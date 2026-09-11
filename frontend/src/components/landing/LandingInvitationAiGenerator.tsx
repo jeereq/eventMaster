@@ -769,13 +769,40 @@ export default function LandingInvitationAiGenerator({
     setRefineSuccess(null);
     setError('');
 
-    const basePrompt = prompt.trim();
-    const combinedPrompt = `${basePrompt}. Retouche demandée : ${rawRefine}. Conserver la cohérence globale de l'invitation, le thème et les visages de référence, tout en appliquant précisément cette retouche.`;
+    // Préservation du contexte visuel (image de fond actuelle) et textuel (éléments en place)
+    const currentBgUrl =
+      generatedImageUrlFromContent(result) ||
+      ((result?.global as Record<string, unknown> | undefined)?.bgImageUrl as string | undefined) ||
+      undefined;
+
+    const existingElements = Array.isArray(result?.elements)
+      ? (result.elements as Record<string, unknown>[])
+      : [];
+
+    const existingTextsSummary = existingElements
+      .filter((el) => typeof el?.text === 'string' && (el.text as string).trim().length > 0)
+      .map((el) => `${el.type || 'texte'}: "${String(el.text).trim()}"`)
+      .join(', ');
+
+    // Nettoyage du prompt de base pour éviter l'accumulation infinie de chaînes
+    const cleanBasePrompt = prompt.split('. Retouche demandée :')[0].trim() || 'Invitation d’exception';
+
+    const combinedPrompt = [
+      `Brief d’origine : ${cleanBasePrompt}`,
+      existingTextsSummary ? `Informations du carton à préserver : ${existingTextsSummary}` : '',
+      `Retouche demandée : ${rawRefine}`,
+      `Conserver fidèlement l'harmonie, la composition, les personnes et les textes existants, en appliquant précisément cet ajustement.`,
+    ]
+      .filter(Boolean)
+      .join('. ');
 
     try {
       const data = await composeTemplateWithAiPublic({
         prompt: combinedPrompt,
         files,
+        baseImageUrl: currentBgUrl,
+        existingElements,
+        isAlteration: true,
         embedText,
         contextSource,
         artStyle,
@@ -783,16 +810,27 @@ export default function LandingInvitationAiGenerator({
         speedMode,
       });
 
-      setResult(data.content);
+      const textChangeRequested =
+        /texte|nom|prénom|date|lieu|heure|écrit|adresse|titre|rsvp/i.test(rawRefine);
+
+      // Si la retouche est visuelle/décorative, préserver intégralement les éléments textuels personnalisés
+      let finalContent: TemplateAiComposeContent = data.content;
+      if (!textChangeRequested && existingElements.length > 0 && !embedText) {
+        finalContent = {
+          ...data.content,
+          elements: existingElements.map((el) => ({ ...el })),
+        };
+      }
+
+      setResult(finalContent);
       setLastStageMeta(data.stage || null);
       setActiveHistoryId(typeof data.historyId === 'string' ? data.historyId : null);
       setAllowance(getAiSimulationAllowance());
-      saveAiTemplateDraft(data.content, combinedPrompt);
-      setPrompt(combinedPrompt);
+      saveAiTemplateDraft(finalContent, cleanBasePrompt);
       void fetchAiTemplateComposeHistory().then(setHistory);
       logAction('model_applied', 'Proposition ajustée', rawRefine);
       playAiGenerationCompleteSound();
-      setRefineSuccess(`Proposition réajustée avec succès : « ${rawRefine} »`);
+      setRefineSuccess(`Proposition réajustée avec succès : « ${rawRefine} ». Les informations et le style ont été préservés.`);
       setRefinePrompt('');
       scrollResultIntoView();
     } catch (err: unknown) {

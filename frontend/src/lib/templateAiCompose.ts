@@ -56,6 +56,9 @@ function fileToDataUrl(file: File): Promise<string> {
 export async function composeTemplateWithAi(input: {
   prompt: string;
   imageUrls: string[];
+  baseImageUrl?: string;
+  existingElements?: any[];
+  isAlteration?: boolean;
   generateBackground?: boolean;
   embedText?: boolean;
   contextSource?: InvitationContextSource;
@@ -64,10 +67,17 @@ export async function composeTemplateWithAi(input: {
   speedMode?: AiSpeedMode;
 }): Promise<TemplateAiComposeResult> {
   const deviceId = getOrCreateDeviceId();
+  const imageUrls = [...(input.imageUrls || [])];
+  if (input.baseImageUrl && /^https?:\/\//i.test(input.baseImageUrl.trim()) && !imageUrls.includes(input.baseImageUrl.trim())) {
+    imageUrls.unshift(input.baseImageUrl.trim());
+  }
   const data = await api.post('/templates/ai/compose', {
     deviceId,
     prompt: input.prompt,
-    imageUrls: input.imageUrls,
+    imageUrls,
+    baseImageUrl: input.baseImageUrl,
+    existingElements: input.existingElements,
+    isAlteration: Boolean(input.isAlteration),
     generateBackground: input.generateBackground !== false,
     embedText: Boolean(input.embedText),
     contextSource: input.contextSource || 'none',
@@ -88,6 +98,9 @@ export async function composeTemplateWithAi(input: {
 export async function composeTemplateWithAiPublic(input: {
   prompt: string;
   files: File[];
+  baseImageUrl?: string;
+  existingElements?: any[];
+  isAlteration?: boolean;
   generateBackground?: boolean;
   embedText?: boolean;
   contextSource?: InvitationContextSource;
@@ -100,10 +113,18 @@ export async function composeTemplateWithAiPublic(input: {
   for (const file of input.files.slice(0, 4)) {
     imageDataUrls.push(await fileToDataUrl(file));
   }
+  const imageUrls: string[] = [];
+  if (input.baseImageUrl && /^https?:\/\//i.test(input.baseImageUrl.trim())) {
+    imageUrls.push(input.baseImageUrl.trim());
+  }
   const data = await api.post('/public/templates/ai/compose', {
     deviceId,
     prompt: input.prompt,
     imageDataUrls,
+    imageUrls,
+    baseImageUrl: input.baseImageUrl,
+    existingElements: input.existingElements,
+    isAlteration: Boolean(input.isAlteration),
     generateBackground: input.generateBackground !== false,
     embedText: Boolean(input.embedText),
     contextSource: input.contextSource || 'none',
@@ -221,14 +242,16 @@ export type AiComposeEditorSetters = {
 export function applyAiComposeToEditor(
   content: TemplateAiComposeContent,
   setters: AiComposeEditorSetters,
-  options?: { preferredVariantUrl?: string },
+  options?: { preferredVariantUrl?: string; preserveElements?: boolean },
 ) {
   const global = content.global || {};
   const elements = ensureMandatoryRsvpFieldsOnElements(
     Array.isArray(content.elements) ? (content.elements as any[]) : [],
   );
 
-  setters.setCanvasElements(elements);
+  if (!options?.preserveElements) {
+    setters.setCanvasElements(elements);
+  }
 
   const rawVariants = Array.isArray(global.variants)
     ? (global.variants as string[])

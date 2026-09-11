@@ -397,7 +397,8 @@ export default function TemplatesPage() {
  const [aiComposePrompt, setAiComposePrompt] = useState('');
  const [aiComposeFiles, setAiComposeFiles] = useState<File[]>([]);
  const [aiComposePreviewUrls, setAiComposePreviewUrls] = useState<string[]>([]);
- const [aiComposeBusy, setAiComposeBusy] = useState(false);
+  const [aiComposeIsAlteration, setAiComposeIsAlteration] = useState(false);
+  const [aiComposeBusy, setAiComposeBusy] = useState(false);
  const [aiComposeStage, setAiComposeStage] = useState<string | null>(null);
  const [aiComposeEmbedText, setAiComposeEmbedText] = useState(false);
  const [aiComposeVariantsCount, setAiComposeVariantsCount] = useState<1 | 2>(1);
@@ -1073,32 +1074,42 @@ export default function TemplatesPage() {
  );
  };
 
- const resetAiComposeModal = () => {
- aiComposePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
- setAiComposeFiles([]);
- setAiComposePreviewUrls([]);
- setAiComposePrompt('');
- setAiComposeStage(null);
- setAiComposeBusy(false);
- setAiComposeHistoryId(null);
- setAiComposeStudioTab('create');
- };
+  const resetAiComposeModal = () => {
+    aiComposePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+    setAiComposeFiles([]);
+    setAiComposePreviewUrls([]);
+    setAiComposePrompt('');
+    setAiComposeStage(null);
+    setAiComposeBusy(false);
+    setAiComposeIsAlteration(false);
+    setAiComposeHistoryId(null);
+    setAiComposeStudioTab('create');
+  };
 
- const openAiComposeModal = async (presetPrompt?: string) => {
- if (!canUseCustomTemplates) return;
- setError('');
- if (presetPrompt) {
- setAiComposePrompt(presetPrompt);
- }
- setAiComposeModalOpen(true);
- void fetchAiTemplateComposeHistoryStudio().then(setAiComposeHistory);
- try {
- const next = await syncDeviceAiTokensWithBackend(api);
- setAiAllowance(next);
- } catch {
- setAiAllowance(getAiSimulationAllowance());
- }
- };
+  const openAiComposeModal = async (
+    presetPrompt?: string,
+    options?: { isAlteration?: boolean },
+  ) => {
+    if (!canUseCustomTemplates) return;
+    setError('');
+    const isAlteration = Boolean(
+      options?.isAlteration ||
+      presetPrompt?.toLowerCase().includes('retouche') ||
+      presetPrompt?.toLowerCase().includes('altér'),
+    );
+    setAiComposeIsAlteration(isAlteration);
+    if (presetPrompt) {
+      setAiComposePrompt(presetPrompt);
+    }
+    setAiComposeModalOpen(true);
+    void fetchAiTemplateComposeHistoryStudio().then(setAiComposeHistory);
+    try {
+      const next = await syncDeviceAiTokensWithBackend(api);
+      setAiAllowance(next);
+    } catch {
+      setAiAllowance(getAiSimulationAllowance());
+    }
+  };
 
  const applyAiComposeHistoryItem = (
    item: AiTemplateComposeHistoryItem,
@@ -1235,71 +1246,108 @@ export default function TemplatesPage() {
  ? 'Composition de la carte et de la typographie…'
  : 'Composition de la carte à partir du brief…',
  );
- const resultPromise = composeTemplateWithAi({
- prompt: aiComposePrompt.trim(),
- imageUrls: uploadedUrls,
- generateBackground: true,
- embedText: aiComposeEmbedText,
- contextSource: aiComposeContextSource,
- artStyle: aiComposeArtStyle,
- variantsCount: aiComposeVariantsCount,
- speedMode: aiComposeSpeedMode,
- });
- // Affiche l’étape « création d’image » pendant l’appel API (analyse + génération côté serveur)
- const stageTimer = window.setTimeout(() => {
- setAiComposeStage('Création de la nouvelle image…');
- }, 2500);
- let result;
- try {
- result = await resultPromise;
- } finally {
- window.clearTimeout(stageTimer);
- }
- setAiComposeStage('Application du modèle…');
- applyAiComposeToEditor(result.content, {
- setCanvasElements,
- setBgType,
- setBgColor,
- setBgImageUrl,
- setBgPattern,
- setFrameType,
- setFontTheme,
- setFloralColor,
- setFloralType,
- setFloralDensity,
- setImportedPalette,
- setColorThemeId,
- setLayoutMode,
- setCanvasSizePreset,
- setCanvasWidth,
- setCanvasHeight,
- setSelectedElementId,
- setAiVariants,
- setAiSafetyFallback: setAiSafetyFallbackNotice,
- });
- setGeneratedByAi(true);
- setImportedWithOcr(false);
- if (result.stage?.variants && result.stage.variants.length > 0) {
-   setAiVariants(result.stage.variants);
- }
- if (result.stage?.safetyFallbackTriggered !== undefined) {
-   setAiSafetyFallbackNotice(Boolean(result.stage.safetyFallbackTriggered));
- }
- if (result.allowance) {
- setAiAllowance(getAiSimulationAllowance());
- }
- setAiComposeHistoryId(typeof result.historyId === 'string' ? result.historyId : null);
- void fetchAiTemplateComposeHistoryStudio().then(setAiComposeHistory);
- setAiComposeModalOpen(false);
- resetAiComposeModal();
- playAiGenerationCompleteSound();
- setSuccess(
- result.stage?.backgroundReady
- ? result.stage?.imageMode === 'edit'
- ? 'Nouvelle image créée à partir de vos références + brief. Structure éditable appliquée.'
- : 'Nouvelle image générée selon l’analyse et votre brief. Structure éditable appliquée.'
- : 'Structure générée — la création d’image n’a pas abouti. Réessayez ou ajustez le brief.',
- );
+    const isAlteration =
+      aiComposeIsAlteration ||
+      /retouch|ajust|refin|altér|réajust|modifier/i.test(aiComposePrompt);
+
+    const currentBgUrl =
+      bgImageUrl && /^https?:\/\//i.test(bgImageUrl.trim()) ? bgImageUrl.trim() : undefined;
+
+    const existingTextSummaries = canvasElements
+      .filter((el) => typeof el.text === 'string' && el.text.trim().length > 0)
+      .map((el) => `${el.type}: "${String(el.text).trim()}"`)
+      .join(', ');
+
+    const promptToSend =
+      isAlteration && existingTextSummaries
+        ? [
+            `Consigne de retouche ciblée : ${aiComposePrompt.trim()}`,
+            `Éléments clés actuels du carton à préserver impérativement : ${existingTextSummaries}`,
+            `Directive : Conserver la disposition, les textes existants et le style général du carton, en appliquant avec précision la retouche demandée.`,
+          ].join('. ')
+        : aiComposePrompt.trim();
+
+    const resultPromise = composeTemplateWithAi({
+      prompt: promptToSend,
+      imageUrls: uploadedUrls,
+      baseImageUrl: isAlteration ? currentBgUrl : undefined,
+      existingElements: isAlteration ? canvasElements : undefined,
+      isAlteration,
+      generateBackground: true,
+      embedText: aiComposeEmbedText,
+      contextSource: aiComposeContextSource,
+      artStyle: aiComposeArtStyle,
+      variantsCount: aiComposeVariantsCount,
+      speedMode: aiComposeSpeedMode,
+    });
+    // Affiche l’étape « création d’image » pendant l’appel API (analyse + génération côté serveur)
+    const stageTimer = window.setTimeout(() => {
+      setAiComposeStage('Création de la nouvelle image…');
+    }, 2500);
+    let result;
+    try {
+      result = await resultPromise;
+    } finally {
+      window.clearTimeout(stageTimer);
+    }
+    setAiComposeStage('Application du modèle…');
+    const isTextChangeRequested =
+      /texte|nom|prénom|date|lieu|heure|écrit|adresse|titre|rsvp/i.test(aiComposePrompt);
+    const preserveElements =
+      isAlteration && !isTextChangeRequested && canvasElements.length > 0 && !aiComposeEmbedText;
+
+    applyAiComposeToEditor(
+      result.content,
+      {
+        setCanvasElements,
+        setBgType,
+        setBgColor,
+        setBgImageUrl,
+        setBgPattern,
+        setFrameType,
+        setFontTheme,
+        setFloralColor,
+        setFloralType,
+        setFloralDensity,
+        setImportedPalette,
+        setColorThemeId,
+        setLayoutMode,
+        setCanvasSizePreset,
+        setCanvasWidth,
+        setCanvasHeight,
+        setSelectedElementId,
+        setAiVariants,
+        setAiSafetyFallback: setAiSafetyFallbackNotice,
+      },
+      {
+        preserveElements,
+      },
+    );
+    setGeneratedByAi(true);
+    setImportedWithOcr(false);
+    if (result.stage?.variants && result.stage.variants.length > 0) {
+      setAiVariants(result.stage.variants);
+    }
+    if (result.stage?.safetyFallbackTriggered !== undefined) {
+      setAiSafetyFallbackNotice(Boolean(result.stage.safetyFallbackTriggered));
+    }
+    if (result.allowance) {
+      setAiAllowance(getAiSimulationAllowance());
+    }
+    setAiComposeHistoryId(typeof result.historyId === 'string' ? result.historyId : null);
+    void fetchAiTemplateComposeHistoryStudio().then(setAiComposeHistory);
+    setAiComposeModalOpen(false);
+    resetAiComposeModal();
+    playAiGenerationCompleteSound();
+    setSuccess(
+      isAlteration
+        ? 'Retouche appliquée avec succès ! Les éléments du carton et textes existants ont été conservés.'
+        : result.stage?.backgroundReady
+        ? result.stage?.imageMode === 'edit'
+          ? 'Nouvelle image créée à partir de vos références + brief. Structure éditable appliquée.'
+          : 'Nouvelle image générée selon l’analyse et votre brief. Structure éditable appliquée.'
+        : 'Structure générée — la création d’image n’a pas abouti. Réessayez ou ajustez le brief.',
+    );
  } catch (err: any) {
  if (err?.status === 402) {
  setAiTokenModalOpen(true);
@@ -1325,13 +1373,15 @@ export default function TemplatesPage() {
  >
  <div className="px-5 pt-5 pb-3 border-b border-border-subtle flex items-start justify-between gap-3">
  <div>
- <h2 id="ai-compose-title" className="text-sm font-bold text-foreground flex items-center gap-2">
- <Wand2 className="w-4 h-4 text-primary" />
- Créer avec l’IA
- </h2>
- <p className="hidden sm:block text-[11px] text-muted mt-1 leading-relaxed">
- Brief seul ou photos + brief ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons). Yeux, sourire et joues restent fidèles aux photos.
- </p>
+            <h2 id="ai-compose-title" className="text-sm font-bold text-foreground flex items-center gap-2">
+              <Wand2 className="w-4 h-4 text-primary" />
+              {aiComposeIsAlteration ? 'Retoucher avec l’IA' : 'Créer avec l’IA'}
+            </h2>
+            <p className="hidden sm:block text-[11px] text-muted mt-1 leading-relaxed">
+              {aiComposeIsAlteration
+                ? `Conserve la disposition, les textes et l'ambiance du carton actuel en appliquant votre retouche (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons).`
+                : `Brief seul ou photos + brief (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons). Yeux, sourire et joues restent fidèles aux photos.`}
+            </p>
  </div>
  <button
  type="button"
@@ -2762,7 +2812,12 @@ export default function TemplatesPage() {
             <button
               type="button"
               disabled={aiComposeBusy}
-              onClick={() => openAiComposeModal('Conserver la base du carton actuel. Retouche demandée : ')}
+              onClick={() =>
+                openAiComposeModal(
+                  'Conserver la base du carton actuel. Retouche demandée : ',
+                  { isAlteration: true },
+                )
+              }
               className="w-full flex items-center justify-center gap-1.5 p-2 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs transition cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5" />
