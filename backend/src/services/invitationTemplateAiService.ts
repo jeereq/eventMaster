@@ -1242,19 +1242,24 @@ async function executeNanoBananaRawRequest(
           }>;
           status?: string;
         };
-        if (isSafetyFilterTriggered(null, data)) {
-          safetyTriggered = true;
-          safetyDetail = 'Interactions API safety filter triggered';
-        } else if (typeof data.output_image?.data === 'string' && data.output_image.data) {
+
+        // 1. Extraire l'image si elle a été générée avec succès
+        if (typeof data.output_image?.data === 'string' && data.output_image.data) {
           b64 = data.output_image.data;
         } else if (Array.isArray(data.steps)) {
           for (const step of data.steps) {
-            const imgBlock = step.content?.find((c) => c.type === 'image' && typeof c.data === 'string');
+            const imgBlock = step.content?.find((c) => c.type === 'image' && typeof c.data === 'string' && c.data.length > 0);
             if (imgBlock?.data) {
               b64 = imgBlock.data;
               break;
             }
           }
+        }
+
+        // 2. Si aucune image n'a été produite, vérifier si un filtre de sécurité a bloqué la génération
+        if (!b64 && isSafetyFilterTriggered(null, data)) {
+          safetyTriggered = true;
+          safetyDetail = 'Interactions API safety filter triggered';
         }
       } else {
         const errText = await interactionsRes.text().catch(() => '');
@@ -1275,7 +1280,7 @@ async function executeNanoBananaRawRequest(
       console.warn('[invitationTemplateAi] Nano Banana interactions attempt error:', (interactErr as Error)?.message);
     }
 
-    if (safetyTriggered) {
+    if (safetyTriggered && !b64) {
       const safetyErr: HttpError = new Error(`SafetyFilterTriggered: ${safetyDetail}`);
       safetyErr.status = 400;
       throw safetyErr;
@@ -1342,13 +1347,6 @@ async function executeNanoBananaRawRequest(
             };
           };
 
-          if (isSafetyFilterTriggered(null, genData)) {
-            const blockInfo = genData.promptFeedback?.blockReason || genData.candidates?.[0]?.finishReason || 'SAFETY';
-            const safetyErr: HttpError = new Error(`SafetyFilterTriggered: ${blockInfo}`);
-            safetyErr.status = 400;
-            throw safetyErr;
-          }
-
           const parts = genData.candidates?.[0]?.content?.parts || [];
           for (const p of parts) {
             const found = p.inlineData?.data || p.inline_data?.data;
@@ -1356,6 +1354,13 @@ async function executeNanoBananaRawRequest(
               b64 = found;
               break;
             }
+          }
+
+          if (!b64 && isSafetyFilterTriggered(null, genData)) {
+            const blockInfo = genData.promptFeedback?.blockReason || genData.candidates?.[0]?.finishReason || 'SAFETY';
+            const safetyErr: HttpError = new Error(`SafetyFilterTriggered: ${blockInfo}`);
+            safetyErr.status = 400;
+            throw safetyErr;
           }
         } else {
           const genErr = await generateRes.text().catch(() => '');

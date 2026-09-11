@@ -976,21 +976,23 @@ async function executeNanoBananaRawRequest(apiKey, promptText, refImages, model)
             });
             if (interactionsRes.ok) {
                 const data = (await interactionsRes.json().catch(() => ({})));
-                if ((0, invitationPromptFidelity_ts_1.isSafetyFilterTriggered)(null, data)) {
-                    safetyTriggered = true;
-                    safetyDetail = 'Interactions API safety filter triggered';
-                }
-                else if (typeof data.output_image?.data === 'string' && data.output_image.data) {
+                // 1. Extraire l'image si elle a été générée avec succès
+                if (typeof data.output_image?.data === 'string' && data.output_image.data) {
                     b64 = data.output_image.data;
                 }
                 else if (Array.isArray(data.steps)) {
                     for (const step of data.steps) {
-                        const imgBlock = step.content?.find((c) => c.type === 'image' && typeof c.data === 'string');
+                        const imgBlock = step.content?.find((c) => c.type === 'image' && typeof c.data === 'string' && c.data.length > 0);
                         if (imgBlock?.data) {
                             b64 = imgBlock.data;
                             break;
                         }
                     }
+                }
+                // 2. Si aucune image n'a été produite, vérifier si un filtre de sécurité a bloqué la génération
+                if (!b64 && (0, invitationPromptFidelity_ts_1.isSafetyFilterTriggered)(null, data)) {
+                    safetyTriggered = true;
+                    safetyDetail = 'Interactions API safety filter triggered';
                 }
             }
             else {
@@ -1012,7 +1014,7 @@ async function executeNanoBananaRawRequest(apiKey, promptText, refImages, model)
             }
             console.warn('[invitationTemplateAi] Nano Banana interactions attempt error:', interactErr?.message);
         }
-        if (safetyTriggered) {
+        if (safetyTriggered && !b64) {
             const safetyErr = new Error(`SafetyFilterTriggered: ${safetyDetail}`);
             safetyErr.status = 400;
             throw safetyErr;
@@ -1058,12 +1060,6 @@ async function executeNanoBananaRawRequest(apiKey, promptText, refImages, model)
                 });
                 if (generateRes.ok) {
                     const genData = (await generateRes.json().catch(() => ({})));
-                    if ((0, invitationPromptFidelity_ts_1.isSafetyFilterTriggered)(null, genData)) {
-                        const blockInfo = genData.promptFeedback?.blockReason || genData.candidates?.[0]?.finishReason || 'SAFETY';
-                        const safetyErr = new Error(`SafetyFilterTriggered: ${blockInfo}`);
-                        safetyErr.status = 400;
-                        throw safetyErr;
-                    }
                     const parts = genData.candidates?.[0]?.content?.parts || [];
                     for (const p of parts) {
                         const found = p.inlineData?.data || p.inline_data?.data;
@@ -1071,6 +1067,12 @@ async function executeNanoBananaRawRequest(apiKey, promptText, refImages, model)
                             b64 = found;
                             break;
                         }
+                    }
+                    if (!b64 && (0, invitationPromptFidelity_ts_1.isSafetyFilterTriggered)(null, genData)) {
+                        const blockInfo = genData.promptFeedback?.blockReason || genData.candidates?.[0]?.finishReason || 'SAFETY';
+                        const safetyErr = new Error(`SafetyFilterTriggered: ${blockInfo}`);
+                        safetyErr.status = 400;
+                        throw safetyErr;
                     }
                 }
                 else {

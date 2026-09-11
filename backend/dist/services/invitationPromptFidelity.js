@@ -334,6 +334,9 @@ function isSafetyText(raw) {
 /**
  * Détecte si une erreur ou un corps de réponse Nano Banana provient d'un filtre de sécurité
  * (Safety Filter, blocage d'image de visage réel, biométrie, etc.).
+ * Important : inspecte UNIQUEMENT les champs structurels de blocage et les messages d'erreur.
+ * Ne sérialise JAMAIS le payload brut en chaîne complète pour éviter les faux positifs
+ * sur les métadonnées de base64 ou les catégories standards déclarées avec probabilité NEGLIGIBLE.
  */
 function isSafetyFilterTriggered(textOrErr, jsonPayload) {
     if (typeof textOrErr === 'string' && isSafetyText(textOrErr))
@@ -343,26 +346,57 @@ function isSafetyFilterTriggered(textOrErr, jsonPayload) {
     if (jsonPayload && typeof jsonPayload === 'object') {
         try {
             const p = jsonPayload;
+            // 1. promptFeedback (Google Gemini generateContent)
             if (p.promptFeedback && typeof p.promptFeedback === 'object') {
                 const pf = p.promptFeedback;
                 const br = String(pf.blockReason || '').toUpperCase();
-                if (br && br !== 'NONE' && (br.includes('SAFETY') || br.includes('BLOCK') || br.includes('PROHIBITED'))) {
+                if (br && br !== 'NONE' && (br.includes('SAFETY') || br.includes('BLOCK') || br.includes('PROHIBITED') || br.includes('SPII'))) {
                     return true;
                 }
             }
+            // 2. candidates finishReason & safetyRatings (Google Gemini generateContent)
             if (Array.isArray(p.candidates) && p.candidates[0] && typeof p.candidates[0] === 'object') {
                 const c = p.candidates[0];
                 const fr = String(c.finishReason || '').toUpperCase();
                 if (fr && (fr.includes('SAFETY') || fr.includes('PROHIBITED') || fr.includes('BLOCK') || fr.includes('SPII'))) {
                     return true;
                 }
+                if (Array.isArray(c.safetyRatings)) {
+                    for (const rating of c.safetyRatings) {
+                        if (rating?.blocked === true)
+                            return true;
+                    }
+                }
             }
-            if (typeof p.status === 'string' && p.status.toUpperCase().includes('BLOCK')) {
-                return true;
+            // 3. Statut au niveau racine (Interactions API ou standard)
+            if (typeof p.status === 'string') {
+                const s = p.status.toUpperCase();
+                if (s.includes('BLOCK') || s === 'REJECTED') {
+                    return true;
+                }
             }
-            const raw = JSON.stringify(jsonPayload);
-            if (isSafetyText(raw))
-                return true;
+            // 4. Objet error de l'API Google
+            if (p.error && typeof p.error === 'object') {
+                const errObj = p.error;
+                const errMsg = String(errObj.message || '');
+                const errStatus = String(errObj.status || '');
+                if (isSafetyText(errMsg) || isSafetyText(errStatus)) {
+                    return true;
+                }
+            }
+            // 5. Steps (Google Interactions API)
+            if (Array.isArray(p.steps)) {
+                for (const step of p.steps) {
+                    if (typeof step.status === 'string' && step.status.toUpperCase().includes('BLOCK')) {
+                        return true;
+                    }
+                    if (step.error && typeof step.error === 'object') {
+                        const msg = String(step.error.message || '');
+                        if (isSafetyText(msg))
+                            return true;
+                    }
+                }
+            }
         }
         catch {
             // ignore

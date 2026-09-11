@@ -339,6 +339,43 @@ describe('Nano Banana Robustesse & Safety Filter Fallback', () => {
       ],
     };
     assert.equal(isSafetyFilterTriggered(null, normalPayload), false);
+
+    // Payload réel de Gemini contenant les métadonnées standards de safetyRatings à probabilité NEGLIGIBLE
+    const normalPayloadWithRatings = {
+      candidates: [
+        {
+          finishReason: 'STOP',
+          content: { parts: [{ inlineData: { data: 'iVBORw0KGgoAAAANSUhEUgAASPII_spii_filter_content' } }] },
+          safetyRatings: [
+            { category: 'HARM_CATEGORY_HATE_SPEECH', probability: 'NEGLIGIBLE' },
+            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', probability: 'NEGLIGIBLE' },
+            { category: 'HARM_CATEGORY_HARASSMENT', probability: 'NEGLIGIBLE' },
+            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', probability: 'NEGLIGIBLE' },
+          ],
+        },
+      ],
+    };
+    assert.equal(isSafetyFilterTriggered(null, normalPayloadWithRatings), false);
+
+    // Interactions API avec étape d'image générée
+    const interactionsSuccessPayload = {
+      status: 'completed',
+      steps: [
+        { type: 'thought' },
+        {
+          type: 'model_output',
+          content: [{ type: 'image', data: '4jyQX2PrkIvuDyjzyMjkhZPvJK77zPKpGPxds9iBsPIIKy4orLgme/spii' }],
+        },
+      ],
+    };
+    assert.equal(isSafetyFilterTriggered(null, interactionsSuccessPayload), false);
+
+    // Interactions API bloquée
+    const interactionsBlockedPayload = {
+      status: 'blocked',
+      steps: [{ type: 'error', error: { message: 'Image content was blocked by policy' } }],
+    };
+    assert.equal(isSafetyFilterTriggered(null, interactionsBlockedPayload), true);
   });
 
   it('génère un prompt de repli thématique sans aucun humain', () => {
