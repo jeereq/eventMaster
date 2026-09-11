@@ -410,7 +410,7 @@ function NotificationsContent() {
                     Gouvernance Organisation · Billetterie & Dons
                   </span>
                 }
-                description="En tant que propriétaire, définissez qui au sein de votre organisation a le droit de recevoir les notifications d'achat de billets et de dons."
+                description="Définissez qui au sein de votre organisation reçoit les alertes de billetterie et de dons."
                 action={
                   <Button
                     size="sm"
@@ -418,7 +418,7 @@ function NotificationsContent() {
                     onClick={() => setShowOrgNotifModal(true)}
                     leftIcon={<Sliders className="w-3.5 h-3.5" />}
                   >
-                    Configurer les autorisations
+                    Configurer
                   </Button>
                 }
               />
@@ -507,11 +507,10 @@ function NotificationsContent() {
             <div className="p-4 rounded-2xl border border-border bg-surface-muted/50 flex items-start gap-3">
               <Info className="w-4 h-4 text-primary shrink-0 mt-0.5" />
               <div className="space-y-0.5 text-xs text-muted leading-relaxed">
-                <p className="font-semibold text-foreground">Gouvernance des alertes de l&apos;organisation</p>
+                <p className="font-semibold text-foreground">Alertes d&apos;organisation</p>
                 <p>
-                  Les règles de distribution des alertes de vente de billets et de dons sont gérées exclusivement
-                  par le propriétaire de l’organisation. Vos réglages ci-dessous définissent les canaux sur lesquels vous
-                  recevez vos notifications personnelles.
+                  La distribution des alertes de vente de billets et de dons est gérée par le propriétaire.
+                  Personnalisez ci-dessous vos canaux personnels de réception.
                 </p>
               </div>
             </div>

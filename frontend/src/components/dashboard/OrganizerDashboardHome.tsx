@@ -202,13 +202,13 @@ export default function OrganizerDashboardHome({
               <div>
                 <p className="font-bold">
                   {daysUntilExpiry <= 0
-                    ? 'Votre abonnement est arrivé à expiration'
-                    : `Votre forfait expire dans ${daysUntilExpiry} jour${daysUntilExpiry > 1 ? 's' : ''}`}
+                    ? 'Abonnement expiré'
+                    : `Expiration dans ${daysUntilExpiry} jour${daysUntilExpiry > 1 ? 's' : ''}`}
                 </p>
                 <p className="text-xs opacity-90 mt-0.5">
                   {daysUntilExpiry <= 0
-                    ? 'Renouvelez votre formule pour réactiver la billetterie et les quotas sans restriction.'
-                    : 'Renouvelez dès maintenant pour garantir la continuité des invitations WhatsApp et du contrôle d’accès.'}
+                    ? 'Renouvelez votre formule pour réactiver vos services et quotas.'
+                    : 'Renouvelez pour maintenir les invitations WhatsApp et le contrôle d’accès.'}
                 </p>
               </div>
             </div>
@@ -216,7 +216,7 @@ export default function OrganizerDashboardHome({
               href="/dashboard/billing"
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover transition shrink-0"
             >
-              <span>Renouveler mon abonnement</span>
+              <span>Renouveler</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
@@ -272,12 +272,12 @@ export default function OrganizerDashboardHome({
               </h1>
               <p className="text-xs sm:text-sm text-muted leading-relaxed">
                 {isOwner
-                  ? 'Pilotage stratégique de votre organisation : recettes billetterie, dons solidaires, gestion d’équipe et suivi de vos abonnements.'
+                  ? 'Pilotage de votre organisation, finances et équipe.'
                   : isManager
-                  ? 'Pilotez le quotidien : événements, équipe, réalisations, simulateur IA et devis. Le forfait se change uniquement chez le propriétaire.'
+                  ? 'Gestion opérationnelle de vos événements, équipe et devis.'
                   : isVendor
-                  ? 'Gérez vos prestations, vos disponibilités et répondez rapidement aux demandes de devis des organisateurs.'
-                  : 'Créez vos événements, envoyez vos invitations par WhatsApp, concevez vos plans de table et contrôlez les accès avec fluidité.'}
+                  ? 'Gestion de vos prestations et réponses aux devis.'
+                  : 'Créez vos événements, invitations et plans de table.'}
               </p>
             </div>
 
@@ -285,13 +285,13 @@ export default function OrganizerDashboardHome({
             <form onSubmit={handleSearchSubmit} className="relative">
               <div className="relative flex items-center">
                 <Search className="w-5 h-5 text-muted absolute left-4 pointer-events-none" />
-                <label htmlFor="org-home-search" className="sr-only">Rechercher un événement, un invité ou une salle</label>
+                <label htmlFor="org-home-search" className="sr-only">Rechercher</label>
                 <input
                   id="org-home-search"
                   type="search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Rechercher parmi vos événements, un invité, une salle…"
+                  placeholder="Rechercher un événement, un invité, une salle…"
                   className="w-full min-h-11 pl-11 pr-32 py-3.5 rounded-xl border border-border bg-surface text-sm text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent shadow-xs transition"
                 />
                 <button
@@ -306,7 +306,7 @@ export default function OrganizerDashboardHome({
 
             {/* Raccourcis directs en 1 clic */}
             <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-xs">
-              <span className="text-xs font-medium text-muted mr-1">Raccourcis :</span>
+              <span className="text-xs font-medium text-muted mr-1">Accès direct :</span>
               <Link
                 href={isVendor ? '/dashboard/marketplace' : '/dashboard/events'}
                 className="min-h-11 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
@@ -319,7 +319,7 @@ export default function OrganizerDashboardHome({
                 className="min-h-11 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
               >
                 <Ticket className="w-3.5 h-3.5" />
-                Billetterie & Dons
+                Billetterie
               </Link>
               {isOwner ? (
                 <>
@@ -328,14 +328,14 @@ export default function OrganizerDashboardHome({
                     className="min-h-11 px-3 py-2 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
                   >
                     <UserCheck className="w-3.5 h-3.5 text-primary" />
-                    Mon Équipe
+                    Équipe
                   </Link>
                   <Link
                     href="/dashboard/billing"
                     className="min-h-11 px-3 py-2 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
                   >
                     <Award className="w-3.5 h-3.5 text-emerald-600" />
-                    Abonnement & Licences
+                    Abonnement
                   </Link>
                 </>
               ) : null}
@@ -343,20 +343,20 @@ export default function OrganizerDashboardHome({
                 href="/dashboard/rooms"
                 className="min-h-11 px-3 py-2 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center"
               >
-                Plan de table 2D/3D
+                Plan 2D/3D
               </Link>
               <Link
                 href="/dashboard/protocol"
                 className="min-h-11 px-3 py-2 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
               >
                 <ScanLine className="w-3 h-3 text-amber-500" />
-                Scanner QR Protocole
+                Scanner QR
               </Link>
               <Link
                 href="/dashboard/catalogue"
                 className="min-h-11 px-3 py-2 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center"
               >
-                Marketplace & Devis
+                Marketplace
               </Link>
               <Link
                 href="/dashboard/catalogue?tab=plan&planView=ai"
@@ -415,7 +415,7 @@ export default function OrganizerDashboardHome({
               <p className="text-2xl font-black text-foreground tracking-tight">
                 {usage ? formatQuota(usage.events, limits?.maxEvents) : events.length}
               </p>
-              <p className="text-xs text-muted mt-0.5">Événements créés</p>
+              <p className="text-xs text-muted mt-0.5">Total créés</p>
             </div>
           </Link>
 
@@ -433,7 +433,7 @@ export default function OrganizerDashboardHome({
               <p className="text-2xl font-black text-foreground tracking-tight">
                 {usage ? formatQuota(usage.guests, limits?.maxGuests) : '—'}
               </p>
-              <p className="text-xs text-muted mt-0.5">Invités enregistrés</p>
+              <p className="text-xs text-muted mt-0.5">Total enregistrés</p>
             </div>
           </Link>
 
@@ -452,7 +452,7 @@ export default function OrganizerDashboardHome({
                 <p className="text-2xl font-black text-foreground tracking-tight">
                   {usage ? formatQuota(usage.orgManagers, limits?.maxOrgManagers) : '—'}
                 </p>
-                <p className="text-xs text-muted mt-0.5">Managers & Opérateurs</p>
+                <p className="text-xs text-muted mt-0.5">Membres actifs</p>
               </div>
             </Link>
           ) : (
@@ -475,7 +475,7 @@ export default function OrganizerDashboardHome({
                     : (usage ? formatQuota(usage.rooms, limits?.maxRooms) : '—')}
                 </p>
                 <p className="text-xs text-muted mt-0.5">
-                  {isVendor ? 'Prestations vitrine' : 'Plans 2D/3D créés'}
+                  {isVendor ? 'Prestations' : 'Plans créés'}
                 </p>
               </div>
             </Link>
@@ -496,7 +496,7 @@ export default function OrganizerDashboardHome({
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 inline" />
                 Actifs
               </p>
-              <p className="text-xs text-muted mt-0.5">Demandes & réservations</p>
+              <p className="text-xs text-muted mt-0.5">En cours</p>
             </div>
           </Link>
 
@@ -534,12 +534,12 @@ export default function OrganizerDashboardHome({
               </div>
               <p className="text-xs text-muted mt-0.5 truncate">
                 {isManager
-                  ? 'Consultation — le forfait reste au propriétaire'
+                  ? 'Géré par le propriétaire'
                   : daysUntilExpiry != null
                   ? daysUntilExpiry <= 0
                     ? 'Renouvellement requis'
-                    : `Licence active (${daysUntilExpiry}j)`
-                  : 'Gérer mon abonnement'}
+                    : `${daysUntilExpiry}j restants`
+                  : 'Gérer l’abonnement'}
               </p>
             </div>
           </Link>
@@ -557,14 +557,14 @@ export default function OrganizerDashboardHome({
                     <TrendingUp className="w-4 h-4" />
                   </span>
                   <h2 className="text-base font-bold text-foreground">
-                    Pilotage Financier & Encaissements
+                    Finances & Billetterie
                   </h2>
                   <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
                     Direction
                   </span>
                 </div>
                 <p className="text-xs text-muted">
-                  Vision globale en temps réel : recettes de billetterie, dons solidaires et taux d’émargement aux entrées.
+                  Recettes de billetterie, dons et émargement en direct.
                 </p>
               </div>
 
@@ -574,7 +574,7 @@ export default function OrganizerDashboardHome({
                   className="px-3.5 py-2 rounded-xl text-xs font-bold bg-primary/10 border border-primary/20 text-primary hover:bg-primary/15 transition inline-flex items-center gap-1.5"
                 >
                   <Ticket className="w-3.5 h-3.5" />
-                  <span>Registre Billetterie & Dons</span>
+                  <span>Billetterie & Dons</span>
                   <ChevronRight className="w-3 h-3" />
                 </Link>
                 <Link
@@ -582,7 +582,7 @@ export default function OrganizerDashboardHome({
                   className="px-3.5 py-2 rounded-xl text-xs font-bold bg-surface-muted hover:bg-surface border border-border text-foreground transition inline-flex items-center gap-1.5"
                 >
                   <Award className="w-3.5 h-3.5 text-primary" />
-                  <span>Abonnement & Licences</span>
+                  <span>Abonnement</span>
                 </Link>
               </div>
             </div>
@@ -601,7 +601,7 @@ export default function OrganizerDashboardHome({
                     {formatFc(ticketingSummary?.totalRevenueFc ?? 0)}
                   </p>
                   <p className="text-xs text-muted mt-0.5">
-                    {ticketingSummary?.paidOrdersCount ?? 0} commande{(ticketingSummary?.paidOrdersCount ?? 0) > 1 ? 's' : ''} encaissée{(ticketingSummary?.paidOrdersCount ?? 0) > 1 ? 's' : ''}
+                    {ticketingSummary?.paidOrdersCount ?? 0} commande{(ticketingSummary?.paidOrdersCount ?? 0) > 1 ? 's' : ''}
                   </p>
                 </div>
               </div>
@@ -619,7 +619,7 @@ export default function OrganizerDashboardHome({
                     {formatFc(ticketingSummary?.ticketsRevenueFc ?? (ticketingSummary?.totalRevenueFc ?? 0))}
                   </p>
                   <p className="text-xs text-muted mt-0.5">
-                    {ticketingSummary?.paidTicketsCount ?? 0} place{(ticketingSummary?.paidTicketsCount ?? 0) > 1 ? 's' : ''} payée{(ticketingSummary?.paidTicketsCount ?? 0) > 1 ? 's' : ''}
+                    {ticketingSummary?.paidTicketsCount ?? 0} billet{(ticketingSummary?.paidTicketsCount ?? 0) > 1 ? 's' : ''}
                   </p>
                 </div>
               </div>
@@ -637,7 +637,7 @@ export default function OrganizerDashboardHome({
                     {formatFc(ticketingSummary?.donationsRevenueFc ?? 0)}
                   </p>
                   <p className="text-xs text-muted mt-0.5">
-                    {ticketingSummary?.donationsCount ?? 0} donateur{(ticketingSummary?.donationsCount ?? 0) > 1 ? 's' : ''} enregistré{(ticketingSummary?.donationsCount ?? 0) > 1 ? 's' : ''}
+                    {ticketingSummary?.donationsCount ?? 0} don{(ticketingSummary?.donationsCount ?? 0) > 1 ? 's' : ''}
                   </p>
                 </div>
               </div>
@@ -659,8 +659,8 @@ export default function OrganizerDashboardHome({
                   </p>
                   <p className="text-xs text-muted mt-0.5">
                     {(ticketingSummary?.paidTicketsCount ?? 0) > 0
-                      ? `${Math.round(((ticketingSummary?.checkedInGuestsCount ?? 0) / (ticketingSummary?.paidTicketsCount || 1)) * 100)} % de présence`
-                      : 'Participants scannés'}
+                      ? `${Math.round(((ticketingSummary?.checkedInGuestsCount ?? 0) / (ticketingSummary?.paidTicketsCount || 1)) * 100)} % présents`
+                      : 'Scannés'}
                   </p>
                 </div>
               </div>
@@ -679,17 +679,17 @@ export default function OrganizerDashboardHome({
               <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
                 <Users className="w-4 h-4" />
               </span>
-              <h2 className="text-lg font-bold text-foreground">Invités, Faire-part & Protocole</h2>
+              <h2 className="text-lg font-bold text-foreground">Invités & Accueil Jour J</h2>
             </div>
             <p className="text-xs text-muted mt-0.5">
-              Générez vos faire-part, envoyez vos invitations par WhatsApp et assurez l’accueil fluide le jour J.
+              Invitations WhatsApp, confirmations et émargement QR.
             </p>
           </div>
           <Link
             href="/dashboard/events"
             className="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
           >
-            Voir tous mes événements <ChevronRight className="w-3.5 h-3.5" />
+            Tous les événements <ChevronRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
@@ -708,25 +708,25 @@ export default function OrganizerDashboardHome({
 
               <div>
                 <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
-                  Invitations & Faire-part WhatsApp
+                  Invitations & Faire-part
                 </h3>
                 <p className="text-xs text-muted leading-relaxed mt-1">
-                  Personnalisez vos faire-part numériques, envoyez des messages nominatifs directs sur WhatsApp et suivez les confirmations en temps réel.
+                  Faire-part personnalisés, envois nominatifs WhatsApp et suivi des confirmations.
                 </p>
               </div>
 
               <div className="space-y-1.5 pt-1">
                 <div className="flex items-center gap-2 text-xs text-muted">
                   <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  <span>Envois individuels nominatifs par WhatsApp & e-mail</span>
+                  <span>Envois individuels WhatsApp et e-mail</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted">
                   <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  <span>Collecte automatique des présences & régimes alimentaires</span>
+                  <span>RSVP et régimes alimentaires</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted">
                   <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                  <span>Pass d&apos;accès numériques avec QR code personnel</span>
+                  <span>Pass d&apos;accès avec QR code</span>
                 </div>
               </div>
             </div>
@@ -737,7 +737,7 @@ export default function OrganizerDashboardHome({
                   href="/dashboard/templates"
                   className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-surface-muted hover:bg-primary/10 hover:text-primary transition text-muted"
                 >
-                  Modèles de faire-part
+                  Modèles
                 </Link>
               </div>
               <Button
@@ -745,7 +745,7 @@ export default function OrganizerDashboardHome({
                 onClick={() => router.push(events.length > 0 ? `/dashboard/events/${events[0].id}` : '/dashboard/events')}
                 rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
               >
-                Gérer mes invités
+                Gérer les invités
               </Button>
             </div>
           </div>
@@ -764,25 +764,25 @@ export default function OrganizerDashboardHome({
 
               <div>
                 <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
-                  Protocole & Contrôle d’Accès QR
+                  Protocole & Contrôle d’Accès
                 </h3>
                 <p className="text-xs text-muted leading-relaxed mt-1">
-                  Scannez les billets et badges d’invités avec votre smartphone à l’entrée, contrôlez les fraudes et suivez l’émargement en direct.
+                  Scan smartphone rapide à l’entrée, détection des doublons et suivi en direct.
                 </p>
               </div>
 
               <div className="space-y-1.5 pt-1">
                 <div className="flex items-center gap-2 text-xs text-muted">
                   <Check className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span>Scan QR instantané par caméra smartphone (sans matériel coûteux)</span>
+                  <span>Scan par caméra smartphone</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted">
                   <Check className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span>Checklist et tâches assignées à votre équipe d’accueil</span>
+                  <span>Checklist et affectation d’équipe</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted">
                   <Check className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                  <span>Validation anti-doublon et affichage immédiat de la table</span>
+                  <span>Contrôle anti-doublon et table</span>
                 </div>
               </div>
             </div>
@@ -793,7 +793,7 @@ export default function OrganizerDashboardHome({
                   href="/dashboard/team"
                   className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-surface-muted hover:bg-primary/10 hover:text-primary transition text-muted"
                 >
-                  Comptes équipe
+                  Équipe
                 </Link>
                 <Link
                   href="/dashboard/protocol?view=tasks"
@@ -808,7 +808,7 @@ export default function OrganizerDashboardHome({
                 onClick={() => router.push('/dashboard/protocol')}
                 rightIcon={<ScanLine className="w-3.5 h-3.5" />}
               >
-                Ouvrir le desk Protocole
+                Ouvrir le Protocole
               </Button>
             </div>
           </div>
@@ -824,10 +824,10 @@ export default function OrganizerDashboardHome({
             <span className="p-1.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400">
               <Building2 className="w-4 h-4" />
             </span>
-            <h2 className="text-lg font-bold text-foreground">Espaces, Plans & Marketplace</h2>
+            <h2 className="text-lg font-bold text-foreground">Salles & Marketplace</h2>
           </div>
           <p className="text-xs text-muted mt-0.5">
-            Agencement 2D/3D de vos réceptions, devis et réservations auprès des prestataires certifiés.
+            Plans de table 2D/3D, simulateur IA et devis prestataires.
           </p>
         </div>
 
@@ -845,10 +845,10 @@ export default function OrganizerDashboardHome({
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
-                    Photos et actualités
+                    Photos & Actualités
                   </h3>
                   <p className="text-xs text-muted leading-relaxed mt-1">
-                    Publiez le travail des salles et prestations. Le protocole et les clients consultent la même grille.
+                    Partagez vos photos d&apos;événements et actualités.
                   </p>
                 </div>
               </div>
@@ -860,7 +860,7 @@ export default function OrganizerDashboardHome({
                 rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
                 className="mt-auto"
               >
-                Ouvrir les réalisations
+                Voir les réalisations
               </Button>
             </div>
           ) : null}
@@ -881,14 +881,14 @@ export default function OrganizerDashboardHome({
                   Plan de salle & Placement
                 </h3>
                 <p className="text-xs text-muted leading-relaxed mt-1">
-                  Concevez vos espaces de réception, disposez les tables rondes, rectangulaires, podium et placez vos invités avec précision.
+                  Disposition des tables, scène, buffet et placement des invités.
                 </p>
               </div>
 
               <div className="flex flex-wrap gap-1.5 pt-1">
                 <span className="text-[10px] px-2 py-0.5 rounded bg-surface-muted text-muted">Tables rondes & rect.</span>
                 <span className="text-[10px] px-2 py-0.5 rounded bg-surface-muted text-muted">Scène & Buffet</span>
-                <span className="text-[10px] px-2 py-0.5 rounded bg-surface-muted text-muted">Vue 3D immersive</span>
+                <span className="text-[10px] px-2 py-0.5 rounded bg-surface-muted text-muted">Vue 3D</span>
               </div>
             </div>
 
@@ -900,7 +900,7 @@ export default function OrganizerDashboardHome({
               rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
               className="mt-auto"
             >
-              Éditeur de salle 2D/3D
+              Éditeur 2D/3D
             </Button>
           </div>
 
@@ -912,16 +912,16 @@ export default function OrganizerDashboardHome({
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
-                  Simulateur IA & Marketplace
+                  Simulateur IA
                 </span>
               </div>
 
               <div>
                 <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
-                  Simulateur IA & Packs Clés en Main
+                  Simulateur IA & Packs
                 </h3>
                 <p className="text-xs text-muted leading-relaxed mt-1">
-                  Calculez instantanément 3 combinaisons (éco, équilibré, confort) dans votre enveloppe budgétaire avec salle et prestataires certifiés.
+                  3 combinaisons budgétaires instantanées (éco, confort, prestige) avec prestataires certifiés.
                 </p>
               </div>
 
@@ -930,7 +930,7 @@ export default function OrganizerDashboardHome({
                   href="/dashboard/catalogue?tab=plan&planView=ai"
                   className="text-xs font-bold px-2.5 py-1 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover transition inline-flex items-center gap-1"
                 >
-                  <Sparkles className="w-3 h-3" /> Simuler 3 Packs IA
+                  <Sparkles className="w-3 h-3" /> Simuler 3 packs
                 </Link>
                 <Link
                   href="/dashboard/catalogue?kind=venue"
@@ -942,7 +942,7 @@ export default function OrganizerDashboardHome({
                   href="/dashboard/catalogue?kind=service"
                   className="text-[10px] font-medium px-2 py-0.5 rounded bg-surface border border-border hover:bg-primary/10 hover:text-primary transition text-muted"
                 >
-                  Traiteurs & DJ
+                  Prestataires
                 </Link>
               </div>
             </div>
@@ -956,7 +956,7 @@ export default function OrganizerDashboardHome({
                 rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
                 className="shadow-xs shadow-primary/20"
               >
-                Lancer une simulation IA
+                Lancer la simulation
               </Button>
               {isManager ? (
                 <Button
@@ -988,7 +988,7 @@ export default function OrganizerDashboardHome({
                   Devis & Réservations
                 </h3>
                 <p className="text-xs text-muted leading-relaxed mt-1">
-                  Suivez vos demandes envoyées aux prestataires, confirmez vos dates et accédez à vos packs enregistrés en un clic.
+                  Suivi des demandes prestataires, dates confirmées et devis en cours.
                 </p>
               </div>
 
@@ -1016,7 +1016,7 @@ export default function OrganizerDashboardHome({
               rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
               className="mt-auto"
             >
-              Suivre mes réservations
+              Gérer mes devis
             </Button>
           </div>
         </div>
@@ -1031,10 +1031,10 @@ export default function OrganizerDashboardHome({
             <div>
               <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-primary" />
-                Vos événements récents
+                Événements récents
               </h2>
               <p className="text-xs text-muted">
-                Consultez, modifiez et suivez l’avancement de vos réceptions.
+                Suivi et gestion de vos réceptions.
               </p>
             </div>
 
@@ -1063,13 +1063,13 @@ export default function OrganizerDashboardHome({
               <Calendar className="w-12 h-12 text-muted mx-auto mb-4 opacity-50" />
               <h3 className="font-semibold text-foreground">Aucun événement pour le moment</h3>
               <p className="text-sm text-muted mt-1 max-w-xs mx-auto">
-                Créez votre premier événement pour envoyer vos faire-part et suivre les confirmations de vos invités.
+                Créez votre premier événement pour lancer vos invitations.
               </p>
               <Link
                 href="/dashboard/events"
                 className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-lg text-sm transition"
               >
-                Créer mon premier événement
+                Créer un événement
               </Link>
             </div>
           ) : (
@@ -1138,13 +1138,13 @@ export default function OrganizerDashboardHome({
               <Award className="w-4 h-4" />
             </span>
             <h2 className="text-lg font-bold text-foreground">
-              {isManager ? 'Quotas de l’organisation' : 'Formules, Quotas & Abonnements disponibles'}
+              {isManager ? 'Quotas de l’organisation' : 'Abonnement & Quotas'}
             </h2>
           </div>
           <p className="text-xs text-muted mt-0.5">
             {isManager
-              ? 'Suivez l’usage des événements, invités et salles. Pour changer de forfait, demandez au propriétaire.'
-              : 'Suivez l’utilisation de vos quotas et découvrez les formules d’abonnement adaptées à la taille de vos projets.'}
+              ? 'Consultez vos quotas. Seul le propriétaire peut modifier le forfait.'
+              : 'Suivi de vos quotas et gestion de votre formule.'}
           </p>
         </div>
 
@@ -1163,7 +1163,7 @@ export default function OrganizerDashboardHome({
                   <Shield className="w-4 h-4" />
                 </span>
                 <p className="text-sm font-bold text-foreground">
-                  Titulaire du compte : Forfait {tenant?.plan || billing?.plan || 'actuel'}
+                  Titulaire : Forfait {tenant?.plan || billing?.plan || 'actuel'}
                 </p>
                 {daysUntilExpiry != null && (
                   <span
@@ -1181,7 +1181,7 @@ export default function OrganizerDashboardHome({
                 )}
               </div>
               <p className="text-xs text-muted">
-                En tant que propriétaire, vous pouvez changer de formule à tout moment, activer un code promo, renouveler votre licence ou gérer votre équipe.
+                Modifiez votre formule, renouvelez votre licence ou appliquez un code promo.
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -1189,7 +1189,7 @@ export default function OrganizerDashboardHome({
                 href="/dashboard/billing"
                 className="px-4 py-2 rounded-xl bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
               >
-                <span>Gérer mon forfait</span>
+                <span>Gérer l’abonnement</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -1201,7 +1201,7 @@ export default function OrganizerDashboardHome({
             <div className="space-y-1 min-w-0">
               <p className="text-sm font-bold text-foreground">Forfait {tenant?.plan || billing?.plan || 'actuel'}</p>
               <p className="text-xs text-muted leading-relaxed">
-                Vous consultez les factures. Le propriétaire change le plan dans Facturation.
+                Factures consultables. Le forfait est géré par le propriétaire.
               </p>
             </div>
             <div className="flex flex-wrap gap-2 shrink-0">
@@ -1211,7 +1211,7 @@ export default function OrganizerDashboardHome({
                 onClick={() => router.push('/dashboard/invoices')}
                 leftIcon={<FileText className="w-3.5 h-3.5" />}
               >
-                Voir les factures
+                Factures
               </Button>
               <Button
                 size="sm"
@@ -1219,7 +1219,7 @@ export default function OrganizerDashboardHome({
                 onClick={() => router.push('/dashboard/publications')}
                 leftIcon={<Rss className="w-3.5 h-3.5" />}
               >
-                Publier une réalisation
+                Réalisations
               </Button>
             </div>
           </div>
@@ -1230,20 +1230,20 @@ export default function OrganizerDashboardHome({
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                   <Crown className="w-3.5 h-3.5" />
-                  Formules & Tarification transparente
+                  Formules
                 </span>
                 <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/40">
-                  <Percent className="w-3 h-3" /> −10 % immédiat en paiement annuel (365 jours)
+                  <Percent className="w-3 h-3" /> −10 % en paiement annuel
                 </span>
                 <span className="text-xs font-medium text-primary flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
-                  <Sparkles className="w-3 h-3" /> Codes promos & parrainages déductibles à l&apos;activation
+                  <Sparkles className="w-3 h-3" /> Codes promos acceptés
                 </span>
               </div>
               <h3 className="text-xl font-bold text-foreground mt-1">
-                Besoin d’invités supplémentaires ou de fonctionnalités avancées ?
+                Besoin de plus d’invités ou de quotas ?
               </h3>
               <p className="text-xs text-muted max-w-2xl leading-relaxed">
-                EventMaster propose des abonnements conçus pour chaque besoin : de la fête privée au grand gala d’entreprise. Les réductions annuelles (−10 %) et vos remises commerciales sont appliquées directement lors du passage de commande.
+                Faites évoluer votre formule à tout moment pour augmenter vos quotas d&apos;invités, salles et accès équipe.
               </p>
             </div>
 
@@ -1271,7 +1271,7 @@ export default function OrganizerDashboardHome({
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-foreground">Mariages & Célébrations</h4>
-                  <p className="text-xs text-muted mt-0.5">Pour événements privés sans abonnement mensuel contraignant.</p>
+                  <p className="text-xs text-muted mt-0.5">Événements privés sans engagement mensuel.</p>
                 </div>
                 <div className="space-y-1 text-xs text-muted pt-1">
                   <p>• <strong>Particulier 50</strong> : 60 000 FC / trim.</p>
@@ -1284,7 +1284,7 @@ export default function OrganizerDashboardHome({
                 href="/dashboard/billing"
                 className="text-xs font-bold text-emerald-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
               >
-                Découvrir Particulier <ArrowRight className="w-3 h-3" />
+                Voir Particulier <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
 
@@ -1299,7 +1299,7 @@ export default function OrganizerDashboardHome({
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-foreground">Business & Premium</h4>
-                  <p className="text-xs text-muted mt-0.5">Pour organisateurs réguliers, entreprises & agences.</p>
+                  <p className="text-xs text-muted mt-0.5">Organisateurs réguliers, agences et PME.</p>
                 </div>
                 <div className="space-y-1 text-xs text-muted pt-1">
                   <p>• <strong>Business</strong> : 30 000 FC / mois (150 inv.)</p>
@@ -1312,7 +1312,7 @@ export default function OrganizerDashboardHome({
                 href="/dashboard/billing"
                 className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1 pt-2 border-t border-primary/20 mt-auto"
               >
-                Passer en Business <ArrowRight className="w-3 h-3" />
+                Voir Business <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
 
@@ -1327,7 +1327,7 @@ export default function OrganizerDashboardHome({
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-foreground">Enterprise & Salons</h4>
-                  <p className="text-xs text-muted mt-0.5">Concerts, salons, festivals et gestion multi-agences.</p>
+                  <p className="text-xs text-muted mt-0.5">Festivals, salons et grands événements.</p>
                 </div>
                 <div className="space-y-1 text-xs text-muted pt-1">
                   <p>• <strong>Enterprise</strong> : 350 000 FC / mois (3 500 inv.)</p>
@@ -1355,7 +1355,7 @@ export default function OrganizerDashboardHome({
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-foreground">Salles & Prestataires</h4>
-                  <p className="text-xs text-muted mt-0.5">Visibilité maximale sur le catalogue en RDC.</p>
+                  <p className="text-xs text-muted mt-0.5">Visibilité directe sur le catalogue RDC.</p>
                 </div>
                 <div className="space-y-1 text-xs text-muted pt-1">
                   <p>• <strong>Forfait Prestataire</strong> : 9 900 FC / mois</p>
@@ -1368,7 +1368,7 @@ export default function OrganizerDashboardHome({
                 href="/dashboard/billing"
                 className="text-xs font-bold text-purple-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
               >
-                Découvrir Vitrine <ArrowRight className="w-3 h-3" />
+                Voir Vitrine <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
           </div>
@@ -1386,12 +1386,12 @@ export default function OrganizerDashboardHome({
           </div>
           <div>
             <p className="text-xs font-bold text-foreground">
-              {isManager ? 'Une question sur votre rôle manager ?' : 'Une question sur la gestion de vos événements ?'}
+              {isManager ? 'Besoin d’aide sur votre espace ?' : 'Besoin d’aide ou de conseils ?'}
             </p>
             <p className="text-xs text-muted">
               {isManager
-                ? 'Le guide manager couvre réalisations, jetons IA, équipe et ce que le propriétaire garde (forfait).'
-                : 'Consultez notre guide complet avec vidéos et conseils étape par étape pour réussir vos réceptions.'}
+                ? 'Consultez le guide des fonctionnalités manager et de l’équipe.'
+                : 'Consultez notre guide pratique étape par étape.'}
             </p>
           </div>
         </div>
@@ -1406,7 +1406,7 @@ export default function OrganizerDashboardHome({
             href={isManager ? '/dashboard/publications' : '/dashboard/catalogue'}
             className="flex-1 sm:flex-none min-h-11 inline-flex items-center justify-center text-center px-3.5 py-2 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition shadow-xs"
           >
-            {isManager ? 'Réalisations' : 'Explorer le marketplace'}
+            {isManager ? 'Réalisations' : 'Marketplace'}
           </Link>
         </div>
       </section>

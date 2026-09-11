@@ -3655,8 +3655,8 @@ Merci de confirmer votre présence :
                     onDragLeave={handleDrag}
                     onDrop={handleDrop}
                     className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition flex flex-col items-center justify-center gap-3 ${dragActive
-                        ? 'border-primary bg-primary/10'
-                        : 'border-border bg-surface-muted/50 hover:bg-surface-muted'
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border bg-surface-muted/50 hover:bg-surface-muted'
                       }`}
                   >
                     <input
@@ -4062,12 +4062,12 @@ Merci de confirmer votre présence :
             <div className="flex items-center justify-between border-b border-border-subtle pb-4">
               <div className="flex items-center gap-2">
                 <div className={`p-1.5 rounded-lg ${broadcastSummary?.failed === broadcastSummary?.total
-                    ? 'bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400'
-                    : broadcastSummary?.allSimulated
+                  ? 'bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-400'
+                  : broadcastSummary?.allSimulated
+                    ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400'
+                    : (broadcastSummary?.failed || 0) > 0 || (broadcastSummary?.simulated || 0) > 0
                       ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400'
-                      : (broadcastSummary?.failed || 0) > 0 || (broadcastSummary?.simulated || 0) > 0
-                        ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400'
-                        : 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400'
+                      : 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400'
                   }`}>
                   {broadcastSummary?.failed === broadcastSummary?.total ? (
                     <AlertCircle className="w-5 h-5" />
@@ -4201,10 +4201,10 @@ Merci de confirmer votre présence :
                                   key={crIdx}
                                   title={cr.error || undefined}
                                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border ${cr.success && !cr.simulated
-                                      ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                                      : cr.simulated
-                                        ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                                        : 'bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
+                                    ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                                    : cr.simulated
+                                      ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                                      : 'bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
                                     }`}
                                 >
                                   {getChannelLabel(cr.channel)}
@@ -4232,8 +4232,8 @@ Merci de confirmer votre présence :
                           type="button"
                           onClick={() => handleCopyLink(res.guestId || index.toString(), publicRsvpLink(res.rsvpLink, res.guestId))}
                           className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border text-xs font-bold transition ${copiedGuestId === (res.guestId || index.toString())
-                              ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'
-                              : 'bg-surface border-border text-muted hover:bg-surface-muted'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'
+                            : 'bg-surface border-border text-muted hover:bg-surface-muted'
                             }`}
                           title="Copier le lien d'invitation"
                         >
@@ -4363,8 +4363,8 @@ Merci de confirmer votre présence :
                     type="button"
                     onClick={() => handleCopyLink(sharingGuest.id, getGuestRsvpLink(sharingGuest.id))}
                     className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-sm font-bold transition ${copiedGuestId === sharingGuest.id
-                        ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-surface border-border text-foreground hover:bg-surface-muted'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-surface border-border text-foreground hover:bg-surface-muted'
                       }`}
                   >
                     {copiedGuestId === sharingGuest.id ? (
