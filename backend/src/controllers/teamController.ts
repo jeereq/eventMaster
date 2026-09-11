@@ -16,6 +16,10 @@ import { VerificationMethod } from '../services/otpService';
 import { resolvePhoneFields } from '../utils/phone';
 import { assertAuthOtpMethodAllowed, resolveAuthOtpMethod } from '../services/platformSettingsService';
 import { grantWelcomeAiTokens } from '../services/welcomeAiTokens';
+import {
+  getTenantNotificationSettings,
+  updateTenantNotificationSettings,
+} from '../services/tenantNotificationSettingsService';
 
 const userSelect = {
   id: true,
@@ -530,5 +534,58 @@ export async function deleteTeamMember(req: AuthenticatedRequest, res: Response)
   } catch (error: any) {
     console.error('Erreur deleteTeamMember:', error);
     return res.status(500).json({ error: 'Impossible de supprimer l\'utilisateur.' });
+  }
+}
+
+/**
+ * Récupère les paramètres de notification billetterie & dons de l'organisation.
+ */
+export async function getOrgNotificationSettings(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+    if (!tenantId || !userId) {
+      return res.status(403).json({ error: 'Organisation non identifiée.' });
+    }
+
+    const access = await resolveOrgAccess(userId, tenantId);
+    if (!access.canManageTeam && !access.isOwner) {
+      return res.status(403).json({ error: 'Accès non autorisé.' });
+    }
+
+    const settings = await getTenantNotificationSettings(tenantId);
+    return res.json({ settings, isOwner: access.isOwner });
+  } catch (error: any) {
+    console.error('Erreur getOrgNotificationSettings:', error);
+    return res.status(500).json({ error: 'Impossible de récupérer les paramètres de notification.' });
+  }
+}
+
+/**
+ * Met à jour les paramètres de notification billetterie & dons de l'organisation (réservé au propriétaire).
+ */
+export async function updateOrgNotificationSettings(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+    if (!tenantId || !userId) {
+      return res.status(403).json({ error: 'Organisation non identifiée.' });
+    }
+
+    const access = await resolveOrgAccess(userId, tenantId);
+    if (!access.isOwner) {
+      return res.status(403).json({
+        error: 'Seul le propriétaire de l\'organisation a le droit de configurer la réception des notifications.',
+      });
+    }
+
+    const settings = await updateTenantNotificationSettings(tenantId, req.body);
+    return res.json({
+      message: 'Paramètres de notification mis à jour avec succès.',
+      settings,
+    });
+  } catch (error: any) {
+    console.error('Erreur updateOrgNotificationSettings:', error);
+    return res.status(500).json({ error: 'Impossible de mettre à jour les paramètres de notification.' });
   }
 }

@@ -2,11 +2,12 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Bell, Check, Loader2 } from 'lucide-react';
+import { Bell, Check, Loader2, Shield, Sliders } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { PageHeader, Breadcrumbs, Button, EmptyState, Pagination, Alert, usePageSize } from '@/components/ui';
 import NotificationPreferencesCard from '@/components/NotificationPreferencesCard';
+import OrgNotificationSettingsModal from '@/components/OrgNotificationSettingsModal';
 import { cn } from '@/lib/cn';
 import {
   NOTIFICATION_FAMILY_LABELS,
@@ -58,7 +59,9 @@ function followHref(item: PlatformNotificationItem): string | null {
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const { user, access } = useAuth();
+  const { user, access, tenant } = useAuth();
+  const isOwner = Boolean(access?.isOwner) || (Boolean(user?.id) && user?.id === tenant?.managerId);
+  const [showOrgNotifModal, setShowOrgNotifModal] = useState(false);
   const [family, setFamily] = useState<NotificationFamily>('all');
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [page, setPage] = useState(1);
@@ -159,6 +162,35 @@ export default function NotificationsPage() {
 
       {error && <Alert variant="error">{error}</Alert>}
 
+      {/* Encart spécifique pour le Propriétaire d'organisation */}
+      {isOwner && (
+        <div className="p-4 rounded-2xl border border-primary/25 bg-primary/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-2xs">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2">
+              <span className="p-1 rounded-md bg-primary/15 text-primary">
+                <Shield className="w-3.5 h-3.5" />
+              </span>
+              <p className="text-xs font-bold text-foreground">
+                Gouvernance des alertes de l’organisation (Billetterie & Dons)
+              </p>
+            </div>
+            <p className="text-xs text-muted">
+              Définissez qui au sein de votre équipe a le droit de recevoir les notifications d’achat de billets et de dons solidaires.
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="primary"
+            onClick={() => setShowOrgNotifModal(true)}
+            leftIcon={<Sliders className="w-3.5 h-3.5" />}
+            className="shrink-0"
+          >
+            Configurer les autorisations
+          </Button>
+        </div>
+      )}
+
       <details className="group" open>
         <summary className="cursor-pointer text-sm font-medium text-foreground hover:text-foreground list-none flex items-center gap-2 min-h-11 py-1">
           <span>Canaux e-mail, WhatsApp, push</span>
@@ -252,6 +284,12 @@ export default function NotificationsPage() {
           itemLabel="notifications"
         />
       )}
+
+      {/* Modal de configuration des alertes de l'organisation pour le propriétaire */}
+      <OrgNotificationSettingsModal
+        isOpen={showOrgNotifModal}
+        onClose={() => setShowOrgNotifModal(false)}
+      />
     </div>
   );
 }

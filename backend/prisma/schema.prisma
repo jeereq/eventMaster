@@ -151,6 +151,8 @@ model Tenant {
   defaultOrgCommercialRenewalCommissionRate Float @default(0.20)
   /** Couleurs de marque org : { primary, accent, sidebar? } */
   branding      Json?
+  /** Paramètres de notification billetterie & dons (propriétaire) : { ticketsEnabled, donationsEnabled, recipientMode, customUserIds, includeEventStaff } */
+  notificationSettings Json?
   /** ORGANIZER = SaaS événement (défaut). VENDOR = offre salles/prestas. BOTH = les deux. CLIENT = réserve sans SaaS. */
   accountKind   TenantAccountKind @default(ORGANIZER)
   /** Cycle facturé : période de base ou annuel (reprise au renouvellement auto). */

@@ -30,9 +30,11 @@ import {
   Layers,
   Sparkles,
   Heart,
+  Bell,
 } from 'lucide-react';
 import { Button, Input, StatusPill, EmptyState } from '@/components/ui';
 import { eventDashboardHref } from '@/lib/eventRoutes';
+import OrgNotificationSettingsModal from '@/components/OrgNotificationSettingsModal';
 
 export interface OrgTicketOrderGuest {
   id: string;
@@ -144,6 +146,7 @@ export default function OrgTicketingView({
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [actingGuestId, setActingGuestId] = useState<string | null>(null);
+  const [showNotifModal, setShowNotifModal] = useState(false);
 
   const isProtocolOnly = Boolean(access?.isProtocolOnly);
 
@@ -320,7 +323,18 @@ export default function OrgTicketingView({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {access?.isOwner && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowNotifModal(true)}
+              leftIcon={<Bell className="w-3.5 h-3.5 text-primary" />}
+            >
+              Alertes de paiement
+            </Button>
+          )}
           <Button
             type="button"
             variant="secondary"
@@ -843,6 +857,12 @@ export default function OrgTicketingView({
           })}
         </div>
       )}
+
+      {/* Modal de configuration des alertes de paiement (réservé au Propriétaire) */}
+      <OrgNotificationSettingsModal
+        isOpen={showNotifModal}
+        onClose={() => setShowNotifModal(false)}
+      />
     </div>
   );
 }

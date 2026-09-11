@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
   Users, UserPlus, Trash2, Loader2, Crown, Mail, Phone,
-  Shield, Briefcase, MessageSquare, TrendingUp, Copy, RefreshCw,
+  Shield, Briefcase, MessageSquare, TrendingUp, Copy, RefreshCw, Bell,
 } from 'lucide-react';
 import {
   SkeletonGrid, ViewModeToggle, useViewMode, listStackClass,
@@ -17,6 +17,7 @@ import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { getQuotaActionMessage } from '@/lib/planAccess';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
+import OrgNotificationSettingsModal from '@/components/OrgNotificationSettingsModal';
 import {
   allowsAuthOtpChoice,
   defaultAuthOtpMethod,
@@ -104,6 +105,7 @@ export default function TeamManagement() {
   const [editCommissionValue, setEditCommissionValue] = useState('');
   const [editRenewalCommissionValue, setEditRenewalCommissionValue] = useState('');
   const [resendingId, setResendingId] = useState<string | null>(null);
+  const [showNotifModal, setShowNotifModal] = useState(false);
 
   useEffect(() => {
     setVerificationMethod(defaultAuthOtpMethod(authChannels));
@@ -287,6 +289,17 @@ export default function TeamManagement() {
               defaultMode="grid"
               defaultColumns={2}
             />
+          )}
+          {access?.isOwner && (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => setShowNotifModal(true)}
+              leftIcon={<Bell className="w-4 h-4 text-primary" />}
+            >
+              Alertes Billetterie & Dons
+            </Button>
           )}
           {canManageTeam && (
             <Button type="button" size="sm" onClick={openForm} leftIcon={<UserPlus className="w-4 h-4" />}>
@@ -716,6 +729,12 @@ export default function TeamManagement() {
           itemLabel="membres"
         />
       )}
+
+      {/* Modal de configuration des alertes de billetterie & dons (Propriétaire) */}
+      <OrgNotificationSettingsModal
+        isOpen={showNotifModal}
+        onClose={() => setShowNotifModal(false)}
+      />
     </div>
   );
 }

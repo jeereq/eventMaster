@@ -4,6 +4,7 @@ import { notifyPlatformStaff, notifyTenantOperators, notifyUsers } from './platf
 import { logAdminAction } from './adminAuditService';
 import { sendRealEmail, sendRealWhatsApp } from './notificationService';
 import { renderOperatorNotificationEmail, renderOperatorWhatsApp } from '../utils/notificationTemplates';
+import { resolveNotificationRecipients } from './tenantNotificationSettingsService';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -327,37 +328,17 @@ export async function notifyTicketPayment(order: {
     ? `${FRONTEND_URL}/dashboard/events/${order.eventId}?tab=ticketing${isDonation ? '&type=DONATIONS' : ''}`
     : `${FRONTEND_URL}/dashboard/events`;
 
-  // Récupération des destinataires : Propriétaire de l'organisation + Managers
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: order.tenantId },
-    select: {
-      managerId: true,
-      users: {
-        where: { orgRole: 'MANAGER' },
-        select: { id: true },
-      },
-    },
+  // Résolution dynamique des destinataires selon la configuration du Propriétaire
+  const { shouldNotify, recipientUserIds } = await resolveNotificationRecipients({
+    tenantId: order.tenantId,
+    eventId: order.eventId,
+    isDonation,
+    isFailed: false,
   });
 
-  // Récupération également des membres du staff assignés à cet événement
-  let eventStaffUserIds: string[] = [];
-  if (order.eventId) {
-    try {
-      const staffRows = await prisma.eventStaff.findMany({
-        where: { eventId: order.eventId },
-        select: { userId: true },
-      });
-      eventStaffUserIds = staffRows.map((s) => s.userId);
-    } catch (err) {
-      console.error('[PaymentTrace] fetch event staff failed:', err);
-    }
+  if (!shouldNotify || recipientUserIds.length === 0) {
+    return created;
   }
-
-  const recipientIds = [
-    tenant?.managerId,
-    ...(tenant?.users.map((u) => u.id) || []),
-    ...eventStaffUserIds,
-  ].filter((id): id is string => Boolean(id));
 
   const title = isDonation
     ? 'Nouveau don solidaire reçu'
@@ -371,7 +352,7 @@ export async function notifyTicketPayment(order: {
     ? `${buyer} a acheté ${quantity} place${quantity > 1 ? 's' : ''} pour « ${eventTitle} » · ${amountLabel}`
     : `${buyer} s’est inscrit à « ${eventTitle} » (${quantity} place${quantity > 1 ? 's' : ''})`;
 
-  void notifyUsers(recipientIds, {
+  void notifyUsers(recipientUserIds, {
     type: PLATFORM_NOTIFICATION_TYPE.TICKET_SALE,
     title,
     message,
@@ -413,43 +394,24 @@ export async function notifyTicketPaymentFailed(order: {
     ? `${FRONTEND_URL}/dashboard/events/${order.eventId}?tab=ticketing${isDonation ? '&type=DONATIONS' : ''}`
     : `${FRONTEND_URL}/dashboard/events`;
 
-  // Destinataires : Propriétaire + Managers + Event Staff
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: order.tenantId },
-    select: {
-      managerId: true,
-      users: {
-        where: { orgRole: 'MANAGER' },
-        select: { id: true },
-      },
-    },
+  // Résolution dynamique des destinataires selon la configuration du Propriétaire
+  const { shouldNotify, recipientUserIds } = await resolveNotificationRecipients({
+    tenantId: order.tenantId,
+    eventId: order.eventId,
+    isDonation,
+    isFailed: true,
   });
 
-  let eventStaffUserIds: string[] = [];
-  if (order.eventId) {
-    try {
-      const staffRows = await prisma.eventStaff.findMany({
-        where: { eventId: order.eventId },
-        select: { userId: true },
-      });
-      eventStaffUserIds = staffRows.map((s) => s.userId);
-    } catch {
-      // Ignorer
-    }
+  if (!shouldNotify || recipientUserIds.length === 0) {
+    return;
   }
-
-  const recipientIds = [
-    tenant?.managerId,
-    ...(tenant?.users.map((u) => u.id) || []),
-    ...eventStaffUserIds,
-  ].filter((id): id is string => Boolean(id));
 
   const title = isDonation ? 'Paiement de don non abouti' : 'Paiement de billet non abouti';
   const message = isDonation
     ? `${buyer} n’a pas finalisé son don solidaire pour « ${eventTitle} »`
     : `${buyer} n’a pas finalisé ${quantity} place${quantity > 1 ? 's' : ''} pour « ${eventTitle} »`;
 
-  void notifyUsers(recipientIds, {
+  void notifyUsers(recipientUserIds, {
     type: PLATFORM_NOTIFICATION_TYPE.TICKET_PAYMENT_FAILED,
     title,
     message,
