@@ -651,9 +651,26 @@ export async function getOrgTicketingSummary(req: AuthenticatedRequest, res: Res
       ...(Array.isArray(accessible) ? { eventId: { in: accessible } } : {}),
     };
 
-    const [paidAggregate, pendingAggregate, totalOrdersCount, checkedInGuestsCount] = await Promise.all([
+    const [
+      paidAggregate,
+      paidTicketsAggregate,
+      paidDonationsAggregate,
+      pendingAggregate,
+      totalOrdersCount,
+      checkedInGuestsCount,
+    ] = await Promise.all([
       prisma.ticketOrder.aggregate({
         where: { ...orderWhere, status: 'PAID' },
+        _sum: { amountFc: true, quantity: true },
+        _count: { _all: true },
+      }),
+      prisma.ticketOrder.aggregate({
+        where: { ...orderWhere, status: 'PAID', NOT: { pricingZoneId: 'donation' } },
+        _sum: { amountFc: true, quantity: true },
+        _count: { _all: true },
+      }),
+      prisma.ticketOrder.aggregate({
+        where: { ...orderWhere, status: 'PAID', pricingZoneId: 'donation' },
         _sum: { amountFc: true, quantity: true },
         _count: { _all: true },
       }),
@@ -675,8 +692,12 @@ export async function getOrgTicketingSummary(req: AuthenticatedRequest, res: Res
     return res.json({
       summary: {
         totalRevenueFc: paidAggregate._sum.amountFc || 0,
-        paidTicketsCount: paidAggregate._sum.quantity || 0,
+        ticketsRevenueFc: paidTicketsAggregate._sum.amountFc || 0,
+        donationsRevenueFc: paidDonationsAggregate._sum.amountFc || 0,
+        paidTicketsCount: paidTicketsAggregate._sum.quantity || 0,
+        donationsCount: paidDonationsAggregate._count._all || 0,
         pendingTicketsCount: pendingAggregate._sum.quantity || 0,
+        pendingRevenueFc: pendingAggregate._sum.amountFc || 0,
         paidOrdersCount: paidAggregate._count._all || 0,
         pendingOrdersCount: pendingAggregate._count._all || 0,
         totalOrdersCount,

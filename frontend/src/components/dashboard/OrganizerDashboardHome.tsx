@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -36,7 +36,12 @@ import {
   Smartphone,
   Sliders,
   Rss,
+  TrendingUp,
+  Heart,
+  AlertTriangle,
+  UserCheck,
 } from 'lucide-react';
+import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
   Button,
@@ -105,7 +110,46 @@ export default function OrganizerDashboardHome({
 
   const isVendor = tenant?.accountKind === 'VENDOR';
   const isBoth = tenant?.accountKind === 'BOTH';
-  const isManager = access?.level === 'manager' && !access?.isOwner;
+  const isOwner = Boolean(access?.isOwner) || (Boolean(user?.id) && user?.id === tenant?.managerId);
+  const isManager = access?.level === 'manager' && !isOwner;
+
+  const [ticketingSummary, setTicketingSummary] = useState<{
+    totalRevenueFc: number;
+    ticketsRevenueFc?: number;
+    donationsRevenueFc?: number;
+    paidTicketsCount: number;
+    donationsCount?: number;
+    pendingRevenueFc?: number;
+    pendingTicketsCount?: number;
+    paidOrdersCount: number;
+    pendingOrdersCount: number;
+    totalOrdersCount: number;
+    checkedInGuestsCount: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (isOwner || access?.canViewBilling) {
+      let isMounted = true;
+      api
+        .get('/events/ticketing/summary')
+        .then((res) => {
+          if (isMounted && res?.summary) {
+            setTicketingSummary(res.summary);
+          }
+        })
+        .catch(() => {
+          // Si l'organisation n'a pas encore de commandes
+        });
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [isOwner, access?.canViewBilling]);
+
+  const licenseExpiresAt = tenant?.licenseExpiresAt;
+  const daysUntilExpiry = licenseExpiresAt
+    ? Math.ceil((new Date(licenseExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : null;
 
   const usage = planQuota?.usage || billing?.usage;
   const limits = planQuota?.limits || billing?.limits;
@@ -136,6 +180,48 @@ export default function OrganizerDashboardHome({
           THÉMATIQUE 1 : 🚀 PILOTAGE GLOBAL & ACTIONS DIRECTES
       ══════════════════════════════════════════════════════════════════════════ */}
       <section className="space-y-6">
+        {/* Alerte proactive d'échéance de licence pour le Propriétaire */}
+        {isOwner && daysUntilExpiry != null && daysUntilExpiry <= 15 && (
+          <div
+            className={cn(
+              'p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm transition',
+              daysUntilExpiry <= 0
+                ? 'bg-danger/10 border-danger/30 text-danger'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-200'
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  'p-2 rounded-xl shrink-0',
+                  daysUntilExpiry <= 0 ? 'bg-danger/20 text-danger' : 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                )}
+              >
+                {daysUntilExpiry <= 0 ? <AlertTriangle className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
+              </div>
+              <div>
+                <p className="font-bold">
+                  {daysUntilExpiry <= 0
+                    ? 'Votre abonnement est arrivé à expiration'
+                    : `Votre forfait expire dans ${daysUntilExpiry} jour${daysUntilExpiry > 1 ? 's' : ''}`}
+                </p>
+                <p className="text-xs opacity-90 mt-0.5">
+                  {daysUntilExpiry <= 0
+                    ? 'Renouvelez votre formule pour réactiver la billetterie et les quotas sans restriction.'
+                    : 'Renouvelez dès maintenant pour garantir la continuité des invitations WhatsApp et du contrôle d’accès.'}
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/dashboard/billing"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover transition shrink-0"
+            >
+              <span>Renouveler mon abonnement</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        )}
+
         {/* Bannière Hero avec recherche intégrée */}
         <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-border bg-linear-to-br from-primary/10 via-surface to-surface-muted p-5 sm:p-7 shadow-xs">
           <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
@@ -151,6 +237,8 @@ export default function OrganizerDashboardHome({
                     ? 'Espace Prestataire / Salles'
                     : isBoth
                     ? 'Espace Mixte (Organisation & Vitrine)'
+                    : isOwner
+                    ? 'Espace Propriétaire · Direction'
                     : 'Espace Organisateur'}
                 </span>
                 {tenant?.name && (
@@ -163,13 +251,29 @@ export default function OrganizerDashboardHome({
                     Forfait {tenant.plan}
                   </span>
                 )}
+                {isOwner && daysUntilExpiry != null && (
+                  <span
+                    className={cn(
+                      'text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md border',
+                      daysUntilExpiry <= 0
+                        ? 'bg-danger/10 border-danger/30 text-danger'
+                        : daysUntilExpiry <= 15
+                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300'
+                        : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                    )}
+                  >
+                    {daysUntilExpiry <= 0 ? 'Expiré' : `Licence · ${daysUntilExpiry}j restants`}
+                  </span>
+                )}
               </div>
 
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground truncate">
                 {greetingLabel}{user?.name ? `, ${user.name.split(' ')[0]}` : ''}
               </h1>
               <p className="text-xs sm:text-sm text-muted leading-relaxed">
-                {isManager
+                {isOwner
+                  ? 'Pilotage stratégique de votre organisation : recettes billetterie, dons solidaires, gestion d’équipe et suivi de vos abonnements.'
+                  : isManager
                   ? 'Pilotez le quotidien : événements, équipe, réalisations, simulateur IA et devis. Le forfait se change uniquement chez le propriétaire.'
                   : isVendor
                   ? 'Gérez vos prestations, vos disponibilités et répondez rapidement aux demandes de devis des organisateurs.'
@@ -215,8 +319,26 @@ export default function OrganizerDashboardHome({
                 className="min-h-11 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
               >
                 <Ticket className="w-3.5 h-3.5" />
-                Billetterie
+                Billetterie & Dons
               </Link>
+              {isOwner ? (
+                <>
+                  <Link
+                    href="/dashboard/team"
+                    className="min-h-11 px-3 py-2 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
+                  >
+                    <UserCheck className="w-3.5 h-3.5 text-primary" />
+                    Mon Équipe
+                  </Link>
+                  <Link
+                    href="/dashboard/billing"
+                    className="min-h-11 px-3 py-2 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
+                  >
+                    <Award className="w-3.5 h-3.5 text-emerald-600" />
+                    Abonnement & Licences
+                  </Link>
+                </>
+              ) : null}
               <Link
                 href="/dashboard/rooms"
                 className="min-h-11 px-3 py-2 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center"
@@ -315,29 +437,49 @@ export default function OrganizerDashboardHome({
             </div>
           </Link>
 
-          <Link
-            href={isVendor ? '/dashboard/marketplace' : '/dashboard/rooms'}
-            className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-purple-500/40 hover:bg-purple-500/5 transition group flex flex-col justify-between h-full"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-muted uppercase tracking-wider">
-                {isVendor ? 'Prestations' : 'Salles & Plans'}
-              </span>
-              <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition">
-                {isVendor ? <Briefcase className="w-4 h-4" /> : <Building2 className="w-4 h-4" />}
+          {isOwner ? (
+            <Link
+              href="/dashboard/team"
+              className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-blue-500/40 hover:bg-blue-500/5 transition group flex flex-col justify-between h-full"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-muted uppercase tracking-wider">Équipe</span>
+                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition">
+                  <UserCheck className="w-4 h-4" />
+                </div>
               </div>
-            </div>
-            <div className="mt-3">
-              <p className="text-2xl font-black text-foreground tracking-tight">
-                {isVendor
-                  ? (usage ? formatQuota(usage.services, limits?.maxServices) : '—')
-                  : (usage ? formatQuota(usage.rooms, limits?.maxRooms) : '—')}
-              </p>
-              <p className="text-xs text-muted mt-0.5">
-                {isVendor ? 'Prestations vitrine' : 'Plans 2D/3D créés'}
-              </p>
-            </div>
-          </Link>
+              <div className="mt-3">
+                <p className="text-2xl font-black text-foreground tracking-tight">
+                  {usage ? formatQuota(usage.orgManagers, limits?.maxOrgManagers) : '—'}
+                </p>
+                <p className="text-xs text-muted mt-0.5">Managers & Opérateurs</p>
+              </div>
+            </Link>
+          ) : (
+            <Link
+              href={isVendor ? '/dashboard/marketplace' : '/dashboard/rooms'}
+              className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-purple-500/40 hover:bg-purple-500/5 transition group flex flex-col justify-between h-full"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-muted uppercase tracking-wider">
+                  {isVendor ? 'Prestations' : 'Salles & Plans'}
+                </span>
+                <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition">
+                  {isVendor ? <Briefcase className="w-4 h-4" /> : <Building2 className="w-4 h-4" />}
+                </div>
+              </div>
+              <div className="mt-3">
+                <p className="text-2xl font-black text-foreground tracking-tight">
+                  {isVendor
+                    ? (usage ? formatQuota(usage.services, limits?.maxServices) : '—')
+                    : (usage ? formatQuota(usage.rooms, limits?.maxRooms) : '—')}
+                </p>
+                <p className="text-xs text-muted mt-0.5">
+                  {isVendor ? 'Prestations vitrine' : 'Plans 2D/3D créés'}
+                </p>
+              </div>
+            </Link>
+          )}
 
           <Link
             href="/dashboard/bookings"
@@ -371,15 +513,160 @@ export default function OrganizerDashboardHome({
               </div>
             </div>
             <div className="mt-3">
-              <p className="text-xl font-black text-foreground tracking-tight truncate">
-                {tenant?.plan || billing?.plan || 'Standard'}
-              </p>
-              <p className="text-xs text-muted mt-0.5">
-                {isManager ? 'Consultation — le forfait reste au propriétaire' : 'Gérer mon abonnement'}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <p className="text-xl font-black text-foreground tracking-tight truncate">
+                  {tenant?.plan || billing?.plan || 'Standard'}
+                </p>
+                {isOwner && daysUntilExpiry != null && (
+                  <span
+                    className={cn(
+                      'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+                      daysUntilExpiry <= 0
+                        ? 'bg-danger/10 text-danger border border-danger/20'
+                        : daysUntilExpiry <= 15
+                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                        : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                    )}
+                  >
+                    {daysUntilExpiry <= 0 ? 'Expiré' : `${daysUntilExpiry}j`}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted mt-0.5 truncate">
+                {isManager
+                  ? 'Consultation — le forfait reste au propriétaire'
+                  : daysUntilExpiry != null
+                  ? daysUntilExpiry <= 0
+                    ? 'Renouvellement requis'
+                    : `Licence active (${daysUntilExpiry}j)`
+                  : 'Gérer mon abonnement'}
               </p>
             </div>
           </Link>
         </div>
+
+        {/* ══════════════════════════════════════════════════════════════════════════
+            PILOTAGE FINANCIER & ENCAISSEMENTS (PROPRIÉTAIRE & DIRECTION)
+        ══════════════════════════════════════════════════════════════════════════ */}
+        {(isOwner || access?.canViewBilling) && (
+          <div className="space-y-3.5 pt-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-surface p-4 sm:p-5 rounded-2xl border border-border shadow-2xs">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <TrendingUp className="w-4 h-4" />
+                  </span>
+                  <h2 className="text-base font-bold text-foreground">
+                    Pilotage Financier & Encaissements
+                  </h2>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                    Direction
+                  </span>
+                </div>
+                <p className="text-xs text-muted">
+                  Vision globale en temps réel : recettes de billetterie, dons solidaires et taux d’émargement aux entrées.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <Link
+                  href="/dashboard/tickets"
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold bg-primary/10 border border-primary/20 text-primary hover:bg-primary/15 transition inline-flex items-center gap-1.5"
+                >
+                  <Ticket className="w-3.5 h-3.5" />
+                  <span>Registre Billetterie & Dons</span>
+                  <ChevronRight className="w-3 h-3" />
+                </Link>
+                <Link
+                  href="/dashboard/billing"
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold bg-surface-muted hover:bg-surface border border-border text-foreground transition inline-flex items-center gap-1.5"
+                >
+                  <Award className="w-3.5 h-3.5 text-primary" />
+                  <span>Abonnement & Licences</span>
+                </Link>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+              {/* 1. Revenus Globaux */}
+              <div className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-muted uppercase tracking-wider">Recettes Globales</span>
+                  <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <Wallet className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <p className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
+                    {formatFc(ticketingSummary?.totalRevenueFc ?? 0)}
+                  </p>
+                  <p className="text-xs text-muted mt-0.5">
+                    {ticketingSummary?.paidOrdersCount ?? 0} commande{(ticketingSummary?.paidOrdersCount ?? 0) > 1 ? 's' : ''} encaissée{(ticketingSummary?.paidOrdersCount ?? 0) > 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+
+              {/* 2. Billetterie Commerciale */}
+              <div className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-muted uppercase tracking-wider">Ventes Billets</span>
+                  <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                    <Ticket className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <p className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
+                    {formatFc(ticketingSummary?.ticketsRevenueFc ?? (ticketingSummary?.totalRevenueFc ?? 0))}
+                  </p>
+                  <p className="text-xs text-muted mt-0.5">
+                    {ticketingSummary?.paidTicketsCount ?? 0} place{(ticketingSummary?.paidTicketsCount ?? 0) > 1 ? 's' : ''} payée{(ticketingSummary?.paidTicketsCount ?? 0) > 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+
+              {/* 3. Dons Solidaires */}
+              <div className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-rose-500/50 hover:bg-rose-500/5 transition flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-muted uppercase tracking-wider">Dons Solidaires</span>
+                  <div className="p-2 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                    <Heart className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <p className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
+                    {formatFc(ticketingSummary?.donationsRevenueFc ?? 0)}
+                  </p>
+                  <p className="text-xs text-muted mt-0.5">
+                    {ticketingSummary?.donationsCount ?? 0} donateur{(ticketingSummary?.donationsCount ?? 0) > 1 ? 's' : ''} enregistré{(ticketingSummary?.donationsCount ?? 0) > 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+
+              {/* 4. Émargement Jour J */}
+              <div className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-amber-500/50 hover:bg-amber-500/5 transition flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-muted uppercase tracking-wider">Émargement Jour J</span>
+                  <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    <ScanLine className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <p className="text-xl sm:text-2xl font-black text-foreground tracking-tight">
+                    {ticketingSummary?.checkedInGuestsCount ?? 0}
+                    <span className="text-sm font-semibold text-muted ml-1">
+                      / {ticketingSummary?.paidTicketsCount || ticketingSummary?.totalOrdersCount || 0}
+                    </span>
+                  </p>
+                  <p className="text-xs text-muted mt-0.5">
+                    {(ticketingSummary?.paidTicketsCount ?? 0) > 0
+                      ? `${Math.round(((ticketingSummary?.checkedInGuestsCount ?? 0) / (ticketingSummary?.paidTicketsCount || 1)) * 100)} % de présence`
+                      : 'Participants scannés'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════════════
@@ -865,6 +1152,47 @@ export default function OrganizerDashboardHome({
         {orgQuota && (
           <div className="space-y-2">
             <QuotaUsagePanel quota={orgQuota} />
+          </div>
+        )}
+
+        {isOwner && (
+          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                  <Shield className="w-4 h-4" />
+                </span>
+                <p className="text-sm font-bold text-foreground">
+                  Titulaire du compte : Forfait {tenant?.plan || billing?.plan || 'actuel'}
+                </p>
+                {daysUntilExpiry != null && (
+                  <span
+                    className={cn(
+                      'text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md border',
+                      daysUntilExpiry <= 0
+                        ? 'bg-danger/10 border-danger/30 text-danger'
+                        : daysUntilExpiry <= 15
+                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300'
+                        : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                    )}
+                  >
+                    {daysUntilExpiry <= 0 ? 'Expiré' : `Échéance dans ${daysUntilExpiry} jours`}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted">
+                En tant que propriétaire, vous pouvez changer de formule à tout moment, activer un code promo, renouveler votre licence ou gérer votre équipe.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Link
+                href="/dashboard/billing"
+                className="px-4 py-2 rounded-xl bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+              >
+                <span>Gérer mon forfait</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
           </div>
         )}
 

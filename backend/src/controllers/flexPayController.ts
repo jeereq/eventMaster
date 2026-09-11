@@ -151,6 +151,7 @@ export async function flexPayCardCallback(req: Request, res: Response) {
             buyerEmail: order.buyerEmail,
             amountFc: order.amountFc,
             quantity: order.quantity,
+            isDonation: order.pricingZoneId === 'donation',
           });
         }
         return res.json({ ok: true, paid: false, kind: 'ticket', orderId: order.id });
@@ -486,6 +487,7 @@ export async function verifyFlexPayCardOrder(req: Request, res: Response) {
           buyerEmail: order.buyerEmail,
           amountFc: order.amountFc,
           quantity: order.quantity,
+          isDonation: order.pricingZoneId === 'donation',
         });
       }
       return res.json({

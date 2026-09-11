@@ -47,7 +47,11 @@ function staffPaymentHref(kind: PaymentTraceKind, metadata?: Record<string, unkn
 
 function staffPaymentTitle(kind: PaymentTraceKind, metadata?: Record<string, unknown>): string {
   if (kind === 'ticket') {
+    const isDonation = Boolean(metadata?.isDonation);
     const eventTitle = typeof metadata?.eventTitle === 'string' ? metadata.eventTitle : '';
+    if (isDonation) {
+      return eventTitle ? `Don reçu — ${eventTitle}` : 'Don solidaire reçu';
+    }
     return eventTitle ? `Billet vendu — ${eventTitle}` : 'Billet vendu';
   }
   if (kind === 'subscription') {
@@ -282,10 +286,17 @@ export async function notifyTicketPayment(order: {
   eventId?: string | null;
   tenantId?: string | null;
   tenantName?: string | null;
+  isDonation?: boolean;
+  donationNote?: string | null;
 }) {
+  const isDonation = Boolean(order.isDonation);
   const quantity = order.quantity || 1;
   const amountFc = Number(order.amountFc) || 0;
   const eventTitle = order.eventTitle || 'événement';
+  const amountLabel = formatAmount(amountFc);
+  const buyer = order.buyerName || order.buyerEmail || (isDonation ? 'Un donateur anonyme' : 'Un acheteur');
+  const donationNote = order.donationNote ? order.donationNote.trim() : '';
+
   const created = await recordPaymentSuccess({
     kind: 'ticket',
     reference: order.id,
@@ -293,7 +304,9 @@ export async function notifyTicketPayment(order: {
     payerUserId: order.userId,
     payerEmail: order.buyerEmail,
     payerPhone: order.buyerPhone,
-    summary: `Billet${quantity > 1 ? 's' : ''} « ${eventTitle} » × ${quantity}`,
+    summary: isDonation
+      ? `Don solidaire « ${eventTitle} » · ${amountLabel}`
+      : `Billet${quantity > 1 ? 's' : ''} « ${eventTitle} » × ${quantity}`,
     metadata: {
       orderId: order.id,
       quantity,
@@ -302,35 +315,79 @@ export async function notifyTicketPayment(order: {
       eventTitle,
       tenantId: order.tenantId || null,
       tenantName: order.tenantName || null,
+      isDonation,
+      donationNote: donationNote || null,
     },
   });
 
   if (!created.created || !order.tenantId) return created;
 
-  const amountLabel = formatAmount(amountFc);
-  const buyer = order.buyerName || order.buyerEmail || 'Un acheteur';
   const isPaid = amountFc > 0;
   const href = order.eventId
-    ? `${FRONTEND_URL}/dashboard/events/${order.eventId}?tab=ticketing`
+    ? `${FRONTEND_URL}/dashboard/events/${order.eventId}?tab=ticketing${isDonation ? '&type=DONATIONS' : ''}`
     : `${FRONTEND_URL}/dashboard/events`;
 
-  void notifyTenantOperators(order.tenantId, {
+  // Récupération des destinataires : Propriétaire de l'organisation + Managers
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: order.tenantId },
+    select: {
+      managerId: true,
+      users: {
+        where: { orgRole: 'MANAGER' },
+        select: { id: true },
+      },
+    },
+  });
+
+  // Récupération également des membres du staff assignés à cet événement
+  let eventStaffUserIds: string[] = [];
+  if (order.eventId) {
+    try {
+      const staffRows = await prisma.eventStaff.findMany({
+        where: { eventId: order.eventId },
+        select: { userId: true },
+      });
+      eventStaffUserIds = staffRows.map((s) => s.userId);
+    } catch (err) {
+      console.error('[PaymentTrace] fetch event staff failed:', err);
+    }
+  }
+
+  const recipientIds = [
+    tenant?.managerId,
+    ...(tenant?.users.map((u) => u.id) || []),
+    ...eventStaffUserIds,
+  ].filter((id): id is string => Boolean(id));
+
+  const title = isDonation
+    ? 'Nouveau don solidaire reçu'
+    : isPaid
+    ? 'Nouveau billet payé'
+    : 'Nouvelle inscription';
+
+  const message = isDonation
+    ? `${buyer} a fait un don de ${amountLabel} pour « ${eventTitle} »${donationNote ? ` (« ${donationNote} »)` : ''}`
+    : isPaid
+    ? `${buyer} a acheté ${quantity} place${quantity > 1 ? 's' : ''} pour « ${eventTitle} » · ${amountLabel}`
+    : `${buyer} s’est inscrit à « ${eventTitle} » (${quantity} place${quantity > 1 ? 's' : ''})`;
+
+  void notifyUsers(recipientIds, {
     type: PLATFORM_NOTIFICATION_TYPE.TICKET_SALE,
-    title: isPaid ? 'Nouveau billet payé' : 'Nouvelle inscription',
-    message: isPaid
-      ? `${buyer} a acheté ${quantity} place${quantity > 1 ? 's' : ''} pour « ${eventTitle} » · ${amountLabel}`
-      : `${buyer} s’est inscrit à « ${eventTitle} » (${quantity} place${quantity > 1 ? 's' : ''})`,
+    title,
+    message,
     metadata: {
-      kind: 'ticket',
+      kind: isDonation ? 'donation' : 'ticket',
       orderId: order.id,
       eventId: order.eventId || null,
       eventTitle,
       tenantId: order.tenantId,
       quantity,
       amountFc,
+      isDonation,
+      donationNote: donationNote || null,
       href,
     },
-  }).catch((err) => console.error('[PaymentTrace] notify tenant operators:', err));
+  }).catch((err) => console.error('[PaymentTrace] notify ticket/donation payment:', err));
 
   return created;
 }
@@ -344,28 +401,67 @@ export async function notifyTicketPaymentFailed(order: {
   buyerEmail?: string | null;
   amountFc?: number | null;
   quantity?: number | null;
+  isDonation?: boolean;
 }) {
   if (!order.tenantId) return;
 
+  const isDonation = Boolean(order.isDonation);
   const eventTitle = order.eventTitle || 'événement';
-  const buyer = order.buyerName || order.buyerEmail || 'Un acheteur';
+  const buyer = order.buyerName || order.buyerEmail || (isDonation ? 'Un donateur' : 'Un acheteur');
   const quantity = order.quantity || 1;
   const href = order.eventId
-    ? `${FRONTEND_URL}/dashboard/events/${order.eventId}?tab=ticketing`
+    ? `${FRONTEND_URL}/dashboard/events/${order.eventId}?tab=ticketing${isDonation ? '&type=DONATIONS' : ''}`
     : `${FRONTEND_URL}/dashboard/events`;
 
-  void notifyTenantOperators(order.tenantId, {
+  // Destinataires : Propriétaire + Managers + Event Staff
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: order.tenantId },
+    select: {
+      managerId: true,
+      users: {
+        where: { orgRole: 'MANAGER' },
+        select: { id: true },
+      },
+    },
+  });
+
+  let eventStaffUserIds: string[] = [];
+  if (order.eventId) {
+    try {
+      const staffRows = await prisma.eventStaff.findMany({
+        where: { eventId: order.eventId },
+        select: { userId: true },
+      });
+      eventStaffUserIds = staffRows.map((s) => s.userId);
+    } catch {
+      // Ignorer
+    }
+  }
+
+  const recipientIds = [
+    tenant?.managerId,
+    ...(tenant?.users.map((u) => u.id) || []),
+    ...eventStaffUserIds,
+  ].filter((id): id is string => Boolean(id));
+
+  const title = isDonation ? 'Paiement de don non abouti' : 'Paiement de billet non abouti';
+  const message = isDonation
+    ? `${buyer} n’a pas finalisé son don solidaire pour « ${eventTitle} »`
+    : `${buyer} n’a pas finalisé ${quantity} place${quantity > 1 ? 's' : ''} pour « ${eventTitle} »`;
+
+  void notifyUsers(recipientIds, {
     type: PLATFORM_NOTIFICATION_TYPE.TICKET_PAYMENT_FAILED,
-    title: 'Paiement de billet non abouti',
-    message: `${buyer} n’a pas finalisé ${quantity} place${quantity > 1 ? 's' : ''} pour « ${eventTitle} »`,
+    title,
+    message,
     metadata: {
-      kind: 'ticket',
+      kind: isDonation ? 'donation' : 'ticket',
       orderId: order.id,
       eventId: order.eventId || null,
       eventTitle,
       tenantId: order.tenantId,
       quantity,
       amountFc: Number(order.amountFc) || 0,
+      isDonation,
       href,
     },
   }).catch((err) => console.error('[PaymentTrace] notify ticket payment failed:', err));

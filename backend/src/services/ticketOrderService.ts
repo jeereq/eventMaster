@@ -180,6 +180,8 @@ export async function fulfillTicketOrder(orderId: string, stripeSession?: {
     eventId: event.id,
     tenantId: event.tenantId,
     tenantName: event.tenant.name,
+    isDonation,
+    donationNote: typeof donationMeta?.donationNote === 'string' ? donationMeta.donationNote : null,
   }).catch((err) => console.error('[Ticket] notify payment:', err));
 
   const primary = paid?.guests.find((g) => g.email.toLowerCase() === order.buyerEmail.toLowerCase()) || paid?.guests[0];

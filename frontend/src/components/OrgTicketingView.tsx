@@ -80,8 +80,12 @@ export interface OrgTicketOrder {
 
 export interface OrgTicketingSummaryData {
   totalRevenueFc: number;
+  ticketsRevenueFc?: number;
+  donationsRevenueFc?: number;
   paidTicketsCount: number;
+  donationsCount?: number;
   pendingTicketsCount: number;
+  pendingRevenueFc?: number;
   paidOrdersCount: number;
   pendingOrdersCount: number;
   totalOrdersCount: number;
