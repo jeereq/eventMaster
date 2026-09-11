@@ -314,11 +314,94 @@ h1, h2, h3, h4 {
   animation: em-studio-shimmer 2.4s linear infinite;
 }
 
+/* ─── Animations de Chargement Style Moteur / Jeu 3D ─── */
+@keyframes em-grid-drift {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 44px; }
+}
+
+@keyframes em-gyro-ring-pitch {
+  0% { transform: rotateX(0deg) rotateY(25deg); }
+  100% { transform: rotateX(360deg) rotateY(25deg); }
+}
+
+@keyframes em-gyro-ring-yaw {
+  0% { transform: rotateY(0deg) rotateZ(35deg); }
+  100% { transform: rotateY(360deg) rotateZ(35deg); }
+}
+
+@keyframes em-gyro-ring-roll {
+  0% { transform: rotateZ(0deg) rotateX(45deg); }
+  100% { transform: rotateZ(360deg) rotateX(45deg); }
+}
+
+@keyframes em-laser-scanner-3d {
+  0% { top: -5%; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { top: 105%; opacity: 0; }
+}
+
+@keyframes em-radar-sweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes em-holo-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.4)) drop-shadow(0 0 22px rgba(99, 102, 241, 0.25));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(245, 158, 11, 0.75)) drop-shadow(0 0 35px rgba(99, 102, 241, 0.5));
+  }
+}
+
+.em-3d-grid-floor {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  animation: em-grid-drift 2.2s linear infinite;
+  mask-image: radial-gradient(ellipse 70% 55% at 50% 50%, black 20%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 50%, black 20%, transparent 80%);
+}
+
+.em-gyro-ring-1 {
+  animation: em-gyro-ring-pitch 9s linear infinite;
+}
+
+.em-gyro-ring-2 {
+  animation: em-gyro-ring-yaw 13s linear infinite;
+}
+
+.em-gyro-ring-3 {
+  animation: em-gyro-ring-roll 17s linear infinite;
+}
+
+.em-laser-scanner-3d {
+  animation: em-laser-scanner-3d 2.6s ease-in-out infinite;
+}
+
+.em-radar-sweep {
+  animation: em-radar-sweep 4s linear infinite;
+}
+
+.em-holo-glow {
+  animation: em-holo-glow 3.2s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .em-studio-scan,
   .em-studio-float,
   .em-studio-dot-in,
-  .em-studio-shimmer {
+  .em-studio-shimmer,
+  .em-3d-grid-floor,
+  .em-gyro-ring-1,
+  .em-gyro-ring-2,
+  .em-gyro-ring-3,
+  .em-laser-scanner-3d,
+  .em-radar-sweep,
+  .em-holo-glow {
     animation: none !important;
   }
   .em-studio-dot-in {
