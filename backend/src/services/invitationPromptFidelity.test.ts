@@ -10,7 +10,10 @@ import {
   type InvitationComposeContext,
 } from './invitationComposeContextUtils.ts';
 import {
+  NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE,
   NANO_BANANA_CRITICAL_CONSTRAINT,
+  NANO_BANANA_LIGHT_RIG_COHERENCE,
+  NANO_BANANA_OPTICAL_BOKEH,
   NANO_BANANA_STYLE_INSTRUCTION,
   applyEnglishSceneBrief,
   buildEnglishSceneBriefScaffold,
@@ -18,7 +21,9 @@ import {
   buildHonestFaceIdentityHeader,
   buildNanoBananaRawDirectives,
   buildReferenceRoles,
+  buildVariantImagePrompt,
   isSafetyFilterTriggered,
+  optimizeReferenceImageUrl,
   parseEnglishSceneBriefFromJson,
   processUserPromptForHonestFaces,
   stripFaceBeautifyLanguage,
@@ -228,6 +233,13 @@ describe('buildHonestFaceIdentityHeader', () => {
     assert.equal(buildReferenceRoles(0), '');
   });
 
+  it('génère les rôles spatiaux et character binding pour plusieurs hôtes', () => {
+    const roles = buildReferenceRoles(2);
+    assert.match(roles, /Image 1 \(left \/ primary position\)/);
+    assert.match(roles, /Image 2 \(right \/ secondary position\)/);
+    assert.match(roles, /SPATIAL CHARACTER BINDING/);
+  });
+
   it('injecte obligatoirement les directives RAW et contraintes strictes anti-lissage Nano Banana', () => {
     const header = buildHonestFaceIdentityHeader(2);
     assert.match(header, /Style instruction: RAW candid photography/);
@@ -237,8 +249,29 @@ describe('buildHonestFaceIdentityHeader', () => {
   });
 });
 
+describe('optimizeReferenceImageUrl', () => {
+  it('injecte la transformation adaptative Cloudinary pour WebP/JPEG et redimensionnement', () => {
+    const raw = 'https://res.cloudinary.com/eventmaster/image/upload/v12345/couple.jpg';
+    const optimized = optimizeReferenceImageUrl(raw);
+    assert.equal(
+      optimized,
+      'https://res.cloudinary.com/eventmaster/image/upload/f_auto,q_auto:good,w_1536,c_limit/v12345/couple.jpg',
+    );
+  });
+
+  it('ne ré-injecte pas de transformation si elle est déjà présente', () => {
+    const already = 'https://res.cloudinary.com/eventmaster/image/upload/f_auto,q_auto:good,w_1536,c_limit/v12345/couple.jpg';
+    assert.equal(optimizeReferenceImageUrl(already), already);
+  });
+
+  it('laisse intactes les URL non-Cloudinary', () => {
+    const external = 'https://example.com/photos/couple.jpg';
+    assert.equal(optimizeReferenceImageUrl(external), external);
+  });
+});
+
 describe('Nano Banana RAW Directives & Fidelity', () => {
-  it('définit fidèlement les directives de style et contraintes critiques', () => {
+  it('définit fidèlement les directives de style, lumière et contraintes critiques', () => {
     assert.equal(
       NANO_BANANA_STYLE_INSTRUCTION,
       'Style instruction: RAW candid photography, unedited, natural skin texture, visible pores, skin blemishes, slight facial asymmetry, harsh flash photography, 8k UHD, dslr, film grain.',
@@ -247,20 +280,28 @@ describe('Nano Banana RAW Directives & Fidelity', () => {
       NANO_BANANA_CRITICAL_CONSTRAINT,
       'CRITICAL CONSTRAINT: Do NOT apply any beauty filters, do NOT smooth skin, do NOT create perfect symmetry, do NOT use airbrushing. The faces MUST retain the exact natural, unedited texture of the reference images.',
     );
+    assert.match(NANO_BANANA_LIGHT_RIG_COHERENCE, /LIGHT RIG COHERENCE/);
+    assert.match(NANO_BANANA_OPTICAL_BOKEH, /OPTICAL DEPTH OF FIELD/);
+
     const directives = buildNanoBananaRawDirectives(true);
     assert.match(directives, /CRITICAL CONSTRAINT/);
     assert.match(directives, /RAW candid photography/);
+    assert.match(directives, /LIGHT RIG COHERENCE/);
+    assert.match(directives, /OPTICAL DEPTH OF FIELD/);
   });
 
-  it('inclut les directives RAW dans imageBrief lors de la présence de visages', () => {
+  it('inclut les directives RAW et de lumière dans imageBrief lors de la présence de visages', () => {
     const processed = processUserPromptForHonestFaces('Mariage prestige Kinshasa', { referenceCount: 1 });
     assert.match(processed.imageBrief, /RAW candid photography/);
     assert.match(processed.imageBrief, /CRITICAL CONSTRAINT/);
+    assert.match(processed.imageBrief, /LIGHT RIG COHERENCE/);
+    assert.match(processed.imageBrief, /OPTICAL DEPTH OF FIELD/);
   });
 
   it('n’injecte pas les directives de visage si aucune photo de référence n’est fournie', () => {
     const processed = processUserPromptForHonestFaces('Mariage décoratif sans photo', { referenceCount: 0 });
     assert.doesNotMatch(processed.imageBrief, /RAW candid photography/);
+    assert.doesNotMatch(processed.imageBrief, /LIGHT RIG COHERENCE/);
     assert.equal(processed.identityHeader, '');
   });
 });
@@ -317,10 +358,22 @@ describe('Nano Banana Robustesse & Safety Filter Fallback', () => {
     assert.match(fallbackPrompt, /vertical 9:16 luxury invitation/i);
     assert.match(fallbackPrompt, /ABSOLUTELY NO human beings/i);
     assert.match(fallbackPrompt, /STRICT CONSTRAINT: Pure festive décor/i);
+    assert.match(fallbackPrompt, /CLEAN ARTWORK MANDATE/);
     assert.match(fallbackPrompt, /drapés de soie pourpre/);
     assert.doesNotMatch(fallbackPrompt, /IDENTITY ANCHOR/);
     assert.doesNotMatch(fallbackPrompt, /visible pores/);
     assert.doesNotMatch(fallbackPrompt, /Do NOT apply any beauty filters/);
   });
+
+  it('génère un prompt de variante A/B préservant l’identité avec une alternative de composition', () => {
+    const original = 'Soirée de fiançailles or et vert émeraude au bord du fleuve Congo.';
+    const variant = buildVariantImagePrompt(original);
+
+    assert.match(variant, /Soirée de fiançailles or et vert émeraude/);
+    assert.match(variant, /ALTERNATIVE COMPOSITION VARIANT \(A\/B VARIATION 2\)/);
+    assert.match(variant, /subtle variation in framing/i);
+    assert.match(variant, /vertical 9:16/i);
+  });
 });
+
 

@@ -26,6 +26,8 @@ export type TemplateAiComposeResult = {
     structureReady: boolean;
     backgroundReady: boolean;
     imageMode?: 'edit' | 'generate' | null;
+    variants?: string[];
+    safetyFallbackTriggered?: boolean;
   };
   historyId?: string | null;
   remaining?: number;
@@ -55,6 +57,7 @@ export async function composeTemplateWithAi(input: {
   embedText?: boolean;
   contextSource?: InvitationContextSource;
   artStyle?: InvitationArtStyleId;
+  variantsCount?: number;
 }): Promise<TemplateAiComposeResult> {
   const deviceId = getOrCreateDeviceId();
   const data = await api.post('/templates/ai/compose', {
@@ -65,6 +68,7 @@ export async function composeTemplateWithAi(input: {
     embedText: Boolean(input.embedText),
     contextSource: input.contextSource || 'none',
     artStyle: input.artStyle || 'realiste',
+    variantsCount: input.variantsCount,
   });
   if (data?.allowance) {
     applyServerAllowance(data.allowance);
@@ -83,6 +87,7 @@ export async function composeTemplateWithAiPublic(input: {
   embedText?: boolean;
   contextSource?: InvitationContextSource;
   artStyle?: InvitationArtStyleId;
+  variantsCount?: number;
 }): Promise<TemplateAiComposeResult> {
   const deviceId = getOrCreateDeviceId();
   const imageDataUrls: string[] = [];
@@ -97,6 +102,7 @@ export async function composeTemplateWithAiPublic(input: {
     embedText: Boolean(input.embedText),
     contextSource: input.contextSource || 'none',
     artStyle: input.artStyle || 'realiste',
+    variantsCount: input.variantsCount,
   });
   if (data?.allowance) {
     applyServerAllowance(data.allowance);
@@ -200,6 +206,8 @@ export type AiComposeEditorSetters = {
   setCanvasWidth: (v: number) => void;
   setCanvasHeight: (v: number) => void;
   setSelectedElementId: (v: string | null) => void;
+  setAiVariants?: (v: string[]) => void;
+  setAiSafetyFallback?: (v: boolean) => void;
 };
 
 /** Applique le payload IA dans l’éditeur canvas (même esprit que l’import maquette). */
@@ -229,6 +237,22 @@ export function applyAiComposeToEditor(
   setters.setFloralDensity(
     typeof global.floralDensity === 'number' ? global.floralDensity : 40,
   );
+
+  if (setters.setAiVariants) {
+    const rawVariants = Array.isArray(global.aiVariants) ? (global.aiVariants as string[]) : [];
+    const validVariants = rawVariants.filter((u) => typeof u === 'string' && u.trim());
+    if (validVariants.length > 0) {
+      setters.setAiVariants(validVariants);
+    } else if (typeof global.bgImageUrl === 'string' && global.bgImageUrl) {
+      setters.setAiVariants([global.bgImageUrl]);
+    } else {
+      setters.setAiVariants([]);
+    }
+  }
+
+  if (setters.setAiSafetyFallback) {
+    setters.setAiSafetyFallback(Boolean(global.aiSafetyFallbackTriggered));
+  }
 
   const palette =
     global.palette && typeof global.palette === 'object' && !Array.isArray(global.palette)

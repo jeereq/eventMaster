@@ -241,6 +241,7 @@ export default function LandingInvitationAiGenerator({
   const stageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [embedText, setEmbedText] = useState(false);
+  const [variantsCount, setVariantsCount] = useState<1 | 2>(1);
   const [artStyle, setArtStyle] = useState<InvitationArtStyleId>(DEFAULT_INVITATION_ART_STYLE);
   const [contextSource, setContextSource] = useState<InvitationContextSource>('none');
   const [downloading, setDownloading] = useState(false);
@@ -548,6 +549,7 @@ export default function LandingInvitationAiGenerator({
         embedText,
         contextSource,
         artStyle,
+        variantsCount,
       });
       if (seq !== generationSeq.current) return;
       setResult(data.content);
@@ -1056,6 +1058,37 @@ export default function LandingInvitationAiGenerator({
                   </span>
                 </button>
 
+                <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="block text-xs font-bold text-foreground">Variations A/B</span>
+                    <span className="block text-[11px] text-muted">1 ou 2 propositions de décors</span>
+                  </div>
+                  <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-lg border border-border">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setVariantsCount(1)}
+                      className={cn(
+                        'px-2.5 py-1 text-xs font-bold rounded-md transition',
+                        variantsCount === 1 ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground',
+                      )}
+                    >
+                      1
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setVariantsCount(2)}
+                      className={cn(
+                        'px-2.5 py-1 text-xs font-bold rounded-md transition',
+                        variantsCount === 2 ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground',
+                      )}
+                    >
+                      2 (A/B)
+                    </button>
+                  </div>
+                </div>
+
               </div>
 
               {error ? (
@@ -1434,7 +1467,50 @@ export default function LandingInvitationAiGenerator({
                 </div>
               )}
 
-              {/* État de la préparation */}
+              {/* État de la préparation & Signalements */}
+              {lastStageMeta?.safetyFallbackTriggered && (
+                <div className="p-2.5 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs text-amber-800 dark:text-amber-200">
+                  <span className="font-bold block">Décor sans visage appliqué</span>
+                  Le filtre de sécurité a orienté la génération vers un décor thématique pur. Vous pourrez insérer vos photos dans le studio.
+                </div>
+              )}
+
+              {lastStageMeta?.variants && lastStageMeta.variants.length > 1 && (
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-xs font-bold text-muted uppercase tracking-wider block">
+                    Variantes A/B ({lastStageMeta.variants.length})
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {lastStageMeta.variants.map((vUrl, idx) => {
+                      const isSelected = generatedImageUrl === vUrl;
+                      return (
+                        <button
+                          key={vUrl}
+                          type="button"
+                          onClick={() => {
+                            if (result?.global) {
+                              setResult({
+                                ...result,
+                                global: { ...result.global, bgImageUrl: vUrl },
+                              });
+                            }
+                          }}
+                          className={cn(
+                            'relative aspect-[9/16] rounded-xl overflow-hidden border-2 transition',
+                            isSelected ? 'border-primary ring-2 ring-primary/30 shadow-md' : 'border-border hover:border-primary/50',
+                          )}
+                        >
+                          <img src={vUrl} alt={`Variante ${idx + 1}`} className="w-full h-full object-cover" />
+                          <span className={cn('absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[10px] font-bold', isSelected ? 'bg-primary text-white' : 'bg-black/60 text-white')}>
+                            Prop. {String.fromCharCode(65 + idx)} {isSelected && '✓'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <p className="text-xs text-muted leading-relaxed">
                 {lastStageMeta?.backgroundReady
                   ? 'Fond généré + structure texte / RSVP prêts à éditer.'

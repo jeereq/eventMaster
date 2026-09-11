@@ -409,6 +409,7 @@ async function composeTemplateWithAi(req, res) {
         const embedText = body.embedText === true;
         const contextSource = typeof body.contextSource === 'string' ? body.contextSource : 'none';
         const artStyle = typeof body.artStyle === 'string' ? body.artStyle : undefined;
+        const variantsCount = typeof body.variantsCount === 'number' ? body.variantsCount : undefined;
         const imageUrls = await resolveComposeImageUrls(body, isSuperAdmin ? null : tenantId);
         const unlimited = (0, aiSimulationWalletService_1.isUnlimitedAiTokenUser)(req.user);
         await (0, aiSimulationWalletService_1.requireAiSimulationCredit)(deviceId, req.user.id, aiSimulationWalletService_1.AI_INVITATION_COMPOSE_TOKEN_COST, { unlimited });
@@ -423,6 +424,7 @@ async function composeTemplateWithAi(req, res) {
             authUserId: req.user.id,
             contextSource,
             artStyle,
+            variantsCount,
         });
         const historyId = await persistTemplateCompose({
             userId: req.user.id,
@@ -481,6 +483,7 @@ async function publicComposeTemplateWithAi(req, res) {
         const embedText = body.embedText === true;
         const contextSource = typeof body.contextSource === 'string' ? body.contextSource : 'none';
         const artStyle = typeof body.artStyle === 'string' ? body.artStyle : undefined;
+        const variantsCount = typeof body.variantsCount === 'number' ? body.variantsCount : undefined;
         const imageUrls = await resolveComposeImageUrls(body, user?.tenantId || null);
         const rateKey = user?.id || req.ip || deviceId;
         const unlimited = (0, aiSimulationWalletService_1.isUnlimitedAiTokenUser)(user);
@@ -496,6 +499,7 @@ async function publicComposeTemplateWithAi(req, res) {
             authUserId: user?.id || null,
             contextSource,
             artStyle,
+            variantsCount,
         });
         const historyId = await persistTemplateCompose({
             userId: user?.id || null,

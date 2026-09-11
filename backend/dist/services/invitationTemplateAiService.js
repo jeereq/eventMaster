@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.downloadReferenceImage = downloadReferenceImage;
 exports.composeInvitationTemplateAi = composeInvitationTemplateAi;
 const mandatoryRsvpFields_1 = require("../utils/mandatoryRsvpFields");
 const cloudinaryService_1 = require("./cloudinaryService");
@@ -342,12 +343,12 @@ function buildImagePrompt(userPrompt, backgroundPrompt, analysis, options) {
         parts.push('=== EMBEDDED INVITATION TYPOGRAPHY (MANDATORY) ===', 'Incrust sharp, correctly spelled luxury invitation lettering ON the artwork itself: names, date, time, venue and greeting extracted from the USER BRIEF (and any cloned card). Elegant serif or script, gold-foil or ink, integrated into the 9:16 layout — not a floating UI overlay, not a watermark.', 'Keep faces fully visible; place typography in the lower third or in a refined cartouche that does not cover eyes, smile or cheeks.');
     }
     else {
-        parts.push('No readable text, letters, names, dates, logos, or watermarks (text is added later by the editor).');
+        parts.push(invitationPromptFidelity_ts_1.NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE);
     }
     if (hasPeople) {
-        parts.push(invitationPromptFidelity_ts_1.NANO_BANANA_CRITICAL_CONSTRAINT, invitationPromptFidelity_ts_1.NANO_BANANA_STYLE_INSTRUCTION);
+        parts.push(invitationPromptFidelity_ts_1.NANO_BANANA_CRITICAL_CONSTRAINT, invitationPromptFidelity_ts_1.NANO_BANANA_STYLE_INSTRUCTION, invitationPromptFidelity_ts_1.NANO_BANANA_LIGHT_RIG_COHERENCE, invitationPromptFidelity_ts_1.NANO_BANANA_OPTICAL_BOKEH);
     }
-    return parts.join('\n').slice(0, hasPeople ? 6200 : 5400);
+    return parts.join('\n').slice(0, hasPeople ? 6400 : 5400);
 }
 function structureSystemPrompt(embedText, artStyle) {
     const style = (0, invitationArtStyle_ts_1.parseInvitationArtStyle)(artStyle);
@@ -499,27 +500,39 @@ async function visionStructure(key, prompt, imageUrls, options) {
         clearTimeout(timer);
     }
 }
-async function downloadImageAsPngBuffer(url) {
+async function downloadReferenceImage(url) {
+    const targetUrl = (0, invitationPromptFidelity_ts_1.optimizeReferenceImageUrl)(url);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 45_000);
     try {
-        const response = await fetch(url, { signal: controller.signal });
+        const response = await fetch(targetUrl, { signal: controller.signal });
         if (!response.ok) {
             fail(502, 'Impossible de télécharger l’image de référence pour la génération.');
         }
+        const contentType = (response.headers.get('content-type') || '').toLowerCase();
         const arrayBuffer = await response.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
         if (buffer.byteLength < 100) {
             fail(502, 'Image de référence invalide ou trop petite.');
         }
-        if (buffer.byteLength > 4 * 1024 * 1024) {
-            fail(400, 'Image de référence trop lourde pour la génération (max ~4 Mo).');
+        if (buffer.byteLength > 8 * 1024 * 1024) {
+            fail(400, 'Image de référence trop lourde pour la génération (max ~8 Mo).');
         }
-        return buffer;
+        const lower = url.toLowerCase();
+        const mimeType = contentType.includes('image/webp') || lower.includes('.webp')
+            ? 'image/webp'
+            : contentType.includes('image/jpeg') || lower.includes('.jpg') || lower.includes('.jpeg')
+                ? 'image/jpeg'
+                : 'image/png';
+        return { buffer, mimeType };
     }
     finally {
         clearTimeout(timer);
     }
+}
+async function downloadImageAsPngBuffer(url) {
+    const { buffer } = await downloadReferenceImage(url);
+    return buffer;
 }
 async function uploadGeneratedB64(b64, tenantId) {
     const buffer = Buffer.from(b64, 'base64');
@@ -584,7 +597,7 @@ async function generateImageWithGpt56Luna(key, imagePrompt, referenceUrls, tenan
     const hasRefs = referenceUrls.length > 0;
     const textRule = options?.embedText
         ? 'Embed sharp invitation typography (names, date, venue from the brief) on the card without covering faces.'
-        : 'Do not add readable text, names, dates, logos or watermarks.';
+        : invitationPromptFidelity_ts_1.NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE;
     const hasPeople = Boolean(options?.hasPeople);
     // Convertir en data URL pour éviter les échecs de téléchargement côté OpenAI.
     const refDataUrls = [];
@@ -1063,17 +1076,11 @@ async function executeNanoBananaRawRequest(apiKey, promptText, refImages, model)
 async function generateImageWithNanoBanana(apiKey, imagePrompt, referenceUrls, tenantId, options, model = getNanoBananaProModel()) {
     const hasRefs = referenceUrls.length > 0;
     const hasPeople = Boolean(options?.hasPeople);
-    // Téléchargement et encodage base64 des photos de référence des hôtes
+    // Téléchargement et encodage base64 des photos de référence des hôtes avec optimisation adaptative
     const refImages = [];
     for (const ref of referenceUrls.slice(0, 4)) {
         try {
-            const buffer = await downloadImageAsPngBuffer(ref);
-            const lower = ref.toLowerCase();
-            const mimeType = lower.includes('.jpg') || lower.includes('.jpeg')
-                ? 'image/jpeg'
-                : lower.includes('.webp')
-                    ? 'image/webp'
-                    : 'image/png';
+            const { buffer, mimeType } = await downloadReferenceImage(ref);
             refImages.push({
                 mimeType,
                 base64: buffer.toString('base64'),
@@ -1083,22 +1090,22 @@ async function generateImageWithNanoBanana(apiKey, imagePrompt, referenceUrls, t
             console.warn('[invitationTemplateAi] Nano Banana skip ref download:', err?.message);
         }
     }
-    // Verrouillage anti-lissage : injection des directives de style RAW et contraintes fermes
+    // Verrouillage anti-lissage : injection des directives de style RAW, lumière et contraintes fermes
     let promptText = imagePrompt;
     if (hasPeople || hasRefs) {
         if (!promptText.includes(invitationPromptFidelity_ts_1.NANO_BANANA_STYLE_INSTRUCTION)) {
-            promptText = `${promptText}\n\n${invitationPromptFidelity_ts_1.NANO_BANANA_CRITICAL_CONSTRAINT}\n${invitationPromptFidelity_ts_1.NANO_BANANA_STYLE_INSTRUCTION}`;
+            promptText = `${promptText}\n\n${invitationPromptFidelity_ts_1.NANO_BANANA_CRITICAL_CONSTRAINT}\n${invitationPromptFidelity_ts_1.NANO_BANANA_STYLE_INSTRUCTION}\n${invitationPromptFidelity_ts_1.NANO_BANANA_LIGHT_RIG_COHERENCE}\n${invitationPromptFidelity_ts_1.NANO_BANANA_OPTICAL_BOKEH}`;
         }
     }
     else {
         promptText = `Vertical 9:16 luxury invitation. ${(0, invitationArtStyle_ts_1.invitationArtStyleImageDirective)((0, invitationArtStyle_ts_1.parseInvitationArtStyle)(options?.artStyle))} ${(0, invitationArtStyle_ts_1.invitationArtStyleCraftNotes)()} If people appear, Black African hosts only — never Caucasian stock faces.
-${options?.embedText ? 'Embed invitation typography from the brief.\n' : ''}
+${options?.embedText ? 'Embed invitation typography from the brief.\n' : `${invitationPromptFidelity_ts_1.NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE}\n`}
 ${imagePrompt}`;
     }
     try {
         const b64 = await executeNanoBananaRawRequest(apiKey, promptText, refImages, model);
         const url = await uploadGeneratedB64(b64, tenantId);
-        return { url, mode: hasPeople || hasRefs ? 'edit' : 'generate' };
+        return { url, mode: hasPeople || hasRefs ? 'edit' : 'generate', safetyFallbackTriggered: false };
     }
     catch (error) {
         // Gestion du fallback automatique en cas de filtre de sécurité sur visages réels
@@ -1109,7 +1116,7 @@ ${imagePrompt}`;
                 const fallbackB64 = await executeNanoBananaRawRequest(apiKey, fallbackPrompt, [], // Aucune photo de référence humaine pour contourner le filtre facial
                 model);
                 const url = await uploadGeneratedB64(fallbackB64, tenantId);
-                return { url, mode: 'generate' };
+                return { url, mode: 'generate', safetyFallbackTriggered: true };
             }
             catch (fallbackErr) {
                 console.warn('[invitationTemplateAi] Nano Banana fallback décoratif sans humains a échoué:', fallbackErr?.message);
@@ -1149,7 +1156,8 @@ async function createNewInvitationImage(key, imageUrls, imagePrompt, tenantId, o
     }
     // 2) GPT-5.6 Luna (Responses + image_generation)
     try {
-        return await generateImageWithGpt56Luna(key, imagePrompt, imageUrls, tenantId, options);
+        const lunaRes = await generateImageWithGpt56Luna(key, imagePrompt, imageUrls, tenantId, options);
+        return { ...lunaRes, safetyFallbackTriggered: false };
     }
     catch (lunaErr) {
         console.warn('[invitationTemplateAi] gpt-5.6-luna image failed, falling back:', lunaErr?.message);
@@ -1159,7 +1167,7 @@ async function createNewInvitationImage(key, imageUrls, imagePrompt, tenantId, o
     if (options?.hasPeople && imageUrls.length > 0) {
         try {
             const url = await generateBackgroundFromReference(key, imageUrls[0], imagePrompt, tenantId);
-            return { url, mode: 'edit' };
+            return { url, mode: 'edit', safetyFallbackTriggered: false };
         }
         catch (editErr) {
             console.warn('[invitationTemplateAi] image edit fallback failed, falling back to text generation:', editErr?.message);
@@ -1167,7 +1175,7 @@ async function createNewInvitationImage(key, imageUrls, imagePrompt, tenantId, o
     }
     try {
         const url = await generateBackgroundFromPrompt(key, imagePrompt, tenantId);
-        return { url, mode: 'generate' };
+        return { url, mode: 'generate', safetyFallbackTriggered: false };
     }
     catch (genErr) {
         console.warn('[invitationTemplateAi] images/generations failed, trying edits:', genErr?.message);
@@ -1180,7 +1188,7 @@ async function createNewInvitationImage(key, imageUrls, imagePrompt, tenantId, o
                 const fallbackPrompt = (0, invitationPromptFidelity_ts_1.buildGenericThematicBackgroundPrompt)(imagePrompt, options);
                 const fallbackB64 = await executeNanoBananaRawRequest(nanoKey, fallbackPrompt, [], getNanoBananaProModel());
                 const url = await uploadGeneratedB64(fallbackB64, tenantId);
-                return { url, mode: 'generate' };
+                return { url, mode: 'generate', safetyFallbackTriggered: true };
             }
             catch (finalFallbackErr) {
                 console.warn('[invitationTemplateAi] Échec du filet de sécurité décoratif Nano Banana:', finalFallbackErr?.message);
@@ -1189,7 +1197,7 @@ async function createNewInvitationImage(key, imageUrls, imagePrompt, tenantId, o
         fail(502, 'Impossible de créer la nouvelle image (Nano Banana + Luna + Images API).');
     }
     const url = await generateBackgroundFromReference(key, primary, imagePrompt, tenantId);
-    return { url, mode: 'edit' };
+    return { url, mode: 'edit', safetyFallbackTriggered: false };
 }
 async function composeInvitationTemplateAi(input) {
     rateLimit(input.userId);
@@ -1242,7 +1250,10 @@ async function composeInvitationTemplateAi(input) {
     });
     let bgImageUrl = '';
     let imageMode = null;
+    let safetyFallbackTriggered = false;
+    const variants = [];
     const wantBg = input.generateBackground !== false;
+    const requestedVariantsCount = Math.min(2, Math.max(1, Number(input.variantsCount) || 1));
     if (wantBg) {
         try {
             const created = await createNewInvitationImage(key, imageUrls, imagePrompt, input.tenantId, {
@@ -1252,6 +1263,27 @@ async function composeInvitationTemplateAi(input) {
             });
             bgImageUrl = created.url;
             imageMode = created.mode;
+            safetyFallbackTriggered = Boolean(created.safetyFallbackTriggered);
+            if (bgImageUrl) {
+                variants.push(bgImageUrl);
+            }
+            // Si l'utilisateur a demandé 2 variantes A/B et que l'image principale a réussi
+            if (requestedVariantsCount >= 2 && bgImageUrl) {
+                try {
+                    const variantPrompt = (0, invitationPromptFidelity_ts_1.buildVariantImagePrompt)(imagePrompt);
+                    const variantCreated = await createNewInvitationImage(key, imageUrls, variantPrompt, input.tenantId, {
+                        hasPeople: Boolean(structured.visualAnalysis?.hasPeople) && imageUrls.length > 0,
+                        embedText,
+                        artStyle,
+                    });
+                    if (variantCreated?.url && variantCreated.url !== bgImageUrl) {
+                        variants.push(variantCreated.url);
+                    }
+                }
+                catch (variantErr) {
+                    console.warn('[invitationTemplateAi] Échec de la génération de la variante A/B secondaire (non-bloquant):', variantErr?.message);
+                }
+            }
         }
         catch (err) {
             // La création d’image est centrale : on remonte l’erreur au client.
@@ -1261,6 +1293,12 @@ async function composeInvitationTemplateAi(input) {
         }
     }
     const global = sanitizeGlobal(structured.global, bgImageUrl);
+    if (variants.length > 0) {
+        global.aiVariants = variants;
+    }
+    if (safetyFallbackTriggered) {
+        global.aiSafetyFallbackTriggered = true;
+    }
     if (structured.visualAnalysis) {
         global.aiVisualAnalysis = structured.visualAnalysis;
     }
@@ -1314,6 +1352,8 @@ async function composeInvitationTemplateAi(input) {
             structureReady: true,
             backgroundReady: Boolean(bgImageUrl),
             imageMode,
+            variants: variants.length > 0 ? variants : (bgImageUrl ? [bgImageUrl] : []),
+            safetyFallbackTriggered,
         },
     };
 }

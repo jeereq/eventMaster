@@ -52,9 +52,44 @@ export const NANO_BANANA_STYLE_INSTRUCTION =
 export const NANO_BANANA_CRITICAL_CONSTRAINT =
   'CRITICAL CONSTRAINT: Do NOT apply any beauty filters, do NOT smooth skin, do NOT create perfect symmetry, do NOT use airbrushing. The faces MUST retain the exact natural, unedited texture of the reference images.';
 
+export const NANO_BANANA_LIGHT_RIG_COHERENCE =
+  'LIGHT RIG COHERENCE: The environment must cast realistic warm ambient rim light and golden specular highlights matching the natural highlights of the reference photographs, with true physical contact shadows on attire, flooring, and surrounding stationery.';
+
+export const NANO_BANANA_OPTICAL_BOKEH =
+  'OPTICAL DEPTH OF FIELD: Shot on 85mm f/2.0 portrait lens feel; the subjects are in tack-sharp focus while the architectural decor and background elements recede into a soft, natural, cinematic optical bokeh. No harsh artificial cutout borders.';
+
+export const NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE =
+  'CLEAN ARTWORK MANDATE: Strictly NO readable text, NO letters, NO fake script, NO numbers, NO dates, NO painted watermarks inside the image pixels. Leave pristine, high-contrast negative space in the lower-third or central framing reserved for crisp vector typography.';
+
 export function buildNanoBananaRawDirectives(hasPeople = true): string {
   if (!hasPeople) return '';
-  return [NANO_BANANA_CRITICAL_CONSTRAINT, NANO_BANANA_STYLE_INSTRUCTION].join('\n');
+  return [
+    NANO_BANANA_CRITICAL_CONSTRAINT,
+    NANO_BANANA_STYLE_INSTRUCTION,
+    NANO_BANANA_LIGHT_RIG_COHERENCE,
+    NANO_BANANA_OPTICAL_BOKEH,
+  ].join('\n');
+}
+
+/**
+ * Optimise les URL Cloudinary de référence en appliquant une transformation adaptative
+ * (WebP/JPEG automatique, redimensionnement max 1536px, compression sans perte perceptible)
+ * pour diviser le payload par 3 à 4 et accélérer considérablement le transfert.
+ */
+export function optimizeReferenceImageUrl(url: string): string {
+  if (!url || typeof url !== 'string') return url;
+  const trimmed = url.trim();
+  if (trimmed.includes('res.cloudinary.com') && trimmed.includes('/image/upload/')) {
+    if (
+      !trimmed.includes('/image/upload/f_') &&
+      !trimmed.includes('/image/upload/c_') &&
+      !trimmed.includes('/image/upload/w_') &&
+      !trimmed.includes('/image/upload/q_')
+    ) {
+      return trimmed.replace('/image/upload/', '/image/upload/f_auto,q_auto:good,w_1536,c_limit/');
+    }
+  }
+  return trimmed;
 }
 
 /** System prompt for Gemini brief reformulation (Nano Banana best practices). */
@@ -112,8 +147,14 @@ export function buildReferenceRoles(referenceCount: number): string {
   ];
   for (let i = 0; i < referenceCount; i += 1) {
     const n = i + 1;
+    const side = i === 0 ? 'left / primary position' : i === 1 ? 'right / secondary position' : `position ${n}`;
     lines.push(
-      `Image ${n}: if this photo shows a person, it is a CHARACTER-CONSISTENCY identity lock for that exact individual (or leftmost→rightmost people in that photo). If this photo is an invitation card / décor sample, it is OBJECT FIDELITY for layout, borders and paper only — do not invent a face from it.`,
+      `Image ${n} (${side}): if this photo shows a person, it is a CHARACTER-CONSISTENCY identity lock for that exact individual (or leftmost→rightmost people in that photo). Keep this person's distinct identity completely isolated without blending traits with other images. If this photo is an invitation card / décor sample, it is OBJECT FIDELITY for layout, borders and paper only — do not invent a face from it.`,
+    );
+  }
+  if (referenceCount >= 2) {
+    lines.push(
+      'SPATIAL CHARACTER BINDING: When multiple hosts are pictured, arrange them with Image 1 on the left and Image 2 on the right, maintaining distinct facial anatomy and bone structure for each person with zero cross-blending.',
     );
   }
   return lines.join('\n');
@@ -136,6 +177,8 @@ export function buildHonestFaceIdentityHeader(referenceCount: number): string {
     'Ensure each person\'s face and features remain completely unchanged. Do not enhance, beautify, reshape, symmetrize, slim, lighten, airbrush, or replace with a stock model.',
     NANO_BANANA_CRITICAL_CONSTRAINT,
     NANO_BANANA_STYLE_INSTRUCTION,
+    NANO_BANANA_LIGHT_RIG_COHERENCE,
+    NANO_BANANA_OPTICAL_BOKEH,
     'If any text in the brief conflicts with the pixels, obey the pixels.',
   ].join('\n');
 }
@@ -250,6 +293,8 @@ export function applyEnglishSceneBrief(
           : 'Do not change hair, clothing, skin or face unless the brief explicitly requests a wardrobe or hair change.',
         NANO_BANANA_CRITICAL_CONSTRAINT,
         NANO_BANANA_STYLE_INSTRUCTION,
+        NANO_BANANA_LIGHT_RIG_COHERENCE,
+        NANO_BANANA_OPTICAL_BOKEH,
       ].join('\n')
     : narrative;
 
@@ -299,6 +344,8 @@ export function processUserPromptForHonestFaces(
           : 'Do not change hair, clothing, skin or face unless the brief explicitly requests a wardrobe or hair change.',
         NANO_BANANA_CRITICAL_CONSTRAINT,
         NANO_BANANA_STYLE_INSTRUCTION,
+        NANO_BANANA_LIGHT_RIG_COHERENCE,
+        NANO_BANANA_OPTICAL_BOKEH,
       ].join('\n')
     : englishSceneBrief;
 
@@ -325,6 +372,8 @@ export function buildGeminiSceneSteps(embedText: boolean): string {
       : 'Finally, leave clean negative space for later typography — no readable names, dates, logos or watermarks.',
     NANO_BANANA_CRITICAL_CONSTRAINT,
     NANO_BANANA_STYLE_INSTRUCTION,
+    NANO_BANANA_LIGHT_RIG_COHERENCE,
+    NANO_BANANA_OPTICAL_BOKEH,
   ].join('\n');
 }
 
@@ -421,9 +470,26 @@ export function buildGenericThematicBackgroundPrompt(
     );
   } else {
     lines.push(
-      'Clean negative space reserved for later typography — NO readable text or watermarks.',
+      NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE,
     );
   }
 
   return lines.filter(Boolean).join('\n');
 }
+
+/**
+ * Construit un prompt de variante A/B (Variante 2) à partir du prompt initial,
+ * en introduisant une modulation subtile du décor, de l'angle de vue ou de la disposition florale
+ * tout en conservant strictement les identités des hôtes et la palette chromatique.
+ */
+export function buildVariantImagePrompt(basePrompt: string): string {
+  const variantDirectives = [
+    'ALTERNATIVE COMPOSITION VARIANT (A/B VARIATION 2):',
+    '- Provide a fresh, alternative composition with subtle variation in framing, floral arrangement, or decorative accents.',
+    '- Maintain identical host facial anatomy, outfits, colors, and lighting temperature.',
+    '- Keep the same vertical 9:16 aspect ratio and luxury aesthetic.',
+  ].join('\n');
+
+  return `${basePrompt}\n\n${variantDirectives}`;
+}
+

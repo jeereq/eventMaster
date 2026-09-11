@@ -358,6 +358,9 @@ export default function TemplatesPage() {
  const [aiComposeBusy, setAiComposeBusy] = useState(false);
  const [aiComposeStage, setAiComposeStage] = useState<string | null>(null);
  const [aiComposeEmbedText, setAiComposeEmbedText] = useState(false);
+ const [aiComposeVariantsCount, setAiComposeVariantsCount] = useState<1 | 2>(1);
+ const [aiVariants, setAiVariants] = useState<string[]>([]);
+ const [aiSafetyFallbackNotice, setAiSafetyFallbackNotice] = useState(false);
  const [aiComposeArtStyle, setAiComposeArtStyle] = useState<InvitationArtStyleId>(DEFAULT_INVITATION_ART_STYLE);
  const [aiComposeContextSource, setAiComposeContextSource] = useState<InvitationContextSource>('none');
  const [aiComposeDragging, setAiComposeDragging] = useState(false);
@@ -1071,6 +1074,8 @@ export default function TemplatesPage() {
  setCanvasWidth,
  setCanvasHeight,
  setSelectedElementId,
+ setAiVariants,
+ setAiSafetyFallback: setAiSafetyFallbackNotice,
  });
  setGeneratedByAi(true);
  setImportedWithOcr(false);
@@ -1164,6 +1169,7 @@ export default function TemplatesPage() {
  embedText: aiComposeEmbedText,
  contextSource: aiComposeContextSource,
  artStyle: aiComposeArtStyle,
+ variantsCount: aiComposeVariantsCount,
  });
  // Affiche l’étape « création d’image » pendant l’appel API (analyse + génération côté serveur)
  const stageTimer = window.setTimeout(() => {
@@ -1194,9 +1200,17 @@ export default function TemplatesPage() {
  setCanvasWidth,
  setCanvasHeight,
  setSelectedElementId,
+ setAiVariants,
+ setAiSafetyFallback: setAiSafetyFallbackNotice,
  });
  setGeneratedByAi(true);
  setImportedWithOcr(false);
+ if (result.stage?.variants && result.stage.variants.length > 0) {
+   setAiVariants(result.stage.variants);
+ }
+ if (result.stage?.safetyFallbackTriggered !== undefined) {
+   setAiSafetyFallbackNotice(Boolean(result.stage.safetyFallbackTriggered));
+ }
  if (result.allowance) {
  setAiAllowance(getAiSimulationAllowance());
  }
@@ -1455,6 +1469,31 @@ export default function TemplatesPage() {
  </span>
  </span>
  </button>
+
+ <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-3">
+   <div>
+     <span className="block text-xs font-bold text-foreground">Nombre d'échantillons (Variations A/B)</span>
+     <span className="block text-[11px] text-muted">Générez 1 ou 2 propositions d'arrière-plan pour comparer</span>
+   </div>
+   <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-lg border border-border">
+     <button
+       type="button"
+       disabled={aiComposeBusy}
+       onClick={() => setAiComposeVariantsCount(1)}
+       className={`px-2.5 py-1 text-xs font-bold rounded-md transition ${aiComposeVariantsCount === 1 ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground'}`}
+     >
+       1
+     </button>
+     <button
+       type="button"
+       disabled={aiComposeBusy}
+       onClick={() => setAiComposeVariantsCount(2)}
+       className={`px-2.5 py-1 text-xs font-bold rounded-md transition ${aiComposeVariantsCount === 2 ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground'}`}
+     >
+       2 (A/B)
+     </button>
+   </div>
+ </div>
  </div>
 
  {aiComposeStage && (
@@ -4343,6 +4382,44 @@ export default function TemplatesPage() {
  />
  </div>
  {bgImageUrl && (
+ <div className="space-y-3">
+ {aiSafetyFallbackNotice && (
+   <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-2.5">
+     <Sparkles className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+     <div className="text-xs text-amber-800 dark:text-amber-200">
+       <span className="font-bold block">Décor thématique sans visage appliqué</span>
+       Le filtre de sécurité du modèle d’image a préservé un arrière-plan décoratif de haute qualité. Vous pouvez insérer votre photo directement dans le cadre ou réajuster vos références.
+     </div>
+   </div>
+ )}
+
+ {aiVariants.length > 1 && (
+   <div className="space-y-1.5 pt-1">
+     <label className="text-xs font-bold text-muted uppercase tracking-wider flex items-center justify-between">
+       <span>Variantes A/B générées ({aiVariants.length})</span>
+       <span className="text-[10px] text-primary lowercase font-normal">cliquez pour basculer</span>
+     </label>
+     <div className="grid grid-cols-2 gap-2">
+       {aiVariants.map((varUrl, idx) => {
+         const isSelected = bgImageUrl === varUrl;
+         return (
+           <button
+             key={varUrl}
+             type="button"
+             onClick={() => setBgImageUrl(varUrl)}
+             className={`relative aspect-[9/16] rounded-xl overflow-hidden border-2 transition group ${isSelected ? 'border-primary shadow-md ring-2 ring-primary/30' : 'border-border hover:border-primary/50'}`}
+           >
+             <img src={varUrl} alt={`Variante ${idx + 1}`} className="w-full h-full object-cover" />
+             <span className={`absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${isSelected ? 'bg-primary text-white shadow-xs' : 'bg-black/60 text-white backdrop-blur-xs'}`}>
+               Proposition {String.fromCharCode(65 + idx)} {isSelected && '✓'}
+             </span>
+           </button>
+         );
+       })}
+     </div>
+   </div>
+ )}
+
  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
  <button
  type="button"
@@ -4369,6 +4446,7 @@ export default function TemplatesPage() {
  {aiImageDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
  Télécharger l'image
  </button>
+ </div>
  </div>
  )}
  </div>
