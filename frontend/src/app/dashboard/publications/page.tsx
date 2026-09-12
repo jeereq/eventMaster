@@ -9,7 +9,7 @@ import { uploadMarketplaceMedia } from '@/lib/cloudinaryUpload';
 import { isVideoUrl, sizedMediaUrl } from '@/lib/marketplace';
 import { cn } from '@/lib/cn';
 import {
-  PageHeader, Breadcrumbs, Alert, Button, EmptyState,
+  PageHeader, Breadcrumbs, Alert, Button, EmptyState, Modal, ConfirmDialog,
 } from '@/components/ui';
 import MarketplaceGlobalActivityFeed from '@/components/marketplace/MarketplaceGlobalActivityFeed';
 import {
@@ -119,8 +119,8 @@ function DashboardPublicationsPageInner() {
       {canPublish ? (
         <div
           role="tablist"
-          aria-label="Réalisations"
-          className="flex flex-wrap items-center gap-1 rounded-xl border border-border bg-muted/40 p-1"
+          aria-label="Navigation des réalisations"
+          className="flex flex-wrap items-center gap-1 rounded-xl border border-border bg-surface-muted p-1"
         >
           {[
             { id: 'grid' as const, label: 'Découvrir', icon: Rss },
@@ -128,37 +128,47 @@ function DashboardPublicationsPageInner() {
           ].map((item) => (
             <button
               key={item.id}
+              id={`tab-publications-${item.id}`}
               type="button"
               role="tab"
               aria-selected={tab === item.id}
+              aria-controls={`tabpanel-publications-${item.id}`}
               onClick={() => setTab(item.id)}
               className={cn(
-                'inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition',
+                'inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                 tab === item.id
-                  ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+                  ? 'bg-surface text-foreground shadow-2xs font-semibold'
                   : 'text-muted hover:bg-surface/70 hover:text-foreground',
               )}
             >
-              <item.icon className="w-4 h-4 shrink-0" />
-              {item.label}
+              <item.icon className="w-4 h-4 shrink-0" aria-hidden />
+              <span>{item.label}</span>
             </button>
           ))}
         </div>
       ) : null}
 
-      {tab === 'grid' ? (
-        <PublicationsGrid canPublish={canPublish} onCreate={() => setTab('create')} />
-      ) : canPublish ? (
-        <CreatePublicationPanel
-          onCreated={() => setTab('grid')}
-        />
-      ) : (
-        <EmptyState
-          icon={<Rss className="w-5 h-5" />}
-          title="Réalisations réservées aux propriétaires"
-          description="Seuls les comptes qui gèrent des salles ou des prestations peuvent créer des réalisations."
-        />
-      )}
+      <div
+        role="tabpanel"
+        id={`tabpanel-publications-${tab}`}
+        aria-labelledby={`tab-publications-${tab}`}
+        className="outline-none"
+        tabIndex={0}
+      >
+        {tab === 'grid' ? (
+          <PublicationsGrid canPublish={canPublish} onCreate={() => setTab('create')} />
+        ) : canPublish ? (
+          <CreatePublicationPanel
+            onCreated={() => setTab('grid')}
+          />
+        ) : (
+          <EmptyState
+            icon={<Rss className="w-5 h-5" />}
+            title="Réalisations réservées aux propriétaires"
+            description="Seuls les comptes qui gèrent des salles ou des prestations peuvent créer des réalisations."
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -214,23 +224,28 @@ function PublicationsGrid({
       {/* Barre d'outils de filtrage & mode d'affichage */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 p-2 rounded-2xl bg-surface border border-border/80 shadow-2xs">
         {/* Filtre par type */}
-        <div className="inline-flex gap-1 p-1 rounded-xl bg-surface-muted border border-border/60 overflow-x-auto no-scrollbar">
+        <div
+          role="group"
+          aria-label="Filtrer les réalisations par type"
+          className="inline-flex gap-1 p-1 rounded-xl bg-surface-muted border border-border/60 overflow-x-auto no-scrollbar"
+        >
           {(
             [
-              ['all', 'Tout', 'text-primary border-primary/25'],
-              ['venue', 'Salles', 'text-emerald-700 dark:text-emerald-300 border-emerald-500/30'],
-              ['vendor', 'Prestations', 'text-amber-700 dark:text-amber-300 border-amber-500/30'],
+              ['all', 'Tout'],
+              ['venue', 'Salles'],
+              ['vendor', 'Prestations'],
             ] as const
-          ).map(([id, label, activeStyle]) => (
+          ).map(([id, label]) => (
             <button
               key={id}
               type="button"
+              aria-pressed={kind === id}
               onClick={() => setKind(id)}
               className={cn(
-                'min-h-10 px-3 rounded-lg text-xs font-semibold transition touch-manipulation whitespace-nowrap shrink-0',
+                'min-h-11 px-3.5 rounded-lg text-xs font-medium transition touch-manipulation whitespace-nowrap shrink-0 active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                 kind === id
-                  ? cn('bg-surface shadow-xs font-bold border', activeStyle)
-                  : 'text-muted hover:text-foreground',
+                  ? 'bg-surface text-foreground shadow-2xs font-semibold border border-border'
+                  : 'text-muted hover:text-foreground hover:bg-surface/50',
               )}
             >
               {label}
@@ -239,23 +254,29 @@ function PublicationsGrid({
         </div>
 
         {/* Toggle Mode Grille / Fil */}
-        <div className="inline-flex gap-1 p-1 rounded-xl bg-surface-muted border border-border/60 self-start sm:self-auto">
+        <div
+          role="group"
+          aria-label="Mode d'affichage des réalisations"
+          className="inline-flex gap-1 p-1 rounded-xl bg-surface-muted border border-border/60 self-start sm:self-auto"
+        >
           <button
             type="button"
+            aria-pressed={displayMode === 'tiles'}
             onClick={() => setDisplayMode('tiles')}
             className={cn(
-              'min-h-10 px-3 rounded-lg text-xs font-semibold transition touch-manipulation whitespace-nowrap',
-              displayMode === 'tiles' ? 'bg-surface text-foreground shadow-xs font-bold' : 'text-muted hover:text-foreground',
+              'min-h-11 px-3.5 rounded-lg text-xs font-medium transition touch-manipulation whitespace-nowrap active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+              displayMode === 'tiles' ? 'bg-surface text-foreground shadow-2xs font-semibold border border-border' : 'text-muted hover:text-foreground hover:bg-surface/50',
             )}
           >
             Grille photos
           </button>
           <button
             type="button"
+            aria-pressed={displayMode === 'feed'}
             onClick={() => setDisplayMode('feed')}
             className={cn(
-              'min-h-10 px-3 rounded-lg text-xs font-semibold transition touch-manipulation whitespace-nowrap',
-              displayMode === 'feed' ? 'bg-surface text-foreground shadow-xs font-bold' : 'text-muted hover:text-foreground',
+              'min-h-11 px-3.5 rounded-lg text-xs font-medium transition touch-manipulation whitespace-nowrap active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+              displayMode === 'feed' ? 'bg-surface text-foreground shadow-2xs font-semibold border border-border' : 'text-muted hover:text-foreground hover:bg-surface/50',
             )}
           >
             Fil détaillé
@@ -300,7 +321,7 @@ function PublicationsGrid({
                 key={post.id}
                 type="button"
                 onClick={() => setSelected(post)}
-                className="group flex flex-col overflow-hidden rounded-2xl bg-surface border border-border/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-2xs hover:border-border transition text-left"
+                className="group flex flex-col overflow-hidden rounded-2xl bg-surface border border-border/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-2xs hover:border-border transition text-left active:scale-[0.99] motion-reduce:active:scale-100"
                 aria-label={`Ouvrir la réalisation de ${post.author?.name || 'ce partenaire'}`}
               >
                 <span className="relative aspect-square overflow-hidden bg-surface-muted">
@@ -313,11 +334,12 @@ function PublicationsGrid({
                         src={sizedMediaUrl(media.url, 480)}
                         alt={post.content ? `Photo : ${post.content.slice(0, 60)}` : `Réalisation de ${post.author?.name || 'partenaire'}`}
                         loading="lazy"
+                        decoding="async"
                         className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                       />
                     )
                   ) : (
-                    <span className="h-full w-full p-4 flex flex-col justify-between bg-emerald-500/8">
+                    <span className="h-full w-full p-4 flex flex-col justify-between bg-surface-muted border-b border-border">
                       <span className="text-xs font-semibold text-primary">{post.author?.name || 'Réalisation'}</span>
                       <span className="text-xs text-foreground line-clamp-4">{post.content}</span>
                     </span>
@@ -395,68 +417,73 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
   }, [media.length]);
 
   useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
       if (e.key === 'ArrowLeft') goPrev();
       if (e.key === 'ArrowRight') goNext();
     };
     document.addEventListener('keydown', onKey);
     return () => {
-      document.body.style.overflow = previous;
       document.removeEventListener('keydown', onKey);
     };
-  }, [onClose, goPrev, goNext]);
+  }, [goPrev, goNext]);
 
   useEffect(() => {
     setIndex(0);
   }, [post.id]);
 
+  const authorName = post.author?.name || 'Réalisation';
+  const isVendor = post.author?.kind === 'vendor';
+
   return (
-    <div
-      className="fixed inset-0 z-[100] bg-stage/80 backdrop-blur-xs flex items-end sm:items-center justify-center p-3 sm:p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Détail de la réalisation"
-      onClick={onClose}
-    >
-      <div
-        className="bg-surface rounded-2xl max-w-4xl w-full max-h-[92vh] overflow-auto border border-border shadow-2xl space-y-4 p-4 sm:p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between gap-3 pb-3 border-b border-border/70">
+    <Modal
+      open={Boolean(post)}
+      onClose={onClose}
+      size="xl"
+      title={
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-surface-muted text-primary border border-border shrink-0">
+            {isVendor ? <Sparkles className="w-4 h-4" aria-hidden /> : <Building2 className="w-4 h-4" aria-hidden />}
+          </div>
           <div className="min-w-0">
-            <h3 className="text-sm sm:text-base font-semibold text-foreground truncate">
-              {post.author?.name || 'Réalisation'}
-            </h3>
-            <div className="flex flex-wrap items-center gap-2 mt-1">
-              <span
-                className={cn(
-                  'inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border',
-                  post.author?.kind === 'vendor'
-                    ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30'
-                    : 'bg-primary/10 text-primary border-primary/30',
-                )}
-              >
-                {post.author?.kind === 'vendor' ? <Sparkles className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
-                {post.author?.kind === 'venue' ? 'Salle' : 'Prestation'}
-              </span>
-              <span className="text-xs text-muted tabular-nums">{formatRelativeDate(post.createdAt)}</span>
+            <span className="text-base font-semibold text-foreground block truncate">{authorName}</span>
+            <div className="flex items-center gap-2 mt-0.5 text-xs text-muted">
+              <span>{isVendor ? 'Prestation' : 'Salle'}</span>
+              <span>·</span>
+              <span className="tabular-nums">{formatRelativeDate(post.createdAt)}</span>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 rounded-xl text-muted hover:text-foreground hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 transition"
-            aria-label="Fermer la vue détaillée (Échap)"
-          >
-            <X className="w-5 h-5" aria-hidden />
-          </button>
         </div>
-
+      }
+      footer={
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
+          <div className="flex items-center gap-3 text-xs text-muted tabular-nums">
+            <span className="inline-flex items-center gap-1.5 font-semibold text-rose-600 dark:text-rose-400">
+              <Heart className="w-4 h-4 fill-current" aria-hidden /> {post.likeCount ?? post.likes?.length ?? 0}
+            </span>
+            <span className="inline-flex items-center gap-1.5 font-semibold text-foreground">
+              <MessageCircle className="w-4 h-4" aria-hidden /> {post.comments?.length ?? 0}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 self-end sm:self-auto">
+            <Button type="button" variant="secondary" size="sm" onClick={onClose}>
+              Fermer
+            </Button>
+            {href ? (
+              <Link
+                href={href}
+                className="inline-flex min-h-9 items-center gap-1.5 px-3.5 rounded-lg bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold text-xs transition touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+              >
+                <span>Voir la fiche</span>
+                <ArrowRight className="w-3.5 h-3.5" aria-hidden />
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      }
+    >
+      <div className="space-y-4 pt-1">
         {current ? (
-          <div className="relative rounded-2xl overflow-hidden border border-border/60 bg-stage aspect-16/10 max-h-[min(72vh,560px)]">
+          <div className="relative rounded-2xl overflow-hidden border border-border/60 bg-stage aspect-16/10 max-h-[min(65vh,520px)] flex items-center justify-center">
             {current.type === 'VIDEO' || isVideoUrl(current.url) ? (
               <video src={current.url} controls playsInline className="w-full h-full object-contain" />
             ) : (
@@ -472,7 +499,7 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
                 <button
                   type="button"
                   onClick={goPrev}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 min-h-11 min-w-11 inline-flex items-center justify-center rounded-full bg-surface/90 text-foreground border border-border shadow-2xs touch-manipulation"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 min-h-11 min-w-11 inline-flex items-center justify-center rounded-full bg-surface/90 text-foreground border border-border shadow-2xs touch-manipulation hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   aria-label="Média précédent"
                 >
                   <ChevronLeft className="w-5 h-5" aria-hidden />
@@ -480,12 +507,12 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
                 <button
                   type="button"
                   onClick={goNext}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 min-h-11 min-w-11 inline-flex items-center justify-center rounded-full bg-surface/90 text-foreground border border-border shadow-2xs touch-manipulation"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 min-h-11 min-w-11 inline-flex items-center justify-center rounded-full bg-surface/90 text-foreground border border-border shadow-2xs touch-manipulation hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   aria-label="Média suivant"
                 >
                   <ChevronRight className="w-5 h-5" aria-hidden />
                 </button>
-                <div className="absolute bottom-1 inset-x-0 flex justify-center gap-0.5">
+                <div className="absolute bottom-2 inset-x-0 flex justify-center gap-1.5" role="tablist" aria-label="Médias de la publication">
                   {media.map((item, i) => (
                     <button
                       key={`${item.url}-${i}`}
@@ -497,8 +524,8 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
                     >
                       <span
                         className={cn(
-                          'h-2 rounded-full transition',
-                          i === index ? 'w-5 bg-primary' : 'w-2 bg-stage-foreground/60',
+                          'h-2 rounded-full transition-all',
+                          i === index ? 'w-5 bg-primary' : 'w-2 bg-white/60 hover:bg-white',
                         )}
                         aria-hidden
                       />
@@ -510,31 +537,11 @@ function PostDetailModal({ post, onClose }: { post: MyPost; onClose: () => void 
           </div>
         ) : null}
 
-        <div className="space-y-4">
-          {post.content ? (
-            <p className="text-sm text-foreground whitespace-pre-line leading-relaxed">{post.content}</p>
-          ) : null}
-
-          <div className="flex flex-wrap items-center gap-3 text-xs text-muted pt-2 border-t border-border/60 tabular-nums">
-            <span className="inline-flex items-center gap-1.5 font-semibold text-rose-600 dark:text-rose-400">
-              <Heart className="w-4 h-4 fill-current" /> {post.likeCount ?? post.likes?.length ?? 0}
-            </span>
-            <span className="inline-flex items-center gap-1.5 font-semibold">
-              <MessageCircle className="w-4 h-4" /> {post.comments?.length ?? 0}
-            </span>
-            {href ? (
-              <Link
-                href={href}
-                className="ml-auto inline-flex min-h-11 items-center gap-1.5 px-3 rounded-xl bg-primary text-primary-foreground font-semibold text-xs hover:opacity-95 active:scale-[0.98] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-              >
-                <span>Voir la fiche</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            ) : null}
-          </div>
-        </div>
+        {post.content ? (
+          <p className="text-sm text-foreground whitespace-pre-line leading-relaxed">{post.content}</p>
+        ) : null}
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -553,6 +560,8 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [myPosts, setMyPosts] = useState<MyPost[]>([]);
+  const [postToDelete, setPostToDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const loadTargets = useCallback(async () => {
@@ -629,13 +638,17 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
     }
   };
 
-  const remove = async (postId: string) => {
-    if (!window.confirm('Supprimer cette réalisation ?')) return;
+  const handleConfirmDelete = async () => {
+    if (!postToDelete) return;
+    setDeleting(true);
     try {
-      await api.delete(`/marketplace/feed/${postId}`);
-      setMyPosts((prev) => prev.filter((p) => p.id !== postId));
+      await api.delete(`/marketplace/feed/${postToDelete}`);
+      setMyPosts((prev) => prev.filter((p) => p.id !== postToDelete));
+      setPostToDelete(null);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Suppression impossible.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -669,38 +682,47 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
         {error ? <Alert variant="error">{error}</Alert> : null}
         {success ? <Alert variant="success">{success}</Alert> : null}
 
-        <div className="rounded-2xl border border-border bg-surface p-4 space-y-4">
-          <div className="inline-flex gap-0.5 p-0.5 rounded-[var(--radius-button)] border border-border bg-surface-muted">
+        <div className="rounded-2xl border border-border bg-surface p-4 space-y-4 shadow-2xs">
+          <div
+            role="group"
+            aria-label="Type d'entité pour la réalisation"
+            className="inline-flex gap-0.5 p-0.5 rounded-[var(--radius-button)] border border-border bg-surface-muted"
+          >
             <button
               type="button"
+              aria-pressed={targetKind === 'venue'}
               onClick={() => setTargetKind('venue')}
               disabled={targets.venues.length === 0}
               className={cn(
-                'min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-40',
-                targetKind === 'venue' ? 'bg-surface text-foreground shadow-sm' : 'text-muted',
+                'min-h-11 px-3.5 rounded-[var(--radius-button)] text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-40 transition touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                targetKind === 'venue' ? 'bg-surface text-foreground shadow-2xs font-bold' : 'text-muted hover:text-foreground',
               )}
             >
-              <Building2 className="w-3.5 h-3.5" /> Salle
+              <Building2 className="w-3.5 h-3.5" aria-hidden /> Salle
             </button>
             <button
               type="button"
+              aria-pressed={targetKind === 'service'}
               onClick={() => setTargetKind('service')}
               disabled={targets.services.length === 0}
               className={cn(
-                'min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-40',
-                targetKind === 'service' ? 'bg-surface text-foreground shadow-sm' : 'text-muted',
+                'min-h-11 px-3.5 rounded-[var(--radius-button)] text-xs font-semibold inline-flex items-center gap-1.5 disabled:opacity-40 transition touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                targetKind === 'service' ? 'bg-surface text-foreground shadow-2xs font-bold' : 'text-muted hover:text-foreground',
               )}
             >
-              <Sparkles className="w-3.5 h-3.5" /> Prestation
+              <Sparkles className="w-3.5 h-3.5" aria-hidden /> Prestation
             </button>
           </div>
 
-          <label className="block space-y-1.5">
-            <span className="text-xs font-semibold text-muted">Lier à</span>
+          <div className="space-y-1.5">
+            <label htmlFor="publication-target-select" className="block text-xs font-semibold text-muted">
+              Lier à
+            </label>
             <select
+              id="publication-target-select"
               value={targetId}
               onChange={(e) => setTargetId(e.target.value)}
-              className="w-full min-h-11 px-3 rounded-xl border border-border bg-surface text-sm"
+              className="w-full min-h-11 px-3.5 rounded-xl border border-border bg-surface text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
             >
               {options.map((o) => (
                 <option key={o.id} value={o.id} disabled={!o.isPublic}>
@@ -708,7 +730,7 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
                 </option>
               ))}
             </select>
-          </label>
+          </div>
 
           <div className="space-y-1.5">
             <label htmlFor="publication-create-textarea" className="block text-xs font-semibold text-muted">
@@ -721,33 +743,32 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
               rows={4}
               maxLength={4000}
               placeholder="Décrivez votre actualité, une nouveauté, un nouveau décor ou une réalisation…"
-              className="w-full rounded-xl border border-border bg-surface-muted px-3.5 py-3 text-base sm:text-sm resize-y min-h-[6.5rem] focus:outline-none focus:ring-2 focus:ring-primary/40"
-              aria-label="Description de la réalisation"
+              className="w-full rounded-xl border border-border bg-surface-muted px-3.5 py-3 text-base sm:text-sm resize-y min-h-[6.5rem] text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition"
               aria-describedby="publication-desc-hint"
             />
             <div className="flex justify-between items-center text-xs text-muted">
               <span id="publication-desc-hint">Partagez vos nouveautés ou réalisations.</span>
-              <span className={cn(content.length > 3800 && 'text-amber-600 font-semibold')}>{content.length} / 4000</span>
+              <span className={cn(content.length > 3800 && 'text-rose-600 dark:text-rose-400 font-semibold tabular-nums')}>{content.length} / 4000</span>
             </div>
           </div>
 
           {media.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {media.map((m, i) => (
-                <div key={`${m.url}-${i}`} className="relative w-24 h-24 rounded-xl overflow-hidden border border-border">
+                <div key={`${m.url}-${i}`} className="relative w-24 h-24 rounded-xl overflow-hidden border border-border bg-surface-muted">
                   {m.type === 'VIDEO' || isVideoUrl(m.url) ? (
-                    <video src={m.url} className="w-full h-full object-cover" muted />
+                    <video src={m.url} className="w-full h-full object-cover" muted playsInline />
                   ) : (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={m.url} alt="" className="w-full h-full object-cover" />
+                    <img src={m.url} alt={`Aperçu du média téléversé n°${i + 1}`} className="w-full h-full object-cover" />
                   )}
                   <button
                     type="button"
                     onClick={() => setMedia((prev) => prev.filter((_, idx) => idx !== i))}
-                    className="absolute top-1 right-1 min-h-11 min-w-11 inline-flex items-center justify-center rounded-full bg-stage/70 text-white hover:bg-stage transition touch-manipulation"
-                    aria-label="Retirer ce média"
+                    className="absolute top-1 right-1 min-h-11 min-w-11 inline-flex items-center justify-center rounded-full bg-stage/70 text-white hover:bg-stage transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    aria-label={`Retirer le média n°${i + 1}`}
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-4 h-4" aria-hidden />
                   </button>
                 </div>
               ))}
@@ -757,10 +778,11 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
           <div className="flex flex-wrap gap-2">
             <input
               ref={fileRef}
+              id="publication-file-input"
               type="file"
               accept="image/*,video/*"
               multiple
-              className="hidden"
+              className="sr-only"
               aria-label="Sélectionner des fichiers médias (images ou vidéos)"
               onChange={(e) => void onPickFiles(e.target.files)}
             />
@@ -768,10 +790,10 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading || media.length >= 8}
-              className="inline-flex items-center gap-1.5 min-h-11 px-3 rounded-xl border border-border text-xs font-semibold text-muted hover:text-foreground disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-xl border border-border text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted disabled:opacity-50 transition touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
-              {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
-              Médias
+              {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden /> : <ImageIcon className="w-3.5 h-3.5" aria-hidden />}
+              <span>Médias ({media.length}/8)</span>
             </button>
             <Button
               onClick={() => void publish()}
@@ -792,14 +814,14 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
         ) : (
           <ul className="space-y-2">
             {myPosts.slice(0, 12).map((p) => (
-              <li key={p.id} className="rounded-xl border border-border bg-surface p-3 flex items-center gap-3">
+              <li key={p.id} className="rounded-xl border border-border bg-surface p-3 flex items-center gap-3 shadow-2xs">
                 <div className="w-16 h-16 rounded-xl overflow-hidden bg-surface-muted shrink-0">
                   {p.mediaUrls?.[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.mediaUrls[0].url} alt="" className="w-full h-full object-cover" />
+                    <img src={p.mediaUrls[0].url} alt={p.content ? `Photo : ${p.content.slice(0, 40)}` : 'Média de réalisation'} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <Rss className="w-4 h-4 text-muted" />
+                      <Rss className="w-4 h-4 text-muted" aria-hidden />
                     </div>
                   )}
                 </div>
@@ -810,17 +832,31 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
                 </div>
                 <button
                   type="button"
-                  onClick={() => void remove(p.id)}
-                  className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl text-muted hover:text-rose-600 hover:bg-rose-500/10 touch-manipulation"
-                  aria-label="Supprimer cette réalisation"
+                  onClick={() => setPostToDelete(p.id)}
+                  className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-xl text-muted hover:text-rose-600 hover:bg-rose-500/10 transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50"
+                  aria-label={`Supprimer la réalisation « ${p.content ? p.content.slice(0, 30) : formatRelativeDate(p.createdAt)} »`}
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-4 h-4" aria-hidden />
                 </button>
               </li>
             ))}
           </ul>
         )}
       </div>
+
+      <ConfirmDialog
+        open={Boolean(postToDelete)}
+        onClose={() => {
+          if (!deleting) setPostToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Supprimer cette réalisation ?"
+        description="Cette publication sera définitivement retirée du fil d’actualité et de votre fiche."
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        tone="danger"
+        loading={deleting}
+      />
     </div>
   );
 }
