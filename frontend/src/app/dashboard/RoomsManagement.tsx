@@ -10,7 +10,7 @@ import { enabledMarketplaceCities } from '@/lib/platformCities';
 import {
   Building2, Plus, Trash2, Users, UserPlus, Check, CheckCircle2,
   ChevronLeft, ChevronRight, LayoutGrid, Theater, Tent, Presentation, Edit3, Sparkles, Ruler,
-  Globe, GlobeLock, Lock, Eye,
+  Globe, GlobeLock, Lock, Eye, AlertTriangle, AlertCircle,
 } from 'lucide-react';
 import {
   ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonRoomsView,
@@ -502,8 +502,9 @@ export default function RoomsManagement() {
     resetWizard();
   };
 
+  const defaultInitialRoomType = allowedRoomTypes.includes('BANQUET') ? 'BANQUET' : allowedRoomTypes[0] || 'SIMPLE';
   const wizardIsDirty = Boolean(
-    name.trim() || description.trim() || floor.trim() || location.trim() || farthestStep > 1,
+    name.trim() || description.trim() || floor.trim() || location.trim() || farthestStep > 1 || roomType !== defaultInitialRoomType,
   );
 
   const requestCloseWizard = () => {
@@ -1513,19 +1514,6 @@ export default function RoomsManagement() {
             {error}
           </Alert>
         )}
-        {confirmDiscard && (
-          <Alert variant="warning" title="Fermer le brouillon ?" className="mb-4">
-            <p>Chaque action reste enregistrée sur cet appareil. Vous pourrez reprendre ce plan à la prochaine création.</p>
-            <div className="flex flex-wrap gap-2 mt-3">
-              <Button type="button" size="sm" variant="secondary" onClick={() => setConfirmDiscard(false)}>
-                Continuer l’édition
-              </Button>
-              <Button type="button" size="sm" variant="danger" onClick={closeWizard}>
-                Fermer — le brouillon est conservé
-              </Button>
-            </div>
-          </Alert>
-        )}
         {wizardDraftRestored && showWizard && (
           <Alert variant="info" title="Brouillon restauré" className="mb-4">
             <p>Vos dernières actions ont été reprises. Rien n’a été perdu.</p>
@@ -2035,6 +2023,60 @@ export default function RoomsManagement() {
             />
           </div>
         )}
+      </Modal>
+
+      <Modal
+        open={confirmDiscard}
+        onClose={() => setConfirmDiscard(false)}
+        size="md"
+        title={
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0">
+              <AlertTriangle className="w-5 h-5" aria-hidden />
+            </div>
+            <div>
+              <span className="text-base font-semibold text-foreground block">
+                Fermer la création de la salle ?
+              </span>
+              <span className="text-xs text-muted block font-normal">
+                Votre travail est conservé en sécurité
+              </span>
+            </div>
+          </div>
+        }
+        footer={
+          <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end w-full">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setConfirmDiscard(false)}
+              className="touch-manipulation"
+            >
+              Continuer la création
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={closeWizard}
+              className="touch-manipulation"
+            >
+              Fermer (brouillon conservé)
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3 pt-1">
+          <div className="p-3.5 rounded-xl border border-border bg-surface-muted/50 space-y-1.5 text-xs">
+            <p className="font-semibold text-foreground flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" aria-hidden />
+              Sauvegarde automatique active
+            </p>
+            <p className="text-muted leading-relaxed">
+              Toutes les données saisies (nom, dimensions, cloisons, agencements et tables) sont enregistrées automatiquement sur cet appareil.
+              Vous pourrez reprendre la configuration exactement là où vous l&apos;avez laissée dès votre prochaine visite.
+            </p>
+          </div>
+        </div>
       </Modal>
 
       <Modal
