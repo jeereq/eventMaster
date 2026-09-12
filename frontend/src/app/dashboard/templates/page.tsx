@@ -51,7 +51,7 @@ import {
  Spline, Triangle, Trash, Layout, Palette, Square,
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins,
  Undo2, Redo2, History, Download, Tag, SlidersHorizontal, LayoutTemplate,
- Calendar, MapPin, User, MessageSquare, Layers, Move,
+ Calendar, MapPin, User, MessageSquare, Layers, Move, Crown, ArrowRight, Check,
 } from 'lucide-react';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
 import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems, usePageSize, Modal } from '@/components/ui';
@@ -60,6 +60,7 @@ import PlanLimitCallout from '@/components/PlanLimitCallout';
 import RsvpFieldTypeEditor from '@/components/RsvpFieldTypeEditor';
 import { getFeatureLockMessage, getQuotaActionMessage } from '@/lib/planAccess';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
+import TemplatePreviewModal from '@/components/templates/TemplatePreviewModal';
 import {
  type RsvpField,
  type CanvasSizePreset,
@@ -199,15 +200,21 @@ function getElementFieldInfo(el: Record<string, unknown>, index: number): {
 }
 
 export default function TemplatesPage() {
- const { user, planFeatures, planQuota, tenant } = useAuth();
+ const { user, planFeatures, planQuota, tenant, access } = useAuth();
  const router = useRouter();
  /** admin = ouvert depuis la console Super Admin (?tab=templates) ; studio = concepteur organisation */
  type StudioOrigin = 'admin' | 'studio';
  const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  const [studioOrigin, setStudioOrigin] = useState<StudioOrigin>('studio');
  const fromAdminConsole = studioOrigin === 'admin' && user?.role === 'SUPER_ADMIN';
+ const isOwnerOrManager = Boolean(
+ access?.isOwner ||
+ access?.level === 'manager' ||
+ user?.orgRole === 'MANAGER' ||
+ user?.role === 'SUPER_ADMIN',
+ );
  const canUseCustomTemplates = user?.role === 'SUPER_ADMIN' || planFeatures?.customTemplates === true;
- const canUseMockupImport = canUseCustomTemplates;
+ const canUseMockupImport = true;
  const canUseMockupOcr = user?.role === 'SUPER_ADMIN' || planFeatures?.mockupOcr === true;
  const templatesAtLimit =
  user?.role !== 'SUPER_ADMIN' &&
@@ -217,7 +224,7 @@ export default function TemplatesPage() {
  planQuota.usage.templates >= planQuota.limits.maxTemplates,
  );
  const templatesQuotaMsg = templatesAtLimit
- ? `Quota modèles atteint (${planQuota!.usage.templates}/${planQuota!.limits.maxTemplates}). Passez à un forfait supérieur.`
+ ? `Quota modèles atteint (${planQuota!.usage.templates}/${planQuota!.limits.maxTemplates}). Passez à un forfait supérieur pour enregistrer de nouveaux modèles.`
  : null;
  const {
  mode: templatesViewMode,
@@ -228,6 +235,8 @@ export default function TemplatesPage() {
  const [catalogPage, setCatalogPage] = useState(1);
  const [ownTemplatesPage, setOwnTemplatesPage] = useState(1);
  const [templatesPageSize, setTemplatesPageSize] = usePageSize('templates', 9);
+ const [previewTemplate, setPreviewTemplate] = useState<TemplateItem | null>(null);
+ const [saveUpgradeModalOpen, setSaveUpgradeModalOpen] = useState(false);
  const [templates, setTemplates] = useState<TemplateItem[]>([]);
  const [loading, setLoading] = useState(true);
  const [editorOpen, setEditorOpen] = useState(false);
@@ -482,12 +491,6 @@ export default function TemplatesPage() {
  }
  }, [user]);
 
- useEffect(() => {
- if (editorOpen && !canUseCustomTemplates) {
- setEditorOpen(false);
- }
- }, [editorOpen, canUseCustomTemplates]);
-
  const closeEditor = (opts?: { keepSuccess?: boolean }) => {
  setExitConfirmOpen(false);
  setEditorOpen(false);
@@ -522,14 +525,8 @@ export default function TemplatesPage() {
  }, [templates]);
 
  const handleCreateTemplateClick = (origin: StudioOrigin = 'studio') => {
- if (!canUseCustomTemplates) {
- setError(getFeatureLockMessage('customTemplates', tenant?.plan) + ' La bibliothèque EventMaster reste disponible.');
- return;
- }
- if (templatesAtLimit) {
- setError(getQuotaActionMessage('templates', planQuota, tenant?.plan));
- return;
- }
+ setError('');
+ setSuccess('');
  setStudioOrigin(origin);
  setEditingTemplateId(null);
  setTemplateName('Nouveau Modèle d\'Invitation');
@@ -592,7 +589,8 @@ export default function TemplatesPage() {
  };
 
  const handleEditTemplateClick = (t: TemplateItem, origin: StudioOrigin = 'studio') => {
- if (!canUseCustomTemplates) return;
+ setError('');
+ setSuccess('');
  setStudioOrigin(origin);
  setEditingTemplateId(t.id);
  setTemplateName(t.name);
@@ -638,17 +636,17 @@ export default function TemplatesPage() {
  };
 
  useEffect(() => {
- if (typeof window === 'undefined' || !canUseCustomTemplates) return;
+ if (typeof window === 'undefined') return;
  const params = new URLSearchParams(window.location.search);
  if (params.get('new') !== '1') return;
  const fromAdmin = params.get('from') === 'admin';
  handleCreateTemplateClick(fromAdmin ? 'admin' : 'studio');
  window.history.replaceState({}, document.title, window.location.pathname);
  // eslint-disable-next-line react-hooks/exhaustive-deps -- ouverture unique via ?new=1
- }, [canUseCustomTemplates]);
+ }, []);
 
  useEffect(() => {
- if (typeof window === 'undefined' || !canUseCustomTemplates) return;
+ if (typeof window === 'undefined') return;
  const params = new URLSearchParams(window.location.search);
  if (params.get('aiDraft') !== '1') return;
  const draft = loadAiTemplateDraft();
@@ -683,7 +681,7 @@ export default function TemplatesPage() {
  clearAiTemplateDraft();
  window.history.replaceState({}, document.title, window.location.pathname);
  // eslint-disable-next-line react-hooks/exhaustive-deps -- import unique via ?aiDraft=1
- }, [canUseCustomTemplates]);
+ }, []);
 
  const handleAddElement = (type: 'text' | 'image' | 'button' | 'rsvp-block' | 'curve' | 'triangle' | 'divider') => {
  const themeFonts = getFontTheme(fontTheme);
@@ -1090,7 +1088,6 @@ export default function TemplatesPage() {
     presetPrompt?: string,
     options?: { isAlteration?: boolean },
   ) => {
-    if (!canUseCustomTemplates) return;
     setError('');
     const isAlteration = Boolean(
       options?.isAlteration ||
@@ -1172,11 +1169,7 @@ export default function TemplatesPage() {
 
  /** Depuis la liste : ouvre le studio puis l’assistant IA. */
  const startAiComposeFromList = async () => {
- if (!canUseCustomTemplates) return;
- if (templatesAtLimit) {
- setError(getQuotaActionMessage('templates', planQuota, tenant?.plan));
- return;
- }
+ setError('');
  if (!editorOpen) {
  handleCreateTemplateClick('studio');
  }
@@ -1215,7 +1208,7 @@ export default function TemplatesPage() {
  };
 
  const handleAiComposeGenerate = async () => {
- if (!canUseCustomTemplates || aiComposeBusy) return;
+ if (aiComposeBusy) return;
  if (aiComposePrompt.trim().length < 8) {
  setError('Décrivez le style souhaité (quelques mots minimum).');
  return;
@@ -2146,6 +2139,41 @@ export default function TemplatesPage() {
  }
  }
 
+ // Restrictions et avertissement approprié au moment de l'enregistrement
+ const isBlockedByPlanOrQuota =
+ user?.role !== 'SUPER_ADMIN' &&
+ (!canUseCustomTemplates || (templatesAtLimit && !editingTemplateId));
+
+ if (isBlockedByPlanOrQuota) {
+ try {
+ const draft = {
+ savedAt: new Date().toISOString(),
+ name: templateName,
+ elements: canvasElements,
+ bgType,
+ bgColor,
+ bgImageUrl,
+ bgPattern,
+ frameType,
+ fontTheme,
+ layoutMode,
+ importedPalette,
+ canvasWidth,
+ canvasHeight,
+ canvasSizePreset,
+ floralColor,
+ floralType,
+ floralDensity,
+ };
+ localStorage.setItem(draftKey, JSON.stringify(draft));
+ setDraftSavedAt(new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }));
+ } catch {
+ /* ignore */
+ }
+ setSaveUpgradeModalOpen(true);
+ return;
+ }
+
  setSaving(true);
  try {
  const isGlobalTemplate = user?.role === 'SUPER_ADMIN' && !selectedTenantId;
@@ -2425,33 +2453,33 @@ export default function TemplatesPage() {
  return <SkeletonTemplatesView />;
  }
 
-  if (editorOpen && canUseCustomTemplates) {
-    return (
-      <>
-        {renderMockupImportModal()}
-        {renderAiComposeModal()}
-        {renderQuickTextModal()}
-        <AiTokenPurchaseModal
-          open={aiTokenModalOpen}
-          onClose={() => setAiTokenModalOpen(false)}
-          onSuccess={() => setAiAllowance(getAiSimulationAllowance())}
-        />
-        <AiComposeFullscreenLoader
-          active={aiComposeBusy}
-          embedText={aiComposeEmbedText}
-          hasReferences={aiComposeFiles.length > 0}
-          title={
-            aiComposePrompt.toLowerCase().includes('retouche') || aiComposePrompt.toLowerCase().includes('altér')
-              ? 'Retouche de l’invitation IA…'
-              : undefined
-          }
-          stageHint={aiComposeStage}
-          footnote={
-            aiComposePrompt.toLowerCase().includes('retouche') || aiComposePrompt.toLowerCase().includes('altér')
-              ? 'Conservation de la base avec ajustement précis par l’IA.'
-              : undefined
-          }
-        />
+ if (editorOpen) {
+ return (
+ <>
+ {renderMockupImportModal()}
+ {renderAiComposeModal()}
+ {renderQuickTextModal()}
+ <AiTokenPurchaseModal
+ open={aiTokenModalOpen}
+ onClose={() => setAiTokenModalOpen(false)}
+ onSuccess={() => setAiAllowance(getAiSimulationAllowance())}
+ />
+ <AiComposeFullscreenLoader
+ active={aiComposeBusy}
+ embedText={aiComposeEmbedText}
+ hasReferences={aiComposeFiles.length > 0}
+ title={
+ aiComposePrompt.toLowerCase().includes('retouche') || aiComposePrompt.toLowerCase().includes('altér')
+ ? 'Retouche de l’invitation IA…'
+ : undefined
+ }
+ stageHint={aiComposeStage}
+ footnote={
+ aiComposePrompt.toLowerCase().includes('retouche') || aiComposePrompt.toLowerCase().includes('altér')
+ ? 'Conservation de la base avec ajustement précis par l’IA.'
+ : undefined
+ }
+ />
  <Modal
  open={exitConfirmOpen}
  onClose={() => setExitConfirmOpen(false)}
@@ -2484,6 +2512,82 @@ export default function TemplatesPage() {
  Dernier brouillon local : {draftSavedAt}. Les invités ne verront les changements qu&apos;après enregistrement.
  </p>
  ) : null}
+ </Modal>
+
+ <Modal
+ open={saveUpgradeModalOpen}
+ onClose={() => setSaveUpgradeModalOpen(false)}
+ size="md"
+ title={
+ <div className="flex items-center gap-2.5">
+ <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+ <Crown className="w-5 h-5" />
+ </div>
+ <div>
+ <span className="text-base font-bold text-foreground block">
+ Enregistrement de modèle d’invitation
+ </span>
+ <span className="text-xs text-muted block font-normal">
+ Votre création est sauvegardée en brouillon local sur cet appareil
+ </span>
+ </div>
+ </div>
+ }
+ >
+ <div className="space-y-4 pt-1">
+ <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-surface to-amber-500/5 border border-amber-500/20 space-y-2">
+ <p className="text-sm font-semibold text-foreground">
+ Votre modèle « {templateName || 'Nouvelle invitation'} » est magnifique !
+ </p>
+ <p className="text-xs text-muted leading-relaxed">
+ {!canUseCustomTemplates
+ ? "La création et l'enregistrement de faire-part personnalisés sont réservés aux offres professionnelles et supérieures. Votre modèle a bien été sauvegardé sur cet appareil pour que vous ne perdiez pas votre travail."
+ : `Vous avez atteint la limite de ${planQuota?.limits.maxTemplates ?? 1} modèle(s) d'invitation de votre formule actuelle (${tenant?.plan || 'actuel'}). Pour enregistrer ce nouveau modèle sans supprimer les précédents, activez une formule supérieure.`}
+ </p>
+ </div>
+
+ <div className="rounded-xl border border-border p-3.5 space-y-2 bg-surface-muted/50 text-xs">
+ <p className="font-bold text-foreground flex items-center gap-1.5">
+ <Sparkles className="w-3.5 h-3.5 text-primary" />
+ Avantages du forfait supérieur :
+ </p>
+ <ul className="space-y-1.5 text-muted pl-1">
+ <li className="flex items-center gap-2">
+ <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+ <span>Enregistrement et utilisation illimitée de modèles sur-mesure</span>
+ </li>
+ <li className="flex items-center gap-2">
+ <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+ <span>Formulaires RSVP personnalisés et suivi des présences</span>
+ </li>
+ <li className="flex items-center gap-2">
+ <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+ <span>Génération d&apos;invitations avancées par Intelligence Artificielle</span>
+ </li>
+ </ul>
+ </div>
+
+ <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+ <button
+ type="button"
+ onClick={() => {
+ window.open('/dashboard/billing', '_blank');
+ }}
+ className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold rounded-xl text-xs shadow-md shadow-amber-500/20 transition cursor-pointer"
+ >
+ <Sparkles className="w-4 h-4" />
+ <span>Passer au forfait supérieur</span>
+ <ArrowRight className="w-4 h-4" />
+ </button>
+ <button
+ type="button"
+ onClick={() => setSaveUpgradeModalOpen(false)}
+ className="px-4 py-2.5 border border-border hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer"
+ >
+ Continuer à peaufiner
+ </button>
+ </div>
+ </div>
  </Modal>
 
  <Modal
@@ -2544,6 +2648,24 @@ export default function TemplatesPage() {
  </div>
  </Modal>
  <div className="flex flex-col gap-4 max-lg:fixed max-lg:inset-0 max-lg:z-[55] max-lg:bg-background max-lg:px-3 max-lg:pt-[max(0.75rem,env(safe-area-inset-top))] max-lg:overflow-hidden">
+ {(!canUseCustomTemplates || templatesAtLimit) && user?.role !== 'SUPER_ADMIN' && (
+ <div className="bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-amber-500/5 border border-amber-500/30 rounded-2xl px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-amber-950 dark:text-amber-200">
+ <div className="flex items-center gap-2 min-w-0">
+ <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+ <span className="leading-tight">
+ <strong className="font-bold">Mode Découverte & Conception :</strong> Vous pouvez concevoir, tester et prévisualiser votre modèle librement. L&apos;enregistrement sur votre compte requiert un forfait supérieur.
+ </span>
+ </div>
+ <button
+ type="button"
+ onClick={() => setSaveUpgradeModalOpen(true)}
+ className="inline-flex items-center gap-1 font-bold text-amber-800 dark:text-amber-300 hover:underline shrink-0 cursor-pointer self-start sm:self-auto"
+ >
+ <span>Voir les formules</span>
+ <ArrowRight className="w-3.5 h-3.5" />
+ </button>
+ </div>
+ )}
  {/* Editor Header — identity left, primary actions right, admin meta secondary */}
  <header className="shrink-0 space-y-3 border-b border-border pb-4">
  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -5252,7 +5374,6 @@ export default function TemplatesPage() {
  />
  }
  action={
- canUseCustomTemplates ? (
  <div className="flex flex-wrap gap-2">
  {user?.role === 'SUPER_ADMIN' && (
  <Link
@@ -5265,13 +5386,12 @@ export default function TemplatesPage() {
  )}
  <Button
  onClick={startAiComposeFromList}
- disabled={templatesAtLimit || aiComposeBusy}
- title={templatesQuotaMsg || `Créer une invitation à partir d’images et d’un brief (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons IA)`}
+ disabled={aiComposeBusy}
+ title={`Créer une invitation à partir d’images et d’un brief (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons IA)`}
  leftIcon={aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
  >
  Créer avec l’IA
  </Button>
- {canUseMockupImport && (
  <>
  <input
  ref={mockupInputRef}
@@ -5283,57 +5403,24 @@ export default function TemplatesPage() {
  <Button
  variant="secondary"
  onClick={() => mockupInputRef.current?.click()}
- disabled={mockupImporting || templatesAtLimit}
- title={templatesQuotaMsg || undefined}
+ disabled={mockupImporting}
  leftIcon={mockupImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
  >
  {mockupImporting ? (ocrProgress !== null ? `Texte ${ocrProgress}%` : 'Import…') : 'Importer une maquette'}
  </Button>
  </>
- )}
  <Button
  variant="secondary"
  onClick={() => handleCreateTemplateClick('studio')}
- disabled={templatesAtLimit}
- title={templatesQuotaMsg || undefined}
  leftIcon={<PlusCircle className="w-4 h-4" />}
  >
  Nouveau modèle
  </Button>
  </div>
- ) : (
- <Link href="/dashboard/billing" className="text-xs font-semibold text-amber-700 hover:underline">
- Débloquer l&apos;éditeur — voir les forfaits →
- </Link>
- )
  }
  />
 
- {canUseCustomTemplates && !templatesAtLimit && (
- <div className="rounded-[var(--radius-card)] border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent px-4 py-4 sm:px-5 sm:py-4 flex flex-col sm:flex-row sm:items-center gap-4">
- <div className="flex items-start gap-3 min-w-0 flex-1">
- <span className="w-11 h-11 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-md shadow-primary/25">
- <Wand2 className="w-5 h-5" />
- </span>
- <div className="min-w-0">
- <p className="text-sm font-bold text-foreground">Édition d’invitation par IA</p>
- <p className="text-xs text-muted leading-relaxed mt-1">
- Déposez 1 à 4 images d’inspiration, décrivez le style : l’IA analyse, crée une nouvelle image de fond et une structure entièrement éditable. Même portefeuille de jetons que la simulation budget.
- </p>
- </div>
- </div>
- <Button
- onClick={startAiComposeFromList}
- disabled={aiComposeBusy}
- leftIcon={<Wand2 className="w-4 h-4" />}
- className="shrink-0"
- >
- Essayer maintenant
- </Button>
- </div>
- )}
-
- {templatesAtLimit && user?.role === 'USER' && (
+ {(!canUseCustomTemplates || templatesAtLimit) && user?.role === 'USER' && (
  <PlanLimitCallout kind="templates" planQuota={planQuota} planName={tenant?.plan} />
  )}
  {user?.role === 'SUPER_ADMIN' && (
@@ -5389,6 +5476,7 @@ export default function TemplatesPage() {
  isSuperAdmin={false}
  layout={templatesViewMode}
  columns={templatesColumns}
+ onViewDetails={(t) => setPreviewTemplate(t as TemplateItem)}
  onDuplicate={
  canDuplicateAny && !templatesAtLimit
  ? (t) => handleDuplicateTemplate(t as TemplateItem)
@@ -5421,22 +5509,19 @@ export default function TemplatesPage() {
  isSuperAdmin={user?.role === 'SUPER_ADMIN'}
  layout={templatesViewMode}
  columns={templatesColumns}
+ onViewDetails={(t) => setPreviewTemplate(t as TemplateItem)}
  emptyMessage={
  user?.role === 'SUPER_ADMIN'
  ? "Aucun modèle. Créez un modèle global ou pour une organisation."
- : canUseCustomTemplates
- ? "Aucun modèle personnel. Créez-en un avec l’IA, importez une maquette, ou partez de la bibliothèque."
- : "Aucun modèle dans votre organisation. Utilisez la bibliothèque ci-dessus pour commencer."
+ : "Aucun modèle personnel pour l'instant. Créez-en un avec l’IA, importez une maquette, ou partez de la bibliothèque."
  }
  emptyAction={
- canUseCustomTemplates ? (
  <div className="flex flex-col sm:flex-row gap-3 justify-center">
  <button
  type="button"
  onClick={startAiComposeFromList}
- disabled={templatesAtLimit || aiComposeBusy}
- title={templatesQuotaMsg || undefined}
- className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+ disabled={aiComposeBusy}
+ className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/20 cursor-pointer"
  >
  {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
  Créer avec l’IA
@@ -5446,7 +5531,7 @@ export default function TemplatesPage() {
  type="button"
  onClick={() => mockupInputRef.current?.click()}
  disabled={mockupImporting}
- className="inline-flex items-center gap-2 px-5 py-2.5 border border-primary/30 text-primary font-semibold rounded-xl text-sm transition hover:bg-primary/10 disabled:opacity-50"
+ className="inline-flex items-center gap-2 px-5 py-2.5 border border-primary/30 text-primary font-semibold rounded-xl text-sm transition hover:bg-primary/10 disabled:opacity-50 cursor-pointer"
  >
  {mockupImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
  Importer ma maquette
@@ -5455,19 +5540,14 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => handleCreateTemplateClick('studio')}
- disabled={templatesAtLimit}
- title={templatesQuotaMsg || undefined}
- className="inline-flex items-center gap-2 px-5 py-2.5 border border-border text-foreground font-semibold rounded-xl text-sm transition hover:bg-surface-muted disabled:opacity-50 disabled:cursor-not-allowed"
+ className="inline-flex items-center gap-2 px-5 py-2.5 border border-border text-foreground font-semibold rounded-xl text-sm transition hover:bg-surface-muted cursor-pointer"
  >
  <PlusCircle className="w-4 h-4" />
  Éditeur manuel
  </button>
  </div>
- ) : catalogTemplates.length > 0 ? (
- <p className="text-xs text-muted">Choisissez un modèle dans la bibliothèque et cliquez sur « Utiliser ce modèle ».</p>
- ) : undefined
  }
- onEdit={canUseCustomTemplates ? (t) => handleEditTemplateClick(t as TemplateItem) : undefined}
+ onEdit={(t) => handleEditTemplateClick(t as TemplateItem)}
  onDuplicate={
  (canUseCustomTemplates || user?.role === 'SUPER_ADMIN') && !templatesAtLimit
  ? (t) => handleDuplicateTemplate(t as TemplateItem)
@@ -5485,6 +5565,109 @@ export default function TemplatesPage() {
  />
  </section>
  </div>
+
+ <TemplatePreviewModal
+ open={Boolean(previewTemplate)}
+ onClose={() => setPreviewTemplate(null)}
+ template={previewTemplate ? {
+ id: previewTemplate.id,
+ name: previewTemplate.name,
+ content: previewTemplate.content,
+ createdAt: previewTemplate.createdAt || '',
+ tenantId: previewTemplate.tenantId,
+ tenantName: previewTemplate.tenant?.name,
+ tenant: previewTemplate.tenant,
+ showOnLanding: previewTemplate.showOnLanding,
+ isGlobal: previewTemplate.isGlobal,
+ } : null}
+ canEdit={true}
+ canDuplicate={canDuplicateAny && !templatesAtLimit}
+ onEdit={(t) => {
+ setPreviewTemplate(null);
+ handleEditTemplateClick(t as TemplateItem);
+ }}
+ onDuplicate={(t) => {
+ setPreviewTemplate(null);
+ handleDuplicateTemplate(t as TemplateItem);
+ }}
+ isOwnerOrManager={isOwnerOrManager}
+ />
+
+ <Modal
+ open={saveUpgradeModalOpen}
+ onClose={() => setSaveUpgradeModalOpen(false)}
+ size="md"
+ title={
+ <div className="flex items-center gap-2.5">
+ <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+ <Crown className="w-5 h-5" />
+ </div>
+ <div>
+ <span className="text-base font-bold text-foreground block">
+ Enregistrement de modèle d’invitation
+ </span>
+ <span className="text-xs text-muted block font-normal">
+ Votre création est sauvegardée en brouillon local sur cet appareil
+ </span>
+ </div>
+ </div>
+ }
+ >
+ <div className="space-y-4 pt-1">
+ <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-surface to-amber-500/5 border border-amber-500/20 space-y-2">
+ <p className="text-sm font-semibold text-foreground">
+ Votre modèle « {templateName || 'Nouvelle invitation'} » est magnifique !
+ </p>
+ <p className="text-xs text-muted leading-relaxed">
+ {!canUseCustomTemplates
+ ? "La création et l'enregistrement de faire-part personnalisés sont réservés aux offres professionnelles et supérieures. Votre modèle a bien été sauvegardé sur cet appareil pour que vous ne perdiez pas votre travail."
+ : `Vous avez atteint la limite de ${planQuota?.limits.maxTemplates ?? 1} modèle(s) d'invitation de votre formule actuelle (${tenant?.plan || 'actuel'}). Pour enregistrer ce nouveau modèle sans supprimer les précédents, activez une formule supérieure.`}
+ </p>
+ </div>
+
+ <div className="rounded-xl border border-border p-3.5 space-y-2 bg-surface-muted/50 text-xs">
+ <p className="font-bold text-foreground flex items-center gap-1.5">
+ <Sparkles className="w-3.5 h-3.5 text-primary" />
+ Avantages du forfait supérieur :
+ </p>
+ <ul className="space-y-1.5 text-muted pl-1">
+ <li className="flex items-center gap-2">
+ <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+ <span>Enregistrement et utilisation illimitée de modèles sur-mesure</span>
+ </li>
+ <li className="flex items-center gap-2">
+ <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+ <span>Formulaires RSVP personnalisés et suivi des présences</span>
+ </li>
+ <li className="flex items-center gap-2">
+ <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+ <span>Génération d&apos;invitations avancées par Intelligence Artificielle</span>
+ </li>
+ </ul>
+ </div>
+
+ <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+ <button
+ type="button"
+ onClick={() => {
+ window.open('/dashboard/billing', '_blank');
+ }}
+ className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold rounded-xl text-xs shadow-md shadow-amber-500/20 transition cursor-pointer"
+ >
+ <Sparkles className="w-3.5 h-3.5" />
+ <span>Passer au forfait supérieur</span>
+ <ArrowRight className="w-3.5 h-3.5" />
+ </button>
+ <button
+ type="button"
+ onClick={() => setSaveUpgradeModalOpen(false)}
+ className="px-4 py-2.5 border border-border hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer"
+ >
+ Continuer à peaufiner
+ </button>
+ </div>
+ </div>
+ </Modal>
  </>
  );
 }

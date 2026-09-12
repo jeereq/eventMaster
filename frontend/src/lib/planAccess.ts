@@ -55,10 +55,10 @@ export function getQuotaLockMessage(
   } as const;
   const row = map[kind];
   if (!isUnlimitedQuota(row.limit) && (row.limit as number) <= 0) {
-    return `${row.label.charAt(0).toUpperCase()}${row.label.slice(1)} non inclus dans votre forfait. Choisissez une offre adaptée.`;
+    return `${row.label.charAt(0).toUpperCase()}${row.label.slice(1)} non inclus dans votre forfait. Choisissez une offre supérieure pour les débloquer.`;
   }
   if (!isAtQuota(row.usage, row.limit)) return null;
-  return `Quota ${row.label} atteint (${row.usage}/${row.limit}). Passez à un forfait supérieur.`;
+  return `Vous avez atteint votre quota de ${row.label} (${row.usage}/${row.limit}). Passez au forfait supérieur pour en ajouter davantage.`;
 }
 
 export function getFeatureLockMessage(
@@ -66,17 +66,17 @@ export function getFeatureLockMessage(
   planName?: string | null,
 ): string {
   const labels: Partial<Record<keyof PlanCapabilities, string>> = {
-    protocolQr: 'Le protocole QR n’est pas inclus dans votre forfait',
-    seatNotifications: 'Les notifications PDF / GPS de placement ne sont pas incluses dans votre forfait',
-    customTemplates: 'Les modèles personnalisés ne sont pas inclus dans votre forfait',
-    customRsvpFields: 'Les champs RSVP personnalisables ne sont pas inclus dans votre forfait',
-    mockupOcr: 'L’import OCR n’est pas inclus dans votre forfait',
-    roomThemesFixtures: 'Thèmes et fixtures de salle non inclus dans votre forfait',
-    commercialNetwork: 'Le réseau commercial n’est pas inclus dans votre forfait',
-    adminReports: 'Les rapports avancés ne sont pas inclus dans votre forfait',
+    protocolQr: 'Le module de protocole QR pour l’accueil jour J nécessite un forfait supérieur',
+    seatNotifications: 'Les notifications automatisées de placement (PDF / GPS) sont disponibles avec un forfait supérieur',
+    customTemplates: 'L’éditeur et l’enregistrement de modèles d’invitation personnalisés nécessitent un forfait supérieur',
+    customRsvpFields: 'Les champs RSVP sur-mesure nécessitent un forfait supérieur',
+    mockupOcr: 'L’import de maquette avec reconnaissance intelligente (OCR) est réservé aux forfaits supérieurs',
+    roomThemesFixtures: 'Les thèmes avancés et décors 2D de salle nécessitent un forfait supérieur',
+    commercialNetwork: 'L’accès au réseau commercial est réservé aux offres supérieures',
+    adminReports: 'Les analyses et rapports détaillés sont réservés aux forfaits supérieurs',
   };
-  const base = labels[feature] || 'Fonctionnalité non incluse dans votre forfait';
-  return planName ? `${base} (actuel : ${planName}).` : `${base}.`;
+  const base = labels[feature] || 'Cette fonctionnalité avancée nécessite un forfait supérieur';
+  return planName ? `${base} (formule actuelle : ${planName}).` : `${base}.`;
 }
 
 export type QuotaKind = 'events' | 'guests' | 'templates' | 'rooms' | 'services' | 'orgManagers';

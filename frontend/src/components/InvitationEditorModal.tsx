@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Button, Modal } from '@/components/ui';
 import InvitationMessagePreview from './InvitationMessagePreview';
+import TemplatePreviewModal from '@/components/templates/TemplatePreviewModal';
 import { toWhatsAppTone } from '@/lib/whatsappTone';
 import { formatGuestGuidelinesBlock, normalizeGuestGuidelines, type GuestGuidelines } from '@/lib/guestGuidelines';
 import { cn } from '@/lib/cn';
@@ -79,6 +80,9 @@ export default function InvitationEditorModal({
   const [activeChannelTab, setActiveChannelTab] = useState<'email' | 'whatsapp'>('email');
   const [activeField, setActiveField] = useState<'subject' | 'body' | 'whatsappBody'>('body');
   const [feedbackMessage, setFeedbackMessage] = useState<{ text: string; type: 'success' | 'info' } | null>(null);
+  const [previewGraphicModalOpen, setPreviewGraphicModalOpen] = useState(false);
+
+  const selectedGraphicTemplate = templates.find((t) => t.id === data.templateId);
 
   const subjectRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
@@ -386,6 +390,7 @@ export default function InvitationEditorModal({
   const whatsappWordCount = (data.whatsappBody || '').trim().split(/\s+/).filter(Boolean).length;
 
   return (
+    <>
     <Modal
       open={open}
       onClose={onClose}
@@ -584,19 +589,33 @@ export default function InvitationEditorModal({
                 </p>
               </div>
 
-              <select
-                aria-label="Sélectionner le modèle graphique de la page RSVP"
-                value={data.templateId}
-                onChange={(e) => handleSelectGraphicTemplate(e.target.value)}
-                className="min-h-11 px-3 py-1.5 bg-surface border border-border rounded-xl text-xs font-semibold focus:ring-2 focus:ring-primary/20 text-foreground cursor-pointer sm:max-w-xs"
-              >
-                <option value="">-- Page RSVP standard EventMaster --</option>
-                {templates.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    🎨 {t.name}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <select
+                  aria-label="Sélectionner le modèle graphique de la page RSVP"
+                  value={data.templateId}
+                  onChange={(e) => handleSelectGraphicTemplate(e.target.value)}
+                  className="flex-1 min-h-11 px-3 py-1.5 bg-surface border border-border rounded-xl text-xs font-semibold focus:ring-2 focus:ring-primary/20 text-foreground cursor-pointer sm:max-w-xs"
+                >
+                  <option value="">-- Page RSVP standard EventMaster --</option>
+                  {templates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      🎨 {t.name}
+                    </option>
+                  ))}
+                </select>
+
+                {selectedGraphicTemplate && (
+                  <button
+                    type="button"
+                    onClick={() => setPreviewGraphicModalOpen(true)}
+                    className="inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition cursor-pointer shrink-0"
+                    title="Voir l'aperçu du faire-part graphique"
+                  >
+                    <Eye className="w-4 h-4" />
+                    <span>Aperçu</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -980,5 +999,20 @@ export default function InvitationEditorModal({
         </div>
       </form>
     </Modal>
+
+    {selectedGraphicTemplate && (
+      <TemplatePreviewModal
+        open={previewGraphicModalOpen}
+        onClose={() => setPreviewGraphicModalOpen(false)}
+        template={{
+          id: selectedGraphicTemplate.id,
+          name: selectedGraphicTemplate.name,
+          content: selectedGraphicTemplate.content,
+          createdAt: '',
+        }}
+        isOwnerOrManager={true}
+      />
+    )}
+  </>
   );
 }
