@@ -47,28 +47,28 @@ function WhatsAppFormattedText({ text }: { text: string }) {
       {tokens.map((token, index) => {
         if (token.type === 'bold') {
           return (
-            <strong key={index} className="font-semibold">
+            <strong key={index} className="font-semibold text-foreground">
               {token.value}
             </strong>
           );
         }
         if (token.type === 'italic') {
           return (
-            <em key={index} className="italic">
+            <em key={index} className="italic text-foreground">
               {token.value}
             </em>
           );
         }
         if (token.type === 'strike') {
           return (
-            <s key={index} className="text-slate-500">
+            <s key={index} className="text-muted line-through">
               {token.value}
             </s>
           );
         }
         if (token.type === 'link') {
           return (
-            <span key={index} className="text-[#027eb5] underline break-all">
+            <span key={index} className="text-sky-600 dark:text-sky-400 font-medium underline break-all">
               {token.value}
             </span>
           );
@@ -101,7 +101,6 @@ export default function InvitationMessagePreview({
   const showEmail = channel !== 'WHATSAPP';
   const showWhatsApp = channel !== 'EMAIL';
   const [tab, setTab] = useState<PreviewTab>(showEmail ? 'email' : 'whatsapp');
-
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -138,7 +137,7 @@ export default function InvitationMessagePreview({
           <button
             type="button"
             onClick={handleCopy}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted rounded-lg border border-border transition min-h-[32px]"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted rounded-xl border border-border transition min-h-9 touch-manipulation cursor-pointer"
             title="Copier le texte du message"
             aria-label="Copier le texte du message"
           >
@@ -155,27 +154,31 @@ export default function InvitationMessagePreview({
             )}
           </button>
           {showEmail && showWhatsApp ? (
-            <div className="inline-flex p-0.5 rounded-lg bg-surface-muted border border-border" role="tablist" aria-label="Canal d'aperçu">
+            <div className="inline-flex p-0.5 rounded-xl bg-surface-muted border border-border" role="tablist" aria-label="Canal d'aperçu">
               <button
+                id="preview-tab-email"
                 type="button"
                 role="tab"
                 aria-selected={tab === 'email'}
+                aria-controls="preview-panel-email"
                 onClick={() => setTab('email')}
                 className={cn(
-                  'px-3 py-1.5 rounded-md text-xs font-semibold transition min-h-[32px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                  tab === 'email' ? 'bg-surface text-foreground shadow-2xs' : 'text-muted hover:text-foreground',
+                  'px-3 py-1.5 rounded-lg text-xs font-semibold transition min-h-9 touch-manipulation cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                  tab === 'email' ? 'bg-surface text-foreground shadow-2xs font-bold' : 'text-muted hover:text-foreground',
                 )}
               >
                 E-mail
               </button>
               <button
+                id="preview-tab-whatsapp"
                 type="button"
                 role="tab"
                 aria-selected={tab === 'whatsapp'}
+                aria-controls="preview-panel-whatsapp"
                 onClick={() => setTab('whatsapp')}
                 className={cn(
-                  'px-3 py-1.5 rounded-md text-xs font-semibold transition min-h-[32px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                  tab === 'whatsapp' ? 'bg-surface text-foreground shadow-2xs' : 'text-muted hover:text-foreground',
+                  'px-3 py-1.5 rounded-lg text-xs font-semibold transition min-h-9 touch-manipulation cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                  tab === 'whatsapp' ? 'bg-surface text-foreground shadow-2xs font-bold' : 'text-muted hover:text-foreground',
                 )}
               >
                 WhatsApp
@@ -190,7 +193,12 @@ export default function InvitationMessagePreview({
       </div>
 
       {tab === 'email' && showEmail ? (
-        <div className="rounded-2xl border border-border overflow-hidden bg-surface-muted/50">
+        <div
+          id="preview-panel-email"
+          role="tabpanel"
+          aria-labelledby="preview-tab-email"
+          className="rounded-2xl border border-border overflow-hidden bg-surface-muted/50"
+        >
           <div
             className="px-4 py-3.5 text-white text-center"
             style={{ background: `linear-gradient(135deg, ${primary}, ${accent})` }}
@@ -202,7 +210,7 @@ export default function InvitationMessagePreview({
             {!alreadyGreets && (
               <p className="font-bold text-foreground">Bonjour Marie,</p>
             )}
-            <p className="whitespace-pre-line">{body || 'Le texte du message apparaîtra ici.'}</p>
+            <p className="whitespace-pre-line">{body || 'Le texte du message apparaîtra ici après rédaction.'}</p>
             <div className="text-center pt-2">
               <span
                 className="inline-block text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs"
@@ -214,7 +222,12 @@ export default function InvitationMessagePreview({
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl border border-border overflow-hidden bg-[#0b141a]">
+        <div
+          id="preview-panel-whatsapp"
+          role="tabpanel"
+          aria-labelledby="preview-tab-whatsapp"
+          className="rounded-2xl border border-border overflow-hidden bg-[#0b141a]"
+        >
           <div className="bg-[#075e54] px-4 py-3 text-white">
             <p className="text-xs uppercase tracking-wider text-white/70">WhatsApp</p>
             <p className="text-sm font-semibold truncate">{orgName || 'Organisation'}</p>
@@ -228,14 +241,14 @@ export default function InvitationMessagePreview({
               backgroundSize: '10px 10px',
             }}
           >
-            <div className="max-w-[92%] rounded-xl rounded-tl-sm bg-white px-3.5 py-2.5 text-sm text-slate-800 leading-relaxed shadow-sm">
+            <div className="max-w-[92%] rounded-xl rounded-tl-sm bg-white dark:bg-surface px-3.5 py-2.5 text-sm text-foreground leading-relaxed shadow-xs">
               {whatsappText ? (
                 <WhatsAppFormattedText text={whatsappText} />
               ) : (
-                <span className="text-slate-500">Le message WhatsApp apparaîtra ici.</span>
+                <span className="text-muted">Le message WhatsApp apparaîtra ici.</span>
               )}
             </div>
-            <p className="text-xs text-slate-600 mt-2">Aperçu en direct tel que reçu par l’invité.</p>
+            <p className="text-xs text-muted mt-2">Aperçu en direct tel que reçu par l’invité.</p>
           </div>
         </div>
       )}

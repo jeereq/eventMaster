@@ -3270,7 +3270,9 @@ Merci de confirmer votre présence :
                               </span>
                             </div>
                             <h3 className="text-base font-semibold text-foreground tracking-tight line-clamp-1">{invite.subject}</h3>
-                            <p className="text-sm text-muted line-clamp-3 leading-relaxed whitespace-pre-line">{invite.body}</p>
+                            <p className="text-sm text-muted line-clamp-3 leading-relaxed whitespace-pre-line">
+                              {invite.body || invite.whatsappBody || 'Aucun message rédigé.'}
+                            </p>
                           </div>
                           <div className="flex gap-2 pt-3 border-t border-border">
                             <Button
@@ -3292,6 +3294,7 @@ Merci de confirmer votre présence :
                               onClick={() => handleEditInvitationClick(invite)}
                               disabled={broadcastingInviteId !== null}
                               title="Modifier l'invitation"
+                              aria-label="Modifier l'invitation"
                             >
                               <Edit3 className="w-4 h-4" />
                             </Button>
@@ -3301,8 +3304,8 @@ Merci de confirmer votre présence :
                               onClick={() => requestDeleteInvitation(invite.id)}
                               disabled={broadcastingInviteId !== null}
                               title="Supprimer l'invitation"
+                              aria-label="Supprimer l'invitation"
                               className="hover:text-danger"
-
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
