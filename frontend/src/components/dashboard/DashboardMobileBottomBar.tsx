@@ -206,7 +206,7 @@ function buildRoleMobileBottomItems({
       { id: 'home', name: 'Accueil', href: '/dashboard', icon: LayoutDashboard },
       { id: 'catalogue', name: 'Explorer', href: '/dashboard/catalogue', icon: Store },
       { id: 'simulator', name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', icon: Sparkles },
-      { id: 'packs', name: 'Mes packs', href: '/dashboard/catalogue?tab=packs', icon: Bookmark },
+      { id: 'tickets', name: 'Billets', href: '/dashboard/tickets', icon: Ticket },
       { id: 'menu', name: 'Menu', href: '#menu', icon: Menu, isMenuTrigger: true },
     ];
   }
