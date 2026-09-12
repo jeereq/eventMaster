@@ -70,29 +70,30 @@ export default function PlanLimitCallout({
     return (
       <div
         className={cn(
-          'rounded-xl border p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition',
-          isFeatureCallout
-            ? 'border-primary/25 dark:border-primary/40 bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 text-foreground'
-            : 'border-amber-300/80 dark:border-amber-700/60 bg-gradient-to-r from-amber-500/10 to-amber-500/5 dark:from-amber-950/30 dark:to-amber-950/10 text-amber-950 dark:text-amber-200',
+          'rounded-xl border border-border bg-surface p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition text-foreground shadow-2xs',
           className,
         )}
         role="status"
       >
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center gap-2.5 min-w-0">
           <div
             className={cn(
               'p-1.5 rounded-lg shrink-0',
               isFeatureCallout
-                ? 'bg-primary/15 dark:bg-primary/25 text-primary dark:text-emerald-300'
-                : 'bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-300',
+                ? 'bg-primary/10 text-primary'
+                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
             )}
           >
-            {isFeatureCallout ? <Sparkles className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
+            {isFeatureCallout ? (
+              <Sparkles className="w-4 h-4" aria-hidden />
+            ) : (
+              <Zap className="w-4 h-4" aria-hidden />
+            )}
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-semibold truncate">{headline}</p>
+            <p className="text-xs font-semibold text-foreground truncate">{headline}</p>
             {usage !== null && limit !== null && (
-              <p className="text-[11px] text-muted dark:text-muted">
+              <p className="text-[11px] text-muted">
                 {usage} / {limit} utilisé{usage > 1 ? 's' : ''} ({percent}%)
               </p>
             )}
@@ -101,15 +102,10 @@ export default function PlanLimitCallout({
 
         <Link
           href={guide.href}
-          className={cn(
-            'inline-flex min-h-11 items-center justify-center gap-1 text-xs font-bold px-3.5 py-2 rounded-lg transition shrink-0 active:scale-[0.98] motion-reduce:active:scale-100',
-            isFeatureCallout
-              ? 'bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground shadow-xs'
-              : 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white shadow-xs',
-          )}
+          className="inline-flex min-h-9 items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground transition shrink-0 active:scale-[0.98] motion-reduce:active:scale-100"
         >
           <span>Augmenter</span>
-          <ArrowRight className="w-3.5 h-3.5" />
+          <ArrowRight className="w-3.5 h-3.5 text-muted" aria-hidden />
         </Link>
       </div>
     );
@@ -118,38 +114,39 @@ export default function PlanLimitCallout({
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-2xl border p-4 sm:p-5 transition shadow-xs space-y-3.5',
-        isFeatureCallout
-          ? 'border-primary/25 dark:border-primary/40 bg-gradient-to-br from-primary/10 via-surface to-primary/5 dark:from-primary/20 dark:via-surface dark:to-primary/10'
-          : 'border-amber-300/80 dark:border-amber-700/60 bg-gradient-to-br from-amber-500/10 via-surface to-amber-500/5 dark:from-amber-950/30 dark:via-surface dark:to-amber-950/10',
+        'relative rounded-2xl border border-border bg-surface p-4 sm:p-5 transition shadow-2xs space-y-3.5 text-foreground',
         className,
       )}
       role="status"
     >
-      {/* En-tête : Badge & titre chaleureux */}
+      {/* En-tête : Badge sobre & titre clair */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <div
             className={cn(
-              'p-2 rounded-xl shrink-0 shadow-xs',
+              'p-2 rounded-xl shrink-0 border border-border/60',
               isFeatureCallout
-                ? 'bg-primary/15 dark:bg-primary/25 text-primary dark:text-emerald-300'
-                : 'bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-300',
+                ? 'bg-primary/10 text-primary'
+                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
             )}
           >
-            {isFeatureCallout ? <Crown className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
+            {isFeatureCallout ? (
+              <Crown className="w-4 h-4" aria-hidden />
+            ) : (
+              <Zap className="w-4 h-4" aria-hidden />
+            )}
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span
                 className={cn(
-                  'px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider',
+                  'px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider',
                   isFeatureCallout
-                    ? 'bg-primary/15 dark:bg-primary/25 text-primary dark:text-emerald-300 border border-primary/20'
-                    : 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 border border-amber-300/50',
+                    ? 'bg-primary/10 text-primary border border-primary/20'
+                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20',
                 )}
               >
-                {isFeatureCallout ? 'Fonctionnalité Premium' : 'Limite de forfait atteinte'}
+                {isFeatureCallout ? 'Fonctionnalité Premium' : 'Limite de forfait'}
               </span>
               {planName && (
                 <span className="text-[11px] text-muted">
@@ -157,14 +154,14 @@ export default function PlanLimitCallout({
                 </span>
               )}
             </div>
-            <h3 className="text-sm font-bold text-foreground mt-0.5">{headline}</h3>
+            <h3 className="text-sm font-semibold text-foreground mt-0.5">{headline}</h3>
           </div>
         </div>
 
-        {/* Jauge si limite chiffrée */}
+        {/* Jauge si limite chiffrée - sobre et lisible */}
         {usage !== null && limit !== null && (
           <div className="sm:text-right shrink-0">
-            <span className="text-xs font-bold text-foreground">
+            <span className="text-xs font-semibold text-foreground">
               {usage} / {limit} utilisé{usage > 1 ? 's' : ''}
             </span>
             <div
@@ -173,14 +170,14 @@ export default function PlanLimitCallout({
               aria-valuemin={0}
               aria-valuemax={100}
               aria-label={`Quota consommé : ${usage} sur ${limit}`}
-              className="w-32 sm:w-28 h-2 bg-surface-muted border border-border rounded-full overflow-hidden mt-1"
+              className="w-32 sm:w-28 h-2 bg-surface-muted border border-border/60 rounded-full overflow-hidden mt-1"
             >
               <div
                 className={cn(
                   'h-full transition-all duration-500 rounded-full',
                   percent && percent >= 100
-                    ? 'bg-gradient-to-r from-amber-500 to-rose-500'
-                    : 'bg-gradient-to-r from-primary to-amber-500',
+                    ? 'bg-amber-600 dark:bg-amber-500'
+                    : 'bg-primary',
                 )}
                 style={{ width: `${percent}%` }}
               />
@@ -189,33 +186,28 @@ export default function PlanLimitCallout({
         )}
       </div>
 
-      {/* Description bienveillante et incitative */}
-      <div className="space-y-1.5 text-xs text-muted dark:text-muted leading-relaxed">
+      {/* Description sobre et lisible */}
+      <div className="space-y-1 text-xs text-muted leading-relaxed">
         <p className="flex items-start gap-1.5">
-          <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-muted" />
+          <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-muted" aria-hidden />
           <span>{guide.what}</span>
         </p>
         <p className="pl-5 text-muted/90">{guide.why}</p>
       </div>
 
       {/* Action concrète et incitation d'upgrade */}
-      <div className="pt-2 border-t border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <p className="text-xs text-foreground font-medium">
-          <span className="text-muted">Comment débloquer :</span> {guide.how}
+      <div className="pt-2.5 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <p className="text-xs text-muted">
+          <span className="font-semibold text-foreground">Pour débloquer :</span> {guide.how}
         </p>
 
         <Link
           href={guide.href}
-          className={cn(
-            'inline-flex min-h-11 items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-sm transition hover:scale-[1.02] active:scale-[0.98] motion-reduce:active:scale-100 shrink-0',
-            isFeatureCallout
-              ? 'bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground shadow-primary/25'
-              : 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 shadow-amber-600/25',
-          )}
+          className="inline-flex min-h-11 items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground shadow-2xs transition active:scale-[0.98] motion-reduce:active:scale-100 shrink-0"
         >
-          <Sparkles className="w-3.5 h-3.5" />
+          <Sparkles className="w-3.5 h-3.5" aria-hidden />
           <span>Passer au forfait supérieur</span>
-          <ArrowRight className="w-3.5 h-3.5" />
+          <ArrowRight className="w-3.5 h-3.5" aria-hidden />
         </Link>
       </div>
     </div>

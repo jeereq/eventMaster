@@ -218,18 +218,18 @@ export default function SubscriptionApprovalModal({
           <div className="text-sm space-y-2">
             <p className="font-bold text-foreground dark:text-white">{request.tenant?.name || 'Organisation'}</p>
             {request.requestKind === 'discount' && (
-              <div className="rounded-xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 px-3 py-2.5 space-y-1">
-                <p className="text-xs font-bold text-amber-800 dark:text-amber-200">Demande de rabais</p>
+              <div className="rounded-xl border border-border bg-surface-muted px-3 py-2.5 space-y-1">
+                <p className="text-xs font-semibold text-foreground">Demande de rabais</p>
                 {request.requestedDiscountPercent != null && (
-                  <p className="text-xs text-amber-800/90">Rabais demandé : {request.requestedDiscountPercent} %</p>
+                  <p className="text-xs text-muted">Rabais demandé : {request.requestedDiscountPercent} %</p>
                 )}
                 {request.requestedAmount != null && (
-                  <p className="text-xs text-amber-800/90">
+                  <p className="text-xs text-muted">
                     Montant souhaité : {Math.round(request.requestedAmount).toLocaleString('fr-FR')} FC
                   </p>
                 )}
                 {request.discountRequestNote && (
-                  <p className="text-xs text-amber-900/80 whitespace-pre-wrap">{request.discountRequestNote}</p>
+                  <p className="text-xs text-muted whitespace-pre-wrap">{request.discountRequestNote}</p>
                 )}
               </div>
             )}

@@ -2520,11 +2520,11 @@ export default function TemplatesPage() {
  size="md"
  title={
  <div className="flex items-center gap-2.5">
- <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
- <Crown className="w-5 h-5" />
+ <div className="p-2 rounded-xl bg-surface-muted text-amber-600 dark:text-amber-400 border border-border">
+ <Crown className="w-5 h-5" aria-hidden />
  </div>
  <div>
- <span className="text-base font-bold text-foreground block">
+ <span className="text-base font-semibold text-foreground block">
  Enregistrement de modèle d’invitation
  </span>
  <span className="text-xs text-muted block font-normal">
@@ -2535,9 +2535,9 @@ export default function TemplatesPage() {
  }
  >
  <div className="space-y-4 pt-1">
- <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-surface to-amber-500/5 border border-amber-500/20 space-y-2">
+ <div className="p-4 rounded-xl bg-surface-muted/50 border border-border space-y-1.5">
  <p className="text-sm font-semibold text-foreground">
- Votre modèle « {templateName || 'Nouvelle invitation'} » est magnifique !
+ Votre modèle « {templateName || 'Nouvelle invitation'} » est prêt !
  </p>
  <p className="text-xs text-muted leading-relaxed">
  {!canUseCustomTemplates
@@ -2546,22 +2546,22 @@ export default function TemplatesPage() {
  </p>
  </div>
 
- <div className="rounded-xl border border-border p-3.5 space-y-2 bg-surface-muted/50 text-xs">
- <p className="font-bold text-foreground flex items-center gap-1.5">
- <Sparkles className="w-3.5 h-3.5 text-primary" />
+ <div className="rounded-xl border border-border p-3.5 space-y-2 bg-surface text-xs">
+ <p className="font-semibold text-foreground flex items-center gap-1.5">
+ <Sparkles className="w-3.5 h-3.5 text-primary" aria-hidden />
  Avantages du forfait supérieur :
  </p>
  <ul className="space-y-1.5 text-muted pl-1">
  <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+ <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden />
  <span>Enregistrement et utilisation illimitée de modèles sur-mesure</span>
  </li>
  <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+ <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden />
  <span>Formulaires RSVP personnalisés et suivi des présences</span>
  </li>
  <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+ <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden />
  <span>Génération d&apos;invitations avancées par Intelligence Artificielle</span>
  </li>
  </ul>
@@ -2573,7 +2573,7 @@ export default function TemplatesPage() {
  onClick={() => {
  window.open('/dashboard/billing', '_blank');
  }}
- className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold rounded-xl text-xs shadow-md shadow-amber-600/20 transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+ className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-xl text-xs transition shadow-2xs cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
  >
  <Sparkles className="w-4 h-4" aria-hidden />
  <span>Passer au forfait supérieur</span>
@@ -2582,7 +2582,7 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => setSaveUpgradeModalOpen(false)}
- className="inline-flex min-h-11 items-center justify-center px-4 py-2.5 border border-border hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+ className="inline-flex min-h-11 items-center justify-center px-4 py-2.5 border border-border bg-surface hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
  >
  Continuer à peaufiner
  </button>
@@ -2648,24 +2648,24 @@ export default function TemplatesPage() {
  </div>
  </Modal>
  <div className="flex flex-col gap-4 max-lg:fixed max-lg:inset-0 max-lg:z-[55] max-lg:bg-background max-lg:px-3 max-lg:pt-[max(0.75rem,env(safe-area-inset-top))] max-lg:overflow-hidden">
- {(!canUseCustomTemplates || templatesAtLimit) && user?.role !== 'SUPER_ADMIN' && (
- <div className="bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-amber-500/5 border border-amber-500/30 rounded-2xl px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-amber-950 dark:text-amber-200">
- <div className="flex items-center gap-2 min-w-0">
- <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
- <span className="leading-tight">
- <strong className="font-bold">Mode Découverte & Conception :</strong> Vous pouvez concevoir, tester et prévisualiser votre modèle librement. L&apos;enregistrement sur votre compte requiert un forfait supérieur.
- </span>
- </div>
- <button
- type="button"
- onClick={() => setSaveUpgradeModalOpen(true)}
- className="inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-amber-900 dark:text-amber-200 bg-amber-500/15 hover:bg-amber-500/25 transition shrink-0 cursor-pointer self-start sm:self-auto touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
- >
- <span>Voir les formules</span>
- <ArrowRight className="w-3.5 h-3.5" aria-hidden />
- </button>
- </div>
- )}
+        {(!canUseCustomTemplates || templatesAtLimit) && user?.role !== 'SUPER_ADMIN' && (
+          <div className="bg-surface border border-border rounded-xl px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-foreground shadow-2xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <Sparkles className="w-4 h-4 text-primary shrink-0" aria-hidden />
+              <span className="leading-tight text-muted">
+                <strong className="font-semibold text-foreground">Mode Découverte & Conception :</strong> Vous pouvez concevoir, tester et prévisualiser votre modèle librement. L&apos;enregistrement sur votre compte requiert un forfait supérieur.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSaveUpgradeModalOpen(true)}
+              className="inline-flex min-h-9 items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-foreground bg-surface-muted hover:bg-surface border border-border transition shrink-0 cursor-pointer self-start sm:self-auto touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+            >
+              <span>Voir les formules</span>
+              <ArrowRight className="w-3.5 h-3.5" aria-hidden />
+            </button>
+          </div>
+        )}
  {/* Editor Header — identity left, primary actions right, admin meta secondary */}
  <header className="shrink-0 space-y-3 border-b border-border pb-4">
  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -2867,25 +2867,28 @@ export default function TemplatesPage() {
  )}
  </header>
 
- {draftSavedAt && (
- <div className="px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold flex items-center justify-between gap-3" role="status">
- <span>Brouillon local à {draftSavedAt} — pas encore enregistré</span>
- <button
- type="button"
- className="text-amber-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 rounded-md px-1"
- onClick={() => {
- try {
- localStorage.removeItem(draftKey);
- setDraftSavedAt(null);
- } catch {
- /* ignore */
- }
- }}
- >
- Effacer le brouillon
- </button>
- </div>
- )}
+        {draftSavedAt && (
+          <div className="px-4 py-2.5 rounded-xl bg-surface border border-border text-foreground text-xs flex items-center justify-between gap-3 shadow-2xs" role="status">
+            <span className="flex items-center gap-2 text-muted">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" aria-hidden />
+              <span>Brouillon local à {draftSavedAt} — pas encore enregistré</span>
+            </span>
+            <button
+              type="button"
+              className="text-muted hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-md px-1 font-medium transition-colors"
+              onClick={() => {
+                try {
+                  localStorage.removeItem(draftKey);
+                  setDraftSavedAt(null);
+                } catch {
+                  /* ignore */
+                }
+              }}
+            >
+              Effacer le brouillon
+            </button>
+          </div>
+        )}
 
  {error && (
  <div
@@ -4988,15 +4991,15 @@ export default function TemplatesPage() {
  </div>
  {bgImageUrl && (
  <div className="space-y-3">
- {aiSafetyFallbackNotice && (
-   <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-start gap-2.5">
-     <Sparkles className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-     <div className="text-xs text-amber-800 dark:text-amber-200">
-       <span className="font-bold block">Décor thématique sans visage appliqué</span>
-       Le filtre de sécurité du modèle d’image a préservé un arrière-plan décoratif de haute qualité. Vous pouvez insérer votre photo directement dans le cadre ou réajuster vos références.
-     </div>
-   </div>
- )}
+            {aiSafetyFallbackNotice && (
+              <div className="p-3 bg-surface border border-border rounded-xl flex items-start gap-2.5 shadow-2xs">
+                <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" aria-hidden />
+                <div className="text-xs text-muted">
+                  <span className="font-semibold text-foreground block">Décor thématique sans visage appliqué</span>
+                  Le filtre de sécurité du modèle d’image a préservé un arrière-plan décoratif de haute qualité. Vous pouvez insérer votre photo directement dans le cadre ou réajuster vos références.
+                </div>
+              </div>
+            )}
 
  {aiVariants.length > 1 && (
    <div className="space-y-1.5 pt-1">
@@ -5599,11 +5602,11 @@ export default function TemplatesPage() {
  size="md"
  title={
  <div className="flex items-center gap-2.5">
- <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
- <Crown className="w-5 h-5" />
+ <div className="p-2 rounded-xl bg-surface-muted text-amber-600 dark:text-amber-400 border border-border">
+ <Crown className="w-5 h-5" aria-hidden />
  </div>
  <div>
- <span className="text-base font-bold text-foreground block">
+ <span className="text-base font-semibold text-foreground block">
  Enregistrement de modèle d’invitation
  </span>
  <span className="text-xs text-muted block font-normal">
@@ -5614,9 +5617,9 @@ export default function TemplatesPage() {
  }
  >
  <div className="space-y-4 pt-1">
- <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-surface to-amber-500/5 border border-amber-500/20 space-y-2">
+ <div className="p-4 rounded-xl bg-surface-muted/50 border border-border space-y-1.5">
  <p className="text-sm font-semibold text-foreground">
- Votre modèle « {templateName || 'Nouvelle invitation'} » est magnifique !
+ Votre modèle « {templateName || 'Nouvelle invitation'} » est prêt !
  </p>
  <p className="text-xs text-muted leading-relaxed">
  {!canUseCustomTemplates
@@ -5625,22 +5628,22 @@ export default function TemplatesPage() {
  </p>
  </div>
 
- <div className="rounded-xl border border-border p-3.5 space-y-2 bg-surface-muted/50 text-xs">
- <p className="font-bold text-foreground flex items-center gap-1.5">
- <Sparkles className="w-3.5 h-3.5 text-primary" />
+ <div className="rounded-xl border border-border p-3.5 space-y-2 bg-surface text-xs">
+ <p className="font-semibold text-foreground flex items-center gap-1.5">
+ <Sparkles className="w-3.5 h-3.5 text-primary" aria-hidden />
  Avantages du forfait supérieur :
  </p>
  <ul className="space-y-1.5 text-muted pl-1">
  <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+ <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden />
  <span>Enregistrement et utilisation illimitée de modèles sur-mesure</span>
  </li>
  <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+ <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden />
  <span>Formulaires RSVP personnalisés et suivi des présences</span>
  </li>
  <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+ <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden />
  <span>Génération d&apos;invitations avancées par Intelligence Artificielle</span>
  </li>
  </ul>
@@ -5652,7 +5655,7 @@ export default function TemplatesPage() {
  onClick={() => {
  window.open('/dashboard/billing', '_blank');
  }}
- className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold rounded-xl text-xs shadow-md shadow-amber-600/20 transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+ className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-xl text-xs transition shadow-2xs cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
  >
  <Sparkles className="w-4 h-4" aria-hidden />
  <span>Passer au forfait supérieur</span>
@@ -5661,7 +5664,7 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => setSaveUpgradeModalOpen(false)}
- className="inline-flex min-h-11 items-center justify-center px-4 py-2.5 border border-border hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+ className="inline-flex min-h-11 items-center justify-center px-4 py-2.5 border border-border bg-surface hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
  >
  Continuer à peaufiner
  </button>

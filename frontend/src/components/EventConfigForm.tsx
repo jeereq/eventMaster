@@ -1990,7 +1990,7 @@ export default function EventConfigForm({
                       </label>
 
                       {!onlinePaymentsEnabled && (
-                        <p className="text-xs text-amber-800 dark:text-amber-200 bg-amber-500/10 border border-amber-500/25 rounded-lg px-3 py-2">
+                        <p className="text-xs text-muted bg-surface-muted border border-border rounded-lg px-3 py-2">
                           Les paiements en ligne sont désactivés par le Super Admin. Seule l&apos;inscription gratuite est disponible.
                         </p>
                       )}
@@ -2351,10 +2351,10 @@ export default function EventConfigForm({
                       </div>
 
                       {!donationsAllowedByAdmin && (
-                        <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200 space-y-1">
-                          <p className="font-semibold flex items-center gap-1.5">
-                            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                            Option soumise à autorisation de l'administrateur
+                        <div className="rounded-xl border border-border bg-surface p-3 text-xs text-foreground space-y-1 shadow-2xs">
+                          <p className="font-semibold flex items-center gap-1.5 text-foreground">
+                            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" aria-hidden />
+                            Option soumise à autorisation de l&apos;administrateur
                           </p>
                           <p className="text-[11px] leading-relaxed text-muted">
                             La collecte de dons à montant libre est actuellement restreinte par la politique du Super Admin pour votre organisation.

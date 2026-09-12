@@ -764,17 +764,17 @@ export default function MarketplaceBookingsPanel({
 
             {/* Note d'instructions pour le client */}
             {depositModal.viewerRole !== 'vendor' ? (
-              <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200 space-y-1.5">
-                <p className="font-semibold flex items-center gap-1.5">
-                  <CreditCard className="w-3.5 h-3.5 text-amber-600" />
+              <div className="rounded-xl border border-border bg-surface-muted/50 p-3 text-xs text-foreground space-y-1.5">
+                <p className="font-semibold flex items-center gap-1.5 text-foreground">
+                  <CreditCard className="w-3.5 h-3.5 text-muted" aria-hidden />
                   Règlement hors plateforme
                 </p>
-                <p className="text-[11px] leading-relaxed">
-                  Effectuez le paiement directement auprès de <strong>{depositModal.vendorName}</strong> (Mobile Money M-Pesa, Orange Money, Airtel Money, ou virement).
+                <p className="text-[11px] leading-relaxed text-muted">
+                  Effectuez le paiement directement auprès de <strong className="text-foreground">{depositModal.vendorName}</strong> (Mobile Money M-Pesa, Orange Money, Airtel Money, ou virement).
                 </p>
                 {depositModal.vendorPhone ? (
-                  <p className="text-[11px] font-medium pt-1 border-t border-amber-500/20">
-                    Contact du prestataire : <a href={`tel:${depositModal.vendorPhone}`} className="underline font-bold">{depositModal.vendorPhone}</a>
+                  <p className="text-[11px] font-medium pt-1 border-t border-border text-muted">
+                    Contact du prestataire : <a href={`tel:${depositModal.vendorPhone}`} className="underline font-semibold text-foreground">{depositModal.vendorPhone}</a>
                   </p>
                 ) : null}
               </div>

@@ -153,10 +153,10 @@ export default function OrgNotificationSettingsModal({
         )}
 
         {!isOwner && (
-          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-200 text-xs flex items-center gap-2">
-            <Lock className="w-4 h-4 shrink-0 text-amber-600" />
-            <span>
-              Mode consultation : seul le propriétaire de l’organisation peut modifier ces autorisations.
+          <div className="p-3 rounded-xl bg-surface border border-border text-foreground text-xs flex items-center gap-2 shadow-2xs">
+            <Lock className="w-4 h-4 shrink-0 text-muted" aria-hidden />
+            <span className="text-muted">
+              <strong className="text-foreground font-semibold">Mode consultation :</strong> seul le propriétaire de l’organisation peut modifier ces autorisations.
             </span>
           </div>
         )}

@@ -14,8 +14,8 @@ const variants = {
     Icon: CheckCircle2,
   },
   warning: {
-    container: 'bg-festive-accent-soft border-festive-accent/30 text-festive-accent',
-    icon: 'text-festive-accent',
+    container: 'bg-amber-500/[0.06] dark:bg-amber-950/20 border-amber-500/25 text-foreground',
+    icon: 'text-amber-600 dark:text-amber-400',
     Icon: AlertTriangle,
   },
   info: {

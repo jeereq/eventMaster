@@ -172,14 +172,14 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
 
   if (planFeatures && !planFeatures.protocolQr) {
     return (
-      <div className="rounded-[var(--radius-card)] border border-amber-200 bg-amber-50 p-6 text-center space-y-3">
-        <QrCode className="w-10 h-10 text-amber-600 mx-auto" />
-        <h3 className="font-bold text-amber-900">Protocole QR non inclus</h3>
-        <p className="text-sm text-amber-800">
+      <div className="rounded-[var(--radius-card)] border border-border bg-surface p-6 text-center space-y-3 shadow-2xs">
+        <QrCode className="w-10 h-10 text-muted mx-auto" aria-hidden />
+        <h3 className="font-semibold text-foreground">Protocole QR non inclus</h3>
+        <p className="text-sm text-muted">
           Le scan QR et la confirmation de présence nécessitent le forfait{' '}
-          <strong>Business</strong> ou supérieur. Forfait actuel : {tenant?.plan || 'FREE'}.
+          <strong className="text-foreground">Business</strong> ou supérieur. Forfait actuel : {tenant?.plan || 'FREE'}.
         </p>
-        <Link href="/dashboard/billing" className="inline-block text-sm font-bold text-primary hover:underline">
+        <Link href="/dashboard/billing" className="inline-block text-sm font-semibold text-primary hover:underline">
           Voir les forfaits →
         </Link>
       </div>
@@ -341,7 +341,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
               )}
             </div>
             {selectedGuest.rsvp !== 'ACCEPTED' && !selectedGuest.checkedInAt && (
-              <p className="text-xs text-amber-800 mt-3 bg-amber-50 border border-amber-100 rounded-[var(--radius-button)] px-3 py-2">
+              <p className="text-xs text-muted mt-3 bg-surface-muted border border-border rounded-[var(--radius-button)] px-3 py-2">
                 {selectedGuest.rsvp === 'PENDING'
                   ? 'RSVP en attente : l’invité doit confirmer sur son lien avant le check-in.'
                   : selectedGuest.rsvp === 'DECLINED'

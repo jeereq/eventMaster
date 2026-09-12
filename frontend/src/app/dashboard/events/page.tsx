@@ -315,9 +315,9 @@ function SendAudienceStats({
         <p className="text-sm font-bold text-emerald-800 mt-0.5">{stats.reachable}</p>
       </div>
       {stats.alreadySent > 0 && (
-        <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-amber-700">Déjà invités</p>
-          <p className="text-sm font-bold text-amber-800 mt-0.5">{stats.alreadySent} — seront renvoyés</p>
+        <div className="rounded-xl border border-border bg-surface-muted px-3 py-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted">Déjà invités</p>
+          <p className="text-sm font-bold text-foreground mt-0.5">{stats.alreadySent} — seront renvoyés</p>
         </div>
       )}
       {stats.missingEmail > 0 && (
@@ -3342,13 +3342,13 @@ Merci de confirmer votre présence :
                     </p>
                   </div>
                   {seatNotificationsLocked && (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                      <p className="font-semibold">Notifications PDF / GPS non incluses</p>
-                      <p className="text-xs mt-1 text-amber-800">
+                    <div className="rounded-xl border border-border bg-surface px-4 py-3 text-sm text-foreground shadow-2xs">
+                      <p className="font-semibold text-foreground">Notifications PDF / GPS non incluses</p>
+                      <p className="text-xs mt-1 text-muted">
                         Vous pouvez placer les invités. L’envoi automatique du PDF, du plan et du GPS dès acceptation RSVP
                         n’est pas dans votre forfait actuel ({tenant?.plan || 'FREE'}).
                       </p>
-                      <Link href="/dashboard/billing" className="inline-block mt-2 text-xs font-bold text-primary hover:underline">
+                      <Link href="/dashboard/billing" className="inline-block mt-2 text-xs font-medium text-primary hover:underline">
                         Voir les forfaits →
                       </Link>
                     </div>
@@ -4167,7 +4167,7 @@ Merci de confirmer votre présence :
                 </p>
               ) : null}
               {broadcastAudience && broadcastAudience.alreadySent > 0 ? (
-                <p className="text-xs text-amber-800">
+                <p className="text-xs text-muted">
                   Les personnes déjà invitées recevront le message à nouveau.
                 </p>
               ) : null}

@@ -1879,16 +1879,16 @@ export default function TablePlanner({
             })}
 
             {ticketingSummary.unassigned.tableCount > 0 && (
-              <div className="inline-flex items-center gap-2 px-3 py-2 min-h-11 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 text-xs">
-                <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <div className="inline-flex items-center gap-2 px-3 py-2 min-h-11 rounded-xl border border-border bg-surface text-foreground text-xs shadow-2xs">
+                <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
                 <div>
-                  <span className="font-semibold">{ticketingSummary.unassigned.tableCount} table{ticketingSummary.unassigned.tableCount > 1 ? 's' : ''} sans zone</span>
-                  <p className="text-xs opacity-80">{ticketingSummary.unassigned.seatCount} places en attente</p>
+                  <span className="font-semibold text-foreground">{ticketingSummary.unassigned.tableCount} table{ticketingSummary.unassigned.tableCount > 1 ? 's' : ''} sans zone</span>
+                  <p className="text-xs text-muted">{ticketingSummary.unassigned.seatCount} places en attente</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setShowDistributeModal(true)}
-                  className="ml-1 px-3 py-1.5 min-h-[32px] rounded-md bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs transition shadow-2xs"
+                  className="ml-1 px-3 py-1.5 min-h-8 rounded-lg bg-surface-muted hover:bg-surface border border-border text-foreground font-medium text-xs transition shadow-2xs"
                 >
                   Répartir
                 </button>
@@ -1942,19 +1942,19 @@ export default function TablePlanner({
  </div>
  )}
 
- {caps.level !== 'complete' ? (
- <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border border-amber-200 bg-amber-50 rounded-[var(--radius-card)]">
- <div className="text-sm">
- <p className="font-semibold text-amber-950 flex items-center gap-2">
- <Sparkles className="w-4 h-4" /> Éditeur {caps.label} · {tables.length}/{caps.maxTables} tables
- </p>
- <p className="text-xs text-amber-800 mt-0.5">{caps.description}</p>
- </div>
- <Link href="/dashboard/billing" className="text-xs font-bold text-primary hover:underline shrink-0">
- Voir les forfaits →
- </Link>
- </div>
- ) : null}
+      {caps.level !== 'complete' ? (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border border-border bg-surface rounded-[var(--radius-card)] shadow-2xs">
+          <div className="text-sm">
+            <p className="font-semibold text-foreground flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" aria-hidden /> Éditeur {caps.label} · {tables.length}/{caps.maxTables} tables
+            </p>
+            <p className="text-xs text-muted mt-0.5">{caps.description}</p>
+          </div>
+          <Link href="/dashboard/billing" className="text-xs font-semibold text-primary hover:underline shrink-0">
+            Voir les forfaits →
+          </Link>
+        </div>
+      ) : null}
 
  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
  <div>

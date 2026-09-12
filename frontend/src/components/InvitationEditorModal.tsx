@@ -748,10 +748,10 @@ export default function InvitationEditorModal({
                   <button
                     type="button"
                     onClick={() => handleInsertGuidelines(activeChannelTab === 'whatsapp' ? 'whatsappBody' : 'body')}
-                    className="inline-flex min-h-10 items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/20 text-xs font-semibold hover:bg-amber-500/20 transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+                    className="inline-flex min-h-10 items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-muted text-foreground border border-border text-xs font-medium hover:bg-surface transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
                     title="Insérer les consignes d'accueil et le dress code de l'événement"
                   >
-                    <Shirt className="w-3.5 h-3.5" />
+                    <Shirt className="w-3.5 h-3.5 text-muted" aria-hidden />
                     <span>+ Consignes & Dress code</span>
                   </button>
                 )}
@@ -760,17 +760,17 @@ export default function InvitationEditorModal({
 
             {/* Alerte si le lien RSVP est manquant dans le message en cours */}
             {isRsvpLinkMissing && (
-              <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200 text-xs flex items-center justify-between gap-3 animate-in fade-in-50">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                  <span>
-                    <strong>Pensez au lien RSVP :</strong> ajoutez <code>{"{{rsvpLink}}"}</code> pour que vos invités puissent confirmer leur présence et recevoir leur pass QR.
+              <div className="p-3.5 rounded-xl border border-border bg-surface text-foreground text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs animate-in fade-in-50">
+                <div className="flex items-center gap-2 min-w-0">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+                  <span className="text-muted leading-relaxed">
+                    <strong className="text-foreground font-semibold">Pensez au lien RSVP :</strong> ajoutez <code className="text-foreground bg-surface-muted px-1 py-0.5 rounded border border-border">{"{{rsvpLink}}"}</code> pour que vos invités puissent confirmer leur présence et recevoir leur pass QR.
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => insertTextAtCursor(activeChannelTab === 'whatsapp' ? 'whatsappBody' : 'body', '\n\n{{rsvpLink}}\n')}
-                  className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition shrink-0 cursor-pointer touch-manipulation"
+                  className="px-3 py-1.5 min-h-8 rounded-lg bg-surface-muted hover:bg-surface border border-border text-foreground text-xs font-medium transition shrink-0 cursor-pointer touch-manipulation self-start sm:self-auto"
                 >
                   + Insérer le lien RSVP
                 </button>
