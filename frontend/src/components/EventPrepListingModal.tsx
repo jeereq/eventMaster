@@ -2,13 +2,16 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Building2, ExternalLink, KeyRound, Loader2, Play, Sparkles } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { Building2, ChevronDown, ChevronUp, ExternalLink, KeyRound, Loader2, Play, Sparkles } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button, Modal, StatusPill, Alert } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import MarketplaceInquiryForm from '@/components/MarketplaceInquiryForm';
 import MarketplaceBookingForm from '@/components/MarketplaceBookingForm';
+import ListingPublicDetails from '@/components/ListingPublicDetails';
+import type { RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
 import {
   dashboardServiceHref,
   dashboardVenueHref,
@@ -24,6 +27,10 @@ import {
   type PublicVenue,
 } from '@/lib/marketplace';
 import { roomTypeLabels, type RoomType } from '@/lib/roomLayoutUtils';
+
+const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
+  loading: () => <div className="h-44 rounded-[var(--radius-card)] bg-surface-muted animate-pulse" aria-hidden />,
+});
 
 export type EventPrepPreviewTarget = {
   kind: 'venue' | 'service';
@@ -79,6 +86,7 @@ export default function EventPrepListingModal({
   const [service, setService] = useState<PublicService | null>(null);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [reloadNonce, setReloadNonce] = useState(0);
+  const [showFullDetails, setShowFullDetails] = useState(false);
 
   useEffect(() => {
     if (!target) {
@@ -87,6 +95,7 @@ export default function EventPrepListingModal({
       setError('');
       setView('details');
       setPhotoIndex(0);
+      setShowFullDetails(false);
       return;
     }
     let cancelled = false;
@@ -94,6 +103,7 @@ export default function EventPrepListingModal({
     setError('');
     setView(initialView);
     setPhotoIndex(0);
+    setShowFullDetails(false);
     (async () => {
       try {
         if (target.kind === 'venue') {
@@ -178,7 +188,7 @@ export default function EventPrepListingModal({
     <Modal
       open={Boolean(target)}
       onClose={onClose}
-      size="lg"
+      size={showFullDetails ? 'xl' : 'lg'}
       title={modalTitle}
       description={modalDescription}
       footer={
@@ -366,13 +376,49 @@ export default function EventPrepListingModal({
             </p>
           ) : null}
 
-          <Link
-            href={href}
-            className="inline-flex items-center gap-1.5 min-h-11 text-xs font-semibold text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-[var(--radius-button)]"
-          >
-            Ouvrir la fiche complète
-            <ExternalLink className="w-3.5 h-3.5" />
-          </Link>
+          {/* Fiche complète directement dans la modale */}
+          <div className="pt-2 border-t border-border space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="min-h-11 font-semibold"
+                onClick={() => setShowFullDetails((prev) => !prev)}
+                leftIcon={showFullDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                aria-expanded={showFullDetails}
+              >
+                {showFullDetails ? 'Masquer la fiche complète' : 'Voir la fiche au complet'}
+              </Button>
+
+              <Link
+                href={href}
+                className="inline-flex items-center gap-1.5 min-h-11 text-xs font-semibold text-muted hover:text-foreground underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-[var(--radius-button)]"
+              >
+                Ouvrir sur une page dédiée
+                <ExternalLink className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {showFullDetails ? (
+              <div className="space-y-6 pt-3 border-t border-border animate-fade-in">
+                <ListingPublicDetails
+                  details={listing.details}
+                  kind={target?.kind === 'venue' ? 'venue' : rental ? 'rental' : 'service'}
+                />
+
+                {venue?.layoutPreview ? (
+                  <div className="space-y-2">
+                    <h2 className="text-sm font-semibold text-foreground">Plan de la salle</h2>
+                    <RoomLayoutPreview
+                      blueprint={venue.layoutPreview as RoomLayoutBlueprint}
+                      quality="showcase"
+                    />
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </Modal>
