@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { LogOut, ShieldAlert } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui';
@@ -24,8 +24,20 @@ function focusableIn(panel: HTMLElement): HTMLElement[] {
 
 export default function SessionExpiredDialog() {
   const { sessionExpired, logout } = useAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  const handleLogout = () => {
+    setLoggingOut(true);
+    try {
+      logout();
+    } catch {
+      if (typeof window !== 'undefined') {
+        window.location.assign('/login');
+      }
+    }
+  };
 
   useEffect(() => {
     if (!sessionExpired) return;
@@ -80,7 +92,7 @@ export default function SessionExpiredDialog() {
 
   return (
     <div
-      className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-4 bg-stage/70 backdrop-blur-sm"
+      className="fixed inset-0 z-[10070] flex items-end sm:items-center justify-center p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] bg-stage/70 backdrop-blur-sm"
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="session-expired-title"
@@ -106,12 +118,14 @@ export default function SessionExpiredDialog() {
         </div>
         <Button
           type="button"
-          onClick={logout}
+          onClick={handleLogout}
+          loading={loggingOut}
+          disabled={loggingOut}
           leftIcon={<LogOut className="w-4 h-4" />}
           className="w-full"
           data-session-initial-focus
         >
-          Se déconnecter
+          {loggingOut ? 'Déconnexion en cours…' : 'Se déconnecter'}
         </Button>
       </div>
     </div>

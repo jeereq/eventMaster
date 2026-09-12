@@ -397,11 +397,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('tenant');
-    localStorage.removeItem('access');
-    localStorage.removeItem(SUPPORT_BACKUP_KEY);
+    try {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('tenant');
+      localStorage.removeItem('access');
+      localStorage.removeItem(SUPPORT_BACKUP_KEY);
+    } catch {
+      // Ignorer les erreurs d'accès à localStorage en navigation privée
+    }
     setToken(null);
     setUser(null);
     setTenant(null);
@@ -410,7 +414,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPlanQuota(null);
     setSupportSession(false);
     setSessionExpired(false);
-    router.push('/login');
+    if (typeof window !== 'undefined') {
+      window.location.assign('/login');
+    } else {
+      router.push('/login');
+    }
   };
 
   const refreshPlanFeatures = async () => {

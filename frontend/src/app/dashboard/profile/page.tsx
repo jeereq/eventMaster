@@ -7,7 +7,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
   User, Mail, Lock, Building, Loader2,
-  Save, Award, Calendar, Palette, Camera, Trash2,
+  Save, Award, Calendar, Palette, Camera, Trash2, LogOut,
 } from 'lucide-react';
 import { PageHeader, Alert, SkeletonProfileView, Button, Breadcrumbs, Input, PhoneInput } from '@/components/ui';
 import { parseStoredPhone } from '@/components/ui/PhoneInput';
@@ -17,7 +17,7 @@ import { ACCOUNT_KIND_DESCRIPTIONS, ACCOUNT_KIND_LABELS, type TenantAccountKind 
 import { isProtocolUser } from '@/lib/protocolAccess';
 
 function ProfilePageContent() {
-  const { user, tenant, updateUserAndTenant, updateBranding, access, refreshProfile } = useAuth();
+  const { user, tenant, updateUserAndTenant, updateBranding, access, refreshProfile, logout } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -386,7 +386,16 @@ function ProfilePageContent() {
               </div>
             )}
 
-            <div className="flex justify-end">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={logout}
+                leftIcon={<LogOut className="w-4 h-4 text-rose-500" />}
+                className="text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 cursor-pointer"
+              >
+                Se déconnecter
+              </Button>
               <Button type="submit" loading={loading} leftIcon={<Save className="w-4 h-4" />}>
                 Enregistrer le profil
               </Button>

@@ -10,7 +10,7 @@ import UserAvatar from '@/components/UserAvatar';
 import { ViewCustomizerTrigger } from '@/components/ViewCustomizer';
 import { Tooltip } from '@/components/ui';
 import PWAInstallCta from '@/components/PWAInstallCta';
-import { Sun, Moon, User, PanelLeft, PanelLeftClose } from 'lucide-react';
+import { Sun, Moon, User, PanelLeft, PanelLeftClose, LogOut } from 'lucide-react';
 
 export function useDashboardTitle(): { title: string; subtitle?: string } {
   const pathname = usePathname();
@@ -97,7 +97,7 @@ export default function DashboardTopBar({
   sidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
 } = {}) {
-  const { user, tenant } = useAuth();
+  const { user, tenant, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { title, subtitle } = useDashboardTitle();
 
@@ -120,7 +120,7 @@ export default function DashboardTopBar({
               <button
                 type="button"
                 onClick={onToggleSidebar}
-                className="p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition touch-manipulation cursor-pointer shrink-0"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition touch-manipulation cursor-pointer shrink-0"
                 aria-label={sidebarCollapsed ? 'Déplier la barre latérale' : 'Réduire la barre latérale'}
               >
                 {sidebarCollapsed ? <PanelLeft className="w-4 h-4 text-primary" /> : <PanelLeftClose className="w-4 h-4" />}
@@ -135,29 +135,41 @@ export default function DashboardTopBar({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-        <PWAInstallCta variant="header" />
-        <NotificationBell />
-        <ViewCustomizerTrigger />
-        <button
-          type="button"
-          onClick={toggleTheme}
-          className="p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
-          aria-label="Changer de thème"
-        >
-          {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-        </button>
-        <Link
-          href="/dashboard/profile"
-          className="inline-flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-[var(--radius-button)] border border-border hover:bg-surface-muted transition max-w-[14rem]"
-        >
-          <UserAvatar name={user?.name} src={user?.avatarUrl} size="sm" className="rounded-md" />
-          <span className="min-w-0 hidden lg:block">
-            <span className="block text-xs font-semibold text-foreground truncate">{user?.name || 'Compte'}</span>
-            <span className="block text-[10px] text-muted truncate">{roleLabel}</span>
-          </span>
-          <User className="w-3.5 h-3.5 text-muted lg:hidden" />
-        </Link>
-      </div>
+          <PWAInstallCta variant="header" />
+          <NotificationBell />
+          <ViewCustomizerTrigger />
+          <Tooltip content={theme === 'light' ? 'Mode sombre' : 'Mode clair'} side="bottom">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition cursor-pointer"
+              aria-label="Changer de thème"
+            >
+              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            </button>
+          </Tooltip>
+          <Link
+            href="/dashboard/profile"
+            className="inline-flex min-h-11 items-center gap-2 pl-2 pr-3 py-1 rounded-[var(--radius-button)] border border-border hover:bg-surface-muted transition max-w-[14rem]"
+          >
+            <UserAvatar name={user?.name} src={user?.avatarUrl} size="sm" className="rounded-md" />
+            <span className="min-w-0 hidden lg:block">
+              <span className="block text-xs font-semibold text-foreground truncate">{user?.name || 'Compte'}</span>
+              <span className="block text-[10px] text-muted truncate">{roleLabel}</span>
+            </span>
+            <User className="w-3.5 h-3.5 text-muted lg:hidden" />
+          </Link>
+          <Tooltip content="Se déconnecter" side="bottom">
+            <button
+              type="button"
+              onClick={logout}
+              className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 rounded-[var(--radius-button)] border border-border text-muted hover:text-rose-600 hover:bg-rose-500/10 hover:border-rose-500/30 transition cursor-pointer"
+              aria-label="Se déconnecter"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </Tooltip>
+        </div>
       </div>
     </header>
   );

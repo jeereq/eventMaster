@@ -510,7 +510,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
  useEffect(() => {
  if (!loading && !token) {
- router.push('/login');
+   if (typeof window !== 'undefined') {
+     window.location.assign('/login');
+   } else {
+     router.push('/login');
+   }
  }
  }, [token, loading, router]);
 
@@ -592,13 +596,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
  if (loading || !token || !user) {
  return (
- <div className="min-h-screen flex items-center justify-center bg-background">
- <div className="flex flex-col items-center gap-4 animate-fade-in">
+ <div className="min-h-screen flex items-center justify-center bg-background px-4">
+ <div className="flex flex-col items-center gap-4 animate-fade-in text-center max-w-sm">
  <SiteBrandMark href={null} size="lg" showLabel={false} />
  <Loader2 className="w-6 h-6 text-primary animate-spin" />
  <p className="text-sm font-medium text-muted">
- Chargement de votre espace…
+  Chargement de votre espace…
  </p>
+ {!token && !loading && (
+   <button
+     type="button"
+     onClick={() => {
+       try {
+         localStorage.clear();
+       } catch {}
+       window.location.assign('/login');
+     }}
+     className="text-xs text-primary hover:underline font-medium cursor-pointer"
+   >
+     Retourner à la page de connexion
+   </button>
+ )}
  </div>
  </div>
  );

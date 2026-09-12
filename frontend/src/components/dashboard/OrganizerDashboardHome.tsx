@@ -488,7 +488,7 @@ export default function OrganizerDashboardHome({
                   'inline-flex min-h-11 items-center gap-2 rounded-xl px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-semibold transition whitespace-nowrap shrink-0 cursor-pointer',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                   active
-                    ? 'bg-primary text-primary-foreground shadow-xs'
+                    ? 'bg-primary-solid text-primary-foreground shadow-xs'
                     : 'text-muted hover:bg-surface-muted hover:text-foreground',
                 )}
               >
@@ -1731,7 +1731,7 @@ export default function OrganizerDashboardHome({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-primary uppercase tracking-wider">Professionnels</span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-primary text-primary-foreground">Recommandé</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-primary-solid text-primary-foreground">Recommandé</span>
                     </div>
                     <p className="text-lg font-black text-foreground">Dès 149 000 FC <span className="text-xs font-normal text-muted">/ mois</span></p>
                     <div className="space-y-1 text-xs text-muted pt-1">
