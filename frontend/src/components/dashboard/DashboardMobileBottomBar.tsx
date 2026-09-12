@@ -249,10 +249,10 @@ function buildRoleMobileBottomItems({
     items.push({ id: 'events', name: 'Événements', href: '/dashboard/events', icon: Calendar });
   }
 
-  if (workspace.showProtocol) {
-    items.push({ id: 'protocol', name: 'Protocole', href: '/dashboard/protocol', icon: ScanLine });
-  } else if (workspace.showRooms) {
+  if (workspace.showRooms) {
     items.push({ id: 'rooms', name: 'Salles', href: '/dashboard/rooms', icon: Building2 });
+  } else if (workspace.showProtocol) {
+    items.push({ id: 'protocol', name: 'Protocole', href: '/dashboard/protocol', icon: ScanLine });
   }
 
   if (workspace.showBrowseCatalogue) {

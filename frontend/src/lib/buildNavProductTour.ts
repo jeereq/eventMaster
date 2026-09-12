@@ -68,19 +68,19 @@ export function buildOrgNavTourIds(
 ): Array<{ tourId: string; route?: string }> {
   const tabs: Array<{ tourId: string; route?: string }> = [{ tourId: 'nav-dashboard' }];
   if (!workspace || workspace.showEvents) tabs.push({ tourId: 'nav-events' });
+  if (workspace?.showRooms) tabs.push({ tourId: 'nav-rooms' });
   if (workspace?.showBrowseCatalogue) tabs.push({ tourId: 'nav-catalogue' });
   if (!workspace || workspace.showEvents || workspace?.showBrowseCatalogue) {
     tabs.push({ tourId: 'nav-quotes' });
     tabs.push({ tourId: 'nav-reservations' });
   }
-  if (workspace?.showRooms) tabs.push({ tourId: 'nav-rooms' });
   if (workspace?.showTeam) tabs.push({ tourId: 'nav-team' });
   if (workspace?.showMarketplace) tabs.push({ tourId: 'nav-marketplace' });
   if (workspace?.showProtocol) {
     tabs.push({ tourId: 'nav-protocol' });
   }
-  if (workspace?.showAnalytics) tabs.push({ tourId: 'nav-analytics-org' });
   if (workspace?.showTemplates) tabs.push({ tourId: 'nav-templates', route: '/dashboard/templates' });
+  if (workspace?.showAnalytics) tabs.push({ tourId: 'nav-analytics-org' });
   if (access?.canViewBilling) tabs.push({ tourId: 'nav-billing' });
   if (access?.canViewInvoices) tabs.push({ tourId: 'nav-invoices', route: '/dashboard/invoices' });
   tabs.push({ tourId: 'nav-guide' }, { tourId: 'nav-profile' });

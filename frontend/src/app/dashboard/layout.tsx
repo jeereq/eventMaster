@@ -268,75 +268,82 @@ function buildDashboardNav(opts: {
   );
  }
 
- const eventItems: NavItem[] = [
-  ...(workspace.showEvents
-   ? [{ name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar }]
-   : []),
-  ...(workspace.showProtocol
-   ? [{ name: 'Protocole', href: '/dashboard/protocol', tourId: 'nav-protocol', icon: ScanLine }]
-   : []),
-  ...(workspace.showEvents || workspace.showProtocol || access?.isProtocolOnly
-   ? [
-      {
-        name: 'Billetterie',
-        href: '/dashboard/tickets',
-        tourId: 'nav-tickets-org',
-        icon: Ticket,
-        description: 'Commandes, entrées, ventes par zone et contrôle d’accès',
-      },
-     ]
-   : []),
-  ...(workspace.showAnalytics
-   ? [{ name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 }]
-   : []),
-  ...(workspace.showTemplates
-   ? [{ name: 'Modèles', href: '/dashboard/templates', tourId: 'nav-templates', icon: Mail }]
-   : []),
- ];
+	const primarySectionLabel =
+		workspace.showEvents && workspace.showRooms
+			? 'Événements & Salles'
+			: workspace.showEvents
+				? 'Événements'
+				: 'Salles';
 
- const marketItems: NavItem[] = [
-  ...(workspace.showBrowseCatalogue
-   ? [
-      { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Catalogue acheteur : salles, prestataires, matériel & équipements (comme le client)' },
-      { name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator-org', icon: Sparkles, description: 'Simulateur budget IA, 3 formules clés en main et devis' },
-      { name: 'Réalisations', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Grille de réalisations et création de posts liés aux salles / prestations' },
-     ]
-   : []),
-  ...(workspace.showEvents || workspace.showBrowseCatalogue
-   ? [
-      { name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox },
-      { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck },
-     ]
-   : []),
-  ...(workspace.showMarketplace
-   ? [{ name: 'Mes offres', href: '/dashboard/marketplace', tourId: 'nav-marketplace', icon: Briefcase, description: 'Publier et gérer vos fiches vendeur (salle / prestataire / matériel & équipements)' }]
-   : []),
-  ...(workspace.showRooms
-   ? [{ name: 'Salles', href: '/dashboard/rooms', tourId: 'nav-rooms', icon: Building2 }]
-   : []),
- ];
+	const primaryItems: NavItem[] = [
+		...(workspace.showEvents
+			? [{ name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar }]
+			: []),
+		...(workspace.showRooms
+			? [{ name: 'Salles', href: '/dashboard/rooms', tourId: 'nav-rooms', icon: Building2 }]
+			: []),
+		...(workspace.showEvents || workspace.showProtocol || access?.isProtocolOnly
+			? [
+					{
+						name: 'Billetterie',
+						href: '/dashboard/tickets',
+						tourId: 'nav-tickets-org',
+						icon: Ticket,
+						description: 'Commandes, entrées, ventes par zone et contrôle d’accès',
+					},
+				]
+			: []),
+		...(workspace.showProtocol
+			? [{ name: 'Protocole', href: '/dashboard/protocol', tourId: 'nav-protocol', icon: ScanLine }]
+			: []),
+		...(workspace.showTemplates
+			? [{ name: 'Modèles', href: '/dashboard/templates', tourId: 'nav-templates', icon: Mail }]
+			: []),
+		...(workspace.showAnalytics
+			? [{ name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 }]
+			: []),
+	];
 
- const billingItems: NavItem[] = [
-  ...(access?.canViewBilling
-   ? [{ name: 'Facturation & plan', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
-   : []),
-  ...(access?.canViewInvoices
-   ? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }]
-   : []),
- ];
+	const marketItems: NavItem[] = [
+		...(workspace.showBrowseCatalogue
+			? [
+					{ name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Catalogue acheteur : salles, prestataires, matériel & équipements (comme le client)' },
+					{ name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator-org', icon: Sparkles, description: 'Simulateur budget IA, 3 formules clés en main et devis' },
+					{ name: 'Réalisations', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Grille de réalisations et création de posts liés aux salles / prestations' },
+				]
+			: []),
+		...(workspace.showEvents || workspace.showBrowseCatalogue
+			? [
+					{ name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox },
+					{ name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck },
+				]
+			: []),
+		...(workspace.showMarketplace
+			? [{ name: 'Mes offres', href: '/dashboard/marketplace', tourId: 'nav-marketplace', icon: Briefcase, description: 'Publier et gérer vos fiches vendeur (salle / prestataire / matériel & équipements)' }]
+			: []),
+	];
 
- return buildNavSections(
-  navSection('Accueil', [
-   { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard },
-  ]),
-  navSection('Événements', eventItems),
-  navSection(vendorOnly ? 'Offre' : 'Marketplace', marketItems),
-  navSection('Organisation', workspace.showTeam
-   ? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users }]
-   : []),
-  navSection('Facturation', billingItems),
-  navSection('Compte', compteNavItems()),
- );
+	const billingItems: NavItem[] = [
+		...(access?.canViewBilling
+			? [{ name: 'Facturation & plan', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
+			: []),
+		...(access?.canViewInvoices
+			? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }]
+			: []),
+	];
+
+	return buildNavSections(
+		navSection('Accueil', [
+			{ name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard },
+		]),
+		navSection(primarySectionLabel, primaryItems),
+		navSection(vendorOnly ? 'Offre' : 'Marketplace', marketItems),
+		navSection('Organisation', workspace.showTeam
+			? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users }]
+			: []),
+		navSection('Facturation', billingItems),
+		navSection('Compte', compteNavItems()),
+	);
 }
 
 function SidebarNav({
