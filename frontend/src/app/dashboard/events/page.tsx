@@ -384,7 +384,29 @@ Votre présence est précieuse pour nous. Veuillez confirmer votre venue en cliq
 
 {{rsvpLink}}
 
-Avec toute notre affection.`
+Avec toute notre affection.`,
+    content: `Cher(e) {{firstName}} {{lastName}},
+
+Nous avons l'immense joie de vous inviter à célébrer notre mariage : {{title}}.
+
+L'événement aura lieu le {{date}} à {{location}}.
+
+Votre présence est précieuse pour nous. Veuillez confirmer votre venue en cliquant sur le lien ci-dessous :
+
+{{rsvpLink}}
+
+Avec toute notre affection.`,
+    whatsappBody: `✨ *Mariage : {{title}}* ✨
+
+Bonjour {{firstName}} ! Nous avons l'immense joie de vous convier à la célébration de notre mariage.
+
+📅 *Date :* {{date}}
+📍 *Lieu :* {{location}}
+
+Votre présence est précieuse pour nous. Merci de confirmer votre présence via ce lien :
+👉 {{rsvpLink}}
+
+Avec toute notre affection ! 🥂💍`,
   },
   {
     id: 'birthday',
@@ -400,7 +422,29 @@ Merci de me confirmer si tu seras des nôtres en cliquant sur ce lien :
 
 {{rsvpLink}}
 
-Hâte de faire la fête avec toi !`
+Hâte de faire la fête avec toi !`,
+    content: `Salut {{firstName}},
+
+Une année de plus, ça se fête ! Je t'invite chaleureusement à mon anniversaire : {{title}}.
+
+On se retrouve le {{date}} à l'adresse suivante : {{location}}.
+
+Merci de me confirmer si tu seras des nôtres en cliquant sur ce lien :
+
+{{rsvpLink}}
+
+Hâte de faire la fête avec toi !`,
+    whatsappBody: `🎉 *Anniversaire : {{title}}* 🎂
+
+Salut {{firstName}} ! Une année de plus, ça se fête dignement avec les personnes qui comptent !
+
+📅 *Date :* {{date}}
+📍 *Lieu :* {{location}}
+
+Confirme-moi vite si tu seras de la fête en cliquant sur ce lien :
+👉 {{rsvpLink}}
+
+Hâte de célébrer ce moment avec toi ! ✨`,
   },
   {
     id: 'corporate',
@@ -419,7 +463,35 @@ Nous vous prions de bien vouloir confirmer votre participation en complétant le
 En espérant vous compter parmi nos honorables invités.
 
 Cordialement,
-L'équipe organisatrice.`
+L'équipe organisatrice.`,
+    content: `Cher(e) {{firstName}} {{lastName}},
+
+Nous avons l'honneur de vous convier à l'événement : {{title}}.
+
+Cette rencontre prestigieuse se déroulera le {{date}} à {{location}}.
+
+Nous vous prions de bien vouloir confirmer votre participation en complétant le formulaire d'inscription en ligne via le lien suivant :
+
+{{rsvpLink}}
+
+En espérant vous compter parmi nos honorables invités.
+
+Cordialement,
+L'équipe organisatrice.`,
+    whatsappBody: `💼 *Invitation officielle : {{title}}*
+
+Bonjour {{firstName}} {{lastName}},
+
+Nous avons le plaisir de vous convier à notre événement : *{{title}}*.
+
+📅 *Date :* {{date}}
+📍 *Lieu :* {{location}}
+
+Merci de bien vouloir valider votre accréditation et confirmer votre participation via ce lien :
+👉 {{rsvpLink}}
+
+Au plaisir de vous compter parmi nos invités.
+_L'équipe organisatrice_`,
   },
   {
     id: 'family',
@@ -435,8 +507,106 @@ Pour nous aider à organiser le repas et l'accueil, merci de confirmer ta prése
 
 {{rsvpLink}}
 
-A très vite !`
-  }
+À très vite !`,
+    content: `Cher(e) {{firstName}},
+
+C'est le moment de se réunir ! Tu es invité(e) à notre fête de famille : {{title}}.
+
+Nous nous rassemblerons le {{date}} à {{location}}.
+
+Pour nous aider à organiser le repas et l'accueil, merci de confirmer ta présence ici :
+
+{{rsvpLink}}
+
+À très vite !`,
+    whatsappBody: `🏡 *Retrouvailles familiales : {{title}}* ❤️
+
+Coucou {{firstName}} ! C'est le moment de nous réunir tous ensemble !
+
+📅 *Date :* {{date}}
+📍 *Lieu :* {{location}}
+
+Merci de nous indiquer si tu seras avec nous pour peaufiner l'organisation :
+👉 {{rsvpLink}}
+
+Grosses bises et à très vite ! ✨`,
+  },
+  {
+    id: 'casual',
+    name: '🍹 Soirée & Cocktail',
+    subject: 'Invitation : Soirée {{title}}',
+    body: `Hello {{firstName}},
+
+Tu es cordialement invité(e) à notre soirée : {{title}} !
+
+Rendez-vous le {{date}} à {{location}}.
+
+Merci de confirmer ta présence sur ce lien pour nous aider dans l'organisation :
+
+{{rsvpLink}}
+
+On compte sur toi !`,
+    content: `Hello {{firstName}},
+
+Tu es cordialement invité(e) à notre soirée : {{title}} !
+
+Rendez-vous le {{date}} à {{location}}.
+
+Merci de confirmer ta présence sur ce lien pour nous aider dans l'organisation :
+
+{{rsvpLink}}
+
+On compte sur toi !`,
+    whatsappBody: `🍹 *Soirée & Cocktail : {{title}}* ✨
+
+Hello {{firstName}} ! Prêt(e) à passer une excellente soirée avec nous ?
+
+📅 *Date :* {{date}}
+📍 *Lieu :* {{location}}
+
+Confirme ta présence en un clic sur le lien ci-dessous :
+👉 {{rsvpLink}}
+
+On a hâte de te retrouver ! 🍸🎶`,
+  },
+  {
+    id: 'thanksgiving',
+    name: '🙏 Action de Grâce',
+    subject: 'Invitation : Célébration d’action de grâce - {{title}}',
+    body: `Cher(e) {{firstName}} {{lastName}},
+
+Nous serions très honorés de vous compter parmi nous pour célébrer notre moment d'action de grâce : {{title}}.
+
+La cérémonie aura lieu le {{date}} à {{location}}.
+
+Afin de faciliter notre accueil, merci de confirmer votre présence via ce lien :
+
+{{rsvpLink}}
+
+Que la joie et la paix soient avec vous.`,
+    content: `Cher(e) {{firstName}} {{lastName}},
+
+Nous serions très honorés de vous compter parmi nous pour célébrer notre moment d'action de grâce : {{title}}.
+
+La cérémonie aura lieu le {{date}} à {{location}}.
+
+Afin de faciliter notre accueil, merci de confirmer votre présence via ce lien :
+
+{{rsvpLink}}
+
+Que la joie et la paix soient avec vous.`,
+    whatsappBody: `🙏 *Action de Grâce : {{title}}* ✨
+
+Bonjour {{firstName}}, nous vous convions chaleureusement à vous joindre à nous pour ce moment de réjouissance et de reconnaissance.
+
+📅 *Date :* {{date}}
+📍 *Lieu :* {{location}}
+
+Merci de bien vouloir confirmer votre présence en suivant ce lien :
+👉 {{rsvpLink}}
+
+Soyez les bienvenus ! 🕊️`,
+  },
 ];
 
 function EventsPageFallback() {
@@ -1707,11 +1877,11 @@ Merci de confirmer votre présence :
 
   const openNewInvitationModal = () => {
     setEditingInviteId(null);
-    setInviteSubject('');
+    setInviteSubject(selectedEvent?.title ? `Invitation : ${selectedEvent.title}` : '');
     setInviteBody('');
     setInviteWhatsAppBody('');
     setSelectedTemplateId('');
-    setInviteChannel('EMAIL');
+    setInviteChannel('EMAIL_AND_WHATSAPP');
     setShowInviteModal(true);
   };
 
