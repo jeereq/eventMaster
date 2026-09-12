@@ -608,10 +608,11 @@ export default function InvitationEditorModal({
                   <button
                     type="button"
                     onClick={() => setPreviewGraphicModalOpen(true)}
-                    className="inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition cursor-pointer shrink-0"
+                    className="inline-flex min-h-11 items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition cursor-pointer shrink-0 active:scale-[0.98] motion-reduce:active:scale-100 touch-manipulation"
                     title="Voir l'aperçu du faire-part graphique"
+                    aria-label={`Voir l'aperçu du modèle graphique ${selectedGraphicTemplate.name}`}
                   >
-                    <Eye className="w-4 h-4" />
+                    <Eye className="w-4 h-4" aria-hidden />
                     <span>Aperçu</span>
                   </button>
                 )}

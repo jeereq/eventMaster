@@ -2573,16 +2573,16 @@ export default function TemplatesPage() {
  onClick={() => {
  window.open('/dashboard/billing', '_blank');
  }}
- className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold rounded-xl text-xs shadow-md shadow-amber-500/20 transition cursor-pointer"
+ className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold rounded-xl text-xs shadow-md shadow-amber-600/20 transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
  >
- <Sparkles className="w-4 h-4" />
+ <Sparkles className="w-4 h-4" aria-hidden />
  <span>Passer au forfait supérieur</span>
- <ArrowRight className="w-4 h-4" />
+ <ArrowRight className="w-4 h-4" aria-hidden />
  </button>
  <button
  type="button"
  onClick={() => setSaveUpgradeModalOpen(false)}
- className="px-4 py-2.5 border border-border hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer"
+ className="inline-flex min-h-11 items-center justify-center px-4 py-2.5 border border-border hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
  >
  Continuer à peaufiner
  </button>
@@ -2659,10 +2659,10 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => setSaveUpgradeModalOpen(true)}
- className="inline-flex items-center gap-1 font-bold text-amber-800 dark:text-amber-300 hover:underline shrink-0 cursor-pointer self-start sm:self-auto"
+ className="inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-amber-900 dark:text-amber-200 bg-amber-500/15 hover:bg-amber-500/25 transition shrink-0 cursor-pointer self-start sm:self-auto touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
  >
  <span>Voir les formules</span>
- <ArrowRight className="w-3.5 h-3.5" />
+ <ArrowRight className="w-3.5 h-3.5" aria-hidden />
  </button>
  </div>
  )}
@@ -5652,16 +5652,16 @@ export default function TemplatesPage() {
  onClick={() => {
  window.open('/dashboard/billing', '_blank');
  }}
- className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold rounded-xl text-xs shadow-md shadow-amber-500/20 transition cursor-pointer"
+ className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-bold rounded-xl text-xs shadow-md shadow-amber-600/20 transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
  >
- <Sparkles className="w-3.5 h-3.5" />
+ <Sparkles className="w-4 h-4" aria-hidden />
  <span>Passer au forfait supérieur</span>
- <ArrowRight className="w-3.5 h-3.5" />
+ <ArrowRight className="w-4 h-4" aria-hidden />
  </button>
  <button
  type="button"
  onClick={() => setSaveUpgradeModalOpen(false)}
- className="px-4 py-2.5 border border-border hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer"
+ className="inline-flex min-h-11 items-center justify-center px-4 py-2.5 border border-border hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
  >
  Continuer à peaufiner
  </button>

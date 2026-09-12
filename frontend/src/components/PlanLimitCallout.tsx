@@ -72,8 +72,8 @@ export default function PlanLimitCallout({
         className={cn(
           'rounded-xl border p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition',
           isFeatureCallout
-            ? 'border-purple-200 dark:border-purple-800/60 bg-gradient-to-r from-purple-50/90 to-purple-50/40 dark:from-purple-950/30 dark:to-purple-950/10 text-purple-950 dark:text-purple-200'
-            : 'border-amber-200 dark:border-amber-800/60 bg-gradient-to-r from-amber-50/90 to-amber-50/40 dark:from-amber-950/30 dark:to-amber-950/10 text-amber-950 dark:text-amber-200',
+            ? 'border-primary/25 dark:border-primary/40 bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 text-foreground'
+            : 'border-amber-300/80 dark:border-amber-700/60 bg-gradient-to-r from-amber-500/10 to-amber-500/5 dark:from-amber-950/30 dark:to-amber-950/10 text-amber-950 dark:text-amber-200',
           className,
         )}
         role="status"
@@ -83,7 +83,7 @@ export default function PlanLimitCallout({
             className={cn(
               'p-1.5 rounded-lg shrink-0',
               isFeatureCallout
-                ? 'bg-purple-100 dark:bg-purple-900/60 text-purple-600 dark:text-purple-300'
+                ? 'bg-primary/15 dark:bg-primary/25 text-primary dark:text-emerald-300'
                 : 'bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-300',
             )}
           >
@@ -102,10 +102,10 @@ export default function PlanLimitCallout({
         <Link
           href={guide.href}
           className={cn(
-            'inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg transition shrink-0',
+            'inline-flex min-h-11 items-center justify-center gap-1 text-xs font-bold px-3.5 py-2 rounded-lg transition shrink-0 active:scale-[0.98] motion-reduce:active:scale-100',
             isFeatureCallout
-              ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-xs'
-              : 'bg-amber-600 hover:bg-amber-700 text-white shadow-xs',
+              ? 'bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground shadow-xs'
+              : 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white shadow-xs',
           )}
         >
           <span>Augmenter</span>
@@ -120,8 +120,8 @@ export default function PlanLimitCallout({
       className={cn(
         'relative overflow-hidden rounded-2xl border p-4 sm:p-5 transition shadow-xs space-y-3.5',
         isFeatureCallout
-          ? 'border-purple-200/90 dark:border-purple-800/50 bg-gradient-to-br from-purple-50/90 via-surface to-purple-50/30 dark:from-purple-950/25 dark:via-surface dark:to-purple-950/10'
-          : 'border-amber-200/90 dark:border-amber-800/50 bg-gradient-to-br from-amber-50/90 via-surface to-amber-50/30 dark:from-amber-950/25 dark:via-surface dark:to-amber-950/10',
+          ? 'border-primary/25 dark:border-primary/40 bg-gradient-to-br from-primary/10 via-surface to-primary/5 dark:from-primary/20 dark:via-surface dark:to-primary/10'
+          : 'border-amber-300/80 dark:border-amber-700/60 bg-gradient-to-br from-amber-500/10 via-surface to-amber-500/5 dark:from-amber-950/30 dark:via-surface dark:to-amber-950/10',
         className,
       )}
       role="status"
@@ -133,7 +133,7 @@ export default function PlanLimitCallout({
             className={cn(
               'p-2 rounded-xl shrink-0 shadow-xs',
               isFeatureCallout
-                ? 'bg-purple-100 dark:bg-purple-900/60 text-purple-600 dark:text-purple-300'
+                ? 'bg-primary/15 dark:bg-primary/25 text-primary dark:text-emerald-300'
                 : 'bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-300',
             )}
           >
@@ -145,8 +145,8 @@ export default function PlanLimitCallout({
                 className={cn(
                   'px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider',
                   isFeatureCallout
-                    ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300'
-                    : 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300',
+                    ? 'bg-primary/15 dark:bg-primary/25 text-primary dark:text-emerald-300 border border-primary/20'
+                    : 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 border border-amber-300/50',
                 )}
               >
                 {isFeatureCallout ? 'Fonctionnalité Premium' : 'Limite de forfait atteinte'}
@@ -167,7 +167,14 @@ export default function PlanLimitCallout({
             <span className="text-xs font-bold text-foreground">
               {usage} / {limit} utilisé{usage > 1 ? 's' : ''}
             </span>
-            <div className="w-32 sm:w-28 h-2 bg-surface-muted border border-border rounded-full overflow-hidden mt-1">
+            <div
+              role="progressbar"
+              aria-valuenow={percent ?? 0}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`Quota consommé : ${usage} sur ${limit}`}
+              className="w-32 sm:w-28 h-2 bg-surface-muted border border-border rounded-full overflow-hidden mt-1"
+            >
               <div
                 className={cn(
                   'h-full transition-all duration-500 rounded-full',
@@ -200,10 +207,10 @@ export default function PlanLimitCallout({
         <Link
           href={guide.href}
           className={cn(
-            'inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white shadow-sm transition hover:scale-[1.02] active:scale-[0.98] shrink-0',
+            'inline-flex min-h-11 items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-white shadow-sm transition hover:scale-[1.02] active:scale-[0.98] motion-reduce:active:scale-100 shrink-0',
             isFeatureCallout
-              ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 shadow-purple-500/20'
-              : 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 shadow-amber-500/20',
+              ? 'bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground shadow-primary/25'
+              : 'bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 shadow-amber-600/25',
           )}
         >
           <Sparkles className="w-3.5 h-3.5" />

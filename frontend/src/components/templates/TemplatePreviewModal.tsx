@@ -1,17 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Smartphone,
   Monitor,
   Copy,
   Edit3,
-  Calendar,
   Layers,
   Palette,
   Sparkles,
-  ExternalLink,
 } from 'lucide-react';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import {
@@ -54,18 +52,24 @@ export default function TemplatePreviewModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [open, onClose]);
 
-  if (!open || !template) return null;
+  const landingPreview = useMemo(() => {
+    if (!template) return null;
+    return templateContentToLandingPreview({
+      id: template.id,
+      name: template.name,
+      content: template.content,
+    });
+  }, [template]);
 
-  const landingPreview = templateContentToLandingPreview({
-    id: template.id,
-    name: template.name,
-    content: template.content,
-  });
+  const summary = useMemo(() => {
+    if (!template?.content) return '';
+    return getTemplateElementSummary(template.content);
+  }, [template?.content]);
+
+  if (!open || !template || !landingPreview) return null;
 
   const isGlobal = !template.tenantId;
-  const summary = getTemplateElementSummary(template.content);
   const elementsCount = template.content?.elements?.length ?? 0;
-  const bgType = (template.content?.global as Record<string, unknown> | undefined)?.bgType;
   const fontTheme = (template.content?.global as Record<string, unknown> | undefined)?.fontTheme;
 
   return (
@@ -120,31 +124,37 @@ export default function TemplatePreviewModal({
 
         {/* Barre de contrôle des vues (Mobile / Desktop) */}
         <div className="px-5 py-2.5 border-b border-border bg-surface flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-1.5 bg-surface-muted p-1 rounded-xl border border-border">
+          <div
+            role="group"
+            aria-label="Format d'affichage du faire-part"
+            className="flex items-center gap-1.5 bg-surface-muted p-1 rounded-xl border border-border"
+          >
             <button
               type="button"
+              aria-pressed={deviceView === 'mobile'}
               onClick={() => setDeviceView('mobile')}
               className={cn(
-                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer',
+                'inline-flex min-h-11 items-center gap-1.5 px-3.5 py-2 rounded-lg font-semibold transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100',
                 deviceView === 'mobile'
-                  ? 'bg-surface text-foreground shadow-2xs'
+                  ? 'bg-surface text-foreground shadow-2xs border border-border/60'
                   : 'text-muted hover:text-foreground',
               )}
             >
-              <Smartphone className="w-3.5 h-3.5" />
+              <Smartphone className="w-4 h-4" aria-hidden />
               <span>Smartphone (380px)</span>
             </button>
             <button
               type="button"
+              aria-pressed={deviceView === 'desktop'}
               onClick={() => setDeviceView('desktop')}
               className={cn(
-                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer',
+                'inline-flex min-h-11 items-center gap-1.5 px-3.5 py-2 rounded-lg font-semibold transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100',
                 deviceView === 'desktop'
-                  ? 'bg-surface text-foreground shadow-2xs'
+                  ? 'bg-surface text-foreground shadow-2xs border border-border/60'
                   : 'text-muted hover:text-foreground',
               )}
             >
-              <Monitor className="w-3.5 h-3.5" />
+              <Monitor className="w-4 h-4" aria-hidden />
               <span>Format large (520px)</span>
             </button>
           </div>
@@ -152,13 +162,13 @@ export default function TemplatePreviewModal({
           <div className="flex items-center gap-3 text-muted text-xs">
             {elementsCount > 0 && (
               <span className="inline-flex items-center gap-1">
-                <Layers className="w-3.5 h-3.5" />
+                <Layers className="w-3.5 h-3.5" aria-hidden />
                 {elementsCount} éléments
               </span>
             )}
             {Boolean(fontTheme) && (
               <span className="hidden sm:inline-flex items-center gap-1">
-                <Palette className="w-3.5 h-3.5" />
+                <Palette className="w-3.5 h-3.5" aria-hidden />
                 Thème : {String(fontTheme)}
               </span>
             )}
@@ -202,7 +212,7 @@ export default function TemplatePreviewModal({
             {summary || 'Rendu en direct du faire-part tel que les invités le recevront.'}
           </p>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {canDuplicate && onDuplicate && (
               <button
                 type="button"
@@ -210,9 +220,9 @@ export default function TemplatePreviewModal({
                   onClose();
                   onDuplicate(template);
                 }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-bold rounded-xl text-xs transition shadow-sm cursor-pointer"
+                className="inline-flex min-h-11 items-center justify-center gap-1.5 px-4 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-bold rounded-xl text-xs transition shadow-sm cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
               >
-                <Copy className="w-3.5 h-3.5" />
+                <Copy className="w-3.5 h-3.5" aria-hidden />
                 <span>Utiliser ce modèle</span>
               </button>
             )}
@@ -224,9 +234,9 @@ export default function TemplatePreviewModal({
                   onClose();
                   onEdit(template);
                 }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl text-xs transition cursor-pointer"
+                className="inline-flex min-h-11 items-center justify-center gap-1.5 px-4 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl text-xs transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
               >
-                <Edit3 className="w-3.5 h-3.5" />
+                <Edit3 className="w-3.5 h-3.5" aria-hidden />
                 <span>Modifier le modèle</span>
               </button>
             )}
@@ -234,7 +244,7 @@ export default function TemplatePreviewModal({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex items-center gap-1.5 px-4 py-2 border border-border hover:bg-surface text-foreground font-semibold rounded-xl text-xs transition cursor-pointer"
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 px-4 py-2.5 border border-border hover:bg-surface text-foreground font-semibold rounded-xl text-xs transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
             >
               Fermer
             </button>
