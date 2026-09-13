@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, SlidersHorizontal,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, SlidersHorizontal,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -212,7 +212,16 @@ import {
   RoomThemeId,
   type FloorType,
 } from '@/lib/roomThemeUtils';
-import { FLOOR_TYPE_PICKER_ORDER, floorTypeLabels, resolveDepthAmount, resolveFloorStyle } from '@/lib/roomFloorUtils';
+import {
+  FLOOR_CATEGORIES,
+  FLOOR_TYPE_PICKER_ORDER,
+  floorsForCategory,
+  floorTypeLabels,
+  resolveDepthAmount,
+  resolveFloorStyle,
+  type FloorCategory,
+} from '@/lib/roomFloorUtils';
+import { computeRoomInventory } from '@/lib/roomInventoryUtils';
 import {
   CHANDELIER_TYPE_ORDER,
   chandelierTypeHints,
@@ -478,8 +487,22 @@ export default function RoomLayoutEditor({
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
   const [clearanceModalOpen, setClearanceModalOpen] = useState(false);
   const [clearancePreset, setClearancePreset] = useState<ClearancePreset>('standard');
+  const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
+  const [copiedInventory, setCopiedInventory] = useState(false);
+  const [floorCategory, setFloorCategory] = useState<FloorCategory>('all');
+  const [floorSearch, setFloorSearch] = useState('');
 
   const clearanceReport = useMemo(() => detectLayoutClearanceConflicts(blueprint), [blueprint]);
+  const inventoryReport = useMemo(() => computeRoomInventory(blueprint), [blueprint]);
+
+  const displayedFloors = useMemo(() => {
+    let list = floorsForCategory(floorCategory);
+    if (floorSearch.trim()) {
+      const q = floorSearch.toLowerCase().trim();
+      list = list.filter((type) => floorTypeLabels[type].toLowerCase().includes(q) || type.toLowerCase().includes(q));
+    }
+    return list;
+  }, [floorCategory, floorSearch]);
 
   const filteredTemplates = useMemo(() => {
     if (templateCategory === 'all') return ROOM_LAYOUT_TEMPLATES;
@@ -2009,6 +2032,29 @@ export default function RoomLayoutEditor({
     log('Export PNG HD téléchargé', 'info');
   };
 
+  const exportInventoryCsv = () => {
+    const blob = new Blob([inventoryReport.csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const stamp = new Date().toISOString().slice(0, 10);
+    link.download = `inventaire-materiel-salle-${stamp}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    log('Inventaire exporté en CSV', 'info');
+  };
+
+  const copyInventoryText = async () => {
+    try {
+      await navigator.clipboard.writeText(inventoryReport.textSummary);
+      setCopiedInventory(true);
+      setTimeout(() => setCopiedInventory(false), 2500);
+      log('Fiche récapitulative copiée dans le presse-papier', 'info');
+    } catch {
+      log('Impossible de copier dans le presse-papier', 'info');
+    }
+  };
+
   const renderCanvas = (className: string) => (
     <div className={cn('relative w-full h-full min-h-0', className)}>
       <RoomWebGLViewer
@@ -2804,28 +2850,67 @@ export default function RoomLayoutEditor({
                     ) : null}
                   </div>
                   <div className="space-y-3 pt-4 border-t border-border/50">
-                    <p className="text-sm font-semibold text-foreground flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> Sol de la salle</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {FLOOR_TYPE_PICKER_ORDER.map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setFloorType(type)}
-                      className={cn(
-                        'min-h-11 py-2.5 px-2.5 rounded-[var(--radius-button)] border text-sm font-medium transition-colors overflow-hidden',
-                        effectiveFloorType === type && !blueprint.metadata.floorImageUrl
-                          ? 'bg-primary/10 border-primary/50 text-primary ring-1 ring-primary/20'
-                          : 'border-border text-muted hover:bg-surface-muted',
-                      )}
-                    >
-                      <span
-                        className="block h-10 rounded mb-1 border border-black/10 shadow-inner"
-                        style={resolveFloorStyle(type, undefined, activeTheme.accentColor)}
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-foreground flex items-center gap-1">
+                        <Layers className="w-3.5 h-3.5" /> Sol de la salle
+                      </p>
+                      <span className="text-xs text-muted">
+                        {displayedFloors.length} sol{displayedFloors.length > 1 ? 's' : ''}
+                      </span>
+                    </div>
+
+                    {/* Filtres par catégories de sols */}
+                    <div className="flex flex-wrap gap-1">
+                      {FLOOR_CATEGORIES.map((cat) => (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => setFloorCategory(cat.id)}
+                          className={cn(
+                            'min-h-11 px-2.5 py-1 text-xs rounded-full border font-medium transition-colors',
+                            floorCategory === cat.id
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-surface-muted/60 text-muted border-border hover:bg-surface-muted hover:text-foreground',
+                          )}
+                        >
+                          {cat.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Champ de recherche de sol */}
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <input
+                        type="text"
+                        placeholder="Rechercher un sol (bois, marbre, led, travertin...)"
+                        value={floorSearch}
+                        onChange={(e) => setFloorSearch(e.target.value)}
+                        className="w-full pl-8 pr-3 py-1.5 text-xs rounded-[var(--radius-button)] border border-border bg-background text-foreground placeholder:text-muted/60 focus:outline-none focus:ring-1 focus:ring-primary min-h-11"
                       />
-                      {floorTypeLabels[type]}
-                    </button>
-                  ))}
-                </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[380px] overflow-y-auto pr-1">
+                      {displayedFloors.map((type) => (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => setFloorType(type)}
+                          className={cn(
+                            'min-h-11 py-2 px-2 rounded-[var(--radius-button)] border text-sm font-medium transition-colors overflow-hidden text-left',
+                            effectiveFloorType === type && !blueprint.metadata.floorImageUrl
+                              ? 'bg-primary/10 border-primary/50 text-primary ring-1 ring-primary/20'
+                              : 'border-border text-muted hover:bg-surface-muted',
+                          )}
+                        >
+                          <span
+                            className="block h-9 rounded mb-1 border border-black/10 shadow-inner"
+                            style={resolveFloorStyle(type, undefined, activeTheme.accentColor)}
+                          />
+                          <span className="line-clamp-1 text-xs font-semibold">{floorTypeLabels[type]}</span>
+                        </button>
+                      ))}
+                    </div>
                 <div className="space-y-2 pt-2">
                   <p className="text-sm font-semibold text-foreground flex items-center gap-1"><Palette className="w-3.5 h-3.5" /> Teinte / couleur du sol</p>
                   <div className="flex flex-wrap gap-1.5 items-center">
@@ -5583,6 +5668,19 @@ export default function RoomLayoutEditor({
       >
         <Keyboard className="w-3.5 h-3.5" aria-hidden /> Raccourcis
       </button>
+      <button
+        type="button"
+        onClick={() => setInventoryModalOpen(true)}
+        title="Consulter l'inventaire matériel et la nomenclature (BOM)"
+        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+      >
+        <ClipboardList className="w-3.5 h-3.5" aria-hidden /> Matériel
+        {inventoryReport.items.length > 0 ? (
+          <span className="px-1.5 py-0.5 rounded-full bg-primary/20 text-primary text-xs font-bold">
+            {inventoryReport.items.length}
+          </span>
+        ) : null}
+      </button>
       {onRegenerate && (
         <button type="button" onClick={() => { onRegenerate(); }} className={cn(EDITOR_TOOL, EDITOR_TOOL_ON)}>
           <RefreshCw className="w-3.5 h-3.5" aria-hidden /> Régénérer
@@ -7008,6 +7106,112 @@ export default function RoomLayoutEditor({
             leftIcon={<MoveHorizontal className="w-4 h-4" />}
           >
             Optimiser en 1 clic
+          </Button>
+        </div>
+      </div>
+    </Modal>
+    <Modal
+      open={inventoryModalOpen}
+      onClose={() => setInventoryModalOpen(false)}
+      title="Nomenclature & Inventaire du matériel"
+      description="Décompte exhaustif du mobilier, des assises, des équipements scéniques et métrages de sol pour les devis et fiches prestataires."
+      size="lg"
+    >
+      <div className="space-y-4">
+        {/* KPI Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div className="p-3 rounded-xl bg-surface-muted border border-border">
+            <span className="text-xs text-muted block">Capacité assise</span>
+            <span className="text-xl font-bold text-foreground">{inventoryReport.totalCapacity} pers.</span>
+            <span className="text-[10px] text-muted block mt-0.5">
+              {inventoryReport.tableSeats} tables · {inventoryReport.rowSeats} rangées
+            </span>
+          </div>
+          <div className="p-3 rounded-xl bg-surface-muted border border-border">
+            <span className="text-xs text-muted block">Surface totale</span>
+            <span className="text-xl font-bold text-foreground">{inventoryReport.totalAreaM2} m²</span>
+            <span className="text-[10px] text-muted block mt-0.5">
+              {blueprint.canvas?.widthM ?? 20}m × {blueprint.canvas?.heightM ?? 16}m
+            </span>
+          </div>
+          <div className="p-3 rounded-xl bg-surface-muted border border-border">
+            <span className="text-xs text-muted block">Ratio d'espace</span>
+            <span className="text-xl font-bold text-foreground">
+              {inventoryReport.ratioM2PerSeat > 0 ? `${inventoryReport.ratioM2PerSeat} m²` : '—'}
+            </span>
+            <span className="text-[10px] text-muted block mt-0.5">par personne assise</span>
+          </div>
+          <div className="p-3 rounded-xl bg-surface-muted border border-border">
+            <span className="text-xs text-muted block">Total références</span>
+            <span className="text-xl font-bold text-foreground">{inventoryReport.items.length}</span>
+            <span className="text-[10px] text-muted block mt-0.5">équipements distincts</span>
+          </div>
+        </div>
+
+        {/* Détails par catégorie */}
+        <div className="max-h-[380px] overflow-y-auto space-y-3.5 pr-1">
+          {Object.entries(inventoryReport.itemsByCategory).map(([category, catItems]) => (
+            <div key={category} className="space-y-1.5">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-muted flex items-center justify-between">
+                <span>{category}</span>
+                <span className="text-[11px] font-semibold text-foreground bg-surface-muted px-2 py-0.5 rounded-full border border-border">
+                  {catItems.reduce((sum, item) => sum + item.count, 0)} unité(s)
+                </span>
+              </h4>
+              <div className="divide-y divide-border/60 border border-border rounded-xl overflow-hidden bg-background">
+                {catItems.map((item) => (
+                  <div key={item.id} className="p-2.5 flex items-center justify-between gap-3 text-xs hover:bg-surface-muted/40 transition-colors">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-foreground truncate">{item.name}</p>
+                      {item.specs ? <p className="text-muted text-[11px] truncate">{item.specs}</p> : null}
+                      {item.notes ? <p className="text-primary text-[11px] font-medium">{item.notes}</p> : null}
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-bold text-xs">
+                        {item.count}×
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          {inventoryReport.items.length === 0 ? (
+            <div className="text-center py-8 text-muted text-sm">
+              Aucun meuble ou équipement dans cette salle pour le moment.
+            </div>
+          ) : null}
+        </div>
+
+        {/* Actions Export & Copie */}
+        <div className="pt-3 border-t border-border flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={copyInventoryText}
+              className="min-h-11 text-xs"
+              leftIcon={copiedInventory ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+            >
+              {copiedInventory ? 'Fiche copiée !' : 'Copier la fiche texte'}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={exportInventoryCsv}
+              className="min-h-11 text-xs"
+              leftIcon={<Download className="w-4 h-4" />}
+            >
+              Exporter en CSV (Excel)
+            </Button>
+          </div>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => setInventoryModalOpen(false)}
+            className="min-h-11"
+          >
+            Fermer
           </Button>
         </div>
       </div>

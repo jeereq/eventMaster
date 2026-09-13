@@ -523,6 +523,8 @@ function FloorPlane({
         map={mat.map ?? undefined}
         bumpMap={mat.bumpMap ?? undefined}
         bumpScale={mat.bumpScale || 0}
+        normalMap={mat.normalMap ?? undefined}
+        normalScale={mat.normalScale ? new THREE.Vector2(mat.normalScale, mat.normalScale) : undefined}
         roughness={mat.roughness}
         metalness={mat.metalness}
         clearcoat={mat.clearcoat}

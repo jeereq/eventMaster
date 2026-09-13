@@ -59,6 +59,39 @@ export const FLOOR_TYPE_PICKER_ORDER: FloorType[] = [
   'herbe', 'pelouse', 'gazonSynth', 'prairie', 'sable', 'gravier', 'gravierFonce', 'beton', 'brique',
 ];
 
+export type FloorCategory = 'all' | 'prestige' | 'wood' | 'stone' | 'outdoor';
+
+export const FLOOR_CATEGORIES: Array<{ id: FloorCategory; label: string }> = [
+  { id: 'all', label: 'Tous' },
+  { id: 'prestige', label: 'Prestige & Gala' },
+  { id: 'wood', label: 'Bois & Parquets' },
+  { id: 'stone', label: 'Pierres & Minéraux' },
+  { id: 'outdoor', label: 'Extérieur & Moquettes' },
+];
+
+export const FLOOR_CATEGORY_MEMBERS: Record<Exclude<FloorCategory, 'all'>, FloorType[]> = {
+  prestige: [
+    'miroirNoir', 'dancefloorLed', 'parquetVersailles', 'moquetteRouge',
+    'marbreCalacatta', 'marbreOr', 'marbreBourgogne', 'epoxyMenthe', 'epoxy',
+  ],
+  wood: [
+    'parquetVersailles', 'boisPanel', 'boisHex', 'boisAmber', 'boisRustique', 'boisBlond', 'boisPetale',
+    'boisCharcoal', 'boisMarqueterie', 'bois', 'parquet', 'chevron', 'chevronGris', 'chevronGreige',
+  ],
+  stone: [
+    'travertin', 'betonCire', 'marbre', 'carrelage', 'damier', 'terrazzo', 'pierre', 'pierreModulaire', 'dallesIrregulieres',
+    'pavesPinwheel', 'pavesGranit', 'beton', 'brique',
+  ],
+  outdoor: [
+    'moquette', 'herbe', 'pelouse', 'gazonSynth', 'prairie', 'sable', 'gravier', 'gravierFonce',
+  ],
+};
+
+export function floorsForCategory(category: FloorCategory): FloorType[] {
+  if (category === 'all') return FLOOR_TYPE_PICKER_ORDER;
+  return FLOOR_CATEGORY_MEMBERS[category] ?? FLOOR_TYPE_PICKER_ORDER;
+}
+
 type FloorAsset = {
   url: string;
   size: string;

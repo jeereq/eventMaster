@@ -63,6 +63,8 @@ export function resolveFloorMap(
   isPlan: boolean;
   bumpMap: THREE.Texture | null;
   bumpScale: number;
+  normalMap?: THREE.Texture | null;
+  normalScale?: number;
 } {
   if (floorImageUrl) {
     const isPlan = floorImageFit !== 'tile';
@@ -85,7 +87,7 @@ export function resolveFloorMap(
 
   if (type === 'miroirNoir') {
     const tileM = FLOOR_TEXTURE_REPEAT_M.miroirNoir;
-    const { map: mTex, bumpMap: mBump } = makeCanvasTexture('floor:miroir-noir-v1', (ctx, size) => {
+    const { map: mTex, bumpMap: mBump, normalMap: mNormal } = makeCanvasTexture('floor:miroir-noir-v1', (ctx, size) => {
       ctx.fillStyle = '#08080a';
       ctx.fillRect(0, 0, size, size);
       // Joints fins biseautés de dalles miroir
@@ -100,9 +102,10 @@ export function resolveFloorMap(
       g.addColorStop(1, 'rgba(4,4,6,0.9)');
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, size, size);
-    }, 512, true);
+    }, 512, true, true, 2.2);
     mTex.repeat.set(widthM / tileM, heightM / tileM);
     if (mBump) mBump.repeat.set(widthM / tileM, heightM / tileM);
+    if (mNormal) mNormal.repeat.set(widthM / tileM, heightM / tileM);
     return {
       map: mTex,
       color: floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff',
@@ -113,12 +116,14 @@ export function resolveFloorMap(
       isPlan: false,
       bumpMap: mBump ?? null,
       bumpScale: 0.002,
+      normalMap: mNormal ?? null,
+      normalScale: 0.6,
     };
   }
 
   if (type === 'dancefloorLed') {
     const tileM = FLOOR_TEXTURE_REPEAT_M.dancefloorLed;
-    const { map: ledTex, bumpMap: ledBump } = makeCanvasTexture('floor:dancefloor-led-v1', (ctx, size) => {
+    const { map: ledTex, bumpMap: ledBump, normalMap: ledNormal } = makeCanvasTexture('floor:dancefloor-led-v1', (ctx, size) => {
       ctx.fillStyle = '#07090e';
       ctx.fillRect(0, 0, size, size);
       const cols = 4;
@@ -154,9 +159,10 @@ export function resolveFloorMap(
           }
         }
       }
-    }, 512, true);
+    }, 512, true, true, 2.5);
     ledTex.repeat.set(widthM / tileM, heightM / tileM);
     if (ledBump) ledBump.repeat.set(widthM / tileM, heightM / tileM);
+    if (ledNormal) ledNormal.repeat.set(widthM / tileM, heightM / tileM);
     return {
       map: ledTex,
       color: floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff',
@@ -167,12 +173,14 @@ export function resolveFloorMap(
       isPlan: false,
       bumpMap: ledBump ?? null,
       bumpScale: 0.004,
+      normalMap: ledNormal ?? null,
+      normalScale: 0.75,
     };
   }
 
   if (type === 'parquetVersailles') {
     const tileM = FLOOR_TEXTURE_REPEAT_M.parquetVersailles;
-    const { map: versTex, bumpMap: versBump } = makeCanvasTexture('floor:parquet-versailles-v1', (ctx, size) => {
+    const { map: versTex, bumpMap: versBump, normalMap: versNormal } = makeCanvasTexture('floor:parquet-versailles-v1', (ctx, size) => {
       ctx.fillStyle = '#b48344';
       ctx.fillRect(0, 0, size, size);
       const b = size * 0.1;
@@ -191,9 +199,10 @@ export function resolveFloorMap(
       ctx.moveTo(size, 0); ctx.lineTo(0, size);
       ctx.stroke();
       noise(ctx, size, 0.07);
-    }, 512, true);
+    }, 512, true, true, 2.8);
     versTex.repeat.set(widthM / tileM, heightM / tileM);
     if (versBump) versBump.repeat.set(widthM / tileM, heightM / tileM);
+    if (versNormal) versNormal.repeat.set(widthM / tileM, heightM / tileM);
     return {
       map: versTex,
       color: floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff',
@@ -204,12 +213,14 @@ export function resolveFloorMap(
       isPlan: false,
       bumpMap: versBump ?? null,
       bumpScale: 0.016,
+      normalMap: versNormal ?? null,
+      normalScale: 0.85,
     };
   }
 
   if (type === 'betonCire') {
     const tileM = FLOOR_TEXTURE_REPEAT_M.betonCire;
-    const { map: betonTex, bumpMap: betonBump } = makeCanvasTexture('floor:beton-cire-v1', (ctx, size) => {
+    const { map: betonTex, bumpMap: betonBump, normalMap: betonNormal } = makeCanvasTexture('floor:beton-cire-v1', (ctx, size) => {
       ctx.fillStyle = '#8f8c85';
       ctx.fillRect(0, 0, size, size);
       for (let i = 0; i < 28; i++) {
@@ -227,9 +238,10 @@ export function resolveFloorMap(
         ctx.fill();
       }
       noise(ctx, size, 0.05);
-    }, 512, true);
+    }, 512, true, true, 1.8);
     betonTex.repeat.set(widthM / tileM, heightM / tileM);
     if (betonBump) betonBump.repeat.set(widthM / tileM, heightM / tileM);
+    if (betonNormal) betonNormal.repeat.set(widthM / tileM, heightM / tileM);
     return {
       map: betonTex,
       color: floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff',
@@ -240,12 +252,14 @@ export function resolveFloorMap(
       isPlan: false,
       bumpMap: betonBump ?? null,
       bumpScale: 0.01,
+      normalMap: betonNormal ?? null,
+      normalScale: 0.5,
     };
   }
 
   if (type === 'travertin') {
     const tileM = FLOOR_TEXTURE_REPEAT_M.travertin;
-    const { map: travTex, bumpMap: travBump } = makeCanvasTexture('floor:travertin-romain-v1', (ctx, size) => {
+    const { map: travTex, bumpMap: travBump, normalMap: travNormal } = makeCanvasTexture('floor:travertin-romain-v1', (ctx, size) => {
       ctx.fillStyle = '#ded5c4';
       ctx.fillRect(0, 0, size, size);
       const half = size / 2;
@@ -263,9 +277,10 @@ export function resolveFloorMap(
         ctx.fillRect(x, y, len, 1.2);
       }
       noise(ctx, size, 0.06);
-    }, 512, true);
+    }, 512, true, true, 2.6);
     travTex.repeat.set(widthM / tileM, heightM / tileM);
     if (travBump) travBump.repeat.set(widthM / tileM, heightM / tileM);
+    if (travNormal) travNormal.repeat.set(widthM / tileM, heightM / tileM);
     return {
       map: travTex,
       color: floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff',
@@ -276,12 +291,14 @@ export function resolveFloorMap(
       isPlan: false,
       bumpMap: travBump ?? null,
       bumpScale: 0.014,
+      normalMap: travNormal ?? null,
+      normalScale: 0.8,
     };
   }
 
   if (type === 'moquetteRouge') {
     const tileM = FLOOR_TEXTURE_REPEAT_M.moquetteRouge;
-    const { map: redCarpetTex, bumpMap: redCarpetBump } = makeCanvasTexture('floor:moquette-rouge-v1', (ctx, size) => {
+    const { map: redCarpetTex, bumpMap: redCarpetBump, normalMap: redCarpetNormal } = makeCanvasTexture('floor:moquette-rouge-v1', (ctx, size) => {
       ctx.fillStyle = '#83141f';
       ctx.fillRect(0, 0, size, size);
       for (let i = 0; i < 3000; i++) {
@@ -291,9 +308,10 @@ export function resolveFloorMap(
         ctx.fillRect(x, y, 1.2, 2.0);
       }
       noise(ctx, size, 0.09);
-    }, 512, true);
+    }, 512, true, true, 2.2);
     redCarpetTex.repeat.set(widthM / tileM, heightM / tileM);
     if (redCarpetBump) redCarpetBump.repeat.set(widthM / tileM, heightM / tileM);
+    if (redCarpetNormal) redCarpetNormal.repeat.set(widthM / tileM, heightM / tileM);
     return {
       map: redCarpetTex,
       color: floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff',
@@ -304,6 +322,8 @@ export function resolveFloorMap(
       isPlan: false,
       bumpMap: redCarpetBump ?? null,
       bumpScale: 0.02,
+      normalMap: redCarpetNormal ?? null,
+      normalScale: 0.7,
     };
   }
 
@@ -405,16 +425,87 @@ function canvasToBumpTexture(source: HTMLCanvasElement, key: string): THREE.Canv
   return tex;
 }
 
+/** Génération d'une carte de normales tangentielles via filtre de convolution de Sobel (PBR 2.0). */
+function canvasToNormalTexture(source: HTMLCanvasElement, key: string, strength = 2.0): THREE.CanvasTexture {
+  const cached = canvasCache.get(key);
+  if (cached) return cached;
+
+  const size = source.width;
+  const normalCanvas = document.createElement('canvas');
+  normalCanvas.width = size;
+  normalCanvas.height = size;
+  const ctx = normalCanvas.getContext('2d');
+  const srcCtx = source.getContext('2d');
+  if (!ctx || !srcCtx) {
+    const empty = new THREE.CanvasTexture(normalCanvas);
+    canvasCache.set(key, empty);
+    return empty;
+  }
+
+  const src = srcCtx.getImageData(0, 0, size, size);
+  const dst = ctx.createImageData(size, size);
+  const data = src.data;
+
+  const lumAt = (x: number, y: number) => {
+    const px = (x + size) % size;
+    const py = (y + size) % size;
+    const idx = (py * size + px) * 4;
+    return (data[idx] * 0.299 + data[idx + 1] * 0.587 + data[idx + 2] * 0.114) / 255;
+  };
+
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      // Masque de Sobel 3x3 pour gradients X et Y
+      const tl = lumAt(x - 1, y - 1);
+      const l  = lumAt(x - 1, y);
+      const bl = lumAt(x - 1, y + 1);
+      const t  = lumAt(x, y - 1);
+      const b  = lumAt(x, y + 1);
+      const tr = lumAt(x + 1, y - 1);
+      const r  = lumAt(x + 1, y);
+      const br = lumAt(x + 1, y + 1);
+
+      const dx = (tr + 2 * r + br) - (tl + 2 * l + bl);
+      const dy = (bl + 2 * b + br) - (tl + 2 * t + tr);
+
+      let nx = -dx * strength;
+      let ny = -dy * strength;
+      let nz = 1.0;
+      const len = Math.hypot(nx, ny, nz) || 1.0;
+      nx /= len;
+      ny /= len;
+      nz /= len;
+
+      const idx = (y * size + x) * 4;
+      dst.data[idx] = Math.round((nx * 0.5 + 0.5) * 255);
+      dst.data[idx + 1] = Math.round((ny * 0.5 + 0.5) * 255);
+      dst.data[idx + 2] = Math.round((nz * 0.5 + 0.5) * 255);
+      dst.data[idx + 3] = 255;
+    }
+  }
+
+  ctx.putImageData(dst, 0, 0);
+  const tex = new THREE.CanvasTexture(normalCanvas);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.NoColorSpace;
+  tex.anisotropy = 8;
+  canvasCache.set(key, tex);
+  return tex;
+}
+
 function makeCanvasTexture(
   key: string,
   draw: (ctx: CanvasRenderingContext2D, size: number) => void,
   size = 256,
   withBump = false,
-): { map: THREE.CanvasTexture; bumpMap?: THREE.CanvasTexture } {
+  withNormal = false,
+  normalStrength = 2.0,
+): { map: THREE.CanvasTexture; bumpMap?: THREE.CanvasTexture; normalMap?: THREE.CanvasTexture } {
   const cached = canvasCache.get(key);
   if (cached) {
     const bump = withBump ? canvasCache.get(`bump:${key}`) : undefined;
-    return { map: cached, bumpMap: bump };
+    const normal = withNormal ? canvasCache.get(`normal:${key}`) : undefined;
+    return { map: cached, bumpMap: bump, normalMap: normal };
   }
 
   const canvas = document.createElement('canvas');
@@ -433,7 +524,8 @@ function makeCanvasTexture(
   tex.anisotropy = 8;
   canvasCache.set(key, tex);
   const bumpMap = withBump ? canvasToBumpTexture(canvas, `bump:${key}`) : undefined;
-  return { map: tex, bumpMap };
+  const normalMap = withNormal ? canvasToNormalTexture(canvas, `normal:${key}`, normalStrength) : undefined;
+  return { map: tex, bumpMap, normalMap };
 }
 
 function noise(ctx: CanvasRenderingContext2D, size: number, alpha = 0.08) {
