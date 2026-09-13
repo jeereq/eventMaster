@@ -11,7 +11,7 @@ import {
  LogOut, Menu, X, Loader2, ShieldCheck, User, Sun, Moon, BarChart3,
  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock, BookOpen,
  PanelLeftClose, PanelLeft, Store, CalendarCheck, ScrollText, Ticket, Wallet, Bell,
- Inbox, Sparkles, Bookmark, Heart, Rss, Coins,
+ Inbox, Sparkles, Heart, Rss, Coins,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import PWAInstallCta from '@/components/PWAInstallCta';
@@ -167,9 +167,15 @@ function buildDashboardNav(opts: {
  accountKind?: string | null;
  isClientAccount: boolean;
  commercialNetwork?: boolean;
+ tenantPlan?: string | null;
+ audience?: string | null;
 }): NavSection[] {
- const { role, access, workspace, accountKind, isClientAccount, commercialNetwork } = opts;
+ const { role, access, workspace, accountKind, isClientAccount, tenantPlan, audience } = opts;
  const vendorOnly = accountKind === 'VENDOR';
+ const isServiceProvider =
+  tenantPlan === 'SERVICE' ||
+  audience === 'SERVICE' ||
+  (vendorOnly && !workspace.showRooms);
 
  if (role === 'SUPER_ADMIN') {
   return buildNavSections(
@@ -267,6 +273,85 @@ function buildDashboardNav(opts: {
    navSection('Compte', compteNavItems()),
   );
  }
+
+	if (isServiceProvider) {
+		const providerActivityItems: NavItem[] = [
+			{
+				name: 'Mes prestations',
+				href: '/dashboard/marketplace',
+				tourId: 'nav-marketplace',
+				icon: Briefcase,
+				description: 'Publier et gérer vos fiches vendeur (traiteur, déco, DJ, photo, matériel…)',
+			},
+			{
+				name: 'Demandes de devis',
+				href: '/dashboard/bookings?tab=quotes',
+				tourId: 'nav-quotes',
+				icon: Inbox,
+				description: 'Chiffrages et demandes reçues des organisateurs',
+			},
+			{
+				name: 'Réservations & Planning',
+				href: '/dashboard/bookings?tab=bookings',
+				tourId: 'nav-reservations',
+				icon: CalendarCheck,
+				description: 'Dates d’intervention et acomptes confirmés',
+			},
+			{
+				name: 'Statistiques & Revenus',
+				href: '/dashboard/analytics',
+				tourId: 'nav-analytics-org',
+				icon: BarChart3,
+				description: 'Volume financier, taux de concrétisation et bilans',
+			},
+			{
+				name: 'Réalisations',
+				href: '/dashboard/publications',
+				tourId: 'nav-publications',
+				icon: Rss,
+				description: 'Portfolio de réalisations et vitrine catalogue',
+			},
+		];
+
+		const providerNetworkItems: NavItem[] = [
+			{
+				name: 'Explorer le catalogue',
+				href: '/dashboard/catalogue',
+				tourId: 'nav-catalogue',
+				icon: Store,
+				description: 'Catalogue partenaires : salles, confrères et équipements',
+			},
+			{
+				name: 'Simulateur IA',
+				href: '/dashboard/catalogue?tab=plan&planView=ai',
+				tourId: 'nav-simulator-org',
+				icon: Sparkles,
+				description: 'Simulateur budget IA et packs 3 formules',
+			},
+		];
+
+		const billingItems: NavItem[] = [
+			...(access?.canViewBilling
+				? [{ name: 'Abonnement & forfaits', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
+				: []),
+			...(access?.canViewInvoices
+				? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }]
+				: []),
+		];
+
+		return buildNavSections(
+			navSection('Accueil', [
+				{ name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard },
+			]),
+			navSection('Prestations & Devis', providerActivityItems),
+			navSection('Réseau & Marketplace', providerNetworkItems),
+			navSection('Organisation', workspace.showTeam
+				? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users }]
+				: []),
+			navSection('Facturation', billingItems),
+			navSection('Compte', compteNavItems()),
+		);
+	}
 
 	const primarySectionLabel =
 		workspace.showEvents && workspace.showRooms
@@ -459,16 +544,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  const router = useRouter();
  const pathname = usePathname();
  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
- const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
- useEffect(() => {
- try {
- const stored = localStorage.getItem('em-sidebar-collapsed');
- if (stored === '1') setSidebarCollapsed(true);
- } catch {
- /* ignore */
- }
- }, []);
+ const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+  if (typeof window === 'undefined') return false;
+  try {
+   return localStorage.getItem('em-sidebar-collapsed') === '1';
+  } catch {
+   return false;
+  }
+ });
 
  useEffect(() => {
   const onTourVisibility = (event: Event) => {
@@ -651,6 +734,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   accountKind: tenant?.accountKind,
   isClientAccount,
   commercialNetwork: Boolean(planFeatures?.commercialNetwork),
+  tenantPlan: tenant?.plan,
+  audience: planFeatures?.audience,
  });
 
  const showNotifications = Boolean(user);

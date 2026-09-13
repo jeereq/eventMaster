@@ -165,7 +165,24 @@ export default function OrganizerDashboardHome({
   const isManager = access?.level === 'manager' && !isOwner;
   const canManageTeam = isOwner || Boolean(access?.canManageTeam);
 
+  const isServiceProvider =
+    tenant?.plan === 'SERVICE' ||
+    planFeatures?.audience === 'SERVICE' ||
+    (isVendor && (!access?.canManageRooms || (planQuota?.limits.maxRooms ?? 0) <= 0));
+
+  const isVenueProvider =
+    !isServiceProvider &&
+    (tenant?.plan === 'VENUE' || planFeatures?.audience === 'VENUE' || (Boolean(access?.canManageRooms) && (planQuota?.limits.maxRooms ?? 0) > 0));
+
+  const isCatalogProvider =
+    !isServiceProvider &&
+    !isVenueProvider &&
+    (tenant?.plan === 'CATALOG' || planFeatures?.audience === 'CATALOG' || isBoth);
+
   const isVenueOrVendorOrCatalog =
+    isServiceProvider ||
+    isVenueProvider ||
+    isCatalogProvider ||
     isVendor ||
     isBoth ||
     tenant?.plan === 'VENUE' ||
@@ -336,6 +353,95 @@ export default function OrganizerDashboardHome({
 
   // Définition des onglets ergonomiques du tableau de bord
   const tabs = useMemo(() => {
+    // ════════════════════════════════════════════════════════════════════════
+    // 1. PROFIL PRESTATAIRE DE SERVICES : Priorité aux prestations, devis & planning
+    // ════════════════════════════════════════════════════════════════════════
+    if (isServiceProvider) {
+      return [
+        {
+          id: 'overview' as const,
+          label: 'Vue d’ensemble',
+          shortLabel: 'Synthèse',
+          icon: LayoutDashboard,
+          badge: null,
+        },
+        {
+          id: 'spaces' as const,
+          label: 'Prestations & Offres',
+          shortLabel: 'Prestations',
+          icon: Briefcase,
+          badge: usage?.services != null ? String(usage.services) : null,
+        },
+        {
+          id: 'quotes' as const,
+          label: 'Demandes de devis',
+          shortLabel: 'Devis',
+          icon: Inbox,
+          badge: pendingQuotesCount > 0 ? String(pendingQuotesCount) : (inquiries.length > 0 ? String(inquiries.length) : null),
+        },
+        {
+          id: 'reservations' as const,
+          label: 'Réservations & Planning',
+          shortLabel: 'Planning',
+          icon: CalendarCheck,
+          badge: bookings.length > 0 ? String(bookings.length) : null,
+        },
+        {
+          id: 'analytics' as const,
+          label: 'Analyses & Revenus',
+          shortLabel: 'Analyses',
+          icon: BarChart3,
+          badge: null,
+        },
+        {
+          id: 'explore' as const,
+          label: 'Explorer le catalogue',
+          shortLabel: 'Explorer',
+          icon: Store,
+          badge: null,
+        },
+        ...((limits?.maxEvents ?? 0) > 0 || events.length > 0
+          ? [
+              {
+                id: 'events' as const,
+                label: 'Événements & Billetterie',
+                shortLabel: 'Événements',
+                icon: Calendar,
+                badge: events.length > 0 ? String(events.length) : null,
+              },
+              {
+                id: 'guests' as const,
+                label: 'Invités & Protocole',
+                shortLabel: 'Invités',
+                icon: Users,
+                badge: usage?.guests != null ? String(usage.guests) : null,
+              },
+            ]
+          : []),
+        ...(canManageTeam
+          ? [
+              {
+                id: 'team' as const,
+                label: 'Équipe & Staff',
+                shortLabel: 'Équipe',
+                icon: UserCheck,
+                badge: null,
+              },
+            ]
+          : []),
+        {
+          id: 'billing' as const,
+          label: isManager ? 'Organisation & Quotas' : 'Abonnement Prestataire',
+          shortLabel: isManager ? 'Quotas' : 'Abonnement',
+          icon: isManager ? Shield : Crown,
+          badge: tenant?.plan || 'Prestataire',
+        },
+      ];
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // 2. PROFIL GESTIONNAIRE DE SALLES OU CATALOGUE MIXTE
+    // ════════════════════════════════════════════════════════════════════════
     if (isVenueOrVendorOrCatalog) {
       return [
         {
@@ -344,6 +450,13 @@ export default function OrganizerDashboardHome({
           shortLabel: 'Synthèse',
           icon: LayoutDashboard,
           badge: null,
+        },
+        {
+          id: 'spaces' as const,
+          label: isVenueProvider ? 'Salles & Plans 3D' : 'Espaces & Prestations',
+          shortLabel: isVenueProvider ? 'Salles & 3D' : 'Espaces',
+          icon: isVenueProvider ? Building2 : Store,
+          badge: usage?.rooms != null ? String(usage.rooms) : null,
         },
         {
           id: 'reservations' as const,
@@ -360,13 +473,6 @@ export default function OrganizerDashboardHome({
           badge: pendingQuotesCount > 0 ? String(pendingQuotesCount) : (inquiries.length > 0 ? String(inquiries.length) : null),
         },
         {
-          id: 'explore' as const,
-          label: 'Explorer le catalogue',
-          shortLabel: 'Explorer',
-          icon: Store,
-          badge: null,
-        },
-        {
           id: 'analytics' as const,
           label: 'Analyses & Performance',
           shortLabel: 'Analyses',
@@ -374,10 +480,10 @@ export default function OrganizerDashboardHome({
           badge: null,
         },
         {
-          id: 'spaces' as const,
-          label: isVendor ? 'Prestations & Offres' : 'Salles & Plans 3D',
-          shortLabel: isVendor ? 'Prestations' : 'Salles & 3D',
-          icon: isVendor ? Briefcase : Building2,
+          id: 'explore' as const,
+          label: 'Explorer le catalogue',
+          shortLabel: 'Explorer',
+          icon: Store,
           badge: null,
         },
         ...((limits?.maxEvents ?? 0) > 0 || events.length > 0
@@ -496,6 +602,8 @@ export default function OrganizerDashboardHome({
       },
     ];
   }, [
+    isServiceProvider,
+    isVenueProvider,
     isVenueOrVendorOrCatalog,
     bookings.length,
     pendingQuotesCount,
@@ -503,6 +611,8 @@ export default function OrganizerDashboardHome({
     isVendor,
     limits?.maxEvents,
     events.length,
+    usage?.services,
+    usage?.rooms,
     usage?.guests,
     canManageTeam,
     isManager,
@@ -589,6 +699,12 @@ export default function OrganizerDashboardHome({
                   <Sparkles className="w-3.5 h-3.5" />
                   {isManager
                     ? 'Espace Manager'
+                    : isServiceProvider
+                    ? 'Espace Prestataire de Services'
+                    : isVenueProvider
+                    ? 'Espace Gestionnaire de Salle'
+                    : isCatalogProvider
+                    ? 'Espace Vitrine & Catalogue'
                     : isVendor
                     ? 'Espace Prestataire / Salles'
                     : isBoth
@@ -627,7 +743,11 @@ export default function OrganizerDashboardHome({
                 {greetingLabel}{user?.name ? `, ${user.name.split(' ')[0]}` : ''}
               </h1>
               <p className="text-xs sm:text-sm text-muted leading-relaxed">
-                {isOwner
+                {isServiceProvider
+                  ? 'Gérez vos prestations, répondez aux demandes de devis des organisateurs et suivez votre planning d’interventions.'
+                  : isVenueProvider
+                  ? 'Modélisez vos salles en 2D/3D, gérez vos dates de privatisation et traitez vos demandes de réservation.'
+                  : isOwner
                   ? 'Pilotage stratégique et financier de votre organisation, événements et équipe.'
                   : isManager
                   ? 'Gestion opérationnelle quotidienne de vos événements, équipe et devis.'
@@ -663,14 +783,82 @@ export default function OrganizerDashboardHome({
             {/* Raccourcis directs en 1 clic */}
             <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-xs">
               <span className="text-xs font-medium text-muted mr-1">Raccourcis :</span>
-              {isVenueOrVendorOrCatalog ? (
+              {isServiceProvider ? (
                 <>
                   <button
                     type="button"
-                    onClick={() => handleTabChange('reservations')}
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1 cursor-pointer"
+                    onClick={() => handleTabChange('spaces')}
+                    className="min-h-9 px-3 py-1.5 rounded-lg bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
                   >
-                    <CalendarCheck className="w-3.5 h-3.5" />
+                    <Briefcase className="w-3.5 h-3.5" />
+                    Mes prestations
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('quotes')}
+                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-amber-500/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Inbox className="w-3.5 h-3.5 text-amber-500" />
+                    Devis reçus
+                    {pendingQuotesCount > 0 && (
+                      <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-amber-500 text-white font-bold">
+                        {pendingQuotesCount}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('reservations')}
+                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <CalendarCheck className="w-3.5 h-3.5 text-primary" />
+                    Planning réservations
+                    {bookings.length > 0 && (
+                      <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-primary text-primary-foreground font-bold">
+                        {bookings.length}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('analytics')}
+                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <BarChart3 className="w-3.5 h-3.5 text-blue-500" />
+                    Analyses & CA
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('explore')}
+                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Store className="w-3.5 h-3.5 text-primary" />
+                    Explorer catalogue
+                  </button>
+                  <Link
+                    href="/dashboard/marketplace?new=1"
+                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface-muted hover:bg-primary/10 hover:text-primary border border-border text-xs font-medium text-muted transition inline-flex items-center gap-1"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5 text-primary" />
+                    + Nouvelle offre
+                  </Link>
+                </>
+              ) : isVenueOrVendorOrCatalog ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('spaces')}
+                    className="min-h-9 px-3 py-1.5 rounded-lg bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  >
+                    <Building2 className="w-3.5 h-3.5" />
+                    Mes salles
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('reservations')}
+                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <CalendarCheck className="w-3.5 h-3.5 text-primary" />
                     Réservations
                     {bookings.length > 0 && (
                       <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-primary text-primary-foreground font-bold">
@@ -706,14 +894,6 @@ export default function OrganizerDashboardHome({
                   >
                     <BarChart3 className="w-3.5 h-3.5 text-blue-500" />
                     Analyses
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleTabChange('spaces')}
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-purple-500/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    {isVendor ? <Briefcase className="w-3.5 h-3.5 text-purple-600" /> : <Building2 className="w-3.5 h-3.5 text-purple-600" />}
-                    {isVendor ? 'Mes prestations' : 'Mes salles'}
                   </button>
                 </>
               ) : (
@@ -852,7 +1032,148 @@ export default function OrganizerDashboardHome({
 
           {/* Indicateurs clés en temps réel (5 Cartes KPI adaptatives) */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-            {isVenueOrVendorOrCatalog ? (
+            {isServiceProvider ? (
+              <>
+                {/* Carte 1 (Prestataire) : Mes Prestations */}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('spaces')}
+                  className="p-4 rounded-2xl border border-primary/30 bg-primary/5 hover:border-primary hover:bg-primary/10 transition group flex flex-col justify-between h-full text-left cursor-pointer shadow-2xs"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-bold text-primary uppercase tracking-wider">Prestations</span>
+                    <div className="p-2 rounded-xl bg-primary/15 text-primary group-hover:scale-110 transition">
+                      <Briefcase className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <p className="text-2xl font-black text-foreground tracking-tight">
+                      {formatQuota(usage?.services, limits?.maxServices)}
+                    </p>
+                    <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
+                      <span>Offres au catalogue</span>
+                      <span className="text-xs text-primary font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Gérer</span>
+                    </p>
+                  </div>
+                </button>
+
+                {/* Carte 2 (Prestataire) : Demandes de devis */}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('quotes')}
+                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-amber-500/40 hover:bg-amber-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Devis Reçus</span>
+                    <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition">
+                      <Inbox className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <p className="text-2xl font-black text-foreground tracking-tight">
+                      {inquiries.length}
+                    </p>
+                    <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
+                      <span>{pendingQuotesCount > 0 ? `${pendingQuotesCount} en attente` : 'Chiffrages'}</span>
+                      <span className="text-xs text-amber-600 dark:text-amber-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Répondre</span>
+                    </p>
+                  </div>
+                </button>
+
+                {/* Carte 3 (Prestataire) : Réservations confirmées */}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('reservations')}
+                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Réservations</span>
+                    <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
+                      <CalendarCheck className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <p className="text-2xl font-black text-foreground tracking-tight">
+                      {bookings.length}
+                    </p>
+                    <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
+                      <span>{confirmedBookingsCount} confirmée{confirmedBookingsCount > 1 ? 's' : ''}</span>
+                      <span className="text-xs text-primary font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Planning</span>
+                    </p>
+                  </div>
+                </button>
+
+                {/* Carte 4 (Prestataire) : Volume financier / CA */}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('analytics')}
+                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Volume d'affaires</span>
+                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition">
+                      <Wallet className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <p className="text-xl sm:text-2xl font-black text-foreground tracking-tight truncate">
+                      {totalBookingsVolumeFc > 0 ? formatFc(totalBookingsVolumeFc) : (ticketingSummary?.totalRevenueFc ? formatFc(ticketingSummary.totalRevenueFc) : '0 FC')}
+                    </p>
+                    <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
+                      <span>{bookings.length > 0 ? `${bookings.length} résa validées` : 'Revenus & Devis'}</span>
+                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Analyse</span>
+                    </p>
+                  </div>
+                </button>
+
+                {/* Carte 5 (Prestataire) : Équipe ou Forfait Prestataire */}
+                {canManageTeam ? (
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('team')}
+                    className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-blue-500/40 hover:bg-blue-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer col-span-2 md:col-span-1"
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-xs font-bold text-muted uppercase tracking-wider">Équipe</span>
+                      <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition">
+                        <UserCheck className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <p className="text-2xl font-black text-foreground tracking-tight">
+                        {usage ? formatQuota(usage.orgManagers, limits?.maxOrgManagers) : '—'}
+                      </p>
+                      <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
+                        <span>Staff & Rôles</span>
+                        <span className="text-xs text-blue-600 dark:text-blue-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Gérer</span>
+                      </p>
+                    </div>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('billing')}
+                    className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full col-span-2 md:col-span-1 text-left cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-xs font-bold text-muted uppercase tracking-wider">Forfait</span>
+                      <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
+                        <Award className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <p className="text-xl font-black text-foreground tracking-tight truncate">
+                        {tenant?.plan || billing?.plan || 'Prestataire'}
+                      </p>
+                      <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
+                        <span>Vitrine active</span>
+                        <span className="text-xs text-primary font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Gérer</span>
+                      </p>
+                    </div>
+                  </button>
+                )}
+              </>
+            ) : isVenueOrVendorOrCatalog ? (
               <>
                 {/* Carte 1 (Venue/Vendor) : Réservations */}
                 <button
@@ -1806,7 +2127,7 @@ export default function OrganizerDashboardHome({
       )}
 
       {/* ══════════════════════════════════════════════════════════════════════════
-          ONGLET 4 : 🏛️ SALLES & MARKETPLACE
+          ONGLET : 💼 PRESTATIONS & OFFRES (OU 🏛️ SALLES POUR VENUES)
       ══════════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'spaces' && (
         <div
@@ -1816,210 +2137,481 @@ export default function OrganizerDashboardHome({
           tabIndex={0}
           className="space-y-6 focus-visible:outline-none animate-in fade-in-50 duration-150"
         >
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="p-1.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400">
-                <Building2 className="w-4 h-4" />
-              </span>
-              <h2 className="text-lg font-bold text-foreground">
-                {isVendor ? 'Prestations & Devis' : 'Salles & Marketplace'}
-              </h2>
-            </div>
-            <p className="text-xs text-muted mt-0.5">
-              Plans de table 2D/3D, simulateur IA, assemblage de packs et devis prestataires.
-            </p>
-          </div>
-
-          <div className={cn('grid grid-cols-1 gap-4', isManager ? 'md:grid-cols-2 xl:grid-cols-4' : 'md:grid-cols-3')}>
-            {isManager ? (
-              <div className="p-5 rounded-2xl border border-primary/25 bg-primary/5 hover:border-primary/50 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 text-primary flex items-center justify-center">
-                      <Rss className="w-5 h-5" />
+          {isServiceProvider ? (
+            <div className="space-y-6">
+              {/* En-tête de section spécifique prestataire */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 rounded-2xl border border-border bg-surface/90 shadow-2xs">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                      <Briefcase className="w-5 h-5" />
                     </div>
-                    <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25">
-                      Réalisations
-                    </span>
+                    <div>
+                      <h2 className="text-lg font-bold text-foreground">
+                        Catalogue de vos Prestations & Services
+                      </h2>
+                      <p className="text-xs text-muted">
+                        Publiez vos offres, ajustez vos tarifs, gérez vos stocks de matériel et soignez votre vitrine auprès des organisateurs.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    href="/dashboard/marketplace"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-surface border border-border hover:border-primary/40 text-foreground transition shadow-2xs"
+                  >
+                    <Briefcase className="w-3.5 h-3.5 text-primary" />
+                    <span>Console Vendeur</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                  <Link
+                    href="/dashboard/marketplace?new=1"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover transition shadow-2xs"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    <span>Nouvelle prestation</span>
+                  </Link>
+                </div>
+              </div>
+
+              {/* Statut de visibilité & Quotas du plan prestataire */}
+              <div className="p-4 rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/5 via-surface to-surface-muted flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-primary/10 text-primary shrink-0">
+                    <Crown className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
-                      Photos & Actualités
-                    </h3>
-                    <p className="text-xs text-muted leading-relaxed mt-1">
-                      Partagez vos photos d&apos;événements et actualités sur le catalogue.
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-bold text-foreground">
+                        Forfait Prestataire · {formatQuota(usage?.services, limits?.maxServices)} offres publiées
+                      </p>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                        En ligne
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted mt-0.5">
+                      Vos prestations sont visibles par tous les organisateurs d’événements, mariés et entreprises de la plateforme.
                     </p>
                   </div>
                 </div>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  fullWidth
-                  onClick={() => router.push('/dashboard/publications')}
-                  rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-                  className="mt-auto"
-                >
-                  Voir les réalisations
-                </Button>
-              </div>
-            ) : null}
 
-            {/* Carte 1 : Plan de Salle 2D/3D */}
-            <div className="p-5 rounded-2xl border border-border bg-surface hover:border-purple-500/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-                    <Building2 className="w-5 h-5" />
+                <div className="flex items-center gap-2 shrink-0">
+                  <Link
+                    href="/dashboard/billing"
+                    className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    <span>Gérer mon forfait</span>
+                    <ChevronRight className="w-3 h-3" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* Cartes d'action métier pour le prestataire */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* 1. Prestations & Services au catalogue */}
+                <div className="p-5 rounded-2xl border border-primary/30 bg-surface hover:border-primary hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition">
+                        <Briefcase className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                        Offres phares
+                      </span>
+                    </div>
+
+                    <div>
+                      <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
+                        Prestations & Forfaits
+                      </h3>
+                      <p className="text-xs text-muted leading-relaxed mt-1">
+                        Traiteur, Décoration, DJ, Photographe, Hôtesses… Définissez vos tarifs par personne ou par événement.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1 pt-1 text-xs text-muted">
+                      <div className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <span>Tarification par heure, jour ou invité</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <span>Photos HD & fiches descriptives</span>
+                      </div>
+                    </div>
                   </div>
-                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
-                    Plan 2D/3D
-                  </span>
+
+                  <div className="flex flex-col gap-2 mt-auto pt-2 border-t border-border">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      fullWidth
+                      onClick={() => router.push('/dashboard/marketplace')}
+                      rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                    >
+                      Gérer mes prestations
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      fullWidth
+                      onClick={() => router.push('/dashboard/marketplace?new=1')}
+                      leftIcon={<PlusCircle className="w-3.5 h-3.5" />}
+                    >
+                      Nouvelle prestation
+                    </Button>
+                  </div>
                 </div>
 
-                <div>
-                  <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
-                    Plan de salle & Placement
-                  </h3>
-                  <p className="text-xs text-muted leading-relaxed mt-1">
-                    Disposition des tables, scène, buffet et placement visuel des invités.
-                  </p>
+                {/* 2. Matériel & Équipements à la location */}
+                <div className="p-5 rounded-2xl border border-border bg-surface hover:border-purple-500/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center group-hover:scale-110 transition">
+                        <Layers className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+                        Location
+                      </span>
+                    </div>
+
+                    <div>
+                      <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
+                        Matériel & Mobilier
+                      </h3>
+                      <p className="text-xs text-muted leading-relaxed mt-1">
+                        Chaises Chiavari, mange-debout, chapiteaux, sonorisation, vaisselle & éclairages en location.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1 pt-1 text-xs text-muted">
+                      <div className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                        <span>Stock disponible par date</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                        <span>Options livraison & montage</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-auto pt-2 border-t border-border">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      fullWidth
+                      onClick={() => router.push('/dashboard/marketplace?tab=rentals')}
+                      rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                    >
+                      Gérer la location
+                    </Button>
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  <span className="text-xs px-2.5 py-1 rounded bg-surface-muted text-muted">Tables rondes & rect.</span>
-                  <span className="text-xs px-2.5 py-1 rounded bg-surface-muted text-muted">Scène & Buffet</span>
-                  <span className="text-xs px-2.5 py-1 rounded bg-surface-muted text-muted">Vue 3D WebGL</span>
+                {/* 3. Demandes de devis & Chiffrages */}
+                <div className="p-5 rounded-2xl border border-border bg-surface hover:border-amber-500/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-110 transition">
+                        <Inbox className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                        {pendingQuotesCount > 0 ? `${pendingQuotesCount} en attente` : 'Opportunités'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
+                        Devis & Chiffrages
+                      </h3>
+                      <p className="text-xs text-muted leading-relaxed mt-1">
+                        Répondez aux demandes des organisateurs avec des propositions tarifaires claires en Franc Congolais.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1 pt-1 text-xs text-muted">
+                      <div className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span>Chiffrage direct et rapide</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span>Acomptes sécurisés par Mobile Money</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-auto pt-2 border-t border-border">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      fullWidth
+                      onClick={() => handleTabChange('quotes')}
+                      rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                    >
+                      Voir les demandes de devis
+                    </Button>
+                  </div>
+                </div>
+
+                {/* 4. Portfolio & Réalisations */}
+                <div className="p-5 rounded-2xl border border-border bg-surface hover:border-blue-500/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 transition">
+                        <Rss className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
+                        Vitrine
+                      </span>
+                    </div>
+
+                    <div>
+                      <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
+                        Réalisations & Portfolio
+                      </h3>
+                      <p className="text-xs text-muted leading-relaxed mt-1">
+                        Partagez des photos et actualités de vos prestations pour prouver votre expertise et rassurer les clients.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1 pt-1 text-xs text-muted">
+                      <div className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span>Posts d’événements réussis</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span>Partage direct sur WhatsApp</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-auto pt-2 border-t border-border">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      fullWidth
+                      onClick={() => router.push('/dashboard/publications')}
+                      rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                    >
+                      Publier une réalisation
+                    </Button>
+                  </div>
                 </div>
               </div>
-
-              <Button
-                variant="secondary"
-                size="sm"
-                fullWidth
-                onClick={() => router.push('/dashboard/rooms')}
-                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-                className="mt-auto"
-              >
-                Éditeur 2D/3D
-              </Button>
             </div>
-
-            {/* Carte 2 : Trouver des prestataires & Packs IA */}
-            <div className="p-5 rounded-2xl border border-primary/30 bg-primary/5 hover:border-primary hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 text-primary flex items-center justify-center">
-                    <Sparkles className="w-5 h-5" />
-                  </div>
-                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
-                    Simulateur IA
+          ) : (
+            <>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                    <Building2 className="w-4 h-4" />
                   </span>
+                  <h2 className="text-lg font-bold text-foreground">
+                    {isVendor ? 'Prestations & Devis' : 'Salles & Marketplace'}
+                  </h2>
                 </div>
-
-                <div>
-                  <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
-                    Simulateur IA & Packs
-                  </h3>
-                  <p className="text-xs text-muted leading-relaxed mt-1">
-                    3 combinaisons budgétaires instantanées (éco, confort, prestige) avec prestataires certifiés.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  <Link
-                    href="/dashboard/catalogue?tab=plan&planView=ai"
-                    className="text-xs font-bold px-2.5 py-1 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover transition inline-flex items-center gap-1"
-                  >
-                    <Sparkles className="w-3 h-3" /> Simuler 3 packs
-                  </Link>
-                  <Link
-                    href="/dashboard/catalogue?kind=venue"
-                    className="text-xs font-medium px-2.5 py-1 rounded-lg bg-surface border border-border hover:bg-primary/10 hover:text-primary transition text-muted min-h-[30px] inline-flex items-center"
-                  >
-                    Salles
-                  </Link>
-                  <Link
-                    href="/dashboard/catalogue?kind=service"
-                    className="text-xs font-medium px-2.5 py-1 rounded-lg bg-surface border border-border hover:bg-primary/10 hover:text-primary transition text-muted min-h-[30px] inline-flex items-center"
-                  >
-                    Prestataires
-                  </Link>
-                </div>
+                <p className="text-xs text-muted mt-0.5">
+                  Plans de table 2D/3D, simulateur IA, assemblage de packs et devis prestataires.
+                </p>
               </div>
 
-              <div className="flex flex-col gap-2 mt-auto">
-                <Button
-                  variant="primary"
-                  size="sm"
-                  fullWidth
-                  onClick={() => router.push('/dashboard/catalogue?tab=plan&planView=ai')}
-                  rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-                  className="shadow-xs shadow-primary/20"
-                >
-                  Lancer la simulation
-                </Button>
+              <div className={cn('grid grid-cols-1 gap-4', isManager ? 'md:grid-cols-2 xl:grid-cols-4' : 'md:grid-cols-3')}>
                 {isManager ? (
+                  <div className="p-5 rounded-2xl border border-primary/25 bg-primary/5 hover:border-primary/50 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 text-primary flex items-center justify-center">
+                          <Rss className="w-5 h-5" />
+                        </div>
+                        <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25">
+                          Réalisations
+                        </span>
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
+                          Photos & Actualités
+                        </h3>
+                        <p className="text-xs text-muted leading-relaxed mt-1">
+                          Partagez vos photos d&apos;événements et actualités sur le catalogue.
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      fullWidth
+                      onClick={() => router.push('/dashboard/publications')}
+                      rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                      className="mt-auto"
+                    >
+                      Voir les réalisations
+                    </Button>
+                  </div>
+                ) : null}
+
+                {/* Carte 1 : Plan de Salle 2D/3D */}
+                <div className="p-5 rounded-2xl border border-border bg-surface hover:border-purple-500/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                        <Building2 className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+                        Plan 2D/3D
+                      </span>
+                    </div>
+
+                    <div>
+                      <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
+                        Plan de salle & Placement
+                      </h3>
+                      <p className="text-xs text-muted leading-relaxed mt-1">
+                        Disposition des tables, scène, buffet et placement visuel des invités.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      <span className="text-xs px-2.5 py-1 rounded bg-surface-muted text-muted">Tables rondes & rect.</span>
+                      <span className="text-xs px-2.5 py-1 rounded bg-surface-muted text-muted">Scène & Buffet</span>
+                      <span className="text-xs px-2.5 py-1 rounded bg-surface-muted text-muted">Vue 3D WebGL</span>
+                    </div>
+                  </div>
+
                   <Button
                     variant="secondary"
                     size="sm"
                     fullWidth
-                    onClick={() => router.push('/dashboard/catalogue?tab=plan&planView=ai&buyTokens=1')}
+                    onClick={() => router.push('/dashboard/rooms')}
+                    rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                    className="mt-auto"
                   >
-                    Acheter des jetons
+                    Éditeur 2D/3D
                   </Button>
-                ) : null}
-              </div>
-            </div>
+                </div>
 
-            {/* Carte 3 : Devis, Réservations & Suivi */}
-            <div className="p-5 rounded-2xl border border-border bg-surface hover:border-emerald-500/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                    <Wallet className="w-5 h-5" />
+                {/* Carte 2 : Trouver des prestataires & Packs IA */}
+                <div className="p-5 rounded-2xl border border-primary/30 bg-primary/5 hover:border-primary hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 text-primary flex items-center justify-center">
+                        <Sparkles className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
+                        Simulateur IA
+                      </span>
+                    </div>
+
+                    <div>
+                      <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
+                        Simulateur IA & Packs
+                      </h3>
+                      <p className="text-xs text-muted leading-relaxed mt-1">
+                        3 combinaisons budgétaires instantanées (éco, confort, prestige) avec prestataires certifiés.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      <Link
+                        href="/dashboard/catalogue?tab=plan&planView=ai"
+                        className="text-xs font-bold px-2.5 py-1 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover transition inline-flex items-center gap-1"
+                      >
+                        <Sparkles className="w-3 h-3" /> Simuler 3 packs
+                      </Link>
+                      <Link
+                        href="/dashboard/catalogue?kind=venue"
+                        className="text-xs font-medium px-2.5 py-1 rounded-lg bg-surface border border-border hover:bg-primary/10 hover:text-primary transition text-muted min-h-[30px] inline-flex items-center"
+                      >
+                        Salles
+                      </Link>
+                      <Link
+                        href="/dashboard/catalogue?kind=service"
+                        className="text-xs font-medium px-2.5 py-1 rounded-lg bg-surface border border-border hover:bg-primary/10 hover:text-primary transition text-muted min-h-[30px] inline-flex items-center"
+                      >
+                        Prestataires
+                      </Link>
+                    </div>
                   </div>
-                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
-                    Devis & Contrats
-                  </span>
+
+                  <div className="flex flex-col gap-2 mt-auto">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      fullWidth
+                      onClick={() => router.push('/dashboard/catalogue?tab=plan&planView=ai')}
+                      rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                      className="shadow-xs shadow-primary/20"
+                    >
+                      Lancer la simulation
+                    </Button>
+                    {isManager ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        fullWidth
+                        onClick={() => router.push('/dashboard/catalogue?tab=plan&planView=ai&buyTokens=1')}
+                      >
+                        Acheter des jetons
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
 
-                <div>
-                  <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
-                    Devis & Réservations
-                  </h3>
-                  <p className="text-xs text-muted leading-relaxed mt-1">
-                    Suivi des demandes prestataires, dates confirmées et devis en cours.
-                  </p>
-                </div>
+                {/* Carte 3 : Devis, Réservations & Suivi */}
+                <div className="p-5 rounded-2xl border border-border bg-surface hover:border-emerald-500/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                        <Wallet className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                        Devis & Contrats
+                      </span>
+                    </div>
 
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  <Link
-                    href="/dashboard/bookings?tab=quotes"
-                    className="text-xs font-medium px-2.5 py-1 rounded-lg bg-surface-muted hover:bg-primary/10 hover:text-primary transition text-muted min-h-[30px] inline-flex items-center"
+                    <div>
+                      <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
+                        Devis & Réservations
+                      </h3>
+                      <p className="text-xs text-muted leading-relaxed mt-1">
+                        Suivi des demandes prestataires, dates confirmées et devis en cours.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      <Link
+                        href="/dashboard/bookings?tab=quotes"
+                        className="text-xs font-medium px-2.5 py-1 rounded-lg bg-surface-muted hover:bg-primary/10 hover:text-primary transition text-muted min-h-[30px] inline-flex items-center"
+                      >
+                        Devis en cours
+                      </Link>
+                      <Link
+                        href="/dashboard/bookings?tab=bookings"
+                        className="text-xs font-medium px-2.5 py-1 rounded-lg bg-surface-muted hover:bg-primary/10 hover:text-primary transition text-muted min-h-[30px] inline-flex items-center"
+                      >
+                        Dates réservées
+                      </Link>
+                    </div>
+                  </div>
+
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    fullWidth
+                    onClick={() => router.push('/dashboard/bookings')}
+                    rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                    className="mt-auto"
                   >
-                    Devis en cours
-                  </Link>
-                  <Link
-                    href="/dashboard/bookings?tab=bookings"
-                    className="text-xs font-medium px-2.5 py-1 rounded-lg bg-surface-muted hover:bg-primary/10 hover:text-primary transition text-muted min-h-[30px] inline-flex items-center"
-                  >
-                    Dates réservées
-                  </Link>
+                    Gérer mes devis
+                  </Button>
                 </div>
               </div>
-
-              <Button
-                variant="secondary"
-                size="sm"
-                fullWidth
-                onClick={() => router.push('/dashboard/bookings')}
-                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-                className="mt-auto"
-              >
-                Gérer mes devis
-              </Button>
-            </div>
-          </div>
+            </>
+          )}
         </div>
       )}
 
