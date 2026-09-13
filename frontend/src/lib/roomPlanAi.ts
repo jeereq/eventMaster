@@ -291,6 +291,16 @@ const FLOOR_ALIASES: Record<string, FloorType> = {
   stone: 'pierre',
   pierre: 'pierre',
   epoxy: 'epoxy',
+  miroirnoir: 'miroirNoir',
+  blackmirror: 'miroirNoir',
+  versailles: 'parquetVersailles',
+  parquetversailles: 'parquetVersailles',
+  betoncire: 'betonCire',
+  travertin: 'travertin',
+  moquetterouge: 'moquetteRouge',
+  tapisrouge: 'moquetteRouge',
+  dancefloorled: 'dancefloorLed',
+  starlight: 'dancefloorLed',
 };
 
 const DEFAULT_FOOTPRINT: Record<string, { w: number; h: number }> = {

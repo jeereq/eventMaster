@@ -39,11 +39,18 @@ export const floorTypeLabels: Record<FloorType, string> = {
   brique: 'Brique',
   gravier: 'Gravier clair',
   gravierFonce: 'Gravier nuit',
+  miroirNoir: 'Miroir noir gala',
+  parquetVersailles: 'Parquet Versailles',
+  betonCire: 'Béton ciré satiné',
+  travertin: 'Dalles de travertin',
+  moquetteRouge: 'Tapis rouge protocole',
+  dancefloorLed: 'Dancefloor LED starlight',
   custom: 'Image importée',
 };
 
 /** Ordre d’affichage dans le sélecteur de sol (photos réalistes en tête). */
 export const FLOOR_TYPE_PICKER_ORDER: FloorType[] = [
+  'miroirNoir', 'dancefloorLed', 'parquetVersailles', 'moquetteRouge', 'betonCire', 'travertin',
   'boisPanel', 'boisHex', 'boisAmber', 'boisRustique', 'boisBlond', 'boisPetale',
   'boisCharcoal', 'boisMarqueterie', 'bois', 'parquet', 'chevron', 'chevronGris', 'chevronGreige',
   'marbreCalacatta', 'marbreOr', 'marbreBourgogne', 'marbre', 'epoxyMenthe', 'epoxy',
@@ -99,6 +106,12 @@ export const FLOOR_ASSETS: Record<Exclude<FloorType, 'custom'>, FloorAsset> = {
   brique: { url: '/floors/brique.svg', size: '64px 32px', fallback: '#b45309' },
   gravier: { url: '/floors/sable.svg', size: '40px 40px', fallback: '#c4b8a4' },
   gravierFonce: { url: '/floors/cobble-granite.png', size: PHOTO, fallback: '#3f3f46' },
+  miroirNoir: { url: '/floors/damier.svg', size: DAMIER_TILE, fallback: '#0b0c10' },
+  parquetVersailles: { url: '/floors/wood-panel.png', size: PHOTO, fallback: '#b38243' },
+  betonCire: { url: '/floors/concrete.svg', size: DAMIER_TILE, fallback: '#87857e' },
+  travertin: { url: '/floors/tile.svg', size: '64px 64px', fallback: '#ded3be' },
+  moquetteRouge: { url: '/floors/carpet.svg', size: '56px 56px', fallback: '#80131d' },
+  dancefloorLed: { url: '/floors/epoxy-mint-gold.png', size: PHOTO, fallback: '#07090e' },
 };
 
 /** Répétition monde (mètres) pour textures WebGL. */
@@ -140,6 +153,12 @@ export const FLOOR_TEXTURE_REPEAT_M: Record<Exclude<FloorType, 'custom'>, number
   brique: 1.4,
   gravier: 1.2,
   gravierFonce: 1.1,
+  miroirNoir: 2.4,
+  parquetVersailles: 2.0,
+  betonCire: 2.4,
+  travertin: 2.0,
+  moquetteRouge: 1.6,
+  dancefloorLed: 2.0,
 };
 
 export function getFloorAsset(floorType: FloorType | undefined): FloorAsset {
@@ -148,7 +167,19 @@ export function getFloorAsset(floorType: FloorType | undefined): FloorAsset {
 }
 
 function lightingOverlays(floorType: FloorType): { image: string; size: string; repeat: string; blend: string } {
-  if (floorType === 'moquette' || floorType === 'damier') {
+  if (floorType === 'miroirNoir' || floorType === 'dancefloorLed') {
+    return {
+      image: [
+        'radial-gradient(ellipse at 50% 35%, rgba(255,255,255,0.22) 0%, transparent 60%)',
+        'linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 40%, rgba(20,20,35,0.45) 100%)',
+        'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, transparent 50%, rgba(0,0,0,0.6) 100%)',
+      ].join(', '),
+      size: '100% 100%, 100% 100%, 100% 100%',
+      repeat: 'no-repeat, no-repeat, no-repeat',
+      blend: 'screen, overlay, multiply',
+    };
+  }
+  if (floorType === 'moquette' || floorType === 'moquetteRouge' || floorType === 'damier') {
     return {
       image: [
         'radial-gradient(ellipse at 50% 38%, rgba(80,60,120,0.16) 0%, transparent 55%)',

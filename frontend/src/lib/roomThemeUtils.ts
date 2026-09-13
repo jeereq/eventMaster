@@ -39,6 +39,12 @@ export type FloorType =
   | 'brique'
   | 'gravier'
   | 'gravierFonce'
+  | 'miroirNoir'
+  | 'parquetVersailles'
+  | 'betonCire'
+  | 'travertin'
+  | 'moquetteRouge'
+  | 'dancefloorLed'
   | 'custom';
 
 export type BuiltInRoomThemeId =

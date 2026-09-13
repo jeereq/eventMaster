@@ -82,6 +82,231 @@ export function resolveFloorMap(
     };
   }
   const type = floorType && floorType !== 'custom' ? floorType : 'parquet';
+
+  if (type === 'miroirNoir') {
+    const tileM = FLOOR_TEXTURE_REPEAT_M.miroirNoir;
+    const { map: mTex, bumpMap: mBump } = makeCanvasTexture('floor:miroir-noir-v1', (ctx, size) => {
+      ctx.fillStyle = '#08080a';
+      ctx.fillRect(0, 0, size, size);
+      // Joints fins biseautés de dalles miroir
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(1, 1, size - 2, size - 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(size * 0.08, size * 0.08, size * 0.84, size * 0.84);
+      const g = ctx.createRadialGradient(size * 0.5, size * 0.5, size * 0.1, size * 0.5, size * 0.5, size * 0.7);
+      g.addColorStop(0, 'rgba(28,28,38,0.4)');
+      g.addColorStop(1, 'rgba(4,4,6,0.9)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, size, size);
+    }, 512, true);
+    mTex.repeat.set(widthM / tileM, heightM / tileM);
+    if (mBump) mBump.repeat.set(widthM / tileM, heightM / tileM);
+    return {
+      map: mTex,
+      color: floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff',
+      roughness: 0.03,
+      metalness: 0.32,
+      clearcoat: 1.0,
+      envMapIntensity: 1.6,
+      isPlan: false,
+      bumpMap: mBump ?? null,
+      bumpScale: 0.002,
+    };
+  }
+
+  if (type === 'dancefloorLed') {
+    const tileM = FLOOR_TEXTURE_REPEAT_M.dancefloorLed;
+    const { map: ledTex, bumpMap: ledBump } = makeCanvasTexture('floor:dancefloor-led-v1', (ctx, size) => {
+      ctx.fillStyle = '#07090e';
+      ctx.fillRect(0, 0, size, size);
+      const cols = 4;
+      const step = size / cols;
+      ctx.strokeStyle = 'rgba(212,175,55,0.4)';
+      ctx.lineWidth = 3;
+      for (let i = 0; i <= cols; i++) {
+        ctx.beginPath();
+        ctx.moveTo(i * step, 0); ctx.lineTo(i * step, size); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i * step); ctx.lineTo(size, i * step); ctx.stroke();
+      }
+      for (let c = 0; c < cols; c++) {
+        for (let r = 0; r < cols; r++) {
+          const cx = c * step;
+          const cy = r * step;
+          ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(cx + 4, cy + 4, step - 8, step - 8);
+          for (let dx = 0.22; dx < 0.9; dx += 0.28) {
+            for (let dy = 0.22; dy < 0.9; dy += 0.28) {
+              const lx = cx + dx * step;
+              const ly = cy + dy * step;
+              const rad = ctx.createRadialGradient(lx, ly, 0.5, lx, ly, 6);
+              rad.addColorStop(0, '#ffffff');
+              rad.addColorStop(0.35, 'rgba(240,230,200,0.85)');
+              rad.addColorStop(1, 'rgba(250,204,21,0)');
+              ctx.fillStyle = rad;
+              ctx.beginPath();
+              ctx.arc(lx, ly, 6, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+      }
+    }, 512, true);
+    ledTex.repeat.set(widthM / tileM, heightM / tileM);
+    if (ledBump) ledBump.repeat.set(widthM / tileM, heightM / tileM);
+    return {
+      map: ledTex,
+      color: floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff',
+      roughness: 0.08,
+      metalness: 0.16,
+      clearcoat: 0.95,
+      envMapIntensity: 1.35,
+      isPlan: false,
+      bumpMap: ledBump ?? null,
+      bumpScale: 0.004,
+    };
+  }
+
+  if (type === 'parquetVersailles') {
+    const tileM = FLOOR_TEXTURE_REPEAT_M.parquetVersailles;
+    const { map: versTex, bumpMap: versBump } = makeCanvasTexture('floor:parquet-versailles-v1', (ctx, size) => {
+      ctx.fillStyle = '#b48344';
+      ctx.fillRect(0, 0, size, size);
+      const b = size * 0.1;
+      ctx.strokeStyle = '#5a3b1a';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(b, b, size - 2 * b, size - 2 * b);
+      ctx.beginPath();
+      ctx.moveTo(size / 2, b);
+      ctx.lineTo(size - b, size / 2);
+      ctx.lineTo(size / 2, size - b);
+      ctx.lineTo(b, size / 2);
+      ctx.closePath();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, 0); ctx.lineTo(size, size);
+      ctx.moveTo(size, 0); ctx.lineTo(0, size);
+      ctx.stroke();
+      noise(ctx, size, 0.07);
+    }, 512, true);
+    versTex.repeat.set(widthM / tileM, heightM / tileM);
+    if (versBump) versBump.repeat.set(widthM / tileM, heightM / tileM);
+    return {
+      map: versTex,
+      color: floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff',
+      roughness: 0.40,
+      metalness: 0.04,
+      clearcoat: 0.35,
+      envMapIntensity: 0.65,
+      isPlan: false,
+      bumpMap: versBump ?? null,
+      bumpScale: 0.016,
+    };
+  }
+
+  if (type === 'betonCire') {
+    const tileM = FLOOR_TEXTURE_REPEAT_M.betonCire;
+    const { map: betonTex, bumpMap: betonBump } = makeCanvasTexture('floor:beton-cire-v1', (ctx, size) => {
+      ctx.fillStyle = '#8f8c85';
+      ctx.fillRect(0, 0, size, size);
+      for (let i = 0; i < 28; i++) {
+        const x = Math.random() * size;
+        const y = Math.random() * size;
+        const radius = size * (0.15 + Math.random() * 0.35);
+        const grad = ctx.createRadialGradient(x, y, radius * 0.1, x, y, radius);
+        const alpha = 0.04 + Math.random() * 0.06;
+        grad.addColorStop(0, `rgba(240,238,232,${alpha})`);
+        grad.addColorStop(0.6, `rgba(100,98,92,${alpha * 0.7})`);
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      noise(ctx, size, 0.05);
+    }, 512, true);
+    betonTex.repeat.set(widthM / tileM, heightM / tileM);
+    if (betonBump) betonBump.repeat.set(widthM / tileM, heightM / tileM);
+    return {
+      map: betonTex,
+      color: floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff',
+      roughness: 0.44,
+      metalness: 0.05,
+      clearcoat: 0.32,
+      envMapIntensity: 0.55,
+      isPlan: false,
+      bumpMap: betonBump ?? null,
+      bumpScale: 0.01,
+    };
+  }
+
+  if (type === 'travertin') {
+    const tileM = FLOOR_TEXTURE_REPEAT_M.travertin;
+    const { map: travTex, bumpMap: travBump } = makeCanvasTexture('floor:travertin-romain-v1', (ctx, size) => {
+      ctx.fillStyle = '#ded5c4';
+      ctx.fillRect(0, 0, size, size);
+      const half = size / 2;
+      ctx.strokeStyle = 'rgba(120,110,95,0.45)';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(2, 2, half - 3, half - 3);
+      ctx.strokeRect(half + 1, 2, half - 3, half - 3);
+      ctx.strokeRect(2, half + 1, half - 3, half - 3);
+      ctx.strokeRect(half + 1, half + 1, half - 3, half - 3);
+      for (let i = 0; i < 350; i++) {
+        const x = Math.random() * size;
+        const y = Math.random() * size;
+        const len = 4 + Math.random() * 18;
+        ctx.fillStyle = Math.random() > 0.4 ? 'rgba(165,152,132,0.22)' : 'rgba(245,240,230,0.3)';
+        ctx.fillRect(x, y, len, 1.2);
+      }
+      noise(ctx, size, 0.06);
+    }, 512, true);
+    travTex.repeat.set(widthM / tileM, heightM / tileM);
+    if (travBump) travBump.repeat.set(widthM / tileM, heightM / tileM);
+    return {
+      map: travTex,
+      color: floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff',
+      roughness: 0.65,
+      metalness: 0.03,
+      clearcoat: 0.08,
+      envMapIntensity: 0.45,
+      isPlan: false,
+      bumpMap: travBump ?? null,
+      bumpScale: 0.014,
+    };
+  }
+
+  if (type === 'moquetteRouge') {
+    const tileM = FLOOR_TEXTURE_REPEAT_M.moquetteRouge;
+    const { map: redCarpetTex, bumpMap: redCarpetBump } = makeCanvasTexture('floor:moquette-rouge-v1', (ctx, size) => {
+      ctx.fillStyle = '#83141f';
+      ctx.fillRect(0, 0, size, size);
+      for (let i = 0; i < 3000; i++) {
+        const x = Math.random() * size;
+        const y = Math.random() * size;
+        ctx.fillStyle = Math.random() > 0.5 ? '#9e1b27' : '#690e17';
+        ctx.fillRect(x, y, 1.2, 2.0);
+      }
+      noise(ctx, size, 0.09);
+    }, 512, true);
+    redCarpetTex.repeat.set(widthM / tileM, heightM / tileM);
+    if (redCarpetBump) redCarpetBump.repeat.set(widthM / tileM, heightM / tileM);
+    return {
+      map: redCarpetTex,
+      color: floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff',
+      roughness: 0.97,
+      metalness: 0,
+      clearcoat: 0,
+      envMapIntensity: 0.15,
+      isPlan: false,
+      bumpMap: redCarpetBump ?? null,
+      bumpScale: 0.02,
+    };
+  }
+
   const asset = getFloorAsset(type);
   const tileM = FLOOR_TEXTURE_REPEAT_M[type] ?? 2;
   const map = loadTiledTexture(asset.url, widthM / tileM, heightM / tileM);
