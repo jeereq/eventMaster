@@ -2,6 +2,7 @@ import { PlanType } from '@prisma/client';
 import { prisma } from '../db';
 import {
   isPlanAllowedForAccountKind,
+  isPlanAllowedForTenant,
   resolveDurationDaysForPlan,
   resolveDefaultSubscriptionDiscountOptions,
   billingCycleFromDurationDays,
@@ -52,6 +53,9 @@ export async function activateSubscriptionRequest(
 
   if (!isPlanAllowedForAccountKind(request.requestedPlan, request.tenant.accountKind)) {
     throw new Error('Ce forfait ne correspond pas au type de compte.');
+  }
+  if (!isPlanAllowedForTenant(request.requestedPlan, request.tenant.accountKind, request.tenant.plan)) {
+    throw new Error('Ce forfait n’est pas du même genre que l’abonnement actuel.');
   }
 
   const durationDays = resolveDurationDaysForPlan(request.requestedPlan, request.durationDays);

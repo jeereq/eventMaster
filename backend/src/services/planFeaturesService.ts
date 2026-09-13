@@ -117,7 +117,7 @@ export async function assertRoomQuota(tenantId: string): Promise<void> {
   if (snapshot.usage.rooms >= max) {
     throw new PlanFeatureError(
       max <= 0
-        ? `La création de salles n’est pas incluse dans ${snapshot.planName}. Choisissez le forfait Salle ou Salle & presta.`
+        ? `La création de salles n’est pas incluse dans ${snapshot.planName}. Choisissez un forfait Business (ou supérieur), Salle ou Salle & presta.`
         : `Quota de salles atteint (${max} max pour ${snapshot.planName}). Passez à un forfait supérieur.`,
     );
   }

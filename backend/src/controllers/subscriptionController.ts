@@ -8,7 +8,7 @@ import {
   commercialReferredTenantFilter,
   isPlatformCommercial,
 } from '../services/platformCommercialScope';
-import { getPlansConfiguration, PAID_PLAN_KEYS, isPlanAllowedForAccountKind, planAudienceMismatchMessage, resolveDurationDaysForPlan, resolveDefaultSubscriptionDiscountOptions, billingCycleFromDurationDays } from '../config/plansConfig';
+import { getPlansConfiguration, PAID_PLAN_KEYS, isPlanAllowedForAccountKind, isPlanAllowedForTenant, planAudienceMismatchMessage, planGenreMismatchMessage, resolveDurationDaysForPlan, resolveDefaultSubscriptionDiscountOptions, billingCycleFromDurationDays } from '../config/plansConfig';
 import { issueTenantPlanInvoice, computeExtendedExpiry } from '../services/tenantBillingService';
 import { computeApprovedAmount, getPlanAmount } from '../services/invoiceService';
 import { auditReq } from '../services/adminAuditService';
@@ -55,11 +55,16 @@ export async function submitSubscriptionRequest(req: AuthenticatedRequest, res: 
 
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { accountKind: true },
+      select: { accountKind: true, plan: true },
     });
     if (!tenant || !isPlanAllowedForAccountKind(requestedPlan, tenant.accountKind)) {
       return res.status(403).json({
         error: planAudienceMismatchMessage(requestedPlan, tenant?.accountKind),
+      });
+    }
+    if (!isPlanAllowedForTenant(requestedPlan, tenant.accountKind, tenant.plan)) {
+      return res.status(403).json({
+        error: planGenreMismatchMessage(requestedPlan, tenant.plan),
       });
     }
 
@@ -128,11 +133,16 @@ export async function submitDiscountRequest(req: AuthenticatedRequest, res: Resp
 
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { accountKind: true, name: true },
+      select: { accountKind: true, name: true, plan: true },
     });
     if (!tenant || !isPlanAllowedForAccountKind(requestedPlan, tenant.accountKind)) {
       return res.status(403).json({
         error: planAudienceMismatchMessage(requestedPlan, tenant?.accountKind),
+      });
+    }
+    if (!isPlanAllowedForTenant(requestedPlan, tenant.accountKind, tenant.plan)) {
+      return res.status(403).json({
+        error: planGenreMismatchMessage(requestedPlan, tenant.plan),
       });
     }
 
@@ -414,6 +424,11 @@ export async function approveSubscriptionRequest(req: AuthenticatedRequest, res:
         error: planAudienceMismatchMessage(request.requestedPlan, request.tenant.accountKind),
       });
     }
+    if (!isPlanAllowedForTenant(request.requestedPlan, request.tenant.accountKind, request.tenant.plan)) {
+      return res.status(403).json({
+        error: planGenreMismatchMessage(request.requestedPlan, request.tenant.plan),
+      });
+    }
 
     if (isPlatformCommercial(req.user?.role) && req.user?.id) {
       const owns = await assertCommercialOwnsTenant(req.user.id, request.tenantId);
@@ -683,11 +698,16 @@ export async function checkoutSubscriptionFlexPay(req: AuthenticatedRequest, res
 
     const tenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { accountKind: true, name: true },
+      select: { accountKind: true, name: true, plan: true },
     });
     if (!tenant || !isPlanAllowedForAccountKind(requestedPlan, tenant.accountKind)) {
       return res.status(403).json({
         error: planAudienceMismatchMessage(requestedPlan, tenant?.accountKind),
+      });
+    }
+    if (!isPlanAllowedForTenant(requestedPlan, tenant.accountKind, tenant.plan)) {
+      return res.status(403).json({
+        error: planGenreMismatchMessage(requestedPlan, tenant.plan),
       });
     }
 

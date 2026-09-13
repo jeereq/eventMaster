@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
-import { getPlanLimitsForTenant, getPlansConfiguration, PAID_PLAN_KEYS, PLAN_KEYS, isPlanAllowedForAccountKind, planAudienceMismatchMessage, resolveDurationDaysForPlan } from '../config/plansConfig';
+import { getPlanLimitsForTenant, getPlansConfiguration, PAID_PLAN_KEYS, PLAN_KEYS, isPlanAllowedForAccountKind, isPlanAllowedForTenant, planAudienceMismatchMessage, planGenreMismatchMessage, resolveDurationDaysForPlan } from '../config/plansConfig';
 import { assertCanViewBilling, assertCanViewInvoices } from '../services/permissionsService';
 import { notifyCommercialsOnSubscriptionApproval, recordCommercialCommission } from '../services/commercialService';
 import { createAndSendInvoice, formatInvoiceForApi } from '../services/invoiceService';
@@ -182,6 +182,9 @@ export async function createCheckoutSession(req: AuthenticatedRequest, res: Resp
     if (!isPlanAllowedForAccountKind(planType, tenant.accountKind)) {
       return res.status(403).json({ error: planAudienceMismatchMessage(planType, tenant.accountKind) });
     }
+    if (!isPlanAllowedForTenant(planType, tenant.accountKind, tenant.plan)) {
+      return res.status(403).json({ error: planGenreMismatchMessage(planType, tenant.plan) });
+    }
 
     // Mock upgrade local (dev) — forfaits réels : demande manuelle ou FlexPay.
     if (req.body.mock === true) {
@@ -275,10 +278,13 @@ export async function mockUpgrade(req: AuthenticatedRequest, res: Response) {
 
     const currentTenant = await prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { accountKind: true },
+      select: { accountKind: true, plan: true },
     });
     if (plan !== 'FREE' && currentTenant && !isPlanAllowedForAccountKind(plan, currentTenant.accountKind)) {
       return res.status(403).json({ error: planAudienceMismatchMessage(plan, currentTenant.accountKind) });
+    }
+    if (plan !== 'FREE' && currentTenant && !isPlanAllowedForTenant(plan, currentTenant.accountKind, currentTenant.plan)) {
+      return res.status(403).json({ error: planGenreMismatchMessage(plan, currentTenant.plan) });
     }
 
     const durationDays = resolveDurationDaysForPlan(plan);

@@ -227,6 +227,7 @@ export function buildFirstLoginTour(
         if (workspace?.showBrowseCatalogue) push('nav-catalogue');
         push('nav-quotes');
         push('nav-reservations');
+        if (workspace?.showMarketplace) push('nav-marketplace');
       } else {
         if (workspace.showRooms) push('nav-rooms');
         if (workspace.showMarketplace) push('nav-marketplace');
@@ -234,7 +235,9 @@ export function buildFirstLoginTour(
       }
       const nextHint = workspace && !workspace.showEvents
         ? 'Ensuite : publiez une fiche salle ou prestation, puis choisissez un forfait marketplace.'
-        : 'Ensuite : créez votre premier événement, puis ajoutez un invité.';
+        : workspace?.showMarketplace
+          ? 'Ensuite : créez un événement, puis publiez une offre sur Mes offres.'
+          : 'Ensuite : créez votre premier événement, puis ajoutez un invité.';
       steps.push(firstLoginFinish(home, nextHint));
       return steps;
     }

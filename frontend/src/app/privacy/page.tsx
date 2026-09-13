@@ -19,8 +19,8 @@ export default function PrivacyPage() {
       <Section title="1. Responsables de traitement, Groupe Tekango & Cadre Légal RDC">
         <p>
           <strong>Appartenance au Groupe Tekango :</strong> EventMaster est un projet et une plateforme développée et
-          exploitée par le <strong>Groupe Tekango</strong>, société établie à Kinshasa (Gombe), République Démocratique
-          du Congo. Les données de compte et d&apos;inscription peuvent être traitées de manière transverse au sein de
+          exploitée par le <strong>Groupe Tekango</strong>. Les données de compte et d&apos;inscription peuvent être
+          traitées de manière transverse au sein de
           l&apos;écosystème Tekango (notamment la plateforme e-commerce Tekango, Poz&apos;tion, ou tout autre service du
           groupe) pour assurer la continuité de service, l&apos;authentification unifiée et des synergies d&apos;usages.
         </p>

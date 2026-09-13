@@ -65,6 +65,20 @@ describe('getWorkspaceModules B2B', () => {
     assert.equal(workspace.showMarketplace, true);
     assert.equal(workspace.showRooms, true);
     assert.equal(workspace.showProtocol, true);
+    assert.equal(workspace.showAnalytics, true);
+  });
+
+  it('garde Mes offres pour B2B même si maxServices tombe à 0 (audience)', () => {
+    const workspace = getWorkspaceModules({
+      accountKind: 'ORGANIZER',
+      access,
+      planQuota: {
+        limits: { maxEvents: 8, maxRooms: 3, maxTemplates: 5, maxServices: 0 },
+      } as never,
+      planFeatures: { audience: 'B2B', protocolQr: true } as never,
+    });
+    assert.equal(workspace.showMarketplace, true);
+    assert.equal(workspace.showEvents, true);
   });
 
   it('cache Mes offres pour un Particulier sans prestations', () => {

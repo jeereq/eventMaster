@@ -115,7 +115,7 @@ export const QUOTA_GUIDES: Record<QuotaKind, PlanLimitGuide> = {
     title: 'Limite de salles',
     what: 'Votre forfait limite le nombre de salles (plans 2D) configurables.',
     why: 'Chaque salle stocke un plan, des thèmes et éventuellement une fiche marketplace.',
-    how: 'Passez à un forfait Salle / Premium, ou supprimez une salle inutilisée. La publication catalogue dépend aussi de l’audience du forfait.',
+    how: 'Passez à un forfait Business / Salle / Premium, ou supprimez une salle inutilisée. La publication catalogue dépend aussi de l’audience du forfait.',
     href: '/dashboard/billing',
   },
   services: {
@@ -279,6 +279,7 @@ export function getWorkspaceModules(opts: {
     opts.planFeatures?.audience === 'VENUE' ||
     opts.planFeatures?.audience === 'SERVICE' ||
     opts.planFeatures?.audience === 'CATALOG' ||
+    opts.planFeatures?.audience === 'B2B' ||
     vendorOnly;
 
   if (vendorOnly && !opts.planQuota) {

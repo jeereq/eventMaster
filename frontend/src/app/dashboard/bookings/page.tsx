@@ -57,7 +57,19 @@ function OrganizerDemandesPage() {
 
   const requestedRole = searchParams.get('role');
   const [role, setRole] = useState<'vendor' | 'organizer'>(
-    canActAsVendor && (requestedRole === 'vendor' || (!requestedRole && (tenant?.accountKind === 'VENDOR' || planFeatures?.audience === 'VENUE')))
+    canActAsVendor && (
+      requestedRole === 'vendor'
+      || (
+        !requestedRole
+        && (
+          tenant?.accountKind === 'VENDOR'
+          || tenant?.accountKind === 'BOTH'
+          || planFeatures?.audience === 'VENUE'
+          || planFeatures?.audience === 'SERVICE'
+          || planFeatures?.audience === 'CATALOG'
+        )
+      )
+    )
       ? 'vendor'
       : 'organizer',
   );

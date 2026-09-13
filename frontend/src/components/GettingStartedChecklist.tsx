@@ -30,6 +30,8 @@ export type GettingStartedProps = {
   hasRooms?: boolean;
   hasServices?: boolean;
   preferServices?: boolean;
+  /** Organisation qui vend aussi (B2B) : ajoute une étape vitrine. */
+  canSell?: boolean;
   /** Si fourni (page événements), ouvre la modale au lieu de recharger la même URL. */
   onCreateEvent?: () => void;
 };
@@ -77,6 +79,7 @@ export default function GettingStartedChecklist({
   hasRooms = false,
   hasServices = false,
   preferServices = false,
+  canSell = false,
   onCreateEvent,
 }: GettingStartedProps) {
   const [flow, setFlow] = useState<PersistedFlow>({});
@@ -183,16 +186,27 @@ export default function GettingStartedChecklist({
         markOnClick: 'inviteDone' as const,
         disabled: !hasEvents,
       },
+      ...(canSell
+        ? [
+            {
+              id: 'offer',
+              title: '4. Publier une offre marketplace',
+              description: 'Mettez en ligne une salle ou une prestation pour recevoir des devis.',
+              href: '/dashboard/marketplace',
+              done: hasRooms || hasServices,
+            },
+          ]
+        : []),
       {
-        id: 'guide',
-        title: '4. Préparer l’accueil du jour J',
+        id: canSell ? 'guide' : 'guide',
+        title: canSell ? '5. Préparer l’accueil du jour J' : '4. Préparer l’accueil du jour J',
         description: 'Scannez les pass QR de vos invités en quelques secondes à l’entrée.',
         href: '/dashboard/guide?view=tour&start=1',
         done: Boolean(flow.guideDone),
         markOnClick: 'guideDone' as const,
       },
     ];
-  }, [variant, hasRooms, hasServices, preferServices, hasEvents, hasGuests, hasInvitations, firstEventId, flow.guestsDone, flow.inviteDone, flow.guideDone, flow.templateDone]);
+  }, [variant, hasRooms, hasServices, preferServices, canSell, hasEvents, hasGuests, hasInvitations, firstEventId, flow.guestsDone, flow.inviteDone, flow.guideDone, flow.templateDone]);
 
   const doneCount = steps.filter((s) => s.done).length;
   const allDone = doneCount === steps.length;

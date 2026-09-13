@@ -4,6 +4,7 @@ import {
   getDefaultPlans,
   getPlanLimits,
   getPlanLimitsForTenant,
+  isPlanAllowedForTenant,
   B2B_PLAN_KEYS,
   B2C_PLAN_KEYS,
 } from './plansConfig.ts';
@@ -60,5 +61,22 @@ describe('B2B catalogue salle + prestations', () => {
 
   it('aligne getDefaultPlans avec getPlanLimits pour Business', () => {
     assert.equal(getDefaultPlans().STANDARD.maxServices, getPlanLimits('STANDARD').maxServices);
+  });
+});
+
+describe('isPlanAllowedForTenant genre', () => {
+  it('refuse un passage B2B → Particulier', () => {
+    assert.equal(isPlanAllowedForTenant('PERSONAL_50', 'ORGANIZER', 'STANDARD'), false);
+    assert.equal(isPlanAllowedForTenant('PREMIUM_1', 'ORGANIZER', 'STANDARD'), true);
+  });
+
+  it('autorise tout genre autorisé tant que le compte est FREE', () => {
+    assert.equal(isPlanAllowedForTenant('PERSONAL_50', 'ORGANIZER', 'FREE'), true);
+    assert.equal(isPlanAllowedForTenant('STANDARD', 'ORGANIZER', 'FREE'), true);
+  });
+
+  it('refuse un passage Salle → Prestataire', () => {
+    assert.equal(isPlanAllowedForTenant('SERVICE', 'VENDOR', 'VENUE'), false);
+    assert.equal(isPlanAllowedForTenant('VENUE', 'VENDOR', 'VENUE'), true);
   });
 });

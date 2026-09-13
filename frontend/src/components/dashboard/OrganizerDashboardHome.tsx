@@ -70,7 +70,6 @@ import type { QuotaSnapshot } from '@/lib/quotaDisplay';
 import type { PlanId } from '@/config/landingPricing';
 import {
   LANDING_PLANS,
-  paidPlanIdsForAccountKind,
   planPricePeriodSuffix,
   formatFc,
 } from '@/config/landingPricing';
@@ -200,6 +199,13 @@ export default function OrganizerDashboardHome({
     tenant?.plan?.startsWith('PERSONAL') ||
       planFeatures?.audience === 'B2C'
   );
+  const isB2bPaidPlan = Boolean(
+    planFeatures?.audience === 'B2B' &&
+      tenant?.plan &&
+      tenant.plan !== 'FREE',
+  );
+  const showB2cUpsellCard = !isB2bPaidPlan && (tenant?.plan === 'FREE' || isB2cPlan || tenant?.accountKind === 'BOTH');
+  const showB2bUpsellCards = !isB2cPlan;
 
   const isVenueOrVendorOrCatalog =
     isServiceProvider ||
@@ -888,6 +894,15 @@ export default function OrganizerDashboardHome({
                     <Building2 className="w-3.5 h-3.5" />
                     Mes salles
                   </button>
+                  {canSell ? (
+                    <Link
+                      href="/dashboard/marketplace"
+                      className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
+                    >
+                      <Briefcase className="w-3.5 h-3.5 text-primary" />
+                      Mes offres
+                    </Link>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => handleTabChange('reservations')}
@@ -1062,6 +1077,7 @@ export default function OrganizerDashboardHome({
               hasRooms={(planQuota?.usage.rooms ?? 0) > 0}
               hasServices={(planQuota?.usage.services ?? 0) > 0}
               preferServices={(planQuota?.limits.maxRooms ?? 1) <= 0}
+              canSell={canSell && !isVendor}
             />
           )}
 
@@ -2451,11 +2467,46 @@ export default function OrganizerDashboardHome({
                   </h2>
                 </div>
                 <p className="text-xs text-muted mt-0.5">
-                  Plans de table 2D/3D, simulateur IA, assemblage de packs et devis prestataires.
+                  {canSell
+                    ? 'Plans de table 2D/3D, vitrine marketplace (salles & prestations), packs et devis.'
+                    : 'Plans de table 2D/3D, simulateur IA, assemblage de packs et devis prestataires.'}
                 </p>
               </div>
 
-              <div className={cn('grid grid-cols-1 gap-4', isManager ? 'md:grid-cols-2 xl:grid-cols-4' : 'md:grid-cols-3')}>
+              <div className={cn('grid grid-cols-1 gap-4', isManager ? 'md:grid-cols-2 xl:grid-cols-4' : canSell ? 'md:grid-cols-2 xl:grid-cols-4' : 'md:grid-cols-3')}>
+                {canSell ? (
+                  <div className="p-5 rounded-2xl border border-primary/30 bg-primary/5 hover:border-primary hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 text-primary flex items-center justify-center">
+                          <Briefcase className="w-5 h-5" />
+                        </div>
+                        <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25">
+                          Vitrine
+                        </span>
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
+                          Mes offres marketplace
+                        </h3>
+                        <p className="text-xs text-muted leading-relaxed mt-1">
+                          Publiez salles et prestations, répondez aux devis et suivez les acomptes.
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      fullWidth
+                      onClick={() => router.push('/dashboard/marketplace')}
+                      rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                      className="mt-auto"
+                    >
+                      Ouvrir Mes offres
+                    </Button>
+                  </div>
+                ) : null}
+
                 {isManager ? (
                   <div className="p-5 rounded-2xl border border-primary/25 bg-primary/5 hover:border-primary/50 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
                     <div className="space-y-3">
@@ -3525,8 +3576,12 @@ export default function OrganizerDashboardHome({
 
                 {/* 2. CAS COMPTE ORGANISATEUR CLASSIQUE (ORGANIZER) OU MIXTE (BOTH) */}
                 {tenant?.accountKind !== 'VENDOR' && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className={cn(
+                    'grid grid-cols-1 gap-4',
+                    showB2cUpsellCard && showB2bUpsellCards ? 'md:grid-cols-3' : 'md:grid-cols-2',
+                  )}>
                     {/* Particuliers & Familles */}
+                    {showB2cUpsellCard && (
                     <div className={cn('p-4 rounded-2xl border bg-surface flex flex-col justify-between transition', isB2cPlan ? 'border-primary ring-2 ring-primary/20 shadow-xs' : 'border-border hover:border-primary/40')}>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
@@ -3551,8 +3606,10 @@ export default function OrganizerDashboardHome({
                         Voir les forfaits Particuliers <ArrowRight className="w-3 h-3" />
                       </Link>
                     </div>
+                    )}
 
                     {/* Professionnels Business & Premium */}
+                    {showB2bUpsellCards && (
                     <div className={cn('p-4 rounded-2xl border-2 bg-surface flex flex-col justify-between transition shadow-xs', (tenant?.plan === 'STANDARD' || tenant?.plan?.startsWith('PREMIUM')) ? 'border-primary ring-2 ring-primary/20' : 'border-primary/40 hover:border-primary')}>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
@@ -3566,7 +3623,7 @@ export default function OrganizerDashboardHome({
                           <p>• <strong>Business</strong> : 30 000 FC (8 évts · 150 invités)</p>
                           <p>• <strong>Premium</strong> : 55 000 FC (12 évts · 500 invités)</p>
                           <p>• <strong>Premium Plus</strong> : 85 000 FC (20 évts · 1 000 invités)</p>
-                          <p>• <strong>Inclus</strong> : Équipe multi-managers & Billetterie</p>
+                          <p>• <strong>Inclus</strong> : Catalogue salle + presta, équipe & billetterie</p>
                         </div>
                       </div>
                       <Link
@@ -3576,8 +3633,10 @@ export default function OrganizerDashboardHome({
                         Voir Business & Premium <ArrowRight className="w-3 h-3" />
                       </Link>
                     </div>
+                    )}
 
                     {/* Grandes Organisations & Entreprises */}
+                    {showB2bUpsellCards && (
                     <div className={cn('p-4 rounded-2xl border bg-surface flex flex-col justify-between transition', tenant?.plan?.startsWith('ENTERPRISE') ? 'border-primary ring-2 ring-primary/20 shadow-xs' : 'border-border hover:border-purple-500/40')}>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
@@ -3591,7 +3650,7 @@ export default function OrganizerDashboardHome({
                           <p>• <strong>Enterprise</strong> : 350 000 FC (3 500 invités)</p>
                           <p>• <strong>Enterprise Pro</strong> : 525 000 FC (5 000 invités)</p>
                           <p>• <strong>Unlimited</strong> : 700 000 FC (Quotas illimités)</p>
-                          <p>• <strong>Inclus</strong> : SLA 24/7, jusqu'à 50 salles & support dédié</p>
+                          <p>• <strong>Inclus</strong> : SLA 24/7, catalogue salle + presta & support dédié</p>
                         </div>
                       </div>
                       <Link
@@ -3601,6 +3660,7 @@ export default function OrganizerDashboardHome({
                         Voir Gamme Enterprise <ArrowRight className="w-3 h-3" />
                       </Link>
                     </div>
+                    )}
                   </div>
                 )}
               </div>

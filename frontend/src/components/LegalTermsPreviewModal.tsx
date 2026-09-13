@@ -249,7 +249,7 @@ export default function LegalTermsPreviewModal({
                 </h3>
                 <p className="text-muted">
                   <strong>EventMaster</strong> est une plateforme SaaS complète éditée par le{' '}
-                  <strong>Groupe Tekango</strong> (Kinshasa, RDC), exploitée conformément au Code du numérique de la RDC. Elle réunit la gestion d’événements, les invitations interactives WhatsApp/e-mail,
+                  <strong>Groupe Tekango</strong>, exploitée conformément au Code du numérique de la RDC. Elle réunit la gestion d’événements, les invitations interactives WhatsApp/e-mail,
                   les plans 2D/3D photoréalistes, le <strong>Simulateur de budget IA (/simulateur)</strong>, la <strong>billetterie en ligne avec présence auto-validée</strong>, les <strong>dons solidaires</strong> et les <strong>paiements sécurisés FlexPay</strong> (Cartes bancaires &amp; Mobile Money).
                 </p>
               </div>
@@ -326,7 +326,7 @@ export default function LegalTermsPreviewModal({
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">Article 1 — Objet, Éditeur &amp; Droit applicable</h4>
                 <p className="text-muted">
-                  La plateforme EventMaster est éditée par le Groupe Tekango (Kinshasa, RDC) conformément au Code du numérique congolais. En créant un compte, en souscrivant un abonnement, en utilisant le Studio IA, en effectuant un don ou en achetant un billet, vous acceptez l’ensemble des présentes conditions d’utilisation.
+                  La plateforme EventMaster est éditée par le Groupe Tekango conformément au Code du numérique congolais. En créant un compte, en souscrivant un abonnement, en utilisant le Studio IA, en effectuant un don ou en achetant un billet, vous acceptez l’ensemble des présentes conditions d’utilisation.
                 </p>
               </section>
 
@@ -368,7 +368,7 @@ export default function LegalTermsPreviewModal({
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">Article 7 — Responsabilité, Données &amp; Litiges</h4>
                 <p className="text-muted">
-                  L’organisateur agit en qualité de responsable de traitement pour ses listes d’invités, donateurs et participants. EventMaster agit comme sous-traitant technique. Les litiges relèvent de la compétence des tribunaux de Kinshasa (Gombe).
+                  L’organisateur agit en qualité de responsable de traitement pour ses listes d’invités, donateurs et participants. EventMaster agit comme sous-traitant technique. Les litiges relèvent de la compétence des tribunaux de la République Démocratique du Congo.
                 </p>
               </section>
             </div>

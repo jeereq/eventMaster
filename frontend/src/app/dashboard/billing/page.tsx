@@ -25,7 +25,9 @@ import {
   PLAN_IDS,
   B2C_PLAN_IDS,
   VENDOR_PLAN_IDS,
-  paidPlanIdsForAccountKind,
+  billingPlanIdsForContext,
+  paidPlanIdsForBillingContext,
+  planAudience,
   ANNUAL_DISCOUNT_PERCENT,
   formatFc,
   getPlanBaseAmountFc,
@@ -371,11 +373,34 @@ function BillingPageInner() {
     }
   }, [searchParams, requests, loading]);
 
+  const billingContext = useMemo(
+    () => ({
+      accountKind: tenant?.accountKind,
+      currentPlan: billing?.plan || tenant?.plan,
+      pendingPlan: tenant?.pendingPlan,
+    }),
+    [tenant?.accountKind, tenant?.plan, tenant?.pendingPlan, billing?.plan],
+  );
+  const visiblePlanIds = useMemo(
+    () => billingPlanIdsForContext(billingContext),
+    [billingContext],
+  );
   const allowedPaidIds = useMemo(
-    () => paidPlanIdsForAccountKind(tenant?.accountKind),
-    [tenant?.accountKind],
+    () => paidPlanIdsForBillingContext(billingContext),
+    [billingContext],
   );
   const isClientAccount = tenant?.accountKind === 'CLIENT';
+  const lockedGenre = useMemo(() => {
+    const current = (billing?.plan || tenant?.plan || 'FREE') as PlanId;
+    if (current !== 'FREE' && (PLAN_IDS as string[]).includes(current)) {
+      return planAudience(current);
+    }
+    const pending = tenant?.pendingPlan;
+    if (pending && pending !== 'FREE' && (PLAN_IDS as string[]).includes(pending)) {
+      return planAudience(pending as PlanId);
+    }
+    return null;
+  }, [billing?.plan, tenant?.plan, tenant?.pendingPlan]);
 
   const focusPlan = (searchParams.get('plan') || tenant?.pendingPlan || '') as PlanId | '';
   const pendingSignupPlan =
@@ -441,15 +466,15 @@ function BillingPageInner() {
     const current = billing?.plan;
     return BILLING_TIERS.map((tier) => ({
       ...tier,
-      ids: tier.ids.filter((id) => isClientAccount || id === current || allowedPaidIds.includes(id)),
+      ids: tier.ids.filter((id) => isClientAccount || id === current || visiblePlanIds.includes(id)),
     })).filter((tier) => tier.ids.length > 0);
-  }, [allowedPaidIds, billing?.plan, isClientAccount]);
+  }, [visiblePlanIds, billing?.plan, isClientAccount]);
 
   const comparisonIds = useMemo(() => {
     if (isClientAccount) return CLIENT_COMPARISON_IDS;
     const current = billing?.plan;
-    return PLAN_IDS.filter((id) => id === current || allowedPaidIds.includes(id) || id === 'FREE');
-  }, [allowedPaidIds, billing?.plan, isClientAccount]);
+    return PLAN_IDS.filter((id) => id === current || visiblePlanIds.includes(id));
+  }, [visiblePlanIds, billing?.plan, isClientAccount]);
 
   const plans = useMemo(() => {
     return LANDING_PLANS.map((plan) => {
@@ -484,7 +509,11 @@ function BillingPageInner() {
   const handleUpgrade = async (plan: PlanId) => {
     if (plan === 'FREE') return;
     if (!allowedPaidIds.includes(plan)) {
-      setError('Ce forfait ne correspond pas à votre type de compte.');
+      setError(
+        lockedGenre
+          ? 'Ce forfait n’est pas du même genre que votre abonnement actuel.'
+          : 'Ce forfait ne correspond pas à votre type de compte.',
+      );
       return;
     }
     if (saasPaymentMode === 'flexpay') {
@@ -685,8 +714,15 @@ function BillingPageInner() {
           {(!billing || billing.plan === 'FREE') && !isClientAccount && (
             <Alert variant="info">
               Aucun abonnement payant n&apos;est actif. Les forfaits correspondent à votre type de compte
-              ({tenant?.accountKind === 'VENDOR' ? 'marketplace' : tenant?.accountKind === 'BOTH' ? 'organisation + marketplace' : 'organisation'}),
+              ({tenant?.accountKind === 'VENDOR'
+                ? 'marketplace'
+                : tenant?.accountKind === 'BOTH'
+                  ? 'organisation + marketplace'
+                  : 'organisation'}),
               exclusivement en {CURRENCY_NAME} (FC).
+              {tenant?.accountKind === 'ORGANIZER' || tenant?.accountKind === 'BOTH'
+                ? ' Après activation d’un forfait payant, seuls les forfaits du même genre restent proposés.'
+                : ''}
             </Alert>
           )}
 
@@ -808,6 +844,20 @@ function BillingPageInner() {
             <p className="text-xs text-muted text-center max-w-lg mx-auto">
               Au clic sur un forfait, une fenêtre s’ouvre pour choisir Mobile Money ou Visa / Mastercard.
             </p>
+          )}
+
+          {lockedGenre && (
+            <Alert variant="info">
+              {lockedGenre === 'B2B'
+                ? 'Votre abonnement est Business (B2B) : seuls les forfaits Business, Premium et Enterprise sont proposés.'
+                : lockedGenre === 'B2C'
+                  ? 'Votre abonnement est Particulier : seuls les forfaits Particulier sont proposés.'
+                  : lockedGenre === 'VENUE'
+                    ? 'Votre abonnement est Salle : seul le forfait Salle est proposé.'
+                    : lockedGenre === 'SERVICE'
+                      ? 'Votre abonnement est Prestataire : seul le forfait Prestataire est proposé.'
+                      : 'Votre abonnement est Salle & presta : seul ce forfait marketplace est proposé.'}
+            </Alert>
           )}
 
           {visibleTiers.map(({ label, ids }) => (

@@ -249,13 +249,17 @@ function buildRoleMobileBottomItems({
     items.push({ id: 'events', name: 'Événements', href: '/dashboard/events', icon: Calendar });
   }
 
-  if (workspace.showRooms) {
+  if (workspace.showMarketplace) {
+    items.push({ id: 'offers', name: 'Mes offres', href: '/dashboard/marketplace', icon: Briefcase });
+  } else if (workspace.showRooms) {
     items.push({ id: 'rooms', name: 'Salles', href: '/dashboard/rooms', icon: Building2 });
   } else if (workspace.showProtocol) {
     items.push({ id: 'protocol', name: 'Protocole', href: '/dashboard/protocol', icon: ScanLine });
   }
 
-  if (workspace.showBrowseCatalogue) {
+  if (workspace.showMarketplace) {
+    items.push({ id: 'quotes', name: 'Devis', href: '/dashboard/bookings?tab=quotes&role=vendor', icon: Inbox });
+  } else if (workspace.showBrowseCatalogue) {
     items.push({ id: 'catalogue', name: 'Explorer', href: '/dashboard/catalogue', icon: Store });
   } else {
     items.push({ id: 'quotes', name: 'Devis', href: '/dashboard/bookings?tab=quotes', icon: Inbox });

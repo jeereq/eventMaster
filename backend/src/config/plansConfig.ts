@@ -566,6 +566,29 @@ export function isPlanAllowedForAccountKind(planKey: string, kind?: string | nul
   return paidPlanKeysForAccountKind(kind).includes(normalized);
 }
 
+/**
+ * Même genre d’abonnement uniquement une fois un forfait payant actif
+ * (ex. B2B → uniquement Business / Premium / Enterprise).
+ */
+export function isPlanAllowedForTenant(
+  planKey: string,
+  accountKind?: string | null,
+  currentPlan?: string | null,
+): boolean {
+  if (!isPlanAllowedForAccountKind(planKey, accountKind)) return false;
+  const normalized = normalizePlanKey(planKey);
+  if (normalized === 'FREE') return true;
+  const current = normalizePlanKey(currentPlan || 'FREE');
+  if (current === 'FREE') return true;
+  return getPlanLimits(current).audience === getPlanLimits(normalized).audience;
+}
+
+export function planGenreMismatchMessage(planKey: string, currentPlan?: string | null): string {
+  const plan = getPlanLimits(planKey);
+  const current = getPlanLimits(currentPlan || 'FREE');
+  return `Le forfait ${plan.name} n’est pas du même genre que votre abonnement actuel (${current.name}). Restez dans la même famille (Particulier, Business, Salle, Prestataire ou Salle & presta).`;
+}
+
 /** Forfait d’inscription à mémoriser (null si gratuit, inconnu ou incompatible avec le kind). */
 export function resolvePendingSignupPlan(
   planKey?: string | null,

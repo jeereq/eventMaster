@@ -21,8 +21,7 @@ export default function TermsPage() {
       <Section title="1. Objet & Présentation de la plateforme">
         <p>
           <strong>EventMaster</strong> est un projet et une plateforme logicielle SaaS multi-tenant éditée par le{' '}
-          <strong>Groupe Tekango</strong>, société immatriculée en République Démocratique du Congo, ayant son siège
-          social sur le Boulevard du 30 Juin, Gombe, Kinshasa, RDC.
+          <strong>Groupe Tekango</strong>.
         </p>
         <p>
           Elle est exploitée conformément aux dispositions de l&apos;Ordonnance-loi n° 23/010 du 13 mars 2023 portant
@@ -523,7 +522,7 @@ export default function TermsPage() {
           Tout différend relatif à la validité, l&apos;interprétation ou l&apos;exécution des présentes fera l&apos;objet
           d&apos;une tentative de règlement amiable préalable. À défaut d&apos;accord amiable dans un délai de trente (30)
           jours à compter de la notification du litige, le différend sera soumis à la compétence exclusive des tribunaux
-          de Kinshasa (Gombe).
+          compétents de la République Démocratique du Congo.
         </p>
       </Section>
 

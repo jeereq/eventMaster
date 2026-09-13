@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import {
   LANDING_PLANS,
-  paidPlanIdsForAccountKind,
+  paidPlanIdsForBillingContext,
   CURRENCY_NAME,
   getPlanDisplayPrice,
   durationDaysForPlan,
@@ -39,8 +39,8 @@ export default function PWARestrictedScreen() {
       ]);
       setRequests(requestsData);
       if (plansData) setDynamicPlans(plansData);
-    } catch (err) {
-      console.error('Error loading subscription requests:', err);
+    } catch {
+      /* ignore */
     } finally {
       setLoadingRequests(false);
     }
@@ -51,8 +51,13 @@ export default function PWARestrictedScreen() {
   }, []);
 
   const allowedPlanIds = useMemo(
-    () => paidPlanIdsForAccountKind(tenant?.accountKind),
-    [tenant?.accountKind],
+    () =>
+      paidPlanIdsForBillingContext({
+        accountKind: tenant?.accountKind,
+        currentPlan: tenant?.plan,
+        pendingPlan: tenant?.pendingPlan,
+      }),
+    [tenant?.accountKind, tenant?.plan, tenant?.pendingPlan],
   );
 
   const plans = useMemo(() => {

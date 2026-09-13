@@ -169,6 +169,76 @@ export function planAudience(id: PlanId): PlanAudience {
   return 'B2B';
 }
 
+/** Tous les forfaits d’un même genre (inclut FREE pour le genre B2B). */
+export function planIdsForAudience(audience: PlanAudience): PlanId[] {
+  switch (audience) {
+    case 'B2C':
+      return [...B2C_PLAN_IDS];
+    case 'VENUE':
+      return ['VENUE'];
+    case 'SERVICE':
+      return ['SERVICE'];
+    case 'CATALOG':
+      return ['CATALOG'];
+    case 'B2B':
+    default:
+      return [...B2B_PLAN_IDS];
+  }
+}
+
+/**
+ * Genre effectif pour la facturation : forfait payant actuel, sinon forfait
+ * en attente à l’inscription, sinon essai FREE (pas encore verrouillé).
+ */
+export function resolveBillingGenrePlan(
+  currentPlan?: string | null,
+  pendingPlan?: string | null,
+): PlanId | null {
+  const current = (currentPlan || 'FREE') as string;
+  if (current !== 'FREE' && (PLAN_IDS as string[]).includes(current)) {
+    return current as PlanId;
+  }
+  const pending = (pendingPlan || '').trim();
+  if (pending && pending !== 'FREE' && (PLAN_IDS as string[]).includes(pending)) {
+    return pending as PlanId;
+  }
+  return null;
+}
+
+/**
+ * Forfaits affichés / demandables : intersection type de compte × genre d’abonnement.
+ * - Essai FREE sans pending : catalogue autorisé par le type de compte.
+ * - Forfait payant (ou pending) : uniquement le même genre (ex. B2B → Business / Premium / Enterprise).
+ */
+export function billingPlanIdsForContext(opts: {
+  accountKind?: string | null;
+  currentPlan?: string | null;
+  pendingPlan?: string | null;
+}): PlanId[] {
+  const byKind = paidPlanIdsForAccountKind(opts.accountKind);
+  const genrePlan = resolveBillingGenrePlan(opts.currentPlan, opts.pendingPlan);
+
+  if (!genrePlan) {
+    const withFree: PlanId[] = ['FREE', ...byKind];
+    return withFree.filter((id, index) => withFree.indexOf(id) === index);
+  }
+
+  const genreIds = planIdsForAudience(planAudience(genrePlan));
+  const current = (opts.currentPlan || 'FREE') as PlanId;
+  return genreIds.filter(
+    (id) => id === current || id === 'FREE' || byKind.includes(id) || id === genrePlan,
+  );
+}
+
+/** Forfaits payants demandables (sans FREE), même règles que billingPlanIdsForContext. */
+export function paidPlanIdsForBillingContext(opts: {
+  accountKind?: string | null;
+  currentPlan?: string | null;
+  pendingPlan?: string | null;
+}): PlanId[] {
+  return billingPlanIdsForContext(opts).filter((id) => id !== 'FREE');
+}
+
 export function planAudienceLabel(audience: PlanAudience | string): string {
   switch (audience) {
     case 'B2C':
