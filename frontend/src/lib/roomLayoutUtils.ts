@@ -911,7 +911,7 @@ function pointInLayoutRect(
 
 export type FurnitureSurfaceHit = {
   id: string;
-  kind: 'podium' | 'stage' | 'carpet' | 'dance' | 'vip' | 'buffet' | 'zone';
+  kind: 'podium' | 'stage' | 'carpet' | 'dance' | 'vip' | 'buffet' | 'zone' | 'balcony';
   label: string;
   /** Hauteur du dessus de surface (m), pour poser le mobilier dessus. */
   elevationM: number;
@@ -933,8 +933,8 @@ export function resolveFurnitureSurfaceAt(
       best = hit;
       return;
     }
-    const bestIsRaised = best.kind === 'podium' || best.kind === 'stage';
-    const hitIsRaised = hit.kind === 'podium' || hit.kind === 'stage';
+    const bestIsRaised = best.kind === 'podium' || best.kind === 'stage' || best.kind === 'balcony';
+    const hitIsRaised = hit.kind === 'podium' || hit.kind === 'stage' || hit.kind === 'balcony';
     if (hitIsRaised && (!bestIsRaised || hit.elevationM >= best.elevationM)) {
       best = hit;
       return;
@@ -952,6 +952,13 @@ export function resolveFurnitureSurfaceAt(
         kind: f.kind,
         label: f.label ?? (f.kind === 'podium' ? 'Podium' : 'Scène'),
         elevationM: f.heightM ?? (f.kind === 'podium' ? 0.6 : 0.45),
+      });
+    } else if (f.kind === 'balcony') {
+      consider({
+        id: f.id,
+        kind: 'balcony',
+        label: f.label ?? 'Balcon',
+        elevationM: f.heightM ?? 0.12,
       });
     } else if (f.kind === 'carpet') {
       consider({
@@ -1247,8 +1254,8 @@ const LAYOUT_SOFT_SURFACE_KINDS = new Set<RoomFixtureKind>([
   'stringLight',
   'chandelier',
 ]);
-const LAYOUT_RAISED_KINDS = new Set<string>(['podium', 'stage']);
-const LAYOUT_STACKABLE_KINDS = new Set<string>(['instrument', 'bar', 'table', 'chair']);
+const LAYOUT_RAISED_KINDS = new Set<string>(['podium', 'stage', 'balcony']);
+const LAYOUT_STACKABLE_KINDS = new Set<string>(['instrument', 'bar', 'table', 'chair', 'row']);
 
 type LayoutBox = { x: number; y: number; w: number; h: number };
 

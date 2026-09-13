@@ -84,22 +84,60 @@ describe('enforceRealLayoutClearances', () => {
     }
   });
 
-  it('dégage les chaises et tables placées sur une estrade ou scène solide', () => {
+  it('permet aux chaises et tables d’être posées sur un podium ou une scène sans déclencher d’espacement', () => {
     const blueprint = {
       canvas: { widthM: 20, heightM: 16 },
       furniture: [
         { id: 'c1', kind: 'chair', x: 50, y: 10 },
+        { id: 't1', kind: 'table', shape: 'round', capacity: 6, x: 48, y: 9 },
       ],
       fixtures: [
         { id: 'fx1', kind: 'stage', x: 40, y: 5, w: 20, h: 10 },
+        { id: 'fx2', kind: 'podium', x: 70, y: 5, w: 10, h: 8 },
       ],
     };
 
     const result = enforceRealLayoutClearances(blueprint);
     const c1 = result.furniture.find((f) => f.id === 'c1')!;
-    const insideX = c1.x >= 40 && c1.x <= 60;
-    const insideY = c1.y >= 5 && c1.y <= 15;
-    assert.ok(!(insideX && insideY), 'La chaise ne doit pas être bloquée sur la scène');
+    const t1 = result.furniture.find((f) => f.id === 't1')!;
+
+    // La chaise et la table restent bien positionnées sur la scène, elles ne sont pas expulsées
+    assert.ok(c1.x >= 40 && c1.x <= 60 && c1.y >= 5 && c1.y <= 15, 'La chaise doit pouvoir rester sur la scène');
+    assert.ok(t1.x >= 40 && t1.x <= 60 && t1.y >= 5 && t1.y <= 15, 'La table doit pouvoir rester sur la scène');
+
+    // Aucun conflit d'espacement ni incorporation ne doit être déclenché avec la scène ou le podium
+    const report = detectLayoutClearanceConflicts(blueprint);
+    const overlapWithStage = report.conflicts.filter(
+      (c) => c.type === 'element_overlap' && (c.itemIds.includes('fx1') || c.itemIds.includes('fx2')),
+    );
+    assert.equal(overlapWithStage.length, 0, 'Ne doit déclencher aucun conflit d’espacement avec la scène ou le podium');
+  });
+
+  it('sépare deux tables qui se chevauchent sur une scène sans les expulser de la scène', () => {
+    const blueprint = {
+      canvas: { widthM: 20, heightM: 16 },
+      furniture: [
+        { id: 't1', kind: 'table', shape: 'round', capacity: 8, x: 45, y: 10 },
+        { id: 't2', kind: 'table', shape: 'round', capacity: 8, x: 47, y: 10 },
+      ],
+      fixtures: [
+        { id: 'fx1', kind: 'stage', x: 30, y: 4, w: 40, h: 14 },
+      ],
+    };
+
+    const result = enforceRealLayoutClearances(blueprint);
+    const t1 = result.furniture.find((f) => f.id === 't1')!;
+    const t2 = result.furniture.find((f) => f.id === 't2')!;
+
+    // Les deux tables doivent rester sur la scène
+    assert.ok(t1.x >= 30 && t1.x <= 70 && t1.y >= 4 && t1.y <= 18, 'La table 1 doit rester sur la scène');
+    assert.ok(t2.x >= 30 && t2.x <= 70 && t2.y >= 4 && t2.y <= 18, 'La table 2 doit rester sur la scène');
+
+    // Les deux tables doivent avoir été séparées pour ne pas se chevaucher
+    const dxM = ((t2.x - t1.x) / 100) * 20;
+    const dyM = ((t2.y - t1.y) / 100) * 16;
+    const distM = Math.hypot(dxM, dyM);
+    assert.ok(distM >= 2.0, `Les deux tables sur scène doivent être espacées entre elles (dist=${distM.toFixed(2)}m)`);
   });
 
   it('sépare deux tables qui se chevauchent', () => {

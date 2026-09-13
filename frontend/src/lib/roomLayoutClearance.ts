@@ -167,6 +167,17 @@ export const CLEARANCE_PRESETS: Record<ClearancePreset, Partial<typeof REAL_CLEA
   },
 };
 
+/**
+ * Installations fixes surélevées / praticables où il est naturel et permis
+ * de poser des tables, chaises, rangées et équipements (scène, estrade, podium, balcon...).
+ * Ne doivent jamais déclencher de conflit d'incorporation ni d'expulsion d'espacement.
+ */
+export const RAISED_PLATFORM_FIXTURE_KINDS = new Set<string>([
+  'stage',
+  'podium',
+  'balcony',
+]);
+
 const SOLID_FIXTURE_KINDS = new Set([
   'stage',
   'podium',
@@ -741,10 +752,12 @@ export function detectLayoutClearanceConflicts(
     }
   }
 
-  // 7. Non-incorporation dans les installations fixes solides (scène, estrade, bar, buffet...)
+  // 7. Non-incorporation dans les installations fixes solides (bar, buffet, colonnes...)
   for (const item of [...tables, ...chairs, ...rows]) {
     for (const fx of solidFixtures) {
       if (!sameStory(item.storyId, fx.storyId)) continue;
+      // Les tables, chaises et rangées peuvent être installées librement sur un podium, une scène ou un balcon
+      if (RAISED_PLATFORM_FIXTURE_KINDS.has(fx.kind)) continue;
       const itemX = pctToM_X(item.x);
       const itemY = pctToM_Y(item.y);
       const fxX = pctToM_X(fx.x);
@@ -1124,10 +1137,12 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
       }
     }
 
-    // 7. Dégagement des fixtures solides (scène, estrade, buffet, bar, régie DJ)
+    // 7. Dégagement des fixtures solides (buffet, bar, régie DJ, colonnes...)
     for (const item of [...chairs, ...tables, ...rows]) {
       for (const fx of mutableFixtures) {
         if (!fx.isSolid || !sameStory(item.storyId, fx.storyId)) continue;
+        // Les tables, chaises et rangées peuvent être posées sur un podium, une scène ou un balcon sans déclencher d'espacement
+        if (RAISED_PLATFORM_FIXTURE_KINDS.has(fx.kind)) continue;
 
         const isServiceCounter =
           fx.kind === 'bar' ||
@@ -1136,10 +1151,10 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
           fx.kind === 'pickupCounter' ||
           fx.kind === 'condimentStation' ||
           fx.kind === 'displayCase';
-        const isStage = fx.kind === 'stage' || fx.kind === 'podium' || fx.kind === 'djBooth';
+        const isDjBooth = fx.kind === 'djBooth';
         const requiredClearance = isServiceCounter
           ? clearances.serviceCounterClearance
-          : isStage
+          : isDjBooth
             ? clearances.stageClearance
             : fx.kind === 'column' || fx.kind === 'pillar'
               ? clearances.columnClearance
