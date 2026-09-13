@@ -206,22 +206,26 @@ export default function TemplatesPage() {
  type StudioOrigin = 'admin' | 'studio';
  const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  const [studioOrigin, setStudioOrigin] = useState<StudioOrigin>('studio');
- const fromAdminConsole = studioOrigin === 'admin' && user?.role === 'SUPER_ADMIN';
- const isOwnerOrManager = Boolean(
- access?.isOwner ||
- access?.level === 'manager' ||
- user?.orgRole === 'MANAGER' ||
- user?.role === 'SUPER_ADMIN',
+ const isPlatformTemplateAdmin = Boolean(
+  user && (user.role === 'SUPER_ADMIN' || (user.role === 'COMMERCIAL' && user.commercialPermissions?.canManageTemplates))
  );
- const canUseCustomTemplates = user?.role === 'SUPER_ADMIN' || planFeatures?.customTemplates === true;
+ const isSuperAdmin = isPlatformTemplateAdmin;
+ const fromAdminConsole = studioOrigin === 'admin' && isPlatformTemplateAdmin;
+ const isOwnerOrManager = Boolean(
+  access?.isOwner ||
+  access?.level === 'manager' ||
+  user?.orgRole === 'MANAGER' ||
+  isPlatformTemplateAdmin,
+ );
+ const canUseCustomTemplates = isPlatformTemplateAdmin || planFeatures?.customTemplates === true;
  const canUseMockupImport = true;
- const canUseMockupOcr = user?.role === 'SUPER_ADMIN' || planFeatures?.mockupOcr === true;
+ const canUseMockupOcr = isPlatformTemplateAdmin || planFeatures?.mockupOcr === true;
  const templatesAtLimit =
- user?.role !== 'SUPER_ADMIN' &&
- Boolean(
- planQuota &&
- planQuota.limits.maxTemplates < 9999 &&
- planQuota.usage.templates >= planQuota.limits.maxTemplates,
+  !isPlatformTemplateAdmin &&
+  Boolean(
+  planQuota &&
+  planQuota.limits.maxTemplates < 9999 &&
+  planQuota.usage.templates >= planQuota.limits.maxTemplates,
  );
  const templatesQuotaMsg = templatesAtLimit
  ? `Quota modèles atteint (${planQuota!.usage.templates}/${planQuota!.limits.maxTemplates}). Passez à un forfait supérieur pour enregistrer de nouveaux modèles.`
@@ -465,7 +469,7 @@ export default function TemplatesPage() {
 
  useEffect(() => {
  const stored = readStoredInvitationContextSource();
- if (stored === 'org' && !(user && tenant?.id) && user?.role !== 'SUPER_ADMIN') {
+ if (stored === 'org' && !(user && tenant?.id) && !isSuperAdmin) {
  setAiComposeContextSource('none');
  return;
  }
@@ -473,7 +477,7 @@ export default function TemplatesPage() {
  }, [user, tenant?.id]);
 
  const loadTenants = async () => {
- if (user?.role === 'SUPER_ADMIN') {
+ if (isSuperAdmin) {
  try {
  const data = await api.get('/admin/tenants?limit=100&sort=name');
  const rows = Array.isArray(data?.items) ? data.items : [];
@@ -498,7 +502,7 @@ export default function TemplatesPage() {
  if (!opts?.keepSuccess) {
  /* leave success banner for studio list if any */
  }
- if (studioOrigin === 'admin' && user?.role === 'SUPER_ADMIN') {
+ if (studioOrigin === 'admin' && isSuperAdmin) {
  router.push(ADMIN_TEMPLATES_HREF);
  }
  };
@@ -1551,7 +1555,7 @@ export default function TemplatesPage() {
  persistInvitationContextSource(source);
  }}
  disabled={aiComposeBusy}
- canUseOrg={Boolean(tenant?.id) || user?.role === 'SUPER_ADMIN'}
+ canUseOrg={Boolean(tenant?.id) || isSuperAdmin}
  />
  </div>
 
@@ -2141,7 +2145,7 @@ export default function TemplatesPage() {
 
  // Restrictions et avertissement approprié au moment de l'enregistrement
  const isBlockedByPlanOrQuota =
- user?.role !== 'SUPER_ADMIN' &&
+ !isSuperAdmin &&
  (!canUseCustomTemplates || (templatesAtLimit && !editingTemplateId));
 
  if (isBlockedByPlanOrQuota) {
@@ -2176,7 +2180,7 @@ export default function TemplatesPage() {
 
  setSaving(true);
  try {
- const isGlobalTemplate = user?.role === 'SUPER_ADMIN' && !selectedTenantId;
+ const isGlobalTemplate = isSuperAdmin && !selectedTenantId;
  const payload: Record<string, unknown> = {
  name: templateName,
  content: { 
@@ -2202,7 +2206,7 @@ export default function TemplatesPage() {
  },
  elements: ensureMandatoryRsvpFieldsOnElements(canvasElements), 
  },
- targetTenantId: user?.role === 'SUPER_ADMIN' ? (selectedTenantId || null) : undefined,
+ targetTenantId: isSuperAdmin ? (selectedTenantId || null) : undefined,
  };
  if (isGlobalTemplate) {
  payload.showOnLanding = showOnLanding;
@@ -2223,7 +2227,7 @@ export default function TemplatesPage() {
  }
  setDraftSavedAt(null);
  setExitConfirmOpen(false);
- if (studioOrigin === 'admin' && user?.role === 'SUPER_ADMIN') {
+ if (studioOrigin === 'admin' && isSuperAdmin) {
  setEditorOpen(false);
  router.push(`${ADMIN_TEMPLATES_HREF}&saved=1`);
  } else {
@@ -2251,7 +2255,7 @@ export default function TemplatesPage() {
  };
 
  const handleDuplicateTemplate = async (t: TemplateItem) => {
- if (templatesAtLimit && user?.role !== 'SUPER_ADMIN') {
+ if (templatesAtLimit && !isSuperAdmin) {
  setError(templatesQuotaMsg || 'Quota modèles atteint.');
  return;
  }
@@ -2272,8 +2276,8 @@ export default function TemplatesPage() {
 
  const catalogTemplates = templates.filter((t) => t.isGlobal ?? !t.tenantId);
  const ownTemplates = templates.filter((t) => t.isOwned ?? Boolean(t.tenantId));
- const canDuplicateAny = user?.role === 'SUPER_ADMIN' || catalogTemplates.length > 0 || canUseCustomTemplates;
- const listTemplates = user?.role === 'SUPER_ADMIN' ? templates : ownTemplates;
+ const canDuplicateAny = isSuperAdmin || catalogTemplates.length > 0 || canUseCustomTemplates;
+ const listTemplates = isSuperAdmin ? templates : ownTemplates;
  const paginatedCatalog = paginateItems(catalogTemplates, catalogPage, templatesPageSize);
  const paginatedOwn = paginateItems(listTemplates, ownTemplatesPage, templatesPageSize);
 
@@ -2648,7 +2652,7 @@ export default function TemplatesPage() {
  </div>
  </Modal>
  <div className="flex flex-col gap-4 max-lg:fixed max-lg:inset-0 max-lg:z-[55] max-lg:bg-background max-lg:px-3 max-lg:pt-[max(0.75rem,env(safe-area-inset-top))] max-lg:overflow-hidden">
-        {(!canUseCustomTemplates || templatesAtLimit) && user?.role !== 'SUPER_ADMIN' && (
+        {(!canUseCustomTemplates || templatesAtLimit) && !isSuperAdmin && (
           <div className="bg-surface border border-border rounded-xl px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-foreground shadow-2xs">
             <div className="flex items-center gap-2 min-w-0">
               <Sparkles className="w-4 h-4 text-primary shrink-0" aria-hidden />
@@ -2713,7 +2717,7 @@ export default function TemplatesPage() {
                     </span>
                   ) : (
                     <span className="text-xs text-muted font-semibold">
-                      {user?.role === 'SUPER_ADMIN' ? 'Modèle plateforme' : 'Atelier d’invitation'}
+                      {isSuperAdmin ? 'Modèle plateforme' : 'Atelier d’invitation'}
                     </span>
                   )}
                   {fromAdminConsole && (
@@ -2833,7 +2837,7 @@ export default function TemplatesPage() {
  </button>
  </div>
  </div>
- {user?.role === 'SUPER_ADMIN' && (
+ {isSuperAdmin && (
  <div className="flex flex-wrap items-center gap-2 pl-14">
  <label className="text-xs font-bold text-muted uppercase tracking-wider" htmlFor="template-scope">
  Visible pour
@@ -4765,7 +4769,7 @@ export default function TemplatesPage() {
  </p>
  </div>
 
- {user?.role === 'SUPER_ADMIN' && !selectedTenantId && (
+ {isSuperAdmin && !selectedTenantId && (
  <div className="space-y-3 p-3 rounded-2xl border border-primary/20 bg-primary/5">
  <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
  <Globe className="w-3.5 h-3.5" />
@@ -5352,19 +5356,19 @@ export default function TemplatesPage() {
  <div className="space-y-6">
  <PageHeader
  title={
- user?.role === 'SUPER_ADMIN'
+ isSuperAdmin
  ? 'Concepteur de modèles'
  : "Vos modèles d'invitation"
  }
  description={
- user?.role === 'SUPER_ADMIN'
+ isSuperAdmin
  ? 'Atelier de création visuelle. Pour le catalogue plateforme, les filtres et la vitrine landing, utilisez la console Super Admin.'
  : 'Créez des invitations interactives — à la main, depuis une maquette, ou avec l’IA (images + brief).'
  }
  breadcrumbs={
  <Breadcrumbs
  items={
- user?.role === 'SUPER_ADMIN'
+ isSuperAdmin
  ? [
  { label: 'Console', href: '/dashboard?tab=templates' },
  { label: 'Concepteur' },
@@ -5378,7 +5382,7 @@ export default function TemplatesPage() {
  }
  action={
  <div className="flex flex-wrap gap-2">
- {user?.role === 'SUPER_ADMIN' && (
+ {isSuperAdmin && (
  <Link
  href={ADMIN_TEMPLATES_HREF}
  className="inline-flex items-center gap-2 px-4 py-2.5 border border-border text-foreground font-semibold rounded-[var(--radius-button)] text-xs transition hover:bg-surface-muted"
@@ -5426,7 +5430,7 @@ export default function TemplatesPage() {
  {(!canUseCustomTemplates || templatesAtLimit) && user?.role === 'USER' && (
  <PlanLimitCallout kind="templates" planQuota={planQuota} planName={tenant?.plan} />
  )}
- {user?.role === 'SUPER_ADMIN' && (
+ {isSuperAdmin && (
  <div className="rounded-[var(--radius-card)] border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground space-y-1">
  <p className="font-semibold text-primary text-xs uppercase tracking-wider">Nuance des vues</p>
  <p className="text-xs text-muted leading-relaxed">
@@ -5466,7 +5470,7 @@ export default function TemplatesPage() {
  />
  </div>
 
- {user?.role !== 'SUPER_ADMIN' && catalogTemplates.length > 0 && (
+ {!isSuperAdmin && catalogTemplates.length > 0 && (
  <section className="space-y-4">
  <div>
  <h2 className="text-lg font-bold text-foreground dark:text-foreground">Bibliothèque EventMaster</h2>
@@ -5498,7 +5502,7 @@ export default function TemplatesPage() {
  )}
 
  <section className="space-y-4">
- {user?.role !== 'SUPER_ADMIN' && (
+ {!isSuperAdmin && (
  <div>
  <h2 className="text-lg font-bold text-foreground dark:text-foreground">Mes modèles</h2>
  <p className="text-sm text-muted dark:text-muted">
@@ -5509,12 +5513,12 @@ export default function TemplatesPage() {
 
  <TemplateCardGrid
  templates={paginatedOwn}
- isSuperAdmin={user?.role === 'SUPER_ADMIN'}
+ isSuperAdmin={isSuperAdmin}
  layout={templatesViewMode}
  columns={templatesColumns}
  onViewDetails={(t) => setPreviewTemplate(t as TemplateItem)}
  emptyMessage={
- user?.role === 'SUPER_ADMIN'
+ isSuperAdmin
  ? "Aucun modèle. Créez un modèle global ou pour une organisation."
  : "Aucun modèle personnel pour l'instant. Créez-en un avec l’IA, importez une maquette, ou partez de la bibliothèque."
  }
@@ -5552,7 +5556,7 @@ export default function TemplatesPage() {
  }
  onEdit={(t) => handleEditTemplateClick(t as TemplateItem)}
  onDuplicate={
- (canUseCustomTemplates || user?.role === 'SUPER_ADMIN') && !templatesAtLimit
+ (canUseCustomTemplates || isSuperAdmin) && !templatesAtLimit
  ? (t) => handleDuplicateTemplate(t as TemplateItem)
  : undefined
  }

@@ -90,11 +90,16 @@ export default function AdminGuestsPage() {
     gridClassName,
   } = useViewMode('em-view-admin-guests', 'grid', 3);
 
+  const canAccess = Boolean(
+    user?.role === 'SUPER_ADMIN' ||
+    (user?.role === 'COMMERCIAL' && user?.commercialPermissions?.canManageGuests)
+  );
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) return;
-    if (user.role !== 'SUPER_ADMIN') router.replace('/dashboard');
-  }, [authLoading, user, router]);
+    if (!canAccess) router.replace('/dashboard');
+  }, [authLoading, user, canAccess, router]);
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -105,15 +110,15 @@ export default function AdminGuestsPage() {
   }, [qInput]);
 
   useEffect(() => {
-    if (user?.role !== 'SUPER_ADMIN') return;
+    if (!canAccess) return;
     api
       .get(`/admin/tenants?${adminListParams({ limit: 100, sort: 'name' })}`)
       .then((data) => setTenants(unwrapAdminList<TenantOption>(data).items))
       .catch(() => { /* filtre org facultatif */ });
-  }, [user?.role]);
+  }, [canAccess]);
 
   const load = useCallback(async () => {
-    if (user?.role !== 'SUPER_ADMIN') return;
+    if (!canAccess) return;
     setLoading(true);
     setError('');
     try {
@@ -187,7 +192,7 @@ export default function AdminGuestsPage() {
     }
   };
 
-  if (authLoading || user?.role !== 'SUPER_ADMIN') {
+  if (authLoading || !canAccess) {
     return (
       <div className="flex justify-center py-16">
         <Loader2 className="w-6 h-6 animate-spin text-primary" />

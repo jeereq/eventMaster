@@ -3,7 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.settingsFilePath = exports.PLATFORM_CITY_CATALOG = exports.DEFAULT_PLATFORM_SETTINGS = exports.DEFAULT_AUDIO_NOTIFICATIONS = exports.AUDIO_NOTIFICATION_FAMILIES = exports.AUDIO_NOTIFICATION_PRESETS = void 0;
+exports.settingsFilePath = exports.PLATFORM_CITY_CATALOG = exports.DEFAULT_PLATFORM_SETTINGS = exports.DEFAULT_STUDIO_VISIBILITY = exports.DEFAULT_AUDIO_NOTIFICATIONS = exports.AUDIO_NOTIFICATION_FAMILIES = exports.AUDIO_NOTIFICATION_PRESETS = void 0;
+exports.sanitizeStudioVisibility = sanitizeStudioVisibility;
+exports.sanitizeCommercialPermissions = sanitizeCommercialPermissions;
 exports.sanitizeAudioNotifications = sanitizeAudioNotifications;
 exports.sanitizeEnabledCities = sanitizeEnabledCities;
 exports.sanitizeAuthOtpChannels = sanitizeAuthOtpChannels;
@@ -25,6 +27,10 @@ exports.getContactDestinations = getContactDestinations;
 exports.maskSecretsForAdmin = maskSecretsForAdmin;
 exports.mergeSettingsUpdate = mergeSettingsUpdate;
 exports.getNotificationCredentials = getNotificationCredentials;
+exports.getCommercialPermissions = getCommercialPermissions;
+exports.hasCommercialPermission = hasCommercialPermission;
+exports.setCommercialPermissions = setCommercialPermissions;
+exports.removeCommercialPermissions = removeCommercialPermissions;
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const db_1 = require("../db");
@@ -52,6 +58,38 @@ exports.DEFAULT_AUDIO_NOTIFICATIONS = {
     studioStepSound: true,
     default: 'chime',
 };
+exports.DEFAULT_STUDIO_VISIBILITY = {
+    budget: true,
+    invite: true,
+    room: true,
+};
+function sanitizeStudioVisibility(raw) {
+    const src = raw && typeof raw === 'object' ? raw : {};
+    return {
+        budget: src.budget !== false,
+        invite: src.invite !== false,
+        room: src.room !== false,
+    };
+}
+function sanitizeCommercialPermissions(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+        return {};
+    }
+    const result = {};
+    for (const [userId, perms] of Object.entries(raw)) {
+        if (perms && typeof perms === 'object' && !Array.isArray(perms)) {
+            const p = perms;
+            result[userId] = {
+                canManageTemplates: Boolean(p.canManageTemplates),
+                canManageMessageTemplates: Boolean(p.canManageMessageTemplates),
+                canManageCatalog: Boolean(p.canManageCatalog),
+                canManageEvents: Boolean(p.canManageEvents),
+                canManageGuests: Boolean(p.canManageGuests),
+            };
+        }
+    }
+    return result;
+}
 function isAudioPreset(value) {
     return typeof value === 'string' && exports.AUDIO_NOTIFICATION_PRESETS.includes(value);
 }
@@ -114,6 +152,8 @@ exports.DEFAULT_PLATFORM_SETTINGS = {
     aiTokenMinPurchaseCdf: aiTokenPricing_1.DEFAULT_AI_TOKEN_MIN_PURCHASE_CDF,
     welcomeAiGrants: welcomeAiTokensPolicy_1.DEFAULT_WELCOME_GRANT_RULES,
     audioNotifications: exports.DEFAULT_AUDIO_NOTIFICATIONS,
+    studioVisibility: exports.DEFAULT_STUDIO_VISIBILITY,
+    commercialPermissions: {},
     subscriptionDiscountAccess: subscriptionDiscountAccess_1.DEFAULT_SUBSCRIPTION_DISCOUNT_ACCESS,
     donationsAccess: donationsAccess_1.DEFAULT_DONATIONS_ACCESS,
 };
@@ -245,6 +285,8 @@ function normalizeStoredRates(settings) {
         aiTokenMinPurchaseCdf: (0, aiTokenPricing_1.sanitizeAiTokenMinPurchaseCdf)(settings.aiTokenMinPurchaseCdf, (0, aiTokenPricing_1.sanitizeAiTokenPriceCdf)(settings.aiTokenPriceCdf)),
         welcomeAiGrants: (0, welcomeAiTokensPolicy_1.sanitizeWelcomeGrantRules)(settings.welcomeAiGrants),
         audioNotifications: sanitizeAudioNotifications(settings.audioNotifications),
+        studioVisibility: sanitizeStudioVisibility(settings.studioVisibility),
+        commercialPermissions: sanitizeCommercialPermissions(settings.commercialPermissions),
         subscriptionDiscountAccess: (0, subscriptionDiscountAccess_1.sanitizeSubscriptionDiscountAccess)(settings.subscriptionDiscountAccess),
         donationsAccess: (0, donationsAccess_1.sanitizeDonationsAccess)(settings.donationsAccess),
     };
@@ -271,6 +313,8 @@ function buildNextSettings(partial) {
     next.aiTokenMinPurchaseCdf = (0, aiTokenPricing_1.sanitizeAiTokenMinPurchaseCdf)(next.aiTokenMinPurchaseCdf, next.aiTokenPriceCdf);
     next.welcomeAiGrants = (0, welcomeAiTokensPolicy_1.sanitizeWelcomeGrantRules)(next.welcomeAiGrants);
     next.audioNotifications = sanitizeAudioNotifications(next.audioNotifications);
+    next.studioVisibility = sanitizeStudioVisibility(next.studioVisibility);
+    next.commercialPermissions = sanitizeCommercialPermissions(next.commercialPermissions);
     next.subscriptionDiscountAccess = (0, subscriptionDiscountAccess_1.sanitizeSubscriptionDiscountAccess)(next.subscriptionDiscountAccess);
     next.donationsAccess = (0, donationsAccess_1.sanitizeDonationsAccess)(next.donationsAccess);
     next.ticketPaymentProvider = 'flexpay_card';
@@ -365,6 +409,7 @@ function getPublicSiteConfig(settings = loadPlatformSettings()) {
         aiTokenMinPurchaseCdf: (0, aiTokenPricing_1.sanitizeAiTokenMinPurchaseCdf)(settings.aiTokenMinPurchaseCdf, (0, aiTokenPricing_1.sanitizeAiTokenPriceCdf)(settings.aiTokenPriceCdf)),
         welcomeAiGrants: (0, welcomeAiTokensPolicy_1.sanitizeWelcomeGrantRules)(settings.welcomeAiGrants),
         audioNotifications: sanitizeAudioNotifications(settings.audioNotifications),
+        studioVisibility: sanitizeStudioVisibility(settings.studioVisibility),
         subscriptionDiscountAccess: (() => {
             const access = (0, subscriptionDiscountAccess_1.sanitizeSubscriptionDiscountAccess)(settings.subscriptionDiscountAccess);
             return {
@@ -441,4 +486,32 @@ function getNotificationCredentials(settings = loadPlatformSettings()) {
         ultramsgInstanceId: pick(settings.ultramsgInstanceId, 'ULTRAMSG_INSTANCE_ID'),
         ultramsgToken: pick(settings.ultramsgToken, 'ULTRAMSG_TOKEN'),
     };
+}
+function getCommercialPermissions(userId) {
+    const settings = loadPlatformSettings();
+    return settings.commercialPermissions?.[userId] || {};
+}
+function hasCommercialPermission(userId, perm) {
+    const userPerms = getCommercialPermissions(userId);
+    return Boolean(userPerms[perm]);
+}
+async function setCommercialPermissions(userId, permissions) {
+    const settings = loadPlatformSettings();
+    const current = { ...(settings.commercialPermissions || {}) };
+    current[userId] = {
+        canManageTemplates: Boolean(permissions.canManageTemplates),
+        canManageMessageTemplates: Boolean(permissions.canManageMessageTemplates),
+        canManageCatalog: Boolean(permissions.canManageCatalog),
+        canManageEvents: Boolean(permissions.canManageEvents),
+        canManageGuests: Boolean(permissions.canManageGuests),
+    };
+    await savePlatformSettingsDurable({ commercialPermissions: current });
+}
+async function removeCommercialPermissions(userId) {
+    const settings = loadPlatformSettings();
+    if (!settings.commercialPermissions?.[userId])
+        return;
+    const current = { ...settings.commercialPermissions };
+    delete current[userId];
+    await savePlatformSettingsDurable({ commercialPermissions: current });
 }

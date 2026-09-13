@@ -24,7 +24,7 @@ import {
   maskPhone,
   VerificationMethod,
 } from '../services/otpService';
-import { loadPlatformSettings, getContactDestinations, assertAuthOtpMethodAllowed, resolveAuthOtpMethod, defaultAuthOtpMethod } from '../services/platformSettingsService';
+import { loadPlatformSettings, getContactDestinations, assertAuthOtpMethodAllowed, resolveAuthOtpMethod, defaultAuthOtpMethod, getCommercialPermissions } from '../services/platformSettingsService';
 import { resolvePhoneFields } from '../utils/phone';
 import { wrapBrandedEmail } from '../utils/brandedMessaging';
 import { escapeHtml, getPlatformBrand } from '../utils/brandingUtils';
@@ -87,6 +87,7 @@ function publicUser(user: {
     avatarUrl: user.avatarUrl ?? null,
     role: user.role,
     orgRole: user.orgRole ?? null,
+    commercialPermissions: user.role === 'COMMERCIAL' ? getCommercialPermissions(user.id) : null,
   };
 }
 

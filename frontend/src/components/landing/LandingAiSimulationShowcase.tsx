@@ -35,6 +35,7 @@ import AiTokenBuyButton from '@/components/AiTokenBuyButton';
 import AiSimulationCounter, { isAiSimulationThresholdReached } from '@/components/AiSimulationCounter';
 import type { EventPrepAiDefaults } from '@/components/EventPrepAiSimulator';
 import AiStudioTabList, {
+  AI_STUDIO_TABS,
   aiStudioPanelId,
   type AiStudioId,
 } from '@/components/AiStudioTabList';
@@ -188,7 +189,24 @@ export default function LandingAiSimulationShowcase() {
   }, [visibleScenarios, selectedScenarioId]);
   const activeScenario = visibleScenarios.find((item) => item.id === selectedScenarioId) || visibleScenarios[0] || SCENARIOS[0];
   const activeScenarioUsd = Math.round(activeScenario.budgetTargetFc / exchangeRate);
-  const fullPage = STUDIO_FULL_PAGE[studio];
+
+  const visibility = site?.studioVisibility ?? { budget: true, invite: true, room: true };
+  const visibleStudioTabs = useMemo(() => {
+    return AI_STUDIO_TABS.filter((t) => {
+      if (t.id === 'budget' && !visibility.budget) return false;
+      if (t.id === 'invite' && !visibility.invite) return false;
+      if (t.id === 'room' && !visibility.room) return false;
+      return true;
+    });
+  }, [visibility]);
+
+  useEffect(() => {
+    if (visibleStudioTabs.length > 0 && !visibleStudioTabs.some((t) => t.id === studio)) {
+      setStudio(visibleStudioTabs[0].id);
+    }
+  }, [visibleStudioTabs, studio]);
+
+  const fullPage = STUDIO_FULL_PAGE[studio] || STUDIO_FULL_PAGE.budget;
 
   useEffect(() => {
     setStudio(readLandingStudio());
@@ -278,6 +296,7 @@ export default function LandingAiSimulationShowcase() {
           <AiStudioTabList
             value={studio}
             onChange={setStudio}
+            tabs={visibleStudioTabs}
             idPrefix={LANDING_STUDIO_PREFIX}
             className="text-left max-w-3xl mx-auto mt-2"
           />
@@ -477,29 +496,33 @@ export default function LandingAiSimulationShowcase() {
         ) : null}
         </div>
 
-        <div
-          role="tabpanel"
-          id={aiStudioPanelId(LANDING_STUDIO_PREFIX, 'invite')}
-          aria-labelledby={`${LANDING_STUDIO_PREFIX}-invite`}
-          hidden={studio !== 'invite'}
-          className="max-w-5xl mx-auto"
-        >
-          {studio === 'invite' ? (
-            <LandingInvitationAiGenerator id="landing-studio-invite" defaultExpanded />
-          ) : null}
-        </div>
+        {visibility.invite ? (
+          <div
+            role="tabpanel"
+            id={aiStudioPanelId(LANDING_STUDIO_PREFIX, 'invite')}
+            aria-labelledby={`${LANDING_STUDIO_PREFIX}-invite`}
+            hidden={studio !== 'invite'}
+            className="max-w-5xl mx-auto"
+          >
+            {studio === 'invite' ? (
+              <LandingInvitationAiGenerator id="landing-studio-invite" defaultExpanded />
+            ) : null}
+          </div>
+        ) : null}
 
-        <div
-          role="tabpanel"
-          id={aiStudioPanelId(LANDING_STUDIO_PREFIX, 'room')}
-          aria-labelledby={`${LANDING_STUDIO_PREFIX}-room`}
-          hidden={studio !== 'room'}
-          className="max-w-5xl mx-auto"
-        >
-          {studio === 'room' ? (
-            <LandingRoomPlanAiStudio id="landing-studio-room" defaultExpanded />
-          ) : null}
-        </div>
+        {visibility.room ? (
+          <div
+            role="tabpanel"
+            id={aiStudioPanelId(LANDING_STUDIO_PREFIX, 'room')}
+            aria-labelledby={`${LANDING_STUDIO_PREFIX}-room`}
+            hidden={studio !== 'room'}
+            className="max-w-5xl mx-auto"
+          >
+            {studio === 'room' ? (
+              <LandingRoomPlanAiStudio id="landing-studio-room" defaultExpanded />
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {purchaseModalOpen ? (

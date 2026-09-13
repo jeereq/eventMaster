@@ -21,6 +21,7 @@ import CatalogueFilterBar, {
 } from '@/components/CatalogueFilterBar';
 import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { CatalogueFocusStage, CatalogueImmersiveStage } from '@/components/CatalogueSearchLayout';
 import CatalogueMobileExplore from '@/components/CatalogueMobileExplore';
@@ -158,6 +159,7 @@ function ClientMarketplaceInner() {
   const [saveError, setSaveError] = useState('');
   const [listingPreview, setListingPreview] = useState<EventPrepPreviewTarget | null>(null);
 
+  const { site } = usePlatformSite();
   const urlTab = parseHubTab(searchParams);
   const urlPlanView = parsePlanPrepView(searchParams);
   const urlAiStudio = parseAiStudio(searchParams);
@@ -167,6 +169,21 @@ function ClientMarketplaceInner() {
   const pendingTab = useRef<HubTab | null>(null);
   const pendingPlanView = useRef<PlanPrepView | null>(null);
   const pendingAiStudio = useRef<DashboardAiStudioId | null>(null);
+
+  const studioVisibility = site?.studioVisibility;
+  useEffect(() => {
+    if (!studioVisibility) return;
+    if (aiStudio === 'budget' && !studioVisibility.budget) {
+      const fallback = studioVisibility.invite ? 'invite' : studioVisibility.room ? 'room' : 'budget';
+      setAiStudioState(fallback);
+    } else if (aiStudio === 'invite' && !studioVisibility.invite) {
+      const fallback = studioVisibility.budget ? 'budget' : studioVisibility.room ? 'room' : 'invite';
+      setAiStudioState(fallback);
+    } else if (aiStudio === 'room' && !studioVisibility.room) {
+      const fallback = studioVisibility.budget ? 'budget' : studioVisibility.invite ? 'invite' : 'room';
+      setAiStudioState(fallback);
+    }
+  }, [studioVisibility, aiStudio]);
 
   useEffect(() => {
     if (pendingTab.current) {

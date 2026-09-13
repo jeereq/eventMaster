@@ -22,6 +22,17 @@ const aiTemplateComposeHistoryService_1 = require("../services/aiTemplateCompose
 const cloudinaryService_1 = require("../services/cloudinaryService");
 const cloudinaryConfig_1 = require("../config/cloudinaryConfig");
 const permissionsService_1 = require("../services/permissionsService");
+const platformSettingsService_1 = require("../services/platformSettingsService");
+function canManagePlatformTemplates(user) {
+    if (!user)
+        return false;
+    if (user.role === 'SUPER_ADMIN')
+        return true;
+    if (user.role === 'COMMERCIAL' && user.id && (0, platformSettingsService_1.hasCommercialPermission)(user.id, 'canManageTemplates')) {
+        return true;
+    }
+    return false;
+}
 async function persistTemplateCompose(opts) {
     try {
         const saved = await (0, aiTemplateComposeHistoryService_1.saveAiTemplateComposeRun)(opts);
@@ -63,10 +74,10 @@ async function assertTemplateContentForPlan(tenantId, content) {
         await (0, planFeaturesService_1.assertPlanFeature)(tenantId, 'mockupOcr');
     }
 }
-// Get all templates (for the tenant, or all templates if Super Admin)
+// Get all templates (for the tenant, or all templates if Super Admin / Commercial délégué)
 async function getTemplates(req, res) {
     try {
-        const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
+        const isSuperAdmin = canManagePlatformTemplates(req.user);
         const tenantId = req.user?.tenantId;
         if (!isSuperAdmin && !tenantId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
@@ -109,7 +120,7 @@ async function getTemplates(req, res) {
 // Create a template (global or private)
 async function createTemplate(req, res) {
     try {
-        const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
+        const isSuperAdmin = canManagePlatformTemplates(req.user);
         const tenantId = req.user?.tenantId;
         const { name, content, targetTenantId, showOnLanding } = req.body;
         if (!isSuperAdmin && !tenantId) {
@@ -163,7 +174,7 @@ async function createTemplate(req, res) {
 // Get single template
 async function getTemplateById(req, res) {
     try {
-        const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
+        const isSuperAdmin = canManagePlatformTemplates(req.user);
         const tenantId = req.user?.tenantId;
         const id = req.params.id;
         if (!isSuperAdmin && !tenantId) {
@@ -200,7 +211,7 @@ async function getTemplateById(req, res) {
 // Update a template
 async function updateTemplate(req, res) {
     try {
-        const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
+        const isSuperAdmin = canManagePlatformTemplates(req.user);
         const tenantId = req.user?.tenantId;
         const id = req.params.id;
         const { name, content, targetTenantId, showOnLanding } = req.body;
@@ -261,7 +272,7 @@ async function updateTemplate(req, res) {
 // Duplicate a template (catalog → organisation, or copy within org)
 async function duplicateTemplate(req, res) {
     try {
-        const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
+        const isSuperAdmin = canManagePlatformTemplates(req.user);
         const tenantId = req.user?.tenantId;
         const id = req.params.id;
         const { name, targetTenantId } = req.body ?? {};
@@ -354,7 +365,7 @@ async function duplicateTemplate(req, res) {
 // Delete a template
 async function deleteTemplate(req, res) {
     try {
-        const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
+        const isSuperAdmin = canManagePlatformTemplates(req.user);
         const tenantId = req.user?.tenantId;
         const id = req.params.id;
         if (!isSuperAdmin && !tenantId) {
@@ -386,7 +397,7 @@ async function composeTemplateWithAi(req, res) {
     try {
         if (!req.user)
             return res.status(401).json({ error: 'Non authentifié.' });
-        const isSuperAdmin = req.user.role === 'SUPER_ADMIN';
+        const isSuperAdmin = canManagePlatformTemplates(req.user);
         const tenantId = req.user.tenantId || null;
         if (!isSuperAdmin && !tenantId) {
             return res.status(403).json({ error: 'Tenant non identifié' });

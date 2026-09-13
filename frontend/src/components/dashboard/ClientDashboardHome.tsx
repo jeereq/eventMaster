@@ -32,6 +32,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { api } from '@/lib/api';
 import { useListingFavorites } from '@/lib/listingFavorites';
 import { Modal, Button } from '@/components/ui';
@@ -139,8 +140,12 @@ const UPGRADE_B2B_PLANS: Array<Omit<UpgradePlanConfig, 'basePriceFc' | 'periodLa
 
 export default function ClientDashboardHome() {
   const { user, tenant } = useAuth();
+  const { site } = usePlatformSite();
   const router = useRouter();
   const { items: favoriteItems } = useListingFavorites();
+
+  const visibility = site?.studioVisibility ?? { budget: true, invite: true, room: true };
+  const activeStudiosCount = (visibility.budget ? 1 : 0) + (visibility.invite ? 1 : 0) + (visibility.room ? 1 : 0);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [stats, setStats] = useState({
@@ -608,132 +613,149 @@ export default function ClientDashboardHome() {
         </div>
       </section>
 
-      {/* ─── 3. LES 3 STUDIOS ACTIFS (VISUEL · ZÉRO TEXTE PESANT) ─── */}
-      <section aria-labelledby="studios-heading" className="space-y-3.5">
-        <div className="flex items-center justify-between border-b border-border/70 pb-2.5">
-          <h2 id="studios-heading" className="font-display text-lg sm:text-xl font-semibold text-foreground tracking-tight flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" />
-            Studios Actifs
-          </h2>
-          <Link
-            href="/dashboard/catalogue?tab=plan&planView=ai"
-            className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
-          >
-            <span>Simulateur complet</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-          {/* Studio 1 : Budget */}
-          <Link
-            href="/dashboard/catalogue?tab=plan&planView=ai&studio=budget"
-            className="rounded-2xl border border-primary/30 bg-gradient-to-b from-primary/5 via-surface to-surface p-4 flex flex-col justify-between gap-3 transition hover:border-primary hover:shadow-xs group"
-          >
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition">
-                  <Wand2 className="w-5 h-5" />
-                </div>
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
-                  Actif
-                </span>
-              </div>
-              <h3 className="font-display text-base font-semibold text-foreground group-hover:text-primary transition">
-                Simulateur Budget
-              </h3>
-              <div className="flex flex-wrap gap-1">
-                <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                  3 formules
-                </span>
-                <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                  CDF &amp; USD
-                </span>
-                <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                  Devis direct
-                </span>
-              </div>
-            </div>
-            <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs font-bold text-primary group-hover:translate-x-0.5 transition">
-              <span>Calculer</span>
+      {/* ─── 3. LES STUDIOS ACTIFS (VISUEL · ZÉRO TEXTE PESANT) ─── */}
+      {activeStudiosCount > 0 && (
+        <section aria-labelledby="studios-heading" className="space-y-3.5">
+          <div className="flex items-center justify-between border-b border-border/70 pb-2.5">
+            <h2 id="studios-heading" className="font-display text-lg sm:text-xl font-semibold text-foreground tracking-tight flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              Studios Actifs
+            </h2>
+            <Link
+              href="/dashboard/catalogue?tab=plan&planView=ai"
+              className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
+            >
+              <span>Simulateur complet</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </div>
-          </Link>
+            </Link>
+          </div>
 
-          {/* Studio 2 : Invitations */}
-          <Link
-            href="/dashboard/catalogue?tab=plan&planView=ai&studio=invite"
-            className="rounded-2xl border border-pink-500/30 bg-gradient-to-b from-pink-500/5 via-surface to-surface p-4 flex flex-col justify-between gap-3 transition hover:border-pink-500 hover:shadow-xs group"
+          <div
+            className={cn(
+              'grid grid-cols-1 gap-3.5',
+              activeStudiosCount === 3
+                ? 'md:grid-cols-3'
+                : activeStudiosCount === 2
+                  ? 'md:grid-cols-2'
+                  : 'max-w-md',
+            )}
           >
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center group-hover:scale-105 transition">
-                  <Mail className="w-5 h-5" />
+            {/* Studio 1 : Budget */}
+            {visibility.budget && (
+              <Link
+                href="/dashboard/catalogue?tab=plan&planView=ai&studio=budget"
+                className="rounded-2xl border border-primary/30 bg-gradient-to-b from-primary/5 via-surface to-surface p-4 flex flex-col justify-between gap-3 transition hover:border-primary hover:shadow-xs group"
+              >
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition">
+                      <Wand2 className="w-5 h-5" />
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
+                      Actif
+                    </span>
+                  </div>
+                  <h3 className="font-display text-base font-semibold text-foreground group-hover:text-primary transition">
+                    Simulateur Budget
+                  </h3>
+                  <div className="flex flex-wrap gap-1">
+                    <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                      3 formules
+                    </span>
+                    <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                      CDF &amp; USD
+                    </span>
+                    <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                      Devis direct
+                    </span>
+                  </div>
                 </div>
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
-                  Actif
-                </span>
-              </div>
-              <h3 className="font-display text-base font-semibold text-foreground group-hover:text-pink-600 dark:group-hover:text-pink-400 transition">
-                Invitations &amp; Cartes
-              </h3>
-              <div className="flex flex-wrap gap-1">
-                <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                  Format 9:16
-                </span>
-                <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                  WhatsApp
-                </span>
-                <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                  Lien RSVP
-                </span>
-              </div>
-            </div>
-            <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs font-bold text-pink-600 dark:text-pink-400 group-hover:translate-x-0.5 transition">
-              <span>Créer</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </div>
-          </Link>
+                <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs font-bold text-primary group-hover:translate-x-0.5 transition">
+                  <span>Calculer</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </div>
+              </Link>
+            )}
 
-          {/* Studio 3 : Plans 3D */}
-          <Link
-            href="/dashboard/catalogue?tab=plan&planView=ai&studio=room"
-            className="rounded-2xl border border-sky-500/30 bg-gradient-to-b from-sky-500/5 via-surface to-surface p-4 flex flex-col justify-between gap-3 transition hover:border-sky-500 hover:shadow-xs group"
-          >
-            <div className="space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center group-hover:scale-105 transition">
-                  <Building2 className="w-5 h-5" />
+            {/* Studio 2 : Invitations */}
+            {visibility.invite && (
+              <Link
+                href="/dashboard/catalogue?tab=plan&planView=ai&studio=invite"
+                className="rounded-2xl border border-pink-500/30 bg-gradient-to-b from-pink-500/5 via-surface to-surface p-4 flex flex-col justify-between gap-3 transition hover:border-pink-500 hover:shadow-xs group"
+              >
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="w-9 h-9 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center group-hover:scale-105 transition">
+                      <Mail className="w-5 h-5" />
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
+                      Actif
+                    </span>
+                  </div>
+                  <h3 className="font-display text-base font-semibold text-foreground group-hover:text-pink-600 dark:group-hover:text-pink-400 transition">
+                    Invitations &amp; Cartes
+                  </h3>
+                  <div className="flex flex-wrap gap-1">
+                    <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                      Format 9:16
+                    </span>
+                    <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                      WhatsApp
+                    </span>
+                    <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                      Lien RSVP
+                    </span>
+                  </div>
                 </div>
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
-                  Actif
-                </span>
-              </div>
-              <h3 className="font-display text-base font-semibold text-foreground group-hover:text-sky-600 dark:group-hover:text-sky-400 transition">
-                Plans de Salle 3D
-              </h3>
-              <div className="flex flex-wrap gap-1">
-                <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                  Visite WebGL
-                </span>
-                <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                  Tables &amp; Buffets
-                </span>
-                <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                  Immersion
-                </span>
-              </div>
-            </div>
-            <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs font-bold text-sky-600 dark:text-sky-400 group-hover:translate-x-0.5 transition">
-              <span>Agencer</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </div>
-          </Link>
-        </div>
-      </section>
+                <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs font-bold text-pink-600 dark:text-pink-400 group-hover:translate-x-0.5 transition">
+                  <span>Créer</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </div>
+              </Link>
+            )}
+
+            {/* Studio 3 : Plans 3D */}
+            {visibility.room && (
+              <Link
+                href="/dashboard/catalogue?tab=plan&planView=ai&studio=room"
+                className="rounded-2xl border border-sky-500/30 bg-gradient-to-b from-sky-500/5 via-surface to-surface p-4 flex flex-col justify-between gap-3 transition hover:border-sky-500 hover:shadow-xs group"
+              >
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center group-hover:scale-105 transition">
+                      <Building2 className="w-5 h-5" />
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
+                      Actif
+                    </span>
+                  </div>
+                  <h3 className="font-display text-base font-semibold text-foreground group-hover:text-sky-600 dark:group-hover:text-sky-400 transition">
+                    Plans de Salle 3D
+                  </h3>
+                  <div className="flex flex-wrap gap-1">
+                    <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                      Visite WebGL
+                    </span>
+                    <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                      Tables &amp; Buffets
+                    </span>
+                    <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                      Immersion
+                    </span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs font-bold text-sky-600 dark:text-sky-400 group-hover:translate-x-0.5 transition">
+                  <span>Agencer</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </div>
+              </Link>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* ─── 4. EXPLORATION PAR UNIVERS (CHIPS DIRECTS) ─── */}
       <section aria-labelledby="marketplace-heading" className="space-y-3.5">

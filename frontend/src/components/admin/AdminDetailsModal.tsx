@@ -455,6 +455,36 @@ export default function AdminDetailsModal({
               <DetailRow label="ID utilisateur" mono>{data.id}</DetailRow>
             </DetailSection>
 
+            {data.role === 'COMMERCIAL' && (
+              <DetailSection title="Droits délégués Super Admin" icon={Shield}>
+                <DetailRow label="Modèles d’invitation">
+                  <Badge variant={data.commercialPermissions?.canManageTemplates ? 'success' : 'default'}>
+                    {data.commercialPermissions?.canManageTemplates ? 'Autorisé' : 'Non attribué'}
+                  </Badge>
+                </DetailRow>
+                <DetailRow label="Messages automatiques">
+                  <Badge variant={data.commercialPermissions?.canManageMessageTemplates ? 'success' : 'default'}>
+                    {data.commercialPermissions?.canManageMessageTemplates ? 'Autorisé' : 'Non attribué'}
+                  </Badge>
+                </DetailRow>
+                <DetailRow label="Modération catalogue">
+                  <Badge variant={data.commercialPermissions?.canManageCatalog ? 'success' : 'default'}>
+                    {data.commercialPermissions?.canManageCatalog ? 'Autorisé' : 'Non attribué'}
+                  </Badge>
+                </DetailRow>
+                <DetailRow label="Supervision événements">
+                  <Badge variant={data.commercialPermissions?.canManageEvents ? 'success' : 'default'}>
+                    {data.commercialPermissions?.canManageEvents ? 'Autorisé' : 'Non attribué'}
+                  </Badge>
+                </DetailRow>
+                <DetailRow label="Supervision invités">
+                  <Badge variant={data.commercialPermissions?.canManageGuests ? 'success' : 'default'}>
+                    {data.commercialPermissions?.canManageGuests ? 'Autorisé' : 'Non attribué'}
+                  </Badge>
+                </DetailRow>
+              </DetailSection>
+            )}
+
             <DetailSection title="Organisation" icon={Building2}>
               <DetailRow label="Rattachement">
                 {data.tenantName && data.tenantName !== '—' && data.tenantName !== 'N/A'

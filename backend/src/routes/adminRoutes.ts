@@ -1,5 +1,9 @@
-import { Router } from 'express';
-import { requireAuth, requireRole } from '../middleware/auth';
+import { Router, type Response, type NextFunction } from 'express';
+import { requireAuth, requireRole, type AuthenticatedRequest } from '../middleware/auth';
+import {
+  hasCommercialPermission,
+  type CommercialGrantedPermissions,
+} from '../services/platformSettingsService';
 import { 
   getSystemStats, 
   listAdminTenants,
@@ -105,17 +109,35 @@ router.post('/subscriptions/requests/:id/reject', requireRole(['SUPER_ADMIN', 'C
 router.post('/tenants', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), createTenant);
 router.get('/tenants/:id/subscription-history', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), getTenantSubscriptionHistory);
 
-// Super Admin uniquement
-router.use(requireRole(['SUPER_ADMIN']));
+/**
+ * Middleware vérifiant les privilèges Super Admin ou une permission commerciale déléguée.
+ */
+function requireAdminOrCommercialPerm(permission: keyof CommercialGrantedPermissions) {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Non authentifié.' });
+    }
+    if (req.user.role === 'SUPER_ADMIN') {
+      return next();
+    }
+    if (req.user.role === 'COMMERCIAL' && hasCommercialPermission(req.user.id, permission)) {
+      return next();
+    }
+    return res.status(403).json({
+      error: `Accès refusé. Privilèges Super Admin ou droit délégué (${permission}) requis.`,
+    });
+  };
+}
 
-router.get('/reports/revenue', getRevenueReport);
-router.get('/reports/revenue/export', exportRevenueReport);
-router.post('/reports/revenue/notify-payouts', notifyRevenuePayouts);
-router.post('/reports/revenue/mark-paid', markRevenuePayoutPaid);
-router.get('/donations/report', getAdminDonationsReport);
-router.get('/donations/export', exportAdminDonationsReport);
-router.get('/payouts', listAdminSaasPayouts);
-router.patch('/payouts', settleAdminSaasPayout);
+// Super Admin uniquement pour les opérations financières et système critiques
+router.get('/reports/revenue', requireRole(['SUPER_ADMIN']), getRevenueReport);
+router.get('/reports/revenue/export', requireRole(['SUPER_ADMIN']), exportRevenueReport);
+router.post('/reports/revenue/notify-payouts', requireRole(['SUPER_ADMIN']), notifyRevenuePayouts);
+router.post('/reports/revenue/mark-paid', requireRole(['SUPER_ADMIN']), markRevenuePayoutPaid);
+router.get('/donations/report', requireRole(['SUPER_ADMIN']), getAdminDonationsReport);
+router.get('/donations/export', requireRole(['SUPER_ADMIN']), exportAdminDonationsReport);
+router.get('/payouts', requireRole(['SUPER_ADMIN']), listAdminSaasPayouts);
+router.patch('/payouts', requireRole(['SUPER_ADMIN']), settleAdminSaasPayout);
 router.post('/payouts/flexpay', requireRole(['SUPER_ADMIN']), initiateAdminSaasFlexPayPayout);
 router.get(
   '/payouts/flexpay/:transferId/verify',
@@ -123,64 +145,72 @@ router.get(
   verifyAdminSaasFlexPayPayout,
 );
 
-router.get('/ops-overview', getOpsOverview);
-router.get('/insights', getPlatformInsights);
-router.get('/audit-logs', getAuditLogs);
-router.get('/tenants/:id/ops', getTenantOps);
-router.post('/tenants/:id/impersonate', impersonateTenant);
+router.get('/ops-overview', requireRole(['SUPER_ADMIN']), getOpsOverview);
+router.get('/insights', requireRole(['SUPER_ADMIN']), getPlatformInsights);
+router.get('/audit-logs', requireRole(['SUPER_ADMIN']), getAuditLogs);
+router.get('/tenants/:id/ops', requireRole(['SUPER_ADMIN']), getTenantOps);
+router.post('/tenants/:id/impersonate', requireRole(['SUPER_ADMIN']), impersonateTenant);
 
-router.get('/catalog/overview', getCatalogOverview);
-router.get('/catalog/venues', listAdminVenues);
-router.get('/catalog/offerings', listAdminOfferings);
-router.patch('/catalog/vendors/:id/block', toggleVendorBlock);
-router.patch('/catalog/venues/:id/block', toggleVenueBlock);
-router.patch('/catalog/offerings/:id/block', toggleOfferingBlock);
-router.get('/catalog/inquiries', listAdminInquiries);
-router.get('/catalog/bookings', listAdminBookings);
-router.get('/catalog/commissions', listAdminCommissions);
-router.patch('/catalog/bookings/:id/commission', settleMarketplaceCommission);
-router.patch('/catalog/venues/:id/visibility', setVenueListingVisibility);
-router.patch('/catalog/offerings/:id/visibility', setServiceOfferingVisibility);
-router.patch('/catalog/venues/:id/unpublish', unpublishVenueListing);
-router.patch('/catalog/offerings/:id/unpublish', unpublishServiceOffering);
+// Catalogue : Super Admin ou Commercial avec droit 'canManageCatalog'
+router.get('/catalog/overview', requireAdminOrCommercialPerm('canManageCatalog'), getCatalogOverview);
+router.get('/catalog/venues', requireAdminOrCommercialPerm('canManageCatalog'), listAdminVenues);
+router.get('/catalog/offerings', requireAdminOrCommercialPerm('canManageCatalog'), listAdminOfferings);
+router.patch('/catalog/vendors/:id/block', requireAdminOrCommercialPerm('canManageCatalog'), toggleVendorBlock);
+router.patch('/catalog/venues/:id/block', requireAdminOrCommercialPerm('canManageCatalog'), toggleVenueBlock);
+router.patch('/catalog/offerings/:id/block', requireAdminOrCommercialPerm('canManageCatalog'), toggleOfferingBlock);
+router.get('/catalog/inquiries', requireAdminOrCommercialPerm('canManageCatalog'), listAdminInquiries);
+router.get('/catalog/bookings', requireAdminOrCommercialPerm('canManageCatalog'), listAdminBookings);
+router.get('/catalog/commissions', requireAdminOrCommercialPerm('canManageCatalog'), listAdminCommissions);
+router.patch('/catalog/bookings/:id/commission', requireAdminOrCommercialPerm('canManageCatalog'), settleMarketplaceCommission);
+router.patch('/catalog/venues/:id/visibility', requireAdminOrCommercialPerm('canManageCatalog'), setVenueListingVisibility);
+router.patch('/catalog/offerings/:id/visibility', requireAdminOrCommercialPerm('canManageCatalog'), setServiceOfferingVisibility);
+router.patch('/catalog/venues/:id/unpublish', requireAdminOrCommercialPerm('canManageCatalog'), unpublishVenueListing);
+router.patch('/catalog/offerings/:id/unpublish', requireAdminOrCommercialPerm('canManageCatalog'), unpublishServiceOffering);
 
-router.get('/payments/overview', getAdminPaymentsOverview);
-router.get('/payments/attempts', listAdminPaymentAttempts);
-router.get('/ai-tokens/usage', getAdminAiTokenUsage);
-router.get('/ai-tokens/export', exportAdminAiTokenUsage);
-router.post('/ai-tokens/grant', grantAdminAiTokens);
+// Paiements et jetons : Super Admin uniquement
+router.get('/payments/overview', requireRole(['SUPER_ADMIN']), getAdminPaymentsOverview);
+router.get('/payments/attempts', requireRole(['SUPER_ADMIN']), listAdminPaymentAttempts);
+router.get('/ai-tokens/usage', requireRole(['SUPER_ADMIN']), getAdminAiTokenUsage);
+router.get('/ai-tokens/export', requireRole(['SUPER_ADMIN']), exportAdminAiTokenUsage);
+router.post('/ai-tokens/grant', requireRole(['SUPER_ADMIN']), grantAdminAiTokens);
 
-router.put('/tenants/:id', updateTenantPlanOrLicense);
-router.delete('/tenants/:id', deleteTenant);
+// Gestion des organisations et utilisateurs : Super Admin uniquement
+router.put('/tenants/:id', requireRole(['SUPER_ADMIN']), updateTenantPlanOrLicense);
+router.delete('/tenants/:id', requireRole(['SUPER_ADMIN']), deleteTenant);
 
-router.get('/users', getAllUsers);
-router.post('/users', createUser);
-router.put('/users/:id', updateUserRoleOrStatus);
-router.delete('/users/:id', deleteUser);
+router.get('/users', requireRole(['SUPER_ADMIN']), getAllUsers);
+router.post('/users', requireRole(['SUPER_ADMIN']), createUser);
+router.put('/users/:id', requireRole(['SUPER_ADMIN']), updateUserRoleOrStatus);
+router.delete('/users/:id', requireRole(['SUPER_ADMIN']), deleteUser);
 
-router.get('/templates', getAllTemplates);
-router.post('/templates/global', createGlobalTemplate);
-router.put('/templates/:id/landing', toggleTemplateLanding);
-router.delete('/templates/:id', deleteTemplate);
+// Modèles d'invitations : Super Admin ou Commercial avec droit 'canManageTemplates'
+router.get('/templates', requireAdminOrCommercialPerm('canManageTemplates'), getAllTemplates);
+router.post('/templates/global', requireAdminOrCommercialPerm('canManageTemplates'), createGlobalTemplate);
+router.put('/templates/:id/landing', requireAdminOrCommercialPerm('canManageTemplates'), toggleTemplateLanding);
+router.delete('/templates/:id', requireAdminOrCommercialPerm('canManageTemplates'), deleteTemplate);
 
-router.get('/message-templates', getGuestMessageTemplates);
-router.get('/message-templates/:id', getGuestMessageTemplateById);
-router.post('/message-templates', createGuestMessageTemplate);
-router.put('/message-templates/:id', updateGuestMessageTemplate);
-router.post('/message-templates/:id/reset', resetGuestMessageTemplate);
+// Modèles de messages automatiques : Super Admin ou Commercial avec droit 'canManageMessageTemplates'
+router.get('/message-templates', requireAdminOrCommercialPerm('canManageMessageTemplates'), getGuestMessageTemplates);
+router.get('/message-templates/:id', requireAdminOrCommercialPerm('canManageMessageTemplates'), getGuestMessageTemplateById);
+router.post('/message-templates', requireAdminOrCommercialPerm('canManageMessageTemplates'), createGuestMessageTemplate);
+router.put('/message-templates/:id', requireAdminOrCommercialPerm('canManageMessageTemplates'), updateGuestMessageTemplate);
+router.post('/message-templates/:id/reset', requireAdminOrCommercialPerm('canManageMessageTemplates'), resetGuestMessageTemplate);
 
-router.get('/events', getAllEvents);
-router.post('/events', createAdminEvent);
-router.put('/events/:id', updateAdminEvent);
-router.patch('/events/:id/block', toggleAdminEventBlock);
-router.delete('/events/:id', deleteAdminEvent);
+// Événements plateforme : Super Admin ou Commercial avec droit 'canManageEvents'
+router.get('/events', requireAdminOrCommercialPerm('canManageEvents'), getAllEvents);
+router.post('/events', requireAdminOrCommercialPerm('canManageEvents'), createAdminEvent);
+router.put('/events/:id', requireAdminOrCommercialPerm('canManageEvents'), updateAdminEvent);
+router.patch('/events/:id/block', requireAdminOrCommercialPerm('canManageEvents'), toggleAdminEventBlock);
+router.delete('/events/:id', requireAdminOrCommercialPerm('canManageEvents'), deleteAdminEvent);
 
-router.get('/guests', getAllGuests);
-router.post('/guests', createAdminGuest);
-router.put('/guests/:id', updateAdminGuest);
-router.delete('/guests/:id', deleteAdminGuest);
+// Invités plateforme : Super Admin ou Commercial avec droit 'canManageGuests'
+router.get('/guests', requireAdminOrCommercialPerm('canManageGuests'), getAllGuests);
+router.post('/guests', requireAdminOrCommercialPerm('canManageGuests'), createAdminGuest);
+router.put('/guests/:id', requireAdminOrCommercialPerm('canManageGuests'), updateAdminGuest);
+router.delete('/guests/:id', requireAdminOrCommercialPerm('canManageGuests'), deleteAdminGuest);
 
-router.get('/settings', getAdminSettings);
-router.put('/settings', updateAdminSettings);
+// Réglages système : Super Admin uniquement
+router.get('/settings', requireRole(['SUPER_ADMIN']), getAdminSettings);
+router.put('/settings', requireRole(['SUPER_ADMIN']), updateAdminSettings);
 
 export default router;

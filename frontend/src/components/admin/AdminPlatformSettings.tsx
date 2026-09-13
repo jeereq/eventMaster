@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import {
-  Check, Globe, Loader2, Mail, MapPin, MessageSquare, Percent, ShieldAlert, Volume2, Wallet, X, Heart,
+  Check, Globe, Loader2, Mail, MapPin, MessageSquare, Percent, ShieldAlert, Volume2, Wallet, X, Heart, Sparkles, Wand2, Building2, Eye, EyeOff,
 } from 'lucide-react';
 import { Button, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -78,6 +78,11 @@ export type AdminPlatformSettingsValues = Record<string, unknown> & {
   twilioAuthToken?: string;
   twilioPhoneNumber?: string;
   audioNotifications?: typeof DEFAULT_AUDIO_NOTIFICATIONS;
+  studioVisibility?: {
+    budget?: boolean;
+    invite?: boolean;
+    room?: boolean;
+  };
   subscriptionDiscountAccess?: {
     enabled?: boolean;
     periodStart?: string | null;
@@ -90,6 +95,7 @@ export type AdminPlatformSettingsValues = Record<string, unknown> & {
 type SettingsSectionId =
   | 'identity'
   | 'access'
+  | 'studios'
   | 'payments'
   | 'marketplace'
   | 'cities'
@@ -100,6 +106,7 @@ type SettingsSectionId =
 const SECTIONS: Array<{ id: SettingsSectionId; label: string; icon: React.ComponentType<{ className?: string }> }> = [
   { id: 'identity', label: 'Identité', icon: Globe },
   { id: 'access', label: 'Accès', icon: ShieldAlert },
+  { id: 'studios', label: 'Studios IA', icon: Sparkles },
   { id: 'payments', label: 'Paiements', icon: Wallet },
   { id: 'marketplace', label: 'Marketplace', icon: Wallet },
   { id: 'cities', label: 'Villes', icon: MapPin },
@@ -339,6 +346,203 @@ export default function AdminPlatformSettings({
                     </button>
                   );
                 })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {section === 'studios' && (
+          <div className={sectionCardClass}>
+            <SectionTitle icon={Sparkles}>Visibilité des Studios IA & Simulateurs</SectionTitle>
+            <p className="text-xs text-muted -mt-2">
+              Contrôlez la disponibilité des studios créatifs pour tous les utilisateurs de la plateforme (clients, organisateurs, prestataires et vitrine publique). Les onglets, menus et raccourcis s’ajustent automatiquement.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+              {/* Studio Budget */}
+              <div
+                className={cn(
+                  'rounded-2xl border p-4 transition flex flex-col justify-between gap-4',
+                  (value.studioVisibility?.budget ?? true)
+                    ? 'border-primary/40 bg-surface shadow-xs'
+                    : 'border-border bg-surface-muted/60 opacity-80',
+                )}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                      <Wand2 className="w-5 h-5" />
+                    </div>
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full',
+                        (value.studioVisibility?.budget ?? true)
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                          : 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
+                      )}
+                    >
+                      {(value.studioVisibility?.budget ?? true) ? (
+                        <>
+                          <Eye className="w-3.5 h-3.5" />
+                          Visible
+                        </>
+                      ) : (
+                        <>
+                          <EyeOff className="w-3.5 h-3.5" />
+                          Masqué
+                        </>
+                      )}
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-foreground">Simulateur Budget IA</h4>
+                    <p className="text-xs text-muted mt-1 leading-relaxed">
+                      Chiffrage automatique en 3 formules clés en main (Éco, Recommandée, Confort), estimation CDF/USD et devis.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-border flex items-center justify-between">
+                  <span className="text-xs font-semibold text-foreground">Afficher ce studio</span>
+                  <input
+                    type="checkbox"
+                    checked={value.studioVisibility?.budget ?? true}
+                    onChange={(e) =>
+                      patch({
+                        studioVisibility: {
+                          budget: e.target.checked,
+                          invite: value.studioVisibility?.invite ?? true,
+                          room: value.studioVisibility?.room ?? true,
+                        },
+                      })
+                    }
+                    className="w-5 h-5 text-primary border-border rounded focus:ring-primary cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* Studio Invitations */}
+              <div
+                className={cn(
+                  'rounded-2xl border p-4 transition flex flex-col justify-between gap-4',
+                  (value.studioVisibility?.invite ?? true)
+                    ? 'border-pink-500/40 bg-surface shadow-xs'
+                    : 'border-border bg-surface-muted/60 opacity-80',
+                )}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center">
+                      <Mail className="w-5 h-5" />
+                    </div>
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full',
+                        (value.studioVisibility?.invite ?? true)
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                          : 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
+                      )}
+                    >
+                      {(value.studioVisibility?.invite ?? true) ? (
+                        <>
+                          <Eye className="w-3.5 h-3.5" />
+                          Visible
+                        </>
+                      ) : (
+                        <>
+                          <EyeOff className="w-3.5 h-3.5" />
+                          Masqué
+                        </>
+                      )}
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-foreground">Studio Invitations IA</h4>
+                    <p className="text-xs text-muted mt-1 leading-relaxed">
+                      Concepteur et générateur d’invitations graphiques 9:16 pour WhatsApp avec lien RSVP et confirmations instantanées.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-border flex items-center justify-between">
+                  <span className="text-xs font-semibold text-foreground">Afficher ce studio</span>
+                  <input
+                    type="checkbox"
+                    checked={value.studioVisibility?.invite ?? true}
+                    onChange={(e) =>
+                      patch({
+                        studioVisibility: {
+                          budget: value.studioVisibility?.budget ?? true,
+                          invite: e.target.checked,
+                          room: value.studioVisibility?.room ?? true,
+                        },
+                      })
+                    }
+                    className="w-5 h-5 text-primary border-border rounded focus:ring-primary cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* Studio Plans 3D */}
+              <div
+                className={cn(
+                  'rounded-2xl border p-4 transition flex flex-col justify-between gap-4',
+                  (value.studioVisibility?.room ?? true)
+                    ? 'border-sky-500/40 bg-surface shadow-xs'
+                    : 'border-border bg-surface-muted/60 opacity-80',
+                )}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                      <Building2 className="w-5 h-5" />
+                    </div>
+                    <span
+                      className={cn(
+                        'inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full',
+                        (value.studioVisibility?.room ?? true)
+                          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                          : 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
+                      )}
+                    >
+                      {(value.studioVisibility?.room ?? true) ? (
+                        <>
+                          <Eye className="w-3.5 h-3.5" />
+                          Visible
+                        </>
+                      ) : (
+                        <>
+                          <EyeOff className="w-3.5 h-3.5" />
+                          Masqué
+                        </>
+                      )}
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-foreground">Studio Plans 3D IA</h4>
+                    <p className="text-xs text-muted mt-1 leading-relaxed">
+                      Aménagement interactif de salle de réception : disposition des tables, pistes de danse, podiums et visite 3D immersive.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-border flex items-center justify-between">
+                  <span className="text-xs font-semibold text-foreground">Afficher ce studio</span>
+                  <input
+                    type="checkbox"
+                    checked={value.studioVisibility?.room ?? true}
+                    onChange={(e) =>
+                      patch({
+                        studioVisibility: {
+                          budget: value.studioVisibility?.budget ?? true,
+                          invite: value.studioVisibility?.invite ?? true,
+                          room: e.target.checked,
+                        },
+                      })
+                    }
+                    className="w-5 h-5 text-primary border-border rounded focus:ring-primary cursor-pointer"
+                  />
+                </div>
               </div>
             </div>
           </div>

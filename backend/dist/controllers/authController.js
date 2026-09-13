@@ -97,6 +97,7 @@ function publicUser(user) {
         avatarUrl: user.avatarUrl ?? null,
         role: user.role,
         orgRole: user.orgRole ?? null,
+        commercialPermissions: user.role === 'COMMERCIAL' ? (0, platformSettingsService_1.getCommercialPermissions)(user.id) : null,
     };
 }
 function buildAuthToken(user, options) {

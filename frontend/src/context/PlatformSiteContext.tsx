@@ -21,6 +21,18 @@ import {
   type DonationsAccess,
 } from '@/lib/donationsAccess';
 
+export interface StudioVisibilitySettings {
+  budget: boolean;
+  invite: boolean;
+  room: boolean;
+}
+
+export const DEFAULT_STUDIO_VISIBILITY: StudioVisibilitySettings = {
+  budget: true,
+  invite: true,
+  room: true,
+};
+
 export interface PublicSiteConfig {
   platformName: string;
   platformTagline: string;
@@ -55,6 +67,7 @@ export interface PublicSiteConfig {
   aiTokenMinPurchaseCdf: number;
   welcomeAiGrants: WelcomeGrantRules;
   audioNotifications: AudioNotificationsSettings;
+  studioVisibility: StudioVisibilitySettings;
   subscriptionDiscountAccess: {
     enabled: boolean;
     periodStart: string | null;
@@ -98,6 +111,7 @@ export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
   aiTokenMinPurchaseCdf: 2500,
   welcomeAiGrants: DEFAULT_WELCOME_AI_GRANTS,
   audioNotifications: DEFAULT_AUDIO_NOTIFICATIONS,
+  studioVisibility: DEFAULT_STUDIO_VISIBILITY,
   subscriptionDiscountAccess: { enabled: true, periodStart: null, periodEnd: null },
   donationsAccess: DEFAULT_DONATIONS_ACCESS,
 };

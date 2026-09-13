@@ -326,11 +326,16 @@ export default function AdminCataloguePage() {
   const [ficheLoading, setFicheLoading] = useState(false);
   const [openingId, setOpeningId] = useState<string | null>(null);
 
+  const canAccess = Boolean(
+    user?.role === 'SUPER_ADMIN' ||
+    (user?.role === 'COMMERCIAL' && user?.commercialPermissions?.canManageCatalog)
+  );
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) return;
-    if (user.role !== 'SUPER_ADMIN') router.replace('/dashboard');
-  }, [authLoading, user, router]);
+    if (!canAccess) router.replace('/dashboard');
+  }, [authLoading, user, canAccess, router]);
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -341,16 +346,16 @@ export default function AdminCataloguePage() {
   }, [qInput]);
 
   const loadOverview = useCallback(async () => {
-    if (user?.role !== 'SUPER_ADMIN') return;
+    if (!canAccess) return;
     try {
       setOverview(await api.get('/admin/catalog/overview'));
     } catch {
       /* compteurs facultatifs */
     }
-  }, [user?.role]);
+  }, [canAccess]);
 
   const load = useCallback(async () => {
-    if (user?.role !== 'SUPER_ADMIN') return;
+    if (!canAccess) return;
     setLoading(true);
     setError('');
     try {
@@ -490,7 +495,7 @@ export default function AdminCataloguePage() {
     }
   };
 
-  if (authLoading || user?.role !== 'SUPER_ADMIN') {
+  if (authLoading || !canAccess) {
     return (
       <div className="flex justify-center py-16">
         <Loader2 className="w-6 h-6 animate-spin text-primary" />

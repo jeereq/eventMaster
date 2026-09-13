@@ -711,6 +711,7 @@ async function getAllUsers(req, res) {
                 updatedAt: u.updatedAt,
                 commissionRate: u.commissionRate,
                 renewalCommissionRate: u.renewalCommissionRate,
+                commercialPermissions: u.role === 'COMMERCIAL' ? (0, platformSettingsService_1.getCommercialPermissions)(u.id) : null,
             };
         }), total, page, pageSize));
     }
@@ -756,6 +757,9 @@ async function createUser(req, res) {
         });
         if (newUser.role === 'COMMERCIAL') {
             await (0, commercialService_1.ensureCommercialReferralCode)(newUser.id);
+            if (req.body.commercialPermissions) {
+                await (0, platformSettingsService_1.setCommercialPermissions)(newUser.id, req.body.commercialPermissions);
+            }
         }
         // If this is the manager of the tenant and tenant managerId is not set, we can set it
         if (resolvedTenantId && resolvedRole === 'USER') {
@@ -817,6 +821,9 @@ async function updateUserRoleOrStatus(req, res) {
         });
         if (updatedUser.role === 'COMMERCIAL') {
             await (0, commercialService_1.ensureCommercialReferralCode)(updatedUser.id);
+            if (req.body.commercialPermissions !== undefined) {
+                await (0, platformSettingsService_1.setCommercialPermissions)(updatedUser.id, req.body.commercialPermissions);
+            }
         }
         await (0, adminAuditService_1.auditReq)(req, {
             action: 'USER_UPDATE',
@@ -850,6 +857,9 @@ async function deleteUser(req, res) {
         await db_1.prisma.user.delete({
             where: { id },
         });
+        if (existingUser.role === 'COMMERCIAL') {
+            await (0, platformSettingsService_1.removeCommercialPermissions)(id);
+        }
         await (0, adminAuditService_1.auditReq)(req, {
             action: 'USER_DELETE',
             targetType: 'user',

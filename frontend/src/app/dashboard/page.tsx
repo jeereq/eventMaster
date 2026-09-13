@@ -155,6 +155,7 @@ interface AdminUserItem {
   updatedAt?: string;
   commissionRate?: number | null;
   renewalCommissionRate?: number | null;
+  commercialPermissions?: import('@/context/AuthContext').CommercialGrantedPermissions | null;
 }
 
 interface AdminTemplateItem {
@@ -472,7 +473,11 @@ function DashboardPageContent() {
     if (isPlatformStaff(user?.role) && (tabParam || user?.role === 'SUPER_ADMIN')) {
       const legacySubscriptions = tabParam === 'subscriptions' ? 'subscription-requests' : tabParam;
       const allowedTabs = user?.role === 'COMMERCIAL'
-        ? ['tenants', 'subscription-requests', 'invoices']
+        ? [
+            'tenants', 'subscription-requests', 'invoices',
+            ...(user.commercialPermissions?.canManageTemplates ? ['templates'] : []),
+            ...(user.commercialPermissions?.canManageMessageTemplates ? ['message-templates'] : []),
+          ]
         : [
           'overview', 'tenants', 'users', 'templates', 'message-templates', 'analytics', 'settings',
           'subscription-requests', 'subscription-plans', 'invoices',
@@ -488,22 +493,27 @@ function DashboardPageContent() {
   useEffect(() => {
     if (searchParams.get('saved') !== '1' || tabParam !== 'templates') return;
     setTemplateSavedFlash(true);
-    if (user?.role === 'SUPER_ADMIN') {
+    if (user?.role === 'SUPER_ADMIN' || (user?.role === 'COMMERCIAL' && user?.commercialPermissions?.canManageTemplates)) {
       void loadTemplates();
     }
     const t = setTimeout(() => setTemplateSavedFlash(false), 4500);
     router.replace('/dashboard?tab=templates');
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- flash one-shot après retour concepteur
-  }, [searchParams, tabParam, router, user?.role]);
+  }, [searchParams, tabParam, router, user]);
 
   useEffect(() => {
     if (user?.role !== 'COMMERCIAL') return;
-    if (!COMMERCIAL_PLATFORM_TABS.includes(activeTab as (typeof COMMERCIAL_PLATFORM_TABS)[number])) {
+    const commercialAllowed = [
+      ...COMMERCIAL_PLATFORM_TABS,
+      ...(user.commercialPermissions?.canManageTemplates ? ['templates'] : []),
+      ...(user.commercialPermissions?.canManageMessageTemplates ? ['message-templates'] : []),
+    ];
+    if (!commercialAllowed.includes(activeTab as any)) {
       setActiveTab('tenants');
       router.replace('/dashboard?tab=tenants');
     }
-  }, [user?.role, activeTab, router]);
+  }, [user?.role, user?.commercialPermissions, activeTab, router]);
 
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [templates, setTemplates] = useState<AdminTemplateItem[]>([]);
@@ -666,6 +676,13 @@ function DashboardPageContent() {
   const [modalUserTenantId, setUserTenantId] = useState('');
   const [modalCommissionRate, setModalCommissionRate] = useState('30');
   const [modalRenewalCommissionRate, setModalRenewalCommissionRate] = useState('20');
+  const [modalCommercialPermissions, setModalCommercialPermissions] = useState({
+    canManageTemplates: false,
+    canManageMessageTemplates: false,
+    canManageCatalog: false,
+    canManageEvents: false,
+    canManageGuests: false,
+  });
   const [updatingUser, setUpdatingUser] = useState(false);
 
   // Template CRUD Modals states — édition via concepteur visuel uniquement
@@ -768,7 +785,8 @@ function DashboardPageContent() {
 
   // Load templates when templates tab is active
   useEffect(() => {
-    if (user?.role === 'SUPER_ADMIN' && activeTab === 'templates') {
+    const canLoadTemplates = user?.role === 'SUPER_ADMIN' || (user?.role === 'COMMERCIAL' && user?.commercialPermissions?.canManageTemplates);
+    if (canLoadTemplates && activeTab === 'templates') {
       loadTemplates();
     }
   }, [activeTab, user, templatesPage, templatesPageSize, deferredSearch, filterType]);
@@ -1374,6 +1392,13 @@ function DashboardPageContent() {
     setUserTenantId('');
     setModalCommissionRate('30');
     setModalRenewalCommissionRate('20');
+    setModalCommercialPermissions({
+      canManageTemplates: false,
+      canManageMessageTemplates: false,
+      canManageCatalog: false,
+      canManageEvents: false,
+      canManageGuests: false,
+    });
     setIsUserModalOpen(true);
   };
 
@@ -1388,6 +1413,13 @@ function DashboardPageContent() {
     setUserTenantId(u.tenantId || '');
     setModalCommissionRate(String(Math.round((u.commissionRate ?? 0.3) * 100)));
     setModalRenewalCommissionRate(String(Math.round((u.renewalCommissionRate ?? 0.2) * 100)));
+    setModalCommercialPermissions({
+      canManageTemplates: Boolean(u.commercialPermissions?.canManageTemplates),
+      canManageMessageTemplates: Boolean(u.commercialPermissions?.canManageMessageTemplates),
+      canManageCatalog: Boolean(u.commercialPermissions?.canManageCatalog),
+      canManageEvents: Boolean(u.commercialPermissions?.canManageEvents),
+      canManageGuests: Boolean(u.commercialPermissions?.canManageGuests),
+    });
     setIsUserModalOpen(true);
   };
 
@@ -1415,6 +1447,7 @@ function DashboardPageContent() {
           ...(modalRole === 'COMMERCIAL' ? {
             commissionRate: parseFloat(modalCommissionRate) / 100,
             renewalCommissionRate: parseFloat(modalRenewalCommissionRate) / 100,
+            commercialPermissions: modalCommercialPermissions,
           } : {}),
         });
       } else if (selectedUser) {
@@ -1428,6 +1461,7 @@ function DashboardPageContent() {
           ...(modalRole === 'COMMERCIAL' ? {
             commissionRate: parseFloat(modalCommissionRate) / 100,
             renewalCommissionRate: parseFloat(modalRenewalCommissionRate) / 100,
+            commercialPermissions: modalCommercialPermissions,
           } : {}),
         });
       }
@@ -1786,6 +1820,11 @@ function DashboardPageContent() {
   if (isPlatformStaff(user?.role)) {
     const isSuperAdmin = user?.role === 'SUPER_ADMIN';
     const isCommercialPlatform = user?.role === 'COMMERCIAL';
+    const canManageTemplates = isSuperAdmin || Boolean(user?.commercialPermissions?.canManageTemplates);
+    const canManageMessageTemplates = isSuperAdmin || Boolean(user?.commercialPermissions?.canManageMessageTemplates);
+    const canManageEvents = isSuperAdmin || Boolean(user?.commercialPermissions?.canManageEvents);
+    const canManageGuests = isSuperAdmin || Boolean(user?.commercialPermissions?.canManageGuests);
+    const canManageCatalog = isSuperAdmin || Boolean(user?.commercialPermissions?.canManageCatalog);
     const pendingSubscriptionCount = subscriptionRequests.filter((r) => r.status === 'PENDING').length;
     // Filter tenants
     const filteredTenants = adminTenants;
@@ -2068,7 +2107,7 @@ function DashboardPageContent() {
                     </Button>
                   )}
 
-                  {activeTab === 'templates' && isSuperAdmin && (
+                  {activeTab === 'templates' && canManageTemplates && (
                     <Link href="/dashboard/templates?new=1&from=admin">
                       <Button type="button" size="sm" leftIcon={<Plus className="w-4 h-4" />}>
                         Nouveau modèle
@@ -2253,7 +2292,7 @@ function DashboardPageContent() {
                     </div>
                   )}
 
-                  {activeTab === 'templates' && isSuperAdmin && (
+                  {activeTab === 'templates' && canManageTemplates && (
                     <div className="flex items-center gap-2">
                       <Filter className="w-4.5 h-4.5 text-muted flex-shrink-0" />
                       <select
@@ -2614,6 +2653,35 @@ function DashboardPageContent() {
                                         ) : null}
                                       </div>
                                       <p className="truncate text-xs text-muted">{u.tenantName || 'Sans organisation'}</p>
+                                      {u.role === 'COMMERCIAL' && (
+                                        <div className="flex flex-wrap gap-1 pt-0.5">
+                                          {u.commercialPermissions?.canManageTemplates && (
+                                            <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                                              Modèles
+                                            </span>
+                                          )}
+                                          {u.commercialPermissions?.canManageMessageTemplates && (
+                                            <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-700 dark:text-sky-300">
+                                              Messages
+                                            </span>
+                                          )}
+                                          {u.commercialPermissions?.canManageCatalog && (
+                                            <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                                              Catalogue
+                                            </span>
+                                          )}
+                                          {u.commercialPermissions?.canManageEvents && (
+                                            <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                                              Événements
+                                            </span>
+                                          )}
+                                          {u.commercialPermissions?.canManageGuests && (
+                                            <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-700 dark:text-purple-300">
+                                              Invités
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
                                       <p className="truncate text-[11px] text-muted">
                                         {[
                                           u.tenantPlan,
@@ -2664,7 +2732,7 @@ function DashboardPageContent() {
                 )}
 
                 {/* Templates Tab */}
-                {activeTab === 'templates' && isSuperAdmin && (
+                {activeTab === 'templates' && canManageTemplates && (
                   <div className="space-y-6">
                     {templateSavedFlash && (
                       <Alert variant="success">
@@ -4773,31 +4841,143 @@ function DashboardPageContent() {
                   </div>
 
                   {modalRole === 'COMMERCIAL' && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-muted uppercase tracking-wider">1er paiement (%)</label>
-                        <input
-                          type="number"
-                          min={0}
-                          max={100}
-                          value={modalCommissionRate}
-                          onChange={(e) => setModalCommissionRate(e.target.value)}
-                          className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm"
-                        />
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-muted uppercase tracking-wider">1er paiement (%)</label>
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={modalCommissionRate}
+                            onChange={(e) => setModalCommissionRate(e.target.value)}
+                            className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-muted uppercase tracking-wider">Paiements suivants (%)</label>
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={modalRenewalCommissionRate}
+                            onChange={(e) => setModalRenewalCommissionRate(e.target.value)}
+                            className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm"
+                          />
+                        </div>
+                        <p className="col-span-2 text-[11px] text-muted">Par défaut : 30 % au premier paiement, puis 20 %.</p>
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-muted uppercase tracking-wider">Paiements suivants (%)</label>
-                        <input
-                          type="number"
-                          min={0}
-                          max={100}
-                          value={modalRenewalCommissionRate}
-                          onChange={(e) => setModalRenewalCommissionRate(e.target.value)}
-                          className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm"
-                        />
+
+                      {/* Droits délégués Super Admin */}
+                      <div className="space-y-3 p-4 bg-surface rounded-xl border border-border">
+                        <div className="flex items-center gap-2">
+                          <Shield className="w-4 h-4 text-primary shrink-0" />
+                          <span className="text-xs font-bold text-foreground uppercase tracking-wider">
+                            Droits délégués (Accès réservés)
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted leading-relaxed">
+                          Attribuez à ce commercial l&apos;accès à certaines fonctionnalités réservées au Super Admin pour lui permettre d&apos;administrer la plateforme.
+                        </p>
+
+                        <div className="space-y-2 pt-1">
+                          <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border hover:bg-surface-muted/50 cursor-pointer transition">
+                            <input
+                              type="checkbox"
+                              checked={modalCommercialPermissions.canManageTemplates}
+                              onChange={(e) =>
+                                setModalCommercialPermissions((prev) => ({ ...prev, canManageTemplates: e.target.checked }))
+                              }
+                              className="mt-0.5 w-4 h-4 text-primary rounded border-border focus:ring-primary"
+                            />
+                            <div>
+                              <span className="text-sm font-semibold text-foreground block">
+                                Conception & Édition des modèles
+                              </span>
+                              <span className="text-xs text-muted block mt-0.5">
+                                Accès à la gestion, conception visuelle et publication des modèles d&apos;invitation sur la vitrine.
+                              </span>
+                            </div>
+                          </label>
+
+                          <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border hover:bg-surface-muted/50 cursor-pointer transition">
+                            <input
+                              type="checkbox"
+                              checked={modalCommercialPermissions.canManageMessageTemplates}
+                              onChange={(e) =>
+                                setModalCommercialPermissions((prev) => ({ ...prev, canManageMessageTemplates: e.target.checked }))
+                              }
+                              className="mt-0.5 w-4 h-4 text-primary rounded border-border focus:ring-primary"
+                            />
+                            <div>
+                              <span className="text-sm font-semibold text-foreground block">
+                                Modèles de messages automatiques
+                              </span>
+                              <span className="text-xs text-muted block mt-0.5">
+                                Création et personnalisation des templates de messages WhatsApp, SMS et e-mail.
+                              </span>
+                            </div>
+                          </label>
+
+                          <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border hover:bg-surface-muted/50 cursor-pointer transition">
+                            <input
+                              type="checkbox"
+                              checked={modalCommercialPermissions.canManageCatalog}
+                              onChange={(e) =>
+                                setModalCommercialPermissions((prev) => ({ ...prev, canManageCatalog: e.target.checked }))
+                              }
+                              className="mt-0.5 w-4 h-4 text-primary rounded border-border focus:ring-primary"
+                            />
+                            <div>
+                              <span className="text-sm font-semibold text-foreground block">
+                                Modération du catalogue prestataire
+                              </span>
+                              <span className="text-xs text-muted block mt-0.5">
+                                Validation et gestion des salles, prestataires et offres de service.
+                              </span>
+                            </div>
+                          </label>
+
+                          <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border hover:bg-surface-muted/50 cursor-pointer transition">
+                            <input
+                              type="checkbox"
+                              checked={modalCommercialPermissions.canManageEvents}
+                              onChange={(e) =>
+                                setModalCommercialPermissions((prev) => ({ ...prev, canManageEvents: e.target.checked }))
+                              }
+                              className="mt-0.5 w-4 h-4 text-primary rounded border-border focus:ring-primary"
+                            />
+                            <div>
+                              <span className="text-sm font-semibold text-foreground block">
+                                Supervision des événements plateforme
+                              </span>
+                              <span className="text-xs text-muted block mt-0.5">
+                                Consultation et supervision des événements de toutes les organisations.
+                              </span>
+                            </div>
+                          </label>
+
+                          <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border hover:bg-surface-muted/50 cursor-pointer transition">
+                            <input
+                              type="checkbox"
+                              checked={modalCommercialPermissions.canManageGuests}
+                              onChange={(e) =>
+                                setModalCommercialPermissions((prev) => ({ ...prev, canManageGuests: e.target.checked }))
+                              }
+                              className="mt-0.5 w-4 h-4 text-primary rounded border-border focus:ring-primary"
+                            />
+                            <div>
+                              <span className="text-sm font-semibold text-foreground block">
+                                Supervision des listes d&apos;invités
+                              </span>
+                              <span className="text-xs text-muted block mt-0.5">
+                                Suivi des listes d&apos;invités, pointages et exports des événements plateforme.
+                              </span>
+                            </div>
+                          </label>
+                        </div>
                       </div>
-                      <p className="col-span-2 text-[11px] text-muted">Par défaut : 30 % au premier paiement, puis 20 %.</p>
-                    </div>
+                    </>
                   )}
 
                   {/* Rattachement Tenant */}

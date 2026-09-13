@@ -29,6 +29,14 @@ export interface OrgAccess {
   isProtocolOnly: boolean;
 }
 
+export interface CommercialGrantedPermissions {
+  canManageTemplates?: boolean;
+  canManageMessageTemplates?: boolean;
+  canManageCatalog?: boolean;
+  canManageEvents?: boolean;
+  canManageGuests?: boolean;
+}
+
 interface User {
   id: string;
   email: string;
@@ -39,6 +47,7 @@ interface User {
   role: 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER';
   orgRole?: 'MANAGER' | 'PROTOCOL' | 'COMMERCIAL' | null;
   impersonatedBy?: string | null;
+  commercialPermissions?: CommercialGrantedPermissions | null;
 }
 
 interface Tenant {

@@ -13,6 +13,7 @@ import {
   Coins,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { isProtocolUser } from '@/lib/protocolAccess';
 import { cn } from '@/lib/cn';
 import {
@@ -79,33 +80,44 @@ export default function DashboardAiStudios({
   budget: React.ReactNode;
 }) {
   const { access } = useAuth();
+  const { site } = usePlatformSite();
+  const visibility = site?.studioVisibility ?? { budget: true, invite: true, room: true };
+
   const protocolLocked = isProtocolUser(access);
   // Le studio 3D est désormais accessible pour tous les utilisateurs non restreints par le protocole (y compris les clients)
-  const showRoom = !protocolLocked;
+  const showRoom = !protocolLocked && visibility.room;
 
   const studioOptions: StudioOption[] = [
-    {
-      id: 'budget',
-      title: 'Simulateur Budget',
-      subtitle: 'Formules clés en main & Devis',
-      description: 'Chiffre 3 formules complètes (Éco, Recommandée, Confort) avec prestataires réels.',
-      icon: Wand2,
-      badge: '3 formules catalogue',
-      pillColor: 'text-amber-700 bg-amber-500/15 border-amber-500/30 dark:text-amber-300',
-      iconBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-      features: ['Salles adaptées', 'Traiteurs & Déco', 'Estimation FC & USD'],
-    },
-    {
-      id: 'invite',
-      title: 'Studio Invitations',
-      subtitle: 'Cartes 9:16 WhatsApp & RSVP',
-      description: 'Cartons d’invitation personnalisés 9:16 pour WhatsApp avec confirmation RSVP invité.',
-      icon: Mail,
-      badge: 'Format WhatsApp 9:16',
-      pillColor: 'text-pink-700 bg-pink-500/15 border-pink-500/30 dark:text-pink-300',
-      iconBg: 'bg-pink-500/10 text-pink-600 dark:text-pink-400',
-      features: ['Format 9:16 mobile', 'Partage WhatsApp', 'Lien RSVP invité'],
-    },
+    ...(visibility.budget
+      ? [
+          {
+            id: 'budget' as DashboardAiStudioId,
+            title: 'Simulateur Budget',
+            subtitle: 'Formules clés en main & Devis',
+            description: 'Chiffre 3 formules complètes (Éco, Recommandée, Confort) avec prestataires réels.',
+            icon: Wand2,
+            badge: '3 formules catalogue',
+            pillColor: 'text-amber-700 bg-amber-500/15 border-amber-500/30 dark:text-amber-300',
+            iconBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+            features: ['Salles adaptées', 'Traiteurs & Déco', 'Estimation FC & USD'],
+          },
+        ]
+      : []),
+    ...(visibility.invite
+      ? [
+          {
+            id: 'invite' as DashboardAiStudioId,
+            title: 'Studio Invitations',
+            subtitle: 'Cartes 9:16 WhatsApp & RSVP',
+            description: 'Cartons d’invitation personnalisés 9:16 pour WhatsApp avec confirmation RSVP invité.',
+            icon: Mail,
+            badge: 'Format WhatsApp 9:16',
+            pillColor: 'text-pink-700 bg-pink-500/15 border-pink-500/30 dark:text-pink-300',
+            iconBg: 'bg-pink-500/10 text-pink-600 dark:text-pink-400',
+            features: ['Format 9:16 mobile', 'Partage WhatsApp', 'Lien RSVP invité'],
+          },
+        ]
+      : []),
     ...(showRoom
       ? [
           {
@@ -122,6 +134,25 @@ export default function DashboardAiStudios({
         ]
       : []),
   ];
+
+  // Auto-sélection si le studio actuel a été masqué par le superadmin
+  React.useEffect(() => {
+    if (studioOptions.length > 0 && !studioOptions.some((s) => s.id === value)) {
+      onChange(studioOptions[0].id);
+    }
+  }, [studioOptions, value, onChange]);
+
+  if (studioOptions.length === 0) {
+    return (
+      <div className="rounded-2xl border border-border bg-surface-muted/50 p-8 text-center space-y-3">
+        <Sparkles className="w-8 h-8 text-muted mx-auto" />
+        <h3 className="text-base font-semibold text-foreground">Studios temporairement indisponibles</h3>
+        <p className="text-xs text-muted max-w-md mx-auto">
+          Les studios IA et simulateurs sont actuellement masqués par l’administration de la plateforme. Vous pouvez continuer d&apos;utiliser le catalogue et vos réservations normalement.
+        </p>
+      </div>
+    );
+  }
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
     const ids = studioOptions.map((s) => s.id);

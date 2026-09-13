@@ -31,6 +31,9 @@ import {
   mergeSettingsUpdate,
   maskSecretsForAdmin,
   DEFAULT_PLATFORM_SETTINGS,
+  getCommercialPermissions,
+  setCommercialPermissions,
+  removeCommercialPermissions,
 } from '../services/platformSettingsService';
 import { auditReq } from '../services/adminAuditService';
 import { adminPager, adminQueryString, adminSearch, listPayload, prismaAnd } from '../utils/adminPager';
@@ -814,6 +817,7 @@ export async function getAllUsers(req: AuthenticatedRequest, res: Response) {
             updatedAt: u.updatedAt,
             commissionRate: u.commissionRate,
             renewalCommissionRate: u.renewalCommissionRate,
+            commercialPermissions: u.role === 'COMMERCIAL' ? getCommercialPermissions(u.id) : null,
           };
         }),
         total,
@@ -871,6 +875,9 @@ export async function createUser(req: AuthenticatedRequest, res: Response) {
 
     if (newUser.role === 'COMMERCIAL') {
       await ensureCommercialReferralCode(newUser.id);
+      if (req.body.commercialPermissions) {
+        await setCommercialPermissions(newUser.id, req.body.commercialPermissions);
+      }
     }
 
     // If this is the manager of the tenant and tenant managerId is not set, we can set it
@@ -940,6 +947,9 @@ export async function updateUserRoleOrStatus(req: AuthenticatedRequest, res: Res
 
     if (updatedUser.role === 'COMMERCIAL') {
       await ensureCommercialReferralCode(updatedUser.id);
+      if (req.body.commercialPermissions !== undefined) {
+        await setCommercialPermissions(updatedUser.id, req.body.commercialPermissions);
+      }
     }
 
     await auditReq(req, {
@@ -978,6 +988,10 @@ export async function deleteUser(req: AuthenticatedRequest, res: Response) {
     await prisma.user.delete({
       where: { id },
     });
+
+    if (existingUser.role === 'COMMERCIAL') {
+      await removeCommercialPermissions(id);
+    }
 
     await auditReq(req, {
       action: 'USER_DELETE',

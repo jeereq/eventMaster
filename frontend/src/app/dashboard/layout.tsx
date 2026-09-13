@@ -170,8 +170,9 @@ function buildDashboardNav(opts: {
  commercialNetwork?: boolean;
  tenantPlan?: string | null;
  audience?: string | null;
+ commercialPermissions?: import('@/context/AuthContext').CommercialGrantedPermissions | null;
 }): NavSection[] {
- const { role, access, workspace, accountKind, isClientAccount, tenantPlan, audience } = opts;
+ const { role, access, workspace, accountKind, isClientAccount, tenantPlan, audience, commercialPermissions } = opts;
  const vendorOnly = accountKind === 'VENDOR';
  const isServiceProvider =
   tenantPlan === 'SERVICE' ||
@@ -213,12 +214,62 @@ function buildDashboardNav(opts: {
  }
 
  if (role === 'COMMERCIAL') {
+  const delegatedItems: NavItem[] = [];
+  if (commercialPermissions?.canManageTemplates) {
+   delegatedItems.push({
+    name: 'Modèles invitation',
+    href: '/dashboard?tab=templates',
+    tab: 'templates',
+    tourId: 'nav-templates',
+    icon: FileText,
+    description: 'Conception et modification des modèles d’invitation',
+   });
+  }
+  if (commercialPermissions?.canManageMessageTemplates) {
+   delegatedItems.push({
+    name: 'Messages automatiques',
+    href: '/dashboard?tab=message-templates',
+    tab: 'message-templates',
+    tourId: 'nav-message-templates',
+    icon: MessageSquare,
+    description: 'Modèles WhatsApp et e-mail de rappel',
+   });
+  }
+  if (commercialPermissions?.canManageCatalog) {
+   delegatedItems.push({
+    name: 'Catalogue plateforme',
+    href: '/dashboard/admin/catalogue',
+    tourId: 'nav-catalog-admin',
+    icon: Store,
+    description: 'Modération des prestataires et offres',
+   });
+  }
+  if (commercialPermissions?.canManageEvents) {
+   delegatedItems.push({
+    name: 'Événements plateforme',
+    href: '/dashboard/admin/events',
+    tourId: 'nav-events-admin',
+    icon: Calendar,
+    description: 'Supervision des événements créés',
+   });
+  }
+  if (commercialPermissions?.canManageGuests) {
+   delegatedItems.push({
+    name: 'Invités plateforme',
+    href: '/dashboard/admin/guests',
+    tourId: 'nav-guests',
+    icon: Users,
+    description: 'Supervision des listes d’invités',
+   });
+  }
+
   return buildNavSections(
    navSection('Portefeuille', [
     { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', tourId: 'nav-tenants', icon: Building2 },
     { name: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', tourId: 'nav-subscription-requests', icon: Clock },
     { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', tourId: 'nav-invoices', icon: FileText },
    ]),
+   delegatedItems.length ? navSection('Accès réservés délégués', delegatedItems) : null,
    navSection('Gains', [
     { name: 'Parrainage & commissions', href: '/dashboard/commercial', tourId: 'nav-commercial', icon: Briefcase },
    ]),
@@ -737,6 +788,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   commercialNetwork: Boolean(planFeatures?.commercialNetwork),
   tenantPlan: tenant?.plan,
   audience: planFeatures?.audience,
+  commercialPermissions: user?.commercialPermissions,
  });
 
  const showNotifications = Boolean(user);

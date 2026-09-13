@@ -66,6 +66,55 @@ export const DEFAULT_AUDIO_NOTIFICATIONS: AudioNotificationsSettings = {
   default: 'chime',
 };
 
+export interface StudioVisibilitySettings {
+  budget: boolean;
+  invite: boolean;
+  room: boolean;
+}
+
+export const DEFAULT_STUDIO_VISIBILITY: StudioVisibilitySettings = {
+  budget: true,
+  invite: true,
+  room: true,
+};
+
+export function sanitizeStudioVisibility(raw: unknown): StudioVisibilitySettings {
+  const src = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  return {
+    budget: src.budget !== false,
+    invite: src.invite !== false,
+    room: src.room !== false,
+  };
+}
+
+export interface CommercialGrantedPermissions {
+  canManageTemplates?: boolean;
+  canManageMessageTemplates?: boolean;
+  canManageCatalog?: boolean;
+  canManageEvents?: boolean;
+  canManageGuests?: boolean;
+}
+
+export function sanitizeCommercialPermissions(raw: unknown): Record<string, CommercialGrantedPermissions> {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+    return {};
+  }
+  const result: Record<string, CommercialGrantedPermissions> = {};
+  for (const [userId, perms] of Object.entries(raw as Record<string, unknown>)) {
+    if (perms && typeof perms === 'object' && !Array.isArray(perms)) {
+      const p = perms as Record<string, unknown>;
+      result[userId] = {
+        canManageTemplates: Boolean(p.canManageTemplates),
+        canManageMessageTemplates: Boolean(p.canManageMessageTemplates),
+        canManageCatalog: Boolean(p.canManageCatalog),
+        canManageEvents: Boolean(p.canManageEvents),
+        canManageGuests: Boolean(p.canManageGuests),
+      };
+    }
+  }
+  return result;
+}
+
 function isAudioPreset(value: unknown): value is AudioNotificationPreset {
   return typeof value === 'string' && (AUDIO_NOTIFICATION_PRESETS as readonly string[]).includes(value);
 }
@@ -152,6 +201,10 @@ export interface PlatformSettings {
   welcomeAiGrants: WelcomeGrantRules;
   /** Sons in-app des notifications plateforme (cloche web). */
   audioNotifications: AudioNotificationsSettings;
+  /** Visibilité des studios IA (budget, invitations, plans 3D). */
+  studioVisibility: StudioVisibilitySettings;
+  /** Droits délégués aux commerciaux pour les fonctionnalités réservées au Super Admin. */
+  commercialPermissions: Record<string, CommercialGrantedPermissions>;
   /** Ouverture des demandes de rabais (période et/ou organisations). */
   subscriptionDiscountAccess: SubscriptionDiscountAccess;
   /** Politique d'autorisation des donations à montant libre. */
@@ -196,6 +249,7 @@ export interface PublicSiteConfig {
   aiTokenMinPurchaseCdf: number;
   welcomeAiGrants: WelcomeGrantRules;
   audioNotifications: AudioNotificationsSettings;
+  studioVisibility: StudioVisibilitySettings;
   subscriptionDiscountAccess: Pick<SubscriptionDiscountAccess, 'enabled' | 'periodStart' | 'periodEnd'>;
   donationsAccess: DonationsAccess;
 }
@@ -244,6 +298,8 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   aiTokenMinPurchaseCdf: DEFAULT_AI_TOKEN_MIN_PURCHASE_CDF,
   welcomeAiGrants: DEFAULT_WELCOME_GRANT_RULES,
   audioNotifications: DEFAULT_AUDIO_NOTIFICATIONS,
+  studioVisibility: DEFAULT_STUDIO_VISIBILITY,
+  commercialPermissions: {},
   subscriptionDiscountAccess: DEFAULT_SUBSCRIPTION_DISCOUNT_ACCESS,
   donationsAccess: DEFAULT_DONATIONS_ACCESS,
 };
@@ -402,6 +458,8 @@ function normalizeStoredRates(settings: PlatformSettings): PlatformSettings {
     ),
     welcomeAiGrants: sanitizeWelcomeGrantRules(settings.welcomeAiGrants),
     audioNotifications: sanitizeAudioNotifications(settings.audioNotifications),
+    studioVisibility: sanitizeStudioVisibility(settings.studioVisibility),
+    commercialPermissions: sanitizeCommercialPermissions(settings.commercialPermissions),
     subscriptionDiscountAccess: sanitizeSubscriptionDiscountAccess(settings.subscriptionDiscountAccess),
     donationsAccess: sanitizeDonationsAccess(settings.donationsAccess),
   };
@@ -433,6 +491,8 @@ function buildNextSettings(
   next.aiTokenMinPurchaseCdf = sanitizeAiTokenMinPurchaseCdf(next.aiTokenMinPurchaseCdf, next.aiTokenPriceCdf);
   next.welcomeAiGrants = sanitizeWelcomeGrantRules(next.welcomeAiGrants);
   next.audioNotifications = sanitizeAudioNotifications(next.audioNotifications);
+  next.studioVisibility = sanitizeStudioVisibility(next.studioVisibility);
+  next.commercialPermissions = sanitizeCommercialPermissions(next.commercialPermissions);
   next.subscriptionDiscountAccess = sanitizeSubscriptionDiscountAccess(next.subscriptionDiscountAccess);
   next.donationsAccess = sanitizeDonationsAccess(next.donationsAccess);
   next.ticketPaymentProvider = 'flexpay_card';
@@ -545,6 +605,7 @@ export function getPublicSiteConfig(settings = loadPlatformSettings()): PublicSi
     ),
     welcomeAiGrants: sanitizeWelcomeGrantRules(settings.welcomeAiGrants),
     audioNotifications: sanitizeAudioNotifications(settings.audioNotifications),
+    studioVisibility: sanitizeStudioVisibility(settings.studioVisibility),
     subscriptionDiscountAccess: (() => {
       const access = sanitizeSubscriptionDiscountAccess(settings.subscriptionDiscountAccess);
       return {
@@ -647,3 +708,35 @@ export function getNotificationCredentials(
 }
 
 export { settingsFilePath };
+
+export function getCommercialPermissions(userId: string): CommercialGrantedPermissions {
+  const settings = loadPlatformSettings();
+  return settings.commercialPermissions?.[userId] || {};
+}
+
+export function hasCommercialPermission(userId: string, perm: keyof CommercialGrantedPermissions): boolean {
+  const userPerms = getCommercialPermissions(userId);
+  return Boolean(userPerms[perm]);
+}
+
+export async function setCommercialPermissions(userId: string, permissions: CommercialGrantedPermissions): Promise<void> {
+  const settings = loadPlatformSettings();
+  const current = { ...(settings.commercialPermissions || {}) };
+  current[userId] = {
+    canManageTemplates: Boolean(permissions.canManageTemplates),
+    canManageMessageTemplates: Boolean(permissions.canManageMessageTemplates),
+    canManageCatalog: Boolean(permissions.canManageCatalog),
+    canManageEvents: Boolean(permissions.canManageEvents),
+    canManageGuests: Boolean(permissions.canManageGuests),
+  };
+  await savePlatformSettingsDurable({ commercialPermissions: current });
+}
+
+export async function removeCommercialPermissions(userId: string): Promise<void> {
+  const settings = loadPlatformSettings();
+  if (!settings.commercialPermissions?.[userId]) return;
+  const current = { ...settings.commercialPermissions };
+  delete current[userId];
+  await savePlatformSettingsDurable({ commercialPermissions: current });
+}
+
