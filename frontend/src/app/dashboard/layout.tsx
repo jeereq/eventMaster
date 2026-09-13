@@ -28,6 +28,7 @@ import ViewCustomizerDrawer, {
 } from '@/components/ViewCustomizer';
 import { Tooltip } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { LANDING_PLANS } from '@/config/landingPricing';
 import { TourProvider } from '@/context/TourContext';
 import ProductTourOverlay from '@/components/guide/ProductTourOverlay';
 import FirstLoginTourHost from '@/components/guide/FirstLoginTourHost';
@@ -915,7 +916,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </div>
                     <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 text-xs font-bold text-primary">
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      {isClientAccount ? 'Client' : `Plan ${tenant.plan}`}
+                      {isClientAccount
+                        ? 'Client'
+                        : `Plan ${LANDING_PLANS.find((p) => p.id === tenant.plan)?.ms365Name || tenant.plan}`}
                     </div>
                   </div>
                 ) : null}

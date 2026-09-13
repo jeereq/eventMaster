@@ -68,7 +68,12 @@ import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import QuotaUsagePanel from '@/components/QuotaUsagePanel';
 import type { QuotaSnapshot } from '@/lib/quotaDisplay';
 import type { PlanId } from '@/config/landingPricing';
-import { formatFc } from '@/config/landingPricing';
+import {
+  LANDING_PLANS,
+  paidPlanIdsForAccountKind,
+  planPricePeriodSuffix,
+  formatFc,
+} from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 
 export interface OrganizerEventItem {
@@ -178,6 +183,11 @@ export default function OrganizerDashboardHome({
     !isServiceProvider &&
     !isVenueProvider &&
     (tenant?.plan === 'CATALOG' || planFeatures?.audience === 'CATALOG' || isBoth);
+
+  const isB2cPlan = Boolean(
+    tenant?.plan?.startsWith('PERSONAL') ||
+      planFeatures?.audience === 'B2C'
+  );
 
   const isVenueOrVendorOrCatalog =
     isServiceProvider ||
@@ -331,6 +341,13 @@ export default function OrganizerDashboardHome({
   const usage = planQuota?.usage || billing?.usage;
   const limits = planQuota?.limits || billing?.limits;
 
+  const currentPlanMeta = useMemo(() => {
+    const rawPlan = tenant?.plan || billing?.plan;
+    return LANDING_PLANS.find((p) => p.id === rawPlan);
+  }, [tenant?.plan, billing?.plan]);
+
+  const currentPlanDisplayName = currentPlanMeta?.ms365Name || tenant?.plan || billing?.plan || 'Forfait';
+
   const formatQuota = (used: number | undefined, max: number | undefined) => {
     if (used == null) return '0';
     if (max == null || max < 0) return String(used);
@@ -434,7 +451,7 @@ export default function OrganizerDashboardHome({
           label: isManager ? 'Organisation & Quotas' : 'Abonnement Prestataire',
           shortLabel: isManager ? 'Quotas' : 'Abonnement',
           icon: isManager ? Shield : Crown,
-          badge: tenant?.plan || 'Prestataire',
+          badge: currentPlanDisplayName,
         },
       ];
     }
@@ -520,7 +537,7 @@ export default function OrganizerDashboardHome({
           label: isManager ? 'Organisation & Quotas' : 'Abonnement & Quotas',
           shortLabel: isManager ? 'Quotas' : 'Abonnement',
           icon: isManager ? Shield : Crown,
-          badge: tenant?.plan || 'Forfait',
+          badge: currentPlanDisplayName,
         },
       ];
     }
@@ -598,7 +615,7 @@ export default function OrganizerDashboardHome({
         label: isManager ? 'Organisation & Quotas' : 'Abonnement & Quotas',
         shortLabel: isManager ? 'Quotas' : 'Abonnement',
         icon: isManager ? Shield : Crown,
-        badge: tenant?.plan || 'Forfait',
+        badge: currentPlanDisplayName,
       },
     ];
   }, [
@@ -616,7 +633,7 @@ export default function OrganizerDashboardHome({
     usage?.guests,
     canManageTeam,
     isManager,
-    tenant?.plan,
+    currentPlanDisplayName,
   ]);
 
   const handleTabKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -720,7 +737,7 @@ export default function OrganizerDashboardHome({
                 )}
                 {tenant?.plan && (
                   <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-surface border border-border text-foreground">
-                    Forfait {tenant.plan}
+                    Forfait {currentPlanDisplayName}
                   </span>
                 )}
                 {isOwner && daysUntilExpiry != null && (
@@ -1163,7 +1180,7 @@ export default function OrganizerDashboardHome({
                     </div>
                     <div className="mt-3">
                       <p className="text-xl font-black text-foreground tracking-tight truncate">
-                        {tenant?.plan || billing?.plan || 'Prestataire'}
+                        {currentPlanDisplayName}
                       </p>
                       <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
                         <span>Vitrine active</span>
@@ -1303,7 +1320,7 @@ export default function OrganizerDashboardHome({
                     </div>
                     <div className="mt-3">
                       <p className="text-xl font-black text-foreground tracking-tight truncate">
-                        {tenant?.plan || billing?.plan || 'Standard'}
+                        {currentPlanDisplayName}
                       </p>
                       <p className="text-xs text-muted mt-0.5">Quotas & Validité</p>
                     </div>
@@ -1430,10 +1447,10 @@ export default function OrganizerDashboardHome({
                       {isManager ? <FileText className="w-4 h-4" /> : <Award className="w-4 h-4" />}
                     </div>
                   </div>
-                  <div className="mt-3">
+                    <div className="mt-3">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <p className="text-xl font-black text-foreground tracking-tight truncate">
-                        {tenant?.plan || billing?.plan || 'Standard'}
+                        {currentPlanDisplayName}
                       </p>
                       {isOwner && daysUntilExpiry != null && (
                         <span
@@ -3297,7 +3314,7 @@ export default function OrganizerDashboardHome({
                     <Shield className="w-4 h-4" />
                   </span>
                   <p className="text-sm font-bold text-foreground">
-                    Titulaire : Forfait {tenant?.plan || billing?.plan || 'actuel'}
+                    Titulaire : Forfait {currentPlanDisplayName}
                   </p>
                   {daysUntilExpiry != null && (
                     <span
@@ -3333,7 +3350,7 @@ export default function OrganizerDashboardHome({
           {isManager ? (
             <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="space-y-1 min-w-0">
-                <p className="text-sm font-bold text-foreground">Forfait {tenant?.plan || billing?.plan || 'actuel'}</p>
+                <p className="text-sm font-bold text-foreground">Forfait {currentPlanDisplayName}</p>
                 <p className="text-xs text-muted leading-relaxed">
                   Factures consultables. Le forfait est géré par le propriétaire.
                 </p>
@@ -3387,76 +3404,187 @@ export default function OrganizerDashboardHome({
                 </Link>
               </div>
 
-              {/* 3 Grandes Familles d'offres */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* 1. Particuliers & Familles */}
-                <div className="p-4 rounded-2xl border border-border bg-surface hover:border-primary/40 transition flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-foreground uppercase tracking-wider">Particuliers</span>
-                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary">Mariage & Fêtes</span>
-                    </div>
-                    <p className="text-lg font-black text-foreground">Dès 35 000 FC</p>
-                    <div className="space-y-1 text-xs text-muted pt-1">
-                      <p>• <strong>Découverte</strong> : 35 000 FC (50 invités)</p>
-                      <p>• <strong>Mariage 150</strong> : 79 000 FC (150 invités)</p>
-                      <p>• <strong>Grande Fête</strong> : 129 000 FC (300 invités)</p>
-                      <p>• <strong>Inclus</strong> : WhatsApp nominatif & QR Pass</p>
-                    </div>
-                  </div>
+              {/* Grille adaptative des forfaits selon le type de compte */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted">
+                    {tenant?.accountKind === 'VENDOR'
+                      ? 'Abonnements disponibles pour compte Prestataire / Salles'
+                      : tenant?.accountKind === 'BOTH'
+                      ? 'Abonnements disponibles pour compte Mixte (Organisation & Vitrine)'
+                      : tenant?.accountKind === 'CLIENT'
+                      ? 'Abonnements pour compte Client catalogue'
+                      : 'Abonnements disponibles pour votre organisation'}
+                  </span>
                   <Link
                     href="/dashboard/billing"
-                    className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
+                    className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
                   >
-                    Voir Particuliers <ArrowRight className="w-3 h-3" />
+                    <span>Tous les détails</span>
+                    <ArrowRight className="w-3 h-3" />
                   </Link>
                 </div>
 
-                {/* 2. Professionnels & Agences */}
-                <div className="p-4 rounded-2xl border-2 border-primary/40 bg-surface hover:border-primary transition flex flex-col justify-between shadow-xs">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-primary uppercase tracking-wider">Professionnels</span>
-                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Recommandé</span>
+                {/* 1. CAS COMPTE PRESTATAIRE / VENDEUR (VENDOR) */}
+                {tenant?.accountKind === 'VENDOR' && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Prestataire */}
+                    <div className={cn('p-4 rounded-2xl border bg-surface flex flex-col justify-between transition', tenant?.plan === 'SERVICE' ? 'border-primary ring-2 ring-primary/20 shadow-xs' : 'border-border hover:border-primary/40')}>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-primary uppercase tracking-wider">Prestataire</span>
+                          {tenant?.plan === 'SERVICE' && (
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
+                          )}
+                        </div>
+                        <p className="text-lg font-black text-foreground">9 900 FC <span className="text-xs font-normal text-muted">/ mois</span></p>
+                        <div className="space-y-1 text-xs text-muted pt-1">
+                          <p>• <strong>Offres</strong> : Prestations illimitées</p>
+                          <p>• <strong>Visibilité</strong> : Traiteur, DJ, Déco, Photo, etc.</p>
+                          <p>• <strong>Outils</strong> : Devis directs & gestion planning</p>
+                          <p>• <strong>Inclus</strong> : Portfolio et réalisations en ligne</p>
+                        </div>
+                      </div>
+                      <Link
+                        href="/dashboard/billing"
+                        className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1 pt-3 border-t border-border mt-3"
+                      >
+                        {tenant?.plan === 'SERVICE' ? 'Gérer mon forfait' : 'Activer Prestataire'} <ArrowRight className="w-3 h-3" />
+                      </Link>
                     </div>
-                    <p className="text-lg font-black text-foreground">Dès 149 000 FC <span className="text-xs font-normal text-muted">/ mois</span></p>
-                    <div className="space-y-1 text-xs text-muted pt-1">
-                      <p>• <strong>Pro 500</strong> : 149 000 FC (500 invités)</p>
-                      <p>• <strong>Premium 1000</strong> : 249 000 FC (1 000 invités)</p>
-                      <p>• <strong>Entreprise 2500</strong> : 449 000 FC (2 500 invités)</p>
-                      <p>• <strong>Inclus</strong> : Équipe multi-managers & Billetterie</p>
-                    </div>
-                  </div>
-                  <Link
-                    href="/dashboard/billing"
-                    className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
-                  >
-                    Voir Professionnels <ArrowRight className="w-3 h-3" />
-                  </Link>
-                </div>
 
-                {/* 3. Vitrine & Marketplace */}
-                <div className="p-4 rounded-2xl border border-border bg-surface hover:border-purple-500/40 transition flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-purple-600 uppercase tracking-wider">Vitrine Catalogue</span>
-                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600">Salles & Métiers</span>
+                    {/* Salle */}
+                    <div className={cn('p-4 rounded-2xl border bg-surface flex flex-col justify-between transition', tenant?.plan === 'VENUE' ? 'border-primary ring-2 ring-primary/20 shadow-xs' : 'border-border hover:border-purple-500/40')}>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-purple-600 uppercase tracking-wider">Salle</span>
+                          {tenant?.plan === 'VENUE' && (
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
+                          )}
+                        </div>
+                        <p className="text-lg font-black text-foreground">14 900 FC <span className="text-xs font-normal text-muted">/ mois</span></p>
+                        <div className="space-y-1 text-xs text-muted pt-1">
+                          <p>• <strong>Espaces</strong> : Salles illimitées au catalogue</p>
+                          <p>• <strong>Plans</strong> : Éditeur 2D/3D complet (80 tables)</p>
+                          <p>• <strong>Réservations</strong> : Dates bloquées et acomptes</p>
+                          <p>• <strong>Inclus</strong> : Simulateur IA et vitrine 3D</p>
+                        </div>
+                      </div>
+                      <Link
+                        href="/dashboard/billing"
+                        className="text-xs font-bold text-purple-600 hover:underline inline-flex items-center gap-1 pt-3 border-t border-border mt-3"
+                      >
+                        {tenant?.plan === 'VENUE' ? 'Gérer mon forfait' : 'Activer Forfait Salle'} <ArrowRight className="w-3 h-3" />
+                      </Link>
                     </div>
-                    <p className="text-lg font-black text-foreground">Dès 9 900 FC <span className="text-xs font-normal text-muted">/ mois</span></p>
-                    <div className="space-y-1 text-xs text-muted pt-1">
-                      <p>• <strong>Forfait Prestataire</strong> : 9 900 FC / mois</p>
-                      <p>• <strong>Forfait Salle</strong> : 14 900 FC / mois</p>
-                      <p>• <strong>Forfait Catalogue Mixte</strong> : 19 900 FC / mois</p>
-                      <p>• <strong>Inclus</strong> : Éditeur 2D/3D & devis directs</p>
+
+                    {/* Salle & Presta */}
+                    <div className={cn('p-4 rounded-2xl border bg-surface flex flex-col justify-between transition', tenant?.plan === 'CATALOG' ? 'border-primary ring-2 ring-primary/20 shadow-xs' : 'border-border hover:border-emerald-500/40')}>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Salle & Presta</span>
+                          {tenant?.plan === 'CATALOG' && (
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
+                          )}
+                        </div>
+                        <p className="text-lg font-black text-foreground">19 900 FC <span className="text-xs font-normal text-muted">/ mois</span></p>
+                        <div className="space-y-1 text-xs text-muted pt-1">
+                          <p>• <strong>Mixte</strong> : Salles ∞ + Prestations ∞</p>
+                          <p>• <strong>Complet</strong> : Plans 3D + Gestion de matériel</p>
+                          <p>• <strong>Devis</strong> : Centralisation complète des demandes</p>
+                          <p>• <strong>Inclus</strong> : Visibilité maximale catalogue</p>
+                        </div>
+                      </div>
+                      <Link
+                        href="/dashboard/billing"
+                        className="text-xs font-bold text-emerald-600 hover:underline inline-flex items-center gap-1 pt-3 border-t border-border mt-3"
+                      >
+                        {tenant?.plan === 'CATALOG' ? 'Gérer mon forfait' : 'Activer Salle & Presta'} <ArrowRight className="w-3 h-3" />
+                      </Link>
                     </div>
                   </div>
-                  <Link
-                    href="/dashboard/billing"
-                    className="text-xs font-bold text-purple-600 hover:underline inline-flex items-center gap-1 pt-2 border-t border-border mt-auto"
-                  >
-                    Voir Vitrine <ArrowRight className="w-3 h-3" />
-                  </Link>
-                </div>
+                )}
+
+                {/* 2. CAS COMPTE ORGANISATEUR CLASSIQUE (ORGANIZER) OU MIXTE (BOTH) */}
+                {tenant?.accountKind !== 'VENDOR' && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Particuliers & Familles */}
+                    <div className={cn('p-4 rounded-2xl border bg-surface flex flex-col justify-between transition', isB2cPlan ? 'border-primary ring-2 ring-primary/20 shadow-xs' : 'border-border hover:border-primary/40')}>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-foreground uppercase tracking-wider">Particuliers (B2C)</span>
+                          {isB2cPlan && (
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
+                          )}
+                        </div>
+                        <p className="text-lg font-black text-foreground">Dès 60 000 FC <span className="text-xs font-normal text-muted">/ trimestre</span></p>
+                        <div className="space-y-1 text-xs text-muted pt-1">
+                          <p>• <strong>Particulier 50</strong> : 60 000 FC (50 invités)</p>
+                          <p>• <strong>Particulier 100</strong> : 90 000 FC (100 invités)</p>
+                          <p>• <strong>Particulier 200</strong> : 120 000 FC (200 invités)</p>
+                          <p>• <strong>Particulier +200</strong> : 180 000 FC (invités ∞)</p>
+                          <p>• <strong>Inclus</strong> : WhatsApp nominatif, QR & Plans 2D/3D</p>
+                        </div>
+                      </div>
+                      <Link
+                        href="/dashboard/billing"
+                        className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1 pt-3 border-t border-border mt-3"
+                      >
+                        Voir les forfaits Particuliers <ArrowRight className="w-3 h-3" />
+                      </Link>
+                    </div>
+
+                    {/* Professionnels Business & Premium */}
+                    <div className={cn('p-4 rounded-2xl border-2 bg-surface flex flex-col justify-between transition shadow-xs', (tenant?.plan === 'STANDARD' || tenant?.plan?.startsWith('PREMIUM')) ? 'border-primary ring-2 ring-primary/20' : 'border-primary/40 hover:border-primary')}>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-primary uppercase tracking-wider">Business & Agences</span>
+                          {(tenant?.plan === 'STANDARD' || tenant?.plan?.startsWith('PREMIUM')) && (
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
+                          )}
+                        </div>
+                        <p className="text-lg font-black text-foreground">Dès 30 000 FC <span className="text-xs font-normal text-muted">/ mois</span></p>
+                        <div className="space-y-1 text-xs text-muted pt-1">
+                          <p>• <strong>Business</strong> : 30 000 FC (8 évts · 150 invités)</p>
+                          <p>• <strong>Premium</strong> : 55 000 FC (12 évts · 500 invités)</p>
+                          <p>• <strong>Premium Plus</strong> : 85 000 FC (20 évts · 1 000 invités)</p>
+                          <p>• <strong>Inclus</strong> : Équipe multi-managers & Billetterie</p>
+                        </div>
+                      </div>
+                      <Link
+                        href="/dashboard/billing"
+                        className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1 pt-3 border-t border-border mt-3"
+                      >
+                        Voir Business & Premium <ArrowRight className="w-3 h-3" />
+                      </Link>
+                    </div>
+
+                    {/* Grandes Organisations & Entreprises */}
+                    <div className={cn('p-4 rounded-2xl border bg-surface flex flex-col justify-between transition', tenant?.plan?.startsWith('ENTERPRISE') ? 'border-primary ring-2 ring-primary/20 shadow-xs' : 'border-border hover:border-purple-500/40')}>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-purple-600 uppercase tracking-wider">Entreprise & Grandes Envergures</span>
+                          {tenant?.plan?.startsWith('ENTERPRISE') && (
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
+                          )}
+                        </div>
+                        <p className="text-lg font-black text-foreground">Dès 350 000 FC <span className="text-xs font-normal text-muted">/ mois</span></p>
+                        <div className="space-y-1 text-xs text-muted pt-1">
+                          <p>• <strong>Enterprise</strong> : 350 000 FC (3 500 invités)</p>
+                          <p>• <strong>Enterprise Pro</strong> : 525 000 FC (5 000 invités)</p>
+                          <p>• <strong>Unlimited</strong> : 700 000 FC (Quotas illimités)</p>
+                          <p>• <strong>Inclus</strong> : SLA 24/7, jusqu'à 50 salles & support dédié</p>
+                        </div>
+                      </div>
+                      <Link
+                        href="/dashboard/billing"
+                        className="text-xs font-bold text-purple-600 hover:underline inline-flex items-center gap-1 pt-3 border-t border-border mt-3"
+                      >
+                        Voir Gamme Enterprise <ArrowRight className="w-3 h-3" />
+                      </Link>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
