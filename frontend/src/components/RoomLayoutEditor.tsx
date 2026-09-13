@@ -4733,12 +4733,22 @@ export default function RoomLayoutEditor({
             ) : null}
             <label className="block text-xs space-y-1">
               <span className="font-semibold text-muted">Nom</span>
-              <input value={selectedFurniture.name} onChange={(e) => updateFurniture(selectedFurniture.id, { name: e.target.value })} className="w-full px-3 py-2 rounded-[var(--radius-button)] border text-sm" />
+              <input
+                value={selectedFurniture.name}
+                onChange={(e) => updateFurniture(selectedFurniture.id, { name: e.target.value })}
+                aria-label="Nom de la table"
+                className="w-full px-3 py-2 rounded-[var(--radius-button)] border text-sm"
+              />
             </label>
             <div className="grid grid-cols-2 gap-2">
               <label className="text-xs space-y-1">
                 <span className="font-semibold text-muted">Forme</span>
-                <select value={selectedFurniture.shape} onChange={(e) => updateFurniture(selectedFurniture.id, { shape: e.target.value as TableShape })} className={EDITOR_FIELD}>
+                <select
+                  value={selectedFurniture.shape}
+                  onChange={(e) => updateFurniture(selectedFurniture.id, { shape: e.target.value as TableShape })}
+                  aria-label="Forme de la table"
+                  className={EDITOR_FIELD}
+                >
                   {caps.tableShapes.includes('round') ? <option value="round">Ronde</option> : null}
                   {caps.tableShapes.includes('rectangular') ? <option value="rectangular">Rectangulaire</option> : null}
                   {caps.tableShapes.includes('square') ? <option value="square">Carrée</option> : null}
@@ -4750,7 +4760,15 @@ export default function RoomLayoutEditor({
               </label>
               <label className="text-xs space-y-1">
                 <span className="font-semibold text-muted">Places</span>
-                <input type="number" min={2} max={24} value={selectedFurniture.capacity} onChange={(e) => updateFurniture(selectedFurniture.id, { capacity: parseInt(e.target.value, 10) })} className={EDITOR_FIELD} />
+                <input
+                  type="number"
+                  min={2}
+                  max={24}
+                  value={selectedFurniture.capacity}
+                  onChange={(e) => updateFurniture(selectedFurniture.id, { capacity: parseInt(e.target.value, 10) })}
+                  aria-label="Nombre de places de la table"
+                  className={EDITOR_FIELD}
+                />
               </label>
             </div>
 
@@ -4770,7 +4788,7 @@ export default function RoomLayoutEditor({
                       customRadiusM: undefined,
                       cornerRadiusM: undefined,
                     }, 'Dimensions réinitialisées en mode auto')}
-                    className="text-[11px] text-muted hover:text-foreground underline decoration-dotted transition"
+                    className="text-xs font-semibold px-2 py-0.5 rounded bg-surface hover:bg-surface-muted border border-border text-foreground transition active:scale-[0.98] motion-reduce:active:scale-100"
                     title="Rétablir les dimensions standards automatiques selon le nombre de places"
                   >
                     Auto
@@ -4793,6 +4811,7 @@ export default function RoomLayoutEditor({
                           step={0.05}
                           min={0.5}
                           max={4.5}
+                          aria-label="Diamètre de la table en mètres"
                           value={Math.round(curDiam * 100) / 100}
                           onChange={(e) => {
                             const val = parseFloat(e.target.value);
@@ -4813,6 +4832,7 @@ export default function RoomLayoutEditor({
                           step={0.05}
                           min={0.25}
                           max={2.25}
+                          aria-label="Rayon de la table en mètres"
                           value={curRadius}
                           onChange={(e) => {
                             const val = parseFloat(e.target.value);
@@ -4834,6 +4854,11 @@ export default function RoomLayoutEditor({
                         max={3.5}
                         step={0.05}
                         value={curDiam}
+                        aria-label="Ajuster le diamètre de la table ronde"
+                        aria-valuemin={0.6}
+                        aria-valuemax={3.5}
+                        aria-valuenow={curDiam}
+                        aria-valuetext={`${curDiam.toFixed(2)} mètres`}
                         onChange={(e) => {
                           const val = parseFloat(e.target.value);
                           updateFurniture(selectedFurniture.id, {
@@ -4843,7 +4868,7 @@ export default function RoomLayoutEditor({
                         }}
                         className="w-full accent-primary cursor-pointer"
                       />
-                      <span className="text-[11px] font-mono text-muted shrink-0 w-14 text-right">
+                      <span className="text-xs font-mono text-muted shrink-0 w-14 text-right">
                         Ø {curDiam.toFixed(2)}m
                       </span>
                     </div>
@@ -4866,6 +4891,7 @@ export default function RoomLayoutEditor({
                           step={0.05}
                           min={0.8}
                           max={6.0}
+                          aria-label="Longueur de la table ovale en mètres"
                           value={Math.round(curW * 100) / 100}
                           onChange={(e) => {
                             const val = parseFloat(e.target.value);
@@ -4883,6 +4909,7 @@ export default function RoomLayoutEditor({
                           step={0.05}
                           min={0.6}
                           max={3.5}
+                          aria-label="Largeur de la table ovale en mètres"
                           value={Math.round(curD * 100) / 100}
                           onChange={(e) => {
                             const val = parseFloat(e.target.value);
@@ -4895,7 +4922,7 @@ export default function RoomLayoutEditor({
                       </label>
                     </div>
                     <div className="space-y-1">
-                      <div className="flex justify-between text-[11px] text-muted">
+                      <div className="flex justify-between text-xs text-muted">
                         <span>Élargissement</span>
                         <span className="font-mono">{curW.toFixed(2)}m × {curD.toFixed(2)}m</span>
                       </div>
@@ -4905,6 +4932,11 @@ export default function RoomLayoutEditor({
                         max={3.0}
                         step={0.05}
                         value={curD}
+                        aria-label="Élargir le plateau de la table ovale"
+                        aria-valuemin={0.6}
+                        aria-valuemax={3.0}
+                        aria-valuenow={curD}
+                        aria-valuetext={`${curD.toFixed(2)} mètres`}
                         onChange={(e) => {
                           const val = parseFloat(e.target.value);
                           updateFurniture(selectedFurniture.id, { customDepthM: val }, 'Largeur table ajustée');
@@ -4932,6 +4964,7 @@ export default function RoomLayoutEditor({
                           step={0.05}
                           min={0.6}
                           max={7.0}
+                          aria-label="Longueur de la table en mètres"
                           value={Math.round(curW * 100) / 100}
                           onChange={(e) => {
                             const val = parseFloat(e.target.value);
@@ -4952,6 +4985,7 @@ export default function RoomLayoutEditor({
                           step={0.05}
                           min={0.5}
                           max={3.0}
+                          aria-label="Largeur ou profondeur de la table en mètres"
                           value={Math.round(curD * 100) / 100}
                           onChange={(e) => {
                             const val = parseFloat(e.target.value);
@@ -4969,7 +5003,7 @@ export default function RoomLayoutEditor({
 
                     {/* Curseur pour élargir la table */}
                     <div className="space-y-1">
-                      <div className="flex justify-between text-[11px] text-muted">
+                      <div className="flex justify-between text-xs text-muted">
                         <span>Élargir le plateau</span>
                         <span className="font-mono">{curW.toFixed(2)}m × {curD.toFixed(2)}m</span>
                       </div>
@@ -4979,6 +5013,11 @@ export default function RoomLayoutEditor({
                         max={2.5}
                         step={0.05}
                         value={curD}
+                        aria-label="Élargir le plateau de la table"
+                        aria-valuemin={0.6}
+                        aria-valuemax={2.5}
+                        aria-valuenow={curD}
+                        aria-valuetext={`${curD.toFixed(2)} mètres`}
                         onChange={(e) => {
                           const val = parseFloat(e.target.value);
                           updateFurniture(selectedFurniture.id, {
@@ -4993,7 +5032,7 @@ export default function RoomLayoutEditor({
                     {/* Curseur Rayon des angles / Coins arrondis */}
                     {selectedFurniture.shape !== 'arc' && (
                       <div className="space-y-1 pt-1.5 border-t border-border/50">
-                        <div className="flex justify-between text-[11px] text-muted">
+                        <div className="flex justify-between text-xs text-muted">
                           <span>Rayon d'angle (Arrondi des coins)</span>
                           <span className="font-mono">{curCornerR > 0 ? `${(curCornerR * 100).toFixed(0)} cm` : 'Angle vif'}</span>
                         </div>
@@ -5004,13 +5043,18 @@ export default function RoomLayoutEditor({
                             max={0.35}
                             step={0.01}
                             value={curCornerR}
+                            aria-label="Arrondi des angles de la table en mètres"
+                            aria-valuemin={0}
+                            aria-valuemax={0.35}
+                            aria-valuenow={curCornerR}
+                            aria-valuetext={curCornerR > 0 ? `${(curCornerR * 100).toFixed(0)} centimètres` : 'Angle vif'}
                             onChange={(e) => {
                               const val = parseFloat(e.target.value);
                               updateFurniture(selectedFurniture.id, { cornerRadiusM: val }, 'Arrondi d’angle table');
                             }}
                             className="w-full accent-primary cursor-pointer"
                           />
-                          <span className="text-[11px] font-mono text-muted shrink-0 w-12 text-right">
+                          <span className="text-xs font-mono text-muted shrink-0 w-12 text-right">
                             {curCornerR > 0 ? `${(curCornerR * 100).toFixed(0)}cm` : '0cm'}
                           </span>
                         </div>

@@ -139,6 +139,7 @@ export function ViewModeToggle({
           type="button"
           onClick={() => setMode('grid')}
           aria-pressed={mode === 'grid'}
+          aria-label="Vue grille"
           title="Vue grille"
           className={cn(
             'inline-flex items-center justify-center rounded-md px-2.5 py-1.5 transition-colors',
@@ -147,13 +148,14 @@ export function ViewModeToggle({
               : 'text-muted hover:text-foreground',
           )}
         >
-          <LayoutGrid className="h-4 w-4" />
+          <LayoutGrid className="h-4 w-4" aria-hidden="true" />
           <span className="ml-1.5 hidden text-xs font-semibold sm:inline">Grille</span>
         </button>
         <button
           type="button"
           onClick={() => setMode('list')}
           aria-pressed={mode === 'list'}
+          aria-label="Vue liste"
           title="Vue liste"
           className={cn(
             'inline-flex items-center justify-center rounded-md px-2.5 py-1.5 transition-colors',
@@ -162,7 +164,7 @@ export function ViewModeToggle({
               : 'text-muted hover:text-foreground',
           )}
         >
-          <List className="h-4 w-4" />
+          <List className="h-4 w-4" aria-hidden="true" />
           <span className="ml-1.5 hidden text-xs font-semibold sm:inline">Liste</span>
         </button>
       </div>
@@ -179,6 +181,7 @@ export function ViewModeToggle({
               type="button"
               onClick={() => setColumns(cols)}
               aria-pressed={columns === cols}
+              aria-label={label}
               title={label}
               className={cn(
                 'inline-flex items-center justify-center rounded-md px-2 py-1.5 transition-colors',
@@ -187,8 +190,8 @@ export function ViewModeToggle({
                   : 'text-muted hover:text-foreground',
               )}
             >
-              <Icon className="h-3.5 w-3.5" />
-              <span className="ml-1 hidden text-[10px] font-bold tabular-nums lg:inline">{cols}</span>
+              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="ml-1 hidden text-xs font-bold tabular-nums lg:inline">{cols}</span>
             </button>
           ))}
         </div>

@@ -569,7 +569,7 @@ export default function GuestRoomPlanCanvas({
 
                             {/* Siège vert émeraude éclatant */}
                             <div
-                              className="relative w-6 h-6 rounded-full bg-emerald-600 text-white font-black text-[10px] border-2 border-white ring-4 ring-emerald-400/80 shadow-lg shadow-emerald-600/50 flex items-center justify-center select-none cursor-pointer"
+                              className="relative w-6 h-6 rounded-full bg-primary-solid text-primary-foreground font-black text-xs border-2 border-white ring-4 ring-primary/60 shadow-lg shadow-primary/40 flex items-center justify-center select-none cursor-pointer"
                               title={`Votre place exacte : Siège n°${seatIdx + 1}`}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -580,12 +580,12 @@ export default function GuestRoomPlanCanvas({
                             </div>
 
                             {/* Badge flottant direct vers le siège */}
-                            <div className="absolute -top-7 left-1/2 -translate-x-1/2 z-40 whitespace-nowrap pointer-events-none flex flex-col items-center animate-bounce motion-reduce:animate-none">
-                              <div className="px-2 py-0.5 rounded-full bg-emerald-600 text-white text-[9px] font-black shadow-md border border-white flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                            <div className="absolute -top-7 left-1/2 -translate-x-1/2 z-40 whitespace-nowrap pointer-events-none flex flex-col items-center em-seat-float">
+                              <div className="px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground text-xs font-black shadow-md border border-white flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping motion-reduce:hidden" />
                                 <span>Mon siège (n°{seatIdx + 1})</span>
                               </div>
-                              <div className="w-1.5 h-1.5 rotate-45 bg-emerald-600 -mt-0.5 border-r border-b border-white" />
+                              <div className="w-1.5 h-1.5 rotate-45 bg-primary-solid -mt-0.5 border-r border-b border-white" />
                             </div>
                           </div>
                         );

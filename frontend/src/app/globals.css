@@ -1427,6 +1427,22 @@ html[data-mood="celebrate"] .font-display {
   50% { transform: rotate(-45deg) translateY(-3px); }
 }
 
+@keyframes em-seat-badge-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.em-seat-float {
+  animation: em-seat-badge-float 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .em-seat-float {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .em-map-marker-hit,
   .em-map-marker-card,

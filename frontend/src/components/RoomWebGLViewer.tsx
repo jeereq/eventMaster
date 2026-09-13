@@ -1595,15 +1595,15 @@ function TableMesh({
 
                 {/* 3. Badge flottant 3D avec flèche pointant sur l'assise */}
                 <Html center distanceFactor={7} style={{ pointerEvents: 'none' }} position={[0, 1.05, 0]}>
-                  <div className="flex flex-col items-center animate-bounce motion-reduce:animate-none select-none drop-shadow-xl">
-                    <div className="px-3 py-1.5 rounded-full bg-emerald-600 text-white text-xs font-black whitespace-nowrap shadow-xl border-2 border-white flex items-center gap-1.5 ring-4 ring-emerald-500/40">
+                  <div className="flex flex-col items-center em-seat-float select-none drop-shadow-xl">
+                    <div className="px-3 py-1.5 rounded-full bg-primary-solid text-primary-foreground text-xs font-black whitespace-nowrap shadow-xl border-2 border-white flex items-center gap-1.5 ring-4 ring-primary/40">
                       <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-90"></span>
+                        <span className="animate-ping motion-reduce:hidden absolute inline-flex h-full w-full rounded-full bg-white opacity-90"></span>
                         <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
                       </span>
                       <span>Votre siège n°{i + 1}</span>
                     </div>
-                    <div className="w-2.5 h-2.5 rotate-45 bg-emerald-600 -mt-1 border-r-2 border-b-2 border-white shadow-xs" />
+                    <div className="w-2.5 h-2.5 rotate-45 bg-primary-solid -mt-1 border-r-2 border-b-2 border-white shadow-xs" />
                   </div>
                 </Html>
               </group>

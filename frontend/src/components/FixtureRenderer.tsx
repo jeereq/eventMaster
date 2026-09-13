@@ -38,10 +38,10 @@ function InstrumentPlanGlyph({ style }: { style: InstrumentStyle }) {
   }
   if (style === 'harp') {
     return (
-      <div className="relative w-[55%] h-[78%]">
-        <span className="absolute left-0 inset-y-1 w-1.5 bg-amber-800 rounded-full" />
-        <span className="absolute right-0 top-0 w-8 h-full border-l-2 border-amber-700 rounded-l-full" />
-      </div>
+      <svg className="w-[55%] h-[78%]" viewBox="0 0 24 32" fill="none" aria-hidden="true">
+        <path d="M4 2v28M4 30c8 0 16-6 16-16V4c-6 0-16-2-16-2" stroke="#92400e" strokeWidth="2" strokeLinecap="round" />
+        <path d="M8 7v20M12 10v14M16 13v8" stroke="#d97706" strokeWidth="1" strokeOpacity="0.7" />
+      </svg>
     );
   }
   if (style === 'cello' || style === 'doubleBass') {

@@ -2338,22 +2338,22 @@ Merci de confirmer votre présence :
               {/* Synthèse ergonomique de l'événement */}
               <div className={cn('grid grid-cols-2 gap-2 pt-1', selectedEvent.donations?.enabled ? 'sm:grid-cols-5' : 'sm:grid-cols-4')}>
                 <div className="rounded-xl border border-border bg-surface px-3 py-2 text-center">
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">Invités</div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-muted">Invités</div>
                   <div className="text-base font-bold text-foreground mt-0.5">
                     {guests.length}{' '}
-                    <span className="text-[11px] font-normal text-emerald-600 dark:text-emerald-400">
+                    <span className="text-xs font-normal text-emerald-600 dark:text-emerald-400">
                       ({guests.filter((g) => g.rsvp === 'ACCEPTED').length} RSVP)
                     </span>
                   </div>
                 </div>
                 <div className="rounded-xl border border-border bg-surface px-3 py-2 text-center">
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">Invitations</div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-muted">Invitations</div>
                   <div className="text-base font-bold text-foreground mt-0.5">
                     {invitations.length}
                   </div>
                 </div>
                 <div className="rounded-xl border border-border bg-surface px-3 py-2 text-center">
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">Billetterie</div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-muted">Billetterie</div>
                   <div className="text-base font-bold text-foreground mt-0.5 truncate">
                     {selectedEvent.ticketingEnabled
                       ? `${selectedEvent.ticketsSold ?? 0}${selectedEvent.ticketsTotal ? ` / ${selectedEvent.ticketsTotal}` : ''}`
@@ -2368,7 +2368,7 @@ Merci de confirmer votre présence :
                     title="Voir le reporting des dons solidaires"
                     aria-label="Voir le reporting des dons solidaires de l’événement"
                   >
-                    <div className="text-[10px] font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-300 flex items-center justify-center gap-1">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-300 flex items-center justify-center gap-1">
                       <Heart className="w-3 h-3 fill-rose-500/30" />
                       Dons
                     </div>
@@ -2378,7 +2378,7 @@ Merci de confirmer votre présence :
                   </button>
                 )}
                 <div className="rounded-xl border border-border bg-surface px-3 py-2 text-center">
-                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">Plan de table</div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-muted">Plan de table</div>
                   <div className="text-base font-bold text-foreground mt-0.5 truncate">
                     {selectedEvent.room ? selectedEvent.room.name : 'Non assigné'}
                   </div>
