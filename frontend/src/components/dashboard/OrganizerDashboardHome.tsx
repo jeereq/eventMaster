@@ -75,6 +75,7 @@ import {
   formatFc,
 } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
+import { canSellOnMarketplace } from '@/lib/planAccess';
 
 export interface OrganizerEventItem {
   id: string;
@@ -170,6 +171,16 @@ export default function OrganizerDashboardHome({
   const isManager = access?.level === 'manager' && !isOwner;
   const canManageTeam = isOwner || Boolean(access?.canManageTeam);
 
+  const canSell = canSellOnMarketplace({
+    accountKind: tenant?.accountKind,
+    planFeatures,
+    planQuota,
+    planId: tenant?.plan,
+  });
+  const hasOrgEvents = (planQuota?.limits.maxEvents ?? 0) > 0;
+  /** Organisation B2B (ou essai) qui vend aussi : ne pas basculer en « prestataire / salle pur ». */
+  const isOrgWithCatalog = canSell && hasOrgEvents && !isVendor;
+
   const isServiceProvider =
     tenant?.plan === 'SERVICE' ||
     planFeatures?.audience === 'SERVICE' ||
@@ -177,6 +188,7 @@ export default function OrganizerDashboardHome({
 
   const isVenueProvider =
     !isServiceProvider &&
+    !isOrgWithCatalog &&
     (tenant?.plan === 'VENUE' || planFeatures?.audience === 'VENUE' || (Boolean(access?.canManageRooms) && (planQuota?.limits.maxRooms ?? 0) > 0));
 
   const isCatalogProvider =
@@ -193,8 +205,10 @@ export default function OrganizerDashboardHome({
     isServiceProvider ||
     isVenueProvider ||
     isCatalogProvider ||
+    isOrgWithCatalog ||
     isVendor ||
     isBoth ||
+    canSell ||
     tenant?.plan === 'VENUE' ||
     tenant?.plan === 'SERVICE' ||
     tenant?.plan === 'CATALOG' ||
@@ -718,6 +732,8 @@ export default function OrganizerDashboardHome({
                     ? 'Espace Manager'
                     : isServiceProvider
                     ? 'Espace Prestataire de Services'
+                    : isOrgWithCatalog
+                    ? 'Espace Organisation & Vitrine'
                     : isVenueProvider
                     ? 'Espace Gestionnaire de Salle'
                     : isCatalogProvider
@@ -762,6 +778,8 @@ export default function OrganizerDashboardHome({
               <p className="text-xs sm:text-sm text-muted leading-relaxed">
                 {isServiceProvider
                   ? 'Gérez vos prestations, répondez aux demandes de devis des organisateurs et suivez votre planning d’interventions.'
+                  : isOrgWithCatalog
+                  ? 'Organisez vos événements et publiez votre vitrine (salles et prestations) sur le marketplace.'
                   : isVenueProvider
                   ? 'Modélisez vos salles en 2D/3D, gérez vos dates de privatisation et traitez vos demandes de réservation.'
                   : isOwner

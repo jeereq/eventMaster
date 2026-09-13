@@ -33,7 +33,7 @@ import { depositPercent } from '@/lib/platformRates';
 import { useListingFavorites } from '@/lib/listingFavorites';
 import type { SavedEventPack } from '@/lib/eventPlan';
 import { eventTypeLabel } from '@/lib/listingDetails';
-import { canPublishVenueCatalog } from '@/lib/planAccess';
+import { canPublishVenueCatalog, canSellOnMarketplace } from '@/lib/planAccess';
 import { cn } from '@/lib/cn';
 
 type HubTab = 'quotes' | 'bookings' | 'packs' | 'favorites';
@@ -47,11 +47,12 @@ function OrganizerDemandesPage() {
 
   const canActAsVendor =
     Boolean(access?.canManageRooms) ||
-    tenant?.accountKind === 'VENDOR' ||
-    tenant?.accountKind === 'BOTH' ||
-    planFeatures?.audience === 'B2B' ||
-    planFeatures?.audience === 'VENUE' ||
-    planFeatures?.audience === 'CATALOG' ||
+    canSellOnMarketplace({
+      accountKind: tenant?.accountKind,
+      planFeatures,
+      planQuota,
+      planId: tenant?.plan,
+    }) ||
     canPublishVenueCatalog(planFeatures, planQuota, tenant?.plan);
 
   const requestedRole = searchParams.get('role');

@@ -725,8 +725,17 @@ function BillingPageInner() {
                 <p className="text-xs text-muted leading-relaxed">
                   Un seul forfait à la fois : il n’y a pas de cumul Salle + Business.
                   {tenant?.accountKind === 'BOTH'
-                    ? ' Compte mixte : Particulier, Business, Salle, Prestataire ou Salle & presta.'
+                    ? ' Compte mixte : Particulier, Business (catalogue inclus), Salle, Prestataire ou Salle & presta.'
                     : ' Compte marketplace : Salle, Prestataire ou Salle & presta (fiches publiées, pas un volume d’agence).'}
+                </p>
+              )}
+              {tenant?.accountKind === 'ORGANIZER' &&
+                billing.plan !== 'FREE' &&
+                !billing.plan?.startsWith('PERSONAL') &&
+                (billing.limits?.maxServices ?? 0) > 0 && (
+                <p className="text-xs text-muted leading-relaxed">
+                  Forfait organisation : le catalogue salle + prestations est inclus (vitrine, devis, calendrier).
+                  Un seul forfait à la fois — pas besoin d’un abonnement Salle ou Prestataire séparé.
                 </p>
               )}
               {billing.capabilities && !isClientAccount && (

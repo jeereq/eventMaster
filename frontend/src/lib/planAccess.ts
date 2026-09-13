@@ -122,7 +122,7 @@ export const QUOTA_GUIDES: Record<QuotaKind, PlanLimitGuide> = {
     title: 'Limite de prestations',
     what: 'Le nombre de fiches prestataire / matériel & équipements est plafonné.',
     why: 'Chaque fiche apparaît sur le marketplace et consomme photos, carte et demandes.',
-    how: 'Passez au forfait Prestataire ou Salle & presta, ou archivez une fiche pour en créer une autre.',
+    how: 'Passez à Business (ou supérieur), Prestataire ou Salle & presta, ou archivez une fiche pour en créer une autre.',
     href: '/dashboard/billing',
   },
   orgManagers: {
@@ -221,6 +221,27 @@ export function canPublishVenueCatalog(
   if (planId === 'FREE') return (maxRooms ?? 0) > 0;
   if (audience === 'SERVICE') return false;
   return (maxRooms ?? 0) > 0;
+}
+
+/**
+ * Peut vendre sur le marketplace (salle et/ou prestations) :
+ * compte VENDOR/BOTH, audience catalogue/B2B, ou quota prestations > 0 (essai FREE inclus).
+ * Les forfaits Particulier (B2C) restent exclus.
+ */
+export function canSellOnMarketplace(opts: {
+  accountKind?: string | null;
+  planFeatures?: PlanCapabilities | null;
+  planQuota?: PlanQuotaInfo | null;
+  planId?: string | null;
+}): boolean {
+  if (opts.planId?.startsWith('PERSONAL') || opts.planFeatures?.audience === 'B2C') return false;
+  const kind = opts.accountKind;
+  if (kind === 'VENDOR' || kind === 'BOTH') return true;
+  const audience = opts.planFeatures?.audience;
+  if (audience === 'VENUE' || audience === 'SERVICE' || audience === 'CATALOG' || audience === 'B2B') {
+    return true;
+  }
+  return (opts.planQuota?.limits.maxServices ?? 0) > 0;
 }
 
 export function getRoomTypeLockMessage(roomType: string, planName?: string | null): string {
