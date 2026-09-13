@@ -1,4 +1,5 @@
 import type { PublicSiteConfig } from '@/context/PlatformSiteContext';
+import { collectionCommissionRangeLabel } from '@/config/legalConfig';
 import { MARKETPLACE_COMMISSION_RATE, MARKETPLACE_DEPOSIT_RATE } from '@/lib/marketplace';
 
 export function commissionPercent(site?: Pick<PublicSiteConfig, 'marketplaceCommissionPercent'> | null) {
@@ -17,7 +18,7 @@ export function renewalPercent(site?: Pick<PublicSiteConfig, 'commercialRenewalC
   return site?.commercialRenewalCommissionPercent ?? 20;
 }
 
-/** Remplace {depositPercent}, {commissionPercent}, {commercialPercent}, {renewalPercent}, {platformName}. */
+/** Remplace {depositPercent}, {commissionPercent}, {commercialPercent}, {renewalPercent}, {collectionCommission}, {platformName}. */
 export function interpolateRates(text: string, site?: PublicSiteConfig | null) {
   if (typeof text !== 'string') return '';
   return text
@@ -25,5 +26,6 @@ export function interpolateRates(text: string, site?: PublicSiteConfig | null) {
     .replaceAll('{commissionPercent}', String(commissionPercent(site)))
     .replaceAll('{commercialPercent}', String(commercialPercent(site)))
     .replaceAll('{renewalPercent}', String(renewalPercent(site)))
+    .replaceAll('{collectionCommission}', collectionCommissionRangeLabel())
     .replaceAll('{platformName}', site?.platformName || 'EventMaster');
 }

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { LegalPageShell, Section } from '@/components/LegalPageShell';
 import LegalSupportEmail from '@/components/LegalSupportEmail';
-import { REFUND_VERSION } from '@/config/legalConfig';
+import { collectionCommissionRangeLabel, REFUND_VERSION } from '@/config/legalConfig';
 
 export const metadata = {
   title: 'Politique de remboursement — EventMaster',
@@ -29,7 +29,8 @@ export default function RefundPage() {
         <p>
           EventMaster est un intermédiaire technique. Les fonds de billetterie et de dons solidaires sont encaissés
           pour le compte de l’organisateur. En plus de l’abonnement SaaS, EventMaster se réserve le droit de prélever
-          une commission de 3 % à 5 % du montant global collecté (billets et/ou dons) avant reversement. Les acomptes
+          une commission de {collectionCommissionRangeLabel()} du montant global collecté (billets et/ou dons) avant
+          reversement. Cette commission, distincte de l’abonnement SaaS, n’est pas remboursable. Les acomptes
           et cautions du marketplace relèvent de l’accord direct entre l’organisateur et le prestataire, l’exploitant
           de salle ou le loueur de matériel.
         </p>
@@ -47,7 +48,9 @@ export default function RefundPage() {
           </li>
           <li>
             EventMaster ne reverse un remboursement à l’acheteur que sur instruction formelle de l’organisateur, et
-            seulement si les fonds correspondants sont encore disponibles (avant ou après reversement/payout, selon le cas).
+            seulement si les fonds correspondants sont encore disponibles (avant ou après reversement/payout, selon le
+            cas). La commission plateforme déjà prélevée sur la collecte n’est pas restituée, sauf erreur de facturation
+            avérée.
           </li>
           <li>
             Tout billet acheté valide automatiquement la présence de son porteur. La personnalisation d&apos;un billet

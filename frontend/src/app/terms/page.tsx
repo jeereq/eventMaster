@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { LegalPageShell, Section } from '@/components/LegalPageShell';
 import LegalSupportEmail from '@/components/LegalSupportEmail';
 import TermsMarketplaceRates from '@/components/TermsMarketplaceRates';
-import { TERMS_VERSION } from '@/config/legalConfig';
+import { collectionCommissionRangeLabel, TERMS_VERSION } from '@/config/legalConfig';
 
 export const metadata = {
   title: 'Conditions d\'utilisation — EventMaster',
@@ -183,8 +183,9 @@ export default function TermsPage() {
           </li>
           <li>
             <strong>Commission de collecte :</strong> En plus de l&apos;abonnement SaaS déjà payé, EventMaster se
-            réserve le droit de prélever une commission de <strong>3 % à 5 %</strong> du montant global collecté au
-            titre de la billetterie de l&apos;événement. Cette commission s&apos;ajoute aux frais de transaction du
+            réserve le droit de prélever une commission de <strong>{collectionCommissionRangeLabel()}</strong> du
+            montant global collecté au titre de la billetterie de l&apos;événement. Cette commission s&apos;ajoute aux
+            frais de transaction du
             prestataire de paiement (FlexPay) et est déduite avant reversement.
           </li>
           <li>
@@ -267,7 +268,8 @@ export default function TermsPage() {
             sur EventMaster sont rigoureusement exacts, sincères et véridiques ;
           </li>
           <li>
-            Qu&apos;elle affectera la totalité des sommes nettes perçues à la réalisation exclusive de la cause annoncée,
+            Qu&apos;elle affectera la totalité des sommes nettes perçues (après frais FlexPay et commission plateforme
+            de {collectionCommissionRangeLabel()}) à la réalisation exclusive de la cause annoncée,
             à l&apos;exclusion de tout usage détourné ou illicite ;
           </li>
           <li>
@@ -324,8 +326,9 @@ export default function TermsPage() {
           </li>
           <li>
             <strong>Commission de collecte :</strong> En plus de l&apos;abonnement SaaS déjà payé, EventMaster se
-            réserve le droit de prélever une commission de <strong>3 % à 5 %</strong> du montant global collecté au
-            titre des dons de l&apos;événement. Cette commission s&apos;ajoute aux frais de transaction FlexPay et est
+            réserve le droit de prélever une commission de <strong>{collectionCommissionRangeLabel()}</strong> du
+            montant global collecté au titre des dons de l&apos;événement. Cette commission s&apos;ajoute aux frais de
+            transaction FlexPay et est
             déduite avant reversement.
           </li>
           <li>
@@ -365,10 +368,23 @@ export default function TermsPage() {
           <strong>5.3 Forfaits SaaS, renouvellement et facturation.</strong>
         </p>
         <ul className="list-disc pl-5 space-y-1">
-          <li><strong>Essentials (Gratuit)</strong> : découverte pour organisateurs et essai marketplace (1 salle / 1 prestation) ;</li>
-          <li><strong>Particulier (B2C)</strong> : 4 paliers (50, 100, 200 ou plus de 200 invités illimités), facturés par trimestre (90 jours) ;</li>
-          <li><strong>Business, Business Premium & Enterprise</strong> : forfaits professionnels pour agences et organisateurs réguliers avec support multi-comptes et fonctionnalités avancées ;</li>
-          <li><strong>Forfaits Marketplace (Salle, Prestataire, Salle & presta)</strong> : publication et mise en avant des services professionnels.</li>
+          <li>
+            <strong>Essentiel (Gratuit)</strong> : découverte organisateur (jusqu’à 3 événements et 50 invités au total)
+            et essai marketplace limité ;
+          </li>
+          <li>
+            <strong>Particulier (B2C)</strong> : 4 paliers (50, 100, 200 ou plus de 200 invités), facturés par trimestre
+            (90 jours), éditeur 2D/3D complet, hors marketplace ;
+          </li>
+          <li>
+            <strong>Business, Premium, Premium Plus &amp; Enterprise</strong> : forfaits professionnels mensuels. Dès
+            Business, la vitrine salles publiables et les prestations marketplace sont incluses (plus de forfait Mixte
+            séparé). Le quota d’invités se renouvelle à chaque période payée ;
+          </li>
+          <li>
+            <strong>Forfaits Marketplace dédiés (Salle, Prestataire, Salle &amp; presta)</strong> : publication
+            professionnelle sans événements ni quota d’invités.
+          </li>
         </ul>
         <p>
           Les tarifs sont indiqués en Francs Congolais (FC / CDF) ou devise applicable. Les abonnements annuels peuvent bénéficier d&apos;une réduction tarifaire (notamment 10% de remise sur l&apos;engagement 12 mois).

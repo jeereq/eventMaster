@@ -22,6 +22,7 @@ import { toPrismaJson } from '../utils/prismaJson';
 import { uniqueSlug } from '../utils/slug';
 import { parsePhotoUrls } from '../utils/publicVenue';
 import { formatEventPlace } from '../utils/eventPlace';
+import { collectionCommissionRangeLabel } from '../config/legalConfig.ts';
 import {
   buildCollectionTermsAcceptance,
   extractCollectionTermsAcceptance,
@@ -264,7 +265,7 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
     ) {
       return res.status(400).json({
         error:
-          'Pour activer la billetterie ou les dons, vous devez accepter les conditions de la plateforme en vigueur, y compris la commission de 3 à 5 % sur le montant collecté.',
+          `Pour activer la billetterie ou les dons, vous devez accepter les conditions de la plateforme en vigueur, y compris la commission de ${collectionCommissionRangeLabel()} sur le montant collecté.`,
       });
     }
 
@@ -461,7 +462,7 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
     ) {
       return res.status(400).json({
         error:
-          'Pour activer la billetterie ou les dons, vous devez accepter les conditions de la plateforme en vigueur, y compris la commission de 3 à 5 % sur le montant collecté.',
+          `Pour activer la billetterie ou les dons, vous devez accepter les conditions de la plateforme en vigueur, y compris la commission de ${collectionCommissionRangeLabel()} sur le montant collecté.`,
       });
     }
 

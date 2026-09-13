@@ -267,7 +267,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'create-event',
         title: 'Créer un événement complet',
         content:
-          '1. Événements → Créer.\n2. Privé (liste d’invités) ou Public (fiche marketplace + billets éventuels).\n3. Galerie, GPS, salle (importe le plan), formulaire RSVP.\n4. Infos invités puis invitations.\n5. Suivez : invités → plan de table → tâches → protocole.',
+          '1. Événements → Créer.\n2. Privé (liste d’invités) ou Public (fiche marketplace + billets éventuels).\n3. Pour activer la billetterie ou les dons : validez les conditions en vigueur, y compris la commission de {collectionCommission} du montant collecté, en plus de l’abonnement.\n4. Galerie, GPS, salle (importe le plan), formulaire RSVP.\n5. Infos invités puis invitations.\n6. Suivez : invités → plan de table → tâches → protocole.',
         links: [{ label: 'Événements', href: '/dashboard/events' }],
       },
       {

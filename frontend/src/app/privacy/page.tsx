@@ -1,6 +1,6 @@
 import { LegalPageShell, Section } from '@/components/LegalPageShell';
 import LegalSupportEmail from '@/components/LegalSupportEmail';
-import { PRIVACY_VERSION } from '@/config/legalConfig';
+import { collectionCommissionRangeLabel, PRIVACY_VERSION } from '@/config/legalConfig';
 
 export const metadata = {
   title: 'Politique de confidentialité — EventMaster',
@@ -109,7 +109,7 @@ export default function PrivacyPage() {
           <li><strong>Simulation de budget prévisionnel (/simulateur) :</strong> estimation de packs budgétaires (Éco, Équilibré, Confort) en FC et USD basés sur les capacités et les tarifs réels du catalogue d&apos;espaces et de prestataires ;</li>
           <li><strong>Gestion de la billetterie électronique multi-zones :</strong> répartition des tables et sièges par zone tarifaire, placement PMR adapté, confirmation automatique de présence (RSVP « ACCEPTED ») dès l&apos;achat, personnalisation nominative des billets partagés par leurs bénéficiaires, génération instantanée des e-billets avec QR Codes infalsifiables et téléchargement PDF ;</li>
           <li><strong>Gestion des dons solidaires et collectes de fonds :</strong> enregistrement et sécurisation des contributions libres, émission des pass invité donateur, gestion des dons anonymes et restitution des états financiers pour les organisateurs ;</li>
-          <li><strong>Traitement des paiements et reversements :</strong> validation des règlements via FlexPay (Cartes &amp; Mobile Money en CDF/USD), recharges de jetons IA, émission des reçus/factures, calcul de la commission plateforme de 3 % à 5 % sur le montant global collecté (billets et dons, en plus de l&apos;abonnement) et reversement des recettes nettes aux organisateurs (payouts) ;</li>
+          <li><strong>Traitement des paiements et reversements :</strong> validation des règlements via FlexPay (Cartes &amp; Mobile Money en CDF/USD), recharges de jetons IA, émission des reçus/factures, calcul de la commission plateforme de {collectionCommissionRangeLabel()} sur le montant global collecté (billets et dons, en plus de l&apos;abonnement) et reversement des recettes nettes aux organisateurs (payouts) ;</li>
           <li><strong>Sécurité du contrôle d&apos;accès le jour J :</strong> vérification instantanée de la validité du billet ou pass donateur, traçabilité des accès, placement des invités et blocage des tentatives de double scan frauduleux ;</li>
           <li><strong>Acheminement des communications d&apos;événements :</strong> envoi d&apos;invitations interactives, relances de confirmation RSVP et notifications de service (sur instruction expresse de l&apos;organisateur) ;</li>
           <li><strong>Traçabilité collaborative d&apos;équipe :</strong> journalisation contextuelle des actions sur les plans pour prévenir les conflits de versioning et garantir l&apos;intégrité des agencements ;</li>

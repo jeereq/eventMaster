@@ -73,7 +73,19 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'public-events',
     question: 'Puis-je organiser un événement public avec billets payants ?',
     answer:
-      'Oui. Choisissez Public à la création : l’événement apparaît sur le marketplace. Vous pouvez configurer des tarifs par zone (VIP, Standard, Fosse...) avec choix de place sur le plan. Lors de l’achat d’un billet (via M-Pesa, Orange Money, Airtel, Afrimoney ou Carte), la présence de l’invité est automatiquement validée (RSVP confirmé) et son pass QR sécurisé est généré immédiatement.',
+      'Oui. Choisissez Public à la création : l’événement apparaît sur le marketplace. Vous pouvez configurer des tarifs par zone (VIP, Standard, Fosse...) avec choix de place sur le plan. Lors de l’achat d’un billet (via M-Pesa, Orange Money, Airtel, Afrimoney ou Carte), la présence de l’invité est automatiquement validée (RSVP confirmé) et son pass QR sécurisé est généré immédiatement. L’activation de la billetterie exige d’accepter les conditions en vigueur. En plus de l’abonnement, EventMaster se réserve le droit de prélever {collectionCommission} du montant global collecté avant reversement.',
+  },
+  {
+    id: 'event-donations',
+    question: 'Puis-je collecter des dons solidaires sur un événement ?',
+    answer:
+      'Oui, si l’option est autorisée pour votre organisation. Activez la collecte à montant libre sur l’événement : les donateurs paient en Francs Congolais via Mobile Money ou carte. Un don peut, selon vos réglages, donner un pass d’accès. L’activation exige d’accepter les conditions en vigueur. En plus de l’abonnement, EventMaster se réserve le droit de prélever {collectionCommission} du montant collecté avant reversement. Les dons confirmés sont irrévocables.',
+  },
+  {
+    id: 'collection-payouts',
+    question: 'Comment sont reversées les recettes de billets et de dons ?',
+    answer:
+      'EventMaster encaisse pour votre compte via FlexPay, puis reverse les recettes nettes (virement ou Mobile Money). En plus de l’abonnement déjà payé, une commission de {collectionCommission} du montant global collecté (billets et/ou dons) peut être déduite, ainsi que les frais FlexPay. Cette commission n’est pas remboursable. Vous devez valider les conditions de la plateforme au moment d’activer la billetterie ou les dons.',
   },
   {
     id: 'shared-tickets-personalization',

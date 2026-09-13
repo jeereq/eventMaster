@@ -144,7 +144,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
     icon: Sparkles,
     imageUrl: 'https://images.unsplash.com/photo-1573164574511-73c773193279?auto=format&fit=crop&w=900&q=80',
     pricingAudience: 'B2B',
-    faqIds: ['what-is-eventmaster', 'public-events', 'shared-tickets-personalization', 'event-packs', 'roles', 'protocol-qr', 'plans-quotas', 'room-editor-plans'],
+    faqIds: ['what-is-eventmaster', 'public-events', 'event-donations', 'collection-payouts', 'shared-tickets-personalization', 'event-packs', 'roles', 'protocol-qr', 'plans-quotas', 'room-editor-plans'],
     steps: [
       {
         title: '1. Configurer la billetterie',
