@@ -159,6 +159,7 @@ const SOLID_FIXTURE_KINDS = new Set([
   'buffet',
   'bar',
   'column',
+  'pillar',
   'stairs',
   'balcony',
   'djBooth',
@@ -229,7 +230,7 @@ export function estimateTableSizeMeters(
   const rotW = baseW * cos + baseH * sin;
   const rotH = baseW * sin + baseH * cos;
 
-  const pullBack = 0.45; // enveloppe de recul des chaises assises
+  const pullBack = 0.48; // enveloppe de recul des chaises assises
   const radiusM = Math.hypot(rotW, rotH) / 2;
   return {
     wM: rotW,
@@ -250,6 +251,7 @@ export function estimateRowSizeMeters(
   halfWM: number;
   halfHM: number;
   radiusM: number;
+  effectiveRadiusM: number;
 } {
   const baseW = Math.max(1.5, seatCount * 0.50);
   const baseH = 0.75;
@@ -258,12 +260,14 @@ export function estimateRowSizeMeters(
   const sin = Math.abs(Math.sin(rad));
   const rotW = baseW * cos + baseH * sin;
   const rotH = baseW * sin + baseH * cos;
+  const radiusM = Math.hypot(rotW, rotH) / 2;
   return {
     wM: rotW,
     hM: rotH,
     halfWM: rotW / 2,
     halfHM: rotH / 2,
-    radiusM: Math.hypot(rotW, rotH) / 2,
+    radiusM,
+    effectiveRadiusM: radiusM,
   };
 }
 
@@ -272,7 +276,129 @@ export type MinimalBlueprint = {
   furniture: any[];
   fixtures?: any[];
   walls?: any[];
+  roomOutline?: {
+    shape?: string;
+    x?: number;
+    y?: number;
+    w?: number;
+    h?: number;
+  };
 };
+
+export interface WallSegmentM {
+  id: string;
+  x1M: number;
+  y1M: number;
+  x2M: number;
+  y2M: number;
+  thicknessM: number;
+  storyId?: string;
+}
+
+function getOutlinePolygonPoints(outline: { shape?: string; x?: number; y?: number; w?: number; h?: number }): Array<{ x: number; y: number }> {
+  const x = typeof outline.x === 'number' ? outline.x : 4;
+  const y = typeof outline.y === 'number' ? outline.y : 4;
+  const w = typeof outline.w === 'number' && outline.w > 0 ? outline.w : 92;
+  const h = typeof outline.h === 'number' && outline.h > 0 ? outline.h : 92;
+  const shape = outline.shape || 'rectangle';
+
+  const map = (px: number, py: number) => ({
+    x: x + (px / 100) * w,
+    y: y + (py / 100) * h,
+  });
+
+  switch (shape) {
+    case 'square':
+      return [map(15, 6), map(85, 6), map(85, 94), map(15, 94)];
+    case 'circle': {
+      const pts: Array<{ x: number; y: number }> = [];
+      const n = 16;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+        pts.push(map(50 + Math.cos(a) * 46, 50 + Math.sin(a) * 44));
+      }
+      return pts;
+    }
+    case 'ellipse': {
+      const pts: Array<{ x: number; y: number }> = [];
+      const n = 16;
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+        pts.push(map(50 + Math.cos(a) * 48, 50 + Math.sin(a) * 32));
+      }
+      return pts;
+    }
+    case 'hexagon':
+      return [map(25, 0), map(75, 0), map(100, 50), map(75, 100), map(25, 100), map(0, 50)];
+    case 'octagon':
+      return [
+        map(30, 0), map(70, 0), map(100, 30), map(100, 70),
+        map(70, 100), map(30, 100), map(0, 70), map(0, 30),
+      ];
+    case 'lShape':
+      return [map(0, 0), map(65, 0), map(65, 35), map(100, 35), map(100, 100), map(0, 100)];
+    case 'tShape':
+      return [
+        map(0, 0), map(100, 0), map(100, 38), map(68, 38),
+        map(68, 100), map(32, 100), map(32, 38), map(0, 38),
+      ];
+    case 'uShape':
+      return [
+        map(0, 0), map(32, 0), map(32, 62), map(68, 62),
+        map(68, 0), map(100, 0), map(100, 100), map(0, 100),
+      ];
+    case 'rectangle':
+    default:
+      return [map(0, 0), map(100, 0), map(100, 100), map(0, 100)];
+  }
+}
+
+export function extractWallSegmentsMeters(
+  blueprint: MinimalBlueprint,
+  widthM: number,
+  heightM: number,
+): WallSegmentM[] {
+  const pctToM_X = (pct: number) => (pct / 100) * widthM;
+  const pctToM_Y = (pct: number) => (pct / 100) * heightM;
+  const segments: WallSegmentM[] = [];
+
+  // 1. Murs procéduraux / cloisons explicites
+  if (Array.isArray(blueprint.walls) && blueprint.walls.length > 0) {
+    for (let i = 0; i < blueprint.walls.length; i++) {
+      const w = blueprint.walls[i];
+      if (!w || !w.start || !w.end) continue;
+      segments.push({
+        id: w.id || `wall_${i}`,
+        x1M: pctToM_X(w.start.x),
+        y1M: pctToM_Y(w.start.y),
+        x2M: pctToM_X(w.end.x),
+        y2M: pctToM_Y(w.end.y),
+        thicknessM: typeof w.thicknessM === 'number' && w.thicknessM > 0 ? w.thicknessM : 0.20,
+        storyId: w.storyId,
+      });
+    }
+  }
+
+  // 2. Murs périphériques du contour de salle si aucun mur explicite
+  if (segments.length < 3) {
+    const outline = blueprint.roomOutline || { x: 3, y: 3, w: 94, h: 94, shape: 'rectangle' };
+    const poly = getOutlinePolygonPoints(outline);
+    for (let i = 0; i < poly.length; i++) {
+      const p1 = poly[i];
+      const p2 = poly[(i + 1) % poly.length];
+      segments.push({
+        id: `boundary_wall_${i}`,
+        x1M: pctToM_X(p1.x),
+        y1M: pctToM_Y(p1.y),
+        x2M: pctToM_X(p2.x),
+        y2M: pctToM_Y(p2.y),
+        thicknessM: 0.25,
+      });
+    }
+  }
+
+  return segments;
+}
 
 type MutableItem = {
   id: string;
@@ -391,6 +517,33 @@ export function detectLayoutClearanceConflicts(
     }
   }
 
+  // 1b. Chaise isolée sous/sur une table ou trop proche d'une table
+  for (const c of chairs) {
+    for (const t of tables) {
+      if (!sameStory(c.storyId, t.storyId)) continue;
+      const szT = estimateTableSizeMeters(t.shape, t.capacity, t.rotation);
+      const dxM = pctToM_X(c.x) - pctToM_X(t.x);
+      const dyM = pctToM_Y(c.y) - pctToM_Y(t.y);
+      const dist = Math.hypot(dxM, dyM);
+      const chairClearance = clearances.chairToTable ?? 0.80;
+      const required = szT.effectiveRadiusM + 0.25 + chairClearance;
+
+      if (dist < required * 0.95) {
+        conflicts.push({
+          id: `chair_table_${c.id}_${t.id}`,
+          type: 'chair_table_overlap',
+          severity: dist < szT.radiusM + 0.35 ? 'error' : 'warning',
+          message: dist < szT.radiusM + 0.35
+            ? `La chaise "${c.label || 'Chaise'}" est placée sur/sous la table "${t.name || 'Table'}".`
+            : `La chaise "${c.label || 'Chaise'}" est trop proche de la table "${t.name || 'Table'}" (${dist.toFixed(2)}m, minimum ${required.toFixed(2)}m requis).`,
+          itemIds: [c.id, t.id],
+          distanceM: Math.round(dist * 100) / 100,
+          requiredM: Math.round(required * 100) / 100,
+        });
+      }
+    }
+  }
+
   // 2. Tables trop proches ou chevauchantes
   for (let i = 0; i < tables.length; i++) {
     for (let j = i + 1; j < tables.length; j++) {
@@ -487,47 +640,75 @@ export function detectLayoutClearanceConflicts(
   }
 
   // 6. Non-incorporation dans les murs (cloisons et parois)
-  if (Array.isArray(blueprint.walls)) {
-    const wallItems = [...tables, ...chairs, ...rows];
-    for (const wall of blueprint.walls) {
-      if (!wall.start || !wall.end) continue;
-      const x1 = pctToM_X(wall.start.x);
-      const y1 = pctToM_Y(wall.start.y);
-      const x2 = pctToM_X(wall.end.x);
-      const y2 = pctToM_Y(wall.end.y);
-      const thicknessM = typeof wall.thicknessM === 'number' && wall.thicknessM > 0 ? wall.thicknessM : 0.20;
+  const allWallSegments = extractWallSegmentsMeters(blueprint, widthM, heightM);
+  const wallItems = [...tables, ...chairs, ...rows];
+  const solidFixtures = (blueprint.fixtures || []).filter((fx) => SOLID_FIXTURE_KINDS.has(fx.kind));
 
-      for (const item of wallItems) {
-        if (!sameStory(item.storyId, wall.storyId)) continue;
-        const itemX = pctToM_X(item.x);
-        const itemY = pctToM_Y(item.y);
-        const sz = item.kind === 'table'
-          ? estimateTableSizeMeters(item.shape, item.capacity, item.rotation)
-          : item.kind === 'row'
-            ? estimateRowSizeMeters(item.seatCount, item.rotation)
-            : { radiusM: 0.25, halfWM: 0.25 };
+  for (const wall of allWallSegments) {
+    for (const item of wallItems) {
+      if (!sameStory(item.storyId, wall.storyId)) continue;
+      const itemX = pctToM_X(item.x);
+      const itemY = pctToM_Y(item.y);
+      const sz = item.kind === 'table'
+        ? estimateTableSizeMeters(item.shape, item.capacity, item.rotation)
+        : item.kind === 'row'
+          ? estimateRowSizeMeters(item.seatCount, item.rotation)
+          : { radiusM: 0.25, halfWM: 0.25, effectiveRadiusM: 0.25 };
 
-        const { distM } = distancePointToSegmentM(itemX, itemY, x1, y1, x2, y2);
-        const physicalCoreDist = sz.radiusM + thicknessM / 2;
+      const { distM } = distancePointToSegmentM(itemX, itemY, wall.x1M, wall.y1M, wall.x2M, wall.y2M);
+      const physicalCoreDist = sz.radiusM + wall.thicknessM / 2;
+      const chairOuterDist = (sz.effectiveRadiusM ?? sz.radiusM) + wall.thicknessM / 2;
 
-        if (distM < physicalCoreDist) {
-          const penetrationM = physicalCoreDist - distM;
-          conflicts.push({
-            id: `wall_penetration_${item.id}_${wall.id || 'wall'}`,
-            type: 'wall_penetration',
-            severity: 'error',
-            message: `L'élément "${item.name || item.label || 'Mobilier'}" est incorporé / encastré dans un mur ou une cloison (pénétration de ${penetrationM.toFixed(2)}m).`,
-            itemIds: [item.id, wall.id || 'wall'],
-            distanceM: Math.round(distM * 100) / 100,
-            requiredM: Math.round(physicalCoreDist * 100) / 100,
-          });
-        }
+      if (distM < physicalCoreDist) {
+        const penetrationM = physicalCoreDist - distM;
+        conflicts.push({
+          id: `wall_penetration_${item.id}_${wall.id || 'wall'}`,
+          type: 'wall_penetration',
+          severity: 'error',
+          message: `L'élément "${item.name || item.label || 'Mobilier'}" est incorporé / encastré dans un mur ou une cloison (pénétration de ${penetrationM.toFixed(2)}m).`,
+          itemIds: [item.id, wall.id || 'wall'],
+          distanceM: Math.round(distM * 100) / 100,
+          requiredM: Math.round(physicalCoreDist * 100) / 100,
+        });
+      } else if (distM < chairOuterDist && item.kind === 'table') {
+        const penetrationM = chairOuterDist - distM;
+        conflicts.push({
+          id: `wall_penetration_${item.id}_${wall.id || 'wall'}`,
+          type: 'wall_penetration',
+          severity: 'warning',
+          message: `Les chaises de la table "${item.name || 'Table'}" pénètrent dans le mur ou manquent de recul (${penetrationM.toFixed(2)}m d'empiètement).`,
+          itemIds: [item.id, wall.id || 'wall'],
+          distanceM: Math.round(distM * 100) / 100,
+          requiredM: Math.round(chairOuterDist * 100) / 100,
+        });
+      }
+    }
+
+    // Fixtures solides contre les cloisons intérieures (interdit la traversée par un mur intérieur)
+    for (const fx of solidFixtures) {
+      if (!sameStory(fx.storyId, wall.storyId) || wall.id.startsWith('boundary_wall_')) continue;
+      const fxX = pctToM_X(fx.x);
+      const fxY = pctToM_Y(fx.y);
+      const fxW = pctToM_X(fx.w);
+      const fxH = pctToM_Y(fx.h);
+      const fxCx = fxX + fxW / 2;
+      const fxCy = fxY + fxH / 2;
+      const { distM, closestX, closestY } = distancePointToSegmentM(fxCx, fxCy, wall.x1M, wall.y1M, wall.x2M, wall.y2M);
+      const inset = 0.08;
+      if (closestX > fxX + inset && closestX < fxX + fxW - inset && closestY > fxY + inset && closestY < fxY + fxH - inset) {
+        conflicts.push({
+          id: `wall_penetration_${fx.id}_${wall.id || 'wall'}`,
+          type: 'wall_penetration',
+          severity: 'error',
+          message: `L'installation fixe "${fx.label || fx.kind}" est traversée par une cloison intérieure.`,
+          itemIds: [fx.id, wall.id || 'wall'],
+          distanceM: Math.round(distM * 100) / 100,
+        });
       }
     }
   }
 
-  // 7. Non-incorporation dans les installations fixes solides
-  const solidFixtures = (blueprint.fixtures || []).filter((fx) => SOLID_FIXTURE_KINDS.has(fx.kind));
+  // 7. Non-incorporation dans les installations fixes solides (scène, estrade, bar, buffet...)
   for (const item of [...tables, ...chairs, ...rows]) {
     for (const fx of solidFixtures) {
       if (!sameStory(item.storyId, fx.storyId)) continue;
@@ -538,12 +719,33 @@ export function detectLayoutClearanceConflicts(
       const fxW = pctToM_X(fx.w);
       const fxH = pctToM_Y(fx.h);
 
-      if (itemX >= fxX && itemX <= fxX + fxW && itemY >= fxY && itemY <= fxY + fxH) {
+      const closestX = Math.max(fxX, Math.min(fxX + fxW, itemX));
+      const closestY = Math.max(fxY, Math.min(fxY + fxH, itemY));
+      const distM = Math.hypot(itemX - closestX, itemY - closestY);
+
+      const sz = item.kind === 'table'
+        ? estimateTableSizeMeters(item.shape, item.capacity, item.rotation)
+        : item.kind === 'row'
+          ? estimateRowSizeMeters(item.seatCount, item.rotation)
+          : { radiusM: 0.25, halfWM: 0.25, effectiveRadiusM: 0.25 };
+
+      const coreRadius = sz.radiusM;
+      const chairRadius = sz.effectiveRadiusM ?? sz.radiusM;
+
+      if (distM < coreRadius) {
         conflicts.push({
           id: `element_overlap_${item.id}_${fx.id}`,
           type: 'element_overlap',
           severity: 'error',
           message: `L'élément "${item.name || item.label || 'Mobilier'}" est incorporé dans l'installation fixe "${fx.label || fx.kind}".`,
+          itemIds: [item.id, fx.id],
+        });
+      } else if (distM < chairRadius) {
+        conflicts.push({
+          id: `element_overlap_${item.id}_${fx.id}`,
+          type: 'element_overlap',
+          severity: 'warning',
+          message: `Les chaises de "${item.name || item.label || 'Mobilier'}" empiètent sur l'installation fixe "${fx.label || fx.kind}".`,
           itemIds: [item.id, fx.id],
         });
       }
@@ -716,31 +918,8 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
     }
   }
 
-  // Extraire les segments de murs pour l'anti-incorporation
-  type WallSegmentM = {
-    id: string;
-    x1M: number;
-    y1M: number;
-    x2M: number;
-    y2M: number;
-    thicknessM: number;
-    storyId?: string;
-  };
-  const wallSegments: WallSegmentM[] = [];
-  if (Array.isArray(blueprint.walls)) {
-    for (const w of blueprint.walls) {
-      if (!w.start || !w.end) continue;
-      wallSegments.push({
-        id: w.id || `wall_${wallSegments.length}`,
-        x1M: pctToM_X(w.start.x),
-        y1M: pctToM_Y(w.start.y),
-        x2M: pctToM_X(w.end.x),
-        y2M: pctToM_Y(w.end.y),
-        thicknessM: typeof w.thicknessM === 'number' && w.thicknessM > 0 ? w.thicknessM : 0.20,
-        storyId: w.storyId,
-      });
-    }
-  }
+  // Extraire les segments de murs (intérieurs et périphériques) pour l'anti-incorporation
+  const wallSegments = extractWallSegmentsMeters(blueprint, widthM, heightM);
 
   const sameStory = (s1?: string, s2?: string) => !s1 || !s2 || s1 === s2;
 
@@ -929,11 +1108,11 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
           ? clearances.serviceCounterClearance
           : isStage
             ? clearances.stageClearance
-            : fx.kind === 'column'
+            : fx.kind === 'column' || fx.kind === 'pillar'
               ? clearances.columnClearance
               : clearances.fixtureClearance;
 
-        const margin = item.radiusM + requiredClearance;
+        const margin = item.effectiveRadiusM + requiredClearance;
         const minX = fx.xM - margin;
         const maxX = fx.xM + fx.wM + margin;
         const minY = fx.yM - margin;
@@ -1037,7 +1216,7 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
       }
     }
 
-    // 11. Dégagement strict et anti-incorporation des cloisons / murs intérieurs
+    // 11. Dégagement strict et anti-incorporation des cloisons / murs intérieurs et périphériques
     for (const item of mutableItems) {
       for (const wall of wallSegments) {
         if (!sameStory(item.storyId, wall.storyId)) continue;
@@ -1059,11 +1238,28 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
           ny = -ny;
         }
 
-        const requiredWallDist = item.radiusM + wall.thicknessM / 2 + 0.15;
+        const requiredWallDist = item.effectiveRadiusM + wall.thicknessM / 2 + 0.12;
         if (distM < requiredWallDist) {
           const pushM = requiredWallDist - distM;
           item.cxM += nx * pushM;
           item.cyM += ny * pushM;
+        }
+      }
+    }
+
+    // 11b. Dégagement des fixtures solides par rapport aux cloisons intérieures
+    for (const fx of mutableFixtures) {
+      if (!fx.isSolid) continue;
+      for (const wall of wallSegments) {
+        if (!sameStory(fx.storyId, wall.storyId) || wall.id.startsWith('boundary_wall_')) continue;
+        const fxCx = fx.xM + fx.wM / 2;
+        const fxCy = fx.yM + fx.hM / 2;
+        let { distM, nx, ny } = distancePointToSegmentM(fxCx, fxCy, wall.x1M, wall.y1M, wall.x2M, wall.y2M);
+        const minReq = Math.min(fx.wM, fx.hM) / 2 + wall.thicknessM / 2;
+        if (distM < minReq) {
+          const pushM = minReq - distM;
+          fx.xM += nx * pushM;
+          fx.yM += ny * pushM;
         }
       }
     }
@@ -1114,15 +1310,20 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
     };
   });
 
-  // Normaliser l'orthogonalité de toutes les portes (angles stricts 0°, 90°, 180°, 270°)
+  // Normaliser l'orthogonalité de toutes les portes et repositionner les fixtures modifiées
+  const fixtureMap = new Map(mutableFixtures.map((fx) => [fx.id, fx]));
   const updatedFixtures = (blueprint.fixtures || []).map((fx) => {
-    if (fx.kind === 'door' || fx.kind === 'entrance') {
-      return {
-        ...fx,
-        rotation: normalizeDoorOrthogonal(fx.rotation ?? 0),
-      };
-    }
-    return fx;
+    const mutable = fixtureMap.get(fx.id);
+    const rotation = (fx.kind === 'door' || fx.kind === 'entrance')
+      ? normalizeDoorOrthogonal(fx.rotation ?? 0)
+      : fx.rotation;
+    if (!mutable) return { ...fx, rotation };
+    return {
+      ...fx,
+      x: clampPct(snapPct(mToPct_X(mutable.xM), IMPORT_SNAP_STEP), 0, 99),
+      y: clampPct(snapPct(mToPct_Y(mutable.yM), IMPORT_SNAP_STEP), 0, 99),
+      rotation,
+    };
   });
 
   return {

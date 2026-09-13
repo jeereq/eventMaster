@@ -89,6 +89,7 @@ import {
   resolveTableColor,
   roomOutlineLabels,
   roomTypeLabels,
+  sanitizeBlueprintLayout,
   saveCustomTemplateToBlueprint,
   tableArrangeLabels,
   tableShapeLabels,
@@ -877,10 +878,23 @@ export default function RoomLayoutEditor({
 
   const handleWebGLMoveEnd = useCallback(() => {
     if (dragHistPushedRef.current) {
-      log('Élément déplacé', 'move');
+      const current = latestBlueprintRef.current;
+      const conflicts = detectLayoutClearanceConflicts(current).conflicts;
+      const criticalConflicts = conflicts.filter((c) => c.severity === 'error');
+
+      if (criticalConflicts.length > 0) {
+        // Magnétisme répulsif : micro-relaxation locale pour expulser l'élément hors d'une collision
+        const sanitized = sanitizeBlueprintLayout(current, { iterations: 12 });
+        emitBlueprint(withLoggedAction(sanitized, {
+          message: `Position ajustée automatiquement (${criticalConflicts[0].message})`,
+          kind: 'move',
+        }));
+      } else {
+        log('Élément déplacé', 'move');
+      }
     }
     dragHistPushedRef.current = false;
-  }, [log]);
+  }, [emitBlueprint, log, withLoggedAction]);
 
   const deleteSelected = () => {
     if (selection.length === 0 || readOnly) return;
@@ -1063,8 +1077,9 @@ export default function RoomLayoutEditor({
       seatsPerRow,
       startRowIndex: rowCount + 1,
     });
+    const nextBp = sanitizeBlueprintLayout({ ...blueprint, furniture: [...blueprint.furniture, ...rows] });
     updateBlueprint(
-      { ...blueprint, furniture: [...blueprint.furniture, ...rows] },
+      nextBp,
       { message: `${chairGroups} groupe${chairGroups > 1 ? 's' : ''} · ${rows.length} rangées ajoutées`, kind: 'add' },
     );
     setQuickCreate(null);
@@ -1496,8 +1511,9 @@ export default function RoomLayoutEditor({
   };
 
   const applyCustomTemplate = (templateId: string) => {
-    const next = applySavedRoomTemplate(blueprint, templateId, { keepStyle: keepTemplateStyle });
-    if (!next) return;
+    const rawNext = applySavedRoomTemplate(blueprint, templateId, { keepStyle: keepTemplateStyle });
+    if (!rawNext) return;
+    const next = sanitizeBlueprintLayout(rawNext);
     const name = blueprint.metadata.customTemplates?.find((t) => t.id === templateId)?.name ?? 'perso.';
     updateBlueprint(next, { message: `Modèle « ${name} » appliqué`, kind: 'template' });
     setSelection([]);
@@ -7222,7 +7238,8 @@ export default function RoomLayoutEditor({
         onClose={() => setStudioOpen(false)}
         current={blueprint}
         caps={caps}
-        onApplied={({ blueprint: next, warnings, selection: nextSelection }) => {
+        onApplied={({ blueprint: nextRaw, warnings, selection: nextSelection }) => {
+          const next = sanitizeBlueprintLayout(nextRaw);
           updateBlueprint(next, {
             message: `Studio IA (${next.furniture.length + next.fixtures.length} éléments)`,
             kind: 'template',

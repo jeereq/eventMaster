@@ -554,12 +554,14 @@ export function duplicateLayoutSelection(
 
   if (copied.length === 0) return { blueprint, selection };
 
+  const sanitized = enforceRealLayoutClearances({
+    ...blueprint,
+    furniture: nextFurniture,
+    fixtures: nextFixtures,
+  });
+
   return {
-    blueprint: refreshBlueprintMetadata({
-      ...blueprint,
-      furniture: nextFurniture,
-      fixtures: nextFixtures,
-    }),
+    blueprint: refreshBlueprintMetadata(sanitized as RoomLayoutBlueprint),
     selection: copied,
   };
 }

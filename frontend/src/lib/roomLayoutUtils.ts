@@ -1,4 +1,5 @@
 import { rowSeatCode, seatsGrownForTier } from '@/lib/roomAmphitheaterGeom';
+import { enforceRealLayoutClearances } from './roomLayoutClearance';
 
 export { estimateAmphitheaterSeats, rowCurveFactor, rowCurvePercent, rowSeatCode } from '@/lib/roomAmphitheaterGeom';
 
@@ -1249,6 +1250,23 @@ function collectOccupiedLayoutBoxes(
     const box = furnitureLayoutBox(item);
     if (box) boxes.push(box);
   }
+  // Murs et cloisons réelles comme obstacles physiques infranchissables
+  const walls = resolveBlueprintWalls(blueprint);
+  for (const wall of walls) {
+    if (!sameLayoutStory(wall.storyId, storyId)) continue;
+    if (!wall.start || !wall.end) continue;
+    const minX = Math.min(wall.start.x, wall.end.x);
+    const maxX = Math.max(wall.start.x, wall.end.x);
+    const minY = Math.min(wall.start.y, wall.end.y);
+    const maxY = Math.max(wall.start.y, wall.end.y);
+    const pad = 1.2;
+    boxes.push({
+      x: minX - pad,
+      y: minY - pad,
+      w: Math.max(2.4, (maxX - minX) + pad * 2),
+      h: Math.max(2.4, (maxY - minY) + pad * 2),
+    });
+  }
   return boxes;
 }
 
@@ -1267,9 +1285,15 @@ export function findClearLayoutSlot(
   const w = Math.max(2, Math.min(96, opts.w));
   const h = Math.max(2, Math.min(96, opts.h));
   const occupied = collectOccupiedLayoutBoxes(blueprint, opts.kind, opts.storyId);
+  const outline = blueprint.roomOutline || { x: 4, y: 4, w: 92, h: 92 };
+  const minBoundaryX = (outline.x ?? 4) + 1;
+  const minBoundaryY = (outline.y ?? 4) + 1;
+  const maxBoundaryX = Math.max(minBoundaryX, minBoundaryX + (outline.w ?? 92) - w - 2);
+  const maxBoundaryY = Math.max(minBoundaryY, minBoundaryY + (outline.h ?? 92) - h - 2);
+
   const clampSlot = (x: number, y: number) => ({
-    x: Math.max(2, Math.min(98 - w, x)),
-    y: Math.max(2, Math.min(98 - h, y)),
+    x: Math.max(minBoundaryX, Math.min(maxBoundaryX, x)),
+    y: Math.max(minBoundaryY, Math.min(maxBoundaryY, y)),
   });
   const isFree = (x: number, y: number) => {
     const box = { x, y, w, h };
@@ -2421,7 +2445,7 @@ export function wallsFromRoomOutline(
 }
 
 export function resolveBlueprintWalls(blueprint: RoomLayoutBlueprint): RoomWallSegment[] {
-  if (Array.isArray(blueprint.walls)) return blueprint.walls;
+  if (Array.isArray(blueprint.walls) && blueprint.walls.length > 0) return blueprint.walls;
   const outline = blueprint.roomOutline ?? defaultRoomOutline('rectangle');
   return wallsFromRoomOutline(outline, { withEntrance: true });
 }
@@ -4982,6 +5006,14 @@ function mergeTemplateStyle(
   });
 }
 
+export function sanitizeBlueprintLayout(
+  blueprint: RoomLayoutBlueprint,
+  options?: Parameters<typeof enforceRealLayoutClearances>[1],
+): RoomLayoutBlueprint {
+  const cleaned = enforceRealLayoutClearances(blueprint, options);
+  return refreshBlueprintMetadata(cleaned as RoomLayoutBlueprint);
+}
+
 export function applyRoomTemplate(
   templateId: string,
   params?: LayoutParams,
@@ -4995,6 +5027,7 @@ export function applyRoomTemplate(
   if (resolved.totalSeats) {
     built = fitBlueprintToSeatCount(built, resolved.totalSeats);
   }
+  built = sanitizeBlueprintLayout(built);
   if (!previous) return built;
   return mergeTemplateStyle(built, previous, options?.keepStyle !== false);
 }
@@ -5336,7 +5369,7 @@ export function fitBlueprintToSeatCount(
     }
   }
 
-  return refreshBlueprintMetadata({ ...blueprint, furniture });
+  return sanitizeBlueprintLayout({ ...blueprint, furniture });
 }
 
 function gridPositions(count: number, margin = 12, maxCol?: number) {
@@ -6581,5 +6614,5 @@ export function autoArrangeTables(
     const pos = positions[cursor++];
     return pos ? { ...item, x: Math.round(pos.x * 10) / 10, y: Math.round(pos.y * 10) / 10 } : item;
   });
-  return refreshBlueprintMetadata({ ...blueprint, furniture });
+  return sanitizeBlueprintLayout({ ...blueprint, furniture });
 }

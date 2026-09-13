@@ -395,4 +395,62 @@ describe('règles architecturales des portes et murs', () => {
     const report = detectLayoutClearanceConflicts(result);
     assert.ok(!report.conflicts.some((c) => c.type === 'wall_penetration'));
   });
+
+  it('détecte une chaise isolée placée sous ou sur une table (chair_table_overlap)', () => {
+    const blueprint = {
+      canvas: { widthM: 20, heightM: 16 },
+      furniture: [
+        { id: 't1', kind: 'table', name: 'Table Ronde', shape: 'round', capacity: 8, x: 50, y: 50 },
+        { id: 'c1', kind: 'chair', label: 'Chaise Erronée', x: 50.2, y: 50.1 },
+      ],
+      fixtures: [],
+    };
+
+    const report = detectLayoutClearanceConflicts(blueprint);
+    assert.equal(report.isCompliant, false);
+    const chairTableConflict = report.conflicts.find((c) => c.type === 'chair_table_overlap');
+    assert.ok(chairTableConflict, 'Doit détecter une chaise sous la table');
+    assert.equal(chairTableConflict.severity, 'error');
+  });
+
+  it('détecte une fixture solide traversée par un mur intérieur', () => {
+    const blueprint = {
+      canvas: { widthM: 20, heightM: 16 },
+      furniture: [],
+      fixtures: [
+        { id: 'stg1', kind: 'stage', label: 'Grande Scène', x: 45, y: 40, w: 20, h: 20 },
+      ],
+      walls: [
+        {
+          id: 'w_diag',
+          start: { x: 40, y: 50 },
+          end: { x: 70, y: 50 },
+          thicknessM: 0.20,
+        },
+      ],
+    };
+
+    const report = detectLayoutClearanceConflicts(blueprint);
+    assert.equal(report.isCompliant, false);
+    const wallConflict = report.conflicts.find((c) => c.type === 'wall_penetration');
+    assert.ok(wallConflict, 'Doit détecter la scène traversée par le mur');
+    assert.equal(wallConflict.severity, 'error');
+  });
+
+  it('dégage les chaises des tables contre les murs via le contour de salle par défaut', () => {
+    const blueprint = {
+      canvas: { widthM: 20, heightM: 16 },
+      furniture: [
+        // Table collée à la bordure gauche x=4% (dans le mur périphérique)
+        { id: 't_edge', kind: 'table', shape: 'round', capacity: 8, x: 4, y: 50 },
+      ],
+      fixtures: [],
+      // Pas de walls explicite : le contour périphérique doit s'appliquer
+    };
+
+    const result = enforceRealLayoutClearances(blueprint);
+    const tEdge = result.furniture.find((f) => f.id === 't_edge')!;
+    // La table doit avoir été poussée vers l'intérieur (x > 8%)
+    assert.ok(tEdge.x > 8, `La table doit être repoussée vers l'intérieur, x actuel : ${tEdge.x}`);
+  });
 });
