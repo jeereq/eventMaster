@@ -160,3 +160,62 @@ export function snapLayoutPct(value: number, enabled: boolean, step = 2.5): numb
   if (!enabled) return clamped;
   return Math.round(clamped / step) * step;
 }
+
+export interface SmartSnapResult {
+  x: number;
+  y: number;
+  snappedX: boolean;
+  snappedY: boolean;
+  guideX?: number;
+  guideY?: number;
+}
+
+/**
+ * Magnétisme intelligent : aligne en priorité un élément sur les axes (X ou Y)
+ * des autres éléments de la pièce si l'écart est inférieur au seuil `thresholdPct`,
+ * sinon se cale sur le pas de grille standard `gridStep`.
+ */
+export function smartSnapLayoutPct(
+  xPct: number,
+  yPct: number,
+  otherItems: Array<{ x: number; y: number }>,
+  enabled: boolean,
+  thresholdPct = 1.2,
+  gridStep = 2.5,
+): SmartSnapResult {
+  let x = Math.max(0, Math.min(100, xPct));
+  let y = Math.max(0, Math.min(100, yPct));
+
+  if (!enabled) {
+    return { x, y, snappedX: false, snappedY: false };
+  }
+
+  let snappedX = false;
+  let snappedY = false;
+  let guideX: number | undefined;
+  let guideY: number | undefined;
+
+  for (const other of otherItems) {
+    if (!snappedX && Math.abs(x - other.x) <= thresholdPct) {
+      x = other.x;
+      snappedX = true;
+      guideX = other.x;
+    }
+    if (!snappedY && Math.abs(y - other.y) <= thresholdPct) {
+      y = other.y;
+      snappedY = true;
+      guideY = other.y;
+    }
+    if (snappedX && snappedY) break;
+  }
+
+  if (!snappedX) {
+    x = Math.round(x / gridStep) * gridStep;
+  }
+  if (!snappedY) {
+    y = Math.round(y / gridStep) * gridStep;
+  }
+
+  return { x, y, snappedX, snappedY, guideX, guideY };
+}
+

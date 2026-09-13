@@ -160,7 +160,7 @@ import {
   publishBlueprintAmbienceToOrg,
   publishOrgAmbience,
 } from '@/lib/roomAmbienceOrg';
-import { roomEditorCapabilities, snapLayoutPct } from '@/lib/roomEditorAccess';
+import { roomEditorCapabilities, snapLayoutPct, smartSnapLayoutPct } from '@/lib/roomEditorAccess';
 import {
   downloadDataUrl,
   exportPixelRatio,
@@ -847,14 +847,30 @@ export default function RoomLayoutEditor({
       pushHistory(blueprint);
       dragHistPushedRef.current = true;
     }
-    const x = snapLayoutPct(xPct, caps.canSnapGrid);
-    const y = snapLayoutPct(yPct, caps.canSnapGrid);
-    skipHistoryRef.current = true;
-
     const movingInSelection = selection.some((s) => s.kind === kind && s.id === id);
     const moveSet = movingInSelection && selection.length > 1
       ? expandSelectionWithGroups(blueprint, selection)
       : [{ kind, id } as LayoutSelectionItem];
+
+    // Magnétisme intelligent : alignement automatique sur les axes des autres tables et éléments
+    let x = xPct;
+    let y = yPct;
+    if (moveSet.length === 1) {
+      const otherItems: Array<{ x: number; y: number }> = [];
+      for (const f of blueprint.furniture) {
+        if (f.id !== id) otherItems.push({ x: f.x, y: f.y });
+      }
+      for (const fix of blueprint.fixtures) {
+        if (fix.id !== id) otherItems.push({ x: fix.x, y: fix.y });
+      }
+      const snapped = smartSnapLayoutPct(xPct, yPct, otherItems, caps.canSnapGrid);
+      x = snapped.x;
+      y = snapped.y;
+    } else {
+      x = snapLayoutPct(xPct, caps.canSnapGrid);
+      y = snapLayoutPct(yPct, caps.canSnapGrid);
+    }
+    skipHistoryRef.current = true;
 
     if (moveSet.length > 1) {
       const box = getSelectionBounds(blueprint, { kind, id });
@@ -6056,6 +6072,36 @@ export default function RoomLayoutEditor({
         <DoorOpen className="w-3.5 h-3.5" aria-hidden />
         {walkthroughActive ? (walkthroughLabel || 'Visite…') : 'Faire le tour'}
       </button>
+      <button
+        type="button"
+        onClick={() => {
+          const next = !blueprint.metadata.showSightlines;
+          updateBlueprint({
+            ...blueprint,
+            metadata: { ...blueprint.metadata, showSightlines: next },
+          }, { message: next ? 'Lignes de visibilité scène activées' : 'Lignes de visibilité scène masquées', kind: 'settings' });
+        }}
+        title="Vérifier la visibilité directe des tables vers la scène ou l'écran géant (vert = dégagé, rouge = obstrué)"
+        className={cn(EDITOR_TOOL, blueprint.metadata.showSightlines ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+      >
+        <Eye className="w-3.5 h-3.5" aria-hidden />
+        {blueprint.metadata.showSightlines ? 'Visibilité scène ON' : 'Visibilité scène'}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          const next = !blueprint.metadata.showCirculationHeatmap;
+          updateBlueprint({
+            ...blueprint,
+            metadata: { ...blueprint.metadata, showCirculationHeatmap: next },
+          }, { message: next ? 'Carte des allées de sécurité activée' : 'Carte des allées masquée', kind: 'settings' });
+        }}
+        title="Afficher les allées de circulation et les gabarits de sécurité incendie / PMR (vert = conforme, orange/rouge = étroit)"
+        className={cn(EDITOR_TOOL, blueprint.metadata.showCirculationHeatmap ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+      >
+        <ShieldCheck className="w-3.5 h-3.5" aria-hidden />
+        {blueprint.metadata.showCirculationHeatmap ? 'Allées & Sécurité ON' : 'Allées & Sécurité'}
+      </button>
       </ToolbarCluster>
 
       <ToolbarCluster label="Éditer">
@@ -6322,6 +6368,21 @@ export default function RoomLayoutEditor({
         </>
       ) : null}
       <button type="button" onClick={addFreeChair} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Fauteuil</button>
+      <button
+        type="button"
+        onClick={() => {
+          const next = !blueprint.metadata.dressAllTables;
+          updateBlueprint({
+            ...blueprint,
+            metadata: { ...blueprint.metadata, dressAllTables: next },
+          }, { message: next ? 'Toutes les tables sont dressées (vaisselle d’apparat)' : 'Dressage standard des tables', kind: 'settings' });
+        }}
+        title="Dresser automatiquement toutes les tables de banquet (assiettes de porcelaine, verres à pied, serviettes et centres de table)"
+        className={cn(EDITOR_TOOL, blueprint.metadata.dressAllTables ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
+      >
+        <Sparkles className="w-3.5 h-3.5" aria-hidden />
+        {blueprint.metadata.dressAllTables ? 'Tables dressées ON' : 'Dresser tables'}
+      </button>
       </EditorToolGroup>
 
       <EditorToolGroup

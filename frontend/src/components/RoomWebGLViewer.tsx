@@ -87,6 +87,7 @@ import {
 } from '@/components/roomCelebrationMeshes';
 import { ConcertInstrumentMesh, EventBarMesh } from '@/components/CataloguePodiumBarMeshes';
 import { clampRowSeatCount } from '@/lib/roomAmphitheaterGeom';
+import { detectLayoutClearanceConflicts } from '@/lib/roomLayoutClearance';
 import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
 import RoomShowcasePostProcessing from '@/components/RoomShowcasePostProcessing';
 import {
@@ -1774,6 +1775,7 @@ function TableMesh({
   centerpieceStyle = 'floral',
   couvertStyle = 'classic',
   showcaseTableware = false,
+  dressAllTables = false,
   attachedChairs = true,
   rotation,
   elevationM = 0,
@@ -1809,6 +1811,7 @@ function TableMesh({
   centerpieceStyle?: 'floral' | 'greeneryRunner' | 'candleCluster';
   couvertStyle?: 'classic' | 'gold' | 'festive';
   showcaseTableware?: boolean;
+  dressAllTables?: boolean;
   attachedChairs?: boolean;
   rotation?: number;
   elevationM?: number;
@@ -1884,7 +1887,7 @@ function TableMesh({
           cornerRadiusM={cornerRadiusM}
         />
       </group>
-      {(hasCouverts || (selected && showcaseTableware && shape !== 'cocktail' && shape !== 'highTop' && capacity <= 10)) &&
+      {(hasCouverts || dressAllTables || (selected && showcaseTableware && shape !== 'cocktail' && shape !== 'highTop' && capacity <= 10)) &&
         Array.from({ length: Math.min(capacity, 8) }).map((_, i) => {
           const a = (i / Math.max(capacity, 1)) * Math.PI * 2;
           const r = Math.max(size[0], size[1]) * 0.28;
@@ -1897,7 +1900,7 @@ function TableMesh({
             />
           );
         })}
-      {(hasCenterpiece || (selected && showcaseTableware && shape !== 'cocktail' && shape !== 'highTop' && capacity >= 4)) && (
+      {(hasCenterpiece || (dressAllTables && shape !== 'cocktail' && shape !== 'highTop' && capacity >= 4) || (selected && showcaseTableware && shape !== 'cocktail' && shape !== 'highTop' && capacity >= 4)) && (
         <group position={[0, topY, 0]}>
           {centerpieceStyle === 'greeneryRunner' ? (
             <GreeneryRunnerMesh length={Math.max(size[0], size[1]) * 0.72} selected={selected} />
@@ -2673,6 +2676,156 @@ function CinematicCameraController({
   return null;
 }
 
+function SightlineRay({
+  start,
+  end,
+  color,
+  isObstructed,
+}: {
+  start: [number, number, number];
+  end: [number, number, number];
+  color: string;
+  isObstructed: boolean;
+}) {
+  const line = useMemo(() => {
+    const geo = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(...start),
+      new THREE.Vector3(...end),
+    ]);
+    const mat = new THREE.LineBasicMaterial({
+      color,
+      transparent: true,
+      opacity: isObstructed ? 0.35 : 0.75,
+      linewidth: 2,
+    });
+    return new THREE.Line(geo, mat);
+  }, [start, end, color, isObstructed]);
+
+  return <primitive object={line} />;
+}
+
+function SightlinesOverlay({
+  blueprint,
+  widthM,
+  heightM,
+}: {
+  blueprint: RoomLayoutBlueprint;
+  widthM: number;
+  heightM: number;
+}) {
+  const focusFixture = blueprint.fixtures.find(
+    (f) => f.kind === 'stage' || f.kind === 'screen' || f.kind === 'podium' || f.kind === 'djBooth',
+  );
+  if (!focusFixture) return null;
+
+  const [targetX, targetZ] = pctToWorld(focusFixture.x, focusFixture.y, widthM, heightM);
+  const targetY = (focusFixture.heightM ?? 0.4) + 0.8;
+
+  const obstacles = blueprint.fixtures.filter(
+    (f) => f.kind === 'column' || f.kind === 'partition',
+  );
+
+  return (
+    <group position={[0, 0, 0]}>
+      {blueprint.furniture.map((item) => {
+        if (item.kind !== 'table') return null;
+        const [tx, tz] = pctToWorld(item.x, item.y, widthM, heightM);
+        const tableY = 0.75;
+
+        const isObstructed = obstacles.some((obs) => {
+          const [ox, oz] = pctToWorld(obs.x, obs.y, widthM, heightM);
+          const dx = targetX - tx;
+          const dz = targetZ - tz;
+          const l2 = dx * dx + dz * dz;
+          if (l2 < 0.001) return false;
+          const t = Math.max(0, Math.min(1, ((ox - tx) * dx + (oz - tz) * dz) / l2));
+          const projX = tx + t * dx;
+          const projZ = tz + t * dz;
+          const distSq = (ox - projX) * (ox - projX) + (oz - projZ) * (oz - projZ);
+          return distSq < 0.64;
+        });
+
+        const color = isObstructed ? '#ef4444' : '#10b981';
+
+        return (
+          <group key={`sightline-${item.id}`}>
+            <SightlineRay
+              start={[tx, tableY + 0.06, tz]}
+              end={[targetX, targetY, targetZ]}
+              color={color}
+              isObstructed={isObstructed}
+            />
+            <mesh position={[tx, tableY + 0.08, tz]}>
+              <sphereGeometry args={[0.065, 12, 12]} />
+              <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.6} />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+function CirculationClearanceOverlay({
+  blueprint,
+  widthM,
+  heightM,
+}: {
+  blueprint: RoomLayoutBlueprint;
+  widthM: number;
+  heightM: number;
+}) {
+  const conflicts = useMemo(() => detectLayoutClearanceConflicts(blueprint).conflicts, [blueprint]);
+  const conflictIds = useMemo(() => {
+    const map = new Map<string, 'error' | 'warning'>();
+    for (const c of conflicts) {
+      for (const id of c.itemIds) {
+        if (c.severity === 'error') {
+          map.set(id, 'error');
+        } else if (!map.has(id) || map.get(id) !== 'error') {
+          map.set(id, 'warning');
+        }
+      }
+    }
+    return map;
+  }, [conflicts]);
+
+  return (
+    <group position={[0, 0.015, 0]}>
+      {blueprint.furniture.map((item) => {
+        if (item.kind !== 'table') return null;
+        const [wx, wz] = pctToWorld(item.x, item.y, widthM, heightM);
+        const conflict = conflictIds.get(item.id);
+        const color = conflict === 'error' ? '#ef4444' : conflict === 'warning' ? '#f59e0b' : '#10b981';
+        const ringRadius = 1.35;
+
+        return (
+          <group key={`clearance-${item.id}`} position={[wx, 0, wz]} rotation={[-Math.PI / 2, 0, 0]}>
+            <mesh>
+              <ringGeometry args={[ringRadius - 0.06, ringRadius, 32]} />
+              <meshBasicMaterial
+                color={color}
+                transparent
+                opacity={conflict ? 0.85 : 0.35}
+                depthWrite={false}
+              />
+            </mesh>
+            <mesh>
+              <circleGeometry args={[ringRadius, 32]} />
+              <meshBasicMaterial
+                color={color}
+                transparent
+                opacity={conflict ? 0.16 : 0.05}
+                depthWrite={false}
+              />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
 /** Sous-gestionnaire d'erreur pour les effets non critiques (Environment HDRI, Post-Processing) */
 class Room3DSubErrorBoundary extends React.Component<
   { children: React.ReactNode; name?: string; fallback?: React.ReactNode },
@@ -2865,6 +3018,7 @@ function SceneContent({
 
       {qualitySettings.contactShadows ? (
         <ContactShadows
+          key={`contact-shadows-${blueprint.furniture.length}-${blueprint.fixtures?.length}-${stackView ? 'stack' : 'single'}`}
           position={[0, 0.028, 0]}
           opacity={
             qualitySettings.contactShadowsOpacity
@@ -2881,7 +3035,7 @@ function SceneContent({
                 : lighting.preset === 'banquet' ? '#2a1810'
                   : '#1c1917'
           }
-          frames={1}
+          frames={qualitySettings.quality === 'showcase' ? 24 : 12}
         />
       ) : null}
 
@@ -3230,6 +3384,7 @@ function SceneContent({
             centerpieceStyle={item.centerpieceStyle}
             couvertStyle={item.couvertStyle}
             showcaseTableware={qualitySettings.quality === 'showcase'}
+            dressAllTables={blueprint.metadata.dressAllTables === true}
             attachedChairs={item.attachedChairs}
             rotation={item.rotation}
             elevationM={surface?.elevationM ?? 0}
@@ -3258,6 +3413,22 @@ function SceneContent({
           </group>
         );
       })}
+
+      {blueprint.metadata.showSightlines && (
+        <SightlinesOverlay
+          blueprint={blueprint}
+          widthM={widthM}
+          heightM={heightM}
+        />
+      )}
+
+      {blueprint.metadata.showCirculationHeatmap && (
+        <CirculationClearanceOverlay
+          blueprint={blueprint}
+          widthM={widthM}
+          heightM={heightM}
+        />
+      )}
 
       <DragPlane
         session={wallEditMode ? null : dragSession}

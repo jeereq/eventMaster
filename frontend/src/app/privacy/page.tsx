@@ -4,31 +4,46 @@ import { PRIVACY_VERSION } from '@/config/legalConfig';
 
 export const metadata = {
   title: 'Politique de confidentialité — EventMaster',
-  description: 'Politique de confidentialité et protection des données personnelles d\'EventMaster, incluant le Studio IA, la billetterie multi-zone et les paiements sécurisés.',
+  description:
+    'Politique de confidentialité et protection des données personnelles d\'EventMaster, incluant le Studio IA, la billetterie multi-zone, les dons solidaires, le Code du numérique RDC et les paiements sécurisés.',
 };
 
 export default function PrivacyPage() {
   return (
     <LegalPageShell
       title="Politique de confidentialité"
-      subtitle="Comment EventMaster collecte, utilise, protège et traite vos données personnelles, incluant le Studio IA, la billetterie multi-zone, la présence auto-validée, la personnalisation invité et les paiements sécurisés."
-      lastUpdated="9 septembre 2026"
+      subtitle="Comment EventMaster collecte, utilise, protège et traite vos données personnelles, incluant le Studio IA, la billetterie multi-zone, les dons solidaires, la présence auto-validée, la personnalisation invité et les paiements sécurisés."
+      lastUpdated="14 septembre 2026"
       version={PRIVACY_VERSION}
     >
-      <Section title="1. Responsables de traitement et Appartenance au Groupe Tekango">
+      <Section title="1. Responsables de traitement, Groupe Tekango & Cadre Légal RDC">
         <p>
-          <strong>Appartenance au Groupe Tekango :</strong> EventMaster est un projet et une plateforme développée et exploitée par le <strong>Groupe Tekango</strong>. 
-          Les données de compte et d&apos;inscription peuvent être traitées de manière transverse au sein de l&apos;écosystème Tekango (notamment la plateforme 
-          e-commerce Tekango, Poz&apos;tion, ou tout autre service du groupe) pour assurer la continuité de service, l&apos;authentification unifiée et des synergies d&apos;usages.
+          <strong>Appartenance au Groupe Tekango :</strong> EventMaster est un projet et une plateforme développée et
+          exploitée par le <strong>Groupe Tekango</strong>, société établie à Kinshasa (Gombe), République Démocratique
+          du Congo. Les données de compte et d&apos;inscription peuvent être traitées de manière transverse au sein de
+          l&apos;écosystème Tekango (notamment la plateforme e-commerce Tekango, Poz&apos;tion, ou tout autre service du
+          groupe) pour assurer la continuité de service, l&apos;authentification unifiée et des synergies d&apos;usages.
         </p>
         <p>
-          <strong>Données de compte plateforme &amp; transactions SaaS</strong> (inscription organisateur, prestataire, acheteur de billets, facturation SaaS, gestion des jetons IA, sécurité globale) : 
-          EventMaster (Groupe Tekango) agit en qualité de <strong>responsable de traitement</strong> pour la gestion des comptes, du support, de la conformité légale et des paiements.
+          <strong>Conformité au Code du numérique de la RDC :</strong> Nos traitements de données à caractère personnel
+          sont réalisés en stricte conformité avec l&apos;Ordonnance-loi n° 23/010 du 13 mars 2023 portant Code du
+          numérique en République Démocratique du Congo (notamment son Livre II, Titre II relatif à la protection des
+          données à caractère personnel) ainsi qu&apos;avec les standards internationaux de sécurité et de confidentialité
+          pour nos utilisateurs internationaux et de la diaspora.
         </p>
         <p>
-          <strong>Données des événements, invités et acheteurs de billets</strong> : L&apos;organisation utilisatrice (organisateur d&apos;événements ou professionnel du marketplace) 
-          agit en qualité de <strong>responsable de traitement</strong>. EventMaster intervient en qualité de <strong>sous-traitant technique</strong>, traitant ces données uniquement 
-          pour exécuter les services sollicités (émission des e-billets multi-zones, contrôle d&apos;accès QR, routage des invitations WhatsApp/e-mail, plans de salle 2D/3D).
+          <strong>Données de compte plateforme &amp; transactions SaaS</strong> (inscription organisateur, prestataire,
+          acheteur de billets, donateur, facturation SaaS, gestion des jetons IA, sécurité globale) : EventMaster (Groupe
+          Tekango) agit en qualité de <strong>responsable de traitement</strong> pour la gestion des comptes, du support,
+          de la conformité légale et des paiements.
+        </p>
+        <p>
+          <strong>Données des événements, invités, donateurs et acheteurs de billets</strong> : L&apos;organisation
+          utilisatrice (organisateur d&apos;événements ou professionnel du marketplace) agit en qualité de{' '}
+          <strong>responsable de traitement</strong>. EventMaster intervient en qualité de{' '}
+          <strong>sous-traitant technique</strong>, traitant ces données uniquement pour exécuter les services sollicités
+          (émission des e-billets multi-zones, enregistrement des dons solidaires, contrôle d&apos;accès QR, routage des
+          invitations WhatsApp/e-mail, plans de salle 2D/3D).
         </p>
         <p>
           Contact DPO / Support légal :{' '}
@@ -46,12 +61,15 @@ export default function PrivacyPage() {
             <strong>Billetterie &amp; Commandes de billets multi-zones :</strong> Nom et prénom de l&apos;acheteur, adresse e-mail de délivrance du billet, numéro de téléphone, intitulé de l&apos;événement, quantité de billets, zone tarifaire choisie (VIP, Carré d&apos;Or, Standard, etc.), tarif payé en Francs Congolais (CDF) ou USD, siège ou table attribué le cas échéant, référence unique de commande, statut de présence automatiquement confirmé (RSVP « ACCEPTED ») et QR Code d&apos;accès cryptographique unique.
           </li>
           <li>
+            <strong>Dons Solidaires &amp; Contributions (Donations) :</strong> Nom, prénom et coordonnées du donateur (e-mail, numéro de téléphone de paiement), montant du don en Francs Congolais (FC / CDF), référence de transaction FlexPay, motif ou note d&apos;encouragement facultative, option de don confidentiel (nom masqué vis-à-vis des visiteurs publics sur la page de l&apos;événement, mais conservé dans l&apos;espace d&apos;administration de l&apos;organisateur et les journaux de conformité comptable), et émission éventuelle d&apos;un pass invité lié au don.
+          </li>
+          <li>
             <strong>Paiements &amp; Transactions financières (FlexPay) :</strong> Horodatage de l&apos;opération, montant et devise (Francs Congolais — FC / USD), statut du paiement (validé, en attente, refusé), mode de règlement utilisé (Carte bancaire Visa/Mastercard ou Mobile Money : M-Pesa, Orange Money, Airtel Money, Afrimoney), numéro de téléphone de facturation mobile, numéro de transaction et référence de commande FlexPay. 
             <br />
             <em className="text-muted text-xs">Note importante : EventMaster ne collecte, ne visualise et ne conserve aucun numéro complet de carte bancaire, ni code secret PIN Mobile Money. Ces données sensibles sont traitées directement par notre processeur de paiement certifié FlexPay conforme aux normes PCI-DSS.</em>
           </li>
           <li>
-            <strong>Studio IA &amp; Données de modélisation spatiale :</strong> Photographies de salles de réception, croquis, plans d&apos;architectes ou documents 2D téléversés par l&apos;utilisateur pour analyse par vision artificielle et rendu 3D WebGL (matériaux PBR, caméras cinématiques). 
+            <strong>Studio IA &amp; Données de modélisation spatiale :</strong> Photographies de salles de réception, croquis, plans d&apos;architectes ou documents 2D téléversés par l&apos;utilisateur pour analyse par vision artificielle et rendu 3D WebGL (matériaux PBR, caméras cinématiques, escaliers, scènes). 
             <br />
             <em className="text-muted text-xs">Garantie stricte : Les photos importées sont traitées exclusivement pour déduire la géométrie de la salle et la disposition du mobilier (tables, chaises, allées, portes, scènes). EventMaster n&apos;effectue aucune identification biométrique ni reconnaissance faciale sur les personnes pouvant figurer fortuitement sur ces clichés.</em>
           </li>
@@ -65,16 +83,16 @@ export default function PrivacyPage() {
             <strong>Grand livre de consommation des jetons IA :</strong> Historique horodaté des requêtes de génération et de simulation, nombre de crédits ou jetons débités ou rechargés, solde restant attaché à l&apos;utilisateur ou à l&apos;organisation.
           </li>
           <li>
-            <strong>Traçabilité des plans de salle (`RoomActionContext`) :</strong> Identifiant de l&apos;utilisateur ayant modifié le plan, rôle au sein de l&apos;équipe, horodatage précis, nature de l&apos;action (ajout, déplacement, suppression de tables, modification des zones tarifaires, optimisation des espacements), source de l&apos;action (manuelle, raccourci, Studio IA, modèle) et delta de places assises.
+            <strong>Traçabilité des plans de salle (`RoomActionContext`) :</strong> Identifiant de l&apos;utilisateur ayant modifié le plan, rôle au sein de l&apos;équipe, horodatage précis, nature de l&apos;action (ajout, déplacement, suppression de tables, modification des zones tarifaires, allées PMR, optimisation des espacements), source de l&apos;action (manuelle, raccourci, Studio IA, modèle) et delta de places assises.
           </li>
           <li>
-            <strong>Contrôle d&apos;accès &amp; Scan le jour J (Protocole) :</strong> Horodatage précis du scan d&apos;entrée, statut de validation du billet (présence confirmée, scan unique enregistré, tentative de doublon détectée), identifiant de l&apos;agent protocole ou du dispositif de scan ayant validé l&apos;accès.
+            <strong>Contrôle d&apos;accès &amp; Scan le jour J (Protocole) :</strong> Horodatage précis du scan d&apos;entrée, statut de validation du billet ou du pass donateur (présence confirmée, scan unique enregistré, tentative de doublon détectée), identifiant de l&apos;agent protocole ou du dispositif de scan ayant validé l&apos;accès.
           </li>
           <li>
-            <strong>Invités, Confirmations RSVP &amp; Personnalisation des accès partagés :</strong> Nom, prénom, numéro de téléphone WhatsApp (format international E.164), adresse e-mail, catégorie d&apos;invité, statut de réponse RSVP (accepté, décliné), faculté offerte à chaque porteur de billet ou invité de rectifier lui-même ses nom, prénom, téléphone et préférences alimentaires (allergies, régime végétarien, notes pratiques), messages déposés sur le livre d&apos;or et photos partagées dans le fil d&apos;actualité.
+            <strong>Invités, Confirmations RSVP &amp; Personnalisation des accès partagés :</strong> Nom, prénom, numéro de téléphone WhatsApp (format international E.164), adresse e-mail, catégorie d&apos;invité, statut de réponse RSVP (accepté, décliné), besoins spécifiques d&apos;accessibilité (fauteuil roulant PMR), faculté offerte à chaque porteur de billet ou invité de rectifier lui-même ses coordonnées et préférences alimentaires (allergies, régime végétarien, notes pratiques), messages déposés sur le livre d&apos;or et photos partagées dans le fil d&apos;actualité.
           </li>
           <li>
-            <strong>Marketplace &amp; Prestations :</strong> Fiches de salles ou de services (descriptifs, tarifs indicatifs, photos et vidéos hébergées via Cloudinary, géolocalisation et calendrier de disponibilité).
+            <strong>Marketplace, Prestations &amp; Locations :</strong> Fiches de salles, de services ou de matériels en location (descriptifs, tarifs indicatifs, photos et vidéos hébergées via Cloudinary, géolocalisation et calendrier de disponibilité).
           </li>
           <li>
             <strong>Données techniques et de journalisation :</strong> Adresse IP, identifiant d&apos;appareil, type de navigateur (user-agent), horodatage des connexions et traces d&apos;acceptation légale des conditions (CGU et politique de confidentialité).
@@ -89,29 +107,33 @@ export default function PrivacyPage() {
           <li><strong>Modélisation spatiale assistée par IA :</strong> analyse visuelle des photos de salle et génération assistée de plans de salle 2D zénithaux et 3D WebGL via des modèles d&apos;intelligence artificielle (Google Gemini) ;</li>
           <li><strong>Création d&apos;invitations multilingues :</strong> rédaction, reformulation et adaptation culturelle des messages d&apos;invitation en Français et dans les 4 langues nationales de la RDC (Lingala, Swahili, Kikongo, Tshiluba) avec prise en compte du contexte choisi et préservation éthique des visages ;</li>
           <li><strong>Simulation de budget prévisionnel (/simulateur) :</strong> estimation de packs budgétaires (Éco, Équilibré, Confort) en FC et USD basés sur les capacités et les tarifs réels du catalogue d&apos;espaces et de prestataires ;</li>
-          <li><strong>Gestion de la billetterie électronique multi-zones :</strong> répartition des tables et sièges par zone tarifaire, confirmation automatique de présence (RSVP « ACCEPTED ») dès l&apos;achat, personnalisation nominative des billets partagés par leurs bénéficiaires, génération instantanée des e-billets avec QR Codes infalsifiables et téléchargement PDF ;</li>
-          <li><strong>Traitement des paiements et reversements :</strong> validation des règlements via FlexPay (Cartes &amp; Mobile Money en CDF/USD), recharges de jetons IA, émission des reçus/factures et reversement des recettes nettes de billetterie aux organisateurs (payouts) ;</li>
-          <li><strong>Sécurité du contrôle d&apos;accès le jour J :</strong> vérification instantanée de la validité du billet, traçabilité des accès, placement des invités et blocage des tentatives de double scan frauduleux ;</li>
+          <li><strong>Gestion de la billetterie électronique multi-zones :</strong> répartition des tables et sièges par zone tarifaire, placement PMR adapté, confirmation automatique de présence (RSVP « ACCEPTED ») dès l&apos;achat, personnalisation nominative des billets partagés par leurs bénéficiaires, génération instantanée des e-billets avec QR Codes infalsifiables et téléchargement PDF ;</li>
+          <li><strong>Gestion des dons solidaires et collectes de fonds :</strong> enregistrement et sécurisation des contributions libres, émission des pass invité donateur, gestion des dons anonymes et restitution des états financiers pour les organisateurs ;</li>
+          <li><strong>Traitement des paiements et reversements :</strong> validation des règlements via FlexPay (Cartes &amp; Mobile Money en CDF/USD), recharges de jetons IA, émission des reçus/factures et reversement des recettes nettes de billetterie et de dons aux organisateurs (payouts) ;</li>
+          <li><strong>Sécurité du contrôle d&apos;accès le jour J :</strong> vérification instantanée de la validité du billet ou pass donateur, traçabilité des accès, placement des invités et blocage des tentatives de double scan frauduleux ;</li>
           <li><strong>Acheminement des communications d&apos;événements :</strong> envoi d&apos;invitations interactives, relances de confirmation RSVP et notifications de service (sur instruction expresse de l&apos;organisateur) ;</li>
           <li><strong>Traçabilité collaborative d&apos;équipe :</strong> journalisation contextuelle des actions sur les plans pour prévenir les conflits de versioning et garantir l&apos;intégrité des agencements ;</li>
           <li><strong>Synergies du Groupe Tekango :</strong> fluidité d&apos;accès et interopérabilité entre les différents services de l&apos;écosystème Tekango ;</li>
-          <li><strong>Respect des obligations réglementaires :</strong> conservation des justificatifs comptables, facturation légale et lutte contre la fraude financière.</li>
+          <li><strong>Respect des obligations réglementaires :</strong> conservation des justificatifs comptables, facturation légale et lutte contre la fraude financière et le blanchiment de capitaux (LCB-FT).</li>
         </ul>
       </Section>
 
       <Section title="4. Base légale des traitements">
-        <p>Nos traitements de données personnelles s&apos;appuient sur les bases légales suivantes :</p>
+        <p>
+          Nos traitements de données personnelles s&apos;appuient sur les bases légales définies par le Code du numérique
+          de la RDC :
+        </p>
         <ul className="list-disc pl-5 space-y-1">
-          <li><strong>Exécution d&apos;un contrat ou de mesures précontractuelles :</strong> fourniture du service SaaS, traitement des achats de billets, analyse IA des plans à la demande de l&apos;utilisateur, exécution des forfaits d&apos;abonnement et gestion des réservations marketplace ;</li>
-          <li><strong>Respect d&apos;obligations légales et fiscales :</strong> émission des pièces comptables, facturation, conservation des traces de transactions financières et fiscales relatives à la billetterie ;</li>
+          <li><strong>Exécution d&apos;un contrat ou de mesures précontractuelles :</strong> fourniture du service SaaS, traitement des achats de billets, enregistrement des dons, analyse IA des plans à la demande de l&apos;utilisateur, exécution des forfaits d&apos;abonnement et gestion des réservations marketplace ;</li>
+          <li><strong>Respect d&apos;obligations légales et fiscales :</strong> émission des pièces comptables, facturation, conservation des traces de transactions financières et fiscales relatives à la billetterie et aux collectes de fonds ;</li>
           <li><strong>Consentement :</strong> acceptation de la présente politique, souscription aux communications WhatsApp/e-mail, téléversement de photographies et autorisation de géolocalisation sur l&apos;appareil ;</li>
-          <li><strong>Intérêt légitime :</strong> sécurité des infrastructures, prévention de la fraude aux billets (anti-doublon QR Code), journalisation d&apos;intégrité collaborative et amélioration continue des fonctionnalités.</li>
+          <li><strong>Intérêt légitime :</strong> sécurité des infrastructures, prévention de la fraude aux billets et aux dons (anti-doublon QR Code), journalisation d&apos;intégrité collaborative et amélioration continue des fonctionnalités.</li>
         </ul>
       </Section>
 
       <Section title="5. Cloisonnement multi-tenant &amp; Confidentialité des accès">
         <p>
-          EventMaster repose sur une architecture multi-tenant étanche : chaque organisation bénéficie d&apos;une isolation logique totale de ses données. Les collaborateurs d&apos;une organisation n&apos;ont accès qu&apos;aux périmètres définis par leurs rôles respectifs (propriétaire, manager d&apos;événement, staff protocole limité au scan QR).
+          EventMaster repose sur une architecture multi-tenant étanche : chaque organisation bénéficie d&apos;une isolation logique totale de ses données. Les collaborateurs d&apos;une organisation n&apos;ont accès qu&apos;aux périmètres définis par leurs rôles respectifs (propriétaire, manager d&apos;événement, staff protocole limité au scan QR, rôle commercial).
         </p>
         <p>
           Les équipes techniques d&apos;EventMaster (Super Admin) n&apos;accèdent aux données d&apos;une organisation que pour des motifs impérieux d&apos;assistance technique, de sécurité opérationnelle ou de validation de conformité des abonnements.
@@ -119,14 +141,12 @@ export default function PrivacyPage() {
       </Section>
 
       <Section title="6. Mesures de sécurité et intégrité technique">
-        <p>
-          EventMaster met en œuvre des mesures techniques et organisationnelles renforcées :
-        </p>
+        <p>EventMaster met en œuvre des mesures techniques et organisationnelles renforcées :</p>
         <ul className="list-disc pl-5 space-y-1">
           <li>Chiffrement systématique des flux de données en transit via TLS / HTTPS (chiffrement 256 bits) ;</li>
           <li>Stockage sécurisé des mots de passe avec algorithmes de hachage robuste (bcrypt avec sel) ;</li>
           <li>Vérification d&apos;identité par mot de passe à usage unique (OTP) acheminé par e-mail ou WhatsApp ;</li>
-          <li>Génération cryptographique des identifiants et clés de validation des QR Codes de billetterie ;</li>
+          <li>Génération cryptographique des identifiants et clés de validation des QR Codes de billetterie et pass donateurs ;</li>
           <li>Moteur de calcul géométrique et d&apos;espacement s&apos;exécutant de manière sécurisée sans fuite de données vers des régies tierces ;</li>
           <li>Surveillance continue, traçabilité des opérations de paiement et sauvegardes régulières des bases de données.</li>
         </ul>
@@ -143,7 +163,7 @@ export default function PrivacyPage() {
             <em className="text-muted text-xs">Engagement de confidentialité : Dans le cadre de nos accords d&apos;API professionnelle, les requêtes textuelles et les images téléversées par nos utilisateurs ne sont pas utilisées pour entraîner les modèles publics de Google.</em>
           </li>
           <li>
-            <strong>FlexPay :</strong> Prestataire de services de paiement agréé (RDC) pour le traitement sécurisé des paiements par Cartes Bancaires (Visa, Mastercard) et Mobile Money (M-Pesa, Orange Money, Airtel Money, Afrimoney), l&apos;achat de jetons IA et l&apos;exécution des reversements de billetterie aux organisateurs (payouts) ;
+            <strong>FlexPay :</strong> Prestataire de services de paiement agréé (RDC) pour le traitement sécurisé des paiements par Cartes Bancaires (Visa, Mastercard) et Mobile Money (M-Pesa, Orange Money, Airtel Money, Afrimoney), l&apos;achat de jetons IA, la collecte de dons et l&apos;exécution des reversements aux organisateurs (payouts) ;
           </li>
           <li>
             <strong>Cloudinary :</strong> Hébergement et distribution sécurisée des médias (images de modèles, visuels d&apos;événements, photographies de plans et photos de fiches marketplace) ;
@@ -167,7 +187,7 @@ export default function PrivacyPage() {
         <ul className="list-disc pl-5 space-y-1">
           <li><strong>Photos de salle et images importées pour analyse IA :</strong> conservées dans l&apos;espace privé de l&apos;organisation pour l&apos;historique du plan jusqu&apos;à suppression volontaire par l&apos;organisateur ou clôture du compte ;</li>
           <li><strong>Données d&apos;événements passés et confirmations d&apos;invités :</strong> conservées dans l&apos;espace de l&apos;organisateur jusqu&apos;à suppression volontaire par ce dernier ou clôture de l&apos;espace ;</li>
-          <li><strong>Billets et historiques de transactions financières :</strong> conservés pendant les délais légaux et comptables obligatoires (de 5 à 10 ans selon la réglementation fiscale et commerciale en vigueur) ;</li>
+          <li><strong>Billets, dons solidaires et historiques de transactions financières :</strong> conservés pendant les délais légaux et comptables obligatoires (de 5 à 10 ans selon la réglementation fiscale et commerciale en vigueur en RDC et sous l&apos;Acte uniforme OHADA) ;</li>
           <li><strong>Grand livre de consommation des jetons IA et journaux d&apos;actions (`RoomActionContext`) :</strong> conservés pour la durée d&apos;activité du compte organisationnel afin de garantir la traçabilité des soldes et des modifications ;</li>
           <li><strong>Journaux techniques de connexion et d&apos;acceptation légale :</strong> conservés pendant une durée maximale de 12 mois à des fins de sécurité et de preuve d&apos;acceptation des conditions.</li>
         </ul>
@@ -175,18 +195,20 @@ export default function PrivacyPage() {
 
       <Section title="9. Vos droits et modalités d'exercice">
         <p>
-          Conformément à la réglementation sur la protection des données personnelles, vous disposez des droits suivants :
+          Conformément au Code du numérique de la RDC et aux standards internationaux de protection des données, vous
+          disposez des droits suivants :
         </p>
         <ul className="list-disc pl-5 space-y-1">
-          <li><strong>Droit d&apos;accès et d&apos;information :</strong> obtenir la confirmation et une copie des données vous concernant ;</li>
-          <li><strong>Droit de rectification :</strong> mettre à jour vos coordonnées ou corriger toute donnée inexacte ;</li>
-          <li><strong>Droit à l&apos;effacement (« droit à l&apos;oubli ») :</strong> demander la suppression de votre compte et de vos données personnelles, sous réserve des exigences légales de conservation comptable ;</li>
-          <li><strong>Droit à la limitation et à l&apos;opposition :</strong> vous opposer à certains traitements non essentiels ;</li>
+          <li><strong>Droit d&apos;accès et d&apos;information :</strong> obtenir la confirmation que des données vous concernant sont traitées et en obtenir une copie lisible ;</li>
+          <li><strong>Droit de rectification :</strong> mettre à jour vos coordonnées ou corriger toute donnée inexacte ou incomplète ;</li>
+          <li><strong>Droit à l&apos;effacement (« droit à l&apos;oubli ») :</strong> demander la suppression de votre compte et de vos données personnelles, sous réserve des exigences légales de conservation comptable et financière ;</li>
+          <li><strong>Droit à la limitation et à l&apos;opposition :</strong> vous opposer à certains traitements non essentiels ou en demander le gel temporaire ;</li>
           <li><strong>Droit à la portabilité :</strong> récupérer vos données dans un format structuré et lisible par machine.</li>
         </ul>
         <p>
-          Pour toute demande relative aux données d&apos;un événement spécifique ou d&apos;un billet, vous pouvez contacter directement l&apos;organisateur de l&apos;événement ou notre délégué à la protection des données via{' '}
-          <LegalSupportEmail className="text-primary dark:text-primary hover:underline" />.
+          Pour toute demande relative aux données d&apos;un événement spécifique, d&apos;un don ou d&apos;un billet, vous
+          pouvez contacter directement l&apos;organisateur de l&apos;événement ou notre délégué à la protection des données
+          via <LegalSupportEmail className="text-primary dark:text-primary hover:underline" />.
         </p>
       </Section>
 
@@ -198,7 +220,7 @@ export default function PrivacyPage() {
 
       <Section title="11. Mises à jour de la politique de confidentialité">
         <p>
-          Cette politique de confidentialité peut être mise à jour pour accompagner le déploiement de nouvelles fonctionnalités ou des évolutions réglementaires. La date de dernière mise à jour et le numéro de version ({PRIVACY_VERSION}) sont toujours clairement indiqués en tête de document.
+          Cette politique de confidentialité peut être mise à jour pour accompagner le déploiement de nouvelles fonctionnalités ou des évolutions réglementaires. La date de dernière mise à jour (14 septembre 2026) et le numéro de version ({PRIVACY_VERSION}) sont toujours clairement indiqués en tête de document.
         </p>
       </Section>
     </LegalPageShell>

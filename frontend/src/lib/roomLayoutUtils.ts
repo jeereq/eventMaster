@@ -705,6 +705,12 @@ export interface RoomLayoutBlueprint {
     totalPmrSeats?: number;
     /** Afficher les repères d’allées PMR et places accessibles. */
     showPmrClearanceOverlay?: boolean;
+    /** Dresser toutes les tables de banquet/réception (vaisselle d’apparat, assiettes, verres, serviettes). */
+    dressAllTables?: boolean;
+    /** Afficher les lignes de visibilité (sightlines) des tables vers la scène ou l'écran géant. */
+    showSightlines?: boolean;
+    /** Afficher la carte de conformité des allées de circulation & sécurité incendie/PMR. */
+    showCirculationHeatmap?: boolean;
     /** Journal des actions d’édition, persisté avec le plan. */
     layoutActions?: import('@/lib/layoutActionLog').LayoutActionEntry[];
   };
