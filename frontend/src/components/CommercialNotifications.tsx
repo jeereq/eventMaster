@@ -241,10 +241,10 @@ export function NotificationBell({ className }: { className?: string }) {
  )}
  <div className={cn(!n.readAt ? '' : 'pl-4')}>
  <div className="flex items-center gap-1.5 mb-0.5">
- <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+ <span className="text-xs font-semibold uppercase tracking-wider text-primary">
  {notificationTypeLabel(n.type)}
  </span>
- <span className="text-[10px] text-muted">{formatRelativeTime(n.createdAt)}</span>
+ <span className="text-xs text-muted">{formatRelativeTime(n.createdAt)}</span>
  </div>
  <p className="text-sm font-semibold text-foreground dark:text-foreground line-clamp-1">
  {n.title}

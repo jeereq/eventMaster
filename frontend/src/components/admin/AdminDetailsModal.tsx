@@ -360,7 +360,7 @@ export default function AdminDetailsModal({
                           <td className="px-2 py-2">
                             {entry.kind === 'REQUEST' ? (
                               <span className={cn(
-                                'text-[11px] font-semibold',
+                                'text-xs font-semibold',
                                 entry.status === 'APPROVED' && 'text-emerald-600',
                                 entry.status === 'REJECTED' && 'text-rose-600',
                                 entry.status === 'PENDING' && 'text-amber-600',

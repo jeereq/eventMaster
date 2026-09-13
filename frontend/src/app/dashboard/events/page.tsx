@@ -2517,8 +2517,9 @@ Merci de confirmer votre présence :
                     <button
                       type="button"
                       onClick={() => router.push(eventDashboardHref(event.id, { tab: protocolDesk ? 'protocol' : 'prep', protocol: protocolDesk }))}
-                      className="inline-flex items-center"
+                      className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation"
                       title={protocolDesk ? 'Ouvrir le protocole' : 'Voir détails'}
+                      aria-label={protocolDesk ? `Ouvrir le protocole pour ${event.title}` : `Voir les détails de l'événement ${event.title}`}
                     >
                       <ListRowAction />
                     </button>
@@ -2527,8 +2528,9 @@ Merci de confirmer votre présence :
                     <button
                       type="button"
                       onClick={() => requestDeleteEvent(event.id)}
-                      className="p-2 text-muted hover:text-danger hover:bg-danger/10 rounded-lg transition"
+                      className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-danger hover:bg-danger/10 rounded-lg transition touch-manipulation"
                       title="Supprimer l'événement"
+                      aria-label={`Supprimer l'événement ${event.title}`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -3622,7 +3624,7 @@ Merci de confirmer votre présence :
                     placeholder="ex. jean.kabeya@gmail.com"
                     className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
                   />
-                  <p className="text-[11px] text-muted">E-mail ou WhatsApp : au moins un des deux.</p>
+                  <p className="text-xs text-muted">E-mail ou WhatsApp : au moins un des deux.</p>
                 </div>
                 <PhoneInput
                   label="Téléphone (WhatsApp)"
@@ -3663,7 +3665,7 @@ Merci de confirmer votre présence :
               </div>
 
               <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/50 p-3 space-y-3">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted">
                   Reporting restauration
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -3700,7 +3702,7 @@ Merci de confirmer votre présence :
                     className="w-full px-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
                   />
                 </div>
-                <p className="text-[10px] text-muted leading-relaxed">
+                <p className="text-xs text-muted leading-relaxed">
                   Ces informations alimentent les filtres, statistiques et exports CSV de reporting.
                 </p>
               </div>
@@ -3807,7 +3809,7 @@ Merci de confirmer votre présence :
                         <Sparkles className="w-4 h-4 text-primary" />
                         Modèle de document requis
                       </div>
-                      <p className="text-[11px] text-primary/80">
+                      <p className="text-xs text-primary/80">
                         Colonnes : Prénom, Nom, Email, Catégorie, Téléphone, Régime, Allergies, Notes.
                       </p>
                     </div>
@@ -3849,7 +3851,7 @@ Merci de confirmer votre présence :
                           parcourez vos fichiers
                         </label>
                       </p>
-                      <p className="text-[10px] text-muted">
+                      <p className="text-xs text-muted">
                         Formats acceptés : {importMethod === 'excel' ? '.xlsx, .xls' : '.csv'} (Taille max 10 Mo)
                       </p>
                     </div>
@@ -3865,7 +3867,7 @@ Merci de confirmer votre présence :
                       <Sparkles className="w-4 h-4 text-primary" /> Format CSV requis :
                     </div>
                     <p>Copiez et collez vos lignes d'invités en respectant l'ordre des colonnes séparées par des virgules :</p>
-                    <pre className="bg-surface p-2.5 rounded-xl border border-primary/20 font-mono text-[11px] text-foreground overflow-x-auto">
+                    <pre className="bg-surface p-2.5 rounded-xl border border-primary/20 font-mono text-xs text-foreground overflow-x-auto">
                       Prénom, Nom, Email, Catégorie, Téléphone, Régime, Allergies, Notes{'\n'}
                       Jean, Kabeya, jean.kabeya@gmail.com, VIP, +243812345678, halal, , Table d&apos;honneur{'\n'}
                       Sarah, Mwamba, sarah.m@outlook.com, Ami, +243998765432, none, Arachides,
@@ -3916,20 +3918,20 @@ Merci de confirmer votre présence :
                           <tr key={idx} className="hover:bg-surface-muted/50">
                             <td className="py-2 px-3 font-semibold">{p.firstName}</td>
                             <td className="py-2 px-3">{p.lastName}</td>
-                            <td className="py-2 px-3 font-mono text-[11px] text-muted">{p.email}</td>
+                            <td className="py-2 px-3 font-mono text-xs text-muted">{p.email}</td>
                             <td className="py-2 px-3">
-                              <span className="px-2 py-0.5 bg-surface-muted text-muted rounded-full text-[10px] font-bold">
+                              <span className="px-2 py-0.5 bg-surface-muted text-muted rounded-full text-xs font-bold">
                                 {p.category}
                               </span>
                             </td>
-                            <td className="py-2 px-3 font-mono text-[11px]">{p.phone || '-'}</td>
+                            <td className="py-2 px-3 font-mono text-xs">{p.phone || '-'}</td>
                             <td className="py-2 px-3 truncate max-w-[120px]" title={p.notes}>{p.notes || '-'}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                     {parsedPreview.length > 5 && (
-                      <div className="bg-surface-muted text-center py-2 text-[10px] font-bold text-muted border-t border-border">
+                      <div className="bg-surface-muted text-center py-2 text-xs font-bold text-muted border-t border-border">
                         Et {parsedPreview.length - 5} autres lignes...
                       </div>
                     )}
@@ -4145,7 +4147,7 @@ Merci de confirmer votre présence :
             {BROADCAST_WIZARD_STEPS.map((step) => (
               <div key={step.id} className="flex-1 space-y-1">
                 <div className={cn('h-1 rounded-full', broadcastWizardStep >= step.id ? 'bg-primary' : 'bg-surface-muted')} />
-                <p className={cn('text-[10px] font-semibold uppercase tracking-wider', broadcastWizardStep === step.id ? 'text-primary' : 'text-muted')}>
+                <p className={cn('text-xs font-semibold uppercase tracking-wider', broadcastWizardStep === step.id ? 'text-primary' : 'text-muted')}>
                   {step.id}. {step.label}
                 </p>
               </div>
@@ -4349,11 +4351,11 @@ Merci de confirmer votre présence :
                         <div className="space-y-1 min-w-[200px]">
                           <div className="flex flex-wrap items-center gap-2">
                             <div className="font-bold text-foreground text-sm">{res.guestName}</div>
-                            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusMeta.classes}`}>
+                            <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold border ${statusMeta.classes}`}>
                               {statusMeta.label}
                             </span>
                             {res.channel && (
-                              <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-muted text-muted border border-border">
+                              <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-bold bg-surface-muted text-muted border border-border">
                                 {res.channel.split(',').map(c => getChannelLabel(c.trim())).join(' + ')}
                               </span>
                             )}
@@ -4373,7 +4375,7 @@ Merci de confirmer votre présence :
                                 <span
                                   key={crIdx}
                                   title={cr.error || undefined}
-                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border ${cr.success && !cr.simulated
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold border ${cr.success && !cr.simulated
                                     ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                                     : cr.simulated
                                       ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
@@ -4710,13 +4712,13 @@ Merci de confirmer votre présence :
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <div className="text-[10px] font-semibold text-muted uppercase tracking-wider">Type de menu</div>
+                        <div className="text-xs font-semibold text-muted uppercase tracking-wider">Type de menu</div>
                         <div className="font-medium text-foreground text-xs mt-1">
                           {specialMealLabel(selectedGuestDetails.preferences?.specialMeal)}
                         </div>
                       </div>
                       <div>
-                        <div className="text-[10px] font-semibold text-muted uppercase tracking-wider">Allergies</div>
+                        <div className="text-xs font-semibold text-muted uppercase tracking-wider">Allergies</div>
                         <div className="font-medium text-foreground text-xs mt-1">
                           {selectedGuestDetails.preferences?.allergies || (
                             <span className="italic text-muted">Aucune</span>
@@ -4724,7 +4726,7 @@ Merci de confirmer votre présence :
                         </div>
                       </div>
                       <div className="col-span-2">
-                        <div className="text-[10px] font-semibold text-muted uppercase tracking-wider">Notes / Remarques</div>
+                        <div className="text-xs font-semibold text-muted uppercase tracking-wider">Notes / Remarques</div>
                         <div className="font-medium text-foreground text-xs mt-1">
                           {selectedGuestDetails.preferences?.notes || (
                             <span className="italic text-muted">Aucune note</span>
@@ -4740,7 +4742,7 @@ Merci de confirmer votre présence :
                     <Sparkles className="w-3.5 h-3.5 text-primary" />
                     <span>Champs personnalisés</span>
                     {customFieldDetails.length > 0 && (
-                      <span className="ml-auto normal-case tracking-normal text-[10px] font-medium text-muted">
+                      <span className="ml-auto normal-case tracking-normal text-xs font-medium text-muted">
                         {customFieldDetails.filter((f) => f.answered).length}/{customFieldDetails.length} renseigné
                         {customFieldDetails.filter((f) => f.answered).length > 1 ? 's' : ''}
                       </span>
@@ -4758,11 +4760,11 @@ Merci de confirmer votre présence :
                           className="rounded-[var(--radius-button)] border border-border bg-surface-muted/60 px-3 py-2.5"
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <div className="text-[11px] font-semibold text-foreground leading-snug">
+                            <div className="text-xs font-semibold text-foreground leading-snug">
                               {field.label}
                             </div>
                             {field.typeLabel && (
-                              <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wider text-muted px-1.5 py-0.5 rounded bg-surface border border-border">
+                              <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-muted px-1.5 py-0.5 rounded bg-surface border border-border">
                                 {field.typeLabel}
                               </span>
                             )}

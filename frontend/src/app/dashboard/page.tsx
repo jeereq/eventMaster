@@ -3231,7 +3231,7 @@ function DashboardPageContent() {
                                   </div>
 
                                   <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-muted uppercase tracking-wider">
+                                    <label className="text-xs font-bold text-muted uppercase tracking-wider">
                                       {isB2cPlanId(planKey) ? 'Prix trimestriel (90 j) — annuel −10 %' : 'Prix mensuel — annuel −10 %'}
                                     </label>
                                     <input
@@ -3265,14 +3265,14 @@ function DashboardPageContent() {
                                           }}
                                           className="w-4 h-4 text-amber-600 border-border rounded focus:ring-amber-500"
                                         />
-                                        <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider">
+                                        <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">
                                           Promotion active
                                         </span>
                                       </label>
                                       {plan.promoActive && (
                                         <>
                                           <div className="space-y-1">
-                                            <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Prix promo (mensuel)</label>
+                                            <label className="text-xs font-bold text-muted uppercase tracking-wider">Prix promo (mensuel)</label>
                                             <input
                                               type="text"
                                               value={plan.promoPrice || ''}
@@ -3291,7 +3291,7 @@ function DashboardPageContent() {
                                             />
                                           </div>
                                           <div className="space-y-1">
-                                            <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Libellé promo</label>
+                                            <label className="text-xs font-bold text-muted uppercase tracking-wider">Libellé promo</label>
                                             <input
                                               type="text"
                                               value={plan.promoLabel || ''}
@@ -3311,7 +3311,7 @@ function DashboardPageContent() {
 
                                   <div className="grid grid-cols-2 gap-2">
                                     <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Max Événements</label>
+                                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Max Événements</label>
                                       <input
                                         type="number"
                                         value={plan.maxEvents}
@@ -3326,7 +3326,7 @@ function DashboardPageContent() {
                                     </div>
 
                                     <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Max Invités</label>
+                                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Max Invités</label>
                                       <input
                                         type="number"
                                         value={plan.maxGuests}
@@ -3343,7 +3343,7 @@ function DashboardPageContent() {
 
                                   <div className="grid grid-cols-2 gap-2">
                                     <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Max Modèles</label>
+                                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Max Modèles</label>
                                       <input
                                         type="number"
                                         value={plan.maxTemplates}
@@ -3360,7 +3360,7 @@ function DashboardPageContent() {
 
                                   <div className="grid grid-cols-2 gap-2">
                                     <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Max Salles</label>
+                                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Max Salles</label>
                                       <input
                                         type="number"
                                         value={plan.maxRooms ?? 0}
@@ -3374,7 +3374,7 @@ function DashboardPageContent() {
                                       />
                                     </div>
                                     <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Max Prestations</label>
+                                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Max Prestations</label>
                                       <input
                                         type="number"
                                         value={plan.maxServices ?? 0}
@@ -3391,7 +3391,7 @@ function DashboardPageContent() {
 
                                   <div className="grid grid-cols-2 gap-2">
                                     <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Managers org.</label>
+                                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Managers org.</label>
                                       <input
                                         type="number"
                                         value={plan.maxOrgManagers ?? 1}
@@ -3404,7 +3404,7 @@ function DashboardPageContent() {
                                       />
                                     </div>
                                     <div className="space-y-1">
-                                      <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Éditeur salle</label>
+                                      <label className="text-xs font-bold text-muted uppercase tracking-wider">Éditeur salle</label>
                                       <select
                                         value={plan.roomEditorLevel || 'basic'}
                                         onChange={(e) => {

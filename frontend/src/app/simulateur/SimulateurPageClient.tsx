@@ -317,7 +317,7 @@ export default function SimulateurPageClient() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-foreground group-hover:text-pink-600 transition truncate">Studio Invitations</p>
-                  <p className="text-[10px] text-muted truncate">Cartes 9:16 WhatsApp &amp; RSVP</p>
+                  <p className="text-xs text-muted truncate">Cartes 9:16 WhatsApp &amp; RSVP</p>
                 </div>
               </div>
               <span className="text-xs font-bold text-muted group-hover:text-pink-600 transition shrink-0">
@@ -335,7 +335,7 @@ export default function SimulateurPageClient() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-foreground group-hover:text-sky-600 transition truncate">Studio Plans 3D</p>
-                  <p className="text-[10px] text-muted truncate">Visite &amp; tables 3D</p>
+                  <p className="text-xs text-muted truncate">Visite &amp; tables 3D</p>
                 </div>
               </div>
               <span className="text-xs font-bold text-muted group-hover:text-sky-600 transition shrink-0">
