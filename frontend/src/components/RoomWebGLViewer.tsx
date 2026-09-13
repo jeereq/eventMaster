@@ -30,6 +30,7 @@ import {
   type InstrumentStyle,
   type BarStyle,
 } from '@/lib/roomLayoutUtils';
+import type { StairStyle } from '@/lib/roomStairsUtils';
 import { resolveDepthAmount } from '@/lib/roomFloorUtils';
 import { isStoryVisible, resolveActiveStoryId, resolveFoundation, resolveStories, stackViewFocusY, worldElevationForStory } from '@/lib/roomBuildingUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
@@ -475,6 +476,7 @@ function FloorPlane({
   floorColor,
   outline,
   onPointerMissed,
+  stairHoles = [],
 }: {
   widthM: number;
   heightM: number;
@@ -484,6 +486,7 @@ function FloorPlane({
   floorColor?: string;
   outline?: RoomLayoutBlueprint['roomOutline'];
   onPointerMissed?: () => void;
+  stairHoles?: Array<{ minX: number; maxX: number; minZ: number; maxZ: number }>;
 }) {
   const mat = useMemo(
     () => resolveFloorMap(floorType, floorImageUrl, widthM, heightM, floorColor, floorImageFit),
@@ -491,20 +494,46 @@ function FloorPlane({
   );
 
   const shapeGeo = useMemo(() => {
-    if (!outline || outline.shape === 'rectangle') return null;
-    const pts = outlinePolygonPoints(outline);
-    if (pts.length < 3) return null;
+    const hasPolygon = outline && outline.shape !== 'rectangle';
+    const hasHoles = stairHoles && stairHoles.length > 0;
+    if (!hasPolygon && !hasHoles) return null;
+
     const shape = new THREE.Shape();
-    pts.forEach((p, i) => {
-      const [wx, wz] = pctToWorld(p.x, p.y, widthM, heightM);
-      if (i === 0) shape.moveTo(wx, -wz);
-      else shape.lineTo(wx, -wz);
-    });
-    shape.closePath();
+    if (hasPolygon) {
+      const pts = outlinePolygonPoints(outline);
+      if (pts.length < 3) return null;
+      pts.forEach((p, i) => {
+        const [wx, wz] = pctToWorld(p.x, p.y, widthM, heightM);
+        if (i === 0) shape.moveTo(wx, -wz);
+        else shape.lineTo(wx, -wz);
+      });
+      shape.closePath();
+    } else {
+      const halfW = widthM / 2;
+      const halfH = heightM / 2;
+      shape.moveTo(-halfW, halfH);
+      shape.lineTo(halfW, halfH);
+      shape.lineTo(halfW, -halfH);
+      shape.lineTo(-halfW, -halfH);
+      shape.closePath();
+    }
+
+    if (hasHoles) {
+      for (const h of stairHoles) {
+        const hole = new THREE.Path();
+        hole.moveTo(h.minX, -h.minZ);
+        hole.lineTo(h.maxX, -h.minZ);
+        hole.lineTo(h.maxX, -h.maxZ);
+        hole.lineTo(h.minX, -h.maxZ);
+        hole.closePath();
+        shape.holes.push(hole);
+      }
+    }
+
     const geo = new THREE.ShapeGeometry(shape);
     geo.rotateX(-Math.PI / 2);
     return geo;
-  }, [outline, widthM, heightM]);
+  }, [outline, widthM, heightM, stairHoles]);
 
   return (
     <mesh
@@ -547,6 +576,7 @@ function RoofMesh({
   opacity = 0.55,
   baseElevationM = 0,
   roofStyle = 'flat',
+  blueprint,
 }: {
   widthM: number;
   heightM: number;
@@ -557,24 +587,68 @@ function RoofMesh({
   /** Décalage Y (vue empilée : sommet du dernier étage). */
   baseElevationM?: number;
   roofStyle?: 'flat' | 'tentSwag' | 'gabled' | 'coffered';
+  blueprint?: RoomLayoutBlueprint;
 }) {
   const y = baseElevationM + wallHeightM + 0.04;
+
+  const stairHoles = useMemo(() => {
+    if (!blueprint?.fixtures) return [];
+    return blueprint.fixtures
+      .filter((f) => f.kind === 'stairs')
+      .map((f) => {
+        const [cx, cz] = pctToWorld(f.x + f.w / 2, f.y + f.h / 2, widthM, heightM);
+        const wM = (f.w / 100) * widthM;
+        const dM = (f.h / 100) * heightM;
+        return {
+          minX: cx - (wM * 1.06) / 2,
+          maxX: cx + (wM * 1.06) / 2,
+          minZ: cz - (dM * 1.06) / 2,
+          maxZ: cz + (dM * 1.06) / 2,
+        };
+      });
+  }, [blueprint?.fixtures, widthM, heightM]);
+
   const shapeGeo = useMemo(() => {
     if (roofStyle === 'tentSwag' || roofStyle === 'gabled') return null;
-    if (!outline || outline.shape === 'rectangle') return null;
-    const pts = outlinePolygonPoints(outline);
-    if (pts.length < 3) return null;
+    const hasPolygon = outline && outline.shape !== 'rectangle';
+    const hasHoles = stairHoles.length > 0;
+    if (!hasPolygon && !hasHoles) return null;
+
     const shape = new THREE.Shape();
-    pts.forEach((p, i) => {
-      const [wx, wz] = pctToWorld(p.x, p.y, widthM, heightM);
-      if (i === 0) shape.moveTo(wx, -wz);
-      else shape.lineTo(wx, -wz);
-    });
-    shape.closePath();
+    if (hasPolygon) {
+      const pts = outlinePolygonPoints(outline);
+      if (pts.length < 3) return null;
+      pts.forEach((p, i) => {
+        const [wx, wz] = pctToWorld(p.x, p.y, widthM, heightM);
+        if (i === 0) shape.moveTo(wx, -wz);
+        else shape.lineTo(wx, -wz);
+      });
+      shape.closePath();
+    } else {
+      const halfW = widthM / 2;
+      const halfH = heightM / 2;
+      shape.moveTo(-halfW, halfH);
+      shape.lineTo(halfW, halfH);
+      shape.lineTo(halfW, -halfH);
+      shape.lineTo(-halfW, -halfH);
+      shape.closePath();
+    }
+
+    // Évidement complet du toit au-dessus de chaque escalier
+    for (const h of stairHoles) {
+      const hole = new THREE.Path();
+      hole.moveTo(h.minX, -h.minZ);
+      hole.lineTo(h.maxX, -h.minZ);
+      hole.lineTo(h.maxX, -h.maxZ);
+      hole.lineTo(h.minX, -h.maxZ);
+      hole.closePath();
+      shape.holes.push(hole);
+    }
+
     const geo = new THREE.ShapeGeometry(shape);
-    geo.rotateX(Math.PI / 2);
+    geo.rotateX(-Math.PI / 2);
     return geo;
-  }, [outline, widthM, heightM, roofStyle]);
+  }, [outline, widthM, heightM, roofStyle, stairHoles]);
 
   if (roofStyle === 'tentSwag') {
     return (
@@ -608,22 +682,34 @@ function RoofMesh({
     const cells = 6;
     return (
       <group position={[0, y, 0]}>
-        <mesh rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[widthM, heightM]} />
+        <mesh geometry={shapeGeo ?? undefined} receiveShadow>
+          {!shapeGeo && (
+            <mesh rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[widthM, heightM]} />
+            </mesh>
+          )}
           <meshStandardMaterial color="#1c1917" roughness={0.7} transparent opacity={Math.max(0.7, opacity)} side={THREE.DoubleSide} />
         </mesh>
         {Array.from({ length: cells + 1 }).map((_, i) => {
           const t = (i / cells - 0.5);
+          const bx = t * widthM;
+          const bz = t * heightM;
+          const inStairX = stairHoles.some((h) => bx >= h.minX && bx <= h.maxX);
+          const inStairZ = stairHoles.some((h) => bz >= h.minZ && bz <= h.maxZ);
           return (
             <group key={i}>
-              <mesh position={[t * widthM, -0.06, 0]}>
-                <boxGeometry args={[0.08, 0.12, heightM]} />
-                <meshStandardMaterial color="#292524" roughness={0.45} />
-              </mesh>
-              <mesh position={[0, -0.06, t * heightM]}>
-                <boxGeometry args={[widthM, 0.12, 0.08]} />
-                <meshStandardMaterial color="#292524" roughness={0.45} />
-              </mesh>
+              {!inStairX && (
+                <mesh position={[bx, -0.06, 0]}>
+                  <boxGeometry args={[0.08, 0.12, heightM]} />
+                  <meshStandardMaterial color="#292524" roughness={0.45} />
+                </mesh>
+              )}
+              {!inStairZ && (
+                <mesh position={[0, -0.06, bz]}>
+                  <boxGeometry args={[widthM, 0.12, 0.08]} />
+                  <meshStandardMaterial color="#292524" roughness={0.45} />
+                </mesh>
+              )}
             </group>
           );
         })}
@@ -632,27 +718,176 @@ function RoofMesh({
   }
 
   return (
-    <mesh
-      geometry={shapeGeo ?? undefined}
-      position={[0, y, 0]}
-      rotation={shapeGeo ? [0, 0, 0] : [Math.PI / 2, 0, 0]}
-      receiveShadow
-    >
-      {!shapeGeo && <planeGeometry args={[widthM * 0.98, heightM * 0.98]} />}
-      <meshStandardMaterial
-        color={color}
-        transparent
-        opacity={opacity}
-        roughness={0.9}
-        metalness={0.02}
-        side={THREE.DoubleSide}
-        depthWrite={opacity > 0.85}
-      />
-    </mesh>
+    <group>
+      <mesh
+        geometry={shapeGeo ?? undefined}
+        position={[0, y, 0]}
+        rotation={shapeGeo ? [0, 0, 0] : [Math.PI / 2, 0, 0]}
+        receiveShadow
+      >
+        {!shapeGeo && <planeGeometry args={[widthM * 0.98, heightM * 0.98]} />}
+        <meshStandardMaterial
+          color={color}
+          transparent
+          opacity={opacity}
+          roughness={0.9}
+          metalness={0.02}
+          side={THREE.DoubleSide}
+          depthWrite={opacity > 0.85}
+        />
+      </mesh>
+      {/* Chevêtre / acrotère de bordure de trémie de toiture en aluminium */}
+      {stairHoles.map((h, i) => {
+        const hw = h.maxX - h.minX;
+        const hd = h.maxZ - h.minZ;
+        const hcx = (h.minX + h.maxX) / 2;
+        const hcz = (h.minZ + h.maxZ) / 2;
+        return (
+          <group key={`roof-curb-${i}`} position={[0, y, 0]}>
+            <mesh position={[hcx, 0.06, h.minZ]} castShadow>
+              <boxGeometry args={[hw, 0.12, 0.05]} />
+              <meshStandardMaterial color="#475569" metalness={0.7} roughness={0.3} />
+            </mesh>
+            <mesh position={[hcx, 0.06, h.maxZ]} castShadow>
+              <boxGeometry args={[hw, 0.12, 0.05]} />
+              <meshStandardMaterial color="#475569" metalness={0.7} roughness={0.3} />
+            </mesh>
+            <mesh position={[h.minX, 0.06, hcz]} castShadow>
+              <boxGeometry args={[0.05, 0.12, hd]} />
+              <meshStandardMaterial color="#475569" metalness={0.7} roughness={0.3} />
+            </mesh>
+            <mesh position={[h.maxX, 0.06, hcz]} castShadow>
+              <boxGeometry args={[0.05, 0.12, hd]} />
+              <meshStandardMaterial color="#475569" metalness={0.7} roughness={0.3} />
+            </mesh>
+          </group>
+        );
+      })}
+    </group>
   );
 }
 
-/** Dalles d’étages empilés (vue coupe / bâtiment). */
+/** Garde-corps de sécurité architectural autour de la trémie d'escalier sur le palier d'étage / mezzanine. */
+function MezzanineStairVoidRail({
+  minX,
+  maxX,
+  minZ,
+  maxZ,
+  stairDirection = 0,
+}: {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+  stairDirection?: number;
+}) {
+  const railH = 0.94;
+  const w = maxX - minX;
+  const d = maxZ - minZ;
+  const cx = (minX + maxX) / 2;
+  const cz = (minZ + maxZ) / 2;
+
+  // Côté d'arrivée où l'ouverture reste libre pour le passage
+  const guardNorth = stairDirection !== 0;
+  const guardSouth = stairDirection !== 180;
+  const guardEast = stairDirection !== 90;
+  const guardWest = stairDirection !== 270;
+
+  return (
+    <group position={[0, 0, 0]}>
+      {/* Profilé aluminium noir de bordure de trémie au sol */}
+      {guardNorth && (
+        <mesh position={[cx, 0.02, minZ]} castShadow>
+          <boxGeometry args={[w, 0.04, 0.04]} />
+          <meshStandardMaterial color="#27272a" metalness={0.8} roughness={0.2} />
+        </mesh>
+      )}
+      {guardSouth && (
+        <mesh position={[cx, 0.02, maxZ]} castShadow>
+          <boxGeometry args={[w, 0.04, 0.04]} />
+          <meshStandardMaterial color="#27272a" metalness={0.8} roughness={0.2} />
+        </mesh>
+      )}
+      {guardWest && (
+        <mesh position={[minX, 0.02, cz]} castShadow>
+          <boxGeometry args={[0.04, 0.04, d]} />
+          <meshStandardMaterial color="#27272a" metalness={0.8} roughness={0.2} />
+        </mesh>
+      )}
+      {guardEast && (
+        <mesh position={[maxX, 0.02, cz]} castShadow>
+          <boxGeometry args={[0.04, 0.04, d]} />
+          <meshStandardMaterial color="#27272a" metalness={0.8} roughness={0.2} />
+        </mesh>
+      )}
+
+      {/* Panneaux de garde-corps en verre sécurit avec main courante inox */}
+      {guardNorth && (
+        <group position={[cx, railH / 2, minZ]}>
+          <mesh>
+            <boxGeometry args={[w * 0.96, railH * 0.85, 0.012]} />
+            <meshPhysicalMaterial color="#f8fafc" transmission={0.9} roughness={0.05} transparent opacity={0.3} />
+          </mesh>
+          <mesh position={[0, railH * 0.46, 0]} castShadow>
+            <boxGeometry args={[w * 1.02, 0.035, 0.04]} />
+            <meshStandardMaterial color="#d4d4d8" metalness={0.85} roughness={0.2} />
+          </mesh>
+        </group>
+      )}
+      {guardSouth && (
+        <group position={[cx, railH / 2, maxZ]}>
+          <mesh>
+            <boxGeometry args={[w * 0.96, railH * 0.85, 0.012]} />
+            <meshPhysicalMaterial color="#f8fafc" transmission={0.9} roughness={0.05} transparent opacity={0.3} />
+          </mesh>
+          <mesh position={[0, railH * 0.46, 0]} castShadow>
+            <boxGeometry args={[w * 1.02, 0.035, 0.04]} />
+            <meshStandardMaterial color="#d4d4d8" metalness={0.85} roughness={0.2} />
+          </mesh>
+        </group>
+      )}
+      {guardWest && (
+        <group position={[minX, railH / 2, cz]}>
+          <mesh>
+            <boxGeometry args={[0.012, railH * 0.85, d * 0.96]} />
+            <meshPhysicalMaterial color="#f8fafc" transmission={0.9} roughness={0.05} transparent opacity={0.3} />
+          </mesh>
+          <mesh position={[0, railH * 0.46, 0]} castShadow>
+            <boxGeometry args={[0.04, 0.035, d * 1.02]} />
+            <meshStandardMaterial color="#d4d4d8" metalness={0.85} roughness={0.2} />
+          </mesh>
+        </group>
+      )}
+      {guardEast && (
+        <group position={[maxX, railH / 2, cz]}>
+          <mesh>
+            <boxGeometry args={[0.012, railH * 0.85, d * 0.96]} />
+            <meshPhysicalMaterial color="#f8fafc" transmission={0.9} roughness={0.05} transparent opacity={0.3} />
+          </mesh>
+          <mesh position={[0, railH * 0.46, 0]} castShadow>
+            <boxGeometry args={[0.04, 0.035, d * 1.02]} />
+            <meshStandardMaterial color="#d4d4d8" metalness={0.85} roughness={0.2} />
+          </mesh>
+        </group>
+      )}
+
+      {/* Poteaux d'angle en inox */}
+      {[
+        [minX, minZ],
+        [maxX, minZ],
+        [minX, maxZ],
+        [maxX, maxZ],
+      ].map(([px, pz], pi) => (
+        <mesh key={pi} position={[px, railH / 2, pz]} castShadow>
+          <boxGeometry args={[0.04, railH, 0.04]} />
+          <meshStandardMaterial color="#a1a1aa" metalness={0.88} roughness={0.2} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/** Dalles d’étages empilés avec trémies d'escalier et garde-corps de mezzanine. */
 function StoryStackDecks({
   widthM,
   heightM,
@@ -660,6 +895,7 @@ function StoryStackDecks({
   stories,
   activeStoryId,
   hideLabels,
+  blueprint,
 }: {
   widthM: number;
   heightM: number;
@@ -667,9 +903,51 @@ function StoryStackDecks({
   stories: ReturnType<typeof resolveStories>;
   activeStoryId: string;
   hideLabels?: boolean;
+  blueprint: RoomLayoutBlueprint;
 }) {
   const slabH = 0.22;
   const colors = ['#e7e5e4', '#d6d3d1', '#c4c0bb', '#b8b2ab', '#a8a29e'];
+
+  const stairHolesByStory = useMemo(() => {
+    const holes: Record<
+      string,
+      Array<{
+        minX: number;
+        maxX: number;
+        minZ: number;
+        maxZ: number;
+        stairDirection?: number;
+      }>
+    > = {};
+
+    const stairs = (blueprint.fixtures || []).filter((f) => f.kind === 'stairs');
+    for (const f of stairs) {
+      const [cx, cz] = pctToWorld(f.x + f.w / 2, f.y + f.h / 2, widthM, heightM);
+      const wM = (f.w / 100) * widthM;
+      const dM = (f.h / 100) * heightM;
+      const hole = {
+        minX: cx - (wM * 1.05) / 2,
+        maxX: cx + (wM * 1.05) / 2,
+        minZ: cz - (dM * 1.05) / 2,
+        maxZ: cz + (dM * 1.05) / 2,
+        stairDirection: f.stairDirection,
+      };
+
+      if (f.connectsToStoryId) {
+        if (!holes[f.connectsToStoryId]) holes[f.connectsToStoryId] = [];
+        holes[f.connectsToStoryId].push(hole);
+      } else {
+        const fromId = f.storyId || stories[0]?.id;
+        const idx = stories.findIndex((s) => s.id === fromId);
+        if (idx >= 0 && idx + 1 < stories.length) {
+          const nextId = stories[idx + 1].id;
+          if (!holes[nextId]) holes[nextId] = [];
+          holes[nextId].push(hole);
+        }
+      }
+    }
+    return holes;
+  }, [blueprint.fixtures, widthM, heightM, stories]);
 
   return (
     <group>
@@ -678,33 +956,130 @@ function StoryStackDecks({
         const elev = story.elevationM;
         const next = stories[index + 1];
         const storyClear = next ? Math.max(2.4, next.elevationM - elev - slabH) : wallHeightM;
+        const storyHoles = index > 0 ? stairHolesByStory[story.id] || [] : [];
+        const hasHoles = storyHoles.length > 0;
+
+        // Géométrie de dalle avec trémie
+        const slabGeo = useMemo(() => {
+          if (!hasHoles) return null;
+          const shape = new THREE.Shape();
+          const halfW = (widthM * 1.02) / 2;
+          const halfH = (heightM * 1.02) / 2;
+          shape.moveTo(-halfW, halfH);
+          shape.lineTo(halfW, halfH);
+          shape.lineTo(halfW, -halfH);
+          shape.lineTo(-halfW, -halfH);
+          shape.closePath();
+
+          for (const h of storyHoles) {
+            const p = new THREE.Path();
+            p.moveTo(h.minX, -h.minZ);
+            p.lineTo(h.maxX, -h.minZ);
+            p.lineTo(h.maxX, -h.maxZ);
+            p.lineTo(h.minX, -h.maxZ);
+            p.closePath();
+            shape.holes.push(p);
+          }
+
+          const geo = new THREE.ExtrudeGeometry(shape, {
+            depth: slabH,
+            bevelEnabled: false,
+          });
+          geo.rotateX(-Math.PI / 2);
+          return geo;
+        }, [hasHoles, storyHoles, widthM, heightM, slabH]);
+
+        // Géométrie de surface supérieure avec trémie
+        const surfGeo = useMemo(() => {
+          if (!hasHoles) return null;
+          const shape = new THREE.Shape();
+          const sHalfW = (widthM * 0.985) / 2;
+          const sHalfH = (heightM * 0.985) / 2;
+          shape.moveTo(-sHalfW, sHalfH);
+          shape.lineTo(sHalfW, sHalfH);
+          shape.lineTo(sHalfW, -sHalfH);
+          shape.lineTo(-sHalfW, -sHalfH);
+          shape.closePath();
+
+          for (const h of storyHoles) {
+            const p = new THREE.Path();
+            p.moveTo(h.minX, -h.minZ);
+            p.lineTo(h.maxX, -h.minZ);
+            p.lineTo(h.maxX, -h.maxZ);
+            p.lineTo(h.minX, -h.maxZ);
+            p.closePath();
+            shape.holes.push(p);
+          }
+
+          const geo = new THREE.ShapeGeometry(shape);
+          geo.rotateX(-Math.PI / 2);
+          return geo;
+        }, [hasHoles, storyHoles, widthM, heightM]);
+
         return (
           <group key={`stack-${story.id}`} position={[0, elev, 0]}>
-            {/* Plancher épais */}
-            <mesh position={[0, -slabH / 2, 0]} castShadow receiveShadow>
-              <boxGeometry args={[widthM * 1.02, slabH, heightM * 1.02]} />
-              <meshStandardMaterial
-                color={colors[index % colors.length]}
-                roughness={0.88}
-                metalness={0.04}
-              />
-            </mesh>
+            {/* Plancher épais (avec ou sans trémie) */}
+            {slabGeo ? (
+              <mesh geometry={slabGeo} position={[0, -slabH, 0]} castShadow receiveShadow>
+                <meshStandardMaterial
+                  color={colors[index % colors.length]}
+                  roughness={0.88}
+                  metalness={0.04}
+                />
+              </mesh>
+            ) : (
+              <mesh position={[0, -slabH / 2, 0]} castShadow receiveShadow>
+                <boxGeometry args={[widthM * 1.02, slabH, heightM * 1.02]} />
+                <meshStandardMaterial
+                  color={colors[index % colors.length]}
+                  roughness={0.88}
+                  metalness={0.04}
+                />
+              </mesh>
+            )}
+
             {/* Surface supérieure (plus claire si étage actif) */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]} receiveShadow>
-              <planeGeometry args={[widthM * 0.985, heightM * 0.985]} />
-              <meshStandardMaterial
-                color={active ? '#fafaf9' : '#f5f5f4'}
-                roughness={0.82}
-                metalness={0.02}
-                transparent={!active}
-                opacity={active ? 1 : 0.92}
+            {surfGeo ? (
+              <mesh geometry={surfGeo} position={[0, 0.002, 0]} receiveShadow>
+                <meshStandardMaterial
+                  color={active ? '#fafaf9' : '#f5f5f4'}
+                  roughness={0.82}
+                  metalness={0.02}
+                  transparent={!active}
+                  opacity={active ? 1 : 0.92}
+                />
+              </mesh>
+            ) : (
+              <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]} receiveShadow>
+                <planeGeometry args={[widthM * 0.985, heightM * 0.985]} />
+                <meshStandardMaterial
+                  color={active ? '#fafaf9' : '#f5f5f4'}
+                  roughness={0.82}
+                  metalness={0.02}
+                  transparent={!active}
+                  opacity={active ? 1 : 0.92}
+                />
+              </mesh>
+            )}
+
+            {/* Garde-corps de sécurité de trémie d'étage */}
+            {storyHoles.map((h, hi) => (
+              <MezzanineStairVoidRail
+                key={`void-rail-${hi}`}
+                minX={h.minX}
+                maxX={h.maxX}
+                minZ={h.minZ}
+                maxZ={h.maxZ}
+                stairDirection={h.stairDirection}
               />
-            </mesh>
+            ))}
+
             {/* Rebord pour lire la coupe */}
             <mesh position={[0, -slabH / 2, heightM / 2 + 0.02]}>
               <boxGeometry args={[widthM * 1.02, slabH * 0.95, 0.04]} />
               <meshStandardMaterial color={active ? '#4573d2' : '#78716c'} roughness={0.6} metalness={0.15} />
             </mesh>
+
             {/* Poteaux d’angle entre cet étage et le suivant */}
             {next ? (
               ([[-1, -1], [1, -1], [-1, 1], [1, 1]] as const).map(([sx, sz]) => (
@@ -722,6 +1097,7 @@ function StoryStackDecks({
                 </mesh>
               ))
             ) : null}
+
             {!hideLabels ? (
               <Html
                 position={[-widthM / 2 - 0.15, Math.min(1.2, storyClear * 0.35), -heightM / 2]}
@@ -1936,7 +2312,7 @@ function FixtureMesh({
   steps?: number;
   hasCouverts?: boolean;
   stairDirection?: 0 | 90 | 180 | 270;
-  stairStyle?: 'straight' | 'open' | 'compact';
+  stairStyle?: StairStyle;
   balconySide?: 'north' | 'south' | 'east' | 'west';
   columnShape?: 'round' | 'square' | 'fluted';
   doorStyle?: DoorStyle;
@@ -2363,6 +2739,32 @@ function SceneContent({
   const focusY = stackViewFocusY(blueprint, wallHeightM);
   const topStoryElev = stories.reduce((max, s) => Math.max(max, s.elevationM), 0);
 
+  const activeStoryStairHoles = useMemo(() => {
+    const activeId = resolveActiveStoryId(blueprint);
+    const activeStory = stories.find((s) => s.id === activeId);
+    if (!activeStory || activeStory.elevationM <= 0.05) return [];
+
+    return (blueprint.fixtures || [])
+      .filter((f) => f.kind === 'stairs')
+      .filter((f) => {
+        if (f.connectsToStoryId) return f.connectsToStoryId === activeId;
+        const fromIdx = stories.findIndex((s) => s.id === (f.storyId || stories[0]?.id));
+        const activeIdx = stories.findIndex((s) => s.id === activeId);
+        return fromIdx >= 0 && fromIdx + 1 === activeIdx;
+      })
+      .map((f) => {
+        const [cx, cz] = pctToWorld(f.x + f.w / 2, f.y + f.h / 2, widthM, heightM);
+        const wM = (f.w / 100) * widthM;
+        const dM = (f.h / 100) * heightM;
+        return {
+          minX: cx - (wM * 1.05) / 2,
+          maxX: cx + (wM * 1.05) / 2,
+          minZ: cz - (dM * 1.05) / 2,
+          maxZ: cz + (dM * 1.05) / 2,
+        };
+      });
+  }, [blueprint, stories, widthM, heightM]);
+
   const { camera } = useThree();
   useEffect(() => {
     if (walkthroughActive) return;
@@ -2491,6 +2893,7 @@ function SceneContent({
           stories={stories}
           activeStoryId={resolveActiveStoryId(blueprint)}
           hideLabels={hideLabels}
+          blueprint={blueprint}
         />
       ) : (
         <FloorPlane
@@ -2502,6 +2905,7 @@ function SceneContent({
           floorColor={blueprint.metadata.floorColor}
           outline={blueprint.roomOutline}
           onPointerMissed={() => onSelect(null)}
+          stairHoles={activeStoryStairHoles}
         />
       )}
 
@@ -2547,6 +2951,7 @@ function SceneContent({
           opacity={blueprint.metadata.roofOpacity ?? 0.45}
           roofStyle={blueprint.metadata.roofStyle ?? 'flat'}
           baseElevationM={stackView ? topStoryElev : 0}
+          blueprint={blueprint}
         />
       )}
 

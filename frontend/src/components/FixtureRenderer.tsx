@@ -978,6 +978,49 @@ export default function FixtureRenderer({
   }
 
   // ─────────────────────────────────────────────────────────────
+  // 4b. ESCALIERS (Marches, Palier & Flèche de montée)
+  // ─────────────────────────────────────────────────────────────
+  if (isStairs) {
+    const stairStyle = fixture.stairStyle ?? 'straight';
+    const nSteps = Math.max(4, Math.min(16, fixture.steps ?? 8));
+    const dir = fixture.stairDirection ?? 0;
+    const isHorizontal = dir === 90 || dir === 270;
+
+    return (
+      <div
+        className={`${fill ? 'relative' : 'absolute'} border-2 border-stone-600 bg-stone-100 dark:bg-stone-800 text-stone-900 dark:text-stone-100 text-[9px] font-bold flex items-center justify-center overflow-hidden rounded-md shadow-xs ${className}`}
+        style={positionStyle}
+      >
+        {stairStyle === 'spiral' ? (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-4/5 h-4/5 rounded-full border border-dashed border-stone-400 dark:border-stone-500 flex items-center justify-center">
+              <span className="w-2.5 h-2.5 rounded-full bg-stone-700 dark:bg-stone-300" />
+            </div>
+          </div>
+        ) : (
+          <div
+            className={`absolute inset-0 flex pointer-events-none ${isHorizontal ? 'flex-row' : 'flex-col'}`}
+          >
+            {Array.from({ length: nSteps }).map((_, i) => (
+              <div
+                key={i}
+                className={`flex-1 border-stone-300 dark:border-stone-600 ${
+                  isHorizontal ? 'border-r' : 'border-b'
+                } ${i === nSteps - 1 ? 'bg-amber-100/50 dark:bg-amber-900/30' : ''}`}
+              />
+            ))}
+          </div>
+        )}
+        {showLabel && (
+          <span className="relative z-10 bg-surface/85 px-1.5 py-0.5 rounded text-[8px] font-bold shadow-xs whitespace-nowrap">
+            {fixture.label || 'Escalier'}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
   // 5. AUTRES FIXTURES (Scène, Podium, Colonne, Buffet, etc.)
   // ─────────────────────────────────────────────────────────────
   const usesZoneMaterial = isStage || isBuffet || isStairs || isBalcony;

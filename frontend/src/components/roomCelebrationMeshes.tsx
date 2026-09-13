@@ -663,7 +663,7 @@ export function DjBoothMesh({
   );
 }
 
-/** Écran de projection. */
+/** Écran de projection / Mur LED événementiel professionnel avec structure truss scénique. */
 export function ScreenMesh({
   w,
   heightM = 2.4,
@@ -674,16 +674,98 @@ export function ScreenMesh({
   selected?: boolean;
 }) {
   const h = Math.max(1.4, heightM);
+  const trussR = 0.024;
+  const trussColor = selected ? '#c7d2fe' : '#94a3b8';
+  const speakerH = Math.min(0.65, h * 0.45);
+  const speakerW = 0.22;
+
   return (
     <group>
-      <mesh position={[0, h * 0.55, 0]} castShadow>
-        <boxGeometry args={[w, h, 0.08]} />
-        <meshStandardMaterial color={selected ? '#1e293b' : '#0f172a'} roughness={0.85} />
+      {/* Structure pont scénique alu (truss) : piliers latéraux et traverses */}
+      {([-1, 1] as const).map((side) => (
+        <group key={`truss-side-${side}`} position={[side * (w * 0.52 + 0.08), 0, 0]}>
+          {/* Embase lourde en acier au sol */}
+          <mesh position={[0, 0.015, 0]} castShadow receiveShadow>
+            <boxGeometry args={[0.42, 0.03, 0.42]} />
+            <meshStandardMaterial color="#1e293b" metalness={0.85} roughness={0.25} />
+          </mesh>
+          {/* 2 tubes verticaux du mât truss */}
+          {[-0.08, 0.08].map((tz, tzi) => (
+            <mesh key={tzi} position={[0, h * 0.55, tz]} castShadow>
+              <cylinderGeometry args={[trussR, trussR, h * 1.1, 12]} />
+              <meshStandardMaterial color={trussColor} metalness={0.88} roughness={0.22} />
+            </mesh>
+          ))}
+          {/* Croisillons de renfort triangulés du truss */}
+          {Array.from({ length: 5 }).map((_, ci) => (
+            <mesh
+              key={ci}
+              position={[0, (h * 1.1 * (ci + 0.5)) / 5, 0]}
+              rotation={[ci % 2 === 0 ? 0.65 : -0.65, 0, 0]}
+              castShadow
+            >
+              <cylinderGeometry args={[0.012, 0.012, 0.22, 8]} />
+              <meshStandardMaterial color={trussColor} metalness={0.85} roughness={0.25} />
+            </mesh>
+          ))}
+          {/* Enceinte de façade suspendue au pont scénique */}
+          <group position={[side * -0.06, h * 0.72, 0.12]}>
+            <mesh castShadow>
+              <boxGeometry args={[speakerW, speakerH, 0.24]} />
+              <meshStandardMaterial color="#09090b" roughness={0.65} metalness={0.15} />
+            </mesh>
+            {/* Grille de haut-parleur */}
+            <mesh position={[0, 0, 0.125]}>
+              <boxGeometry args={[speakerW * 0.9, speakerH * 0.9, 0.01]} />
+              <meshStandardMaterial color="#18181b" roughness={0.85} metalness={0.4} />
+            </mesh>
+          </group>
+        </group>
+      ))}
+
+      {/* Traverse supérieure du pont scénique */}
+      <mesh position={[0, h * 1.06, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[trussR * 1.1, trussR * 1.1, w * 1.12, 12]} />
+        <meshStandardMaterial color={trussColor} metalness={0.88} roughness={0.22} />
       </mesh>
-      <mesh position={[0, h * 0.55, 0.05]}>
-        <boxGeometry args={[w * 0.92, h * 0.82, 0.02]} />
-        <meshStandardMaterial color="#111827" roughness={0.35} metalness={0.15} />
+
+      {/* Châssis / coque arrière de l'écran LED (armoire technique modulaire) */}
+      <mesh position={[0, h * 0.55, -0.02]} castShadow receiveShadow>
+        <boxGeometry args={[w, h, 0.07]} />
+        <meshStandardMaterial color={selected ? '#334155' : '#0f172a'} roughness={0.7} metalness={0.3} />
       </mesh>
+
+      {/* Dalle écran LED active haute résolution avec rétroéclairage scénique */}
+      <mesh position={[0, h * 0.55, 0.025]}>
+        <boxGeometry args={[w * 0.96, h * 0.94, 0.02]} />
+        <meshStandardMaterial
+          color="#0f172a"
+          emissive="#1e3a8a"
+          emissiveIntensity={0.55}
+          roughness={0.18}
+          metalness={0.25}
+        />
+      </mesh>
+
+      {/* Cadre biseauté ultra-fin autour de l'écran */}
+      <mesh position={[0, h * 0.55, 0.02]}>
+        <boxGeometry args={[w * 0.98, h * 0.96, 0.015]} />
+        <meshStandardMaterial color="#020617" roughness={0.3} metalness={0.6} />
+      </mesh>
+
+      {/* Ligne LED d'ambiance sous l'écran */}
+      <mesh position={[0, h * 0.08, 0.04]}>
+        <boxGeometry args={[w * 0.92, 0.015, 0.015]} />
+        <meshStandardMaterial
+          color="#38bdf8"
+          emissive="#0284c7"
+          emissiveIntensity={0.85}
+          roughness={0.1}
+        />
+      </mesh>
+
+      {/* Halo lumineux doux projeté vers la scène / public */}
+      <pointLight position={[0, h * 0.55, 0.45]} intensity={0.45} color="#60a5fa" distance={7} />
     </group>
   );
 }

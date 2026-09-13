@@ -4,7 +4,13 @@ import type { RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
 export type StairDirection = 0 | 90 | 180 | 270;
 
 /** Style visuel / géométrie de l’escalier. */
-export type StairStyle = 'straight' | 'open' | 'compact';
+export type StairStyle =
+  | 'straight'
+  | 'open'
+  | 'compact'
+  | 'spiral'
+  | 'quarterTurn'
+  | 'monumental';
 
 export const stairDirectionLabels: Record<StairDirection, string> = {
   0: 'Haut',
@@ -17,14 +23,20 @@ export const STAIR_DIRECTION_ORDER: StairDirection[] = [0, 90, 180, 270];
 
 export const stairStyleLabels: Record<StairStyle, string> = {
   straight: 'Droit classique',
-  open: 'Ouvert (loft)',
-  compact: 'Compact',
+  open: 'Flottant contemporain (loft)',
+  compact: 'Compact / Pas décalés',
+  spiral: 'Hélicoïdal (colimaçon)',
+  quarterTurn: 'Quart-tournant avec palier',
+  monumental: 'Monumental d’apparat (prestige)',
 };
 
 export const stairStyleHints: Record<StairStyle, string> = {
-  straight: 'Marches pleines, limons, garde-corps',
-  open: 'Contremarches ouvertes, plus aérien',
-  compact: 'Course plus courte, marches plus hautes',
+  straight: 'Marches pleines, limons massifs, nez de marche et garde-corps',
+  open: 'Marches suspendues sans contremarches, crémaillère centrale & verre',
+  compact: 'Course resserrée, encombrement réduit avec sécurité',
+  spiral: 'Fût central en acier satiné, marches rayonnantes hélicoïdales',
+  quarterTurn: 'Deux volées à 90° avec palier intermédiaire de repos',
+  monumental: 'Large volée d’honneur avec tapis de réception et rampes dorées',
 };
 
 export type StairFixture = RoomLayoutBlueprint['fixtures'][number] & { kind: 'stairs' };
@@ -83,7 +95,15 @@ export function resolveStairDirection(value?: number | null): StairDirection {
 }
 
 export function resolveStairStyle(value?: string | null): StairStyle {
-  if (value === 'open' || value === 'compact') return value;
+  if (
+    value === 'open' ||
+    value === 'compact' ||
+    value === 'spiral' ||
+    value === 'quarterTurn' ||
+    value === 'monumental'
+  ) {
+    return value;
+  }
   return 'straight';
 }
 
@@ -98,15 +118,25 @@ export function computeStairMetrics(opts: {
   const riseM = Math.max(0.8, opts.riseM);
   const canvasW = Math.max(5, opts.canvasWidthM);
   const canvasD = Math.max(5, opts.canvasDepthM);
-  const riser = style === 'compact' ? COMPACT_RISER_M : IDEAL_RISER_M;
-  const tread = style === 'compact' ? COMPACT_TREAD_M : IDEAL_TREAD_M;
-  const maxRunRatio = style === 'compact' ? 0.42 : 0.55;
-  const steps = Math.max(6, Math.min(22, Math.round(riseM / riser)));
-  const runM = Math.min(canvasD * maxRunRatio, Math.max(2.0, steps * tread));
-  const widthM = Math.min(2.2, Math.max(1.05, canvasW * (style === 'compact' ? 0.09 : 0.1)));
+  const isSpiral = style === 'spiral';
+  const isMonumental = style === 'monumental';
+  const riser = style === 'compact' ? COMPACT_RISER_M : isSpiral ? 0.18 : IDEAL_RISER_M;
+  const tread = style === 'compact' ? COMPACT_TREAD_M : isSpiral ? 0.25 : IDEAL_TREAD_M;
+  const maxRunRatio = style === 'compact' ? 0.42 : isSpiral ? 0.35 : 0.55;
+  const steps = isSpiral
+    ? Math.max(12, Math.min(26, Math.round(riseM / 0.18)))
+    : Math.max(6, Math.min(24, Math.round(riseM / riser)));
+  const runM = isSpiral
+    ? Math.min(canvasD * maxRunRatio, Math.max(1.8, 2.2))
+    : Math.min(canvasD * maxRunRatio, Math.max(2.0, steps * tread));
+  const widthM = isSpiral
+    ? runM
+    : isMonumental
+      ? Math.min(4.2, Math.max(2.2, canvasW * 0.18))
+      : Math.min(2.2, Math.max(1.05, canvasW * (style === 'compact' ? 0.09 : 0.1)));
   const hPct = Math.max(12, Math.min(55, (runM / canvasD) * 100));
-  const wPct = Math.max(6, Math.min(28, (widthM / canvasW) * 100));
-  const inclineDeg = (Math.atan2(riseM, runM) * 180) / Math.PI;
+  const wPct = Math.max(6, Math.min(38, (widthM / canvasW) * 100));
+  const inclineDeg = isSpiral ? 32 : (Math.atan2(riseM, runM) * 180) / Math.PI;
   return { riseM, runM, widthM, steps, wPct, hPct, inclineDeg };
 }
 

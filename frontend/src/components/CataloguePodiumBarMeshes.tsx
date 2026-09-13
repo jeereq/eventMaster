@@ -181,7 +181,7 @@ export function EventBarMesh({
   color?: string;
   selected?: boolean;
 }) {
-  const body = selected ? '#c7d2fe' : color ?? '#4a3728';
+  const body = selected ? '#c7d2fe' : color ?? '#292524';
   const topY = height;
   const bottles = BOTTLE_COLORS[style] ?? BOTTLE_COLORS.cocktail;
   const bottleCount = Math.min(BAR_BOTTLE_MAX, Math.max(4, Math.round(w * 1.6)));
@@ -190,43 +190,122 @@ export function EventBarMesh({
   const isIsland = style === 'island';
   const isL = style === 'lShaped';
   const tallBottles = style === 'wine' || style === 'champagne' || style === 'whiskey';
+  const slatCount = Math.max(6, Math.min(24, Math.round(w * 5)));
 
   return (
     <group>
-      <mesh position={[0, height * 0.42, 0]} castShadow receiveShadow>
-        <boxGeometry args={[w, height * 0.82, d]} />
-        <Mat color={body} roughness={0.48} />
+      {/* Caisson principal du bar */}
+      <mesh position={[0, height * 0.45, 0]} castShadow receiveShadow>
+        <boxGeometry args={[w, height * 0.88, d]} />
+        <Mat color={body} roughness={0.5} />
       </mesh>
-      <mesh position={[0, height * 0.12, d * 0.48]} castShadow>
-        <boxGeometry args={[w * 0.96, 0.08, 0.04]} />
-        <Mat color="#1c1917" roughness={0.55} />
+
+      {/* Façade architecturale à tasseaux de bois verticaux (slat wall design) */}
+      {Array.from({ length: slatCount }).map((_, si) => {
+        const sx = ((si + 0.5) / slatCount - 0.5) * (w * 0.94);
+        return (
+          <mesh key={`slat-${si}`} position={[sx, height * 0.45, d * 0.51]} castShadow>
+            <boxGeometry args={[Math.max(0.015, (w * 0.8) / (slatCount * 1.6)), height * 0.82, 0.02]} />
+            <meshStandardMaterial color="#78350f" roughness={0.65} metalness={0.05} />
+          </mesh>
+        );
+      })}
+
+      {/* Plinthe en retrait noire mate */}
+      <mesh position={[0, 0.04, d * 0.47]} castShadow>
+        <boxGeometry args={[w * 0.98, 0.08, 0.05]} />
+        <Mat color="#09090b" roughness={0.7} />
       </mesh>
-      <mesh position={[0, 0.22, d * 0.52]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-        <cylinderGeometry args={[0.018, 0.018, w * 0.9, 8]} />
-        <Mat color="#a1a1aa" metalness={0.75} roughness={0.22} />
-      </mesh>
+
+      {/* Repose-pieds tubulaire en laiton brossé ou inox */}
+      <group position={[0, 0.18, d * 0.56]}>
+        <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
+          <cylinderGeometry args={[0.018, 0.018, w * 0.92, 12]} />
+          <meshStandardMaterial color="#fbbf24" metalness={0.85} roughness={0.18} />
+        </mesh>
+        {/* Supports au sol du repose-pieds */}
+        {[-w * 0.38, 0, w * 0.38].map((spX, spi) => (
+          <mesh key={spi} position={[spX, -0.09, -0.03]} rotation={[0.4, 0, 0]} castShadow>
+            <cylinderGeometry args={[0.012, 0.012, 0.18, 8]} />
+            <meshStandardMaterial color="#d4af37" metalness={0.88} roughness={0.2} />
+          </mesh>
+        ))}
+      </group>
+
+      {/* Plateau de bar en marbre noble biseauté avec surplomb ergonomique */}
       <mesh position={[0, topY + 0.025, d * 0.06]} receiveShadow castShadow>
-        <boxGeometry args={[w * 1.08, 0.055, d * 1.18]} />
-        <Mat color="#f5f0e8" roughness={0.26} metalness={0.14} />
+        <boxGeometry args={[w * 1.06, 0.055, d * 1.15]} />
+        <meshPhysicalMaterial
+          color="#f8fafc"
+          roughness={0.18}
+          metalness={0.12}
+          clearcoat={0.7}
+          clearcoatRoughness={0.15}
+        />
       </mesh>
-      <mesh position={[0, topY + 0.002, d * 0.42]}>
-        <boxGeometry args={[w * 0.92, 0.03, 0.08]} />
-        <Mat color="#d6d3d1" metalness={0.45} roughness={0.3} />
+
+      {/* Ruban LED blanc chaud encastré sous le surplomb du comptoir */}
+      <mesh position={[0, topY - 0.01, d * 0.54]}>
+        <boxGeometry args={[w * 1.02, 0.015, 0.02]} />
+        <meshStandardMaterial
+          color="#fef3c7"
+          emissive="#fbbf24"
+          emissiveIntensity={0.65}
+          roughness={0.1}
+        />
       </mesh>
+
+      {/* Rail égouttoir inox barman encastré sur le dessus */}
+      <mesh position={[0, topY + 0.054, d * 0.38]}>
+        <boxGeometry args={[w * 0.88, 0.005, 0.12]} />
+        <meshStandardMaterial color="#a1a1aa" metalness={0.85} roughness={0.2} />
+      </mesh>
+
+      {/* Shaker de barman en inox poli sur le comptoir */}
+      <group position={[w * 0.32, topY + 0.14, d * 0.18]}>
+        <mesh castShadow>
+          <cylinderGeometry args={[0.045, 0.035, 0.18, 14]} />
+          <meshStandardMaterial color="#f8fafc" metalness={0.92} roughness={0.12} />
+        </mesh>
+        <mesh position={[0, 0.1, 0]} castShadow>
+          <cylinderGeometry args={[0.028, 0.042, 0.06, 12]} />
+          <meshStandardMaterial color="#f8fafc" metalness={0.92} roughness={0.12} />
+        </mesh>
+      </group>
+
       {!isIsland ? (
         <>
+          {/* Arrière-bar avec panneau miroir et structure d'étagères */}
           <mesh position={[0, height * 1.38, -d * 0.44]} castShadow>
             <boxGeometry args={[w * 0.94, height * 0.92, 0.07]} />
-            <Mat color="#1c1917" roughness={0.55} />
+            <meshStandardMaterial color="#1c1917" roughness={0.55} />
           </mesh>
-          <mesh position={[0, height * 1.82, -d * 0.4]}>
-            <boxGeometry args={[w * 0.9, 0.02, 0.04]} />
-            <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={0.55} />
+          {/* Miroir de fond réfléchissant */}
+          <mesh position={[0, height * 1.38, -d * 0.4]}>
+            <boxGeometry args={[w * 0.9, height * 0.85, 0.01]} />
+            <meshPhysicalMaterial
+              color="#e2e8f0"
+              roughness={0.08}
+              metalness={0.85}
+              clearcoat={0.9}
+            />
+          </mesh>
+          {/* Bande lumineuse supérieure d'arrière-bar */}
+          <mesh position={[0, height * 1.84, -d * 0.38]}>
+            <boxGeometry args={[w * 0.92, 0.025, 0.04]} />
+            <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={0.65} />
           </mesh>
           {Array.from({ length: BAR_SHELF_COUNT }).map((_, shelf) => (
-            <mesh key={shelf} position={[0, height * (0.92 + shelf * 0.32), -d * 0.36]} receiveShadow>
-              <boxGeometry args={[w * 0.88, 0.028, 0.16]} />
-              <Mat color="#d6c4b0" roughness={0.4} />
+            <mesh key={shelf} position={[0, height * (0.92 + shelf * 0.32), -d * 0.34]} receiveShadow>
+              <boxGeometry args={[w * 0.88, 0.02, 0.18]} />
+              <meshPhysicalMaterial
+                color="#f8fafc"
+                roughness={0.15}
+                metalness={0.1}
+                transmission={0.4}
+                transparent
+                opacity={0.85}
+              />
             </mesh>
           ))}
         </>

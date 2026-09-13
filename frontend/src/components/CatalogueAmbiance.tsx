@@ -685,20 +685,174 @@ export function CatalogueDoor({
           </>
         )}
 
-        {/* 6. DOUBLE BATTANTE OU SIMPLE PAR DÉFAUT */}
-        {style !== 'grandPortal' && style !== 'frenchDoor' && style !== 'barnDoor' && style !== 'velvetCurtain' && style !== 'fireExit' && (
+        {/* 6. PORTE TOUT-VERRE MINIMALISTE AVEC BÂTON DE MARÉCHAL INOX */}
+        {style === 'glass' && (
           <group position={[0, 0, 0]}>
-            <mesh castShadow receiveShadow>
-              <boxGeometry args={[frameW - frameThickness * 1.2, frameH - frameThickness * 1.2, doorThick]} />
-              <meshStandardMaterial color={color ?? '#ffffff'} roughness={0.4} />
+            {/* Panneau de verre sécurit feuilleté */}
+            <mesh position={[0, 0, 0]}>
+              <boxGeometry args={[frameW - frameThickness * 1.1, frameH - frameThickness * 1.1, 0.012]} />
+              <meshPhysicalMaterial
+                color="#f8fafc"
+                transmission={0.92}
+                opacity={0.3}
+                transparent
+                roughness={0.05}
+                metalness={0.1}
+              />
             </mesh>
-            {/* Poignée inox */}
-            <mesh position={[frameW * 0.35, -0.1, doorThick / 2 + 0.02]} castShadow>
-              <cylinderGeometry args={[0.012, 0.012, 0.16, 12]} />
-              <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.2} />
+            {/* Fines bordures périphériques en aluminium noir anodisé */}
+            <mesh position={[0, 0, 0]}>
+              <boxGeometry args={[frameW - frameThickness * 1.05, frameH - frameThickness * 1.05, 0.02]} />
+              <meshStandardMaterial color="#18181b" metalness={0.85} roughness={0.25} wireframe={false} />
+            </mesh>
+            {/* Longue poignée verticale bâton de maréchal en inox brossé */}
+            <group position={[frameW * 0.32, 0, 0.045]}>
+              <mesh castShadow>
+                <cylinderGeometry args={[0.016, 0.016, 1.25, 16]} />
+                <meshStandardMaterial color="#e2e8f0" metalness={0.92} roughness={0.12} />
+              </mesh>
+              {/* Fixations murales / entretoises de la poignée */}
+              {[-0.5, 0.5].map((py, pi) => (
+                <mesh key={pi} position={[0, py, -0.025]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+                  <cylinderGeometry args={[0.012, 0.012, 0.05, 12]} />
+                  <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.15} />
+                </mesh>
+              ))}
+            </group>
+          </group>
+        )}
+
+        {/* 7. GRANDE PORTE PIVOTANTE D'ARCHITECTE CONTEMPORAINE (AXE DÉPORTÉ) */}
+        {style === 'pivot' && (
+          <group position={[frameW * 0.05, 0, 0.02]}>
+            {/* Axe de pivot supérieur et inférieur */}
+            {[-frameH * 0.48, frameH * 0.48].map((py, pi) => (
+              <mesh key={pi} position={[-frameW * 0.28, py, 0]} castShadow>
+                <cylinderGeometry args={[0.025, 0.025, 0.04, 16]} />
+                <meshStandardMaterial color="#18181b" metalness={0.9} roughness={0.2} />
+              </mesh>
+            ))}
+            {/* Vantail pivotant en bois noir texturé ou métal liquide */}
+            <mesh position={[0, 0, 0]} castShadow receiveShadow>
+              <boxGeometry args={[frameW * 0.94, frameH * 0.96, 0.065]} />
+              <meshStandardMaterial color={color ?? '#18181b'} roughness={0.4} metalness={0.2} />
+            </mesh>
+            {/* Gorge / poignée intégrée verticale rétroéclairée */}
+            <mesh position={[frameW * 0.34, 0, 0.035]}>
+              <boxGeometry args={[0.02, 1.4, 0.015]} />
+              <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={0.6} />
             </mesh>
           </group>
         )}
+
+        {/* 8. DOUBLE PORTE BATTANTE CLASSIQUE MOULURÉE */}
+        {style === 'double' && (
+          <>
+            {[-1, 1].map((side) => {
+              const leafW = (frameW - frameThickness * 1.5) / 2;
+              return (
+                <group key={`double-${side}`} position={[side * (leafW / 2 + 0.01), 0, 0]}>
+                  {/* Vantail */}
+                  <mesh castShadow receiveShadow>
+                    <boxGeometry args={[leafW, frameH - frameThickness * 1.2, doorThick]} />
+                    <meshStandardMaterial color={color ?? '#ffffff'} roughness={0.35} />
+                  </mesh>
+                  {/* Moulure haute en relief */}
+                  <mesh position={[0, frameH * 0.22, doorThick / 2 + 0.006]} castShadow>
+                    <boxGeometry args={[leafW * 0.75, frameH * 0.35, 0.01]} />
+                    <meshStandardMaterial color={color ?? '#f8fafc'} roughness={0.4} />
+                  </mesh>
+                  {/* Moulure basse en relief */}
+                  <mesh position={[0, -frameH * 0.22, doorThick / 2 + 0.006]} castShadow>
+                    <boxGeometry args={[leafW * 0.75, frameH * 0.35, 0.01]} />
+                    <meshStandardMaterial color={color ?? '#f8fafc'} roughness={0.4} />
+                  </mesh>
+                  {/* Poignée béquille laiton/inox sur rosace */}
+                  <group position={[-side * (leafW * 0.35), -0.05, doorThick / 2 + 0.015]}>
+                    <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
+                      <cylinderGeometry args={[0.025, 0.025, 0.008, 16]} />
+                      <meshStandardMaterial color="#fbbf24" metalness={0.85} roughness={0.2} />
+                    </mesh>
+                    <mesh position={[side * 0.05, 0, 0.025]} castShadow>
+                      <boxGeometry args={[0.11, 0.018, 0.018]} />
+                      <meshStandardMaterial color="#d4af37" metalness={0.9} roughness={0.18} />
+                    </mesh>
+                  </group>
+                </group>
+              );
+            })}
+          </>
+        )}
+
+        {/* 9. PORTE CINTRÉE EN PLEIN CINTRE */}
+        {style === 'arch' && (
+          <group position={[0, 0, 0]}>
+            <mesh castShadow receiveShadow>
+              <boxGeometry args={[frameW - frameThickness * 1.2, frameH - frameThickness * 1.2, doorThick]} />
+              <meshStandardMaterial color={color ?? '#451a03'} roughness={0.5} />
+            </mesh>
+            {/* Clé de voûte cintrée en relief */}
+            <mesh position={[0, frameH / 2 + 0.05, 0.03]} castShadow>
+              <boxGeometry args={[0.18, 0.15, 0.08]} />
+              <meshStandardMaterial color="#78716c" roughness={0.7} />
+            </mesh>
+            {/* Heurtoir en fer forgé */}
+            <mesh position={[0, frameH * 0.1, doorThick / 2 + 0.02]} castShadow>
+              <torusGeometry args={[0.065, 0.012, 10, 20]} />
+              <meshStandardMaterial color="#1c1917" metalness={0.8} roughness={0.3} />
+            </mesh>
+            {/* Poignée */}
+            <mesh position={[frameW * 0.32, -0.1, doorThick / 2 + 0.02]} castShadow>
+              <cylinderGeometry args={[0.015, 0.015, 0.16, 12]} />
+              <meshStandardMaterial color="#fbbf24" metalness={0.85} roughness={0.2} />
+            </mesh>
+          </group>
+        )}
+
+        {/* 10. PORTE SIMPLE / MOULURÉE PAR DÉFAUT */}
+        {style !== 'grandPortal' &&
+          style !== 'frenchDoor' &&
+          style !== 'barnDoor' &&
+          style !== 'velvetCurtain' &&
+          style !== 'fireExit' &&
+          style !== 'glass' &&
+          style !== 'pivot' &&
+          style !== 'double' &&
+          style !== 'arch' && (
+            <group position={[0, 0, 0]}>
+              {/* Vantail principal */}
+              <mesh castShadow receiveShadow>
+                <boxGeometry args={[frameW - frameThickness * 1.2, frameH - frameThickness * 1.2, doorThick]} />
+                <meshStandardMaterial color={color ?? '#ffffff'} roughness={0.38} />
+              </mesh>
+              {/* Deux panneaux moulurés en léger relief d'ébénisterie */}
+              <mesh position={[0, frameH * 0.22, doorThick / 2 + 0.005]} castShadow>
+                <boxGeometry args={[(frameW - frameThickness * 2) * 0.8, frameH * 0.38, 0.008]} />
+                <meshStandardMaterial color={color ?? '#f8fafc'} roughness={0.45} />
+              </mesh>
+              <mesh position={[0, -frameH * 0.22, doorThick / 2 + 0.005]} castShadow>
+                <boxGeometry args={[(frameW - frameThickness * 2) * 0.8, frameH * 0.38, 0.008]} />
+                <meshStandardMaterial color={color ?? '#f8fafc'} roughness={0.45} />
+              </mesh>
+              {/* Ensemble poignée béquille en L sur rosace circulaire */}
+              <group position={[frameW * 0.34, -0.06, doorThick / 2 + 0.015]}>
+                <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
+                  <cylinderGeometry args={[0.026, 0.026, 0.008, 16]} />
+                  <meshStandardMaterial color="#94a3b8" metalness={0.85} roughness={0.2} />
+                </mesh>
+                {/* Béquille en L */}
+                <mesh position={[-0.05, 0, 0.02]} castShadow>
+                  <boxGeometry args={[0.11, 0.018, 0.016]} />
+                  <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.15} />
+                </mesh>
+                {/* Trou de serrure sous la rosace */}
+                <mesh position={[0, -0.06, 0]} rotation={[Math.PI / 2, 0, 0]}>
+                  <cylinderGeometry args={[0.016, 0.016, 0.006, 12]} />
+                  <meshStandardMaterial color="#64748b" metalness={0.8} roughness={0.3} />
+                </mesh>
+              </group>
+            </group>
+          )}
       </group>
     </group>
   );

@@ -448,24 +448,70 @@ export function EventStage({
       ) : null}
       {showLectern ? (
         <group position={[0, height, style === 'lectern' ? 0 : -d * 0.12]}>
+          {/* Fût principal du pupitre moderne en bois noble ou verre fumé */}
           <mesh position={[0, 0.55, 0]} castShadow>
             <boxGeometry args={[0.52, 1.05, 0.28]} />
-            <meshStandardMaterial color={selected ? '#c7d2fe' : '#3f2a1d'} roughness={0.45} />
+            <meshStandardMaterial color={selected ? '#c7d2fe' : '#292524'} roughness={0.35} metalness={0.15} />
           </mesh>
-          <mesh position={[0, 1.12, 0.12]} rotation={[-0.35, 0, 0]} castShadow>
-            <boxGeometry args={[0.62, 0.04, 0.38]} />
-            <meshStandardMaterial color="#1c1917" roughness={0.4} />
+          {/* Parement de façade du pupitre avec panneau texturé */}
+          <mesh position={[0, 0.55, 0.145]} castShadow>
+            <boxGeometry args={[0.46, 0.95, 0.015]} />
+            <meshStandardMaterial color="#451a03" roughness={0.4} />
           </mesh>
-          <mesh position={[0, 1.42, 0.02]} castShadow>
-            <cylinderGeometry args={[0.012, 0.012, 0.42, 8]} />
-            <meshStandardMaterial color="#d4d4d8" metalness={0.7} roughness={0.25} />
+          {/* Tablette orateur inclinée pour documents / tablette tactile */}
+          <mesh position={[0, 1.12, 0.04]} rotation={[-0.32, 0, 0]} castShadow>
+            <boxGeometry args={[0.62, 0.035, 0.42]} />
+            <meshStandardMaterial color="#18181b" roughness={0.3} metalness={0.25} />
           </mesh>
-          <mesh position={[0, 1.64, 0.04]} rotation={[0.4, 0, 0]} castShadow>
-            <cylinderGeometry args={[0.018, 0.03, 0.08, 10]} />
-            <meshStandardMaterial color="#171717" roughness={0.4} />
+          {/* Butée basse pour maintenir les notes */}
+          <mesh position={[0, 1.06, 0.21]} rotation={[-0.32, 0, 0]} castShadow>
+            <boxGeometry args={[0.58, 0.02, 0.015]} />
+            <meshStandardMaterial color="#c4a35a" metalness={0.75} roughness={0.25} />
+          </mesh>
+          {/* Double microphone col-de-cygne de conférence */}
+          {[-0.14, 0.14].map((mx, mi) => (
+            <group key={mi} position={[mx, 1.18, 0.02]}>
+              <mesh castShadow>
+                <cylinderGeometry args={[0.005, 0.005, 0.38, 8]} />
+                <meshStandardMaterial color="#d4d4d8" metalness={0.85} roughness={0.2} />
+              </mesh>
+              {/* Bonnette micro noire inclinée vers l'orateur */}
+              <mesh position={[0, 0.2, 0.04]} rotation={[0.45, 0, 0]} castShadow>
+                <cylinderGeometry args={[0.014, 0.022, 0.06, 12]} />
+                <meshStandardMaterial color="#09090b" roughness={0.9} />
+              </mesh>
+            </group>
+          ))}
+          {/* Lampe liseuse LED encastrée sur le dessus du pupitre */}
+          <mesh position={[0, 1.25, -0.1]} rotation={[0.2, 0, 0]}>
+            <boxGeometry args={[0.28, 0.015, 0.025]} />
+            <meshStandardMaterial color="#fef3c7" emissive="#fbbf24" emissiveIntensity={0.8} />
           </mesh>
         </group>
       ) : null}
+
+      {/* Garde-corps arrière de sécurité pour scènes hautes */}
+      {isStage && height >= 0.55 && (
+        <group position={[0, height, -d * 0.48]}>
+          {/* Main courante arrière */}
+          <mesh position={[0, 0.95, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+            <cylinderGeometry args={[0.022, 0.022, w * 0.94, 12]} />
+            <meshStandardMaterial color="#292524" metalness={0.8} roughness={0.25} />
+          </mesh>
+          {/* Lisse basse */}
+          <mesh position={[0, 0.48, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+            <cylinderGeometry args={[0.014, 0.014, w * 0.94, 10]} />
+            <meshStandardMaterial color="#57534e" metalness={0.7} roughness={0.3} />
+          </mesh>
+          {/* Poteaux verticaux de sécurité */}
+          {[-w * 0.45, -w * 0.15, w * 0.15, w * 0.45].map((px, pi) => (
+            <mesh key={pi} position={[px, 0.48, 0]} castShadow>
+              <cylinderGeometry args={[0.02, 0.02, 0.96, 10]} />
+              <meshStandardMaterial color="#292524" metalness={0.8} roughness={0.25} />
+            </mesh>
+          ))}
+        </group>
+      )}
       {kind === 'podium' && style === 'honor' ? (
         <mesh position={[0, height + 0.38, 0]} castShadow receiveShadow>
           <boxGeometry args={[w * 0.72, 0.72, d * 0.42]} />
