@@ -2456,7 +2456,7 @@ Merci de confirmer votre présence :
                   <Calendar className="w-12 h-12 text-muted mx-auto mb-4 opacity-50" />
                   <h3 className="text-lg font-semibold text-foreground">Votre premier événement vous attend</h3>
                   <p className="text-sm text-muted mt-2 max-w-md mx-auto leading-relaxed">
-                    Ajoutez un titre, une date, puis lancez vos invitations. L'aventure commence ici.
+                    Ajoutez un titre, une date et lancez vos invitations.
                   </p>
                   <ol className="mt-5 inline-flex flex-col sm:flex-row gap-2 sm:gap-3 text-left text-xs text-muted">
                     <li className="px-3 py-2 rounded-lg bg-surface-muted border border-border">1. Événement</li>
@@ -3168,7 +3168,7 @@ Merci de confirmer votre présence :
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div className="space-y-1">
                       <h2 className="text-lg font-semibold text-foreground tracking-tight">Invitations</h2>
-                      <p className="text-sm text-muted">Rédigez le message, choisissez e-mail ou WhatsApp, puis envoyez le lien RSVP. Le PDF de table part après confirmation.</p>
+                      <p className="text-sm text-muted">Envoi par WhatsApp ou e-mail avec lien RSVP personnel.</p>
                     </div>
                     <div className="flex flex-col items-stretch sm:items-end gap-1.5 shrink-0">
                       <Button

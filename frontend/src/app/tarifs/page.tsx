@@ -62,7 +62,7 @@ export default function TarifsPage() {
         <LandingPricingSection
           dbPlans={dbPlans}
           defaultAudience="B2C"
-          lead="Le compte client est 100% gratuit pour chercher des prestataires et créer des favoris. Choisissez un forfait ci-dessous pour débloquer la gestion d'invitations, le placement 2D/3D et le scan QR le jour J."
+          lead="Compte de recherche gratuit. Choisissez un forfait pour débloquer la création d’événements, le plan 2D/3D et le scan QR."
         />
 
         <div className="page-container py-4">
@@ -76,7 +76,7 @@ export default function TarifsPage() {
 
         <PublicCtaBand
           title="Une question avant de choisir votre forfait ?"
-          description={`Notre équipe à ${cityLabel} est disponible pour vous conseiller — forfaits clairs, paiement Mobile Money et activation immédiate.`}
+          description={`Notre équipe à ${cityLabel} vous conseille : forfaits clairs et paiements Mobile Money.`}
           highlights={[
             { icon: Wallet, label: 'Mobile Money' },
             { icon: Zap, label: 'Activation immédiate' },

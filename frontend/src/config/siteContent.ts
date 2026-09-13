@@ -12,13 +12,13 @@ export const SITE_CONTACT = {
 } as const;
 
 export const FOOTER_FEATURES = [
-  'Préparez votre événement de A à Z en un clic',
-  'Invitations WhatsApp IA, réponses & personnalisation invité',
-  'Billetterie en ligne, présence auto-validée & pass QR',
-  'Plans de table 2D & 3D photoréalistes avec caméras cinéma',
-  'Simulateur budget IA dédié en Francs Congolais & USD',
-  'Marketplace : salles, prestataires certifiés, matériel & devis',
-  '100% dans le navigateur mobile et ordinateur',
+  'Organisation complète en ligne',
+  'Invitations WhatsApp & RSVP en direct',
+  'Billetterie Mobile Money & pass QR',
+  'Plans de salle 2D cotés & visite 3D',
+  'Simulateur de budget CDF & USD',
+  'Marketplace de salles et prestataires',
+  '100% web, sans application à installer',
 ] as const;
 
 export const FOOTER_PRODUCT = [
@@ -42,7 +42,7 @@ export const FOOTER_RESOURCES = [
 ] as const;
 
 export const FOOTER_BRAND_DESCRIPTION =
-  'Plateforme tout-en-un pour vos événements en RDC : invitations WhatsApp IA, billetterie multi-zones avec présence auto-validée, plans de table 2D/3D immersifs, simulateur de budget et marketplace de salles & prestataires certifiés.';
+  'Plateforme événementielle en RDC : invitations WhatsApp, plans 2D/3D, billetterie Mobile Money et marketplace certifiée.';
 
 export interface FaqItem {
   id: string;

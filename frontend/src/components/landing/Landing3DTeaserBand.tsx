@@ -49,10 +49,10 @@ export default function Landing3DTeaserBand() {
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-6 lg:gap-10 items-center">
             <div className="max-w-xl space-y-3">
               <h2 className="em-landing-heading text-xl sm:text-3xl lg:text-4xl text-stage-foreground">
-                Modélisez vos réceptions au millimètre et placez vos invités
+                Plan de table 2D coté & visite 3D
               </h2>
               <p className="text-sm text-stage-foreground/80 leading-relaxed">
-                Tables, allées, lustres et finitions réalistes : visualisez votre plan 2D coté ou plongez en 3D photoréaliste (angles de vue cinéma, zones de billetterie et placement de table).
+                Disposition de tables, allées et lustres : visualisez en 2D au millimètre ou plongez en 3D interactive.
               </p>
               <ul className="grid grid-cols-2 gap-2 pt-1 text-xs text-stage-foreground/90 font-medium">
                 <li className="flex items-center gap-1.5">
@@ -61,15 +61,15 @@ export default function Landing3DTeaserBand() {
                 </li>
                 <li className="flex items-center gap-1.5">
                   <Eye className="w-3.5 h-3.5 text-festive-on-stage shrink-0" aria-hidden />
-                  Rendu 3D &amp; Caméras cinéma
+                  Visite 3D interactive
                 </li>
                 <li className="flex items-center gap-1.5">
                   <Users className="w-3.5 h-3.5 text-festive-on-stage shrink-0" aria-hidden />
-                  Tarifs par zone &amp; Sièges
+                  Placement des invités
                 </li>
                 <li className="flex items-center gap-1.5">
                   <ScanLine className="w-3.5 h-3.5 text-festive-on-stage shrink-0" aria-hidden />
-                  Accueil QR &amp; Présence
+                  Accueil QR jour J
                 </li>
               </ul>
               <div className="flex flex-col sm:flex-row gap-2.5 pt-1">

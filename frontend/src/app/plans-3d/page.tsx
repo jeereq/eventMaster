@@ -117,7 +117,7 @@ export default function Plans3DPage() {
       {/* ─── Hero épuré ─── */}
       <PublicPageHero
         title="Modèles de salles 2D & 3D interactifs"
-        description="Mariages, banquets, conférences ou cocktails. Composez un plan avec l’IA, explorez-le en 2D / 3D, puis ouvrez-le dans l’éditeur."
+        description="Configurations témoins en 2D / 3D ou composition sur mesure avec l'IA."
         compact
       >
         <div className="pt-1 flex flex-wrap items-center gap-2.5">
@@ -350,7 +350,7 @@ export default function Plans3DPage() {
 
       <PublicCtaBand
         title="Prêt à concevoir le plan de votre événement ?"
-        description="Modélisez vos réceptions au millimètre et placez vos invités — plans 2D cotés, visite 3D et accueil QR le jour J."
+        description="Plan 2D coté, visite 3D interactive et placement nominatif sur table."
         highlights={[
           { icon: LayoutGrid, label: 'Plan 2D coté' },
           { icon: Eye, label: 'Visite 3D 360°' },

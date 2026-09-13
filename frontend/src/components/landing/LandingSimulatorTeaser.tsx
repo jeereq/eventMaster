@@ -90,13 +90,13 @@ export default function LandingSimulatorTeaser() {
               <div className="space-y-2">
                 <h2 className="em-landing-heading text-xl sm:text-3xl text-foreground">
                   {isBudgetBlocked
-                    ? 'Prochainement : Trois formules budget réelles, composées en 1 clic'
-                    : 'Trois formules budget réelles, composées en 1 clic'}
+                    ? '3 formules budget automatiques'
+                    : '3 formules budget clés en main en 1 clic'}
                 </h2>
                 <p className="text-xs sm:text-sm text-muted leading-relaxed max-w-xl">
                   {isBudgetBlocked
-                    ? 'Actuellement en cours de préparation : notre IA composera prochainement 3 formules chiffrées (Éco, Équilibré et Confort) à partir des salles et prestataires certifiés du catalogue.'
-                    : 'Indiquez vos invités, votre ville et vos envies : l’IA compose instantanément 3 formules chiffrées (Éco, Équilibré et Confort) à partir des salles et prestataires certifiés du catalogue.'}
+                    ? 'Bientôt disponible : composition automatique de 3 formules (Éco, Équilibré, Confort) selon vos critères.'
+                    : 'Indiquez vos invités et votre ville : l’IA compose 3 formules chiffrées (Éco, Équilibré, Confort) avec les prestataires certifiés.'}
                 </p>
               </div>
 
@@ -105,19 +105,19 @@ export default function LandingSimulatorTeaser() {
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
                   <span>
-                    3 packs chiffrés en FC & USD {isBudgetBlocked ? '(Bientôt disponible)' : ''}
+                    Chiffrage immédiat en CDF & USD {isBudgetBlocked ? '(À venir)' : ''}
                   </span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
-                  <span>Salles, traiteurs et DJ vérifiés</span>
+                  <span>Salles et prestataires certifiés</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
                   <span>
                     {isBudgetBlocked
-                      ? 'Tarifs transparents selon les fiches'
-                      : '4 simulations gratuites sans compte'}
+                      ? 'Tarifs transparents catalogue'
+                      : 'Simulations gratuites sans compte'}
                   </span>
                 </li>
                 <li className="flex items-center gap-2">
@@ -135,13 +135,13 @@ export default function LandingSimulatorTeaser() {
                   className="justify-center shadow-md font-bold text-xs sm:text-sm min-h-11"
                   rightIcon={isBudgetBlocked ? <Clock className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
                 >
-                  {isBudgetBlocked ? 'Découvrir la fonctionnalité à venir' : 'Ouvrir le simulateur de budget'}
+                  {isBudgetBlocked ? 'Découvrir la fonctionnalité' : 'Ouvrir le simulateur'}
                 </Button>
                 <Link
                   href="/marketplace"
                   className="inline-flex min-h-11 items-center justify-center px-4 rounded-[var(--radius-button)] text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition border border-border"
                 >
-                  Voir les prix du catalogue
+                  Voir les tarifs
                 </Link>
               </div>
             </div>

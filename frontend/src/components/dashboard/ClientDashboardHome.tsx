@@ -481,7 +481,7 @@ export default function ClientDashboardHome() {
               Organisez vos événements privés ou professionnels
             </h2>
             <p className="text-xs sm:text-sm text-muted leading-relaxed">
-              Débloquez la création d’événements, l’envoi de faire-part WhatsApp nominatifs avec RSVP, la conception de plans de table 2D/3D et le contrôle d’accès par QR code Jour J. Choisissez votre orientation pour régler directement votre premier abonnement et activer votre compte.
+              Créez vos événements, envoyez vos faire-part WhatsApp, dressez vos plans 2D/3D et scannez les entrées le jour J.
             </p>
           </div>
 
@@ -490,7 +490,7 @@ export default function ClientDashboardHome() {
               href="/dashboard/billing?tab=plans"
               className="text-xs font-semibold text-muted hover:text-foreground transition underline underline-offset-4"
             >
-              Consulter la grille tarifaire complète
+              Grille tarifaire
             </Link>
           </div>
         </div>
@@ -504,7 +504,7 @@ export default function ClientDashboardHome() {
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20">
                   <Heart className="w-3.5 h-3.5" />
                   Organisation Particulier (B2C)
                 </span>
@@ -516,7 +516,7 @@ export default function ClientDashboardHome() {
                   Mariages & Célébrations Privées
                 </h3>
                 <p className="text-xs text-muted leading-relaxed mt-1">
-                  Pour mariages, anniversaires, fêtes familiales ou cérémonies privées sans abonnement mensuel contraignant.
+                  Mariages, anniversaires et fêtes privées sans engagement mensuel.
                 </p>
               </div>
 
@@ -527,17 +527,17 @@ export default function ClientDashboardHome() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                  <span>Faire-part WhatsApp nominatifs avec confirmation RSVP</span>
+                  <span>Faire-part WhatsApp nominatifs avec RSVP</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                  <span>Plan de table 2D/3D & scan smartphone Jour J</span>
+                  <span>Plan de table 2D/3D & scan smartphone</span>
                 </div>
               </div>
             </div>
 
             <div className="pt-3 border-t border-border flex items-center justify-between gap-2 mt-auto">
-              <span className="text-[11px] font-medium text-muted">Durée : 90 jours (trimestre)</span>
+              <span className="text-xs font-medium text-muted">Durée : 90 jours</span>
               <Button
                 variant="primary"
                 size="sm"
@@ -548,7 +548,7 @@ export default function ClientDashboardHome() {
                 rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
                 className="bg-rose-600 hover:bg-rose-700 text-white shadow-xs"
               >
-                Choisir Particulier & Payer
+                Choisir Particulier
               </Button>
             </div>
           </div>
@@ -560,7 +560,7 @@ export default function ClientDashboardHome() {
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary/10 text-primary border border-primary/20">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
                   <Building2 className="w-3.5 h-3.5" />
                   Organisation Professionnelle (B2B)
                 </span>
@@ -572,7 +572,7 @@ export default function ClientDashboardHome() {
                   Entreprises, Galas & Agences Pro
                 </h3>
                 <p className="text-xs text-muted leading-relaxed mt-1">
-                  Pour entreprises, agences événementielles, institutions, séminaires, concerts et organisateurs réguliers.
+                  Concerts, conférences, galas et billetterie en ligne.
                 </p>
               </div>
 
@@ -593,7 +593,7 @@ export default function ClientDashboardHome() {
             </div>
 
             <div className="pt-3 border-t border-border flex items-center justify-between gap-2 mt-auto">
-              <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 font-semibold">
+              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 font-semibold">
                 −10 % en annuel (365 j)
               </span>
               <Button
@@ -606,7 +606,7 @@ export default function ClientDashboardHome() {
                 rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
                 className="shadow-xs shadow-primary/20"
               >
-                Choisir Entreprise & Payer
+                Choisir Entreprise
               </Button>
             </div>
           </div>

@@ -102,8 +102,7 @@ export default function LandingHeroStreamlined() {
           </h1>
 
           <p className="text-xs sm:text-base text-muted leading-relaxed max-w-xl mx-auto">
-            <span className="sm:hidden">Salles, prestataires, plans 2D/3D, billetterie et invitations WhatsApp en RDC.</span>
-            <span className="hidden sm:inline">Salles d’exception, plans 2D/3D photoréalistes, billetterie avec présence auto-validée et invitations WhatsApp — choisissez votre projet.</span>
+            Salles d’exception, plans 2D/3D, billetterie Mobile Money et invitations WhatsApp en RDC.
           </p>
 
           {user ? (
@@ -121,7 +120,7 @@ export default function LandingHeroStreamlined() {
             </div>
           ) : null}
 
-          <div className="flex pt-1 flex-wrap items-center justify-center gap-x-3 sm:gap-x-4 gap-y-1.5 text-[11px] sm:text-xs text-muted">
+          <div className="flex pt-1 flex-wrap items-center justify-center gap-x-3 sm:gap-x-4 gap-y-1.5 text-xs text-muted">
             <span className="inline-flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
               <span>{cityLabel}</span>
@@ -134,7 +133,7 @@ export default function LandingHeroStreamlined() {
             <span className="text-border">·</span>
             <span className="inline-flex items-center gap-1">
               <Smartphone className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span>100% dans le navigateur</span>
+              <span>100% web, sans appli</span>
             </span>
           </div>
         </div>

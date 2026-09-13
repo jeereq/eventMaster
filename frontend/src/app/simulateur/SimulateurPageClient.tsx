@@ -193,8 +193,8 @@ export default function SimulateurPageClient() {
         title="Simulateur de Budget & Formules IA"
         description={
           isBudgetBlocked
-            ? 'Fonctionnalité à venir : l’estimation et la composition automatique de formules par IA sera disponible prochainement.'
-            : 'Estimez votre réception en 1 clic : 3 formules catalogue clés en main (Éco, Équilibré, Confort).'
+            ? 'Fonctionnalité à venir : 3 formules chiffrées selon votre budget.'
+            : '3 formules clés en main (Éco, Équilibré, Confort) en 1 clic.'
         }
         compact
       >
@@ -360,7 +360,7 @@ export default function SimulateurPageClient() {
               </h2>
               <p className="text-xs text-muted">
                 {isBudgetBlocked
-                  ? 'Exemples de scénarios d’événements qui seront automatiquement chiffrés dès l’activation du simulateur.'
+                  ? 'Exemples chiffrés dès l’activation du simulateur.'
                   : 'Chargez un exemple type en 1 clic.'}
               </p>
             </div>
@@ -452,7 +452,7 @@ export default function SimulateurPageClient() {
                     Simulateur de budget · Fonctionnalité à venir
                   </p>
                   <p className="text-xs text-muted">
-                    L&apos;outil d&apos;estimation automatique par IA est temporairement désactivé par l&apos;administration. Vous pouvez explorer directement nos espaces et prestataires certifiés.
+                    L&apos;estimation IA est temporairement désactivée. Explorez nos espaces et prestataires certifiés.
                   </p>
                 </div>
               </div>
@@ -477,10 +477,10 @@ export default function SimulateurPageClient() {
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-primary" />
-              <span>Explorez les autres outils créatifs EventMaster</span>
+              <span>Explorez les autres outils créatifs</span>
             </h3>
             <p className="text-xs text-muted">
-              Vos jetons IA sont utilisables sur l’ensemble de nos ateliers créatifs.
+              Vos jetons IA sont utilisables sur l’ensemble des ateliers.
             </p>
           </div>
 
@@ -497,7 +497,7 @@ export default function SimulateurPageClient() {
                   Studio Cartes & Invitations WhatsApp
                 </p>
                 <p className="text-xs text-muted truncate">
-                  Générez une carte d’invitation visuelle 9:16 avec RSVP
+                  Carte d’invitation 9:16 avec confirmation RSVP
                 </p>
               </div>
             </Link>
@@ -514,7 +514,7 @@ export default function SimulateurPageClient() {
                   Studio Plans de Salle 2D & 3D
                 </p>
                 <p className="text-xs text-muted truncate">
-                  Modelez tables, allées et visitez la salle en 3D
+                  Disposition des tables et visite 3D
                 </p>
               </div>
             </Link>
@@ -523,8 +523,8 @@ export default function SimulateurPageClient() {
       </div>
 
       <PublicCtaBand
-        title="Retenez un pack, puis envoyez les devis"
-        description="Un compte client gratuit enregistre vos formules, ouvre les fiches et envoie les demandes. Le paiement des acomptes se fait directement avec le professionnel."
+        title="Retenez un pack, puis demandez vos devis"
+        description="Enregistrez vos formules et contactez directement les professionnels."
         highlights={[
           { icon: Sparkles, label: '3 formules chiffrées en FC & USD' },
           { icon: Store, label: 'Salles, métiers et matériel certifiés' },

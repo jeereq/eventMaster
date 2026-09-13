@@ -77,7 +77,7 @@ export default function ModelesPage() {
     >
       <PublicPageHero
         title="Modèles d'invitations prêts à l'emploi"
-        description="Mariages, anniversaires, réceptions d'entreprise ou galas. Choisissez un design élégant, personnalisez vos informations — ou créez le vôtre avec l’IA."
+        description="Designs élégants pour vos réceptions, ou création sur mesure avec l'IA."
         compact
       >
         <div className="pt-1 flex flex-wrap items-center gap-2.5">
@@ -295,7 +295,7 @@ export default function ModelesPage() {
 
       <PublicCtaBand
         title="Prêt à créer votre propre modèle d'invitation ?"
-        description="Inscrivez-vous gratuitement et personnalisez vos faire-part en quelques minutes — puis placez vos invités et suivez les RSVP."
+        description="Personnalisez vos faire-part et suivez vos réponses RSVP en temps réel."
         highlights={[
           { icon: Wand2, label: 'Studio IA' },
           { icon: Mail, label: 'WhatsApp' },
