@@ -109,7 +109,7 @@ export const REAL_CLEARANCE_METERS = {
   columnClearance: 0.60,
 };
 
-export type ClearancePreset = 'standard' | 'vip' | 'compact';
+export type ClearancePreset = 'standard' | 'vip' | 'compact' | 'pmr';
 
 export const CLEARANCE_PRESETS: Record<ClearancePreset, Partial<typeof REAL_CLEARANCE_METERS>> = {
   standard: {
@@ -150,6 +150,20 @@ export const CLEARANCE_PRESETS: Record<ClearancePreset, Partial<typeof REAL_CLEA
     doorClearance: 1.20,
     danceFloorClearance: 0.60,
     serviceCounterClearance: 1.20,
+  },
+  pmr: {
+    tableToTable: 1.50, // Aire de rotation 1.50 m pour fauteuil roulant
+    chairToChair: 0.85,
+    chairToTable: 0.90,
+    tableToRow: 1.50,
+    chairToRow: 0.90,
+    rowToRow: 1.20,
+    wallMargin: 1.20,
+    stageClearance: 1.50,
+    doorClearance: 1.50, // Dégagement d'accès réglementaire devant les portes
+    danceFloorClearance: 1.20,
+    serviceCounterClearance: 1.50,
+    aisleClearance: 1.40, // Allée principale de circulation PMR
   },
 };
 

@@ -7,6 +7,7 @@ import {
   distancePointToSegmentM,
   estimateTableSizeMeters,
   REAL_CLEARANCE_METERS,
+  CLEARANCE_PRESETS,
 } from './roomLayoutClearance.ts';
 
 describe('enforceRealLayoutClearances', () => {
@@ -500,5 +501,17 @@ describe('règles architecturales des portes et murs', () => {
     const report = detectLayoutClearanceConflicts(blueprintWithWidenedTable);
     const tableOverlap = report.conflicts.find((c) => c.type === 'table_overlap');
     assert.ok(tableOverlap, 'La table géante personnalisée doit déclencher un conflit d’encombrement');
+  });
+
+  it('gère le profil de dégagement PMR et les contraintes réglementaires', () => {
+    // 1. Profil PMR : normes d’accessibilité pour fauteuil roulant et allées
+    assert.equal(CLEARANCE_PRESETS.pmr.tableToTable, 1.50);
+    assert.equal(CLEARANCE_PRESETS.pmr.doorClearance, 1.50);
+    assert.equal(CLEARANCE_PRESETS.pmr.aisleClearance, 1.40);
+    assert.equal(CLEARANCE_PRESETS.pmr.tableToRow, 1.50);
+    assert.equal(CLEARANCE_PRESETS.pmr.wallMargin, 1.20);
+
+    // 2. Vérification que deux tables séparées de 1.45m respectent le profil standard (1.40m) mais déclenchent une alerte en profil PMR (1.50m)
+    assert.ok(CLEARANCE_PRESETS.pmr.tableToTable! > CLEARANCE_PRESETS.standard.tableToTable!);
   });
 });

@@ -5221,23 +5221,80 @@ export default function RoomLayoutEditor({
             {selectedFurniture.attachedChairs !== false ? (
               <div className="space-y-1.5">
                 {typeof selected?.seatIndex === 'number' ? (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = detachOneTableChair(blueprint, selectedFurniture.id, selected.seatIndex as number);
-                      updateBlueprint(next, {
-                        message: `Chaise ${selected.seatIndex! + 1} détachée`,
-                        kind: 'edit',
-                      });
-                      const created = next.furniture.filter((f) => f.kind === 'chair' && !blueprint.furniture.some((p) => p.id === f.id));
-                      const last = created[created.length - 1];
-                      if (last) setSelection([{ kind: 'chair', id: last.id }]);
-                    }}
-                    className={cn(EDITOR_PANEL_BTN, 'w-full border-primary/30 bg-primary/10 text-primary')}
-                  >
-                    Détacher cette chaise
-                  </button>
+                  <div className="space-y-1.5">
+                    {(() => {
+                      const idx = selected.seatIndex as number;
+                      const isPmr = selectedFurniture.pmrSeatIndices?.includes(idx);
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentPmr = selectedFurniture.pmrSeatIndices ?? [];
+                            const nextPmr = isPmr
+                              ? currentPmr.filter((i) => i !== idx)
+                              : [...currentPmr, idx];
+                            updateFurniture(
+                              selectedFurniture.id,
+                              {
+                                pmrSeatIndices: nextPmr.length > 0 ? nextPmr : undefined,
+                                hasPmrAccess: nextPmr.length > 0 ? true : selectedFurniture.hasPmrAccess,
+                              },
+                              isPmr ? `Siège ${idx + 1} redevenu standard` : `Siège ${idx + 1} adapté en place PMR`,
+                            );
+                          }}
+                          className={cn(
+                            EDITOR_PANEL_BTN,
+                            'w-full',
+                            isPmr
+                              ? 'border-sky-500/40 bg-sky-500/15 text-sky-700 dark:text-sky-300 font-bold'
+                              : 'border-border text-foreground hover:bg-surface-muted',
+                          )}
+                        >
+                          <span aria-hidden>♿</span>
+                          {isPmr ? `Siège ${idx + 1} : Place PMR (Active)` : `Adapter siège ${idx + 1} en Place PMR`}
+                        </button>
+                      );
+                    })()}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const next = detachOneTableChair(blueprint, selectedFurniture.id, selected.seatIndex as number);
+                        updateBlueprint(next, {
+                          message: `Chaise ${selected.seatIndex! + 1} détachée`,
+                          kind: 'edit',
+                        });
+                        const created = next.furniture.filter((f) => f.kind === 'chair' && !blueprint.furniture.some((p) => p.id === f.id));
+                        const last = created[created.length - 1];
+                        if (last) setSelection([{ kind: 'chair', id: last.id }]);
+                      }}
+                      className={cn(EDITOR_PANEL_BTN, 'w-full border-primary/30 bg-primary/10 text-primary')}
+                    >
+                      Détacher cette chaise
+                    </button>
+                  </div>
                 ) : null}
+                {/* Option table PMR globale */}
+                <div className="p-2.5 rounded-xl border border-border bg-surface flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <span aria-hidden>♿</span> Accès prioritaire PMR
+                  </span>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={selectedFurniture.hasPmrAccess === true}
+                      onChange={(e) => {
+                        updateFurniture(
+                          selectedFurniture.id,
+                          { hasPmrAccess: e.target.checked },
+                          e.target.checked ? 'Table déclarée accessible PMR' : 'Accès PMR retiré',
+                        );
+                      }}
+                      className="sr-only peer"
+                      aria-label="Table accessible PMR avec dégagement adapté"
+                    />
+                    <div className="w-9 h-5 bg-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-solid"></div>
+                  </label>
+                </div>
                 <button
                   type="button"
                   onClick={() => {
@@ -5319,6 +5376,13 @@ export default function RoomLayoutEditor({
                 >
                   Dimensions & Rayon
                 </button>
+                <button
+                  type="button"
+                  onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['pmr']), { message: 'Configuration PMR appliquée à toutes les tables', kind: 'edit' })}
+                  className={cn(EDITOR_PANEL_BTN, 'border-border text-muted hover:bg-surface-muted')}
+                >
+                  <span aria-hidden>♿</span> Config PMR
+                </button>
               </div>
             </div>
           </div>
@@ -5367,6 +5431,43 @@ export default function RoomLayoutEditor({
               value={selectedFurniture.seatCount}
               onChange={(e) => updateFurniture(selectedFurniture.id, { seatCount: parseInt(e.target.value, 10) })}
             />
+
+            {typeof selected?.seatIndex === 'number' && (
+              <div className="pt-1">
+                {(() => {
+                  const idx = selected.seatIndex as number;
+                  const isPmr = selectedFurniture.pmrSeatIndices?.includes(idx);
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const currentPmr = selectedFurniture.pmrSeatIndices ?? [];
+                        const nextPmr = isPmr
+                          ? currentPmr.filter((i) => i !== idx)
+                          : [...currentPmr, idx];
+                        updateFurniture(
+                          selectedFurniture.id,
+                          {
+                            pmrSeatIndices: nextPmr.length > 0 ? nextPmr : undefined,
+                          },
+                          isPmr ? `Siège ${idx + 1} redevenu standard` : `Siège ${idx + 1} de la rangée adapté PMR`,
+                        );
+                      }}
+                      className={cn(
+                        EDITOR_PANEL_BTN,
+                        'w-full',
+                        isPmr
+                          ? 'border-sky-500/40 bg-sky-500/15 text-sky-700 dark:text-sky-300 font-bold'
+                          : 'border-border text-foreground hover:bg-surface-muted',
+                      )}
+                    >
+                      <span aria-hidden>♿</span>
+                      {isPmr ? `Siège ${idx + 1} : Place PMR (Active)` : `Adapter siège ${idx + 1} en Place PMR`}
+                    </button>
+                  );
+                })()}
+              </div>
+            )}
 
             {/* Courbure & Gradin (Amphithéâtre Pinterest) */}
             <div className="space-y-2 p-2.5 rounded bg-surface border border-border">
@@ -5994,6 +6095,42 @@ export default function RoomLayoutEditor({
             {clearanceReport.conflicts.length}
           </span>
         ) : null}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          const nextVal = !blueprint.metadata.showPmrClearanceOverlay;
+          updateBlueprint(
+            {
+              ...blueprint,
+              metadata: {
+                ...blueprint.metadata,
+                showPmrClearanceOverlay: nextVal,
+              },
+            },
+            {
+              message: nextVal ? 'Mode accessibilité PMR activé' : 'Mode accessibilité standard',
+              kind: 'settings',
+            },
+          );
+        }}
+        title="Activer/désactiver l'affichage des repères d'accessibilité PMR et allées de circulation"
+        className={cn(
+          EDITOR_TOOL,
+          blueprint.metadata.showPmrClearanceOverlay
+            ? 'border-sky-500/50 bg-sky-500/15 text-sky-700 dark:text-sky-300 font-bold'
+            : (blueprint.metadata.totalPmrSeats ?? 0) > 0 || blueprint.metadata.hasPmrAccess
+              ? 'border-sky-500/30 text-sky-600 dark:text-sky-400 bg-surface'
+              : EDITOR_TOOL_IDLE,
+        )}
+      >
+        <span aria-hidden>♿</span>
+        <span>Normes PMR</span>
+        {(blueprint.metadata.totalPmrSeats ?? 0) > 0 && (
+          <span className="px-1.5 py-0.5 rounded-full bg-sky-500/20 text-sky-700 dark:text-sky-300 text-xs font-bold">
+            {blueprint.metadata.totalPmrSeats} pl.
+          </span>
+        )}
       </button>
       <button
         type="button"
@@ -7374,11 +7511,12 @@ export default function RoomLayoutEditor({
 
         <div className="space-y-1.5">
           <label className="text-xs font-bold text-foreground">Profil d'espacement souhaité :</label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
               { id: 'standard' as const, label: 'Standard', desc: '1.40m tables · Réceptions' },
               { id: 'vip' as const, label: 'Confort VIP', desc: '1.80m tables · Galas' },
               { id: 'compact' as const, label: 'Bistrot', desc: '1.10m tables · Urbain' },
+              { id: 'pmr' as const, label: 'Accessibilité PMR', desc: '1.50m fauteuil · Allées 1.40m' },
             ].map((p) => (
               <button
                 key={p.id}

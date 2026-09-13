@@ -459,13 +459,15 @@ function DashboardPageContent() {
   >('overview');
 
   useEffect(() => {
-    if (tabParam === 'events') {
-      router.replace('/dashboard/admin/events');
-      return;
-    }
-    if (tabParam === 'guests') {
-      router.replace('/dashboard/admin/guests');
-      return;
+    if (user?.role === 'SUPER_ADMIN') {
+      if (tabParam === 'events') {
+        router.replace('/dashboard/admin/events');
+        return;
+      }
+      if (tabParam === 'guests') {
+        router.replace('/dashboard/admin/guests');
+        return;
+      }
     }
     if (isPlatformStaff(user?.role) && (tabParam || user?.role === 'SUPER_ADMIN')) {
       const legacySubscriptions = tabParam === 'subscriptions' ? 'subscription-requests' : tabParam;

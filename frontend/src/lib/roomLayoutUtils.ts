@@ -63,7 +63,8 @@ export type TableStyleField =
   | 'couvertStyle'
   | 'hasCenterpiece'
   | 'centerpieceStyle'
-  | 'dimensions';
+  | 'dimensions'
+  | 'pmr';
 export type StageShape = 'rect' | 'semiCircle';
 /** Variantes d’estrade événementielle (orateur, couple, passerelle…). */
 export type PodiumStyle =
@@ -554,6 +555,10 @@ export interface RoomLayoutBlueprint {
         attachedChairs?: boolean;
         /** Sièges autour de la table retirés (après détachement unitaire). */
         hiddenSeatIndices?: number[];
+        /** Sièges réservés ou adaptés PMR (accès personne à mobilité réduite / fauteuil). */
+        pmrSeatIndices?: number[];
+        /** Table identifiée avec accès direct et prioritaire PMR. */
+        hasPmrAccess?: boolean;
         groupId?: string;
         storyId?: string;
       }
@@ -586,6 +591,8 @@ export interface RoomLayoutBlueprint {
         y: number;
         curve?: number;
         rotation?: number;
+        /** Sièges réservés PMR (ex: en bout de rangée). */
+        pmrSeatIndices?: number[];
         /** Division avec allée centrale de passage. */
         aisleSplit?: boolean;
         /** Largeur de l’allée centrale en % de la rangée (5–30%). */
@@ -692,6 +699,12 @@ export interface RoomLayoutBlueprint {
     stackView?: boolean;
     /** Liaisons verticales explicites (escalier / ascenseur). */
     verticalLinks?: import('@/lib/roomBuildingUtils').VerticalLink[];
+    /** Salle ou plan déclaré accessible PMR (personnes à mobilité réduite). */
+    hasPmrAccess?: boolean;
+    /** Nombre total de places adaptées PMR. */
+    totalPmrSeats?: number;
+    /** Afficher les repères d’allées PMR et places accessibles. */
+    showPmrClearanceOverlay?: boolean;
     /** Journal des actions d’édition, persisté avec le plan. */
     layoutActions?: import('@/lib/layoutActionLog').LayoutActionEntry[];
   };
@@ -717,6 +730,27 @@ export function refreshBlueprintMetadata(blueprint: RoomLayoutBlueprint): RoomLa
   const tableCount = blueprint.furniture.filter((f) => f.kind === 'table').length;
   const rowCount = blueprint.furniture.filter((f) => f.kind === 'row').length;
   const totalSeats = calculateBlueprintCapacity(blueprint);
+
+  let totalPmrSeats = 0;
+  for (const f of blueprint.furniture) {
+    if (f.kind === 'table') {
+      if (f.chairType === 'WHEELCHAIR') {
+        const hidden = f.hiddenSeatIndices?.length ?? 0;
+        totalPmrSeats += Math.max(0, f.capacity - hidden);
+      } else if (f.pmrSeatIndices && f.pmrSeatIndices.length > 0) {
+        totalPmrSeats += f.pmrSeatIndices.length;
+      }
+    } else if (f.kind === 'chair' && f.chairType === 'WHEELCHAIR') {
+      totalPmrSeats += 1;
+    } else if (f.kind === 'row') {
+      if (f.chairType === 'WHEELCHAIR') {
+        totalPmrSeats += f.seatCount;
+      } else if (f.pmrSeatIndices && f.pmrSeatIndices.length > 0) {
+        totalPmrSeats += f.pmrSeatIndices.length;
+      }
+    }
+  }
+
   return {
     ...blueprint,
     metadata: {
@@ -724,6 +758,8 @@ export function refreshBlueprintMetadata(blueprint: RoomLayoutBlueprint): RoomLa
       tableCount: tableCount || undefined,
       rowCount: rowCount || undefined,
       totalSeats,
+      totalPmrSeats: totalPmrSeats || undefined,
+      hasPmrAccess: blueprint.metadata.hasPmrAccess ?? (totalPmrSeats > 0 ? true : undefined),
     },
   };
 }
@@ -5164,6 +5200,8 @@ export function applyTableStyleToAll(
       customDepthM: fields.includes('dimensions') ? source.customDepthM : item.customDepthM,
       customRadiusM: fields.includes('dimensions') ? source.customRadiusM : item.customRadiusM,
       cornerRadiusM: fields.includes('dimensions') ? source.cornerRadiusM : item.cornerRadiusM,
+      hasPmrAccess: fields.includes('pmr') ? source.hasPmrAccess : item.hasPmrAccess,
+      pmrSeatIndices: fields.includes('pmr') ? (source.pmrSeatIndices ? [...source.pmrSeatIndices] : undefined) : item.pmrSeatIndices,
     };
   });
   return refreshBlueprintMetadata({ ...blueprint, furniture });

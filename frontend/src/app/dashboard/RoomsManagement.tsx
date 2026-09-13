@@ -10,7 +10,7 @@ import { enabledMarketplaceCities } from '@/lib/platformCities';
 import {
   Building2, Plus, Trash2, Users, UserPlus, Check, CheckCircle2,
   ChevronLeft, ChevronRight, LayoutGrid, Theater, Tent, Presentation, Edit3, Sparkles, Ruler,
-  Globe, GlobeLock, Lock, Eye, AlertTriangle, AlertCircle,
+  Globe, GlobeLock, Lock, Eye, AlertTriangle, AlertCircle, ExternalLink,
 } from 'lucide-react';
 import {
   ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonRoomsView,
@@ -364,6 +364,7 @@ export default function RoomsManagement() {
   const [description, setDescription] = useState('');
   const [floor, setFloor] = useState('');
   const [location, setLocation] = useState('');
+  const [hasPmrAccess, setHasPmrAccess] = useState(false);
   const [roomType, setRoomType] = useState<RoomType>('BANQUET');
   const [layoutParams, setLayoutParams] = useState<LayoutParams>(defaultParams.BANQUET);
   const [blueprintDraft, setBlueprintDraft] = useState<RoomLayoutBlueprint | null>(null);
@@ -381,7 +382,7 @@ export default function RoomsManagement() {
   const [editingRoom, setEditingRoom] = useState<RoomItem | null>(null);
   const [viewingRoom, setViewingRoom] = useState<RoomItem | null>(null);
   const [editBlueprint, setEditBlueprint] = useState<RoomLayoutBlueprint | null>(null);
-  const [editMeta, setEditMeta] = useState({ name: '', floor: '', location: '', description: '' });
+  const [editMeta, setEditMeta] = useState({ name: '', floor: '', location: '', description: '', hasPmrAccess: false });
   const [editPane, setEditPane] = useState<'identite' | 'elements' | 'publication'>('identite');
   const [editElementsReady, setEditElementsReady] = useState(false);
   const [savingLayout, setSavingLayout] = useState(false);
@@ -483,6 +484,7 @@ export default function RoomsManagement() {
     setDescription('');
     setFloor('');
     setLocation('');
+    setHasPmrAccess(false);
     const initialType = allowedRoomTypes.includes('BANQUET') ? 'BANQUET' : allowedRoomTypes[0] || 'SIMPLE';
     setRoomType(initialType);
     setLayoutParams(defaultParams[initialType]);
@@ -819,13 +821,23 @@ export default function RoomsManagement() {
     }
     setSaving(true);
     try {
+      const finalBlueprint = blueprintDraft
+        ? {
+            ...blueprintDraft,
+            metadata: {
+              ...blueprintDraft.metadata,
+              hasPmrAccess: hasPmrAccess || undefined,
+            },
+          }
+        : undefined;
+
       const res = await api.post('/rooms', {
         name,
         description: description || undefined,
         floor: floor || undefined,
         location: location || undefined,
         roomType,
-        layoutBlueprint: blueprintDraft ?? undefined,
+        layoutBlueprint: finalBlueprint ?? undefined,
       });
 
       const newRoomId = res?.room?.id || res?.id;
@@ -914,12 +926,20 @@ export default function RoomsManagement() {
     setSavingLayout(true);
     setError('');
     try {
+      const updatedBlueprint: RoomLayoutBlueprint = {
+        ...editBlueprint,
+        metadata: {
+          ...editBlueprint.metadata,
+          hasPmrAccess: editMeta.hasPmrAccess,
+        },
+      };
+
       await api.put(`/rooms/${editingRoom.id}`, {
         name: editMeta.name.trim() || editingRoom.name,
         description: editMeta.description.trim() || undefined,
         floor: editMeta.floor.trim() || undefined,
         location: editMeta.location.trim() || undefined,
-        layoutBlueprint: editBlueprint,
+        layoutBlueprint: updatedBlueprint,
         roomType: editBlueprint.roomType,
       });
 
@@ -1027,6 +1047,7 @@ export default function RoomsManagement() {
       floor: room.floor || '',
       location: room.location || '',
       description: room.description || '',
+      hasPmrAccess: bp?.metadata?.hasPmrAccess ?? false,
     });
     const serverBlueprint = bp
       ? refreshBlueprintMetadata({ ...bp })
@@ -1040,11 +1061,12 @@ export default function RoomsManagement() {
       const draft = await readRoomLayoutDraft(tenant?.id, room.id);
       if (editSessionRef.current !== session) return;
       if (!draft?.pendingServerSync || !draft.blueprint) return;
-      setEditMeta(draft.editMeta ?? {
-        name: room.name,
-        floor: room.floor || '',
-        location: room.location || '',
-        description: room.description || '',
+      setEditMeta({
+        name: draft.editMeta?.name ?? room.name,
+        floor: draft.editMeta?.floor ?? room.floor ?? '',
+        location: draft.editMeta?.location ?? room.location ?? '',
+        description: draft.editMeta?.description ?? room.description ?? '',
+        hasPmrAccess: draft.editMeta?.hasPmrAccess ?? Boolean(room.layoutBlueprint?.metadata?.hasPmrAccess),
       });
       setEditBlueprint(refreshBlueprintMetadata(draft.blueprint));
       editDirtyRef.current = true;
@@ -1616,6 +1638,27 @@ export default function RoomsManagement() {
                   />
                 </div>
               </div>
+            </div>
+            {/* Option d'accessibilité PMR */}
+            <div className="p-3.5 rounded-xl border border-border bg-surface-muted/40 flex items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                  <span aria-hidden>♿</span> Accès PMR & Mobilité Réduite
+                </span>
+                <p className="text-xs text-muted">
+                  La salle dispose d’accès plain-pied, d’ascenseurs ou de rampes adaptés.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                <input
+                  type="checkbox"
+                  checked={hasPmrAccess}
+                  onChange={(e) => setHasPmrAccess(e.target.checked)}
+                  className="sr-only peer"
+                  aria-label="Salle accessible aux personnes à mobilité réduite"
+                />
+                <div className="w-11 h-6 bg-border peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/40 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-solid"></div>
+              </label>
             </div>
             <div className="space-y-2">
               <label htmlFor={notesFieldId} className="block text-sm font-semibold text-foreground">
@@ -2288,6 +2331,53 @@ export default function RoomsManagement() {
                       ))
                     )}
                   </div>
+
+                  {/* Badges d'accessibilité PMR et caractéristiques du plan */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-border/40">
+                    {room.layoutBlueprint?.canvas?.widthM && room.layoutBlueprint?.canvas?.heightM ? (
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-surface-muted text-muted border border-border">
+                        {room.layoutBlueprint.canvas.widthM * room.layoutBlueprint.canvas.heightM} m² ({room.layoutBlueprint.canvas.widthM}×{room.layoutBlueprint.canvas.heightM}m)
+                      </span>
+                    ) : null}
+                    {(room.layoutBlueprint?.metadata?.hasPmrAccess || (room.layoutBlueprint?.metadata?.totalPmrSeats ?? 0) > 0) && (
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20 inline-flex items-center gap-1">
+                        <span aria-hidden>♿</span> Accès PMR {(room.layoutBlueprint?.metadata?.totalPmrSeats ?? 0) > 0 ? `(${room.layoutBlueprint?.metadata?.totalPmrSeats} pl.)` : ''}
+                      </span>
+                    )}
+                    {(room.layoutBlueprint?.furniture?.filter((f) => f.kind === 'table').length ?? 0) > 0 && (
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-surface-muted text-muted border border-border">
+                        {room.layoutBlueprint?.furniture?.filter((f) => f.kind === 'table').length} table{(room.layoutBlueprint?.furniture?.filter((f) => f.kind === 'table').length ?? 0) > 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Actions directes rapides et intuitives */}
+                  <div className="flex items-center gap-2 pt-2 border-t border-border/60">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setViewingRoom(room);
+                      }}
+                      className="flex-1 min-h-9 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-surface border border-border hover:bg-surface-muted hover:border-primary/40 text-foreground transition inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <Eye className="w-3.5 h-3.5 text-primary" />
+                      <span>Détails & Rendu</span>
+                    </button>
+                    {canManage && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditLayout(room);
+                        }}
+                        className="flex-1 min-h-9 px-2.5 py-1.5 text-xs font-bold rounded-lg bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover transition inline-flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Modifier plan</span>
+                      </button>
+                    )}
+                  </div>
                 </ProjectCard>
 
                 {canManage && (
@@ -2359,10 +2449,24 @@ export default function RoomsManagement() {
         description={viewingRoom ? [roomTypeLabels[viewingRoom.roomType || 'SIMPLE'], viewingRoom.floor, viewingRoom.location].filter(Boolean).join(' · ') : undefined}
         size="xl"
         footer={
-          <div className="flex w-full justify-between gap-2">
-            <Button type="button" variant="secondary" size="sm" onClick={() => setViewingRoom(null)}>
-              Fermer
-            </Button>
+          <div className="flex flex-col sm:flex-row w-full justify-between items-center gap-2">
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="secondary" size="sm" onClick={() => setViewingRoom(null)}>
+                Fermer
+              </Button>
+              {canCatalogPublish && viewingRoom?.venueListing?.isPublic && viewingRoom.venueListing.slug && (
+                <Link
+                  href={`/marketplace/salles/${viewingRoom.venueListing.slug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="min-h-9 px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-surface-muted transition inline-flex items-center gap-1.5"
+                >
+                  <Globe className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Fiche publique</span>
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
+              )}
+            </div>
             {canManage && viewingRoom && (
               <Button
                 type="button"
@@ -2374,7 +2478,7 @@ export default function RoomsManagement() {
                 }}
                 leftIcon={<Edit3 className="w-4 h-4" />}
               >
-                Modifier le plan
+                Modifier le plan 3D
               </Button>
             )}
           </div>
@@ -2382,7 +2486,7 @@ export default function RoomsManagement() {
       >
         {viewingRoom && (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
               <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
                 <p className="text-xs font-bold uppercase text-muted">Type</p>
                 <p className="font-semibold text-foreground">{roomTypeLabels[viewingRoom.roomType || 'SIMPLE']}</p>
@@ -2394,11 +2498,23 @@ export default function RoomsManagement() {
                 </p>
               </div>
               <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
-                <p className="text-xs font-bold uppercase text-muted">Dimensions</p>
+                <p className="text-xs font-bold uppercase text-muted">Dimensions & Surface</p>
                 <p className="font-semibold text-foreground">
-                  {viewingRoom.layoutBlueprint
-                    ? `${viewingRoom.layoutBlueprint.canvas.widthM}×${viewingRoom.layoutBlueprint.canvas.heightM} m`
+                  {viewingRoom.layoutBlueprint?.canvas
+                    ? `${viewingRoom.layoutBlueprint.canvas.widthM}×${viewingRoom.layoutBlueprint.canvas.heightM} m · ${viewingRoom.layoutBlueprint.canvas.widthM * viewingRoom.layoutBlueprint.canvas.heightM} m²`
                     : '—'}
+                </p>
+              </div>
+              <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
+                <p className="text-xs font-bold uppercase text-muted">Accessibilité PMR</p>
+                <p className="font-semibold text-foreground">
+                  {viewingRoom.layoutBlueprint?.metadata?.hasPmrAccess || (viewingRoom.layoutBlueprint?.metadata?.totalPmrSeats ?? 0) > 0 ? (
+                    <span className="text-sky-600 dark:text-sky-400 font-bold flex items-center gap-1">
+                      <span aria-hidden>♿</span> {(viewingRoom.layoutBlueprint?.metadata?.totalPmrSeats ?? 0) > 0 ? `${viewingRoom.layoutBlueprint?.metadata?.totalPmrSeats} pl. PMR` : 'Conforme'}
+                    </span>
+                  ) : (
+                    <span className="text-muted">Standard</span>
+                  )}
                 </p>
               </div>
               <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2">
@@ -2409,8 +2525,24 @@ export default function RoomsManagement() {
             {viewingRoom.description && (
               <p className="text-sm text-muted leading-relaxed">{viewingRoom.description}</p>
             )}
-            <div className="border border-border rounded-[var(--radius-card)] p-3 sm:p-4 bg-surface">
-              <h3 className="text-sm font-semibold mb-2">Rendu de la salle</h3>
+            <div className="border border-border rounded-[var(--radius-card)] p-3 sm:p-4 bg-surface space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold">Rendu & Plan de la salle</h3>
+                {canManage && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const room = viewingRoom;
+                      setViewingRoom(null);
+                      openEditLayout(room);
+                    }}
+                    className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Ouvrir dans l’éditeur</span>
+                  </button>
+                )}
+              </div>
               <RoomLayoutPreview
                 blueprint={viewingRoom.layoutBlueprint}
                 quality="showcase"
@@ -2581,6 +2713,31 @@ export default function RoomsManagement() {
                   }}
                   className="text-base sm:text-sm min-h-11"
                 />
+              </div>
+              <div className="sm:col-span-2">
+                <div className="p-3.5 rounded-xl border border-border bg-surface-muted/40 flex items-center justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                      <span aria-hidden>♿</span> Accès PMR & Mobilité Réduite
+                    </span>
+                    <p className="text-xs text-muted">
+                      La salle dispose d’aménagements pour personnes à mobilité réduite.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={editMeta.hasPmrAccess}
+                      onChange={(e) => {
+                        markEditDirty();
+                        setEditMeta((m) => ({ ...m, hasPmrAccess: e.target.checked }));
+                      }}
+                      className="sr-only peer"
+                      aria-label="Salle accessible aux personnes à mobilité réduite"
+                    />
+                    <div className="w-11 h-6 bg-border peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/40 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-solid"></div>
+                  </label>
+                </div>
               </div>
               <div className="sm:col-span-2 space-y-1.5">
                 <label htmlFor={editNotesFieldId} className={labelClass}>

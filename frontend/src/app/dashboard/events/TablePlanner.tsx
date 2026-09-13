@@ -5,7 +5,7 @@ import {
  Plus, Trash2, Users, Check, Move, X, RefreshCw, Search,
   HelpCircle, Edit2, LayoutGrid, Maximize2, Minimize2, Copy, Lock, Unlock, Palette, RotateCw, Sparkles, ChevronDown, Download, PlusCircle, Save, Box,
   Wand2, Paintbrush, Settings2, CheckCircle2, AlertCircle, Coins, Eye, Tag, SlidersHorizontal,
-  ZoomIn, ZoomOut, Columns, ShieldCheck, Grid, RotateCcw, Sun
+  ZoomIn, ZoomOut, Columns, ShieldCheck, Grid, RotateCcw, Sun, Building2,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import Modal from '@/components/ui/Modal';
@@ -19,7 +19,7 @@ import {
   normalizeTableSeats,
  TableShape,
 } from '@/lib/tablePlanUtils';
-import { chairTypeLabels, getFixtureClass, type ChairType, type RoomLayoutBlueprint, resolveBlueprintWalls, wallsFromRoomOutline } from '@/lib/roomLayoutUtils';
+import { chairTypeLabels, getFixtureClass, type ChairType, type RoomLayoutBlueprint, resolveBlueprintWalls, wallsFromRoomOutline, roomTypeLabels } from '@/lib/roomLayoutUtils';
 import { resolveFloorStyle } from '@/lib/roomFloorUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
 import { roomEditorCapabilities, snapLayoutPct } from '@/lib/roomEditorAccess';
@@ -1917,27 +1917,55 @@ export default function TablePlanner({
  </div>
  )}
  {canImportRoomLayout && onImportRoomLayout && (
- <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-surface-muted border border-border rounded-[var(--radius-card)]">
- <div className="text-sm">
- <p className="font-semibold text-primary">Plan de salle disponible</p>
- <p className="text-muted text-xs mt-0.5">
- {roomName ? (
- <>Mettre à jour depuis <span className="text-primary font-medium">« {roomName} »</span> — le nouveau plan 3D est appliqué ; les places déjà assignées sont conservées.</>
- ) : (
- 'Importer le modèle de la salle liée (places conservées si possible).'
- )}
- </p>
+ <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-surface border border-border rounded-[var(--radius-card)] shadow-2xs">
+ <div className="text-sm space-y-1">
+   <div className="flex items-center gap-2 flex-wrap">
+     <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+       <Building2 className="w-4 h-4" />
+     </div>
+     <p className="font-bold text-foreground">
+       {roomName ? `Salle liée : « ${roomName} »` : 'Plan de salle disponible'}
+     </p>
+     {roomLayoutBlueprint?.roomType && (
+       <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+         {roomTypeLabels[roomLayoutBlueprint.roomType] || roomLayoutBlueprint.roomType}
+       </span>
+     )}
+     {roomLayoutBlueprint?.canvas && (
+       <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-surface-muted text-muted border border-border">
+         {roomLayoutBlueprint.canvas.widthM}×{roomLayoutBlueprint.canvas.heightM} m ({roomLayoutBlueprint.canvas.widthM * roomLayoutBlueprint.canvas.heightM} m²)
+       </span>
+     )}
+     {(roomLayoutBlueprint?.metadata?.hasPmrAccess || (roomLayoutBlueprint?.metadata?.totalPmrSeats ?? 0) > 0) && (
+       <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20 inline-flex items-center gap-1">
+         <span aria-hidden>♿</span> Accès PMR {(roomLayoutBlueprint?.metadata?.totalPmrSeats ?? 0) > 0 ? `(${roomLayoutBlueprint?.metadata?.totalPmrSeats} pl.)` : ''}
+       </span>
+     )}
+   </div>
+   <p className="text-muted text-xs">
+     {roomName ? (
+       <>Synchronisé avec la salle. Vous pouvez réimporter les dernières modifications de structure (murs, scènes) tout en conservant les places déjà assignées.</>
+     ) : (
+       'Importer le modèle de la salle liée (places conservées si possible).'
+     )}
+   </p>
  </div>
- <div className="flex flex-wrap gap-2">
- <button
- type="button"
- disabled={importingLayout}
- onClick={() => onImportRoomLayout(tables.length > 0)}
- className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary hover:bg-primary-hover disabled:opacity-60 text-white text-xs font-semibold rounded-[var(--radius-button)] transition"
- >
- {importingLayout ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
- {tables.length > 0 ? 'Mettre à jour depuis la salle' : 'Importer depuis la salle'}
- </button>
+ <div className="flex flex-wrap items-center gap-2 shrink-0">
+   <Link
+     href="/dashboard/rooms"
+     className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-[var(--radius-button)] border border-border bg-surface hover:bg-surface-muted text-foreground transition"
+   >
+     <span>Gérer les salles</span>
+   </Link>
+   <button
+     type="button"
+     disabled={importingLayout}
+     onClick={() => onImportRoomLayout(tables.length > 0)}
+     className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-solid hover:bg-primary-solid-hover disabled:opacity-60 text-primary-foreground text-xs font-bold rounded-[var(--radius-button)] transition shadow-2xs"
+   >
+     {importingLayout ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+     {tables.length > 0 ? 'Mettre à jour depuis la salle' : 'Importer depuis la salle'}
+   </button>
  </div>
  </div>
  )}

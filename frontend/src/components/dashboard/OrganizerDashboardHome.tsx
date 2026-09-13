@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -41,6 +42,7 @@ import {
   AlertTriangle,
   UserCheck,
   LayoutDashboard,
+  Loader2,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -69,7 +71,16 @@ export interface OrganizerEventItem {
   location: string;
 }
 
-export type OrganizerDashboardTab = 'overview' | 'events' | 'guests' | 'spaces' | 'billing';
+export type OrganizerDashboardTab = 'overview' | 'events' | 'guests' | 'spaces' | 'team' | 'billing';
+
+const DynamicTeamManagement = dynamic(() => import('@/app/dashboard/TeamManagement'), {
+  loading: () => (
+    <div className="p-8 text-center text-muted">
+      <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary mb-2" />
+      <p className="text-xs">Chargement de la gestion de l’équipe…</p>
+    </div>
+  ),
+});
 
 interface OrganizerDashboardHomeProps {
   events: OrganizerEventItem[];
@@ -116,11 +127,12 @@ export default function OrganizerDashboardHome({
   const isBoth = tenant?.accountKind === 'BOTH';
   const isOwner = Boolean(access?.isOwner) || (Boolean(user?.id) && user?.id === tenant?.managerId);
   const isManager = access?.level === 'manager' && !isOwner;
+  const canManageTeam = isOwner || Boolean(access?.canManageTeam);
 
   // Onglet actif initialisé depuis l'URL ou par défaut 'overview'
   const [activeTab, setActiveTab] = useState<OrganizerDashboardTab>(() => {
     const t = searchParams.get('tab');
-    if (t === 'overview' || t === 'events' || t === 'guests' || t === 'spaces' || t === 'billing') {
+    if (t === 'overview' || t === 'events' || t === 'guests' || t === 'spaces' || t === 'team' || t === 'billing') {
       return t;
     }
     return 'overview';
@@ -128,8 +140,8 @@ export default function OrganizerDashboardHome({
 
   // Synchronisation avec les changements d'historique (boutons précédent/suivant)
   useEffect(() => {
-    const t = searchParams.get('tab');
-    if (t === 'events' || t === 'guests' || t === 'spaces' || t === 'billing') {
+    const t = searchParams.get('tab') as OrganizerDashboardTab | null;
+    if (t === 'events' || t === 'guests' || t === 'spaces' || t === 'team' || t === 'billing') {
       setActiveTab(t);
     } else if (!t || t === 'overview') {
       setActiveTab('overview');
@@ -139,13 +151,15 @@ export default function OrganizerDashboardHome({
   const handleTabChange = (tabId: OrganizerDashboardTab) => {
     setActiveTab(tabId);
     if (typeof window !== 'undefined') {
-      const url = new URL(window.location.href);
+      const currentSearchParams = searchParams ? new URLSearchParams(searchParams.toString()) : new URLSearchParams();
       if (tabId === 'overview') {
-        url.searchParams.delete('tab');
+        currentSearchParams.delete('tab');
       } else {
-        url.searchParams.set('tab', tabId);
+        currentSearchParams.set('tab', tabId);
       }
-      window.history.replaceState({}, '', url.toString());
+      const qs = currentSearchParams.toString();
+      const targetUrl = qs ? `/dashboard?${qs}` : '/dashboard';
+      router.replace(targetUrl, { scroll: false });
     }
   };
 
@@ -240,6 +254,17 @@ export default function OrganizerDashboardHome({
       icon: isVendor ? Briefcase : Building2,
       badge: null,
     },
+    ...(canManageTeam
+      ? [
+          {
+            id: 'team' as const,
+            label: 'Équipe & Rôles',
+            shortLabel: 'Équipe',
+            icon: UserCheck,
+            badge: null,
+          },
+        ]
+      : []),
     {
       id: 'billing' as const,
       label: isManager ? 'Organisation & Quotas' : 'Abonnement & Quotas',
@@ -247,7 +272,7 @@ export default function OrganizerDashboardHome({
       icon: isManager ? Shield : Crown,
       badge: tenant?.plan || 'Forfait',
     },
-  ], [events.length, isManager, isVendor, tenant?.plan, usage?.guests]);
+  ], [canManageTeam, events.length, isManager, isVendor, tenant?.plan, usage?.guests]);
 
   const handleTabKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft' && e.key !== 'Home' && e.key !== 'End') return;
@@ -419,29 +444,32 @@ export default function OrganizerDashboardHome({
               </Link>
               {isOwner ? (
                 <>
-                  <Link
-                    href="/dashboard/team"
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('team')}
+                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
                     <UserCheck className="w-3.5 h-3.5 text-primary" />
                     Équipe
-                  </Link>
-                  <Link
-                    href="/dashboard/billing"
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('billing')}
+                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
                     <Award className="w-3.5 h-3.5 text-emerald-600" />
                     Abonnement
-                  </Link>
+                  </button>
                 </>
               ) : null}
-              <Link
-                href="/dashboard/rooms"
-                className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
+              <button
+                type="button"
+                onClick={() => handleTabChange('spaces')}
+                className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
               >
                 <Building2 className="w-3.5 h-3.5 text-purple-600" />
                 Salles
-              </Link>
+              </button>
               <Link
                 href="/dashboard/protocol"
                 className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
@@ -1566,6 +1594,48 @@ export default function OrganizerDashboardHome({
               </Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════════
+          ONGLET : 👥 ÉQUIPE & RÔLES DE L'ORGANISATION
+      ══════════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'team' && canManageTeam && (
+        <div
+          role="tabpanel"
+          id="org-panel-team"
+          aria-labelledby="org-tab-team"
+          tabIndex={0}
+          className="space-y-6 focus-visible:outline-none animate-in fade-in-50 duration-150"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-surface p-4 sm:p-5 rounded-2xl border border-border shadow-2xs">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                  <UserCheck className="w-4 h-4" />
+                </span>
+                <h2 className="text-base font-bold text-foreground">
+                  Gestion de l’Équipe & Rôles
+                </h2>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                  {isOwner ? 'Propriétaire' : 'Manager'}
+                </span>
+              </div>
+              <p className="text-xs text-muted">
+                Invitez vos collaborateurs, attribuez les accès (Manager, Protocole émargement, Commercial) et suivez leur statut.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/dashboard/team"
+                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-surface border border-border hover:border-primary/40 text-foreground transition inline-flex items-center gap-1.5"
+              >
+                <span>Page dédiée</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+          <DynamicTeamManagement />
         </div>
       )}
 

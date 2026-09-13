@@ -28,6 +28,7 @@ export interface RoomLayoutDraftMeta {
   floor: string;
   location: string;
   description: string;
+  hasPmrAccess?: boolean;
 }
 
 export interface RoomLayoutDraft {
