@@ -273,7 +273,9 @@ function buildDashboardNav(opts: {
 			? 'Événements & Salles'
 			: workspace.showEvents
 				? 'Événements'
-				: 'Salles';
+				: workspace.showRooms
+					? 'Salles & Espaces'
+					: 'Espaces & Activités';
 
 	const primaryItems: NavItem[] = [
 		...(workspace.showEvents
@@ -312,7 +314,7 @@ function buildDashboardNav(opts: {
 					{ name: 'Réalisations', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Grille de réalisations et création de posts liés aux salles / prestations' },
 				]
 			: []),
-		...(workspace.showEvents || workspace.showBrowseCatalogue
+		...(workspace.showEvents || workspace.showBrowseCatalogue || vendorOnly
 			? [
 					{ name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox },
 					{ name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck },
@@ -337,7 +339,7 @@ function buildDashboardNav(opts: {
 			{ name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard },
 		]),
 		navSection(primarySectionLabel, primaryItems),
-		navSection(vendorOnly ? 'Offre' : 'Marketplace', marketItems),
+		navSection(vendorOnly ? 'Offres & Marketplace' : 'Marketplace', marketItems),
 		navSection('Organisation', workspace.showTeam
 			? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users }]
 			: []),

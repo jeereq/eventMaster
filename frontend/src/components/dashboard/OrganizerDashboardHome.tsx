@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -43,7 +43,15 @@ import {
   UserCheck,
   LayoutDashboard,
   Loader2,
+  CalendarCheck,
+  Inbox,
+  Store,
+  BarChart3,
+  HelpCircle,
+  Eye,
+  Filter,
 } from 'lucide-react';
+import type { MarketplaceBookingItem, MarketplaceInquiryItem } from '@/lib/marketplace';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -71,13 +79,41 @@ export interface OrganizerEventItem {
   location: string;
 }
 
-export type OrganizerDashboardTab = 'overview' | 'events' | 'guests' | 'spaces' | 'team' | 'billing';
+export type OrganizerDashboardTab =
+  | 'overview'
+  | 'reservations'
+  | 'quotes'
+  | 'explore'
+  | 'analytics'
+  | 'spaces'
+  | 'events'
+  | 'guests'
+  | 'team'
+  | 'billing';
 
 const DynamicTeamManagement = dynamic(() => import('@/app/dashboard/TeamManagement'), {
   loading: () => (
     <div className="p-8 text-center text-muted">
       <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary mb-2" />
       <p className="text-xs">Chargement de la gestion de l’équipe…</p>
+    </div>
+  ),
+});
+
+const DynamicMarketplaceBookingsPanel = dynamic(() => import('@/components/MarketplaceBookingsPanel'), {
+  loading: () => (
+    <div className="p-8 text-center text-muted">
+      <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary mb-2" />
+      <p className="text-xs">Chargement des réservations…</p>
+    </div>
+  ),
+});
+
+const DynamicMarketplaceInquiriesPanel = dynamic(() => import('@/components/MarketplaceInquiriesPanel'), {
+  loading: () => (
+    <div className="p-8 text-center text-muted">
+      <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary mb-2" />
+      <p className="text-xs">Chargement des demandes de devis…</p>
     </div>
   ),
 });
@@ -117,7 +153,7 @@ export default function OrganizerDashboardHome({
   homeEventsPageSize,
   setHomeEventsPageSize,
 }: OrganizerDashboardHomeProps) {
-  const { user, tenant, planQuota, access } = useAuth();
+  const { user, tenant, planQuota, access, planFeatures } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -129,23 +165,41 @@ export default function OrganizerDashboardHome({
   const isManager = access?.level === 'manager' && !isOwner;
   const canManageTeam = isOwner || Boolean(access?.canManageTeam);
 
+  const isVenueOrVendorOrCatalog =
+    isVendor ||
+    isBoth ||
+    tenant?.plan === 'VENUE' ||
+    tenant?.plan === 'SERVICE' ||
+    tenant?.plan === 'CATALOG' ||
+    planFeatures?.audience === 'VENUE' ||
+    planFeatures?.audience === 'SERVICE' ||
+    planFeatures?.audience === 'CATALOG' ||
+    Boolean(access?.canManageRooms);
+
+  const normalizeDashboardTab = (raw: string | null): OrganizerDashboardTab => {
+    if (!raw) return 'overview';
+    const val = raw.toLowerCase();
+    if (val === 'reservations' || val === 'bookings') return 'reservations';
+    if (val === 'quotes' || val === 'devis' || val === 'inquiries') return 'quotes';
+    if (val === 'explore' || val === 'catalogue' || val === 'marketplace') return 'explore';
+    if (val === 'analytics' || val === 'analyses' || val === 'stats' || val === 'statistiques') return 'analytics';
+    if (val === 'spaces' || val === 'salles' || val === 'rooms' || val === 'prestations' || val === 'offres') return 'spaces';
+    if (val === 'events' || val === 'evenements') return 'events';
+    if (val === 'guests' || val === 'invites') return 'guests';
+    if (val === 'team' || val === 'equipe') return 'team';
+    if (val === 'billing' || val === 'abonnement' || val === 'quotas') return 'billing';
+    return 'overview';
+  };
+
   // Onglet actif initialisé depuis l'URL ou par défaut 'overview'
   const [activeTab, setActiveTab] = useState<OrganizerDashboardTab>(() => {
-    const t = searchParams.get('tab');
-    if (t === 'overview' || t === 'events' || t === 'guests' || t === 'spaces' || t === 'team' || t === 'billing') {
-      return t;
-    }
-    return 'overview';
+    return normalizeDashboardTab(searchParams.get('tab'));
   });
 
   // Synchronisation avec les changements d'historique (boutons précédent/suivant)
   useEffect(() => {
-    const t = searchParams.get('tab') as OrganizerDashboardTab | null;
-    if (t === 'events' || t === 'guests' || t === 'spaces' || t === 'team' || t === 'billing') {
-      setActiveTab(t);
-    } else if (!t || t === 'overview') {
-      setActiveTab('overview');
-    }
+    const raw = searchParams.get('tab');
+    setActiveTab(normalizeDashboardTab(raw));
   }, [searchParams]);
 
   const handleTabChange = (tabId: OrganizerDashboardTab) => {
@@ -162,6 +216,62 @@ export default function OrganizerDashboardHome({
       router.replace(targetUrl, { scroll: false });
     }
   };
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ÉTAT ET CHARGEMENT DU HUB COMMERCE / RÉSERVATIONS / DEVIS
+  // ══════════════════════════════════════════════════════════════════════════
+  const [inquiries, setInquiries] = useState<MarketplaceInquiryItem[]>([]);
+  const [bookings, setBookings] = useState<MarketplaceBookingItem[]>([]);
+  const [commissionDueFc, setCommissionDueFc] = useState(0);
+  const [vendorHubLoading, setVendorHubLoading] = useState(false);
+  const [vendorRolePerspective, setVendorRolePerspective] = useState<'vendor' | 'organizer'>(
+    isVenueOrVendorOrCatalog ? 'vendor' : 'organizer'
+  );
+
+  const loadVendorHubData = useCallback(async (perspectiveRole: 'vendor' | 'organizer') => {
+    if (!tenant?.id) return;
+    setVendorHubLoading(true);
+    try {
+      const [bData, iData] = await Promise.all([
+        api.get(`/marketplace/bookings?role=${perspectiveRole}`).catch(() => ({ bookings: [], commissionDueFc: 0 })),
+        api.get(`/marketplace/inquiries?role=${perspectiveRole}`).catch(() => ({ inquiries: [] })),
+      ]);
+      setBookings(Array.isArray(bData?.bookings) ? bData.bookings : []);
+      setCommissionDueFc(Number(bData?.commissionDueFc) || 0);
+      setInquiries(Array.isArray(iData?.inquiries) ? iData.inquiries : []);
+    } catch {
+      // Tolérance aux erreurs réseau
+    } finally {
+      setVendorHubLoading(false);
+    }
+  }, [tenant?.id]);
+
+  useEffect(() => {
+    if (tenant?.id) {
+      loadVendorHubData(vendorRolePerspective);
+    }
+  }, [tenant?.id, vendorRolePerspective, loadVendorHubData]);
+
+  const pendingQuotesCount = useMemo(
+    () => inquiries.filter((i) => i.status === 'NEW' || i.status === 'CONTACTED').length,
+    [inquiries]
+  );
+  const acceptedQuotesCount = useMemo(
+    () => inquiries.filter((i) => i.status === 'QUOTED' || Boolean(i.hasBooking)).length,
+    [inquiries]
+  );
+  const confirmedBookingsCount = useMemo(
+    () => bookings.filter((b) => b.status === 'CONFIRMED' || b.status === 'COMPLETED').length,
+    [bookings]
+  );
+  const pendingBookingsCount = useMemo(
+    () => bookings.filter((b) => b.status === 'REQUESTED' || b.status === 'ACCEPTED').length,
+    [bookings]
+  );
+  const totalBookingsVolumeFc = useMemo(
+    () => bookings.reduce((sum, b) => sum + (Number(b.amountFc) || 0), 0),
+    [bookings]
+  );
 
   const [ticketingSummary, setTicketingSummary] = useState<{
     totalRevenueFc: number;
@@ -225,54 +335,179 @@ export default function OrganizerDashboardHome({
   const paginatedEvents = events.slice(startIdx, startIdx + homeEventsPageSize);
 
   // Définition des onglets ergonomiques du tableau de bord
-  const tabs = useMemo(() => [
-    {
-      id: 'overview' as const,
-      label: 'Vue d’ensemble',
-      shortLabel: 'Synthèse',
-      icon: LayoutDashboard,
-      badge: null,
-    },
-    {
-      id: 'events' as const,
-      label: 'Événements & Billetterie',
-      shortLabel: 'Événements',
-      icon: Calendar,
-      badge: events.length > 0 ? String(events.length) : null,
-    },
-    {
-      id: 'guests' as const,
-      label: 'Invités & Protocole',
-      shortLabel: 'Invités',
-      icon: Users,
-      badge: usage?.guests != null ? String(usage.guests) : null,
-    },
-    {
-      id: 'spaces' as const,
-      label: isVendor ? 'Prestations & Devis' : 'Salles & Marketplace',
-      shortLabel: isVendor ? 'Prestations' : 'Salles & 3D',
-      icon: isVendor ? Briefcase : Building2,
-      badge: null,
-    },
-    ...(canManageTeam
-      ? [
-          {
-            id: 'team' as const,
-            label: 'Équipe & Rôles',
-            shortLabel: 'Équipe',
-            icon: UserCheck,
-            badge: null,
-          },
-        ]
-      : []),
-    {
-      id: 'billing' as const,
-      label: isManager ? 'Organisation & Quotas' : 'Abonnement & Quotas',
-      shortLabel: isManager ? 'Quotas' : 'Abonnement',
-      icon: isManager ? Shield : Crown,
-      badge: tenant?.plan || 'Forfait',
-    },
-  ], [canManageTeam, events.length, isManager, isVendor, tenant?.plan, usage?.guests]);
+  const tabs = useMemo(() => {
+    if (isVenueOrVendorOrCatalog) {
+      return [
+        {
+          id: 'overview' as const,
+          label: 'Vue d’ensemble',
+          shortLabel: 'Synthèse',
+          icon: LayoutDashboard,
+          badge: null,
+        },
+        {
+          id: 'reservations' as const,
+          label: 'Réservations & Planning',
+          shortLabel: 'Réservations',
+          icon: CalendarCheck,
+          badge: bookings.length > 0 ? String(bookings.length) : null,
+        },
+        {
+          id: 'quotes' as const,
+          label: 'Demandes de devis',
+          shortLabel: 'Devis',
+          icon: Inbox,
+          badge: pendingQuotesCount > 0 ? String(pendingQuotesCount) : (inquiries.length > 0 ? String(inquiries.length) : null),
+        },
+        {
+          id: 'explore' as const,
+          label: 'Explorer le catalogue',
+          shortLabel: 'Explorer',
+          icon: Store,
+          badge: null,
+        },
+        {
+          id: 'analytics' as const,
+          label: 'Analyses & Performance',
+          shortLabel: 'Analyses',
+          icon: BarChart3,
+          badge: null,
+        },
+        {
+          id: 'spaces' as const,
+          label: isVendor ? 'Prestations & Offres' : 'Salles & Plans 3D',
+          shortLabel: isVendor ? 'Prestations' : 'Salles & 3D',
+          icon: isVendor ? Briefcase : Building2,
+          badge: null,
+        },
+        ...((limits?.maxEvents ?? 0) > 0 || events.length > 0
+          ? [
+              {
+                id: 'events' as const,
+                label: 'Événements & Billetterie',
+                shortLabel: 'Événements',
+                icon: Calendar,
+                badge: events.length > 0 ? String(events.length) : null,
+              },
+              {
+                id: 'guests' as const,
+                label: 'Invités & Protocole',
+                shortLabel: 'Invités',
+                icon: Users,
+                badge: usage?.guests != null ? String(usage.guests) : null,
+              },
+            ]
+          : []),
+        ...(canManageTeam
+          ? [
+              {
+                id: 'team' as const,
+                label: 'Équipe & Rôles',
+                shortLabel: 'Équipe',
+                icon: UserCheck,
+                badge: null,
+              },
+            ]
+          : []),
+        {
+          id: 'billing' as const,
+          label: isManager ? 'Organisation & Quotas' : 'Abonnement & Quotas',
+          shortLabel: isManager ? 'Quotas' : 'Abonnement',
+          icon: isManager ? Shield : Crown,
+          badge: tenant?.plan || 'Forfait',
+        },
+      ];
+    }
+
+    return [
+      {
+        id: 'overview' as const,
+        label: 'Vue d’ensemble',
+        shortLabel: 'Synthèse',
+        icon: LayoutDashboard,
+        badge: null,
+      },
+      {
+        id: 'events' as const,
+        label: 'Événements & Billetterie',
+        shortLabel: 'Événements',
+        icon: Calendar,
+        badge: events.length > 0 ? String(events.length) : null,
+      },
+      {
+        id: 'guests' as const,
+        label: 'Invités & Protocole',
+        shortLabel: 'Invités',
+        icon: Users,
+        badge: usage?.guests != null ? String(usage.guests) : null,
+      },
+      {
+        id: 'reservations' as const,
+        label: 'Mes réservations',
+        shortLabel: 'Réservations',
+        icon: CalendarCheck,
+        badge: bookings.length > 0 ? String(bookings.length) : null,
+      },
+      {
+        id: 'quotes' as const,
+        label: 'Mes devis',
+        shortLabel: 'Devis',
+        icon: Inbox,
+        badge: inquiries.length > 0 ? String(inquiries.length) : null,
+      },
+      {
+        id: 'explore' as const,
+        label: 'Explorer le catalogue',
+        shortLabel: 'Explorer',
+        icon: Store,
+        badge: null,
+      },
+      {
+        id: 'analytics' as const,
+        label: 'Analyses & Statistiques',
+        shortLabel: 'Analyses',
+        icon: BarChart3,
+        badge: null,
+      },
+      {
+        id: 'spaces' as const,
+        label: 'Salles & Marketplace',
+        shortLabel: 'Salles & 3D',
+        icon: Building2,
+        badge: null,
+      },
+      ...(canManageTeam
+        ? [
+            {
+              id: 'team' as const,
+              label: 'Équipe & Rôles',
+              shortLabel: 'Équipe',
+              icon: UserCheck,
+              badge: null,
+            },
+          ]
+        : []),
+      {
+        id: 'billing' as const,
+        label: isManager ? 'Organisation & Quotas' : 'Abonnement & Quotas',
+        shortLabel: isManager ? 'Quotas' : 'Abonnement',
+        icon: isManager ? Shield : Crown,
+        badge: tenant?.plan || 'Forfait',
+      },
+    ];
+  }, [
+    isVenueOrVendorOrCatalog,
+    bookings.length,
+    pendingQuotesCount,
+    inquiries.length,
+    isVendor,
+    limits?.maxEvents,
+    events.length,
+    usage?.guests,
+    canManageTeam,
+    isManager,
+    tenant?.plan,
+  ]);
 
   const handleTabKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft' && e.key !== 'Home' && e.key !== 'End') return;
@@ -428,20 +663,85 @@ export default function OrganizerDashboardHome({
             {/* Raccourcis directs en 1 clic */}
             <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-xs">
               <span className="text-xs font-medium text-muted mr-1">Raccourcis :</span>
-              <Link
-                href={isVendor ? '/dashboard/marketplace' : '/dashboard/events'}
-                className="min-h-9 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
-              >
-                <PlusCircle className="w-3.5 h-3.5" />
-                {isVendor ? 'Nouvelle prestation' : 'Créer un événement'}
-              </Link>
-              <Link
-                href="/dashboard/tickets"
-                className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
-              >
-                <Ticket className="w-3.5 h-3.5 text-primary" />
-                Billetterie
-              </Link>
+              {isVenueOrVendorOrCatalog ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('reservations')}
+                    className="min-h-9 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <CalendarCheck className="w-3.5 h-3.5" />
+                    Réservations
+                    {bookings.length > 0 && (
+                      <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-primary text-primary-foreground">
+                        {bookings.length}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('quotes')}
+                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-amber-500/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Inbox className="w-3.5 h-3.5 text-amber-500" />
+                    Devis reçus
+                    {pendingQuotesCount > 0 && (
+                      <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500 text-white font-bold">
+                        {pendingQuotesCount}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('explore')}
+                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Store className="w-3.5 h-3.5 text-primary" />
+                    Explorer catalogue
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('analytics')}
+                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <BarChart3 className="w-3.5 h-3.5 text-blue-500" />
+                    Analyses
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('spaces')}
+                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-purple-500/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    {isVendor ? <Briefcase className="w-3.5 h-3.5 text-purple-600" /> : <Building2 className="w-3.5 h-3.5 text-purple-600" />}
+                    {isVendor ? 'Mes prestations' : 'Mes salles'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/dashboard/events"
+                    className="min-h-9 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    Créer un événement
+                  </Link>
+                  <Link
+                    href="/dashboard/tickets"
+                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
+                  >
+                    <Ticket className="w-3.5 h-3.5 text-primary" />
+                    Billetterie
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('reservations')}
+                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <CalendarCheck className="w-3.5 h-3.5 text-primary" />
+                    Réservations
+                  </button>
+                </>
+              )}
               {isOwner ? (
                 <>
                   <button
@@ -462,21 +762,6 @@ export default function OrganizerDashboardHome({
                   </button>
                 </>
               ) : null}
-              <button
-                type="button"
-                onClick={() => handleTabChange('spaces')}
-                className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
-              >
-                <Building2 className="w-3.5 h-3.5 text-purple-600" />
-                Salles
-              </button>
-              <Link
-                href="/dashboard/protocol"
-                className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
-              >
-                <ScanLine className="w-3.5 h-3.5 text-amber-500" />
-                Scanner QR
-              </Link>
               <Link
                 href="/dashboard/catalogue?tab=plan&planView=ai"
                 className="min-h-9 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
@@ -565,157 +850,298 @@ export default function OrganizerDashboardHome({
             />
           )}
 
-          {/* Indicateurs clés en temps réel (5 Cartes KPI) */}
+          {/* Indicateurs clés en temps réel (5 Cartes KPI adaptatives) */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-            <button
-              type="button"
-              onClick={() => handleTabChange('events')}
-              className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
-            >
-              <div className="flex items-center justify-between w-full">
-                <span className="text-xs font-bold text-muted uppercase tracking-wider">Événements</span>
-                <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
-                  <Calendar className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="mt-3">
-                <p className="text-2xl font-black text-foreground tracking-tight">
-                  {usage ? formatQuota(usage.events, limits?.maxEvents) : events.length}
-                </p>
-                <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
-                  <span>Total créés</span>
-                  <span className="text-[10px] text-primary font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Gérer</span>
-                </p>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleTabChange('guests')}
-              className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-amber-500/40 hover:bg-amber-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
-            >
-              <div className="flex items-center justify-between w-full">
-                <span className="text-xs font-bold text-muted uppercase tracking-wider">Invités</span>
-                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition">
-                  <Users className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="mt-3">
-                <p className="text-2xl font-black text-foreground tracking-tight">
-                  {usage ? formatQuota(usage.guests, limits?.maxGuests) : '—'}
-                </p>
-                <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
-                  <span>Enregistrés</span>
-                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Suivi</span>
-                </p>
-              </div>
-            </button>
-
-            {isOwner ? (
-              <Link
-                href="/dashboard/team"
-                className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-blue-500/40 hover:bg-blue-500/5 transition group flex flex-col justify-between h-full"
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span className="text-xs font-bold text-muted uppercase tracking-wider">Équipe</span>
-                  <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition">
-                    <UserCheck className="w-4 h-4" />
+            {isVenueOrVendorOrCatalog ? (
+              <>
+                {/* Carte 1 (Venue/Vendor) : Réservations */}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('reservations')}
+                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Réservations</span>
+                    <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
+                      <CalendarCheck className="w-4 h-4" />
+                    </div>
                   </div>
-                </div>
-                <div className="mt-3">
-                  <p className="text-2xl font-black text-foreground tracking-tight">
-                    {usage ? formatQuota(usage.orgManagers, limits?.maxOrgManagers) : '—'}
-                  </p>
-                  <p className="text-xs text-muted mt-0.5">Membres actifs</p>
-                </div>
-              </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={() => handleTabChange('spaces')}
-                className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-purple-500/40 hover:bg-purple-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span className="text-xs font-bold text-muted uppercase tracking-wider">
-                    {isVendor ? 'Prestations' : 'Salles & Plans'}
-                  </span>
-                  <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition">
-                    {isVendor ? <Briefcase className="w-4 h-4" /> : <Building2 className="w-4 h-4" />}
+                  <div className="mt-3">
+                    <p className="text-2xl font-black text-foreground tracking-tight">
+                      {bookings.length}
+                    </p>
+                    <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
+                      <span>{confirmedBookingsCount} confirmée{confirmedBookingsCount > 1 ? 's' : ''}</span>
+                      <span className="text-[10px] text-primary font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Gérer</span>
+                    </p>
                   </div>
-                </div>
-                <div className="mt-3">
-                  <p className="text-2xl font-black text-foreground tracking-tight">
-                    {usage ? formatQuota(usage.rooms, limits?.maxRooms) : '—'}
-                  </p>
-                  <p className="text-xs text-muted mt-0.5">Modélisées 2D/3D</p>
-                </div>
-              </button>
-            )}
+                </button>
 
-            <button
-              type="button"
-              onClick={() => handleTabChange('spaces')}
-              className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
-            >
-              <div className="flex items-center justify-between w-full">
-                <span className="text-xs font-bold text-muted uppercase tracking-wider">Devis & Packs</span>
-                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition">
-                  <Wallet className="w-4 h-4" />
-                </div>
-              </div>
-              <div className="mt-3">
-                <p className="text-2xl font-black text-foreground tracking-tight flex items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 inline" />
-                  Actifs
-                </p>
-                <p className="text-xs text-muted mt-0.5">En cours</p>
-              </div>
-            </button>
+                {/* Carte 2 (Venue/Vendor) : Demandes de devis */}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('quotes')}
+                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-amber-500/40 hover:bg-amber-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Devis Reçus</span>
+                    <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition">
+                      <Inbox className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <p className="text-2xl font-black text-foreground tracking-tight">
+                      {inquiries.length}
+                    </p>
+                    <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
+                      <span>{pendingQuotesCount > 0 ? `${pendingQuotesCount} en attente` : 'Chiffrages'}</span>
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Répondre</span>
+                    </p>
+                  </div>
+                </button>
 
-            <button
-              type="button"
-              onClick={() => handleTabChange('billing')}
-              className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full col-span-2 md:col-span-1 text-left cursor-pointer"
-            >
-              <div className="flex items-center justify-between w-full">
-                <span className="text-xs font-bold text-muted uppercase tracking-wider">
-                  {isManager ? 'Factures' : 'Mon Forfait'}
-                </span>
-                <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
-                  {isManager ? <FileText className="w-4 h-4" /> : <Award className="w-4 h-4" />}
-                </div>
-              </div>
-              <div className="mt-3">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <p className="text-xl font-black text-foreground tracking-tight truncate">
-                    {tenant?.plan || billing?.plan || 'Standard'}
-                  </p>
-                  {isOwner && daysUntilExpiry != null && (
-                    <span
-                      className={cn(
-                        'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
-                        daysUntilExpiry <= 0
-                          ? 'bg-danger/10 text-danger border border-danger/20'
-                          : daysUntilExpiry <= 15
-                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                          : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                      )}
-                    >
-                      {daysUntilExpiry <= 0 ? 'Expiré' : `${daysUntilExpiry}j`}
+                {/* Carte 3 (Venue/Vendor) : Salles ou Prestations */}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('spaces')}
+                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-purple-500/40 hover:bg-purple-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-bold text-muted uppercase tracking-wider">
+                      {isVendor ? 'Prestations' : 'Salles & Plans'}
                     </span>
-                  )}
-                </div>
-                <p className="text-xs text-muted mt-0.5 truncate">
-                  {isManager
-                    ? 'Géré par le propriétaire'
-                    : daysUntilExpiry != null
-                    ? daysUntilExpiry <= 0
-                      ? 'Renouvellement requis'
-                      : `${daysUntilExpiry}j restants`
-                    : 'Gérer l’abonnement'}
-                </p>
-              </div>
-            </button>
+                    <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition">
+                      {isVendor ? <Briefcase className="w-4 h-4" /> : <Building2 className="w-4 h-4" />}
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <p className="text-2xl font-black text-foreground tracking-tight">
+                      {isVendor ? formatQuota(usage?.services, limits?.maxServices) : formatQuota(usage?.rooms, limits?.maxRooms)}
+                    </p>
+                    <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
+                      <span>{isVendor ? 'Offres actives' : 'Modélisées 2D/3D'}</span>
+                      <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Configurer</span>
+                    </p>
+                  </div>
+                </button>
+
+                {/* Carte 4 (Venue/Vendor) : Volume financier / Revenus */}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('analytics')}
+                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Volume d'affaires</span>
+                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition">
+                      <Wallet className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <p className="text-xl sm:text-2xl font-black text-foreground tracking-tight truncate">
+                      {totalBookingsVolumeFc > 0 ? formatFc(totalBookingsVolumeFc) : (ticketingSummary?.totalRevenueFc ? formatFc(ticketingSummary.totalRevenueFc) : '0 FC')}
+                    </p>
+                    <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
+                      <span>{bookings.length > 0 ? `${bookings.length} résa validées` : 'Revenus & Devis'}</span>
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Analyse</span>
+                    </p>
+                  </div>
+                </button>
+
+                {/* Carte 5 (Venue/Vendor) : Équipe ou Forfait */}
+                {canManageTeam ? (
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('team')}
+                    className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-blue-500/40 hover:bg-blue-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer col-span-2 md:col-span-1"
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-xs font-bold text-muted uppercase tracking-wider">Équipe</span>
+                      <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition">
+                        <UserCheck className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <p className="text-2xl font-black text-foreground tracking-tight">
+                        {usage ? formatQuota(usage.orgManagers, limits?.maxOrgManagers) : '—'}
+                      </p>
+                      <p className="text-xs text-muted mt-0.5">Membres actifs</p>
+                    </div>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('billing')}
+                    className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full col-span-2 md:col-span-1 text-left cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-xs font-bold text-muted uppercase tracking-wider">Mon Forfait</span>
+                      <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
+                        <Award className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <p className="text-xl font-black text-foreground tracking-tight truncate">
+                        {tenant?.plan || billing?.plan || 'Standard'}
+                      </p>
+                      <p className="text-xs text-muted mt-0.5">Quotas & Validité</p>
+                    </div>
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('events')}
+                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Événements</span>
+                    <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
+                      <Calendar className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <p className="text-2xl font-black text-foreground tracking-tight">
+                      {usage ? formatQuota(usage.events, limits?.maxEvents) : events.length}
+                    </p>
+                    <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
+                      <span>Total créés</span>
+                      <span className="text-[10px] text-primary font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Gérer</span>
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('guests')}
+                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-amber-500/40 hover:bg-amber-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Invités</span>
+                    <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition">
+                      <Users className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <p className="text-2xl font-black text-foreground tracking-tight">
+                      {usage ? formatQuota(usage.guests, limits?.maxGuests) : '—'}
+                    </p>
+                    <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
+                      <span>Enregistrés</span>
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Suivi</span>
+                    </p>
+                  </div>
+                </button>
+
+                {isOwner ? (
+                  <Link
+                    href="/dashboard/team"
+                    className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-blue-500/40 hover:bg-blue-500/5 transition group flex flex-col justify-between h-full"
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-xs font-bold text-muted uppercase tracking-wider">Équipe</span>
+                      <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition">
+                        <UserCheck className="w-4 h-4" />
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <p className="text-2xl font-black text-foreground tracking-tight">
+                        {usage ? formatQuota(usage.orgManagers, limits?.maxOrgManagers) : '—'}
+                      </p>
+                      <p className="text-xs text-muted mt-0.5">Membres actifs</p>
+                    </div>
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('spaces')}
+                    className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-purple-500/40 hover:bg-purple-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-xs font-bold text-muted uppercase tracking-wider">
+                        {isVendor ? 'Prestations' : 'Salles & Plans'}
+                      </span>
+                      <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition">
+                        {isVendor ? <Briefcase className="w-4 h-4" /> : <Building2 className="w-4 h-4" />}
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <p className="text-2xl font-black text-foreground tracking-tight">
+                        {usage ? formatQuota(usage.rooms, limits?.maxRooms) : '—'}
+                      </p>
+                      <p className="text-xs text-muted mt-0.5">Modélisées 2D/3D</p>
+                    </div>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('spaces')}
+                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-bold text-muted uppercase tracking-wider">Devis & Packs</span>
+                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition">
+                      <Wallet className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <p className="text-2xl font-black text-foreground tracking-tight flex items-center gap-1">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 inline" />
+                      Actifs
+                    </p>
+                    <p className="text-xs text-muted mt-0.5">En cours</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('billing')}
+                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition group flex flex-col justify-between h-full col-span-2 md:col-span-1 text-left cursor-pointer"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="text-xs font-bold text-muted uppercase tracking-wider">
+                      {isManager ? 'Factures' : 'Mon Forfait'}
+                    </span>
+                    <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
+                      {isManager ? <FileText className="w-4 h-4" /> : <Award className="w-4 h-4" />}
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="text-xl font-black text-foreground tracking-tight truncate">
+                        {tenant?.plan || billing?.plan || 'Standard'}
+                      </p>
+                      {isOwner && daysUntilExpiry != null && (
+                        <span
+                          className={cn(
+                            'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+                            daysUntilExpiry <= 0
+                              ? 'bg-danger/10 text-danger border border-danger/20'
+                              : daysUntilExpiry <= 15
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                          )}
+                        >
+                          {daysUntilExpiry <= 0 ? 'Expiré' : `${daysUntilExpiry}j`}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted mt-0.5 truncate">
+                      {isManager
+                        ? 'Géré par le propriétaire'
+                        : daysUntilExpiry != null
+                        ? daysUntilExpiry <= 0
+                          ? 'Renouvellement requis'
+                          : `${daysUntilExpiry}j restants`
+                        : 'Gérer l’abonnement'}
+                    </p>
+                  </div>
+                </button>
+              </>
+            )}
           </div>
 
           {/* Pilotage financier & billetterie express (si direction ou owner) */}
@@ -1592,6 +2018,597 @@ export default function OrganizerDashboardHome({
               >
                 Gérer mes devis
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════════
+          ONGLET : 📅 RÉSERVATIONS & PLANNING D'OCCUPATION
+      ══════════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'reservations' && (
+        <div
+          role="tabpanel"
+          id="org-panel-reservations"
+          aria-labelledby="org-tab-reservations"
+          tabIndex={0}
+          className="space-y-6 focus-visible:outline-none animate-in fade-in-50 duration-150"
+        >
+          {/* En-tête de section avec bascule de perspective */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 rounded-2xl border border-border bg-surface/90 shadow-2xs">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                  <CalendarCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-foreground">
+                    Réservations & Dates Bloquées
+                  </h2>
+                  <p className="text-xs text-muted">
+                    Suivi des réservations confirmées, acomptes et disponibilités de vos espaces et prestations.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {isVenueOrVendorOrCatalog && (
+                <div className="flex items-center p-1 rounded-xl border border-border bg-surface-muted/60 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVendorRolePerspective('vendor');
+                      loadVendorHubData('vendor');
+                    }}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer',
+                      vendorRolePerspective === 'vendor'
+                        ? 'bg-surface text-foreground shadow-2xs font-bold'
+                        : 'text-muted hover:text-foreground'
+                    )}
+                  >
+                    Reçues (Prestataire/Salle)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVendorRolePerspective('organizer');
+                      loadVendorHubData('organizer');
+                    }}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer',
+                      vendorRolePerspective === 'organizer'
+                        ? 'bg-surface text-foreground shadow-2xs font-bold'
+                        : 'text-muted hover:text-foreground'
+                    )}
+                  >
+                    Mes réservations
+                  </button>
+                </div>
+              )}
+
+              <Link
+                href="/dashboard/bookings?tab=bookings"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover transition shadow-2xs"
+              >
+                <span>Plein écran</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+
+          {/* 4 KPIs clés des réservations */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
+              <span className="text-xs font-bold text-muted uppercase tracking-wider">Total Réservations</span>
+              <p className="text-2xl font-black text-foreground mt-2">{bookings.length}</p>
+              <p className="text-xs text-muted mt-0.5">Dossiers enregistrés</p>
+            </div>
+            <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
+              <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Confirmées / En cours</span>
+              <p className="text-2xl font-black text-emerald-600 mt-2">{confirmedBookingsCount}</p>
+              <p className="text-xs text-muted mt-0.5">Dates garanties</p>
+            </div>
+            <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
+              <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">En attente</span>
+              <p className="text-2xl font-black text-amber-600 mt-2">{pendingBookingsCount}</p>
+              <p className="text-xs text-muted mt-0.5">À valider / acompte requis</p>
+            </div>
+            <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
+              <span className="text-xs font-bold text-primary uppercase tracking-wider">Volume financier</span>
+              <p className="text-2xl font-black text-foreground mt-2">
+                {totalBookingsVolumeFc > 0 ? formatFc(totalBookingsVolumeFc) : '0 FC'}
+              </p>
+              <p className="text-xs text-muted mt-0.5">Total réservations brutes</p>
+            </div>
+          </div>
+
+          {/* Panneau interactif de gestion des réservations */}
+          {vendorHubLoading ? (
+            <div className="p-12 text-center text-muted">
+              <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary mb-2" />
+              <p className="text-xs">Actualisation des réservations…</p>
+            </div>
+          ) : (
+            <DynamicMarketplaceBookingsPanel
+              bookings={bookings}
+              commissionDueFc={vendorRolePerspective === 'vendor' ? commissionDueFc : 0}
+              onChanged={() => loadVendorHubData(vendorRolePerspective)}
+              organizerView={vendorRolePerspective === 'organizer'}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════════
+          ONGLET : 💬 DEMANDES DE DEVIS & PROPOSITIONS
+      ══════════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'quotes' && (
+        <div
+          role="tabpanel"
+          id="org-panel-quotes"
+          aria-labelledby="org-tab-quotes"
+          tabIndex={0}
+          className="space-y-6 focus-visible:outline-none animate-in fade-in-50 duration-150"
+        >
+          {/* En-tête de section avec bascule de perspective */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 rounded-2xl border border-border bg-surface/90 shadow-2xs">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600">
+                  <Inbox className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-foreground">
+                    Demandes de Devis & Échanges
+                  </h2>
+                  <p className="text-xs text-muted">
+                    Répondez aux demandes des organisateurs, proposez vos tarifs sur-mesure et convertissez vos prospects.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {isVenueOrVendorOrCatalog && (
+                <div className="flex items-center p-1 rounded-xl border border-border bg-surface-muted/60 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVendorRolePerspective('vendor');
+                      loadVendorHubData('vendor');
+                    }}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer',
+                      vendorRolePerspective === 'vendor'
+                        ? 'bg-surface text-foreground shadow-2xs font-bold'
+                        : 'text-muted hover:text-foreground'
+                    )}
+                  >
+                    Demandes reçues
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVendorRolePerspective('organizer');
+                      loadVendorHubData('organizer');
+                    }}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg font-semibold transition cursor-pointer',
+                      vendorRolePerspective === 'organizer'
+                        ? 'bg-surface text-foreground shadow-2xs font-bold'
+                        : 'text-muted hover:text-foreground'
+                    )}
+                  >
+                    Mes demandes
+                  </button>
+                </div>
+              )}
+
+              <Link
+                href="/dashboard/bookings?tab=quotes"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover transition shadow-2xs"
+              >
+                <span>Plein écran</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+
+          {/* 4 KPIs Devis */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
+              <span className="text-xs font-bold text-muted uppercase tracking-wider">Demandes Reçues</span>
+              <p className="text-2xl font-black text-foreground mt-2">{inquiries.length}</p>
+              <p className="text-xs text-muted mt-0.5">Organisateurs intéressés</p>
+            </div>
+            <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
+              <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">En Attente de Réponse</span>
+              <div className="flex items-center gap-2 mt-2">
+                <p className="text-2xl font-black text-amber-600">{pendingQuotesCount}</p>
+                {pendingQuotesCount > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 animate-pulse">
+                    À traiter
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-muted mt-0.5">Réponse rapide recommandée</p>
+            </div>
+            <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
+              <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Devis Acceptés</span>
+              <p className="text-2xl font-black text-emerald-600 mt-2">{acceptedQuotesCount}</p>
+              <p className="text-xs text-muted mt-0.5">Accords de principe</p>
+            </div>
+            <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
+              <span className="text-xs font-bold text-primary uppercase tracking-wider">Taux d'Acceptation</span>
+              <p className="text-2xl font-black text-primary mt-2">
+                {inquiries.length > 0 ? `${Math.round((acceptedQuotesCount / inquiries.length) * 100)} %` : '—'}
+              </p>
+              <p className="text-xs text-muted mt-0.5">Efficacité commerciale</p>
+            </div>
+          </div>
+
+          {/* Panneau interactif des devis */}
+          {vendorHubLoading ? (
+            <div className="p-12 text-center text-muted">
+              <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary mb-2" />
+              <p className="text-xs">Actualisation des devis…</p>
+            </div>
+          ) : (
+            <DynamicMarketplaceInquiriesPanel
+              inquiries={inquiries}
+              organizerView={vendorRolePerspective === 'organizer'}
+              onChanged={() => loadVendorHubData(vendorRolePerspective)}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════════
+          ONGLET : 🏬 EXPLORER LE MARKETPLACE & CATALOGUE
+      ══════════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'explore' && (
+        <div
+          role="tabpanel"
+          id="org-panel-explore"
+          aria-labelledby="org-tab-explore"
+          tabIndex={0}
+          className="space-y-6 focus-visible:outline-none animate-in fade-in-50 duration-150"
+        >
+          {/* En-tête */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 rounded-2xl border border-border bg-gradient-to-r from-primary/10 via-surface to-surface shadow-2xs">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-primary text-primary-foreground">
+                  <Store className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-foreground">
+                    Explorer le Catalogue & Marketplace
+                  </h2>
+                  <p className="text-xs text-muted">
+                    Salles de réception, prestataires événementiels, matériel en location et simulateur de budget.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/dashboard/catalogue"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover transition shadow-2xs shrink-0"
+            >
+              <Store className="w-4 h-4" />
+              <span>Ouvrir le catalogue complet</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {/* Recherche rapide */}
+          <div className="p-4 rounded-2xl border border-border bg-surface/90 space-y-3">
+            <p className="text-xs font-bold text-muted uppercase tracking-wider">Recherche ciblée dans le catalogue</p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="search"
+                  placeholder="Rechercher une salle, un traiteur, un DJ, du matériel…"
+                  className="w-full min-h-11 pl-10 pr-4 rounded-xl border border-border bg-surface text-sm text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary shadow-2xs transition"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const val = (e.currentTarget as HTMLInputElement).value.trim();
+                      if (val) router.push(`/dashboard/catalogue?q=${encodeURIComponent(val)}`);
+                    }
+                  }}
+                />
+              </div>
+              <Button
+                variant="primary"
+                onClick={() => router.push('/dashboard/catalogue')}
+                leftIcon={<Compass className="w-4 h-4" />}
+                className="shrink-0"
+              >
+                Explorer tout
+              </Button>
+            </div>
+          </div>
+
+          {/* 4 Grandes Cartes d'exploration thématique */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-5 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition flex flex-col justify-between group">
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center group-hover:scale-110 transition">
+                  <Building2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
+                    Salles & Lieux
+                  </h3>
+                  <p className="text-xs text-muted mt-1 leading-relaxed">
+                    Halls de réception, terrasses, domaines et espaces modulables avec rendus 2D/3D et plans interactifs.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/dashboard/catalogue?kind=venue"
+                className="mt-4 inline-flex items-center justify-between text-xs font-bold text-primary group-hover:translate-x-0.5 transition"
+              >
+                <span>Voir les salles</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="p-5 rounded-2xl border border-border/80 bg-surface/90 hover:border-blue-500/50 hover:bg-blue-500/5 transition flex flex-col justify-between group">
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center group-hover:scale-110 transition">
+                  <Briefcase className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground group-hover:text-blue-600 transition">
+                    Prestataires
+                  </h3>
+                  <p className="text-xs text-muted mt-1 leading-relaxed">
+                    Traiteurs, décorateurs, photographes, DJ, sonorisation, sécurité et hôtesses qualifiés.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/dashboard/catalogue?kind=service"
+                className="mt-4 inline-flex items-center justify-between text-xs font-bold text-blue-600 group-hover:translate-x-0.5 transition"
+              >
+                <span>Trouver des prestataires</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="p-5 rounded-2xl border border-border/80 bg-surface/90 hover:border-amber-500/50 hover:bg-amber-500/5 transition flex flex-col justify-between group">
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center group-hover:scale-110 transition">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground group-hover:text-amber-600 transition">
+                    Location de Matériel
+                  </h3>
+                  <p className="text-xs text-muted mt-1 leading-relaxed">
+                    Mobilier, chaises Napoléon, chapiteaux, écrans géants LED, podiums et vaisselle de réception.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/dashboard/catalogue?kind=rental"
+                className="mt-4 inline-flex items-center justify-between text-xs font-bold text-amber-600 group-hover:translate-x-0.5 transition"
+              >
+                <span>Louer du matériel</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="p-5 rounded-2xl border border-border/80 bg-surface/90 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition flex flex-col justify-between group">
+              <div className="space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground group-hover:text-emerald-600 transition">
+                    Simulateur IA & Packs
+                  </h3>
+                  <p className="text-xs text-muted mt-1 leading-relaxed">
+                    Estimez votre budget global, générez 3 propositions équilibrées et contactez les prestataires en 1 clic.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/dashboard/catalogue?tab=plan&planView=ai"
+                className="mt-4 inline-flex items-center justify-between text-xs font-bold text-emerald-600 group-hover:translate-x-0.5 transition"
+              >
+                <span>Lancer le simulateur</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Bannière vers Réalisations & Vitrine */}
+          <div className="p-5 rounded-2xl border border-border bg-surface flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-surface-muted text-foreground">
+                <Rss className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-foreground">Fil des Réalisations & Vitrine Publique</h4>
+                <p className="text-xs text-muted">Consultez les photos des réceptions réussies et publiez vos propres réalisations.</p>
+              </div>
+            </div>
+            <Link
+              href="/dashboard/publications"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-surface-muted hover:bg-surface-muted/80 text-foreground border border-border transition shrink-0"
+            >
+              <span>Voir les réalisations</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════════
+          ONGLET : 📊 ANALYSES & PERFORMANCE COMMERCIALE
+      ══════════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'analytics' && (
+        <div
+          role="tabpanel"
+          id="org-panel-analytics"
+          aria-labelledby="org-tab-analytics"
+          tabIndex={0}
+          className="space-y-6 focus-visible:outline-none animate-in fade-in-50 duration-150"
+        >
+          {/* En-tête */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 rounded-2xl border border-border bg-surface/90 shadow-2xs">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                  <BarChart3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-foreground">
+                    Analyses & Indicateurs de Performance
+                  </h2>
+                  <p className="text-xs text-muted">
+                    Indicateurs de conversion, volume financier, bilan d'activité et recommandations d’optimisation.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <Link
+              href="/dashboard/analytics"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover transition shadow-2xs"
+            >
+              <span>Rapports approfondis</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {/* 4 KPIs analytiques */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
+              <span className="text-xs font-bold text-muted uppercase tracking-wider">Volume Engagé</span>
+              <p className="text-2xl font-black text-foreground mt-2">
+                {totalBookingsVolumeFc > 0 ? formatFc(totalBookingsVolumeFc) : '0 FC'}
+              </p>
+              <p className="text-xs text-muted mt-0.5">Sur {bookings.length} réservation{bookings.length > 1 ? 's' : ''}</p>
+            </div>
+            <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
+              <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Taux de Conversion</span>
+              <p className="text-2xl font-black text-emerald-600 mt-2">
+                {inquiries.length > 0 ? `${Math.round((confirmedBookingsCount / inquiries.length) * 100)} %` : '—'}
+              </p>
+              <p className="text-xs text-muted mt-0.5">Devis &rarr; Réservations validées</p>
+            </div>
+            <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
+              <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Demandes Actives</span>
+              <p className="text-2xl font-black text-blue-600 mt-2">{inquiries.length + bookings.length}</p>
+              <p className="text-xs text-muted mt-0.5">Intéractions clients cumulées</p>
+            </div>
+            <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
+              <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">Billetterie directe</span>
+              <p className="text-2xl font-black text-foreground mt-2">
+                {ticketingSummary?.totalRevenueFc ? formatFc(ticketingSummary.totalRevenueFc) : '0 FC'}
+              </p>
+              <p className="text-xs text-muted mt-0.5">{ticketingSummary?.paidOrdersCount ?? 0} commandes réglées</p>
+            </div>
+          </div>
+
+          {/* Deux colonnes d'analyse détaillée */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Colonne 1 : Répartition des statuts de réservations et devis */}
+            <div className="p-5 rounded-2xl border border-border bg-surface/90 space-y-4">
+              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-primary" />
+                <span>Statut du Pipeline Commercial</span>
+              </h3>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <div className="flex justify-between font-semibold mb-1">
+                    <span className="text-muted">Réservations confirmées</span>
+                    <span className="text-emerald-600 font-bold">{confirmedBookingsCount}</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-surface-muted overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                      style={{ width: `${bookings.length > 0 ? Math.round((confirmedBookingsCount / bookings.length) * 100) : 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between font-semibold mb-1">
+                    <span className="text-muted">Réservations en attente</span>
+                    <span className="text-amber-600 font-bold">{pendingBookingsCount}</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-surface-muted overflow-hidden">
+                    <div
+                      className="h-full bg-amber-500 rounded-full transition-all duration-500"
+                      style={{ width: `${bookings.length > 0 ? Math.round((pendingBookingsCount / bookings.length) * 100) : 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between font-semibold mb-1">
+                    <span className="text-muted">Devis en attente de réponse</span>
+                    <span className="text-primary font-bold">{pendingQuotesCount}</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-surface-muted overflow-hidden">
+                    <div
+                      className="h-full bg-primary rounded-full transition-all duration-500"
+                      style={{ width: `${inquiries.length > 0 ? Math.round((pendingQuotesCount / inquiries.length) * 100) : 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex justify-between font-semibold mb-1">
+                    <span className="text-muted">Devis acceptés</span>
+                    <span className="text-blue-600 font-bold">{acceptedQuotesCount}</span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-surface-muted overflow-hidden">
+                    <div
+                      className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                      style={{ width: `${inquiries.length > 0 ? Math.round((acceptedQuotesCount / inquiries.length) * 100) : 0}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Colonne 2 : Bonnes pratiques et conseils de visibilité */}
+            <div className="p-5 rounded-2xl border border-border bg-surface/90 space-y-4">
+              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <span>Conseils d'Optimisation & Visibilité</span>
+              </h3>
+
+              <div className="space-y-3 text-xs">
+                <div className="p-3 rounded-xl bg-surface-muted/60 border border-border/60">
+                  <p className="font-bold text-foreground">Photos HD et présentation soignée</p>
+                  <p className="text-muted mt-0.5">
+                    Les fiches disposant d'au moins 3 photos haute définition reçoivent 2,4 fois plus de demandes de devis.
+                  </p>
+                </div>
+                <div className="p-3 rounded-xl bg-surface-muted/60 border border-border/60">
+                  <p className="font-bold text-foreground">Réactivité sous 24h</p>
+                  <p className="text-muted mt-0.5">
+                    Une réponse rapide par message ou WhatsApp multiplie par 3 les chances de conversion en réservation ferme.
+                  </p>
+                </div>
+                <div className="p-3 rounded-xl bg-surface-muted/60 border border-border/60">
+                  <p className="font-bold text-foreground">Plans 2D/3D et normes d'accessibilité PMR</p>
+                  <p className="text-muted mt-0.5">
+                    Mettez en valeur les dimensions exactes et l'accès PMR pour rassurer les organisateurs corporate et institutionnels.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

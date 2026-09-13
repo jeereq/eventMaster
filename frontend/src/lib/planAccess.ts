@@ -254,6 +254,11 @@ export function getWorkspaceModules(opts: {
   const canRooms = Boolean(opts.access?.canManageRooms);
   const canTeam = Boolean(opts.access?.canManageTeam);
   const protocolOnly = Boolean(opts.access?.isProtocolOnly);
+  const isCatalogOrVenue =
+    opts.planFeatures?.audience === 'VENUE' ||
+    opts.planFeatures?.audience === 'SERVICE' ||
+    opts.planFeatures?.audience === 'CATALOG' ||
+    vendorOnly;
 
   if (vendorOnly && !opts.planQuota) {
     return {
@@ -262,7 +267,7 @@ export function getWorkspaceModules(opts: {
       showMarketplace: !protocolOnly,
       showBrowseCatalogue: !protocolOnly,
       showTemplates: false,
-      showAnalytics: false,
+      showAnalytics: !protocolOnly,
       showProtocol: false,
       showTeam: canTeam,
     };
@@ -275,9 +280,9 @@ export function getWorkspaceModules(opts: {
 
   const showEvents = maxEvents > 0 || protocolOnly;
   const showRooms = canRooms && maxRooms > 0;
-  const showMarketplace = maxServices > 0 && !protocolOnly;
-  /** Protocole et orga avec événements peuvent explorer le catalogue acheteur. */
-  const showBrowseCatalogue = showEvents || protocolOnly;
+  const showMarketplace = (maxServices > 0 || isCatalogOrVenue) && !protocolOnly;
+  /** Tout compte (organisation, vendeur, protocole) peut explorer le catalogue acheteur. */
+  const showBrowseCatalogue = true;
 
   return {
     showEvents,
@@ -285,7 +290,7 @@ export function getWorkspaceModules(opts: {
     showMarketplace,
     showBrowseCatalogue,
     showTemplates: maxEvents > 0 && maxTemplates > 0 && !protocolOnly,
-    showAnalytics: showEvents,
+    showAnalytics: showEvents || isCatalogOrVenue,
     showProtocol:
       protocolOnly
       || (
