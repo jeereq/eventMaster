@@ -11,6 +11,7 @@ import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import { isAiSimulationThresholdReached } from '@/components/AiSimulationCounter';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { cn } from '@/lib/cn';
 import {
   AI_ALLOWANCE_CHANGED,
@@ -32,6 +33,8 @@ export default function GlobalAiSimulatorFab() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, tenant, planFeatures, access } = useAuth();
+  const { site } = usePlatformSite();
+  const isBudgetBlocked = site?.studioVisibility?.budget === false;
   const [open, setOpen] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const [allowance, setAllowance] = useState<AiAllowance>(createEmptyAiAllowance);
@@ -128,7 +131,9 @@ export default function GlobalAiSimulatorFab() {
               placement.mood === 'celebrate' ? 'text-stage-foreground/75' : 'text-primary-foreground/80',
             )}
           >
-            {placement.subtitle}
+            {isBudgetBlocked && placement.highlight === 'budget'
+              ? 'Fonctionnalité à venir'
+              : placement.subtitle}
           </span>
         </span>
         {showCounter ? (
@@ -172,8 +177,8 @@ export default function GlobalAiSimulatorFab() {
             <ShortcutCard
               href={placement.catalogueHref}
               icon={Wand2}
-              title="Pack budget"
-              detail={`${AI_SIMULATION_TOKEN_COST} jeton · 3 formules`}
+              title={isBudgetBlocked ? 'Pack budget (À venir)' : 'Pack budget'}
+              detail={isBudgetBlocked ? 'Fonctionnalité en préparation' : `${AI_SIMULATION_TOKEN_COST} jeton · 3 formules`}
               active={placement.highlight === 'budget'}
               onNavigate={() => setOpen(false)}
             />

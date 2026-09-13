@@ -33,6 +33,7 @@ import {
   CheckCircle2,
   Mail,
   Building2,
+  Clock,
 } from 'lucide-react';
 import AiSimulationCounter, { isAiSimulationThresholdReached } from '@/components/AiSimulationCounter';
 import AiTokenBuyButton from '@/components/AiTokenBuyButton';
@@ -184,12 +185,17 @@ export default function SimulateurPageClient() {
   };
 
   const activeScenario = visibleScenarios.find((s) => s.id === selectedScenarioId);
+  const isBudgetBlocked = site?.studioVisibility?.budget === false;
 
   return (
     <PublicPageShell faqHref="/faq" mobileFooterPad>
       <PublicPageHero
         title="Simulateur de Budget & Formules IA"
-        description="Estimez votre réception en 1 clic : 3 formules catalogue clés en main (Éco, Équilibré, Confort)."
+        description={
+          isBudgetBlocked
+            ? 'Fonctionnalité à venir : l’estimation et la composition automatique de formules par IA sera disponible prochainement.'
+            : 'Estimez votre réception en 1 clic : 3 formules catalogue clés en main (Éco, Équilibré, Confort).'
+        }
         compact
       >
         <div className="pt-2 flex flex-wrap items-center gap-2">
@@ -199,20 +205,29 @@ export default function SimulateurPageClient() {
             Taux du jour : 1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
           </span>
 
-          {/* Compteur jetons / simulations */}
-          {!allowance.unlimited && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold text-primary tabular-nums">
-              <Sparkles className="w-3.5 h-3.5" />
-              {allowance.totalRemaining} simulation{allowance.totalRemaining > 1 ? 's' : ''} disponible{allowance.totalRemaining > 1 ? 's' : ''}
+          {isBudgetBlocked ? (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-xs font-bold text-amber-800 dark:text-amber-300">
+              <Clock className="w-3.5 h-3.5" />
+              Fonctionnalité à venir
             </span>
-          )}
+          ) : (
+            <>
+              {/* Compteur jetons / simulations */}
+              {!allowance.unlimited && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold text-primary tabular-nums">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  {allowance.totalRemaining} simulation{allowance.totalRemaining > 1 ? 's' : ''} disponible{allowance.totalRemaining > 1 ? 's' : ''}
+                </span>
+              )}
 
-          {!allowance.unlimited && (
-            <AiTokenBuyButton
-              variant="secondary"
-              onClick={() => setPurchaseModalOpen(true)}
-              className="text-xs min-h-9 py-1 px-3"
-            />
+              {!allowance.unlimited && (
+                <AiTokenBuyButton
+                  variant="secondary"
+                  onClick={() => setPurchaseModalOpen(true)}
+                  className="text-xs min-h-9 py-1 px-3"
+                />
+              )}
+            </>
           )}
         </div>
       </PublicPageHero>
@@ -226,7 +241,7 @@ export default function SimulateurPageClient() {
           <Alert variant="warning">Paiement annulé — aucun jeton n’a été débité.</Alert>
         ) : null}
 
-        {isAiSimulationThresholdReached(allowance) ? (
+        {!isBudgetBlocked && isAiSimulationThresholdReached(allowance) ? (
           <div className="max-w-xl mx-auto">
             <AiSimulationCounter
               allowance={allowance}
@@ -239,7 +254,7 @@ export default function SimulateurPageClient() {
         <section aria-label="Studios créatifs actifs" className="rounded-2xl border border-primary/20 bg-surface p-4 sm:p-5 shadow-xs space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/50 pb-3">
             <div className="space-y-0.5">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary text-primary-foreground">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary text-primary-foreground">
                 <Sparkles className="w-3.5 h-3.5" />
                 Studios actifs
               </span>
@@ -253,19 +268,42 @@ export default function SimulateurPageClient() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            <div className="p-3 rounded-xl border-2 border-primary bg-primary/5 flex items-center justify-between gap-2">
+            <div
+              className={`p-3 rounded-xl border flex items-center justify-between gap-2 ${
+                isBudgetBlocked
+                  ? 'border-amber-500/30 bg-amber-500/5'
+                  : 'border-2 border-primary bg-primary/5'
+              }`}
+            >
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
                   <Wand2 className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-foreground truncate">Simulateur Budget</p>
-                  <p className="text-[10px] text-muted truncate">3 formules catalogue</p>
+                  <p className="text-xs text-muted truncate">
+                    {isBudgetBlocked ? 'Bientôt disponible' : '3 formules catalogue'}
+                  </p>
                 </div>
               </div>
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 shrink-0">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
-                Actif
+              <span
+                className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                  isBudgetBlocked
+                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                }`}
+              >
+                {isBudgetBlocked ? (
+                  <>
+                    <Clock className="w-3 h-3" />
+                    À venir
+                  </>
+                ) : (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
+                    Actif
+                  </>
+                )}
               </span>
             </div>
 
@@ -313,10 +351,17 @@ export default function SimulateurPageClient() {
             <div>
               <h2 id="scenarios-heading" className="text-sm font-bold text-foreground flex items-center gap-2">
                 <Wand2 className="w-4 h-4 text-primary" />
-                <span>Projets types prêts à l’emploi</span>
+                <span>{isBudgetBlocked ? 'Aperçu des futurs projets types' : 'Projets types prêts à l’emploi'}</span>
+                {isBudgetBlocked && (
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                    À venir
+                  </span>
+                )}
               </h2>
               <p className="text-xs text-muted">
-                Chargez un exemple type en 1 clic.
+                {isBudgetBlocked
+                  ? 'Exemples de scénarios d’événements qui seront automatiquement chiffrés dès l’activation du simulateur.'
+                  : 'Chargez un exemple type en 1 clic.'}
               </p>
             </div>
 
@@ -396,6 +441,27 @@ export default function SimulateurPageClient() {
 
         {/* Zone interactive du simulateur */}
         <section id="simulateur" className="scroll-mt-24 space-y-4">
+          {isBudgetBlocked && (
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xs sm:text-sm font-bold text-foreground">
+                    Simulateur de budget · Fonctionnalité à venir
+                  </p>
+                  <p className="text-xs text-muted">
+                    L&apos;outil d&apos;estimation automatique par IA est temporairement désactivé par l&apos;administration. Vous pouvez explorer directement nos espaces et prestataires certifiés.
+                  </p>
+                </div>
+              </div>
+              <Button href="/marketplace" size="sm" variant="primary" className="shrink-0">
+                Explorer le catalogue
+              </Button>
+            </div>
+          )}
+
           <div className="border-t border-border pt-6">
             <EventPrepAiSimulator
               embedded

@@ -25,6 +25,7 @@ import {
   isUnlimitedAiTokenUser,
   AI_SIMULATION_TOKEN_COST,
 } from '../services/aiSimulationWalletService';
+import { loadPlatformSettings } from '../services/platformSettingsService';
 
 function parseKind(value: unknown): 'venue' | 'service' | null {
   return value === 'venue' || value === 'service' ? value : null;
@@ -246,6 +247,15 @@ async function runEventPlanAi(
   source: AiSimulationSource,
   rateLimitKey: string,
 ) {
+  const settings = loadPlatformSettings();
+  if (settings.studioVisibility && settings.studioVisibility.budget === false) {
+    const error: Error & { status?: number } = new Error(
+      'Le simulateur de budget IA est une fonctionnalité à venir et n’est pas disponible actuellement.',
+    );
+    error.status = 403;
+    throw error;
+  }
+
   const body = req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {};
   const deviceId = typeof body.deviceId === 'string' ? body.deviceId.trim() : '';
   if (!deviceId) {

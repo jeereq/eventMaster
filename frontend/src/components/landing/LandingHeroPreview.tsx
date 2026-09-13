@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { LandingProfileId } from '@/lib/landingProfiles';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 
 export interface ActionCard {
   title: string;
@@ -180,6 +181,8 @@ export default function LandingHeroPreview({
   embedded?: boolean;
 } = {}) {
   const { user } = useAuth();
+  const { site } = usePlatformSite();
+  const isBudgetBlocked = site?.studioVisibility?.budget === false;
   const isLoggedIn = Boolean(user);
   const actions = PROFILE_ACTIONS[profileId] || PROFILE_ACTIONS.personal;
 
@@ -223,6 +226,15 @@ export default function LandingHeroPreview({
             const Icon = act.icon;
             const targetHref = act.href(isLoggedIn);
             const isExternal = targetHref.startsWith('http');
+            const isSimulatorAction = targetHref === '/simulateur' || targetHref.startsWith('/simulateur');
+            const isUpcoming = isSimulatorAction && isBudgetBlocked;
+
+            const displayBadge = isUpcoming ? 'À venir' : act.badge;
+            const displayCta = isUpcoming ? 'Bientôt disponible' : act.ctaLabel;
+            const displayDesc = isUpcoming
+              ? 'Prochainement : l’IA composera 3 formules réelles chiffrées selon votre budget (fonctionnalité à venir).'
+              : act.description;
+            const isHighlight = isUpcoming ? false : act.highlight;
 
             return (
               <Link
@@ -230,12 +242,14 @@ export default function LandingHeroPreview({
                 href={targetHref}
                 target={isExternal ? '_blank' : undefined}
                 rel={isExternal ? 'noopener noreferrer' : undefined}
-                aria-label={act.ctaLabel}
+                aria-label={displayCta}
                 className={cn(
                   'rounded-[var(--radius-card)] p-3.5 sm:p-4 border transition-all duration-200 motion-reduce:transition-none flex flex-col justify-between h-full group hover:border-primary/60 hover:shadow-md cursor-pointer block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                  act.highlight
-                    ? 'bg-festive-accent-soft border-festive-accent/40 ring-1 ring-festive-accent/25'
-                    : 'bg-surface/80 dark:bg-surface/70 border-border',
+                  isUpcoming
+                    ? 'bg-amber-500/5 border-amber-500/30'
+                    : isHighlight
+                      ? 'bg-festive-accent-soft border-festive-accent/40 ring-1 ring-festive-accent/25'
+                      : 'bg-surface/80 dark:bg-surface/70 border-border',
                 )}
               >
                 <div className="space-y-1.5 sm:space-y-2 mb-2.5 sm:mb-3">
@@ -248,13 +262,20 @@ export default function LandingHeroPreview({
                         {act.title}
                       </span>
                     </div>
-                    <span className="text-xs font-semibold text-muted px-1.5 sm:px-2 py-0.5 rounded bg-surface border border-border shrink-0">
-                      {act.badge}
+                    <span
+                      className={cn(
+                        'text-xs font-semibold px-1.5 sm:px-2 py-0.5 rounded border shrink-0',
+                        isUpcoming
+                          ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/20'
+                          : 'bg-surface text-muted border-border',
+                      )}
+                    >
+                      {displayBadge}
                     </span>
                   </div>
 
                   <p className="text-xs text-muted leading-relaxed line-clamp-2 sm:line-clamp-3">
-                    {act.description}
+                    {displayDesc}
                   </p>
                 </div>
 
@@ -262,12 +283,12 @@ export default function LandingHeroPreview({
                   <div
                     className={cn(
                       'w-full min-h-11 py-1.5 sm:py-2 px-3 rounded-[var(--radius-button)] text-xs font-semibold flex items-center justify-between transition-all duration-200 touch-manipulation active:scale-[0.98]',
-                      act.highlight
+                      isHighlight
                         ? 'bg-primary-solid text-primary-foreground shadow-sm shadow-primary/30 group-hover:bg-primary-solid-hover'
                         : 'bg-surface-muted text-foreground border border-border group-hover:border-primary/40 group-hover:text-primary',
                     )}
                   >
-                    <span className="truncate">{act.ctaLabel}</span>
+                    <span className="truncate">{displayCta}</span>
                     <ArrowRight className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
                   </div>
                 </div>

@@ -180,7 +180,12 @@ export default function SiteHeader({
                 aria-current={active ? 'page' : undefined}
                 className={itemClass}
               >
-                {item.label}
+                <span>{item.label}</span>
+                {item.href === '/simulateur' && site?.studioVisibility?.budget === false && (
+                  <span className="ml-1.5 px-1.5 py-0.5 text-xs font-bold rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                    À venir
+                  </span>
+                )}
               </Link>
             );
           })}
@@ -289,7 +294,14 @@ export default function SiteHeader({
                     onClick={() => setMobileMenuOpen(false)}
                     className={mobileClass}
                   >
-                    <span>{item.label}</span>
+                    <span className="flex items-center gap-2">
+                      <span>{item.label}</span>
+                      {item.href === '/simulateur' && site?.studioVisibility?.budget === false && (
+                        <span className="px-1.5 py-0.5 text-xs font-bold rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                          À venir
+                        </span>
+                      )}
+                    </span>
                     {active && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
                   </Link>
                 );

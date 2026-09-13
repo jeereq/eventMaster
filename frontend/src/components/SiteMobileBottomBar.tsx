@@ -8,6 +8,7 @@ import { Home, Store, LayoutGrid, FileText, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { revealAndScrollToSection } from '@/lib/aiFabPlacement';
 import { motionSafeScrollBehavior } from '@/lib/prefersReducedMotion';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 
 const SIMULATOR_HREF = '/simulateur';
 
@@ -79,6 +80,8 @@ export default function SiteMobileBottomBar({
   className?: string;
 }) {
   const pathname = usePathname();
+  const { site } = usePlatformSite();
+  const isBudgetBlocked = site?.studioVisibility?.budget === false;
   const [currentHash, setCurrentHash] = useState('');
   const [mounted, setMounted] = useState(false);
 
@@ -127,6 +130,7 @@ export default function SiteMobileBottomBar({
               ? 'text-primary-solid font-bold'
               : 'text-muted hover:text-foreground',
           );
+          const isSimulatorUpcoming = item.id === 'simulator' && isBudgetBlocked;
           const inner = (
             <>
               <div
@@ -138,12 +142,25 @@ export default function SiteMobileBottomBar({
                 )}
               >
                 <Icon className="w-[18px] h-[18px] sm:w-[19px] sm:h-[19px]" aria-hidden />
-                {active && (
+                {isSimulatorUpcoming ? (
+                  <span
+                    className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-background"
+                    title="Fonctionnalité à venir"
+                  />
+                ) : null}
+                {active && !isSimulatorUpcoming && (
                   <span className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-primary-solid" />
                 )}
               </div>
               <span className="text-xs tracking-tight leading-tight truncate max-w-full text-center">
-                {item.shortLabel ? (
+                {isSimulatorUpcoming ? (
+                  <>
+                    <span>Simulateur</span>
+                    <span className="block text-[9px] font-bold text-amber-600 dark:text-amber-400 -mt-0.5">
+                      À venir
+                    </span>
+                  </>
+                ) : item.shortLabel ? (
                   <>
                     <span className="hidden min-[400px]:inline">{item.label}</span>
                     <span className="inline min-[400px]:hidden">{item.shortLabel}</span>

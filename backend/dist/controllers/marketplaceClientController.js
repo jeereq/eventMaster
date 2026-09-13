@@ -27,6 +27,7 @@ const eventPlanAiService_1 = require("../services/eventPlanAiService");
 const aiSimulationHistoryService_1 = require("../services/aiSimulationHistoryService");
 const aiTokenFlexPayService_1 = require("../services/aiTokenFlexPayService");
 const aiSimulationWalletService_1 = require("../services/aiSimulationWalletService");
+const platformSettingsService_1 = require("../services/platformSettingsService");
 function parseKind(value) {
     return value === 'venue' || value === 'service' ? value : null;
 }
@@ -222,6 +223,12 @@ async function persistSimulation(req, result, source) {
     }
 }
 async function runEventPlanAi(req, source, rateLimitKey) {
+    const settings = (0, platformSettingsService_1.loadPlatformSettings)();
+    if (settings.studioVisibility && settings.studioVisibility.budget === false) {
+        const error = new Error('Le simulateur de budget IA est une fonctionnalité à venir et n’est pas disponible actuellement.');
+        error.status = 403;
+        throw error;
+    }
     const body = req.body && typeof req.body === 'object' ? req.body : {};
     const deviceId = typeof body.deviceId === 'string' ? body.deviceId.trim() : '';
     if (!deviceId) {

@@ -21,6 +21,7 @@ interface SiteFooterProps {
 
 export default function SiteFooter({ faqHref = '/#faq', className }: SiteFooterProps) {
   const { site } = usePlatformSite();
+  const isBudgetBlocked = site?.studioVisibility?.budget === false;
   const product = FOOTER_PRODUCT.map((item) =>
     item.label === 'FAQ' ? { ...item, href: faqHref } : item,
   );
@@ -61,7 +62,12 @@ export default function SiteFooter({ faqHref = '/#faq', className }: SiteFooterP
                     </a>
                   ) : (
                     <Link href={item.href} className={linkClass}>
-                      {item.label}
+                      <span>{item.label}</span>
+                      {item.href === '/simulateur' && isBudgetBlocked && (
+                        <span className="ml-1.5 text-xs font-bold text-amber-600 dark:text-amber-400">
+                          (À venir)
+                        </span>
+                      )}
                     </Link>
                   )}
                 </li>

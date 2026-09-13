@@ -167,9 +167,9 @@ export default function RsvpPage() {
     const raw = id.trim().toLowerCase();
     if (raw === 'badge' || raw === 'table' || raw === 'route' || raw === 'donations' || raw === 'guestbook' || raw === 'feed') {
       setActiveGuestTab(raw as typeof activeGuestTab);
-      window.history.replaceState(
-        null,
-        '',
+    window.history.replaceState(
+      null,
+      '',
         `${window.location.pathname}${window.location.search}#${raw}`,
       );
       if (typeof window !== 'undefined') {
@@ -186,40 +186,40 @@ export default function RsvpPage() {
   }, []);
 
   const loadRsvpDetails = useCallback(async () => {
-    if (!guestId) return;
-    try {
-      const data = await api.get(`/rsvp/${guestId}`);
-      setGuest(data);
+      if (!guestId) return;
+      try {
+        const data = await api.get(`/rsvp/${guestId}`);
+        setGuest(data);
       setGuestFirstName(data.firstName || '');
       setGuestLastName(data.lastName || '');
       setGuestPhone(data.phone || data.preferences?.phone || '');
-      setRsvpLocked(Boolean(data.rsvpLocked));
+        setRsvpLocked(Boolean(data.rsvpLocked));
       const isTicketOrPublic = Boolean(
         data.ticketOrderId || data.category === 'Billet' || data.event?.isPublic,
       );
       if ((data.rsvp && data.rsvp !== 'PENDING') || isTicketOrPublic) {
         setRsvpStatus(data.rsvp === 'DECLINED' ? 'DECLINED' : 'ACCEPTED');
-        setSubmitted(true);
+          setSubmitted(true);
+        }
+        if (data.preferences) {
+          setAllergies(data.preferences.allergies || '');
+          setSpecialMeal(data.preferences.specialMeal || 'none');
+          setAdditionalNotes(data.preferences.notes || '');
+          const templateContent = data.event?.invitations?.[0]?.template?.content;
+          const elements = templateContent?.elements || [];
+          const rsvpFields = ensureMandatoryRsvpFields(
+            elements
+              .filter((el: { type?: string }) => el.type === 'rsvp-block')
+              .flatMap((el: { rsvpFields?: RsvpField[] }) => el.rsvpFields || []),
+          );
+          setCustomFieldValues(restoreFieldValuesFromPreferences(rsvpFields, data.preferences));
+        }
+      } catch (err: any) {
+        console.error('Error fetching RSVP details:', err);
+        setError('Le lien d\'invitation est invalide ou a expiré.');
+      } finally {
+        setLoading(false);
       }
-      if (data.preferences) {
-        setAllergies(data.preferences.allergies || '');
-        setSpecialMeal(data.preferences.specialMeal || 'none');
-        setAdditionalNotes(data.preferences.notes || '');
-        const templateContent = data.event?.invitations?.[0]?.template?.content;
-        const elements = templateContent?.elements || [];
-        const rsvpFields = ensureMandatoryRsvpFields(
-          elements
-            .filter((el: { type?: string }) => el.type === 'rsvp-block')
-            .flatMap((el: { rsvpFields?: RsvpField[] }) => el.rsvpFields || []),
-        );
-        setCustomFieldValues(restoreFieldValuesFromPreferences(rsvpFields, data.preferences));
-      }
-    } catch (err: any) {
-      console.error('Error fetching RSVP details:', err);
-      setError('Le lien d\'invitation est invalide ou a expiré.');
-    } finally {
-      setLoading(false);
-    }
   }, [guestId]);
 
   useEffect(() => {
@@ -830,11 +830,11 @@ export default function RsvpPage() {
                         <div>
                           <h3 className="text-sm font-bold text-foreground">
                             Vos billets pour cet événement
-                          </h3>
+                    </h3>
                           <p className="text-xs text-muted">
                             Commande de {guest.orderPasses.totalCount} places &middot; Un pass d&apos;entrée individuel avec QR code est disponible pour chacun.
                           </p>
-                        </div>
+                  </div>
                       </div>
                       <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold border border-primary/20 shrink-0">
                         {guest.orderPasses.totalCount} billets
@@ -888,9 +888,9 @@ export default function RsvpPage() {
                                       Siège n°{pass.seatNumber}
                                     </p>
                                   )}
-                                </div>
+                        </div>
                               )}
-                            </div>
+                        </div>
 
                             <div className="flex items-center gap-1.5 pt-1 flex-wrap">
                               {!isCurrent ? (
@@ -969,12 +969,12 @@ export default function RsvpPage() {
                               >
                                 <Pencil className="w-4 h-4" aria-hidden />
                               </button>
-                            </div>
-                          </div>
+                      </div>
+                        </div>
                         );
                       })}
-                    </div>
-                  </div>
+                        </div>
+                      </div>
                 )}
 
                 {/* Carte de placement assigné (très visible pour les billets payés et invités placés) */}
@@ -1007,7 +1007,7 @@ export default function RsvpPage() {
                             </span>
                           </p>
                         )}
-                      </div>
+                  </div>
 
                       {(guest.ticketPlacement?.seatNumber != null || guest.tableDetails?.seatIndex != null) && (
                         <div className="rounded-xl px-4 py-2 border border-primary/30 bg-surface text-center shrink-0 shadow-xs">
@@ -1015,7 +1015,7 @@ export default function RsvpPage() {
                           <p className="text-lg sm:text-xl font-black text-primary tabular-nums">
                             n° {guest.ticketPlacement?.seatNumber ?? ((guest.tableDetails?.seatIndex ?? 0) + 1)}
                           </p>
-                        </div>
+                      </div>
                       )}
                     </div>
 
@@ -1059,8 +1059,8 @@ export default function RsvpPage() {
                     </div>
                     <p className="text-xs text-muted leading-relaxed">
                       Billet validé. Placement communiqué à l&apos;accueil.
-                    </p>
-                  </div>
+                        </p>
+                      </div>
                 )}
 
                 {/* Bandeau de campagne solidaire si les dons sont activés */}
@@ -1153,7 +1153,7 @@ export default function RsvpPage() {
 
                 {!rsvpLocked && (
                   <div className="space-y-2.5 pt-2">
-                    <button
+                <button
                       type="button"
                       onClick={() => {
                         setIdentitySaveError('');
@@ -1167,11 +1167,11 @@ export default function RsvpPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setSubmitted(false)}
+                  onClick={() => setSubmitted(false)}
                       className="w-full min-h-11 py-2.5 border border-border bg-surface hover:bg-surface-muted text-muted font-semibold rounded-xl text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                    >
+                >
                       Modifier ma réponse (présence / absence)
-                    </button>
+                </button>
                   </div>
                 )}
               </div>
@@ -1757,8 +1757,8 @@ export default function RsvpPage() {
         {/* Bouton sticky Pass Express — masqué sur l’onglet Table pour ne pas recouvrir les convives */}
         {activeGuestTab !== 'table' && (
           <div className="fixed left-1/2 -translate-x-1/2 z-30 w-full max-w-sm px-4 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] pointer-events-none animate-fade-in">
-            <button
-              type="button"
+          <button
+            type="button"
               onClick={() => {
                 setSelectedQrGuestId(guest.id);
                 setShowFullScreenQr(true);
@@ -1768,7 +1768,7 @@ export default function RsvpPage() {
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-9 h-9 shrink-0 rounded-xl bg-white/15 text-white flex items-center justify-center font-bold text-xs ring-1 ring-white/25">
                   <QrCode className="w-4 h-4" aria-hidden />
-                </div>
+              </div>
                 <div className="text-left min-w-0">
                   <p className="text-sm font-bold leading-tight truncate">Mon Pass d&apos;entrée QR</p>
                   <p className="text-xs text-white/80 truncate">
@@ -1779,15 +1779,15 @@ export default function RsvpPage() {
                             : ''
                         }`
                       : 'Ouvrir le pass pour l’accueil'}
-                  </p>
-                </div>
+                </p>
               </div>
+            </div>
               <span className="hidden min-[380px]:inline text-xs font-bold uppercase tracking-wider bg-white/20 px-2.5 py-1 rounded-lg text-white shrink-0">
                 Ouvrir
-              </span>
+            </span>
               <Maximize2 className="w-4 h-4 shrink-0 opacity-90 min-[380px]:hidden" aria-hidden />
-            </button>
-          </div>
+          </button>
+        </div>
         )}
 
         {/* Modal QR Code Plein Écran & Contraste Élevé pour le scan d'accueil */}
@@ -1811,21 +1811,21 @@ export default function RsvpPage() {
               tabIndex={-1}
               aria-labelledby="guest-pass-qr-title"
               onClick={closeFullScreenQr}
-            >
-              <button
+          >
+            <button
                 ref={qrCloseRef}
-                type="button"
+              type="button"
                 onClick={closeFullScreenQr}
                 className="absolute top-5 right-5 p-2.5 min-h-11 min-w-11 inline-flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
                 aria-label="Fermer le pass QR"
               >
                 <X className="w-6 h-6" aria-hidden />
-              </button>
+            </button>
 
-              <div
+            <div
                 className="bg-surface rounded-3xl p-5 sm:p-7 text-center max-w-sm w-full shadow-2xl space-y-4 animate-scale-up border border-border"
-                onClick={(e) => e.stopPropagation()}
-              >
+              onClick={(e) => e.stopPropagation()}
+            >
                 {/* Sélecteur de billets si commande multiple */}
                 {guest.orderPasses && guest.orderPasses.passes.length > 1 && (
                   <div className="flex items-center justify-center gap-1 p-1 rounded-xl bg-surface-muted border border-border" role="tablist" aria-label="Choisir le pass à scanner">
@@ -1855,13 +1855,13 @@ export default function RsvpPage() {
                 <div className="space-y-0.5">
                   <h3 id="guest-pass-qr-title" className="text-xl font-bold text-foreground">
                     {activeQrPass.firstName} {activeQrPass.lastName}
-                  </h3>
+                </h3>
                   {guest.orderPasses && guest.orderPasses.passes.length > 1 && (
                     <p className="text-xs font-semibold text-primary">
                       Billet {activeQrPass.ticketNumber} sur {guest.orderPasses.totalCount}
                     </p>
                   )}
-                </div>
+              </div>
 
                 {(activeQrPass.tableName || activeQrPass.zoneName) && (
                   <div className="py-2.5 px-4 rounded-xl bg-surface-muted border border-border text-left">
@@ -1876,9 +1876,9 @@ export default function RsvpPage() {
                     <p className="text-base font-extrabold text-foreground">
                       {activeQrPass.tableName || 'Table assignée'}
                       {activeQrPass.seatNumber != null ? ` • Siège n° ${activeQrPass.seatNumber}` : ''}
-                    </p>
-                  </div>
-                )}
+                  </p>
+                </div>
+              )}
 
                 {/* Fond blanc volontaire : contraste maximal pour le scan d'accueil */}
                 <div className="p-3 bg-white border-2 border-foreground rounded-2xl inline-block shadow-inner">
@@ -1886,22 +1886,22 @@ export default function RsvpPage() {
                     src={getGuestQrImageUrl(activeQrPass.guestId, 320)}
                     alt={`Pass QR de ${activeQrPass.firstName} ${activeQrPass.lastName}`}
                     className="w-52 h-52 sm:w-60 sm:h-60 object-contain"
-                  />
-                </div>
+                />
+              </div>
 
                 <p className="text-xs text-muted leading-snug">
-                  Présentez ce QR Code directement à l&apos;équipe d&apos;accueil à l&apos;entrée de la salle.
-                </p>
+                Présentez ce QR Code directement à l&apos;équipe d&apos;accueil à l&apos;entrée de la salle.
+              </p>
 
-                <button
-                  type="button"
+              <button
+                type="button"
                   onClick={closeFullScreenQr}
                   className="w-full min-h-11 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary-hover transition"
-                >
-                  Fermer
-                </button>
-              </div>
+              >
+                Fermer
+              </button>
             </div>
+          </div>
           );
         })()}
 
@@ -1921,8 +1921,8 @@ export default function RsvpPage() {
                 <div className="flex items-center gap-2.5">
                   <div className="p-2 rounded-xl bg-primary/10 text-primary">
                     <UserCog className="w-5 h-5" aria-hidden />
-                  </div>
-                  <div>
+        </div>
+        <div>
                     <h3 id="edit-identity-title" className="text-base font-bold text-foreground">
                       {targetEditGuestId !== guestId ? 'Modifier le titulaire de ce billet' : 'Modifier mes coordonnées'}
                     </h3>
@@ -1930,33 +1930,33 @@ export default function RsvpPage() {
                       {targetEditGuestId !== guestId
                         ? 'Indiquez les coordonnées de la personne qui utilisera ce pass d’entrée le jour J.'
                         : 'Ce nom figurera sur votre pass QR, votre siège et à l’accueil.'}
-                    </p>
-                  </div>
-                </div>
-                <button
+          </p>
+        </div>
+      </div>
+          <button
                   ref={editModalCloseRef}
-                  type="button"
+            type="button"
                   disabled={savingIdentity}
                   onClick={() => setIsEditIdentityOpen(false)}
                   className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 rounded-xl text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                   aria-label="Fermer"
                 >
                   <X className="w-5 h-5" />
-                </button>
-              </div>
+          </button>
+        </div>
 
               {identitySaveError && (
                 <div className="p-3 rounded-xl bg-danger/10 border border-danger/25 text-danger text-xs font-semibold" role="alert">
                   {identitySaveError}
-                </div>
+              </div>
               )}
 
               {identitySaveSuccess && (
                 <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 text-xs font-semibold flex items-center gap-2" role="status">
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
                   Vos informations ont été enregistrées avec succès.
-                </div>
-              )}
+          </div>
+        )}
 
               <form onSubmit={handleUpdateGuestInfo} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1974,7 +1974,7 @@ export default function RsvpPage() {
                       placeholder="Ex : Paul"
                       required
                     />
-                  </div>
+          </div>
                   <div className="space-y-1">
                     <label htmlFor="modal-last-name" className="block text-xs font-semibold text-foreground">
                       Nom de famille
@@ -1988,8 +1988,8 @@ export default function RsvpPage() {
                       className="w-full min-h-11 px-3 py-2 border border-border rounded-xl text-sm bg-surface text-foreground focus:outline-primary"
                       placeholder="Ex : Kasongo"
                     />
-                  </div>
-                </div>
+        </div>
+      </div>
 
                 <div className="space-y-1">
                   <label htmlFor="modal-phone" className="block text-xs font-semibold text-foreground">
@@ -2006,8 +2006,8 @@ export default function RsvpPage() {
                   />
                   <p className="text-[11px] text-muted">
                     Utilisé pour vous transmettre votre badge et les notifications de placement.
-                  </p>
-                </div>
+                </p>
+              </div>
 
                 {/* Préférences & Remarques */}
                 <div className="pt-2 border-t border-border space-y-3">
@@ -2019,7 +2019,7 @@ export default function RsvpPage() {
                   <div className="space-y-1">
                     <label htmlFor="modal-allergies" className="block text-xs font-semibold text-foreground">
                       Allergies ou régimes particuliers
-                    </label>
+                  </label>
                     <input
                       id="modal-allergies"
                       type="text"
@@ -2029,21 +2029,21 @@ export default function RsvpPage() {
                       className="w-full min-h-11 px-3 py-2 border border-border rounded-xl text-sm bg-surface text-foreground focus:outline-primary"
                       placeholder="Ex : Sans arachides, sans gluten..."
                     />
-                  </div>
+                </div>
 
                   <div className="space-y-1">
                     <label htmlFor="modal-notes" className="block text-xs font-semibold text-foreground">
                       Message / Remarques pour l&apos;organisateur
-                    </label>
-                    <textarea
+                  </label>
+                  <textarea
                       id="modal-notes"
-                      value={additionalNotes}
+                    value={additionalNotes}
                       onChange={(e) => setAdditionalNotes(e.target.value)}
                       disabled={savingIdentity}
                       className="w-full min-h-20 px-3 py-2 border border-border rounded-xl text-sm bg-surface text-foreground focus:outline-primary"
                       placeholder="Une précision sur votre venue, accompagnement..."
-                      rows={2}
-                    />
+                    rows={2}
+                  />
                   </div>
                 </div>
 
@@ -2056,24 +2056,24 @@ export default function RsvpPage() {
                   >
                     Annuler
                   </button>
-                  <button
-                    type="submit"
+                <button
+                  type="submit"
                     disabled={savingIdentity}
                     className="w-full sm:w-auto min-h-11 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary-hover shadow-sm transition flex items-center justify-center gap-2"
-                  >
+                >
                     {savingIdentity ? (
-                      <>
+                    <>
                         <Loader2 className="w-4 h-4 animate-spin" />
                         Enregistrement…
-                      </>
-                    ) : (
+                    </>
+                  ) : (
                       'Enregistrer mes coordonnées'
-                    )}
-                  </button>
+                  )}
+                </button>
                 </div>
               </form>
             </div>
-          </div>
+        </div>
         )}
         </>
     );

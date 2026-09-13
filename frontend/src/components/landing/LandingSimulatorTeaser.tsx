@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Sparkles, Wand2, Calculator, Users, MapPin, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Sparkles, Wand2, Calculator, Users, MapPin, CheckCircle2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -40,6 +40,7 @@ export default function LandingSimulatorTeaser() {
   const revealRef = useLandingReveal<HTMLElement>();
   const { site } = usePlatformSite();
   const exchangeRate = resolveUsdExchangeRateCdf(site?.usdExchangeRateCdf);
+  const isBudgetBlocked = site?.studioVisibility?.budget === false;
 
   return (
     <section
@@ -48,27 +49,54 @@ export default function LandingSimulatorTeaser() {
       className="em-reveal em-landing-defer scroll-mt-20 py-8 sm:py-16 border-t border-border bg-gradient-to-b from-surface/80 via-surface-muted/30 to-surface/80 relative overflow-hidden em-landing-section-glow"
     >
       <div className="page-container relative z-10 space-y-6 sm:space-y-8">
-        <div className="rounded-[var(--radius-card)] border border-primary/25 bg-surface p-5 sm:p-8 lg:p-10 shadow-lg shadow-primary/5 relative overflow-hidden">
+        <div
+          className={`rounded-[var(--radius-card)] border bg-surface p-5 sm:p-8 lg:p-10 shadow-lg relative overflow-hidden ${
+            isBudgetBlocked
+              ? 'border-amber-500/30 shadow-amber-500/5'
+              : 'border-primary/25 shadow-primary/5'
+          }`}
+        >
           {/* Lueur subtile en fond */}
           <div
-            className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-primary/10 blur-3xl pointer-events-none"
+            className={`absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full blur-3xl pointer-events-none ${
+              isBudgetBlocked ? 'bg-amber-500/10' : 'bg-primary/10'
+            }`}
             aria-hidden
           />
 
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-6 lg:gap-10 items-center">
             {/* Texte et présentation */}
             <div className="space-y-4">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold text-primary">
-                <Wand2 className="w-3.5 h-3.5" aria-hidden />
-                <span>Simulateur de Budget IA</span>
+              <div
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                  isBudgetBlocked
+                    ? 'bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300'
+                    : 'bg-primary/10 border border-primary/20 text-primary'
+                }`}
+              >
+                {isBudgetBlocked ? (
+                  <>
+                    <Clock className="w-3.5 h-3.5" aria-hidden />
+                    <span>Fonctionnalité à venir</span>
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="w-3.5 h-3.5" aria-hidden />
+                    <span>Simulateur de Budget IA</span>
+                  </>
+                )}
               </div>
 
               <div className="space-y-2">
                 <h2 className="em-landing-heading text-xl sm:text-3xl text-foreground">
-                  Trois formules budget réelles, composées en 1 clic
+                  {isBudgetBlocked
+                    ? 'Prochainement : Trois formules budget réelles, composées en 1 clic'
+                    : 'Trois formules budget réelles, composées en 1 clic'}
                 </h2>
                 <p className="text-xs sm:text-sm text-muted leading-relaxed max-w-xl">
-                  Indiquez vos invités, votre ville et vos envies : l’IA compose instantanément 3 formules chiffrées (Éco, Équilibré et Confort) à partir des salles et prestataires certifiés du catalogue.
+                  {isBudgetBlocked
+                    ? 'Actuellement en cours de préparation : notre IA composera prochainement 3 formules chiffrées (Éco, Équilibré et Confort) à partir des salles et prestataires certifiés du catalogue.'
+                    : 'Indiquez vos invités, votre ville et vos envies : l’IA compose instantanément 3 formules chiffrées (Éco, Équilibré et Confort) à partir des salles et prestataires certifiés du catalogue.'}
                 </p>
               </div>
 
@@ -76,7 +104,9 @@ export default function LandingSimulatorTeaser() {
               <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-muted font-medium pt-1">
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
-                  <span>3 packs chiffrés en FC & USD</span>
+                  <span>
+                    3 packs chiffrés en FC & USD {isBudgetBlocked ? '(Bientôt disponible)' : ''}
+                  </span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
@@ -84,7 +114,11 @@ export default function LandingSimulatorTeaser() {
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
-                  <span>4 simulations gratuites sans compte</span>
+                  <span>
+                    {isBudgetBlocked
+                      ? 'Tarifs transparents selon les fiches'
+                      : '4 simulations gratuites sans compte'}
+                  </span>
                 </li>
                 <li className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
@@ -97,11 +131,11 @@ export default function LandingSimulatorTeaser() {
                 <Button
                   href="/simulateur"
                   size="lg"
-                  variant="primary"
+                  variant={isBudgetBlocked ? 'secondary' : 'primary'}
                   className="justify-center shadow-md font-bold text-xs sm:text-sm min-h-11"
-                  rightIcon={<ArrowRight className="w-4 h-4" />}
+                  rightIcon={isBudgetBlocked ? <Clock className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
                 >
-                  Ouvrir le simulateur de budget
+                  {isBudgetBlocked ? 'Découvrir la fonctionnalité à venir' : 'Ouvrir le simulateur de budget'}
                 </Button>
                 <Link
                   href="/marketplace"
@@ -117,9 +151,11 @@ export default function LandingSimulatorTeaser() {
               <div className="flex items-center justify-between pb-1 border-b border-border/60">
                 <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
                   <Calculator className="w-3.5 h-3.5 text-primary" />
-                  Exemples calculés par l’IA
+                  {isBudgetBlocked ? 'Aperçu des scénarios types' : 'Exemples calculés par l’IA'}
                 </span>
-                <span className="text-xs text-muted tabular-nums">1 clic pour tester</span>
+                <span className="text-xs text-muted tabular-nums">
+                  {isBudgetBlocked ? 'À venir' : '1 clic pour tester'}
+                </span>
               </div>
 
               <div className="space-y-2">
@@ -135,8 +171,14 @@ export default function LandingSimulatorTeaser() {
                         <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate">
                           {sc.label}
                         </span>
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 shrink-0">
-                          {sc.tag}
+                        <span
+                          className={`text-xs font-semibold px-2 py-0.5 rounded-full border shrink-0 ${
+                            isBudgetBlocked
+                              ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20'
+                              : 'bg-primary/10 text-primary border-primary/20'
+                          }`}
+                        >
+                          {isBudgetBlocked ? 'À venir' : sc.tag}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-xs text-muted">
@@ -154,7 +196,9 @@ export default function LandingSimulatorTeaser() {
               </div>
 
               <p className="text-xs text-muted text-center pt-1">
-                Besoin d’un budget sur-mesure ? Testez vos propres critères gratuitement.
+                {isBudgetBlocked
+                  ? 'Cette fonctionnalité sera activée dans une prochaine version.'
+                  : 'Besoin d’un budget sur-mesure ? Testez vos propres critères gratuitement.'}
               </p>
             </div>
           </div>

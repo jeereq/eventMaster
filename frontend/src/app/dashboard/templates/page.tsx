@@ -222,10 +222,10 @@ export default function TemplatesPage() {
  const canUseMockupOcr = isPlatformTemplateAdmin || planFeatures?.mockupOcr === true;
  const templatesAtLimit =
   !isPlatformTemplateAdmin &&
-  Boolean(
-  planQuota &&
-  planQuota.limits.maxTemplates < 9999 &&
-  planQuota.usage.templates >= planQuota.limits.maxTemplates,
+ Boolean(
+ planQuota &&
+ planQuota.limits.maxTemplates < 9999 &&
+ planQuota.usage.templates >= planQuota.limits.maxTemplates,
  );
  const templatesQuotaMsg = templatesAtLimit
  ? `Quota modèles atteint (${planQuota!.usage.templates}/${planQuota!.limits.maxTemplates}). Passez à un forfait supérieur pour enregistrer de nouveaux modèles.`
@@ -1706,12 +1706,12 @@ export default function TemplatesPage() {
  >
             {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
             {aiComposeBusy ? 'Génération…' : `Générer (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
+ </button>
+ </div>
+ </div>
+ </div>
+ );
+ };
 
  // Handle image file upload → Cloudinary
  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -2572,7 +2572,7 @@ export default function TemplatesPage() {
  </div>
 
  <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
- <button
+ <button 
  type="button"
  onClick={() => {
  window.open('/dashboard/billing', '_blank');
@@ -2678,21 +2678,21 @@ export default function TemplatesPage() {
                 type="button"
                 onClick={() => requestCloseEditor()}
                 className="inline-flex h-11 w-11 shrink-0 items-center justify-center hover:bg-surface-muted rounded-[var(--radius-button)] transition text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                title={fromAdminConsole ? 'Retour au catalogue Super Admin' : 'Retour à mes modèles'}
+ title={fromAdminConsole ? 'Retour au catalogue Super Admin' : 'Retour à mes modèles'}
                 aria-label={fromAdminConsole ? 'Retour au catalogue Super Admin' : 'Retour à mes modèles'}
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
+ >
+ <ArrowLeft className="w-5 h-5" />
+ </button>
               <div className="min-w-0 flex-1 pt-1">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="relative flex-1 max-w-md group">
-                    <input
-                      type="text"
-                      value={templateName}
-                      onChange={(e) => setTemplateName(e.target.value)}
+ <input 
+ type="text" 
+ value={templateName}
+ onChange={(e) => setTemplateName(e.target.value)}
                       maxLength={120}
                       className="w-full min-w-0 text-lg sm:text-xl font-extrabold text-foreground bg-transparent border-b border-border/40 hover:border-border focus:border-primary focus:outline-none focus-visible:border-primary pr-6 py-0.5 transition"
-                      placeholder="Nom du modèle"
+ placeholder="Nom du modèle"
                       aria-label="Nom du modèle"
                     />
                     <Edit3 className="w-3.5 h-3.5 text-muted/40 group-hover:text-muted pointer-events-none absolute right-1 top-2 transition-colors" />
@@ -2710,24 +2710,24 @@ export default function TemplatesPage() {
                   <p className="text-xs text-muted mt-0.5">{templateName.length}/120 caractères</p>
                 )}
                 <div className="mt-1 flex items-center gap-2">
-                  {fromAdminConsole ? (
+ {fromAdminConsole ? (
                     <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md">
-                      <Globe className="w-3 h-3" />
+ <Globe className="w-3 h-3" />
                       Catalogue Super Admin
-                    </span>
-                  ) : (
+ </span>
+ ) : (
                     <span className="text-xs text-muted font-semibold">
                       {isSuperAdmin ? 'Modèle plateforme' : 'Atelier d’invitation'}
                     </span>
-                  )}
-                  {fromAdminConsole && (
+ )}
+ {fromAdminConsole && (
                     <span className="text-xs text-muted hidden sm:inline">
                       · L’enregistrement synchronise le catalogue public
                     </span>
-                  )}
-                </div>
-              </div>
-            </div>
+ )}
+ </div>
+ </div>
+ </div>
             <div className="flex flex-wrap items-center gap-2 sm:justify-end shrink-0">
               {rsvpReportingIssues.length > 0 ? (
                 <p
@@ -2816,7 +2816,7 @@ export default function TemplatesPage() {
  <span className="hidden sm:inline">Aperçu invité</span>
  <span className="sm:hidden">Aperçu</span>
  </button>
- <button
+ <button 
  type="button"
  onClick={handleSaveTemplate}
  disabled={saving}
@@ -2871,28 +2871,28 @@ export default function TemplatesPage() {
  )}
  </header>
 
-        {draftSavedAt && (
+ {draftSavedAt && (
           <div className="px-4 py-2.5 rounded-xl bg-surface border border-border text-foreground text-xs flex items-center justify-between gap-3 shadow-2xs" role="status">
             <span className="flex items-center gap-2 text-muted">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" aria-hidden />
               <span>Brouillon local à {draftSavedAt} — pas encore enregistré</span>
             </span>
-            <button
-              type="button"
+ <button
+ type="button"
               className="text-muted hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-md px-1 font-medium transition-colors"
-              onClick={() => {
-                try {
-                  localStorage.removeItem(draftKey);
-                  setDraftSavedAt(null);
-                } catch {
-                  /* ignore */
-                }
-              }}
-            >
+ onClick={() => {
+ try {
+ localStorage.removeItem(draftKey);
+ setDraftSavedAt(null);
+ } catch {
+ /* ignore */
+ }
+ }}
+ >
               Effacer le brouillon
-            </button>
-          </div>
-        )}
+ </button>
+ </div>
+ )}
 
  {error && (
  <div
@@ -3117,82 +3117,82 @@ export default function TemplatesPage() {
 
         <div className="space-y-2">
           <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Disposition des éléments</h3>
-          <div className="grid grid-cols-2 gap-1.5">
-            <button
-              type="button"
-              onClick={() => convertToFlowLayout()}
+ <div className="grid grid-cols-2 gap-1.5">
+ <button
+ type="button"
+ onClick={() => convertToFlowLayout()}
               title="Les éléments se placent les uns sous les autres"
               aria-pressed={layoutMode === 'flow'}
               className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                layoutMode === 'flow'
+ layoutMode === 'flow'
                   ? 'border-primary bg-primary/10 text-primary shadow-2xs'
                   : 'border-border text-muted hover:bg-surface-muted hover:text-foreground'
-              }`}
-            >
+ }`}
+ >
               <Layers className="w-3.5 h-3.5" />
               <span>Empilée</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => (layoutMode === 'free' ? setLayoutMode('free') : convertToFreeLayout())}
+ </button>
+ <button
+ type="button"
+ onClick={() => (layoutMode === 'free' ? setLayoutMode('free') : convertToFreeLayout())}
               title="Glissez-déposez librement sur la carte"
               aria-pressed={layoutMode === 'free'}
               className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
-                layoutMode === 'free'
+ layoutMode === 'free'
                   ? 'border-primary bg-primary/10 text-primary shadow-2xs'
                   : 'border-border text-muted hover:bg-surface-muted hover:text-foreground'
-              }`}
-            >
+ }`}
+ >
               <Move className="w-3.5 h-3.5" />
               <span>Libre</span>
-            </button>
-          </div>
-        </div>
+ </button>
+ </div>
+ </div>
 
         <div className="space-y-2.5">
           <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Composants</h3>
           <div className="grid grid-cols-2 gap-2">
-            <button
+ <button 
               type="button"
-              onClick={() => handleAddElement('text')}
+ onClick={() => handleAddElement('text')}
               className="flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
-            >
+ >
               <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
                 <Type className="w-4 h-4" />
               </span>
-              <span>Texte</span>
-            </button>
-            <button
+ <span>Texte</span>
+ </button>
+ <button 
               type="button"
-              onClick={() => handleAddElement('button')}
+ onClick={() => handleAddElement('button')}
               className="flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
-            >
+ >
               <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
                 <Columns className="w-4 h-4" />
               </span>
-              <span>Bouton</span>
-            </button>
-            <button
+ <span>Bouton</span>
+ </button>
+ <button 
               type="button"
-              onClick={() => handleAddElement('image')}
+ onClick={() => handleAddElement('image')}
               className="flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
-            >
+ >
               <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
                 <Image className="w-4 h-4" />
               </span>
-              <span>Image</span>
-            </button>
-            <button
+ <span>Image</span>
+ </button>
+ <button 
               type="button"
-              onClick={() => handleAddElement('divider')}
+ onClick={() => handleAddElement('divider')}
               className="flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
-            >
+ >
               <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
                 <Palette className="w-4 h-4" />
               </span>
-              <span>Séparateur</span>
-            </button>
-            <button
+ <span>Séparateur</span>
+ </button>
+ <button 
               type="button"
               onClick={() => handleAddElement('rsvp-block')}
               className="flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group col-span-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
@@ -3217,27 +3217,27 @@ export default function TemplatesPage() {
             <div className="grid grid-cols-2 gap-2 pt-1">
               <button
                 type="button"
-                onClick={() => handleAddElement('curve')}
+ onClick={() => handleAddElement('curve')}
                 className="flex items-center gap-2 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
-              >
+ >
                 <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
                   <Spline className="w-4 h-4" />
                 </span>
-                <span>Courbe</span>
-              </button>
-              <button
+ <span>Courbe</span>
+ </button>
+ <button 
                 type="button"
-                onClick={() => handleAddElement('triangle')}
+ onClick={() => handleAddElement('triangle')}
                 className="flex items-center gap-2 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
-              >
+ >
                 <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
                   <Triangle className="w-4 h-4" />
                 </span>
-                <span>Triangle</span>
-              </button>
+ <span>Triangle</span>
+ </button>
             </div>
           )}
-        </div>
+ </div>
 
  <button
  type="button"
@@ -3306,7 +3306,7 @@ export default function TemplatesPage() {
  ? invitationColorThemes(tenant?.branding)
  : invitationColorThemes(tenant?.branding).slice(0, 4)
  ).map((theme) => (
- <button
+ <button 
  key={theme.id}
  type="button"
  onClick={() => applyColorTheme(theme.id, true)}
@@ -3368,7 +3368,7 @@ export default function TemplatesPage() {
  )}
  </aside>
 
-      {/* Center Canvas Preview */}
+ {/* Center Canvas Preview */}
       <div className={cn(
         'order-1 lg:order-2 min-w-0 space-y-3',
         mobilePane === 'canvas' ? 'max-lg:block' : 'max-lg:hidden',
@@ -3381,13 +3381,13 @@ export default function TemplatesPage() {
               <span>{canvasWidth} × {canvasHeight} px</span>
               <span className="text-muted font-normal hidden sm:inline">
                 ({canvasSizePreset !== 'custom' ? (CANVAS_SIZE_PRESETS[canvasSizePreset as Exclude<CanvasSizePreset, 'custom'>]?.label.split(' (')[0] || canvasSizePreset) : 'Personnalisé'})
-              </span>
+ </span>
             </span>
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-primary/10 text-primary">
               {layoutMode === 'free' ? 'Placement libre' : 'Disposition empilée'}
             </span>
-          </div>
-
+ </div>
+ 
           <div className="flex items-center gap-1.5 ml-auto">
             {selectedElementId ? (
               <button
@@ -3700,11 +3700,11 @@ export default function TemplatesPage() {
  <path d="M10,90 Q50,50 90,10" />
  <path d="M50,50 Q60,30 75,25 Q65,45 50,50" fill="currentColor" fillOpacity="0.2" />
  <path d="M30,70 Q40,50 55,45 Q45,65 30,70" fill="currentColor" fillOpacity="0.2" />
-                        <path d="M70,30 Q80,10 95,5 Q85,25 70,30" fill="currentColor" fillOpacity="0.2" />
-                      </svg>
-                    </div>
-                  </>
-                )}
+ <path d="M70,30 Q80,10 95,5 Q85,25 70,30" fill="currentColor" fillOpacity="0.2" />
+ </svg>
+ </div>
+ </>
+ )}
 
                 {/* Art Déco Gatsby Frame */}
                 {frameType === 'art-deco' && (
@@ -3799,7 +3799,7 @@ export default function TemplatesPage() {
  onPointerUp={handleFreePointerUp}
  onPointerLeave={handleFreePointerUp}
  >
-          {canvasElements.length === 0 ? (
+ {canvasElements.length === 0 ? (
             <div className="w-full text-center py-16 px-6 rounded-2xl border border-dashed border-border/80 bg-surface/50 backdrop-blur-xs flex flex-col items-center justify-center gap-4">
               <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-2xs">
                 <Sparkles className="w-6 h-6" />
@@ -3876,96 +3876,96 @@ export default function TemplatesPage() {
                   Appliquer le préréglage
                 </button>
               </div>
-            </div>
-          ) : (
-            canvasElements
-              .filter((el) => !(el.type === 'rsvp-block' && el.rsvpPlacement === 'outside'))
-              .map((el, index) => {
-                const isSelected = selectedElementId === el.id;
-                const isFree = layoutMode === 'free' || el.positionMode === 'absolute';
-                const widthClass = isFree
-                  ? ''
-                  : el.width === 'half'
-                  ? 'w-1/2 px-2'
-                  : el.width === 'third'
-                  ? 'w-1/3 px-2'
-                  : 'w-full px-2';
-                
-                return (
-                  <div 
-                    key={el.id}
-                    onClick={(e) => { e.stopPropagation(); handleElementSelect(el.id); }}
-                    onPointerDown={(e) => isFree && handleFreePointerDown(el.id, e)}
-                    className={`${widthClass} group transition cursor-pointer relative ${isFree ? 'touch-none' : ''}`}
-                    style={
-                      isFree
-                        ? {
-                            position: 'absolute',
-                            left: `${el.xPct ?? 8}%`,
-                            top: `${el.yPct ?? 8}%`,
-                            width: `${el.wPct ?? 84}%`,
-                            zIndex: el.zIndex ?? index + 1,
-                          }
-                        : undefined
-                    }
-                  >
+ </div>
+ ) : (
+ canvasElements
+ .filter((el) => !(el.type === 'rsvp-block' && el.rsvpPlacement === 'outside'))
+ .map((el, index) => {
+ const isSelected = selectedElementId === el.id;
+ const isFree = layoutMode === 'free' || el.positionMode === 'absolute';
+ const widthClass = isFree
+ ? ''
+ : el.width === 'half'
+ ? 'w-1/2 px-2'
+ : el.width === 'third'
+ ? 'w-1/3 px-2'
+ : 'w-full px-2';
+ 
+ return (
+ <div 
+ key={el.id}
+ onClick={(e) => { e.stopPropagation(); handleElementSelect(el.id); }}
+ onPointerDown={(e) => isFree && handleFreePointerDown(el.id, e)}
+ className={`${widthClass} group transition cursor-pointer relative ${isFree ? 'touch-none' : ''}`}
+ style={
+ isFree
+ ? {
+ position: 'absolute',
+ left: `${el.xPct ?? 8}%`,
+ top: `${el.yPct ?? 8}%`,
+ width: `${el.wPct ?? 84}%`,
+ zIndex: el.zIndex ?? index + 1,
+ }
+ : undefined
+ }
+ >
                     <div className={`p-2.5 rounded-xl border transition ${isSelected ? 'border-primary bg-primary/5 shadow-xs ring-2 ring-primary/20' : 'border-dashed border-transparent hover:border-border/60'}`}>
-                      {/* Element Controls (Delete & Reorder) */}
+ {/* Element Controls (Delete & Reorder) */}
                       <div className={`absolute -top-3.5 right-2 flex items-center gap-1 z-20 transition-opacity ${
                         isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                       }`}>
-                        {/* Move Up */}
-                        {index > 0 && (
-                          <button 
+ {/* Move Up */}
+ {index > 0 && (
+ <button 
                             type="button"
-                            onClick={(e) => handleMoveElementUp(index, e)}
+ onClick={(e) => handleMoveElementUp(index, e)}
                             className="bg-surface text-foreground hover:bg-primary hover:text-white dark:bg-surface-elevated border border-border shadow-xs p-1.5 rounded-lg transition cursor-pointer"
-                            title="Déplacer vers le haut"
-                          >
+ title="Déplacer vers le haut"
+ >
                             <ArrowUp className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        {/* Move Down */}
-                        {index < canvasElements.length - 1 && (
-                          <button 
+ </button>
+ )}
+ {/* Move Down */}
+ {index < canvasElements.length - 1 && (
+ <button 
                             type="button"
-                            onClick={(e) => handleMoveElementDown(index, e)}
+ onClick={(e) => handleMoveElementDown(index, e)}
                             className="bg-surface text-foreground hover:bg-primary hover:text-white dark:bg-surface-elevated border border-border shadow-xs p-1.5 rounded-lg transition cursor-pointer"
-                            title="Déplacer vers le bas"
-                          >
+ title="Déplacer vers le bas"
+ >
                             <ArrowDown className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                        <button
+ </button>
+ )}
+ <button
                           type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const clone = { ...el, id: `${Date.now()}` };
-                            if (isFree) {
-                              clone.xPct = Math.min(88, (el.xPct ?? 8) + 4);
-                              clone.yPct = Math.min(88, (el.yPct ?? 8) + 4);
-                            }
-                            setCanvasElements((prev) => [...prev, clone]);
-                            setSelectedElementId(clone.id);
-                          }}
+ onClick={(e) => {
+ e.stopPropagation();
+ const clone = { ...el, id: `${Date.now()}` };
+ if (isFree) {
+ clone.xPct = Math.min(88, (el.xPct ?? 8) + 4);
+ clone.yPct = Math.min(88, (el.yPct ?? 8) + 4);
+ }
+ setCanvasElements((prev) => [...prev, clone]);
+ setSelectedElementId(clone.id);
+ }}
                           className="bg-surface text-foreground hover:bg-primary hover:text-white dark:bg-surface-elevated border border-border shadow-xs p-1.5 rounded-lg transition cursor-pointer"
-                          title="Dupliquer"
-                        >
+ title="Dupliquer"
+ >
                           <Copy className="w-3.5 h-3.5" />
-                        </button>
-                        {/* Delete */}
-                        <button 
+ </button>
+ {/* Delete */}
+ <button 
                           type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
+ onClick={(e) => {
+ e.stopPropagation();
                             handleDeleteElement(el.id);
-                          }}
+ }}
                           className="bg-rose-500 hover:bg-rose-600 text-white p-1.5 rounded-lg shadow-xs transition cursor-pointer"
-                          title="Supprimer cet élément"
-                        >
+ title="Supprimer cet élément"
+ >
                           <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+ </button>
+ </div>
  {isFree && isSelected && (
  <input
  type="range"
@@ -4177,46 +4177,46 @@ export default function TemplatesPage() {
  </div>
  )}
 
-            {el.type === 'rsvp-block' && (
+ {el.type === 'rsvp-block' && (
               <div className="bg-surface/85 backdrop-blur-sm border border-border rounded-2xl p-5 space-y-4 pointer-events-none shadow-sm">
-                <div className="font-bold text-foreground text-center text-sm">{el.text}</div>
-                
-                {/* Render customizable fields preview */}
-                {el.rsvpFields && el.rsvpFields.length > 0 && (
-                  <div className="space-y-3 border-t border-b border-border/60 py-3 text-left">
-                    {el.rsvpFields.map((field) => (
-                      <div key={field.id} className="space-y-1">
+ <div className="font-bold text-foreground text-center text-sm">{el.text}</div>
+ 
+ {/* Render customizable fields preview */}
+ {el.rsvpFields && el.rsvpFields.length > 0 && (
+ <div className="space-y-3 border-t border-b border-border/60 py-3 text-left">
+ {el.rsvpFields.map((field) => (
+ <div key={field.id} className="space-y-1">
                         <label className="text-xs font-bold text-muted uppercase tracking-wider">
-                          {field.label} {field.required && <span className="text-rose-500">*</span>}
-                        </label>
-                        {field.type === 'text' && (
+ {field.label} {field.required && <span className="text-rose-500">*</span>}
+ </label>
+ {field.type === 'text' && (
                           <div className="w-full px-3 py-1.5 bg-surface border border-border rounded-lg text-xs text-muted">
-                            Zone de texte
-                          </div>
-                        )}
-                        {field.type === 'select' && (
+ Zone de texte
+ </div>
+ )}
+ {field.type === 'select' && (
                           <div className="w-full px-3 py-1.5 bg-surface border border-border rounded-lg text-xs text-muted flex justify-between items-center">
-                            <span>{field.options ? field.options.split(',')[0].trim() : 'Option 1'}</span>
+ <span>{field.options ? field.options.split(',')[0].trim() : 'Option 1'}</span>
                             <span className="text-xs text-muted">▼</span>
-                          </div>
-                        )}
-                        {field.type === 'checkbox' && (
-                          <div className="flex items-center gap-2">
+ </div>
+ )}
+ {field.type === 'checkbox' && (
+ <div className="flex items-center gap-2">
                             <div className="w-4 h-4 border border-border bg-surface rounded" />
-                            <span className="text-xs text-muted font-medium">{field.label}</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+ <span className="text-xs text-muted font-medium">{field.label}</span>
+ </div>
+ )}
+ </div>
+ ))}
+ </div>
+ )}
 
-                <div className="flex gap-2 justify-center">
+ <div className="flex gap-2 justify-center">
                   <div className="px-4 py-2 bg-surface border border-border rounded-lg text-xs font-bold text-muted">Je serai présent</div>
                   <div className="px-4 py-2 bg-surface border border-border rounded-lg text-xs font-bold text-muted">Je serai absent</div>
-                </div>
-              </div>
-            )}
+ </div>
+ </div>
+ )}
  </div>
  </div>
  );
@@ -4225,49 +4225,49 @@ export default function TemplatesPage() {
  </div>
  </div>
 
-        {canvasElements.some((el) => el.type === 'rsvp-block' && el.rsvpPlacement === 'outside') && (
+ {canvasElements.some((el) => el.type === 'rsvp-block' && el.rsvpPlacement === 'outside') && (
           <div className="w-full space-y-3" style={{ maxWidth: 'min(100%, 42rem)' }}>
             <p className="text-center text-xs font-bold uppercase tracking-wider text-primary">
               Formulaire RSVP sous la carte
-            </p>
-            {canvasElements
-              .filter((el) => el.type === 'rsvp-block' && el.rsvpPlacement === 'outside')
-              .map((el) => (
-                <div
-                  key={el.id}
-                  onClick={(e) => { e.stopPropagation(); handleElementSelect(el.id); }}
-                  className={`rounded-2xl border-2 border-dashed p-5 cursor-pointer transition ${
-                    selectedElementId === el.id
-                      ? 'border-primary bg-primary/10 shadow-md'
+ </p>
+ {canvasElements
+ .filter((el) => el.type === 'rsvp-block' && el.rsvpPlacement === 'outside')
+ .map((el) => (
+ <div
+ key={el.id}
+ onClick={(e) => { e.stopPropagation(); handleElementSelect(el.id); }}
+ className={`rounded-2xl border-2 border-dashed p-5 cursor-pointer transition ${
+ selectedElementId === el.id
+ ? 'border-primary bg-primary/10 shadow-md'
                       : 'border-primary/30 bg-surface hover:border-primary/50'
-                  }`}
+ }`}
                   style={{ width: '100%' }}
-                >
-                  <div className="text-xs font-bold text-primary text-center mb-3">{el.text || 'Confirmer votre présence'}</div>
-                  <div className="grid grid-cols-2 gap-2 mb-3">
+ >
+ <div className="text-xs font-bold text-primary text-center mb-3">{el.text || 'Confirmer votre présence'}</div>
+ <div className="grid grid-cols-2 gap-2 mb-3">
                     <div className="py-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-xs font-bold text-emerald-700 dark:text-emerald-400 text-center">Oui</div>
                     <div className="py-2 rounded-xl border border-border bg-surface-muted text-xs font-bold text-muted text-center">Non</div>
-                  </div>
-                  {el.rsvpFields && el.rsvpFields.length > 0 && (
+ </div>
+ {el.rsvpFields && el.rsvpFields.length > 0 && (
                     <p className="text-xs text-muted text-center">
-                      {el.rsvpFields.length} champ{el.rsvpFields.length > 1 ? 's' : ''} personnalisé{el.rsvpFields.length > 1 ? 's' : ''}
-                    </p>
-                  )}
-                </div>
-              ))}
-          </div>
-        )}
+ {el.rsvpFields.length} champ{el.rsvpFields.length > 1 ? 's' : ''} personnalisé{el.rsvpFields.length > 1 ? 's' : ''}
+ </p>
+ )}
+ </div>
+ ))}
+ </div>
+ )}
         </div>
         </div>
-      </div>
+ </div>
 
  {/* Right Properties Panel */}
  <aside className={cn(
   'order-3 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto overscroll-contain bg-surface border border-border rounded-[var(--radius-card)] p-4 space-y-4',
   mobilePane === 'inspect' ? 'max-lg:block' : 'max-lg:hidden',
  )}>
-      {selectedElementId ? (
-        // Element Properties Panel
+ {selectedElementId ? (
+ // Element Properties Panel
         <div className="space-y-4">
           {(() => {
             const activeEl = canvasElements.find((e) => e.id === selectedElementId);
@@ -4297,7 +4297,7 @@ export default function TemplatesPage() {
                     <span className="block text-[11px] text-muted">Propriétés de l&apos;élément</span>
                   </div>
                 </div>
-                <button
+ <button 
                   type="button"
                   onClick={() => {
                     setSelectedElementId(null);
@@ -4353,7 +4353,7 @@ export default function TemplatesPage() {
  </span>
  )}
  </div>
- <textarea
+ <textarea 
  value={elText}
  onChange={(e) => handlePropertyChange('text', e.target.value)}
  className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition h-20 resize-none"
@@ -4389,7 +4389,7 @@ export default function TemplatesPage() {
  {['text', 'button'].includes(canvasElements.find(e => e.id === selectedElementId)?.type || '') && (
  <div className="space-y-1.5">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Taille</label>
- <select
+ <select 
  value={elFontSize}
  onChange={(e) => handlePropertyChange('fontSize', e.target.value)}
  className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
@@ -4409,8 +4409,8 @@ export default function TemplatesPage() {
  {['text', 'button'].includes(canvasElements.find(e => e.id === selectedElementId)?.type || '') && (
  <div className="flex gap-4">
  <label className="flex items-center gap-2 cursor-pointer text-xs text-muted font-semibold select-none">
- <input
- type="checkbox"
+ <input 
+ type="checkbox" 
  checked={elBold}
  onChange={(e) => handlePropertyChange('bold', e.target.checked)}
  className="rounded text-primary focus:ring-primary"
@@ -4418,8 +4418,8 @@ export default function TemplatesPage() {
  Gras
  </label>
  <label className="flex items-center gap-2 cursor-pointer text-xs text-muted font-semibold select-none">
- <input
- type="checkbox"
+ <input 
+ type="checkbox" 
  checked={elItalic}
  onChange={(e) => handlePropertyChange('italic', e.target.checked)}
  className="rounded text-primary focus:ring-primary"
@@ -4449,7 +4449,7 @@ export default function TemplatesPage() {
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'button' && (
  <div className="space-y-1.5">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Style de bouton</label>
- <select
+ <select 
  value={elButtonStyle}
  onChange={(e) => handlePropertyChange('buttonStyle', e.target.value)}
  className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
@@ -4496,7 +4496,7 @@ export default function TemplatesPage() {
  </div>
  <div className="space-y-1.5">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">URL</label>
- <input
+ <input 
  type="text"
  value={elImageUrl}
  onChange={(e) => handlePropertyChange('imageUrl', e.target.value)}
@@ -4567,7 +4567,7 @@ export default function TemplatesPage() {
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'curve' && (
  <div className="space-y-1.5">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Style de courbe</label>
- <select
+ <select 
  value={elCurveStyle}
  onChange={(e) => handlePropertyChange('curveStyle', e.target.value)}
  className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
@@ -4587,7 +4587,7 @@ export default function TemplatesPage() {
  <div className="space-y-4 border-t border-border-subtle pt-4">
  <div className="space-y-1.5">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Largeur</label>
- <select
+ <select 
  value={elWidth}
  onChange={(e) => handlePropertyChange('width', e.target.value)}
  className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
@@ -4630,8 +4630,8 @@ export default function TemplatesPage() {
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'button' && (
  <div className="space-y-1.5">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Lien (URL)</label>
- <input
- type="text"
+ <input 
+ type="text" 
  value={elButtonLink}
  onChange={(e) => handlePropertyChange('buttonLink', e.target.value)}
  placeholder="https://… ou {{rsvpLink}}"
@@ -4661,8 +4661,8 @@ export default function TemplatesPage() {
  <div className="grid grid-cols-2 gap-2">
  <div className="space-y-1.5">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Largeur</label>
- <input
- type="text"
+ <input 
+ type="text" 
  value={elImageWidth}
  onChange={(e) => handlePropertyChange('imageWidth', e.target.value)}
  placeholder="100%"
@@ -4671,8 +4671,8 @@ export default function TemplatesPage() {
  </div>
  <div className="space-y-1.5">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Hauteur</label>
- <input
- type="text"
+ <input 
+ type="text" 
  value={elImageHeight}
  onChange={(e) => handlePropertyChange('imageHeight', e.target.value)}
  placeholder="200px"
@@ -4682,7 +4682,7 @@ export default function TemplatesPage() {
  </div>
  <div className="space-y-1.5">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Mode d'affichage</label>
- <select
+ <select 
  value={elImageObjectFit}
  onChange={(e) => handlePropertyChange('imageObjectFit', e.target.value)}
  className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
@@ -4699,7 +4699,7 @@ export default function TemplatesPage() {
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'curve' && (
  <div className="space-y-1.5">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Épaisseur</label>
- <select
+ <select 
  value={elStrokeWidth}
  onChange={(e) => handlePropertyChange('strokeWidth', e.target.value)}
  className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
@@ -4716,7 +4716,7 @@ export default function TemplatesPage() {
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'triangle' && (
  <div className="space-y-1.5">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Taille</label>
- <select
+ <select 
  value={elShapeSize}
  onChange={(e) => handlePropertyChange('shapeSize', e.target.value)}
  className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
@@ -4788,82 +4788,82 @@ export default function TemplatesPage() {
  <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${showOnLanding ? 'translate-x-5' : 'translate-x-0'}`} />
  </button>
  </label>
-            <div className="space-y-1.5">
+ <div className="space-y-1.5">
               <label className="text-xs font-bold text-muted uppercase tracking-wider">Catégorie sur la page d&apos;accueil</label>
-              <select
-                value={landingCategory}
-                onChange={(e) => setLandingCategory(e.target.value as 'private' | 'corporate' | 'casual')}
+ <select
+ value={landingCategory}
+ onChange={(e) => setLandingCategory(e.target.value as 'private' | 'corporate' | 'casual')}
                 className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs font-semibold text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              >
-                <option value="private">Privé & Célébrations</option>
-                <option value="corporate">Professionnel & Gala</option>
-                <option value="casual">Moderne & Cocktail</option>
-              </select>
-            </div>
-            <div className="space-y-1.5">
+ >
+ <option value="private">Privé & Célébrations</option>
+ <option value="corporate">Professionnel & Gala</option>
+ <option value="casual">Moderne & Cocktail</option>
+ </select>
+ </div>
+ <div className="space-y-1.5">
               <label className="text-xs font-bold text-muted uppercase tracking-wider">Accroche (visiteurs)</label>
-              <textarea
-                value={landingDescription}
-                onChange={(e) => setLandingDescription(e.target.value)}
-                rows={3}
-                maxLength={220}
+ <textarea
+ value={landingDescription}
+ onChange={(e) => setLandingDescription(e.target.value)}
+ rows={3}
+ maxLength={220}
                 placeholder="Ex. : Tons pastel et typographie élégante pour un mariage."
                 className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 resize-none leading-relaxed"
-              />
+ />
               <p className="text-xs text-muted text-right">{landingDescription.length}/220</p>
-            </div>
-          </div>
-        )}
+ </div>
+ </div>
+ )}
 
-        {/* Canvas dimensions */}
-        <div className="space-y-3 p-3 rounded-2xl border border-primary/20 bg-primary/10">
+ {/* Canvas dimensions */}
+ <div className="space-y-3 p-3 rounded-2xl border border-primary/20 bg-primary/10">
           <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
-            <Layout className="w-3.5 h-3.5" />
-            Taille du modèle
-          </h4>
-          <div className="space-y-1.5">
+ <Layout className="w-3.5 h-3.5" />
+ Taille du modèle
+ </h4>
+ <div className="space-y-1.5">
             <label className="text-xs font-bold text-muted uppercase tracking-wider">Format prédéfini</label>
-            <select
-              value={canvasSizePreset}
-              onChange={(e) => handleCanvasPresetChange(e.target.value as CanvasSizePreset)}
+ <select
+ value={canvasSizePreset}
+ onChange={(e) => handleCanvasPresetChange(e.target.value as CanvasSizePreset)}
               className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs font-semibold text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-            >
-              {Object.entries(CANVAS_SIZE_PRESETS).map(([key, preset]) => (
-                <option key={key} value={key}>{preset.label}</option>
-              ))}
-              <option value="custom">Personnalisé</option>
-            </select>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
+ >
+ {Object.entries(CANVAS_SIZE_PRESETS).map(([key, preset]) => (
+ <option key={key} value={key}>{preset.label}</option>
+ ))}
+ <option value="custom">Personnalisé</option>
+ </select>
+ </div>
+ <div className="grid grid-cols-2 gap-2">
+ <div className="space-y-1">
               <label className="text-xs font-bold text-muted uppercase">Largeur (px)</label>
-              <input
-                type="number"
-                min={280}
-                max={1200}
-                value={canvasWidth}
-                onChange={(e) => {
-                  setCanvasSizePreset('custom');
-                  setCanvasWidth(Number(e.target.value) || CANVAS_SIZE_PRESETS.standard.width);
-                }}
+ <input
+ type="number"
+ min={280}
+ max={1200}
+ value={canvasWidth}
+ onChange={(e) => {
+ setCanvasSizePreset('custom');
+ setCanvasWidth(Number(e.target.value) || CANVAS_SIZE_PRESETS.standard.width);
+ }}
                 className="w-full px-2.5 py-1.5 bg-surface-muted border border-border rounded-lg text-xs text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
-            <div className="space-y-1">
+ />
+ </div>
+ <div className="space-y-1">
               <label className="text-xs font-bold text-muted uppercase">Hauteur min. (px)</label>
-              <input
-                type="number"
-                min={400}
-                max={1600}
-                value={canvasHeight}
-                onChange={(e) => {
-                  setCanvasSizePreset('custom');
-                  setCanvasHeight(Number(e.target.value) || CANVAS_SIZE_PRESETS.standard.height);
-                }}
+ <input
+ type="number"
+ min={400}
+ max={1600}
+ value={canvasHeight}
+ onChange={(e) => {
+ setCanvasSizePreset('custom');
+ setCanvasHeight(Number(e.target.value) || CANVAS_SIZE_PRESETS.standard.height);
+ }}
                 className="w-full px-2.5 py-1.5 bg-surface-muted border border-border rounded-lg text-xs text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
-          </div>
+ />
+ </div>
+ </div>
  <p className="text-xs text-muted leading-relaxed">
  Utilisée pour l&apos;aperçu, l&apos;invitation RSVP et les cartes du catalogue.
  </p>
@@ -4953,21 +4953,21 @@ export default function TemplatesPage() {
  onChange={(e) => setBgPattern(e.target.value as any)}
  className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
  >
-                    <option value="none">Aucune texture</option>
-                    <option value="paper">Papier grainé de luxe (Hassan Raza)</option>
-                    <option value="watercolor">Aquarelle artistique (Ananya & Rishabh)</option>
-                    <option value="boho">Boho Botanique (Feuillage Ornemental)</option>
-                    <option value="linen">Lin de luxe (Tissu texturé)</option>
-                    <option value="marble">Marbre blanc (Veines dorées)</option>
-                    <option value="gold-dust">Poussière d'or (Scintillant)</option>
-                    <option value="parchment">Parchemin ancien (Kraft)</option>
-                    <option value="velvet">Velours royal (Sombre)</option>
+ <option value="none">Aucune texture</option>
+ <option value="paper">Papier grainé de luxe (Hassan Raza)</option>
+ <option value="watercolor">Aquarelle artistique (Ananya & Rishabh)</option>
+ <option value="boho">Boho Botanique (Feuillage Ornemental)</option>
+ <option value="linen">Lin de luxe (Tissu texturé)</option>
+ <option value="marble">Marbre blanc (Veines dorées)</option>
+ <option value="gold-dust">Poussière d'or (Scintillant)</option>
+ <option value="parchment">Parchemin ancien (Kraft)</option>
+ <option value="velvet">Velours royal (Sombre)</option>
                     <option value="vellum">Vellum givré / Verre translucide (Tendance 2026)</option>
                     <option value="art-deco-geom">Art Déco Géométrique Doré (Gatsby)</option>
                     <option value="kuba-weave">Tissage Royal Kuba (Afro-Luxe)</option>
                     <option value="deckled-cotton">Papier Coton Artisanal Pressé (Letterpress)</option>
                     <option value="celestial">Nuit Céleste & Étoiles (Cosmique)</option>
-                  </select>
+ </select>
  </div>
  )}
 
@@ -5067,26 +5067,26 @@ export default function TemplatesPage() {
  {/* Frame Type Selection */}
  <div className="space-y-1.5">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Style d'Encadrement / Cadre</label>
-                  <select 
-                    value={frameType}
-                    onChange={(e) => setFrameType(e.target.value as any)}
-                    className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
-                  >
-                    <option value="none">Aucun cadre (Bords normaux)</option>
-                    <option value="arch">Arche Royale de Luxe (Ananya / Watercolor)</option>
-                    <option value="double-border">Double Bordure Fine (Hassan Raza / Boho)</option>
-                    <option value="gold-border">Bordure Or Lumineuse (Luxury Modern)</option>
+ <select 
+ value={frameType}
+ onChange={(e) => setFrameType(e.target.value as any)}
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
+ >
+ <option value="none">Aucun cadre (Bords normaux)</option>
+ <option value="arch">Arche Royale de Luxe (Ananya / Watercolor)</option>
+ <option value="double-border">Double Bordure Fine (Hassan Raza / Boho)</option>
+ <option value="gold-border">Bordure Or Lumineuse (Luxury Modern)</option>
                     <option value="art-deco">Art Déco Gatsby Doré (Symétrie & Chevrons)</option>
                     <option value="deckled">Papier Artisanal Bords Frangés (Deckled Edge)</option>
                     <option value="embossed-arch">Arche en Gaufrage à Sec (Quiet Luxury 2026)</option>
                     <option value="passport-vip">Passeport Diplomatique / Billet VIP</option>
                     <option value="frosted-glass">Verre Dépoli & Reflets Translucides</option>
-                    <option value="floral-wreath">Couronne Florale Dorée (Centre)</option>
-                    <option value="floral-arch">Arche de Roses Rouges (Haut)</option>
-                    <option value="boho-dried">Feuillage Séché Boho (Coins)</option>
-                    <option value="gold-leaves-circle">Cercle de Feuilles d'Or et Perles</option>
-                    <option value="minimal-leaves">Feuilles Minimalistes (Angles)</option>
-                  </select>
+ <option value="floral-wreath">Couronne Florale Dorée (Centre)</option>
+ <option value="floral-arch">Arche de Roses Rouges (Haut)</option>
+ <option value="boho-dried">Feuillage Séché Boho (Coins)</option>
+ <option value="gold-leaves-circle">Cercle de Feuilles d'Or et Perles</option>
+ <option value="minimal-leaves">Feuilles Minimalistes (Angles)</option>
+ </select>
  </div>
 
  {/* Floral Customization Panel */}
@@ -5333,9 +5333,9 @@ export default function TemplatesPage() {
  );
  }
 
-  return (
-    <>
-      {renderMockupImportModal()}
+ return (
+ <>
+ {renderMockupImportModal()}
       {renderAiComposeModal()}
       <AiTokenPurchaseModal
         open={aiTokenModalOpen}

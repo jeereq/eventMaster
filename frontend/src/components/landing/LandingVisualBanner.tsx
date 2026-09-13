@@ -13,9 +13,11 @@ import {
   MapPin,
   CheckCircle2,
   Wand2,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
 import LandingMedia from '@/components/landing/LandingMedia';
 import { cn } from '@/lib/cn';
@@ -104,6 +106,8 @@ const GALLERY_ITEMS: GalleryItem[] = [
 export default function LandingVisualBanner() {
   const revealRef = useLandingReveal<HTMLElement>();
   const { user } = useAuth();
+  const { site } = usePlatformSite();
+  const isBudgetBlocked = site?.studioVisibility?.budget === false;
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const budgetHref = '/simulateur';
 
@@ -227,20 +231,33 @@ export default function LandingVisualBanner() {
                       <ArrowRight className="w-3.5 h-3.5 group-hover/link:translate-x-0.5 transition-transform motion-reduce:transition-none" />
                     </Link>
 
-                    <Link
-                      href={budgetHref}
-                      className="min-h-11 px-3 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold inline-flex items-center justify-center gap-1.5 transition touch-manipulation active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                      aria-label={user
-                        ? 'Ouvrir le simulateur budget dans le tableau de bord (1 jeton)'
-                        : 'Estimer un budget avec 3 formules IA (1 jeton)'}
-                      title={user
-                        ? 'Ouvrir le simulateur budget dans le tableau de bord (1 jeton)'
-                        : 'Estimer un budget avec 3 formules IA (1 jeton)'}
-                    >
-                      <Wand2 className="w-3.5 h-3.5" />
-                      <span className="sm:hidden">Budget IA</span>
-                      <span className="hidden sm:inline">Estimer mon budget · 1 jeton</span>
-                    </Link>
+                    {isBudgetBlocked ? (
+                      <Link
+                        href={budgetHref}
+                        className="min-h-11 px-3 py-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-bold inline-flex items-center justify-center gap-1.5 transition touch-manipulation active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background border border-amber-500/20"
+                        aria-label="Simulateur budget IA (Fonctionnalité à venir)"
+                        title="Simulateur budget IA (Fonctionnalité à venir)"
+                      >
+                        <Clock className="w-3.5 h-3.5" />
+                        <span className="sm:hidden">Budget IA</span>
+                        <span className="hidden sm:inline">Budget IA · À venir</span>
+                      </Link>
+                    ) : (
+                      <Link
+                        href={budgetHref}
+                        className="min-h-11 px-3 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold inline-flex items-center justify-center gap-1.5 transition touch-manipulation active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        aria-label={user
+                          ? 'Ouvrir le simulateur budget dans le tableau de bord (1 jeton)'
+                          : 'Estimer un budget avec 3 formules IA (1 jeton)'}
+                        title={user
+                          ? 'Ouvrir le simulateur budget dans le tableau de bord (1 jeton)'
+                          : 'Estimer un budget avec 3 formules IA (1 jeton)'}
+                      >
+                        <Wand2 className="w-3.5 h-3.5" />
+                        <span className="sm:hidden">Budget IA</span>
+                        <span className="hidden sm:inline">Estimer mon budget · 1 jeton</span>
+                      </Link>
+                    )}
                   </div>
                 </div>
               </article>

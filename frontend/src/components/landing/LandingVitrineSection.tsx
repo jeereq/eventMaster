@@ -33,7 +33,7 @@ import {
   type CatalogueEntityExtras,
 } from '@/lib/catalogueEntityFilters';
 import { fetchPublicServicesForCatalogue } from '@/lib/catalogueFetch';
-import { ArrowRight, Building2, Calendar, KeyRound, RefreshCw, Sparkles } from 'lucide-react';
+import { ArrowRight, Building2, Calendar, KeyRound, RefreshCw, Sparkles, Clock } from 'lucide-react';
 import { useCatalogueGridCols, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
 import { marketplaceSectionUrl } from '@/lib/share';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
@@ -48,6 +48,7 @@ const emptyFilters: EntityFilters = { ...EMPTY_CATALOGUE_GEO, ...EMPTY_CATALOGUE
 export default function LandingVitrineSection() {
   const revealRef = useLandingReveal<HTMLElement>();
   const { site } = usePlatformSite();
+  const isBudgetBlocked = site?.studioVisibility?.budget === false;
   const marketplaceCities = enabledMarketplaceCities(site);
   const [tab, setTab] = useState<VitrineTab>('venues');
   const [venues, setVenues] = useState<PublicVenue[]>([]);
@@ -311,30 +312,58 @@ export default function LandingVitrineSection() {
         </div>
 
         {/* Bannière d'appel au simulateur de pack IA */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-[var(--radius-card)] bg-gradient-to-r from-primary/10 via-surface to-primary/5 border border-primary/25 shadow-xs">
+        <div
+          className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-[var(--radius-card)] border shadow-xs ${
+            isBudgetBlocked
+              ? 'bg-amber-500/10 border-amber-500/25'
+              : 'bg-gradient-to-r from-primary/10 via-surface to-primary/5 border-primary/25'
+          }`}
+        >
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-[var(--radius-button)] bg-primary/15 text-primary flex items-center justify-center shrink-0">
-              <Sparkles className="w-4 h-4" />
+            <div
+              className={`w-9 h-9 rounded-[var(--radius-button)] flex items-center justify-center shrink-0 ${
+                isBudgetBlocked
+                  ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                  : 'bg-primary/15 text-primary'
+              }`}
+            >
+              {isBudgetBlocked ? <Clock className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
             </div>
             <div>
-              <p className="text-xs font-bold text-foreground">
-                <span className="sm:hidden">Pack selon votre budget</span>
-                <span className="hidden sm:inline">Besoin d’un pack complet selon votre budget ?</span>
+              <p className="text-xs font-bold text-foreground flex items-center gap-2">
+                <span className="sm:hidden">
+                  {isBudgetBlocked ? 'Pack budget IA' : 'Pack selon votre budget'}
+                </span>
+                <span className="hidden sm:inline">
+                  {isBudgetBlocked
+                    ? 'Simulateur de pack budget IA'
+                    : 'Besoin d’un pack complet selon votre budget ?'}
+                </span>
+                {isBudgetBlocked && (
+                  <span className="px-1.5 py-0.5 text-xs font-bold rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                    À venir
+                  </span>
+                )}
               </p>
               <p className="text-xs text-muted hidden sm:block">
-                Laissez notre simulateur IA composer instantanément 3 formules (salle + traiteur + déco + DJ) adaptées à votre enveloppe.
+                {isBudgetBlocked
+                  ? 'L’estimation et composition automatique par IA sera disponible prochainement. Vous pouvez directement composer votre panier depuis les fiches prestataires.'
+                  : 'Laissez notre simulateur IA composer instantanément 3 formules (salle + traiteur + déco + DJ) adaptées à votre enveloppe.'}
               </p>
             </div>
           </div>
           <Button
             href="/simulateur"
             size="sm"
+            variant={isBudgetBlocked ? 'secondary' : 'primary'}
             className="shrink-0 w-full sm:w-auto"
-            aria-label="Tester la simulation IA"
-            rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+            aria-label={isBudgetBlocked ? 'En savoir plus sur la fonctionnalité à venir' : 'Tester la simulation IA'}
+            rightIcon={isBudgetBlocked ? <Clock className="w-3.5 h-3.5" /> : <ArrowRight className="w-3.5 h-3.5" />}
           >
-            <span className="sm:hidden">Simulation IA</span>
-            <span className="hidden sm:inline">Tester la simulation IA</span>
+            <span className="sm:hidden">{isBudgetBlocked ? 'À venir' : 'Simulation IA'}</span>
+            <span className="hidden sm:inline">
+              {isBudgetBlocked ? 'Fonctionnalité à venir' : 'Tester la simulation IA'}
+            </span>
           </Button>
         </div>
 

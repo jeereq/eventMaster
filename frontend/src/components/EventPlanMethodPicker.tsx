@@ -1,8 +1,9 @@
 'use client';
 
 import React from 'react';
-import { Check, ListChecks, MousePointerClick, Wand2 } from 'lucide-react';
+import { Check, ListChecks, MousePointerClick, Wand2, Clock } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 
 export type EventPlanMethodId = 'manual' | 'ai' | 'final';
 
@@ -41,6 +42,8 @@ export default function EventPlanMethodPicker({
   /** Désactive l’étape 2 tant qu’aucune simulation n’a produit de pack. */
   finalLocked?: boolean;
 }) {
+  const { site } = usePlatformSite();
+  const isBudgetBlocked = site?.studioVisibility?.budget === false;
   const simReady = counts.manual > 0 || counts.ai > 0;
 
   return (
@@ -55,6 +58,8 @@ export default function EventPlanMethodPicker({
             const Icon = item.icon;
             const selected = value === item.id;
             const count = counts[item.id];
+            const isItemUpcoming = item.id === 'ai' && isBudgetBlocked;
+
             return (
               <button
                 key={item.id}
@@ -64,20 +69,29 @@ export default function EventPlanMethodPicker({
                 className={cn(
                   'text-left rounded-2xl border p-4 transition touch-manipulation cursor-pointer min-h-[7.5rem] flex flex-col gap-2',
                   cardFocus,
+                  isItemUpcoming && !selected && 'border-amber-500/30 bg-amber-500/5',
                   selected
                     ? 'border-primary bg-primary/8 shadow-[var(--shadow-soft)] ring-1 ring-primary/30'
-                    : 'border-border bg-surface hover:border-primary/40 hover:bg-surface-muted/50',
+                    : !isItemUpcoming && 'border-border bg-surface hover:border-primary/40 hover:bg-surface-muted/50',
                 )}
               >
                 <div className="flex items-start justify-between gap-2">
                   <span className={cn(
                     'w-9 h-9 rounded-xl inline-flex items-center justify-center shrink-0',
-                    selected ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted',
+                    selected
+                      ? 'bg-primary text-primary-foreground'
+                      : isItemUpcoming
+                        ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                        : 'bg-surface-muted text-muted',
                   )}>
-                    <Icon className="w-4 h-4" aria-hidden />
+                    {isItemUpcoming ? <Clock className="w-4 h-4" /> : <Icon className="w-4 h-4" aria-hidden />}
                   </span>
                   <span className="flex items-center gap-1.5">
-                    {count > 0 ? (
+                    {isItemUpcoming ? (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                        À venir
+                      </span>
+                    ) : count > 0 ? (
                       <span className="text-xs font-bold px-2 py-1 rounded-full bg-primary/15 text-primary-solid">
                         {count} pack{count > 1 ? 's' : ''}
                       </span>
@@ -92,8 +106,14 @@ export default function EventPlanMethodPicker({
                   </span>
                 </div>
                 <div className="space-y-0.5 min-w-0">
-                  <p className="text-sm font-bold text-foreground">{item.label}</p>
-                  <p className="text-xs text-muted leading-relaxed">{item.description}</p>
+                  <p className="text-sm font-bold text-foreground">
+                    {item.label}
+                  </p>
+                  <p className="text-xs text-muted leading-relaxed">
+                    {isItemUpcoming
+                      ? 'Fonctionnalité en préparation : composition automatique des formules à venir.'
+                      : item.description}
+                  </p>
                 </div>
               </button>
             );
