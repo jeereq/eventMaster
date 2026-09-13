@@ -406,6 +406,7 @@ export default function AdminPlatformSettings({
                   <span className="text-xs font-semibold text-foreground">Afficher ce studio</span>
                   <input
                     type="checkbox"
+                    aria-label="Afficher le Simulateur Budget IA"
                     checked={value.studioVisibility?.budget ?? true}
                     onChange={(e) =>
                       patch({
@@ -468,6 +469,7 @@ export default function AdminPlatformSettings({
                   <span className="text-xs font-semibold text-foreground">Afficher ce studio</span>
                   <input
                     type="checkbox"
+                    aria-label="Afficher le Studio Invitations IA"
                     checked={value.studioVisibility?.invite ?? true}
                     onChange={(e) =>
                       patch({
@@ -530,6 +532,7 @@ export default function AdminPlatformSettings({
                   <span className="text-xs font-semibold text-foreground">Afficher ce studio</span>
                   <input
                     type="checkbox"
+                    aria-label="Afficher le Studio Plans 3D IA"
                     checked={value.studioVisibility?.room ?? true}
                     onChange={(e) =>
                       patch({

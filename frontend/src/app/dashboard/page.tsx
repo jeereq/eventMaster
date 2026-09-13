@@ -1937,7 +1937,7 @@ function DashboardPageContent() {
             <div className={`grid gap-3 ${isCommercialPlatform ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-2 xl:grid-cols-4'}`}>
               <div className={statCardClass}>
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">
+                  <span className="text-xs font-semibold text-muted uppercase tracking-wider">
                     {isCommercialPlatform ? 'Parrainées' : 'Organisations'}
                   </span>
                   <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
@@ -1946,7 +1946,7 @@ function DashboardPageContent() {
                 </div>
                 <div>
                   <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.tenants}</span>
-                  <p className="text-[11px] text-muted mt-1">
+                  <p className="text-xs text-muted mt-1">
                     {isCommercialPlatform
                       ? 'Liées à votre code'
                       : `${activeLicensesCount} licence${activeLicensesCount !== 1 ? 's' : ''} active${activeLicensesCount !== 1 ? 's' : ''}`}
@@ -1958,33 +1958,33 @@ function DashboardPageContent() {
                 <>
                   <div className={statCardClass}>
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Membres liés</span>
+                      <span className="text-xs font-semibold text-muted uppercase tracking-wider">Membres liés</span>
                       <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
                         <Users className="w-4 h-4" />
                       </div>
                     </div>
                     <div>
                       <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.users}</span>
-                      <p className="text-[11px] text-muted mt-1">
+                      <p className="text-xs text-muted mt-1">
                         {adminData.stats.events} événement{adminData.stats.events !== 1 ? 's' : ''} · {adminData.stats.guests} invité{adminData.stats.guests !== 1 ? 's' : ''}
                       </p>
                     </div>
                   </div>
                   <div className={statCardClass}>
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">En attente</span>
+                      <span className="text-xs font-semibold text-muted uppercase tracking-wider">En attente</span>
                       <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-600 p-1.5 rounded-[var(--radius-button)]">
                         <Clock className="w-4 h-4" />
                       </div>
                     </div>
                     <div>
                       <span className="text-2xl font-semibold text-foreground tracking-tight">{pendingSubscriptionCount}</span>
-                      <p className="text-[11px] text-muted mt-1">Demandes à traiter</p>
+                      <p className="text-xs text-muted mt-1">Demandes à traiter</p>
                     </div>
                   </div>
                   <div className={statCardClass}>
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Commission</span>
+                      <span className="text-xs font-semibold text-muted uppercase tracking-wider">Commission</span>
                       <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 p-1.5 rounded-[var(--radius-button)]">
                         <Wallet className="w-4 h-4" />
                       </div>
@@ -1993,7 +1993,7 @@ function DashboardPageContent() {
                       <span className="text-2xl font-semibold text-foreground tracking-tight">
                         {(commercialOverview?.stats?.monthlyCommission ?? 0).toLocaleString('fr-FR')} FC
                       </span>
-                      <p className="text-[11px] text-muted mt-1">
+                      <p className="text-xs text-muted mt-1">
                         {(commercialOverview?.stats?.totalCommission ?? 0).toLocaleString('fr-FR')} FC au total
                         {commercialOverview?.commissionRate != null
                           ? ` · ${Math.round(commercialOverview.commissionRate * 100)} %`
@@ -2006,33 +2006,33 @@ function DashboardPageContent() {
                 <>
                   <div className={statCardClass}>
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Utilisateurs</span>
+                      <span className="text-xs font-semibold text-muted uppercase tracking-wider">Utilisateurs</span>
                       <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
                         <Users className="w-4 h-4" />
                       </div>
                     </div>
                     <div>
                       <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.users}</span>
-                      <p className="text-[11px] text-muted mt-1">
+                      <p className="text-xs text-muted mt-1">
                         {paidPlansCount} org. payante{paidPlansCount !== 1 ? 's' : ''}
                       </p>
                     </div>
                   </div>
                   <div className={statCardClass}>
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">Événements</span>
+                      <span className="text-xs font-semibold text-muted uppercase tracking-wider">Événements</span>
                       <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 p-1.5 rounded-[var(--radius-button)]">
                         <Calendar className="w-4 h-4" />
                       </div>
                     </div>
                     <div>
                       <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.events}</span>
-                      <p className="text-[11px] text-muted mt-1">Tous tenants confondus</p>
+                      <p className="text-xs text-muted mt-1">Tous tenants confondus</p>
                     </div>
                   </div>
                   <div className={statCardClass}>
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-muted uppercase tracking-wider">
+                      <span className="text-xs font-semibold text-muted uppercase tracking-wider">
                         {pendingSubscriptionCount > 0 ? 'Demandes' : 'Invités'}
                       </span>
                       <div className={cn(
@@ -2048,7 +2048,7 @@ function DashboardPageContent() {
                       <span className="text-2xl font-semibold text-foreground tracking-tight">
                         {pendingSubscriptionCount > 0 ? pendingSubscriptionCount : adminData.stats.guests}
                       </span>
-                      <p className="text-[11px] text-muted mt-1">
+                      <p className="text-xs text-muted mt-1">
                         {pendingSubscriptionCount > 0
                           ? `Abonnements en attente · ${adminData.stats.guests} invités`
                           : 'Enregistrés au total'}
@@ -2082,7 +2082,7 @@ function DashboardPageContent() {
                   </h2>
                   <p className="text-xs text-muted mt-1 leading-relaxed max-w-2xl">{panelDescription}</p>
                   {!isCommercialPlatform && tabMeta.tip && (
-                    <p className="text-[11px] text-primary mt-2 font-medium">{tabMeta.tip}</p>
+                    <p className="text-xs text-primary mt-2 font-medium">{tabMeta.tip}</p>
                   )}
                 </div>
 
@@ -2409,8 +2409,9 @@ function DashboardPageContent() {
                                 <button
                                   type="button"
                                   onClick={() => handleOpenDetailsModal('tenant', t)}
-                                  className="inline-flex items-center"
+                                  className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground rounded-lg transition"
                                   title="Voir détails"
+                                  aria-label={`Voir les détails de l'organisation ${t.name}`}
                                 >
                                   <ListRowAction />
                                 </button>
@@ -2418,8 +2419,9 @@ function DashboardPageContent() {
                                 <button
                                   type="button"
                                   onClick={() => handleOpenDetailsModal('tenant', t)}
-                                  className="p-1.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-md transition"
+                                  className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
                                   title="Détails"
+                                  aria-label={`Détails de l'organisation ${t.name}`}
                                 >
                                   <Eye className="w-4 h-4" />
                                 </button>
@@ -2433,24 +2435,27 @@ function DashboardPageContent() {
                                       void handleOpenWorkspace(t.id);
                                     }}
                                     disabled={openingWorkspaceId === t.id}
-                                    className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-md transition disabled:opacity-50"
+                                    className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition disabled:opacity-50"
                                     title="Ouvrir l’espace"
+                                    aria-label={`Ouvrir l'espace de ${t.name}`}
                                   >
                                     {openingWorkspaceId === t.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => handleOpenEditTenantModal(t)}
-                                    className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-md transition"
+                                    className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition"
                                     title="Modifier"
+                                    aria-label={`Modifier l'organisation ${t.name}`}
                                   >
                                     <Edit2 className="w-4 h-4" />
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteTenant(t.id, t.name)}
-                                    className="p-1.5 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md transition"
+                                    className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition"
                                     title="Supprimer"
+                                    aria-label={`Supprimer l'organisation ${t.name}`}
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
@@ -2516,7 +2521,7 @@ function DashboardPageContent() {
                               }
                               footer={
                                 tenantsViewMode === 'grid' ? (
-                                  <span className="text-[11px] text-muted">
+                                  <span className="text-xs text-muted">
                                     {t.usersCount} membre{t.usersCount !== 1 ? 's' : ''} · {t.eventsCount} événement{t.eventsCount !== 1 ? 's' : ''} · {t.guestsPeriodCount ?? 0}/{(t.maxGuests && t.maxGuests >= 9999) ? '∞' : (t.maxGuests ?? 50)} inv. (période)
                                   </span>
                                 ) : undefined
@@ -2583,8 +2588,9 @@ function DashboardPageContent() {
                                   <button
                                     type="button"
                                     onClick={() => handleOpenDetailsModal('user', u)}
-                                    className="inline-flex items-center"
+                                    className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground rounded-lg transition"
                                     title="Voir détails"
+                                    aria-label={`Voir les détails de l'utilisateur ${u.name || u.email}`}
                                   >
                                     <ListRowAction />
                                   </button>
@@ -2592,8 +2598,9 @@ function DashboardPageContent() {
                                   <button
                                     type="button"
                                     onClick={() => handleOpenDetailsModal('user', u)}
-                                    className="p-1.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-md transition"
+                                    className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
                                     title="Détails"
+                                    aria-label={`Détails de l'utilisateur ${u.name || u.email}`}
                                   >
                                     <Eye className="w-4 h-4" />
                                   </button>
@@ -2601,8 +2608,9 @@ function DashboardPageContent() {
                                 <button
                                   type="button"
                                   onClick={() => handleOpenEditUserModal(u)}
-                                  className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-md transition"
+                                  className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition"
                                   title="Modifier"
+                                  aria-label={`Modifier l'utilisateur ${u.name || u.email}`}
                                 >
                                   <Edit2 className="w-4 h-4" />
                                 </button>
@@ -2610,8 +2618,9 @@ function DashboardPageContent() {
                                   type="button"
                                   onClick={() => handleDeleteUser(u.id, u.email)}
                                   disabled={u.id === user?.id}
-                                  className="p-1.5 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md transition disabled:opacity-30 disabled:cursor-not-allowed"
+                                  className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed"
                                   title="Supprimer"
+                                  aria-label={`Supprimer l'utilisateur ${u.name || u.email}`}
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -2656,33 +2665,33 @@ function DashboardPageContent() {
                                       {u.role === 'COMMERCIAL' && (
                                         <div className="flex flex-wrap gap-1 pt-0.5">
                                           {u.commercialPermissions?.canManageTemplates && (
-                                            <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                                            <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary">
                                               Modèles
                                             </span>
                                           )}
                                           {u.commercialPermissions?.canManageMessageTemplates && (
-                                            <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-700 dark:text-sky-300">
+                                            <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded bg-sky-500/10 text-sky-700 dark:text-sky-300">
                                               Messages
                                             </span>
                                           )}
                                           {u.commercialPermissions?.canManageCatalog && (
-                                            <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                                            <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
                                               Catalogue
                                             </span>
                                           )}
                                           {u.commercialPermissions?.canManageEvents && (
-                                            <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                                            <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300">
                                               Événements
                                             </span>
                                           )}
                                           {u.commercialPermissions?.canManageGuests && (
-                                            <span className="inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-700 dark:text-purple-300">
+                                            <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded bg-purple-500/10 text-purple-700 dark:text-purple-300">
                                               Invités
                                             </span>
                                           )}
                                         </div>
                                       )}
-                                      <p className="truncate text-[11px] text-muted">
+                                      <p className="truncate text-xs text-muted">
                                         {[
                                           u.tenantPlan,
                                           kindLabel,
@@ -2696,7 +2705,7 @@ function DashboardPageContent() {
                                 status={usersViewMode === 'list' ? roleChip : undefined}
                                 aside={usersViewMode === 'list' ? verifiedChip : undefined}
                                 footer={
-                                  <span className="text-[11px] text-muted truncate">
+                                  <span className="text-xs text-muted truncate">
                                     {usersViewMode === 'grid'
                                       ? [
                                           u.tenantName || '—',
@@ -2741,19 +2750,19 @@ function DashboardPageContent() {
                     )}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                       <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
-                        <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Modèles globaux</p>
+                        <p className="text-xs font-bold text-primary uppercase tracking-wider">Modèles globaux</p>
                         <p className="text-2xl font-extrabold text-primary mt-1">{templateCounts.global}</p>
                       </div>
                       <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-4">
-                        <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Sur la landing</p>
+                        <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Sur la landing</p>
                         <p className="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{templateCounts.landing}</p>
                       </div>
                       <div className="bg-surface-muted dark:bg-background/50 border border-border dark:border-border rounded-xl p-4">
-                        <p className="text-[10px] font-bold text-muted dark:text-muted uppercase tracking-wider">Organisations</p>
+                        <p className="text-xs font-bold text-muted dark:text-muted uppercase tracking-wider">Organisations</p>
                         <p className="text-2xl font-extrabold text-foreground dark:text-foreground mt-1">{templateCounts.tenant}</p>
                       </div>
                       <div className="bg-surface-muted dark:bg-background/50 border border-border dark:border-border rounded-xl p-4">
-                        <p className="text-[10px] font-bold text-muted dark:text-muted uppercase tracking-wider">Affichés (filtre)</p>
+                        <p className="text-xs font-bold text-muted dark:text-muted uppercase tracking-wider">Affichés (filtre)</p>
                         <p className="text-2xl font-extrabold text-foreground dark:text-foreground mt-1">{templatesTotal}</p>
                       </div>
                     </div>
@@ -2854,8 +2863,9 @@ function DashboardPageContent() {
                                   <button
                                     type="button"
                                     onClick={() => handleOpenDetailsModal('event', e)}
-                                    className="inline-flex items-center"
+                                    className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground rounded-lg transition"
                                     title="Voir détails"
+                                    aria-label={`Voir les détails de l'événement ${e.title}`}
                                   >
                                     <ListRowAction />
                                   </button>
@@ -2863,8 +2873,9 @@ function DashboardPageContent() {
                                   <button
                                     type="button"
                                     onClick={() => handleOpenDetailsModal('event', e)}
-                                    className="p-1.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-md transition"
+                                    className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
                                     title="Détails"
+                                    aria-label={`Détails de l'événement ${e.title}`}
                                   >
                                     <Eye className="w-4 h-4" />
                                   </button>
@@ -2872,16 +2883,18 @@ function DashboardPageContent() {
                                 <button
                                   type="button"
                                   onClick={() => handleOpenEditEventModal(e)}
-                                  className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-md transition"
+                                  className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition"
                                   title="Modifier"
+                                  aria-label={`Modifier l'événement ${e.title}`}
                                 >
                                   <Edit2 className="w-4 h-4" />
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteEvent(e.id, e.title)}
-                                  className="p-1.5 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md transition"
+                                  className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition"
                                   title="Supprimer"
+                                  aria-label={`Supprimer l'événement ${e.title}`}
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -2912,7 +2925,7 @@ function DashboardPageContent() {
                                     <div className="space-y-1.5">
                                       <p className="truncate text-xs font-medium">{e.tenantName}</p>
                                       <p className="truncate text-xs text-muted">{e.location || 'Sans lieu'}</p>
-                                      <p className="text-[11px] text-muted">{dateLabel}</p>
+                                      <p className="text-xs text-muted">{dateLabel}</p>
                                       <div className="flex flex-wrap items-center gap-1.5">
                                         {visibilityChip}
                                         {ticketsChip}
@@ -2985,8 +2998,9 @@ function DashboardPageContent() {
                                   <button
                                     type="button"
                                     onClick={() => handleOpenDetailsModal('guest', g)}
-                                    className="inline-flex items-center"
+                                    className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground rounded-lg transition"
                                     title="Voir détails"
+                                    aria-label={`Voir les détails de l'invité ${g.firstName} ${g.lastName}`}
                                   >
                                     <ListRowAction />
                                   </button>
@@ -2994,8 +3008,9 @@ function DashboardPageContent() {
                                   <button
                                     type="button"
                                     onClick={() => handleOpenDetailsModal('guest', g)}
-                                    className="p-1.5 text-muted hover:text-foreground hover:bg-surface-muted rounded-md transition"
+                                    className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
                                     title="Détails"
+                                    aria-label={`Détails de l'invité ${g.firstName} ${g.lastName}`}
                                   >
                                     <Eye className="w-4 h-4" />
                                   </button>
@@ -3003,16 +3018,18 @@ function DashboardPageContent() {
                                 <button
                                   type="button"
                                   onClick={() => handleOpenEditGuestModal(g)}
-                                  className="p-1.5 text-muted hover:text-primary hover:bg-primary/10 rounded-md transition"
+                                  className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition"
                                   title="Modifier"
+                                  aria-label={`Modifier l'invité ${g.firstName} ${g.lastName}`}
                                 >
                                   <Edit2 className="w-4 h-4" />
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteGuest(g.id, `${g.firstName} ${g.lastName}`)}
-                                  className="p-1.5 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-md transition"
+                                  className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition"
                                   title="Supprimer"
+                                  aria-label={`Supprimer l'invité ${g.firstName} ${g.lastName}`}
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -3049,7 +3066,7 @@ function DashboardPageContent() {
                                         {checkinChip}
                                       </div>
                                       <p className="truncate text-xs font-medium">{g.eventTitle}</p>
-                                      <p className="truncate text-[11px] text-muted">{g.tenantName}</p>
+                                      <p className="truncate text-xs text-muted">{g.tenantName}</p>
                                     </div>
                                   )
                                 }
@@ -3174,7 +3191,7 @@ function DashboardPageContent() {
                                 <div className={`flex items-center justify-between ${plansViewMode === 'list' ? 'md:col-span-full' : ''}`}>
                                   <span className="text-xs font-extrabold text-primary uppercase tracking-wider">{planKey}</span>
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-border bg-surface">
+                                    <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-border bg-surface">
                                       {planAudienceLabel(plan.audience || planKey)}
                                     </span>
                                     <span className="text-xs bg-primary/10 text-primary font-bold px-2.5 py-0.5 rounded-full">
@@ -3185,7 +3202,7 @@ function DashboardPageContent() {
 
                                 <div className={plansViewMode === 'list' ? 'contents' : 'space-y-3'}>
                                   <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Nom du Plan</label>
+                                    <label className="text-xs font-bold text-muted uppercase tracking-wider">Nom du Plan</label>
                                     <input
                                       type="text"
                                       value={plan.name}
@@ -3200,7 +3217,7 @@ function DashboardPageContent() {
                                   </div>
 
                                   <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-muted uppercase tracking-wider">Description</label>
+                                    <label className="text-xs font-bold text-muted uppercase tracking-wider">Description</label>
                                     <textarea
                                       value={plan.description || ''}
                                       onChange={(e) => {
@@ -3418,7 +3435,7 @@ function DashboardPageContent() {
                                         }}
                                         className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
                                       />
-                                      <label htmlFor={`custom-templates-${planKey}`} className="text-[10px] font-bold text-muted uppercase tracking-wider cursor-pointer">
+                                      <label htmlFor={`custom-templates-${planKey}`} className="text-xs font-bold text-muted uppercase tracking-wider cursor-pointer">
                                         Modèles Perso.
                                       </label>
                                     </div>
@@ -3434,7 +3451,7 @@ function DashboardPageContent() {
                                         }}
                                         className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
                                       />
-                                      <label htmlFor={`custom-rsvp-${planKey}`} className="text-[10px] font-bold text-muted uppercase tracking-wider cursor-pointer">
+                                      <label htmlFor={`custom-rsvp-${planKey}`} className="text-xs font-bold text-muted uppercase tracking-wider cursor-pointer">
                                         Champs RSVP
                                       </label>
                                     </div>
@@ -3450,7 +3467,7 @@ function DashboardPageContent() {
                                         }}
                                         className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
                                       />
-                                      <label htmlFor={`protocol-qr-${planKey}`} className="text-[10px] font-bold text-muted uppercase tracking-wider cursor-pointer">
+                                      <label htmlFor={`protocol-qr-${planKey}`} className="text-xs font-bold text-muted uppercase tracking-wider cursor-pointer">
                                         QR protocole
                                       </label>
                                     </div>
@@ -3466,7 +3483,7 @@ function DashboardPageContent() {
                                         }}
                                         className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
                                       />
-                                      <label htmlFor={`mockup-ocr-${planKey}`} className="text-[10px] font-bold text-muted uppercase tracking-wider cursor-pointer">
+                                      <label htmlFor={`mockup-ocr-${planKey}`} className="text-xs font-bold text-muted uppercase tracking-wider cursor-pointer">
                                         OCR maquette
                                       </label>
                                     </div>
@@ -3482,7 +3499,7 @@ function DashboardPageContent() {
                                         }}
                                         className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
                                       />
-                                      <label htmlFor={`themes-fixtures-${planKey}`} className="text-[10px] font-bold text-muted uppercase tracking-wider cursor-pointer">
+                                      <label htmlFor={`themes-fixtures-${planKey}`} className="text-xs font-bold text-muted uppercase tracking-wider cursor-pointer">
                                         Thèmes & décors
                                       </label>
                                     </div>
@@ -3498,7 +3515,7 @@ function DashboardPageContent() {
                                         }}
                                         className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
                                       />
-                                      <label htmlFor={`admin-reports-${planKey}`} className="text-[10px] font-bold text-muted uppercase tracking-wider cursor-pointer">
+                                      <label htmlFor={`admin-reports-${planKey}`} className="text-xs font-bold text-muted uppercase tracking-wider cursor-pointer">
                                         Rapports admin
                                       </label>
                                     </div>
@@ -4044,7 +4061,7 @@ function DashboardPageContent() {
                                             Verser (preuve + motif)
                                           </Link>
                                         ) : c.kind === 'org' && (c.unpaidCommission ?? 0) > 0 ? (
-                                          <p className="mt-2 text-[11px] text-muted">À verser par l’organisation parrainante, hors EventMaster.</p>
+                                          <p className="mt-2 text-xs text-muted">À verser par l’organisation parrainante, hors EventMaster.</p>
                                         ) : null}
                                       </div>
                                     ))}
@@ -4189,7 +4206,7 @@ function DashboardPageContent() {
                                     {[u.tenantName, orgRoleLabel(u.orgRole, u.isOwner) || platformRoleLabel(u.role), formatAdminDate(u.createdAt)].filter(Boolean).join(' · ')}
                                   </p>
                                 </div>
-                                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-surface-muted dark:bg-surface-muted text-muted dark:text-muted shrink-0">
+                                <span className="text-xs font-bold uppercase px-2 py-0.5 rounded-full bg-surface-muted dark:bg-surface-muted text-muted dark:text-muted shrink-0">
                                   {u.role === 'USER' && orgRoleLabel(u.orgRole, u.isOwner)
                                     ? orgRoleLabel(u.orgRole, u.isOwner)
                                     : platformRoleLabel(u.role)}
@@ -4596,8 +4613,11 @@ function DashboardPageContent() {
                     </div>
                     <button
                       type="button"
+                      role="switch"
+                      aria-checked={modalLicenseActive}
+                      aria-label="Statut de la licence de l'organisation"
                       onClick={() => setModalLicenseActive(!modalLicenseActive)}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${modalLicenseActive ? 'bg-primary' : 'bg-surface-muted'}`}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${modalLicenseActive ? 'bg-primary' : 'bg-surface-muted border-border'}`}
                     >
                       <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${modalLicenseActive ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>
@@ -4615,7 +4635,7 @@ function DashboardPageContent() {
                       onChange={(e) => setModalLicenseExpiresAt(e.target.value)}
                       className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
                     />
-                    <p className="text-[11px] text-muted">Laissez vide pour une licence à durée illimitée.</p>
+                    <p className="text-xs text-muted">Laissez vide pour une licence à durée illimitée.</p>
                   </div>
 
                   {/* License Key */}
@@ -4648,8 +4668,11 @@ function DashboardPageContent() {
                         </div>
                         <button
                           type="button"
+                          role="switch"
+                          aria-checked={modalIssueInvoice}
+                          aria-label="Facturation automatique ou émission de facture"
                           onClick={() => setModalIssueInvoice(!modalIssueInvoice)}
-                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${modalIssueInvoice ? 'bg-primary' : 'bg-surface-muted'}`}
+                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${modalIssueInvoice ? 'bg-primary' : 'bg-surface-muted border-border'}`}
                         >
                           <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${modalIssueInvoice ? 'translate-x-5' : 'translate-x-0'}`} />
                         </button>
@@ -4686,7 +4709,7 @@ function DashboardPageContent() {
                                         setModalDiscountPercent(preset.annual ? String(ANNUAL_DISCOUNT_PERCENT) : '0');
                                         setModalApprovedAmount('');
                                       }}
-                                      className={`px-2.5 py-1 rounded-md text-[11px] font-semibold border transition ${selected
+                                      className={`px-2.5 py-1 rounded-md text-xs font-semibold border transition ${selected
                                           ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                                           : 'bg-white text-muted border-border hover:text-foreground'
                                         }`}
@@ -4705,12 +4728,12 @@ function DashboardPageContent() {
                                 className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-white"
                               />
                               {Number(modalBillingDurationDays) === 365 && (
-                                <p className="text-[11px] text-emerald-700 font-medium">
+                                <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
                                   Paiement annuel : catalogue {isB2cPlanId(modalPlan) ? '4 trimestres' : '12 mois'} puis −{ANNUAL_DISCOUNT_PERCENT} % prérempli.
                                 </p>
                               )}
                               {isB2cPlanId(modalPlan) && Number(modalBillingDurationDays) === 90 && (
-                                <p className="text-[11px] text-muted">Période de base Particulier : trimestre 90 jours.</p>
+                                <p className="text-xs text-muted">Période de base Particulier : trimestre 90 jours.</p>
                               )}
                             </div>
                             <div className="flex items-end pb-1">
@@ -4737,7 +4760,7 @@ function DashboardPageContent() {
                             onApprovedAmountChange={setModalApprovedAmount}
                             compact
                           />
-                          <p className="text-[10px] text-muted">
+                          <p className="text-xs text-muted">
                             Facture au propriétaire et managers. Commerciaux liés informés par e-mail.
                           </p>
                         </>
@@ -4865,7 +4888,7 @@ function DashboardPageContent() {
                             className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm"
                           />
                         </div>
-                        <p className="col-span-2 text-[11px] text-muted">Par défaut : 30 % au premier paiement, puis 20 %.</p>
+                        <p className="col-span-2 text-xs text-muted">Par défaut : 30 % au premier paiement, puis 20 %.</p>
                       </div>
 
                       {/* Droits délégués Super Admin */}
@@ -5005,8 +5028,11 @@ function DashboardPageContent() {
                     </div>
                     <button
                       type="button"
+                      role="switch"
+                      aria-checked={modalIsEmailVerified}
+                      aria-label="Vérification de l'adresse e-mail"
                       onClick={() => setModalIsEmailVerified(!modalIsEmailVerified)}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${modalIsEmailVerified ? 'bg-primary' : 'bg-surface-muted'}`}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${modalIsEmailVerified ? 'bg-primary' : 'bg-surface-muted border-border'}`}
                     >
                       <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${modalIsEmailVerified ? 'translate-x-5' : 'translate-x-0'}`} />
                     </button>

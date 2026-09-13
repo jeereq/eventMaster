@@ -134,7 +134,7 @@ function DetailSection({
 }) {
   return (
     <section className="space-y-2.5">
-      <h5 className="text-[11px] font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
+      <h5 className="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1.5">
         {Icon && <Icon className="w-3.5 h-3.5" />}
         {title}
       </h5>
@@ -185,7 +185,7 @@ function StatTiles({
           key={item.label}
           className="rounded-[var(--radius-card)] border border-border bg-surface-muted px-3 py-3 text-center"
         >
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted">{item.label}</div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted">{item.label}</div>
           <div className="text-xl font-semibold text-foreground mt-1 tracking-tight">{item.value}</div>
         </div>
       ))}
@@ -248,7 +248,7 @@ export default function AdminDetailsModal({
               subtitle={`ID · ${data.id}`}
               badges={
                 <>
-                  <span className={cn('inline-flex px-2 py-0.5 rounded-md text-[10px] font-semibold border', planBadgeClass(data.plan))}>
+                  <span className={cn('inline-flex px-2 py-0.5 rounded-md text-xs font-semibold border', planBadgeClass(data.plan))}>
                     {data.plan}
                   </span>
                   <Badge variant={data.licenseActive ? 'success' : 'danger'}>
@@ -327,7 +327,7 @@ export default function AdminDetailsModal({
                 <div className="overflow-x-auto max-h-56 overflow-y-auto">
                   <table className="w-full text-left text-xs">
                     <thead className="sticky top-0 bg-surface">
-                      <tr className="border-b border-border text-[10px] font-semibold text-muted uppercase">
+                      <tr className="border-b border-border text-xs font-semibold text-muted uppercase">
                         <th className="px-3 py-2">Date</th>
                         <th className="px-2 py-2">Type</th>
                         <th className="px-2 py-2">Forfait</th>
@@ -350,7 +350,7 @@ export default function AdminDetailsModal({
                             </Badge>
                           </td>
                           <td className="px-2 py-2">
-                            <span className={cn('inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold border', planBadgeClass(entry.plan))}>
+                            <span className={cn('inline-flex px-1.5 py-0.5 rounded text-xs font-semibold border', planBadgeClass(entry.plan))}>
                               {entry.plan}
                             </span>
                           </td>
@@ -368,14 +368,14 @@ export default function AdminDetailsModal({
                                 {entry.statusLabel}
                               </span>
                             ) : (
-                              <span className="text-[11px] text-muted">{entry.invoice?.statusLabel || '—'}</span>
+                              <span className="text-xs text-muted">{entry.invoice?.statusLabel || '—'}</span>
                             )}
                           </td>
                           <td className="px-3 py-2">
                             {entry.invoice ? (
                               <div className="flex flex-col">
-                                <span className="font-mono text-[10px] text-foreground">{entry.invoice.invoiceNumber}</span>
-                                <span className="font-semibold text-primary text-[11px]">{entry.invoice.amountFormatted}</span>
+                                <span className="font-mono text-xs text-foreground">{entry.invoice.invoiceNumber}</span>
+                                <span className="font-semibold text-primary text-xs">{entry.invoice.amountFormatted}</span>
                               </div>
                             ) : (
                               <span className="text-muted">—</span>
@@ -606,7 +606,7 @@ export default function AdminDetailsModal({
                     <p className="text-xs text-muted mb-1.5">Éléments ({data.content.elements.length})</p>
                     <div className="flex flex-wrap gap-1.5">
                       {data.content.elements.map((el: any, idx: number) => (
-                        <span key={idx} className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md border border-border">
+                        <span key={idx} className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md border border-border">
                           {el.type}{el.text ? ` · ${String(el.text).slice(0, 18)}` : ''}
                         </span>
                       ))}
