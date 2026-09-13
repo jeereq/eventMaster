@@ -11,10 +11,10 @@ export const REGISTER_KIND_TITLES: Record<TenantAccountKind, string> = {
 };
 
 export const REGISTER_KIND_DESCRIPTIONS: Record<TenantAccountKind, string> = {
-  ORGANIZER: 'Invitations, réponses des invités, plan de table et accueil le jour J.',
+  ORGANIZER: 'Invitations, plan de table, accueil jour J. Les forfaits Business incluent aussi la vitrine salle et prestations.',
   CLIENT: 'Compte gratuit : comparez, gardez des favoris, demandez un devis.',
-  VENDOR: 'Publiez votre vitrine et recevez des demandes d’organisateurs.',
-  BOTH: 'Un seul compte pour vos événements et votre activité.',
+  VENDOR: 'Publiez votre vitrine seule (salle ou métier), sans gérer d’événements.',
+  BOTH: 'Événements et vitrine dès l’essai. Utile si vous visez surtout le catalogue marketplace.',
 };
 
 export function registerAccountSummary(

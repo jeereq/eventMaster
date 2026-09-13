@@ -175,7 +175,7 @@ export default function TermsPage() {
         </ul>
 
         <p>
-          <strong>3.5 Reversement des recettes de billetterie (Payouts).</strong>
+          <strong>3.5 Reversement des recettes de billetterie (Payouts) &amp; Commission plateforme.</strong>
         </p>
         <ul className="list-disc pl-5 space-y-1">
           <li>
@@ -183,9 +183,20 @@ export default function TermsPage() {
             mandataire technique d&apos;encaissement.
           </li>
           <li>
-            Les recettes nettes (montant brut des ventes après déduction des frais de transaction et commissions de
-            billetterie convenues) sont reversées à l&apos;organisation selon le calendrier et le moyen de paiement
-            convenu (virement bancaire ou paiement électronique / Mobile Money FlexPay Payout).
+            <strong>Commission de collecte :</strong> En plus de l&apos;abonnement SaaS déjà payé, EventMaster se
+            réserve le droit de prélever une commission de <strong>3 % à 5 %</strong> du montant global collecté au
+            titre de la billetterie de l&apos;événement. Cette commission s&apos;ajoute aux frais de transaction du
+            prestataire de paiement (FlexPay) et est déduite avant reversement.
+          </li>
+          <li>
+            Les recettes nettes (montant brut des ventes après déduction des frais de transaction et de la commission
+            plateforme) sont reversées à l&apos;organisation selon le calendrier et le moyen de paiement convenu
+            (virement bancaire ou paiement électronique / Mobile Money FlexPay Payout).
+          </li>
+          <li>
+            <strong>Acceptation à l&apos;activation :</strong> L&apos;activation de la billetterie sur un événement
+            n&apos;est possible qu&apos;après validation expresse, par le créateur, des conditions de la plateforme
+            en vigueur (y compris la présente commission).
           </li>
           <li>
             L&apos;organisateur est seul redevable des éventuelles taxes, droits d&apos;auteurs ou prélèvements fiscaux
@@ -303,6 +314,27 @@ export default function TermsPage() {
           blanchiment de capitaux sera immédiatement suspendue, les fonds gelés et un signalement transmis aux
           autorités judiciaires et financières compétentes en RDC.
         </p>
+
+        <p>
+          <strong>4.6 Reversement des dons (Payouts) &amp; Commission plateforme.</strong>
+        </p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>
+            EventMaster encaisse les dons pour le compte de l&apos;organisation initiatrice en qualité de mandataire
+            technique d&apos;encaissement.
+          </li>
+          <li>
+            <strong>Commission de collecte :</strong> En plus de l&apos;abonnement SaaS déjà payé, EventMaster se
+            réserve le droit de prélever une commission de <strong>3 % à 5 %</strong> du montant global collecté au
+            titre des dons de l&apos;événement. Cette commission s&apos;ajoute aux frais de transaction FlexPay et est
+            déduite avant reversement.
+          </li>
+          <li>
+            <strong>Acceptation à l&apos;activation :</strong> L&apos;activation de la collecte de dons sur un
+            événement n&apos;est possible qu&apos;après validation expresse, par le créateur, des conditions de la
+            plateforme en vigueur (y compris la présente commission).
+          </li>
+        </ul>
       </Section>
 
       <Section title="5. Paiements, Abonnements SaaS & Jetons d'Intelligence Artificielle (AI Tokens)">

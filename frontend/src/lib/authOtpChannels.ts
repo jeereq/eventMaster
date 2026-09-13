@@ -30,6 +30,14 @@ export function resolveAuthOtpMethodFromSite(
   return String(requested || '').trim().toUpperCase() === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL';
 }
 
+export function otpMethodFromIdentifierMode(
+  mode: 'email' | 'phone',
+  channels: AuthOtpChannels = 'BOTH',
+): AuthOtpMethod {
+  if (!allowsAuthOtpChoice(channels)) return defaultAuthOtpMethod(channels);
+  return resolveAuthOtpMethodFromSite(mode === 'phone' ? 'WHATSAPP' : 'EMAIL', channels);
+}
+
 export function authOtpChannelsLabel(channels: AuthOtpChannels): string {
   if (channels === 'EMAIL') return 'E-mail uniquement';
   if (channels === 'WHATSAPP') return 'WhatsApp uniquement';

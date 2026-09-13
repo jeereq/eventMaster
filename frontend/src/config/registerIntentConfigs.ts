@@ -244,9 +244,9 @@ export const REGISTER_INTENT_CONFIGS: Record<string, RegistrationActionConfig> =
   },
   pro: {
     key: 'pro',
-    heroTitle: 'Billetterie et gestion multi-événements',
+    heroTitle: 'Organisation pro, billetterie et vitrine',
     heroDescription:
-      'Vendez vos billets par zone, encaissez par Mobile Money/Carte et coordonnez votre desk protocole.',
+      'Multi-événements, Mobile Money/Carte, protocole — et catalogue salle + prestations inclus dès Business.',
     defaultAccountKind: 'ORGANIZER',
     defaultNextPath: '/dashboard/tickets',
     submitButtonLabel: 'Lancer mon espace Pro',
@@ -254,7 +254,7 @@ export const REGISTER_INTENT_CONFIGS: Record<string, RegistrationActionConfig> =
     orgPlaceholder: 'Ex: Horizon Events SARL / Agence Prestige',
     features: [
       { step: 1, icon: Wallet, title: 'Billetterie FlexPay', desc: 'Ventes multi-zones en Franc Congolais (CDF).' },
-      { step: 2, icon: LayoutGrid, title: 'Équipe & Salles', desc: 'Gestion des rôles et modélisation d’espaces.' },
+      { step: 2, icon: Store, title: 'Vitrine incluse', desc: 'Salles publiables et prestations marketplace (Business+).' },
       { step: 3, icon: ScanLine, title: 'Scan Protocole', desc: 'Contrôle des billets et orientation des invités.' },
     ],
   },
@@ -262,7 +262,7 @@ export const REGISTER_INTENT_CONFIGS: Record<string, RegistrationActionConfig> =
     key: 'vendor',
     heroTitle: 'Donnez de la visibilité à votre activité',
     heroDescription:
-      'Publiez votre fiche vitrine, recevez des demandes qualifiées et développez votre clientèle.',
+      'Compte marketplace seul : publiez votre fiche, recevez des devis — sans événements ni invités.',
     defaultAccountKind: 'VENDOR',
     defaultNextPath: '/dashboard/catalogue',
     submitButtonLabel: 'Référencer mon activité',

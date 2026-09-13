@@ -101,6 +101,12 @@ import {
 } from '@/lib/donationsAccess';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import { templateContentToLandingPreview } from '@/lib/landingTemplateAdapter';
+import CollectionTermsAcceptanceModal from '@/components/CollectionTermsAcceptanceModal';
+import { hasValidCollectionTermsAcceptance } from '@/lib/collectionTerms';
+import {
+  COLLECTION_COMMISSION_MAX_PERCENT,
+  COLLECTION_COMMISSION_MIN_PERCENT,
+} from '@/config/legalConfig';
 
 const SELECT_CLASS =
   'w-full px-3.5 py-2.5 bg-surface-muted/50 backdrop-blur-sm dark:bg-background border border-border/80 dark:border-border rounded-[var(--radius-button)] text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all';
@@ -246,6 +252,13 @@ export default function EventConfigForm({
   // Sécurité et validation explicite en cas de billets déjà vendus
   const [pendingTicketRisks, setPendingTicketRisks] = useState<Array<{ title: string; risk: string }> | null>(null);
   const [ticketRiskConfirmed, setTicketRiskConfirmed] = useState(false);
+  const [collectionTermsAccepted, setCollectionTermsAccepted] = useState(false);
+  const [collectionTermsModal, setCollectionTermsModal] = useState<'ticketing' | 'donations' | 'both' | null>(
+    null,
+  );
+  const [pendingCollectionEnable, setPendingCollectionEnable] = useState<
+    'ticketing' | 'donations' | 'public-ticketing' | 'save' | null
+  >(null);
 
   useEffect(() => {
     if (!onlinePaymentsEnabled && ticketing) setTicketing(false);
@@ -259,6 +272,9 @@ export default function EventConfigForm({
     setPlaceSubTab('room');
     setPendingTicketRisks(null);
     setTicketRiskConfirmed(false);
+    setCollectionTermsAccepted(hasValidCollectionTermsAcceptance(initialEvent?.collectionTerms));
+    setCollectionTermsModal(null);
+    setPendingCollectionEnable(null);
     setMode(defaultMode);
     setFormError('');
     setSearchError('');
@@ -816,6 +832,7 @@ export default function EventConfigForm({
             suggestedAmountsFc: [],
             donorAttendancePass: true,
           },
+      acceptCollectionTerms: collectionTermsAccepted,
     };
   };
 
@@ -878,6 +895,65 @@ export default function EventConfigForm({
     return risks;
   };
 
+  const collectionModalContext = (
+    pending: 'ticketing' | 'donations' | 'public-ticketing' | 'save' | null,
+  ): 'ticketing' | 'donations' | 'both' => {
+    if (pending === 'donations') return ticketing ? 'both' : 'donations';
+    if (pending === 'ticketing' || pending === 'public-ticketing') {
+      return donationsEnabled ? 'both' : 'ticketing';
+    }
+    if (ticketing && donationsEnabled) return 'both';
+    if (donationsEnabled) return 'donations';
+    return 'ticketing';
+  };
+
+  const requestEnableCollection = (
+    action: 'ticketing' | 'donations' | 'public-ticketing',
+  ) => {
+    if (collectionTermsAccepted) {
+      if (action === 'public-ticketing') {
+        setIsPublic(true);
+        setTicketing(true);
+        return;
+      }
+      if (action === 'ticketing') {
+        setTicketing(true);
+        return;
+      }
+      setDonationsEnabled(true);
+      return;
+    }
+    setPendingCollectionEnable(action);
+    setCollectionTermsModal(collectionModalContext(action));
+  };
+
+  const handleAcceptCollectionTerms = async () => {
+    setCollectionTermsAccepted(true);
+    const pending = pendingCollectionEnable;
+    setCollectionTermsModal(null);
+    setPendingCollectionEnable(null);
+    if (pending === 'public-ticketing') {
+      setIsPublic(true);
+      setTicketing(true);
+      return;
+    }
+    if (pending === 'ticketing') {
+      setTicketing(true);
+      return;
+    }
+    if (pending === 'donations') {
+      setDonationsEnabled(true);
+      return;
+    }
+    if (pending === 'save') {
+      setFormError('');
+      await onSave({
+        ...buildPayload(),
+        acceptCollectionTerms: true,
+      });
+    }
+  };
+
   const submit = async () => {
     if (missingTab) {
       setTab(missingTab);
@@ -900,6 +976,18 @@ export default function EventConfigForm({
         setFormError('Ajoutez au moins une zone avec un prix, ou un prix par défaut.');
         return;
       }
+    }
+
+    const willCollect =
+      (complete ? isPublic && ticketing : Boolean(initialEvent?.ticketingEnabled)) || donationsEnabled;
+    if (willCollect && !collectionTermsAccepted) {
+      setTab('access');
+      setPendingCollectionEnable('save');
+      setCollectionTermsModal(collectionModalContext('save'));
+      setFormError(
+        'Pour activer la billetterie ou les dons, validez les conditions de la plateforme en vigueur.',
+      );
+      return;
     }
 
     // Interception de sécurité : Si des billets ont été vendus et que des changements à risque sont détectés
@@ -1553,8 +1641,11 @@ export default function EventConfigForm({
                     <button
                       type="button"
                       onClick={() => {
+                        if (onlinePaymentsEnabled) {
+                          requestEnableCollection('public-ticketing');
+                          return;
+                        }
                         setIsPublic(true);
-                        if (onlinePaymentsEnabled) setTicketing(true);
                       }}
                       className={cn(
                         'p-3.5 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-2 min-h-11',
@@ -1975,7 +2066,13 @@ export default function EventConfigForm({
                           type="checkbox"
                           checked={ticketing}
                           disabled={!onlinePaymentsEnabled}
-                          onChange={(e) => setTicketing(e.target.checked)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              requestEnableCollection('ticketing');
+                              return;
+                            }
+                            setTicketing(false);
+                          }}
                           className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30 mt-0.5"
                         />
                         <div>
@@ -1985,6 +2082,10 @@ export default function EventConfigForm({
                           </span>
                           <p className="text-[11px] text-muted mt-0.5">
                             Paiement sécurisé par Mobile Money (Orange Money, M-Pesa, Airtel Money) et Carte bancaire.
+                            En plus de l&apos;abonnement, EventMaster se réserve le droit de prélever une commission de{' '}
+                            {COLLECTION_COMMISSION_MIN_PERCENT} à {COLLECTION_COMMISSION_MAX_PERCENT}&nbsp;% du
+                            montant global collecté. L&apos;activation exige l&apos;acceptation des conditions en
+                            vigueur.
                           </p>
                         </div>
                       </label>
@@ -2325,7 +2426,13 @@ export default function EventConfigForm({
                             type="checkbox"
                             checked={donationsEnabled}
                             disabled={!donationsAllowedByAdmin}
-                            onChange={(e) => setDonationsEnabled(e.target.checked)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                requestEnableCollection('donations');
+                                return;
+                              }
+                              setDonationsEnabled(false);
+                            }}
                             className="w-4 h-4 rounded border-border text-primary focus:ring-primary/30 mt-0.5"
                           />
                           <div>
@@ -2335,6 +2442,10 @@ export default function EventConfigForm({
                             </span>
                             <p className="text-[11px] text-muted mt-0.5">
                               Permet aux participants et donateurs d’effectuer un don financier solidaire libre en FC ou USD via Mobile Money et Carte bancaire.
+                              En plus de l&apos;abonnement, EventMaster se réserve le droit de prélever une commission de{' '}
+                              {COLLECTION_COMMISSION_MIN_PERCENT} à {COLLECTION_COMMISSION_MAX_PERCENT}&nbsp;% du
+                              montant global collecté. L&apos;activation exige l&apos;acceptation des conditions en
+                              vigueur.
                             </p>
                           </div>
                         </label>
@@ -3075,6 +3186,18 @@ export default function EventConfigForm({
         </label>
       </div>
     </Modal>
+
+      <CollectionTermsAcceptanceModal
+        open={collectionTermsModal !== null}
+        context={collectionTermsModal || 'ticketing'}
+        onClose={() => {
+          setCollectionTermsModal(null);
+          setPendingCollectionEnable(null);
+        }}
+        onAccept={() => {
+          void handleAcceptCollectionTerms();
+        }}
+      />
   </>
 );
 }

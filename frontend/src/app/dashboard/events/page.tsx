@@ -140,6 +140,7 @@ interface EventItem {
   tenant?: { name: string };
   tenantId?: string | null;
   donations?: import('@/lib/donationsAccess').EventDonationsConfig | null;
+  collectionTerms?: import('@/lib/collectionTerms').CollectionTermsAcceptance | null;
 }
 
 interface OrgRoomOption {
@@ -1186,6 +1187,7 @@ Merci de confirmer votre présence :
         dayOfContactName: form.dayOfContactName,
         dayOfContactPhone: form.dayOfContactPhone,
         donations: form.donations,
+        acceptCollectionTerms: form.acceptCollectionTerms,
       };
 
       if (editingEventId) {

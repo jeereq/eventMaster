@@ -270,7 +270,7 @@ export default function LegalTermsPreviewModal({
                   3. Dons Solidaires &amp; Collectes de Fonds
                 </h3>
                 <p className="text-muted">
-                  Collectes à montant libre en Francs Congolais (CDF) pour causes déclarées. EventMaster intervient en qualité d&apos;intermédiaire technique d&apos;encaissement. L&apos;organisateur est seul garant de la sincérité de la cause et de l&apos;affectation des fonds. Les dons confirmés sont des libéralités volontaires irrévocables, non remboursables par la plateforme.
+                  Collectes à montant libre en Francs Congolais (CDF) pour causes déclarées. EventMaster intervient en qualité d&apos;intermédiaire technique d&apos;encaissement. L&apos;organisateur est seul garant de la sincérité de la cause et de l&apos;affectation des fonds. Les dons confirmés sont des libéralités volontaires irrévocables. En plus de l’abonnement, une commission de 3 à 5 % du montant collecté peut être prélevée avant reversement. L’activation de l’option exige l’acceptation des conditions en vigueur.
                 </p>
               </div>
 
@@ -280,7 +280,7 @@ export default function LegalTermsPreviewModal({
                   4. Paiements FlexPay, Abonnements, Jetons IA &amp; Locations
                 </h3>
                 <p className="text-muted">
-                  Paiements sécurisés via <strong>FlexPay</strong> (Visa, Mastercard, M-Pesa, Orange Money, Airtel Money, Afrimoney) en Francs Congolais (CDF) et devises. Recharges de jetons d&apos;IA pour l’aménagement et les invitations. Marketplace de salles, prestataires et locations de matériel (tentes, sono, mobilier). Les recettes nettes de billetterie et de dons sont reversées à l’organisateur (payouts).
+                  Paiements sécurisés via <strong>FlexPay</strong> (Visa, Mastercard, M-Pesa, Orange Money, Airtel Money, Afrimoney) en Francs Congolais (CDF) et devises. Recharges de jetons d&apos;IA pour l’aménagement et les invitations. Marketplace de salles, prestataires et locations de matériel (tentes, sono, mobilier). En plus de l’abonnement, EventMaster se réserve le droit de prélever une commission de 3 à 5 % du montant global collecté (billets et dons) avant reversement (payouts).
                 </p>
               </div>
 
@@ -310,7 +310,7 @@ export default function LegalTermsPreviewModal({
                   7. Remboursements &amp; Cautions
                 </h3>
                 <p className="text-muted">
-                  Billets : décision de l’organisateur. Dons solidaires : irrévocables et non remboursables. Abonnements : la période payée va jusqu’à son terme. Jetons IA consommés : non remboursables. Cautions de location de matériel : convenues directement entre parties hors plateforme. Erreurs de paiement : régularisées via numéro de transaction FlexPay.
+                  Billets : décision de l’organisateur. Dons solidaires : irrévocables et non remboursables. Payouts billets et dons : nets des frais FlexPay et d’une commission plateforme de 3 à 5 % du montant collecté, en plus de l’abonnement. Abonnements : la période payée va jusqu’à son terme. Jetons IA consommés : non remboursables. Cautions de location : hors plateforme. Erreurs de paiement : régularisées via numéro de transaction FlexPay.
                 </p>
               </div>
             </div>
@@ -340,7 +340,7 @@ export default function LegalTermsPreviewModal({
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">Article 3 — Dons Solidaires &amp; Collectes de Fonds</h4>
                 <p className="text-muted">
-                  EventMaster fournit l&apos;infrastructure technique d&apos;encaissement des dons libres pour le compte de l&apos;organisation. L&apos;organisation est seule garante de la sincérité de la cause. Tout don confirmé est une libéralité volontaire définitive et irrévocable, non remboursable par la plateforme.
+                  EventMaster fournit l&apos;infrastructure technique d&apos;encaissement des dons libres pour le compte de l&apos;organisation. L&apos;organisation est seule garante de la sincérité de la cause. Tout don confirmé est une libéralité volontaire définitive et irrévocable. En plus de l’abonnement, EventMaster se réserve le droit de prélever 3 à 5 % du montant collecté avant payout. L’activation exige l’acceptation des conditions en vigueur.
                 </p>
               </section>
 
@@ -361,7 +361,7 @@ export default function LegalTermsPreviewModal({
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">Article 6 — Reversement des recettes (Payouts)</h4>
                 <p className="text-muted">
-                  EventMaster collecte les règlements pour le compte de l’organisateur et lui reverse les recettes nettes de billetterie et de dons déduites des frais et commissions convenues, par virement bancaire ou payout Mobile Money FlexPay.
+                  EventMaster collecte les règlements pour le compte de l’organisateur et lui reverse les recettes nettes de billetterie et de dons, après déduction des frais FlexPay et d’une commission plateforme de 3 à 5 % du montant global collecté, en plus de l’abonnement SaaS. L’activation de la billetterie ou des dons sur un événement exige l’acceptation des conditions en vigueur.
                 </p>
               </section>
 

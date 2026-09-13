@@ -28,8 +28,10 @@ export default function RefundPage() {
         </p>
         <p>
           EventMaster est un intermédiaire technique. Les fonds de billetterie et de dons solidaires sont encaissés
-          pour le compte de l’organisateur. Les acomptes et cautions du marketplace relèvent de l’accord direct entre
-          l’organisateur et le prestataire, l’exploitant de salle ou le loueur de matériel.
+          pour le compte de l’organisateur. En plus de l’abonnement SaaS, EventMaster se réserve le droit de prélever
+          une commission de 3 % à 5 % du montant global collecté (billets et/ou dons) avant reversement. Les acomptes
+          et cautions du marketplace relèvent de l’accord direct entre l’organisateur et le prestataire, l’exploitant
+          de salle ou le loueur de matériel.
         </p>
       </Section>
 

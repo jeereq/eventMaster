@@ -4,9 +4,9 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import {
-  Calendar, Mail, MessageSquare, Table, Sparkles,
+  Calendar, MessageSquare, Table, Sparkles,
 } from 'lucide-react';
-import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
+import { AuthSplitLayout } from '@/components/AuthSplitLayout';
 import { Button, Alert, Card, IdentifierInput, identifierValue } from '@/components/ui';
 import type { IdentifierMode } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
@@ -14,6 +14,7 @@ import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   allowsAuthOtpChoice,
   defaultAuthOtpMethod,
+  otpMethodFromIdentifierMode,
   type AuthOtpMethod,
 } from '@/lib/authOtpChannels';
 
@@ -27,7 +28,6 @@ const FEATURES = [
 export default function AskResetPasswordPage() {
   const { site } = usePlatformSite();
   const authChannels = site.authOtpChannels;
-  const canChooseOtpChannel = allowsAuthOtpChoice(authChannels);
   const [mode, setMode] = useState<IdentifierMode>('email');
   const [email, setEmail] = useState('');
   const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
@@ -38,8 +38,13 @@ export default function AskResetPasswordPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setMethod(defaultAuthOtpMethod(authChannels));
-  }, [authChannels]);
+    setMethod(otpMethodFromIdentifierMode(mode, authChannels));
+  }, [authChannels, mode]);
+
+  const handleModeChange = (next: IdentifierMode) => {
+    setMode(next);
+    setMethod(otpMethodFromIdentifierMode(next, authChannels));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +58,8 @@ export default function AskResetPasswordPage() {
     setLoading(true);
 
     try {
-      const response = await api.post('/auth/forgot-password', { email: identifier, method });
+      const deliveryMethod = otpMethodFromIdentifierMode(mode, authChannels);
+      const response = await api.post('/auth/forgot-password', { email: identifier, method: deliveryMethod });
       setSuccess(response.message || 'Si le compte existe, un lien de réinitialisation a été envoyé.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue lors de la demande de réinitialisation.');
@@ -65,7 +71,7 @@ export default function AskResetPasswordPage() {
   return (
     <AuthSplitLayout
       title="Récupérez l'accès à votre compte en toute sécurité."
-      description="Recevez un lien de réinitialisation par e-mail ou directement sur WhatsApp."
+      description="Recevez un lien de réinitialisation sur le même canal que votre identifiant (e-mail ou WhatsApp)."
       features={FEATURES}
       backHref="/login"
       backLabel="Retour à la connexion"
@@ -74,7 +80,7 @@ export default function AskResetPasswordPage() {
         <div className="mb-6">
           <h2 className="text-2xl font-semibold text-foreground tracking-tight">Mot de passe oublié</h2>
           <p className="mt-2 text-sm text-muted">
-            Choisissez e-mail ou téléphone, puis le canal de réception du lien.
+            Choisissez e-mail ou téléphone : le lien part sur ce même moyen.
           </p>
         </div>
 
@@ -91,7 +97,7 @@ export default function AskResetPasswordPage() {
           <form className="space-y-5" onSubmit={handleSubmit}>
             <IdentifierInput
               mode={mode}
-              onModeChange={setMode}
+              onModeChange={handleModeChange}
               email={email}
               onEmailChange={setEmail}
               countryCode={phoneCountryCode}
@@ -100,21 +106,14 @@ export default function AskResetPasswordPage() {
               onNationalChange={setPhoneNational}
             />
 
-            {canChooseOtpChannel ? (
-              <MethodToggle
-                label="Recevoir le lien par"
-                value={method}
-                onChange={setMethod}
-                options={[
-                  { value: 'EMAIL' as const, label: 'E-mail', icon: <Mail className="w-4 h-4" /> },
-                  { value: 'WHATSAPP' as const, label: 'WhatsApp', icon: <MessageSquare className="w-4 h-4" /> },
-                ]}
-              />
-            ) : (
-              <p className="text-xs text-muted">
-                Lien envoyé {method === 'WHATSAPP' ? 'par WhatsApp' : 'par e-mail'} (réglage plateforme).
-              </p>
-            )}
+            <p className="text-xs text-muted">
+              Lien envoyé {method === 'WHATSAPP' ? 'par WhatsApp' : 'par e-mail'}
+              {allowsAuthOtpChoice(authChannels)
+                ? mode === 'phone'
+                  ? ' (numéro choisi).'
+                  : ' (adresse e-mail choisie).'
+                : ' (réglage plateforme).'}
+            </p>
 
             <Button type="submit" fullWidth size="lg" loading={loading}>
               Envoyer le lien de réinitialisation

@@ -22,6 +22,12 @@ import { toPrismaJson } from '../utils/prismaJson';
 import { uniqueSlug } from '../utils/slug';
 import { parsePhotoUrls } from '../utils/publicVenue';
 import { formatEventPlace } from '../utils/eventPlace';
+import {
+  buildCollectionTermsAcceptance,
+  extractCollectionTermsAcceptance,
+  hasValidCollectionTermsAcceptance,
+  requiresCollectionTermsAcceptance,
+} from '../services/collectionTerms';
 
 function rejectPaidTicketingIfDisabled(body: Record<string, unknown>, res: Response): boolean {
   const wantsPublic = body.isPublic === true || body.isPublic === 'true';
@@ -59,6 +65,7 @@ function serializeEvent<T extends {
     donations: donationsConfig
       ? { ...donationsConfig, allowedByPlatform }
       : { enabled: false, targetAmountFc: null, minAmountFc: donationsAccess.minAmountFc, cause: null, suggestedAmountsFc: donationsAccess.defaultSuggestedAmountsFc, donorAttendancePass: true, allowedByPlatform },
+    collectionTerms: extractCollectionTermsAcceptance(event.eventPrep),
   };
 }
 
@@ -242,6 +249,24 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
     if (rejectPaidTicketingIfDisabled(req.body, res)) return;
 
     const visibility = await eventVisibilityData(title, req.body);
+    const willDonationsEnabled = Boolean(
+      req.body.donations && typeof req.body.donations === 'object' && req.body.donations.enabled,
+    );
+    if (
+      requiresCollectionTermsAcceptance({
+        wasTicketingEnabled: false,
+        willTicketingEnabled: visibility.ticketingEnabled,
+        wasDonationsEnabled: false,
+        willDonationsEnabled,
+        eventPrep: req.body.eventPrep,
+        acceptCollectionTerms: req.body.acceptCollectionTerms === true,
+      })
+    ) {
+      return res.status(400).json({
+        error:
+          'Pour activer la billetterie ou les dons, vous devez accepter les conditions de la plateforme en vigueur, y compris la commission de 3 à 5 % sur le montant collecté.',
+      });
+    }
 
     // Check Plan / Quota before creating event (will be integrated in Phase 4, but let's add a placeholder or simple check)
     const tenant = await prisma.tenant.findUnique({
@@ -298,6 +323,14 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
     const initialEventPrep: Record<string, unknown> = {
       ...(req.body.eventPrep && typeof req.body.eventPrep === 'object' ? (req.body.eventPrep as Record<string, unknown>) : {}),
       ...(donationsConfig ? { donations: donationsConfig } : {}),
+      ...((visibility.ticketingEnabled || donationsConfig?.enabled) &&
+      (req.body.acceptCollectionTerms === true || hasValidCollectionTermsAcceptance(req.body.eventPrep))
+        ? {
+            collectionTerms: hasValidCollectionTermsAcceptance(req.body.eventPrep)
+              ? extractCollectionTermsAcceptance(req.body.eventPrep)
+              : buildCollectionTermsAcceptance(userId),
+          }
+        : {}),
     };
 
     const event = await prisma.event.create({
@@ -402,6 +435,36 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
         ? await eventVisibilityData(title || existingEvent.title, req.body, existingEvent)
         : {};
 
+    const existingDonations = extractEventDonationsConfig(existingEvent.eventPrep);
+    const visibilityTicketing =
+      visibility && typeof visibility === 'object' && 'ticketingEnabled' in visibility
+        ? Boolean((visibility as { ticketingEnabled?: boolean }).ticketingEnabled)
+        : undefined;
+    const willTicketingEnabled =
+      visibilityTicketing !== undefined
+        ? visibilityTicketing
+        : Boolean(existingEvent.ticketingEnabled);
+    const willDonationsEnabled =
+      req.body.donations !== undefined
+        ? Boolean(req.body.donations && typeof req.body.donations === 'object' && req.body.donations.enabled)
+        : Boolean(existingDonations?.enabled);
+
+    if (
+      requiresCollectionTermsAcceptance({
+        wasTicketingEnabled: Boolean(existingEvent.ticketingEnabled),
+        willTicketingEnabled,
+        wasDonationsEnabled: Boolean(existingDonations?.enabled),
+        willDonationsEnabled,
+        eventPrep: existingEvent.eventPrep,
+        acceptCollectionTerms: req.body.acceptCollectionTerms === true,
+      })
+    ) {
+      return res.status(400).json({
+        error:
+          'Pour activer la billetterie ou les dons, vous devez accepter les conditions de la plateforme en vigueur, y compris la commission de 3 à 5 % sur le montant collecté.',
+      });
+    }
+
     let mergedTablePlan = tablePlan !== undefined ? tablePlan : undefined;
     if (req.body.pricingZones !== undefined) {
       const base = tablePlan !== undefined ? tablePlan : existingEvent.tablePlan;
@@ -430,6 +493,17 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
       updatedEventPrep = {
         ...updatedEventPrep,
         donations: sanitized,
+      };
+    }
+
+    if (
+      (willTicketingEnabled || willDonationsEnabled) &&
+      req.body.acceptCollectionTerms === true &&
+      !hasValidCollectionTermsAcceptance(updatedEventPrep)
+    ) {
+      updatedEventPrep = {
+        ...updatedEventPrep,
+        collectionTerms: buildCollectionTermsAcceptance(userId),
       };
     }
 

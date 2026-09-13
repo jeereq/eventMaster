@@ -77,16 +77,16 @@ const REGISTRATION_KIND_CONFIGS: Record<string, RegistrationActionConfig> = {
     key: 'ORGANIZER',
     heroTitle: 'Votre espace organisateur',
     heroDescription:
-      'Créez l’événement, invitez vos proches, suivez les réponses et accueillez le jour J.',
+      'Créez l’événement, invitez, accueillez le jour J. Avec un forfait Business, publiez aussi salles et prestations.',
     defaultAccountKind: 'ORGANIZER',
     defaultNextPath: '/dashboard/events',
     submitButtonLabel: 'Créer mon compte organisateur',
     orgLabel: 'Nom de l’événement ou de l’organisation',
     orgPlaceholder: 'Ex: Mariage Sarah & David / Famille Dupont',
     features: [
-      { step: 1, icon: Calendar, title: 'Créer', desc: 'Titre, date, lieu. Un modèle d’invitation prêt en un clic.' },
-      { step: 2, icon: Mail, title: 'Inviter', desc: 'Un lien par personne. Suivez les réponses sans aucun stress.' },
-      { step: 3, icon: ScanLine, title: 'Accueillir', desc: 'Scannez vos invités à l’entrée, directement depuis votre smartphone.' },
+      { step: 1, icon: Calendar, title: 'Organiser', desc: 'Invitations, RSVP, plan de table et protocole QR.' },
+      { step: 2, icon: Store, title: 'Vendre (Business+)', desc: 'Salles publiables et prestations marketplace illimitées.' },
+      { step: 3, icon: ScanLine, title: 'Accueillir', desc: 'Scannez vos invités à l’entrée, depuis votre smartphone.' },
     ],
   },
   CLIENT: {
@@ -109,7 +109,7 @@ const REGISTRATION_KIND_CONFIGS: Record<string, RegistrationActionConfig> = {
     key: 'VENDOR',
     heroTitle: 'Publiez votre activité',
     heroDescription:
-      'Une vitrine pour votre salle ou votre métier. Les organisateurs vous écrivent, vous bloquez la date.',
+      'Vitrine salle ou métier uniquement — sans événements ni invités. Les organisateurs vous écrivent.',
     defaultAccountKind: 'VENDOR',
     defaultNextPath: '/dashboard/catalogue',
     submitButtonLabel: 'Créer mon compte professionnel',
@@ -125,7 +125,7 @@ const REGISTRATION_KIND_CONFIGS: Record<string, RegistrationActionConfig> = {
     key: 'BOTH',
     heroTitle: 'Organiser et vendre, ensemble',
     heroDescription:
-      'Un compte pour vos événements et pour votre vitrine salle ou prestataire.',
+      'Un compte mixte dès l’essai : événements et vitrine. Les forfaits Business couvrent déjà le catalogue pour un organisateur.',
     defaultAccountKind: 'BOTH',
     defaultNextPath: '/dashboard',
     submitButtonLabel: 'Créer mon compte',

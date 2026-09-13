@@ -28,7 +28,7 @@ export default function IdentifierInput({
   onCountryCodeChange,
   onNationalChange,
   required = true,
-  label = 'Identifiant',
+  label = 'Moyen d’identification',
 }: {
   mode: IdentifierMode;
   onModeChange: (mode: IdentifierMode) => void;

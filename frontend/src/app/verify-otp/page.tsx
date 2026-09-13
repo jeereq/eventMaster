@@ -22,7 +22,9 @@ function VerifyOtpForm() {
  const canChooseOtpChannel = allowsAuthOtpChoice(authChannels);
 
  const initialEmail = searchParams.get('email') || '';
- const initialMethod = resolveAuthOtpMethodFromSite(searchParams.get('method'), authChannels);
+ const methodFromUrl = searchParams.get('method');
+ const methodLocked = Boolean(methodFromUrl);
+ const initialMethod = resolveAuthOtpMethodFromSite(methodFromUrl, authChannels);
  const fromLogin = searchParams.get('from') === 'login';
  const welcomeFailed = searchParams.get('welcome') === 'failed';
 
@@ -36,8 +38,12 @@ function VerifyOtpForm() {
  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
  useEffect(() => {
-   setVerificationMethod((prev) => resolveAuthOtpMethodFromSite(prev, authChannels));
- }, [authChannels]);
+   setVerificationMethod((prev) =>
+     methodLocked
+       ? resolveAuthOtpMethodFromSite(methodFromUrl, authChannels)
+       : resolveAuthOtpMethodFromSite(prev, authChannels),
+   );
+ }, [authChannels, methodLocked, methodFromUrl]);
 
  useEffect(() => {
  if (email) inputRefs.current[0]?.focus();
@@ -182,7 +188,7 @@ function VerifyOtpForm() {
 
  <div className="mt-6 pt-5 border-t border-border-subtle dark:border-border space-y-4">
  <p className="text-xs text-muted text-center">Code expiré ou non reçu ?</p>
- {canChooseOtpChannel ? (
+ {canChooseOtpChannel && !methodLocked ? (
  <MethodToggle
  value={verificationMethod}
  onChange={setVerificationMethod}
@@ -193,7 +199,8 @@ function VerifyOtpForm() {
  />
  ) : (
  <p className="text-xs text-muted text-center">
- Renvoi {verificationMethod === 'WHATSAPP' ? 'par WhatsApp' : 'par e-mail'}.
+ Renvoi {verificationMethod === 'WHATSAPP' ? 'par WhatsApp' : 'par e-mail'}
+ {methodLocked ? ' (canal choisi à l’inscription).' : '.'}
  </p>
  )}
  <div className="text-center">

@@ -77,6 +77,7 @@ export type EventConfigSource = {
   themeId?: string | null;
   tenantId?: string | null;
   donations?: import('@/lib/donationsAccess').EventDonationsConfig | null;
+  collectionTerms?: import('@/lib/collectionTerms').CollectionTermsAcceptance | null;
 };
 
 export type EventConfigPayload = {
@@ -114,6 +115,7 @@ export type EventConfigPayload = {
   neighborSharingPolicy?: NeighborSharingPolicy;
   tablePlan?: unknown;
   donations?: import('@/lib/donationsAccess').EventDonationsConfig | null;
+  acceptCollectionTerms?: boolean;
 };
 
 export type NeighborSharingMode = 'full' | 'first_name' | 'hidden';
