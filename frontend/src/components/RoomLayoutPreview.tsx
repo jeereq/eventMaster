@@ -253,6 +253,12 @@ function ThumbPreview({
             tableColor,
             item.tableImageUrl,
             item.tableSurface ?? blueprint.metadata.defaultTableSurface,
+            {
+              customWidthM: item.customWidthM,
+              customDepthM: item.customDepthM,
+              customRadiusM: item.customRadiusM,
+              cornerRadiusM: item.cornerRadiusM,
+            },
           );
           return (
             <div
@@ -483,6 +489,12 @@ function FlatShowcasePreview({
             tableColor,
             item.tableImageUrl,
             item.tableSurface ?? blueprint.metadata.defaultTableSurface,
+            {
+              customWidthM: item.customWidthM,
+              customDepthM: item.customDepthM,
+              customRadiusM: item.customRadiusM,
+              cornerRadiusM: item.cornerRadiusM,
+            },
           );
           const depthScale = depthScaleForY(item.y, amount);
           return (

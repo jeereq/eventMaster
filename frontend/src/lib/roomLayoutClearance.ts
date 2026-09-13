@@ -179,6 +179,11 @@ export function estimateTableSizeMeters(
   shape: string | undefined,
   capacity: number = 8,
   rotationDeg: number = 0,
+  customDims?: {
+    customWidthM?: number;
+    customDepthM?: number;
+    customRadiusM?: number;
+  },
 ): {
   wM: number;
   hM: number;
@@ -190,10 +195,16 @@ export function estimateTableSizeMeters(
   let baseW = 1.6;
   let baseH = 1.6;
 
-  if (shape === 'cocktail' || shape === 'highTop') {
-    baseW = 0.85;
-    baseH = 0.85;
-    const r = baseW / 2;
+  if (typeof customDims?.customRadiusM === 'number' && customDims.customRadiusM > 0) {
+    const diam = customDims.customRadiusM * 2;
+    baseW = diam;
+    baseH = typeof customDims.customDepthM === 'number' && customDims.customDepthM > 0
+      ? customDims.customDepthM
+      : (shape === 'oval' ? diam * 0.75 : diam);
+  } else if (shape === 'cocktail' || shape === 'highTop') {
+    baseW = typeof customDims?.customWidthM === 'number' && customDims.customWidthM > 0 ? customDims.customWidthM : 0.85;
+    baseH = typeof customDims?.customDepthM === 'number' && customDims.customDepthM > 0 ? customDims.customDepthM : baseW;
+    const r = Math.max(baseW, baseH) / 2;
     return {
       wM: baseW,
       hM: baseH,
@@ -202,15 +213,17 @@ export function estimateTableSizeMeters(
       halfHM: r + 0.30,
       effectiveRadiusM: r + 0.30,
     };
-  }
-
-  if (shape === 'square') {
-    const side = capacity <= 2 ? 0.85 : capacity <= 4 ? 1.05 : 1.50;
+  } else if (shape === 'square') {
+    const side = typeof customDims?.customWidthM === 'number' && customDims.customWidthM > 0
+      ? customDims.customWidthM
+      : (capacity <= 2 ? 0.85 : capacity <= 4 ? 1.05 : 1.50);
     baseW = side;
-    baseH = side;
+    baseH = typeof customDims?.customDepthM === 'number' && customDims.customDepthM > 0 ? customDims.customDepthM : side;
   } else if (shape === 'rectangular' || shape === 'arc') {
-    baseH = 1.05;
-    if (capacity <= 2) baseW = 0.90;
+    baseH = typeof customDims?.customDepthM === 'number' && customDims.customDepthM > 0 ? customDims.customDepthM : 1.05;
+    if (typeof customDims?.customWidthM === 'number' && customDims.customWidthM > 0) {
+      baseW = customDims.customWidthM;
+    } else if (capacity <= 2) baseW = 0.90;
     else if (capacity <= 4) baseW = 1.35;
     else if (capacity <= 6) baseW = 1.80;
     else if (capacity <= 8) baseW = 2.25;
@@ -219,9 +232,13 @@ export function estimateTableSizeMeters(
     else baseW = 3.50;
   } else {
     // round / oval
-    const diam = Math.max(0.9, Math.min(2.8, 0.8 + capacity * 0.125));
+    const diam = typeof customDims?.customWidthM === 'number' && customDims.customWidthM > 0
+      ? customDims.customWidthM
+      : Math.max(0.9, Math.min(2.8, 0.8 + capacity * 0.125));
     baseW = diam;
-    baseH = shape === 'oval' ? diam * 0.75 : diam;
+    baseH = typeof customDims?.customDepthM === 'number' && customDims.customDepthM > 0
+      ? customDims.customDepthM
+      : (shape === 'oval' ? diam * 0.75 : diam);
   }
 
   const rad = ((rotationDeg % 360) * Math.PI) / 180;
@@ -231,7 +248,9 @@ export function estimateTableSizeMeters(
   const rotH = baseW * sin + baseH * cos;
 
   const pullBack = 0.48; // enveloppe de recul des chaises assises
-  const radiusM = Math.hypot(rotW, rotH) / 2;
+  const radiusM = (shape === 'round' || shape === 'cocktail' || shape === 'highTop')
+    ? baseW / 2
+    : Math.hypot(rotW, rotH) / 2;
   return {
     wM: rotW,
     hM: rotH,
@@ -521,7 +540,7 @@ export function detectLayoutClearanceConflicts(
   for (const c of chairs) {
     for (const t of tables) {
       if (!sameStory(c.storyId, t.storyId)) continue;
-      const szT = estimateTableSizeMeters(t.shape, t.capacity, t.rotation);
+      const szT = estimateTableSizeMeters(t.shape, t.capacity, t.rotation, t);
       const dxM = pctToM_X(c.x) - pctToM_X(t.x);
       const dyM = pctToM_Y(c.y) - pctToM_Y(t.y);
       const dist = Math.hypot(dxM, dyM);
@@ -551,8 +570,8 @@ export function detectLayoutClearanceConflicts(
       const t2 = tables[j];
       if (!sameStory(t1.storyId, t2.storyId)) continue;
 
-      const sz1 = estimateTableSizeMeters(t1.shape, t1.capacity, t1.rotation);
-      const sz2 = estimateTableSizeMeters(t2.shape, t2.capacity, t2.rotation);
+      const sz1 = estimateTableSizeMeters(t1.shape, t1.capacity, t1.rotation, t1);
+      const sz2 = estimateTableSizeMeters(t2.shape, t2.capacity, t2.rotation, t2);
 
       const dxM = Math.abs(pctToM_X(t2.x) - pctToM_X(t1.x));
       const dyM = Math.abs(pctToM_Y(t2.y) - pctToM_Y(t1.y));
@@ -579,7 +598,7 @@ export function detectLayoutClearanceConflicts(
   for (const t of tables) {
     for (const r of rows) {
       if (!sameStory(t.storyId, r.storyId)) continue;
-      const szT = estimateTableSizeMeters(t.shape, t.capacity, t.rotation);
+      const szT = estimateTableSizeMeters(t.shape, t.capacity, t.rotation, t);
       const szR = estimateRowSizeMeters(r.seatCount, r.rotation);
 
       const dxM = Math.abs(pctToM_X(r.x) - pctToM_X(t.x));
@@ -650,7 +669,7 @@ export function detectLayoutClearanceConflicts(
       const itemX = pctToM_X(item.x);
       const itemY = pctToM_Y(item.y);
       const sz = item.kind === 'table'
-        ? estimateTableSizeMeters(item.shape, item.capacity, item.rotation)
+        ? estimateTableSizeMeters(item.shape, item.capacity, item.rotation, item)
         : item.kind === 'row'
           ? estimateRowSizeMeters(item.seatCount, item.rotation)
           : { radiusM: 0.25, halfWM: 0.25, effectiveRadiusM: 0.25 };
@@ -724,7 +743,7 @@ export function detectLayoutClearanceConflicts(
       const distM = Math.hypot(itemX - closestX, itemY - closestY);
 
       const sz = item.kind === 'table'
-        ? estimateTableSizeMeters(item.shape, item.capacity, item.rotation)
+        ? estimateTableSizeMeters(item.shape, item.capacity, item.rotation, item)
         : item.kind === 'row'
           ? estimateRowSizeMeters(item.seatCount, item.rotation)
           : { radiusM: 0.25, halfWM: 0.25, effectiveRadiusM: 0.25 };
@@ -822,7 +841,7 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
     }
 
     if (f.kind === 'table') {
-      const sz = estimateTableSizeMeters(f.shape, f.capacity, f.rotation);
+      const sz = estimateTableSizeMeters(f.shape, f.capacity, f.rotation, f);
       return {
         id: f.id,
         kind: 'table',

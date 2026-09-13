@@ -127,6 +127,12 @@ export function getTableVisualStyle(
   tableColor?: string,
   tableImageUrl?: string,
   tableSurface?: TableSurfaceStyle,
+  customDims?: {
+    customWidthM?: number;
+    customDepthM?: number;
+    customRadiusM?: number;
+    cornerRadiusM?: number;
+  },
 ): { className: string; style?: React.CSSProperties } {
   const size = tableSizeClass(shape);
   const shapeKey = ['round', 'oval', 'square', 'rectangular', 'cocktail', 'highTop', 'arc'].includes(String(shape))
@@ -137,6 +143,9 @@ export function getTableVisualStyle(
   const wood = 'url(/floors/table-wood.svg)';
   const dark = isDarkTableColor(tableColor);
   const tint = tableColor || (dark ? '#1e293b' : '#f3e6c8');
+  const customCornerRadius = typeof customDims?.cornerRadiusM === 'number' && customDims.cornerRadiusM > 0
+    ? `${Math.round(customDims.cornerRadiusM * 100)}px`
+    : undefined;
   const resolvedSurface: TableSurfaceStyle | undefined = tableSurface ?? (
     shape === 'round' || shape === 'oval' || shape === 'cocktail' || shape === 'highTop'
       ? 'linen'
@@ -151,6 +160,7 @@ export function getTableVisualStyle(
         backgroundImage: `radial-gradient(ellipse at 34% 28%, rgba(255,255,255,0.28) 0%, transparent 42%), url(${tableImageUrl})`,
         backgroundSize: '100% 100%, cover',
         backgroundPosition: 'center',
+        ...(customCornerRadius ? { borderRadius: customCornerRadius } : {}),
       },
     };
   }
@@ -163,6 +173,7 @@ export function getTableVisualStyle(
         backgroundImage: 'linear-gradient(135deg, rgba(248,250,252,0.92) 0%, rgba(203,213,225,0.45) 100%)',
         boxShadow: 'inset 0 0 0 1px rgba(148,163,184,0.35)',
         color: dark ? '#f8fafc' : '#334155',
+        ...(customCornerRadius ? { borderRadius: customCornerRadius } : {}),
       },
     };
   }
@@ -174,6 +185,7 @@ export function getTableVisualStyle(
         backgroundColor: tint,
         backgroundImage: 'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(226,232,240,0.7) 100%)',
         color: dark ? '#f8fafc' : '#475569',
+        ...(customCornerRadius ? { borderRadius: customCornerRadius } : {}),
       },
     };
   }
@@ -191,6 +203,7 @@ export function getTableVisualStyle(
         backgroundSize: '100% 100%, cover',
         backgroundBlendMode: 'soft-light, multiply',
         color: dark ? '#f8fafc' : '#3f2a12',
+        ...(customCornerRadius ? { borderRadius: customCornerRadius } : {}),
       },
     };
   }
@@ -205,6 +218,7 @@ export function getTableVisualStyle(
       backgroundSize: dark ? '100% 100%, 72px 72px' : '100% 100%, 72px 72px, cover',
       backgroundBlendMode: dark ? 'soft-light, multiply' : 'soft-light, multiply, overlay',
       color: dark ? '#f8fafc' : '#3f2a12',
+      ...(customCornerRadius ? { borderRadius: customCornerRadius } : {}),
     },
   };
 }
@@ -266,7 +280,59 @@ export function getSeatCoordinates(
 }
 
 /** Dimensions du plateau 3D (mètres), alignées sur le viewer. */
-export function tablePlateSizeMeters(shape: TableShape, capacity: number): [number, number] {
+export function tablePlateSizeMeters(
+  shape: TableShape,
+  capacity: number,
+  customDims?: {
+    customWidthM?: number;
+    customDepthM?: number;
+    customRadiusM?: number;
+  },
+): [number, number] {
+  if (customDims) {
+    if (shape === 'round' || shape === 'cocktail' || shape === 'highTop') {
+      if (typeof customDims.customRadiusM === 'number' && customDims.customRadiusM > 0) {
+        const diam = Math.round(customDims.customRadiusM * 2 * 100) / 100;
+        return [diam, diam];
+      }
+      if (typeof customDims.customWidthM === 'number' && customDims.customWidthM > 0) {
+        return [customDims.customWidthM, customDims.customWidthM];
+      }
+    } else if (shape === 'oval') {
+      const defaultW = 1.7;
+      const defaultD = 1.0;
+      const w = typeof customDims.customWidthM === 'number' && customDims.customWidthM > 0
+        ? customDims.customWidthM
+        : typeof customDims.customRadiusM === 'number' && customDims.customRadiusM > 0
+          ? customDims.customRadiusM * 2
+          : defaultW;
+      const d = typeof customDims.customDepthM === 'number' && customDims.customDepthM > 0
+        ? customDims.customDepthM
+        : defaultD;
+      return [w, d];
+    } else if (shape === 'square') {
+      const defaultSide = 1.2;
+      const side = typeof customDims.customWidthM === 'number' && customDims.customWidthM > 0
+        ? customDims.customWidthM
+        : typeof customDims.customDepthM === 'number' && customDims.customDepthM > 0
+          ? customDims.customDepthM
+          : typeof customDims.customRadiusM === 'number' && customDims.customRadiusM > 0
+            ? customDims.customRadiusM * 2
+            : defaultSide;
+      return [side, side];
+    } else if (shape === 'rectangular' || shape === 'arc') {
+      const defaultW = shape === 'arc' ? 3.6 : capacity >= 14 ? 4.4 : capacity >= 10 ? 3.2 : 1.8;
+      const defaultD = shape === 'arc' ? 1.8 : capacity >= 14 ? 0.95 : capacity >= 10 ? 0.92 : 0.9;
+      const w = typeof customDims.customWidthM === 'number' && customDims.customWidthM > 0
+        ? customDims.customWidthM
+        : defaultW;
+      const d = typeof customDims.customDepthM === 'number' && customDims.customDepthM > 0
+        ? customDims.customDepthM
+        : defaultD;
+      return [w, d];
+    }
+  }
+
   if (shape === 'rectangular') {
     if (capacity >= 14) return [4.4, 0.95];
     if (capacity >= 10) return [3.2, 0.92];

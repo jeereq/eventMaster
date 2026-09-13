@@ -1407,6 +1407,10 @@ function TableMesh({
   selectedSeatIndices = [],
   hiddenSeatIndices = [],
   blockedSeatIndices = [],
+  customWidthM,
+  customDepthM,
+  customRadiusM,
+  cornerRadiusM,
   onSelect,
   onDragStart,
   readOnly,
@@ -1437,6 +1441,10 @@ function TableMesh({
   selected: boolean;
   selectedSeatIndices?: number[];
   hiddenSeatIndices?: number[];
+  customWidthM?: number;
+  customDepthM?: number;
+  customRadiusM?: number;
+  cornerRadiusM?: number;
   onSelect: (mods?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean; seatIndex?: number }) => void;
   onDragStart?: (e: ThreeEvent<PointerEvent>) => void;
   readOnly?: boolean;
@@ -1450,7 +1458,7 @@ function TableMesh({
     [shape, color, tableImageUrl, tableSurface],
   );
 
-  const size = tablePlateSizeMeters(shape, capacity);
+  const size = tablePlateSizeMeters(shape, capacity, { customWidthM, customDepthM, customRadiusM });
   const topY = shape === 'highTop' ? 1.05 : shape === 'cocktail' ? 0.55 : 0.72;
   const isRound = shape === 'round' || shape === 'oval' || shape === 'cocktail' || shape === 'highTop';
   const seatPicked = selectedSeatIndices.length > 0;
@@ -1497,6 +1505,7 @@ function TableMesh({
           topY={topY}
           mat={mat}
           selected={tableHalo}
+          cornerRadiusM={cornerRadiusM}
         />
       </group>
       {(hasCouverts || (selected && showcaseTableware && shape !== 'cocktail' && shape !== 'highTop' && capacity <= 10)) &&
@@ -2827,6 +2836,10 @@ function SceneContent({
               .map((s) => s.seatIndex as number)}
             hiddenSeatIndices={item.hiddenSeatIndices}
             blockedSeatIndices={blockedByTable.get(item.id)}
+            customWidthM={item.customWidthM}
+            customDepthM={item.customDepthM}
+            customRadiusM={item.customRadiusM}
+            cornerRadiusM={item.cornerRadiusM}
             onSelect={(e) =>
               onSelect(
                 { kind: 'table', id: item.id, seatIndex: e?.seatIndex },

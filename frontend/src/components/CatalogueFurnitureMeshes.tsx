@@ -759,12 +759,14 @@ export function CatalogueTableStructure({
   topY,
   mat,
   selected,
+  cornerRadiusM,
 }: {
   shape: TableShape;
   size: [number, number];
   topY: number;
   mat: TableMat;
   selected: boolean;
+  cornerRadiusM?: number;
 }) {
   const topColor = mat.color;
   const topMat = {
@@ -922,14 +924,56 @@ export function CatalogueTableStructure({
     );
   }
 
+function createRoundedRectShape(w: number, d: number, r: number): THREE.Shape {
+  const shape = new THREE.Shape();
+  const x = -w / 2;
+  const y = -d / 2;
+  shape.moveTo(x + r, y);
+  shape.lineTo(x + w - r, y);
+  shape.quadraticCurveTo(x + w, y, x + w, y + r);
+  shape.lineTo(x + w, y + d - r);
+  shape.quadraticCurveTo(x + w, y + d, x + w - r, y + d);
+  shape.lineTo(x + r, y + d);
+  shape.quadraticCurveTo(x, y + d, x, y + d - r);
+  shape.lineTo(x, y + r);
+  shape.quadraticCurveTo(x, y, x + r, y);
+  return shape;
+}
+
   // rectangular / square
   const legInset = shape === 'square' ? 0.36 : 0.4;
+  const roundedTopGeom = useMemo(() => {
+    if (!cornerRadiusM || cornerRadiusM <= 0.01 || isRound) return null;
+    const w = size[0];
+    const d = size[1];
+    const maxR = Math.min(w / 2 - 0.02, d / 2 - 0.02);
+    const r = Math.min(cornerRadiusM, maxR);
+    if (r <= 0.01) return null;
+    const s = createRoundedRectShape(w, d, r);
+    const geom = new THREE.ExtrudeGeometry(s, {
+      depth: 0.055,
+      bevelEnabled: true,
+      bevelSegments: 2,
+      steps: 1,
+      bevelSize: 0.005,
+      bevelThickness: 0.005,
+    });
+    geom.rotateX(-Math.PI / 2);
+    return geom;
+  }, [cornerRadiusM, isRound, size]);
+
   return (
     <group>
-      <mesh position={[0, topY, 0]} castShadow receiveShadow>
-        <boxGeometry args={[size[0], 0.055, size[1]]} />
-        <Mat color={topColor} {...topMat} />
-      </mesh>
+      {roundedTopGeom ? (
+        <mesh position={[0, topY + 0.0275, 0]} geometry={roundedTopGeom} castShadow receiveShadow>
+          <Mat color={topColor} {...topMat} />
+        </mesh>
+      ) : (
+        <mesh position={[0, topY, 0]} castShadow receiveShadow>
+          <boxGeometry args={[size[0], 0.055, size[1]]} />
+          <Mat color={topColor} {...topMat} />
+        </mesh>
+      )}
       <mesh position={[0, topY - 0.08, 0]} castShadow>
         <boxGeometry args={[size[0] * 0.96, 0.1, size[1] * 0.96]} />
         <Mat color="#4a3728" roughness={0.6} metalness={0.08} />

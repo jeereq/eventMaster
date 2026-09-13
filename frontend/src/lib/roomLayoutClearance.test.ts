@@ -5,6 +5,7 @@ import {
   detectLayoutClearanceConflicts,
   normalizeDoorOrthogonal,
   distancePointToSegmentM,
+  estimateTableSizeMeters,
   REAL_CLEARANCE_METERS,
 } from './roomLayoutClearance.ts';
 
@@ -452,5 +453,52 @@ describe('règles architecturales des portes et murs', () => {
     const tEdge = result.furniture.find((f) => f.id === 't_edge')!;
     // La table doit avoir été poussée vers l'intérieur (x > 8%)
     assert.ok(tEdge.x > 8, `La table doit être repoussée vers l'intérieur, x actuel : ${tEdge.x}`);
+  });
+
+  it('prend en compte les dimensions personnalisées (agrandissement et radius) pour les calculs géométriques', () => {
+    // 1. Table standard vs Table agrandie en rayon
+    const standardRound = estimateTableSizeMeters('round', 8);
+    const customRound = estimateTableSizeMeters('round', 8, 0, { customRadiusM: 1.5 });
+    assert.ok(customRound.radiusM > standardRound.radiusM, 'Le rayon personnalisé doit être plus grand');
+    assert.equal(customRound.radiusM, 1.5);
+    assert.equal(customRound.wM, 3.0);
+
+    // 2. Table rectangulaire élargie
+    const standardRect = estimateTableSizeMeters('rectangular', 8);
+    const widenedRect = estimateTableSizeMeters('rectangular', 8, 0, { customWidthM: 3.5, customDepthM: 1.8 });
+    assert.equal(widenedRect.wM, 3.5);
+    assert.equal(widenedRect.hM, 1.8);
+    assert.ok(widenedRect.effectiveRadiusM > standardRect.effectiveRadiusM);
+
+    // 3. Détection de conflit avec table agrandie
+    const blueprintWithWidenedTable = {
+      canvas: { widthM: 20, heightM: 16 },
+      furniture: [
+        {
+          id: 't_big',
+          kind: 'table',
+          shape: 'rectangular',
+          capacity: 8,
+          x: 50,
+          y: 50,
+          customWidthM: 4.5,
+          customDepthM: 2.2,
+        },
+        // Table voisine à 2.5m de distance (suffisante pour table standard, mais insuffisante pour table agrandie de 4.5m)
+        {
+          id: 't_neighbor',
+          kind: 'table',
+          shape: 'rectangular',
+          capacity: 8,
+          x: 65,
+          y: 50,
+        },
+      ],
+      fixtures: [],
+    };
+
+    const report = detectLayoutClearanceConflicts(blueprintWithWidenedTable);
+    const tableOverlap = report.conflicts.find((c) => c.type === 'table_overlap');
+    assert.ok(tableOverlap, 'La table géante personnalisée doit déclencher un conflit d’encombrement');
   });
 });

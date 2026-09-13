@@ -266,6 +266,7 @@ import {
   type FoundationKind,
 } from '@/lib/roomBuildingUtils';
 import { cn } from '@/lib/cn';
+import { tablePlateSizeMeters } from '@/lib/tablePlanUtils';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
 import { Alert, Button, Input, Modal } from '@/components/ui';
 
@@ -4752,6 +4753,273 @@ export default function RoomLayoutEditor({
                 <input type="number" min={2} max={24} value={selectedFurniture.capacity} onChange={(e) => updateFurniture(selectedFurniture.id, { capacity: parseInt(e.target.value, 10) })} className={EDITOR_FIELD} />
               </label>
             </div>
+
+            {/* Dimensions & Radius personnalisés de la table */}
+            <div className="p-3 rounded-[var(--radius-card)] bg-surface-muted border border-border/80 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Ruler className="w-3.5 h-3.5 text-primary" />
+                  Dimensions & Rayon (m)
+                </span>
+                {(selectedFurniture.customWidthM || selectedFurniture.customDepthM || selectedFurniture.customRadiusM || selectedFurniture.cornerRadiusM) && (
+                  <button
+                    type="button"
+                    onClick={() => updateFurniture(selectedFurniture.id, {
+                      customWidthM: undefined,
+                      customDepthM: undefined,
+                      customRadiusM: undefined,
+                      cornerRadiusM: undefined,
+                    }, 'Dimensions réinitialisées en mode auto')}
+                    className="text-[11px] text-muted hover:text-foreground underline decoration-dotted transition"
+                    title="Rétablir les dimensions standards automatiques selon le nombre de places"
+                  >
+                    Auto
+                  </button>
+                )}
+              </div>
+
+              {/* Cas 1 : Table Ronde / Mange-debout / Cocktail */}
+              {(selectedFurniture.shape === 'round' || selectedFurniture.shape === 'cocktail' || selectedFurniture.shape === 'highTop') && (() => {
+                const [defW] = tablePlateSizeMeters(selectedFurniture.shape, selectedFurniture.capacity);
+                const curDiam = selectedFurniture.customWidthM ?? (selectedFurniture.customRadiusM ? selectedFurniture.customRadiusM * 2 : defW);
+                const curRadius = selectedFurniture.customRadiusM ?? Math.round((curDiam / 2) * 100) / 100;
+                return (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="text-xs space-y-1">
+                        <span className="font-medium text-muted">Diamètre (m)</span>
+                        <input
+                          type="number"
+                          step={0.05}
+                          min={0.5}
+                          max={4.5}
+                          value={Math.round(curDiam * 100) / 100}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (val && val > 0) {
+                              updateFurniture(selectedFurniture.id, {
+                                customWidthM: val,
+                                customRadiusM: Math.round((val / 2) * 100) / 100,
+                              }, 'Diamètre table modifié');
+                            }
+                          }}
+                          className={EDITOR_FIELD}
+                        />
+                      </label>
+                      <label className="text-xs space-y-1">
+                        <span className="font-medium text-muted">Rayon / Radius (m)</span>
+                        <input
+                          type="number"
+                          step={0.05}
+                          min={0.25}
+                          max={2.25}
+                          value={curRadius}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (val && val > 0) {
+                              updateFurniture(selectedFurniture.id, {
+                                customRadiusM: val,
+                                customWidthM: Math.round(val * 2 * 100) / 100,
+                              }, 'Rayon table modifié');
+                            }
+                          }}
+                          className={EDITOR_FIELD}
+                        />
+                      </label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="range"
+                        min={0.6}
+                        max={3.5}
+                        step={0.05}
+                        value={curDiam}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          updateFurniture(selectedFurniture.id, {
+                            customWidthM: val,
+                            customRadiusM: Math.round((val / 2) * 100) / 100,
+                          }, 'Diamètre table ajusté');
+                        }}
+                        className="w-full accent-primary cursor-pointer"
+                      />
+                      <span className="text-[11px] font-mono text-muted shrink-0 w-14 text-right">
+                        Ø {curDiam.toFixed(2)}m
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Cas 2 : Table Ovale */}
+              {selectedFurniture.shape === 'oval' && (() => {
+                const [defW, defD] = tablePlateSizeMeters(selectedFurniture.shape, selectedFurniture.capacity);
+                const curW = selectedFurniture.customWidthM ?? defW;
+                const curD = selectedFurniture.customDepthM ?? defD;
+                return (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="text-xs space-y-1">
+                        <span className="font-medium text-muted">Longueur (m)</span>
+                        <input
+                          type="number"
+                          step={0.05}
+                          min={0.8}
+                          max={6.0}
+                          value={Math.round(curW * 100) / 100}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (val && val > 0) {
+                              updateFurniture(selectedFurniture.id, { customWidthM: val }, 'Longueur table ovale modifiée');
+                            }
+                          }}
+                          className={EDITOR_FIELD}
+                        />
+                      </label>
+                      <label className="text-xs space-y-1">
+                        <span className="font-medium text-muted">Élargir / Largeur (m)</span>
+                        <input
+                          type="number"
+                          step={0.05}
+                          min={0.6}
+                          max={3.5}
+                          value={Math.round(curD * 100) / 100}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (val && val > 0) {
+                              updateFurniture(selectedFurniture.id, { customDepthM: val }, 'Largeur table ovale modifiée');
+                            }
+                          }}
+                          className={EDITOR_FIELD}
+                        />
+                      </label>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[11px] text-muted">
+                        <span>Élargissement</span>
+                        <span className="font-mono">{curW.toFixed(2)}m × {curD.toFixed(2)}m</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0.6}
+                        max={3.0}
+                        step={0.05}
+                        value={curD}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          updateFurniture(selectedFurniture.id, { customDepthM: val }, 'Largeur table ajustée');
+                        }}
+                        className="w-full accent-primary cursor-pointer"
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Cas 3 : Table Rectangulaire, Carrée, ou en Arc */}
+              {(selectedFurniture.shape === 'rectangular' || selectedFurniture.shape === 'square' || selectedFurniture.shape === 'arc') && (() => {
+                const [defW, defD] = tablePlateSizeMeters(selectedFurniture.shape, selectedFurniture.capacity);
+                const curW = selectedFurniture.customWidthM ?? defW;
+                const curD = selectedFurniture.customDepthM ?? defD;
+                const curCornerR = selectedFurniture.cornerRadiusM ?? 0;
+                return (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="text-xs space-y-1">
+                        <span className="font-medium text-muted">Longueur (m)</span>
+                        <input
+                          type="number"
+                          step={0.05}
+                          min={0.6}
+                          max={7.0}
+                          value={Math.round(curW * 100) / 100}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (val && val > 0) {
+                              updateFurniture(selectedFurniture.id, {
+                                customWidthM: val,
+                                ...(selectedFurniture.shape === 'square' ? { customDepthM: val } : {}),
+                              }, 'Longueur table modifiée');
+                            }
+                          }}
+                          className={EDITOR_FIELD}
+                        />
+                      </label>
+                      <label className="text-xs space-y-1">
+                        <span className="font-medium text-muted">Élargir / Profondeur (m)</span>
+                        <input
+                          type="number"
+                          step={0.05}
+                          min={0.5}
+                          max={3.0}
+                          value={Math.round(curD * 100) / 100}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (val && val > 0) {
+                              updateFurniture(selectedFurniture.id, {
+                                customDepthM: val,
+                                ...(selectedFurniture.shape === 'square' ? { customWidthM: val } : {}),
+                              }, 'Largeur table modifiée');
+                            }
+                          }}
+                          className={EDITOR_FIELD}
+                        />
+                      </label>
+                    </div>
+
+                    {/* Curseur pour élargir la table */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[11px] text-muted">
+                        <span>Élargir le plateau</span>
+                        <span className="font-mono">{curW.toFixed(2)}m × {curD.toFixed(2)}m</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0.6}
+                        max={2.5}
+                        step={0.05}
+                        value={curD}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          updateFurniture(selectedFurniture.id, {
+                            customDepthM: val,
+                            ...(selectedFurniture.shape === 'square' ? { customWidthM: val } : {}),
+                          }, 'Élargissement table');
+                        }}
+                        className="w-full accent-primary cursor-pointer"
+                      />
+                    </div>
+
+                    {/* Curseur Rayon des angles / Coins arrondis */}
+                    {selectedFurniture.shape !== 'arc' && (
+                      <div className="space-y-1 pt-1.5 border-t border-border/50">
+                        <div className="flex justify-between text-[11px] text-muted">
+                          <span>Rayon d'angle (Arrondi des coins)</span>
+                          <span className="font-mono">{curCornerR > 0 ? `${(curCornerR * 100).toFixed(0)} cm` : 'Angle vif'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="range"
+                            min={0}
+                            max={0.35}
+                            step={0.01}
+                            value={curCornerR}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value);
+                              updateFurniture(selectedFurniture.id, { cornerRadiusM: val }, 'Arrondi d’angle table');
+                            }}
+                            className="w-full accent-primary cursor-pointer"
+                          />
+                          <span className="text-[11px] font-mono text-muted shrink-0 w-12 text-right">
+                            {curCornerR > 0 ? `${(curCornerR * 100).toFixed(0)}cm` : '0cm'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
             <label className="block space-y-1.5">
               <span className="text-xs font-semibold text-foreground flex items-center gap-1"><Palette className="w-3 h-3" /> Couleur de cette table</span>
               <div className="flex gap-2 items-center">
@@ -4999,6 +5267,13 @@ export default function RoomLayoutEditor({
                   className={cn(EDITOR_PANEL_BTN, 'border-border text-muted hover:bg-surface-muted')}
                 >
                   Centres
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateBlueprint(applyTableStyleToAll(blueprint, selectedFurniture.id, ['dimensions']), { message: 'Dimensions & rayon appliqués à toutes les tables', kind: 'edit' })}
+                  className={cn(EDITOR_PANEL_BTN, 'border-border text-muted hover:bg-surface-muted')}
+                >
+                  Dimensions & Rayon
                 </button>
               </div>
             </div>

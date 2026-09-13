@@ -51,7 +51,19 @@ export type SeatMaterial =
   | 'rattan';
 export type TableArrangePreset = 'grid' | 'banquet' | 'ushape' | 'circle' | 'longBanquet';
 export type ArrangeDensity = 'compact' | 'comfortable' | 'ample';
-export type TableStyleField = 'shape' | 'chairType' | 'chairStyle' | 'seatMaterial' | 'tableColor' | 'tableSurface' | 'capacity' | 'hasCouverts' | 'couvertStyle' | 'hasCenterpiece' | 'centerpieceStyle';
+export type TableStyleField =
+  | 'shape'
+  | 'chairType'
+  | 'chairStyle'
+  | 'seatMaterial'
+  | 'tableColor'
+  | 'tableSurface'
+  | 'capacity'
+  | 'hasCouverts'
+  | 'couvertStyle'
+  | 'hasCenterpiece'
+  | 'centerpieceStyle'
+  | 'dimensions';
 export type StageShape = 'rect' | 'semiCircle';
 /** Variantes d’estrade événementielle (orateur, couple, passerelle…). */
 export type PodiumStyle =
@@ -527,6 +539,14 @@ export interface RoomLayoutBlueprint {
         /** Grand parasol d'ombrage de terrasse (restaurant / extérieur). */
         hasParasol?: boolean;
         parasolColor?: string;
+        /** Dimensions personnalisées métriques manuelles (longueur / diamètre en mètres). */
+        customWidthM?: number;
+        /** Élargissement / profondeur personnalisée de table en mètres. */
+        customDepthM?: number;
+        /** Rayon personnalisé pour tables rondes/ovales/cocktail en mètres. */
+        customRadiusM?: number;
+        /** Rayon d'arrondi des angles (coins) en mètres pour tables rectangulaires / carrées. */
+        cornerRadiusM?: number;
         x: number;
         y: number;
         locked?: boolean;
@@ -1204,7 +1224,31 @@ function layoutBoxesOverlap(a: LayoutBox, b: LayoutBox, gap: number) {
   return a.x < b.x + b.w + gap && a.x + a.w + gap > b.x && a.y < b.y + b.h + gap && a.y + a.h + gap > b.y;
 }
 
-export function estimateTableFootprint(shape: TableShape | undefined, capacity: number): { w: number; h: number } {
+export function estimateTableFootprint(
+  shape: TableShape | undefined,
+  capacity: number,
+  customDims?: {
+    customWidthM?: number;
+    customDepthM?: number;
+    customRadiusM?: number;
+  },
+): { w: number; h: number } {
+  if (customDims) {
+    if (typeof customDims.customRadiusM === 'number' && customDims.customRadiusM > 0) {
+      const span = Math.max(4, Math.min(30, customDims.customRadiusM * 2 * 6.5));
+      return { w: span, h: span };
+    }
+    const w = typeof customDims.customWidthM === 'number' && customDims.customWidthM > 0
+      ? Math.max(4, Math.min(35, customDims.customWidthM * 5.8))
+      : undefined;
+    const h = typeof customDims.customDepthM === 'number' && customDims.customDepthM > 0
+      ? Math.max(4, Math.min(30, customDims.customDepthM * 5.8))
+      : undefined;
+    if (w !== undefined || h !== undefined) {
+      const def = shape === 'square' ? { w: 8, h: 8 } : { w: 10, h: 7 };
+      return { w: w ?? def.w, h: h ?? def.h };
+    }
+  }
   if (shape === 'cocktail' || shape === 'highTop') return { w: 5, h: 5 };
   if (shape === 'rectangular' || shape === 'arc') {
     const w = capacity >= 14 ? 16 : capacity >= 10 ? 13 : 10;
@@ -1220,7 +1264,11 @@ function furnitureLayoutBox(item: RoomLayoutBlueprint['furniture'][number]): Lay
     return { x: item.x, y: item.y, w: item.w, h: item.h };
   }
   if (item.kind === 'table') {
-    const size = estimateTableFootprint(item.shape, item.capacity);
+    const size = estimateTableFootprint(item.shape, item.capacity, {
+      customWidthM: item.customWidthM,
+      customDepthM: item.customDepthM,
+      customRadiusM: item.customRadiusM,
+    });
     return { x: item.x - size.w / 2, y: item.y - size.h / 2, w: size.w, h: size.h };
   }
   if (item.kind === 'row') {
@@ -5112,6 +5160,10 @@ export function applyTableStyleToAll(
       couvertStyle: fields.includes('couvertStyle') ? source.couvertStyle : item.couvertStyle,
       hasCenterpiece: fields.includes('hasCenterpiece') ? source.hasCenterpiece : item.hasCenterpiece,
       centerpieceStyle: fields.includes('centerpieceStyle') ? source.centerpieceStyle : item.centerpieceStyle,
+      customWidthM: fields.includes('dimensions') ? source.customWidthM : item.customWidthM,
+      customDepthM: fields.includes('dimensions') ? source.customDepthM : item.customDepthM,
+      customRadiusM: fields.includes('dimensions') ? source.customRadiusM : item.customRadiusM,
+      cornerRadiusM: fields.includes('dimensions') ? source.cornerRadiusM : item.cornerRadiusM,
     };
   });
   return refreshBlueprintMetadata({ ...blueprint, furniture });
