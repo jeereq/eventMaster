@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Calendar, Compass, Store, Sparkles } from 'lucide-react';
+import { Calendar, Compass, Store } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { TenantAccountKind } from '@/lib/marketplace';
 import {
@@ -11,11 +11,10 @@ import {
   REGISTER_KIND_TITLES,
 } from '@/lib/registerAccountKinds';
 
-const KIND_ICONS: Record<TenantAccountKind, typeof Calendar> = {
+const KIND_ICONS: Record<(typeof REGISTER_KIND_ORDER)[number], typeof Calendar> = {
   ORGANIZER: Calendar,
   CLIENT: Compass,
   VENDOR: Store,
-  BOTH: Sparkles,
 };
 
 export default function RegisterAccountKindPicker({
@@ -65,14 +64,6 @@ export default function RegisterAccountKindPicker({
             </button>
           );
         })}
-        <button
-          type="button"
-          onClick={() => onSelect('BOTH')}
-          className="w-full min-h-11 px-3 pt-3 mt-1 border-t border-border rounded-none text-left text-xs text-muted hover:text-foreground transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-        >
-          <span className="font-semibold text-foreground">{REGISTER_KIND_TITLES.BOTH}</span>
-          <span className="block mt-0.5 leading-relaxed">{REGISTER_KIND_DESCRIPTIONS.BOTH}</span>
-        </button>
       </div>
     </div>
   );

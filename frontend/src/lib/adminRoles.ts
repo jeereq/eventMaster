@@ -16,7 +16,7 @@ export function orgRoleLabel(orgRole?: string | null, isOwner?: boolean): string
 export function accountKindShortLabel(kind?: string | null): string {
   if (kind === 'ORGANIZER') return 'Organisateur';
   if (kind === 'VENDOR') return 'Prestataire';
-  if (kind === 'BOTH') return 'Les deux';
+  if (kind === 'BOTH') return 'Organisateur';
   if (kind === 'CLIENT') return 'Client catalogue';
   return '';
 }

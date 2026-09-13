@@ -24,7 +24,7 @@ export const WELCOME_GRANT_LABELS: Record<WelcomeGrantKey, string> = {
   b2c: 'Organisateur particulier',
   b2b: 'Organisation pro',
   enterprise: 'Forfait entreprise',
-  catalog: 'Client / salle / presta / mixte',
+  catalog: 'Client / salle / presta',
   protocol: 'Agent protocole',
   manager: 'Manager',
 };

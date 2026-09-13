@@ -121,22 +121,6 @@ const REGISTRATION_KIND_CONFIGS: Record<string, RegistrationActionConfig> = {
       { step: 3, icon: CalendarCheck, title: 'Confirmer', desc: 'Bloquez la date et suivez les acomptes.' },
     ],
   },
-  BOTH: {
-    key: 'BOTH',
-    heroTitle: 'Organiser et vendre, ensemble',
-    heroDescription:
-      'Un compte mixte dès l’essai : événements et vitrine. Les forfaits Business couvrent déjà le catalogue pour un organisateur.',
-    defaultAccountKind: 'BOTH',
-    defaultNextPath: '/dashboard',
-    submitButtonLabel: 'Créer mon compte',
-    orgLabel: 'Nom de l’entreprise ou de l’établissement',
-    orgPlaceholder: 'Ex: Groupe Événementiel & Salles',
-    features: [
-      { step: 1, icon: Calendar, title: 'Organiser', desc: 'Invitations, plan de table, accueil QR.' },
-      { step: 2, icon: Store, title: 'Publier', desc: 'Votre salle ou vos prestations, visibles des organisateurs.' },
-      { step: 3, icon: ScanLine, title: 'Le jour J', desc: 'Scan à l’entrée, sans application à installer pour les invités.' },
-    ],
-  },
 };
 
 const KIND_STEP_FEATURES = [
@@ -283,7 +267,10 @@ function RegisterPageContent() {
       setReferralChoice('yes');
    }
    const kind = searchParams.get('kind');
-   if (kind === 'CLIENT' || kind === 'VENDOR' || kind === 'BOTH' || kind === 'ORGANIZER') {
+   // BOTH n’est plus proposé : les forfaits Business couvrent déjà salle + prestations.
+   if (kind === 'BOTH') {
+     setAccountKind('ORGANIZER');
+   } else if (kind === 'CLIENT' || kind === 'VENDOR' || kind === 'ORGANIZER') {
      setAccountKind(kind);
     } else if (actionParam === 'venue' || actionParam === 'services' || actionParam === 'quotes' || actionParam === 'rentals' || actionParam === 'ai_recommendation' || intentParam === 'vendor') {
      setAccountKind('VENDOR');

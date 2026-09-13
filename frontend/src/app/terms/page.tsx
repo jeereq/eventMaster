@@ -66,9 +66,8 @@ export default function TermsPage() {
         </p>
         <p>Les comptes se déclinent selon différents profils adaptés aux usages :</p>
         <ul className="list-disc pl-5 space-y-1">
-          <li><strong>Organisateur</strong> : création d&apos;événements, invitations, plans de salle 2D/3D, billetterie, dons solidaires et contrôle d&apos;accès ;</li>
+          <li><strong>Organisateur</strong> : création d&apos;événements, invitations, plans de salle 2D/3D, billetterie, dons solidaires et contrôle d&apos;accès ; les forfaits Business et au-delà incluent aussi la vitrine salle et prestations ;</li>
           <li><strong>Prestataire / Salle / Loueur</strong> : publication de vitrines marketplace (prestations de service, location de salles ou de matériel), gestion des disponibilités et devis ;</li>
-          <li><strong>Mixte</strong> : cumul des fonctionnalités d&apos;organisateur d&apos;événements et de professionnel du marketplace ;</li>
           <li><strong>Client / Acheteur / Donateur</strong> : consultation du marketplace, demandes de devis, participation aux collectes solidaires et achat de billets d&apos;événements sans abonnement SaaS organisationnel requis ;</li>
           <li><strong>Commercial / Apporteur d&apos;affaires</strong> : compte habilité à promouvoir la plateforme et à percevoir des commissions d&apos;apporteur selon les règles du réseau commercial en vigueur.</li>
         </ul>
@@ -369,7 +368,7 @@ export default function TermsPage() {
           <li><strong>Essentials (Gratuit)</strong> : découverte pour organisateurs et essai marketplace (1 salle / 1 prestation) ;</li>
           <li><strong>Particulier (B2C)</strong> : 4 paliers (50, 100, 200 ou plus de 200 invités illimités), facturés par trimestre (90 jours) ;</li>
           <li><strong>Business, Business Premium & Enterprise</strong> : forfaits professionnels pour agences et organisateurs réguliers avec support multi-comptes et fonctionnalités avancées ;</li>
-          <li><strong>Forfaits Marketplace (Salle, Prestataire, Loueur de matériel, Mixte)</strong> : publication et mise en avant des services professionnels.</li>
+          <li><strong>Forfaits Marketplace (Salle, Prestataire, Salle & presta)</strong> : publication et mise en avant des services professionnels.</li>
         </ul>
         <p>
           Les tarifs sont indiqués en Francs Congolais (FC / CDF) ou devise applicable. Les abonnements annuels peuvent bénéficier d&apos;une réduction tarifaire (notamment 10% de remise sur l&apos;engagement 12 mois).

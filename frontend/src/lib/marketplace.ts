@@ -99,21 +99,21 @@ export interface VenueListingDraft {
 export const ACCOUNT_KIND_LABELS: Record<TenantAccountKind, string> = {
   ORGANIZER: 'Organisateur d’événements',
   VENDOR: 'Salle ou prestataire',
-  BOTH: 'Organisateur et vendeur',
+  BOTH: 'Organisateur d’événements',
   CLIENT: 'Client (recherche)',
 };
 
 export const ACCOUNT_KIND_FILTER_LABELS: Record<TenantAccountKind, string> = {
   ORGANIZER: 'Organisateur',
   VENDOR: 'Salle / presta',
-  BOTH: 'Mixte',
+  BOTH: 'Organisateur',
   CLIENT: 'Client',
 };
 
 export const ACCOUNT_KIND_DESCRIPTIONS: Record<TenantAccountKind, string> = {
-  ORGANIZER: 'Vous créez l’événement, invitez, et accueillez le jour J.',
+  ORGANIZER: 'Vous créez l’événement, invitez, et accueillez le jour J. Les forfaits Business incluent aussi salle et prestations.',
   VENDOR: 'Vous publiez une salle à réserver, ou un métier (traiteur, photo, location…).',
-  BOTH: 'Vous organisez et vous vendez, dans le même compte.',
+  BOTH: 'Vous créez l’événement, invitez, et accueillez le jour J. Les forfaits Business incluent aussi salle et prestations.',
   CLIENT: 'Vous cherchez une salle ou un prestataire. Compte gratuit.',
 };
 

@@ -716,12 +716,10 @@ function BillingPageInner() {
               Aucun abonnement payant n&apos;est actif. Les forfaits correspondent à votre type de compte
               ({tenant?.accountKind === 'VENDOR'
                 ? 'marketplace'
-                : tenant?.accountKind === 'BOTH'
-                  ? 'organisation + marketplace'
-                  : 'organisation'}),
+                : 'organisation'}),
               exclusivement en {CURRENCY_NAME} (FC).
               {tenant?.accountKind === 'ORGANIZER' || tenant?.accountKind === 'BOTH'
-                ? ' Après activation d’un forfait payant, seuls les forfaits du même genre restent proposés.'
+                ? ' Après activation d’un forfait payant, seuls les forfaits du même genre restent proposés. Les forfaits Business incluent déjà salle et prestations.'
                 : ''}
             </Alert>
           )}
@@ -757,15 +755,13 @@ function BillingPageInner() {
                   }}
                 />
               )}
-              {(tenant?.accountKind === 'VENDOR' || tenant?.accountKind === 'BOTH') && (
+              {tenant?.accountKind === 'VENDOR' && (
                 <p className="text-xs text-muted leading-relaxed">
                   Un seul forfait à la fois : il n’y a pas de cumul Salle + Business.
-                  {tenant?.accountKind === 'BOTH'
-                    ? ' Compte mixte : Particulier, Business (catalogue inclus), Salle, Prestataire ou Salle & presta.'
-                    : ' Compte marketplace : Salle, Prestataire ou Salle & presta (fiches publiées, pas un volume d’agence).'}
+                  {' '}Compte marketplace : Salle, Prestataire ou Salle & presta (fiches publiées, pas un volume d’agence).
                 </p>
               )}
-              {tenant?.accountKind === 'ORGANIZER' &&
+              {(tenant?.accountKind === 'ORGANIZER' || tenant?.accountKind === 'BOTH') &&
                 billing.plan !== 'FREE' &&
                 !billing.plan?.startsWith('PERSONAL') &&
                 (billing.limits?.maxServices ?? 0) > 0 && (

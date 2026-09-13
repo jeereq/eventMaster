@@ -169,7 +169,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'upgrade',
     question: 'Comment changer de forfait ou demander un abonnement ?',
     answer:
-      'Depuis Facturation, comparez les quotas, choisissez la période de base ou l’annuel (−10 %), puis soumettez une demande. EventMaster valide et émet une facture. Le type de compte (organisateur, prestataire, mixte, client) détermine les forfaits visibles.',
+      'Depuis Facturation, comparez les quotas, choisissez la période de base ou l’annuel (−10 %), puis soumettez une demande. EventMaster valide et émet une facture. Le type de compte (organisateur, prestataire / salle, client) détermine les forfaits visibles. Les forfaits Business incluent déjà la vitrine salle et prestations.',
   },
   {
     id: 'invoices',

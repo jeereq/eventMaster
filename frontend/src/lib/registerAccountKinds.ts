@@ -7,14 +7,15 @@ export const REGISTER_KIND_TITLES: Record<TenantAccountKind, string> = {
   ORGANIZER: 'J’organise un événement',
   CLIENT: 'Je cherche une salle ou un prestataire',
   VENDOR: 'Je propose une salle ou un service',
-  BOTH: 'J’organise et je vends',
+  // Legacy (plus proposé à l’inscription) → même libellé que organisateur
+  BOTH: 'J’organise un événement',
 };
 
 export const REGISTER_KIND_DESCRIPTIONS: Record<TenantAccountKind, string> = {
   ORGANIZER: 'Invitations, plan de table, accueil jour J. Les forfaits Business incluent aussi la vitrine salle et prestations.',
   CLIENT: 'Compte gratuit : comparez, gardez des favoris, demandez un devis.',
   VENDOR: 'Publiez votre vitrine seule (salle ou métier), sans gérer d’événements.',
-  BOTH: 'Événements et vitrine dès l’essai. Utile si vous visez surtout le catalogue marketplace.',
+  BOTH: 'Invitations, plan de table, accueil jour J. Les forfaits Business incluent aussi la vitrine salle et prestations.',
 };
 
 export function registerAccountSummary(
@@ -38,7 +39,6 @@ export function registerAccountFormTitle(
   if (vendorTrack === 'service') return 'Créer le compte prestataire';
   if (kind === 'CLIENT') return 'Créer le compte client';
   if (kind === 'VENDOR') return 'Créer le compte professionnel';
-  if (kind === 'BOTH') return 'Créer le compte organisateur et vendeur';
   return 'Créer le compte organisateur';
 }
 

@@ -747,7 +747,7 @@ export default function OrganizerDashboardHome({
                     : isVendor
                     ? 'Espace Prestataire / Salles'
                     : isBoth
-                    ? 'Espace Mixte (Organisation & Vitrine)'
+                    ? 'Espace Organisation & Vitrine'
                     : isOwner
                     ? 'Espace Propriétaire'
                     : 'Espace Organisateur'}
@@ -3479,8 +3479,6 @@ export default function OrganizerDashboardHome({
                   <span className="text-xs font-bold uppercase tracking-wider text-muted">
                     {tenant?.accountKind === 'VENDOR'
                       ? 'Abonnements disponibles pour compte Prestataire / Salles'
-                      : tenant?.accountKind === 'BOTH'
-                      ? 'Abonnements disponibles pour compte Mixte (Organisation & Vitrine)'
                       : tenant?.accountKind === 'CLIENT'
                       ? 'Abonnements pour compte Client catalogue'
                       : 'Abonnements disponibles pour votre organisation'}
@@ -3558,7 +3556,7 @@ export default function OrganizerDashboardHome({
                         </div>
                         <p className="text-lg font-black text-foreground">19 900 FC <span className="text-xs font-normal text-muted">/ mois</span></p>
                         <div className="space-y-1 text-xs text-muted pt-1">
-                          <p>• <strong>Mixte</strong> : Salles ∞ + Prestations ∞</p>
+                          <p>• <strong>Salle & presta</strong> : Salles ∞ + Prestations ∞</p>
                           <p>• <strong>Complet</strong> : Plans 3D + Gestion de matériel</p>
                           <p>• <strong>Devis</strong> : Centralisation complète des demandes</p>
                           <p>• <strong>Inclus</strong> : Visibilité maximale catalogue</p>
@@ -3574,7 +3572,7 @@ export default function OrganizerDashboardHome({
                   </div>
                 )}
 
-                {/* 2. CAS COMPTE ORGANISATEUR CLASSIQUE (ORGANIZER) OU MIXTE (BOTH) */}
+                {/* 2. CAS COMPTE ORGANISATEUR (ORGANIZER ; BOTH legacy = même parcours) */}
                 {tenant?.accountKind !== 'VENDOR' && (
                   <div className={cn(
                     'grid grid-cols-1 gap-4',

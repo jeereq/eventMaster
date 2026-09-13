@@ -42,7 +42,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Vous pilotez EventMaster : organisations et licences, marketplace, vitrine, facturation, audit et impersonation support.',
     canDo: [
       'Traiter la file du jour : demandes d’abonnement, licences J-7, factures ouvertes',
-      'Créer et modifier les organisations, forfaits, durées et type de compte (organisateur, prestataire, mixte, client)',
+      'Créer et modifier les organisations, forfaits, durées et type de compte (organisateur, prestataire / salle, client)',
       'Ouvrir l’espace d’une organisation (impersonation support, bandeau visible)',
       'Modérer le catalogue : salles, prestataires, matériel & équipements ; dépublier / republier avec motif',
       'Suivre packs, favoris, GMV salles / prestataires / matériel & équipements et commissions {commissionPercent} %',
@@ -84,7 +84,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'account-kind',
         title: 'Changer le type de compte d’une organisation',
         content:
-          '1. Organisations → Modifier.\n2. Champ Type de compte : organisateur, prestataire, mixte ou client.\n3. Ajustez le forfait s’il n’est plus compatible.\n4. Enregistrez. Aucun autre rôle (propriétaire, manager, commercial, client) ne peut faire ce changement.',
+          '1. Organisations → Modifier.\n2. Champ Type de compte : organisateur, prestataire / salle ou client.\n3. Ajustez le forfait s’il n’est plus compatible.\n4. Enregistrez. Aucun autre rôle (propriétaire, manager, commercial, client) ne peut faire ce changement.',
         links: [{ label: 'Organisations', href: '/dashboard?tab=tenants' }],
       },
       {
@@ -140,7 +140,7 @@ export const USER_GUIDES: UserGuide[] = [
       },
     ],
     tips: [
-      'Filtrez les organisations par type : Client (sans licence), Organisateur, Salle / presta, Mixte.',
+      'Filtrez les organisations par type : Client (sans licence), Organisateur, Salle / presta.',
       'Sur Invités (/dashboard/admin/guests), le filtre « PDF non livré » cible les RSVP acceptés sans seatingInvitationPdfUrl. L’export CSV porte sur 100 résultats filtrés.',
       'Un motif de dépublication apparaît dans le journal d’audit (CATALOG_UNPUBLISH).',
       'Les modèles d\'organisation ne doivent jamais avoir showOnLanding — seuls les modèles globaux sont publics.',
@@ -299,7 +299,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'account-kind',
         title: 'Type de compte',
         content:
-          '1. Le type (organisateur, prestataire, mixte, client) s’affiche en lecture seule dans Mon compte.\n2. Aucun rôle d’organisation ne peut le modifier — ni le propriétaire, ni le manager, ni le protocole.\n3. Pour un changement d’activité, contactez le Super Admin EventMaster : il le règle depuis Organisations.\n4. Un type incompatible avec le forfait se corrige aussi côté Super Admin (forfait adapté).',
+          '1. Le type (organisateur, prestataire / salle, client) s’affiche en lecture seule dans Mon compte.\n2. Aucun rôle d’organisation ne peut le modifier — ni le propriétaire, ni le manager, ni le protocole.\n3. Pour un changement d’activité, contactez le Super Admin EventMaster : il le règle depuis Organisations.\n4. Un type incompatible avec le forfait se corrige aussi côté Super Admin (forfait adapté).',
         links: [
           { label: 'Mon compte', href: '/dashboard/profile' },
           { label: 'Facturation', href: '/dashboard/billing' },
@@ -767,7 +767,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'upgrade-account',
         title: 'Passer organisateur ou prestataire',
         content:
-          '1. Le type de compte est visible en lecture seule dans Mon compte.\n2. Vous ne pouvez pas le modifier vous-même.\n3. Contactez le support EventMaster (Super Admin) pour passer organisateur, prestataire ou mixte.\n4. Une fois le type mis à jour, choisissez un forfait adapté dans Facturation.',
+          '1. Le type de compte est visible en lecture seule dans Mon compte.\n2. Vous ne pouvez pas le modifier vous-même.\n3. Contactez le support EventMaster (Super Admin) pour passer organisateur ou prestataire / salle.\n4. Une fois le type mis à jour, choisissez un forfait adapté dans Facturation.',
         links: [{ label: 'Mon compte', href: '/dashboard/profile' }],
       },
     ],
