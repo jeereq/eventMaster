@@ -369,7 +369,7 @@ function SidebarNav({
  {sections.filter((section) => section.items.length > 0).map((section, sectionIdx) => (
  <div key={section.label ?? sectionIdx}>
  {section.label && !collapsed && (
- <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
+ <p className="px-3 mb-1.5 text-xs font-bold uppercase tracking-wider text-muted">
  {section.label}
  </p>
  )}
@@ -804,32 +804,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <>
                 {user?.role === 'SUPER_ADMIN' ? (
                   <div className="p-3 bg-surface border border-border rounded-lg">
-                    <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">Rôle global</div>
+                    <div className="text-xs text-muted font-bold uppercase tracking-wider">Rôle global</div>
                     <div className="font-semibold text-sm mt-0.5 text-foreground">Super Admin</div>
-                    <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 text-[10px] font-bold text-primary">
-                      <ShieldCheck className="w-3 h-3" />
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 text-xs font-bold text-primary">
+                      <ShieldCheck className="w-3.5 h-3.5" />
                       Plateforme SaaS
                     </div>
                   </div>
                 ) : user?.role === 'COMMERCIAL' ? (
                   <div className="p-3 bg-surface border border-border rounded-lg">
-                    <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">Rôle global</div>
+                    <div className="text-xs text-muted font-bold uppercase tracking-wider">Rôle global</div>
                     <div className="font-semibold text-sm mt-0.5 text-foreground">Commercial plateforme</div>
-                    <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-amber-500/10 text-[10px] font-bold text-amber-700 dark:text-amber-300">
-                      <Briefcase className="w-3 h-3" />
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 text-xs font-bold text-amber-700 dark:text-amber-300">
+                      <Briefcase className="w-3.5 h-3.5" />
                       Parrainage
                     </div>
                   </div>
                 ) : tenant ? (
                   <div className="p-3 bg-surface border border-border rounded-lg">
-                    <div className="text-[10px] text-muted font-semibold uppercase tracking-wider">
+                    <div className="text-xs text-muted font-bold uppercase tracking-wider">
                       {isClientAccount ? 'Compte' : 'Organisation'}
                     </div>
                     <div className="font-semibold text-foreground text-sm truncate mt-0.5">
                       {tenant.name}
                     </div>
-                    <div className="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 text-[10px] font-bold text-primary">
-                      <ShieldCheck className="w-3 h-3" />
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 text-xs font-bold text-primary">
+                      <ShieldCheck className="w-3.5 h-3.5" />
                       {isClientAccount ? 'Client' : `Plan ${tenant.plan}`}
                     </div>
                   </div>

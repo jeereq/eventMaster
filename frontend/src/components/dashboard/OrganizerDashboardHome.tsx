@@ -603,14 +603,14 @@ export default function OrganizerDashboardHome({
                   </span>
                 )}
                 {tenant?.plan && (
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md bg-surface border border-border text-foreground">
+                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-surface border border-border text-foreground">
                     Forfait {tenant.plan}
                   </span>
                 )}
                 {isOwner && daysUntilExpiry != null && (
                   <span
                     className={cn(
-                      'text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md border',
+                      'text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border',
                       daysUntilExpiry <= 0
                         ? 'bg-danger/10 border-danger/30 text-danger'
                         : daysUntilExpiry <= 15
@@ -673,7 +673,7 @@ export default function OrganizerDashboardHome({
                     <CalendarCheck className="w-3.5 h-3.5" />
                     Réservations
                     {bookings.length > 0 && (
-                      <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-primary text-primary-foreground">
+                      <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-primary text-primary-foreground font-bold">
                         {bookings.length}
                       </span>
                     )}
@@ -686,7 +686,7 @@ export default function OrganizerDashboardHome({
                     <Inbox className="w-3.5 h-3.5 text-amber-500" />
                     Devis reçus
                     {pendingQuotesCount > 0 && (
-                      <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500 text-white font-bold">
+                      <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-amber-500 text-white font-bold">
                         {pendingQuotesCount}
                       </span>
                     )}
@@ -811,7 +811,7 @@ export default function OrganizerDashboardHome({
                 {tab.badge && (
                   <span
                     className={cn(
-                      'ml-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold',
+                      'ml-1 px-2 py-0.5 rounded-full text-xs font-bold',
                       active
                         ? 'bg-primary-foreground/20 text-primary-foreground'
                         : 'bg-surface-muted text-muted border border-border',
@@ -872,7 +872,7 @@ export default function OrganizerDashboardHome({
                     </p>
                     <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
                       <span>{confirmedBookingsCount} confirmée{confirmedBookingsCount > 1 ? 's' : ''}</span>
-                      <span className="text-[10px] text-primary font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Gérer</span>
+                      <span className="text-xs text-primary font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Gérer</span>
                     </p>
                   </div>
                 </button>
@@ -895,7 +895,7 @@ export default function OrganizerDashboardHome({
                     </p>
                     <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
                       <span>{pendingQuotesCount > 0 ? `${pendingQuotesCount} en attente` : 'Chiffrages'}</span>
-                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Répondre</span>
+                      <span className="text-xs text-amber-600 dark:text-amber-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Répondre</span>
                     </p>
                   </div>
                 </button>
@@ -920,7 +920,7 @@ export default function OrganizerDashboardHome({
                     </p>
                     <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
                       <span>{isVendor ? 'Offres actives' : 'Modélisées 2D/3D'}</span>
-                      <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Configurer</span>
+                      <span className="text-xs text-purple-600 dark:text-purple-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Configurer</span>
                     </p>
                   </div>
                 </button>
@@ -943,7 +943,7 @@ export default function OrganizerDashboardHome({
                     </p>
                     <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
                       <span>{bookings.length > 0 ? `${bookings.length} résa validées` : 'Revenus & Devis'}</span>
-                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Analyse</span>
+                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Analyse</span>
                     </p>
                   </div>
                 </button>
@@ -1008,7 +1008,7 @@ export default function OrganizerDashboardHome({
                     </p>
                     <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
                       <span>Total créés</span>
-                      <span className="text-[10px] text-primary font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Gérer</span>
+                      <span className="text-xs text-primary font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Gérer</span>
                     </p>
                   </div>
                 </button>
@@ -1030,7 +1030,7 @@ export default function OrganizerDashboardHome({
                     </p>
                     <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
                       <span>Enregistrés</span>
-                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Suivi</span>
+                      <span className="text-xs text-amber-600 dark:text-amber-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Suivi</span>
                     </p>
                   </div>
                 </button>
@@ -1117,7 +1117,7 @@ export default function OrganizerDashboardHome({
                       {isOwner && daysUntilExpiry != null && (
                         <span
                           className={cn(
-                            'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+                            'text-xs font-bold px-2 py-0.5 rounded-full',
                             daysUntilExpiry <= 0
                               ? 'bg-danger/10 text-danger border border-danger/20'
                               : daysUntilExpiry <= 15
@@ -1156,7 +1156,7 @@ export default function OrganizerDashboardHome({
                     <h2 className="text-base font-bold text-foreground">
                       Finances & Billetterie
                     </h2>
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                    <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
                       Direction
                     </span>
                   </div>
@@ -1460,7 +1460,7 @@ export default function OrganizerDashboardHome({
                     <h2 className="text-base font-bold text-foreground">
                       Bilan Financier & Billetterie des Événements
                     </h2>
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                    <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
                       Direction
                     </span>
                   </div>
@@ -1703,7 +1703,7 @@ export default function OrganizerDashboardHome({
                   <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                     <Mail className="w-5 h-5" />
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
+                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
                     Faire-part & RSVP
                   </span>
                 </div>
@@ -1736,7 +1736,7 @@ export default function OrganizerDashboardHome({
               <div className="pt-3 border-t border-border flex items-center justify-between gap-2 mt-auto">
                 <Link
                   href="/dashboard/templates"
-                  className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-surface-muted hover:bg-primary/10 hover:text-primary transition text-muted"
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-surface-muted hover:bg-primary/10 hover:text-primary transition text-muted"
                 >
                   Modèles de messages
                 </Link>
@@ -1757,7 +1757,7 @@ export default function OrganizerDashboardHome({
                   <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
                     <ScanLine className="w-5 h-5" />
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
                     Accueil Jour J
                   </span>
                 </div>
@@ -1788,7 +1788,7 @@ export default function OrganizerDashboardHome({
               </div>
 
               <div className="pt-3 border-t border-border flex items-center justify-between gap-2 mt-auto">
-                <span className="text-[11px] text-muted">
+                <span className="text-xs text-muted">
                   Émargement sécurisé
                 </span>
                 <Button
@@ -1871,7 +1871,7 @@ export default function OrganizerDashboardHome({
                   <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center">
                     <Building2 className="w-5 h-5" />
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
                     Plan 2D/3D
                   </span>
                 </div>
@@ -1886,9 +1886,9 @@ export default function OrganizerDashboardHome({
                 </div>
 
                 <div className="flex flex-wrap gap-1.5 pt-1">
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-surface-muted text-muted">Tables rondes & rect.</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-surface-muted text-muted">Scène & Buffet</span>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-surface-muted text-muted">Vue 3D WebGL</span>
+                  <span className="text-xs px-2.5 py-1 rounded bg-surface-muted text-muted">Tables rondes & rect.</span>
+                  <span className="text-xs px-2.5 py-1 rounded bg-surface-muted text-muted">Scène & Buffet</span>
+                  <span className="text-xs px-2.5 py-1 rounded bg-surface-muted text-muted">Vue 3D WebGL</span>
                 </div>
               </div>
 
@@ -1911,7 +1911,7 @@ export default function OrganizerDashboardHome({
                   <div className="w-10 h-10 rounded-xl bg-primary/15 border border-primary/25 text-primary flex items-center justify-center">
                     <Sparkles className="w-5 h-5" />
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
+                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
                     Simulateur IA
                   </span>
                 </div>
@@ -1934,13 +1934,13 @@ export default function OrganizerDashboardHome({
                   </Link>
                   <Link
                     href="/dashboard/catalogue?kind=venue"
-                    className="text-[10px] font-medium px-2 py-0.5 rounded bg-surface border border-border hover:bg-primary/10 hover:text-primary transition text-muted"
+                    className="text-xs font-medium px-2.5 py-1 rounded-lg bg-surface border border-border hover:bg-primary/10 hover:text-primary transition text-muted min-h-[30px] inline-flex items-center"
                   >
                     Salles
                   </Link>
                   <Link
                     href="/dashboard/catalogue?kind=service"
-                    className="text-[10px] font-medium px-2 py-0.5 rounded bg-surface border border-border hover:bg-primary/10 hover:text-primary transition text-muted"
+                    className="text-xs font-medium px-2.5 py-1 rounded-lg bg-surface border border-border hover:bg-primary/10 hover:text-primary transition text-muted min-h-[30px] inline-flex items-center"
                   >
                     Prestataires
                   </Link>
@@ -1978,7 +1978,7 @@ export default function OrganizerDashboardHome({
                   <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                     <Wallet className="w-5 h-5" />
                   </div>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
                     Devis & Contrats
                   </span>
                 </div>
@@ -1995,13 +1995,13 @@ export default function OrganizerDashboardHome({
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   <Link
                     href="/dashboard/bookings?tab=quotes"
-                    className="text-[10px] font-medium px-2 py-0.5 rounded bg-surface-muted hover:bg-primary/10 hover:text-primary transition text-muted"
+                    className="text-xs font-medium px-2.5 py-1 rounded-lg bg-surface-muted hover:bg-primary/10 hover:text-primary transition text-muted min-h-[30px] inline-flex items-center"
                   >
                     Devis en cours
                   </Link>
                   <Link
                     href="/dashboard/bookings?tab=bookings"
-                    className="text-[10px] font-medium px-2 py-0.5 rounded bg-surface-muted hover:bg-primary/10 hover:text-primary transition text-muted"
+                    className="text-xs font-medium px-2.5 py-1 rounded-lg bg-surface-muted hover:bg-primary/10 hover:text-primary transition text-muted min-h-[30px] inline-flex items-center"
                   >
                     Dates réservées
                   </Link>
@@ -2057,6 +2057,7 @@ export default function OrganizerDashboardHome({
                 <div className="flex items-center p-1 rounded-xl border border-border bg-surface-muted/60 text-xs">
                   <button
                     type="button"
+                    aria-pressed={vendorRolePerspective === 'vendor'}
                     onClick={() => {
                       setVendorRolePerspective('vendor');
                       loadVendorHubData('vendor');
@@ -2072,6 +2073,7 @@ export default function OrganizerDashboardHome({
                   </button>
                   <button
                     type="button"
+                    aria-pressed={vendorRolePerspective === 'organizer'}
                     onClick={() => {
                       setVendorRolePerspective('organizer');
                       loadVendorHubData('organizer');
@@ -2175,6 +2177,7 @@ export default function OrganizerDashboardHome({
                 <div className="flex items-center p-1 rounded-xl border border-border bg-surface-muted/60 text-xs">
                   <button
                     type="button"
+                    aria-pressed={vendorRolePerspective === 'vendor'}
                     onClick={() => {
                       setVendorRolePerspective('vendor');
                       loadVendorHubData('vendor');
@@ -2190,6 +2193,7 @@ export default function OrganizerDashboardHome({
                   </button>
                   <button
                     type="button"
+                    aria-pressed={vendorRolePerspective === 'organizer'}
                     onClick={() => {
                       setVendorRolePerspective('organizer');
                       loadVendorHubData('organizer');
@@ -2228,7 +2232,7 @@ export default function OrganizerDashboardHome({
               <div className="flex items-center gap-2 mt-2">
                 <p className="text-2xl font-black text-amber-600">{pendingQuotesCount}</p>
                 {pendingQuotesCount > 0 && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 animate-pulse">
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 animate-pulse">
                     À traiter
                   </span>
                 )}
@@ -2310,8 +2314,11 @@ export default function OrganizerDashboardHome({
             <div className="flex flex-col sm:flex-row gap-2">
               <div className="relative flex-1">
                 <Search className="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <label htmlFor="org-catalogue-quick-search" className="sr-only">Rechercher dans le catalogue</label>
                 <input
+                  id="org-catalogue-quick-search"
                   type="search"
+                  aria-label="Rechercher une salle, un traiteur, un DJ ou du matériel"
                   placeholder="Rechercher une salle, un traiteur, un DJ, du matériel…"
                   className="w-full min-h-11 pl-10 pr-4 rounded-xl border border-border bg-surface text-sm text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary shadow-2xs transition"
                   onKeyDown={(e) => {
@@ -2634,7 +2641,7 @@ export default function OrganizerDashboardHome({
                 <h2 className="text-base font-bold text-foreground">
                   Gestion de l’Équipe & Rôles
                 </h2>
-                <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                   {isOwner ? 'Propriétaire' : 'Manager'}
                 </span>
               </div>
@@ -2703,7 +2710,7 @@ export default function OrganizerDashboardHome({
                   {daysUntilExpiry != null && (
                     <span
                       className={cn(
-                        'text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md border',
+                        'text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border',
                         daysUntilExpiry <= 0
                           ? 'bg-danger/10 border-danger/30 text-danger'
                           : daysUntilExpiry <= 15
@@ -2763,14 +2770,14 @@ export default function OrganizerDashboardHome({
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-5 border-b border-border/80">
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                       <Crown className="w-3.5 h-3.5" />
                       Formules
                     </span>
-                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/40">
+                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-md border border-emerald-200 dark:border-emerald-800/40">
                       <Percent className="w-3 h-3" /> −10 % en paiement annuel
                     </span>
-                    <span className="text-xs font-medium text-primary flex items-center gap-1 bg-primary/10 px-2 py-0.5 rounded-md border border-primary/20">
+                    <span className="text-xs font-medium text-primary flex items-center gap-1 bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20">
                       <Sparkles className="w-3 h-3" /> Codes promos acceptés
                     </span>
                   </div>
@@ -2795,7 +2802,7 @@ export default function OrganizerDashboardHome({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-foreground uppercase tracking-wider">Particuliers</span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-primary/10 text-primary">Mariage & Fêtes</span>
+                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary/10 text-primary">Mariage & Fêtes</span>
                     </div>
                     <p className="text-lg font-black text-foreground">Dès 35 000 FC</p>
                     <div className="space-y-1 text-xs text-muted pt-1">
@@ -2818,7 +2825,7 @@ export default function OrganizerDashboardHome({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-primary uppercase tracking-wider">Professionnels</span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-primary-solid text-primary-foreground">Recommandé</span>
+                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Recommandé</span>
                     </div>
                     <p className="text-lg font-black text-foreground">Dès 149 000 FC <span className="text-xs font-normal text-muted">/ mois</span></p>
                     <div className="space-y-1 text-xs text-muted pt-1">
@@ -2841,7 +2848,7 @@ export default function OrganizerDashboardHome({
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-purple-600 uppercase tracking-wider">Vitrine Catalogue</span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/10 text-purple-600">Salles & Métiers</span>
+                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600">Salles & Métiers</span>
                     </div>
                     <p className="text-lg font-black text-foreground">Dès 9 900 FC <span className="text-xs font-normal text-muted">/ mois</span></p>
                     <div className="space-y-1 text-xs text-muted pt-1">
