@@ -91,12 +91,38 @@ export default function LandingRoomPlanAiStudio({
   const [studioTab, setStudioTab] = useState<StudioAiTabId>('create');
 
   useEffect(() => {
-    void fetchAiRoomPlanComposeHistory().then(setHistory);
+    void fetchAiRoomPlanComposeHistory().then(setHistory).catch(() => setHistory([]));
   }, []);
 
   useEffect(() => {
     setAllowance(getAiSimulationAllowance());
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const checkHashOrParams = () => {
+        const params = new URLSearchParams(window.location.search);
+        const shouldOpen =
+          window.location.hash === `#${id}` ||
+          window.location.hash === '#studio-ia' ||
+          params.get('studio') === '1' ||
+          params.get('open') === '1' ||
+          params.get('studio') === 'room';
+        if (shouldOpen) {
+          setExpanded(true);
+          const el = document.getElementById(id);
+          if (el) {
+            setTimeout(() => {
+              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+          }
+        }
+      };
+      checkHashOrParams();
+      window.addEventListener('hashchange', checkHashOrParams);
+      return () => window.removeEventListener('hashchange', checkHashOrParams);
+    }
+  }, [id]);
 
   const asRoomType = (value?: string | null): RoomType => (
     value && ROOM_TYPES.includes(value as RoomType) ? (value as RoomType) : 'BANQUET'
