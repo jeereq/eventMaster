@@ -617,8 +617,8 @@ export function bookingNextStep(
     : { title: 'Confirmation en cours', detail: 'L’acompte est marqué. Le professionnel va bloquer la date.' };
 }
 
-export function inquiryChatClosed(item: Pick<MarketplaceInquiryItem, 'closedAt' | 'status' | 'hasBooking'>): boolean {
-  return Boolean(item.closedAt) || item.status === 'DECLINED' || Boolean(item.hasBooking);
+export function inquiryChatClosed(item: Pick<MarketplaceInquiryItem, 'closedAt' | 'status'>): boolean {
+  return Boolean(item.closedAt) || item.status === 'DECLINED';
 }
 
 export function canDeclineInquiry(item: MarketplaceInquiryItem): boolean {
@@ -640,21 +640,21 @@ export function inquiryNextStep(item: MarketplaceInquiryItem): { title: string; 
   if (item.status === 'QUOTED') {
     const formatted = item.quotedAmountFc != null ? `${formatFc(item.quotedAmountFc)} FC` : 'Chiffré';
     return asOrganizer
-      ? { title: `Devis reçu (${formatted})`, detail: 'Acceptez ce devis pour demander la réservation. Le professionnel confirmera, puis vous versez l’acompte.' }
-      : { title: `Devis transmis (${formatted})`, detail: 'Proposition envoyée au client. Il peut vous répondre ici ; vous pouvez aussi convertir en réservation.' };
+      ? { title: `Devis reçu (${formatted})`, detail: 'Discutez le montant ou la date ici, puis acceptez pour conclure.' }
+      : { title: `Devis transmis (${formatted})`, detail: 'Le client peut encore discuter. Ajustez le devis ou convertissez en réservation.' };
   }
   if (item.closedAt) {
     return { title: 'Conversation clôturée', detail: 'Plus aucun message ne peut être envoyé sur ce devis.' };
   }
   if (item.status === 'NEW') {
     return asOrganizer
-      ? { title: 'En attente du devis', detail: 'Le professionnel n’a pas encore chiffré. Répondez-lui ici si vous avez une précision — ne réservez qu’après le devis.' }
+      ? { title: 'Discutez pour conclure', detail: 'Précisez date, lieu et besoin ici. Le professionnel chiffre, puis vous acceptez.' }
       : item.eventDate
-        ? { title: 'Nouveau devis', detail: 'Contactez le client, puis chiffrez le devis ou refusez avec motif.' }
-        : { title: 'Nouveau devis', detail: 'Contactez le client, puis marquez la demande comme contactée.' };
+        ? { title: 'Nouveau devis', detail: 'Discutez avec le client, puis chiffrez le devis pour conclure.' }
+        : { title: 'Nouveau devis', detail: 'Convenez d’une date dans la conversation, puis chiffrez le devis.' };
   }
   if (asOrganizer) {
-    return { title: 'Prise en charge', detail: 'Le professionnel vous a contacté. Réservez depuis l’événement si un tarif est publié.' };
+    return { title: 'Échange en cours', detail: 'Continuez la conversation, puis acceptez le devis chiffré pour réserver.' };
   }
   return item.eventDate
     ? { title: 'Prêt à chiffrer / réserver', detail: 'Chiffrez le devis ou convertissez directement en réservation pour bloquer la date.' }

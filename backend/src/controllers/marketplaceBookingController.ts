@@ -732,8 +732,7 @@ export async function acceptInquiryQuote(req: AuthenticatedRequest, res: Respons
     await prisma.marketplaceInquiry.update({
       where: { id: inquiry.id },
       data: {
-        closedAt: inquiry.closedAt ?? new Date(),
-        closedByRole: inquiry.closedByRole ?? 'CLIENT',
+        status: inquiry.status === 'NEW' ? 'CONTACTED' : inquiry.status,
       },
     });
 
@@ -839,11 +838,7 @@ export async function convertInquiryToBooking(req: AuthenticatedRequest, res: Re
 
     await prisma.marketplaceInquiry.update({
       where: { id: inquiry.id },
-      data: {
-        status: 'CONTACTED',
-        closedAt: inquiry.closedAt ?? new Date(),
-        closedByRole: inquiry.closedByRole ?? 'VENDOR',
-      },
+      data: { status: 'CONTACTED' },
     });
 
     const bookingTitle = booking.offering?.title || booking.listing?.headline || booking.listing?.room.name || 'Réservation';

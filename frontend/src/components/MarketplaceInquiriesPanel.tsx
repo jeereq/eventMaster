@@ -259,18 +259,17 @@ export default function MarketplaceInquiriesPanel({
           responseNotes: quoteNotes.trim() || undefined,
         });
       }
+      const quoted = {
+        status: 'QUOTED' as const,
+        quotedAmountFc: parsedAmount,
+        responseNotes: quoteNotes.trim() || null,
+        respondedAt: new Date().toISOString(),
+      };
       setInquiries((prev) =>
-        prev.map((i) =>
-          i.id === quoteTarget.id
-            ? {
-                ...i,
-                status: 'QUOTED',
-                quotedAmountFc: parsedAmount,
-                responseNotes: quoteNotes.trim() || null,
-                respondedAt: new Date().toISOString(),
-              }
-            : i,
-        ),
+        prev.map((i) => (i.id === quoteTarget.id ? { ...i, ...quoted } : i)),
+      );
+      setThreadTarget((current) =>
+        current && current.id === quoteTarget.id ? { ...current, ...quoted } : current,
       );
       setQuoteTarget(null);
       if (onChanged) await onChanged();
@@ -462,16 +461,21 @@ export default function MarketplaceInquiriesPanel({
       const data = await api.post(`/marketplace/inquiries/${threadTarget.id}/messages`, {
         body,
         authorRole: organizerView ? 'CLIENT' : 'VENDOR',
-      }) as { message?: MarketplaceInquiryThreadMessage };
+      }) as { message?: MarketplaceInquiryThreadMessage; status?: MarketplaceInquiryItem['status'] };
       if (data.message) {
         setThreadMessages((prev) => [...prev, data.message as MarketplaceInquiryThreadMessage]);
       }
       setThreadDraft('');
+      const nextStatus = data.status || threadTarget.status;
+      setThreadTarget((current) =>
+        current && current.id === threadTarget.id ? { ...current, status: nextStatus } : current,
+      );
       setInquiries((prev) =>
         prev.map((item) =>
           item.id === threadTarget.id
             ? {
                 ...item,
+                status: nextStatus,
                 messageCount: (item.messageCount || 0) + 1,
                 lastMessage: {
                   body,
@@ -528,6 +532,9 @@ export default function MarketplaceInquiriesPanel({
         prev.map((i) =>
           i.id === acceptTarget.id ? { ...i, hasBooking: true } : i,
         ),
+      );
+      setThreadTarget((current) =>
+        current && current.id === acceptTarget.id ? { ...current, hasBooking: true } : current,
       );
       setAcceptTarget(null);
       setPanelNotice(result.message || 'Devis accepté. Le professionnel doit confirmer la réservation.');
@@ -742,11 +749,15 @@ export default function MarketplaceInquiriesPanel({
                 <div className="flex flex-wrap items-center gap-1.5">
                   <Button
                     size="sm"
-                    variant="secondary"
+                    variant={
+                      inquiryChatClosed(item) || item.hasBooking || (!organizerView && item.status !== 'QUOTED')
+                        ? 'secondary'
+                        : 'primary'
+                    }
                     onClick={() => openThread(item)}
                     leftIcon={<MessageCircle className="w-3.5 h-3.5" />}
                   >
-                    {inquiryChatClosed(item) ? 'Conversation' : organizerView ? 'Répondre' : 'Conversation'}
+                    {inquiryChatClosed(item) ? 'Conversation' : 'Discuter'}
                     {(item.messageCount || 0) > 0 ? ` (${item.messageCount})` : ''}
                   </Button>
 
@@ -793,7 +804,7 @@ export default function MarketplaceInquiriesPanel({
 
                   {organizerView && !item.hasBooking && item.status === 'NEW' ? (
                     <span className="inline-flex items-center min-h-11 px-2.5 text-[11px] font-semibold text-muted">
-                      En attente du devis
+                      Discutez pour préciser le besoin
                     </span>
                   ) : null}
 
@@ -1232,8 +1243,8 @@ export default function MarketplaceInquiriesPanel({
             ? inquiryChatClosed(threadTarget)
               ? 'Cette conversation est clôturée. Les messages restent visibles.'
               : organizerView
-                ? `Échangez avec ${threadTarget.vendorName || 'le professionnel'} à propos de ce devis.`
-                : `Échangez avec ${threadTarget.fromName} à propos de sa demande.`
+                ? `Discutez date, montant et conditions avec ${threadTarget.vendorName || 'le professionnel'}, puis acceptez le devis pour conclure.`
+                : `Discutez avec ${threadTarget.fromName} pour tomber d’accord, puis chiffrez le devis pour conclure.`
             : undefined
         }
         size="lg"
@@ -1282,10 +1293,61 @@ export default function MarketplaceInquiriesPanel({
       >
         <div className="space-y-3">
           {panelError && threadTarget ? <Alert variant="error">{panelError}</Alert> : null}
-          {threadTarget?.status === 'QUOTED' && threadTarget.quotedAmountFc != null ? (
-            <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-800 dark:text-emerald-200">
-              Devis en cours : {formatFc(threadTarget.quotedAmountFc)}
+          {threadTarget && !inquiryChatClosed(threadTarget) && !threadTarget.hasBooking ? (
+            <div className="rounded-xl border border-border bg-surface-muted/50 px-3 py-2.5 space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+                Conclure le devis
+              </p>
+              {threadTarget.status === 'QUOTED' && threadTarget.quotedAmountFc != null ? (
+                <p className="text-sm font-medium text-foreground">
+                  Proposition en cours : {formatFc(threadTarget.quotedAmountFc)}
+                </p>
+              ) : (
+                <p className="text-xs text-muted">
+                  {organizerView
+                    ? 'Précisez votre besoin ici. Dès que le professionnel chiffre, vous pourrez accepter.'
+                    : 'Échangez sur la date et le périmètre, puis envoyez un montant pour conclure.'}
+                </p>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {organizerView && threadTarget.status === 'QUOTED' ? (
+                  <Button
+                    size="sm"
+                    onClick={() => handleConvertBooking(threadTarget)}
+                    leftIcon={<CalendarCheck className="w-3.5 h-3.5" />}
+                  >
+                    Accepter et demander la réservation
+                    {threadTarget.quotedAmountFc != null ? ` (${formatFc(threadTarget.quotedAmountFc)})` : ''}
+                  </Button>
+                ) : null}
+                {!organizerView ? (
+                  <Button
+                    size="sm"
+                    variant={threadTarget.status === 'QUOTED' ? 'secondary' : 'primary'}
+                    onClick={() => openQuoteModal(threadTarget)}
+                    leftIcon={<Coins className="w-3.5 h-3.5" />}
+                  >
+                    {threadTarget.status === 'QUOTED' ? 'Modifier le devis' : 'Chiffrer le devis'}
+                  </Button>
+                ) : null}
+                {!organizerView && threadTarget.eventDate ? (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={busyId === threadTarget.id}
+                    onClick={() => handleConvertBooking(threadTarget)}
+                    leftIcon={<CalendarCheck className="w-3.5 h-3.5" />}
+                  >
+                    Créer la réservation
+                  </Button>
+                ) : null}
+              </div>
             </div>
+          ) : null}
+          {threadTarget?.hasBooking ? (
+            <Alert variant="success">
+              Un accord a été conclu. Suivez l’acompte et la confirmation dans Réservations.
+            </Alert>
           ) : null}
           <div className="space-y-2 max-h-[45vh] overflow-y-auto overscroll-contain pr-1">
             {threadTarget?.message ? (

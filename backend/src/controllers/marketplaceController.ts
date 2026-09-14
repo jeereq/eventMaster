@@ -1683,6 +1683,13 @@ export async function postInquiryMessage(req: AuthenticatedRequest, res: Respons
       },
     });
 
+    if (authorRole === INQUIRY_AUTHOR_VENDOR && access.inquiry.status === 'NEW') {
+      await prisma.marketplaceInquiry.update({
+        where: { id: inquiryId },
+        data: { status: 'CONTACTED', respondedAt: new Date() },
+      });
+    }
+
     const title = inquiryTitleOf(access.inquiry);
     const preview = body.length > 140 ? `${body.slice(0, 137)}…` : body;
     if (authorRole === INQUIRY_AUTHOR_VENDOR) {
@@ -1702,7 +1709,12 @@ export async function postInquiryMessage(req: AuthenticatedRequest, res: Respons
       });
     }
 
-    return res.status(201).json({ message: created });
+    return res.status(201).json({
+      message: created,
+      status: authorRole === INQUIRY_AUTHOR_VENDOR && access.inquiry.status === 'NEW'
+        ? 'CONTACTED'
+        : access.inquiry.status,
+    });
   } catch (error) {
     console.error('postInquiryMessage:', error);
     return res.status(500).json({ error: 'Impossible d’envoyer la réponse.' });
