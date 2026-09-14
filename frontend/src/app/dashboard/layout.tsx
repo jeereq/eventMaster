@@ -716,6 +716,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
    setMobileMenuOpen(false);
  }, [pathname]);
 
+ useEffect(() => {
+   const onTourVisibility = (event: Event) => {
+     const active = Boolean((event as CustomEvent<{ active?: boolean }>).detail?.active);
+     if (typeof window !== 'undefined' && window.innerWidth < 768) {
+       setMobileMenuOpen(active);
+     }
+   };
+   window.addEventListener('em-tour-visibility', onTourVisibility);
+   return () => window.removeEventListener('em-tour-visibility', onTourVisibility);
+ }, []);
+
  const isClientAccount = tenant?.accountKind === 'CLIENT' || access?.level === 'client';
  const workspace = getWorkspaceModules({
   accountKind: tenant?.accountKind,

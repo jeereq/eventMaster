@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -17,14 +17,15 @@ import { cn } from '@/lib/cn';
 type GuideViewTab = 'doc' | 'tour';
 
 function DashboardGuidePageContent() {
-  const { user, access, tenant, planQuota, planFeatures } = useAuth();
+  const { user, access, tenant, planQuota, planFeatures, loading } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { startTour } = useTour();
+  const { startTour, isActive } = useTour();
+  const autoStartedRef = useRef(false);
 
   const resolved = useMemo(
-    () => resolveUserGuideRole({ role: user?.role, access }),
-    [user?.role, access],
+    () => resolveUserGuideRole({ role: user?.role, access, accountKind: tenant?.accountKind }),
+    [user?.role, access, tenant?.accountKind],
   );
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
@@ -61,13 +62,15 @@ function DashboardGuidePageContent() {
   };
 
   useEffect(() => {
-    if (searchParams.get('start') === '1' && activeTab === 'tour') {
-      startTour(activeGuideId, access, tourOpts);
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete('start');
-      router.replace(`/dashboard/guide?${params.toString()}`, { scroll: false });
-    }
-  }, [searchParams, activeTab, activeGuideId, access, startTour, router, tourOpts]);
+    if (loading || !user || isActive || autoStartedRef.current) return;
+    if (user.role === 'USER' && !tenant && !access) return;
+    if (searchParams.get('start') !== '1' || activeTab !== 'tour') return;
+    autoStartedRef.current = true;
+    startTour(activeGuideId, access, tourOpts);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('start');
+    router.replace(`/dashboard/guide?${params.toString()}`, { scroll: false });
+  }, [loading, user, isActive, searchParams, activeTab, activeGuideId, access, startTour, router, tourOpts]);
 
   return (
     <div className="space-y-6 w-full">

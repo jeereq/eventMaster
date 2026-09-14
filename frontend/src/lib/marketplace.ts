@@ -438,6 +438,8 @@ export interface MarketplaceInquiryItem {
   offeringSlug?: string | null;
   offeringCategory?: string | null;
   viewerRole?: 'vendor' | 'organizer';
+  closedAt?: string | null;
+  closedByRole?: 'CLIENT' | 'VENDOR' | string | null;
   messageCount?: number;
   lastMessage?: {
     body: string;
@@ -615,6 +617,14 @@ export function bookingNextStep(
     : { title: 'Confirmation en cours', detail: 'L’acompte est marqué. Le professionnel va bloquer la date.' };
 }
 
+export function inquiryChatClosed(item: Pick<MarketplaceInquiryItem, 'closedAt' | 'status' | 'hasBooking'>): boolean {
+  return Boolean(item.closedAt) || item.status === 'DECLINED' || Boolean(item.hasBooking);
+}
+
+export function canDeclineInquiry(item: MarketplaceInquiryItem): boolean {
+  return !item.hasBooking && !item.closedAt && item.status === 'NEW' && !(item.messageCount && item.messageCount > 0);
+}
+
 export function inquiryNextStep(item: MarketplaceInquiryItem): { title: string; detail: string } {
   const asOrganizer = item.viewerRole === 'organizer';
   if (item.hasBooking) {
@@ -632,6 +642,9 @@ export function inquiryNextStep(item: MarketplaceInquiryItem): { title: string; 
     return asOrganizer
       ? { title: `Devis reçu (${formatted})`, detail: 'Acceptez ce devis pour demander la réservation. Le professionnel confirmera, puis vous versez l’acompte.' }
       : { title: `Devis transmis (${formatted})`, detail: 'Proposition envoyée au client. Il peut vous répondre ici ; vous pouvez aussi convertir en réservation.' };
+  }
+  if (item.closedAt) {
+    return { title: 'Conversation clôturée', detail: 'Plus aucun message ne peut être envoyé sur ce devis.' };
   }
   if (item.status === 'NEW') {
     return asOrganizer

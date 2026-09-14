@@ -803,6 +803,8 @@ model MarketplaceInquiry {
   responseNotes String?
   declineReason String?
   respondedAt   DateTime?
+  closedAt      DateTime?
+  closedByRole  String?
   fromTenantId String?
   fromTenant   Tenant?                  @relation("InquiryFromTenant", fields: [fromTenantId], references: [id], onDelete: SetNull)
   createdAt   DateTime                  @default(now())

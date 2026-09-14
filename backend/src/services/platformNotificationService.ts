@@ -13,6 +13,7 @@ import {
   resolveNotificationHref,
   userWhatsAppNumber,
 } from '../utils/notificationTemplates';
+import { DEDUP_WINDOW_MS, isWithinDedupWindow, notificationDedupeKey } from './notificationDedup';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -220,6 +221,33 @@ export async function createCommercialBillingNotification(params: {
 export async function createPlatformNotification(params: {
   userId: string;
 } & PlatformNotifyParams) {
+  const incomingKey = notificationDedupeKey({
+    type: params.type,
+    title: params.title,
+    message: params.message,
+    metadata: params.metadata ?? null,
+  });
+  const recent = await prisma.platformNotification.findMany({
+    where: {
+      userId: params.userId,
+      type: params.type,
+      createdAt: { gte: new Date(Date.now() - DEDUP_WINDOW_MS) },
+    },
+    select: { id: true, title: true, message: true, metadata: true, createdAt: true },
+    take: 12,
+    orderBy: { createdAt: 'desc' },
+  });
+  const duplicate = recent.find((row) => {
+    if (!isWithinDedupWindow(row.createdAt)) return false;
+    return notificationDedupeKey({
+      type: params.type,
+      title: row.title,
+      message: row.message,
+      metadata: (row.metadata as Record<string, unknown> | null) ?? null,
+    }) === incomingKey;
+  });
+  if (duplicate) return duplicate;
+
   const notification = await prisma.platformNotification.create({
     data: {
       userId: params.userId,
@@ -316,7 +344,7 @@ export async function notifyPlatformStaff(params: PlatformNotifyParams & { inclu
   );
 }
 
-export async function notifyTenantOperators(tenantId: string, params: PlatformNotifyParams) {
+export async function listTenantOperatorIds(tenantId: string): Promise<string[]> {
   const tenant = await prisma.tenant.findUnique({
     where: { id: tenantId },
     select: {
@@ -327,8 +355,19 @@ export async function notifyTenantOperators(tenantId: string, params: PlatformNo
       },
     },
   });
-  if (!tenant) return;
-  await notifyUsers([tenant.managerId, ...tenant.users.map((u) => u.id)], params);
+  if (!tenant) return [];
+  return [...new Set([tenant.managerId, ...tenant.users.map((user) => user.id)].filter((id): id is string => Boolean(id)))];
+}
+
+export async function notifyTenantOperators(
+  tenantId: string,
+  params: PlatformNotifyParams,
+  opts?: { excludeUserIds?: Array<string | null | undefined> },
+) {
+  const exclude = new Set((opts?.excludeUserIds || []).filter((id): id is string => Boolean(id)));
+  const ids = (await listTenantOperatorIds(tenantId)).filter((id) => !exclude.has(id));
+  if (ids.length === 0) return;
+  await notifyUsers(ids, params);
 }
 
 export async function markNotificationRead(userId: string, notificationId: string) {

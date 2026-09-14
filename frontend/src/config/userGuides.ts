@@ -676,10 +676,10 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Client marketplace',
     badge: 'Client',
     summary:
-      'Vous cherchez une salle, un prestataire ou un événement public. Menu : Marketplace (Explorer), Agenda, billets, Demandes de devis et Réservations (séparés). Pour organiser ou publier, un Super Admin doit changer le type de compte.',
+      'Vous cherchez une salle, un prestataire ou un événement public. Menu : Marketplace, Simulateur, Événements, billets, Demandes de devis et Réservations. Pour organiser ou publier, un Super Admin doit changer le type de compte.',
     canDo: [
       'Explorer salles, prestataires, matériel & équipements et événements (filtres, carte, grille / liste)',
-      'Agenda : s’inscrire ou acheter un billet',
+      'Événements : s’inscrire ou acheter un billet',
       'Favoris, packs budget, partage d’URL',
       'Suivre Demandes de devis et Réservations dans deux menus distincts',
       'Mes billets + badge QR',
@@ -693,7 +693,7 @@ export const USER_GUIDES: UserGuide[] = [
     ],
     navLinks: [
       { label: 'Marketplace', href: '/dashboard/catalogue' },
-      { label: 'Agenda', href: '/dashboard/catalogue?kind=event' },
+      { label: 'Événements', href: '/dashboard/catalogue?kind=event' },
       { label: 'Mes billets', href: '/dashboard/tickets' },
       { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
       { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
@@ -705,7 +705,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'whats-new-client',
         title: 'Nouveautés menu',
         content:
-          '1. Demandes de devis et Réservations sont deux entrées séparées (plus un seul « Devis & réservations »).\n2. Marketplace = Explorer / Favoris / Préparer / Packs.\n3. Agenda = événements publics uniquement.',
+          '1. Demandes de devis et Réservations sont deux entrées séparées (plus un seul « Devis & réservations »).\n2. Marketplace = Explorer / Favoris / Préparer / Packs.\n3. Événements = événements publics uniquement.',
         links: [
           { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
           { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
@@ -736,9 +736,9 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'browse-agenda',
         title: 'Parcourir l’agenda et s’inscrire',
         content:
-          '1. Ouvrez Agenda (ou Marketplace filtré sur Événements).\n2. Filtrez par date, ville, entrée payante / libre.\n3. Ouvrez une fiche, inscrivez-vous ou achetez un billet (compte ou invité).\n4. Le billet apparaît dans Mes billets si vous êtes connecté ou si l’e-mail correspond.',
+          '1. Ouvrez Événements (ou Marketplace filtré sur Événements).\n2. Filtrez par date, ville, entrée payante / libre.\n3. Ouvrez une fiche, inscrivez-vous ou achetez un billet (compte ou invité).\n4. Le billet apparaît dans Mes billets si vous êtes connecté ou si l’e-mail correspond.',
         links: [
-          { label: 'Agenda', href: '/dashboard/catalogue?kind=event' },
+          { label: 'Événements', href: '/dashboard/catalogue?kind=event' },
           { label: 'Mes billets', href: '/dashboard/tickets' },
         ],
       },
@@ -746,7 +746,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'book-venue',
         title: 'Réserver une salle ou un prestataire',
         content:
-          '1. Ouvrez une fiche (Explorer, Favoris, Agenda ou pack).\n2. Envoyez un devis ou une demande de date.\n3. Suivez dans Demandes de devis.\n4. Après acceptation, versez l’acompte ({depositPercent} %) hors EventMaster.\n5. Suivez dans Réservations.',
+          '1. Ouvrez une fiche (Marketplace, Favoris, Événements ou pack).\n2. Envoyez un devis ou une demande de date.\n3. Suivez dans Demandes de devis.\n4. Après acceptation, versez l’acompte ({depositPercent} %) hors EventMaster.\n5. Suivez dans Réservations.',
         links: [
           { label: 'Marketplace', href: '/dashboard/catalogue' },
           { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
@@ -757,10 +757,10 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'my-tickets',
         title: 'Retrouver, filtrer et afficher un billet',
         content:
-          '1. Les commandes liées à votre compte ou à votre e-mail apparaissent dans Mes billets.\n2. Filtrez par mot-clé, à venir / passés, payant / entrée libre, et lieu.\n3. Passez en grille ou liste (nombre de colonnes mémorisé).\n4. Ouvrez Badge QR pour le portail Répondez s’il vous plaît, ou Fiche pour l’événement.\n5. Le bouton Agenda ouvre les événements du marketplace client — pas le site public.',
+          '1. Les commandes liées à votre compte ou à votre e-mail apparaissent dans Mes billets.\n2. Filtrez par mot-clé, à venir / passés, payant / entrée libre, et lieu.\n3. Passez en grille ou liste (nombre de colonnes mémorisé).\n4. Ouvrez Badge QR pour le portail Répondez s’il vous plaît, ou Fiche pour l’événement.\n5. Le bouton Événements ouvre le marketplace client — pas le site public.',
         links: [
           { label: 'Mes billets', href: '/dashboard/tickets' },
-          { label: 'Agenda', href: '/dashboard/catalogue?kind=event' },
+          { label: 'Événements', href: '/dashboard/catalogue?kind=event' },
         ],
       },
       {
@@ -776,7 +776,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Compte client : pas de licence SaaS.',
       'Marge du brief = montant (ex. 5 % de 1 500 000 FC).',
       'Les 3 packs évitent de recycler la même salle si le catalogue le permet.',
-      'Agenda du menu = marketplace client événements.',
+      'Événements du menu = marketplace client événements.',
       'Commission vendeur ({commissionPercent} %) : vous ne la payez pas en client.',
     ],
   },

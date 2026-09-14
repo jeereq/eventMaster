@@ -136,18 +136,19 @@ async function notifyBookingStatus(
     whatsapp: vendorWhatsApp,
   });
 
-  if (booking.organizerUserId) {
-    void notifyUsers([booking.organizerUserId], {
+  if (booking.organizerTenantId && booking.organizerTenantId !== booking.vendorTenantId) {
+    void notifyTenantOperators(booking.organizerTenantId, {
       type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING_STATUS,
       title,
       message: organizerMessage,
       metadata: { bookingId: booking.id, href: organizerHref },
       whatsapp: organizerWhatsApp,
     });
+    return;
   }
 
-  if (booking.organizerTenantId && booking.organizerTenantId !== booking.vendorTenantId) {
-    void notifyTenantOperators(booking.organizerTenantId, {
+  if (booking.organizerUserId) {
+    void notifyUsers([booking.organizerUserId], {
       type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING_STATUS,
       title,
       message: organizerMessage,
@@ -523,14 +524,7 @@ export async function updateBooking(req: AuthenticatedRequest, res: Response) {
           metadata: { bookingId: booking.id, href: vendorHref },
           whatsapp: `Acompte déclaré pour « ${title} » : Le client indique avoir versé ${depositFormatted}${noteSuffix}.\nVérifiez votre compte et confirmez la réservation : ${vendorHref}`,
         });
-        if (booking.organizerUserId) {
-          void notifyUsers([booking.organizerUserId], {
-            type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING_STATUS,
-            title: `Acompte transmis — ${title}`,
-            message: `Votre déclaration de versement d'acompte (${depositFormatted})${noteSuffix} a été transmise au prestataire pour validation.`,
-            metadata: { bookingId: booking.id, href: organizerHref },
-          });
-        }
+        // Le client voit déjà le résultat à l’écran : pas de second message à soi-même.
       } else {
         // Le professionnel a validé la réception de l'acompte
         void notifyTenantOperators(booking.vendorTenantId, {
@@ -539,22 +533,17 @@ export async function updateBooking(req: AuthenticatedRequest, res: Response) {
           message: `Vous avez validé la réception de l'acompte (${depositFormatted}). Confirmez pour verrouiller la date.`,
           metadata: { bookingId: booking.id, href: vendorHref },
         });
-        if (booking.organizerUserId) {
-          void notifyUsers([booking.organizerUserId], {
-            type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING_STATUS,
-            title: `Acompte validé — ${title}`,
-            message: `Le professionnel a confirmé la réception de votre acompte de ${depositFormatted}. La réservation sera confirmée sous peu.`,
-            metadata: { bookingId: booking.id, href: organizerHref },
-            whatsapp: `Bonne nouvelle ! Votre acompte de ${depositFormatted} pour « ${title} » a été validé par le professionnel.\nConsultez : ${organizerHref}`,
-          });
-        }
+        const organizerPayload = {
+          type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING_STATUS,
+          title: `Acompte validé — ${title}`,
+          message: `Le professionnel a confirmé la réception de votre acompte de ${depositFormatted}. La réservation sera confirmée sous peu.`,
+          metadata: { bookingId: booking.id, href: organizerHref },
+          whatsapp: `Bonne nouvelle ! Votre acompte de ${depositFormatted} pour « ${title} » a été validé par le professionnel.\nConsultez : ${organizerHref}`,
+        };
         if (booking.organizerTenantId && booking.organizerTenantId !== booking.vendorTenantId) {
-          void notifyTenantOperators(booking.organizerTenantId, {
-            type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING_STATUS,
-            title: `Acompte validé — ${title}`,
-            message: `Le professionnel a validé la réception de l'acompte de ${depositFormatted}.`,
-            metadata: { bookingId: booking.id, href: organizerHref },
-          });
+          void notifyTenantOperators(booking.organizerTenantId, organizerPayload);
+        } else if (booking.organizerUserId) {
+          void notifyUsers([booking.organizerUserId], organizerPayload);
         }
       }
 
@@ -740,6 +729,14 @@ export async function acceptInquiryQuote(req: AuthenticatedRequest, res: Respons
       include: bookingInclude,
     });
 
+    await prisma.marketplaceInquiry.update({
+      where: { id: inquiry.id },
+      data: {
+        closedAt: inquiry.closedAt ?? new Date(),
+        closedByRole: inquiry.closedByRole ?? 'CLIENT',
+      },
+    });
+
     const bookingTitle = booking.offering?.title || booking.listing?.headline || booking.listing?.room.name || 'Réservation';
     const amountFormatted = `${amounts.amountFc.toLocaleString('fr-FR')} FC`;
     const depositFormatted = `${amounts.depositFc.toLocaleString('fr-FR')} FC`;
@@ -842,7 +839,11 @@ export async function convertInquiryToBooking(req: AuthenticatedRequest, res: Re
 
     await prisma.marketplaceInquiry.update({
       where: { id: inquiry.id },
-      data: { status: 'CONTACTED' },
+      data: {
+        status: 'CONTACTED',
+        closedAt: inquiry.closedAt ?? new Date(),
+        closedByRole: inquiry.closedByRole ?? 'VENDOR',
+      },
     });
 
     const bookingTitle = booking.offering?.title || booking.listing?.headline || booking.listing?.room.name || 'Réservation';
@@ -850,23 +851,17 @@ export async function convertInquiryToBooking(req: AuthenticatedRequest, res: Re
     const amountFormatted = `${amounts.amountFc.toLocaleString('fr-FR')} FC`;
     const clientBookingHref = `${FRONTEND_URL}/dashboard/bookings?tab=bookings&bookingId=${booking.id}`;
 
+    const clientPayload = {
+      type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING,
+      title: `Réservation acceptée — ${bookingTitle}`,
+      message: `Votre devis a été converti en réservation acceptée (${amountFormatted}). Veuillez verser l'acompte de ${depositFormatted}.`,
+      metadata: { bookingId: booking.id, href: clientBookingHref },
+      whatsapp: `Votre devis pour « ${bookingTitle} » a été converti en réservation acceptée au montant de ${amountFormatted}.\nAcompte requis : ${depositFormatted}.\nConsultez les détails : ${clientBookingHref}`,
+    };
     if (inquiry.fromTenantId) {
-      void notifyTenantOperators(inquiry.fromTenantId, {
-        type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING,
-        title: `Réservation acceptée — ${bookingTitle}`,
-        message: `Votre devis a été converti en réservation acceptée (${amountFormatted}). Veuillez verser l'acompte de ${depositFormatted}.`,
-        metadata: { bookingId: booking.id, href: clientBookingHref },
-        whatsapp: `Votre devis pour « ${bookingTitle} » a été converti en réservation acceptée au montant de ${amountFormatted}.\nAcompte requis : ${depositFormatted}.\nConsultez les détails : ${clientBookingHref}`,
-      });
-    }
-    if (organizerUserId) {
-      void notifyUsers([organizerUserId], {
-        type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING,
-        title: `Réservation acceptée — ${bookingTitle}`,
-        message: `Votre devis a été converti en réservation acceptée (${amountFormatted}). Veuillez verser l'acompte de ${depositFormatted}.`,
-        metadata: { bookingId: booking.id, href: clientBookingHref },
-        whatsapp: `Votre devis pour « ${bookingTitle} » a été converti en réservation acceptée au montant de ${amountFormatted}.\nAcompte requis : ${depositFormatted}.\nConsultez les détails : ${clientBookingHref}`,
-      });
+      void notifyTenantOperators(inquiry.fromTenantId, clientPayload);
+    } else if (organizerUserId) {
+      void notifyUsers([organizerUserId], clientPayload);
     }
 
     return res.status(201).json({

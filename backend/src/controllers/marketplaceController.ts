@@ -31,7 +31,7 @@ import { parseListingDetails } from '../utils/listingDetails';
 import { fetchActivityPreview } from './marketplaceFeedController';
 import { Prisma, RoomType, ServiceCategory, MarketplaceBookingStatus, VenuePriceUnit } from '@prisma/client';
 import { PlanFeatureError, assertServiceQuota, assertVenueCatalogPublish } from '../services/planFeaturesService';
-import { notifyTenantOperators, notifyUsers } from '../services/platformNotificationService';
+import { listTenantOperatorIds, notifyTenantOperators, notifyUsers } from '../services/platformNotificationService';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 import {
   allowedCityPrismaFilter,
@@ -89,15 +89,11 @@ async function notifyInquiryClient(opts: {
     metadata: { inquiryId: opts.inquiry.id, href },
     whatsapp: opts.whatsapp || `${opts.message}\nConsultez la conversation : ${href}`,
   };
+  const exclude = opts.actorUserId ? [opts.actorUserId] : [];
   const operatorIds = new Set<string>();
   if (opts.inquiry.fromTenantId) {
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: opts.inquiry.fromTenantId },
-      select: { managerId: true, users: { where: { orgRole: 'MANAGER' }, select: { id: true } } },
-    });
-    if (tenant?.managerId) operatorIds.add(tenant.managerId);
-    tenant?.users.forEach((user) => operatorIds.add(user.id));
-    await notifyTenantOperators(opts.inquiry.fromTenantId, payload);
+    (await listTenantOperatorIds(opts.inquiry.fromTenantId)).forEach((id) => operatorIds.add(id));
+    await notifyTenantOperators(opts.inquiry.fromTenantId, payload, { excludeUserIds: exclude });
   }
   const inquirer = await prisma.user.findFirst({
     where: { email: { equals: opts.inquiry.fromEmail, mode: 'insensitive' } },
@@ -116,13 +112,17 @@ async function notifyInquiryVendor(opts: {
   message: string;
 }) {
   const href = inquiryVendorHref(opts.inquiryId);
-  void notifyTenantOperators(opts.vendorTenantId, {
-    type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
-    title: opts.title,
-    message: opts.message,
-    metadata: { inquiryId: opts.inquiryId, href },
-    whatsapp: `${opts.message}\nRépondez dans EventMaster : ${href}`,
-  });
+  void notifyTenantOperators(
+    opts.vendorTenantId,
+    {
+      type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
+      title: opts.title,
+      message: opts.message,
+      metadata: { inquiryId: opts.inquiryId, href },
+      whatsapp: `${opts.message}\nRépondez dans EventMaster : ${href}`,
+    },
+    { excludeUserIds: opts.actorUserId ? [opts.actorUserId] : [] },
+  );
 }
 
 async function resolveInquiryAccess(opts: {
@@ -656,14 +656,14 @@ export async function createVenueInquiry(req: AuthenticatedRequest, res: Respons
         },
         whatsapp: `Votre demande de devis pour « ${listing.room.name} » a été transmise à ${listing.tenant.name}.\nSuivez l'avancement sur : ${clientDashboardHref}`,
       });
+    } else {
+      await sendRealEmail(
+        inquiry.fromEmail,
+        `Votre demande — ${listing.room.name}`,
+        `Nous avons transmis votre demande pour « ${listing.room.name} » à ${listing.tenant.name}. Ils vous recontacteront directement.`,
+        `<p>Nous avons transmis votre demande pour <strong>${listing.room.name}</strong> à ${listing.tenant.name}.</p><p>Ils vous recontacteront directement.</p>`,
+      );
     }
-
-    await sendRealEmail(
-      inquiry.fromEmail,
-      `Votre demande — ${listing.room.name}`,
-      `Nous avons transmis votre demande pour « ${listing.room.name} » à ${listing.tenant.name}. Ils vous recontacteront directement.`,
-      `<p>Nous avons transmis votre demande pour <strong>${listing.room.name}</strong> à ${listing.tenant.name}.</p><p>Ils vous recontacteront directement.</p>`,
-    );
 
     return res.status(201).json({
       success: true,
@@ -1102,12 +1102,6 @@ async function notifyInquiry(params: {
     email: operatorCopy.email,
     whatsapp: operatorCopy.whatsapp,
   });
-  await sendRealEmail(
-    inquiry.fromEmail,
-    `Votre demande — ${params.subjectTitle}`,
-    `Nous avons transmis votre demande pour « ${params.subjectTitle} » à ${params.ownerOrgName}. Ils vous recontacteront directement.`,
-    `<p>Nous avons transmis votre demande pour <strong>${params.subjectTitle}</strong> à ${params.ownerOrgName}.</p><p>Ils vous recontacteront directement.</p>`,
-  );
 }
 
 export async function createServiceInquiry(req: AuthenticatedRequest, res: Response) {
@@ -1461,6 +1455,8 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
           offeringSlug: item.offering?.slug || null,
           offeringCategory: item.offering?.category || null,
           viewerRole: role,
+          closedAt: item.closedAt,
+          closedByRole: item.closedByRole,
           messageCount: item._count.messages,
           lastMessage: item.messages[0]
             ? {
@@ -1545,6 +1541,8 @@ export async function updateInquiryStatus(req: AuthenticatedRequest, res: Respon
         declineReason,
         responseNotes,
         respondedAt: new Date(),
+        closedAt: existing.closedAt ?? new Date(),
+        closedByRole: existing.closedByRole ?? INQUIRY_AUTHOR_VENDOR,
       };
 
       const declineBody = [`Demande déclinée. Motif : ${declineReason}`, responseNotes].filter(Boolean).join('\n\n');
@@ -1610,6 +1608,9 @@ export async function listInquiryMessages(req: AuthenticatedRequest, res: Respon
 
     return res.json({
       messages,
+      closedAt: access.inquiry.closedAt,
+      closedByRole: access.inquiry.closedByRole,
+      status: access.inquiry.status,
       viewerRole: access.isVendor && !access.isClient
         ? INQUIRY_AUTHOR_VENDOR
         : access.isClient && !access.isVendor
@@ -1641,6 +1642,12 @@ export async function postInquiryMessage(req: AuthenticatedRequest, res: Respons
     if (!access) return res.status(404).json({ error: 'Demande introuvable.' });
     if (!access.isClient && !access.isVendor) {
       return res.status(403).json({ error: 'Vous ne pouvez pas répondre à cette demande.' });
+    }
+    if (access.inquiry.closedAt) {
+      return res.status(409).json({ error: 'Cette conversation est clôturée. Vous ne pouvez plus envoyer de message.' });
+    }
+    if (access.inquiry.status === 'DECLINED') {
+      return res.status(409).json({ error: 'Cette demande a été déclinée. La conversation est fermée.' });
     }
 
     const requestedRole = String(req.body?.authorRole || '').toUpperCase();
@@ -1691,6 +1698,65 @@ export async function postInquiryMessage(req: AuthenticatedRequest, res: Respons
   } catch (error) {
     console.error('postInquiryMessage:', error);
     return res.status(500).json({ error: 'Impossible d’envoyer la réponse.' });
+  }
+}
+
+export async function closeInquiryThread(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+    const inquiryId = req.params.id as string;
+    if (!tenantId || !userId) return res.status(403).json({ error: 'Organisation non identifiée.' });
+
+    const access = await resolveInquiryAccess({ inquiryId, userId, tenantId });
+    if (!access) return res.status(404).json({ error: 'Demande introuvable.' });
+    if (!access.isClient && !access.isVendor) {
+      return res.status(403).json({ error: 'Vous ne pouvez pas clôturer cette conversation.' });
+    }
+    if (access.inquiry.closedAt) {
+      return res.json({
+        closedAt: access.inquiry.closedAt,
+        closedByRole: access.inquiry.closedByRole,
+        alreadyClosed: true,
+      });
+    }
+
+    const closedByRole = access.isVendor && !access.isClient
+      ? INQUIRY_AUTHOR_VENDOR
+      : access.isClient && !access.isVendor
+        ? INQUIRY_AUTHOR_CLIENT
+        : access.isVendor
+          ? INQUIRY_AUTHOR_VENDOR
+          : INQUIRY_AUTHOR_CLIENT;
+    const closedAt = new Date();
+    await prisma.marketplaceInquiry.update({
+      where: { id: inquiryId },
+      data: { closedAt, closedByRole },
+    });
+
+    const title = inquiryTitleOf(access.inquiry);
+    const closerLabel = closedByRole === INQUIRY_AUTHOR_VENDOR ? 'Le professionnel' : access.inquiry.fromName;
+    if (closedByRole === INQUIRY_AUTHOR_VENDOR) {
+      void notifyInquiryClient({
+        inquiry: access.inquiry,
+        actorUserId: userId,
+        title: `Conversation clôturée — ${title}`,
+        message: `${closerLabel} a clôturé la conversation pour « ${title} ».`,
+      });
+    } else if (access.vendorTenantId) {
+      void notifyInquiryVendor({
+        vendorTenantId: access.vendorTenantId,
+        inquiryId,
+        actorUserId: userId,
+        title: `Conversation clôturée — ${title}`,
+        message: `${closerLabel} a clôturé la conversation pour « ${title} ».`,
+      });
+    }
+
+    return res.json({ closedAt, closedByRole, alreadyClosed: false });
+  } catch (error) {
+    console.error('closeInquiryThread:', error);
+    return res.status(500).json({ error: 'Impossible de clôturer la conversation.' });
   }
 }
 

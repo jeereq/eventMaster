@@ -28,6 +28,8 @@ import {
   dashboardServiceHref,
   dashboardVenueHref,
   inquiryNextStep,
+  inquiryChatClosed,
+  canDeclineInquiry,
   buildWhatsAppDirectLink,
   MARKETPLACE_DEPOSIT_RATE,
   type MarketplaceInquiryItem,
@@ -49,7 +51,10 @@ import {
   Phone,
   Sparkles,
   XCircle,
+  DoorClosed,
 } from 'lucide-react';
+
+const THREAD_POLL_MS = 4_000;
 
 const KIND_OPTIONS = [
   { id: 'all', label: 'Tous' },
@@ -145,6 +150,8 @@ export default function MarketplaceInquiriesPanel({
   const [acceptTarget, setAcceptTarget] = useState<MarketplaceInquiryItem | null>(null);
   const [acceptSubmitting, setAcceptSubmitting] = useState(false);
   const [panelNotice, setPanelNotice] = useState('');
+  const [threadClosing, setThreadClosing] = useState(false);
+  const threadEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setInquiries(initialInquiries);
@@ -324,26 +331,108 @@ export default function MarketplaceInquiriesPanel({
     }
   };
 
-  const loadThread = async (item: MarketplaceInquiryItem) => {
-    setThreadLoading(true);
+  const mergeThreadMessages = (incoming: MarketplaceInquiryThreadMessage[]) => {
+    setThreadMessages((prev) => {
+      if (incoming.length === 0) return prev;
+      const seen = new Set(prev.map((message) => message.id));
+      const extras = incoming.filter((message) => !seen.has(message.id));
+      if (extras.length === 0 && prev.length === incoming.length) return prev;
+      return incoming;
+    });
+  };
+
+  const loadThread = async (item: MarketplaceInquiryItem, opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setThreadLoading(true);
     try {
       const data = await api.get(`/marketplace/inquiries/${item.id}/messages`) as {
         messages?: MarketplaceInquiryThreadMessage[];
+        closedAt?: string | null;
+        closedByRole?: string | null;
+        status?: MarketplaceInquiryItem['status'];
       };
-      setThreadMessages(Array.isArray(data.messages) ? data.messages : []);
+      mergeThreadMessages(Array.isArray(data.messages) ? data.messages : []);
+      const nextCount = Array.isArray(data.messages) ? data.messages.length : undefined;
+      setThreadTarget((current) => {
+        if (!current || current.id !== item.id) return current;
+        const closedAt = data.closedAt ?? current.closedAt;
+        const closedByRole = data.closedByRole ?? current.closedByRole;
+        const status = data.status ?? current.status;
+        if (current.closedAt === closedAt && current.closedByRole === closedByRole && current.status === status) {
+          return current;
+        }
+        return { ...current, closedAt, closedByRole, status };
+      });
+      setInquiries((prev) =>
+        prev.map((row) => {
+          if (row.id !== item.id) return row;
+          const closedAt = data.closedAt ?? row.closedAt;
+          const closedByRole = data.closedByRole ?? row.closedByRole;
+          const status = data.status ?? row.status;
+          const messageCount = nextCount ?? row.messageCount;
+          if (
+            row.closedAt === closedAt
+            && row.closedByRole === closedByRole
+            && row.status === status
+            && row.messageCount === messageCount
+          ) {
+            return row;
+          }
+          return { ...row, closedAt, closedByRole, status, messageCount };
+        }),
+      );
     } catch (err: unknown) {
-      setPanelError(err instanceof Error ? err.message : 'Impossible de charger la conversation.');
-      setThreadMessages([]);
+      if (!opts?.silent) {
+        setPanelError(err instanceof Error ? err.message : 'Impossible de charger la conversation.');
+        setThreadMessages([]);
+      }
     } finally {
-      setThreadLoading(false);
+      if (!opts?.silent) setThreadLoading(false);
     }
   };
 
   const openThread = (item: MarketplaceInquiryItem) => {
     setThreadTarget(item);
+    setThreadMessages([]);
     setThreadDraft('');
     setPanelError('');
     void loadThread(item);
+  };
+
+  useEffect(() => {
+    if (!threadTarget || inquiryChatClosed(threadTarget)) return;
+    const interval = window.setInterval(() => {
+      void loadThread(threadTarget, { silent: true });
+    }, THREAD_POLL_MS);
+    return () => window.clearInterval(interval);
+  }, [threadTarget?.id, threadTarget?.closedAt, threadTarget?.status]);
+
+  useEffect(() => {
+    threadEndRef.current?.scrollIntoView({ block: 'end' });
+  }, [threadMessages.length, threadTarget?.id]);
+
+  const handleCloseThread = async () => {
+    if (!threadTarget || inquiryChatClosed(threadTarget)) return;
+    setThreadClosing(true);
+    setPanelError('');
+    try {
+      const data = await api.post(`/marketplace/inquiries/${threadTarget.id}/close`, {}) as {
+        closedAt?: string;
+        closedByRole?: string;
+      };
+      const closedAt = data.closedAt || new Date().toISOString();
+      const closedByRole = data.closedByRole || (organizerView ? 'CLIENT' : 'VENDOR');
+      setThreadTarget((current) => current ? { ...current, closedAt, closedByRole } : current);
+      setInquiries((prev) =>
+        prev.map((row) =>
+          row.id === threadTarget.id ? { ...row, closedAt, closedByRole } : row,
+        ),
+      );
+      if (onChanged) await onChanged();
+    } catch (err: unknown) {
+      setPanelError(err instanceof Error ? err.message : 'Impossible de clôturer la conversation.');
+    } finally {
+      setThreadClosing(false);
+    }
   };
 
   const openedHighlightRef = useRef<string | null>(null);
@@ -358,6 +447,10 @@ export default function MarketplaceInquiriesPanel({
   const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!threadTarget) return;
+    if (inquiryChatClosed(threadTarget)) {
+      setPanelError('Cette conversation est clôturée.');
+      return;
+    }
     const body = threadDraft.trim();
     if (!body) {
       setPanelError('Écrivez un message pour répondre.');
@@ -653,7 +746,7 @@ export default function MarketplaceInquiriesPanel({
                     onClick={() => openThread(item)}
                     leftIcon={<MessageCircle className="w-3.5 h-3.5" />}
                   >
-                    {organizerView ? 'Répondre' : 'Conversation'}
+                    {inquiryChatClosed(item) ? 'Conversation' : organizerView ? 'Répondre' : 'Conversation'}
                     {(item.messageCount || 0) > 0 ? ` (${item.messageCount})` : ''}
                   </Button>
 
@@ -746,15 +839,17 @@ export default function MarketplaceInquiriesPanel({
                         </Button>
                       ) : null}
 
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => openDeclineModal(item)}
-                        leftIcon={<XCircle className="w-3.5 h-3.5 text-rose-500" />}
-                        className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                      >
-                        Refuser
-                      </Button>
+                      {canDeclineInquiry(item) ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => openDeclineModal(item)}
+                          leftIcon={<XCircle className="w-3.5 h-3.5 text-rose-500" />}
+                          className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                        >
+                          Refuser
+                        </Button>
+                      ) : null}
                     </>
                   ) : null}
                 </div>
@@ -1134,25 +1229,55 @@ export default function MarketplaceInquiriesPanel({
         title={threadTarget ? `Conversation — ${threadTarget.title}` : 'Conversation'}
         description={
           threadTarget
-            ? organizerView
-              ? `Échangez avec ${threadTarget.vendorName || 'le professionnel'} à propos de ce devis.`
-              : `Échangez avec ${threadTarget.fromName} à propos de sa demande.`
+            ? inquiryChatClosed(threadTarget)
+              ? 'Cette conversation est clôturée. Les messages restent visibles.'
+              : organizerView
+                ? `Échangez avec ${threadTarget.vendorName || 'le professionnel'} à propos de ce devis.`
+                : `Échangez avec ${threadTarget.fromName} à propos de sa demande.`
             : undefined
         }
         size="lg"
         footer={
-          <form onSubmit={handleSendReply} className="flex w-full flex-col sm:flex-row gap-2">
-            <textarea
-              rows={2}
-              value={threadDraft}
-              onChange={(e) => setThreadDraft(e.target.value)}
-              placeholder={organizerView ? 'Répondre au professionnel…' : 'Répondre au client…'}
-              className="flex-1 min-h-11 px-3 py-2 rounded-xl border border-border bg-surface text-sm text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary resize-none"
-            />
-            <Button type="submit" loading={threadSending} disabled={!threadDraft.trim()}>
-              Envoyer
-            </Button>
-          </form>
+          threadTarget && inquiryChatClosed(threadTarget) ? (
+            <p className="w-full text-xs text-muted">
+              Conversation clôturée
+              {threadTarget.closedByRole
+                ? ` par ${threadTarget.closedByRole === 'CLIENT' ? (threadTarget.fromName || 'le client') : (threadTarget.vendorName || 'le professionnel')}`
+                : ''}
+              {threadTarget.closedAt
+                ? ` · ${new Date(threadTarget.closedAt).toLocaleString('fr-FR')}`
+                : ''}
+              .
+            </p>
+          ) : (
+            <div className="flex w-full flex-col gap-2">
+              <form onSubmit={handleSendReply} className="flex w-full flex-col sm:flex-row gap-2">
+                <textarea
+                  rows={2}
+                  value={threadDraft}
+                  onChange={(e) => setThreadDraft(e.target.value)}
+                  placeholder={organizerView ? 'Répondre au professionnel…' : 'Répondre au client…'}
+                  className="flex-1 min-h-11 px-3 py-2 rounded-xl border border-border bg-surface text-sm text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary resize-none"
+                />
+                <Button type="submit" loading={threadSending} disabled={!threadDraft.trim()}>
+                  Envoyer
+                </Button>
+              </form>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[11px] text-muted">Les réponses apparaissent ici en direct.</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  loading={threadClosing}
+                  onClick={() => void handleCloseThread()}
+                  leftIcon={<DoorClosed className="w-3.5 h-3.5" />}
+                >
+                  Clôturer
+                </Button>
+              </div>
+            </div>
+          )
         }
       >
         <div className="space-y-3">
@@ -1197,6 +1322,7 @@ export default function MarketplaceInquiriesPanel({
                 </div>
               );
             })}
+            <div ref={threadEndRef} />
           </div>
         </div>
       </Modal>

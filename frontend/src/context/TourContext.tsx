@@ -22,6 +22,15 @@ interface TourContextValue {
 
 const TourContext = createContext<TourContextValue | undefined>(undefined);
 
+function findVisibleTourTarget(tourId: string): HTMLElement | null {
+  const nodes = document.querySelectorAll<HTMLElement>(`[data-tour="${tourId}"]`);
+  for (const node of nodes) {
+    const rect = node.getBoundingClientRect();
+    if (rect.width > 1 && rect.height > 1) return node;
+  }
+  return nodes[0] ?? null;
+}
+
 function pathsMatch(current: string, target?: string): boolean {
   if (!target) return true;
   const [targetPath, targetQuery = ''] = target.split('?');
@@ -130,12 +139,13 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    const targetId = currentStep.target;
     setWaitingForTarget(true);
     let attempts = 0;
     const maxAttempts = 40;
 
     const tryFind = () => {
-      const el = document.querySelector(`[data-tour="${currentStep.target}"]`) as HTMLElement | null;
+      const el = findVisibleTourTarget(targetId);
       if (el) {
         el.setAttribute('data-tour-active', 'true');
         document.querySelectorAll('[data-tour-active]').forEach((node) => {
@@ -175,7 +185,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
 
     const updateRect = () => {
       if (!currentStep?.target) return;
-      const el = document.querySelector(`[data-tour="${currentStep.target}"]`);
+      const el = findVisibleTourTarget(currentStep.target);
       if (el) setTargetRect(el.getBoundingClientRect());
     };
 

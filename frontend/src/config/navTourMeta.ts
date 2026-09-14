@@ -199,10 +199,28 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
       'Profil personnel (nom, e-mail, mot de passe) et couleurs de marque de l’organisation.',
     route: '/dashboard/profile',
   },
+  'nav-client-dashboard': {
+    title: 'Tableau de bord',
+    description:
+      'Accueil de votre espace client : objectifs, recommandations et synthèse de vos devis, réservations et billets.',
+    route: '/dashboard',
+  },
+  'nav-simulator': {
+    title: 'Simulateur',
+    description:
+      'Assemblez un budget et comparez des packs salle + prestataires. Rien n’est réservé : vous comparez, puis envoyez un devis.',
+    route: '/dashboard/catalogue?tab=plan&planView=ai',
+  },
+  'nav-favorites': {
+    title: 'Mes favoris',
+    description:
+      'Salles, prestataires et matériel mis de côté. Filtrez et rouvrez une fiche pour demander un devis.',
+    route: '/dashboard/catalogue?tab=favorites',
+  },
   'nav-catalogue': {
     title: 'Explorer',
     description:
-      'Catalogue acheteur (comme le client) : salles, prestataires, matériel & équipements et événements — filtres, carte Focus, grille ou liste, favoris et packs budget.',
+      'Catalogue : salles, prestataires, matériel & équipements et événements — filtres, carte Focus, grille ou liste, favoris et packs budget.',
     route: '/dashboard/catalogue',
   },
   'nav-publications': {
@@ -212,9 +230,9 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
     route: '/dashboard/publications',
   },
   'nav-agenda': {
-    title: 'Agenda',
+    title: 'Événements',
     description:
-      'Événements publics du marketplace client. Filtrez, ouvrez une fiche, inscrivez-vous ou achetez un billet — il apparaît dans Mes billets.',
+      'Événements publics du marketplace. Filtrez, ouvrez une fiche, inscrivez-vous ou achetez un billet — il apparaît dans Mes billets.',
     route: '/dashboard/catalogue?kind=event',
   },
   'nav-bookings': {

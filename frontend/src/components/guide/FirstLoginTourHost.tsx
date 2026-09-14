@@ -31,8 +31,8 @@ export default function FirstLoginTourHost() {
   const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   const resolved = useMemo(
-    () => resolveUserGuideRole({ role: user?.role, access }),
-    [user?.role, access],
+    () => resolveUserGuideRole({ role: user?.role, access, accountKind: tenant?.accountKind }),
+    [user?.role, access, tenant?.accountKind],
   );
 
   const tourOpts = useMemo(
@@ -69,6 +69,7 @@ export default function FirstLoginTourHost() {
 
   useEffect(() => {
     if (!user?.id || supportSession || isActive) return;
+    if (user.role === 'USER' && !tenant && !access) return;
     if (!shouldAutoOfferFirstTour(resolved.guideId)) {
       if (searchParams.get('tour') === '1') stripTourParam();
       return;
@@ -96,7 +97,7 @@ export default function FirstLoginTourHost() {
       setOfferOpen(true);
       if (fromOtp) stripTourParam();
     }
-  }, [user?.id, supportSession, isActive, resolved.guideId, tenant?.accountKind, searchParams, stripTourParam]);
+  }, [user?.id, user?.role, supportSession, isActive, resolved.guideId, tenant, access, searchParams, stripTourParam]);
 
   useEffect(() => {
     const onStopped = (event: Event) => {

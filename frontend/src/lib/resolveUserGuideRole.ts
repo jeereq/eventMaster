@@ -1,9 +1,11 @@
 import type { OrgAccess } from '@/context/AuthContext';
 import type { UserGuideId } from '@/config/userGuides';
+import type { TenantAccountKind } from '@/lib/marketplace';
 
 interface ResolveUserGuideInput {
   role?: 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER';
   access?: OrgAccess | null;
+  accountKind?: TenantAccountKind | string | null;
 }
 
 export interface ResolvedUserGuide {
@@ -23,7 +25,7 @@ const GUIDE_LABELS: Record<UserGuideId, string> = {
   guest: 'Invité',
 };
 
-export function resolveUserGuideRole({ role, access }: ResolveUserGuideInput): ResolvedUserGuide {
+export function resolveUserGuideRole({ role, access, accountKind }: ResolveUserGuideInput): ResolvedUserGuide {
   if (role === 'SUPER_ADMIN') {
     return { guideId: 'super_admin', label: GUIDE_LABELS.super_admin };
   }
@@ -32,7 +34,7 @@ export function resolveUserGuideRole({ role, access }: ResolveUserGuideInput): R
     return { guideId: 'commercial_platform', label: GUIDE_LABELS.commercial_platform };
   }
 
-  if (access?.level === 'client') {
+  if (access?.level === 'client' || accountKind === 'CLIENT') {
     return { guideId: 'client', label: GUIDE_LABELS.client };
   }
 

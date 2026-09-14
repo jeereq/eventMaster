@@ -134,7 +134,7 @@ export function buildNavTourOptions(input: {
 }
 
 function firstLoginHome(guideId: UserGuideId, access?: OrgAccess | null): string {
-  if (guideId === 'client') return '/dashboard/catalogue';
+  if (guideId === 'client') return '/dashboard';
   if (guideId === 'org_protocol' || access?.isProtocolOnly) return '/dashboard';
   if (guideId === 'org_commercial') return '/dashboard/org-commercial';
   if (guideId === 'commercial_platform') return '/dashboard?tab=tenants';
@@ -167,6 +167,7 @@ export function buildFirstLoginTour(
 
   switch (guideId) {
     case 'client':
+      push('nav-client-dashboard', home);
       push('nav-catalogue');
       push('nav-quotes');
       push('nav-reservations');
@@ -312,11 +313,15 @@ export function buildNavProductTour(
 
     case 'client':
       return buildSteps([
+        { tourId: 'nav-client-dashboard' },
         { tourId: 'nav-catalogue' },
+        { tourId: 'nav-simulator' },
         { tourId: 'nav-agenda' },
         { tourId: 'nav-tickets' },
+        { tourId: 'nav-publications' },
         { tourId: 'nav-quotes' },
         { tourId: 'nav-reservations' },
+        { tourId: 'nav-favorites' },
         { tourId: 'nav-guide' },
         { tourId: 'nav-profile' },
       ]);
