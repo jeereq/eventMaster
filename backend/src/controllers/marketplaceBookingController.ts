@@ -647,6 +647,115 @@ export async function updateBooking(req: AuthenticatedRequest, res: Response) {
   }
 }
 
+export async function acceptInquiryQuote(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+    const inquiryId = req.params.id as string;
+    if (!tenantId || !userId) return res.status(403).json({ error: 'Organisation non identifiée.' });
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+    const email = user?.email?.trim().toLowerCase() || '';
+
+    const inquiry = await prisma.marketplaceInquiry.findFirst({
+      where: {
+        id: inquiryId,
+        OR: [
+          { fromTenantId: tenantId },
+          ...(email ? [{ fromEmail: { equals: email, mode: 'insensitive' as const } }] : []),
+        ],
+      },
+      include: {
+        listing: true,
+        offering: true,
+      },
+    });
+    if (!inquiry) return res.status(404).json({ error: 'Demande introuvable.' });
+    if (inquiry.status !== 'QUOTED' || inquiry.quotedAmountFc == null) {
+      return res.status(400).json({
+        error: 'Attendez le devis chiffré du professionnel avant de demander une réservation.',
+      });
+    }
+    if (!inquiry.eventDate) {
+      return res.status(400).json({
+        error: 'Une date est nécessaire. Écrivez au professionnel pour la confirmer, puis acceptez le devis.',
+      });
+    }
+
+    const vendorTenantId = inquiry.listing?.tenantId || inquiry.offering?.tenantId;
+    if (!vendorTenantId) {
+      return res.status(400).json({ error: 'Offre introuvable pour cette demande.' });
+    }
+    if (vendorTenantId === tenantId) {
+      return res.status(400).json({ error: 'Vous ne pouvez pas réserver votre propre offre.' });
+    }
+
+    const existing = await prisma.marketplaceBooking.findUnique({ where: { inquiryId } });
+    if (existing) return res.status(409).json({ error: 'Une réservation existe déjà pour cette demande.' });
+
+    const dateKey = toDateKey(inquiry.eventDate);
+    const blocked = parseBlockedDates(inquiry.listing?.blockedDates ?? inquiry.offering?.blockedDates);
+    if (
+      !dateKey
+      || !isRangeAvailable(blocked, dateKey, dateKey)
+      || await isRangeTaken({ listingId: inquiry.listingId, offeringId: inquiry.offeringId, from: dateKey, to: dateKey })
+    ) {
+      return res.status(409).json({ error: 'Cette date n’est plus disponible. Écrivez au professionnel pour en convenir une autre.' });
+    }
+
+    const amounts = computeMarketplaceAmounts(inquiry.quotedAmountFc);
+    const booking = await prisma.marketplaceBooking.create({
+      data: {
+        listingId: inquiry.listingId,
+        offeringId: inquiry.offeringId,
+        inquiryId: inquiry.id,
+        vendorTenantId,
+        organizerTenantId: inquiry.fromTenantId || tenantId,
+        organizerUserId: userId,
+        eventId: inquiry.eventId,
+        eventDate: inquiry.eventDate,
+        guestCount: inquiry.guestCount,
+        notes: inquiry.message,
+        ...amounts,
+        status: 'REQUESTED',
+      },
+      include: bookingInclude,
+    });
+
+    const bookingTitle = booking.offering?.title || booking.listing?.headline || booking.listing?.room.name || 'Réservation';
+    const amountFormatted = `${amounts.amountFc.toLocaleString('fr-FR')} FC`;
+    const depositFormatted = `${amounts.depositFc.toLocaleString('fr-FR')} FC`;
+    const vendorHref = `${FRONTEND_URL}/dashboard/bookings?tab=bookings&role=vendor&bookingId=${booking.id}`;
+    const clientHref = `${FRONTEND_URL}/dashboard/bookings?tab=bookings&bookingId=${booking.id}`;
+
+    void notifyTenantOperators(vendorTenantId, {
+      type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING,
+      title: `Devis accepté — ${bookingTitle}`,
+      message: `${inquiry.fromName} a accepté votre devis (${amountFormatted}). Confirmez la réservation, puis l’acompte de ${depositFormatted}.`,
+      metadata: { bookingId: booking.id, href: vendorHref },
+      whatsapp: `${inquiry.fromName} a accepté le devis pour « ${bookingTitle} » (${amountFormatted}).\nAcompte : ${depositFormatted}.\nConfirmez : ${vendorHref}`,
+    });
+    void notifyUsers([userId], {
+      type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING,
+      title: `Réservation demandée — ${bookingTitle}`,
+      message: `Votre acceptation du devis (${amountFormatted}) a été transmise. Le professionnel doit confirmer, puis vous versez l’acompte de ${depositFormatted}.`,
+      metadata: { bookingId: booking.id, href: clientHref },
+      whatsapp: `Devis accepté pour « ${bookingTitle} » (${amountFormatted}).\nProchaine étape : confirmation du professionnel, puis acompte ${depositFormatted}.\nSuivi : ${clientHref}`,
+    });
+
+    return res.status(201).json({
+      booking: serializeBooking(booking),
+      message: 'Devis accepté. Le professionnel doit confirmer la réservation, puis vous versez l’acompte.',
+    });
+  } catch (error) {
+    console.error('acceptInquiryQuote:', error);
+    return res.status(500).json({ error: 'Impossible d’accepter le devis.' });
+  }
+}
+
 export async function convertInquiryToBooking(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;

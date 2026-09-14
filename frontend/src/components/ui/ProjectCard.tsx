@@ -231,7 +231,7 @@ export function ProjectCard({
               : undefined
           }
           className={cn(
-            'group relative flex items-center gap-3 sm:gap-4 overflow-hidden',
+            'group relative flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 overflow-hidden',
             'rounded-[var(--radius-card)] border border-border bg-surface',
             'p-2.5 sm:p-3',
             'shadow-[var(--shadow-soft)] hover:border-primary/35 hover:shadow-[var(--shadow-soft)] transition',
@@ -287,7 +287,10 @@ export function ProjectCard({
           )}
 
           {actions && (
-            <div className="flex shrink-0 items-center gap-0.5 sm:gap-1" onClick={(e) => e.stopPropagation()}>
+            <div
+              className="flex flex-wrap items-center justify-end gap-1.5 w-full sm:w-auto sm:shrink-0"
+              onClick={(e) => e.stopPropagation()}
+            >
               {actions}
             </div>
           )}
@@ -341,10 +344,10 @@ export function ProjectCard({
         {children}
         {(showCta || actions || footer) && (
           <div
-            className="mt-auto flex items-center justify-between gap-2 pt-1"
+            className="mt-auto flex flex-col gap-2 pt-1"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="min-w-0 flex-1 flex items-center gap-2">
+            <div className="min-w-0 flex items-center justify-between gap-2">
               {showCta ? (
                 <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
                   {ctaLabel || 'Voir la fiche'}
@@ -354,7 +357,11 @@ export function ProjectCard({
                 footer
               )}
             </div>
-            {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
+            {actions && (
+              <div className="flex flex-wrap items-center gap-1.5 w-full">
+                {actions}
+              </div>
+            )}
           </div>
         )}
         {showCta && footer ? <div className="text-[11px] text-muted">{footer}</div> : null}

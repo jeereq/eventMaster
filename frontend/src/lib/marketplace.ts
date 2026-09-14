@@ -628,12 +628,12 @@ export function inquiryNextStep(item: MarketplaceInquiryItem): { title: string; 
   if (item.status === 'QUOTED') {
     const formatted = item.quotedAmountFc != null ? `${formatFc(item.quotedAmountFc)} FC` : 'Chiffré';
     return asOrganizer
-      ? { title: `Devis chiffré (${formatted})`, detail: 'Le professionnel vous a transmis son devis. Répondez-lui ou réservez pour valider la date.' }
+      ? { title: `Devis reçu (${formatted})`, detail: 'Acceptez ce devis pour demander la réservation. Le professionnel confirmera, puis vous versez l’acompte.' }
       : { title: `Devis transmis (${formatted})`, detail: 'Proposition envoyée au client. Il peut vous répondre ici ; vous pouvez aussi convertir en réservation.' };
   }
   if (item.status === 'NEW') {
     return asOrganizer
-      ? { title: 'Envoyée', detail: 'Le professionnel n’a pas encore répondu. Vous pouvez déjà réserver si un tarif est publié.' }
+      ? { title: 'En attente du devis', detail: 'Le professionnel n’a pas encore chiffré. Répondez-lui ici si vous avez une précision — ne réservez qu’après le devis.' }
       : item.eventDate
         ? { title: 'Nouveau devis', detail: 'Contactez le client, puis chiffrez le devis ou refusez avec motif.' }
         : { title: 'Nouveau devis', detail: 'Contactez le client, puis marquez la demande comme contactée.' };

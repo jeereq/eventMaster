@@ -29,6 +29,7 @@ import {
   dashboardVenueHref,
   inquiryNextStep,
   buildWhatsAppDirectLink,
+  MARKETPLACE_DEPOSIT_RATE,
   type MarketplaceInquiryItem,
   type MarketplaceInquiryThreadMessage,
 } from '@/lib/marketplace';
@@ -141,6 +142,9 @@ export default function MarketplaceInquiriesPanel({
   const [threadLoading, setThreadLoading] = useState(false);
   const [threadDraft, setThreadDraft] = useState('');
   const [threadSending, setThreadSending] = useState(false);
+  const [acceptTarget, setAcceptTarget] = useState<MarketplaceInquiryItem | null>(null);
+  const [acceptSubmitting, setAcceptSubmitting] = useState(false);
+  const [panelNotice, setPanelNotice] = useState('');
 
   useEffect(() => {
     setInquiries(initialInquiries);
@@ -394,6 +398,11 @@ export default function MarketplaceInquiriesPanel({
   };
 
   const handleConvertBooking = async (item: MarketplaceInquiryItem) => {
+    if (organizerView) {
+      setAcceptTarget(item);
+      setPanelError('');
+      return;
+    }
     run(item.id, async () => {
       if (onConvert) {
         await onConvert(item.id, item.quotedAmountFc ?? undefined);
@@ -409,6 +418,32 @@ export default function MarketplaceInquiriesPanel({
       );
       if (onChanged) await onChanged();
     });
+  };
+
+  const handleAcceptQuote = async () => {
+    if (!acceptTarget) return;
+    if (!acceptTarget.eventDate) {
+      setPanelError('Une date est nécessaire. Écrivez au professionnel pour la confirmer, puis acceptez le devis.');
+      return;
+    }
+    setAcceptSubmitting(true);
+    setPanelError('');
+    setPanelNotice('');
+    try {
+      const result = await api.post(`/marketplace/inquiries/${acceptTarget.id}/accept`, {}) as { message?: string };
+      setInquiries((prev) =>
+        prev.map((i) =>
+          i.id === acceptTarget.id ? { ...i, hasBooking: true } : i,
+        ),
+      );
+      setAcceptTarget(null);
+      setPanelNotice(result.message || 'Devis accepté. Le professionnel doit confirmer la réservation.');
+      if (onChanged) await onChanged();
+    } catch (err: unknown) {
+      setPanelError(err instanceof Error ? err.message : 'Impossible d’accepter le devis.');
+    } finally {
+      setAcceptSubmitting(false);
+    }
   };
 
   const activeError = panelError || externalError;
@@ -441,6 +476,7 @@ export default function MarketplaceInquiriesPanel({
   return (
     <div className="space-y-4">
       {activeError && <Alert variant="error">{activeError}</Alert>}
+      {panelNotice && <Alert variant="success">{panelNotice}</Alert>}
 
       <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar sm:flex-wrap pb-1">
         <button
@@ -651,36 +687,21 @@ export default function MarketplaceInquiriesPanel({
                     )
                   ) : null}
 
-                  {/* Boutons Organisateur */}
-                  {organizerView && !item.hasBooking && item.status === 'QUOTED' && (
+                  {organizerView && !item.hasBooking && item.status === 'QUOTED' ? (
                     <Button
                       size="sm"
-                      loading={busy}
                       onClick={() => handleConvertBooking(item)}
                       leftIcon={<CalendarCheck className="w-3.5 h-3.5" />}
                     >
-                      Réserver au devis ({formatFc(item.quotedAmountFc || 0)})
+                      Accepter le devis
+                      {item.quotedAmountFc != null ? ` (${formatFc(item.quotedAmountFc)})` : ''}
                     </Button>
-                  )}
+                  ) : null}
 
-                  {organizerView && !item.hasBooking && item.status !== 'QUOTED' && item.status !== 'DECLINED' && (item.listingSlug || item.offeringSlug) ? (
-                    <Link
-                      href={
-                        item.event?.id
-                          ? eventDashboardHref(item.event.id, {
-                              tab: 'prep',
-                              listing: item.listingSlug,
-                              offer: item.offeringSlug,
-                              action: 'book',
-                            })
-                          : listingHref || '#'
-                      }
-                      className="inline-flex"
-                    >
-                      <Button size="sm" leftIcon={<CalendarCheck className="w-3.5 h-3.5" />}>
-                        Réserver
-                      </Button>
-                    </Link>
+                  {organizerView && !item.hasBooking && item.status === 'NEW' ? (
+                    <span className="inline-flex items-center min-h-11 px-2.5 text-[11px] font-semibold text-muted">
+                      En attente du devis
+                    </span>
                   ) : null}
 
                   {organizerView && item.event?.id ? (
@@ -1029,6 +1050,80 @@ export default function MarketplaceInquiriesPanel({
             />
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={Boolean(acceptTarget)}
+        onClose={() => {
+          if (!acceptSubmitting) setAcceptTarget(null);
+        }}
+        title="Accepter le devis"
+        description={
+          acceptTarget
+            ? `Confirmez le montant proposé par ${acceptTarget.vendorName || 'le professionnel'} pour « ${acceptTarget.title} ».`
+            : undefined
+        }
+        size="md"
+        footer={
+          <div className="flex w-full flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={acceptSubmitting}
+              onClick={() => setAcceptTarget(null)}
+            >
+              Pas maintenant
+            </Button>
+            <Button
+              type="button"
+              loading={acceptSubmitting}
+              disabled={!acceptTarget?.eventDate || acceptTarget.quotedAmountFc == null}
+              onClick={handleAcceptQuote}
+              leftIcon={<CalendarCheck className="w-4 h-4" />}
+            >
+              Confirmer et demander la réservation
+            </Button>
+          </div>
+        }
+      >
+        {acceptTarget ? (
+          <div className="space-y-3">
+            {panelError ? <Alert variant="error">{panelError}</Alert> : null}
+            <ol className="space-y-2 text-sm text-foreground">
+              <li className="rounded-xl border border-border bg-surface-muted/60 px-3 py-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">1. Devis</span>
+                <p className="mt-0.5 font-semibold">
+                  {acceptTarget.quotedAmountFc != null ? formatFc(acceptTarget.quotedAmountFc) : 'Montant à confirmer'}
+                </p>
+              </li>
+              <li className="rounded-xl border border-border bg-surface-muted/60 px-3 py-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">2. Votre acceptation</span>
+                <p className="mt-0.5">
+                  Une demande de réservation est envoyée au professionnel. Il doit encore confirmer.
+                </p>
+              </li>
+              <li className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-300">
+                  3. Acompte après confirmation
+                </span>
+                <p className="mt-0.5">
+                  {acceptTarget.quotedAmountFc != null
+                    ? `Acompte ${Math.round(MARKETPLACE_DEPOSIT_RATE * 100)} % : ${formatFc(Math.round(acceptTarget.quotedAmountFc * MARKETPLACE_DEPOSIT_RATE))} — versé hors plateforme.`
+                    : 'L’acompte de 30 % sera indiqué après confirmation.'}
+                </p>
+              </li>
+            </ol>
+            {acceptTarget.eventDate ? (
+              <p className="text-xs text-muted">
+                Date demandée : {new Date(acceptTarget.eventDate).toLocaleDateString('fr-FR')}
+              </p>
+            ) : (
+              <Alert variant="warning">
+                Aucune date n’est encore indiquée. Répondez au professionnel pour la fixer, puis revenez accepter le devis.
+              </Alert>
+            )}
+          </div>
+        ) : null}
       </Modal>
 
       <Modal

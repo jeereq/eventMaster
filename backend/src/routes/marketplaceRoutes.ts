@@ -15,6 +15,7 @@ import {
   listBookings,
   updateBooking,
   convertInquiryToBooking,
+  acceptInquiryQuote,
 } from '../controllers/marketplaceBookingController';
 import {
   listFavorites,
@@ -62,6 +63,7 @@ router.get('/inquiries/:id/messages', listInquiryMessages);
 router.post('/inquiries/:id/messages', postInquiryMessage);
 router.patch('/inquiries/:id', updateInquiryStatus);
 router.post('/inquiries/:id/book', convertInquiryToBooking);
+router.post('/inquiries/:id/accept', acceptInquiryQuote);
 router.get('/bookings', listBookings);
 router.post('/bookings', createBooking);
 router.patch('/bookings/:id', updateBooking);
