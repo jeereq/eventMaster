@@ -98,7 +98,7 @@ export default function RootLayout({
           id="theme-boot"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark')document.documentElement.classList.add('dark');else document.documentElement.classList.remove('dark');}catch(e){document.documentElement.classList.remove('dark');}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark')document.documentElement.classList.add('dark');else document.documentElement.classList.remove('dark');var narrow=window.matchMedia('(max-width:767px)').matches;var standalone=window.matchMedia('(display-mode:standalone)').matches||!!(navigator&&navigator.standalone);if(!narrow&&!standalone)return;var force=sessionStorage.getItem('em_force_splash')==='1';var seen=sessionStorage.getItem('em_mobile_splash_seen_v1')==='1';if(force||!seen)document.documentElement.classList.add('em-splash-boot');}catch(e){document.documentElement.classList.remove('dark');}})();`,
           }}
         />
         <a

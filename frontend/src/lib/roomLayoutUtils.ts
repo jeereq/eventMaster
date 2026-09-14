@@ -981,15 +981,31 @@ export type FurnitureSurfaceHit = {
   elevationM: number;
 };
 
+export interface ResolveFurnitureSurfaceOptions {
+  /**
+   * Si true, une table peut être considérée comme surface de pose (réservé aux petits équipements posés sur table : PC portables, moniteurs).
+   * Par défaut false, pour que les tables, chaises et autres mobiliers de sol ne se posent JAMAIS sur une table.
+   */
+  allowTable?: boolean;
+  /**
+   * Identifiant de l'élément à ignorer (ex: pour qu'une table ou un équipement ne se détecte jamais elle-même).
+   */
+  ignoreId?: string;
+}
+
 /**
- * Surface sous un point (moquette, piste, podium, table…) pour y poser tables / chaises / écrans / ordinateurs.
- * Priorité : table > podium / scène > autres surfaces.
+ * Surface sous un point (moquette, piste, podium, scène, ou table pour petits équipements).
+ * Priorité : table (si autorisée) > podium / scène > autres surfaces (balcon, piste, moquette).
  */
 export function resolveFurnitureSurfaceAt(
   blueprint: RoomLayoutBlueprint,
   xPct: number,
   yPct: number,
+  options?: ResolveFurnitureSurfaceOptions,
 ): FurnitureSurfaceHit | null {
+  const allowTable = options?.allowTable === true;
+  const ignoreId = options?.ignoreId;
+
   let best: FurnitureSurfaceHit | null = null;
 
   const consider = (hit: FurnitureSurfaceHit) => {
@@ -1016,27 +1032,37 @@ export function resolveFurnitureSurfaceAt(
     }
   };
 
-  // 1. Détection des tables comme supports d'équipements (ordinateurs portables, moniteurs)
-  for (const item of blueprint.furniture) {
-    if (item.kind === 'table') {
-      const radiusPct = item.customRadiusM ? item.customRadiusM * 5 : 7;
-      const w = item.customWidthM ? item.customWidthM * 5 : 12;
-      const h = item.customDepthM ? item.customDepthM * 5 : 10;
-      const inTable = item.shape === 'round' || item.shape === 'cocktail'
-        ? Math.hypot(xPct - item.x, yPct - item.y) <= radiusPct
-        : Math.abs(xPct - item.x) <= w / 2 && Math.abs(yPct - item.y) <= h / 2;
-      if (inTable) {
-        consider({
-          id: item.id,
-          kind: 'table',
-          label: item.name ?? 'Table',
-          elevationM: item.shape === 'cocktail' ? 1.05 : 0.76,
-        });
+  // 1. Détection des tables comme supports d'équipements UNIQUEMENT si allowTable === true
+  if (allowTable) {
+    for (const item of blueprint.furniture) {
+      if (item.kind === 'table' && item.id !== ignoreId) {
+        const radiusPct = item.customRadiusM ? item.customRadiusM * 5 : 7;
+        const w = item.customWidthM ? item.customWidthM * 5 : 12;
+        const h = item.customDepthM ? item.customDepthM * 5 : 10;
+        const inTable = item.shape === 'round' || item.shape === 'cocktail'
+          ? Math.hypot(xPct - item.x, yPct - item.y) <= radiusPct
+          : Math.abs(xPct - item.x) <= w / 2 && Math.abs(yPct - item.y) <= h / 2;
+        if (inTable) {
+          // Si la table repose elle-même sur une estrade / un podium
+          const baseUnderTable = resolveFurnitureSurfaceAt(blueprint, item.x, item.y, {
+            allowTable: false,
+            ignoreId: item.id,
+          });
+          const baseElev = baseUnderTable?.elevationM ?? 0;
+          const tableHeight = item.shape === 'highTop' ? 1.05 : item.shape === 'cocktail' ? 0.55 : 0.74;
+          consider({
+            id: item.id,
+            kind: 'table',
+            label: item.name ?? 'Table',
+            elevationM: baseElev + tableHeight,
+          });
+        }
       }
     }
   }
 
   for (const f of blueprint.fixtures) {
+    if (f.id === ignoreId) continue;
     if (!pointInLayoutRect(xPct, yPct, f)) continue;
     if (f.kind === 'podium' || f.kind === 'stage') {
       consider({
@@ -1063,7 +1089,7 @@ export function resolveFurnitureSurfaceAt(
   }
 
   for (const item of blueprint.furniture) {
-    if (item.kind !== 'zone') continue;
+    if (item.kind !== 'zone' || item.id === ignoreId) continue;
     if (!pointInLayoutRect(xPct, yPct, { x: item.x, y: item.y, w: item.w, h: item.h })) continue;
     const kind =
       item.zoneKind === 'dance' ? 'dance' :

@@ -13,6 +13,7 @@ import { claimAiTemplateComposeHistory } from '@/lib/aiTemplateComposeHistory';
 import { claimAiRoomPlanComposeHistory } from '@/lib/aiRoomPlanComposeHistory';
 import { setAiTokenSessionUnlimited } from '@/lib/aiTokens';
 import { SESSION_EXPIRED_EVENT } from '@/lib/sessionEvents';
+import { requestMobileSplashAfterAuth } from '@/lib/mobileSplash';
 
 export interface OrgAccess {
   level: 'owner' | 'manager' | 'protocol' | 'commercial' | 'staff' | 'client' | 'none';
@@ -298,6 +299,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       void claimAiTemplateComposeHistory();
       void claimAiRoomPlanComposeHistory();
 
+      requestMobileSplashAfterAuth();
       router.push(safeAppPath(options?.next) || postAuthPath(data.user?.role, data.access ?? null, data.tenant ?? null));
     } catch (error: any) {
       setLoading(false);
@@ -382,6 +384,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       void claimAiTemplateComposeHistory();
       void claimAiRoomPlanComposeHistory();
       const dest = safeAppPath(options?.next) || postAuthPath(data.user?.role, data.access ?? null, data.tenant ?? null);
+      requestMobileSplashAfterAuth();
       router.push(safeAppPath(options?.next) ? dest : appendFirstTourQuery(dest));
     } catch (error) {
       setLoading(false);

@@ -756,7 +756,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
  if (loading || !token || !user) {
  return (
- <div className="min-h-screen flex items-center justify-center bg-background px-4">
+ <div className="min-h-screen flex items-center justify-center bg-[#f6f7f8] dark:bg-background px-4">
  <div className="flex flex-col items-center gap-4 animate-fade-in text-center max-w-sm">
  <SiteBrandMark href={null} size="lg" showLabel={false} />
  <Loader2 className="w-6 h-6 text-primary animate-spin" />

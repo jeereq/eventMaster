@@ -1,39 +1,26 @@
 'use client';
 
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { cn } from '@/lib/cn';
+import {
+  clearMobileSplashBootClass,
+  markMobileSplashSeen,
+  shouldShowMobileSplash,
+} from '@/lib/mobileSplash';
 
-const STORAGE_KEY = 'em_mobile_splash_seen_v1';
-const MIN_SHOW_MS = 1100;
-const MAX_SHOW_MS = 2000;
-
-function isMobileViewport() {
-  if (typeof window === 'undefined') return false;
-  const narrow = window.matchMedia('(max-width: 767px)').matches;
-  const standalone =
-    window.matchMedia('(display-mode: standalone)').matches ||
-    (typeof navigator !== 'undefined' &&
-      (navigator as Navigator & { standalone?: boolean }).standalone === true);
-  return narrow || standalone;
-}
+const MIN_SHOW_MS = 1200;
+const MAX_SHOW_MS = 2200;
 
 function prefersReducedMotion() {
   if (typeof window === 'undefined') return false;
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-function markSeen() {
-  try {
-    sessionStorage.setItem(STORAGE_KEY, '1');
-  } catch {
-    /* private mode */
-  }
-}
-
 /**
- * Splash d’accueil mobile / PWA — une fois par session.
- * Dialogue modal : focus piégé, Passer coupe le délai.
+ * Splash d’accueil mobile / PWA.
+ * Couleurs marque fixes (pas le fond dark) pour éviter un premier écran noir.
+ * Affiché aussi après login via `requestMobileSplashAfterAuth`.
  */
 export default function MobileSplashScreen() {
   const { site } = usePlatformSite();
@@ -44,17 +31,30 @@ export default function MobileSplashScreen() {
   const skipRef = useRef<HTMLButtonElement>(null);
   const dismissNowRef = useRef<() => void>(() => {});
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!isMobileViewport()) return;
-    try {
-      if (sessionStorage.getItem(STORAGE_KEY) === '1') return;
-    } catch {
-      /* private mode */
+  // Afficher dès le premier paint client (avant paint paint si possible)
+  useLayoutEffect(() => {
+    if (!shouldShowMobileSplash()) {
+      clearMobileSplashBootClass();
+      return;
     }
+    setVisible(true);
+  }, []);
+
+  // Rejouer après login (le composant reste monté dans le layout racine)
+  useEffect(() => {
+    const onRequest = () => {
+      if (!shouldShowMobileSplash()) return;
+      setLeaving(false);
+      setVisible(true);
+    };
+    window.addEventListener('em-mobile-splash-request', onRequest);
+    return () => window.removeEventListener('em-mobile-splash-request', onRequest);
+  }, []);
+
+  useEffect(() => {
+    if (!visible) return;
 
     const quiet = prefersReducedMotion();
-    setVisible(true);
     const started = Date.now();
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -76,14 +76,14 @@ export default function MobileSplashScreen() {
       if (quiet) {
         setVisible(false);
         restore();
-        markSeen();
+        markMobileSplashSeen();
         return;
       }
       setLeaving(true);
       leaveTimer = window.setTimeout(() => {
         setVisible(false);
         restore();
-        markSeen();
+        markMobileSplashSeen();
       }, 280);
     };
 
@@ -114,7 +114,7 @@ export default function MobileSplashScreen() {
       window.removeEventListener('load', finishAuto);
       restore();
     };
-  }, []);
+  }, [visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -158,11 +158,16 @@ export default function MobileSplashScreen() {
       aria-busy={!leaving}
       className={cn(
         'fixed inset-0 z-[10050] flex flex-col items-center justify-center',
-        'bg-[radial-gradient(120%_80%_at_50%_18%,color-mix(in_oklab,var(--primary)_20%,transparent),transparent_58%),var(--background)]',
+        /* Fond marque clair — indépendant du mode sombre (évite écran noir). */
+        'bg-[#f6f7f8]',
         'px-6 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]',
         'transition-opacity duration-300 ease-out motion-reduce:transition-none',
         leaving ? 'opacity-0 pointer-events-none' : 'opacity-100',
       )}
+      style={{
+        backgroundImage:
+          'radial-gradient(120% 80% at 50% 18%, color-mix(in oklab, #059669 22%, transparent), transparent 58%)',
+      }}
     >
       <div
         className={cn(
@@ -170,29 +175,32 @@ export default function MobileSplashScreen() {
           leaving ? 'scale-[0.98] opacity-0' : 'scale-100 opacity-100',
         )}
       >
-        <span className="w-16 h-16 rounded-[1.25rem] shadow-lg flex items-center justify-center overflow-hidden">
+        <span className="w-16 h-16 rounded-[1.25rem] shadow-lg flex items-center justify-center overflow-hidden bg-white">
           {/* eslint-disable-next-line @next/next/no-img-element -- marque PWA, pas de hop next/image */}
-          <img src="/icon.svg" alt={name} width={64} height={64} className="w-16 h-16 rounded-[1.25rem]" />
+          <img src="/icon.svg" alt="" width={64} height={64} className="w-16 h-16 rounded-[1.25rem]" />
         </span>
         <div className="space-y-1.5 w-full">
-          <p id={titleId} className="text-xl font-display font-semibold tracking-tight text-foreground leading-tight break-words">
+          <p
+            id={titleId}
+            className="text-xl font-display font-semibold tracking-tight text-[#1e1f21] leading-tight break-words"
+          >
             {name}
           </p>
           {site.platformTagline ? (
-            <p className="text-xs font-medium text-muted leading-snug break-words">
+            <p className="text-xs font-medium text-[#6d6e6f] leading-snug break-words">
               {site.platformTagline}
             </p>
           ) : null}
         </div>
         <span
-          className="mt-1 w-7 h-7 rounded-full border-2 border-primary/30 border-t-primary animate-spin motion-reduce:hidden"
+          className="mt-1 w-7 h-7 rounded-full border-2 border-[#059669]/30 border-t-[#059669] animate-spin motion-reduce:hidden"
           aria-hidden
         />
         <button
           ref={skipRef}
           type="button"
           onClick={() => dismissNowRef.current()}
-          className="mt-2 min-h-11 px-4 rounded-[var(--radius-button)] text-sm font-medium text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          className="mt-2 min-h-11 px-4 rounded-[var(--radius-button)] text-sm font-medium text-[#6d6e6f] hover:text-[#1e1f21] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#059669]/40"
         >
           Passer
         </button>

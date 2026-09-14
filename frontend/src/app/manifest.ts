@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Plateforme SaaS Multi-tenant d\'organisation d\'événements, réponse à l’invitation et invitations personnalisées',
     start_url: '/',
     display: 'standalone',
-    background_color: '#ffffff',
+    background_color: '#f6f7f8',
     theme_color: '#059669',
     icons: [
       {

@@ -2761,21 +2761,21 @@ function FixtureMesh({
           <TableMonitorMesh
             w={Math.max(0.48, Math.min(1.4, w))}
             ratio={screenRatio ?? '16:9'}
-            surfaceElevationM={screenElevationM ?? surfaceElevationM}
+            surfaceElevationM={screenElevationM ?? 0}
             selected={selected}
             powered={screenPowered ?? true}
           />
         ) : screenKind === 'laptop' ? (
           <LaptopMesh
             w={Math.min(0.46, Math.max(0.28, w))}
-            surfaceElevationM={screenElevationM ?? surfaceElevationM}
+            surfaceElevationM={screenElevationM ?? 0}
             selected={selected}
             powered={screenPowered ?? true}
           />
         ) : screenKind === 'desktopPc' ? (
           <DesktopPcMesh
             w={Math.min(0.72, Math.max(0.42, w))}
-            surfaceElevationM={screenElevationM ?? surfaceElevationM}
+            surfaceElevationM={screenElevationM ?? 0}
             selected={selected}
             powered={screenPowered ?? true}
           />
@@ -3455,15 +3455,20 @@ function SceneContent({
           ? surfacePickable || selected.some((s) => s.kind === 'fixture' && s.id === f.id)
           : true;
         const canDragFixture = !readOnly && !wallEditMode && (!isSurfaceFixture || surfacePickable || selected.some((s) => s.kind === 'fixture' && s.id === f.id));
+        const isTabletopScreen =
+          f.kind === 'screen' &&
+          (f.screenKind === 'tableMonitor' ||
+            f.screenKind === 'laptop' ||
+            f.screenKind === 'desktopPc');
         const sitsOnRaisedSurface =
           f.kind === 'instrument' ||
           f.kind === 'bar' ||
-          (f.kind === 'screen' &&
-            (f.screenKind === 'tableMonitor' ||
-              f.screenKind === 'laptop' ||
-              f.screenKind === 'desktopPc'));
+          isTabletopScreen;
         const raisedSurface = sitsOnRaisedSurface
-          ? resolveFurnitureSurfaceAt(blueprint, f.x + f.w / 2, f.y + f.h / 2)
+          ? resolveFurnitureSurfaceAt(blueprint, f.x + f.w / 2, f.y + f.h / 2, {
+              allowTable: isTabletopScreen,
+              ignoreId: f.id,
+            })
           : null;
         return (
           <group key={f.id} position={[0, worldElevationForStory(blueprint, f.storyId), 0]}>
@@ -3554,7 +3559,10 @@ function SceneContent({
           );
         }
         if (item.kind === 'chair') {
-          const surface = resolveFurnitureSurfaceAt(blueprint, item.x, item.y);
+          const surface = resolveFurnitureSurfaceAt(blueprint, item.x, item.y, {
+            allowTable: false,
+            ignoreId: item.id,
+          });
           const chairBlocked = (blockedByTable.get(item.id) ?? []).includes(0);
           return (
             <group key={item.id} position={[0, storyElev, 0]}>
@@ -3588,7 +3596,10 @@ function SceneContent({
         if (item.kind === 'row') {
           const [wx, wz] = pctToWorld(item.x, item.y, widthM, heightM);
           const count = clampRowSeatCount(item.seatCount);
-          const surface = resolveFurnitureSurfaceAt(blueprint, item.x, item.y);
+          const surface = resolveFurnitureSurfaceAt(blueprint, item.x, item.y, {
+            allowTable: false,
+            ignoreId: item.id,
+          });
           const elevation = Math.max(
             item.elevationM ?? (item.tier > 0 ? item.tier * 0.38 : 0),
             surface?.elevationM ?? 0,
@@ -3681,7 +3692,10 @@ function SceneContent({
         }
 
         const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor) ?? '#f8fafc';
-        const surface = resolveFurnitureSurfaceAt(blueprint, item.x, item.y);
+        const surface = resolveFurnitureSurfaceAt(blueprint, item.x, item.y, {
+          allowTable: false,
+          ignoreId: item.id,
+        });
         return (
           <group key={item.id} position={[0, storyElev, 0]}>
           <TableMesh

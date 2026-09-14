@@ -856,7 +856,7 @@ export function WallTvMesh({
 export function TableMonitorMesh({
   w = 0.65,
   ratio = '16:9',
-  surfaceElevationM = 0.76,
+  surfaceElevationM = 0,
   selected = false,
   powered = true,
 }: {
@@ -919,7 +919,7 @@ export function TableMonitorMesh({
 /** Ordinateur portable (PC portable / laptop) posé sur table avec écran ouvert incliné. */
 export function LaptopMesh({
   w = 0.36,
-  surfaceElevationM = 0.76,
+  surfaceElevationM = 0,
   selected = false,
   powered = true,
 }: {
@@ -990,7 +990,7 @@ export function LaptopMesh({
 /** Ordinateur fixe (Desktop PC / Tout-en-un) avec grand écran, clavier fin et souris. */
 export function DesktopPcMesh({
   w = 0.58,
-  surfaceElevationM = 0.76,
+  surfaceElevationM = 0,
   selected = false,
   powered = true,
 }: {

@@ -137,6 +137,26 @@ html {
   caret-color: var(--primary);
 }
 
+/* Splash boot : avant hydratation React — évite un flash noir (surtout dark / PWA). */
+html.em-splash-boot {
+  background-color: #f6f7f8 !important;
+}
+
+html.em-splash-boot body {
+  background-color: #f6f7f8 !important;
+}
+
+html.em-splash-boot::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 10049;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 50% 18%, color-mix(in oklab, #059669 22%, transparent), transparent 58%),
+    #f6f7f8;
+}
+
 ::selection {
   background: color-mix(in srgb, var(--primary) 32%, transparent);
   color: var(--foreground);

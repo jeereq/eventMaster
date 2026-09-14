@@ -4304,11 +4304,17 @@ export default function RoomLayoutEditor({
       const isStairs = selectedFixture.kind === 'stairs';
       const isBalcony = selectedFixture.kind === 'balcony';
       const isScreen = selectedFixture.kind === 'screen';
+      const isTabletopScreen = isScreen && (
+        selectedFixture.screenKind === 'tableMonitor' ||
+        selectedFixture.screenKind === 'laptop' ||
+        selectedFixture.screenKind === 'desktopPc'
+      );
       const raisedSurface = (isInstrument || isBar || isScreen)
         ? resolveFurnitureSurfaceAt(
             blueprint,
             selectedFixture.x + selectedFixture.w / 2,
             selectedFixture.y + selectedFixture.h / 2,
+            { allowTable: isTabletopScreen, ignoreId: selectedFixture.id },
           )
         : null;
       const isDoor = selectedFixture.kind === 'door' || selectedFixture.kind === 'entrance';
@@ -5799,7 +5805,10 @@ export default function RoomLayoutEditor({
               </label>
             )}
             {(() => {
-              const surface = resolveFurnitureSurfaceAt(blueprint, selectedFurniture.x, selectedFurniture.y);
+              const surface = resolveFurnitureSurfaceAt(blueprint, selectedFurniture.x, selectedFurniture.y, {
+                allowTable: false,
+                ignoreId: selectedFurniture.id,
+              });
               if (!surface) {
                 return (
                   <p className={EDITOR_HINT}>
@@ -6440,7 +6449,10 @@ export default function RoomLayoutEditor({
               </button>
             </div>
             {(() => {
-              const surface = resolveFurnitureSurfaceAt(blueprint, selectedFurniture.x, selectedFurniture.y);
+              const surface = resolveFurnitureSurfaceAt(blueprint, selectedFurniture.x, selectedFurniture.y, {
+                allowTable: false,
+                ignoreId: selectedFurniture.id,
+              });
               if (!surface) {
                 return (
                   <p className="text-xs text-muted">Glissez le siège sur une moquette, piste ou podium pour le poser dessus.</p>
