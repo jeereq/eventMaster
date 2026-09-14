@@ -304,10 +304,10 @@ export default function DashboardMobileBottomBar({
   const nav = (
     <nav
       aria-label="Navigation principale mobile"
-      className="em-dash-bottom-nav md:hidden bg-[#121212]/96 backdrop-blur-2xl border-t border-white/[0.08] shadow-[0_-8px_30px_rgba(0,0,0,0.6)] pb-[max(0.45rem,env(safe-area-inset-bottom))] pt-1.5 px-1.5"
+      className="em-dash-bottom-nav md:hidden pointer-events-none px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-1"
     >
       <div
-        className="grid gap-0 items-center max-w-lg mx-auto relative"
+        className="pointer-events-auto max-w-lg mx-auto bg-surface/92 dark:bg-[#18181b]/92 backdrop-blur-2xl border border-border/80 dark:border-white/10 rounded-2xl min-[400px]:rounded-full shadow-[0_12px_36px_-6px_rgba(0,0,0,0.14),0_4px_16px_-2px_rgba(0,0,0,0.06)] dark:shadow-[0_16px_40px_-6px_rgba(0,0,0,0.6)] px-1.5 py-1 grid gap-0.5 items-center relative"
         style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
       >
         {items.map((item) => {
@@ -324,32 +324,23 @@ export default function DashboardMobileBottomBar({
                 aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir tout le menu'}
                 aria-expanded={mobileMenuOpen}
                 className={cn(
-                  'relative flex flex-col items-center justify-center gap-1 min-h-[48px] py-1 px-1 rounded-lg transition-all duration-150 select-none touch-manipulation cursor-pointer active:scale-95 active:opacity-80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40',
+                  'relative flex flex-col items-center justify-center gap-0.5 min-h-[46px] py-1 px-1 rounded-full transition-all duration-200 select-none touch-manipulation cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                   active
-                    ? 'text-white'
-                    : 'text-[#8c8c8c] hover:text-[#e5e5e5]',
+                    ? 'text-primary-solid dark:text-primary font-bold'
+                    : 'text-muted hover:text-foreground',
                 )}
               >
-                {active && (
-                  <span
-                    className="absolute -top-1.5 w-6 h-[2.5px] rounded-full bg-[#e50914] shadow-[0_0_8px_#e50914] transition-all duration-200"
-                    aria-hidden
-                  />
-                )}
-                <div className="relative flex items-center justify-center">
-                  <Icon
-                    className={cn(
-                      'w-5 h-5 transition-transform duration-200',
-                      active ? 'scale-105 stroke-[2.2px] text-white' : 'stroke-[1.75px] text-[#8c8c8c]',
-                    )}
-                  />
-                </div>
-                <span
+                <div
                   className={cn(
-                    'text-[10px] tracking-tight leading-none truncate max-w-full transition-colors',
-                    active ? 'font-semibold text-white' : 'font-medium text-[#8c8c8c]',
+                    'p-1.5 rounded-full transition-all duration-200 flex items-center justify-center',
+                    active
+                      ? 'bg-primary/12 text-primary-solid dark:text-primary scale-105'
+                      : 'bg-transparent text-muted',
                   )}
                 >
+                  <Icon className="w-[18px] h-[18px]" />
+                </div>
+                <span className="text-[10px] tracking-tight leading-none truncate max-w-full">
                   {mobileMenuOpen ? 'Fermer' : item.name}
                 </span>
               </button>
@@ -366,35 +357,26 @@ export default function DashboardMobileBottomBar({
               }}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'relative flex flex-col items-center justify-center gap-1 min-h-[48px] py-1 px-1 rounded-lg transition-all duration-150 select-none touch-manipulation cursor-pointer active:scale-95 active:opacity-80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40',
+                'relative flex flex-col items-center justify-center gap-0.5 min-h-[46px] py-1 px-1 rounded-full transition-all duration-200 select-none touch-manipulation cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                 active
-                  ? 'text-white'
-                  : 'text-[#8c8c8c] hover:text-[#e5e5e5]',
+                  ? 'text-primary-solid dark:text-primary font-bold'
+                  : 'text-muted hover:text-foreground',
               )}
             >
-              {active && (
-                <span
-                  className="absolute -top-1.5 w-6 h-[2.5px] rounded-full bg-[#e50914] shadow-[0_0_8px_#e50914] transition-all duration-200"
-                  aria-hidden
-                />
-              )}
-              <div className="relative flex items-center justify-center">
-                <Icon
-                  className={cn(
-                    'w-5 h-5 transition-transform duration-200',
-                    active ? 'scale-105 stroke-[2.2px] text-white' : 'stroke-[1.75px] text-[#8c8c8c]',
-                  )}
-                />
-                {active && (
-                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#e50914] shadow-[0_0_6px_#e50914]" />
-                )}
-              </div>
-              <span
+              <div
                 className={cn(
-                  'text-[10px] tracking-tight leading-none truncate max-w-full transition-colors',
-                  active ? 'font-semibold text-white' : 'font-medium text-[#8c8c8c]',
+                  'p-1.5 rounded-full transition-all duration-200 flex items-center justify-center relative',
+                  active
+                    ? 'bg-primary/12 text-primary-solid dark:text-primary scale-105'
+                    : 'bg-transparent text-muted',
                 )}
               >
+                <Icon className="w-[18px] h-[18px]" />
+                {active && (
+                  <span className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-primary-solid dark:bg-primary" />
+                )}
+              </div>
+              <span className="text-[10px] tracking-tight leading-none truncate max-w-full">
                 {item.name}
               </span>
             </Link>
