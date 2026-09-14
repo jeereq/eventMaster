@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
-import { cn } from '@/lib/cn';
 import {
-  clearMobileSplashBootClass,
+  hideNativeSplashShell,
   markMobileSplashSeen,
   shouldShowMobileSplash,
+  showNativeSplashShell,
 } from '@/lib/mobileSplash';
 
 const MIN_SHOW_MS = 1200;
@@ -18,193 +18,121 @@ function prefersReducedMotion() {
 }
 
 /**
- * Splash d’accueil mobile / PWA.
- * Couleurs marque fixes (pas le fond dark) pour éviter un premier écran noir.
- * Affiché aussi après login via `requestMobileSplashAfterAuth`.
+ * Pilote le splash HTML natif (#em-native-splash) — pas de second overlay React.
+ * Le shell est visible dès le boot script → plus de flash noir.
  */
 export default function MobileSplashScreen() {
   const { site } = usePlatformSite();
-  const titleId = useId();
-  const [visible, setVisible] = useState(false);
-  const [leaving, setLeaving] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const skipRef = useRef<HTMLButtonElement>(null);
-  const dismissNowRef = useRef<() => void>(() => {});
+  const leaveStartedRef = useRef(false);
+  const cleanupRef = useRef<(() => void) | null>(null);
+  const timersRef = useRef<{ wait?: number; leave?: number; max?: number }>({});
 
-  // Afficher dès le premier paint client (avant paint paint si possible)
-  useLayoutEffect(() => {
-    if (!shouldShowMobileSplash()) {
-      clearMobileSplashBootClass();
+  useEffect(() => {
+    const title = document.querySelector('#em-native-splash .em-ns-title');
+    if (title && site.platformName) title.textContent = site.platformName;
+    const root = document.getElementById('em-native-splash');
+    if (root && site.platformName) root.setAttribute('aria-label', site.platformName);
+  }, [site.platformName]);
+
+  const clearTimers = () => {
+    const t = timersRef.current;
+    if (t.wait) window.clearTimeout(t.wait);
+    if (t.leave) window.clearTimeout(t.leave);
+    if (t.max) window.clearTimeout(t.max);
+    timersRef.current = {};
+  };
+
+  const startLeave = (quiet: boolean) => {
+    if (leaveStartedRef.current) return;
+    leaveStartedRef.current = true;
+    clearTimers();
+    const el = document.getElementById('em-native-splash');
+    if (quiet) {
+      markMobileSplashSeen();
       return;
     }
-    setVisible(true);
-  }, []);
+    el?.classList.add('is-leaving');
+    timersRef.current.leave = window.setTimeout(() => {
+      markMobileSplashSeen();
+      el?.classList.remove('is-leaving');
+    }, 280);
+  };
 
-  // Rejouer après login (le composant reste monté dans le layout racine)
-  useEffect(() => {
-    const onRequest = () => {
-      if (!shouldShowMobileSplash()) return;
-      setLeaving(false);
-      setVisible(true);
-    };
-    window.addEventListener('em-mobile-splash-request', onRequest);
-    return () => window.removeEventListener('em-mobile-splash-request', onRequest);
-  }, []);
+  const runSplashCycle = () => {
+    cleanupRef.current?.();
+    cleanupRef.current = null;
 
-  useEffect(() => {
-    if (!visible) return;
+    if (!shouldShowMobileSplash()) {
+      hideNativeSplashShell();
+      return;
+    }
+
+    leaveStartedRef.current = false;
+    clearTimers();
+    showNativeSplashShell();
 
     const quiet = prefersReducedMotion();
     const started = Date.now();
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
-    let waitTimer = 0;
-    let leaveTimer = 0;
-    let maxTimer = 0;
-    let leaveStarted = false;
-
-    const restore = () => {
-      document.body.style.overflow = previousOverflow;
-    };
-
-    const startLeave = () => {
-      if (leaveStarted) return;
-      leaveStarted = true;
-      window.clearTimeout(waitTimer);
-      window.clearTimeout(maxTimer);
-      if (quiet) {
-        setVisible(false);
-        restore();
-        markMobileSplashSeen();
-        return;
-      }
-      setLeaving(true);
-      leaveTimer = window.setTimeout(() => {
-        setVisible(false);
-        restore();
-        markMobileSplashSeen();
-      }, 280);
-    };
-
     const finishAuto = () => {
-      if (leaveStarted) return;
+      if (leaveStartedRef.current) return;
       const wait = Math.max(0, MIN_SHOW_MS - (Date.now() - started));
-      waitTimer = window.setTimeout(startLeave, wait);
+      timersRef.current.wait = window.setTimeout(() => startLeave(quiet), wait);
     };
 
-    dismissNowRef.current = () => {
-      window.clearTimeout(waitTimer);
-      window.clearTimeout(maxTimer);
-      startLeave();
-    };
+    const onSkip = () => startLeave(quiet);
+    const skipBtn = document.getElementById('em-native-splash-skip');
+    skipBtn?.addEventListener('click', onSkip);
 
-    maxTimer = window.setTimeout(finishAuto, MAX_SHOW_MS);
+    timersRef.current.max = window.setTimeout(finishAuto, MAX_SHOW_MS);
     if (document.readyState === 'complete') {
       finishAuto();
     } else {
       window.addEventListener('load', finishAuto, { once: true });
     }
 
-    return () => {
-      leaveStarted = true;
-      window.clearTimeout(waitTimer);
-      window.clearTimeout(leaveTimer);
-      window.clearTimeout(maxTimer);
-      window.removeEventListener('load', finishAuto);
-      restore();
-    };
-  }, [visible]);
-
-  useEffect(() => {
-    if (!visible) return;
-    skipRef.current?.focus();
-
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
-        dismissNowRef.current();
-        return;
+        startLeave(quiet);
       }
-      if (event.key !== 'Tab') return;
-      event.preventDefault();
-      skipRef.current?.focus();
     };
-
-    const onFocusIn = (event: FocusEvent) => {
-      const root = rootRef.current;
-      if (!root || root.contains(event.target as Node)) return;
-      skipRef.current?.focus();
-    };
-
     document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('focusin', onFocusIn);
-    return () => {
+
+    cleanupRef.current = () => {
+      leaveStartedRef.current = true;
+      clearTimers();
+      window.removeEventListener('load', finishAuto);
       document.removeEventListener('keydown', onKeyDown);
-      document.removeEventListener('focusin', onFocusIn);
+      skipBtn?.removeEventListener('click', onSkip);
+      document.body.style.overflow = previousOverflow;
     };
-  }, [visible]);
+  };
 
-  if (!visible) return null;
+  useLayoutEffect(() => {
+    if (!shouldShowMobileSplash()) {
+      hideNativeSplashShell();
+      return;
+    }
+    runSplashCycle();
+    return () => {
+      cleanupRef.current?.();
+      cleanupRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const name = site.platformName || 'EventMaster';
+  useEffect(() => {
+    const onRequest = () => {
+      if (!shouldShowMobileSplash()) return;
+      runSplashCycle();
+    };
+    window.addEventListener('em-mobile-splash-request', onRequest);
+    return () => window.removeEventListener('em-mobile-splash-request', onRequest);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  return (
-    <div
-      ref={rootRef}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      aria-busy={!leaving}
-      className={cn(
-        'fixed inset-0 z-[10050] flex flex-col items-center justify-center',
-        /* Fond marque clair — indépendant du mode sombre (évite écran noir). */
-        'bg-[#f6f7f8]',
-        'px-6 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]',
-        'transition-opacity duration-300 ease-out motion-reduce:transition-none',
-        leaving ? 'opacity-0 pointer-events-none' : 'opacity-100',
-      )}
-      style={{
-        backgroundImage:
-          'radial-gradient(120% 80% at 50% 18%, color-mix(in oklab, #059669 22%, transparent), transparent 58%)',
-      }}
-    >
-      <div
-        className={cn(
-          'flex flex-col items-center gap-4 w-full max-w-[20rem] text-center transition duration-300 ease-out motion-reduce:transition-none motion-reduce:transform-none',
-          leaving ? 'scale-[0.98] opacity-0' : 'scale-100 opacity-100',
-        )}
-      >
-        <span className="w-16 h-16 rounded-[1.25rem] shadow-lg flex items-center justify-center overflow-hidden bg-white">
-          {/* eslint-disable-next-line @next/next/no-img-element -- marque PWA, pas de hop next/image */}
-          <img src="/icon.svg" alt="" width={64} height={64} className="w-16 h-16 rounded-[1.25rem]" />
-        </span>
-        <div className="space-y-1.5 w-full">
-          <p
-            id={titleId}
-            className="text-xl font-display font-semibold tracking-tight text-[#1e1f21] leading-tight break-words"
-          >
-            {name}
-          </p>
-          {site.platformTagline ? (
-            <p className="text-xs font-medium text-[#6d6e6f] leading-snug break-words">
-              {site.platformTagline}
-            </p>
-          ) : null}
-        </div>
-        <span
-          className="mt-1 w-7 h-7 rounded-full border-2 border-[#059669]/30 border-t-[#059669] animate-spin motion-reduce:hidden"
-          aria-hidden
-        />
-        <button
-          ref={skipRef}
-          type="button"
-          onClick={() => dismissNowRef.current()}
-          className="mt-2 min-h-11 px-4 rounded-[var(--radius-button)] text-sm font-medium text-[#6d6e6f] hover:text-[#1e1f21] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#059669]/40"
-        >
-          Passer
-        </button>
-      </div>
-    </div>
-  );
+  return null;
 }

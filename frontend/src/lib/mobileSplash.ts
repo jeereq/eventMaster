@@ -1,8 +1,9 @@
-/** Splash mobile / PWA — clés sessionStorage partagées. */
+/** Splash mobile / PWA — clés sessionStorage + shell HTML natif (#em-native-splash). */
 
 export const MOBILE_SPLASH_SEEN_KEY = 'em_mobile_splash_seen_v1';
-/** Forcer le splash après connexion / OTP (ignore « déjà vu » dans la session). */
 export const MOBILE_SPLASH_FORCE_KEY = 'em_force_splash';
+
+const PENDING_DARK_KEY = '__emPendingDark';
 
 export function isMobileSplashViewport(): boolean {
   if (typeof window === 'undefined') return false;
@@ -14,15 +15,64 @@ export function isMobileSplashViewport(): boolean {
   return narrow || standalone;
 }
 
+function nativeSplashEl(): HTMLElement | null {
+  if (typeof document === 'undefined') return null;
+  return document.getElementById('em-native-splash');
+}
+
+/** Affiche le shell HTML immédiatement (avant React) et reporte le mode sombre. */
+export function showNativeSplashShell(): void {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  root.classList.add('em-splash-boot');
+
+  if (root.classList.contains('dark')) {
+    try {
+      (window as unknown as Record<string, unknown>)[PENDING_DARK_KEY] = true;
+    } catch {
+      /* ignore */
+    }
+    root.classList.remove('dark');
+  }
+
+  const el = nativeSplashEl();
+  if (el) {
+    el.classList.add('is-on');
+    el.setAttribute('aria-hidden', 'false');
+    el.removeAttribute('hidden');
+  }
+}
+
+export function hideNativeSplashShell(): void {
+  if (typeof document === 'undefined') return;
+  const el = nativeSplashEl();
+  if (el) {
+    el.classList.remove('is-on');
+    el.setAttribute('aria-hidden', 'true');
+    el.setAttribute('hidden', '');
+  }
+  document.documentElement.classList.remove('em-splash-boot');
+
+  try {
+    const w = window as unknown as Record<string, unknown>;
+    if (w[PENDING_DARK_KEY]) {
+      document.documentElement.classList.add('dark');
+      delete w[PENDING_DARK_KEY];
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 export function requestMobileSplashAfterAuth(): void {
   if (typeof window === 'undefined') return;
   try {
     sessionStorage.setItem(MOBILE_SPLASH_FORCE_KEY, '1');
     sessionStorage.removeItem(MOBILE_SPLASH_SEEN_KEY);
-    document.documentElement.classList.add('em-splash-boot');
   } catch {
     /* private mode */
   }
+  showNativeSplashShell();
   window.dispatchEvent(new Event('em-mobile-splash-request'));
 }
 
@@ -46,10 +96,9 @@ export function markMobileSplashSeen(): void {
   } catch {
     /* private mode */
   }
-  document.documentElement.classList.remove('em-splash-boot');
+  hideNativeSplashShell();
 }
 
 export function clearMobileSplashBootClass(): void {
-  if (typeof document === 'undefined') return;
-  document.documentElement.classList.remove('em-splash-boot');
+  hideNativeSplashShell();
 }

@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { Inter, Geist_Mono, Fraunces } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
@@ -92,13 +91,41 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        {/* Critical : splash avant CSS/JS bundle — bloque le flash noir (surtout dark / PWA). */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+#em-native-splash{position:fixed;inset:0;z-index:2147483000;display:none;flex-direction:column;align-items:center;justify-content:center;padding:max(2rem,env(safe-area-inset-top)) 1.5rem max(1.5rem,env(safe-area-inset-bottom));background:#f6f7f8;background-image:radial-gradient(120% 80% at 50% 18%,rgba(5,150,105,.22),transparent 58%);color:#1e1f21;font-family:system-ui,-apple-system,sans-serif;transition:opacity .28s ease}
+#em-native-splash.is-on{display:flex!important}
+#em-native-splash.is-leaving{opacity:0;pointer-events:none}
+#em-native-splash .em-ns-mark{width:4rem;height:4rem;border-radius:1.25rem;overflow:hidden;background:#fff;box-shadow:0 10px 28px rgba(0,0,0,.12)}
+#em-native-splash .em-ns-mark img{width:100%;height:100%;display:block}
+#em-native-splash .em-ns-title{margin:.9rem 0 0;font-size:1.25rem;font-weight:650;letter-spacing:-.02em;text-align:center}
+#em-native-splash .em-ns-spin{margin-top:1rem;width:1.75rem;height:1.75rem;border-radius:999px;border:2px solid rgba(5,150,105,.28);border-top-color:#059669;animation:em-ns-spin .7s linear infinite}
+#em-native-splash .em-ns-skip{margin-top:.85rem;min-height:2.75rem;padding:0 1rem;border:0;background:transparent;color:#6d6e6f;font-size:.875rem;font-weight:500;cursor:pointer}
+@keyframes em-ns-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#em-native-splash .em-ns-spin{animation:none;border-top-color:rgba(5,150,105,.28)}#em-native-splash{transition:none}}
+html.em-splash-boot,html.em-splash-boot body{background:#f6f7f8!important}
+`.replace(/\n/g, ''),
+          }}
+        />
       </head>
       <body className={`${inter.className} min-h-full flex flex-col font-sans bg-background text-foreground`}>
-        <Script
-          id="theme-boot"
-          strategy="beforeInteractive"
+        <div id="em-native-splash" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-label="EventMaster">
+          <span className="em-ns-mark">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/icon.svg" alt="" width={64} height={64} />
+          </span>
+          <p className="em-ns-title">EventMaster</p>
+          <span className="em-ns-spin" aria-hidden="true" />
+          <button id="em-native-splash-skip" type="button" className="em-ns-skip">
+            Passer
+          </button>
+        </div>
+        {/* Inline juste après le shell : le nœud existe déjà (évite getElementById null). */}
+        <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark')document.documentElement.classList.add('dark');else document.documentElement.classList.remove('dark');var narrow=window.matchMedia('(max-width:767px)').matches;var standalone=window.matchMedia('(display-mode:standalone)').matches||!!(navigator&&navigator.standalone);if(!narrow&&!standalone)return;var force=sessionStorage.getItem('em_force_splash')==='1';var seen=sessionStorage.getItem('em_mobile_splash_seen_v1')==='1';if(force||!seen)document.documentElement.classList.add('em-splash-boot');}catch(e){document.documentElement.classList.remove('dark');}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('theme');var narrow=window.matchMedia('(max-width:767px)').matches;var standalone=window.matchMedia('(display-mode:standalone)').matches||!!(navigator&&navigator.standalone);var force=false;var seen=false;try{force=sessionStorage.getItem('em_force_splash')==='1';seen=sessionStorage.getItem('em_mobile_splash_seen_v1')==='1';}catch(e){}var need=(narrow||standalone)&&(force||!seen);var splash=document.getElementById('em-native-splash');if(need){document.documentElement.classList.add('em-splash-boot');window.__emPendingDark=(t==='dark');if(splash){splash.hidden=false;splash.classList.add('is-on');splash.setAttribute('aria-hidden','false');}}else if(t==='dark'){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){try{document.documentElement.classList.remove('dark');}catch(x){}}})();`,
           }}
         />
         <a
