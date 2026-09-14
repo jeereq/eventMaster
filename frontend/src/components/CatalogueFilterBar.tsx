@@ -53,7 +53,7 @@ export function CatalogueFilterField({
   return (
     <div className="block space-y-1.5 min-w-0">
       <span className="text-xs font-semibold text-foreground">{label}</span>
-      {hint ? <p className="text-[11px] text-muted -mt-0.5">{hint}</p> : null}
+      {hint ? <p className="text-xs text-muted -mt-0.5">{hint}</p> : null}
       {children}
     </div>
   );
@@ -266,13 +266,13 @@ export default function CatalogueFilterBar({
         <button
           type="button"
           onClick={onClearChips}
-          className="text-[10px] font-semibold text-muted hover:text-foreground px-1 shrink-0"
+          className="text-xs font-semibold text-muted hover:text-foreground px-1 shrink-0"
         >
           Tout effacer
         </button>
       ) : null}
       {resultLabel && variant !== 'float' ? (
-        <span className="ml-auto text-[10px] text-muted font-medium w-full sm:w-auto shrink-0">{resultLabel}</span>
+        <span className="ml-auto text-xs text-muted font-medium w-full sm:w-auto shrink-0">{resultLabel}</span>
       ) : null}
     </div>
   ) : null;
@@ -337,7 +337,7 @@ export default function CatalogueFilterBar({
               <SlidersHorizontal className="w-3.5 h-3.5" />
               <span>Filtres</span>
               {count > 0 ? (
-                <span className="inline-flex h-4 min-w-4 px-1 rounded-full bg-primary-foreground text-primary-solid text-[10px] font-bold leading-4 items-center justify-center tabular-nums">
+                <span className="inline-flex h-4 min-w-4 px-1 rounded-full bg-primary-foreground text-primary-solid text-xs font-bold leading-4 items-center justify-center tabular-nums">
                   {count}
                 </span>
               ) : null}
@@ -365,7 +365,7 @@ export default function CatalogueFilterBar({
         ) : null}
         {view === 'grid' && gridCols && onGridColsChange ? (
           <div className="hidden sm:flex items-center gap-2">
-            <span className="text-[11px] font-semibold text-muted">Colonnes</span>
+            <span className="text-xs font-semibold text-muted">Colonnes</span>
             <CatalogueGridColsToggle
               value={gridCols}
               onChange={onGridColsChange}
@@ -409,7 +409,7 @@ export default function CatalogueFilterBar({
             >
               <span className="hidden min-[380px]:inline">Filtres</span>
               {count > 0 ? (
-                <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white/20 px-1 text-[10px] font-semibold tabular-nums">
+                <span className="ml-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white/20 px-1 text-xs font-semibold tabular-nums">
                   {count}
                 </span>
               ) : null}
@@ -505,7 +505,7 @@ export function CatalogueGeoFields({
               onChange={(id) => set({ commune: id, neighborhood: '', nearPlace: '' })}
             />
             {!normalizeRdcCity(value.city) ? (
-              <p className="text-[11px] text-muted mt-1">Choisissez d’abord {cityList}.</p>
+              <p className="text-xs text-muted mt-1">Choisissez d’abord {cityList}.</p>
             ) : null}
           </CatalogueFilterField>
           <CatalogueFilterField label="Quartier">
@@ -515,7 +515,7 @@ export function CatalogueGeoFields({
               onChange={(id) => set({ neighborhood: id, nearPlace: '' })}
             />
             {normalizeRdcCity(value.city) && !value.commune ? (
-              <p className="text-[11px] text-muted mt-1">Choisissez une commune pour voir les quartiers.</p>
+              <p className="text-xs text-muted mt-1">Choisissez une commune pour voir les quartiers.</p>
             ) : null}
           </CatalogueFilterField>
         </>
@@ -606,13 +606,13 @@ export function CatalogueGeoFields({
           })}
         />
         {value.proximity === 'around' ? (
-          <p className="text-[11px] text-muted mt-2">
+          <p className="text-xs text-muted mt-2">
             Nous lirons votre GPS ({cityList} uniquement), puis filtrerons à la distance choisie.
           </p>
         ) : null}
         {value.proximity === 'near' ? (
           <div className="mt-3 space-y-3">
-            <p className="text-[11px] text-muted">
+            <p className="text-xs text-muted">
               Choisissez uniquement une commune, puis un quartier, dans la liste. Le rayon part du centre de la commune.
             </p>
             {!normalizeRdcCity(value.city) ? (
@@ -620,7 +620,7 @@ export function CatalogueGeoFields({
             ) : (
               <>
                 <div>
-                  <span className="block text-[11px] text-muted mb-1.5">Commune</span>
+                  <span className="block text-xs text-muted mb-1.5">Commune</span>
                   <CatalogueChoicePills
                     options={communesForCity(value.city).map((item) => ({ id: item.name, label: item.name }))}
                     value={value.commune}
@@ -628,14 +628,14 @@ export function CatalogueGeoFields({
                   />
                 </div>
                 <div>
-                  <span className="block text-[11px] text-muted mb-1.5">Quartier</span>
+                  <span className="block text-xs text-muted mb-1.5">Quartier</span>
                   <CatalogueChoicePills
                     options={neighborhoodsFor(value.city, value.commune).map((name) => ({ id: name, label: name }))}
                     value={value.neighborhood}
                     onChange={(id) => set({ neighborhood: id, nearPlace: '', lat: null, lng: null })}
                   />
                   {!value.commune ? (
-                    <p className="text-[11px] text-muted mt-1">Choisissez une commune pour voir les quartiers.</p>
+                    <p className="text-xs text-muted mt-1">Choisissez une commune pour voir les quartiers.</p>
                   ) : null}
                 </div>
               </>
@@ -644,7 +644,7 @@ export function CatalogueGeoFields({
         ) : null}
         {value.proximity ? (
           <div className="mt-3 space-y-2">
-            <span className="text-[11px] text-muted">Rayon autour du point ({clampRadiusKm(value.radiusKm)} km)</span>
+            <span className="text-xs text-muted">Rayon autour du point ({clampRadiusKm(value.radiusKm)} km)</span>
             <CatalogueChoicePills
               options={RADIUS_KM_OPTIONS.map((km) => ({ id: String(km), label: `${km} km` }))}
               value={(RADIUS_KM_OPTIONS as readonly number[]).includes(value.radiusKm) ? String(value.radiusKm) : ''}

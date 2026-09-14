@@ -181,7 +181,7 @@ export default function AdminDonationsPage() {
             <p className="text-xl font-black text-rose-700 dark:text-rose-300 tabular-nums">
               {formatFc(summary.totalCollectedFc)}
             </p>
-            <p className="text-[11px] text-muted">
+            <p className="text-xs text-muted">
               {summary.totalDonationsPaid} dons confirmés
             </p>
           </div>
@@ -195,7 +195,7 @@ export default function AdminDonationsPage() {
             <p className="text-xl font-black text-foreground tabular-nums">
               {formatFc(summary.pendingAmountFc)}
             </p>
-            <p className="text-[11px] text-muted">
+            <p className="text-xs text-muted">
               {summary.totalDonationsPending} en cours
             </p>
           </div>
@@ -209,7 +209,7 @@ export default function AdminDonationsPage() {
             <p className="text-xl font-black text-foreground tabular-nums">
               {formatFc(summary.averageDonationFc)}
             </p>
-            <p className="text-[11px] text-muted">par transaction</p>
+            <p className="text-xs text-muted">par transaction</p>
           </div>
 
           {/* Don record */}
@@ -221,7 +221,7 @@ export default function AdminDonationsPage() {
             <p className="text-xl font-black text-foreground tabular-nums">
               {formatFc(summary.highestDonationFc)}
             </p>
-            <p className="text-[11px] text-muted">Record plateforme</p>
+            <p className="text-xs text-muted">Record plateforme</p>
           </div>
 
           {/* Événements actifs */}
@@ -233,7 +233,7 @@ export default function AdminDonationsPage() {
             <p className="text-xl font-black text-primary tabular-nums">
               {summary.eventsWithDonationsCount}
             </p>
-            <p className="text-[11px] text-muted">Campagnes actives</p>
+            <p className="text-xs text-muted">Campagnes actives</p>
           </div>
 
           {/* Organisations */}
@@ -245,7 +245,7 @@ export default function AdminDonationsPage() {
             <p className="text-xl font-black text-foreground tabular-nums">
               {summary.activeTenantsCount}
             </p>
-            <p className="text-[11px] text-muted">Collectrices de fonds</p>
+            <p className="text-xs text-muted">Collectrices de fonds</p>
           </div>
         </div>
       )}

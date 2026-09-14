@@ -374,7 +374,7 @@ export default function ClientDashboardHome() {
             className="p-3 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
           >
             <div>
-              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block">Devis</span>
+              <span className="text-xs font-bold text-muted uppercase tracking-wider block">Devis</span>
               <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
                 {stats.loading ? (
                   <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
@@ -393,7 +393,7 @@ export default function ClientDashboardHome() {
             className="p-3 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
           >
             <div>
-              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block">Réservations</span>
+              <span className="text-xs font-bold text-muted uppercase tracking-wider block">Réservations</span>
               <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
                 {stats.loading ? (
                   <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
@@ -412,7 +412,7 @@ export default function ClientDashboardHome() {
             className="p-3 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
           >
             <div>
-              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block">Billets</span>
+              <span className="text-xs font-bold text-muted uppercase tracking-wider block">Billets</span>
               <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
                 {stats.loading ? (
                   <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
@@ -431,7 +431,7 @@ export default function ClientDashboardHome() {
             className="p-3 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
           >
             <div>
-              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block">Packs</span>
+              <span className="text-xs font-bold text-muted uppercase tracking-wider block">Packs</span>
               <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
                 {stats.loading ? (
                   <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
@@ -450,7 +450,7 @@ export default function ClientDashboardHome() {
             className="p-3 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3 col-span-2 md:col-span-1"
           >
             <div>
-              <span className="text-[11px] font-bold text-muted uppercase tracking-wider block">Favoris</span>
+              <span className="text-xs font-bold text-muted uppercase tracking-wider block">Favoris</span>
               <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
                 {stats.loading ? (
                   <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
@@ -651,7 +651,7 @@ export default function ClientDashboardHome() {
                     <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition">
                       <Wand2 className="w-5 h-5" />
                     </div>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
                       Actif
                     </span>
@@ -660,13 +660,13 @@ export default function ClientDashboardHome() {
                     Simulateur Budget
                   </h3>
                   <div className="flex flex-wrap gap-1">
-                    <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                    <span className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
                       3 formules
                     </span>
-                    <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                    <span className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
                       CDF &amp; USD
                     </span>
-                    <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                    <span className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
                       Devis direct
                     </span>
                   </div>
@@ -689,7 +689,7 @@ export default function ClientDashboardHome() {
                     <div className="w-9 h-9 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center group-hover:scale-105 transition">
                       <Mail className="w-5 h-5" />
                     </div>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
                       Actif
                     </span>
@@ -698,13 +698,13 @@ export default function ClientDashboardHome() {
                     Invitations &amp; Cartes
                   </h3>
                   <div className="flex flex-wrap gap-1">
-                    <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                    <span className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
                       Format 9:16
                     </span>
-                    <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                    <span className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
                       WhatsApp
                     </span>
-                    <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                    <span className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
                       Lien RSVP
                     </span>
                   </div>
@@ -727,7 +727,7 @@ export default function ClientDashboardHome() {
                     <div className="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center group-hover:scale-105 transition">
                       <Building2 className="w-5 h-5" />
                     </div>
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
                       Actif
                     </span>
@@ -736,13 +736,13 @@ export default function ClientDashboardHome() {
                     Plans de Salle 3D
                   </h3>
                   <div className="flex flex-wrap gap-1">
-                    <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                    <span className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
                       Visite WebGL
                     </span>
-                    <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                    <span className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
                       Tables &amp; Buffets
                     </span>
-                    <span className="text-[10px] font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
+                    <span className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
                       Immersion
                     </span>
                   </div>
@@ -786,9 +786,9 @@ export default function ClientDashboardHome() {
                 Lieux &amp; Espaces
               </h3>
               <div className="flex flex-wrap gap-1">
-                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Salles</span>
-                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Jardins</span>
-                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Domaines</span>
+                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Salles</span>
+                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Jardins</span>
+                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Domaines</span>
               </div>
             </div>
             <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">
@@ -810,9 +810,9 @@ export default function ClientDashboardHome() {
                 Prestataires
               </h3>
               <div className="flex flex-wrap gap-1">
-                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Traiteurs</span>
-                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">DJ</span>
-                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Photo</span>
+                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Traiteurs</span>
+                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">DJ</span>
+                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Photo</span>
               </div>
             </div>
             <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">
@@ -834,9 +834,9 @@ export default function ClientDashboardHome() {
                 Mobilier &amp; Cortèges
               </h3>
               <div className="flex flex-wrap gap-1">
-                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Chaises</span>
-                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Tentes</span>
-                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Voitures</span>
+                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Chaises</span>
+                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Tentes</span>
+                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Voitures</span>
               </div>
             </div>
             <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">
@@ -858,9 +858,9 @@ export default function ClientDashboardHome() {
                 Billetterie
               </h3>
               <div className="flex flex-wrap gap-1">
-                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Concerts</span>
-                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Galas</span>
-                <span className="text-[10px] bg-surface-muted text-muted px-1.5 py-0.5 rounded">Pass QR</span>
+                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Concerts</span>
+                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Galas</span>
+                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Pass QR</span>
               </div>
             </div>
             <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">

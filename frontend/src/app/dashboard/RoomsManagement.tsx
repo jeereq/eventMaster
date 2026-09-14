@@ -2572,6 +2572,11 @@ export default function RoomsManagement() {
         title={editingRoom ? `Salle — ${editingRoom.name}` : 'Plan'}
         description="Identité d’abord, plan 2D, puis publication sur le catalogue public."
         size={editPane === 'elements' ? 'full' : editPane === 'publication' ? 'xl' : 'lg'}
+        className={
+          editPane === 'elements'
+            ? 'h-[100dvh] max-h-[100dvh] sm:h-auto sm:max-h-[96vh] rounded-none sm:rounded-2xl'
+            : undefined
+        }
         footer={
           <div className="flex justify-between items-center gap-2 w-full">
             <p className="text-xs text-muted min-w-0 truncate" role="status">

@@ -79,7 +79,7 @@ export function PlanZoomControls({
       <button type="button" onClick={onZoomOut} className={btn} aria-label="Zoom arrière" title="Zoom arrière">
         <ZoomOut className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
       </button>
-      <span className="text-[11px] text-muted font-mono w-10 text-center select-none tabular-nums">
+      <span className="text-xs text-muted font-mono w-10 text-center select-none tabular-nums">
         {Math.round(zoom * 100)}%
       </span>
       <button type="button" onClick={onZoomIn} className={btn} aria-label="Zoom avant" title="Zoom avant">

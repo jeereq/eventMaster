@@ -185,7 +185,7 @@ export default function ShowcasePlanEditorModal({
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/15 text-primary-solid dark:text-primary">
+              <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/15 text-primary-solid dark:text-primary">
                 Modèle Vitrine 2D / 3D
               </span>
               <span className="text-xs text-muted hidden sm:inline">
@@ -202,8 +202,10 @@ export default function ShowcasePlanEditorModal({
           <button
             type="button"
             onClick={() => setDetailsOpen((v) => !v)}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 min-h-11 rounded-lg border border-border bg-surface-muted text-xs font-semibold text-foreground hover:bg-surface transition"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 min-h-11 rounded-lg border border-border bg-surface-muted text-xs font-semibold text-foreground hover:bg-surface transition cursor-pointer touch-manipulation"
             title="Paramètres du modèle (titre, catégorie, visibilité)"
+            aria-label="Paramètres du modèle"
+            aria-expanded={detailsOpen}
           >
             <Sliders className="w-3.5 h-3.5 text-muted" />
             <span>Paramètres</span>

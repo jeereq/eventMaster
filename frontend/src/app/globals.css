@@ -356,8 +356,8 @@ h1, h2, h3, h4 {
   }
 }
 
+/* impeccable-disable-next-line codex-grid-background -- Sol de modélisation 3D pour aperçu blueprint */
 .em-3d-grid-floor {
-  /* impeccable-disable-next-line codex-grid-background -- Sol de modélisation 3D pour aperçu blueprint */
   background-size: 40px 40px;
   background-image:
     linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
@@ -1630,10 +1630,17 @@ html[data-mood="celebrate"] .font-display {
 }
 
 .em-plan-stage {
-  height: min(72dvh, 640px);
-  min-height: 520px;
+  height: min(52dvh, 28rem);
+  min-height: 16rem;
   touch-action: none;
   overscroll-behavior: none;
+}
+
+@media (min-width: 1024px) {
+  .em-plan-stage {
+    height: min(72dvh, 640px);
+    min-height: 520px;
+  }
 }
 
 @media (min-width: 1280px) {

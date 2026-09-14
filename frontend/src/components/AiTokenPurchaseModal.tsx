@@ -328,7 +328,7 @@ export default function AiTokenPurchaseModal({
                 <Clock className="w-3.5 h-3.5 shrink-0" aria-hidden />
                 En attente du signal opérateur…
               </span>
-              <span className="font-mono text-[10px] text-muted tabular-nums">
+              <span className="font-mono text-xs text-muted tabular-nums">
                 {pollCount}/{POLL_MAX}
               </span>
             </div>
@@ -381,7 +381,7 @@ export default function AiTokenPurchaseModal({
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-foreground">Recharge proportionnelle</p>
-                  <p className="text-[11px] text-muted">
+                  <p className="text-xs text-muted">
                     {formatFc(pricing.minAmountCdf)} = {pricing.minCount} jeton{pricing.minCount > 1 ? 's' : ''} · {aiTokenCostLegend()}
                   </p>
                 </div>
@@ -390,12 +390,12 @@ export default function AiTokenPurchaseModal({
                 <span className="text-sm font-black text-primary block tabular-nums">
                   {isValidAmount ? `${previewTokens} jeton${previewTokens === 1 ? '' : 's'}` : '—'}
                 </span>
-                <span className="text-[10px] text-muted">crédités</span>
+                <span className="text-xs text-muted">crédités</span>
               </div>
             </div>
 
             {showsLeftoverHint && nextTokenAtFc ? (
-              <p className="text-[11px] text-foreground/80 leading-relaxed" aria-live="polite">
+              <p className="text-xs text-foreground/80 leading-relaxed" aria-live="polite">
                 Ce montant crédite {previewTokens} jetons. Le prochain jeton s’obtient à{' '}
                 <strong>{formatFc(nextTokenAtFc)}</strong>.
               </p>
@@ -504,7 +504,7 @@ export default function AiTokenPurchaseModal({
                   )} par Mobile Money`}
             </Button>
 
-            <div className="flex items-center justify-center gap-1.5 text-[11px] text-muted text-center pt-1">
+            <div className="flex items-center justify-center gap-1.5 text-xs text-muted text-center pt-1">
               <ShieldCheck className="w-3.5 h-3.5 text-primary" aria-hidden />
               <span>Paiement réel FlexPay (Orange, M-Pesa, Airtel, cartes)</span>
             </div>

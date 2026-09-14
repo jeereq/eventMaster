@@ -11,17 +11,20 @@ export function StudioMobileDock<T extends string>({
   value,
   onChange,
   className,
+  /** Safe-area bas : désactiver si le parent offset déjà via --em-dash-bottom-nav. */
+  safeArea = true,
 }: {
   panes: Array<{ id: T; label: string; icon: LucideIcon; hint?: string }>;
   value: T;
   onChange: (id: T) => void;
   className?: string;
+  safeArea?: boolean;
 }) {
   return (
     <nav
       className={cn(
         'border-t border-border bg-surface/95 backdrop-blur-md',
-        'pb-[max(0.5rem,env(safe-area-inset-bottom))]',
+        safeArea && 'pb-[max(0.5rem,env(safe-area-inset-bottom))]',
         className,
       )}
       aria-label="Navigation du studio"

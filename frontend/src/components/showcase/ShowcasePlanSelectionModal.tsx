@@ -200,8 +200,9 @@ export default function ShowcasePlanSelectionModal({
                         type="button"
                         onClick={() => handleMove(index, 'up')}
                         disabled={index === 0}
-                        className="p-1 min-h-11 min-w-9 rounded-md text-muted hover:text-foreground disabled:opacity-20 hover:bg-surface-muted transition flex items-center justify-center cursor-pointer"
+                        className="p-1 min-h-11 min-w-11 rounded-md text-muted hover:text-foreground disabled:opacity-20 hover:bg-surface-muted transition flex items-center justify-center cursor-pointer touch-manipulation"
                         title="Monter"
+                        aria-label={`Monter le plan ${plan.name} d'un rang`}
                       >
                         <ArrowUp className="w-4 h-4" />
                       </button>
@@ -209,8 +210,9 @@ export default function ShowcasePlanSelectionModal({
                         type="button"
                         onClick={() => handleMove(index, 'down')}
                         disabled={index === localPlans.length - 1}
-                        className="p-1 min-h-11 min-w-9 rounded-md text-muted hover:text-foreground disabled:opacity-20 hover:bg-surface-muted transition flex items-center justify-center cursor-pointer"
+                        className="p-1 min-h-11 min-w-11 rounded-md text-muted hover:text-foreground disabled:opacity-20 hover:bg-surface-muted transition flex items-center justify-center cursor-pointer touch-manipulation"
                         title="Descendre"
+                        aria-label={`Descendre le plan ${plan.name} d'un rang`}
                       >
                         <ArrowDown className="w-4 h-4" />
                       </button>
@@ -222,15 +224,15 @@ export default function ShowcasePlanSelectionModal({
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h4 className="text-sm font-bold text-foreground truncate">{plan.name}</h4>
-                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface-muted border border-border text-muted">
+                        <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface-muted border border-border text-muted">
                           {plan.label || plan.category}
                         </span>
                         {isPub ? (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary-solid dark:text-primary">
+                          <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary-solid dark:text-primary">
                             En ligne
                           </span>
                         ) : (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-surface-muted text-muted">
+                          <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-surface-muted text-muted">
                             Masqué
                           </span>
                         )}
@@ -266,8 +268,9 @@ export default function ShowcasePlanSelectionModal({
                         onEditPlan(plan);
                         onClose();
                       }}
-                      className="p-2 min-h-11 min-w-11 rounded-lg border border-border text-muted hover:text-foreground hover:bg-surface-muted transition flex items-center justify-center cursor-pointer"
+                      className="p-2 min-h-11 min-w-11 rounded-lg border border-border text-muted hover:text-foreground hover:bg-surface-muted transition flex items-center justify-center cursor-pointer touch-manipulation"
                       title="Éditer dans l’éditeur 2D / 3D"
+                      aria-label={`Éditer le plan vitrine ${plan.name}`}
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
@@ -275,8 +278,9 @@ export default function ShowcasePlanSelectionModal({
                     <button
                       type="button"
                       onClick={() => handleDelete(plan)}
-                      className="p-2 min-h-11 min-w-11 rounded-lg border border-border text-muted hover:text-danger hover:bg-danger/10 transition flex items-center justify-center cursor-pointer"
+                      className="p-2 min-h-11 min-w-11 rounded-lg border border-border text-muted hover:text-danger hover:bg-danger/10 transition flex items-center justify-center cursor-pointer touch-manipulation"
                       title="Supprimer ce modèle"
+                      aria-label={`Supprimer le modèle vitrine ${plan.name}`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

@@ -3682,7 +3682,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             aria-pressed={activePreset === 'overview'}
             title="Vue d'ensemble de la salle"
             className={cn(
-              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all shrink-0 min-h-[32px]',
+              'inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-semibold transition-all shrink-0 min-h-11',
               activePreset === 'overview'
                 ? 'bg-primary-solid text-primary-foreground shadow-xs'
                 : 'text-foreground/80 hover:text-foreground hover:bg-surface-muted',
@@ -3697,7 +3697,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             aria-pressed={activePreset === 'stage'}
             title="Point de vue vers la scène"
             className={cn(
-              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all shrink-0 min-h-[32px]',
+              'inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-semibold transition-all shrink-0 min-h-11',
               activePreset === 'stage'
                 ? 'bg-primary-solid text-primary-foreground shadow-xs'
                 : 'text-foreground/80 hover:text-foreground hover:bg-surface-muted',
@@ -3712,7 +3712,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             aria-pressed={activePreset === 'vip'}
             title="Point de vue Table d'honneur"
             className={cn(
-              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all shrink-0 min-h-[32px]',
+              'inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-semibold transition-all shrink-0 min-h-11',
               activePreset === 'vip'
                 ? 'bg-primary-solid text-primary-foreground shadow-xs'
                 : 'text-foreground/80 hover:text-foreground hover:bg-surface-muted',
@@ -3727,7 +3727,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             aria-pressed={activePreset === 'entrance'}
             title="Point de vue depuis l'entrée"
             className={cn(
-              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all shrink-0 min-h-[32px]',
+              'inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-semibold transition-all shrink-0 min-h-11',
               activePreset === 'entrance'
                 ? 'bg-primary-solid text-primary-foreground shadow-xs'
                 : 'text-foreground/80 hover:text-foreground hover:bg-surface-muted',

@@ -406,6 +406,12 @@ interface RoomLayoutEditorProps {
   /** Photo déjà choisie (wizard) — lance la lecture IA au montage. */
   seedPlanPhoto?: File | null;
   onSeedPlanPhotoConsumed?: () => void;
+  /**
+   * Offset du dock mobile.
+   * - `none` (défaut) : éditeur en modale / plein écran — collé au bas utile.
+   * - `dashboard` : page dashboard avec bottom-nav visible.
+   */
+  mobileDockOffset?: 'none' | 'dashboard';
 }
 
 type CropTarget = { kind: 'fixture'; id: string } | null;
@@ -421,6 +427,7 @@ export default function RoomLayoutEditor({
   focusPlanImport = false,
   seedPlanPhoto = null,
   onSeedPlanPhotoConsumed,
+  mobileDockOffset = 'none',
 }: RoomLayoutEditorProps) {
   const { user, tenant } = useAuth();
   const blueprint = ensureBlueprintDefaults(rawBlueprint);
@@ -468,7 +475,9 @@ export default function RoomLayoutEditor({
   const [quickAisleStyle, setQuickAisleStyle] = useState<AisleStyle>('royalRed');
   const [elementsFilter, setElementsFilter] = useState<'all' | LayoutSelectionItem['kind']>('all');
   const [elementsQuery, setElementsQuery] = useState('');
-  const [elementsOpen, setElementsOpen] = useState(true);
+  const [elementsOpen, setElementsOpen] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)').matches : false,
+  );
   const [groupStyleColor, setGroupStyleColor] = useState('#c4a06a');
   const [customAmbienceName, setCustomAmbienceName] = useState('');
   const [ambienceLibrary, setAmbienceLibrary] = useState<import('@/lib/roomLayoutUtils').SavedRoomAmbience[]>([]);
@@ -701,10 +710,7 @@ export default function RoomLayoutEditor({
     window.requestAnimationFrame(() => scrollToElementId('plan-import-ia'));
   }, [focusPlanImport, seedPlanPhoto]);
 
-  useEffect(() => {
-    if (selection.length > 0) setMobilePane('edit');
-  }, [selection.length]);
-
+  // Ne plus forcer l’onglet Régler au tap : on reste sur le Plan pour déplacer.
   useEffect(() => {
     if (readOnly) return;
     const onKey = (e: KeyboardEvent) => {
@@ -2180,9 +2186,12 @@ export default function RoomLayoutEditor({
               {selection.length} éléments sélectionnés
             </p>
             <p className="text-xs text-muted">
-              Shift+clic pour ajouter / retirer · Échap pour tout désélectionner
-              {caps.canDuplicate ? ' · Cmd/Ctrl+D pour dupliquer' : ''}
-              {caps.canAlign ? ' · Cmd/Ctrl+G pour grouper' : ''}
+              <span className="lg:hidden">Appui long ou onglet Régler pour les propriétés · tap pour sélectionner</span>
+              <span className="hidden lg:inline">
+                Shift+clic pour ajouter / retirer · Échap pour tout désélectionner
+                {caps.canDuplicate ? ' · Cmd/Ctrl+D pour dupliquer' : ''}
+                {caps.canAlign ? ' · Cmd/Ctrl+G pour grouper' : ''}
+              </span>
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {caps.canDuplicate ? (
@@ -5915,7 +5924,7 @@ export default function RoomLayoutEditor({
             aria-selected={templateCategory === cat.id}
             onClick={() => setTemplateCategory(cat.id)}
             className={cn(
-              'px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition border min-h-[32px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+              'px-3 py-2.5 rounded-full text-xs font-semibold whitespace-nowrap transition border min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
               templateCategory === cat.id
                 ? 'bg-primary-solid text-primary-foreground border-transparent shadow-2xs font-bold'
                 : 'bg-surface border-border text-muted hover:text-foreground hover:bg-surface-muted',
@@ -7457,6 +7466,97 @@ export default function RoomLayoutEditor({
     </div>
   );
 
+  /** Barre caméra / actions toujours visible sur l’onglet Plan (mobile). */
+  const mobilePlanChrome = !readOnly ? (
+    <div className="lg:hidden space-y-2">
+      <div
+        className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5"
+        role="toolbar"
+        aria-label="Caméra et actions du plan"
+      >
+        <button
+          type="button"
+          onClick={() => setLockOrbit((v) => !v)}
+          className={cn(EDITOR_TOOL, 'shrink-0', lockOrbit ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+          title="Déplacer le mobilier ou tourner la vue"
+        >
+          {lockOrbit ? <MoveHorizontal className="w-3.5 h-3.5" aria-hidden /> : <Video className="w-3.5 h-3.5" aria-hidden />}
+          {lockOrbit ? 'Déplacer' : 'Regarder'}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            webglRef.current?.resetCamera?.();
+            log('Vue 3D recentrée au centre de la salle', 'info');
+          }}
+          className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'shrink-0')}
+          title="Recentrer la caméra"
+        >
+          <Crosshair className="w-3.5 h-3.5" aria-hidden />
+          Recentrer
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (depthAmount === 0) {
+              setDepthAmount(60);
+              log('Vue 3D perspective activée', 'info');
+            } else {
+              setDepthAmount(0);
+              log('Vue Plan 2D activée', 'info');
+            }
+          }}
+          className={cn(
+            EDITOR_TOOL,
+            'shrink-0',
+            depthAmount === 0 ? 'bg-primary/20 text-primary border-primary/50 font-bold' : EDITOR_TOOL_IDLE,
+          )}
+          title={depthAmount === 0 ? 'Passer en 3D' : 'Passer en plan 2D'}
+        >
+          {depthAmount === 0 ? <LayoutGrid className="w-3.5 h-3.5 text-primary" aria-hidden /> : <Box className="w-3.5 h-3.5" aria-hidden />}
+          {depthAmount === 0 ? '2D' : '3D'}
+        </button>
+        <button
+          type="button"
+          onClick={undo}
+          disabled={!canUndo}
+          className={cn(EDITOR_TOOL_ICON, 'shrink-0')}
+          aria-label="Annuler"
+          title="Annuler"
+        >
+          <Undo2 className="w-4 h-4" aria-hidden />
+        </button>
+        <button
+          type="button"
+          onClick={redo}
+          disabled={!canRedo}
+          className={cn(EDITOR_TOOL_ICON, 'shrink-0')}
+          aria-label="Rétablir"
+          title="Rétablir"
+        >
+          <Redo2 className="w-4 h-4" aria-hidden />
+        </button>
+      </div>
+      {selection.length > 0 ? (
+        <button
+          type="button"
+          onClick={() => setMobilePane('edit')}
+          className={cn(
+            EDITOR_TOOL,
+            EDITOR_TOOL_PRIMARY,
+            'w-full justify-between',
+          )}
+        >
+          <span className="inline-flex items-center gap-1.5 min-w-0 truncate">
+            <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" aria-hidden />
+            {selection.length === 1 ? 'Régler la sélection' : `Régler (${selection.length})`}
+          </span>
+          <ChevronDown className="w-3.5 h-3.5 -rotate-90 shrink-0" aria-hidden />
+        </button>
+      ) : null}
+    </div>
+  ) : null;
+
   const ambiencePreviewModal = (
     <>
     <Modal
@@ -7895,13 +7995,15 @@ export default function RoomLayoutEditor({
                   {quickCreatePanel}
                 </div>
               ) : null}
-              <div className={cn('flex-1 min-w-0 min-h-[50dvh] md:min-h-0 flex flex-col gap-2', mobilePane !== 'plan' && 'max-lg:hidden')}>
+              <div className={cn('flex-1 min-w-0 min-h-[42dvh] md:min-h-0 flex flex-col gap-2', mobilePane !== 'plan' && 'max-lg:hidden')}>
+                {mobilePane === 'plan' ? mobilePlanChrome : null}
                 {storyBar}
                 {photoDock}
                 {renderCanvas('flex-1 min-h-0 h-full')}
               </div>
               <div className={cn(
-                'md:flex-1 md:min-w-[240px] md:max-w-[320px] max-h-[34dvh] md:max-h-none overflow-y-auto shrink-0 space-y-3 contain-layout contain-paint',
+                'md:flex-1 md:min-w-[240px] md:max-w-[320px] overflow-y-auto shrink-0 space-y-3 contain-layout contain-paint',
+                mobilePane === 'edit' ? 'flex-1 min-h-0 max-lg:max-h-none' : 'max-h-[34dvh] md:max-h-none',
                 mobilePane !== 'edit' && 'max-lg:hidden',
               )}>
                 {renderCanvasInventory()}
@@ -7910,6 +8012,7 @@ export default function RoomLayoutEditor({
             </div>
             <StudioMobileDock
               className="lg:hidden shrink-0"
+              safeArea
               value={mobilePane}
               onChange={setMobilePane}
               panes={[
@@ -7918,14 +8021,16 @@ export default function RoomLayoutEditor({
                 { id: 'edit', label: 'Régler', icon: SlidersHorizontal, hint: 'Propriétés de la sélection' },
               ]}
             />
-            <div className="hidden lg:flex p-2 sm:p-3 border-t border-border-subtle justify-end shrink-0">
-              <button type="button" onClick={() => setIsExpanded(false)} className="px-5 py-2.5 bg-surface-muted text-foreground rounded-[var(--radius-card)] text-xs font-bold">Fermer le mode agrandi</button>
-            </div>
           </div>
         </div>
       </>
     );
   }
+
+  const dockOffsetClass =
+    mobileDockOffset === 'dashboard'
+      ? 'sticky bottom-[var(--em-dash-bottom-nav)] z-20 -mx-1'
+      : 'sticky bottom-0 z-20 -mx-1';
 
   return (
     <>
@@ -7958,12 +8063,13 @@ export default function RoomLayoutEditor({
         )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
           <div className={cn('lg:col-span-2 min-h-0 space-y-2', mobilePane !== 'plan' && 'max-lg:hidden')}>
+            {mobilePane === 'plan' ? mobilePlanChrome : null}
             {storyBar}
             {photoDock}
-            {renderCanvas('em-plan-stage min-h-[min(70dvh,38rem)] lg:min-h-[min(64vh,40rem)]')}
+            {renderCanvas('em-plan-stage lg:min-h-[min(64vh,40rem)]')}
           </div>
           <div className={cn(
-            'lg:max-h-[520px] overflow-y-auto space-y-3 contain-layout contain-paint',
+            'max-lg:max-h-[min(70dvh,32rem)] lg:max-h-[520px] overflow-y-auto space-y-3 contain-layout contain-paint pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]',
             mobilePane !== 'edit' && 'max-lg:hidden',
           )}>
             {renderCanvasInventory()}
@@ -7971,7 +8077,8 @@ export default function RoomLayoutEditor({
           </div>
         </div>
         <StudioMobileDock
-          className="lg:hidden sticky bottom-[var(--em-dash-bottom-nav)] z-20 -mx-1"
+          className={cn('lg:hidden', dockOffsetClass)}
+          safeArea={mobileDockOffset !== 'dashboard'}
           value={mobilePane}
           onChange={setMobilePane}
           panes={[

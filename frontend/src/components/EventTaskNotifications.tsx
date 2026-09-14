@@ -48,12 +48,12 @@ export default function EventTaskNotifications({
       <p className="text-sm font-semibold inline-flex items-center gap-2">
         <Bell className="w-4 h-4 text-primary" />
         Notifications de tâches
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted">{items.length}</span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted">{items.length}</span>
       </p>
       <ul className="space-y-1.5">
         {items.map((item) => (
           <li key={item.id} className={cn('text-sm', !item.readAt && 'font-medium')}>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted">
               {notificationFamilyLabel(item.type)}
               {' · '}
               {new Date(item.createdAt).toLocaleString('fr-FR', {
