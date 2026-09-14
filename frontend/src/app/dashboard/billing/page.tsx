@@ -574,7 +574,7 @@ function BillingPageInner() {
     overview: {
       title: isClientAccount ? 'Votre compte client' : `Forfait de ${tenant?.name || 'votre organisation'}`,
       description: isClientAccount
-        ? 'Compte gratuit : catalogue, devis, billets. Le type de compte se change uniquement par un Super Admin.'
+        ? 'Compte gratuit : catalogue, devis, billets. Passez organisateur ou catalogue en payant un abonnement (Particulier, Entreprise, Salle, Prestataire ou Salle & presta).'
         : `Plan actuel, quotas et capacités · tarifs en ${CURRENCY_NAME} (FC).`,
     },
     plans: {
@@ -694,15 +694,13 @@ function BillingPageInner() {
                 </h2>
                 <p className="text-sm text-muted leading-relaxed max-w-3xl">
                   Ce compte permet d&apos;explorer le catalogue, de simuler un budget, de demander des devis et d&apos;acheter des billets.
-                  Pour organiser un événement ou publier des offres, contactez le support EventMaster : seul un Super Admin peut changer le type de ce compte.
+                  Pour organiser un événement ou publier des offres, payez directement un forfait : le type de compte bascule après paiement
+                  (Particulier / Entreprise → organisateur ; Salle, Prestataire ou Salle & presta → catalogue).
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border">
-                <Button href="/register?kind=ORGANIZER&intent=personal" size="md" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                  Compte organisateur
-                </Button>
-                <Button href="/register?kind=VENDOR&intent=vendor" size="md" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                  Compte prestataire / salle
+                <Button type="button" size="md" onClick={() => setBillingTab('plans')} rightIcon={<ArrowRight className="w-4 h-4" />}>
+                  Choisir un forfait &amp; payer
                 </Button>
                 <Button href="/dashboard" size="md" variant="ghost">
                   Tableau de bord
@@ -803,7 +801,8 @@ function BillingPageInner() {
         <div id="billing-panel-plans" role="tabpanel" aria-labelledby="billing-tab-plans" tabIndex={0} className="space-y-6">
           {isClientAccount && (
             <Alert variant="info">
-              Ces forfaits s’activent après un changement de type de compte (Super Admin) ou sur un compte organisateur / prestataire distinct.
+              Paiement d’un forfait = migration automatique du compte (B2C/B2B → organisateur ; Salle / Prestataire / Salle & presta → catalogue).
+              Vous pouvez aussi démarrer depuis l’accueil du tableau de bord.
             </Alert>
           )}
 
@@ -946,9 +945,7 @@ function BillingPageInner() {
                         )}
                         {plan.id !== 'FREE' && !allowedPaidIds.includes(plan.id) && (
                           <p className="text-xs text-muted mt-2 leading-relaxed">
-                            {isClientAccount
-                              ? 'Réservé à un compte organisateur ou prestataire. Contactez le Super Admin pour changer le type.'
-                              : 'Ce forfait ne correspond pas à votre type de compte.'}
+                            Ce forfait ne correspond pas à votre type de compte ou à votre genre d’abonnement actuel.
                           </p>
                         )}
                         <Button

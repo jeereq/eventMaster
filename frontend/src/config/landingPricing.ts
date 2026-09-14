@@ -152,7 +152,8 @@ const B2B_PAID_IDS: PlanId[] = B2B_PLAN_IDS.filter((id) => id !== 'FREE');
 export function paidPlanIdsForAccountKind(kind?: string | null): PlanId[] {
   switch (kind) {
     case 'CLIENT':
-      return [...B2C_PLAN_IDS, ...B2B_PAID_IDS];
+      // Migration payante : org (B2C/B2B) ou catalogue (salle / presta / salle+presta)
+      return [...B2C_PLAN_IDS, ...B2B_PAID_IDS, ...VENDOR_PLAN_IDS];
     case 'VENDOR':
       return [...VENDOR_PLAN_IDS];
     case 'BOTH':

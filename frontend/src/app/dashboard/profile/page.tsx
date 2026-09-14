@@ -326,7 +326,9 @@ function ProfilePageContent() {
                       <p className="text-xs text-muted">
                         {isProtocol
                           ? 'Votre rôle protocole ne permet pas de changer le type de compte.'
-                          : 'Seul un Super Admin peut changer le type de compte. Contactez le support EventMaster si votre activité a changé.'}
+                          : isClient
+                            ? 'Pour changer de type, payez un abonnement adapté dans Facturation (ou depuis l’accueil) : le compte bascule après paiement. Un Super Admin peut aussi le faire manuellement.'
+                            : 'Seul un Super Admin peut changer le type de compte hors paiement. Contactez le support EventMaster si votre activité a changé.'}
                       </p>
                     </label>
                     </>

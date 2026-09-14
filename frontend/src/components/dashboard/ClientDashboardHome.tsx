@@ -138,6 +138,60 @@ const UPGRADE_B2B_PLANS: Array<Omit<UpgradePlanConfig, 'basePriceFc' | 'periodLa
   },
 ];
 
+const UPGRADE_VENDOR_PLANS: Array<Omit<UpgradePlanConfig, 'basePriceFc' | 'periodLabel'> & {
+  monthlyPriceFc: number;
+}> = [
+  {
+    id: 'VENUE',
+    name: 'Salle',
+    badge: 'Salles',
+    monthlyPriceFc: 14900,
+    guestsMax: 0,
+    description: 'Publiez vos salles avec éditeur 2D/3D — sans événements.',
+    highlights: ['Salles illimitées · éditeur complet', '4 essais IA · recharge de jetons', 'Sans événements ni invités'],
+  },
+  {
+    id: 'SERVICE',
+    name: 'Prestataire',
+    badge: 'Métiers',
+    monthlyPriceFc: 9900,
+    guestsMax: 0,
+    description: 'Prestations et Matériel & Équipements illimités — sans salles ni événements.',
+    highlights: ['Prestations + matériel illimités', '4 essais IA · recharge de jetons', 'Sans salles ni événements'],
+  },
+  {
+    id: 'CATALOG',
+    name: 'Salle & presta',
+    badge: 'Salle + métiers',
+    popular: true,
+    monthlyPriceFc: 19900,
+    guestsMax: 0,
+    description: 'Salles et métiers illimités (éditeur complet) — sans événements.',
+    highlights: ['Salles ∞ + prestations / matériel ∞', 'Éditeur 2D/3D complet', '4 essais IA · recharge de jetons'],
+  },
+];
+
+type UpgradeCategory = 'b2c' | 'b2b' | 'venue' | 'service' | 'catalog';
+
+function isVendorUpgradeCategory(category: UpgradeCategory): boolean {
+  return category === 'venue' || category === 'service' || category === 'catalog';
+}
+
+function defaultPlanForCategory(category: UpgradeCategory): PlanId {
+  switch (category) {
+    case 'b2c':
+      return 'PERSONAL_200';
+    case 'b2b':
+      return 'PREMIUM_1';
+    case 'venue':
+      return 'VENUE';
+    case 'service':
+      return 'SERVICE';
+    case 'catalog':
+      return 'CATALOG';
+  }
+}
+
 export default function ClientDashboardHome() {
   const { user, tenant } = useAuth();
   const { site } = usePlatformSite();
@@ -156,9 +210,9 @@ export default function ClientDashboardHome() {
     loading: true,
   });
 
-  // États pour l'évolution vers organisation et paiement direct
+  // États pour l'évolution de compte (org ou catalogue) et paiement direct
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
-  const [upgradeCategory, setUpgradeCategory] = useState<'b2c' | 'b2b'>('b2c');
+  const [upgradeCategory, setUpgradeCategory] = useState<UpgradeCategory>('b2c');
   const [selectedPlanId, setSelectedPlanId] = useState<PlanId>('PERSONAL_200');
   const [b2bBillingCycle, setB2bBillingCycle] = useState<BillingCycle>('monthly');
   const [orgName, setOrgName] = useState(tenant?.name || user?.name || '');
@@ -171,13 +225,9 @@ export default function ClientDashboardHome() {
     else if (user?.name) setOrgName(user.name);
   }, [tenant?.name, user?.name]);
 
-  const handleOpenUpgrade = (category: 'b2c' | 'b2b') => {
+  const handleOpenUpgrade = (category: UpgradeCategory) => {
     setUpgradeCategory(category);
-    if (category === 'b2c') {
-      setSelectedPlanId('PERSONAL_200');
-    } else {
-      setSelectedPlanId('PREMIUM_1');
-    }
+    setSelectedPlanId(defaultPlanForCategory(category));
     setUpgradeModalOpen(true);
   };
 
@@ -192,7 +242,8 @@ export default function ClientDashboardHome() {
         durationLabel: '90 jours (trimestre)',
         description: plan.description,
       };
-    } else {
+    }
+    if (upgradeCategory === 'b2b') {
       const plan = UPGRADE_B2B_PLANS.find((p) => p.id === selectedPlanId) || UPGRADE_B2B_PLANS[1];
       const priceFc =
         b2bBillingCycle === 'annual'
@@ -210,7 +261,45 @@ export default function ClientDashboardHome() {
         description: plan.description,
       };
     }
+    const vendorPlan =
+      UPGRADE_VENDOR_PLANS.find((p) => p.id === selectedPlanId) ||
+      UPGRADE_VENDOR_PLANS.find((p) => p.id === defaultPlanForCategory(upgradeCategory)) ||
+      UPGRADE_VENDOR_PLANS[0];
+    const priceFc =
+      b2bBillingCycle === 'annual'
+        ? Math.round(vendorPlan.monthlyPriceFc * 12 * 0.9)
+        : vendorPlan.monthlyPriceFc;
+    return {
+      id: vendorPlan.id,
+      name: vendorPlan.name,
+      priceFc,
+      priceLabel: formatFc(priceFc),
+      durationLabel:
+        b2bBillingCycle === 'annual'
+          ? '365 jours (annuel · −10 %)'
+          : '30 jours (mensuel)',
+      description: vendorPlan.description,
+    };
   }, [upgradeCategory, selectedPlanId, b2bBillingCycle]);
+
+  const upgradeModalTitle = useMemo(() => {
+    switch (upgradeCategory) {
+      case 'b2c':
+        return 'Activer une Organisation Particulier (B2C)';
+      case 'b2b':
+        return 'Activer une Organisation Professionnelle (B2B)';
+      case 'venue':
+        return 'Publier des salles (forfait Salle)';
+      case 'service':
+        return 'Publier des prestations (forfait Prestataire)';
+      case 'catalog':
+        return 'Publier salles et métiers (Salle & presta)';
+    }
+  }, [upgradeCategory]);
+
+  const upgradeSuccessTitle = isVendorUpgradeCategory(upgradeCategory)
+    ? 'Compte catalogue activé !'
+    : 'Organisation activée avec succès !';
 
   const handleProceedToPayment = async () => {
     const trimmed = orgName.trim();
@@ -475,13 +564,14 @@ export default function ClientDashboardHome() {
           <div className="space-y-1.5 max-w-2xl">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-primary/15 text-primary border border-primary/25">
               <Crown className="w-3.5 h-3.5" />
-              <span>Évolution de compte · Créez votre Organisation</span>
+              <span>Évolution de compte · Paiement direct</span>
             </div>
             <h2 id="upgrade-heading" className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight">
-              Organisez vos événements privés ou professionnels
+              Passez organisateur ou publiez au catalogue
             </h2>
             <p className="text-xs sm:text-sm text-muted leading-relaxed">
-              Créez vos événements, envoyez vos faire-part WhatsApp, dressez vos plans 2D/3D et scannez les entrées le jour J.
+              Payez un abonnement Particulier, Entreprise, Salle, Prestataire ou Salle & presta : votre type de compte
+              s’adapte automatiquement après validation du paiement.
             </p>
           </div>
 
@@ -495,7 +585,7 @@ export default function ClientDashboardHome() {
           </div>
         </div>
 
-        {/* 2 Cartes de choix interactives : B2C vs B2B */}
+        {/* Choix : org B2C / B2B + catalogue salle / presta / salle+presta */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Carte 1 : Organisation Particulier (B2C) */}
           <div
@@ -607,6 +697,123 @@ export default function ClientDashboardHome() {
                 className="shadow-xs shadow-primary/20"
               >
                 Choisir Entreprise
+              </Button>
+            </div>
+          </div>
+
+          {/* Carte 3 : Salle */}
+          <div
+            onClick={() => handleOpenUpgrade('venue')}
+            className="cursor-pointer group p-5 rounded-2xl border border-amber-500/25 bg-surface hover:border-amber-500/50 hover:shadow-md transition-all flex flex-col justify-between gap-4"
+          >
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/20">
+                  <Utensils className="w-3.5 h-3.5" />
+                  Catalogue · Salle
+                </span>
+                <span className="text-xs font-black text-foreground shrink-0">14 900 FC / mois</span>
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-foreground group-hover:text-amber-700 dark:group-hover:text-amber-400 transition">
+                  Mettre mes salles en ligne
+                </h3>
+                <p className="text-xs text-muted leading-relaxed mt-1">
+                  Salles illimitées, éditeur 2D/3D — sans organiser d’événements.
+                </p>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-border flex items-center justify-between gap-2 mt-auto">
+              <span className="text-xs font-medium text-muted">Compte prestataire / salle</span>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenUpgrade('venue');
+                }}
+                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                className="bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
+              >
+                Choisir Salle
+              </Button>
+            </div>
+          </div>
+
+          {/* Carte 4 : Prestataire */}
+          <div
+            onClick={() => handleOpenUpgrade('service')}
+            className="cursor-pointer group p-5 rounded-2xl border border-sky-500/25 bg-surface hover:border-sky-500/50 hover:shadow-md transition-all flex flex-col justify-between gap-4"
+          >
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-500/10 text-sky-800 dark:text-sky-300 border border-sky-500/20">
+                  <Truck className="w-3.5 h-3.5" />
+                  Catalogue · Prestataire
+                </span>
+                <span className="text-xs font-black text-foreground shrink-0">9 900 FC / mois</span>
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-foreground group-hover:text-sky-700 dark:group-hover:text-sky-400 transition">
+                  Publier mes prestations
+                </h3>
+                <p className="text-xs text-muted leading-relaxed mt-1">
+                  Métiers et Matériel & Équipements illimités — sans salles ni événements.
+                </p>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-border flex items-center justify-between gap-2 mt-auto">
+              <span className="text-xs font-medium text-muted">Compte prestataire</span>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenUpgrade('service');
+                }}
+                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                className="bg-sky-600 hover:bg-sky-700 text-white shadow-xs"
+              >
+                Choisir Prestataire
+              </Button>
+            </div>
+          </div>
+
+          {/* Carte 5 : Salle & presta */}
+          <div
+            onClick={() => handleOpenUpgrade('catalog')}
+            className="cursor-pointer group p-5 rounded-2xl border border-violet-500/25 bg-surface hover:border-violet-500/50 hover:shadow-md transition-all flex flex-col justify-between gap-4 md:col-span-2"
+          >
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-violet-500/10 text-violet-800 dark:text-violet-300 border border-violet-500/20">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Catalogue · Salle & presta
+                </span>
+                <span className="text-xs font-black text-foreground">19 900 FC / mois</span>
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-foreground group-hover:text-violet-700 dark:group-hover:text-violet-400 transition">
+                  Vendre salles et métiers ensemble
+                </h3>
+                <p className="text-xs text-muted leading-relaxed mt-1 max-w-2xl">
+                  Un seul forfait pour salles + prestations / matériel, sans organiser d’événements.
+                </p>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-border flex items-center justify-between gap-2 mt-auto">
+              <span className="text-xs font-medium text-muted">−10 % en annuel</span>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenUpgrade('catalog');
+                }}
+                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                className="bg-violet-600 hover:bg-violet-700 text-white shadow-xs"
+              >
+                Choisir Salle & presta
               </Button>
             </div>
           </div>
@@ -894,7 +1101,7 @@ export default function ClientDashboardHome() {
         </div>
       </section>
 
-      {/* ─── MODALE D'ÉVOLUTION VERS ORGANISATION & SÉLECTION DE FORFAIT ─── */}
+      {/* ─── MODALE D'ÉVOLUTION DE COMPTE & SÉLECTION DE FORFAIT ─── */}
       <Modal
         open={upgradeModalOpen}
         onClose={() => setUpgradeModalOpen(false)}
@@ -904,51 +1111,43 @@ export default function ClientDashboardHome() {
             <span className="p-1.5 rounded-lg bg-primary/10 text-primary">
               <Crown className="w-5 h-5" />
             </span>
-            <span>
-              {upgradeCategory === 'b2c'
-                ? 'Activer une Organisation Particulier (B2C)'
-                : 'Activer une Organisation Professionnelle (B2B)'}
-            </span>
+            <span>{upgradeModalTitle}</span>
           </div>
         }
-        description="Choisissez votre formule et réglez directement votre abonnement pour débloquer votre organisation."
+        description="Choisissez votre formule et réglez directement : le type de compte bascule après paiement validé."
       >
         <div className="space-y-6 pt-2">
-          {/* Commutateur de catégorie (B2C vs B2B) */}
-          <div className="flex p-1 rounded-xl bg-surface-muted border border-border gap-1">
-            <button
-              type="button"
-              onClick={() => handleOpenUpgrade('b2c')}
-              className={cn(
-                'flex-1 min-h-11 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2',
-                upgradeCategory === 'b2c'
-                  ? 'bg-surface text-foreground shadow-xs border border-border'
-                  : 'text-muted hover:text-foreground',
-              )}
-            >
-              <Heart className="w-4 h-4 text-rose-500" />
-              <span>Particulier & Privé (B2C)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleOpenUpgrade('b2b')}
-              className={cn(
-                'flex-1 min-h-11 py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-2',
-                upgradeCategory === 'b2b'
-                  ? 'bg-surface text-foreground shadow-xs border border-border'
-                  : 'text-muted hover:text-foreground',
-              )}
-            >
-              <Building2 className="w-4 h-4 text-primary" />
-              <span>Entreprise & Agence (B2B)</span>
-            </button>
+          <div className="flex flex-wrap p-1 rounded-xl bg-surface-muted border border-border gap-1">
+            {(
+              [
+                { id: 'b2c' as const, label: 'Particulier', icon: Heart, iconClass: 'text-rose-500' },
+                { id: 'b2b' as const, label: 'Entreprise', icon: Building2, iconClass: 'text-primary' },
+                { id: 'venue' as const, label: 'Salle', icon: Utensils, iconClass: 'text-amber-600' },
+                { id: 'service' as const, label: 'Prestataire', icon: Truck, iconClass: 'text-sky-600' },
+                { id: 'catalog' as const, label: 'Salle & presta', icon: Sparkles, iconClass: 'text-violet-600' },
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleOpenUpgrade(tab.id)}
+                className={cn(
+                  'flex-1 min-w-[7.5rem] min-h-11 py-2 px-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
+                  upgradeCategory === tab.id
+                    ? 'bg-surface text-foreground shadow-xs border border-border'
+                    : 'text-muted hover:text-foreground',
+                )}
+              >
+                <tab.icon className={cn('w-4 h-4 shrink-0', tab.iconClass)} />
+                <span>{tab.label}</span>
+              </button>
+            ))}
           </div>
 
-          {/* Commutateur mensuel / annuel si B2B */}
-          {upgradeCategory === 'b2b' && (
+          {(upgradeCategory === 'b2b' || isVendorUpgradeCategory(upgradeCategory)) && (
             <div className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/20">
               <div className="space-y-0.5">
-                <p className="text-xs font-bold text-foreground">Cycle de facturation B2B</p>
+                <p className="text-xs font-bold text-foreground">Cycle de facturation</p>
                 <p className="text-xs text-muted">Économisez 10 % en optant pour un engagement annuel (365 jours)</p>
               </div>
               <div className="flex items-center gap-1 bg-surface p-0.5 rounded-lg border border-border">
@@ -981,10 +1180,13 @@ export default function ClientDashboardHome() {
             </div>
           )}
 
-          {/* Champ optionnel : Nom de l'organisation ou de l'événement */}
           <div className="space-y-1.5">
             <label htmlFor="upgrade-org-name" className="text-xs font-bold text-foreground flex items-center justify-between">
-              <span>Nom de votre organisation ou événement</span>
+              <span>
+                {isVendorUpgradeCategory(upgradeCategory)
+                  ? 'Nom de votre activité ou enseigne'
+                  : 'Nom de votre organisation ou événement'}
+              </span>
               <span className="text-xs font-normal text-muted">(Modifiable à tout moment)</span>
             </label>
             <input
@@ -992,15 +1194,28 @@ export default function ClientDashboardHome() {
               type="text"
               value={orgName}
               onChange={(e) => setOrgName(e.target.value)}
-              placeholder={upgradeCategory === 'b2c' ? 'ex: Mariage Sarah & Paul, Anniversaire 30 ans…' : 'ex: Agence Lumina, Event Corp Kinshasa…'}
+              placeholder={
+                upgradeCategory === 'b2c'
+                  ? 'ex: Mariage Sarah & Paul, Anniversaire 30 ans…'
+                  : upgradeCategory === 'b2b'
+                    ? 'ex: Agence Lumina, Event Corp Kinshasa…'
+                    : upgradeCategory === 'venue'
+                      ? 'ex: Villa Palmier, Salle Horizon…'
+                      : upgradeCategory === 'service'
+                        ? 'ex: Traiteur Mama, Sono Pro Kin…'
+                        : 'ex: Maison des Fêtes & Traiteur…'
+              }
               className="w-full min-h-11 px-3.5 py-2.5 rounded-xl border border-border bg-surface text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
             />
           </div>
 
-          {/* Grille des formules disponibles */}
           <div className="space-y-2.5">
             <p className="text-xs font-bold text-muted uppercase tracking-wider">
-              Sélectionnez votre formule {upgradeCategory === 'b2c' ? 'Particulier (90 jours)' : 'Entreprise'}
+              {upgradeCategory === 'b2c'
+                ? 'Sélectionnez votre formule Particulier (90 jours)'
+                : upgradeCategory === 'b2b'
+                  ? 'Sélectionnez votre formule Entreprise'
+                  : 'Confirmez votre forfait catalogue'}
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1049,60 +1264,108 @@ export default function ClientDashboardHome() {
                       </div>
                     );
                   })
-                : UPGRADE_B2B_PLANS.map((plan) => {
-                    const isSelected = selectedPlanId === plan.id;
-                    const priceFc =
-                      b2bBillingCycle === 'annual'
-                        ? Math.round(plan.monthlyPriceFc * 12 * 0.9)
-                        : plan.monthlyPriceFc;
-                    return (
-                      <div
-                        key={plan.id}
-                        onClick={() => setSelectedPlanId(plan.id)}
-                        className={cn(
-                          'cursor-pointer p-4 rounded-xl border transition flex flex-col justify-between gap-3 text-left relative',
-                          isSelected
-                            ? 'border-primary bg-primary/5 ring-2 ring-primary/20 shadow-xs'
-                            : 'border-border bg-surface hover:border-primary/40',
-                        )}
-                      >
-                        {plan.popular && (
-                          <span className="absolute -top-2.5 right-3 text-xs font-extrabold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground shadow-xs">
-                            Recommandé Pro
-                          </span>
-                        )}
-
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-bold text-foreground">{plan.name}</span>
-                            <span className="text-xs font-semibold text-primary">
-                              {plan.badge}
+                : upgradeCategory === 'b2b'
+                  ? UPGRADE_B2B_PLANS.map((plan) => {
+                      const isSelected = selectedPlanId === plan.id;
+                      const priceFc =
+                        b2bBillingCycle === 'annual'
+                          ? Math.round(plan.monthlyPriceFc * 12 * 0.9)
+                          : plan.monthlyPriceFc;
+                      return (
+                        <div
+                          key={plan.id}
+                          onClick={() => setSelectedPlanId(plan.id)}
+                          className={cn(
+                            'cursor-pointer p-4 rounded-xl border transition flex flex-col justify-between gap-3 text-left relative',
+                            isSelected
+                              ? 'border-primary bg-primary/5 ring-2 ring-primary/20 shadow-xs'
+                              : 'border-border bg-surface hover:border-primary/40',
+                          )}
+                        >
+                          {plan.popular && (
+                            <span className="absolute -top-2.5 right-3 text-xs font-extrabold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground shadow-xs">
+                              Recommandé Pro
                             </span>
-                          </div>
-                          <p className="text-lg font-black text-foreground">
-                            {formatFc(priceFc)}
-                            <span className="text-xs font-normal text-muted ml-1">
-                              {b2bBillingCycle === 'annual' ? '/ an' : '/ mois'}
-                            </span>
-                          </p>
-                          <p className="text-xs text-muted leading-relaxed mt-1">{plan.description}</p>
-                        </div>
+                          )}
 
-                        <div className="space-y-1 pt-2 border-t border-border/60 text-xs text-muted">
-                          {plan.highlights.map((h, idx) => (
-                            <div key={idx} className="flex items-center gap-1.5">
-                              <Check className="w-3 h-3 text-primary shrink-0" />
-                              <span className="truncate">{h}</span>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-bold text-foreground">{plan.name}</span>
+                              <span className="text-xs font-semibold text-primary">
+                                {plan.badge}
+                              </span>
                             </div>
-                          ))}
+                            <p className="text-lg font-black text-foreground">
+                              {formatFc(priceFc)}
+                              <span className="text-xs font-normal text-muted ml-1">
+                                {b2bBillingCycle === 'annual' ? '/ an' : '/ mois'}
+                              </span>
+                            </p>
+                            <p className="text-xs text-muted leading-relaxed mt-1">{plan.description}</p>
+                          </div>
+
+                          <div className="space-y-1 pt-2 border-t border-border/60 text-xs text-muted">
+                            {plan.highlights.map((h, idx) => (
+                              <div key={idx} className="flex items-center gap-1.5">
+                                <Check className="w-3 h-3 text-primary shrink-0" />
+                                <span className="truncate">{h}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  : UPGRADE_VENDOR_PLANS.filter((p) => p.id === defaultPlanForCategory(upgradeCategory)).map(
+                      (plan) => {
+                        const isSelected = selectedPlanId === plan.id;
+                        const priceFc =
+                          b2bBillingCycle === 'annual'
+                            ? Math.round(plan.monthlyPriceFc * 12 * 0.9)
+                            : plan.monthlyPriceFc;
+                        return (
+                          <div
+                            key={plan.id}
+                            onClick={() => setSelectedPlanId(plan.id)}
+                            className={cn(
+                              'cursor-pointer p-4 rounded-xl border transition flex flex-col justify-between gap-3 text-left relative sm:col-span-2',
+                              isSelected
+                                ? 'border-primary bg-primary/5 ring-2 ring-primary/20 shadow-xs'
+                                : 'border-border bg-surface hover:border-primary/40',
+                            )}
+                          >
+                            {plan.popular && (
+                              <span className="absolute -top-2.5 right-3 text-xs font-extrabold px-2 py-0.5 rounded-full bg-violet-600 text-white shadow-xs">
+                                Complet
+                              </span>
+                            )}
+                            <div className="space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-bold text-foreground">{plan.name}</span>
+                                <span className="text-xs font-semibold text-primary">{plan.badge}</span>
+                              </div>
+                              <p className="text-lg font-black text-foreground">
+                                {formatFc(priceFc)}
+                                <span className="text-xs font-normal text-muted ml-1">
+                                  {b2bBillingCycle === 'annual' ? '/ an' : '/ mois'}
+                                </span>
+                              </p>
+                              <p className="text-xs text-muted leading-relaxed mt-1">{plan.description}</p>
+                            </div>
+                            <div className="space-y-1 pt-2 border-t border-border/60 text-xs text-muted">
+                              {plan.highlights.map((h, idx) => (
+                                <div key={idx} className="flex items-center gap-1.5">
+                                  <Check className="w-3 h-3 text-primary shrink-0" />
+                                  <span className="truncate">{h}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      },
+                    )}
             </div>
           </div>
 
-          {/* Récapitulatif et bouton de paiement direct */}
           <div className="p-4 rounded-2xl bg-surface-muted border border-border space-y-3">
             <div className="flex items-center justify-between">
               <div>
@@ -1128,7 +1391,7 @@ export default function ClientDashboardHome() {
               className="font-bold shadow-md shadow-primary/20 min-h-12"
             >
               {savingOrgName
-                ? 'Préparation de l’organisation…'
+                ? 'Préparation…'
                 : `Payer l’abonnement (${activePlanDetails.priceLabel}) & Activer`}
             </Button>
 
@@ -1159,7 +1422,7 @@ export default function ClientDashboardHome() {
               <CheckCircle2 className="w-9 h-9" />
             </div>
             <div className="space-y-1">
-              <h3 className="text-lg font-extrabold text-foreground">Organisation activée avec succès !</h3>
+              <h3 className="text-lg font-extrabold text-foreground">{upgradeSuccessTitle}</h3>
               <p className="text-xs text-muted">
                 Votre forfait {activePlanDetails.name} est actif. Ouverture de votre nouveau tableau de bord…
               </p>

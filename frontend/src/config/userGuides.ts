@@ -676,20 +676,19 @@ export const USER_GUIDES: UserGuide[] = [
     title: 'Guide Client marketplace',
     badge: 'Client',
     summary:
-      'Vous cherchez une salle, un prestataire ou un événement public. Menu : Marketplace, Simulateur, Événements, billets, Demandes de devis et Réservations. Pour organiser ou publier, un Super Admin doit changer le type de compte.',
+      'Vous cherchez une salle, un prestataire ou un événement public. Menu : Marketplace, Simulateur, Événements, billets, Demandes de devis et Réservations. Pour organiser ou publier, payez un forfait depuis l’accueil ou Facturation : le type de compte bascule après paiement.',
     canDo: [
       'Explorer salles, prestataires, matériel & équipements et événements (filtres, carte, grille / liste)',
       'Événements : s’inscrire ou acheter un billet',
       'Favoris, packs budget, partage d’URL',
       'Suivre Demandes de devis et Réservations dans deux menus distincts',
       'Mes billets + badge QR',
-      'Demander un passage organisateur / prestataire au Super Admin',
+      'Migrer en payant un abonnement Particulier, Entreprise, Salle, Prestataire ou Salle & presta',
     ],
     cannotDo: [
-      'Changer soi-même le type de compte (réservé au Super Admin)',
-      'Créer des événements, invitations ou plans de table',
-      'Publier une salle ou une prestation',
-      'Souscrire un abonnement SaaS tant que le compte reste client',
+      'Changer le type de compte sans paiement (hors Super Admin)',
+      'Créer des événements, invitations ou plans de table tant que le compte reste client',
+      'Publier une salle ou une prestation tant que le compte reste client',
     ],
     navLinks: [
       { label: 'Marketplace', href: '/dashboard/catalogue' },
@@ -697,6 +696,7 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Mes billets', href: '/dashboard/tickets' },
       { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
       { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
+      { label: 'Facturation', href: '/dashboard/billing?tab=plans' },
       { label: 'Guide utilisateur', href: '/dashboard/guide' },
       { label: 'Mon compte', href: '/dashboard/profile' },
     ],
@@ -765,15 +765,18 @@ export const USER_GUIDES: UserGuide[] = [
       },
       {
         id: 'upgrade-account',
-        title: 'Passer organisateur ou prestataire',
+        title: 'Passer organisateur ou catalogue',
         content:
-          '1. Le type de compte est visible en lecture seule dans Mon compte.\n2. Vous ne pouvez pas le modifier vous-même.\n3. Contactez le support EventMaster (Super Admin) pour passer organisateur ou prestataire / salle.\n4. Une fois le type mis à jour, choisissez un forfait adapté dans Facturation.',
-        links: [{ label: 'Mon compte', href: '/dashboard/profile' }],
+          '1. Depuis l’accueil client ou Facturation → Forfaits, choisissez un abonnement.\n2. Particulier (B2C) ou Entreprise (B2B) → compte organisateur après paiement.\n3. Salle, Prestataire ou Salle & presta → compte catalogue après paiement.\n4. Réglez via FlexPay (Mobile Money ou carte) : le type de compte bascule automatiquement.\n5. Un Super Admin peut encore forcer un changement manuel si besoin.',
+        links: [
+          { label: 'Facturation · forfaits', href: '/dashboard/billing?tab=plans' },
+          { label: 'Tableau de bord', href: '/dashboard' },
+        ],
       },
     ],
     tips: [
       'Devis et Réservations = deux menus pour y voir plus clair.',
-      'Compte client : pas de licence SaaS.',
+      'Compte client : pas de licence SaaS tant que vous n’avez pas payé.',
       'Marge du brief = montant (ex. 5 % de 1 500 000 FC).',
       'Les 3 packs évitent de recycler la même salle si le catalogue le permet.',
       'Événements du menu = marketplace client événements.',

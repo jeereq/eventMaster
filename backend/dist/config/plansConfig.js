@@ -485,7 +485,8 @@ const B2B_PAID_KEYS = exports.B2B_PLAN_KEYS.filter((k) => k !== 'FREE');
 function paidPlanKeysForAccountKind(kind) {
     switch (kind) {
         case 'CLIENT':
-            return [...exports.B2C_PLAN_KEYS, ...B2B_PAID_KEYS];
+            // Migration payante : B2C / B2B (→ ORGANIZER) ou Salle / Presta / Salle+presta (→ VENDOR / BOTH)
+            return [...exports.B2C_PLAN_KEYS, ...B2B_PAID_KEYS, ...exports.VENDOR_PLAN_KEYS];
         case 'VENDOR':
             return [...exports.VENDOR_PLAN_KEYS];
         case 'BOTH':
@@ -561,7 +562,7 @@ function accountKindForPlanAssignment(planKey, currentKind) {
 }
 function planAudienceMismatchMessage(planKey, kind) {
     if (kind === 'CLIENT') {
-        return 'Pour activer votre compte en organisation, choisissez un forfait Particulier (B2C) ou Entreprise (B2B).';
+        return 'Pour faire évoluer votre compte client, choisissez un forfait Particulier (B2C), Entreprise (B2B), Salle, Prestataire ou Salle & presta.';
     }
     const plan = getPlanLimits(planKey);
     if (kind === 'VENDOR') {
