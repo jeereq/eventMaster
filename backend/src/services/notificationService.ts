@@ -8,6 +8,11 @@ import {
 logNotificationConfigStatus();
 
 import { formatPhoneE164 } from '../utils/phone';
+import {
+  claimSimilarOutbound,
+  isPlatformBrandedEmailSubject,
+  outboundChannelFingerprint,
+} from './notificationDedup';
 
 export { formatPhoneE164 };
 
@@ -29,6 +34,18 @@ export async function sendRealEmail(
   }
 
   const { sendgridApiKey, sendgridFrom } = getNotificationCredentials();
+
+  if (isPlatformBrandedEmailSubject(subject)) {
+    const fingerprint = outboundChannelFingerprint({
+      channel: 'EMAIL',
+      to,
+      subject,
+      body: textBody,
+    });
+    if (!claimSimilarOutbound(fingerprint)) {
+      return { success: true, simulated: false, messageId: 'deduped-same-channel' };
+    }
+  }
 
   try {
     sgMail.setApiKey(sendgridApiKey);

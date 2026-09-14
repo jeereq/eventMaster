@@ -3,7 +3,6 @@ import { getTenantOwner, sendLicenseExpiryWarning } from './invoiceService';
 import { resolveRenewalTerms } from './tenantBillingService';
 import { notifyTenantOperators, notifyPlatformStaff } from './platformNotificationService';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
-import { sendRealEmail } from './notificationService';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -97,7 +96,6 @@ export async function processSubscriptionExpiryTasks() {
             plan: tenant.plan,
             href: renewHref,
           },
-          channels: ['IN_APP', 'PUSH', 'WHATSAPP'],
         });
 
         void notifyPlatformStaff({
@@ -107,23 +105,6 @@ export async function processSubscriptionExpiryTasks() {
           metadata: { tenantId: tenant.id, plan: tenant.plan, href: renewHref },
           includeCommercials: true,
         });
-
-        const owner = await getTenantOwner(tenant.id);
-        if (owner?.email) {
-          void sendRealEmail(
-            owner.email,
-            'EventMaster — Votre abonnement a expiré',
-            [
-              `L'abonnement de « ${tenant.name} » (${tenant.plan}) a expiré le ${expiryLabel}.`,
-              `Montant estimé du renouvellement : ${amountHint} FC.`,
-              '',
-              `Renouvelez ici : ${renewHref}`,
-            ].join('\n'),
-            `<p>L'abonnement de <strong>${tenant.name}</strong> (<strong>${tenant.plan}</strong>) a expiré le <strong>${expiryLabel}</strong>.</p>
-<p>Montant estimé : <strong>${amountHint} FC</strong>.</p>
-<p><a href="${renewHref}">Renouveler mon forfait</a></p>`,
-          ).catch((err) => console.warn('[Subscription Expiry] email:', err));
-        }
 
         console.log(`[Subscription Expiry] Licence désactivée pour ${tenant.name} (expirée ${expiryLabel})`);
       }

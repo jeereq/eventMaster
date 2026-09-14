@@ -13,7 +13,15 @@ import {
   resolveNotificationHref,
   userWhatsAppNumber,
 } from '../utils/notificationTemplates';
-import { DEDUP_WINDOW_MS, isWithinDedupWindow, notificationDedupeKey } from './notificationDedup';
+import {
+  DEDUP_WINDOW_MS,
+  claimSimilarOutbound,
+  isWithinDedupWindow,
+  notificationDedupeKey,
+  outboundChannelFingerprint,
+} from './notificationDedup';
+
+const inflightNotifications = new Map<string, Promise<{ id: string } | null>>();
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -139,7 +147,9 @@ async function fanOutChannels(
     await logDelivery({
       notificationId: notification.id,
       channel: 'EMAIL',
-      status: result.simulated ? 'SIMULATED' : result.success ? 'SENT' : 'FAILED',
+      status: result.messageId === 'deduped-same-channel'
+        ? 'SIMULATED'
+        : result.simulated ? 'SIMULATED' : result.success ? 'SENT' : 'FAILED',
       providerId: result.messageId,
       error: result.error,
     });
@@ -154,14 +164,28 @@ async function fanOutChannels(
           message: notification.message,
           href,
         });
-    const result = await sendRealWhatsApp(waTo, body);
-    await logDelivery({
-      notificationId: notification.id,
+    const waKey = outboundChannelFingerprint({
       channel: 'WHATSAPP',
-      status: result.simulated ? 'SIMULATED' : result.success ? 'SENT' : 'FAILED',
-      providerId: result.messageSid,
-      error: result.error,
+      to: waTo,
+      body,
     });
+    if (claimSimilarOutbound(waKey)) {
+      const result = await sendRealWhatsApp(waTo, body);
+      await logDelivery({
+        notificationId: notification.id,
+        channel: 'WHATSAPP',
+        status: result.simulated ? 'SIMULATED' : result.success ? 'SENT' : 'FAILED',
+        providerId: result.messageSid,
+        error: result.error,
+      });
+    } else {
+      await logDelivery({
+        notificationId: notification.id,
+        channel: 'WHATSAPP',
+        status: 'SIMULATED',
+        providerId: 'deduped-same-channel',
+      });
+    }
   }
 }
 
@@ -221,12 +245,27 @@ export async function createCommercialBillingNotification(params: {
 export async function createPlatformNotification(params: {
   userId: string;
 } & PlatformNotifyParams) {
-  const incomingKey = notificationDedupeKey({
+  const contentKey = notificationDedupeKey({
     type: params.type,
     title: params.title,
     message: params.message,
     metadata: params.metadata ?? null,
   });
+  const incomingKey = `${params.userId}|${contentKey}`;
+  const pending = inflightNotifications.get(incomingKey);
+  if (pending) return pending;
+
+  const work = persistPlatformNotification(params, contentKey).finally(() => {
+    inflightNotifications.delete(incomingKey);
+  });
+  inflightNotifications.set(incomingKey, work);
+  return work;
+}
+
+async function persistPlatformNotification(
+  params: { userId: string } & PlatformNotifyParams,
+  contentKey: string,
+) {
   const recent = await prisma.platformNotification.findMany({
     where: {
       userId: params.userId,
@@ -244,7 +283,7 @@ export async function createPlatformNotification(params: {
       title: row.title,
       message: row.message,
       metadata: (row.metadata as Record<string, unknown> | null) ?? null,
-    }) === incomingKey;
+    }) === contentKey;
   });
   if (duplicate) return duplicate;
 
