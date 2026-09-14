@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import { useNotificationInbox } from '@/context/NotificationInboxContext';
 import {
   PageHeader,
   Breadcrumbs,
@@ -88,6 +89,7 @@ function NotificationsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, access, tenant } = useAuth();
+  const { setUnreadCount, refresh: refreshInbox } = useNotificationInbox();
   const isOwner = Boolean(access?.isOwner) || (Boolean(user?.id) && user?.id === tenant?.managerId);
   const isOrgMember = Boolean(tenant && user?.role === 'USER' && tenant.accountKind !== 'CLIENT');
 
@@ -180,12 +182,13 @@ function NotificationsContent() {
       if (family !== 'all') params.set('family', family);
       const result = await api.get(`/notifications?${params}`);
       setData(result);
+      if (typeof result.unreadCount === 'number') setUnreadCount(result.unreadCount);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de charger les notifications.');
     } finally {
       setLoading(false);
     }
-  }, [family, unreadOnly, page, pageSize]);
+  }, [family, unreadOnly, page, pageSize, setUnreadCount]);
 
   useEffect(() => {
     if (activeTab === 'inbox') {
@@ -197,17 +200,18 @@ function NotificationsContent() {
     if (!item.readAt) {
       try {
         await api.patch(`/notifications/${item.id}/read`, {});
-        setData((prev) =>
-          prev
-            ? {
-                ...prev,
-                unreadCount: Math.max(0, prev.unreadCount - 1),
-                items: prev.items.map((n) =>
-                  n.id === item.id ? { ...n, readAt: n.readAt ?? new Date().toISOString() } : n,
-                ),
-              }
-            : prev,
-        );
+        setData((prev) => {
+          if (!prev) return prev;
+          const nextCount = Math.max(0, prev.unreadCount - 1);
+          setUnreadCount(nextCount);
+          return {
+            ...prev,
+            unreadCount: nextCount,
+            items: prev.items.map((n) =>
+              n.id === item.id ? { ...n, readAt: n.readAt ?? new Date().toISOString() } : n,
+            ),
+          };
+        });
       } catch {
         /* ignore */
       }
@@ -218,7 +222,9 @@ function NotificationsContent() {
 
   const markAllRead = async () => {
     await api.post('/notifications/read-all', {});
+    setUnreadCount(0);
     await load();
+    await refreshInbox();
   };
 
   const recipientModeLabel = (mode?: string) => {

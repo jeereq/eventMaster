@@ -19,6 +19,11 @@ import SiteBrandMark from '@/components/SiteBrandMark';
 import UserLegalGate from '@/components/UserLegalGate';
 import SupportSessionBanner from '@/components/admin/SupportSessionBanner';
 import { NotificationBell } from '@/components/CommercialNotifications';
+import {
+  NotificationInboxProvider,
+  UnreadCountBadge,
+  useNotificationInbox,
+} from '@/context/NotificationInboxContext';
 import DashboardTopBar, { useDashboardTitle } from '@/components/DashboardTopBar';
 import DashboardMobileBottomBar from '@/components/dashboard/DashboardMobileBottomBar';
 import DashboardMobileMenuSheet from '@/components/dashboard/DashboardMobileMenuSheet';
@@ -511,6 +516,7 @@ function SidebarNav({
 }) {
  const searchParams = useSearchParams();
  const currentTab = searchParams.get('tab') || fallbackTab;
+ const { unreadCount } = useNotificationInbox();
 
  return (
  <nav className={cn('space-y-4', collapsed && 'space-y-2.5')} aria-label="Navigation principale">
@@ -529,15 +535,21 @@ function SidebarNav({
  const Icon = item.icon;
  const isActive = navItemIsActive(pathname, searchParams.toString(), item, currentTab);
 
+ const isNotifications = item.href === '/dashboard/notifications';
+ const unreadLabel = isNotifications && unreadCount > 0
+  ? `${unreadCount} non lue${unreadCount > 1 ? 's' : ''}`
+  : null;
+
  const tip = item.description ? (
  <span className="flex flex-col gap-0.5 text-left">
  <span className="font-semibold">{item.name}</span>
  <span className="font-normal opacity-80 max-w-[12rem] whitespace-normal leading-snug">
  {item.description}
  </span>
+ {unreadLabel ? <span className="font-semibold text-danger">{unreadLabel}</span> : null}
  </span>
  ) : (
- item.name
+ unreadLabel ? `${item.name} · ${unreadLabel}` : item.name
  );
 
  return (
@@ -556,7 +568,8 @@ function SidebarNav({
   setMobileMenuOpen(false);
  }}
  aria-current={isActive ? 'page' : undefined}
- title={collapsed ? item.name : undefined}
+ aria-label={unreadLabel ? `${item.name}, ${unreadLabel}` : undefined}
+ title={collapsed ? (unreadLabel ? `${item.name} · ${unreadLabel}` : item.name) : undefined}
  className={cn(
  'group relative flex w-full items-center rounded-[var(--radius-button)] text-sm font-medium transition-colors duration-150 touch-manipulation select-none active:scale-[0.99]',
  collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5 min-h-[40px]',
@@ -576,15 +589,29 @@ function SidebarNav({
  aria-hidden
  />
  )}
+ <span className="relative shrink-0">
  <Icon
  className={cn(
  'w-[18px] h-[18px] shrink-0 transition-colors',
  isActive ? 'text-primary' : 'text-muted group-hover:text-foreground',
  )}
  />
+ {collapsed && isNotifications ? (
+  <UnreadCountBadge
+    count={unreadCount}
+    className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 inline-flex items-center justify-center rounded-full bg-danger text-primary-foreground text-[10px] font-bold tabular-nums"
+  />
+ ) : null}
+ </span>
  {!collapsed && (
- <span className="truncate text-[13px] leading-snug">{item.name}</span>
+ <span className="truncate text-[13px] leading-snug flex-1">{item.name}</span>
  )}
+ {!collapsed && isNotifications ? (
+  <UnreadCountBadge
+    count={unreadCount}
+    className="ml-auto min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full bg-danger text-primary-foreground text-[10px] font-bold tabular-nums"
+  />
+ ) : null}
  </Link>
  </Tooltip>
  );
@@ -818,6 +845,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  }
  >
  <TourProvider>
+  <NotificationInboxProvider>
       <div className="h-dvh max-h-dvh min-h-0 overflow-hidden flex flex-col bg-background text-foreground">
       <SupportSessionBanner />
       <div
@@ -1176,6 +1204,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <ProductTourOverlay />
     </div>
     </div>
+  </NotificationInboxProvider>
   </TourProvider>
  </Suspense>
  );
