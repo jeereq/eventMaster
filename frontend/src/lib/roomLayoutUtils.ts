@@ -6132,7 +6132,7 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
         id: item.id,
         sourceFurnitureId: item.id,
         name: item.label,
-        shape: 'rectangular' as TableShape,
+        shape: 'arc' as TableShape,
         capacity: item.seatCount,
         chairType: item.chairType,
         x: item.x,
@@ -6142,6 +6142,11 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
         rowMeta: {
           tier: item.tier,
           curve: item.curve ?? 0,
+          elevationM: item.elevationM,
+          aisleSplit: item.aisleSplit === true,
+          aisleWidthPct: item.aisleWidthPct,
+          focusX: item.focusX,
+          focusY: item.focusY,
           rowName: item.rowName || item.label,
           seatCodes: Array.from({ length: item.seatCount }, (_, i) =>
             rowSeatCode(item.rowName || item.label, i),

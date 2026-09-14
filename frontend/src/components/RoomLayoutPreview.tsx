@@ -15,6 +15,7 @@ import {
   isBlueprintWallsVisible,
 } from '@/lib/roomLayoutUtils';
 import { getSeatCoordinates, getTableVisualStyle } from '@/lib/tablePlanUtils';
+import { mapTicketSelectionsToWebGL, resolveTicketSeatPick } from '@/lib/seatSelectionLayout';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import {
   depthScaleForY,
@@ -114,24 +115,13 @@ function WebGLPreviewCanvas({
   onSelectSeat,
 }: WebGLPreviewProps) {
   const selected = useMemo(() => {
-    const list: Array<{ kind: 'table' | 'zone'; id: string; seatIndex?: number }> = [];
-    if (selectedSeats?.length) {
-      for (const s of selectedSeats) {
-        list.push({ kind: 'table', id: s.tableId, seatIndex: s.seatIndex });
-      }
-    }
-    if (selectedTableId) {
-      list.push({ kind: 'table', id: selectedTableId });
-    }
-    if (selectedTableIds?.length) {
-      for (const id of selectedTableIds) {
-        if (!list.some((s) => s.kind === 'table' && s.id === id && s.seatIndex == null)) {
-          list.push({ kind: 'table', id });
-        }
-      }
-    }
-    return list;
-  }, [selectedTableId, selectedTableIds, selectedSeats]);
+    return mapTicketSelectionsToWebGL(
+      selectedSeats ?? [],
+      selectedTableId,
+      selectedTableIds,
+      webglBlueprint.furniture,
+    );
+  }, [selectedTableId, selectedTableIds, selectedSeats, webglBlueprint.furniture]);
 
   return (
     <RoomWebGLViewer
@@ -139,16 +129,16 @@ function WebGLPreviewCanvas({
       selected={selected}
       blockedSeats={blockedSeats}
       onSelect={(sel) => {
-        if (!sel) return;
-        if (sel.kind === 'table' && typeof sel.seatIndex === 'number' && onSelectSeat) {
-          onSelectSeat(sel.id, sel.seatIndex);
+        const pick = resolveTicketSeatPick(sel);
+        if (!pick) {
+          if (sel?.kind === 'zone' && onSelectZone) onSelectZone(sel.id);
           return;
         }
-        if (sel.kind === 'table' && onSelectTable) {
-          onSelectTable(sel.id);
-        } else if (sel.kind === 'zone' && onSelectZone) {
-          onSelectZone(sel.id);
+        if (typeof pick.seatIndex === 'number' && onSelectSeat) {
+          onSelectSeat(pick.tableId, pick.seatIndex);
+          return;
         }
+        if (onSelectTable) onSelectTable(pick.tableId);
       }}
       readOnly
       previewMode

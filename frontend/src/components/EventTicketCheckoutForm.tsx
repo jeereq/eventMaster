@@ -41,6 +41,15 @@ type SeatRow = {
   priceFc: number;
   pricingZoneId: string | null;
   pricingZoneName: string | null;
+  rowMeta?: {
+    tier?: number;
+    curve?: number;
+    elevationM?: number;
+    aisleSplit?: boolean;
+    aisleWidthPct?: number;
+    focusX?: number;
+    focusY?: number;
+  } | null;
 };
 
 type SeatInventoryMeta = {

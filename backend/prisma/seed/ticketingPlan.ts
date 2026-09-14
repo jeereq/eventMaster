@@ -54,8 +54,8 @@ export const SEED_GALA_PRICING_ZONES: PricingZone[] = [
 
 /** Zones pour amphithéâtre / conférence. */
 export const SEED_AMPHI_PRICING_ZONES: PricingZone[] = [
-  { id: 'tier-0', name: 'Orchestre', priceFc: 120_000, color: '#6bbd6e', x: 10, y: 55, w: 80, h: 35 },
-  { id: 'tier-1', name: 'Balcon', priceFc: 75_000, color: '#9b6bcc', x: 12, y: 12, w: 76, h: 38 },
+  { id: 'tier-0', name: 'Orchestre', priceFc: 120_000, color: '#6bbd6e', x: 10, y: 18, w: 80, h: 32 },
+  { id: 'tier-1', name: 'Balcon', priceFc: 75_000, color: '#9b6bcc', x: 12, y: 50, w: 76, h: 40 },
 ];
 
 export function pricingZonesForVolumeSeed(index: number): PricingZone[] {

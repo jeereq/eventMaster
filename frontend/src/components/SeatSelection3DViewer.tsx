@@ -7,6 +7,7 @@ import type { PricingZone } from '@/lib/ticketPricing';
 import RoomLayoutPreview, { type RoomPreviewQuality } from '@/components/RoomLayoutPreview';
 import { buildTablePlanPreviewBlueprint, type TablePlanPreviewTable } from '@/lib/tablePlanPreviewBlueprint';
 import type { RoomLayoutBlueprint, TableShape } from '@/lib/roomLayoutUtils';
+import { checkoutPlanShape, type SeatRowMeta } from '@/lib/seatSelectionLayout';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
 import {
   Users,
@@ -28,6 +29,7 @@ export type SeatSelection3DRow = {
   priceFc: number;
   pricingZoneId: string | null;
   pricingZoneName: string | null;
+  rowMeta?: SeatRowMeta | null;
 };
 
 export type SeatSelection3DMeta = {
@@ -136,12 +138,11 @@ export default function SeatSelection3DViewer({
       seats: SeatSelection3DRow[];
       pricingZoneId: string | null;
       pricingZoneName: string | null;
+      rowMeta?: SeatRowMeta | null;
     }>();
 
     for (const s of seats) {
-      const shape = (['round', 'rectangular', 'square', 'oval', 'cocktail', 'highTop'].includes(s.shape)
-        ? s.shape
-        : 'round') as TableShape;
+      const shape = checkoutPlanShape(s.shape, s.rowMeta);
       const existing = map.get(s.tableId);
       if (existing) {
         existing.seats.push(s);
@@ -156,6 +157,7 @@ export default function SeatSelection3DViewer({
           seats: [s],
           pricingZoneId: s.pricingZoneId,
           pricingZoneName: s.pricingZoneName,
+          rowMeta: s.rowMeta ?? null,
         });
       }
     }
@@ -192,6 +194,7 @@ export default function SeatSelection3DViewer({
         y: t.y,
         pricingZoneId: t.pricingZoneId || undefined,
         tableColor: zoneColor,
+        rowMeta: t.rowMeta ?? undefined,
       };
     });
   }, [tablesList, zoneColorById]);

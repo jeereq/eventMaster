@@ -164,7 +164,7 @@ function buildRoleMobileBottomItems({
       { id: 'tenants', name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', icon: Building2 },
       { id: 'users', name: 'Utilisateurs', href: '/dashboard?tab=users', tab: 'users', icon: Users },
       { id: 'requests', name: 'Demandes', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', icon: Clock },
-      { id: 'menu', name: 'Menu', href: '#menu', icon: Menu, isMenuTrigger: true },
+      { id: 'menu', name: 'Plus', href: '#menu', icon: Menu, isMenuTrigger: true },
     ];
   }
 
@@ -175,7 +175,7 @@ function buildRoleMobileBottomItems({
       { id: 'requests', name: 'Demandes', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', icon: Clock },
       { id: 'commissions', name: 'Gains', href: '/dashboard/commercial', icon: Briefcase },
       { id: 'invoices', name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', icon: FileText },
-      { id: 'menu', name: 'Menu', href: '#menu', icon: Menu, isMenuTrigger: true },
+      { id: 'menu', name: 'Plus', href: '#menu', icon: Menu, isMenuTrigger: true },
     ];
   }
 
@@ -185,7 +185,7 @@ function buildRoleMobileBottomItems({
       { id: 'network', name: 'Réseau', href: '/dashboard/org-commercial', icon: Briefcase },
       { id: 'catalogue', name: 'Explorer', href: '/dashboard/catalogue', icon: Store },
       { id: 'quotes', name: 'Devis', href: '/dashboard/bookings?tab=quotes', icon: Inbox },
-      { id: 'menu', name: 'Menu', href: '#menu', icon: Menu, isMenuTrigger: true },
+      { id: 'menu', name: 'Plus', href: '#menu', icon: Menu, isMenuTrigger: true },
     ];
   }
 
@@ -196,7 +196,7 @@ function buildRoleMobileBottomItems({
       { id: 'protocol', name: 'Protocole', href: '/dashboard/protocol', icon: ScanLine },
       { id: 'publications', name: 'Réalisations', href: '/dashboard/publications', icon: Rss },
       { id: 'catalogue', name: 'Explorer', href: '/dashboard/catalogue', icon: Store },
-      { id: 'menu', name: 'Menu', href: '#menu', icon: Menu, isMenuTrigger: true },
+      { id: 'menu', name: 'Plus', href: '#menu', icon: Menu, isMenuTrigger: true },
     ];
   }
 
@@ -207,7 +207,7 @@ function buildRoleMobileBottomItems({
       { id: 'catalogue', name: 'Explorer', href: '/dashboard/catalogue', icon: Store },
       { id: 'simulator', name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', icon: Sparkles },
       { id: 'tickets', name: 'Billets', href: '/dashboard/tickets', icon: Ticket },
-      { id: 'menu', name: 'Menu', href: '#menu', icon: Menu, isMenuTrigger: true },
+      { id: 'menu', name: 'Plus', href: '#menu', icon: Menu, isMenuTrigger: true },
     ];
   }
 
@@ -218,7 +218,7 @@ function buildRoleMobileBottomItems({
       { id: 'offers', name: 'Mes offres', href: '/dashboard/marketplace', icon: Briefcase },
       { id: 'quotes', name: 'Devis', href: '/dashboard/bookings?tab=quotes', icon: Inbox },
       { id: 'catalogue', name: 'Explorer', href: '/dashboard/catalogue', icon: Store },
-      { id: 'menu', name: 'Menu', href: '#menu', icon: Menu, isMenuTrigger: true },
+      { id: 'menu', name: 'Plus', href: '#menu', icon: Menu, isMenuTrigger: true },
     ];
   }
 
@@ -236,7 +236,7 @@ function buildRoleMobileBottomItems({
     } else if (workspace.showProtocol) {
       managerItems.push({ id: 'protocol', name: 'Protocole', href: '/dashboard/protocol', icon: ScanLine });
     }
-    managerItems.push({ id: 'menu', name: 'Menu', href: '#menu', icon: Menu, isMenuTrigger: true });
+    managerItems.push({ id: 'menu', name: 'Plus', href: '#menu', icon: Menu, isMenuTrigger: true });
     return managerItems;
   }
 
@@ -265,7 +265,7 @@ function buildRoleMobileBottomItems({
     items.push({ id: 'quotes', name: 'Devis', href: '/dashboard/bookings?tab=quotes', icon: Inbox });
   }
 
-  items.push({ id: 'menu', name: 'Menu', href: '#menu', icon: Menu, isMenuTrigger: true });
+  items.push({ id: 'menu', name: 'Plus', href: '#menu', icon: Menu, isMenuTrigger: true });
 
   return items;
 }
@@ -321,8 +321,9 @@ export default function DashboardMobileBottomBar({
                 key={item.id}
                 type="button"
                 onClick={onToggleMobileMenu}
-                aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir tout le menu'}
+                aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu Plus'}
                 aria-expanded={mobileMenuOpen}
+                aria-controls="dashboard-mobile-menu-sheet"
                 className={cn(
                   'relative flex flex-col items-center justify-center gap-0.5 min-h-[46px] py-1 px-1 rounded-full transition-all duration-200 select-none touch-manipulation cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                   active

@@ -16,6 +16,17 @@ export type SeatInventoryItem = {
   priceFc: number;
   pricingZoneId: string | null;
   pricingZoneName: string | null;
+  rowMeta?: SeatRowMeta;
+};
+
+type SeatRowMeta = {
+  tier?: number;
+  curve?: number;
+  elevationM?: number;
+  aisleSplit?: boolean;
+  aisleWidthPct?: number;
+  focusX?: number;
+  focusY?: number;
 };
 
 type PlanTable = {
@@ -26,6 +37,7 @@ type PlanTable = {
   x: number;
   y: number;
   seats?: Record<string | number, string | null>;
+  rowMeta?: SeatRowMeta;
 };
 
 function planTables(tablePlan: unknown): PlanTable[] {
@@ -102,6 +114,7 @@ export async function listSeatInventory(eventId: string): Promise<{
         priceFc: pricing.priceFc,
         pricingZoneId: pricing.pricingZoneId,
         pricingZoneName: pricing.pricingZoneName,
+        ...(table.rowMeta ? { rowMeta: table.rowMeta } : {}),
       });
     }
   }

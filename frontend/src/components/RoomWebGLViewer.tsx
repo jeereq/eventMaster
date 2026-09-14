@@ -3338,6 +3338,7 @@ function SceneContent({
                     selectedSeatIndices={selected
                       .filter((s) => s.kind === 'row' && s.id === item.id && typeof s.seatIndex === 'number')
                       .map((s) => s.seatIndex as number)}
+                    blockedSeatIndices={blockedByTable.get(item.id)}
                     onSelectSeat={(seatIndex, mods) =>
                       onSelect(
                         { kind: 'row', id: item.id, seatIndex },

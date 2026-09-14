@@ -24,6 +24,7 @@ export function RowSeatsLOD({
   chairImageUrl,
   selected,
   selectedSeatIndices = [],
+  blockedSeatIndices = [],
   onSelectSeat,
   lod,
   castShadow,
@@ -44,6 +45,7 @@ export function RowSeatsLOD({
   chairImageUrl?: string;
   selected: boolean;
   selectedSeatIndices?: number[];
+  blockedSeatIndices?: number[];
   onSelectSeat?: (seatIndex: number, mods?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean }) => void;
   lod: Lod;
   castShadow: boolean;
@@ -59,9 +61,10 @@ export function RowSeatsLOD({
   const color = visual.seatColor;
   const frame = visual.frameColor;
   const picked = selectedSeatIndices;
+  const blocked = useMemo(() => new Set(blockedSeatIndices), [blockedSeatIndices]);
 
   const emitSeat = (i: number, e: { stopPropagation: () => void; shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => {
-    if (!onSelectSeat) return;
+    if (!onSelectSeat || blocked.has(i)) return;
     e.stopPropagation();
     onSelectSeat(i, { shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
   };
@@ -145,6 +148,7 @@ export function RowSeatsLOD({
         {Array.from({ length: count }).map((_, i) => {
           const p = computeRowSeatPose(i, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct);
           const chairSelected = picked.includes(i);
+          const chairBlocked = blocked.has(i);
           return (
             <group
               key={i}
@@ -160,6 +164,12 @@ export function RowSeatsLOD({
                 rotationY={p.faceY}
                 selected={chairSelected}
               />
+              {chairBlocked ? (
+                <mesh position={[p.localX, p.y + 0.55, p.localZ]} rotation={[0, p.faceY, 0]}>
+                  <boxGeometry args={[0.42, 0.9, 0.42]} />
+                  <meshStandardMaterial color="#0f172a" transparent opacity={0.28} />
+                </mesh>
+              ) : null}
             </group>
           );
         })}
@@ -185,7 +195,10 @@ export function RowSeatsLOD({
               {/* Assise rembourrée */}
               <mesh position={[0, 0.44, 0.01]} castShadow={castShadow}>
                 <boxGeometry args={[0.38, 0.08, 0.36]} />
-                <meshStandardMaterial color={picked.includes(i) ? '#93c5fd' : color} roughness={0.85} />
+                <meshStandardMaterial
+                  color={blocked.has(i) ? '#64748b' : picked.includes(i) ? '#93c5fd' : color}
+                  roughness={0.85}
+                />
               </mesh>
               {/* Dossier rembourré */}
               <mesh position={[0, 0.70, -0.16]} castShadow={castShadow}>

@@ -21,6 +21,7 @@ import SupportSessionBanner from '@/components/admin/SupportSessionBanner';
 import { NotificationBell } from '@/components/CommercialNotifications';
 import DashboardTopBar, { useDashboardTitle } from '@/components/DashboardTopBar';
 import DashboardMobileBottomBar from '@/components/dashboard/DashboardMobileBottomBar';
+import DashboardMobileMenuSheet from '@/components/dashboard/DashboardMobileMenuSheet';
 import UserAvatar from '@/components/UserAvatar';
 import ViewCustomizerDrawer, {
  ViewCustomizerEdgeHandle,
@@ -673,6 +674,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  };
  }, [mobileMenuOpen]);
 
+ useEffect(() => {
+   if (typeof document !== 'undefined' && document.body.dataset.emTour === '1') return;
+   setMobileMenuOpen(false);
+ }, [pathname]);
+
  const isClientAccount = tenant?.accountKind === 'CLIENT' || access?.level === 'client';
  const workspace = getWorkspaceModules({
   accountKind: tenant?.accountKind,
@@ -808,45 +814,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         className="flex-1 min-h-0 flex flex-col md:flex-row"
         style={{ ['--em-sidebar-width' as string]: sidebarCollapsed ? '4.5rem' : '16rem' }}
       >
-        {/* Overlay mobile */}
-        {mobileMenuOpen && (
-          <button
-            type="button"
-            aria-label="Fermer le menu"
-            className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm md:hidden animate-fade-in"
-            onClick={() => {
-              if (document.body.dataset.emTour === '1') return;
-              setMobileMenuOpen(false);
-            }}
-          />
-        )}
-
         {/* Header mobile */}
         <header className="md:hidden bg-sidebar border-b border-border px-3 flex items-center justify-between fixed inset-x-0 top-0 z-40 pt-[env(safe-area-inset-top,0px)]">
           <div className="h-12 w-full flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
-            <SiteBrandMark href="/dashboard" showLabel={false} />
-            <DashboardMobileTitle />
-          </div>
-          <div className="flex items-center gap-0.5 shrink-0">
-            {showNotifications && <NotificationBell />}
-            <ViewCustomizerTrigger />
-            <button
-              onClick={toggleTheme}
-              className="inline-flex items-center justify-center min-h-11 min-w-11 p-2 rounded-lg border border-border text-muted hover:bg-surface-muted hover:text-foreground transition touch-manipulation"
-              aria-label="Changer de thème"
-            >
-              {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-            </button>
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="inline-flex items-center justify-center min-h-11 min-w-11 p-2 rounded-lg text-muted hover:bg-surface-muted hover:text-foreground transition touch-manipulation"
-              aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-              aria-expanded={mobileMenuOpen}
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-          </div>
+            <div className="flex items-center gap-2 min-w-0">
+              <SiteBrandMark href="/dashboard" showLabel={false} />
+              <DashboardMobileTitle />
+            </div>
+            <div className="flex items-center gap-0.5 shrink-0">
+              {showNotifications && <NotificationBell />}
+              <ViewCustomizerTrigger />
+              <button
+                onClick={toggleTheme}
+                className="inline-flex items-center justify-center min-h-11 min-w-11 p-2 rounded-lg border border-border text-muted hover:bg-surface-muted hover:text-foreground transition touch-manipulation"
+                aria-label="Changer de thème"
+              >
+                {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+              </button>
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="inline-flex items-center justify-center min-h-11 min-w-11 p-2 rounded-lg text-muted hover:bg-surface-muted hover:text-foreground transition touch-manipulation"
+                aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+                aria-expanded={mobileMenuOpen}
+                aria-controls="dashboard-mobile-menu-sheet"
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
         </header>
         <div
@@ -854,46 +848,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           className="md:hidden h-[calc(3rem+env(safe-area-inset-top,0px))] shrink-0"
         />
 
-        {/* Sidebar */}
+        {/* Sidebar — desktop uniquement ; mobile = bottom sheet */}
         <aside
           className={cn(
-            'fixed inset-y-0 left-0 z-[70] w-[min(86vw,20rem)] bg-sidebar border-r border-border shadow-2xl',
-            'flex flex-col transition-[width,transform] duration-200 ease-in-out',
-            'md:top-0 md:bottom-auto md:inset-y-0 md:translate-x-0 md:sticky md:h-full md:max-w-none md:z-30 md:shadow-none',
-            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+            'hidden md:flex md:flex-col',
+            'md:sticky md:top-0 md:h-full md:max-w-none md:z-30',
+            'bg-sidebar border-r border-border',
+            'transition-[width] duration-200 ease-in-out',
             sidebarCollapsed ? 'md:w-[4.5rem]' : 'md:w-64',
           )}
         >
-          {/* Header spécifique du drawer mobile */}
-          <div className="flex md:hidden items-center justify-between p-3.5 border-b border-border bg-surface shrink-0">
-            <SiteBrandMark
-              href="/dashboard"
-              size="sm"
-              meta={
-                user?.role === 'SUPER_ADMIN'
-                  ? 'Console plateforme'
-                  : user?.role === 'COMMERCIAL'
-                    ? 'Espace commercial'
-                    : isClientAccount
-                      ? 'Espace client'
-                      : tenant?.accountKind === 'VENDOR'
-                        ? 'Espace marketplace'
-                        : 'Workspace'
-              }
-            />
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(false)}
-              className="inline-flex items-center justify-center min-h-11 min-w-11 p-1.5 rounded-lg bg-surface-muted hover:bg-border text-foreground transition touch-manipulation cursor-pointer"
-              aria-label="Fermer le menu"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
           <div className={cn('flex-1 overflow-y-auto overscroll-contain space-y-4', sidebarCollapsed ? 'p-2 md:p-2' : 'p-3.5 sm:p-4')}>
             {/* Logo desktop */}
-            <div className={cn('hidden md:flex items-center', sidebarCollapsed ? 'flex-col gap-2' : 'justify-between')}>
+            <div className={cn('flex items-center', sidebarCollapsed ? 'flex-col gap-2' : 'justify-between')}>
               <SiteBrandMark
                 href="/dashboard"
                 showLabel={!sidebarCollapsed}
@@ -938,7 +905,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
 
             {/* Contexte tenant / admin */}
-            {(!sidebarCollapsed || mobileMenuOpen) && (
+            {!sidebarCollapsed && (
               <>
                 {user?.role === 'SUPER_ADMIN' ? (
                   <div className="p-3 bg-surface border border-border rounded-lg">
@@ -995,7 +962,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
           {/* Profil & déconnexion */}
-          <div className={cn('border-t border-border bg-surface shrink-0', sidebarCollapsed ? 'p-2 space-y-1' : 'p-3.5 sm:p-4 space-y-2 pb-[max(1rem,env(safe-area-inset-bottom))]')}>
+          <div className={cn('border-t border-border bg-surface shrink-0', sidebarCollapsed ? 'p-2 space-y-1' : 'p-3.5 sm:p-4 space-y-2')}>
             <Tooltip
               content={
                 <span className="flex flex-col gap-0.5 text-left">
@@ -1057,6 +1024,113 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )}
           </div>
         </aside>
+
+        <DashboardMobileMenuSheet
+          open={mobileMenuOpen}
+          onClose={() => {
+            if (document.body.dataset.emTour === '1') return;
+            setMobileMenuOpen(false);
+          }}
+          title="Menu & navigation"
+          subtitle={
+            user?.role === 'SUPER_ADMIN'
+              ? 'Console plateforme'
+              : user?.role === 'COMMERCIAL'
+                ? 'Espace commercial'
+                : isClientAccount
+                  ? 'Espace client'
+                  : tenant?.accountKind === 'VENDOR'
+                    ? 'Espace marketplace'
+                    : tenant?.name || 'Workspace'
+          }
+        >
+          {user?.role === 'SUPER_ADMIN' ? (
+            <div className="p-3 rounded-2xl bg-surface-muted/40 dark:bg-surface-muted/20 border border-border/60">
+              <div className="text-xs text-muted font-bold uppercase tracking-wider">Rôle global</div>
+              <div className="font-semibold text-sm mt-0.5 text-foreground">Super Admin</div>
+            </div>
+          ) : user?.role === 'COMMERCIAL' ? (
+            <div className="p-3 rounded-2xl bg-surface-muted/40 dark:bg-surface-muted/20 border border-border/60">
+              <div className="text-xs text-muted font-bold uppercase tracking-wider">Rôle global</div>
+              <div className="font-semibold text-sm mt-0.5 text-foreground">Commercial plateforme</div>
+            </div>
+          ) : tenant ? (
+            <div className="p-3 rounded-2xl bg-surface-muted/40 dark:bg-surface-muted/20 border border-border/60">
+              <div className="text-xs text-muted font-bold uppercase tracking-wider">
+                {isClientAccount ? 'Compte' : 'Organisation'}
+              </div>
+              <div className="font-semibold text-foreground text-sm truncate mt-0.5">{tenant.name}</div>
+              <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 text-xs font-bold text-primary">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                {isClientAccount
+                  ? 'Client'
+                  : `Plan ${LANDING_PLANS.find((p) => p.id === tenant.plan)?.ms365Name || tenant.plan}`}
+              </div>
+            </div>
+          ) : null}
+
+          <Suspense
+            fallback={
+              <div className="h-20 flex items-center justify-center">
+                <Loader2 className="w-5 h-5 text-primary animate-spin" />
+              </div>
+            }
+          >
+            <SidebarNav
+              sections={withNavTips(navSections)}
+              pathname={pathname}
+              setMobileMenuOpen={setMobileMenuOpen}
+              collapsed={false}
+              fallbackTab={user.role === 'SUPER_ADMIN' ? 'overview' : 'tenants'}
+            />
+          </Suspense>
+
+          <div className="pt-2 border-t border-border/60 space-y-2">
+            <Link
+              href="/dashboard/profile"
+              data-tour="nav-profile"
+              onClick={() => {
+                if (document.body.dataset.emTour === '1') return;
+                setMobileMenuOpen(false);
+              }}
+              className="flex items-center gap-3 min-h-12 p-2.5 rounded-2xl bg-surface-muted/40 border border-border/60 hover:bg-surface-muted transition touch-manipulation"
+            >
+              <UserAvatar name={user.name} src={user.avatarUrl} size="md" />
+              <div className="min-w-0 flex-1">
+                <span className="font-semibold text-foreground text-sm truncate block">{user.name}</span>
+                <span className="text-xs text-muted truncate block">Mon compte</span>
+              </div>
+            </Link>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="flex items-center justify-center gap-2 min-h-11 px-3 rounded-2xl bg-surface-muted/40 border border-border/60 text-xs font-semibold text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation"
+              >
+                {theme === 'light' ? (
+                  <>
+                    <Moon className="w-4 h-4 text-muted" /> Mode sombre
+                  </>
+                ) : (
+                  <>
+                    <Sun className="w-4 h-4 text-amber-500" /> Mode clair
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  logout();
+                  setMobileMenuOpen(false);
+                }}
+                className="flex items-center justify-center gap-2 min-h-11 px-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/15 transition active:scale-95 touch-manipulation"
+              >
+                <LogOut className="w-4 h-4" />
+                Déconnexion
+              </button>
+            </div>
+          </div>
+        </DashboardMobileMenuSheet>
 
       {/* Contenu principal */}
       <main id="main-content" className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain bg-background flex flex-col em-dashboard-glow-bg">

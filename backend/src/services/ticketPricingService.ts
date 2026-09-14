@@ -19,7 +19,7 @@ type PlanTable = {
   y: number;
   capacity: number;
   pricingZoneId?: string;
-  rowMeta?: { tier?: number };
+  rowMeta?: { tier?: number; curve?: number };
   seats?: Record<string | number, string | null>;
 };
 

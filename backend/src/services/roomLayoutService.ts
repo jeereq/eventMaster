@@ -11,7 +11,7 @@ export type ChairType =
   | 'MESH'
   | 'BARSTOOL'
   | 'POUF';
-export type TableShape = 'round' | 'rectangular' | 'square' | 'oval';
+export type TableShape = 'round' | 'rectangular' | 'square' | 'oval' | 'arc';
 export type RoomOutlineShape = 'rectangle' | 'square' | 'circle' | 'lShape' | 'hexagon' | 'octagon';
 export type ColumnShape = 'round' | 'square';
 export type FlowerType = 'rose' | 'tulipe' | 'orchidee' | 'tournesol' | 'lavande' | 'boquet' | 'personnalise';
@@ -266,28 +266,35 @@ function generateAmphitheaterBlueprint(params: LayoutParams, chairType: ChairTyp
   const rowsPerTier = Math.max(1, params.rowsPerTier ?? 2);
   const seatsPerRow = Math.max(2, params.seatsPerRow ?? 12);
   const furniture: RoomLayoutBlueprint['furniture'] = [];
+  const risePerTierM = 0.38;
+  const stageFocus = { x: 50, y: 10 };
   let rowIndex = 0;
+  let totalSeats = 0;
 
+  // Scène en haut du plan ; le gradin 1 (tier 0) est le plus proche, comme l’éditeur frontend.
   for (let tier = 0; tier < tierCount; tier++) {
     for (let r = 0; r < rowsPerTier; r++) {
-      const progress = (tier * rowsPerTier + r) / (tierCount * rowsPerTier - 1 || 1);
-      const y = 25 + progress * 60;
-      const curve = Math.round(36 + tier * 8);
+      const rowDepth = tier * rowsPerTier + r;
+      const progress = rowDepth / Math.max(1, tierCount * rowsPerTier - 1);
+      const y = 28 + progress * 58;
+      const seats = seatsPerRow + tier * 2;
+      const curve = Math.round(38 + progress * 22);
       furniture.push({
         id: uid('row'),
         kind: 'row',
         label: `Gradin ${tier + 1} — Rangée ${r + 1}`,
-        seatCount: seatsPerRow + tier * 2,
+        seatCount: seats,
         chairType,
         tier,
         x: 50,
         y,
         curve,
         aisleSplit: true,
-        elevationM: Number(((tier + 1) * 0.28).toFixed(2)),
-        focusX: 50,
-        focusY: 12,
+        elevationM: Number((tier * risePerTierM + r * (risePerTierM * 0.35)).toFixed(2)),
+        focusX: stageFocus.x,
+        focusY: stageFocus.y,
       });
+      totalSeats += seats;
       rowIndex++;
     }
   }
@@ -295,20 +302,20 @@ function generateAmphitheaterBlueprint(params: LayoutParams, chairType: ChairTyp
   return {
     version: 1,
     roomType: 'AMPHITHEATER',
-    canvas: { widthM: 22, heightM: 16 },
+    canvas: { widthM: 24, heightM: 18 },
     fixtures: [
       {
         id: uid('stage'),
         kind: 'stage',
-        x: 30,
-        y: 88,
-        w: 40,
+        x: 28,
+        y: 3,
+        w: 44,
         h: 8,
         label: 'Scène',
       },
     ],
     furniture,
-    metadata: { rowCount: rowIndex, totalSeats: rowIndex * seatsPerRow },
+    metadata: { rowCount: rowIndex, totalSeats },
   };
 }
 
@@ -419,14 +426,21 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
         id: item.id,
         sourceFurnitureId: item.id,
         name: item.label,
-        shape: 'rectangular' as TableShape,
+        shape: 'arc' as TableShape,
         capacity: item.seatCount,
         chairType: item.chairType,
         x: item.x,
         y: item.y,
         seats,
         locked: true,
-        rowMeta: { tier: item.tier, curve: item.curve ?? 0 },
+        rowMeta: {
+          tier: item.tier,
+          curve: item.curve ?? 0,
+          elevationM: item.elevationM,
+          aisleSplit: item.aisleSplit === true,
+          focusX: item.focusX,
+          focusY: item.focusY,
+        },
       };
     });
 

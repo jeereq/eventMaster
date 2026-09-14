@@ -21,7 +21,15 @@ export type TablePlanPreviewTable = {
   rotation?: number;
   sourceFurnitureId?: string;
   pricingZoneId?: string;
-  rowMeta?: { tier?: number; curve?: number; elevationM?: number };
+  rowMeta?: {
+    tier?: number;
+    curve?: number;
+    elevationM?: number;
+    aisleSplit?: boolean;
+    aisleWidthPct?: number;
+    focusX?: number;
+    focusY?: number;
+  };
 };
 
 export type TablePlanPreviewInput = {
@@ -130,7 +138,7 @@ function tablesToFurniture(
       };
     }
 
-    if (table.rowMeta) {
+    if (table.rowMeta || table.shape === 'arc') {
       return {
         id: table.id,
         kind: 'row' as const,
@@ -140,12 +148,16 @@ function tablesToFurniture(
         chairType: (table.chairType as ChairType) || 'THEATER',
         chairStyle: 'modern',
         seatMaterial: 'velvet',
-        tier: table.rowMeta.tier ?? 0,
+        tier: table.rowMeta?.tier ?? 0,
         x: table.x,
         y: table.y,
-        curve: table.rowMeta.curve ?? 0,
+        curve: table.rowMeta?.curve ?? 0,
+        aisleSplit: table.rowMeta?.aisleSplit === true,
+        aisleWidthPct: table.rowMeta?.aisleWidthPct,
+        elevationM: table.rowMeta?.elevationM ?? (table.rowMeta?.tier ? table.rowMeta.tier * 0.28 : 0),
+        focusX: table.rowMeta?.focusX,
+        focusY: table.rowMeta?.focusY,
         rotation: table.rotation ?? 0,
-        elevationM: table.rowMeta.elevationM ?? (table.rowMeta.tier ? table.rowMeta.tier * 0.28 : 0),
         showSeatNumbers: true,
       };
     }
