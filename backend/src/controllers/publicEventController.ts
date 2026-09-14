@@ -3,6 +3,9 @@ import { prisma } from '../db';
 import {
   fulfillTicketOrder,
   ticketsRemaining,
+  countPaidTicketsForBuyer,
+  checkoutQuantityCap,
+  buyerTicketsLimitMessage,
 } from '../services/ticketOrderService';
 import { assertSeatAvailable, checkSeatsAvailability, listSeatInventory } from '../services/seatSelectionService';
 import {
@@ -82,6 +85,7 @@ function serializePublicEvent(
     ticketPriceFc: number;
     ticketsTotal: number | null;
     ticketsSold: number;
+    ticketsPerBuyerLimit?: number | null;
     seatSelectionEnabled?: boolean;
     ticketPricingMode?: string;
     tablePlan?: unknown;
@@ -152,6 +156,7 @@ function serializePublicEvent(
     ticketsTotal: event.ticketsTotal,
     ticketsSold: event.ticketsSold,
     ticketsRemaining: remaining,
+    ticketsPerBuyerLimit: event.ticketsPerBuyerLimit ?? null,
     soldOut: remaining === 0,
     seatSelectionEnabled: Boolean(event.seatSelectionEnabled) && hasTablePlan,
     eventProgram: event.eventProgram ?? null,
@@ -548,12 +553,30 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
       requestedSeats = [{ tableId, seatIndex }];
     }
 
+    const alreadyBought = await countPaidTicketsForBuyer(event.id, buyerEmail);
+    const maxThisCheckout = checkoutQuantityCap({
+      ticketsPerBuyerLimit: event.ticketsPerBuyerLimit ?? null,
+      alreadyBought,
+      ticketsRemaining: ticketsRemaining(event),
+    });
+
     if (event.seatSelectionEnabled) {
       if (requestedSeats.length === 0) {
         return res.status(400).json({ error: 'Sélectionnez au moins une place sur le plan.' });
       }
-      if (requestedSeats.length > 8) {
-        return res.status(400).json({ error: 'Vous pouvez réserver au maximum 8 places à la fois.' });
+      if (maxThisCheckout < 1) {
+        return res.status(400).json({
+          error: event.ticketsPerBuyerLimit
+            ? buyerTicketsLimitMessage(event.ticketsPerBuyerLimit, alreadyBought)
+            : 'Complet.',
+        });
+      }
+      if (requestedSeats.length > maxThisCheckout) {
+        return res.status(400).json({
+          error: event.ticketsPerBuyerLimit
+            ? buyerTicketsLimitMessage(event.ticketsPerBuyerLimit, alreadyBought)
+            : `Vous pouvez réserver au maximum ${maxThisCheckout} place${maxThisCheckout > 1 ? 's' : ''} à la fois.`,
+        });
       }
       const seen = new Set<string>();
       for (const s of requestedSeats) {
@@ -565,7 +588,14 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
       }
       quantity = requestedSeats.length;
     } else {
-      quantity = Math.min(8, Math.max(1, Number(req.body?.quantity) || 1));
+      if (maxThisCheckout < 1) {
+        return res.status(400).json({
+          error: event.ticketsPerBuyerLimit
+            ? buyerTicketsLimitMessage(event.ticketsPerBuyerLimit, alreadyBought)
+            : 'Complet.',
+        });
+      }
+      quantity = Math.min(maxThisCheckout, Math.max(1, Number(req.body?.quantity) || 1));
     }
 
     const pricingMode = normalizeTicketPricingMode(event.ticketPricingMode);
@@ -638,11 +668,13 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
       return res.status(403).json({ error: 'Plus de places du côté de l’organisateur (quota d’invités atteint pour la période en cours).' });
     }
 
-    const existing = await prisma.guest.findUnique({
-      where: { eventId_email: { eventId: event.id, email: buyerEmail } },
-    });
-    if (existing) {
-      return res.status(400).json({ error: 'Cet e-mail a déjà une inscription pour cet événement.' });
+    if (
+      event.ticketsPerBuyerLimit != null &&
+      alreadyBought + quantity > event.ticketsPerBuyerLimit
+    ) {
+      return res.status(400).json({
+        error: buyerTicketsLimitMessage(event.ticketsPerBuyerLimit, alreadyBought),
+      });
     }
 
     const paid = event.ticketingEnabled && amountFc > 0 && isOnlinePaymentsEnabled();

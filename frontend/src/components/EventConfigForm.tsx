@@ -203,6 +203,7 @@ export default function EventConfigForm({
   const [pricingZones, setPricingZones] = useState<PricingZone[]>([]);
   const [tableZoneAssignments, setTableZoneAssignments] = useState<Record<string, string>>({});
   const [ticketsTotal, setTicketsTotal] = useState('');
+  const [ticketsPerBuyerLimit, setTicketsPerBuyerLimit] = useState('');
   const [seatSelection, setSeatSelection] = useState(false);
   const [neighborSharingMode, setNeighborSharingMode] = useState<NeighborSharingMode>('first_name');
   const [shareSameTable, setShareSameTable] = useState(true);
@@ -368,6 +369,9 @@ export default function EventConfigForm({
     }
 
     setTicketsTotal(initialEvent.ticketsTotal != null ? String(initialEvent.ticketsTotal) : '');
+    setTicketsPerBuyerLimit(
+      initialEvent.ticketsPerBuyerLimit != null ? String(initialEvent.ticketsPerBuyerLimit) : '',
+    );
     setSeatSelection(Boolean((initialEvent as { seatSelectionEnabled?: boolean }).seatSelectionEnabled));
 
     const initialSharingPolicy = (initialEvent?.tablePlan as any)?.neighborSharingPolicy || (initialEvent as any)?.neighborSharingPolicy;
@@ -790,6 +794,11 @@ export default function EventConfigForm({
           ? Number(ticketsTotal)
           : null
         : initialEvent?.ticketsTotal ?? null,
+      ticketsPerBuyerLimit: complete
+        ? publicEvent && paid && ticketsPerBuyerLimit
+          ? Number(ticketsPerBuyerLimit)
+          : null
+        : initialEvent?.ticketsPerBuyerLimit ?? null,
       seatSelectionEnabled: complete ? publicEvent && seatSelection : Boolean((initialEvent as { seatSelectionEnabled?: boolean } | undefined)?.seatSelectionEnabled),
       neighborSharingPolicy,
       eventProgram,
@@ -2231,9 +2240,20 @@ export default function EventConfigForm({
                           placeholder="Illimité"
                         />
                       )}
+                      {ticketing && (
+                        <Input
+                          label="Limite de billets par personne"
+                          type="number"
+                          min={1}
+                          value={ticketsPerBuyerLimit}
+                          onChange={(e) => setTicketsPerBuyerLimit(e.target.value)}
+                          placeholder="Illimité"
+                          hint="Nombre maximal de billets qu’un même e-mail peut payer. Laissez vide pour autoriser plusieurs achats sans plafond."
+                        />
+                      )}
                       <p className="text-[11px] text-muted">
                         {ticketing
-                          ? 'Paiements par Mobile Money et Carte (FlexPay). L’acheteur reçoit son billet avec QR Code unique et son lien d’accès.'
+                          ? 'Paiements par Mobile Money et Carte (FlexPay). Une même personne peut racheter des billets, dans la limite que vous fixez. Chaque commande génère des pass QR distincts.'
                           : 'Inscription gratuite : le visiteur renseigne son nom et téléphone, puis reçoit son pass d’accès.'}
                       </p>
                     </div>

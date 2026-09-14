@@ -285,6 +285,8 @@ model Event {
   ticketPricingMode String       @default("global")
   ticketsTotal      Int?
   ticketsSold       Int          @default(0)
+  /** Plafond de billets payés par e-mail (null = pas de limite par personne). */
+  ticketsPerBuyerLimit Int?
   /** Achat billet pour une place précise (plan de table requis). */
   seatSelectionEnabled Boolean   @default(false)
   /** Programme structuré (créneaux + ambiance lumière). */

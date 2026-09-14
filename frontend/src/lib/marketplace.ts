@@ -1207,6 +1207,7 @@ export interface PublicEventCard {
   pricingZones?: PricingZone[];
   paid: boolean;
   ticketsTotal: number | null;
+  ticketsPerBuyerLimit?: number | null;
   ticketsSold: number;
   ticketsRemaining: number | null;
   soldOut: boolean;

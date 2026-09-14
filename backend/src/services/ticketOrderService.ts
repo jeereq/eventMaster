@@ -8,8 +8,34 @@ import { brandedEventDetailsHtml, orgBrandFromTenant, wrapBrandedEmail } from '.
 import { escapeHtml } from '../utils/brandingUtils';
 import { GUEST_COPY } from '../utils/guestMessageCopy';
 
-import { splitBuyerName, companionTicketEmail, ticketsRemaining } from '../utils/ticketOrderUtils';
-export { splitBuyerName, companionTicketEmail, ticketsRemaining };
+import {
+  splitBuyerName,
+  companionTicketEmail,
+  ticketsRemaining,
+  checkoutQuantityCap,
+  buyerTicketsLimitMessage,
+} from '../utils/ticketOrderUtils';
+export {
+  splitBuyerName,
+  companionTicketEmail,
+  ticketsRemaining,
+  checkoutQuantityCap,
+  buyerTicketsLimitMessage,
+};
+
+export async function countPaidTicketsForBuyer(eventId: string, buyerEmail: string): Promise<number> {
+  const email = buyerEmail.trim().toLowerCase();
+  const agg = await prisma.ticketOrder.aggregate({
+    where: {
+      eventId,
+      buyerEmail: email,
+      status: 'PAID',
+      NOT: { pricingZoneId: 'donation' },
+    },
+    _sum: { quantity: true },
+  });
+  return agg._sum.quantity || 0;
+}
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -68,36 +94,40 @@ export async function fulfillTicketOrder(orderId: string, stripeSession?: {
   }> = [];
 
   if (!isDonation || wantDonorPass) {
-    const rawPayloads = Array.from({ length: order.quantity }, (_, i) => {
-      const email = i === 0 ? order.buyerEmail.trim().toLowerCase() : companionTicketEmail(order.buyerEmail, i + 1, order.id);
-      return {
-        eventId: event.id,
-        firstName: i === 0 ? firstName : `Invité ${i + 1}`,
-        lastName,
-        email,
-        phone: i === 0 ? order.buyerPhone : null,
-        category: isDonation ? 'Donateur' : (event.ticketingEnabled ? 'Billet' : 'Public'),
-        rsvp: 'ACCEPTED',
-        ticketOrderId: order.id,
-        ...(i === 0 && order.buyerPhone ? { preferences: { phone: order.buyerPhone } } : {}),
-      };
+    const buyerEmail = order.buyerEmail.trim().toLowerCase();
+    const existingBuyer = await prisma.guest.findUnique({
+      where: { eventId_email: { eventId: event.id, email: buyerEmail } },
     });
 
-    for (const row of rawPayloads) {
-      const clash = await prisma.guest.findUnique({
-        where: { eventId_email: { eventId: event.id, email: row.email } },
+    if (isDonation && existingBuyer) {
+      await prisma.guest.update({
+        where: { id: existingBuyer.id },
+        data: { category: 'Donateur', rsvp: 'ACCEPTED', ticketOrderId: order.id },
       });
-      if (clash) {
-        if (isDonation) {
-          await prisma.guest.update({
-            where: { id: clash.id },
-            data: { category: 'Donateur', rsvp: 'ACCEPTED', ticketOrderId: order.id },
-          });
-        } else {
-          throw new Error(`Un invité avec l’e-mail ${row.email} existe déjà pour cet événement.`);
-        }
-      } else {
-        guestPayloads.push(row);
+    } else {
+      const rawPayloads = Array.from({ length: order.quantity }, (_, i) => {
+        const reuseBuyerEmail = i === 0 && !existingBuyer;
+        const email = reuseBuyerEmail
+          ? buyerEmail
+          : companionTicketEmail(buyerEmail, i + 1, order.id);
+        return {
+          eventId: event.id,
+          firstName: reuseBuyerEmail ? firstName : `Invité ${i + 1}`,
+          lastName,
+          email,
+          phone: reuseBuyerEmail ? order.buyerPhone : null,
+          category: isDonation ? 'Donateur' : (event.ticketingEnabled ? 'Billet' : 'Public'),
+          rsvp: 'ACCEPTED',
+          ticketOrderId: order.id,
+          ...(reuseBuyerEmail && order.buyerPhone ? { preferences: { phone: order.buyerPhone } } : {}),
+        };
+      });
+
+      for (const row of rawPayloads) {
+        const clash = await prisma.guest.findUnique({
+          where: { eventId_email: { eventId: event.id, email: row.email } },
+        });
+        if (!clash) guestPayloads.push(row);
       }
     }
   }

@@ -69,6 +69,7 @@ type SeatInventoryMeta = {
 };
 
 const ZONE_COLOR_FALLBACK = 'var(--festive-accent)';
+const FALLBACK_TICKETS_PER_CHECKOUT = 50;
 
 export default function EventTicketCheckoutForm({
   event,
@@ -105,6 +106,13 @@ export default function EventTicketCheckoutForm({
   const zonePricing = pricingMode === 'by_zone';
   const seatMode = Boolean(event.seatSelectionEnabled);
   const pricingZones = event.pricingZones ?? [];
+  const maxQuantity = useMemo(() => {
+    const ownerLimit = event.ticketsPerBuyerLimit;
+    const personalCap =
+      ownerLimit != null && ownerLimit > 0 ? ownerLimit : FALLBACK_TICKETS_PER_CHECKOUT;
+    const inventoryCap = event.ticketsRemaining != null ? event.ticketsRemaining : personalCap;
+    return Math.max(1, Math.min(personalCap, inventoryCap, FALLBACK_TICKETS_PER_CHECKOUT));
+  }, [event.ticketsPerBuyerLimit, event.ticketsRemaining]);
 
   const planWalls = useMemo(() => {
     if (planMeta?.roomLayoutBlueprint) {
@@ -214,8 +222,12 @@ export default function EventTicketCheckoutForm({
       if (exists) {
         return prev.filter((s) => !(s.tableId === tableId && s.seatIndex === seatIndex));
       }
-      if (prev.length >= 8) {
-        setError('Vous pouvez sélectionner au maximum 8 places à la fois.');
+      if (prev.length >= maxQuantity) {
+        setError(
+          event.ticketsPerBuyerLimit
+            ? `L’organisateur autorise au plus ${event.ticketsPerBuyerLimit} billet${event.ticketsPerBuyerLimit > 1 ? 's' : ''} par personne.`
+            : `Vous pouvez sélectionner au maximum ${maxQuantity} place${maxQuantity > 1 ? 's' : ''} à la fois.`,
+        );
         return prev;
       }
       setError('');
@@ -892,7 +904,7 @@ export default function EventTicketCheckoutForm({
                   <p className="text-xs text-muted">
                     {selectedSeats.length === 0
                       ? 'Touchez un ou plusieurs sièges libres sur le plan (jusqu’à 8 places)'
-                      : `${selectedSeats.length} place${selectedSeats.length > 1 ? 's' : ''} sélectionnée${selectedSeats.length > 1 ? 's' : ''} (max 8)`}
+                      : `${selectedSeats.length} place${selectedSeats.length > 1 ? 's' : ''} sélectionnée${selectedSeats.length > 1 ? 's' : ''} (max ${maxQuantity})`}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 self-start sm:self-auto">
@@ -1084,8 +1096,8 @@ export default function EventTicketCheckoutForm({
                 </div>
                 <button
                   type="button"
-                  onClick={() => setQuantity((q) => Math.min(8, q + 1))}
-                  disabled={quantity >= 8}
+                  onClick={() => setQuantity((q) => Math.min(maxQuantity, q + 1))}
+                  disabled={quantity >= maxQuantity}
                   className="w-11 h-11 rounded-lg border border-border bg-surface text-foreground flex items-center justify-center hover:bg-surface-muted disabled:opacity-40 active:scale-95 transition touch-manipulation"
                   aria-label="Augmenter"
                 >
@@ -1095,6 +1107,11 @@ export default function EventTicketCheckoutForm({
                   {quantity > 1 ? `(${quantity} places)` : '(1 place)'}
                 </span>
               </div>
+              <p className="text-[11px] text-muted">
+                {event.ticketsPerBuyerLimit
+                  ? `Jusqu’à ${event.ticketsPerBuyerLimit} billet${event.ticketsPerBuyerLimit > 1 ? 's' : ''} par personne. Vous pouvez payer plusieurs fois, dans cette limite.`
+                  : 'Vous pouvez acheter plusieurs fois avec le même compte.'}
+              </p>
             </div>
           )}
 

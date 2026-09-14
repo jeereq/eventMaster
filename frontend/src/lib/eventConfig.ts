@@ -64,6 +64,7 @@ export type EventConfigSource = {
   ticketPricingMode?: TicketPricingMode | string | null;
   tablePlan?: { pricingZones?: PricingZone[] } | null;
   ticketsTotal?: number | null;
+  ticketsPerBuyerLimit?: number | null;
   ticketsSold?: number | null;
   seatSelectionEnabled?: boolean | null;
   photos?: string[] | null;
@@ -98,6 +99,7 @@ export type EventConfigPayload = {
   ticketPricingMode?: TicketPricingMode;
   pricingZones?: PricingZone[];
   ticketsTotal: number | null;
+  ticketsPerBuyerLimit: number | null;
   photos: string[];
   guestGuidelines: GuestGuidelines;
   formTemplateId: string;

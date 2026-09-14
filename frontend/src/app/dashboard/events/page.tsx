@@ -121,6 +121,7 @@ interface EventItem {
   ticketPriceFc?: number;
   ticketPricingMode?: string;
   ticketsTotal?: number | null;
+  ticketsPerBuyerLimit?: number | null;
   ticketsSold?: number;
   photos?: string[] | null;
   room?: {
@@ -1175,6 +1176,7 @@ Merci de confirmer votre présence :
         ticketPricingMode: form.ticketPricingMode,
         pricingZones: form.pricingZones,
         ticketsTotal: form.ticketsTotal,
+        ticketsPerBuyerLimit: form.ticketsPerBuyerLimit,
         seatSelectionEnabled: form.seatSelectionEnabled,
         tablePlan: form.tablePlan,
         eventProgram: form.eventProgram,

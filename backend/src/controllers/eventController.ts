@@ -20,6 +20,7 @@ import {
 import { notifyTableAssignmentChanges } from '../services/tableAssignmentNotificationService';
 import { toPrismaJson } from '../utils/prismaJson';
 import { uniqueSlug } from '../utils/slug';
+import { parseTicketsPerBuyerLimit } from '../utils/ticketOrderUtils';
 import { parsePhotoUrls } from '../utils/publicVenue';
 import { formatEventPlace } from '../utils/eventPlace';
 import { collectionCommissionRangeLabel } from '../config/legalConfig.ts';
@@ -158,7 +159,14 @@ function eventDossierData(body: Record<string, unknown>, forCreate: boolean) {
 async function eventVisibilityData(
   title: string,
   body: Record<string, unknown>,
-  existing?: { id: string; slug: string | null; publishedAt: Date | null; ticketsSold: number; ticketsTotal: number | null } | null,
+  existing?: {
+    id: string;
+    slug: string | null;
+    publishedAt: Date | null;
+    ticketsSold: number;
+    ticketsTotal: number | null;
+    ticketsPerBuyerLimit?: number | null;
+  } | null,
 ) {
   const isPublic = body.isPublic === true || body.isPublic === 'true';
   let slug = existing?.slug || null;
@@ -181,6 +189,9 @@ async function eventVisibilityData(
     rawTotal === '' || rawTotal == null || rawTotal === undefined
       ? null
       : Math.max(existing?.ticketsSold || 0, Math.round(Number(rawTotal) || 0)) || null;
+  const ticketsPerBuyerLimit = ticketingEnabled
+    ? parseTicketsPerBuyerLimit(body.ticketsPerBuyerLimit)
+    : existing?.ticketsPerBuyerLimit ?? null;
 
   return {
     isPublic,
@@ -190,6 +201,7 @@ async function eventVisibilityData(
     ticketPriceFc: isPublic ? ticketPriceFc : 0,
     ticketPricingMode: isPublic && ticketingEnabled ? ticketPricingMode : 'global',
     ticketsTotal: isPublic ? ticketsTotal : existing?.ticketsTotal ?? null,
+    ticketsPerBuyerLimit: isPublic && ticketingEnabled ? ticketsPerBuyerLimit : existing?.ticketsPerBuyerLimit ?? null,
     seatSelectionEnabled:
       isPublic && (body.seatSelectionEnabled === true || body.seatSelectionEnabled === 'true'),
   };
