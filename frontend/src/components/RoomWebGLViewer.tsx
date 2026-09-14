@@ -83,6 +83,10 @@ import {
   GazeboMesh,
   DjBoothMesh,
   ScreenMesh,
+  WallTvMesh,
+  TableMonitorMesh,
+  LaptopMesh,
+  DesktopPcMesh,
   GabledStageRoof,
 } from '@/components/roomCelebrationMeshes';
 import { ConcertInstrumentMesh, EventBarMesh } from '@/components/CataloguePodiumBarMeshes';
@@ -587,7 +591,7 @@ function RoofMesh({
   opacity?: number;
   /** Décalage Y (vue empilée : sommet du dernier étage). */
   baseElevationM?: number;
-  roofStyle?: 'flat' | 'tentSwag' | 'gabled' | 'coffered';
+  roofStyle?: import('@/lib/roomLayoutUtils').RoofStyle;
   blueprint?: RoomLayoutBlueprint;
 }) {
   const y = baseElevationM + wallHeightM + 0.04;
@@ -610,7 +614,15 @@ function RoofMesh({
   }, [blueprint?.fixtures, widthM, heightM]);
 
   const shapeGeo = useMemo(() => {
-    if (roofStyle === 'tentSwag' || roofStyle === 'gabled') return null;
+    if (
+      roofStyle === 'tentSwag' ||
+      roofStyle === 'gabled' ||
+      roofStyle === 'pergola' ||
+      roofStyle === 'glassCanopy' ||
+      roofStyle === 'fabricStretch' ||
+      roofStyle === 'mansard'
+    )
+      return null;
     const hasPolygon = outline && outline.shape !== 'rectangle';
     const hasHoles = stairHoles.length > 0;
     if (!hasPolygon && !hasHoles) return null;
@@ -674,6 +686,243 @@ function RoofMesh({
         <mesh rotation={[0, 0, -0.28]} position={[0, 0.35, 0]} castShadow>
           <boxGeometry args={[widthM * 0.62, 0.08, heightM * 0.92]} />
           <meshStandardMaterial color={color} roughness={0.55} transparent opacity={opacity} />
+        </mesh>
+      </group>
+    );
+  }
+
+  if (roofStyle === 'glassCanopy') {
+    const gridX = Math.max(3, Math.round(widthM / 2.2));
+    const gridZ = Math.max(3, Math.round(heightM / 2.2));
+    return (
+      <group position={[0, y, 0]}>
+        {/* Panneau de verre translucide zénithal */}
+        <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+          <planeGeometry args={[widthM, heightM]} />
+          <meshPhysicalMaterial
+            color="#93c5fd"
+            roughness={0.06}
+            metalness={0.15}
+            transparent
+            opacity={Math.min(0.55, Math.max(0.25, opacity))}
+            clearcoat={1}
+            clearcoatRoughness={0.05}
+            side={THREE.DoubleSide}
+            depthWrite={false}
+          />
+        </mesh>
+        {/* Poutres maîtresses acier noir longitudinales */}
+        {Array.from({ length: gridX + 1 }).map((_, i) => {
+          const bx = (i / gridX - 0.5) * widthM;
+          return (
+            <mesh key={`glass-bx-${i}`} position={[bx, 0.04, 0]} castShadow>
+              <boxGeometry args={[0.08, 0.14, heightM]} />
+              <meshStandardMaterial color="#0f172a" metalness={0.85} roughness={0.25} />
+            </mesh>
+          );
+        })}
+        {/* Poutres acier transversales */}
+        {Array.from({ length: gridZ + 1 }).map((_, i) => {
+          const bz = (i / gridZ - 0.5) * heightM;
+          return (
+            <mesh key={`glass-bz-${i}`} position={[0, 0.04, bz]} castShadow>
+              <boxGeometry args={[widthM, 0.14, 0.08]} />
+              <meshStandardMaterial color="#0f172a" metalness={0.85} roughness={0.25} />
+            </mesh>
+          );
+        })}
+        {/* Éclairage zénithal naturel doux */}
+        <pointLight position={[0, 0.4, 0]} intensity={0.4} color="#e0f2fe" distance={Math.max(widthM, heightM) * 1.5} />
+      </group>
+    );
+  }
+
+  if (roofStyle === 'pergola') {
+    const louverCount = Math.max(12, Math.round(heightM * 2.8));
+    return (
+      <group position={[0, y, 0]}>
+        {/* Poutres d'appui latérales en bois / alu */}
+        {[-widthM / 2 + 0.1, widthM / 2 - 0.1].map((px, pi) => (
+          <mesh key={`pergola-support-${pi}`} position={[px, 0.06, 0]} castShadow>
+            <boxGeometry args={[0.16, 0.18, heightM]} />
+            <meshStandardMaterial color={color || '#334155'} roughness={0.45} metalness={0.2} />
+          </mesh>
+        ))}
+        {/* Lames bioclimatiques ajourées inclinées à 35° */}
+        {Array.from({ length: louverCount }).map((_, li) => {
+          const bz = (li / (louverCount - 1) - 0.5) * (heightM - 0.4);
+          const inStairZ = stairHoles.some((h) => bz >= h.minZ && bz <= h.maxZ);
+          if (inStairZ) return null;
+          return (
+            <mesh
+              key={`pergola-louver-${li}`}
+              position={[0, 0.08, bz]}
+              rotation={[0.62, 0, 0]}
+              castShadow
+            >
+              <boxGeometry args={[widthM - 0.1, 0.14, 0.025]} />
+              <meshStandardMaterial
+                color={color || '#1e293b'}
+                roughness={0.5}
+                metalness={0.15}
+                transparent
+                opacity={Math.max(0.85, opacity)}
+              />
+            </mesh>
+          );
+        })}
+      </group>
+    );
+  }
+
+  if (roofStyle === 'dome') {
+    const radius = Math.min(widthM, heightM) * 0.48;
+    return (
+      <group position={[0, y, 0]}>
+        {/* Plafond plat périmétrique avec découpe circulaire */}
+        <mesh geometry={shapeGeo ?? undefined} receiveShadow>
+          {!shapeGeo && (
+            <mesh rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[widthM, heightM]} />
+            </mesh>
+          )}
+          <meshStandardMaterial color="#1e293b" roughness={0.7} transparent opacity={opacity} side={THREE.DoubleSide} />
+        </mesh>
+        {/* Coupole hémisphérique surélevée */}
+        <mesh position={[0, 0.1, 0]} rotation={[0, 0, 0]} castShadow receiveShadow>
+          <sphereGeometry args={[radius, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.38]} />
+          <meshStandardMaterial
+            color={color || '#f1f5f9'}
+            roughness={0.35}
+            metalness={0.1}
+            side={THREE.DoubleSide}
+            transparent
+            opacity={Math.max(0.75, opacity)}
+          />
+        </mesh>
+        {/* Anneau et lanterneau central lumineux */}
+        <mesh position={[0, radius * 0.38 + 0.12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[radius * 0.05, radius * 0.18, 24]} />
+          <meshStandardMaterial color="#fbbf24" emissive="#d97706" emissiveIntensity={0.65} side={THREE.DoubleSide} />
+        </mesh>
+        <pointLight position={[0, radius * 0.3, 0]} intensity={0.65} color="#fed7aa" distance={12} />
+      </group>
+    );
+  }
+
+  if (roofStyle === 'mansard') {
+    const slopeW = widthM * 0.14;
+    const slopeH = heightM * 0.14;
+    const deckW = widthM - slopeW * 2;
+    const deckH = heightM - slopeH * 2;
+    return (
+      <group position={[0, y, 0]}>
+        {/* Plateau plat supérieur en zinc / ardoise */}
+        <mesh position={[0, 0.42, 0]} rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
+          <planeGeometry args={[Math.max(1, deckW), Math.max(1, deckH)]} />
+          <meshStandardMaterial color="#334155" roughness={0.4} metalness={0.6} side={THREE.DoubleSide} />
+        </mesh>
+        {/* Pans brisés mansardés nord et sud */}
+        {[-heightM / 2 + slopeH / 2, heightM / 2 - slopeH / 2].map((pz, pi) => (
+          <mesh
+            key={`mansard-z-${pi}`}
+            position={[0, 0.21, pz]}
+            rotation={[pi === 0 ? 0.72 : -0.72, 0, 0]}
+            castShadow
+          >
+            <boxGeometry args={[widthM, 0.06, slopeH * 1.25]} />
+            <meshStandardMaterial color={color || '#475569'} roughness={0.45} metalness={0.5} />
+          </mesh>
+        ))}
+        {/* Pans brisés mansardés est et ouest */}
+        {[-widthM / 2 + slopeW / 2, widthM / 2 - slopeW / 2].map((px, pi) => (
+          <mesh
+            key={`mansard-x-${pi}`}
+            position={[px, 0.21, 0]}
+            rotation={[0, 0, pi === 0 ? -0.72 : 0.72]}
+            castShadow
+          >
+            <boxGeometry args={[slopeW * 1.25, 0.06, deckH]} />
+            <meshStandardMaterial color={color || '#475569'} roughness={0.45} metalness={0.5} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+
+  if (roofStyle === 'skylight') {
+    const holeW = widthM * 0.26;
+    const holeH = heightM * 0.32;
+    return (
+      <group position={[0, y, 0]}>
+        {/* Plafond plein suspendu */}
+        <mesh geometry={shapeGeo ?? undefined} receiveShadow>
+          {!shapeGeo && (
+            <mesh rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[widthM, heightM]} />
+            </mesh>
+          )}
+          <meshStandardMaterial color={color || '#0f172a'} roughness={0.8} transparent opacity={opacity} side={THREE.DoubleSide} />
+        </mesh>
+        {/* 2 puits de lumière rectangulaires contemporains */}
+        {[-widthM * 0.22, widthM * 0.22].map((sx, si) => (
+          <group key={`skylight-${si}`} position={[sx, 0.04, 0]}>
+            {/* Cadre saillant en aluminium blanc */}
+            <mesh position={[0, 0.02, 0]} castShadow>
+              <boxGeometry args={[holeW + 0.1, 0.08, holeH + 0.1]} />
+              <meshStandardMaterial color="#f8fafc" roughness={0.3} metalness={0.2} />
+            </mesh>
+            {/* Vitrage diffusant lumineux */}
+            <mesh position={[0, 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[holeW, holeH]} />
+              <meshStandardMaterial
+                color="#f0f9ff"
+                emissive="#e0f2fe"
+                emissiveIntensity={0.65}
+                roughness={0.1}
+                side={THREE.DoubleSide}
+              />
+            </mesh>
+            <pointLight position={[0, 0.2, 0]} intensity={0.5} color="#bae6fd" distance={9} />
+          </group>
+        ))}
+      </group>
+    );
+  }
+
+  if (roofStyle === 'fabricStretch') {
+    return (
+      <group position={[0, y, 0]}>
+        {/* Mâts centraux de tension */}
+        {[-widthM * 0.2, widthM * 0.2].map((mx, mi) => (
+          <group key={`mast-${mi}`} position={[mx, 0, 0]}>
+            <mesh position={[0, 0.35, 0]} castShadow>
+              <cylinderGeometry args={[0.035, 0.045, 0.75, 12]} />
+              <meshStandardMaterial color="#cbd5e1" metalness={0.8} roughness={0.2} />
+            </mesh>
+            {/* Chapeau conique de tension du velum */}
+            <mesh position={[0, 0.72, 0]} castShadow>
+              <coneGeometry args={[widthM * 0.26, 0.45, 16, 1, true]} />
+              <meshStandardMaterial
+                color={color || '#f8fafc'}
+                roughness={0.7}
+                side={THREE.DoubleSide}
+                transparent
+                opacity={Math.max(0.8, opacity)}
+              />
+            </mesh>
+          </group>
+        ))}
+        {/* Voiles d'ombrage tendues périphériques */}
+        <mesh position={[0, 0.25, 0]} rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
+          <planeGeometry args={[widthM * 0.88, heightM * 0.88]} />
+          <meshStandardMaterial
+            color={color || '#fdfcfb'}
+            roughness={0.65}
+            transparent
+            opacity={Math.max(0.78, opacity)}
+            side={THREE.DoubleSide}
+          />
         </mesh>
       </group>
     );
@@ -2292,6 +2541,13 @@ function FixtureMesh({
   podiumStyle,
   instrumentStyle,
   barStyle,
+  screenKind,
+  screenRatio,
+  screenElevationM,
+  screenTiltDeg,
+  screenPowered,
+  screenFrameColor,
+  screenContent,
   surfaceElevationM = 0,
   widthM,
   roomDepthM,
@@ -2339,6 +2595,13 @@ function FixtureMesh({
   podiumStyle?: PodiumStyle;
   instrumentStyle?: InstrumentStyle;
   barStyle?: BarStyle;
+  screenKind?: import('@/lib/roomLayoutUtils').ScreenKind;
+  screenRatio?: import('@/lib/roomLayoutUtils').ScreenRatio;
+  screenElevationM?: number;
+  screenTiltDeg?: number;
+  screenPowered?: boolean;
+  screenFrameColor?: string;
+  screenContent?: import('@/lib/roomLayoutUtils').ScreenContent;
   surfaceElevationM?: number;
   widthM: number;
   roomDepthM: number;
@@ -2484,7 +2747,41 @@ function FixtureMesh({
       ) : kind === 'djBooth' ? (
         <DjBoothMesh w={w} d={d} color={color ?? '#1c1917'} selected={selected} />
       ) : kind === 'screen' ? (
-        <ScreenMesh w={w} heightM={height} selected={selected} />
+        screenKind === 'wallTv' ? (
+          <WallTvMesh
+            w={Math.max(0.8, w)}
+            ratio={screenRatio ?? '16:9'}
+            tiltDeg={screenTiltDeg ?? 4}
+            elevationM={screenElevationM ?? 1.6}
+            selected={selected}
+            powered={screenPowered ?? true}
+            frameColor={screenFrameColor ?? color ?? '#0f172a'}
+          />
+        ) : screenKind === 'tableMonitor' ? (
+          <TableMonitorMesh
+            w={Math.max(0.48, Math.min(1.4, w))}
+            ratio={screenRatio ?? '16:9'}
+            surfaceElevationM={screenElevationM ?? surfaceElevationM}
+            selected={selected}
+            powered={screenPowered ?? true}
+          />
+        ) : screenKind === 'laptop' ? (
+          <LaptopMesh
+            w={Math.min(0.46, Math.max(0.28, w))}
+            surfaceElevationM={screenElevationM ?? surfaceElevationM}
+            selected={selected}
+            powered={screenPowered ?? true}
+          />
+        ) : screenKind === 'desktopPc' ? (
+          <DesktopPcMesh
+            w={Math.min(0.72, Math.max(0.42, w))}
+            surfaceElevationM={screenElevationM ?? surfaceElevationM}
+            selected={selected}
+            powered={screenPowered ?? true}
+          />
+        ) : (
+          <ScreenMesh w={w} heightM={height} selected={selected} />
+        )
       ) : kind === 'podium' || kind === 'stage' ? (
         <group>
           <EventStage
@@ -3158,7 +3455,13 @@ function SceneContent({
           ? surfacePickable || selected.some((s) => s.kind === 'fixture' && s.id === f.id)
           : true;
         const canDragFixture = !readOnly && !wallEditMode && (!isSurfaceFixture || surfacePickable || selected.some((s) => s.kind === 'fixture' && s.id === f.id));
-        const sitsOnRaisedSurface = f.kind === 'instrument' || f.kind === 'bar';
+        const sitsOnRaisedSurface =
+          f.kind === 'instrument' ||
+          f.kind === 'bar' ||
+          (f.kind === 'screen' &&
+            (f.screenKind === 'tableMonitor' ||
+              f.screenKind === 'laptop' ||
+              f.screenKind === 'desktopPc'));
         const raisedSurface = sitsOnRaisedSurface
           ? resolveFurnitureSurfaceAt(blueprint, f.x + f.w / 2, f.y + f.h / 2)
           : null;
@@ -3202,6 +3505,13 @@ function SceneContent({
             podiumStyle={f.podiumStyle}
             instrumentStyle={f.instrumentStyle}
             barStyle={f.barStyle}
+            screenKind={f.screenKind}
+            screenRatio={f.screenRatio}
+            screenElevationM={f.screenElevationM}
+            screenTiltDeg={f.screenTiltDeg}
+            screenPowered={f.screenPowered}
+            screenFrameColor={f.screenFrameColor}
+            screenContent={f.screenContent}
             surfaceElevationM={raisedSurface?.elevationM ?? 0}
             widthM={widthM}
             roomDepthM={heightM}
@@ -3682,7 +3992,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             aria-pressed={activePreset === 'overview'}
             title="Vue d'ensemble de la salle"
             className={cn(
-              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all shrink-0 min-h-[32px]',
+              'inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-semibold transition-all shrink-0 min-h-11',
               activePreset === 'overview'
                 ? 'bg-primary-solid text-primary-foreground shadow-xs'
                 : 'text-foreground/80 hover:text-foreground hover:bg-surface-muted',
@@ -3697,7 +4007,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             aria-pressed={activePreset === 'stage'}
             title="Point de vue vers la scène"
             className={cn(
-              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all shrink-0 min-h-[32px]',
+              'inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-semibold transition-all shrink-0 min-h-11',
               activePreset === 'stage'
                 ? 'bg-primary-solid text-primary-foreground shadow-xs'
                 : 'text-foreground/80 hover:text-foreground hover:bg-surface-muted',
@@ -3712,7 +4022,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             aria-pressed={activePreset === 'vip'}
             title="Point de vue Table d'honneur"
             className={cn(
-              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all shrink-0 min-h-[32px]',
+              'inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-semibold transition-all shrink-0 min-h-11',
               activePreset === 'vip'
                 ? 'bg-primary-solid text-primary-foreground shadow-xs'
                 : 'text-foreground/80 hover:text-foreground hover:bg-surface-muted',
@@ -3727,7 +4037,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             aria-pressed={activePreset === 'entrance'}
             title="Point de vue depuis l'entrée"
             className={cn(
-              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all shrink-0 min-h-[32px]',
+              'inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-semibold transition-all shrink-0 min-h-11',
               activePreset === 'entrance'
                 ? 'bg-primary-solid text-primary-foreground shadow-xs'
                 : 'text-foreground/80 hover:text-foreground hover:bg-surface-muted',

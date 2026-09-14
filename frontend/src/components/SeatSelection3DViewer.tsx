@@ -304,7 +304,7 @@ export default function SeatSelection3DViewer({
         />
 
         {tablesWithSelection.length > 0 && (
-          <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1.5 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground text-xs font-semibold px-2.5 py-1.5 shadow-sm">
+          <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground text-xs font-semibold px-2.5 py-1.5 shadow-sm">
             <Check className="w-3.5 h-3.5" aria-hidden />
             <span>{selectedSeats.length} place{selectedSeats.length > 1 ? 's' : ''} sélectionnée{selectedSeats.length > 1 ? 's' : ''}</span>
           </div>
@@ -313,7 +313,7 @@ export default function SeatSelection3DViewer({
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-muted leading-relaxed">
-          Touchez une chaise dans la salle, ou un siège dans la liste. Les places sombres sont déjà prises.
+          Touchez une chaise, ou un siège dans la liste. Masquez le toit et les murs, puis passez en plein écran pour viser plus facilement.
         </p>
         <div className="sm:hidden">
           <SeatPreviewQualityChips quality={quality} onChange={setQuality} variant="bar" />

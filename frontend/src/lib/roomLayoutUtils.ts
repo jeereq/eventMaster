@@ -110,7 +110,37 @@ export type BarStyle =
   | 'mocktail'
   | 'tapas'
   | 'tea';
-export type RoofStyle = 'flat' | 'tentSwag' | 'gabled' | 'coffered';
+export type RoofStyle =
+  | 'flat'
+  | 'tentSwag'
+  | 'gabled'
+  | 'coffered'
+  | 'glassCanopy'
+  | 'dome'
+  | 'pergola'
+  | 'mansard'
+  | 'skylight'
+  | 'fabricStretch';
+
+export type ScreenKind = 'stageLedWall' | 'wallTv' | 'tableMonitor' | 'laptop' | 'desktopPc';
+export type ScreenRatio = '16:9' | '21:9' | '9:16' | '32:9';
+export type ScreenContent = 'presentation' | 'video' | 'matrix' | 'off' | 'glow';
+
+export const screenKindLabels: Record<ScreenKind, string> = {
+  stageLedWall: 'Mur LED scénique (Truss)',
+  wallTv: 'Télévision murale (Accrochée)',
+  tableMonitor: 'Écran de table / Régie',
+  laptop: 'Ordinateur portable (Laptop)',
+  desktopPc: 'Ordinateur fixe (PC tout-en-un)',
+};
+
+export const screenRatioLabels: Record<ScreenRatio, string> = {
+  '16:9': 'Paysage standard (16:9)',
+  '21:9': 'Cinéma ultra-large (21:9)',
+  '9:16': 'Portrait vertical / Totem (9:16)',
+  '32:9': 'Double écran panoramique (32:9)',
+};
+
 export type RoomFixtureKind =
   | 'stage'
   | 'podium'
@@ -514,6 +544,20 @@ export interface RoomLayoutBlueprint {
     groupId?: string;
     /** Étage du bâtiment (maison multi-niveaux). */
     storyId?: string;
+    /** Écran / multimédia : variante et type d'appareil. */
+    screenKind?: ScreenKind;
+    /** Écran : format / ratio d'affichage. */
+    screenRatio?: ScreenRatio;
+    /** Écran : hauteur d'accrochage ou élévation du meuble en mètres (défaut selon type). */
+    screenElevationM?: number;
+    /** Écran : inclinaison verticale de l'écran en degrés (-30° à +30° pour TV murale ou laptop). */
+    screenTiltDeg?: number;
+    /** Écran : allumé / éteint / veilleuse d'ambiance. */
+    screenPowered?: boolean;
+    /** Écran : couleur du châssis ou pied (noir, alu, blanc, or). */
+    screenFrameColor?: string;
+    /** Écran : type d'affichage / contenu simulé (conférence, logo, vidéo, dashboard). */
+    screenContent?: ScreenContent;
   }>;
   furniture: Array<
     | {
@@ -724,6 +768,20 @@ export function isBlueprintWallsVisible(metadata?: RoomLayoutBlueprint['metadata
   return metadata?.showWalls !== false;
 }
 
+export function applyPlanSceneVisibility<T extends { metadata?: RoomLayoutBlueprint['metadata'] }>(
+  blueprint: T,
+  visibility: { showWalls: boolean; showRoof: boolean },
+): T {
+  return {
+    ...blueprint,
+    metadata: {
+      ...blueprint.metadata,
+      showWalls: visibility.showWalls,
+      showRoof: visibility.showRoof,
+    },
+  };
+}
+
 function uid(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 }
@@ -917,15 +975,15 @@ function pointInLayoutRect(
 
 export type FurnitureSurfaceHit = {
   id: string;
-  kind: 'podium' | 'stage' | 'carpet' | 'dance' | 'vip' | 'buffet' | 'zone' | 'balcony';
+  kind: 'podium' | 'stage' | 'carpet' | 'dance' | 'vip' | 'buffet' | 'zone' | 'balcony' | 'table';
   label: string;
   /** Hauteur du dessus de surface (m), pour poser le mobilier dessus. */
   elevationM: number;
 };
 
 /**
- * Surface sous un point (moquette, piste, podium…) pour y poser tables / chaises.
- * Priorité : podium / scène > autres surfaces.
+ * Surface sous un point (moquette, piste, podium, table…) pour y poser tables / chaises / écrans / ordinateurs.
+ * Priorité : table > podium / scène > autres surfaces.
  */
 export function resolveFurnitureSurfaceAt(
   blueprint: RoomLayoutBlueprint,
@@ -939,6 +997,14 @@ export function resolveFurnitureSurfaceAt(
       best = hit;
       return;
     }
+    const bestIsTop = best.kind === 'table';
+    const hitIsTop = hit.kind === 'table';
+    if (hitIsTop) {
+      best = hit;
+      return;
+    }
+    if (bestIsTop) return;
+
     const bestIsRaised = best.kind === 'podium' || best.kind === 'stage' || best.kind === 'balcony';
     const hitIsRaised = hit.kind === 'podium' || hit.kind === 'stage' || hit.kind === 'balcony';
     if (hitIsRaised && (!bestIsRaised || hit.elevationM >= best.elevationM)) {
@@ -949,6 +1015,26 @@ export function resolveFurnitureSurfaceAt(
       best = hit;
     }
   };
+
+  // 1. Détection des tables comme supports d'équipements (ordinateurs portables, moniteurs)
+  for (const item of blueprint.furniture) {
+    if (item.kind === 'table') {
+      const radiusPct = item.customRadiusM ? item.customRadiusM * 5 : 7;
+      const w = item.customWidthM ? item.customWidthM * 5 : 12;
+      const h = item.customDepthM ? item.customDepthM * 5 : 10;
+      const inTable = item.shape === 'round' || item.shape === 'cocktail'
+        ? Math.hypot(xPct - item.x, yPct - item.y) <= radiusPct
+        : Math.abs(xPct - item.x) <= w / 2 && Math.abs(yPct - item.y) <= h / 2;
+      if (inTable) {
+        consider({
+          id: item.id,
+          kind: 'table',
+          label: item.name ?? 'Table',
+          elevationM: item.shape === 'cocktail' ? 1.05 : 0.76,
+        });
+      }
+    }
+  }
 
   for (const f of blueprint.fixtures) {
     if (!pointInLayoutRect(xPct, yPct, f)) continue;
@@ -1245,6 +1331,12 @@ export function createBlueprintFixture(
     barStyle: kind === 'bar' ? 'cocktail' : undefined,
     decalKind: kind === 'decal' ? 'rose' : undefined,
     pedestalStyle: kind === 'pedestal' ? 'squareWhite' : undefined,
+    screenKind: kind === 'screen' ? 'stageLedWall' : undefined,
+    screenRatio: kind === 'screen' ? '16:9' : undefined,
+    screenPowered: kind === 'screen' ? true : undefined,
+    screenElevationM: kind === 'screen' ? 0 : undefined,
+    screenTiltDeg: kind === 'screen' ? 0 : undefined,
+    screenContent: kind === 'screen' ? 'presentation' : undefined,
   };
 }
 
@@ -6455,10 +6547,16 @@ export function nextOwnedLabel(
 }
 
 export const roofStyleLabels: Record<RoofStyle, string> = {
-  flat: 'Plat',
-  tentSwag: 'Tente drapée',
-  gabled: 'Pignon (jardin)',
-  coffered: 'Caissons',
+  flat: 'Plafond plat',
+  tentSwag: 'Tente drapée (Voilage)',
+  gabled: 'Toit à pignon (Jardin)',
+  coffered: 'Plafond à caissons',
+  glassCanopy: 'Verrière zénithale (Atelier)',
+  dome: 'Coupole & Dôme d’Opéra',
+  pergola: 'Pergola bioclimatique ajourée',
+  mansard: 'Combles mansardés (Pans coupés)',
+  skylight: 'Puits de lumière contemporain',
+  fabricStretch: 'Velum tendu architectural',
 };
 
 export const centerpieceStyleLabels: Record<CenterpieceStyle, string> = {
