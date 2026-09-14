@@ -30,6 +30,7 @@ export type TablePlanPreviewTable = {
     focusX?: number;
     focusY?: number;
   };
+  chairMeta?: { standalone?: boolean; rotation?: number; isPmr?: boolean };
 };
 
 export type TablePlanPreviewInput = {
@@ -109,11 +110,11 @@ function tablesToFurniture(
   }
 
   const existingRowMap = new Map<string, Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'row' }>>();
+  const existingChairMap = new Map<string, Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'chair' }>>();
   if (roomBlueprint?.furniture) {
     for (const f of roomBlueprint.furniture) {
-      if (f.kind === 'row') {
-        existingRowMap.set(f.id, f);
-      }
+      if (f.kind === 'row') existingRowMap.set(f.id, f);
+      if (f.kind === 'chair') existingChairMap.set(f.id, f);
     }
   }
 
@@ -123,6 +124,24 @@ function tablesToFurniture(
       table.tableColor && table.tableColor !== '#ffffff' && table.tableColor !== '#f3e6c8'
         ? table.tableColor
         : (zoneColor || table.tableColor);
+
+    const existingChair = existingChairMap.get(table.id)
+      || (table.sourceFurnitureId ? existingChairMap.get(table.sourceFurnitureId) : undefined);
+    if (existingChair || table.chairMeta?.standalone) {
+      return {
+        ...(existingChair ?? {
+          kind: 'chair' as const,
+          chairType: (table.chairType as ChairType) || 'BANQUET',
+        }),
+        id: table.id,
+        kind: 'chair' as const,
+        label: table.name,
+        x: table.x,
+        y: table.y,
+        rotation: table.rotation ?? table.chairMeta?.rotation ?? existingChair?.rotation,
+        chairType: (table.chairType as ChairType) || existingChair?.chairType || 'BANQUET',
+      };
+    }
 
     // Si la table correspond à une rangée / gradin de la salle
     const existingRow = existingRowMap.get(table.id) || (table.sourceFurnitureId ? existingRowMap.get(table.sourceFurnitureId) : undefined);
@@ -255,10 +274,12 @@ export function buildTablePlanPreviewBlueprint(
     }
     // Conserver le mobilier décoratif non-table et non-rangée de la salle (bars, scène, podium, etc.)
     // Les rangées et tables sont déjà incluses et synchronisées dans tableFurniture
-    const existingDecor = (base.furniture || []).filter((f) => f && f.kind !== 'table' && f.kind !== 'row' && f.kind !== 'zone');
+    const existingDecor = (base.furniture || []).filter(
+      (f) => f && f.kind !== 'table' && f.kind !== 'row' && f.kind !== 'zone' && f.kind !== 'chair',
+    );
     const combinedFurniture = [
       ...zoneFurniture,
-      ...(tableFurniture.length > 0 ? tableFurniture : (base.furniture || []).filter((f) => f && (f.kind === 'table' || f.kind === 'row'))),
+      ...(tableFurniture.length > 0 ? tableFurniture : (base.furniture || []).filter((f) => f && (f.kind === 'table' || f.kind === 'row' || f.kind === 'chair'))),
       ...existingDecor,
     ];
 

@@ -4,6 +4,7 @@ import { getSeatCoordinates } from './tablePlanUtils.ts';
 import { getRowSeatCoordinates2D } from './roomAmphitheaterGeom.ts';
 import {
   checkoutPlanShape,
+  formatCheckoutSeatLabel,
   isTheaterRowPlan,
   mapTicketSelectionsToWebGL,
   resolveTicketSeatPick,
@@ -82,5 +83,34 @@ describe('seatSelectionLayout — rangées vs tables', () => {
     const pick = resolveTicketSeatPick({ kind: 'row', id: 'gradin-1', seatIndex: 7 });
     assert.deepEqual(pick, { tableId: 'gradin-1', seatIndex: 7 });
     assert.equal(resolveTicketSeatPick({ kind: 'fixture', id: 'stage' }), null);
+  });
+
+  it('traite une chaise libre 3D comme le siège 0', () => {
+    const pick = resolveTicketSeatPick({ kind: 'chair', id: 'honneur-g' });
+    assert.deepEqual(pick, { tableId: 'honneur-g', seatIndex: 0 });
+    const mapped = mapTicketSelectionsToWebGL(
+      [{ tableId: 'honneur-g', seatIndex: 0 }],
+      null,
+      undefined,
+      [{ id: 'honneur-g', kind: 'chair' }],
+    );
+    assert.deepEqual(mapped, [{ kind: 'chair', id: 'honneur-g', seatIndex: 0 }]);
+  });
+});
+
+describe('seatSelectionLayout — libellés PMR et chaises', () => {
+  it('formate les libellés de checkout', () => {
+    assert.equal(
+      formatCheckoutSeatLabel({ tableName: 'Rang A', seatIndex: 3, seatCode: 'A4' }),
+      'Rang A · A4',
+    );
+    assert.equal(
+      formatCheckoutSeatLabel({ tableName: 'Rang A', seatIndex: 0, seatCode: 'A1', isPmr: true }),
+      'Rang A · A1 · PMR',
+    );
+    assert.equal(
+      formatCheckoutSeatLabel({ tableName: 'Siège d’honneur', seatIndex: 0, standalone: true, isPmr: true }),
+      'Siège d’honneur · PMR',
+    );
   });
 });

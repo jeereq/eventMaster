@@ -3245,6 +3245,7 @@ function SceneContent({
         }
         if (item.kind === 'chair') {
           const surface = resolveFurnitureSurfaceAt(blueprint, item.x, item.y);
+          const chairBlocked = (blockedByTable.get(item.id) ?? []).includes(0);
           return (
             <group key={item.id} position={[0, storyElev, 0]}>
             <FreeChairMesh
@@ -3259,8 +3260,14 @@ function SceneContent({
               label={item.label}
               widthM={widthM}
               heightM={heightM}
-              selected={selected.some((s) => s.kind === 'chair' && s.id === item.id)}
-              onSelect={(e) => onSelect({ kind: 'chair', id: item.id }, { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) })}
+              selected={selected.some((s) => (s.kind === 'chair' || s.kind === 'table') && s.id === item.id)}
+              onSelect={(e) => {
+                if (chairBlocked) return;
+                onSelect(
+                  { kind: 'chair', id: item.id, seatIndex: 0 },
+                  { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) },
+                );
+              }}
               onDragStart={wallEditMode || readOnly || item.locked ? undefined : (e) => armDrag('chair', item.id, item.x, item.y, e)}
               readOnly={readOnly || wallEditMode || item.locked}
               hideLabels={hideLabels}

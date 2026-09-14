@@ -16,6 +16,7 @@ import { resolveLightingFromProgram, normalizeEventProgram } from '@/lib/eventPr
 import { lightingPresetLabels } from '@/lib/roomRenderQuality';
 import { normalizeTicketPricingMode, type PricingZone } from '@/lib/ticketPricing';
 import { resolveBlueprintWalls } from '@/lib/roomLayoutUtils';
+import { formatCheckoutSeatLabel, isStandaloneChairPlan } from '@/lib/seatSelectionLayout';
 import SeatSelectionPlanCanvas, { type SeatSelectionPlanCanvasProps } from '@/components/SeatSelectionPlanCanvas';
 import SeatSelection3DViewer from '@/components/SeatSelection3DViewer';
 import { PlanViewToggle, type PlanViewMode } from '@/components/PlanViewChrome';
@@ -49,7 +50,11 @@ type SeatRow = {
     aisleWidthPct?: number;
     focusX?: number;
     focusY?: number;
+    seatCodes?: string[];
   } | null;
+  chairMeta?: { standalone?: boolean; rotation?: number; isPmr?: boolean } | null;
+  isPmr?: boolean;
+  seatCode?: string | null;
 };
 
 type SeatInventoryMeta = {
@@ -973,7 +978,13 @@ export default function EventTicketCheckoutForm({
                                 {idx + 1}
                               </span>
                               <span>
-                                {s.tableName} · Siège {s.seatIndex + 1}
+                                {formatCheckoutSeatLabel({
+                                  tableName: s.tableName,
+                                  seatIndex: s.seatIndex,
+                                  seatCode: s.seatCode || s.rowMeta?.seatCodes?.[s.seatIndex],
+                                  standalone: isStandaloneChairPlan(s.chairMeta),
+                                  isPmr: s.isPmr,
+                                })}
                               </span>
                               {s.pricingZoneName && (
                                 <span
@@ -996,7 +1007,13 @@ export default function EventTicketCheckoutForm({
                                 onClick={() => removeSeat(s.tableId, s.seatIndex)}
                                 className="text-muted hover:text-danger ml-1 rounded-md min-w-11 min-h-11 inline-flex items-center justify-center touch-manipulation active:scale-95 hover:bg-danger/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                                 title="Retirer ce siège"
-                                aria-label={`Retirer le siège ${s.tableName} n°${s.seatIndex + 1}`}
+                                aria-label={`Retirer ${formatCheckoutSeatLabel({
+                                  tableName: s.tableName,
+                                  seatIndex: s.seatIndex,
+                                  seatCode: s.seatCode || s.rowMeta?.seatCodes?.[s.seatIndex],
+                                  standalone: isStandaloneChairPlan(s.chairMeta),
+                                  isPmr: s.isPmr,
+                                })}`}
                               >
                                 <X className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                               </button>
@@ -1036,7 +1053,7 @@ export default function EventTicketCheckoutForm({
                                   }`}
                                   style={!active && zoneColor ? { borderColor: zoneColor } : undefined}
                                 >
-                                  {s.seatIndex + 1}
+                                  {s.seatCode || s.seatIndex + 1}{s.isPmr ? ' · PMR' : ''}
                                   {active && <Check className="w-2.5 h-2.5 inline-block ml-0.5" />}
                                 </button>
                               );

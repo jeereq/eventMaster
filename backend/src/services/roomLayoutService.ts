@@ -81,6 +81,18 @@ export interface RoomLayoutBlueprint {
         x: number;
         y: number;
         locked?: boolean;
+        hiddenSeatIndices?: number[];
+        pmrSeatIndices?: number[];
+      }
+    | {
+        id: string;
+        kind: 'chair';
+        chairType: ChairType;
+        label?: string;
+        x: number;
+        y: number;
+        rotation?: number;
+        locked?: boolean;
       }
     | {
         id: string;
@@ -97,6 +109,7 @@ export interface RoomLayoutBlueprint {
         elevationM?: number;
         focusX?: number;
         focusY?: number;
+        pmrSeatIndices?: number[];
       }
     | {
         id: string;
@@ -123,6 +136,83 @@ function uid(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
+function emptySeats(capacity: number): Record<number, string | null> {
+  const seats: Record<number, string | null> = {};
+  for (let i = 0; i < capacity; i++) seats[i] = null;
+  return seats;
+}
+
+function rowSeatCode(rowName: string | undefined, index: number): string {
+  const raw = String(rowName || 'A').trim();
+  const token = raw.replace(/^rang(ée)?\s+/i, '').split(/\s+/)[0] || 'A';
+  return `${token.slice(0, 4).toUpperCase()}${index + 1}`;
+}
+
+function furnitureToPlanTable(item: Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'table' | 'row' | 'chair' }>) {
+  if (item.kind === 'chair') {
+    const isPmr = item.chairType === 'WHEELCHAIR';
+    return {
+      id: item.id,
+      sourceFurnitureId: item.id,
+      name: item.label || 'Siège',
+      shape: 'round' as TableShape,
+      capacity: 1,
+      chairType: item.chairType,
+      x: item.x,
+      y: item.y,
+      rotation: item.rotation ?? 0,
+      seats: emptySeats(1),
+      locked: item.locked ?? false,
+      chairMeta: { standalone: true, rotation: item.rotation ?? 0, isPmr },
+      pmrSeatIndices: isPmr ? [0] : undefined,
+    };
+  }
+
+  if (item.kind === 'table') {
+    return {
+      id: item.id,
+      sourceFurnitureId: item.id,
+      name: item.name,
+      shape: item.shape,
+      capacity: item.capacity,
+      chairType: item.chairType,
+      chairImageUrl: item.chairImageUrl,
+      tableColor: item.tableColor,
+      tableImageUrl: item.tableImageUrl,
+      x: item.x,
+      y: item.y,
+      seats: emptySeats(item.capacity),
+      locked: item.locked ?? false,
+      hiddenSeatIndices: item.hiddenSeatIndices,
+      pmrSeatIndices: item.pmrSeatIndices,
+    };
+  }
+
+  return {
+    id: item.id,
+    sourceFurnitureId: item.id,
+    name: item.label,
+    shape: 'arc' as TableShape,
+    capacity: item.seatCount,
+    chairType: item.chairType,
+    x: item.x,
+    y: item.y,
+    seats: emptySeats(item.seatCount),
+    locked: true,
+    pmrSeatIndices: item.pmrSeatIndices,
+    rowMeta: {
+      tier: item.tier,
+      curve: item.curve ?? 0,
+      elevationM: item.elevationM,
+      aisleSplit: item.aisleSplit === true,
+      focusX: item.focusX,
+      focusY: item.focusY,
+      rowName: item.label,
+      seatCodes: Array.from({ length: item.seatCount }, (_, i) => rowSeatCode(item.label, i)),
+    },
+  };
+}
+
 function gridPositions(count: number, margin = 12, maxCol?: number) {
   const cols = maxCol ?? Math.ceil(Math.sqrt(count));
   const rows = Math.ceil(count / cols);
@@ -139,8 +229,12 @@ function gridPositions(count: number, margin = 12, maxCol?: number) {
 
 export function calculateBlueprintCapacity(blueprint: RoomLayoutBlueprint): number {
   return blueprint.furniture.reduce((sum, item) => {
-    if (item.kind === 'table') return sum + item.capacity;
+    if (item.kind === 'table') {
+      const hidden = item.hiddenSeatIndices?.length ?? 0;
+      return sum + Math.max(0, item.capacity - hidden);
+    }
     if (item.kind === 'row') return sum + item.seatCount;
+    if (item.kind === 'chair') return sum + 1;
     return sum;
   }, 0);
 }
@@ -401,51 +495,10 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
   }
 
   const tables = blueprint.furniture
-    .filter((item): item is Extract<typeof item, { kind: 'table' | 'row' }> => item.kind === 'table' || item.kind === 'row')
-    .map((item) => {
-      if (item.kind === 'table') {
-        const seats: Record<number, string | null> = {};
-        for (let i = 0; i < item.capacity; i++) seats[i] = null;
-        return {
-          id: item.id,
-          sourceFurnitureId: item.id,
-          name: item.name,
-          shape: item.shape,
-          capacity: item.capacity,
-          chairType: item.chairType,
-          chairImageUrl: item.chairImageUrl,
-          tableColor: item.tableColor,
-          tableImageUrl: item.tableImageUrl,
-          x: item.x,
-          y: item.y,
-          seats,
-          locked: item.locked ?? false,
-        };
-      }
-
-      const seats: Record<number, string | null> = {};
-      for (let i = 0; i < item.seatCount; i++) seats[i] = null;
-      return {
-        id: item.id,
-        sourceFurnitureId: item.id,
-        name: item.label,
-        shape: 'arc' as TableShape,
-        capacity: item.seatCount,
-        chairType: item.chairType,
-        x: item.x,
-        y: item.y,
-        seats,
-        locked: true,
-        rowMeta: {
-          tier: item.tier,
-          curve: item.curve ?? 0,
-          elevationM: item.elevationM,
-          aisleSplit: item.aisleSplit === true,
-          focusX: item.focusX,
-          focusY: item.focusY,
-        },
-      };
-    });
+    .filter((item): item is Extract<typeof item, { kind: 'table' | 'row' | 'chair' }> =>
+      item.kind === 'table' || item.kind === 'row' || item.kind === 'chair',
+    )
+    .map((item) => furnitureToPlanTable(item));
 
   return {
     tables,

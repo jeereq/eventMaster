@@ -11,6 +11,12 @@ import {
   resolveTablePricingZoneId,
   type PricingZone,
 } from './ticketPricingService.ts';
+import {
+  buildSeatInventoryItems,
+  holdKey,
+  isSeatBookable,
+  type PlanTable,
+} from './seatSelectionPlan.ts';
 
 const AMPHI_ZONES: PricingZone[] = [
   { id: 'tier-0', name: 'Orchestre', priceFc: 120_000, color: '#6bbd6e', x: 10, y: 18, w: 80, h: 32 },
@@ -21,16 +27,6 @@ const BANQUET_ZONES: PricingZone[] = [
   { id: 'zone-vip', name: 'VIP', priceFc: 100_000, color: '#c4a35a' },
   { id: 'zone-standard', name: 'Standard', priceFc: 50_000, color: '#5b8def' },
 ];
-
-type PlanTable = {
-  id: string;
-  name?: string;
-  shape?: string;
-  capacity: number;
-  x: number;
-  y: number;
-  rowMeta?: { tier?: number; curve?: number; aisleSplit?: boolean };
-};
 
 function planTables(plan: ReturnType<typeof blueprintToTablePlan>): PlanTable[] {
   return (plan.tables ?? []) as PlanTable[];
@@ -128,6 +124,69 @@ describe('sélection de places — types d’emplacements', () => {
 
     const openTent = planTables(blueprintToTablePlan(generateRoomBlueprint('TENT', { tableCount: 0 })));
     assert.equal(openTent.length, 0);
+  });
+
+  it('convertit les chaises seules d’une cérémonie ou grille en places vendables', () => {
+    const blueprint = generateRoomBlueprint('CONFERENCE', { rowCount: 2, seatsPerRow: 4 });
+    blueprint.furniture.push(
+      {
+        id: 'chair_honneur',
+        kind: 'chair',
+        chairType: 'ARMCHAIR',
+        label: 'Siège d’honneur',
+        x: 56,
+        y: 10,
+      },
+      {
+        id: 'chair_pmr',
+        kind: 'chair',
+        chairType: 'WHEELCHAIR',
+        label: 'Place PMR',
+        x: 20,
+        y: 80,
+      },
+    );
+    const tables = planTables(blueprintToTablePlan(blueprint));
+    const honour = tables.find((table) => table.id === 'chair_honneur');
+    const pmr = tables.find((table) => table.id === 'chair_pmr');
+    assert.equal(honour?.capacity, 1);
+    assert.equal(honour?.shape, 'round');
+    assert.equal(pmr?.capacity, 1);
+    assert.deepEqual(pmr?.pmrSeatIndices, [0]);
+
+    const inventory = buildSeatInventoryItems(
+      { ticketPricingMode: 'global', ticketPriceFc: 10_000, tablePlan: { tables } },
+      tables,
+    );
+    assert.ok(inventory.some((seat) => seat.tableId === 'chair_honneur' && seat.available));
+    assert.equal(inventory.find((seat) => seat.tableId === 'chair_pmr')?.isPmr, true);
+  });
+
+  it('masque les sièges détachés et bloque les places en hold', () => {
+    const table: PlanTable = {
+      id: 't1',
+      name: 'Table 1',
+      shape: 'round',
+      capacity: 8,
+      x: 40,
+      y: 40,
+      seats: { 1: 'guest-1' },
+      hiddenSeatIndices: [3, 4],
+      pmrSeatIndices: [0],
+    };
+    const holds = new Set([holdKey('t1', 2)]);
+    const inventory = buildSeatInventoryItems(
+      { ticketPricingMode: 'global', ticketPriceFc: 25_000 },
+      [table],
+      holds,
+    );
+    const indices = inventory.map((seat) => seat.seatIndex).sort((a, b) => a - b);
+    assert.deepEqual(indices, [0, 1, 2, 5, 6, 7]);
+    assert.equal(inventory.find((seat) => seat.seatIndex === 0)?.isPmr, true);
+    assert.equal(inventory.find((seat) => seat.seatIndex === 1)?.available, false);
+    assert.equal(inventory.find((seat) => seat.seatIndex === 2)?.available, false);
+    assert.equal(isSeatBookable(table, 3).reason, 'hidden');
+    assert.equal(isSeatBookable(table, 2, holds).reason, 'held');
   });
 
   it('refuse un index de siège hors capacité de rangée', () => {

@@ -7,7 +7,13 @@ import type { PricingZone } from '@/lib/ticketPricing';
 import RoomLayoutPreview, { type RoomPreviewQuality } from '@/components/RoomLayoutPreview';
 import { buildTablePlanPreviewBlueprint, type TablePlanPreviewTable } from '@/lib/tablePlanPreviewBlueprint';
 import type { RoomLayoutBlueprint, TableShape } from '@/lib/roomLayoutUtils';
-import { checkoutPlanShape, type SeatRowMeta } from '@/lib/seatSelectionLayout';
+import {
+  checkoutPlanShape,
+  isStandaloneChairPlan,
+  isTheaterRowPlan,
+  type SeatChairMeta,
+  type SeatRowMeta,
+} from '@/lib/seatSelectionLayout';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
 import {
   Users,
@@ -30,6 +36,9 @@ export type SeatSelection3DRow = {
   pricingZoneId: string | null;
   pricingZoneName: string | null;
   rowMeta?: SeatRowMeta | null;
+  chairMeta?: SeatChairMeta | null;
+  isPmr?: boolean;
+  seatCode?: string | null;
 };
 
 export type SeatSelection3DMeta = {
@@ -139,6 +148,7 @@ export default function SeatSelection3DViewer({
       pricingZoneId: string | null;
       pricingZoneName: string | null;
       rowMeta?: SeatRowMeta | null;
+      chairMeta?: SeatChairMeta | null;
     }>();
 
     for (const s of seats) {
@@ -158,6 +168,7 @@ export default function SeatSelection3DViewer({
           pricingZoneId: s.pricingZoneId,
           pricingZoneName: s.pricingZoneName,
           rowMeta: s.rowMeta ?? null,
+          chairMeta: s.chairMeta ?? null,
         });
       }
     }
@@ -195,6 +206,7 @@ export default function SeatSelection3DViewer({
         pricingZoneId: t.pricingZoneId || undefined,
         tableColor: zoneColor,
         rowMeta: t.rowMeta ?? undefined,
+        chairMeta: t.chairMeta ?? undefined,
       };
     });
   }, [tablesList, zoneColorById]);
@@ -350,8 +362,8 @@ export default function SeatSelection3DViewer({
                   type="button"
                   onClick={goToPrevTable}
                   className="p-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground transition min-w-11 min-h-11 flex items-center justify-center"
-                  title="Table précédente"
-                  aria-label="Table précédente"
+                  title={isTheaterRowPlan(activeTable.shape, activeTable.rowMeta) ? 'Rangée précédente' : 'Emplacement précédent'}
+                  aria-label={isTheaterRowPlan(activeTable.shape, activeTable.rowMeta) ? 'Rangée précédente' : 'Emplacement précédent'}
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -362,8 +374,8 @@ export default function SeatSelection3DViewer({
                   type="button"
                   onClick={goToNextTable}
                   className="p-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground transition min-w-11 min-h-11 flex items-center justify-center"
-                  title="Table suivante"
-                  aria-label="Table suivante"
+                  title={isTheaterRowPlan(activeTable.shape, activeTable.rowMeta) ? 'Rangée suivante' : 'Emplacement suivant'}
+                  aria-label={isTheaterRowPlan(activeTable.shape, activeTable.rowMeta) ? 'Rangée suivante' : 'Emplacement suivant'}
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -403,7 +415,10 @@ export default function SeatSelection3DViewer({
                   )}
 
                   <span className="text-xs font-bold leading-none">
-                    Siège {seat.seatIndex + 1}
+                    {isStandaloneChairPlan(seat.chairMeta)
+                      ? seat.tableName
+                      : (seat.seatCode || `Siège ${seat.seatIndex + 1}`)}
+                    {seat.isPmr ? ' · PMR' : ''}
                   </span>
 
                   <span

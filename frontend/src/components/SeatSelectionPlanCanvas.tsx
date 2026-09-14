@@ -11,7 +11,9 @@ import { getSeatCoordinates, getTableVisualStyle, type TableShape } from '@/lib/
 import { getRowSeatCoordinates2D } from '@/lib/roomAmphitheaterGeom';
 import {
   checkoutPlanShape,
+  isStandaloneChairPlan,
   isTheaterRowPlan,
+  type SeatChairMeta,
   type SeatRowMeta,
 } from '@/lib/seatSelectionLayout';
 import { formatFc } from '@/config/landingPricing';
@@ -33,6 +35,9 @@ export type SeatSelectionSeat = {
   pricingZoneId?: string | null;
   pricingZoneName?: string | null;
   rowMeta?: SeatRowMeta | null;
+  chairMeta?: SeatChairMeta | null;
+  isPmr?: boolean;
+  seatCode?: string | null;
 };
 
 type PlanFixture = {
@@ -87,6 +92,7 @@ type PlanTable = {
   seats: SeatSelectionSeat[];
   pricingZoneId?: string | null;
   rowMeta?: SeatRowMeta | null;
+  chairMeta?: SeatChairMeta | null;
 };
 
 export default function SeatSelectionPlanCanvas({
@@ -150,6 +156,7 @@ export default function SeatSelectionPlanCanvas({
           seats: [s],
           pricingZoneId: s.pricingZoneId ?? null,
           rowMeta: s.rowMeta ?? null,
+          chairMeta: s.chairMeta ?? null,
         });
       }
     }
@@ -294,6 +301,7 @@ export default function SeatSelectionPlanCanvas({
             const isFocused = activeTableId === table.id;
             const zoneColor = table.pricingZoneId ? zoneColorById?.get(table.pricingZoneId) : undefined;
             const isRow = isTheaterRowPlan(table.shape, table.rowMeta);
+            const isChair = isStandaloneChairPlan(table.chairMeta);
             const visual = getTableVisualStyle(table.shape, Boolean(tableHasSelection || isFocused), undefined);
             const availableSeatsCount = table.seats.filter((s) => s.available).length;
 
@@ -319,14 +327,16 @@ export default function SeatSelectionPlanCanvas({
                   }}
                   className={cn(
                     'relative flex items-center justify-center text-center cursor-pointer transition-shadow',
-                    isRow ? 'min-w-[7.5rem] min-h-8 rounded-full bg-surface/90 border border-border px-2' : visual.className,
+                    isChair && 'min-w-10 min-h-10 rounded-full bg-transparent border-0',
+                    isRow && !isChair && 'min-w-[7.5rem] min-h-8 rounded-full bg-surface/90 border border-border px-2',
+                    !isRow && !isChair && visual.className,
                     tableHasSelection && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
                     isFocused && !tableHasSelection && 'ring-2 ring-amber-500 ring-offset-1 ring-offset-background',
                   )}
-                  style={isRow ? undefined : visual.style}
+                  style={isRow || isChair ? undefined : visual.style}
                   title={`${table.name} (${availableSeatsCount}/${table.capacity} places libres)`}
                 >
-                  <div className="px-1 relative z-10 pointer-events-none">
+                  <div className={cn('px-1 relative z-10 pointer-events-none', isChair && 'hidden sm:block')}>
                     <div className="truncate max-w-[5.5rem] sm:max-w-[72px] font-semibold text-[11px] sm:text-[10px]">{table.name}</div>
                     {table.seats[0]?.pricingZoneName && (
                       <div
@@ -343,9 +353,11 @@ export default function SeatSelectionPlanCanvas({
                   </div>
 
                   {table.seats.map((seat) => {
-                    const coords = isTheaterRowPlan(table.shape, table.rowMeta)
-                      ? getRowSeatCoordinates2D(table.capacity, seat.seatIndex, table.rowMeta)
-                      : getSeatCoordinates(table.shape, table.capacity, seat.seatIndex);
+                    const coords = isChair
+                      ? { x: 0, y: 0, rotationDeg: table.chairMeta?.rotation ?? 0 }
+                      : isTheaterRowPlan(table.shape, table.rowMeta)
+                        ? getRowSeatCoordinates2D(table.capacity, seat.seatIndex, table.rowMeta)
+                        : getSeatCoordinates(table.shape, table.capacity, seat.seatIndex);
                     const isSelected = isSeatSelected(seat.tableId, seat.seatIndex);
                     const badge = getSeatBadge(seat.tableId, seat.seatIndex);
                     const seatZoneColor = seat.pricingZoneId ? zoneColorById?.get(seat.pricingZoneId) : zoneColor;
@@ -373,10 +385,11 @@ export default function SeatSelectionPlanCanvas({
                           !seat.available && 'opacity-35 cursor-not-allowed bg-muted text-muted border-border',
                           seat.available && !isSelected && 'bg-surface hover:bg-primary/10 hover:border-primary cursor-pointer border-border text-foreground',
                           isSelected && 'bg-primary-solid text-primary-foreground border-primary-solid scale-110 shadow-md font-extrabold ring-2 ring-primary-solid/40',
+                          seat.isPmr && 'ring-1 ring-sky-500/70',
                         )}
                         title={
                           seat.available
-                            ? `Siège ${seat.seatIndex + 1}${seat.pricingZoneName ? ` · ${seat.pricingZoneName}` : ''}${showZonePricing && seat.priceFc ? ` · ${formatFc(seat.priceFc)}` : ''}${isSelected ? ' (Sélectionné — cliquer pour retirer)' : ''}`
+                            ? `${seat.seatCode || `Siège ${seat.seatIndex + 1}`}${seat.isPmr ? ' · PMR' : ''}${seat.pricingZoneName ? ` · ${seat.pricingZoneName}` : ''}${showZonePricing && seat.priceFc ? ` · ${formatFc(seat.priceFc)}` : ''}${isSelected ? ' (Sélectionné — cliquer pour retirer)' : ''}`
                             : 'Occupé'
                         }
                       >
@@ -394,7 +407,7 @@ export default function SeatSelectionPlanCanvas({
                             opacity: seat.available ? 0.85 : 0.35,
                           }}
                         />
-                        <span className="relative z-10">{seat.seatIndex + 1}</span>
+                        <span className="relative z-10">{isChair && seat.isPmr ? 'PMR' : seat.seatIndex + 1}</span>
                         {badge != null && (
                           <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-emerald-500 text-white text-[7px] font-black flex items-center justify-center border border-white z-20">
                             {badge}

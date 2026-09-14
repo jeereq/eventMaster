@@ -21,6 +21,13 @@ export type SeatRowMeta = {
   focusX?: number;
   focusY?: number;
   rowName?: string;
+  seatCodes?: string[];
+};
+
+export type SeatChairMeta = {
+  standalone?: boolean;
+  rotation?: number;
+  isPmr?: boolean;
 };
 
 export function isTheaterRowPlan(shape?: string | null, rowMeta?: SeatRowMeta | null): boolean {
@@ -41,15 +48,35 @@ export function webglKindForPlanTable(shape?: string | null, rowMeta?: SeatRowMe
   return isTheaterRowPlan(shape, rowMeta) ? 'row' : 'table';
 }
 
+export function isStandaloneChairPlan(chairMeta?: SeatChairMeta | null): boolean {
+  return chairMeta?.standalone === true;
+}
+
 export function furnitureKindById(
   furniture: Array<{ id: string; kind: string }> | undefined,
   id: string,
-): 'row' | 'table' {
-  return furniture?.find((item) => item.id === id)?.kind === 'row' ? 'row' : 'table';
+): 'row' | 'table' | 'chair' {
+  const kind = furniture?.find((item) => item.id === id)?.kind;
+  if (kind === 'row' || kind === 'chair') return kind;
+  return 'table';
+}
+
+export function formatCheckoutSeatLabel(opts: {
+  tableName: string;
+  seatIndex: number;
+  seatCode?: string | null;
+  standalone?: boolean;
+  isPmr?: boolean;
+}): string {
+  if (opts.standalone) {
+    return opts.isPmr ? `${opts.tableName} · PMR` : opts.tableName;
+  }
+  const seat = opts.seatCode || `Siège ${opts.seatIndex + 1}`;
+  return opts.isPmr ? `${opts.tableName} · ${seat} · PMR` : `${opts.tableName} · ${seat}`;
 }
 
 export type WebGLTicketSelection = {
-  kind: 'table' | 'row';
+  kind: 'table' | 'row' | 'chair';
   id: string;
   seatIndex?: number;
 };
@@ -87,6 +114,7 @@ export function resolveTicketSeatPick(sel: { kind: string; id: string; seatIndex
   seatIndex?: number;
 } | null {
   if (!sel) return null;
+  if (sel.kind === 'chair') return { tableId: sel.id, seatIndex: sel.seatIndex ?? 0 };
   if (sel.kind !== 'table' && sel.kind !== 'row') return null;
   return { tableId: sel.id, seatIndex: sel.seatIndex };
 }

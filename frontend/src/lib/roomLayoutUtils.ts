@@ -5491,7 +5491,10 @@ function gridPositions(count: number, margin = 12, maxCol?: number) {
 
 export function calculateBlueprintCapacity(blueprint: RoomLayoutBlueprint): number {
   return blueprint.furniture.reduce((sum, item) => {
-    if (item.kind === 'table') return sum + item.capacity;
+    if (item.kind === 'table') {
+      const hidden = item.hiddenSeatIndices?.length ?? 0;
+      return sum + Math.max(0, item.capacity - hidden);
+    }
     if (item.kind === 'row') return sum + item.seatCount;
     if (item.kind === 'chair') return sum + 1;
     return sum;
@@ -6104,8 +6107,30 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
   }
 
   const tables = blueprint.furniture
-    .filter((item): item is Extract<typeof item, { kind: 'table' | 'row' }> => item.kind === 'table' || item.kind === 'row')
+    .filter((item): item is Extract<typeof item, { kind: 'table' | 'row' | 'chair' }> =>
+      item.kind === 'table' || item.kind === 'row' || item.kind === 'chair',
+    )
     .map((item) => {
+      if (item.kind === 'chair') {
+        const isPmr = item.chairType === 'WHEELCHAIR';
+        const seats: Record<number, string | null> = { 0: null };
+        return {
+          id: item.id,
+          sourceFurnitureId: item.id,
+          name: item.label || 'Siège',
+          shape: 'round' as TableShape,
+          capacity: 1,
+          chairType: item.chairType,
+          x: item.x,
+          y: item.y,
+          rotation: item.rotation ?? 0,
+          seats,
+          locked: item.locked ?? false,
+          chairMeta: { standalone: true, rotation: item.rotation ?? 0, isPmr },
+          pmrSeatIndices: isPmr ? [0] : undefined,
+        };
+      }
+
       if (item.kind === 'table') {
         const seats: Record<number, string | null> = {};
         for (let i = 0; i < item.capacity; i++) seats[i] = null;
@@ -6123,6 +6148,8 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
           y: item.y,
           seats,
           locked: item.locked ?? false,
+          hiddenSeatIndices: item.hiddenSeatIndices,
+          pmrSeatIndices: item.pmrSeatIndices,
         };
       }
 
@@ -6139,6 +6166,7 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
         y: item.y,
         seats,
         locked: true,
+        pmrSeatIndices: item.pmrSeatIndices,
         rowMeta: {
           tier: item.tier,
           curve: item.curve ?? 0,
