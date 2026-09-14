@@ -1,8 +1,13 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import GuestRoomPlanCanvas from '@/components/GuestRoomPlanCanvas';
-import RoomWebGLViewer, { type RoomWebGLCaptureApi } from '@/components/RoomWebGLViewer';
+import type { RoomWebGLCaptureApi } from '@/components/RoomWebGLViewer';
+
+const RoomWebGLViewer = dynamic(() => import('@/components/RoomWebGLViewer'), {
+  ssr: false,
+});
 import { buildTablePlanPreviewBlueprint } from '@/lib/tablePlanPreviewBlueprint';
 import { ensureBlueprintDefaults, type RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
 import type { LightingPreset } from '@/lib/roomRenderQuality';

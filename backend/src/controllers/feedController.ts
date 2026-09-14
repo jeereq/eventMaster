@@ -107,6 +107,12 @@ export async function getEventFeed(req: Request, res: Response) {
   try {
     const eventId = req.params.eventId as string;
 
+    const limitRaw = req.query.limit;
+    const hasLimit = limitRaw != null && String(limitRaw) !== '';
+    const limit = hasLimit
+      ? Math.min(200, Math.max(1, Number.parseInt(String(limitRaw), 10) || 80))
+      : 80;
+
     const posts = await prisma.eventPost.findMany({
       where: { eventId },
       include: {
@@ -115,6 +121,7 @@ export async function getEventFeed(req: Request, res: Response) {
         },
       },
       orderBy: { createdAt: 'desc' },
+      take: limit,
     });
 
     return res.json(posts);

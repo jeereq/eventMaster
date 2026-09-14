@@ -1,5 +1,5 @@
 import { Response } from 'express';
-import { AuthenticatedRequest } from '../middleware/auth';
+import { AuthenticatedRequest, invalidateLicenseCache } from '../middleware/auth';
 import { prisma } from '../db';
 import { PlanType, Role } from '@prisma/client';
 import bcrypt from 'bcryptjs';
@@ -575,6 +575,7 @@ export async function updateTenantPlanOrLicense(req: AuthenticatedRequest, res: 
         pendingPlan: newPlanKey === 'FREE' ? existing.pendingPlan : null,
       },
     });
+    invalidateLicenseCache(id);
 
     let billingResult = null;
     if (

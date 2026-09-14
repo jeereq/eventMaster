@@ -43,12 +43,25 @@ export async function getGuests(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Accès refusé à cet événement.' });
     }
 
+    const limitRaw = req.query.limit;
+    const hasLimit = limitRaw != null && String(limitRaw) !== '';
+    const limit = hasLimit
+      ? Math.min(500, Math.max(1, Number.parseInt(String(limitRaw), 10) || 100))
+      : undefined;
+    const offset = Math.max(0, Number.parseInt(String(req.query.offset || '0'), 10) || 0);
+
     const guests = await prisma.guest.findMany({
       where: { eventId },
       orderBy: { lastName: 'asc' },
+      ...(limit ? { take: limit, skip: offset } : {}),
     });
 
-    return res.json(guests);
+    if (!limit) {
+      return res.json(guests);
+    }
+
+    const total = await prisma.guest.count({ where: { eventId } });
+    return res.json({ guests, total, limit, offset });
   } catch (error: any) {
     console.error('Erreur lors de la récupération des invités:', error);
     return res.status(500).json({ error: 'Erreur lors de la récupération des invités' });

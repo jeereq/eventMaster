@@ -13,16 +13,9 @@ import {
   ClipboardList, Eye, Utensils, FileSpreadsheet, Download, LayoutGrid,
   Building2, ScanLine, Shirt, Globe, GlobeLock, Heart,
 } from 'lucide-react';
-import TablePlanner from './TablePlanner';
-import EventStaffPanel from './EventStaffPanel';
-import EventFeedManager from './EventFeedManager';
-import GuestProtocolPanel from './GuestProtocolPanel';
-import EventTaskPanel from '@/components/EventTaskPanel';
-import ProtocolTasksPanel from '@/components/ProtocolTasksPanel';
-import ProtocolTasksInbox from '@/components/ProtocolTasksInbox';
+import dynamic from 'next/dynamic';
 import EventGuestGuidelinesEditor from '@/components/EventGuestGuidelinesEditor';
 import EventWorkflowPanel from '@/components/EventWorkflowPanel';
-import EventConfigForm from '@/components/EventConfigForm';
 import {
   computeEventWorkflowState,
   type EventWorkflowTab,
@@ -53,9 +46,6 @@ import {
 } from '@/lib/planAccess';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
 import { eventDashboardHref, eventsListHref, isEventWorkspaceTab, type EventWorkspaceTab } from '@/lib/eventRoutes';
-import EventPrepPanel from '@/components/EventPrepPanel';
-import OrgTicketingView from '@/components/OrgTicketingView';
-import EventDonationsReportView from '@/components/EventDonationsReportView';
 import { isB2cPlanId, formatFc } from '@/config/landingPricing';
 import { formatEventPlace } from '@/lib/eventPlace';
 import type { EventConfigPayload } from '@/lib/eventConfig';
@@ -82,6 +72,18 @@ import {
   type RsvpField,
 } from '@/lib/rsvpFormFields';
 import RsvpFieldTypeEditor from '@/components/RsvpFieldTypeEditor';
+
+const EventConfigForm = dynamic(() => import('@/components/EventConfigForm'), { ssr: false });
+const TablePlanner = dynamic(() => import('./TablePlanner'), { ssr: false });
+const EventStaffPanel = dynamic(() => import('./EventStaffPanel'), { ssr: false });
+const EventFeedManager = dynamic(() => import('./EventFeedManager'), { ssr: false });
+const GuestProtocolPanel = dynamic(() => import('./GuestProtocolPanel'), { ssr: false });
+const EventTaskPanel = dynamic(() => import('@/components/EventTaskPanel'), { ssr: false });
+const ProtocolTasksPanel = dynamic(() => import('@/components/ProtocolTasksPanel'), { ssr: false });
+const ProtocolTasksInbox = dynamic(() => import('@/components/ProtocolTasksInbox'), { ssr: false });
+const EventPrepPanel = dynamic(() => import('@/components/EventPrepPanel'), { ssr: false });
+const OrgTicketingView = dynamic(() => import('@/components/OrgTicketingView'), { ssr: false });
+const EventDonationsReportView = dynamic(() => import('@/components/EventDonationsReportView'), { ssr: false });
 
 const GUEST_FILTER_CONTROL =
   'w-full min-h-11 px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs font-semibold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary';
@@ -142,6 +144,13 @@ interface EventItem {
   tenantId?: string | null;
   donations?: import('@/lib/donationsAccess').EventDonationsConfig | null;
   collectionTerms?: import('@/lib/collectionTerms').CollectionTermsAcceptance | null;
+  assignmentNotifications?: {
+    notified?: number;
+    skipped?: number;
+    skippedReason?: string;
+    queued?: boolean;
+    pendingCount?: number;
+  };
 }
 
 interface OrgRoomOption {
@@ -1099,7 +1108,7 @@ Merci de confirmer votre présence :
   };
 
   useEffect(() => {
-    if (!showEventModal) return;
+    if (!showEventModal && activeTab !== 'invitations') return;
     let cancelled = false;
     (async () => {
       try {
@@ -1112,7 +1121,7 @@ Merci de confirmer votre présence :
     return () => {
       cancelled = true;
     };
-  }, [showEventModal]);
+  }, [showEventModal, activeTab]);
 
   const openAddGuestModal = () => {
     if (guestsAtLimit && !editingGuestId) {
@@ -1252,6 +1261,11 @@ Merci de confirmer votre présence :
   const handleEditEventClick = (event: EventItem) => {
     setEventFormTarget(event);
     setShowEventModal(true);
+    void api.get(`/events/${event.id}`).then((detail: EventItem) => {
+      setEventFormTarget(detail);
+    }).catch(() => {
+      /* le formulaire s’ouvre déjà avec la fiche liste */
+    });
   };
 
   const handleDeleteEvent = async (id: string) => {
@@ -1285,6 +1299,13 @@ Merci de confirmer votre présence :
       if (skippedReason === 'forfait') {
         setSuccess(
           'Plan de table enregistré. Les notifications de placement ne sont pas incluses dans votre forfait actuel.',
+        );
+      } else if (updatedEvent.assignmentNotifications?.queued) {
+        const pending = updatedEvent.assignmentNotifications?.pendingCount ?? 0;
+        setSuccess(
+          pending > 0
+            ? `Plan enregistré. ${pending} notification${pending > 1 ? 's' : ''} de placement partent en arrière-plan.`
+            : 'Plan enregistré. Les notifications de placement partent en arrière-plan.',
         );
       } else if (notified > 0) {
         if (planFeatures?.seatNotifications) {
@@ -1360,13 +1381,19 @@ Merci de confirmer votre présence :
     setError('');
     setSuccess('');
     try {
-      const [guestsData, templatesData, invitesData] = await Promise.all([
+      const [detail, guestsData, invitesData] = await Promise.all([
+        api.get(`/events/${event.id}`) as Promise<EventItem>,
         api.get(`/events/${event.id}/guests`),
-        api.get('/templates').catch(() => []),
         api.get(`/events/${event.id}/invitations`).catch(() => []),
       ]);
+      setSelectedEvent(detail);
+      setGuestGuidelines(normalizeGuestGuidelines(detail.guestGuidelines));
+      setEventRsvpFields(
+        parseEventRsvpForm(detail.rsvpForm).length
+          ? parseEventRsvpForm(detail.rsvpForm)
+          : createMandatoryRsvpFields(),
+      );
       setGuests(Array.isArray(guestsData) ? guestsData : []);
-      setTemplates(Array.isArray(templatesData) ? templatesData : []);
       setInvitations(Array.isArray(invitesData) ? invitesData : []);
     } catch (err: any) {
       setError('Erreur lors du chargement des invités.');
@@ -2999,7 +3026,10 @@ Merci de confirmer votre présence :
                         </label>
                       </div>
 
-                      <div className={guestsViewMode === 'grid' ? guestsGridClass : listStackClass}>
+                      <div
+                        className={guestsViewMode === 'grid' ? guestsGridClass : listStackClass}
+                        style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 88px' }}
+                      >
                         {paginatedGuestsList.map((g) => {
                           const isSelected = selectedGuestIds.includes(g.id);
                           const rsvpTone = (g.rsvp === 'ACCEPTED' ? 'emerald' : g.rsvp === 'DECLINED' ? 'rose' : 'amber') as 'emerald' | 'rose' | 'amber';

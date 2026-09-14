@@ -7,7 +7,7 @@ import {
   checkoutQuantityCap,
   buyerTicketsLimitMessage,
 } from '../services/ticketOrderService';
-import { assertSeatAvailable, checkSeatsAvailability, listSeatInventory } from '../services/seatSelectionService';
+import { assertSeatsAvailable, checkSeatsAvailability, listSeatInventory } from '../services/seatSelectionService';
 import {
   normalizeTicketPricingMode,
   priceFromFcForEvent,
@@ -196,6 +196,32 @@ export async function listPublicEvents(req: Request, res: Response) {
     if (Number.isFinite(maxPrice) && maxPrice >= 0) priceFilter.lte = maxPrice;
 
     const events = await prisma.event.findMany({
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        description: true,
+        date: true,
+        location: true,
+        city: true,
+        commune: true,
+        neighborhood: true,
+        latitude: true,
+        longitude: true,
+        isPublic: true,
+        ticketingEnabled: true,
+        ticketPriceFc: true,
+        ticketsTotal: true,
+        ticketsSold: true,
+        ticketsPerBuyerLimit: true,
+        seatSelectionEnabled: true,
+        ticketPricingMode: true,
+        tablePlan: true,
+        eventPrep: true,
+        photos: true,
+        tenantId: true,
+        tenant: { select: { name: true } },
+      },
       where: {
         isPublic: true,
         isBlockedByAdmin: false,
@@ -232,7 +258,6 @@ export async function listPublicEvents(req: Request, res: Response) {
             }
           : {}),
       },
-      include: { tenant: { select: { name: true } } },
       orderBy: { date: 'asc' },
       take: hasGeo || locationBits.length ? 200 : 80,
     });
@@ -688,9 +713,7 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
     // Règle d'or : Vérifier la disponibilité de la place AVANT d'initier tout paiement
     if (event.seatSelectionEnabled && requestedSeats.length > 0) {
       try {
-        for (const s of requestedSeats) {
-          await assertSeatAvailable(event.id, s.tableId, s.seatIndex);
-        }
+        await assertSeatsAvailable(event.id, requestedSeats);
       } catch (err: any) {
         return res.status(409).json({
           error: err?.message || 'Un ou plusieurs sièges sélectionnés ne sont plus disponibles. Veuillez choisir une autre place.',

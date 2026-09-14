@@ -10,7 +10,7 @@ import { PwaInstallProvider } from "@/context/PwaInstallContext";
 import ViewPreferencesBridge from "@/components/ViewPreferencesBridge";
 import MaintenanceOverlay from "@/components/MaintenanceOverlay";
 import BrandFaviconSync from "@/components/BrandFaviconSync";
-import GlobalAiSimulatorFab from "@/components/GlobalAiSimulatorFab";
+import GlobalAiSimulatorFabHost from "@/components/GlobalAiSimulatorFabHost";
 import MobileSplashScreen from "@/components/MobileSplashScreen";
 import NavigationProgressBar from "@/components/NavigationProgressBar";
 import NavigationScrollTop from "@/components/NavigationScrollTop";
@@ -152,7 +152,7 @@ html.em-splash-boot,html.em-splash-boot body{background:#f6f7f8!important;overfl
                     {children}
                   </Suspense>
                   <Suspense fallback={null}>
-                    <GlobalAiSimulatorFab />
+                    <GlobalAiSimulatorFabHost />
                   </Suspense>
                 </ViewPreferencesBridge>
               </PwaInstallProvider>

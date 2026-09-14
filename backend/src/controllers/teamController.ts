@@ -2,7 +2,7 @@ import { Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../db';
 import { AuthenticatedRequest } from '../middleware/auth';
-import { isValidOrgRole, resolveOrgAccess } from '../services/permissionsService';
+import { isValidOrgRole, resolveOrgAccess, invalidateOrgAccessCache } from '../services/permissionsService';
 import { assertOrgManagerQuota, assertPlanFeature, PlanFeatureError } from '../services/planFeaturesService';
 import {
   ensureOrgCommercialReferralCode,
@@ -287,6 +287,7 @@ export async function updateTeamMember(req: AuthenticatedRequest, res: Response)
       data: updateData,
       select: userSelect,
     });
+    invalidateOrgAccessCache(memberId, tenantId);
 
     const finalUser = await prisma.user.findUnique({ where: { id: memberId }, select: userSelect });
 

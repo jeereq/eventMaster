@@ -65,8 +65,12 @@ import EventPrepListingModal, {
   type EventPrepPreviewTarget,
 } from '@/components/EventPrepListingModal';
 import EventPrepVendorSheet from '@/components/EventPrepVendorSheet';
-import EventPrepAiSimulator from '@/components/EventPrepAiSimulator';
 import EventPlanMethodPicker from '@/components/EventPlanMethodPicker';
+import dynamic from 'next/dynamic';
+
+const EventPrepAiSimulator = dynamic(() => import('@/components/EventPrepAiSimulator'), {
+  ssr: false,
+});
 
 type OrgRoomOption = {
   id: string;

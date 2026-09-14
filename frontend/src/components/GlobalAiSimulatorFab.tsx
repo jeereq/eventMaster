@@ -1,11 +1,15 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Building2, Mail, Sparkles, Wand2 } from 'lucide-react';
 import { Modal } from '@/components/ui';
-import EventPrepAiSimulator from '@/components/EventPrepAiSimulator';
+
+const EventPrepAiSimulator = dynamic(() => import('@/components/EventPrepAiSimulator'), {
+  ssr: false,
+});
 import AiTokenBuyButton from '@/components/AiTokenBuyButton';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import { isAiSimulationThresholdReached } from '@/components/AiSimulationCounter';
@@ -224,17 +228,12 @@ export default function GlobalAiSimulatorFab() {
             </p>
           ) : null}
 
-          {placement.embedSimulator ? (
+          {open ? (
             <EventPrepAiSimulator
-              defaultOpen
+              defaultOpen={placement.embedSimulator}
               onAllowanceChange={(next) => setAllowance(next)}
             />
-          ) : (
-            <EventPrepAiSimulator
-              defaultOpen={false}
-              onAllowanceChange={(next) => setAllowance(next)}
-            />
-          )}
+          ) : null}
         </div>
       </Modal>
 

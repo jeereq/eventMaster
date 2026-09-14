@@ -128,11 +128,19 @@ function apiBase() {
   return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
 }
 
+const SITE_REFRESH_MIN_MS = 120_000;
+let lastSiteRefreshAt = 0;
+
 export function PlatformSiteProvider({ children }: { children: React.ReactNode }) {
   const [site, setSite] = useState<PublicSiteConfig>(DEFAULT_PUBLIC_SITE);
   const [ready, setReady] = useState(false);
 
-  const refresh = async () => {
+  const refresh = async (force = false) => {
+    const now = Date.now();
+    if (!force && lastSiteRefreshAt > 0 && now - lastSiteRefreshAt < SITE_REFRESH_MIN_MS) {
+      return;
+    }
+    lastSiteRefreshAt = now;
     try {
       const res = await fetch(`${apiBase()}/public/site`, { cache: 'no-store' });
       if (!res.ok) throw new Error('site fetch failed');
@@ -185,10 +193,10 @@ export function PlatformSiteProvider({ children }: { children: React.ReactNode }
   };
 
   useEffect(() => {
-    void refresh();
-    const onUpdated = () => void refresh();
+    void refresh(true);
+    const onUpdated = () => void refresh(true);
     const onVisible = () => {
-      if (document.visibilityState === 'visible') void refresh();
+      if (document.visibilityState === 'visible') void refresh(false);
     };
     window.addEventListener('em-platform-settings-updated', onUpdated);
     document.addEventListener('visibilitychange', onVisible);

@@ -77,7 +77,10 @@ export async function listSeatInventory(eventId: string): Promise<{
   };
 }
 
-export async function assertSeatAvailable(eventId: string, tableId: string, seatIndex: number) {
+export async function assertSeatsAvailable(
+  eventId: string,
+  seats: Array<{ tableId: string; seatIndex: number }>,
+) {
   await purgeExpiredSeatHolds(eventId);
   const event = await prisma.event.findUnique({
     where: { id: eventId },
@@ -86,20 +89,41 @@ export async function assertSeatAvailable(eventId: string, tableId: string, seat
   if (!event?.seatSelectionEnabled) {
     throw new Error('La sélection de siège n’est pas activée pour cet événement.');
   }
-  const table = planTables(event.tablePlan).find((t) => t.id === tableId);
-  if (!table) throw new Error('Table introuvable sur le plan.');
+  const tables = planTables(event.tablePlan);
+  const tableById = new Map(tables.map((table) => [table.id, table]));
   const holds = await prisma.seatHold.findMany({
     where: { eventId, expiresAt: { gt: new Date() } },
     select: { tableId: true, seatIndex: true },
   });
   const holdKeys = new Set(holds.map((h) => holdKey(h.tableId, h.seatIndex)));
-  const bookable = isSeatBookable(table, seatIndex, holdKeys);
-  if (!bookable.ok) {
-    if (bookable.reason === 'invalid' || bookable.reason === 'hidden') {
-      throw new Error('Siège invalide.');
+  const seen = new Set<string>();
+
+  for (const seat of seats) {
+    const key = holdKey(seat.tableId, seat.seatIndex);
+    if (seen.has(key)) {
+      throw new Error('Le même siège a été demandé plusieurs fois.');
     }
-    throw new Error(`Le siège n°${seatIndex + 1} à la table « ${table.name || tableId} » est déjà réservé.`);
+    seen.add(key);
+    const table = tableById.get(seat.tableId);
+    if (!table) throw new Error('Table introuvable sur le plan.');
+    const bookable = isSeatBookable(table, seat.seatIndex, holdKeys);
+    if (!bookable.ok) {
+      if (bookable.reason === 'invalid' || bookable.reason === 'hidden') {
+        throw new Error('Siège invalide.');
+      }
+      throw new Error(
+        `Le siège n°${seat.seatIndex + 1} à la table « ${table.name || seat.tableId} » est déjà réservé.`,
+      );
+    }
   }
+
+  return tables;
+}
+
+export async function assertSeatAvailable(eventId: string, tableId: string, seatIndex: number) {
+  const tables = await assertSeatsAvailable(eventId, [{ tableId, seatIndex }]);
+  const table = tables.find((item) => item.id === tableId);
+  if (!table) throw new Error('Table introuvable sur le plan.');
   return table;
 }
 
@@ -143,25 +167,19 @@ export async function createSeatHold(opts: {
   buyerEmail: string;
   orderId: string;
 }) {
-  await assertSeatAvailable(opts.eventId, opts.tableId, opts.seatIndex);
-  const expiresAt = new Date(Date.now() + HOLD_TTL_MS);
-  // Nettoyer un hold expiré sur la même clé
-  await prisma.seatHold.deleteMany({
-    where: {
-      eventId: opts.eventId,
-      tableId: opts.tableId,
-      seatIndex: opts.seatIndex,
-      expiresAt: { lt: new Date() },
-    },
+  await createMultipleSeatHolds({
+    eventId: opts.eventId,
+    seats: [{ tableId: opts.tableId, seatIndex: opts.seatIndex }],
+    buyerEmail: opts.buyerEmail,
+    orderId: opts.orderId,
   });
-  return prisma.seatHold.create({
-    data: {
-      eventId: opts.eventId,
-      tableId: opts.tableId,
-      seatIndex: opts.seatIndex,
-      buyerEmail: opts.buyerEmail,
-      orderId: opts.orderId,
-      expiresAt,
+  return prisma.seatHold.findUnique({
+    where: {
+      eventId_tableId_seatIndex: {
+        eventId: opts.eventId,
+        tableId: opts.tableId,
+        seatIndex: opts.seatIndex,
+      },
     },
   });
 }
@@ -172,31 +190,26 @@ export async function createMultipleSeatHolds(opts: {
   buyerEmail: string;
   orderId: string;
 }) {
-  await purgeExpiredSeatHolds(opts.eventId);
-  for (const s of opts.seats) {
-    await assertSeatAvailable(opts.eventId, s.tableId, s.seatIndex);
-  }
+  if (opts.seats.length === 0) return;
+  await assertSeatsAvailable(opts.eventId, opts.seats);
   const expiresAt = new Date(Date.now() + HOLD_TTL_MS);
-  for (const s of opts.seats) {
-    await prisma.seatHold.deleteMany({
-      where: {
-        eventId: opts.eventId,
-        tableId: s.tableId,
-        seatIndex: s.seatIndex,
-        expiresAt: { lt: new Date() },
-      },
-    });
-    await prisma.seatHold.create({
-      data: {
-        eventId: opts.eventId,
-        tableId: s.tableId,
-        seatIndex: s.seatIndex,
-        buyerEmail: opts.buyerEmail,
-        orderId: opts.orderId,
-        expiresAt,
-      },
-    });
-  }
+  await prisma.seatHold.deleteMany({
+    where: {
+      eventId: opts.eventId,
+      expiresAt: { lt: new Date() },
+      OR: opts.seats.map((seat) => ({ tableId: seat.tableId, seatIndex: seat.seatIndex })),
+    },
+  });
+  await prisma.seatHold.createMany({
+    data: opts.seats.map((seat) => ({
+      eventId: opts.eventId,
+      tableId: seat.tableId,
+      seatIndex: seat.seatIndex,
+      buyerEmail: opts.buyerEmail,
+      orderId: opts.orderId,
+      expiresAt,
+    })),
+  });
 }
 
 /** Assigne le siège dans tablePlan JSON et libère le hold. */

@@ -1,6 +1,25 @@
 import { OrgRole, StaffRole } from '@prisma/client';
 import { prisma } from '../db';
 import { isTenantManager } from '../utils/tenantAccess';
+import { createTtlCache } from '../utils/ttlCache';
+
+const ORG_ACCESS_TTL_MS = 90_000;
+const orgAccessCache = createTtlCache<OrgAccess>(ORG_ACCESS_TTL_MS);
+
+function orgAccessCacheKey(userId: string, tenantId: string) {
+  return `${userId}:${tenantId}`;
+}
+
+export function invalidateOrgAccessCache(userId?: string, tenantId?: string) {
+  if (userId && tenantId) {
+    orgAccessCache.delete(orgAccessCacheKey(userId, tenantId));
+    return;
+  }
+  if (tenantId) {
+    const suffix = `:${tenantId}`;
+    orgAccessCache.deleteMatching((key) => key.endsWith(suffix));
+  }
+}
 
 export type OrgAccessLevel = 'owner' | 'manager' | 'protocol' | 'commercial' | 'staff' | 'client' | 'none';
 
@@ -20,6 +39,15 @@ export interface OrgAccess {
 }
 
 export async function resolveOrgAccess(userId: string, tenantId: string): Promise<OrgAccess> {
+  const cacheKey = orgAccessCacheKey(userId, tenantId);
+  const cached = orgAccessCache.get(cacheKey);
+  if (cached) return cached;
+  const access = await computeOrgAccess(userId, tenantId);
+  orgAccessCache.set(cacheKey, access);
+  return access;
+}
+
+async function computeOrgAccess(userId: string, tenantId: string): Promise<OrgAccess> {
   const user = await prisma.user.findFirst({
     where: { id: userId, tenantId, role: 'USER' },
     select: { id: true, orgRole: true },

@@ -1,6 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { prisma } from '../db';
+import { createTtlCache } from '../utils/ttlCache';
+
+const LICENSE_CACHE_TTL_MS = 60_000;
+const licenseCache = createTtlCache<{
+  accountKind: string;
+  licenseActive: boolean;
+  licenseExpiresAt: Date | null;
+}>(LICENSE_CACHE_TTL_MS);
+
+export function invalidateLicenseCache(tenantId: string) {
+  licenseCache.delete(tenantId);
+}
 
 export const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
 
@@ -95,12 +107,17 @@ export async function requireActiveLicense(req: AuthenticatedRequest, res: Respo
   }
 
   try {
-    const tenant = await prisma.tenant.findUnique({
-      where: { id: tenantId },
-    });
-
+    let tenant = licenseCache.get(tenantId);
     if (!tenant) {
-      return res.status(404).json({ error: 'Organisation non trouvée.' });
+      const row = await prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { accountKind: true, licenseActive: true, licenseExpiresAt: true },
+      });
+      if (!row) {
+        return res.status(404).json({ error: 'Organisation non trouvée.' });
+      }
+      tenant = row;
+      licenseCache.set(tenantId, row);
     }
 
     if (tenant.accountKind === 'CLIENT') {

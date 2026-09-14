@@ -18,6 +18,7 @@ import {
   type EventDonationsConfig,
 } from '../services/donationsAccess';
 import { notifyTableAssignmentChanges } from '../services/tableAssignmentNotificationService';
+import { findAssignmentChanges } from '../utils/tablePlanAssignment';
 import { toPrismaJson } from '../utils/prismaJson';
 import { uniqueSlug } from '../utils/slug';
 import { parseTicketsPerBuyerLimit } from '../utils/ticketOrderUtils';
@@ -207,6 +208,47 @@ async function eventVisibilityData(
   };
 }
 
+const EVENT_LIST_SELECT = {
+  id: true,
+  tenantId: true,
+  roomId: true,
+  title: true,
+  description: true,
+  date: true,
+  endsAt: true,
+  location: true,
+  city: true,
+  commune: true,
+  neighborhood: true,
+  eventKind: true,
+  clientName: true,
+  estimatedGuests: true,
+  dayOfContactName: true,
+  dayOfContactPhone: true,
+  reminderFrequency: true,
+  latitude: true,
+  longitude: true,
+  isPublic: true,
+  slug: true,
+  publishedAt: true,
+  isBlockedByAdmin: true,
+  adminBlockReason: true,
+  ticketingEnabled: true,
+  ticketPriceFc: true,
+  ticketPricingMode: true,
+  ticketsTotal: true,
+  ticketsSold: true,
+  ticketsPerBuyerLimit: true,
+  seatSelectionEnabled: true,
+  themeId: true,
+  photos: true,
+  eventPrep: true,
+  createdAt: true,
+  updatedAt: true,
+  room: { select: { id: true, name: true, roomType: true } },
+  _count: { select: { posts: true } },
+} as const;
+
 // List all events for the current tenant
 export async function getEvents(req: AuthenticatedRequest, res: Response) {
   try {
@@ -224,10 +266,7 @@ export async function getEvents(req: AuthenticatedRequest, res: Response) {
 
     const events = await prisma.event.findMany({
       where,
-      include: {
-        room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } },
-        _count: { select: { posts: true } },
-      },
+      select: EVENT_LIST_SELECT,
       orderBy: { date: 'asc' },
     });
 
@@ -551,28 +590,48 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
     });
 
     let assignmentNotifications = null;
-    let eventForResponse = updatedEvent;
+    const eventForResponse = updatedEvent;
     if (mergedTablePlan !== undefined) {
-      assignmentNotifications = await notifyTableAssignmentChanges({
-        eventId: id,
-        tenantId,
-        oldPlan: existingEvent.tablePlan,
-        newPlan: mergedTablePlan,
-      });
-
-      if ((assignmentNotifications?.notified ?? 0) > 0) {
-        const planWithMeta = {
-          ...(typeof mergedTablePlan === 'object' && mergedTablePlan !== null ? mergedTablePlan : {}),
-          placementNotifiedAt: new Date().toISOString(),
+      const pendingGuestIds = findAssignmentChanges(existingEvent.tablePlan, mergedTablePlan);
+      if (pendingGuestIds.length > 0) {
+        assignmentNotifications = {
+          notified: 0,
+          skipped: 0,
+          queued: true,
+          pendingCount: pendingGuestIds.length,
+          results: [],
         };
-        eventForResponse = await prisma.event.update({
-          where: { id },
-          data: { tablePlan: planWithMeta },
-          include: {
-            room: { select: { id: true, name: true, roomType: true, layoutBlueprint: true } },
-            _count: { select: { posts: true } },
-          },
-        });
+        void notifyTableAssignmentChanges({
+          eventId: id,
+          tenantId,
+          oldPlan: existingEvent.tablePlan,
+          newPlan: mergedTablePlan,
+        })
+          .then(async (summary) => {
+            if ((summary?.notified ?? 0) <= 0) return;
+            const current = await prisma.event.findUnique({
+              where: { id },
+              select: { tablePlan: true },
+            });
+            const currentPlan =
+              current?.tablePlan && typeof current.tablePlan === 'object'
+                ? current.tablePlan
+                : mergedTablePlan;
+            await prisma.event.update({
+              where: { id },
+              data: {
+                tablePlan: toPrismaJson({
+                  ...(typeof currentPlan === 'object' && currentPlan !== null ? currentPlan : {}),
+                  placementNotifiedAt: new Date().toISOString(),
+                }),
+              },
+            });
+          })
+          .catch((err) => {
+            console.error('[table-assignment] notification asynchrone échouée', err);
+          });
+      } else {
+        assignmentNotifications = { notified: 0, skipped: 0, queued: false, pendingCount: 0, results: [] };
       }
     }
 

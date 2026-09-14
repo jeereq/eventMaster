@@ -80,10 +80,14 @@ import EventPlanBriefForm from '@/components/EventPlanBriefForm';
 import EventPlanMethodPicker from '@/components/EventPlanMethodPicker';
 import EventPlanPacks from '@/components/EventPlanPacks';
 import EventSavedPacks from '@/components/EventSavedPacks';
-import EventPrepAiSimulator from '@/components/EventPrepAiSimulator';
+import dynamic from 'next/dynamic';
 import DashboardAiStudios, { type DashboardAiStudioId } from '@/components/DashboardAiStudios';
 import CatalogueViewToggle from '@/components/CatalogueViewToggle';
 import EventPrepListingModal, { type EventPrepPreviewTarget } from '@/components/EventPrepListingModal';
+
+const EventPrepAiSimulator = dynamic(() => import('@/components/EventPrepAiSimulator'), {
+  ssr: false,
+});
 
 type HubTab = 'explore' | 'favorites' | 'plan' | 'packs';
 type PlanPrepView = 'manual' | 'ai' | 'final';

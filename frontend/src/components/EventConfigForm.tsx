@@ -57,8 +57,8 @@ import {
 } from '@/lib/eventProgram';
 import { lightingPresetLabels, type LightingPreset } from '@/lib/roomRenderQuality';
 import { ensureBlueprintDefaults, type RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
-import RoomLayoutPreview, { type RoomPreviewQuality } from '@/components/RoomLayoutPreview';
-import PublicEventZoneStudio3D from '@/components/PublicEventZoneStudio3D';
+import dynamic from 'next/dynamic';
+import type { RoomPreviewQuality } from '@/components/RoomLayoutPreview';
 import type { TablePlanPreviewTable } from '@/lib/tablePlanPreviewBlueprint';
 import {
   EVENT_CONFIG_TABS,
@@ -107,6 +107,15 @@ import {
   COLLECTION_COMMISSION_MAX_PERCENT,
   COLLECTION_COMMISSION_MIN_PERCENT,
 } from '@/config/legalConfig';
+
+const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
+  ssr: false,
+  loading: () => <div className="h-64 rounded-[var(--radius-card)] bg-surface-muted animate-pulse" aria-hidden />,
+});
+const PublicEventZoneStudio3D = dynamic(() => import('@/components/PublicEventZoneStudio3D'), {
+  ssr: false,
+  loading: () => <div className="h-64 rounded-[var(--radius-card)] bg-surface-muted animate-pulse" aria-hidden />,
+});
 
 const SELECT_CLASS =
   'w-full px-3.5 py-2.5 bg-surface-muted/50 backdrop-blur-sm dark:bg-background border border-border/80 dark:border-border rounded-[var(--radius-button)] text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all';

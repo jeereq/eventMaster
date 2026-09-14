@@ -311,6 +311,7 @@ model Event {
   @@index([isPublic, date])
   @@index([city])
   @@index([commune])
+  @@index([tenantId, date])
 }
 
 model Guest {
@@ -347,6 +348,7 @@ model Guest {
 
   @@unique([eventId, email])
   @@index([phone])
+  @@index([eventId, rsvp])
 }
 
 model TicketOrder {
@@ -541,6 +543,8 @@ model Invitation {
   channel     String       // EMAIL, WHATSAPP, EMAIL_AND_WHATSAPP
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+
+  @@index([eventId, createdAt])
 }
 
 model GuestShare {
@@ -568,6 +572,8 @@ model EventPost {
   publishedOnListing Boolean @default(false)
   createdAt DateTime       @default(now())
   comments  EventComment[]
+
+  @@index([eventId, createdAt])
 }
 
 model EventComment {
