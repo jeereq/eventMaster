@@ -246,9 +246,9 @@ export function planAudienceLabel(audience: PlanAudience | string): string {
     case 'VENUE':
       return 'Salle';
     case 'SERVICE':
-      return 'Presta';
+      return 'Métier';
     case 'CATALOG':
-      return 'Marketplace';
+      return 'Salle + métiers';
     default:
       return 'B2B';
   }
@@ -313,7 +313,7 @@ export const LANDING_PLANS: LandingPlan[] = [
   {
     id: 'FREE',
     ms365Name: 'Essentiel',
-    tagline: 'Découverte : tester EventMaster — flux invitations, ou 1 salle / 1 prestation.',
+    tagline: 'Découverte : tester EventMaster — flux invitations, ou 1 salle / 1 prestation (ou matériel).',
     monthlyPriceFc: 0,
     monthlyNote: 'Gratuit, sans carte bancaire',
     cta: 'Essayer sans carte',
@@ -321,7 +321,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaVariant: 'outline',
     tier: 'essentials',
     audience: 'B2B',
-    highlights: ['3 événements · 50 invités (essai)', '4 essais IA offerts, puis jetons', 'Invitations, RSVP, QR, PDF/GPS', '1 salle simple · 1 prestation'],
+    highlights: ['3 événements · 50 invités (essai)', '4 essais IA offerts, puis jetons', 'Invitations, RSVP, QR, PDF/GPS', '1 salle · 1 prestation / matériel'],
   },
   {
     id: 'PERSONAL_50',
@@ -479,7 +479,7 @@ export const LANDING_PLANS: LandingPlan[] = [
   {
     id: 'SERVICE',
     ms365Name: 'Prestataire',
-    tagline: 'Prestations illimitées, photos / vidéos, rayon et calendrier — sans salles ni événements.',
+    tagline: 'Prestations et Matériel & Équipements illimités (habits, véhicules, sono…) — sans salles ni événements.',
     monthlyPriceFc: 9900,
     monthlyNote: 'par prestataire / mois',
     cta: 'Publier mes prestations',
@@ -487,22 +487,30 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaVariant: 'primary',
     tier: 'service',
     audience: 'SERVICE',
-    badge: 'Prestas',
-    highlights: ['Prestations illimitées', '4 essais IA · recharge de jetons', 'Sans salles ni événements'],
+    badge: 'Métiers',
+    highlights: [
+      'Prestations + Matériel & Équipements illimités',
+      '4 essais IA · recharge de jetons',
+      'Sans salles ni événements',
+    ],
   },
   {
     id: 'CATALOG',
     ms365Name: 'Salle & presta',
-    tagline: 'Salles et prestations illimitées (éditeur complet) — sans événements ni invités.',
+    tagline: 'Salles, prestations et Matériel & Équipements illimités (éditeur complet) — sans événements ni invités.',
     monthlyPriceFc: 19900,
     monthlyNote: 'par offre / mois',
-    cta: 'Vendre salles et prestas',
+    cta: 'Vendre salles et métiers',
     ctaHref: '/register?kind=VENDOR&intent=vendor&plan=CATALOG',
     ctaVariant: 'primary',
     tier: 'catalog',
     audience: 'CATALOG',
-    badge: 'Salle + presta',
-    highlights: ['Salles ∞ + prestations ∞', 'Éditeur 2D/3D complet (80 tables)', '4 essais IA · recharge de jetons'],
+    badge: 'Salle + métiers',
+    highlights: [
+      'Salles ∞ + prestations / matériel ∞',
+      'Éditeur 2D/3D complet (80 tables)',
+      '4 essais IA · recharge de jetons',
+    ],
   },
 ];
 
@@ -1104,13 +1112,13 @@ export const ROLE_HIGHLIGHTS = [
     icon: 'building',
   },
   {
-    title: 'Prestataire',
-    description: 'Publie prestations, matériel et équipements. Les demandes arrivent dans votre espace.',
+    title: 'Métier (prestations & matériel)',
+    description: 'Publie prestations et Matériel & Équipements. Les demandes arrivent dans votre espace.',
     icon: 'briefcase',
   },
   {
     title: 'Client marketplace',
-    description: 'Cherche une salle ou un pro, compare, demande un devis — sans organiser d’événement.',
+    description: 'Cherche une salle, un métier ou du matériel — compare, demande un devis, sans organiser d’événement.',
     icon: 'heart',
   },
   {
@@ -1275,8 +1283,8 @@ export function planTierLabel(tier: LandingPlan['tier']): string {
     case 'venue':
       return 'Salles';
     case 'service':
-      return 'Prestataire';
+      return 'Métier';
     case 'catalog':
-      return 'Marketplace';
+      return 'Salle + métiers';
   }
 }

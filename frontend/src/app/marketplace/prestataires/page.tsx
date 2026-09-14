@@ -149,9 +149,9 @@ function MarketplaceServicesPageInner() {
       city={applied.city}
       searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
       cta={{
-        title: 'Vous proposez un service ?',
-        description: 'Publiez votre prestation avec zone d’intervention, médias et calendrier.',
-        primaryHref: '/register',
+        title: 'Vous proposez un métier ou du Matériel & Équipements ?',
+        description: 'Publiez prestations ou locations (habits, véhicules, sono…) avec zone, médias et calendrier.',
+        primaryHref: '/register?kind=VENDOR&intent=vendor&action=services',
         primaryLabel: 'Proposer mes services',
         secondaryHref: '/contact',
         secondaryLabel: 'Nous contacter',

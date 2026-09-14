@@ -115,49 +115,75 @@ export default function SiteMobileBottomBar({
     <nav
       aria-label="Navigation mobile principale"
       className={cn(
-        'em-site-bottom-nav md:hidden bg-surface/95 dark:bg-background/95 backdrop-blur-xl border-t border-border/80 shadow-[0_-8px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.35)] pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1 pl-[max(0.25rem,env(safe-area-inset-left))] pr-[max(0.25rem,env(safe-area-inset-right))]',
+        'em-site-bottom-nav md:hidden',
+        // Style Netflix signature : fond noir obsidienne cinématographique avec flou de verre
+        'bg-[#121212]/96 backdrop-blur-2xl',
+        'border-t border-white/[0.08]',
+        'shadow-[0_-8px_30px_rgba(0,0,0,0.6)]',
+        'pb-[max(0.45rem,env(safe-area-inset-bottom))] pt-1.5',
+        'pl-[max(0.25rem,env(safe-area-inset-left))] pr-[max(0.25rem,env(safe-area-inset-right))]',
         className,
       )}
     >
-      <div className="grid grid-cols-5 gap-0 items-center max-w-xl mx-auto">
+      <div className="grid grid-cols-5 gap-0 items-center max-w-xl mx-auto relative">
         {SITE_MOBILE_NAV_ITEMS.map((item) => {
           const active = isItemActive(item.href, pathname, currentHash);
           const Icon = item.icon;
           const isHashHref = item.href.startsWith('/#');
-          const classNameItem = cn(
-            'flex flex-col items-center justify-center gap-0.5 min-h-[48px] py-1 px-0.5 rounded-xl transition-all select-none touch-manipulation cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-            active
-              ? 'text-primary-solid font-bold'
-              : 'text-muted hover:text-foreground',
-          );
           const isSimulatorUpcoming = item.id === 'simulator' && isBudgetBlocked;
+
+          const classNameItem = cn(
+            'relative flex flex-col items-center justify-center gap-1 min-h-[48px] py-1 px-0.5 rounded-lg transition-all duration-150 select-none touch-manipulation cursor-pointer',
+            'active:scale-95 active:opacity-80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40',
+            active
+              ? 'text-white'
+              : 'text-[#8c8c8c] hover:text-[#e5e5e5]',
+          );
+
           const inner = (
             <>
-              <div
-                className={cn(
-                  'p-1 sm:p-1.5 rounded-lg transition-all flex items-center justify-center relative',
-                  active
-                    ? 'bg-primary/15 text-primary-solid scale-105'
-                    : 'bg-transparent text-muted',
-                )}
-              >
-                <Icon className="w-[18px] h-[18px] sm:w-[19px] sm:h-[19px]" aria-hidden />
-                {isSimulatorUpcoming ? (
+              {/* Ligne indicatrice supérieure rouge signature Netflix */}
+              {active && (
+                <span
+                  className="absolute -top-1.5 w-6 h-[2.5px] rounded-full bg-[#e50914] shadow-[0_0_8px_#e50914] transition-all duration-200"
+                  aria-hidden
+                />
+              )}
+
+              {/* Icône sans conteneur superflu, typique de l'application mobile Netflix */}
+              <div className="relative flex items-center justify-center">
+                <Icon
+                  className={cn(
+                    'w-5 h-5 transition-transform duration-200',
+                    active ? 'scale-105 stroke-[2.2px] text-white' : 'stroke-[1.75px] text-[#8c8c8c]',
+                  )}
+                  aria-hidden
+                />
+
+                {/* Badge d'alerte / fonctionnalité à venir style Netflix */}
+                {isSimulatorUpcoming && (
                   <span
-                    className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-background"
+                    className="absolute -top-1 -right-1.5 flex h-2 w-2"
                     title="Fonctionnalité à venir"
-                  />
-                ) : null}
-                {active && !isSimulatorUpcoming && (
-                  <span className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-primary-solid" />
+                  >
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#e50914] opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#e50914] ring-2 ring-[#121212]" />
+                  </span>
                 )}
               </div>
-              <span className="text-xs tracking-tight leading-tight truncate max-w-full text-center">
+
+              {/* Typographie nette, compacte, fidèle à l'interface Netflix */}
+              <span
+                className={cn(
+                  'text-[10px] tracking-tight leading-none truncate max-w-full text-center transition-colors',
+                  active ? 'font-semibold text-white' : 'font-medium text-[#8c8c8c]',
+                )}
+              >
                 {isSimulatorUpcoming ? (
                   <>
                     <span>Simulateur</span>
-                    <span className="block text-[9px] font-bold text-amber-600 dark:text-amber-400 -mt-0.5">
-                      À venir
+                    <span className="block text-[8px] font-bold text-[#e50914] uppercase tracking-wider mt-0.5">
+                      Bientôt
                     </span>
                   </>
                 ) : item.shortLabel ? (

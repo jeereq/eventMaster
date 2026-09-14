@@ -91,16 +91,16 @@ const REGISTRATION_KIND_CONFIGS: Record<string, RegistrationActionConfig> = {
   },
   CLIENT: {
     key: 'CLIENT',
-    heroTitle: 'Trouvez salle et prestataires',
+    heroTitle: 'Trouvez salle, métiers et matériel',
     heroDescription:
-      'Compte gratuit. Comparez, gardez des favoris, demandez un devis sans engagement.',
+      'Compte gratuit. Comparez salles, métiers et Matériel & Équipements, favoris et devis sans engagement.',
     defaultAccountKind: 'CLIENT',
     defaultNextPath: '/marketplace',
     submitButtonLabel: 'Créer mon compte gratuit',
     orgLabel: '',
     orgPlaceholder: '',
     features: [
-      { step: 1, icon: LayoutGrid, title: 'Explorer', desc: 'Salles 3D, prestataires, matériel. Trouvez ce qu’il vous faut.' },
+      { step: 1, icon: LayoutGrid, title: 'Explorer', desc: 'Salles 3D, métiers et Matériel & Équipements.' },
       { step: 2, icon: Wallet, title: 'Comparer', desc: 'Favoris et pack budget. Rien n’est réservé tant que le devis n’est pas envoyé.' },
       { step: 3, icon: CalendarCheck, title: 'Demander un devis', desc: 'Écrivez au pro. L’acompte se verse ensuite, directement.' },
     ],
@@ -109,14 +109,14 @@ const REGISTRATION_KIND_CONFIGS: Record<string, RegistrationActionConfig> = {
     key: 'VENDOR',
     heroTitle: 'Publiez votre activité',
     heroDescription:
-      'Vitrine salle ou métier uniquement — sans événements ni invités. Les organisateurs vous écrivent.',
+      'Salle à réserver, ou métier (prestations / Matériel & Équipements) — sans événements ni invités.',
     defaultAccountKind: 'VENDOR',
     defaultNextPath: '/dashboard/catalogue',
     submitButtonLabel: 'Créer mon compte professionnel',
     orgLabel: 'Nom de l’établissement ou de l’enseigne',
     orgPlaceholder: 'Ex: Espace Prestige Kinshasa',
     features: [
-      { step: 1, icon: Store, title: 'Publier', desc: 'Photos, tarifs, éventuellement visite 3D.' },
+      { step: 1, icon: Store, title: 'Publier', desc: 'Salle, métier ou locations — photos, tarifs, éventuellement visite 3D.' },
       { step: 2, icon: MessageSquare, title: 'Répondre', desc: 'Demandes de devis d’organisateurs, sans commission cachée.' },
       { step: 3, icon: CalendarCheck, title: 'Confirmer', desc: 'Bloquez la date et suivez les acomptes.' },
     ],

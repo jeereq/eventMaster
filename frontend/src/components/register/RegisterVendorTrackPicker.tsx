@@ -21,7 +21,7 @@ const TRACKS: Array<{
   {
     id: 'service',
     title: 'Un métier de service',
-    hint: 'Traiteur, photo, DJ, décoration, location de matériel… Vous vous déplacez ou livrez.',
+    hint: 'Traiteur, photo, DJ, déco, ou Matériel & Équipements (habits, voitures, sono, tentes…). Vous vous déplacez ou livrez.',
     icon: Store,
   },
 ];

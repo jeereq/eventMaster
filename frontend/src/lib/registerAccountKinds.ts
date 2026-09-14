@@ -14,7 +14,7 @@ export const REGISTER_KIND_TITLES: Record<TenantAccountKind, string> = {
 export const REGISTER_KIND_DESCRIPTIONS: Record<TenantAccountKind, string> = {
   ORGANIZER: 'Invitations, plan de table, accueil jour J. Les forfaits Business incluent aussi la vitrine salle et prestations.',
   CLIENT: 'Compte gratuit : comparez, gardez des favoris, demandez un devis.',
-  VENDOR: 'Publiez votre vitrine seule (salle ou métier), sans gérer d’événements.',
+  VENDOR: 'Publiez votre vitrine seule (salle ou métier : prestations / Matériel & Équipements), sans gérer d’événements.',
   BOTH: 'Invitations, plan de table, accueil jour J. Les forfaits Business incluent aussi la vitrine salle et prestations.',
 };
 
@@ -26,7 +26,7 @@ export function registerAccountSummary(
     return 'Compte salle : vitrine, devis et calendrier de réservation.';
   }
   if (vendorTrack === 'service') {
-    return 'Compte prestataire : offre visible, puis réponses aux devis.';
+    return 'Compte métier : prestations ou Matériel & Équipements, puis réponses aux devis.';
   }
   return REGISTER_KIND_DESCRIPTIONS[kind];
 }

@@ -36,8 +36,8 @@ export default function TarifsPage() {
       mobileFooterPad
     >
       <PublicPageHero
-        title="Des forfaits clairs et adaptés à votre événement"
-        description="Sans engagement, sans frais cachés. Paiement simplifié par Mobile Money (M-Pesa, Orange Money, Airtel Money) ou carte bancaire en Francs Congolais (FC)."
+        title="Des forfaits clairs selon votre usage"
+        description="Client gratuit · Organisation Business+ (catalogue inclus) · Pro salle ou métier. Paiement Mobile Money ou carte en Francs Congolais (FC)."
         compact
       >
         <div className="pt-1 flex flex-wrap items-center gap-2.5">
@@ -62,7 +62,7 @@ export default function TarifsPage() {
         <LandingPricingSection
           dbPlans={dbPlans}
           defaultAudience="B2C"
-          lead="Compte de recherche gratuit. Choisissez un forfait pour débloquer la création d’événements, le plan 2D/3D et le scan QR."
+          lead="Trois parcours : client (recherche gratuite), organisateur (événements — catalogue inclus dès Business), pro (salle ou métier sans événements)."
         />
 
         <div className="page-container py-4">

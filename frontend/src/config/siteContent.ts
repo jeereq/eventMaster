@@ -38,11 +38,11 @@ export const FOOTER_RESOURCES = [
   { label: `Politique de confidentialité (v${PRIVACY_VERSION})`, href: '/privacy' },
   { label: `Politique de remboursement (v${REFUND_VERSION})`, href: '/refund' },
   { label: 'Connexion', href: '/login' },
-  { label: 'Compte client (devis, favoris & packs)', href: '/register' },
+  { label: 'Compte client (devis, favoris & packs)', href: '/register?kind=CLIENT&intent=seeker' },
 ] as const;
 
 export const FOOTER_BRAND_DESCRIPTION =
-  'Plateforme événementielle en RDC : invitations WhatsApp, plans 2D/3D, billetterie Mobile Money et marketplace certifiée.';
+  'Plateforme événementielle en RDC : invitations WhatsApp, plans 2D/3D, billetterie Mobile Money et marketplace (salles, métiers, Matériel & Équipements).';
 
 export interface FaqItem {
   id: string;
@@ -55,7 +55,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'what-is-eventmaster',
     question: 'Qu\'est-ce qu\'EventMaster ?',
     answer:
-      'Une plateforme tout-en-un pour préparer un événement en toute sérénité : invitations interactives avec IA, billetterie en ligne avec validation automatique de présence, personnalisation des pass pour billets partagés, plans de salle 2D et 3D photoréalistes, accueil QR le jour J, simulateur de budget IA et marketplace de lieux et talents en RDC. Tout fonctionne directement dans le navigateur, sur smartphone comme sur ordinateur.',
+      'Une plateforme tout-en-un pour préparer un événement en toute sérénité : invitations interactives avec IA, billetterie en ligne avec validation automatique de présence, personnalisation des pass pour billets partagés, plans de salle 2D et 3D photoréalistes, accueil QR le jour J, simulateur de budget IA et marketplace (salles, métiers et Matériel & Équipements) en RDC. Trois types de compte : organisateur, client, ou pro (salle / métier). Dès Business, la vitrine catalogue est incluse pour un organisateur. Tout fonctionne dans le navigateur.',
   },
   {
     id: 'mobile-app',
@@ -103,7 +103,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'marketplace-venues',
     question: 'Puis-je trouver une salle ou un prestataire sur EventMaster ?',
     answer:
-      'Oui. Parcourez salles, prestataires, matériel et équipements sans compte. Pour un devis ou une réservation, créez un compte client gratuit. L’acompte ({depositPercent} %) se verse directement au professionnel, pas via EventMaster.',
+      'Oui. Parcourez salles, métiers (traiteur, photo…) et Matériel & Équipements (habits, véhicules, sono…) sans compte. Pour un devis ou une réservation, créez un compte client gratuit. L’acompte ({depositPercent} %) se verse directement au professionnel, pas via EventMaster.',
   },
   {
     id: 'marketplace-booking',
@@ -118,6 +118,18 @@ export const FAQ_ITEMS: FaqItem[] = [
       'Non. Le compte client est gratuit : explorer, favoris, packs budget, devis. Pour organiser une fête ou publier vos offres, un Super Admin doit changer le type de compte ; ensuite choisissez un forfait.',
   },
   {
+    id: 'venue-subscription',
+    question: 'Comment publier une salle sur le marketplace ?',
+    answer:
+      'Inscrivez-vous en compte pro, choisissez « Une salle à réserver », puis souscrivez le forfait Salle (ou Salle & presta). Les organisateurs Business+ peuvent aussi publier des salles via le catalogue inclus dans leur forfait organisation — sans forfait marketplace séparé.',
+  },
+  {
+    id: 'service-subscription',
+    question: 'Comment publier une prestation ou du Matériel & Équipements ?',
+    answer:
+      'Compte pro → « Un métier de service » : traiteur, photo, DJ… ou locations (habits, voiture, sono, tente…). Le forfait Prestataire couvre prestations et Matériel & Équipements ; Salle & presta ajoute les salles. Un organisateur Business+ publie aussi ces fiches via le catalogue inclus.',
+  },
+  {
     id: 'event-packs',
     question: 'Comment fonctionne la simulation d’événement et de packs budget par IA ?',
     answer:
@@ -127,13 +139,13 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'free-trial',
     question: 'Puis-je essayer gratuitement ?',
     answer:
-      'Oui. Le forfait gratuit (Essentiel) permet de créer une organisation, jusqu’à 3 événements et 50 invités au total — sans carte bancaire. Ensuite, vous passez au forfait qui correspond : particulier, organisation, salle ou prestataire.',
+      'Oui. Le forfait gratuit (Essentiel) permet de créer une organisation, jusqu’à 3 événements et 50 invités au total — sans carte bancaire. Ensuite, choisissez selon votre usage : Particulier, organisation Business+ (catalogue salle + prestations inclus dès Business), ou compte pro salle / métier (prestations et Matériel & Équipements).',
   },
   {
     id: 'plans-quotas',
     question: 'Comment fonctionnent les forfaits et les quotas ?',
     answer:
-      'Chaque organisation souscrit un seul forfait. Pour tous les forfaits incluant la gestion d’invités (Particulier ou Professionnel), le quota d’invités est comptabilisé par période de facturation payée (chaque mois pour les formules B2B, chaque trimestre de 90 jours pour Particulier) et non sur la totalité de l’histoire du compte. À chaque renouvellement, votre quota d’invitations se renouvelle intégralement pour vos nouveaux événements sans blocage lié aux invités passés. Les particuliers choisissent un palier d’invités (50, 100, 200 ou +200) avec éditeur de salle complet. Les organisateurs B2B ont Essentiel (gratuit), Business (150 invités/mois), Premium (500 invités/mois), Premium Plus (1 000 invités/mois) et Enterprise. Les forfaits Salle et Prestataire sont quant à eux dédiés au marketplace (sans événements ni quota d’invités). Le paiement annuel applique −10 % de réduction.',
+      'Chaque organisation souscrit un seul forfait. Le quota d’invités (Particulier ou B2B) se compte par période payée (mois B2B, trimestre Particulier), pas sur tout l’historique — il se renouvelle à chaque période. Particulier : paliers 50 / 100 / 200 / +200 avec éditeur complet. Organisations B2B : Essentiel, Business, Premium, Premium Plus, Enterprise — dès Business, salles publiables et prestations marketplace (y compris Matériel & Équipements) sont incluses. Les forfaits Salle, Prestataire et Salle & presta restent pour le compte pro sans événements. −10 % en annuel.',
   },
   {
     id: 'guest-quota-period',

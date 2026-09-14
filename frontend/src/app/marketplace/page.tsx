@@ -150,10 +150,10 @@ function MarketplaceHubPageInner() {
       searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
       showKindLegend
       cta={{
-        title: 'Vous proposez une salle, une prestation ou du matériel & équipements ?',
-        description: 'Publiez une fiche depuis votre organisation EventMaster, avec photos, vidéos, carte et calendrier.',
-        primaryHref: '/register',
-        primaryLabel: 'Créer un compte',
+        title: 'Vous proposez une salle, un métier ou du Matériel & Équipements ?',
+        description: 'Compte pro : publiez votre fiche (photos, vidéos, carte, calendrier). Les organisateurs Business+ publient aussi via leur forfait.',
+        primaryHref: '/register?kind=VENDOR&intent=vendor',
+        primaryLabel: 'Créer un compte pro',
         secondaryHref: '/contact',
         secondaryLabel: 'Nous contacter',
       }}

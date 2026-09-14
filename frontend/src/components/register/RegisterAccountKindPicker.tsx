@@ -11,10 +11,11 @@ import {
   REGISTER_KIND_TITLES,
 } from '@/lib/registerAccountKinds';
 
-const KIND_ICONS: Record<(typeof REGISTER_KIND_ORDER)[number], typeof Calendar> = {
+const KIND_ICONS: Record<TenantAccountKind, typeof Calendar> = {
   ORGANIZER: Calendar,
   CLIENT: Compass,
   VENDOR: Store,
+  BOTH: Calendar,
 };
 
 export default function RegisterAccountKindPicker({

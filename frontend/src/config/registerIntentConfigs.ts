@@ -173,7 +173,7 @@ export const REGISTER_INTENT_CONFIGS: Record<string, RegistrationActionConfig> =
     orgLabel: 'Nom de l’enseigne ou entreprise',
     orgPlaceholder: 'Ex: Prestige Traiteur / Sonorisation Pro Kin',
     features: [
-      { step: 1, icon: Store, title: 'Choisir le métier', desc: 'Prestation (traiteur, photo, DJ…) ou location de matériel.' },
+      { step: 1, icon: Store, title: 'Choisir le métier', desc: 'Prestation (traiteur, photo, DJ…) ou Matériel & Équipements.' },
       { step: 2, icon: Mail, title: 'Publier une offre', desc: 'Tarif de départ, zone et photos — visible par les organisateurs.' },
       { step: 3, icon: CalendarCheck, title: 'Répondre aux devis', desc: 'Demande, date, acompte. Sans commission plateforme.' },
     ],
@@ -205,7 +205,7 @@ export const REGISTER_INTENT_CONFIGS: Record<string, RegistrationActionConfig> =
     orgLabel: '',
     orgPlaceholder: '',
     features: [
-      { step: 1, icon: LayoutGrid, title: 'Explorer le catalogue', desc: 'Salles avec vue 3D, traiteurs, décorateurs, DJ et animateurs.' },
+      { step: 1, icon: LayoutGrid, title: 'Explorer le catalogue', desc: 'Salles 3D, métiers et Matériel & Équipements.' },
       { step: 2, icon: Wallet, title: 'Packs budget personnalisés', desc: 'Estimez et ajustez le coût global de votre événement.' },
       { step: 3, icon: CalendarCheck, title: 'Devis en 1 clic', desc: 'Contactez directement les pros sans aucun engagement financier.' },
     ],

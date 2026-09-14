@@ -300,10 +300,10 @@ export default function LandingVitrineSection() {
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
           <div className="max-w-xl space-y-2.5">
             <h2 className="em-landing-heading text-xl sm:text-3xl text-foreground">
-              Lieux, prestataires et billetteries
+              Salles, métiers, matériel et billetteries
             </h2>
             <p className="hidden sm:block text-sm text-muted leading-relaxed">
-              Explorez les espaces vérifiés avec visite 3D et contactez les professionnels en direct.
+              Explorez salles 3D, métiers et Matériel & Équipements — contactez les pros en direct.
             </p>
           </div>
           <Button href="/marketplace" className="w-full sm:w-auto" rightIcon={<ArrowRight className="w-4 h-4" />}>

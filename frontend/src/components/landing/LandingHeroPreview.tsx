@@ -148,10 +148,18 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
     {
       title: 'Publier mes Prestations',
       badge: '0% commission',
-      description: 'Formules traiteur, sono, photo ou déco sans frais.',
+      description: 'Traiteur, photo, DJ ou Matériel & Équipements (habits, véhicules…).',
       icon: Store,
       href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue' : '/register?kind=VENDOR&intent=vendor&action=services'),
       ctaLabel: 'Ajouter mes services',
+    },
+    {
+      title: 'Matériel & Équipements',
+      badge: 'Locations',
+      description: 'Habits, voitures, sono, tentes — même compte métier.',
+      icon: LayoutGrid,
+      href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue' : '/register?kind=VENDOR&intent=vendor&action=rentals'),
+      ctaLabel: 'Proposer du matériel',
     },
     {
       title: 'Demandes & Devis IA',

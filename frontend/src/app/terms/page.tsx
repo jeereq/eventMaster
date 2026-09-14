@@ -39,7 +39,7 @@ export default function TermsPage() {
           dégagement physique réel, plans de table avec sélection interactive de place et accessibilité PMR, protocole
           d&apos;accueil et contrôle d&apos;accès le jour J (scan QR ultra-rapide anti-doublon), fil d&apos;actualité
           média, livre d&apos;or en ligne, gestion collaborative d&apos;équipes avec journal d&apos;actions contextuel,
-          marketplace de prestataires, de salles et de loueurs de matériel certifiés, module de{' '}
+          marketplace de salles, de métiers (services et Matériel &amp; Équipements) certifiés, module de{' '}
           <strong>dons solidaires et collectes de fonds à montant libre</strong>, ainsi qu&apos;un module complet de{' '}
           <strong>billetterie en ligne sécurisée (Ticketing multi-zones avec présence auto-validée et personnalisation des billets partagés)</strong>{' '}
           et de <strong>paiements multicanaux sécurisés (cartes bancaires et Mobile Money en Francs Congolais — CDF et devises acceptées via FlexPay)</strong>.
@@ -66,8 +66,8 @@ export default function TermsPage() {
         </p>
         <p>Les comptes se déclinent selon différents profils adaptés aux usages :</p>
         <ul className="list-disc pl-5 space-y-1">
-          <li><strong>Organisateur</strong> : création d&apos;événements, invitations, plans de salle 2D/3D, billetterie, dons solidaires et contrôle d&apos;accès ; les forfaits Business et au-delà incluent aussi la vitrine salle et prestations ;</li>
-          <li><strong>Prestataire / Salle / Loueur</strong> : publication de vitrines marketplace (prestations de service, location de salles ou de matériel), gestion des disponibilités et devis ;</li>
+          <li><strong>Organisateur</strong> : création d&apos;événements, invitations, plans de salle 2D/3D, billetterie, dons solidaires et contrôle d&apos;accès ; les forfaits Business et au-delà incluent aussi la vitrine salle et prestations (y compris Matériel &amp; Équipements) ;</li>
+          <li><strong>Pro (salle ou métier)</strong> : publication de vitrines marketplace — salle à réserver, ou métier de service (prestations et Matériel &amp; Équipements : habits, véhicules, sono…) — sans gérer d&apos;événements ;</li>
           <li><strong>Client / Acheteur / Donateur</strong> : consultation du marketplace, demandes de devis, participation aux collectes solidaires et achat de billets d&apos;événements sans abonnement SaaS organisationnel requis ;</li>
           <li><strong>Commercial / Apporteur d&apos;affaires</strong> : compte habilité à promouvoir la plateforme et à percevoir des commissions d&apos;apporteur selon les règles du réseau commercial en vigueur.</li>
         </ul>
@@ -378,12 +378,14 @@ export default function TermsPage() {
           </li>
           <li>
             <strong>Business, Premium, Premium Plus &amp; Enterprise</strong> : forfaits professionnels mensuels. Dès
-            Business, la vitrine salles publiables et les prestations marketplace sont incluses (plus de forfait Mixte
-            séparé). Le quota d’invités se renouvelle à chaque période payée ;
+            Business, la vitrine salles publiables et les prestations marketplace (y compris Matériel &amp; Équipements)
+            sont incluses — pas besoin d&apos;un forfait marketplace séparé pour publier le catalogue. Le quota
+            d&apos;invités se renouvelle à chaque période payée ;
           </li>
           <li>
-            <strong>Forfaits Marketplace dédiés (Salle, Prestataire, Salle &amp; presta)</strong> : publication
-            professionnelle sans événements ni quota d’invités.
+            <strong>Forfaits Marketplace dédiés (Salle, Prestataire, Salle &amp; presta)</strong> : pour le compte pro
+            sans événements ni quota d&apos;invités. Distincts des forfaits Business+ organisateur, qui incluent déjà
+            la vitrine.
           </li>
         </ul>
         <p>
@@ -483,7 +485,7 @@ export default function TermsPage() {
 
       <Section title="8. Marketplace de Lieux, Prestataires & Locations de Matériel">
         <p>
-          Le marketplace EventMaster met en relation des organisateurs avec des gestionnaires de salles, des prestataires de services événementiels (traiteurs, DJ, photographes, sécurité) et des <strong>loueurs de matériel et mobilier</strong> (tentes, chapiteaux, mobilier, sonorisation, éclairage, véhicules).
+          Le marketplace EventMaster met en relation des organisateurs avec des gestionnaires de salles et des professionnels (traiteurs, DJ, photographes, sécurité, et Matériel &amp; Équipements : tentes, mobilier, sono, véhicules, habits…).
         </p>
         <p>
           <strong>8.1 Contrat direct entre les parties :</strong> EventMaster agit comme plateforme de mise en relation technique. Le contrat de prestation ou de location est conclu directement entre l&apos;organisateur et le professionnel. EventMaster n&apos;est ni locataire, ni sous-locataire, ni garant des obligations réciproques des parties.

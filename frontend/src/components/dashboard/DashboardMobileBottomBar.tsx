@@ -304,10 +304,10 @@ export default function DashboardMobileBottomBar({
   const nav = (
     <nav
       aria-label="Navigation principale mobile"
-      className="em-dash-bottom-nav md:hidden bg-surface/92 backdrop-blur-xl border-t border-border shadow-[0_-8px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.35)] pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1 px-1.5"
+      className="em-dash-bottom-nav md:hidden bg-[#121212]/96 backdrop-blur-2xl border-t border-white/[0.08] shadow-[0_-8px_30px_rgba(0,0,0,0.6)] pb-[max(0.45rem,env(safe-area-inset-bottom))] pt-1.5 px-1.5"
     >
       <div
-        className="grid gap-1 items-center max-w-lg mx-auto"
+        className="grid gap-0 items-center max-w-lg mx-auto relative"
         style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
       >
         {items.map((item) => {
@@ -324,23 +324,32 @@ export default function DashboardMobileBottomBar({
                 aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir tout le menu'}
                 aria-expanded={mobileMenuOpen}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1 min-h-[48px] py-1 px-1 rounded-xl transition select-none touch-manipulation cursor-pointer active:scale-95',
+                  'relative flex flex-col items-center justify-center gap-1 min-h-[48px] py-1 px-1 rounded-lg transition-all duration-150 select-none touch-manipulation cursor-pointer active:scale-95 active:opacity-80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40',
                   active
-                    ? 'text-primary font-bold'
-                    : 'text-muted hover:text-foreground',
+                    ? 'text-white'
+                    : 'text-[#8c8c8c] hover:text-[#e5e5e5]',
                 )}
               >
-                <div
+                {active && (
+                  <span
+                    className="absolute -top-1.5 w-6 h-[2.5px] rounded-full bg-[#e50914] shadow-[0_0_8px_#e50914] transition-all duration-200"
+                    aria-hidden
+                  />
+                )}
+                <div className="relative flex items-center justify-center">
+                  <Icon
+                    className={cn(
+                      'w-5 h-5 transition-transform duration-200',
+                      active ? 'scale-105 stroke-[2.2px] text-white' : 'stroke-[1.75px] text-[#8c8c8c]',
+                    )}
+                  />
+                </div>
+                <span
                   className={cn(
-                    'p-1.5 rounded-lg transition-all flex items-center justify-center',
-                    active
-                      ? 'bg-primary/15 text-primary scale-105'
-                      : 'bg-transparent text-muted',
+                    'text-[10px] tracking-tight leading-none truncate max-w-full transition-colors',
+                    active ? 'font-semibold text-white' : 'font-medium text-[#8c8c8c]',
                   )}
                 >
-                  <Icon className="w-[19px] h-[19px]" />
-                </div>
-                <span className="text-xs tracking-tight leading-none truncate max-w-full">
                   {mobileMenuOpen ? 'Fermer' : item.name}
                 </span>
               </button>
@@ -357,26 +366,35 @@ export default function DashboardMobileBottomBar({
               }}
               aria-current={active ? 'page' : undefined}
               className={cn(
-                'flex flex-col items-center justify-center gap-1 min-h-[48px] py-1 px-1 rounded-xl transition select-none touch-manipulation cursor-pointer active:scale-95',
+                'relative flex flex-col items-center justify-center gap-1 min-h-[48px] py-1 px-1 rounded-lg transition-all duration-150 select-none touch-manipulation cursor-pointer active:scale-95 active:opacity-80 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/40',
                 active
-                  ? 'text-primary font-bold'
-                  : 'text-muted hover:text-foreground',
+                  ? 'text-white'
+                  : 'text-[#8c8c8c] hover:text-[#e5e5e5]',
               )}
             >
-              <div
-                className={cn(
-                  'p-1.5 rounded-lg transition-all flex items-center justify-center relative',
-                  active
-                    ? 'bg-primary/15 text-primary scale-105'
-                    : 'bg-transparent text-muted',
-                )}
-              >
-                <Icon className="w-[19px] h-[19px]" />
+              {active && (
+                <span
+                  className="absolute -top-1.5 w-6 h-[2.5px] rounded-full bg-[#e50914] shadow-[0_0_8px_#e50914] transition-all duration-200"
+                  aria-hidden
+                />
+              )}
+              <div className="relative flex items-center justify-center">
+                <Icon
+                  className={cn(
+                    'w-5 h-5 transition-transform duration-200',
+                    active ? 'scale-105 stroke-[2.2px] text-white' : 'stroke-[1.75px] text-[#8c8c8c]',
+                  )}
+                />
                 {active && (
-                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-primary" />
+                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-[#e50914] shadow-[0_0_6px_#e50914]" />
                 )}
               </div>
-              <span className="text-xs tracking-tight leading-none truncate max-w-full">
+              <span
+                className={cn(
+                  'text-[10px] tracking-tight leading-none truncate max-w-full transition-colors',
+                  active ? 'font-semibold text-white' : 'font-medium text-[#8c8c8c]',
+                )}
+              >
                 {item.name}
               </span>
             </Link>

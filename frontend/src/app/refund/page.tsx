@@ -31,8 +31,8 @@ export default function RefundPage() {
           pour le compte de l’organisateur. En plus de l’abonnement SaaS, EventMaster se réserve le droit de prélever
           une commission de {collectionCommissionRangeLabel()} du montant global collecté (billets et/ou dons) avant
           reversement. Cette commission, distincte de l’abonnement SaaS, n’est pas remboursable. Les acomptes
-          et cautions du marketplace relèvent de l’accord direct entre l’organisateur et le prestataire, l’exploitant
-          de salle ou le loueur de matériel.
+          et cautions du marketplace relèvent de l’accord direct entre l’organisateur et le professionnel
+          (salle, métier de service ou Matériel &amp; Équipements).
         </p>
       </Section>
 
@@ -138,10 +138,10 @@ export default function RefundPage() {
             les parties.
           </li>
           <li>
-            <strong>Dépôts de garantie et cautions de location :</strong> Les éventuelles cautions exigées par un loueur
-            de matériel (tentes, sonorisation, mobilier) sont convenues et réglées directement hors plateforme. EventMaster
-            n&apos;encaisse pas ces cautions et n&apos;intervient pas dans leur restitution ou encaissement en cas de
-            dégradation.
+            <strong>Dépôts de garantie et cautions de location :</strong> Les éventuelles cautions exigées pour du
+            Matériel &amp; Équipements (tentes, sonorisation, mobilier, véhicules…) sont convenues et réglées
+            directement hors plateforme. EventMaster n&apos;encaisse pas ces cautions et n&apos;intervient pas dans
+            leur restitution ou encaissement en cas de dégradation.
           </li>
           <li>
             EventMaster peut, sur demande conjointe et si les fonds d&apos;un acompte transitent encore par la plateforme,

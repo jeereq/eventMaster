@@ -136,8 +136,8 @@ function MarketplaceEventsPageInner() {
       cta={{
         title: 'Vous organisez un événement public ?',
         description: 'Publiez la fiche avec galerie, GPS et billets : elle apparaît ici, sur le hub et sur la carte.',
-        primaryHref: '/register',
-        primaryLabel: 'Créer un compte',
+        primaryHref: '/register?kind=ORGANIZER&intent=pro',
+        primaryLabel: 'Créer un compte organisateur',
         secondaryHref: '/contact',
         secondaryLabel: 'Nous contacter',
       }}

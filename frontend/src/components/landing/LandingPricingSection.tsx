@@ -175,29 +175,29 @@ export default function LandingPricingSection({
             {
               label: 'Essai gratuit',
               ids: ['FREE'],
-              description: '1 salle simple et 1 prestation pour tester la publication sans engagement',
+              description: '1 salle ou 1 prestation / matériel pour tester sans engagement',
             },
             {
-              label: 'Salles & prestataires',
+              label: 'Salles, métiers & matériel',
               ids: [...VENDOR_PLAN_IDS],
-              description: 'Salles ou prestations illimitées avec éditeur complet — pas de frais d’organisation événement',
+              description: 'Salle, prestations ou Matériel & Équipements — éditeur complet, sans événements',
             },
           ]
         : [
             {
               label: 'Essentiel & Business',
               ids: ['FREE', 'STANDARD'],
-              description: 'Démarrage gratuit ou 150 invités avec protocole QR et éditeur Business',
+              description: 'Démarrage gratuit ou 150 invités — dès Business : catalogue salle + prestations inclus',
             },
             {
               label: 'Premium & Premium Plus',
               ids: ['PREMIUM_1', 'PREMIUM_2'],
-              description: 'Éditeur avancé (thèmes, scènes, escaliers), modèles sur-mesure, OCR maquette et protocole',
+              description: 'Éditeur avancé, modèles sur-mesure, OCR — catalogue marketplace toujours inclus',
             },
             {
               label: 'Enterprise',
               ids: ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3'],
-              description: 'Volume élevé, éditeur complet, multi-salles, rapports et accompagnement dédié',
+              description: 'Volume élevé, éditeur complet, multi-salles, catalogue inclus et accompagnement',
             },
           ];
 
@@ -219,7 +219,7 @@ export default function LandingPricingSection({
             {audience === 'B2C'
               ? 'Forfaits Particuliers'
               : audience === 'VENDOR'
-                ? 'Forfaits Salles & Prestataires'
+                ? 'Forfaits Salle, métier & matériel'
                 : 'Forfaits Organisations'}
           </h2>
           <p className="text-sm text-muted leading-relaxed">
@@ -227,8 +227,8 @@ export default function LandingPricingSection({
               (audience === 'B2C'
                 ? `Forfaits clairs selon votre nombre d'invités. Éditeur de salle complet inclus. −${ANNUAL_DISCOUNT_PERCENT} % en annuel.`
                 : audience === 'VENDOR'
-                  ? `Publiez votre vitrine avec plan 3D et recevez des demandes directes sans commission. −${ANNUAL_DISCOUNT_PERCENT} % en annuel.`
-                  : `Billetterie par zone, gestion d’équipe, scan jour J et multi-événements. −${ANNUAL_DISCOUNT_PERCENT} % en annuel.`)}
+                  ? `Publiez une salle, un métier ou du Matériel & Équipements — sans événements. −${ANNUAL_DISCOUNT_PERCENT} % en annuel.`
+                  : `Billetterie, protocole QR, multi-événements — et dès Business : vitrine salles + prestations incluses. −${ANNUAL_DISCOUNT_PERCENT} % en annuel.`)}
           </p>
         </div>
 
@@ -289,7 +289,7 @@ export default function LandingPricingSection({
      : 'text-muted hover:text-foreground',
  )}
  >
- Salles & prestataires
+ Salles, métiers & matériel
  </button>
  </div>
 

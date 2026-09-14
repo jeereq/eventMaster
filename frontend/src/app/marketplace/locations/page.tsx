@@ -149,9 +149,9 @@ function MarketplaceRentalsPageInner() {
       city={applied.city}
       searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
       cta={{
-        title: 'Vous proposez du matériel ou des équipements ?',
-        description: 'Publiez vos fiches avec photos, caution et calendrier de disponibilité.',
-        primaryHref: '/register',
+        title: 'Vous proposez du Matériel & Équipements ?',
+        description: 'Compte pro → métier de service : habits, véhicules, sono, tentes… photos, caution et calendrier.',
+        primaryHref: '/register?kind=VENDOR&intent=vendor&action=rentals',
         primaryLabel: 'Proposer du matériel',
         secondaryHref: '/contact',
         secondaryLabel: 'Nous contacter',

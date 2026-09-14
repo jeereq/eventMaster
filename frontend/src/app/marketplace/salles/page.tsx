@@ -123,7 +123,7 @@ function MarketplaceVenuesPageInner() {
       cta={{
         title: 'Vous avez une salle à proposer ?',
         description: 'Publiez votre fiche avec photos, vidéos, tarifs et calendrier.',
-        primaryHref: '/register',
+        primaryHref: '/register?kind=VENDOR&intent=vendor&action=venue',
         primaryLabel: 'Publier une salle',
         secondaryHref: '/contact',
         secondaryLabel: 'Nous contacter',
