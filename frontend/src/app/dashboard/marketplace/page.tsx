@@ -8,23 +8,19 @@ import { useAuth } from '@/context/AuthContext';
 import { getQuotaLockMessage, getQuotaActionMessage } from '@/lib/planAccess';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
 import {
-  PageHeader, Button, Breadcrumbs, Alert, Input, Modal, EmptyState, StatusPill,
+  PageHeader, Button, Breadcrumbs, Alert, Modal, EmptyState, StatusPill,
   Pagination, paginateItems, usePageSize, ViewModeToggle, useViewMode, listStackClass,
 } from '@/components/ui';
 import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
 import {
-  PRICE_UNIT_OPTIONS,
   SERVICE_CATEGORY_LABELS,
   SERVICE_MOBILITY_OPTIONS,
   SERVICE_RENTAL_CATEGORIES,
   SERVICE_TRADE_CATEGORIES,
   isServiceRentalCategory,
   mediaPosterUrl,
-  missingPublishLocation,
   parseBlockedDates,
   defaultUnitForServiceCategory,
-  unitsForServiceCategory,
-  SERVICE_CATEGORY_META,
   dashboardServiceHref,
   type MarketplaceBookingItem,
   type MarketplaceInquiryItem,
@@ -32,20 +28,20 @@ import {
   type ServiceMobility,
   type VenuePriceUnit,
 } from '@/lib/marketplace';
-import { EMPTY_LISTING_DETAILS, parseListingDetails, type ListingDetails } from '@/lib/listingDetails';
+import { EMPTY_LISTING_DETAILS, parseListingDetails } from '@/lib/listingDetails';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { commissionPercent } from '@/lib/platformRates';
-import ListingDetailsFields from '@/components/ListingDetailsFields';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import {
   Globe, GlobeLock, KeyRound, Loader2, Plus, Sparkles, Trash2,
 } from 'lucide-react';
-import BlockedDatesField from '@/components/BlockedDatesField';
-import MarketplaceMediaField from '@/components/MarketplaceMediaField';
-import MarketplaceFormTabs, { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
-import LocationPickerMap from '@/components/LocationPickerMap';
-import CityLocationFields from '@/components/CityLocationFields';
+import { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
+import ServiceOfferingForm, {
+  focusOfferingField,
+  getOfferingPublishGaps,
+  type ServiceOfferingDraft,
+} from '@/components/ServiceOfferingForm';
 import MarketplaceBookingsPanel from '@/components/MarketplaceBookingsPanel';
 import MarketplaceInquiriesPanel from '@/components/MarketplaceInquiriesPanel';
 import { useRememberListReturn } from '@/lib/catalogueQuery';
@@ -75,9 +71,6 @@ interface ServiceItem {
 }
 
 type DeskTab = 'services' | 'rentals' | 'inquiries' | 'bookings';
-
-const fieldClass =
-  'w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm';
 
 export default function MarketplaceDeskPage() {
   useRememberListReturn();
@@ -112,7 +105,7 @@ export default function MarketplaceDeskPage() {
   const [editing, setEditing] = useState<ServiceItem | null>(null);
   const [saving, setSaving] = useState(false);
   const [editorTab, setEditorTab] = useState<MarketplaceFormTab>('details');
-  const [draft, setDraft] = useState({
+  const [draft, setDraft] = useState<ServiceOfferingDraft>({
     title: '',
     description: '',
     category: 'CATERING' as ServiceCategory,
@@ -209,6 +202,7 @@ export default function MarketplaceDeskPage() {
       details: EMPTY_LISTING_DETAILS,
     });
     setEditorTab('details');
+    setError('');
     setEditorOpen(true);
   };
 
@@ -236,30 +230,18 @@ export default function MarketplaceDeskPage() {
       details: parseListingDetails(item.details),
     });
     setEditorTab('details');
+    setError('');
     setEditorOpen(true);
   };
 
   const handleSave = async (publish: boolean) => {
     if (publish) {
-      const missing = missingPublishLocation(draft);
-      if (missing === 'city') {
-        setEditorTab('details');
-        setError('Choisissez une ville active, puis la commune et le quartier.');
-        return;
-      }
-      if (missing === 'map') {
-        setEditorTab('map');
-        setError('Ville, commune, quartier et position GPS sont obligatoires pour publier.');
-        return;
-      }
-      if (missing) {
-        setEditorTab('details');
-        setError('Ville, commune et quartier sont obligatoires pour publier.');
-        return;
-      }
-      if (draft.travels && !(Number(draft.coverageRadiusKm) > 0)) {
-        setEditorTab('details');
-        setError('Indiquez le rayon d’intervention si vous vous déplacez.');
+      const gaps = getOfferingPublishGaps(draft);
+      if (gaps.length) {
+        const first = gaps[0];
+        setEditorTab(first.tab);
+        setError(first.message);
+        focusOfferingField(first.fieldId);
         return;
       }
     }
@@ -364,6 +346,8 @@ export default function MarketplaceDeskPage() {
     return matchesSearch && matchesCategory && matchesCity && matchesVisibility && matchesMobility;
   });
 
+  const publishGaps = getOfferingPublishGaps(draft);
+
   const serviceChips: CatalogueFilterChip[] = [
     ...(filterCategory ? [{ id: 'category', label: 'Catégorie', value: SERVICE_CATEGORY_LABELS[filterCategory as ServiceCategory] || filterCategory }] : []),
     ...(filterCity ? [{ id: 'city', label: 'Ville', value: filterCity }] : []),
@@ -419,7 +403,7 @@ export default function MarketplaceDeskPage() {
           type="button"
           onClick={() => setTab('services')}
           className={cn(
-            'px-3 py-1.5 rounded-full text-xs font-semibold border',
+            'min-h-11 px-3 py-2 rounded-full text-xs font-semibold border',
             tab === 'services' ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted',
           )}
         >
@@ -429,7 +413,7 @@ export default function MarketplaceDeskPage() {
           type="button"
           onClick={() => setTab('rentals')}
           className={cn(
-            'px-3 py-1.5 rounded-full text-xs font-semibold border',
+            'min-h-11 px-3 py-2 rounded-full text-xs font-semibold border',
             tab === 'rentals' ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted',
           )}
         >
@@ -439,7 +423,7 @@ export default function MarketplaceDeskPage() {
           type="button"
           onClick={() => setTab('inquiries')}
           className={cn(
-            'px-3 py-1.5 rounded-full text-xs font-semibold border',
+            'min-h-11 px-3 py-2 rounded-full text-xs font-semibold border',
             tab === 'inquiries' ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted',
           )}
         >
@@ -449,7 +433,7 @@ export default function MarketplaceDeskPage() {
           type="button"
           onClick={() => setTab('bookings')}
           className={cn(
-            'px-3 py-1.5 rounded-full text-xs font-semibold border',
+            'min-h-11 px-3 py-2 rounded-full text-xs font-semibold border',
             tab === 'bookings' ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted',
           )}
         >
@@ -457,7 +441,7 @@ export default function MarketplaceDeskPage() {
         </button>
       </div>
 
-      {error && <Alert variant="error">{error}</Alert>}
+      {error && !editorOpen ? <Alert variant="error">{error}</Alert> : null}
       {success && <Alert variant="success">{success}</Alert>}
 
       {listingTab && listingPool.length > 0 && (
@@ -694,11 +678,16 @@ export default function MarketplaceDeskPage() {
         description="Visible sur le marketplace uniquement après publication."
         size="xl"
         footer={
-          <div className="flex w-full justify-between gap-2">
-            <Button type="button" variant="secondary" size="sm" onClick={() => setEditorOpen(false)}>
-              Annuler
-            </Button>
-            <div className="flex gap-2">
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-muted">
+              {publishGaps.length
+                ? `Publication : ${publishGaps[0].message}`
+                : 'Tous les critères obligatoires sont remplis.'}
+            </p>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setEditorOpen(false)}>
+                Annuler
+              </Button>
               <Button type="button" variant="secondary" size="sm" loading={saving} onClick={() => handleSave(false)} leftIcon={<GlobeLock className="w-4 h-4" />}>
                 Brouillon
               </Button>
@@ -709,184 +698,13 @@ export default function MarketplaceDeskPage() {
           </div>
         }
       >
-        <div className="space-y-3">
-          {error && <Alert variant="error">{error}</Alert>}
-          <MarketplaceFormTabs
-            value={editorTab}
-            onChange={setEditorTab}
-            include={['details', 'map', 'medias']}
-          />
-          {editorTab === 'details' && (
-            <>
-          <Input label="Titre" value={draft.title} onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} />
-          <label>
-            <span className="block text-xs font-medium text-muted mb-1.5">Catégorie</span>
-            <select
-              value={draft.category}
-              onChange={(e) => {
-                const category = e.target.value as ServiceCategory;
-                setDraft((d) => ({
-                  ...d,
-                  category,
-                  priceUnit: unitsForServiceCategory(category).includes(d.priceUnit)
-                    ? d.priceUnit
-                    : defaultUnitForServiceCategory(category),
-                }));
-              }}
-              className={fieldClass}
-            >
-              {isServiceRentalCategory(draft.category) ? (
-                SERVICE_RENTAL_CATEGORIES.map((id) => (
-                  <option key={id} value={id}>{SERVICE_CATEGORY_LABELS[id]}</option>
-                ))
-              ) : (
-                SERVICE_TRADE_CATEGORIES.map((id) => (
-                  <option key={id} value={id}>{SERVICE_CATEGORY_LABELS[id]}</option>
-                ))
-              )}
-            </select>
-          </label>
-          {isServiceRentalCategory(draft.category) ? (
-            <p className="text-[11px] text-muted -mt-1">
-              {SERVICE_CATEGORY_META[draft.category].hint} Indiquez le parc, les tailles / modèles et la caution dans la fiche.
-            </p>
-          ) : (
-            <p className="text-[11px] text-muted -mt-1">{SERVICE_CATEGORY_META[draft.category].hint}</p>
-          )}
-          <label>
-            <span className="block text-xs font-medium text-muted mb-1.5">Description</span>
-            <textarea
-              rows={3}
-              value={draft.description}
-              onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
-              className={fieldClass}
-            />
-          </label>
-          <ListingDetailsFields
-            kind="service"
-            hideDescription
-            category={draft.category}
-            value={draft.details}
-            onChange={(details: ListingDetails) => setDraft((d) => ({ ...d, details }))}
-          />
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="sm:col-span-2">
-              <CityLocationFields
-                city={draft.city}
-                commune={draft.commune}
-                neighborhood={draft.neighborhood}
-                onChange={({ city, commune, neighborhood }) =>
-                  setDraft((d) => ({ ...d, city, commune, neighborhood }))
-                }
-              />
-            </div>
-            <div className="sm:col-span-2 space-y-2">
-              <span className="block text-xs font-medium text-muted">Zone d’intervention</span>
-              <div className="flex flex-wrap gap-1.5">
-                {[
-                  { id: false, label: 'Sur place uniquement' },
-                  { id: true, label: 'Je me déplace' },
-                ].map((opt) => (
-                  <button
-                    key={String(opt.id)}
-                    type="button"
-                    onClick={() => setDraft((d) => ({
-                      ...d,
-                      travels: opt.id,
-                      coverageRadiusKm: opt.id ? d.coverageRadiusKm : '',
-                    }))}
-                    className={cn(
-                      'px-3 py-1.5 rounded-full text-xs font-semibold border transition',
-                      draft.travels === opt.id
-                        ? 'bg-foreground text-background border-foreground'
-                        : 'bg-surface text-muted border-border hover:text-foreground',
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-              {draft.travels ? (
-                <Input
-                  label="Rayon d’intervention (km)"
-                  type="number"
-                  min={1}
-                  value={draft.coverageRadiusKm}
-                  onChange={(e) => setDraft((d) => ({ ...d, coverageRadiusKm: e.target.value }))}
-                />
-              ) : (
-                <p className="text-[11px] text-muted">
-                  Les clients viennent à votre adresse. Aucun rayon n’est affiché sur la carte.
-                </p>
-              )}
-            </div>
-            <Input
-              label="Tarif de départ (FC)"
-              type="number"
-              min={0}
-              value={draft.priceFromFc}
-              onChange={(e) => setDraft((d) => ({ ...d, priceFromFc: e.target.value }))}
-            />
-            <label>
-              <span className="block text-xs font-medium text-muted mb-1.5">Unité</span>
-              <select
-                value={draft.priceUnit}
-                onChange={(e) => setDraft((d) => ({ ...d, priceUnit: e.target.value as VenuePriceUnit }))}
-                className={fieldClass}
-              >
-                {unitsForServiceCategory(draft.category).map((id) => {
-                  const opt = PRICE_UNIT_OPTIONS.find((item) => item.id === id);
-                  return (
-                    <option key={id} value={id}>
-                      {opt?.label || id}
-                    </option>
-                  );
-                })}
-              </select>
-              <p className="text-[11px] text-muted mt-1">
-                {PRICE_UNIT_OPTIONS.find((opt) => opt.id === draft.priceUnit)?.hint
-                  || 'Choisissez l’unité affichée aux clients.'}
-              </p>
-            </label>
-            <Input
-              label="Quota min. invités"
-              type="number"
-              min={0}
-              value={draft.quotaMin}
-              onChange={(e) => setDraft((d) => ({ ...d, quotaMin: e.target.value }))}
-            />
-            <Input
-              label="Quota max. invités"
-              type="number"
-              min={0}
-              value={draft.quotaMax}
-              onChange={(e) => setDraft((d) => ({ ...d, quotaMax: e.target.value }))}
-            />
-          </div>
-          <BlockedDatesField
-            value={draft.blockedDates}
-            bookedDates={draft.bookedDates}
-            onChange={(blockedDates) => setDraft((d) => ({ ...d, blockedDates }))}
-          />
-            </>
-          )}
-          {editorTab === 'map' && (
-            <LocationPickerMap
-              latitude={draft.latitude}
-              longitude={draft.longitude}
-              city={draft.city}
-              commune={draft.commune}
-              required
-              onChange={({ latitude, longitude }) => setDraft((d) => ({ ...d, latitude, longitude }))}
-            />
-          )}
-          {editorTab === 'medias' && (
-            <MarketplaceMediaField
-              urls={draft.photos}
-              onChange={(photos) => setDraft((d) => ({ ...d, photos }))}
-            />
-          )}
-        </div>
+        <ServiceOfferingForm
+          draft={draft}
+          onChange={setDraft}
+          tab={editorTab}
+          onTabChange={setEditorTab}
+          error={error}
+        />
       </Modal>
     </div>
   );

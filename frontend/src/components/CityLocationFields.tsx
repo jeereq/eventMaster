@@ -13,7 +13,7 @@ import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { enabledMarketplaceCities, formatCityList } from '@/lib/platformCities';
 
 const SELECT_CLASS =
-  'w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary';
+  'w-full min-h-11 px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-base sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary';
 
 export default function CityLocationFields({
   city,
@@ -45,7 +45,7 @@ export default function CityLocationFields({
     <div className={cn('grid grid-cols-1 sm:grid-cols-2 gap-3', className)}>
       <label>
         <span className="block text-xs font-medium text-muted mb-1.5">
-          Ville{required ? <span className="text-rose-500"> *</span> : null}
+          Ville{required ? <span className="text-danger"> *</span> : null}
         </span>
         <select
           value={cityName || ''}
@@ -64,7 +64,7 @@ export default function CityLocationFields({
       </label>
       <label>
         <span className="block text-xs font-medium text-muted mb-1.5">
-          Commune{required ? <span className="text-rose-500"> *</span> : null}
+          Commune{required ? <span className="text-danger"> *</span> : null}
         </span>
         <select
           value={commune}
@@ -81,7 +81,7 @@ export default function CityLocationFields({
       </label>
       <label className="sm:col-span-2">
         <span className="block text-xs font-medium text-muted mb-1.5">
-          Quartier{required ? <span className="text-rose-500"> *</span> : null}
+          Quartier{required ? <span className="text-danger"> *</span> : null}
         </span>
         <select
           value={neighborhood}
@@ -96,7 +96,7 @@ export default function CityLocationFields({
           ))}
         </select>
       </label>
-      <p className="sm:col-span-2 text-[11px] text-muted -mt-1">
+      <p className="sm:col-span-2 text-xs text-muted -mt-1">
         {help}
       </p>
     </div>

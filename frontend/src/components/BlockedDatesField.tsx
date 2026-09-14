@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
+import { Button } from '@/components/ui';
 import { eachDateKey, parseBlockedDates } from '@/lib/marketplace';
 
 export default function BlockedDatesField({
@@ -33,7 +34,7 @@ export default function BlockedDatesField({
   return (
     <div className="space-y-3">
       <AvailabilityCalendar
-        title="Dates déjà bookées"
+        title="Calendrier d’indisponibilité"
         bookedDates={booked}
         blockedDates={dates}
         editable
@@ -46,7 +47,7 @@ export default function BlockedDatesField({
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+            className="w-full min-h-11 px-3.5 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm"
           />
         </label>
         <label className="space-y-1">
@@ -56,21 +57,16 @@ export default function BlockedDatesField({
             value={to}
             min={from || undefined}
             onChange={(e) => setTo(e.target.value)}
-            className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+            className="w-full min-h-11 px-3.5 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm"
           />
         </label>
-        <button
-          type="button"
-          onClick={addRange}
-          disabled={!from}
-          className="px-3 py-2 text-xs font-semibold rounded-[var(--radius-button)] border border-border text-foreground disabled:opacity-40"
-        >
+        <Button type="button" variant="secondary" size="sm" onClick={addRange} disabled={!from}>
           Bloquer la période
-        </button>
+        </Button>
       </div>
-      <p className="text-[11px] text-muted leading-relaxed">
-        Les jours en rouge viennent des réservations EventMaster. Les jours ambre sont ceux que vous marquez déjà pris
-        (hors plateforme). Vous pouvez en sélectionner un ou plusieurs.
+      <p className="text-xs text-muted leading-relaxed">
+        Rouge : réservations EventMaster. Ambre : jours que vous bloquez vous-même. Cliquez un jour libre pour le
+        marquer indisponible.
       </p>
     </div>
   );

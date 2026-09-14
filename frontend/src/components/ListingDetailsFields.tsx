@@ -33,7 +33,7 @@ function MultiPills({
             type="button"
             onClick={() => onToggle(opt.id)}
             className={cn(
-              'px-3 py-1.5 rounded-full text-xs font-medium border transition',
+              'min-h-11 px-3 py-2 rounded-full text-xs font-medium border transition',
               active
                 ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                 : 'bg-surface-muted text-muted border-border hover:text-foreground hover:border-primary/30',
@@ -72,7 +72,7 @@ export default function ListingDetailsFields({
           rows={4}
           value={value.description}
           onChange={(e) => onChange({ ...value, description: e.target.value })}
-          className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+          className="w-full min-h-11 px-3.5 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm"
           placeholder={kind === 'venue'
             ? 'Ambiance, capacité réelle, horaires, ce qui rend la salle unique…'
             : isRental
@@ -84,7 +84,7 @@ export default function ListingDetailsFields({
       <div className="space-y-1.5">
         <span className="text-xs font-semibold text-foreground">Équipements et atouts</span>
         {isRental ? (
-          <p className="text-[11px] text-muted">
+          <p className="text-xs text-muted">
             Précisez tailles, livraison, chauffeur ou ce qui est fourni avec la location.
           </p>
         ) : null}
@@ -150,7 +150,7 @@ export default function ListingDetailsFields({
           rows={3}
           value={value.included}
           onChange={(e) => onChange({ ...value, included: e.target.value })}
-          className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+          className="w-full min-h-11 px-3.5 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm"
           placeholder="Tables, chaises, éclairage, équipe, essai…"
         />
       </label>
@@ -177,7 +177,7 @@ export default function ListingDetailsFields({
               onChange={(e) => onChange({ ...value, surfaceM2: e.target.value })}
             />
           </>
-        ) : (
+        ) : isRental ? null : (
           <>
             <Input
               label="Taille de l’équipe"
@@ -238,7 +238,7 @@ export default function ListingDetailsFields({
               <select
                 value={value.condition}
                 onChange={(e) => onChange({ ...value, condition: e.target.value })}
-                className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+                className="w-full min-h-11 px-3.5 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm"
               >
                 <option value="">Sélectionner...</option>
                 <option value="new">Neuf</option>
@@ -277,7 +277,7 @@ export default function ListingDetailsFields({
               <select
                 value={value.deliveryMode}
                 onChange={(e) => onChange({ ...value, deliveryMode: e.target.value })}
-                className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+                className="w-full min-h-11 px-3.5 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm"
               >
                 <option value="">Sélectionner...</option>
                 <option value="pickup">Retrait sur place uniquement</option>
@@ -293,7 +293,7 @@ export default function ListingDetailsFields({
                 rows={2}
                 value={value.accessories}
                 onChange={(e) => onChange({ ...value, accessories: e.target.value })}
-                className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+                className="w-full min-h-11 px-3.5 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm"
                 placeholder="Câblage, housse, casque..."
               />
             </label>
@@ -303,7 +303,7 @@ export default function ListingDetailsFields({
                 rows={2}
                 value={value.returnRules}
                 onChange={(e) => onChange({ ...value, returnRules: e.target.value })}
-                className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+                className="w-full min-h-11 px-3.5 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm"
                 placeholder="Rendre propre, plein de carburant fait..."
               />
             </label>
@@ -317,7 +317,7 @@ export default function ListingDetailsFields({
           rows={2}
           value={value.accessNotes}
           onChange={(e) => onChange({ ...value, accessNotes: e.target.value })}
-          className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+          className="w-full min-h-11 px-3.5 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm"
           placeholder="Entrée, parking, étage, point de rendez-vous…"
         />
       </label>
@@ -327,7 +327,7 @@ export default function ListingDetailsFields({
           rows={2}
           value={value.extraFees}
           onChange={(e) => onChange({ ...value, extraFees: e.target.value })}
-          className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+          className="w-full min-h-11 px-3.5 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm"
           placeholder="Décoration, heures supplémentaires, déplacement hors zone…"
         />
       </label>
@@ -337,7 +337,7 @@ export default function ListingDetailsFields({
           rows={2}
           value={value.houseRules}
           onChange={(e) => onChange({ ...value, houseRules: e.target.value })}
-          className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+          className="w-full min-h-11 px-3.5 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm"
           placeholder="Horaires, bruit, décoration, matériel interdit…"
         />
       </label>
@@ -347,7 +347,7 @@ export default function ListingDetailsFields({
           rows={2}
           value={value.cancellation}
           onChange={(e) => onChange({ ...value, cancellation: e.target.value })}
-          className="w-full px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
+          className="w-full min-h-11 px-3.5 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm"
           placeholder="Délai, remboursement de l’acompte…"
         />
       </label>
