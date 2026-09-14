@@ -251,6 +251,7 @@ async function updateTeamMember(req, res) {
             data: updateData,
             select: userSelect,
         });
+        (0, permissionsService_1.invalidateOrgAccessCache)(memberId, tenantId);
         const finalUser = await db_1.prisma.user.findUnique({ where: { id: memberId }, select: userSelect });
         return res.json({
             message: 'Rôle mis à jour.',

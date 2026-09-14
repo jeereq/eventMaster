@@ -4,7 +4,7 @@ exports.canGuestAccessPlacement = canGuestAccessPlacement;
 exports.getPlacementNotifiedAt = getPlacementNotifiedAt;
 exports.mergePlacementNotifiedPreferences = mergePlacementNotifiedPreferences;
 /**
- * Accès au plan / PDF / GPS : dès RSVP accepté, ou après check-in / vérification siège (legacy).
+ * Accès au plan / PDF / GPS : dès présence confirmée, ou après check-in / vérification siège (legacy).
  */
 function canGuestAccessPlacement(guest) {
     return Boolean(guest.rsvp === 'ACCEPTED' || guest.checkedInAt || guest.seatVerified);

@@ -12,7 +12,7 @@ exports.createEventComment = createEventComment;
 exports.toggleLikeEventPost = toggleLikeEventPost;
 const db_1 = require("../db");
 const permissionsService_1 = require("../services/permissionsService");
-// 1. Submit Guest Share (Public - Guest RSVP page)
+// 1. Submit Guest Share (Public - Guest réponse à l’invitation page)
 async function submitGuestShare(req, res) {
     try {
         const guestId = req.params.guestId;
@@ -77,7 +77,7 @@ async function getEventShares(req, res) {
         return res.status(500).json({ error: 'Erreur lors de la récupération des partages.' });
     }
 }
-// 2b. Get Public Event Shares (Public - Guest RSVP page)
+// 2b. Get Public Event Shares (Public - Guest réponse à l’invitation page)
 async function getPublicEventShares(req, res) {
     try {
         const eventId = req.params.eventId;
@@ -100,10 +100,15 @@ async function getPublicEventShares(req, res) {
         return res.status(500).json({ error: 'Erreur lors de la récupération des partages.' });
     }
 }
-// 3. Get Event Feed (Public - Guest RSVP page and Dashboard)
+// 3. Get Event Feed (Public - Guest réponse à l’invitation page and Dashboard)
 async function getEventFeed(req, res) {
     try {
         const eventId = req.params.eventId;
+        const limitRaw = req.query.limit;
+        const hasLimit = limitRaw != null && String(limitRaw) !== '';
+        const limit = hasLimit
+            ? Math.min(200, Math.max(1, Number.parseInt(String(limitRaw), 10) || 80))
+            : 80;
         const posts = await db_1.prisma.eventPost.findMany({
             where: { eventId },
             include: {
@@ -112,6 +117,7 @@ async function getEventFeed(req, res) {
                 },
             },
             orderBy: { createdAt: 'desc' },
+            take: limit,
         });
         return res.json(posts);
     }
@@ -246,7 +252,7 @@ async function deleteGuestShare(req, res) {
         return res.status(500).json({ error: 'Erreur lors de la suppression du message.' });
     }
 }
-// 6. Create Event Comment (Public - Guest RSVP page and Dashboard)
+// 6. Create Event Comment (Public - Guest réponse à l’invitation page and Dashboard)
 async function createEventComment(req, res) {
     try {
         const postId = req.params.postId;
@@ -295,7 +301,7 @@ async function createEventComment(req, res) {
         return res.status(500).json({ error: 'Erreur lors de la création du commentaire.' });
     }
 }
-// 7. Toggle Like on Event Post (Public - Guest RSVP page and Dashboard)
+// 7. Toggle Like on Event Post (Public - Guest réponse à l’invitation page and Dashboard)
 async function toggleLikeEventPost(req, res) {
     try {
         const postId = req.params.postId;

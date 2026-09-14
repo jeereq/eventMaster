@@ -7,7 +7,6 @@ const invoiceService_1 = require("./invoiceService");
 const tenantBillingService_1 = require("./tenantBillingService");
 const platformNotificationService_1 = require("./platformNotificationService");
 const platformNotificationTypes_1 = require("../config/platformNotificationTypes");
-const notificationService_1 = require("./notificationService");
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 function startOfDay(date) {
     const d = new Date(date);
@@ -89,7 +88,6 @@ async function processSubscriptionExpiryTasks() {
                         plan: tenant.plan,
                         href: renewHref,
                     },
-                    channels: ['IN_APP', 'PUSH', 'WHATSAPP'],
                 });
                 void (0, platformNotificationService_1.notifyPlatformStaff)({
                     type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.LICENSE_EXPIRING,
@@ -98,17 +96,6 @@ async function processSubscriptionExpiryTasks() {
                     metadata: { tenantId: tenant.id, plan: tenant.plan, href: renewHref },
                     includeCommercials: true,
                 });
-                const owner = await (0, invoiceService_1.getTenantOwner)(tenant.id);
-                if (owner?.email) {
-                    void (0, notificationService_1.sendRealEmail)(owner.email, 'EventMaster — Votre abonnement a expiré', [
-                        `L'abonnement de « ${tenant.name} » (${tenant.plan}) a expiré le ${expiryLabel}.`,
-                        `Montant estimé du renouvellement : ${amountHint} FC.`,
-                        '',
-                        `Renouvelez ici : ${renewHref}`,
-                    ].join('\n'), `<p>L'abonnement de <strong>${tenant.name}</strong> (<strong>${tenant.plan}</strong>) a expiré le <strong>${expiryLabel}</strong>.</p>
-<p>Montant estimé : <strong>${amountHint} FC</strong>.</p>
-<p><a href="${renewHref}">Renouveler mon forfait</a></p>`).catch((err) => console.warn('[Subscription Expiry] email:', err));
-                }
                 console.log(`[Subscription Expiry] Licence désactivée pour ${tenant.name} (expirée ${expiryLabel})`);
             }
         }

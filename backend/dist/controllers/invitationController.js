@@ -162,7 +162,7 @@ async function sendInvitation(req, res) {
             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
         }) : '';
         const orgBrand = await (0, brandedMessaging_1.loadOrgBrand)(event.tenantId);
-        // Send and generate RSVP links
+        // Send and generate réponse à l’invitation links
         const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
         const sentInvitations = await Promise.all(guests.map(async (guest) => {
             const rsvpLink = `${FRONTEND_URL}/rsvp/${guest.id}`;
@@ -225,7 +225,7 @@ async function sendInvitation(req, res) {
                     </div>`
                                 : ''}
             `,
-                            cta: { href: rsvpLink, label: 'Confirmer ma présence (RSVP)' },
+                            cta: { href: rsvpLink, label: 'Confirmer ma présence' },
                             footerNote: guestMessageCopy_1.GUEST_COPY.inviteEmailFooter,
                         });
                         sendResult = await (0, notificationService_1.sendRealEmail)(destEmail, subject, body, htmlBody);

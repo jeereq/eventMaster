@@ -8,7 +8,7 @@ const tablePlanAssignment_1 = require("../utils/tablePlanAssignment");
 const planFeaturesService_1 = require("../services/planFeaturesService");
 const guestGuidelines_1 = require("../utils/guestGuidelines");
 const guestPlacementAccess_1 = require("../utils/guestPlacementAccess");
-/** Envoie la carte + PDF / plan / GPS dès RSVP accepté (ou check-in si pas encore envoyé). */
+/** Envoie la carte + PDF / plan / GPS dès présence confirmée (ou check-in si pas encore envoyé). */
 async function deliverGuestPlacementIfEligible(params) {
     const { guestId, eventId, tenantId } = params;
     const snapshot = await (0, planFeaturesService_1.getTenantPlanSnapshot)(tenantId);

@@ -91,6 +91,7 @@ function serializePublicEvent(event, donationStats) {
         ticketsTotal: event.ticketsTotal,
         ticketsSold: event.ticketsSold,
         ticketsRemaining: remaining,
+        ticketsPerBuyerLimit: event.ticketsPerBuyerLimit ?? null,
         soldOut: remaining === 0,
         seatSelectionEnabled: Boolean(event.seatSelectionEnabled) && hasTablePlan,
         eventProgram: event.eventProgram ?? null,
@@ -129,6 +130,32 @@ async function listPublicEvents(req, res) {
         if (Number.isFinite(maxPrice) && maxPrice >= 0)
             priceFilter.lte = maxPrice;
         const events = await db_1.prisma.event.findMany({
+            select: {
+                id: true,
+                slug: true,
+                title: true,
+                description: true,
+                date: true,
+                location: true,
+                city: true,
+                commune: true,
+                neighborhood: true,
+                latitude: true,
+                longitude: true,
+                isPublic: true,
+                ticketingEnabled: true,
+                ticketPriceFc: true,
+                ticketsTotal: true,
+                ticketsSold: true,
+                ticketsPerBuyerLimit: true,
+                seatSelectionEnabled: true,
+                ticketPricingMode: true,
+                tablePlan: true,
+                eventPrep: true,
+                photos: true,
+                tenantId: true,
+                tenant: { select: { name: true } },
+            },
             where: {
                 isPublic: true,
                 isBlockedByAdmin: false,
@@ -165,7 +192,6 @@ async function listPublicEvents(req, res) {
                     }
                     : {}),
             },
-            include: { tenant: { select: { name: true } } },
             orderBy: { date: 'asc' },
             take: hasGeo || locationBits.length ? 200 : 80,
         });
@@ -470,12 +496,29 @@ async function checkoutPublicEvent(req, res) {
         else if (tableId && seatIndex != null && Number.isFinite(seatIndex) && seatIndex >= 0) {
             requestedSeats = [{ tableId, seatIndex }];
         }
+        const alreadyBought = await (0, ticketOrderService_1.countPaidTicketsForBuyer)(event.id, buyerEmail);
+        const maxThisCheckout = (0, ticketOrderService_1.checkoutQuantityCap)({
+            ticketsPerBuyerLimit: event.ticketsPerBuyerLimit ?? null,
+            alreadyBought,
+            ticketsRemaining: (0, ticketOrderService_1.ticketsRemaining)(event),
+        });
         if (event.seatSelectionEnabled) {
             if (requestedSeats.length === 0) {
                 return res.status(400).json({ error: 'Sélectionnez au moins une place sur le plan.' });
             }
-            if (requestedSeats.length > 8) {
-                return res.status(400).json({ error: 'Vous pouvez réserver au maximum 8 places à la fois.' });
+            if (maxThisCheckout < 1) {
+                return res.status(400).json({
+                    error: event.ticketsPerBuyerLimit
+                        ? (0, ticketOrderService_1.buyerTicketsLimitMessage)(event.ticketsPerBuyerLimit, alreadyBought)
+                        : 'Complet.',
+                });
+            }
+            if (requestedSeats.length > maxThisCheckout) {
+                return res.status(400).json({
+                    error: event.ticketsPerBuyerLimit
+                        ? (0, ticketOrderService_1.buyerTicketsLimitMessage)(event.ticketsPerBuyerLimit, alreadyBought)
+                        : `Vous pouvez réserver au maximum ${maxThisCheckout} place${maxThisCheckout > 1 ? 's' : ''} à la fois.`,
+                });
             }
             const seen = new Set();
             for (const s of requestedSeats) {
@@ -488,7 +531,14 @@ async function checkoutPublicEvent(req, res) {
             quantity = requestedSeats.length;
         }
         else {
-            quantity = Math.min(8, Math.max(1, Number(req.body?.quantity) || 1));
+            if (maxThisCheckout < 1) {
+                return res.status(400).json({
+                    error: event.ticketsPerBuyerLimit
+                        ? (0, ticketOrderService_1.buyerTicketsLimitMessage)(event.ticketsPerBuyerLimit, alreadyBought)
+                        : 'Complet.',
+                });
+            }
+            quantity = Math.min(maxThisCheckout, Math.max(1, Number(req.body?.quantity) || 1));
         }
         const pricingMode = (0, ticketPricingService_1.normalizeTicketPricingMode)(event.ticketPricingMode);
         let unitPriceFc = 0;
@@ -554,11 +604,11 @@ async function checkoutPublicEvent(req, res) {
         if (periodGuests + quantity > limits.maxGuests) {
             return res.status(403).json({ error: 'Plus de places du côté de l’organisateur (quota d’invités atteint pour la période en cours).' });
         }
-        const existing = await db_1.prisma.guest.findUnique({
-            where: { eventId_email: { eventId: event.id, email: buyerEmail } },
-        });
-        if (existing) {
-            return res.status(400).json({ error: 'Cet e-mail a déjà une inscription pour cet événement.' });
+        if (event.ticketsPerBuyerLimit != null &&
+            alreadyBought + quantity > event.ticketsPerBuyerLimit) {
+            return res.status(400).json({
+                error: (0, ticketOrderService_1.buyerTicketsLimitMessage)(event.ticketsPerBuyerLimit, alreadyBought),
+            });
         }
         const paid = event.ticketingEnabled && amountFc > 0 && (0, platformSettingsService_1.isOnlinePaymentsEnabled)();
         if (!paid)
@@ -571,9 +621,7 @@ async function checkoutPublicEvent(req, res) {
         // Règle d'or : Vérifier la disponibilité de la place AVANT d'initier tout paiement
         if (event.seatSelectionEnabled && requestedSeats.length > 0) {
             try {
-                for (const s of requestedSeats) {
-                    await (0, seatSelectionService_1.assertSeatAvailable)(event.id, s.tableId, s.seatIndex);
-                }
+                await (0, seatSelectionService_1.assertSeatsAvailable)(event.id, requestedSeats);
             }
             catch (err) {
                 return res.status(409).json({

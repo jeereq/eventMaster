@@ -26,7 +26,7 @@ _Nous serons ravis de vous compter parmi nous._
     },
     {
         type: 'REMINDER_WHATSAPP',
-        name: 'Rappel RSVP (WhatsApp)',
+        name: 'Rappel de réponse à l’invitation (WhatsApp)',
         description: 'Rappel automatique envoyé aux invités n\'ayant pas encore répondu.',
         channel: 'WHATSAPP',
         body: `Bonjour *{{firstName}}* 🔔
@@ -34,7 +34,7 @@ _Nous serons ravis de vous compter parmi nous._
 Un petit rappel amical concernant l'événement :
 *{{title}}*
 
-Nous n'avons pas encore reçu votre réponse RSVP.
+Nous n'avons pas encore reçu votre réponse à l’invitation.
 
 📅 *Date* : {{date}}
 📍 *Lieu* : {{location}}
@@ -48,8 +48,8 @@ _Votre réponse nous aide à mieux organiser cette réception._
     },
     {
         type: 'RSVP_CONFIRMATION_WHATSAPP',
-        name: 'Confirmation RSVP invité (WhatsApp)',
-        description: 'Message envoyé à l\'invité après acceptation de son RSVP (badge QR).',
+        name: 'Confirmation de présence invité (WhatsApp)',
+        description: 'Message envoyé à l\'invité après acceptation de sa réponse à l’invitation (badge QR).',
         channel: 'WHATSAPP',
         body: `Bonjour *{{firstName}}* ✨
 
@@ -67,9 +67,9 @@ _Au plaisir de vous accueillir très bientôt !_
     {
         type: 'RSVP_ORGANIZER_WHATSAPP',
         name: 'Notification organisateur (WhatsApp)',
-        description: 'Alerte WhatsApp envoyée à l\'organisateur lors d\'une réponse RSVP.',
+        description: 'Alerte WhatsApp envoyée à l\'organisateur lors d\'une réponse à l’invitation.',
         channel: 'WHATSAPP',
-        body: `🔔 *Nouvelle réponse RSVP*
+        body: `🔔 *Nouvelle réponse à l’invitation*
 
 📌 *Événement* : {{title}}
 

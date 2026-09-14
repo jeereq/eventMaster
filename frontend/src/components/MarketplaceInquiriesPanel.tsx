@@ -11,9 +11,7 @@ import {
   Modal,
   Pagination,
   paginateItems,
-  ProjectCard,
   StatusPill,
-  ListRowAction,
   listStackClass,
   usePageSize,
   useViewMode,
@@ -38,17 +36,15 @@ import {
 import { eventDashboardHref } from '@/lib/eventRoutes';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
+import { DealDeclineBlock, DealQuoteBlock, MarketplaceDealCard, type MarketplaceDealFact } from '@/components/MarketplaceDealCard';
 import {
   Building2,
   CalendarCheck,
   CheckCircle2,
   Coins,
-  FileText,
   Inbox,
   KeyRound,
-  Mail,
   MessageCircle,
-  Phone,
   Sparkles,
   XCircle,
   DoorClosed,
@@ -728,105 +724,119 @@ export default function MarketplaceInquiriesPanel({
                 : item.offeringSlug
                   ? dashboardServiceHref(item.offeringSlug, item.offeringCategory)
                   : null;
-              const statusChip = (
-                <StatusPill tone={inquiryStatusTone(item)}>{inquiryStatusLabel(item, organizerView)}</StatusPill>
-              );
-              const metaBits = [
-                kindLabel(item.kind),
-                organizerView ? item.vendorName : item.fromName,
-                item.eventDate ? `date ${new Date(item.eventDate).toLocaleDateString('fr-FR')}` : null,
-                item.event?.title ? `événement ${item.event.title}` : null,
-                item.guestCount ? `${item.guestCount} invités` : null,
-              ].filter(Boolean);
-
+              const counterpart = organizerView ? item.vendorName : item.fromName;
               const waTargetPhone = organizerView ? item.vendorPhone : item.fromPhone;
               const waPresetMsg = organizerView
                 ? `Bonjour, je vous contacte concernant ma demande de devis pour « ${item.title} » sur EventMaster.`
                 : `Bonjour ${item.fromName}, je fais suite à votre demande de devis pour « ${item.title} » sur EventMaster.`;
               const waUrl = buildWhatsAppDirectLink(waTargetPhone, waPresetMsg);
-
-              const actions = (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <Button
-                    size="sm"
-                    variant={
-                      inquiryChatClosed(item) || item.hasBooking || (!organizerView && item.status !== 'QUOTED')
-                        ? 'secondary'
-                        : 'primary'
-                    }
-                    onClick={() => openThread(item)}
-                    leftIcon={<MessageCircle className="w-3.5 h-3.5" />}
-                  >
-                    {inquiryChatClosed(item) ? 'Conversation' : 'Discuter'}
-                    {(item.messageCount || 0) > 0 ? ` (${item.messageCount})` : ''}
-                  </Button>
-
-                  {waUrl ? (
-                    <a
-                      href={waUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex"
-                      title="Échanger directement par WhatsApp"
-                    >
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        leftIcon={<MessageCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
-                      >
-                        WhatsApp
-                      </Button>
+              const contactPhone = organizerView ? item.vendorPhone : item.fromPhone;
+              const facts: MarketplaceDealFact[] = [];
+              if (item.eventDate) {
+                facts.push({
+                  label: 'Date',
+                  value: new Date(item.eventDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }),
+                });
+              }
+              if (item.guestCount) facts.push({ label: 'Invités', value: String(item.guestCount) });
+              if (item.event?.title) facts.push({ label: 'Événement', value: item.event.title });
+              if (!organizerView && item.fromEmail) {
+                facts.push({
+                  label: 'E-mail',
+                  value: (
+                    <a href={`mailto:${item.fromEmail}`} className="text-primary hover:underline break-all">
+                      {item.fromEmail}
                     </a>
-                  ) : null}
+                  ),
+                });
+              } else if (contactPhone) {
+                facts.push({
+                  label: 'Téléphone',
+                  value: (
+                    <a href={`tel:${contactPhone}`} className="text-primary hover:underline">
+                      {contactPhone}
+                    </a>
+                  ),
+                });
+              }
 
-                  {listingHref ? (
-                    mode === 'list' ? (
-                      <Link href={listingHref} className="inline-flex">
-                        <ListRowAction />
-                      </Link>
-                    ) : (
-                      <Link href={listingHref} className="inline-flex">
-                        <Button size="sm" variant="secondary">Voir la fiche</Button>
-                      </Link>
-                    )
-                  ) : null}
+              const discussButton = (
+                <Button
+                  size="sm"
+                  variant={
+                    inquiryChatClosed(item) || item.hasBooking || (!organizerView && item.status !== 'QUOTED')
+                      ? 'secondary'
+                      : 'primary'
+                  }
+                  onClick={() => openThread(item)}
+                  leftIcon={<MessageCircle className="w-3.5 h-3.5" />}
+                >
+                  {inquiryChatClosed(item) ? 'Conversation' : 'Discuter'}
+                  {(item.messageCount || 0) > 0 ? ` (${item.messageCount})` : ''}
+                </Button>
+              );
+              const acceptButton = organizerView && !item.hasBooking && item.status === 'QUOTED' ? (
+                <Button
+                  size="sm"
+                  onClick={() => handleConvertBooking(item)}
+                  leftIcon={<CalendarCheck className="w-3.5 h-3.5" />}
+                >
+                  Accepter
+                </Button>
+              ) : null;
+              const quoteButton = !organizerView && !item.hasBooking && item.status !== 'DECLINED' ? (
+                <Button
+                  size="sm"
+                  variant={item.status === 'QUOTED' ? 'secondary' : 'primary'}
+                  onClick={() => openQuoteModal(item)}
+                  leftIcon={<Coins className="w-3.5 h-3.5" />}
+                >
+                  {item.status === 'QUOTED' ? 'Modifier' : 'Chiffrer'}
+                </Button>
+              ) : null;
 
-                  {organizerView && !item.hasBooking && item.status === 'QUOTED' ? (
-                    <Button
-                      size="sm"
-                      onClick={() => handleConvertBooking(item)}
-                      leftIcon={<CalendarCheck className="w-3.5 h-3.5" />}
-                    >
-                      Accepter le devis
-                      {item.quotedAmountFc != null ? ` (${formatFc(item.quotedAmountFc)})` : ''}
-                    </Button>
-                  ) : null}
-
-                  {organizerView && !item.hasBooking && item.status === 'NEW' ? (
-                    <span className="inline-flex items-center min-h-11 px-2.5 text-[11px] font-semibold text-muted">
-                      Discutez pour préciser le besoin
-                    </span>
-                  ) : null}
-
-                  {organizerView && item.event?.id ? (
-                    <Link href={eventDashboardHref(item.event.id, { tab: 'prep' })} className="inline-flex">
-                      <Button size="sm" variant="secondary">Événement</Button>
-                    </Link>
-                  ) : null}
-
-                  {/* Boutons Professionnel (Vendeur) */}
-                  {!organizerView && !item.hasBooking && item.status !== 'DECLINED' ? (
+              return (
+                <MarketplaceDealCard
+                  key={item.id}
+                  id={item.id}
+                  title={item.title}
+                  subtitle={[kindLabel(item.kind), counterpart].filter(Boolean).join(' · ')}
+                  timestamp={new Date(item.createdAt).toLocaleString('fr-FR')}
+                  icon={kindIcon(item.kind)}
+                  status={<StatusPill tone={inquiryStatusTone(item)}>{inquiryStatusLabel(item, organizerView)}</StatusPill>}
+                  facts={facts}
+                  highlight={Boolean(highlightInquiryId && item.id === highlightInquiryId)}
+                  layout={mode}
+                  primaryActions={(
                     <>
-                      <Button
-                        size="sm"
-                        variant={item.status === 'QUOTED' ? 'secondary' : 'primary'}
-                        onClick={() => openQuoteModal(item)}
-                        leftIcon={<Coins className="w-3.5 h-3.5" />}
-                      >
-                        {item.status === 'QUOTED' ? 'Modifier devis' : 'Chiffrer le devis'}
-                      </Button>
-
-                      {item.eventDate ? (
+                      {acceptButton || discussButton}
+                      {acceptButton ? discussButton : quoteButton}
+                    </>
+                  )}
+                  secondaryActions={(
+                    <>
+                      {waUrl ? (
+                        <a href={waUrl} target="_blank" rel="noopener noreferrer" title="Échanger directement par WhatsApp">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            leftIcon={<MessageCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
+                          >
+                            WhatsApp
+                          </Button>
+                        </a>
+                      ) : null}
+                      {listingHref ? (
+                        <Button size="sm" variant="secondary" href={listingHref}>
+                          Fiche
+                        </Button>
+                      ) : null}
+                      {organizerView && item.event?.id ? (
+                        <Button size="sm" variant="secondary" href={eventDashboardHref(item.event.id, { tab: 'prep' })}>
+                          Événement
+                        </Button>
+                      ) : null}
+                      {!organizerView && !item.hasBooking && item.status !== 'DECLINED' && item.eventDate ? (
                         <Button
                           size="sm"
                           variant="secondary"
@@ -834,11 +844,10 @@ export default function MarketplaceInquiriesPanel({
                           onClick={() => handleConvertBooking(item)}
                           leftIcon={<CalendarCheck className="w-3.5 h-3.5" />}
                         >
-                          Créer réservation
+                          Réserver
                         </Button>
                       ) : null}
-
-                      {item.status === 'NEW' && onMarkContacted ? (
+                      {!organizerView && !item.hasBooking && item.status === 'NEW' && onMarkContacted ? (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -849,8 +858,7 @@ export default function MarketplaceInquiriesPanel({
                           Contacté
                         </Button>
                       ) : null}
-
-                      {canDeclineInquiry(item) ? (
+                      {!organizerView && canDeclineInquiry(item) ? (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -862,109 +870,32 @@ export default function MarketplaceInquiriesPanel({
                         </Button>
                       ) : null}
                     </>
+                  )}
+                >
+                  <p className="text-xs text-foreground/80 leading-relaxed">{next.detail}</p>
+                  {item.status === 'QUOTED' && item.quotedAmountFc != null ? (
+                    <DealQuoteBlock
+                      amountFc={formatFc(item.quotedAmountFc)}
+                      depositFc={formatFc(Math.round(item.quotedAmountFc * 0.3))}
+                      notes={item.responseNotes}
+                    />
                   ) : null}
-                </div>
-              );
-
-              const isHighlighted = Boolean(highlightInquiryId && item.id === highlightInquiryId);
-
-              return (
-                <div key={item.id} className={cn('rounded-[var(--radius-card)] transition', isHighlighted && 'ring-2 ring-primary ring-offset-2 ring-offset-background')}>
-                  <ProjectCard
-                    id={item.id}
-                    title={organizerView ? item.title : item.fromName}
-                    layout={mode}
-                    icon={kindIcon(item.kind)}
-                    hideCta
-                    status={statusChip}
-                    overlayMeta={`${kindLabel(item.kind)}${item.vendorName && organizerView ? ` · ${item.vendorName}` : ''}`}
-                    meta={
-                      mode === 'list' ? (
-                        <span className="truncate">{metaBits.join(' · ')}</span>
-                      ) : (
-                        <div className="space-y-1.5">
-                          <p className="truncate text-xs">{metaBits.join(' · ')}</p>
-                          {!organizerView ? (
-                            <p className="text-xs text-muted flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                              <a href={`mailto:${item.fromEmail}`} className="inline-flex items-center gap-1 font-medium text-primary hover:underline">
-                                <Mail className="w-3 h-3" />
-                                {item.fromEmail}
-                              </a>
-                              {item.fromPhone ? (
-                                <a href={`tel:${item.fromPhone}`} className="inline-flex items-center gap-1 font-medium text-primary hover:underline">
-                                  <Phone className="w-3 h-3" />
-                                  {item.fromPhone}
-                                </a>
-                              ) : null}
-                            </p>
-                          ) : item.vendorPhone ? (
-                            <p className="text-xs text-muted flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                              <a href={`tel:${item.vendorPhone}`} className="inline-flex items-center gap-1 font-medium text-primary hover:underline">
-                                <Phone className="w-3 h-3" />
-                                {item.vendorPhone}
-                              </a>
-                            </p>
-                          ) : null}
-                          <p className="text-[11px] text-muted">{new Date(item.createdAt).toLocaleString('fr-FR')}</p>
-                        </div>
-                      )
-                    }
-                    description={mode === 'grid' ? next.detail : next.title}
-                    actions={actions}
-                  >
-                    <div className="space-y-2 pt-1">
-                      {/* Bloc devis chiffré */}
-                      {item.status === 'QUOTED' && item.quotedAmountFc != null ? (
-                        <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-2.5 text-xs space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
-                              <Coins className="w-3.5 h-3.5" />
-                              Devis proposé : {formatFc(item.quotedAmountFc)}
-                            </span>
-                            <span className="text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
-                              Acompte (30%) : {formatFc(Math.round(item.quotedAmountFc * 0.3))}
-                            </span>
-                          </div>
-                          {item.responseNotes ? (
-                            <p className="text-xs text-foreground/90 whitespace-pre-line border-t border-emerald-500/15 pt-1">
-                              {item.responseNotes}
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : null}
-
-                      {/* Bloc refusé */}
-                      {item.status === 'DECLINED' ? (
-                        <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 p-2.5 text-xs text-rose-800 dark:text-rose-200 space-y-1">
-                          <p className="font-semibold flex items-center gap-1.5">
-                            <XCircle className="w-3.5 h-3.5 text-rose-600" />
-                            Demande déclinée
-                          </p>
-                          {item.declineReason ? (
-                            <p className="text-xs">
-                              <span className="font-medium text-rose-900 dark:text-rose-100">Motif :</span> {item.declineReason}
-                            </p>
-                          ) : null}
-                          {item.responseNotes ? (
-                            <p className="text-[11px] text-muted-foreground whitespace-pre-line border-t border-rose-500/15 pt-1">
-                              {item.responseNotes}
-                            </p>
-                          ) : null}
-                        </div>
-                      ) : null}
-
-                      {/* Message initial du demandeur */}
-                      {mode === 'grid' && item.message ? (
-                        <p className="text-xs text-muted line-clamp-3 whitespace-pre-line">{item.message}</p>
-                      ) : null}
-                      {item.lastMessage ? (
-                        <p className="text-[11px] text-muted line-clamp-2">
-                          Dernier message ({item.lastMessage.authorRole === 'CLIENT' ? 'client' : 'pro'}) : {item.lastMessage.body}
-                        </p>
-                      ) : null}
-                    </div>
-                  </ProjectCard>
-                </div>
+                  {item.status === 'DECLINED' ? (
+                    <DealDeclineBlock
+                      title="Demande déclinée"
+                      reason={item.declineReason}
+                      notes={item.responseNotes}
+                    />
+                  ) : null}
+                  {item.message ? (
+                    <p className="text-xs text-muted line-clamp-3 whitespace-pre-line">{item.message}</p>
+                  ) : null}
+                  {item.lastMessage ? (
+                    <p className="text-[11px] text-muted line-clamp-2">
+                      Dernier message ({item.lastMessage.authorRole === 'CLIENT' ? 'client' : 'pro'}) : {item.lastMessage.body}
+                    </p>
+                  ) : null}
+                </MarketplaceDealCard>
               );
             })}
           </div>

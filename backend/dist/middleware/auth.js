@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.JWT_SECRET = void 0;
+exports.invalidateLicenseCache = invalidateLicenseCache;
 exports.signUserToken = signUserToken;
 exports.optionalAuth = optionalAuth;
 exports.requireAuth = requireAuth;
@@ -11,6 +12,12 @@ exports.requireRole = requireRole;
 exports.requireActiveLicense = requireActiveLicense;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const db_1 = require("../db");
+const ttlCache_1 = require("../utils/ttlCache");
+const LICENSE_CACHE_TTL_MS = 60_000;
+const licenseCache = (0, ttlCache_1.createTtlCache)(LICENSE_CACHE_TTL_MS);
+function invalidateLicenseCache(tenantId) {
+    licenseCache.delete(tenantId);
+}
 exports.JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
 function signUserToken(payload, expiresIn = '24h') {
     return jsonwebtoken_1.default.sign(payload, exports.JWT_SECRET, { expiresIn: expiresIn });
@@ -77,11 +84,17 @@ async function requireActiveLicense(req, res, next) {
         return res.status(403).json({ error: 'Tenant non identifié. Accès refusé.' });
     }
     try {
-        const tenant = await db_1.prisma.tenant.findUnique({
-            where: { id: tenantId },
-        });
+        let tenant = licenseCache.get(tenantId);
         if (!tenant) {
-            return res.status(404).json({ error: 'Organisation non trouvée.' });
+            const row = await db_1.prisma.tenant.findUnique({
+                where: { id: tenantId },
+                select: { accountKind: true, licenseActive: true, licenseExpiresAt: true },
+            });
+            if (!row) {
+                return res.status(404).json({ error: 'Organisation non trouvée.' });
+            }
+            tenant = row;
+            licenseCache.set(tenantId, row);
         }
         if (tenant.accountKind === 'CLIENT') {
             return next();

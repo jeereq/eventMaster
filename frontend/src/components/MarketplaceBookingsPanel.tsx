@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
 import { api } from '@/lib/api';
 import {
   Alert,
@@ -11,9 +10,7 @@ import {
   Modal,
   Pagination,
   paginateItems,
-  ProjectCard,
   StatusPill,
-  ListRowAction,
   listStackClass,
   usePageSize,
   useViewMode,
@@ -26,6 +23,7 @@ import CatalogueFilterBar, {
 } from '@/components/CatalogueFilterBar';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
+import { DealDeclineBlock, MarketplaceDealCard, type MarketplaceDealFact } from '@/components/MarketplaceDealCard';
 import {
   BOOKING_PIPELINE_STEPS,
   BOOKING_STATUS_LABELS,
@@ -164,35 +162,43 @@ function BookingStepper({ item }: { item: MarketplaceBookingItem }) {
     );
   }
   const idx = bookingPipelineIndex(item);
+  const current = BOOKING_PIPELINE_STEPS[idx];
   return (
-    <ol className="flex flex-nowrap sm:flex-wrap items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5" aria-label="Étapes de la réservation">
-      {BOOKING_PIPELINE_STEPS.map((step, i) => {
-        const isCurrent = i === idx;
-        const isPassed = i < idx;
-        return (
-          <li key={step.id} className="flex items-center gap-1.5">
-            <span
-              className={cn(
-                'px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide border transition flex items-center gap-1',
-                isCurrent
-                  ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs ring-2 ring-primary/20'
-                  : isPassed
-                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
-                    : 'border-border text-muted bg-surface/60 opacity-60',
-              )}
-            >
-              {isPassed ? <CheckCircle2 className="w-2.5 h-2.5" /> : null}
-              {step.label}
-            </span>
-            {i < BOOKING_PIPELINE_STEPS.length - 1 && (
-              <span className="text-border text-[10px] select-none" aria-hidden>
-                →
+    <div className="space-y-2">
+      {current ? (
+        <p className="text-xs font-semibold text-foreground sm:hidden">
+          {current.label}
+          <span className="font-normal text-muted">
+            {' '}· étape {idx + 1} sur {BOOKING_PIPELINE_STEPS.length}
+          </span>
+        </p>
+      ) : null}
+      <ol className="flex gap-1.5" aria-label="Étapes de la réservation">
+        {BOOKING_PIPELINE_STEPS.map((step, i) => {
+          const isCurrent = i === idx;
+          const isPassed = i < idx;
+          return (
+            <li key={step.id} className="min-w-0 flex-1">
+              <span
+                className={cn(
+                  'block h-1.5 rounded-full',
+                  isCurrent || isPassed ? 'bg-primary-solid' : 'bg-border',
+                  isCurrent && 'ring-2 ring-primary/25',
+                )}
+              />
+              <span
+                className={cn(
+                  'mt-1 hidden text-[11px] font-medium leading-tight sm:block',
+                  isCurrent ? 'text-foreground' : isPassed ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted',
+                )}
+              >
+                {step.label}
               </span>
-            )}
-          </li>
-        );
-      })}
-    </ol>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }
 
@@ -609,204 +615,156 @@ export default function MarketplaceBookingsPanel({
                 : item.offeringSlug
                   ? dashboardServiceHref(item.offeringSlug, item.offeringCategory)
                   : null;
-              const statusChip = (
-                <StatusPill tone={toneFor(item.status)}>{BOOKING_STATUS_LABELS[item.status]}</StatusPill>
-              );
-              const metaBits = [
-                kindLabel(item),
-                isVendor ? item.organizerName || 'Organisateur' : item.vendorName,
-                item.event?.title ? `événement ${item.event.title}` : null,
-                item.depositMarkedAt ? 'acompte marqué' : null,
-              ].filter(Boolean);
               const periodLabel = formatBookingPeriod(item.eventDate, item.eventEndDate);
-
+              const counterpart = isVendor ? item.organizerName || 'Organisateur' : item.vendorName;
               const waPresetMsg = isVendor
                 ? `Bonjour, je vous contacte au sujet de votre réservation pour « ${item.title} » (${formatBookingPeriod(item.eventDate, item.eventEndDate)}) sur EventMaster.`
                 : `Bonjour, je vous contacte au sujet de ma réservation pour « ${item.title} » (${formatBookingPeriod(item.eventDate, item.eventEndDate)}) sur EventMaster.`;
               const waUrl = buildWhatsAppDirectLink(item.vendorPhone, waPresetMsg);
+              const focusPeriod = () => {
+                const start = String(item.eventDate || '').slice(0, 10);
+                const end = String(item.eventEndDate || item.eventDate || '').slice(0, 10);
+                if (!start) return;
+                setFromDate(start);
+                setToDate(end || start);
+                setCalendarOpen(true);
+              };
+              const facts: MarketplaceDealFact[] = [
+                { label: 'Période', value: periodLabel, onClick: item.eventDate ? focusPeriod : undefined },
+              ];
+              if (counterpart) facts.push({ label: isVendor ? 'Client' : 'Professionnel', value: counterpart });
+              if (item.event?.title) facts.push({ label: 'Événement', value: item.event.title });
+              facts.push({ label: 'Total', value: formatFc(item.amountFc) });
+              facts.push({ label: 'Acompte', value: formatFc(item.depositFc) });
+              if (isVendor) facts.push({ label: 'Commission', value: formatFc(item.commissionFc) });
 
-              const actions = (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {waUrl && !isVendor ? (
-                    <a
-                      href={waUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex"
-                      title="Échanger directement par WhatsApp"
-                    >
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        leftIcon={<MessageCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
-                      >
-                        WhatsApp
-                      </Button>
-                    </a>
-                  ) : null}
-
-                  {isVendor && item.status === 'REQUESTED' && mode === 'grid' ? (
-                    <div className="w-28">
-                      <Input
-                        label="Montant (FC)"
-                        type="number"
-                        min={0}
-                        value={amountDraft}
-                        onChange={(e) => setAcceptAmount((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                      />
-                    </div>
-                  ) : null}
-                  {isVendor && item.status === 'REQUESTED' ? (
-                    <>
-                      <Button
-                        size="sm"
-                        loading={busy}
-                        onClick={() => run(item.id, 'accept', { amountFc: Number(amountDraft) })}
-                        leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}
-                      >
-                        Accepter
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setCancelModal({ item, action: 'decline' });
-                          setCancelReasonChoice(DECLINE_BOOKING_REASONS[0]);
-                          setCancelCustomReason('');
-                          setCancelNotes('');
-                        }}
-                        leftIcon={<XCircle className="w-3.5 h-3.5 text-rose-500" />}
-                        className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                      >
-                        Refuser
-                      </Button>
-                    </>
-                  ) : null}
-                  {item.status === 'ACCEPTED' && !item.depositMarkedAt ? (
-                    <Button
-                      size="sm"
-                      loading={busy}
-                      variant="primary"
-                      onClick={() => {
-                        setDepositModal(item);
-                        setDepositNote('');
-                      }}
-                      leftIcon={<Coins className="w-3.5 h-3.5" />}
-                    >
-                      {isVendor ? 'Acompte reçu' : 'J’ai versé'}
-                    </Button>
-                  ) : null}
-                  {isVendor && item.status === 'ACCEPTED' && item.depositMarkedAt ? (
-                    <Button size="sm" loading={busy} onClick={() => run(item.id, 'confirm')}>
-                      Confirmer
-                    </Button>
-                  ) : null}
-                  {(item.status === 'ACCEPTED' || (item.status === 'REQUESTED' && !isVendor)) ? (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setCancelModal({ item, action: 'cancel' });
-                        setCancelReasonChoice(DECLINE_BOOKING_REASONS[0]);
-                        setCancelCustomReason('');
-                        setCancelNotes('');
-                      }}
-                      className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                    >
-                      Annuler
-                    </Button>
-                  ) : null}
-                  {listingHref ? (
-                    mode === 'list' ? (
-                      <Link href={listingHref} className="inline-flex">
-                        <ListRowAction />
-                      </Link>
-                    ) : (
-                      <Link href={listingHref} className="inline-flex">
-                        <Button size="sm" variant="ghost">Voir la fiche</Button>
-                      </Link>
-                    )
-                  ) : null}
-                  {item.vendorPhone && !isVendor ? (
-                    <a href={`tel:${item.vendorPhone}`} className="inline-flex" title="Appeler le prestataire">
-                      <Button size="sm" variant="ghost" leftIcon={<Phone className="w-3.5 h-3.5" />}>
-                        Appeler
-                      </Button>
-                    </a>
-                  ) : null}
-                  {organizerView && item.event?.id ? (
-                    <Link href={eventDashboardHref(item.event.id, { tab: 'prep' })} className="inline-flex">
-                      <Button size="sm" variant="secondary">Événement</Button>
-                    </Link>
-                  ) : null}
-                </div>
-              );
-
-              const isHighlighted = Boolean(highlightBookingId && item.id === highlightBookingId);
+              const acceptButton = isVendor && item.status === 'REQUESTED' ? (
+                <Button
+                  size="sm"
+                  loading={busy}
+                  onClick={() => run(item.id, 'accept', { amountFc: Number(amountDraft) })}
+                  leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}
+                >
+                  Accepter
+                </Button>
+              ) : null;
+              const depositButton = item.status === 'ACCEPTED' && !item.depositMarkedAt ? (
+                <Button
+                  size="sm"
+                  loading={busy}
+                  variant="primary"
+                  onClick={() => {
+                    setDepositModal(item);
+                    setDepositNote('');
+                  }}
+                  leftIcon={<Coins className="w-3.5 h-3.5" />}
+                >
+                  {isVendor ? 'Acompte reçu' : 'J’ai versé'}
+                </Button>
+              ) : null;
+              const confirmButton = isVendor && item.status === 'ACCEPTED' && item.depositMarkedAt ? (
+                <Button size="sm" loading={busy} onClick={() => run(item.id, 'confirm')}>
+                  Confirmer
+                </Button>
+              ) : null;
 
               return (
-                <div key={item.id} className={cn('rounded-[var(--radius-card)] transition', isHighlighted && 'ring-2 ring-primary ring-offset-2 ring-offset-background')}>
-                  <ProjectCard
-                    id={item.id}
-                    title={item.title}
-                    layout={mode}
-                    icon={kindIcon(item)}
-                    hideCta
-                    status={statusChip}
-                    overlayMeta={`${periodLabel} · ${isVendor ? 'Reçue' : 'Envoyée'}`}
-                    value={mode === 'list' ? formatFc(item.amountFc) : undefined}
-                    valueMeta={mode === 'list' ? `Acompte ${formatFc(item.depositFc)}` : undefined}
-                    meta={
-                      mode === 'list' ? (
-                        <span className="truncate">{[periodLabel, ...metaBits].join(' · ')}</span>
-                      ) : (
-                        <div className="space-y-1.5">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const start = String(item.eventDate || '').slice(0, 10);
-                              const end = String(item.eventEndDate || item.eventDate || '').slice(0, 10);
-                              if (!start) return;
-                              setFromDate(start);
-                              setToDate(end || start);
-                              setCalendarOpen(true);
-                            }}
-                            className="text-xs font-semibold text-foreground flex items-center gap-1.5 hover:text-primary"
+                <MarketplaceDealCard
+                  key={item.id}
+                  id={item.id}
+                  title={item.title}
+                  subtitle={`${kindLabel(item)} · ${isVendor ? 'Reçue' : 'Envoyée'}`}
+                  icon={kindIcon(item)}
+                  status={<StatusPill tone={toneFor(item.status)}>{BOOKING_STATUS_LABELS[item.status]}</StatusPill>}
+                  facts={facts}
+                  value={formatFc(item.amountFc)}
+                  valueMeta={`Acompte ${formatFc(item.depositFc)}`}
+                  highlight={Boolean(highlightBookingId && item.id === highlightBookingId)}
+                  layout={mode}
+                  primaryActions={acceptButton || depositButton || confirmButton}
+                  secondaryActions={(
+                    <>
+                      {waUrl && !isVendor ? (
+                        <a href={waUrl} target="_blank" rel="noopener noreferrer" title="Échanger directement par WhatsApp">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            leftIcon={<MessageCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
                           >
-                            <CalendarDays className="w-3.5 h-3.5 text-primary shrink-0" />
-                            {periodLabel}
-                          </button>
-                          <p className="truncate text-xs">{metaBits.join(' · ')}</p>
-                          <p className="text-xs text-muted">
-                            {formatFc(item.amountFc)} · acompte {formatFc(item.depositFc)}
-                            {isVendor ? ` · commission ${formatFc(item.commissionFc)}` : ''}
-                          </p>
-                          {item.vendorPhone && !isVendor ? (
-                            <p className="text-xs text-muted flex items-center gap-1">
-                              <Phone className="w-3 h-3" />
-                              <a href={`tel:${item.vendorPhone}`} className="text-primary hover:underline">{item.vendorPhone}</a>
-                            </p>
-                          ) : null}
-                          <BookingStepper item={item} />
-                        </div>
-                      )
-                    }
-                    description={next.detail}
-                    actions={actions}
-                  >
-                    <div className="space-y-1.5 pt-1">
-                      {item.status === 'CANCELLED' && item.declineReason ? (
-                        <div className="rounded-xl border border-rose-500/25 bg-rose-500/10 p-2 text-xs text-rose-800 dark:text-rose-200">
-                          <span className="font-semibold">Motif :</span> {item.declineReason}
-                        </div>
+                            WhatsApp
+                          </Button>
+                        </a>
                       ) : null}
-                      <BookingUnavailability item={item} onFocusDate={focusDay} />
-                      {mode === 'grid' && item.notes ? (
-                        <p className="text-xs text-muted line-clamp-3 whitespace-pre-line">{item.notes}</p>
+                      {listingHref ? (
+                        <Button size="sm" variant="secondary" href={listingHref}>
+                          Fiche
+                        </Button>
                       ) : null}
-                    </div>
-                  </ProjectCard>
-                </div>
+                      {item.vendorPhone && !isVendor ? (
+                        <a href={`tel:${item.vendorPhone}`} title="Appeler le prestataire">
+                          <Button size="sm" variant="ghost" leftIcon={<Phone className="w-3.5 h-3.5" />}>
+                            Appeler
+                          </Button>
+                        </a>
+                      ) : null}
+                      {organizerView && item.event?.id ? (
+                        <Button size="sm" variant="secondary" href={eventDashboardHref(item.event.id, { tab: 'prep' })}>
+                          Événement
+                        </Button>
+                      ) : null}
+                      {isVendor && item.status === 'REQUESTED' ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setCancelModal({ item, action: 'decline' });
+                            setCancelReasonChoice(DECLINE_BOOKING_REASONS[0]);
+                            setCancelCustomReason('');
+                            setCancelNotes('');
+                          }}
+                          leftIcon={<XCircle className="w-3.5 h-3.5 text-rose-500" />}
+                          className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                        >
+                          Refuser
+                        </Button>
+                      ) : null}
+                      {(item.status === 'ACCEPTED' || (item.status === 'REQUESTED' && !isVendor)) ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setCancelModal({ item, action: 'cancel' });
+                            setCancelReasonChoice(DECLINE_BOOKING_REASONS[0]);
+                            setCancelCustomReason('');
+                            setCancelNotes('');
+                          }}
+                          className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                        >
+                          Annuler
+                        </Button>
+                      ) : null}
+                    </>
+                  )}
+                >
+                  <p className="text-xs text-foreground/80 leading-relaxed">{next.detail}</p>
+                  <BookingStepper item={item} />
+                  {isVendor && item.status === 'REQUESTED' ? (
+                    <Input
+                      label="Montant à confirmer (FC)"
+                      type="number"
+                      min={0}
+                      value={amountDraft}
+                      onChange={(e) => setAcceptAmount((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                    />
+                  ) : null}
+                  {item.status === 'CANCELLED' && item.declineReason ? (
+                    <DealDeclineBlock title="Réservation annulée" reason={item.declineReason} />
+                  ) : null}
+                  <BookingUnavailability item={item} onFocusDate={focusDay} />
+                  {item.notes ? (
+                    <p className="text-xs text-muted line-clamp-3 whitespace-pre-line">{item.notes}</p>
+                  ) : null}
+                </MarketplaceDealCard>
               );
             })}
           </div>

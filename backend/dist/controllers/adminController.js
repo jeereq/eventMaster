@@ -29,6 +29,7 @@ exports.updateAdminGuest = updateAdminGuest;
 exports.deleteAdminGuest = deleteAdminGuest;
 exports.getAdminSettings = getAdminSettings;
 exports.updateAdminSettings = updateAdminSettings;
+const auth_1 = require("../middleware/auth");
 const db_1 = require("../db");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const tenantAccess_1 = require("../utils/tenantAccess");
@@ -494,6 +495,7 @@ async function updateTenantPlanOrLicense(req, res) {
                 pendingPlan: newPlanKey === 'FREE' ? existing.pendingPlan : null,
             },
         });
+        (0, auth_1.invalidateLicenseCache)(id);
         let billingResult = null;
         if (billingPayload?.issueInvoice &&
             newPlanKey !== 'FREE' &&

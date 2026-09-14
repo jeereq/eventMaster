@@ -6,6 +6,7 @@ exports.hasNotificationForPeriod = hasNotificationForPeriod;
 exports.getUserNotifications = getUserNotifications;
 exports.notifyUsers = notifyUsers;
 exports.notifyPlatformStaff = notifyPlatformStaff;
+exports.listTenantOperatorIds = listTenantOperatorIds;
 exports.notifyTenantOperators = notifyTenantOperators;
 exports.markNotificationRead = markNotificationRead;
 exports.markAllNotificationsRead = markAllNotificationsRead;
@@ -16,6 +17,8 @@ const expoPushService_1 = require("./expoPushService");
 const notificationService_1 = require("./notificationService");
 const notificationPreferenceService_1 = require("./notificationPreferenceService");
 const notificationTemplates_1 = require("../utils/notificationTemplates");
+const notificationDedup_1 = require("./notificationDedup");
+const inflightNotifications = new Map();
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 function formatAmountFc(amount) {
     return `${amount.toLocaleString('fr-FR')} FC`;
@@ -104,7 +107,9 @@ async function fanOutChannels(notification, extras) {
         await logDelivery({
             notificationId: notification.id,
             channel: 'EMAIL',
-            status: result.simulated ? 'SIMULATED' : result.success ? 'SENT' : 'FAILED',
+            status: result.messageId === 'deduped-same-channel'
+                ? 'SIMULATED'
+                : result.simulated ? 'SIMULATED' : result.success ? 'SENT' : 'FAILED',
             providerId: result.messageId,
             error: result.error,
         });
@@ -118,14 +123,29 @@ async function fanOutChannels(notification, extras) {
                 message: notification.message,
                 href,
             });
-        const result = await (0, notificationService_1.sendRealWhatsApp)(waTo, body);
-        await logDelivery({
-            notificationId: notification.id,
+        const waKey = (0, notificationDedup_1.outboundChannelFingerprint)({
             channel: 'WHATSAPP',
-            status: result.simulated ? 'SIMULATED' : result.success ? 'SENT' : 'FAILED',
-            providerId: result.messageSid,
-            error: result.error,
+            to: waTo,
+            body,
         });
+        if ((0, notificationDedup_1.claimSimilarOutbound)(waKey)) {
+            const result = await (0, notificationService_1.sendRealWhatsApp)(waTo, body);
+            await logDelivery({
+                notificationId: notification.id,
+                channel: 'WHATSAPP',
+                status: result.simulated ? 'SIMULATED' : result.success ? 'SENT' : 'FAILED',
+                providerId: result.messageSid,
+                error: result.error,
+            });
+        }
+        else {
+            await logDelivery({
+                notificationId: notification.id,
+                channel: 'WHATSAPP',
+                status: 'SIMULATED',
+                providerId: 'deduped-same-channel',
+            });
+        }
     }
 }
 async function createCommercialBillingNotification(params) {
@@ -164,6 +184,45 @@ async function createCommercialBillingNotification(params) {
     });
 }
 async function createPlatformNotification(params) {
+    const contentKey = (0, notificationDedup_1.notificationDedupeKey)({
+        type: params.type,
+        title: params.title,
+        message: params.message,
+        metadata: params.metadata ?? null,
+    });
+    const incomingKey = `${params.userId}|${contentKey}`;
+    const pending = inflightNotifications.get(incomingKey);
+    if (pending)
+        return pending;
+    const work = persistPlatformNotification(params, contentKey).finally(() => {
+        inflightNotifications.delete(incomingKey);
+    });
+    inflightNotifications.set(incomingKey, work);
+    return work;
+}
+async function persistPlatformNotification(params, contentKey) {
+    const recent = await db_1.prisma.platformNotification.findMany({
+        where: {
+            userId: params.userId,
+            type: params.type,
+            createdAt: { gte: new Date(Date.now() - notificationDedup_1.DEDUP_WINDOW_MS) },
+        },
+        select: { id: true, title: true, message: true, metadata: true, createdAt: true },
+        take: 12,
+        orderBy: { createdAt: 'desc' },
+    });
+    const duplicate = recent.find((row) => {
+        if (!(0, notificationDedup_1.isWithinDedupWindow)(row.createdAt))
+            return false;
+        return (0, notificationDedup_1.notificationDedupeKey)({
+            type: params.type,
+            title: row.title,
+            message: row.message,
+            metadata: row.metadata ?? null,
+        }) === contentKey;
+    });
+    if (duplicate)
+        return duplicate;
     const notification = await db_1.prisma.platformNotification.create({
         data: {
             userId: params.userId,
@@ -240,7 +299,7 @@ async function notifyPlatformStaff(params) {
     });
     await notifyUsers(users.map((u) => u.id), notifyParams);
 }
-async function notifyTenantOperators(tenantId, params) {
+async function listTenantOperatorIds(tenantId) {
     const tenant = await db_1.prisma.tenant.findUnique({
         where: { id: tenantId },
         select: {
@@ -252,8 +311,15 @@ async function notifyTenantOperators(tenantId, params) {
         },
     });
     if (!tenant)
+        return [];
+    return [...new Set([tenant.managerId, ...tenant.users.map((user) => user.id)].filter((id) => Boolean(id)))];
+}
+async function notifyTenantOperators(tenantId, params, opts) {
+    const exclude = new Set((opts?.excludeUserIds || []).filter((id) => Boolean(id)));
+    const ids = (await listTenantOperatorIds(tenantId)).filter((id) => !exclude.has(id));
+    if (ids.length === 0)
         return;
-    await notifyUsers([tenant.managerId, ...tenant.users.map((u) => u.id)], params);
+    await notifyUsers(ids, params);
 }
 async function markNotificationRead(userId, notificationId) {
     const notification = await db_1.prisma.platformNotification.findFirst({

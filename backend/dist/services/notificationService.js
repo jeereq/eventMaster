@@ -14,6 +14,7 @@ const notificationConfig_1 = require("../config/notificationConfig");
 (0, notificationConfig_1.logNotificationConfigStatus)();
 const phone_1 = require("../utils/phone");
 Object.defineProperty(exports, "formatPhoneE164", { enumerable: true, get: function () { return phone_1.formatPhoneE164; } });
+const notificationDedup_1 = require("./notificationDedup");
 /**
  * Envoie un e-mail via SendGrid uniquement (aucune simulation).
  */
@@ -24,6 +25,17 @@ async function sendRealEmail(to, subject, textBody, htmlBody, attachments) {
         return { success: false, simulated: false, error: errMsg };
     }
     const { sendgridApiKey, sendgridFrom } = (0, notificationConfig_1.getNotificationCredentials)();
+    if ((0, notificationDedup_1.isPlatformBrandedEmailSubject)(subject)) {
+        const fingerprint = (0, notificationDedup_1.outboundChannelFingerprint)({
+            channel: 'EMAIL',
+            to,
+            subject,
+            body: textBody,
+        });
+        if (!(0, notificationDedup_1.claimSimilarOutbound)(fingerprint)) {
+            return { success: true, simulated: false, messageId: 'deduped-same-channel' };
+        }
+    }
     try {
         mail_1.default.setApiKey(sendgridApiKey);
         const msg = {

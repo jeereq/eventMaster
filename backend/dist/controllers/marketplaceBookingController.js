@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createBooking = createBooking;
 exports.listBookings = listBookings;
 exports.updateBooking = updateBooking;
+exports.acceptInquiryQuote = acceptInquiryQuote;
 exports.convertInquiryToBooking = convertInquiryToBooking;
 const db_1 = require("../db");
 const permissionsService_1 = require("../services/permissionsService");
@@ -14,12 +15,22 @@ const marketplaceDates_1 = require("../utils/marketplaceDates");
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 const HOLD_STATUSES = ['REQUESTED', 'ACCEPTED', 'CONFIRMED'];
 const bookingInclude = {
-    listing: { select: { slug: true, headline: true, roomId: true, address: true, latitude: true, longitude: true, room: { select: { name: true, location: true } } } },
-    offering: { select: { slug: true, title: true, category: true } },
+    listing: { select: { slug: true, headline: true, roomId: true, address: true, latitude: true, longitude: true, blockedDates: true, room: { select: { name: true, location: true } } } },
+    offering: { select: { slug: true, title: true, category: true, blockedDates: true } },
     event: { select: { id: true, title: true, date: true } },
     vendorTenant: { select: { id: true, name: true, managerId: true, manager: { select: { phone: true, phoneCountryCode: true } }, vendorProfile: { select: { slug: true, displayName: true } } } },
     organizerTenant: { select: { id: true, name: true } },
 };
+async function collectVendorBlockedDates(tenantId) {
+    const [listings, offerings] = await Promise.all([
+        db_1.prisma.venueListing.findMany({ where: { tenantId }, select: { blockedDates: true } }),
+        db_1.prisma.serviceOffering.findMany({ where: { tenantId }, select: { blockedDates: true } }),
+    ]);
+    return (0, marketplaceDates_1.parseBlockedDates)([
+        ...listings.flatMap((row) => (0, marketplaceDates_1.parseBlockedDates)(row.blockedDates)),
+        ...offerings.flatMap((row) => (0, marketplaceDates_1.parseBlockedDates)(row.blockedDates)),
+    ]);
+}
 function serializeBooking(row) {
     const kind = row.offeringId ? 'service' : 'venue';
     const title = row.offering?.title || row.listing?.headline || row.listing?.room?.name || 'Réservation';
@@ -50,6 +61,7 @@ function serializeBooking(row) {
         notes: row.notes,
         createdAt: row.createdAt,
         event: row.event,
+        blockedDates: (0, marketplaceDates_1.parseBlockedDates)(row.listing?.blockedDates ?? row.offering?.blockedDates),
     };
 }
 async function notifyBookingStatus(booking, payload) {
@@ -69,17 +81,18 @@ async function notifyBookingStatus(booking, payload) {
         metadata: { bookingId: booking.id, href: vendorHref },
         whatsapp: vendorWhatsApp,
     });
-    if (booking.organizerUserId) {
-        void (0, platformNotificationService_1.notifyUsers)([booking.organizerUserId], {
+    if (booking.organizerTenantId && booking.organizerTenantId !== booking.vendorTenantId) {
+        void (0, platformNotificationService_1.notifyTenantOperators)(booking.organizerTenantId, {
             type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING_STATUS,
             title,
             message: organizerMessage,
             metadata: { bookingId: booking.id, href: organizerHref },
             whatsapp: organizerWhatsApp,
         });
+        return;
     }
-    if (booking.organizerTenantId && booking.organizerTenantId !== booking.vendorTenantId) {
-        void (0, platformNotificationService_1.notifyTenantOperators)(booking.organizerTenantId, {
+    if (booking.organizerUserId) {
+        void (0, platformNotificationService_1.notifyUsers)([booking.organizerUserId], {
             type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING_STATUS,
             title,
             message: organizerMessage,
@@ -302,11 +315,13 @@ async function listBookings(req, res) {
         const commissionDue = rows
             .filter((b) => b.vendorTenantId === tenantId && (b.status === 'CONFIRMED' || b.status === 'COMPLETED'))
             .reduce((sum, b) => sum + b.commissionFc, 0);
+        const vendorBlockedDates = role === 'organizer' ? [] : await collectVendorBlockedDates(tenantId);
         return res.json({
             bookings: rows.map((row) => ({
                 ...serializeBooking(row),
                 viewerRole: row.vendorTenantId === tenantId ? 'vendor' : 'organizer',
             })),
+            blockedDates: vendorBlockedDates,
             commissionDueFc: commissionDue,
             commissionRate: 0.08,
         });
@@ -423,14 +438,7 @@ async function updateBooking(req, res) {
                     metadata: { bookingId: booking.id, href: vendorHref },
                     whatsapp: `Acompte déclaré pour « ${title} » : Le client indique avoir versé ${depositFormatted}${noteSuffix}.\nVérifiez votre compte et confirmez la réservation : ${vendorHref}`,
                 });
-                if (booking.organizerUserId) {
-                    void (0, platformNotificationService_1.notifyUsers)([booking.organizerUserId], {
-                        type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING_STATUS,
-                        title: `Acompte transmis — ${title}`,
-                        message: `Votre déclaration de versement d'acompte (${depositFormatted})${noteSuffix} a été transmise au prestataire pour validation.`,
-                        metadata: { bookingId: booking.id, href: organizerHref },
-                    });
-                }
+                // Le client voit déjà le résultat à l’écran : pas de second message à soi-même.
             }
             else {
                 // Le professionnel a validé la réception de l'acompte
@@ -440,22 +448,18 @@ async function updateBooking(req, res) {
                     message: `Vous avez validé la réception de l'acompte (${depositFormatted}). Confirmez pour verrouiller la date.`,
                     metadata: { bookingId: booking.id, href: vendorHref },
                 });
-                if (booking.organizerUserId) {
-                    void (0, platformNotificationService_1.notifyUsers)([booking.organizerUserId], {
-                        type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING_STATUS,
-                        title: `Acompte validé — ${title}`,
-                        message: `Le professionnel a confirmé la réception de votre acompte de ${depositFormatted}. La réservation sera confirmée sous peu.`,
-                        metadata: { bookingId: booking.id, href: organizerHref },
-                        whatsapp: `Bonne nouvelle ! Votre acompte de ${depositFormatted} pour « ${title} » a été validé par le professionnel.\nConsultez : ${organizerHref}`,
-                    });
-                }
+                const organizerPayload = {
+                    type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING_STATUS,
+                    title: `Acompte validé — ${title}`,
+                    message: `Le professionnel a confirmé la réception de votre acompte de ${depositFormatted}. La réservation sera confirmée sous peu.`,
+                    metadata: { bookingId: booking.id, href: organizerHref },
+                    whatsapp: `Bonne nouvelle ! Votre acompte de ${depositFormatted} pour « ${title} » a été validé par le professionnel.\nConsultez : ${organizerHref}`,
+                };
                 if (booking.organizerTenantId && booking.organizerTenantId !== booking.vendorTenantId) {
-                    void (0, platformNotificationService_1.notifyTenantOperators)(booking.organizerTenantId, {
-                        type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING_STATUS,
-                        title: `Acompte validé — ${title}`,
-                        message: `Le professionnel a validé la réception de l'acompte de ${depositFormatted}.`,
-                        metadata: { bookingId: booking.id, href: organizerHref },
-                    });
+                    void (0, platformNotificationService_1.notifyTenantOperators)(booking.organizerTenantId, organizerPayload);
+                }
+                else if (booking.organizerUserId) {
+                    void (0, platformNotificationService_1.notifyUsers)([booking.organizerUserId], organizerPayload);
                 }
             }
             return res.json({ booking: serializeBooking(updated), message: 'Acompte marqué. Confirmez pour bloquer la date.' });
@@ -554,6 +558,107 @@ async function updateBooking(req, res) {
         return res.status(500).json({ error: 'Impossible de mettre à jour la réservation.' });
     }
 }
+async function acceptInquiryQuote(req, res) {
+    try {
+        const tenantId = req.user?.tenantId;
+        const userId = req.user?.id;
+        const inquiryId = req.params.id;
+        if (!tenantId || !userId)
+            return res.status(403).json({ error: 'Organisation non identifiée.' });
+        const user = await db_1.prisma.user.findUnique({
+            where: { id: userId },
+            select: { email: true },
+        });
+        const email = user?.email?.trim().toLowerCase() || '';
+        const inquiry = await db_1.prisma.marketplaceInquiry.findFirst({
+            where: {
+                id: inquiryId,
+                OR: [
+                    { fromTenantId: tenantId },
+                    ...(email ? [{ fromEmail: { equals: email, mode: 'insensitive' } }] : []),
+                ],
+            },
+            include: {
+                listing: true,
+                offering: true,
+            },
+        });
+        if (!inquiry)
+            return res.status(404).json({ error: 'Demande introuvable.' });
+        if (inquiry.status !== 'QUOTED' || inquiry.quotedAmountFc == null) {
+            return res.status(400).json({
+                error: 'Attendez le devis chiffré du professionnel avant de demander une réservation.',
+            });
+        }
+        if (!inquiry.eventDate) {
+            return res.status(400).json({
+                error: 'Une date est nécessaire. Écrivez au professionnel pour la confirmer, puis acceptez le devis.',
+            });
+        }
+        const vendorTenantId = inquiry.listing?.tenantId || inquiry.offering?.tenantId;
+        if (!vendorTenantId) {
+            return res.status(400).json({ error: 'Offre introuvable pour cette demande.' });
+        }
+        if (vendorTenantId === tenantId) {
+            return res.status(400).json({ error: 'Vous ne pouvez pas réserver votre propre offre.' });
+        }
+        const existing = await db_1.prisma.marketplaceBooking.findUnique({ where: { inquiryId } });
+        if (existing)
+            return res.status(409).json({ error: 'Une réservation existe déjà pour cette demande.' });
+        const dateKey = (0, marketplaceDates_1.toDateKey)(inquiry.eventDate);
+        const blocked = (0, marketplaceDates_1.parseBlockedDates)(inquiry.listing?.blockedDates ?? inquiry.offering?.blockedDates);
+        if (!dateKey
+            || !(0, marketplaceDates_1.isRangeAvailable)(blocked, dateKey, dateKey)
+            || await isRangeTaken({ listingId: inquiry.listingId, offeringId: inquiry.offeringId, from: dateKey, to: dateKey })) {
+            return res.status(409).json({ error: 'Cette date n’est plus disponible. Écrivez au professionnel pour en convenir une autre.' });
+        }
+        const amounts = (0, marketplaceBilling_1.computeMarketplaceAmounts)(inquiry.quotedAmountFc);
+        const booking = await db_1.prisma.marketplaceBooking.create({
+            data: {
+                listingId: inquiry.listingId,
+                offeringId: inquiry.offeringId,
+                inquiryId: inquiry.id,
+                vendorTenantId,
+                organizerTenantId: inquiry.fromTenantId || tenantId,
+                organizerUserId: userId,
+                eventId: inquiry.eventId,
+                eventDate: inquiry.eventDate,
+                guestCount: inquiry.guestCount,
+                notes: inquiry.message,
+                ...amounts,
+                status: 'REQUESTED',
+            },
+            include: bookingInclude,
+        });
+        const bookingTitle = booking.offering?.title || booking.listing?.headline || booking.listing?.room.name || 'Réservation';
+        const amountFormatted = `${amounts.amountFc.toLocaleString('fr-FR')} FC`;
+        const depositFormatted = `${amounts.depositFc.toLocaleString('fr-FR')} FC`;
+        const vendorHref = `${FRONTEND_URL}/dashboard/bookings?tab=bookings&role=vendor&bookingId=${booking.id}`;
+        const clientHref = `${FRONTEND_URL}/dashboard/bookings?tab=bookings&bookingId=${booking.id}`;
+        void (0, platformNotificationService_1.notifyTenantOperators)(vendorTenantId, {
+            type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING,
+            title: `Devis accepté — ${bookingTitle}`,
+            message: `${inquiry.fromName} a accepté votre devis (${amountFormatted}). Confirmez la réservation, puis l’acompte de ${depositFormatted}.`,
+            metadata: { bookingId: booking.id, href: vendorHref },
+            whatsapp: `${inquiry.fromName} a accepté le devis pour « ${bookingTitle} » (${amountFormatted}).\nAcompte : ${depositFormatted}.\nConfirmez : ${vendorHref}`,
+        });
+        void (0, platformNotificationService_1.notifyUsers)([userId], {
+            type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING,
+            title: `Réservation demandée — ${bookingTitle}`,
+            message: `Votre acceptation du devis (${amountFormatted}) a été transmise. Le professionnel doit confirmer, puis vous versez l’acompte de ${depositFormatted}.`,
+            metadata: { bookingId: booking.id, href: clientHref },
+            whatsapp: `Devis accepté pour « ${bookingTitle} » (${amountFormatted}).\nProchaine étape : confirmation du professionnel, puis acompte ${depositFormatted}.\nSuivi : ${clientHref}`,
+        });
+        return res.status(201).json({
+            booking: serializeBooking(booking),
+            message: 'Devis accepté. Le professionnel doit confirmer la réservation, puis vous versez l’acompte.',
+        });
+    }
+    catch (error) {
+        console.error('acceptInquiryQuote:', error);
+        return res.status(500).json({ error: 'Impossible d’accepter le devis.' });
+    }
+}
 async function convertInquiryToBooking(req, res) {
     try {
         const tenantId = req.user?.tenantId;
@@ -626,23 +731,18 @@ async function convertInquiryToBooking(req, res) {
         const depositFormatted = `${amounts.depositFc.toLocaleString('fr-FR')} FC`;
         const amountFormatted = `${amounts.amountFc.toLocaleString('fr-FR')} FC`;
         const clientBookingHref = `${FRONTEND_URL}/dashboard/bookings?tab=bookings&bookingId=${booking.id}`;
+        const clientPayload = {
+            type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING,
+            title: `Réservation acceptée — ${bookingTitle}`,
+            message: `Votre devis a été converti en réservation acceptée (${amountFormatted}). Veuillez verser l'acompte de ${depositFormatted}.`,
+            metadata: { bookingId: booking.id, href: clientBookingHref },
+            whatsapp: `Votre devis pour « ${bookingTitle} » a été converti en réservation acceptée au montant de ${amountFormatted}.\nAcompte requis : ${depositFormatted}.\nConsultez les détails : ${clientBookingHref}`,
+        };
         if (inquiry.fromTenantId) {
-            void (0, platformNotificationService_1.notifyTenantOperators)(inquiry.fromTenantId, {
-                type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING,
-                title: `Réservation acceptée — ${bookingTitle}`,
-                message: `Votre devis a été converti en réservation acceptée (${amountFormatted}). Veuillez verser l'acompte de ${depositFormatted}.`,
-                metadata: { bookingId: booking.id, href: clientBookingHref },
-                whatsapp: `Votre devis pour « ${bookingTitle} » a été converti en réservation acceptée au montant de ${amountFormatted}.\nAcompte requis : ${depositFormatted}.\nConsultez les détails : ${clientBookingHref}`,
-            });
+            void (0, platformNotificationService_1.notifyTenantOperators)(inquiry.fromTenantId, clientPayload);
         }
-        if (organizerUserId) {
-            void (0, platformNotificationService_1.notifyUsers)([organizerUserId], {
-                type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING,
-                title: `Réservation acceptée — ${bookingTitle}`,
-                message: `Votre devis a été converti en réservation acceptée (${amountFormatted}). Veuillez verser l'acompte de ${depositFormatted}.`,
-                metadata: { bookingId: booking.id, href: clientBookingHref },
-                whatsapp: `Votre devis pour « ${bookingTitle} » a été converti en réservation acceptée au montant de ${amountFormatted}.\nAcompte requis : ${depositFormatted}.\nConsultez les détails : ${clientBookingHref}`,
-            });
+        else if (organizerUserId) {
+            void (0, platformNotificationService_1.notifyUsers)([organizerUserId], clientPayload);
         }
         return res.status(201).json({
             booking: serializeBooking(booking),

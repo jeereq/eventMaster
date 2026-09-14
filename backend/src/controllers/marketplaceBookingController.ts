@@ -729,13 +729,6 @@ export async function acceptInquiryQuote(req: AuthenticatedRequest, res: Respons
       include: bookingInclude,
     });
 
-    await prisma.marketplaceInquiry.update({
-      where: { id: inquiry.id },
-      data: {
-        status: inquiry.status === 'NEW' ? 'CONTACTED' : inquiry.status,
-      },
-    });
-
     const bookingTitle = booking.offering?.title || booking.listing?.headline || booking.listing?.room.name || 'Réservation';
     const amountFormatted = `${amounts.amountFc.toLocaleString('fr-FR')} FC`;
     const depositFormatted = `${amounts.depositFc.toLocaleString('fr-FR')} FC`;

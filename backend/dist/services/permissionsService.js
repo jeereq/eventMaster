@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ACCOUNT_KIND_SUPERADMIN_ONLY = exports.PROTOCOL_CREATIVE_DENIED = void 0;
+exports.invalidateOrgAccessCache = invalidateOrgAccessCache;
 exports.resolveOrgAccess = resolveOrgAccess;
 exports.getAccessibleEventIds = getAccessibleEventIds;
 exports.getManageableEventIds = getManageableEventIds;
@@ -20,7 +21,32 @@ exports.isValidStaffRole = isValidStaffRole;
 exports.isValidOrgRole = isValidOrgRole;
 const db_1 = require("../db");
 const tenantAccess_1 = require("../utils/tenantAccess");
+const ttlCache_1 = require("../utils/ttlCache");
+const ORG_ACCESS_TTL_MS = 90_000;
+const orgAccessCache = (0, ttlCache_1.createTtlCache)(ORG_ACCESS_TTL_MS);
+function orgAccessCacheKey(userId, tenantId) {
+    return `${userId}:${tenantId}`;
+}
+function invalidateOrgAccessCache(userId, tenantId) {
+    if (userId && tenantId) {
+        orgAccessCache.delete(orgAccessCacheKey(userId, tenantId));
+        return;
+    }
+    if (tenantId) {
+        const suffix = `:${tenantId}`;
+        orgAccessCache.deleteMatching((key) => key.endsWith(suffix));
+    }
+}
 async function resolveOrgAccess(userId, tenantId) {
+    const cacheKey = orgAccessCacheKey(userId, tenantId);
+    const cached = orgAccessCache.get(cacheKey);
+    if (cached)
+        return cached;
+    const access = await computeOrgAccess(userId, tenantId);
+    orgAccessCache.set(cacheKey, access);
+    return access;
+}
+async function computeOrgAccess(userId, tenantId) {
     const user = await db_1.prisma.user.findFirst({
         where: { id: userId, tenantId, role: 'USER' },
         select: { id: true, orgRole: true },

@@ -49,7 +49,7 @@ function applyPlacementVariables(text, vars, guestGuidelines) {
         .replaceAll('{{tableMatesInline}}', vars.tableMatesInline);
     return (0, guestGuidelines_1.applyInvitationGuidelineVariables)(result, guestGuidelines);
 }
-/** Notification lors de l'assignation au plan de table (canaux de l'invitation + PDF). */
+/** Notification lors de l'assignation au plan de table (canaux de l’invitation + PDF). */
 async function notifyGuestTableAssignment(params) {
     const { guest, eventId, event, assignedSeat, tableMates, invitation, dressCode, delivery = 'full' } = params;
     const isAnnouncement = delivery === 'announcement';
@@ -170,7 +170,7 @@ async function notifyGuestTableAssignment(params) {
     `,
         cta: {
             href: rsvpUrl,
-            label: isAnnouncement ? 'Voir mon portail RSVP' : 'Voir mon invitation',
+            label: isAnnouncement ? 'Voir mon portail de réponse à l’invitation' : 'Voir mon invitation',
         },
         footerNote: isAnnouncement
             ? guestMessageCopy_1.GUEST_COPY.tableAnnouncement
@@ -189,7 +189,7 @@ async function notifyGuestTableAssignment(params) {
             formattedDate ? `\n📅 ${formattedDate}` : '',
             event.location ? `\n📍 ${event.location}` : '',
             '',
-            `🔗 Portail RSVP : ${rsvpUrl}`,
+            `🔗 Portail de réponse à l’invitation : ${rsvpUrl}`,
             '',
             `_${guestMessageCopy_1.GUEST_COPY.tableAnnouncement}_`,
             '',
