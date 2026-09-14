@@ -7,7 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "scheme": "eventmaster",
-    "description": "Organisez vos événements privés : invitations, RSVP, protocole jour J et plan de table.",
+    "description": "Organisez vos événements privés : invitations, Répondez s’il vous plaît, protocole jour J et plan de table.",
     "primaryColor": "#4f46e5",
     "splash": {
       "image": "./assets/splash-icon.png",

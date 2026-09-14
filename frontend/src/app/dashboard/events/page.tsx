@@ -1220,7 +1220,7 @@ Merci de confirmer votre présence :
           importedPlan
             ? 'Événement créé et plan de table importé depuis la salle.'
             : form.formTemplateId
-              ? 'Événement créé avec le formulaire RSVP.'
+              ? 'Événement créé avec le formulaire Répondez s’il vous plaît.'
               : 'Événement créé avec succès !'
         );
         if (form.openTablePlanAfterSave) {
@@ -1446,9 +1446,9 @@ Merci de confirmer votre présence :
       setSelectedEvent((prev) => (prev ? { ...prev, ...updatedEvent } : prev));
       setEvents((prev) => prev.map((e) => (e.id === selectedEvent.id ? { ...e, ...updatedEvent } : e)));
       setEventRsvpFields(fields);
-      setSuccess('Formulaire RSVP enregistré.');
+      setSuccess('Formulaire Répondez s’il vous plaît enregistré.');
     } catch (err: any) {
-      setError(err.message || 'Erreur lors de l\'enregistrement du formulaire RSVP.');
+      setError(err.message || 'Erreur lors de l\'enregistrement du formulaire Répondez s’il vous plaît.');
     } finally {
       setSavingRsvpForm(false);
     }
@@ -1568,7 +1568,7 @@ Merci de confirmer votre présence :
       return;
     }
 
-    const headers = ["Prénom", "Nom", "Email", "Téléphone", "Catégorie", "Statut RSVP", "Régime", "Allergies", "Notes"];
+    const headers = ["Prénom", "Nom", "Email", "Téléphone", "Catégorie", "Statut Répondez s’il vous plaît", "Régime", "Allergies", "Notes"];
     const rows = guests.map(g => {
       const phone = g.phone || g.preferences?.phone || g.preferences?.telephone || "";
       const notes = g.preferences?.notes || "";
@@ -2344,7 +2344,7 @@ Merci de confirmer votre présence :
                   <div className="text-base font-bold text-foreground mt-0.5">
                     {guests.length}{' '}
                     <span className="text-xs font-normal text-emerald-600 dark:text-emerald-400">
-                      ({guests.filter((g) => g.rsvp === 'ACCEPTED').length} RSVP)
+                      ({guests.filter((g) => g.rsvp === 'ACCEPTED').length} Répondez s’il vous plaît)
                     </span>
                   </div>
                 </div>
@@ -2729,7 +2729,7 @@ Merci de confirmer votre présence :
                         <dd className="text-lg font-semibold text-foreground tabular-nums">{guests.length}</dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="text-xs text-muted">Présents (RSVP)</dt>
+                        <dt className="text-xs text-muted">Présents (Répondez s’il vous plaît)</dt>
                         <dd className="text-lg font-semibold text-foreground tabular-nums">
                           {guests.filter(g => g.rsvp === 'ACCEPTED').length}
                           <span className="text-xs font-medium text-muted ml-1.5">
@@ -2770,7 +2770,7 @@ Merci de confirmer votre présence :
                         </div>
 
                         <div className="w-full lg:w-44">
-                          <label htmlFor="guest-filter-rsvp" className="block text-xs font-semibold text-muted mb-1.5">Statut RSVP</label>
+                          <label htmlFor="guest-filter-rsvp" className="block text-xs font-semibold text-muted mb-1.5">Statut Répondez s’il vous plaît</label>
                           <select
                             id="guest-filter-rsvp"
                             value={rsvpFilter}
@@ -3170,7 +3170,7 @@ Merci de confirmer votre présence :
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div className="space-y-1">
                       <h2 className="text-lg font-semibold text-foreground tracking-tight">Invitations</h2>
-                      <p className="text-sm text-muted">Envoi par WhatsApp ou e-mail avec lien RSVP personnel.</p>
+                      <p className="text-sm text-muted">Envoi par WhatsApp ou e-mail avec lien Répondez s’il vous plaît personnel.</p>
                     </div>
                     <div className="flex flex-col items-stretch sm:items-end gap-1.5 shrink-0">
                       <Button
@@ -3210,7 +3210,7 @@ Merci de confirmer votre présence :
                         </dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="text-xs text-muted">Réponses RSVP</dt>
+                        <dt className="text-xs text-muted">Réponses Répondez s’il vous plaît</dt>
                         <dd className="text-lg font-semibold text-foreground tabular-nums">
                           {guests.filter(g => g.rsvp !== 'PENDING').length}
                           <span className="text-xs font-medium text-muted ml-1.5">
@@ -3228,7 +3228,7 @@ Merci de confirmer votre présence :
                       title={
                         <span className="inline-flex items-center gap-2">
                           <ClipboardList className="w-4 h-4 text-primary" />
-                          Formulaire RSVP
+                          Formulaire Répondez s’il vous plaît
                         </span>
                       }
                       description="Types toujours présents : genre, allergies, boissons, menu. Valeurs prédéfinies ou personnalisées pour cet événement."
@@ -3245,7 +3245,7 @@ Merci de confirmer votre présence :
                     <EmptyState
                       icon={<Mail className="w-5 h-5" />}
                       title="Invitations à configurer"
-                      description="Personnalisez vos faire-part numériques et commencez à récolter les confirmations de présence (RSVP) de vos invités."
+                      description="Personnalisez vos faire-part numériques et commencez à récolter les confirmations de présence (Répondez s’il vous plaît) de vos invités."
                       action={
                         <Button onClick={openNewInvitationModal} leftIcon={<PlusCircle className="w-4 h-4" />}>
                           Configurer une invitation
@@ -3326,7 +3326,7 @@ Merci de confirmer votre présence :
                 <div className="space-y-4 animate-fade-in">
                   <div className="space-y-1">
                     <h2 className="text-lg font-semibold text-foreground tracking-tight">Infos invités</h2>
-                    <p className="text-sm text-muted">Dress code, avantages (parking, cadeaux, extras) et notes visibles sur le portail RSVP et dans l’invitation.</p>
+                    <p className="text-sm text-muted">Dress code, avantages (parking, cadeaux, extras) et notes visibles sur le portail Répondez s’il vous plaît et dans l’invitation.</p>
                   </div>
                   <EventGuestGuidelinesEditor
                     value={guestGuidelines}
@@ -3349,7 +3349,7 @@ Merci de confirmer votre présence :
                     <div className="rounded-xl border border-border bg-surface px-4 py-3 text-sm text-foreground shadow-2xs">
                       <p className="font-semibold text-foreground">Notifications PDF / GPS non incluses</p>
                       <p className="text-xs mt-1 text-muted">
-                        Vous pouvez placer les invités. L’envoi automatique du PDF, du plan et du GPS dès acceptation RSVP
+                        Vous pouvez placer les invités. L’envoi automatique du PDF, du plan et du GPS dès acceptation Répondez s’il vous plaît
                         n’est pas dans votre forfait actuel ({tenant?.plan || 'FREE'}).
                       </p>
                       <Link href="/dashboard/billing" className="inline-block mt-2 text-xs font-medium text-primary hover:underline">
@@ -3466,7 +3466,7 @@ Merci de confirmer votre présence :
             const isTicket = Boolean(g?.preferences?.ticketOrderId || g?.category === 'Billet');
             return isTicket
               ? `⚠️ ATTENTION : Cet invité est lié à un billet acheté (${g?.firstName} ${g?.lastName}). Sa suppression annulera son pass d'accès payé, son QR code et sa place attribuée.`
-              : 'L’invité sera retiré de la liste. Ses réponses RSVP et sa place seront perdues.';
+              : 'L’invité sera retiré de la liste. Ses réponses Répondez s’il vous plaît et sa place seront perdues.';
           })()
         }
         confirmLabel="Supprimer"
@@ -3653,7 +3653,7 @@ Merci de confirmer votre présence :
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted uppercase tracking-wider">Statut RSVP</label>
+                  <label className="text-xs font-bold text-muted uppercase tracking-wider">Statut Répondez s’il vous plaît</label>
                   <select
                     value={guestRsvp}
                     onChange={(e) => setGuestRsvp(e.target.value as 'PENDING' | 'ACCEPTED' | 'DECLINED')}
@@ -4001,7 +4001,7 @@ Merci de confirmer votre présence :
             <form onSubmit={handleBulkSendInvitation} className="space-y-4">
               <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl">
                 <p className="text-xs text-primary font-semibold leading-relaxed">
-                  Envoi à <strong className="text-primary font-extrabold">{selectedGuestIds.length} invité{selectedGuestIds.length > 1 ? 's' : ''}</strong> — lien RSVP uniquement, pas le PDF de table.
+                  Envoi à <strong className="text-primary font-extrabold">{selectedGuestIds.length} invité{selectedGuestIds.length > 1 ? 's' : ''}</strong> — lien Répondez s’il vous plaît uniquement, pas le PDF de table.
                 </p>
               </div>
 
@@ -4095,7 +4095,7 @@ Merci de confirmer votre présence :
             ? 'Vérifiez les contacts avant d’envoyer. Le PDF de table part après confirmation, pas maintenant.'
             : broadcastWizardStep === 2
               ? 'Voici ce que Marie Kabeya verrait. Rien n’est encore parti.'
-              : 'Dernière étape : le lien RSVP part à tous les destinataires prêts.'
+              : 'Dernière étape : le lien Répondez s’il vous plaît part à tous les destinataires prêts.'
         }
         size="md"
         footer={
@@ -4205,7 +4205,7 @@ Merci de confirmer votre présence :
                 <span className="font-semibold">{broadcastAudience?.reachable ?? 0}</span> destinataire{(broadcastAudience?.reachable ?? 0) > 1 ? 's' : ''} prêt{(broadcastAudience?.reachable ?? 0) > 1 ? 's' : ''} · {getChannelLabel(broadcastConfirmInvite?.channel || 'EMAIL')}
               </p>
               <p className="text-xs text-muted">
-                Lien RSVP seulement. Le PDF de table part après confirmation, si une place est attribuée.
+                Lien Répondez s’il vous plaît seulement. Le PDF de table part après confirmation, si une place est attribuée.
               </p>
             </div>
           ) : null}
@@ -4688,7 +4688,7 @@ Merci de confirmer votre présence :
                 </div>
 
                 <div className="flex items-center justify-between p-3.5 bg-surface border border-border rounded-[var(--radius-card)]">
-                  <span className="text-xs font-semibold text-muted uppercase tracking-wider">Statut RSVP</span>
+                  <span className="text-xs font-semibold text-muted uppercase tracking-wider">Statut Répondez s’il vous plaît</span>
                   <StatusPill
                     tone={
                       selectedGuestDetails.rsvp === 'ACCEPTED'

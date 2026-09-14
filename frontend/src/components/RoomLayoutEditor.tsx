@@ -2170,34 +2170,34 @@ export default function RoomLayoutEditor({
         />
       )}
       {selection.length > 0 && !readOnly && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 p-1 rounded-full bg-surface/95 dark:bg-zinc-900/95 backdrop-blur-md border border-border shadow-xl text-foreground animate-in fade-in zoom-in-95 duration-150">
-          <div className="px-2.5 py-1 rounded-full bg-primary/10 text-primary font-semibold text-xs flex items-center gap-1 select-none">
-            <BoxSelect className="w-3.5 h-3.5" />
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 p-1 rounded-full bg-surface/95 dark:bg-surface-elevated/95 backdrop-blur-md border border-border shadow-xl text-foreground animate-in fade-in zoom-in-95 duration-150">
+          <div className="px-3 min-h-11 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center gap-1.5 select-none">
+            <BoxSelect className="w-4 h-4" aria-hidden />
             <span>{selection.length}</span>
           </div>
 
-          <div className="h-4 w-px bg-border my-auto mx-0.5" />
+          <div className="h-5 w-px bg-border my-auto mx-0.5" />
 
           {caps.canDuplicate && (
             <button
               type="button"
               onClick={duplicateSelection}
-              className="p-1.5 rounded-full hover:bg-surface-muted text-foreground transition-colors"
+              className="min-h-11 min-w-11 rounded-full hover:bg-surface-muted text-foreground flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               title="Dupliquer (Cmd/Ctrl+D)"
-              aria-label="Dupliquer"
+              aria-label="Dupliquer la sélection"
             >
-              <Copy className="w-3.5 h-3.5" />
+              <Copy className="w-4 h-4" />
             </button>
           )}
 
           <button
             type="button"
             onClick={rotateSelection}
-            className="p-1.5 rounded-full hover:bg-surface-muted text-foreground transition-colors"
-            title="Pivoter 90°"
-            aria-label="Pivoter 90°"
+            className="min-h-11 min-w-11 rounded-full hover:bg-surface-muted text-foreground flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            title="Pivoter 90° (R)"
+            aria-label="Pivoter la sélection de 90 degrés"
           >
-            <RotateCw className="w-3.5 h-3.5" />
+            <RotateCw className="w-4 h-4" />
           </button>
 
           {selection.length >= 2 && caps.canAlign && (
@@ -2209,31 +2209,31 @@ export default function RoomLayoutEditor({
                   setHudColorOpen(false);
                 }}
                 className={cn(
-                  'p-1.5 rounded-full hover:bg-surface-muted text-foreground transition-colors flex items-center gap-0.5',
+                  'min-h-11 min-w-11 rounded-full hover:bg-surface-muted text-foreground flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                   hudAlignOpen && 'bg-primary/15 text-primary',
                 )}
                 title="Aligner les éléments sélectionnés"
                 aria-label="Aligner les éléments sélectionnés"
+                aria-expanded={hudAlignOpen}
               >
-                <AlignCenter className="w-3.5 h-3.5" />
-                <ChevronDown className="w-2.5 h-2.5 opacity-60" />
+                <AlignCenter className="w-4 h-4" />
               </button>
 
               {hudAlignOpen && (
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-2 rounded-xl bg-surface dark:bg-zinc-900 border border-border shadow-2xl z-40 w-52 space-y-1.5 animate-in fade-in slide-in-from-top-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-1">
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-2.5 rounded-xl bg-surface dark:bg-surface-elevated border border-border shadow-2xl z-40 w-60 space-y-2 animate-in fade-in slide-in-from-top-1">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted px-1 block">
                     Aligner & répartir
                   </span>
-                  <div className="grid grid-cols-4 gap-1">
+                  <div className="grid grid-cols-4 gap-1.5">
                     {([
                       ['left', AlignLeft, 'Gauche'],
                       ['centerX', AlignCenter, 'Centre X'],
                       ['right', AlignRight, 'Droite'],
-                      ['distributeX', BetweenHorizontalStart, 'Répartir X'],
+                      ['distributeX', BetweenHorizontalStart, 'Rép. X'],
                       ['top', AlignStartVertical, 'Haut'],
                       ['centerY', AlignCenterVertical, 'Centre Y'],
                       ['bottom', AlignEndVertical, 'Bas'],
-                      ['distributeY', BetweenVerticalStart, 'Répartir Y'],
+                      ['distributeY', BetweenVerticalStart, 'Rép. Y'],
                     ] as const).map(([mode, Icon, lbl]) => (
                       <button
                         key={mode}
@@ -2244,23 +2244,23 @@ export default function RoomLayoutEditor({
                         }}
                         title={alignModeLabels[mode]}
                         aria-label={alignModeLabels[mode]}
-                        className="p-1.5 rounded-md hover:bg-surface-muted flex flex-col items-center justify-center text-foreground"
+                        className="min-h-11 p-1 rounded-lg hover:bg-surface-muted flex flex-col items-center justify-center text-foreground gap-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       >
-                        <Icon className="w-3.5 h-3.5" />
-                        <span className="text-[8px] font-mono opacity-60">{lbl}</span>
+                        <Icon className="w-4 h-4" />
+                        <span className="text-xs font-medium text-muted">{lbl}</span>
                       </button>
                     ))}
                   </div>
-                  <div className="pt-1 border-t border-border flex flex-col gap-1">
+                  <div className="pt-1.5 border-t border-border flex flex-col gap-1">
                     <button
                       type="button"
                       onClick={() => {
                         applyAlign('centerRoomX');
                         setHudAlignOpen(false);
                       }}
-                      className="w-full text-left px-2 py-1 rounded text-xs hover:bg-surface-muted flex items-center gap-2"
+                      className="w-full text-left min-h-11 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-surface-muted flex items-center gap-2 text-foreground"
                     >
-                      <Crosshair className="w-3 h-3 text-primary" /> Centrer dans la salle H
+                      <Crosshair className="w-4 h-4 text-primary shrink-0" /> Centrer dans la salle H
                     </button>
                     <button
                       type="button"
@@ -2268,9 +2268,9 @@ export default function RoomLayoutEditor({
                         applyAlign('gridTidy');
                         setHudAlignOpen(false);
                       }}
-                      className="w-full text-left px-2 py-1 rounded text-xs hover:bg-surface-muted flex items-center gap-2"
+                      className="w-full text-left min-h-11 px-3 py-2 rounded-lg text-xs font-semibold hover:bg-surface-muted flex items-center gap-2 text-foreground"
                     >
-                      <LayoutGrid className="w-3 h-3 text-primary" /> Ranger en grille propre
+                      <LayoutGrid className="w-4 h-4 text-primary shrink-0" /> Ranger en grille propre
                     </button>
                   </div>
                 </div>
@@ -2287,31 +2287,32 @@ export default function RoomLayoutEditor({
                 setHudAlignOpen(false);
               }}
               className={cn(
-                'p-1.5 rounded-full hover:bg-surface-muted text-foreground transition-colors',
+                'min-h-11 min-w-11 rounded-full hover:bg-surface-muted text-foreground flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                 hudColorOpen && 'bg-primary/15 text-primary',
               )}
               title="Teinter le lot"
-              aria-label="Teinter le lot"
+              aria-label="Teinter les éléments sélectionnés"
+              aria-expanded={hudColorOpen}
             >
-              <Palette className="w-3.5 h-3.5" />
+              <Palette className="w-4 h-4" />
             </button>
 
             {hudColorOpen && (
-              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-2 rounded-xl bg-surface dark:bg-zinc-900 border border-border shadow-2xl z-40 w-44 space-y-2 animate-in fade-in slide-in-from-top-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-1">
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-3 rounded-xl bg-surface dark:bg-surface-elevated border border-border shadow-2xl z-40 w-52 space-y-2.5 animate-in fade-in slide-in-from-top-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted px-1 block">
                   Palette rapide
                 </span>
-                <div className="grid grid-cols-4 gap-1.5 p-1">
+                <div className="grid grid-cols-4 gap-2 p-1">
                   {[
-                    '#ffffff',
-                    '#d4a373',
-                    '#451a03',
-                    '#d4af37',
-                    '#065f46',
-                    '#1e3a8a',
-                    '#475569',
-                    '#09090b',
-                  ].map((hex) => (
+                    { hex: '#ffffff', label: 'Blanc immaculé' },
+                    { hex: '#d4a373', label: 'Chêne clair' },
+                    { hex: '#451a03', label: 'Noyer foncé' },
+                    { hex: '#d4af37', label: 'Or champagne' },
+                    { hex: '#065f46', label: 'Vert émeraude' },
+                    { hex: '#1e3a8a', label: 'Bleu nuit' },
+                    { hex: '#475569', label: 'Gris ardoise' },
+                    { hex: '#09090b', label: 'Noir mat' },
+                  ].map(({ hex, label }) => (
                     <button
                       key={hex}
                       type="button"
@@ -2321,40 +2322,45 @@ export default function RoomLayoutEditor({
                             tableColor: hex,
                             color: hex,
                           }),
-                          { message: 'Couleur appliquée', kind: 'edit' },
+                          { message: `Couleur ${label} appliquée`, kind: 'edit' },
                         );
                         setHudColorOpen(false);
                       }}
-                      className="size-6 rounded-full border border-black/20 hover:scale-110 transition-transform shadow-xs"
-                      style={{ backgroundColor: hex }}
-                      title={hex}
-                    />
+                      className="min-h-11 min-w-11 rounded-full flex items-center justify-center hover:scale-105 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      aria-label={`Appliquer couleur ${label} (${hex})`}
+                      title={`${label} (${hex})`}
+                    >
+                      <span
+                        className="size-7 rounded-full border border-black/20 shadow-xs"
+                        style={{ backgroundColor: hex }}
+                      />
+                    </button>
                   ))}
                 </div>
               </div>
             )}
           </div>
 
-          <div className="h-4 w-px bg-border my-auto mx-0.5" />
+          <div className="h-5 w-px bg-border my-auto mx-0.5" />
 
           <button
             type="button"
             onClick={deleteSelected}
-            className="p-1.5 rounded-full hover:bg-rose-500/10 text-rose-500 transition-colors"
+            className="min-h-11 min-w-11 rounded-full hover:bg-rose-500/10 text-rose-500 flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
             title="Supprimer (Suppr / Backspace)"
-            aria-label="Supprimer"
+            aria-label="Supprimer les éléments sélectionnés"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="w-4 h-4" />
           </button>
 
           <button
             type="button"
             onClick={() => setSelection([])}
-            className="p-1.5 rounded-full hover:bg-surface-muted text-muted hover:text-foreground transition-colors"
+            className="min-h-11 min-w-11 rounded-full hover:bg-surface-muted text-muted hover:text-foreground flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             title="Désélectionner (Échap)"
-            aria-label="Désélectionner"
+            aria-label="Désélectionner tout"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -2477,11 +2483,11 @@ export default function RoomLayoutEditor({
             </div>
 
             {/* Filtres de sélection rapide */}
-            <div className="pt-2 border-t border-border flex flex-wrap gap-1">
+            <div className="pt-2 border-t border-border flex flex-wrap gap-1.5">
               <button
                 type="button"
                 onClick={() => setSelection(selectAllItems(blueprint))}
-                className="px-2 py-1 rounded text-xs font-medium border border-border bg-surface hover:bg-surface-muted"
+                className="min-h-11 px-3 py-2 rounded-lg text-xs font-semibold border border-border bg-surface hover:bg-surface-muted transition flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 title="Tout sélectionner sur le plan (Ctrl+A)"
               >
                 Tout ({selectAllItems(blueprint).length})
@@ -2489,28 +2495,28 @@ export default function RoomLayoutEditor({
               <button
                 type="button"
                 onClick={() => setSelection(selectItemsByKind(blueprint, 'table'))}
-                className="px-2 py-1 rounded text-xs font-medium border border-border bg-surface hover:bg-surface-muted"
+                className="min-h-11 px-3 py-2 rounded-lg text-xs font-semibold border border-border bg-surface hover:bg-surface-muted transition flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 Toutes les tables
               </button>
               <button
                 type="button"
                 onClick={() => setSelection(selectItemsByKind(blueprint, 'chair'))}
-                className="px-2 py-1 rounded text-xs font-medium border border-border bg-surface hover:bg-surface-muted"
+                className="min-h-11 px-3 py-2 rounded-lg text-xs font-semibold border border-border bg-surface hover:bg-surface-muted transition flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 Toutes les chaises
               </button>
               <button
                 type="button"
                 onClick={() => setSelection(selectItemsByKind(blueprint, 'screen'))}
-                className="px-2 py-1 rounded text-xs font-medium border border-border bg-surface hover:bg-surface-muted"
+                className="min-h-11 px-3 py-2 rounded-lg text-xs font-semibold border border-border bg-surface hover:bg-surface-muted transition flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 Tous les écrans
               </button>
               <button
                 type="button"
                 onClick={() => setSelection(invertSelection(blueprint, selection))}
-                className="px-2 py-1 rounded text-xs font-medium border border-border bg-surface hover:bg-surface-muted"
+                className="min-h-11 px-3 py-2 rounded-lg text-xs font-semibold border border-border bg-surface hover:bg-surface-muted transition flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 title="Inverser la sélection"
               >
                 Inverser
@@ -2586,7 +2592,7 @@ export default function RoomLayoutEditor({
                       <button
                         type="button"
                         onClick={() => applyAlign('centerRoomX')}
-                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'text-xs py-1.5')}
+                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'text-xs')}
                         title="Centrer horizontalement dans la pièce (axe central)"
                       >
                         <Crosshair className="w-3.5 h-3.5" aria-hidden /> Centrer X
@@ -2594,7 +2600,7 @@ export default function RoomLayoutEditor({
                       <button
                         type="button"
                         onClick={() => applyAlign('centerRoomY')}
-                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'text-xs py-1.5')}
+                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'text-xs')}
                         title="Centrer verticalement dans la pièce"
                       >
                         <Crosshair className="w-3.5 h-3.5" aria-hidden /> Centrer Y
@@ -2602,7 +2608,7 @@ export default function RoomLayoutEditor({
                       <button
                         type="button"
                         onClick={() => applyAlign('gridTidy')}
-                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'text-xs py-1.5')}
+                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'text-xs')}
                         title="Organiser automatiquement en grille rectangulaire ordonnée"
                       >
                         <LayoutGrid className="w-3.5 h-3.5" aria-hidden /> En grille
@@ -2655,11 +2661,11 @@ export default function RoomLayoutEditor({
                             { message: `Couleur ${p.name} appliquée`, kind: 'edit' },
                           );
                         }}
-                        className="flex items-center gap-1.5 px-2 py-1.5 rounded-[var(--radius-button)] border border-border bg-surface hover:bg-surface-muted text-xs font-medium truncate"
+                        className="flex items-center gap-1.5 min-h-11 px-2.5 py-1.5 rounded-[var(--radius-button)] border border-border bg-surface hover:bg-surface-muted text-xs font-semibold truncate transition"
                         title={p.name}
                       >
                         <span
-                          className="size-3.5 rounded-full border border-black/20 shrink-0"
+                          className="size-4 rounded-full border border-black/20 shrink-0"
                           style={{ backgroundColor: p.hex }}
                         />
                         <span className="truncate text-xs">{p.name.split(' ')[0]}</span>
@@ -2707,7 +2713,7 @@ export default function RoomLayoutEditor({
                             { message: 'Échelle +10%', kind: 'edit' },
                           )
                         }
-                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1 text-xs py-1.5')}
+                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1 text-xs')}
                       >
                         +10%
                       </button>
@@ -2719,7 +2725,7 @@ export default function RoomLayoutEditor({
                             { message: 'Échelle -10%', kind: 'edit' },
                           )
                         }
-                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1 text-xs py-1.5')}
+                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1 text-xs')}
                       >
                         -10%
                       </button>
@@ -2737,7 +2743,7 @@ export default function RoomLayoutEditor({
                             { message: 'Rotation -15°', kind: 'edit' },
                           )
                         }
-                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1 text-xs py-1.5')}
+                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1 text-xs')}
                       >
                         -15°
                       </button>
@@ -2749,7 +2755,7 @@ export default function RoomLayoutEditor({
                             { message: 'Rotation +15°', kind: 'edit' },
                           )
                         }
-                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1 text-xs py-1.5')}
+                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1 text-xs')}
                       >
                         +15°
                       </button>

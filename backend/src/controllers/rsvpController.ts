@@ -116,7 +116,7 @@ async function notifyOrganizerOfRsvp(params: {
   const { organizer, guest, eventTitle, rsvp, preferences } = params;
   const statusLabel = rsvp === 'ACCEPTED' ? 'Présence confirmée (Oui)' : 'Absence (Décliné)';
   const preferencesDetails = formatPreferencesDetails(preferences);
-  const ownerSubject = `[RSVP] ${guest.firstName} ${guest.lastName} — ${rsvp === 'ACCEPTED' ? 'Présent' : 'Décliné'}`;
+  const ownerSubject = `[Répondez s’il vous plaît] ${guest.firstName} ${guest.lastName} — ${rsvp === 'ACCEPTED' ? 'Présent' : 'Décliné'}`;
   const dashboardPath = params.eventId
     ? `/dashboard/events/${params.eventId}`
     : '/dashboard/events';

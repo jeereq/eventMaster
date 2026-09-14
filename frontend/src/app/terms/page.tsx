@@ -33,7 +33,7 @@ export default function TermsPage() {
           d&apos;événements privés et professionnels :
           création d&apos;invitations interactives multilingues avec respect de l&apos;identité et contextualisation IA
           (Français et langues nationales de la RDC : Lingala, Swahili, Kikongo, Tshiluba), routage et confirmations
-          RSVP instantanées sur WhatsApp, <strong>Simulateur de budget IA dédié</strong> en Francs Congolais (CDF) et
+          Répondez s’il vous plaît instantanées sur WhatsApp, <strong>Simulateur de budget IA dédié</strong> en Francs Congolais (CDF) et
           Dollars ($), <strong>Studio d&apos;Aménagement IA</strong> avec modélisation 2D zénithale cotée et rendu 3D
           WebGL photoréaliste de salles (matériaux PBR, caméras cinématiques), moteur d&apos;espacement et de
           dégagement physique réel, plans de table avec sélection interactive de place et accessibilité PMR, protocole
@@ -137,7 +137,7 @@ export default function TermsPage() {
           <li>
             <strong>Validation automatique de présence :</strong> Dès validation d&apos;un achat de billet sur un
             événement public ou payant, la présence de l&apos;invité est automatiquement enregistrée et confirmée
-            (statut RSVP « ACCEPTED »). L&apos;invité accède directement à son portail d&apos;accueil, à son pass QR et à
+            (statut Répondez s’il vous plaît « accepté »). L&apos;invité accède directement à son portail d&apos;accueil, à son pass QR et à
             ses consignes d&apos;accès sans nécessiter de validation manuelle supplémentaire.
           </li>
           <li>

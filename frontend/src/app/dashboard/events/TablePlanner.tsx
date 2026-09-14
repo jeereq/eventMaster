@@ -841,7 +841,7 @@ export default function TablePlanner({
           {zonePricing && pricingZones.length > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-surface border border-border shadow-2xs shrink-0">
               <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0 scrollbar-none touch-pan-x">
-                <span className="text-[11px] font-semibold text-muted uppercase tracking-wider flex items-center gap-1 mr-1 shrink-0">
+                <span className="text-xs font-semibold text-muted uppercase tracking-wider flex items-center gap-1 mr-1 shrink-0">
                   <Paintbrush className="w-3.5 h-3.5 text-primary" />
                   Pinceau 3D :
                 </span>
@@ -955,7 +955,7 @@ export default function TablePlanner({
                 <select
                   value={activeLightingPreset}
                   onChange={(e) => setActiveLightingPreset(e.target.value as LightingPreset)}
-                  className="bg-transparent text-[11px] font-semibold text-background border-none focus:ring-0 cursor-pointer pr-3 py-0"
+                  className="bg-transparent text-xs font-semibold text-background border-none focus:ring-0 cursor-pointer pr-3 py-0"
                   title="Changer l'ambiance lumineuse 3D"
                 >
                   <option value="day" className="bg-surface text-foreground">Soleil de midi</option>
@@ -1058,7 +1058,7 @@ export default function TablePlanner({
             })()}
           </div>
 
-          <p className="hidden sm:block text-[11px] text-muted leading-relaxed">
+          <p className="hidden sm:block text-xs text-muted leading-relaxed">
             Vue 3D interactive — sélectionnez ou peignez les tables directement en 3D. Pour placer manuellement les convives par siège, basculez en{' '}
             <button type="button" onClick={() => setPlannerView('2d')} className="font-semibold text-primary hover:underline">
               vue 2D
@@ -1078,7 +1078,7 @@ export default function TablePlanner({
               </div>
               <div>
                 <h3 className="font-bold text-sm sm:text-base text-background">Vue 3D Immersive du Plan</h3>
-                <p className="text-[11px] text-background/70">
+                <p className="text-xs text-background/70">
                   {roomName || 'Salle'} · {tables.length} tables · {tables.reduce((acc, t) => acc + t.capacity, 0)} places
                 </p>
               </div>
@@ -1251,7 +1251,7 @@ export default function TablePlanner({
             </button>
             <span
               onClick={() => setCanvasZoom(1)}
-              className="px-1 text-[11px] font-bold text-foreground cursor-pointer hover:text-primary transition tabular-nums"
+              className="px-1 text-xs font-bold text-foreground cursor-pointer hover:text-primary transition tabular-nums"
               title="Cliquer pour réinitialiser le zoom à 100%"
             >
               {Math.round(canvasZoom * 100)}%
@@ -1489,7 +1489,7 @@ export default function TablePlanner({
  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 w-52 z-50 pointer-events-none animate-fade-in">
  <div className="bg-surface text-foreground rounded-[var(--radius-card)] p-3 border border-border space-y-1.5 text-left shadow-[var(--shadow-soft)]">
  <p className="font-semibold text-sm leading-tight">{table.name}</p>
- <p className="text-[11px] text-primary font-medium">
+ <p className="text-xs text-primary font-medium">
  {getTableShapeLabel(table.shape)} · {occupiedCount}/{table.capacity} places
  {zone ? ` · ${zone.name}` : ''}
  </p>
@@ -1527,7 +1527,7 @@ export default function TablePlanner({
                       }}
  >
  <div className="px-2 relative z-10 drop-shadow-[0_1px_1px_rgba(255,255,255,0.85)]">
- <div className="truncate max-w-[90px] font-semibold text-[11px] tracking-tight">{table.name}</div>
+ <div className="truncate max-w-[90px] font-semibold text-xs tracking-tight">{table.name}</div>
  <div className="text-[9px] opacity-80 mt-0.5 tabular-nums">
  {occupiedCount}/{table.capacity}
  </div>
@@ -1717,7 +1717,7 @@ export default function TablePlanner({
                 <button
                   type="button"
                   onClick={() => setPaintZoneId(null)}
-                  className="ml-1.5 px-2.5 py-0.5 rounded-full bg-surface-muted hover:bg-surface text-[11px] font-bold text-muted hover:text-foreground transition border border-border"
+                  className="ml-1.5 px-3 min-h-11 rounded-full bg-surface-muted hover:bg-surface text-xs font-bold text-muted hover:text-foreground transition border border-border inline-flex items-center justify-center"
                 >
                   Terminer
                 </button>
@@ -1733,7 +1733,7 @@ export default function TablePlanner({
                 </span>
               </div>
               <span className="text-muted/40">·</span>
-              <span className="text-[11px] text-muted tabular-nums">
+              <span className="text-xs text-muted tabular-nums">
                 {tables.length} table{tables.length > 1 ? 's' : ''}
               </span>
             </div>
@@ -1825,7 +1825,7 @@ export default function TablePlanner({
 
           {/* Interactive zone cards with paint brush */}
           <div className="flex flex-wrap items-center gap-2 pt-0.5">
-            <span className="text-[11px] font-semibold text-muted uppercase tracking-wider mr-1">
+            <span className="text-xs font-semibold text-muted uppercase tracking-wider mr-1">
               Pinceau rapide :
             </span>
             {ticketingSummary.byZone.map((stat) => {
@@ -1927,17 +1927,17 @@ export default function TablePlanner({
        {roomName ? `Salle liée : « ${roomName} »` : 'Plan de salle disponible'}
      </p>
      {roomLayoutBlueprint?.roomType && (
-       <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+       <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
          {roomTypeLabels[roomLayoutBlueprint.roomType] || roomLayoutBlueprint.roomType}
        </span>
      )}
      {roomLayoutBlueprint?.canvas && (
-       <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-surface-muted text-muted border border-border">
+       <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-surface-muted text-muted border border-border">
          {roomLayoutBlueprint.canvas.widthM}×{roomLayoutBlueprint.canvas.heightM} m ({roomLayoutBlueprint.canvas.widthM * roomLayoutBlueprint.canvas.heightM} m²)
        </span>
      )}
      {(roomLayoutBlueprint?.metadata?.hasPmrAccess || (roomLayoutBlueprint?.metadata?.totalPmrSeats ?? 0) > 0) && (
-       <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20 inline-flex items-center gap-1">
+       <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20 inline-flex items-center gap-1">
          <span aria-hidden>♿</span> Accès PMR {(roomLayoutBlueprint?.metadata?.totalPmrSeats ?? 0) > 0 ? `(${roomLayoutBlueprint?.metadata?.totalPmrSeats} pl.)` : ''}
        </span>
      )}
@@ -2230,7 +2230,7 @@ export default function TablePlanner({
  <LayoutGrid className="w-4 h-4 sm:w-5 sm:h-5 text-primary shrink-0" />
  <span className="truncate">Plan de table</span>
  </h3>
- <p className="text-[11px] text-muted mt-0.5 hidden sm:block">
+ <p className="text-xs text-muted mt-0.5 hidden sm:block">
  Survolez une table pour afficher son type, sa capacité et les invités placés.
  </p>
  </div>

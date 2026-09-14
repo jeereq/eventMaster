@@ -265,7 +265,7 @@ export default function LegalTermsPreviewModal({
                   2. Billetterie multi-zones, Présence auto-validée &amp; Personnalisation
                 </h3>
                 <p className="text-muted">
-                  Tarification par zone avec choix de place sur le plan et placement PMR. Tout achat de billet valide immédiatement la présence de l&apos;invité (RSVP « ACCEPTED »). Pour les billets partagés entre proches ou collègues, chaque bénéficiaire peut personnaliser ses nom, prénom, numéro WhatsApp et régimes alimentaires sur son portail. Le jour J, le contrôle d’accès applique la règle du <strong>scan unique</strong>.
+                  Tarification par zone avec choix de place sur le plan et placement PMR. Tout achat de billet valide immédiatement la présence de l&apos;invité (Répondez s’il vous plaît « accepté »). Pour les billets partagés entre proches ou collègues, chaque bénéficiaire peut personnaliser ses nom, prénom, numéro WhatsApp et régimes alimentaires sur son portail. Le jour J, le contrôle d’accès applique la règle du <strong>scan unique</strong>.
                 </p>
               </div>
 
@@ -338,7 +338,7 @@ export default function LegalTermsPreviewModal({
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">Article 2 — Billetterie en ligne, Présence auto-validée &amp; Billets partagés</h4>
                 <p className="text-muted">
-                  L’organisateur définit ses quotas et ses tarifs (globaux ou par zone/siège avec accessibilité PMR). Tout achat validé émet un e-billet muni d’un QR Code unique et valide automatiquement la présence de l&apos;invité (RSVP « ACCEPTED »). Les bénéficiaires de billets partagés peuvent personnaliser leurs coordonnées sur leur espace dédié. Le scan à l’entrée est unique et bloque toute réutilisation frauduleuse.
+                  L’organisateur définit ses quotas et ses tarifs (globaux ou par zone/siège avec accessibilité PMR). Tout achat validé émet un e-billet muni d’un QR Code unique et valide automatiquement la présence de l&apos;invité (Répondez s’il vous plaît « accepté »). Les bénéficiaires de billets partagés peuvent personnaliser leurs coordonnées sur leur espace dédié. Le scan à l’entrée est unique et bloque toute réutilisation frauduleuse.
                 </p>
               </section>
 

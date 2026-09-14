@@ -37,7 +37,7 @@
   --auth-via: #022c22;
   --auth-to: #0f172a;
   --auth-glow: 5, 150, 105;
-  /* Celebrate (landing / RSVP / auth) — touche Kinshasa + confetti minimal */
+  /* Celebrate (landing / Répondez s’il vous plaît / auth) — touche Kinshasa + confetti minimal */
   --festive-accent: #d97706;
   --festive-accent-soft: color-mix(in srgb, #d97706 14%, transparent);
   --festive-on-stage: #fbbf24;

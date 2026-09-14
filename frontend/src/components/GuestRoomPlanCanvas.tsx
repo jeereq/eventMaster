@@ -46,7 +46,7 @@ interface GuestRoomPlanCanvasProps {
   guestFullName?: string;
   neighborNames?: string[];
   height?: number;
-  /** Remplit le parent (plein écran / RSVP immersif). */
+  /** Remplit le parent (plein écran / Répondez s’il vous plaît immersif). */
   fill?: boolean;
   className?: string;
 }

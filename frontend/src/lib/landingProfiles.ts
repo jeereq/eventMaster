@@ -80,7 +80,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
     cta: { href: '/register?kind=ORGANIZER&intent=personal', label: 'Créer mon événement' },
     registerHint: 'Éditeur 2D/3D inclus. Sans carte bancaire.',
     results: [
-      { icon: Heart, label: 'Faire-part & RSVP WhatsApp avec IA' },
+      { icon: Heart, label: 'Faire-part & Répondez s’il vous plaît WhatsApp avec IA' },
       { icon: LayoutGrid, label: 'Plan de table 2D & 3D photoréaliste' },
       { icon: Sparkles, label: 'Simulateur budget IA (4 essais gratuits)' },
       { icon: ScanLine, label: 'Pass QR & Personnalisation invité' },
@@ -100,7 +100,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
       {
         title: '2. Inviter sur WhatsApp',
         description: 'Lien unique par invité, sans application.',
-        detail: 'Envoyez vos invitations en 1 clic. Vos convives confirment leur présence (RSVP) et personnalisent leurs coordonnées.',
+        detail: 'Envoyez vos invitations en 1 clic. Vos convives confirment leur présence (Répondez s’il vous plaît) et personnalisent leurs coordonnées.',
         outcome: 'Confirmations et régimes alimentaires en direct.',
         icon: Mail,
       },

@@ -47,7 +47,7 @@ export const USER_GUIDES: UserGuide[] = [
       'Modérer le catalogue : salles, prestataires, matériel & équipements ; dépublier / republier avec motif',
       'Suivre packs, favoris, GMV salles / prestataires / matériel & équipements et commissions {commissionPercent} %',
       'Publier des modèles globaux sur la landing, éditer les messages invités',
-      'Consulter les analyses SaaS, le funnel RSVP / PDF / scan, le journal d’audit et les réglages',
+      'Consulter les analyses SaaS, le funnel Répondez s’il vous plaît / PDF / scan, le journal d’audit et les réglages',
       'Suivre toutes les tentatives de paiement (billets, abonnements, jetons IA) via Paiements',
       'Verser les commissions des commerciaux plateforme hors EventMaster (preuve + motif), via Versements SaaS',
       'Ajuster commission marketplace, acompte et taux commerciaux (Réglages)',
@@ -141,7 +141,7 @@ export const USER_GUIDES: UserGuide[] = [
     ],
     tips: [
       'Filtrez les organisations par type : Client (sans licence), Organisateur, Salle / presta.',
-      'Sur Invités (/dashboard/admin/guests), le filtre « PDF non livré » cible les RSVP acceptés sans seatingInvitationPdfUrl. L’export CSV porte sur 100 résultats filtrés.',
+      'Sur Invités (/dashboard/admin/guests), le filtre « PDF non livré » cible les Répondez s’il vous plaît acceptés sans seatingInvitationPdfUrl. L’export CSV porte sur 100 résultats filtrés.',
       'Un motif de dépublication apparaît dans le journal d’audit (CATALOG_UNPUBLISH).',
       'Les modèles d\'organisation ne doivent jamais avoir showOnLanding — seuls les modèles globaux sont publics.',
       'Vérifiez les licences expirées sur l’Accueil avant d’approuver un renouvellement.',
@@ -256,7 +256,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'event-lifecycle',
         title: 'Parcours complet d\'un événement',
         content:
-          '1. Créez l\'événement (titre, date, lieu, salle).\n2. Onglet Préparation : retenez une salle / prestataires via Explorer, puis envoyez un devis.\n3. Infos invités : dress code, avantages, notes (visibles au RSVP).\n4. Invités → invitation RSVP → plan de table.\n5. Onglet Tâches : checklist d’équipe (assignez le protocole).\n6. Feed : annonces ; livre d’or.\n7. Jour J : Protocole (scan QR) + onglet Tâches pour la checklist accueil.\n8. Statistiques RSVP / check-in.',
+          '1. Créez l\'événement (titre, date, lieu, salle).\n2. Onglet Préparation : retenez une salle / prestataires via Explorer, puis envoyez un devis.\n3. Infos invités : dress code, avantages, notes (visibles au Répondez s’il vous plaît).\n4. Invités → invitation Répondez s’il vous plaît → plan de table.\n5. Onglet Tâches : checklist d’équipe (assignez le protocole).\n6. Feed : annonces ; livre d’or.\n7. Jour J : Protocole (scan QR) + onglet Tâches pour la checklist accueil.\n8. Statistiques Répondez s’il vous plaît / check-in.',
         links: [
           { label: 'Événements', href: '/dashboard/events' },
           { label: 'Explorer', href: '/dashboard/catalogue' },
@@ -267,7 +267,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'create-event',
         title: 'Créer un événement complet',
         content:
-          '1. Événements → Créer.\n2. Privé (liste d’invités) ou Public (fiche marketplace + billets éventuels).\n3. Pour activer la billetterie ou les dons : validez les conditions en vigueur, y compris la commission de {collectionCommission} du montant collecté, en plus de l’abonnement.\n4. Galerie, GPS, salle (importe le plan), formulaire RSVP.\n5. Infos invités puis invitations.\n6. Suivez : invités → plan de table → tâches → protocole.',
+          '1. Événements → Créer.\n2. Privé (liste d’invités) ou Public (fiche marketplace + billets éventuels).\n3. Pour activer la billetterie ou les dons : validez les conditions en vigueur, y compris la commission de {collectionCommission} du montant collecté, en plus de l’abonnement.\n4. Galerie, GPS, salle (importe le plan), formulaire Répondez s’il vous plaît.\n5. Infos invités puis invitations.\n6. Suivez : invités → plan de table → tâches → protocole.',
         links: [{ label: 'Événements', href: '/dashboard/events' }],
       },
       {
@@ -412,7 +412,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'event-lifecycle',
         title: 'Parcours complet d\'un événement',
         content:
-          '1. Créez l\'événement.\n2. Préparation : retenez des fiches via Explorer, devis liés.\n3. Invités → invitation RSVP → plan de table.\n4. Tâches d’équipe (assignez le protocole).\n5. Jour J : Protocole + checklist Tâches.',
+          '1. Créez l\'événement.\n2. Préparation : retenez des fiches via Explorer, devis liés.\n3. Invités → invitation Répondez s’il vous plaît → plan de table.\n4. Tâches d’équipe (assignez le protocole).\n5. Jour J : Protocole + checklist Tâches.',
         links: [
           { label: 'Événements', href: '/dashboard/events' },
           { label: 'Explorer', href: '/dashboard/catalogue' },
@@ -457,7 +457,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'invite-guests',
         title: 'Inviter et placer des invités',
         content:
-          '1. Invités : ajouter / importer.\n2. Invitations : message + envoi RSVP.\n3. Plan de table ; PDF au « oui ».\n4. Protocole le jour J.',
+          '1. Invités : ajouter / importer.\n2. Invitations : message + envoi Répondez s’il vous plaît.\n3. Plan de table ; PDF au « oui ».\n4. Protocole le jour J.',
         links: [{ label: 'Événements', href: '/dashboard/events' }],
       },
       {
@@ -545,7 +545,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'protocol-scan',
         title: 'Accueillir un invité (scan QR)',
         content:
-          '1. Ouvrez Protocole → choisissez l’événement → Accueil.\n2. Autorisez la caméra (ou recherchez par nom).\n3. RSVP confirmé requis.\n4. Confirmez la présence puis le siège si prévu.',
+          '1. Ouvrez Protocole → choisissez l’événement → Accueil.\n2. Autorisez la caméra (ou recherchez par nom).\n3. Répondez s’il vous plaît confirmé requis.\n4. Confirmez la présence puis le siège si prévu.',
         links: [{ label: 'Ouvrir Protocole', href: '/dashboard/protocol' }],
       },
       {
@@ -757,7 +757,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'my-tickets',
         title: 'Retrouver, filtrer et afficher un billet',
         content:
-          '1. Les commandes liées à votre compte ou à votre e-mail apparaissent dans Mes billets.\n2. Filtrez par mot-clé, à venir / passés, payant / entrée libre, et lieu.\n3. Passez en grille ou liste (nombre de colonnes mémorisé).\n4. Ouvrez Badge QR pour le portail RSVP, ou Fiche pour l’événement.\n5. Le bouton Agenda ouvre les événements du marketplace client — pas le site public.',
+          '1. Les commandes liées à votre compte ou à votre e-mail apparaissent dans Mes billets.\n2. Filtrez par mot-clé, à venir / passés, payant / entrée libre, et lieu.\n3. Passez en grille ou liste (nombre de colonnes mémorisé).\n4. Ouvrez Badge QR pour le portail Répondez s’il vous plaît, ou Fiche pour l’événement.\n5. Le bouton Agenda ouvre les événements du marketplace client — pas le site public.',
         links: [
           { label: 'Mes billets', href: '/dashboard/tickets' },
           { label: 'Agenda', href: '/dashboard/catalogue?kind=event' },
@@ -787,11 +787,11 @@ export const USER_GUIDES: UserGuide[] = [
     summary:
       'Vous ouvrez votre invitation via un lien reçu par e-mail, WhatsApp ou après l’achat d’un billet. Aucun compte {platformName} n’est obligatoire.',
     canDo: [
-      'Confirmer ou décliner votre présence (RSVP)',
+      'Confirmer ou décliner votre présence (Répondez s’il vous plaît)',
       'Voir toutes vos invitations regroupées (même e-mail ou téléphone)',
       'Consulter date, lieu, consignes du jour J et itinéraire',
       'Afficher votre badge QR pour l’accueil',
-      'Recevoir votre placement (plan, voisins, PDF) une fois le RSVP accepté',
+      'Recevoir votre placement (plan, voisins, PDF) une fois le Répondez s’il vous plaît accepté',
       'Participer au fil d’actualité et au livre d’or si l’organisateur les a ouverts',
       'Installer l’espace invité sur l’écran d’accueil (PWA)',
     ],
@@ -813,7 +813,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'all-invites',
         title: 'Retrouver toutes vos invitations',
         content:
-          '1. Dans l’en-tête, touchez Mes invitations.\n2. Vous voyez les événements à venir et passés liés à votre e-mail ou téléphone.\n3. Un événement terminé reste consultable, mais le RSVP ne se modifie plus.\n4. Partagez ce lien uniquement avec vous-même : il est personnel.',
+          '1. Dans l’en-tête, touchez Mes invitations.\n2. Vous voyez les événements à venir et passés liés à votre e-mail ou téléphone.\n3. Un événement terminé reste consultable, mais le Répondez s’il vous plaît ne se modifie plus.\n4. Partagez ce lien uniquement avec vous-même : il est personnel.',
       },
       {
         id: 'view-seating',
@@ -825,7 +825,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'event-feed',
         title: 'Fil d’actualité et livre d’or',
         content:
-          '1. Après un RSVP accepté, ouvrez Actualités pour les photos et annonces de l’organisateur.\n2. Livre d’or : laissez un message et des photos — l’organisateur les voit dans son fil.\n3. Le jour J, le fil reste le canal des annonces en direct.',
+          '1. Après un Répondez s’il vous plaît accepté, ouvrez Actualités pour les photos et annonces de l’organisateur.\n2. Livre d’or : laissez un message et des photos — l’organisateur les voit dans son fil.\n3. Le jour J, le fil reste le canal des annonces en direct.',
       },
       {
         id: 'tickets',
@@ -842,8 +842,8 @@ export const USER_GUIDES: UserGuide[] = [
       },
     ],
     tips: [
-      'Conservez le lien RSVP — il est unique et personnel.',
-      'Le PDF part une fois la place assignée. L’itinéraire est disponible dès la confirmation RSVP.',
+      'Conservez le lien Répondez s’il vous plaît — il est unique et personnel.',
+      'Le PDF part une fois la place assignée. L’itinéraire est disponible dès la confirmation Répondez s’il vous plaît.',
       'Si le lien ne s’ouvre pas, contactez l’organisateur.',
       'Le thème (couleurs, nom) suit l’organisation qui vous invite, pas seulement le site public.',
     ],
