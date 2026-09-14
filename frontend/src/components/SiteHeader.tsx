@@ -174,16 +174,21 @@ export default function SiteHeader({
               </Link>
             </>
           ) : (
-            <div className="flex items-center gap-1.5 ml-1">
+            <div className="flex items-center gap-1 sm:gap-1.5 ml-1">
               <Link
                 href="/login"
-                className="inline-flex items-center min-h-11 text-xs font-semibold text-muted hover:text-foreground px-2.5 sm:px-3 rounded-md transition hover:bg-surface-muted"
+                className="hidden min-[420px]:inline-flex items-center min-h-11 text-xs font-semibold text-muted hover:text-foreground px-2 sm:px-3 rounded-md transition hover:bg-surface-muted"
               >
                 Connexion
               </Link>
               {site.allowRegistration ? (
-                <Button href="/register" size="sm" className="hidden sm:inline-flex" rightIcon={<Sparkles className="w-3.5 h-3.5" />}>
-                  Démarrer
+                <Button
+                  href="/register"
+                  size="sm"
+                  className="inline-flex text-xs px-2.5 sm:px-3 shadow-xs"
+                  rightIcon={<Sparkles className="w-3.5 h-3.5" />}
+                >
+                  Créer un compte
                 </Button>
               ) : null}
             </div>

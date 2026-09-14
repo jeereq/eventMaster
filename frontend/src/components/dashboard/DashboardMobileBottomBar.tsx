@@ -307,7 +307,7 @@ export default function DashboardMobileBottomBar({
       className="em-dash-bottom-nav md:hidden pointer-events-none px-3 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-1"
     >
       <div
-        className="pointer-events-auto max-w-lg mx-auto bg-surface/92 dark:bg-[#18181b]/92 backdrop-blur-2xl border border-border/80 dark:border-white/10 rounded-2xl min-[400px]:rounded-full shadow-[0_12px_36px_-6px_rgba(0,0,0,0.14),0_4px_16px_-2px_rgba(0,0,0,0.06)] dark:shadow-[0_16px_40px_-6px_rgba(0,0,0,0.6)] px-1.5 py-1 grid gap-0.5 items-center relative"
+        className="pointer-events-auto max-w-lg mx-auto bg-surface/92 dark:bg-stage-elevated/95 backdrop-blur-2xl border border-border/80 dark:border-border-subtle/30 rounded-2xl min-[400px]:rounded-full shadow-[0_12px_36px_-6px_rgba(0,0,0,0.14),0_4px_16px_-2px_rgba(0,0,0,0.06)] dark:shadow-[0_16px_40px_-6px_rgba(0,0,0,0.6)] px-1.5 py-1 grid gap-0.5 items-center relative"
         style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
       >
         {items.map((item) => {
@@ -340,7 +340,7 @@ export default function DashboardMobileBottomBar({
                 >
                   <Icon className="w-[18px] h-[18px]" />
                 </div>
-                <span className="text-[10px] tracking-tight leading-none truncate max-w-full">
+                <span className="text-xs tracking-tight leading-none truncate max-w-full">
                   {mobileMenuOpen ? 'Fermer' : item.name}
                 </span>
               </button>
@@ -376,7 +376,7 @@ export default function DashboardMobileBottomBar({
                   <span className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-primary-solid dark:bg-primary" />
                 )}
               </div>
-              <span className="text-[10px] tracking-tight leading-none truncate max-w-full">
+              <span className="text-xs tracking-tight leading-none truncate max-w-full">
                 {item.name}
               </span>
             </Link>

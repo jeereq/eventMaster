@@ -357,6 +357,7 @@ h1, h2, h3, h4 {
 }
 
 .em-3d-grid-floor {
+  /* impeccable-disable-next-line codex-grid-background -- Sol de modélisation 3D pour aperçu blueprint */
   background-size: 40px 40px;
   background-image:
     linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
