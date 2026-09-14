@@ -18,6 +18,8 @@ exports.mergePlansForSave = mergePlansForSave;
 exports.isPaidPlan = isPaidPlan;
 exports.paidPlanKeysForAccountKind = paidPlanKeysForAccountKind;
 exports.isPlanAllowedForAccountKind = isPlanAllowedForAccountKind;
+exports.isPlanAllowedForTenant = isPlanAllowedForTenant;
+exports.planGenreMismatchMessage = planGenreMismatchMessage;
 exports.resolvePendingSignupPlan = resolvePendingSignupPlan;
 exports.accountKindForPlanAssignment = accountKindForPlanAssignment;
 exports.planAudienceMismatchMessage = planAudienceMismatchMessage;
@@ -168,12 +170,13 @@ function getDefaultPlans() {
             name: 'Business',
             price: '30.000 FC',
             monthlyPriceFc: 30000,
-            description: 'B2B — plusieurs réceptions par an : invitations, protocole QR, PDF/GPS dès RSVP.',
+            description: 'B2B — réceptions, protocole QR, PDF/GPS : 3 salles publiables au catalogue et prestations marketplace illimitées.',
             audience: 'B2B',
             maxEvents: 8,
             maxGuests: 150,
             maxTemplates: 5,
             maxRooms: 3,
+            maxServices: 9999,
             maxOrgManagers: 3,
             customTemplates: false,
             mockupOcr: false,
@@ -189,12 +192,13 @@ function getDefaultPlans() {
             name: 'Premium',
             price: '55.000 FC',
             monthlyPriceFc: 55000,
-            description: 'B2B — salles 2D avancées (thèmes, scénographie), modèles personnalisés et équipe élargie.',
+            description: 'B2B — salles 2D avancées, modèles personnalisés : 5 salles publiables et prestations marketplace illimitées.',
             audience: 'B2B',
             maxEvents: 12,
             maxGuests: 500,
             maxTemplates: 8,
             maxRooms: 5,
+            maxServices: 9999,
             maxOrgManagers: 5,
             customTemplates: true,
             mockupOcr: false,
@@ -210,12 +214,13 @@ function getDefaultPlans() {
             name: 'Premium Plus',
             price: '85.000 FC',
             monthlyPriceFc: 85000,
-            description: 'B2B — protocole complet, OCR maquette, notifications siège et gestion multi-salles.',
+            description: 'B2B — protocole complet, OCR, multi-salles : 10 salles publiables et prestations marketplace illimitées.',
             audience: 'B2B',
             maxEvents: 20,
             maxGuests: 1000,
             maxTemplates: 10,
             maxRooms: 10,
+            maxServices: 9999,
             maxOrgManagers: 10,
             customTemplates: true,
             mockupOcr: true,
@@ -231,12 +236,13 @@ function getDefaultPlans() {
             name: 'Enterprise',
             price: '350.000 FC',
             monthlyPriceFc: 350000,
-            description: 'B2B — grandes organisations : volume élevé, éditeur de salle complet, rapports et support prioritaire.',
+            description: 'B2B — volume élevé, éditeur complet : 25 salles publiables, prestations marketplace illimitées, rapports et support prioritaire.',
             audience: 'B2B',
             maxEvents: 40,
             maxGuests: 3500,
             maxTemplates: 18,
             maxRooms: 25,
+            maxServices: 9999,
             maxOrgManagers: 18,
             customTemplates: true,
             mockupOcr: true,
@@ -252,12 +258,13 @@ function getDefaultPlans() {
             name: 'Enterprise Pro',
             price: '525.000 FC',
             monthlyPriceFc: 525000,
-            description: 'B2B — agences événementielles : volume élevé, éditeur complet et support dédié.',
+            description: 'B2B — agences : 50 salles publiables, prestations marketplace illimitées, éditeur complet et support dédié.',
             audience: 'B2B',
             maxEvents: 70,
             maxGuests: 5000,
             maxTemplates: 30,
             maxRooms: 50,
+            maxServices: 9999,
             maxOrgManagers: 30,
             customTemplates: true,
             mockupOcr: true,
@@ -273,12 +280,13 @@ function getDefaultPlans() {
             name: 'Enterprise Unlimited',
             price: '700.000 FC',
             monthlyPriceFc: 700000,
-            description: 'B2B — illimité, multi-agences, SLA 24/7 et onboarding dédié.',
+            description: 'B2B — illimité (événements, salles publiables, prestations marketplace), multi-agences, SLA 24/7 et onboarding dédié.',
             audience: 'B2B',
             maxEvents: 9999,
             maxGuests: 99999,
             maxTemplates: 9999,
             maxRooms: 9999,
+            maxServices: 9999,
             maxOrgManagers: 9999,
             customTemplates: true,
             mockupOcr: true,
@@ -492,6 +500,26 @@ function isPlanAllowedForAccountKind(planKey, kind) {
     if (normalized === 'FREE')
         return true;
     return paidPlanKeysForAccountKind(kind).includes(normalized);
+}
+/**
+ * Même genre d’abonnement uniquement une fois un forfait payant actif
+ * (ex. B2B → uniquement Business / Premium / Enterprise).
+ */
+function isPlanAllowedForTenant(planKey, accountKind, currentPlan) {
+    if (!isPlanAllowedForAccountKind(planKey, accountKind))
+        return false;
+    const normalized = normalizePlanKey(planKey);
+    if (normalized === 'FREE')
+        return true;
+    const current = normalizePlanKey(currentPlan || 'FREE');
+    if (current === 'FREE')
+        return true;
+    return getPlanLimits(current).audience === getPlanLimits(normalized).audience;
+}
+function planGenreMismatchMessage(planKey, currentPlan) {
+    const plan = getPlanLimits(planKey);
+    const current = getPlanLimits(currentPlan || 'FREE');
+    return `Le forfait ${plan.name} n’est pas du même genre que votre abonnement actuel (${current.name}). Restez dans la même famille (Particulier, Business, Salle, Prestataire ou Salle & presta).`;
 }
 /** Forfait d’inscription à mémoriser (null si gratuit, inconnu ou incompatible avec le kind). */
 function resolvePendingSignupPlan(planKey, accountKind) {

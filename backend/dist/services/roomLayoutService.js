@@ -7,6 +7,79 @@ exports.mergeBlueprintIntoTablePlan = mergeBlueprintIntoTablePlan;
 function uid(prefix) {
     return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 }
+function emptySeats(capacity) {
+    const seats = {};
+    for (let i = 0; i < capacity; i++)
+        seats[i] = null;
+    return seats;
+}
+function rowSeatCode(rowName, index) {
+    const raw = String(rowName || 'A').trim();
+    const token = raw.replace(/^rang(ée)?\s+/i, '').split(/\s+/)[0] || 'A';
+    return `${token.slice(0, 4).toUpperCase()}${index + 1}`;
+}
+function furnitureToPlanTable(item) {
+    if (item.kind === 'chair') {
+        const isPmr = item.chairType === 'WHEELCHAIR';
+        return {
+            id: item.id,
+            sourceFurnitureId: item.id,
+            name: item.label || 'Siège',
+            shape: 'round',
+            capacity: 1,
+            chairType: item.chairType,
+            x: item.x,
+            y: item.y,
+            rotation: item.rotation ?? 0,
+            seats: emptySeats(1),
+            locked: item.locked ?? false,
+            chairMeta: { standalone: true, rotation: item.rotation ?? 0, isPmr },
+            pmrSeatIndices: isPmr ? [0] : undefined,
+        };
+    }
+    if (item.kind === 'table') {
+        return {
+            id: item.id,
+            sourceFurnitureId: item.id,
+            name: item.name,
+            shape: item.shape,
+            capacity: item.capacity,
+            chairType: item.chairType,
+            chairImageUrl: item.chairImageUrl,
+            tableColor: item.tableColor,
+            tableImageUrl: item.tableImageUrl,
+            x: item.x,
+            y: item.y,
+            seats: emptySeats(item.capacity),
+            locked: item.locked ?? false,
+            hiddenSeatIndices: item.hiddenSeatIndices,
+            pmrSeatIndices: item.pmrSeatIndices,
+        };
+    }
+    return {
+        id: item.id,
+        sourceFurnitureId: item.id,
+        name: item.label,
+        shape: 'arc',
+        capacity: item.seatCount,
+        chairType: item.chairType,
+        x: item.x,
+        y: item.y,
+        seats: emptySeats(item.seatCount),
+        locked: true,
+        pmrSeatIndices: item.pmrSeatIndices,
+        rowMeta: {
+            tier: item.tier,
+            curve: item.curve ?? 0,
+            elevationM: item.elevationM,
+            aisleSplit: item.aisleSplit === true,
+            focusX: item.focusX,
+            focusY: item.focusY,
+            rowName: item.label,
+            seatCodes: Array.from({ length: item.seatCount }, (_, i) => rowSeatCode(item.label, i)),
+        },
+    };
+}
 function gridPositions(count, margin = 12, maxCol) {
     const cols = maxCol ?? Math.ceil(Math.sqrt(count));
     const rows = Math.ceil(count / cols);
@@ -22,10 +95,14 @@ function gridPositions(count, margin = 12, maxCol) {
 }
 function calculateBlueprintCapacity(blueprint) {
     return blueprint.furniture.reduce((sum, item) => {
-        if (item.kind === 'table')
-            return sum + item.capacity;
+        if (item.kind === 'table') {
+            const hidden = item.hiddenSeatIndices?.length ?? 0;
+            return sum + Math.max(0, item.capacity - hidden);
+        }
         if (item.kind === 'row')
             return sum + item.seatCount;
+        if (item.kind === 'chair')
+            return sum + 1;
         return sum;
     }, 0);
 }
@@ -107,6 +184,9 @@ function generateConferenceBlueprint(params, chairType) {
             tier: 0,
             x: 50,
             y: rowCount === 1 ? 55 : startY + step * i,
+            curve: 0,
+            focusX: 50,
+            focusY: 8,
         });
     }
     return {
@@ -142,47 +222,54 @@ function generateAmphitheaterBlueprint(params, chairType) {
     const rowsPerTier = Math.max(1, params.rowsPerTier ?? 2);
     const seatsPerRow = Math.max(2, params.seatsPerRow ?? 12);
     const furniture = [];
+    const risePerTierM = 0.38;
+    const stageFocus = { x: 50, y: 10 };
     let rowIndex = 0;
+    let totalSeats = 0;
+    // Scène en haut du plan ; le gradin 1 (tier 0) est le plus proche, comme l’éditeur frontend.
     for (let tier = 0; tier < tierCount; tier++) {
         for (let r = 0; r < rowsPerTier; r++) {
-            const progress = (tier * rowsPerTier + r) / (tierCount * rowsPerTier - 1 || 1);
-            const y = 25 + progress * 60;
-            const curve = Math.round(36 + tier * 8);
+            const rowDepth = tier * rowsPerTier + r;
+            const progress = rowDepth / Math.max(1, tierCount * rowsPerTier - 1);
+            const y = 28 + progress * 58;
+            const seats = seatsPerRow + tier * 2;
+            const curve = Math.round(38 + progress * 22);
             furniture.push({
                 id: uid('row'),
                 kind: 'row',
                 label: `Gradin ${tier + 1} — Rangée ${r + 1}`,
-                seatCount: seatsPerRow + tier * 2,
+                seatCount: seats,
                 chairType,
                 tier,
                 x: 50,
                 y,
                 curve,
                 aisleSplit: true,
-                elevationM: Number(((tier + 1) * 0.28).toFixed(2)),
-                focusX: 50,
-                focusY: 12,
+                elevationM: Number((tier * risePerTierM + r * (risePerTierM * 0.35)).toFixed(2)),
+                focusX: stageFocus.x,
+                focusY: stageFocus.y,
             });
+            totalSeats += seats;
             rowIndex++;
         }
     }
     return {
         version: 1,
         roomType: 'AMPHITHEATER',
-        canvas: { widthM: 22, heightM: 16 },
+        canvas: { widthM: 24, heightM: 18 },
         fixtures: [
             {
                 id: uid('stage'),
                 kind: 'stage',
-                x: 30,
-                y: 88,
-                w: 40,
+                x: 28,
+                y: 3,
+                w: 44,
                 h: 8,
                 label: 'Scène',
             },
         ],
         furniture,
-        metadata: { rowCount: rowIndex, totalSeats: rowIndex * seatsPerRow },
+        metadata: { rowCount: rowIndex, totalSeats },
     };
 }
 function generateTentBlueprint(params, chairType) {
@@ -259,45 +346,8 @@ function blueprintToTablePlan(blueprint) {
         };
     }
     const tables = blueprint.furniture
-        .filter((item) => item.kind === 'table' || item.kind === 'row')
-        .map((item) => {
-        if (item.kind === 'table') {
-            const seats = {};
-            for (let i = 0; i < item.capacity; i++)
-                seats[i] = null;
-            return {
-                id: item.id,
-                sourceFurnitureId: item.id,
-                name: item.name,
-                shape: item.shape,
-                capacity: item.capacity,
-                chairType: item.chairType,
-                chairImageUrl: item.chairImageUrl,
-                tableColor: item.tableColor,
-                tableImageUrl: item.tableImageUrl,
-                x: item.x,
-                y: item.y,
-                seats,
-                locked: item.locked ?? false,
-            };
-        }
-        const seats = {};
-        for (let i = 0; i < item.seatCount; i++)
-            seats[i] = null;
-        return {
-            id: item.id,
-            sourceFurnitureId: item.id,
-            name: item.label,
-            shape: 'rectangular',
-            capacity: item.seatCount,
-            chairType: item.chairType,
-            x: item.x,
-            y: item.y,
-            seats,
-            locked: true,
-            rowMeta: { tier: item.tier, curve: item.curve ?? 0 },
-        };
-    });
+        .filter((item) => item.kind === 'table' || item.kind === 'row' || item.kind === 'chair')
+        .map((item) => furnitureToPlanTable(item));
     return {
         tables,
         fixtures: blueprint.fixtures,

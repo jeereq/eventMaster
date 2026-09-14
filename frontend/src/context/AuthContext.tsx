@@ -35,6 +35,7 @@ export interface CommercialGrantedPermissions {
   canManageCatalog?: boolean;
   canManageEvents?: boolean;
   canManageGuests?: boolean;
+  canManageShowcasePlans?: boolean;
 }
 
 interface User {

@@ -3,8 +3,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.settingsFilePath = exports.PLATFORM_CITY_CATALOG = exports.DEFAULT_PLATFORM_SETTINGS = exports.DEFAULT_STUDIO_VISIBILITY = exports.DEFAULT_AUDIO_NOTIFICATIONS = exports.AUDIO_NOTIFICATION_FAMILIES = exports.AUDIO_NOTIFICATION_PRESETS = void 0;
+exports.settingsFilePath = exports.PLATFORM_CITY_CATALOG = exports.DEFAULT_PLATFORM_SETTINGS = exports.DEFAULT_SHOWCASE_ROOM_PLANS = exports.DEFAULT_STUDIO_VISIBILITY = exports.DEFAULT_AUDIO_NOTIFICATIONS = exports.AUDIO_NOTIFICATION_FAMILIES = exports.AUDIO_NOTIFICATION_PRESETS = void 0;
 exports.sanitizeStudioVisibility = sanitizeStudioVisibility;
+exports.sanitizeShowcaseRoomPlans = sanitizeShowcaseRoomPlans;
 exports.sanitizeCommercialPermissions = sanitizeCommercialPermissions;
 exports.sanitizeAudioNotifications = sanitizeAudioNotifications;
 exports.sanitizeEnabledCities = sanitizeEnabledCities;
@@ -29,6 +30,7 @@ exports.mergeSettingsUpdate = mergeSettingsUpdate;
 exports.getNotificationCredentials = getNotificationCredentials;
 exports.getCommercialPermissions = getCommercialPermissions;
 exports.hasCommercialPermission = hasCommercialPermission;
+exports.canManageShowcasePlans = canManageShowcasePlans;
 exports.setCommercialPermissions = setCommercialPermissions;
 exports.removeCommercialPermissions = removeCommercialPermissions;
 const fs_1 = __importDefault(require("fs"));
@@ -71,6 +73,130 @@ function sanitizeStudioVisibility(raw) {
         room: src.room !== false,
     };
 }
+exports.DEFAULT_SHOWCASE_ROOM_PLANS = [
+    {
+        id: 'banquet-honor',
+        name: 'Table d’honneur',
+        label: 'Mariage & Table d’Honneur',
+        category: 'wedding',
+        description: 'Table d’honneur VIP verrouillée avec invités disposés en banquet',
+        outlineShape: 'rectangle',
+        presetId: 'banquet-honor',
+        isPublished: true,
+        order: 1,
+    },
+    {
+        id: 'banquet-classic',
+        name: 'Banquet classique',
+        label: 'Banquet & Réception',
+        category: 'banquet',
+        description: 'Tables rondes ordonnées en grille avec grande scène de réception',
+        outlineShape: 'rectangle',
+        presetId: 'banquet-classic',
+        isPublished: true,
+        order: 2,
+    },
+    {
+        id: 'cocktail',
+        name: 'Cocktail & Mange-debout',
+        label: 'Cocktail & Mange-debout',
+        category: 'cocktail',
+        description: 'Espace fluide pour réceptions debout, bar événementiel et zone DJ',
+        outlineShape: 'rectangle',
+        presetId: 'cocktail',
+        isPublished: true,
+        order: 3,
+    },
+    {
+        id: 'conference-standard',
+        name: 'Conférence standard',
+        label: 'Conférence & Séminaire',
+        category: 'pro',
+        description: 'Rangées de sièges face à la scène principale et pupitre orateur',
+        outlineShape: 'rectangle',
+        presetId: 'conference-standard',
+        isPublished: true,
+        order: 4,
+    },
+    {
+        id: 'chairs-ceremony',
+        name: 'Allée nuptiale',
+        label: 'Cérémonie & Allée Nuptiale',
+        category: 'wedding',
+        description: 'Double rangée avec allée centrale majestueuse et arche florale',
+        outlineShape: 'rectangle',
+        presetId: 'chairs-ceremony',
+        isPublished: true,
+        order: 5,
+    },
+    {
+        id: 'banquet-ushape',
+        name: 'Banquet en U',
+        label: 'Banquet en U',
+        category: 'banquet',
+        description: 'Tables rectangulaires conviviales ouvertes vers la scène',
+        outlineShape: 'rectangle',
+        presetId: 'banquet-ushape',
+        isPublished: true,
+        order: 6,
+    },
+    {
+        id: 'boardroom',
+        name: 'Salle de conseil VIP',
+        label: 'Salle de Conseil VIP',
+        category: 'pro',
+        description: 'Grande table de direction avec fauteuils et écran de présentation',
+        outlineShape: 'rectangle',
+        presetId: 'boardroom',
+        isPublished: true,
+        order: 7,
+    },
+    {
+        id: 'chairs-theater',
+        name: 'Auditorium & Théâtre',
+        label: 'Auditorium & Théâtre',
+        category: 'pro',
+        description: 'Disposition en gradins théâtraux avec visibilité optimale',
+        outlineShape: 'rectangle',
+        presetId: 'chairs-theater',
+        isPublished: true,
+        order: 8,
+    },
+    {
+        id: 'classroom',
+        name: 'Formation & Classe',
+        label: 'Formation & Classe',
+        category: 'pro',
+        description: 'Tables de travail partagées avec sièges et allées de circulation',
+        outlineShape: 'rectangle',
+        presetId: 'classroom',
+        isPublished: true,
+        order: 9,
+    },
+];
+function sanitizeShowcaseRoomPlans(raw) {
+    if (!Array.isArray(raw) || raw.length === 0) {
+        return exports.DEFAULT_SHOWCASE_ROOM_PLANS;
+    }
+    return raw.map((item, index) => {
+        const src = item && typeof item === 'object' ? item : {};
+        return {
+            id: String(src.id || `showcase-${index + 1}`),
+            name: String(src.name || 'Plan sans titre').trim(),
+            label: String(src.label || src.name || 'Modèle').trim(),
+            category: String(src.category || 'other').trim(),
+            description: String(src.description || '').trim(),
+            outlineShape: src.outlineShape ? String(src.outlineShape) : 'rectangle',
+            blueprint: src.blueprint && typeof src.blueprint === 'object' ? src.blueprint : undefined,
+            presetId: src.presetId ? String(src.presetId) : undefined,
+            isPublished: src.isPublished !== false,
+            order: Number.isFinite(Number(src.order)) ? Number(src.order) : index + 1,
+            createdAt: src.createdAt ? String(src.createdAt) : undefined,
+            updatedAt: src.updatedAt ? String(src.updatedAt) : undefined,
+            updatedBy: src.updatedBy ? String(src.updatedBy) : undefined,
+        };
+    });
+}
 function sanitizeCommercialPermissions(raw) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
         return {};
@@ -85,6 +211,7 @@ function sanitizeCommercialPermissions(raw) {
                 canManageCatalog: Boolean(p.canManageCatalog),
                 canManageEvents: Boolean(p.canManageEvents),
                 canManageGuests: Boolean(p.canManageGuests),
+                canManageShowcasePlans: Boolean(p.canManageShowcasePlans),
             };
         }
     }
@@ -156,6 +283,7 @@ exports.DEFAULT_PLATFORM_SETTINGS = {
     commercialPermissions: {},
     subscriptionDiscountAccess: subscriptionDiscountAccess_1.DEFAULT_SUBSCRIPTION_DISCOUNT_ACCESS,
     donationsAccess: donationsAccess_1.DEFAULT_DONATIONS_ACCESS,
+    showcaseRoomPlans: exports.DEFAULT_SHOWCASE_ROOM_PLANS,
 };
 exports.PLATFORM_CITY_CATALOG = [
     'Kinshasa',
@@ -317,6 +445,7 @@ function buildNextSettings(partial) {
     next.commercialPermissions = sanitizeCommercialPermissions(next.commercialPermissions);
     next.subscriptionDiscountAccess = (0, subscriptionDiscountAccess_1.sanitizeSubscriptionDiscountAccess)(next.subscriptionDiscountAccess);
     next.donationsAccess = (0, donationsAccess_1.sanitizeDonationsAccess)(next.donationsAccess);
+    next.showcaseRoomPlans = sanitizeShowcaseRoomPlans(next.showcaseRoomPlans);
     next.ticketPaymentProvider = 'flexpay_card';
     next.saasPaymentMode = next.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
     next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
@@ -495,6 +624,17 @@ function hasCommercialPermission(userId, perm) {
     const userPerms = getCommercialPermissions(userId);
     return Boolean(userPerms[perm]);
 }
+/** Vérifie si un utilisateur a le droit de gérer les plans vitrine 2D/3D (Super Admin ou Commercial habilité). */
+function canManageShowcasePlans(user) {
+    if (!user)
+        return false;
+    if (user.role === 'SUPER_ADMIN')
+        return true;
+    if (user.role === 'COMMERCIAL' && user.id && hasCommercialPermission(user.id, 'canManageShowcasePlans')) {
+        return true;
+    }
+    return false;
+}
 async function setCommercialPermissions(userId, permissions) {
     const settings = loadPlatformSettings();
     const current = { ...(settings.commercialPermissions || {}) };
@@ -504,6 +644,7 @@ async function setCommercialPermissions(userId, permissions) {
         canManageCatalog: Boolean(permissions.canManageCatalog),
         canManageEvents: Boolean(permissions.canManageEvents),
         canManageGuests: Boolean(permissions.canManageGuests),
+        canManageShowcasePlans: Boolean(permissions.canManageShowcasePlans),
     };
     await savePlatformSettingsDurable({ commercialPermissions: current });
 }

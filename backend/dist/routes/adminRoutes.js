@@ -5,6 +5,7 @@ const auth_1 = require("../middleware/auth");
 const platformSettingsService_1 = require("../services/platformSettingsService");
 const adminController_1 = require("../controllers/adminController");
 const guestMessageTemplateController_1 = require("../controllers/guestMessageTemplateController");
+const showcasePlanController_1 = require("../controllers/showcasePlanController");
 const subscriptionController_1 = require("../controllers/subscriptionController");
 const revenueReportController_1 = require("../controllers/revenueReportController");
 const saasPayoutController_1 = require("../controllers/saasPayoutController");
@@ -98,6 +99,12 @@ router.get('/templates', requireAdminOrCommercialPerm('canManageTemplates'), adm
 router.post('/templates/global', requireAdminOrCommercialPerm('canManageTemplates'), adminController_1.createGlobalTemplate);
 router.put('/templates/:id/landing', requireAdminOrCommercialPerm('canManageTemplates'), adminController_1.toggleTemplateLanding);
 router.delete('/templates/:id', requireAdminOrCommercialPerm('canManageTemplates'), adminController_1.deleteTemplate);
+// Plans 2D / 3D vitrine : Super Admin ou Commercial avec droit 'canManageShowcasePlans'
+router.get('/showcase-plans', requireAdminOrCommercialPerm('canManageShowcasePlans'), showcasePlanController_1.getAdminShowcasePlans);
+router.post('/showcase-plans', requireAdminOrCommercialPerm('canManageShowcasePlans'), showcasePlanController_1.createShowcasePlan);
+router.put('/showcase-plans/selection', requireAdminOrCommercialPerm('canManageShowcasePlans'), showcasePlanController_1.updateShowcasePlansSelection);
+router.put('/showcase-plans/:id', requireAdminOrCommercialPerm('canManageShowcasePlans'), showcasePlanController_1.updateShowcasePlan);
+router.delete('/showcase-plans/:id', requireAdminOrCommercialPerm('canManageShowcasePlans'), showcasePlanController_1.deleteShowcasePlan);
 // Modèles de messages automatiques : Super Admin ou Commercial avec droit 'canManageMessageTemplates'
 router.get('/message-templates', requireAdminOrCommercialPerm('canManageMessageTemplates'), guestMessageTemplateController_1.getGuestMessageTemplates);
 router.get('/message-templates/:id', requireAdminOrCommercialPerm('canManageMessageTemplates'), guestMessageTemplateController_1.getGuestMessageTemplateById);

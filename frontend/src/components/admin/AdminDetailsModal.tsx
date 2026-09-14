@@ -482,6 +482,11 @@ export default function AdminDetailsModal({
                     {data.commercialPermissions?.canManageGuests ? 'Autorisé' : 'Non attribué'}
                   </Badge>
                 </DetailRow>
+                <DetailRow label="Plans 2D / 3D vitrine">
+                  <Badge variant={data.commercialPermissions?.canManageShowcasePlans ? 'success' : 'default'}>
+                    {data.commercialPermissions?.canManageShowcasePlans ? 'Autorisé' : 'Non attribué'}
+                  </Badge>
+                </DetailRow>
               </DetailSection>
             )}
 

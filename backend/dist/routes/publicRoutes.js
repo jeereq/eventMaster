@@ -15,6 +15,7 @@ const publicEventController_1 = require("../controllers/publicEventController");
 const marketplaceClientController_1 = require("../controllers/marketplaceClientController");
 const templateController_1 = require("../controllers/templateController");
 const roomController_1 = require("../controllers/roomController");
+const showcasePlanController_1 = require("../controllers/showcasePlanController");
 const flexPayController_1 = require("../controllers/flexPayController");
 const router = (0, express_1.Router)();
 /** GET /api/public/site — identité & contact (sans secrets) */
@@ -74,6 +75,8 @@ router.get('/templates', async (_req, res) => {
         return res.status(500).json({ error: 'Erreur lors de la récupération des modèles publics' });
     }
 });
+// GET /api/public/showcase-plans — Plans 2D / 3D vitrine affichés sur /plans-3d
+router.get('/showcase-plans', auth_1.optionalAuth, showcasePlanController_1.getPublicShowcasePlans);
 router.get('/venues', marketplaceController_1.listPublicVenues);
 router.get('/venues/:slug', auth_1.optionalAuth, marketplaceController_1.getPublicVenue);
 router.get('/venues/:slug/feed', marketplaceFeedController_1.getPublicVenueFeed);

@@ -11,7 +11,7 @@ import {
  LogOut, Menu, X, Loader2, ShieldCheck, User, Sun, Moon, BarChart3,
  Building2, FileText, Key, MessageSquare, ScanLine, Briefcase, Clock, BookOpen,
  PanelLeftClose, PanelLeft, Store, CalendarCheck, ScrollText, Ticket, Wallet, Bell,
- Inbox, Sparkles, Heart, Rss, Coins,
+ Inbox, Sparkles, Heart, Rss, Coins, LayoutGrid,
 } from 'lucide-react';
 import PWARestrictedScreen from '@/components/PWARestrictedScreen';
 import PWAInstallCta from '@/components/PWAInstallCta';
@@ -195,6 +195,7 @@ function buildDashboardNav(opts: {
    ]),
    navSection('Contenu & vitrine', [
     { name: 'Modèles invitation', href: '/dashboard?tab=templates', tab: 'templates', tourId: 'nav-templates', icon: FileText },
+    { name: 'Plans 2D / 3D vitrine', href: '/plans-3d', tourId: 'nav-showcase-plans', icon: LayoutGrid, description: 'Gestion et édition des plans 2D/3D affichés en vitrine' },
     { name: 'Messages automatiques', href: '/dashboard?tab=message-templates', tab: 'message-templates', tourId: 'nav-message-templates', icon: MessageSquare },
     { name: 'Catalogue', href: '/dashboard/admin/catalogue', tourId: 'nav-catalog-admin', icon: Store },
    ]),
@@ -261,6 +262,15 @@ function buildDashboardNav(opts: {
     tourId: 'nav-guests',
     icon: Users,
     description: 'Supervision des listes d’invités',
+   });
+  }
+  if (commercialPermissions?.canManageShowcasePlans) {
+   delegatedItems.push({
+    name: 'Plans 2D / 3D vitrine',
+    href: '/plans-3d',
+    tourId: 'nav-showcase-plans',
+    icon: LayoutGrid,
+    description: 'Gestion, édition et sélection des plans 2D/3D vitrine',
    });
   }
 

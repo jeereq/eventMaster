@@ -93,6 +93,149 @@ export interface CommercialGrantedPermissions {
   canManageCatalog?: boolean;
   canManageEvents?: boolean;
   canManageGuests?: boolean;
+  canManageShowcasePlans?: boolean;
+}
+
+export interface ShowcaseRoomPlanItem {
+  id: string;
+  name: string;
+  label: string;
+  category: string;
+  description: string;
+  outlineShape?: string;
+  blueprint?: unknown;
+  presetId?: string;
+  isPublished: boolean;
+  order: number;
+  createdAt?: string;
+  updatedAt?: string;
+  updatedBy?: string | null;
+}
+
+export const DEFAULT_SHOWCASE_ROOM_PLANS: ShowcaseRoomPlanItem[] = [
+  {
+    id: 'banquet-honor',
+    name: 'Table d’honneur',
+    label: 'Mariage & Table d’Honneur',
+    category: 'wedding',
+    description: 'Table d’honneur VIP verrouillée avec invités disposés en banquet',
+    outlineShape: 'rectangle',
+    presetId: 'banquet-honor',
+    isPublished: true,
+    order: 1,
+  },
+  {
+    id: 'banquet-classic',
+    name: 'Banquet classique',
+    label: 'Banquet & Réception',
+    category: 'banquet',
+    description: 'Tables rondes ordonnées en grille avec grande scène de réception',
+    outlineShape: 'rectangle',
+    presetId: 'banquet-classic',
+    isPublished: true,
+    order: 2,
+  },
+  {
+    id: 'cocktail',
+    name: 'Cocktail & Mange-debout',
+    label: 'Cocktail & Mange-debout',
+    category: 'cocktail',
+    description: 'Espace fluide pour réceptions debout, bar événementiel et zone DJ',
+    outlineShape: 'rectangle',
+    presetId: 'cocktail',
+    isPublished: true,
+    order: 3,
+  },
+  {
+    id: 'conference-standard',
+    name: 'Conférence standard',
+    label: 'Conférence & Séminaire',
+    category: 'pro',
+    description: 'Rangées de sièges face à la scène principale et pupitre orateur',
+    outlineShape: 'rectangle',
+    presetId: 'conference-standard',
+    isPublished: true,
+    order: 4,
+  },
+  {
+    id: 'chairs-ceremony',
+    name: 'Allée nuptiale',
+    label: 'Cérémonie & Allée Nuptiale',
+    category: 'wedding',
+    description: 'Double rangée avec allée centrale majestueuse et arche florale',
+    outlineShape: 'rectangle',
+    presetId: 'chairs-ceremony',
+    isPublished: true,
+    order: 5,
+  },
+  {
+    id: 'banquet-ushape',
+    name: 'Banquet en U',
+    label: 'Banquet en U',
+    category: 'banquet',
+    description: 'Tables rectangulaires conviviales ouvertes vers la scène',
+    outlineShape: 'rectangle',
+    presetId: 'banquet-ushape',
+    isPublished: true,
+    order: 6,
+  },
+  {
+    id: 'boardroom',
+    name: 'Salle de conseil VIP',
+    label: 'Salle de Conseil VIP',
+    category: 'pro',
+    description: 'Grande table de direction avec fauteuils et écran de présentation',
+    outlineShape: 'rectangle',
+    presetId: 'boardroom',
+    isPublished: true,
+    order: 7,
+  },
+  {
+    id: 'chairs-theater',
+    name: 'Auditorium & Théâtre',
+    label: 'Auditorium & Théâtre',
+    category: 'pro',
+    description: 'Disposition en gradins théâtraux avec visibilité optimale',
+    outlineShape: 'rectangle',
+    presetId: 'chairs-theater',
+    isPublished: true,
+    order: 8,
+  },
+  {
+    id: 'classroom',
+    name: 'Formation & Classe',
+    label: 'Formation & Classe',
+    category: 'pro',
+    description: 'Tables de travail partagées avec sièges et allées de circulation',
+    outlineShape: 'rectangle',
+    presetId: 'classroom',
+    isPublished: true,
+    order: 9,
+  },
+];
+
+export function sanitizeShowcaseRoomPlans(raw: unknown): ShowcaseRoomPlanItem[] {
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return DEFAULT_SHOWCASE_ROOM_PLANS;
+  }
+  return raw.map((item, index) => {
+    const src = item && typeof item === 'object' ? (item as Record<string, unknown>) : {};
+    return {
+      id: String(src.id || `showcase-${index + 1}`),
+      name: String(src.name || 'Plan sans titre').trim(),
+      label: String(src.label || src.name || 'Modèle').trim(),
+      category: String(src.category || 'other').trim(),
+      description: String(src.description || '').trim(),
+      outlineShape: src.outlineShape ? String(src.outlineShape) : 'rectangle',
+      blueprint: src.blueprint && typeof src.blueprint === 'object' ? src.blueprint : undefined,
+      presetId: src.presetId ? String(src.presetId) : undefined,
+      isPublished: src.isPublished !== false,
+      order: Number.isFinite(Number(src.order)) ? Number(src.order) : index + 1,
+      createdAt: src.createdAt ? String(src.createdAt) : undefined,
+      updatedAt: src.updatedAt ? String(src.updatedAt) : undefined,
+      updatedBy: src.updatedBy ? String(src.updatedBy) : undefined,
+    };
+  });
 }
 
 export function sanitizeCommercialPermissions(raw: unknown): Record<string, CommercialGrantedPermissions> {
@@ -109,6 +252,7 @@ export function sanitizeCommercialPermissions(raw: unknown): Record<string, Comm
         canManageCatalog: Boolean(p.canManageCatalog),
         canManageEvents: Boolean(p.canManageEvents),
         canManageGuests: Boolean(p.canManageGuests),
+        canManageShowcasePlans: Boolean(p.canManageShowcasePlans),
       };
     }
   }
@@ -209,6 +353,8 @@ export interface PlatformSettings {
   subscriptionDiscountAccess: SubscriptionDiscountAccess;
   /** Politique d'autorisation des donations à montant libre. */
   donationsAccess: DonationsAccess;
+  /** Plans de salle 2D / 3D affichés en vitrine publique sur /plans-3d. */
+  showcaseRoomPlans: ShowcaseRoomPlanItem[];
 }
 
 /** Champs exposés publiquement (sans secrets). */
@@ -302,6 +448,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   commercialPermissions: {},
   subscriptionDiscountAccess: DEFAULT_SUBSCRIPTION_DISCOUNT_ACCESS,
   donationsAccess: DEFAULT_DONATIONS_ACCESS,
+  showcaseRoomPlans: DEFAULT_SHOWCASE_ROOM_PLANS,
 };
 
 export const PLATFORM_CITY_CATALOG = [
@@ -495,6 +642,7 @@ function buildNextSettings(
   next.commercialPermissions = sanitizeCommercialPermissions(next.commercialPermissions);
   next.subscriptionDiscountAccess = sanitizeSubscriptionDiscountAccess(next.subscriptionDiscountAccess);
   next.donationsAccess = sanitizeDonationsAccess(next.donationsAccess);
+  next.showcaseRoomPlans = sanitizeShowcaseRoomPlans(next.showcaseRoomPlans);
   next.ticketPaymentProvider = 'flexpay_card';
   next.saasPaymentMode = next.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
   next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
@@ -719,6 +867,16 @@ export function hasCommercialPermission(userId: string, perm: keyof CommercialGr
   return Boolean(userPerms[perm]);
 }
 
+/** Vérifie si un utilisateur a le droit de gérer les plans vitrine 2D/3D (Super Admin ou Commercial habilité). */
+export function canManageShowcasePlans(user?: { id?: string; role?: string }): boolean {
+  if (!user) return false;
+  if (user.role === 'SUPER_ADMIN') return true;
+  if (user.role === 'COMMERCIAL' && user.id && hasCommercialPermission(user.id, 'canManageShowcasePlans')) {
+    return true;
+  }
+  return false;
+}
+
 export async function setCommercialPermissions(userId: string, permissions: CommercialGrantedPermissions): Promise<void> {
   const settings = loadPlatformSettings();
   const current = { ...(settings.commercialPermissions || {}) };
@@ -728,6 +886,7 @@ export async function setCommercialPermissions(userId: string, permissions: Comm
     canManageCatalog: Boolean(permissions.canManageCatalog),
     canManageEvents: Boolean(permissions.canManageEvents),
     canManageGuests: Boolean(permissions.canManageGuests),
+    canManageShowcasePlans: Boolean(permissions.canManageShowcasePlans),
   };
   await savePlatformSettingsDurable({ commercialPermissions: current });
 }

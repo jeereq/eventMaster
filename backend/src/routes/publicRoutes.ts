@@ -53,6 +53,7 @@ import {
   getPublicAiRoomPlanCompose,
   claimPublicAiRoomPlanComposes,
 } from '../controllers/roomController';
+import { getPublicShowcasePlans } from '../controllers/showcasePlanController';
 import {
   flexPayCardCallback,
   flexPayCardReturn,
@@ -123,6 +124,9 @@ router.get('/templates', async (_req: Request, res: Response) => {
     return res.status(500).json({ error: 'Erreur lors de la récupération des modèles publics' });
   }
 });
+
+// GET /api/public/showcase-plans — Plans 2D / 3D vitrine affichés sur /plans-3d
+router.get('/showcase-plans', optionalAuth, getPublicShowcasePlans);
 
 router.get('/venues', listPublicVenues);
 router.get('/venues/:slug', optionalAuth, getPublicVenue);

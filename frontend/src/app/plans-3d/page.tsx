@@ -14,17 +14,34 @@ import {
   Sparkles,
   LayoutGrid,
   Eye,
+  EyeOff,
   ArrowRight,
   CheckCircle2,
   Users,
   Building2,
   ScanLine,
+  ShieldCheck,
+  Pencil,
+  Plus,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import LandingRoomPlanAiStudio from '@/components/landing/LandingRoomPlanAiStudio';
 import PlanViewModeToggle from '@/components/PlanViewModeToggle';
 import { StudioHowTo } from '@/components/StudioAiTabs';
+import { api } from '@/lib/api';
+import type { ShowcasePlanData } from '@/components/showcase/ShowcasePlanEditorModal';
+
+const ShowcasePlanEditorModal = dynamic(
+  () => import('@/components/showcase/ShowcasePlanEditorModal'),
+  { ssr: false },
+);
+
+const ShowcasePlanSelectionModal = dynamic(
+  () => import('@/components/showcase/ShowcasePlanSelectionModal'),
+  { ssr: false },
+);
 
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
   loading: () => (
@@ -47,6 +64,21 @@ const SHOWCASE_TEMPLATES = [
   { id: 'classroom', category: 'pro', label: 'Formation & Classe' },
 ];
 
+const INITIAL_SHOWCASE_PLANS: ShowcasePlanData[] = SHOWCASE_TEMPLATES.map((item, idx) => {
+  const tpl = ROOM_LAYOUT_TEMPLATES.find((t) => t.id === item.id);
+  return {
+    id: item.id,
+    name: tpl?.name || item.label,
+    label: item.label,
+    category: item.category,
+    description: tpl?.description || '',
+    outlineShape: tpl?.outlineShape || 'rectangle',
+    presetId: item.id,
+    isPublished: true,
+    order: idx + 1,
+  };
+});
+
 const CATEGORIES = [
   { id: 'all', label: 'Tous' },
   { id: 'wedding', label: 'Mariages' },
@@ -55,41 +87,99 @@ const CATEGORIES = [
   { id: 'cocktail', label: 'Cocktails' },
 ];
 
+function resolvePlanBlueprint(
+  plan?: ShowcasePlanData | null,
+): RoomLayoutBlueprint | null {
+  if (!plan) return null;
+  if (plan.blueprint) {
+    return plan.blueprint as RoomLayoutBlueprint;
+  }
+  const targetId = plan.presetId || plan.id;
+  if (targetId) {
+    try {
+      return applyRoomTemplate(targetId);
+    } catch {
+      // ignore
+    }
+  }
+  try {
+    return applyRoomTemplate('banquet-honor');
+  } catch {
+    return null;
+  }
+}
+
 export default function Plans3DPage() {
   const { user, access } = useAuth();
   const protocolLocked = Boolean(access?.isProtocolOnly);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('banquet-honor');
+
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const isAuthorizedCommercial = Boolean(
+    user?.role === 'COMMERCIAL' && user.commercialPermissions?.canManageShowcasePlans,
+  );
+  const canManageShowcase = isSuperAdmin || isAuthorizedCommercial;
+
+  const [showcasePlans, setShowcasePlans] = useState<ShowcasePlanData[]>(INITIAL_SHOWCASE_PLANS);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('banquet-honor');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [force2d, setForce2d] = useState(true);
   const [studioBlueprint, setStudioBlueprint] = useState<RoomLayoutBlueprint | null>(null);
   const [previewReady, setPreviewReady] = useState(false);
 
+  // États des modales d'administration Super Admin / Commercial
+  const [editorModalOpen, setEditorModalOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<ShowcasePlanData | null>(null);
+  const [selectionModalOpen, setSelectionModalOpen] = useState(false);
+
   useEffect(() => {
     setPreviewReady(true);
   }, []);
 
-  const selectedTemplate = useMemo(() => {
-    return (
-      ROOM_LAYOUT_TEMPLATES.find((t) => t.id === selectedTemplateId) ||
-      ROOM_LAYOUT_TEMPLATES[0]
-    );
-  }, [selectedTemplateId]);
+  // Chargement des plans configurés depuis l'API backend
+  useEffect(() => {
+    let isMounted = true;
+    api
+      .get('/public/showcase-plans')
+      .then((data: any) => {
+        if (isMounted && data?.plans && Array.isArray(data.plans) && data.plans.length > 0) {
+          setShowcasePlans(data.plans);
+        }
+      })
+      .catch((err) => {
+        console.warn('[Plans3D] Utilisation des modèles locaux par défaut:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Plan actuellement actif
+  const activePlan = useMemo(() => {
+    const found = showcasePlans.find((p) => p.id === selectedPlanId);
+    if (found) return found;
+    return showcasePlans[0] || INITIAL_SHOWCASE_PLANS[0];
+  }, [showcasePlans, selectedPlanId]);
 
   const templateBlueprint = useMemo<RoomLayoutBlueprint | null>(() => {
-    try {
-      return applyRoomTemplate(selectedTemplateId);
-    } catch {
-      return null;
-    }
-  }, [selectedTemplateId]);
+    return resolvePlanBlueprint(activePlan);
+  }, [activePlan]);
+
   const activeBlueprint = studioBlueprint ?? templateBlueprint;
 
-  const filteredTemplates = useMemo(() => {
-    return SHOWCASE_TEMPLATES.filter((item) => {
+  // Filtrage selon les droits et la catégorie sélectionnée
+  const filteredPlans = useMemo(() => {
+    return showcasePlans.filter((item) => {
+      // Les visiteurs ne voient que les plans publiés
+      if (!canManageShowcase && item.isPublished === false) return false;
       if (selectedCategory === 'all') return true;
       return item.category === selectedCategory;
     });
-  }, [selectedCategory]);
+  }, [showcasePlans, selectedCategory, canManageShowcase]);
+
+  const publishedCount = useMemo(() => {
+    return showcasePlans.filter((p) => p.isPublished !== false).length;
+  }, [showcasePlans]);
 
   const editorUrl = protocolLocked
     ? '/dashboard/protocol'
@@ -102,7 +192,7 @@ export default function Plans3DPage() {
     if (!activeBlueprint) return { seats: 0, tables: 0, fixtures: 0 };
     let seats = 0;
     let tables = 0;
-    for (const f of activeBlueprint.furniture) {
+    for (const f of activeBlueprint.furniture || []) {
       if (f.kind === 'table') {
         tables += 1;
         seats += f.capacity || 0;
@@ -111,6 +201,41 @@ export default function Plans3DPage() {
     const fixtures = activeBlueprint.fixtures?.length || 0;
     return { seats, tables, fixtures };
   }, [activeBlueprint]);
+
+  // Callback après enregistrement dans l'éditeur de modèle
+  const handlePlanSaved = (savedPlan: ShowcasePlanData) => {
+    setShowcasePlans((current) => {
+      const idx = current.findIndex((p) => p.id === savedPlan.id);
+      if (idx >= 0) {
+        const copy = [...current];
+        copy[idx] = savedPlan;
+        return copy;
+      }
+      return [...current, savedPlan];
+    });
+    if (savedPlan.id) {
+      setSelectedPlanId(savedPlan.id);
+    }
+    setStudioBlueprint(null);
+  };
+
+  const handlePlansUpdated = (updatedList: ShowcasePlanData[]) => {
+    setShowcasePlans(updatedList);
+  };
+
+  const handleQuickTogglePublish = async (e: React.MouseEvent, plan: ShowcasePlanData) => {
+    e.stopPropagation();
+    if (!plan.id) return;
+    const nextState = plan.isPublished === false;
+    try {
+      await api.put(`/admin/showcase-plans/${plan.id}`, { isPublished: nextState });
+      setShowcasePlans((current) =>
+        current.map((p) => (p.id === plan.id ? { ...p, isPublished: nextState } : p)),
+      );
+    } catch (err) {
+      console.error('[Plans3D] Erreur bascule publication:', err);
+    }
+  };
 
   return (
     <PublicPageShell faqHref="/faq" mobileFooterPad>
@@ -134,15 +259,70 @@ export default function Plans3DPage() {
       </PublicPageHero>
 
       <div className="page-container py-6 sm:py-10 space-y-12">
+        {/* ─── Barre d'administration Vitrine 2D/3D (Super Admin & Commercial délégué) ─── */}
+        {canManageShowcase && (
+          <aside
+            aria-label="Contrôles administrateur de la vitrine 2D/3D"
+            className="rounded-2xl border border-primary/30 bg-primary/5 dark:bg-primary/10 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-primary text-primary-foreground shadow-xs shrink-0">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                    Administration Vitrine 2D / 3D
+                  </span>
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-surface border border-border text-foreground">
+                    {isSuperAdmin ? 'Super Admin' : 'Commercial habilité'}
+                  </span>
+                </div>
+                <p className="text-xs text-muted mt-0.5">
+                  {publishedCount} modèle{publishedCount > 1 ? 's' : ''} affiché{publishedCount > 1 ? 's' : ''} aux visiteurs sur {showcasePlans.length} configuré{showcasePlans.length > 1 ? 's' : ''}. Vous pouvez modifier les plans, en ajouter ou réordonner la sélection.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => setSelectionModalOpen(true)}
+                leftIcon={<SlidersHorizontal className="w-3.5 h-3.5" />}
+              >
+                Gérer la sélection
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setEditingPlan(null);
+                  setEditorModalOpen(true);
+                }}
+                leftIcon={<Plus className="w-3.5 h-3.5" />}
+              >
+                Nouveau modèle
+              </Button>
+            </div>
+          </aside>
+        )}
+
         <section id="plan-viewer" className="space-y-4 scroll-mt-20">
           <div className="space-y-2">
-            <h2 className="text-base sm:text-lg font-semibold text-foreground">
-              {studioBlueprint ? 'Plan généré par l’IA' : selectedTemplate.name}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-semibold text-foreground">
+                {studioBlueprint ? 'Plan généré par l’IA' : activePlan.name}
+              </h2>
+              {canManageShowcase && activePlan.isPublished === false && (
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-surface-muted text-muted border border-border">
+                  Masqué au public
+                </span>
+              )}
+            </div>
             <p className="text-xs sm:text-sm text-muted leading-relaxed">
               {studioBlueprint
                 ? 'Le studio IA a posé ce plan. Basculez 2D / 3D, puis ouvrez l’éditeur pour le peaufiner.'
-                : selectedTemplate.description}
+                : activePlan.description}
             </p>
             <StudioHowTo
               steps={[
@@ -155,9 +335,24 @@ export default function Plans3DPage() {
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <PlanViewModeToggle force2d={force2d} onChange={setForce2d} />
-            <Button href={editorUrl} size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
-              {protocolLocked ? 'Desk protocole' : 'Personnaliser dans l’éditeur'}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              {canManageShowcase && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    setEditingPlan(activePlan);
+                    setEditorModalOpen(true);
+                  }}
+                  leftIcon={<Pencil className="w-3.5 h-3.5" />}
+                >
+                  Éditer ce modèle vitrine
+                </Button>
+              )}
+              <Button href={editorUrl} size="sm" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
+                {protocolLocked ? 'Desk protocole' : 'Personnaliser dans l’éditeur'}
+              </Button>
+            </div>
           </div>
 
           {/* Visualiseur WebGL / 2D interactif */}
@@ -237,64 +432,93 @@ export default function Plans3DPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredTemplates.map((item) => {
-              const tpl = ROOM_LAYOUT_TEMPLATES.find((t) => t.id === item.id);
-              if (!tpl) return null;
-              const isSelected = selectedTemplateId === tpl.id;
+            {filteredPlans.map((item) => {
+              const isSelected = selectedPlanId === item.id;
+              const isPub = item.isPublished !== false;
 
               return (
-                <button
-                  type="button"
-                  key={tpl.id}
-                  aria-pressed={isSelected}
-                  className={cn(
-                    'group rounded-xl border p-4 flex flex-col justify-between transition-all duration-200 text-left w-full',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                    isSelected
-                      ? 'border-primary ring-2 ring-primary/30 bg-primary/5 shadow-md'
-                      : 'border-border/80 bg-surface hover:border-primary/40 hover:shadow-xs',
-                  )}
+                <div
+                  key={item.id}
                   onClick={() => {
                     setStudioBlueprint(null);
-                    setSelectedTemplateId(tpl.id);
+                    if (item.id) setSelectedPlanId(item.id);
                     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
                     document.getElementById('plan-viewer')?.scrollIntoView({
                       block: 'start',
                       behavior: reduceMotion ? 'auto' : 'smooth',
                     });
                   }}
+                  className={cn(
+                    'group rounded-xl border p-4 flex flex-col justify-between transition-all duration-200 text-left w-full cursor-pointer relative',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                    isSelected
+                      ? 'border-primary ring-2 ring-primary/30 bg-primary/5 shadow-md'
+                      : isPub
+                        ? 'border-border/80 bg-surface hover:border-primary/40 hover:shadow-xs'
+                        : 'border-border/60 bg-surface-muted/50 opacity-70 hover:opacity-100',
+                  )}
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-semibold text-muted px-2 py-0.5 rounded-full bg-surface-muted border border-border">
-                        {item.label}
+                        {item.label || item.name}
                       </span>
-                      {isSelected && (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-primary">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                          <span>Actif</span>
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {canManageShowcase && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleQuickTogglePublish(e, item)}
+                            className="p-1 min-h-8 min-w-8 rounded-md text-muted hover:text-foreground hover:bg-surface-muted transition flex items-center justify-center"
+                            title={isPub ? 'Masquer du public' : 'Publier en vitrine'}
+                          >
+                            {isPub ? <Eye className="w-3.5 h-3.5 text-primary" /> : <EyeOff className="w-3.5 h-3.5" />}
+                          </button>
+                        )}
+                        {isSelected && (
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-primary">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                            <span>Actif</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">
-                      {tpl.name}
+                      {item.name}
                     </h3>
                     <p className="text-xs text-muted leading-relaxed line-clamp-2">
-                      {tpl.description}
+                      {item.description}
                     </p>
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between gap-2">
                     <span className="text-xs font-semibold text-muted">
-                      {tpl.outlineShape === 'circle' ? 'Salle circulaire' : 'Salle rectangulaire'}
+                      {item.outlineShape === 'circle' ? 'Salle circulaire' : 'Salle rectangulaire'}
                     </span>
-                    <span className="text-xs font-semibold text-primary inline-flex items-center gap-1">
-                      <Eye className="w-3 h-3" aria-hidden />
-                      <span>Charger ce plan</span>
-                    </span>
+
+                    <div className="flex items-center gap-2">
+                      {canManageShowcase && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingPlan(item);
+                            setEditorModalOpen(true);
+                          }}
+                          className="px-2 py-1 min-h-8 rounded-md bg-surface-muted text-xs font-semibold text-muted hover:text-foreground hover:bg-surface transition inline-flex items-center gap-1 border border-border"
+                          title="Éditer dans l’éditeur 2D / 3D"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          <span>Éditer</span>
+                        </button>
+                      )}
+                      <span className="text-xs font-semibold text-primary inline-flex items-center gap-1">
+                        <Eye className="w-3 h-3" aria-hidden />
+                        <span>Charger</span>
+                      </span>
+                    </div>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -362,6 +586,34 @@ export default function Plans3DPage() {
         secondaryHref="/tarifs"
         secondaryLabel="Voir les forfaits"
       />
+
+      {/* ─── Modales d'administration Vitrine (chargées à la demande) ─── */}
+      {editorModalOpen && (
+        <ShowcasePlanEditorModal
+          isOpen={editorModalOpen}
+          initialPlan={editingPlan}
+          fallbackBlueprint={activeBlueprint}
+          onClose={() => setEditorModalOpen(false)}
+          onSaved={handlePlanSaved}
+        />
+      )}
+
+      {selectionModalOpen && (
+        <ShowcasePlanSelectionModal
+          isOpen={selectionModalOpen}
+          plans={showcasePlans}
+          onClose={() => setSelectionModalOpen(false)}
+          onEditPlan={(plan) => {
+            setEditingPlan(plan);
+            setEditorModalOpen(true);
+          }}
+          onCreateNewPlan={() => {
+            setEditingPlan(null);
+            setEditorModalOpen(true);
+          }}
+          onPlansUpdated={handlePlansUpdated}
+        />
+      )}
     </PublicPageShell>
   );
 }

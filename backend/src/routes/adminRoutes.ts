@@ -39,6 +39,13 @@ import {
   updateGuestMessageTemplate,
   resetGuestMessageTemplate,
 } from '../controllers/guestMessageTemplateController';
+import {
+  getAdminShowcasePlans,
+  createShowcasePlan,
+  updateShowcasePlan,
+  deleteShowcasePlan,
+  updateShowcasePlansSelection,
+} from '../controllers/showcasePlanController';
 import { 
   getAdminSubscriptionRequests, 
   approveSubscriptionRequest, 
@@ -188,6 +195,13 @@ router.get('/templates', requireAdminOrCommercialPerm('canManageTemplates'), get
 router.post('/templates/global', requireAdminOrCommercialPerm('canManageTemplates'), createGlobalTemplate);
 router.put('/templates/:id/landing', requireAdminOrCommercialPerm('canManageTemplates'), toggleTemplateLanding);
 router.delete('/templates/:id', requireAdminOrCommercialPerm('canManageTemplates'), deleteTemplate);
+
+// Plans 2D / 3D vitrine : Super Admin ou Commercial avec droit 'canManageShowcasePlans'
+router.get('/showcase-plans', requireAdminOrCommercialPerm('canManageShowcasePlans'), getAdminShowcasePlans);
+router.post('/showcase-plans', requireAdminOrCommercialPerm('canManageShowcasePlans'), createShowcasePlan);
+router.put('/showcase-plans/selection', requireAdminOrCommercialPerm('canManageShowcasePlans'), updateShowcasePlansSelection);
+router.put('/showcase-plans/:id', requireAdminOrCommercialPerm('canManageShowcasePlans'), updateShowcasePlan);
+router.delete('/showcase-plans/:id', requireAdminOrCommercialPerm('canManageShowcasePlans'), deleteShowcasePlan);
 
 // Modèles de messages automatiques : Super Admin ou Commercial avec droit 'canManageMessageTemplates'
 router.get('/message-templates', requireAdminOrCommercialPerm('canManageMessageTemplates'), getGuestMessageTemplates);

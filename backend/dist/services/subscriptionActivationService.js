@@ -40,6 +40,9 @@ async function activateSubscriptionRequest(requestId, opts) {
     if (!(0, plansConfig_1.isPlanAllowedForAccountKind)(request.requestedPlan, request.tenant.accountKind)) {
         throw new Error('Ce forfait ne correspond pas au type de compte.');
     }
+    if (!(0, plansConfig_1.isPlanAllowedForTenant)(request.requestedPlan, request.tenant.accountKind, request.tenant.plan)) {
+        throw new Error('Ce forfait n’est pas du même genre que l’abonnement actuel.');
+    }
     const durationDays = (0, plansConfig_1.resolveDurationDaysForPlan)(request.requestedPlan, request.durationDays);
     const baseAmount = (0, invoiceService_1.getPlanAmount)(request.requestedPlan, durationDays);
     let resolvedApproved = opts?.approvedAmount;

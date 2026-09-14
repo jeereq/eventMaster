@@ -10,14 +10,8 @@ exports.assignSeatInTablePlan = assignSeatInTablePlan;
 exports.assignMultipleSeatsInTablePlan = assignMultipleSeatsInTablePlan;
 const db_1 = require("../db");
 const prismaJson_1 = require("../utils/prismaJson");
-const ticketPricingService_1 = require("./ticketPricingService");
+const seatSelectionPlan_1 = require("./seatSelectionPlan");
 const HOLD_TTL_MS = 10 * 60 * 1000;
-function planTables(tablePlan) {
-    if (!tablePlan || typeof tablePlan !== 'object')
-        return [];
-    const tables = tablePlan.tables;
-    return Array.isArray(tables) ? tables : [];
-}
 async function purgeExpiredSeatHolds(eventId) {
     await db_1.prisma.seatHold.deleteMany({
         where: {
@@ -38,40 +32,19 @@ async function listSeatInventory(eventId) {
         },
     });
     const plan = event?.tablePlan;
-    const tables = planTables(plan);
+    const tables = (0, seatSelectionPlan_1.planTables)(plan);
     const holds = await db_1.prisma.seatHold.findMany({
         where: { eventId, expiresAt: { gt: new Date() } },
         select: { tableId: true, seatIndex: true },
     });
-    const holdKeys = new Set(holds.map((h) => `${h.tableId}:${h.seatIndex}`));
-    const seats = [];
-    for (const table of tables) {
-        const cap = Math.max(0, Number(table.capacity) || 0);
-        for (let i = 0; i < cap; i++) {
-            // Tant que le paiement n'est pas validé, la place est toujours libre
-            const taken = Boolean(table.seats?.[i] ?? table.seats?.[String(i)]);
-            const pricing = event
-                ? (0, ticketPricingService_1.resolveSeatPrice)({
-                    ticketPricingMode: event.ticketPricingMode,
-                    ticketPriceFc: event.ticketPriceFc,
-                    tablePlan: event.tablePlan,
-                }, table.id, i)
-                : { priceFc: 0, pricingZoneId: null, pricingZoneName: null };
-            seats.push({
-                tableId: table.id,
-                tableName: table.name,
-                seatIndex: i,
-                x: table.x,
-                y: table.y,
-                shape: table.shape || 'round',
-                capacity: cap,
-                available: !taken,
-                priceFc: pricing.priceFc,
-                pricingZoneId: pricing.pricingZoneId,
-                pricingZoneName: pricing.pricingZoneName,
-            });
+    const holdKeys = new Set(holds.map((h) => (0, seatSelectionPlan_1.holdKey)(h.tableId, h.seatIndex)));
+    const seats = (0, seatSelectionPlan_1.buildSeatInventoryItems)(event
+        ? {
+            ticketPricingMode: event.ticketPricingMode,
+            ticketPriceFc: event.ticketPriceFc,
+            tablePlan: event.tablePlan,
         }
-    }
+        : null, tables, holdKeys);
     return {
         seats,
         fixtures: plan?.fixtures ?? [],
@@ -94,33 +67,40 @@ async function assertSeatAvailable(eventId, tableId, seatIndex) {
     if (!event?.seatSelectionEnabled) {
         throw new Error('La sélection de siège n’est pas activée pour cet événement.');
     }
-    const table = planTables(event.tablePlan).find((t) => t.id === tableId);
+    const table = (0, seatSelectionPlan_1.planTables)(event.tablePlan).find((t) => t.id === tableId);
     if (!table)
         throw new Error('Table introuvable sur le plan.');
-    if (seatIndex < 0 || seatIndex >= table.capacity)
-        throw new Error('Siège invalide.');
-    const occupied = Boolean(table.seats?.[seatIndex] ?? table.seats?.[String(seatIndex)]);
-    if (occupied) {
+    const holds = await db_1.prisma.seatHold.findMany({
+        where: { eventId, expiresAt: { gt: new Date() } },
+        select: { tableId: true, seatIndex: true },
+    });
+    const holdKeys = new Set(holds.map((h) => (0, seatSelectionPlan_1.holdKey)(h.tableId, h.seatIndex)));
+    const bookable = (0, seatSelectionPlan_1.isSeatBookable)(table, seatIndex, holdKeys);
+    if (!bookable.ok) {
+        if (bookable.reason === 'invalid' || bookable.reason === 'hidden') {
+            throw new Error('Siège invalide.');
+        }
         throw new Error(`Le siège n°${seatIndex + 1} à la table « ${table.name || tableId} » est déjà réservé.`);
     }
     return table;
 }
 async function checkSeatsAvailability(eventId, seats) {
+    await purgeExpiredSeatHolds(eventId);
     const event = await db_1.prisma.event.findUnique({
         where: { id: eventId },
         select: { tablePlan: true },
     });
-    const tables = planTables(event?.tablePlan);
+    const tables = (0, seatSelectionPlan_1.planTables)(event?.tablePlan);
+    const holds = await db_1.prisma.seatHold.findMany({
+        where: { eventId, expiresAt: { gt: new Date() } },
+        select: { tableId: true, seatIndex: true },
+    });
+    const holdKeys = new Set(holds.map((h) => (0, seatSelectionPlan_1.holdKey)(h.tableId, h.seatIndex)));
     const unavailable = [];
     for (const s of seats) {
         const table = tables.find((t) => t.id === s.tableId);
-        if (!table) {
-            unavailable.push({ ...s });
-            continue;
-        }
-        const isOccupied = Boolean(table.seats?.[s.seatIndex] ?? table.seats?.[String(s.seatIndex)]);
-        if (isOccupied || s.seatIndex < 0 || s.seatIndex >= table.capacity) {
-            unavailable.push({ tableId: s.tableId, seatIndex: s.seatIndex, tableName: table.name });
+        if (!table || !(0, seatSelectionPlan_1.isSeatBookable)(table, s.seatIndex, holdKeys).ok) {
+            unavailable.push({ tableId: s.tableId, seatIndex: s.seatIndex, tableName: table?.name });
         }
     }
     return {

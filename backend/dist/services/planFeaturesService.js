@@ -95,7 +95,7 @@ async function assertRoomQuota(tenantId) {
         return;
     if (snapshot.usage.rooms >= max) {
         throw new PlanFeatureError(max <= 0
-            ? `La création de salles n’est pas incluse dans ${snapshot.planName}. Choisissez le forfait Salle ou Salle & presta.`
+            ? `La création de salles n’est pas incluse dans ${snapshot.planName}. Choisissez un forfait Business (ou supérieur), Salle ou Salle & presta.`
             : `Quota de salles atteint (${max} max pour ${snapshot.planName}). Passez à un forfait supérieur.`);
     }
 }
@@ -108,7 +108,7 @@ async function assertServiceQuota(tenantId) {
         return;
     if (snapshot.usage.services >= max) {
         throw new PlanFeatureError(max <= 0
-            ? `La publication de prestations n’est pas incluse dans ${snapshot.planName}. Choisissez le forfait Prestataire (prestations illimitées) ou Salle & presta.`
+            ? `La publication de prestations n’est pas incluse dans ${snapshot.planName}. Choisissez un forfait Business (ou supérieur), Prestataire ou Salle & presta.`
             : `Quota de prestations atteint (${max} max pour ${snapshot.planName}). Passez à un forfait supérieur.`);
     }
 }

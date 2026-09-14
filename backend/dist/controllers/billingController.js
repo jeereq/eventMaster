@@ -197,6 +197,9 @@ async function createCheckoutSession(req, res) {
         if (!(0, plansConfig_1.isPlanAllowedForAccountKind)(planType, tenant.accountKind)) {
             return res.status(403).json({ error: (0, plansConfig_1.planAudienceMismatchMessage)(planType, tenant.accountKind) });
         }
+        if (!(0, plansConfig_1.isPlanAllowedForTenant)(planType, tenant.accountKind, tenant.plan)) {
+            return res.status(403).json({ error: (0, plansConfig_1.planGenreMismatchMessage)(planType, tenant.plan) });
+        }
         // Mock upgrade local (dev) — forfaits réels : demande manuelle ou FlexPay.
         if (req.body.mock === true) {
             // Direct mock upgrade for local dev convenience - also activate and extend license
@@ -279,10 +282,13 @@ async function mockUpgrade(req, res) {
         }
         const currentTenant = await db_1.prisma.tenant.findUnique({
             where: { id: tenantId },
-            select: { accountKind: true },
+            select: { accountKind: true, plan: true },
         });
         if (plan !== 'FREE' && currentTenant && !(0, plansConfig_1.isPlanAllowedForAccountKind)(plan, currentTenant.accountKind)) {
             return res.status(403).json({ error: (0, plansConfig_1.planAudienceMismatchMessage)(plan, currentTenant.accountKind) });
+        }
+        if (plan !== 'FREE' && currentTenant && !(0, plansConfig_1.isPlanAllowedForTenant)(plan, currentTenant.accountKind, currentTenant.plan)) {
+            return res.status(403).json({ error: (0, plansConfig_1.planGenreMismatchMessage)(plan, currentTenant.plan) });
         }
         const durationDays = (0, plansConfig_1.resolveDurationDaysForPlan)(plan);
         const expiryDate = new Date();

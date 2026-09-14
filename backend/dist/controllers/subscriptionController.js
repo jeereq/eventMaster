@@ -40,11 +40,16 @@ async function submitSubscriptionRequest(req, res) {
         }
         const tenant = await db_1.prisma.tenant.findUnique({
             where: { id: tenantId },
-            select: { accountKind: true },
+            select: { accountKind: true, plan: true },
         });
         if (!tenant || !(0, plansConfig_1.isPlanAllowedForAccountKind)(requestedPlan, tenant.accountKind)) {
             return res.status(403).json({
                 error: (0, plansConfig_1.planAudienceMismatchMessage)(requestedPlan, tenant?.accountKind),
+            });
+        }
+        if (!(0, plansConfig_1.isPlanAllowedForTenant)(requestedPlan, tenant.accountKind, tenant.plan)) {
+            return res.status(403).json({
+                error: (0, plansConfig_1.planGenreMismatchMessage)(requestedPlan, tenant.plan),
             });
         }
         const days = (0, plansConfig_1.resolveDurationDaysForPlan)(requestedPlan, durationDays != null ? parseInt(String(durationDays), 10) : null);
@@ -103,11 +108,16 @@ async function submitDiscountRequest(req, res) {
         }
         const tenant = await db_1.prisma.tenant.findUnique({
             where: { id: tenantId },
-            select: { accountKind: true, name: true },
+            select: { accountKind: true, name: true, plan: true },
         });
         if (!tenant || !(0, plansConfig_1.isPlanAllowedForAccountKind)(requestedPlan, tenant.accountKind)) {
             return res.status(403).json({
                 error: (0, plansConfig_1.planAudienceMismatchMessage)(requestedPlan, tenant?.accountKind),
+            });
+        }
+        if (!(0, plansConfig_1.isPlanAllowedForTenant)(requestedPlan, tenant.accountKind, tenant.plan)) {
+            return res.status(403).json({
+                error: (0, plansConfig_1.planGenreMismatchMessage)(requestedPlan, tenant.plan),
             });
         }
         const days = (0, plansConfig_1.resolveDurationDaysForPlan)(requestedPlan, durationDays != null ? parseInt(String(durationDays), 10) : null);
@@ -351,6 +361,11 @@ async function approveSubscriptionRequest(req, res) {
                 error: (0, plansConfig_1.planAudienceMismatchMessage)(request.requestedPlan, request.tenant.accountKind),
             });
         }
+        if (!(0, plansConfig_1.isPlanAllowedForTenant)(request.requestedPlan, request.tenant.accountKind, request.tenant.plan)) {
+            return res.status(403).json({
+                error: (0, plansConfig_1.planGenreMismatchMessage)(request.requestedPlan, request.tenant.plan),
+            });
+        }
         if ((0, platformCommercialScope_1.isPlatformCommercial)(req.user?.role) && req.user?.id) {
             const owns = await (0, platformCommercialScope_1.assertCommercialOwnsTenant)(req.user.id, request.tenantId);
             if (!owns) {
@@ -587,11 +602,16 @@ async function checkoutSubscriptionFlexPay(req, res) {
         }
         const tenant = await db_1.prisma.tenant.findUnique({
             where: { id: tenantId },
-            select: { accountKind: true, name: true },
+            select: { accountKind: true, name: true, plan: true },
         });
         if (!tenant || !(0, plansConfig_1.isPlanAllowedForAccountKind)(requestedPlan, tenant.accountKind)) {
             return res.status(403).json({
                 error: (0, plansConfig_1.planAudienceMismatchMessage)(requestedPlan, tenant?.accountKind),
+            });
+        }
+        if (!(0, plansConfig_1.isPlanAllowedForTenant)(requestedPlan, tenant.accountKind, tenant.plan)) {
+            return res.status(403).json({
+                error: (0, plansConfig_1.planGenreMismatchMessage)(requestedPlan, tenant.plan),
             });
         }
         const days = (0, plansConfig_1.resolveDurationDaysForPlan)(requestedPlan, durationDays != null ? parseInt(String(durationDays), 10) : null);

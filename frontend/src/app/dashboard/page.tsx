@@ -682,6 +682,7 @@ function DashboardPageContent() {
     canManageCatalog: false,
     canManageEvents: false,
     canManageGuests: false,
+    canManageShowcasePlans: false,
   });
  const [updatingUser, setUpdatingUser] = useState(false);
 
@@ -1398,6 +1399,7 @@ function DashboardPageContent() {
       canManageCatalog: false,
       canManageEvents: false,
       canManageGuests: false,
+      canManageShowcasePlans: false,
     });
  setIsUserModalOpen(true);
  };
@@ -1419,6 +1421,7 @@ function DashboardPageContent() {
       canManageCatalog: Boolean(u.commercialPermissions?.canManageCatalog),
       canManageEvents: Boolean(u.commercialPermissions?.canManageEvents),
       canManageGuests: Boolean(u.commercialPermissions?.canManageGuests),
+      canManageShowcasePlans: Boolean(u.commercialPermissions?.canManageShowcasePlans),
     });
  setIsUserModalOpen(true);
  };
@@ -2687,6 +2690,11 @@ function DashboardPageContent() {
                                           {u.commercialPermissions?.canManageGuests && (
                                             <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded bg-purple-500/10 text-purple-700 dark:text-purple-300">
                                               Invités
+                                            </span>
+                                          )}
+                                          {u.commercialPermissions?.canManageShowcasePlans && (
+                                            <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded bg-teal-500/10 text-teal-700 dark:text-teal-300">
+                                              Plans 2D/3D
                                             </span>
                                           )}
                                         </div>
@@ -4995,6 +5003,25 @@ function DashboardPageContent() {
                               </span>
                               <span className="text-xs text-muted block mt-0.5">
                                 Suivi des listes d&apos;invités, pointages et exports des événements plateforme.
+                              </span>
+                            </div>
+                          </label>
+
+                          <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border hover:bg-surface-muted/50 cursor-pointer transition">
+                            <input
+                              type="checkbox"
+                              checked={modalCommercialPermissions.canManageShowcasePlans}
+                              onChange={(e) =>
+                                setModalCommercialPermissions((prev) => ({ ...prev, canManageShowcasePlans: e.target.checked }))
+                              }
+                              className="mt-0.5 w-4 h-4 text-primary rounded border-border focus:ring-primary"
+                            />
+                            <div>
+                              <span className="text-sm font-semibold text-foreground block">
+                                Plans 2D / 3D témoins & vitrine
+                              </span>
+                              <span className="text-xs text-muted block mt-0.5">
+                                Création, édition dans l&apos;éditeur de salle 3D, sélection et publication des plans affichés sur la vitrine publique.
                               </span>
                             </div>
                           </label>
