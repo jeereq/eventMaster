@@ -1,7 +1,9 @@
 import type { TenantAccountKind } from '@/lib/marketplace';
 import type { VendorRegisterTrack } from '@/lib/registerVendorIntent';
 
-export const REGISTER_KIND_ORDER: TenantAccountKind[] = ['ORGANIZER', 'CLIENT', 'VENDOR'];
+/** Types proposés à l’inscription (BOTH n’est plus proposé). */
+export const REGISTER_KIND_ORDER = ['ORGANIZER', 'CLIENT', 'VENDOR'] as const;
+export type RegisterSelectableKind = (typeof REGISTER_KIND_ORDER)[number];
 
 export const REGISTER_KIND_TITLES: Record<TenantAccountKind, string> = {
   ORGANIZER: 'J’organise un événement',
