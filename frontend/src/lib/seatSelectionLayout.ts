@@ -1,13 +1,6 @@
-import {
-  rowArcZ,
-  rowCurveFactor,
-  rowSeatLocalX,
-} from './roomAmphitheaterGeom.ts';
-import { getSeatCoordinates, type TableShape } from './tablePlanUtils.ts';
+export const THEATER_ROW_PLAN_SHAPE = 'arc';
 
-export const THEATER_ROW_PLAN_SHAPE: TableShape = 'arc';
-
-const CHECKOUT_TABLE_SHAPES: readonly TableShape[] = [
+const CHECKOUT_TABLE_SHAPES = [
   'round',
   'rectangular',
   'square',
@@ -15,11 +8,9 @@ const CHECKOUT_TABLE_SHAPES: readonly TableShape[] = [
   'cocktail',
   'highTop',
   'arc',
-];
+] as const;
 
-/** Espacement pixel 2D calé sur la largeur des pastilles de siège (~32px). */
-const CHECKOUT_ROW_SEAT_SPACING_PX = 16;
-const CHECKOUT_ROW_FOCUS_LOCAL_Z = -80;
+export type CheckoutPlanShape = (typeof CHECKOUT_TABLE_SHAPES)[number];
 
 export type SeatRowMeta = {
   tier?: number;
@@ -38,10 +29,10 @@ export function isTheaterRowPlan(shape?: string | null, rowMeta?: SeatRowMeta | 
   return rowMeta.curve != null || rowMeta.tier != null || rowMeta.aisleSplit === true;
 }
 
-export function checkoutPlanShape(shape?: string | null, rowMeta?: SeatRowMeta | null): TableShape {
+export function checkoutPlanShape(shape?: string | null, rowMeta?: SeatRowMeta | null): CheckoutPlanShape {
   if (isTheaterRowPlan(shape, rowMeta)) return THEATER_ROW_PLAN_SHAPE;
-  if (shape && CHECKOUT_TABLE_SHAPES.includes(shape as TableShape)) {
-    return shape as TableShape;
+  if (shape && CHECKOUT_TABLE_SHAPES.includes(shape as CheckoutPlanShape)) {
+    return shape as CheckoutPlanShape;
   }
   return 'round';
 }
@@ -98,36 +89,4 @@ export function resolveTicketSeatPick(sel: { kind: string; id: string; seatIndex
   if (!sel) return null;
   if (sel.kind !== 'table' && sel.kind !== 'row') return null;
   return { tableId: sel.id, seatIndex: sel.seatIndex };
-}
-
-/**
- * Positions 2D des sièges au checkout.
- * Les rangées / gradins réutilisent la géométrie 3D (courbe + allée) pour rester alignés.
- */
-export function getCheckoutSeatCoordinates(
-  shape: TableShape | string,
-  capacity: number,
-  seatIndex: number,
-  rowMeta?: SeatRowMeta | null,
-) {
-  if (!isTheaterRowPlan(shape, rowMeta)) {
-    return getSeatCoordinates(shape as TableShape, capacity, seatIndex);
-  }
-
-  const count = Math.max(1, capacity);
-  const curve = rowMeta?.curve ?? 36;
-  const localX = rowSeatLocalX(
-    seatIndex,
-    count,
-    CHECKOUT_ROW_SEAT_SPACING_PX,
-    rowMeta?.aisleSplit,
-    rowMeta?.aisleWidthPct,
-  );
-  const localZ = rowArcZ(localX, CHECKOUT_ROW_SEAT_SPACING_PX, rowCurveFactor(curve));
-  const faceY = Math.atan2(-localX, CHECKOUT_ROW_FOCUS_LOCAL_Z - localZ);
-  return {
-    x: localX,
-    y: localZ,
-    rotationDeg: (faceY * 180) / Math.PI + 180,
-  };
 }

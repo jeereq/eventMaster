@@ -14,6 +14,7 @@ import BrandFaviconSync from "@/components/BrandFaviconSync";
 import GlobalAiSimulatorFab from "@/components/GlobalAiSimulatorFab";
 import MobileSplashScreen from "@/components/MobileSplashScreen";
 import NavigationProgressBar from "@/components/NavigationProgressBar";
+import NavigationScrollTop from "@/components/NavigationScrollTop";
 import SessionExpiredDialog from "@/components/SessionExpiredDialog";
 import { fetchPublicSiteSnapshot, resolveMetadataBase } from "@/lib/publicSiteServer";
 
@@ -118,6 +119,7 @@ export default function RootLayout({
                   <MaintenanceOverlay />
                   <Suspense fallback={null}>
                     <NavigationProgressBar />
+                    <NavigationScrollTop />
                   </Suspense>
                   <Suspense fallback={null}>
                     {children}

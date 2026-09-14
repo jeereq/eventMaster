@@ -229,6 +229,9 @@ function generateConferenceBlueprint(params: LayoutParams, chairType: ChairType)
       tier: 0,
       x: 50,
       y: rowCount === 1 ? 55 : startY + step * i,
+      curve: 0,
+      focusX: 50,
+      focusY: 8,
     });
   }
 

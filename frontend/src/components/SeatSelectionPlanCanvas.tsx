@@ -7,10 +7,10 @@ import { PlanZoomControls } from '@/components/PlanViewChrome';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import { resolveFloorStyle } from '@/lib/roomFloorUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
-import { getTableVisualStyle, type TableShape } from '@/lib/tablePlanUtils';
+import { getSeatCoordinates, getTableVisualStyle, type TableShape } from '@/lib/tablePlanUtils';
+import { getRowSeatCoordinates2D } from '@/lib/roomAmphitheaterGeom';
 import {
   checkoutPlanShape,
-  getCheckoutSeatCoordinates,
   isTheaterRowPlan,
   type SeatRowMeta,
 } from '@/lib/seatSelectionLayout';
@@ -343,12 +343,9 @@ export default function SeatSelectionPlanCanvas({
                   </div>
 
                   {table.seats.map((seat) => {
-                    const coords = getCheckoutSeatCoordinates(
-                      table.shape,
-                      table.capacity,
-                      seat.seatIndex,
-                      table.rowMeta,
-                    );
+                    const coords = isTheaterRowPlan(table.shape, table.rowMeta)
+                      ? getRowSeatCoordinates2D(table.capacity, seat.seatIndex, table.rowMeta)
+                      : getSeatCoordinates(table.shape, table.capacity, seat.seatIndex);
                     const isSelected = isSeatSelected(seat.tableId, seat.seatIndex);
                     const badge = getSeatBadge(seat.tableId, seat.seatIndex);
                     const seatZoneColor = seat.pricingZoneId ? zoneColorById?.get(seat.pricingZoneId) : zoneColor;

@@ -87,6 +87,65 @@ describe('ticketPricing zone distribution', () => {
     }
   });
 
+  it('assigne VIP aux premières rangées d’amphithéâtre (près de la scène)', () => {
+    const amphiRows = [
+      { id: 'tier0-r1', x: 50, y: 28, capacity: 12 },
+      { id: 'tier0-r2', x: 50, y: 36, capacity: 12 },
+      { id: 'tier1-r1', x: 50, y: 58, capacity: 14 },
+      { id: 'tier1-r2', x: 50, y: 72, capacity: 14 },
+      { id: 'tier2-r1', x: 50, y: 86, capacity: 16 },
+    ];
+    const result = autoDistributeTablesToZones(amphiRows, sampleZones, {
+      strategy: 'front_to_back',
+      fixtures: [{ kind: 'stage', x: 28, y: 3, w: 44, h: 10 }],
+    });
+    assert.equal(result.tables.find((t) => t.id === 'tier0-r1')?.pricingZoneId, 'zone-vip');
+    assert.equal(result.tables.find((t) => t.id === 'tier2-r1')?.pricingZoneId, 'zone-standard');
+  });
+
+  it('répartit une conférence rangée par rangée depuis le podium', () => {
+    const conferenceRows = [
+      { id: 'row-1', x: 50, y: 22, capacity: 10 },
+      { id: 'row-2', x: 50, y: 40, capacity: 10 },
+      { id: 'row-3', x: 50, y: 58, capacity: 10 },
+      { id: 'row-4', x: 50, y: 76, capacity: 10 },
+    ];
+    const result = autoDistributeTablesToZones(conferenceRows, sampleZones, {
+      strategy: 'front_to_back',
+      fixtures: [{ kind: 'podium', x: 40, y: 6, w: 20, h: 10 }],
+    });
+    assert.equal(result.tables.find((t) => t.id === 'row-1')?.pricingZoneId, 'zone-vip');
+    assert.equal(result.tables.find((t) => t.id === 'row-4')?.pricingZoneId, 'zone-standard');
+  });
+
+  it('répartit un banquet autour de tables et une tente avec tables', () => {
+    const banquetTables = [
+      { id: 'honour', x: 50, y: 18, capacity: 8 },
+      { id: 'mid', x: 30, y: 48, capacity: 8 },
+      { id: 'back', x: 70, y: 82, capacity: 8 },
+    ];
+    const banquet = autoDistributeTablesToZones(banquetTables, sampleZones, {
+      strategy: 'front_to_back',
+      fixtures: [{ kind: 'stage', x: 25, y: 4, w: 50, h: 8 }],
+    });
+    assert.equal(banquet.tables.find((t) => t.id === 'honour')?.pricingZoneId, 'zone-vip');
+    assert.equal(banquet.tables.find((t) => t.id === 'back')?.pricingZoneId, 'zone-standard');
+
+    const tentTables = [
+      { id: 'near-mast', x: 50, y: 50, capacity: 8 },
+      { id: 'corner', x: 18, y: 78, capacity: 8 },
+    ];
+    const tent = autoDistributeTablesToZones(tentTables, sampleZones, { strategy: 'concentric' });
+    assert.equal(tent.tables.find((t) => t.id === 'near-mast')?.pricingZoneId, 'zone-vip');
+    assert.equal(tent.tables.find((t) => t.id === 'corner')?.pricingZoneId, 'zone-standard');
+  });
+
+  it('ne crée pas de places assignables pour une salle simple ou une tente sans tables', () => {
+    const empty = autoDistributeTablesToZones([], sampleZones, { strategy: 'front_to_back' });
+    assert.equal(empty.tables.length, 0);
+    assert.equal(empty.summary.totalSeats, 0);
+  });
+
   it('determines contrast luminance correctly with isLightHexColor', () => {
     // Light colors needing dark text
     assert.equal(isLightHexColor('#ffffff'), true);

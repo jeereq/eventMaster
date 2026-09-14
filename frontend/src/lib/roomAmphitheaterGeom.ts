@@ -48,6 +48,34 @@ export function rowArcZ(localX: number, spacing: number, curveFactor: number): n
   return curveFactor * t * t * ROW_ARC_Z_K;
 }
 
+/** Espacement pixel 2D calé sur la largeur des pastilles de siège (~32px). */
+const CHECKOUT_ROW_SEAT_SPACING_PX = 16;
+const CHECKOUT_ROW_FOCUS_LOCAL_Z = -80;
+
+/** Positions 2D d’une rangée, alignées sur la pose 3D (courbe + allée). */
+export function getRowSeatCoordinates2D(
+  capacity: number,
+  seatIndex: number,
+  rowMeta?: { curve?: number; aisleSplit?: boolean; aisleWidthPct?: number } | null,
+) {
+  const count = Math.max(1, capacity);
+  const curve = rowMeta?.curve ?? 36;
+  const localX = rowSeatLocalX(
+    seatIndex,
+    count,
+    CHECKOUT_ROW_SEAT_SPACING_PX,
+    rowMeta?.aisleSplit,
+    rowMeta?.aisleWidthPct,
+  );
+  const localZ = rowArcZ(localX, CHECKOUT_ROW_SEAT_SPACING_PX, rowCurveFactor(curve));
+  const faceY = Math.atan2(-localX, CHECKOUT_ROW_FOCUS_LOCAL_Z - localZ);
+  return {
+    x: localX,
+    y: localZ,
+    rotationDeg: (faceY * 180) / Math.PI + 180,
+  };
+}
+
 export function computeRowSeatPose(
   index: number,
   count: number,
