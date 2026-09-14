@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -8,12 +8,11 @@ import { useTheme } from '@/context/ThemeContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { Sun, Moon, Menu, X, Sparkles, LayoutDashboard, ArrowRight, Download } from 'lucide-react';
+import { Sun, Moon, Sparkles, LayoutDashboard, ArrowRight } from 'lucide-react';
 import PublicAccentPicker from '@/components/PublicAccentPicker';
 import SiteMobileBottomBar from '@/components/SiteMobileBottomBar';
 import SiteBrandMark from '@/components/SiteBrandMark';
 import PWAInstallCta from '@/components/PWAInstallCta';
-import usePwaInstall from '@/hooks/usePwaInstall';
 import { revealAndScrollToSection } from '@/lib/aiFabPlacement';
 
 export type SiteHeaderLink = {
@@ -36,26 +35,15 @@ const PUBLIC_LINKS: SiteHeaderLink[] = [
   { href: '/contact', label: 'Contact' },
 ];
 
-const LEGAL_LINKS: SiteHeaderLink[] = [
-  { href: '/faq', label: 'FAQ' },
-  { href: '/terms', label: 'Conditions d’utilisation' },
-  { href: '/privacy', label: 'Confidentialité' },
-  { href: '/refund', label: 'Remboursements' },
-];
-
 export default function SiteHeader({
   variant = 'landing',
   className,
 }: SiteHeaderProps) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { site } = usePlatformSite();
   const pathname = usePathname();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentHash, setCurrentHash] = useState('');
-  const { visible: showInstall, install, busy: installBusy } = usePwaInstall();
-  const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const drawerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onHashChange = () => {
@@ -65,47 +53,6 @@ export default function SiteHeader({
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
-
-  useEffect(() => {
-    if (!mobileMenuOpen) return;
-    const drawer = drawerRef.current;
-    const getFocusable = () => {
-      if (!drawer) return [];
-      return Array.from(
-        drawer.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        ),
-      ).filter((el) => el.getClientRects().length > 0);
-    };
-
-    const first = getFocusable()[0];
-    first?.focus();
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setMobileMenuOpen(false);
-        return;
-      }
-      if (event.key !== 'Tab') return;
-      const items = getFocusable();
-      if (items.length === 0) return;
-      const firstItem = items[0];
-      const lastItem = items[items.length - 1];
-      if (event.shiftKey && document.activeElement === firstItem) {
-        event.preventDefault();
-        lastItem.focus();
-      } else if (!event.shiftKey && document.activeElement === lastItem) {
-        event.preventDefault();
-        firstItem.focus();
-      }
-    };
-
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      window.removeEventListener('keydown', onKeyDown);
-      menuButtonRef.current?.focus();
-    };
-  }, [mobileMenuOpen]);
 
   const links = variant === 'minimal' ? [] : PUBLIC_LINKS;
   const iconBtn =
@@ -138,7 +85,6 @@ export default function SiteHeader({
       revealAndScrollToSection(targetId);
       setCurrentHash(`#${targetId}`);
     }
-    setMobileMenuOpen(false);
   };
 
   return (
@@ -228,183 +174,21 @@ export default function SiteHeader({
               </Link>
             </>
           ) : (
-            <div className="hidden md:flex items-center gap-2 ml-1">
+            <div className="flex items-center gap-1.5 ml-1">
               <Link
                 href="/login"
-                className="inline-flex items-center min-h-11 text-xs font-semibold text-muted hover:text-foreground px-3 rounded-md transition hover:bg-surface-muted"
+                className="inline-flex items-center min-h-11 text-xs font-semibold text-muted hover:text-foreground px-2.5 sm:px-3 rounded-md transition hover:bg-surface-muted"
               >
                 Connexion
               </Link>
               {site.allowRegistration ? (
-                <Button href="/register" size="sm" rightIcon={<Sparkles className="w-3.5 h-3.5" />}>
+                <Button href="/register" size="sm" className="hidden sm:inline-flex" rightIcon={<Sparkles className="w-3.5 h-3.5" />}>
                   Démarrer
                 </Button>
               ) : null}
             </div>
           )}
-
-          <button
-            ref={menuButtonRef}
-            type="button"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className={cn(iconBtn, 'md:hidden')}
-            aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-            aria-expanded={mobileMenuOpen}
-            aria-controls="site-mobile-nav"
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
         </div>
-      </div>
-
-      {/* Tiroir de navigation mobile HUD */}
-      <div
-        ref={drawerRef}
-        id="site-mobile-nav"
-        hidden={!mobileMenuOpen}
-        className="md:hidden border-t border-border/80 bg-background/95 backdrop-blur-xl shadow-xl"
-      >
-        <div className="page-container py-4 space-y-3 pb-[calc(var(--em-site-bottom-nav)+var(--em-site-install-bar)+1rem)]">
-            <div className="space-y-1">
-              {links.map((item) => {
-                const active = isLinkActive(item.href);
-                const mobileClass = cn(
-                  'flex items-center justify-between min-h-11 px-3 py-2.5 rounded-xl text-sm font-semibold transition touch-manipulation',
-                  active
-                    ? 'bg-primary/10 text-primary border border-primary/20'
-                    : 'text-muted hover:text-foreground hover:bg-surface-muted/50',
-                );
-
-                return item.href.startsWith('/#') ? (
-                  <a
-                    key={item.href}
-                    href={item.href}
-                    aria-current={active ? 'page' : undefined}
-                    onClick={(e) => handleAnchorClick(e, item.href)}
-                    className={mobileClass}
-                  >
-                    <span>{item.label}</span>
-                    {active && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
-                  </a>
-                ) : (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-current={active ? 'page' : undefined}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={mobileClass}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span>{item.label}</span>
-                      {item.href === '/simulateur' && site?.studioVisibility?.budget === false && (
-                        <span className="px-1.5 py-0.5 text-xs font-bold rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
-                          À venir
-                        </span>
-                      )}
-                    </span>
-                    {active && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
-                  </Link>
-                );
-              })}
-            </div>
-
-            {variant !== 'minimal' ? (
-              <div className="pt-2 border-t border-border/60 space-y-1">
-                <p className="px-3 pb-1 text-xs font-semibold text-muted">Infos & légal</p>
-                {LEGAL_LINKS.map((item) => {
-                  const active = pathname === item.href;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      aria-current={active ? 'page' : undefined}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={cn(
-                        'flex items-center justify-between min-h-11 px-3 py-2.5 rounded-xl text-sm font-semibold transition touch-manipulation',
-                        active
-                          ? 'bg-primary/10 text-primary border border-primary/20'
-                          : 'text-muted hover:text-foreground hover:bg-surface-muted/50',
-                      )}
-                    >
-                      <span>{item.label}</span>
-                      {active ? <span className="w-1.5 h-1.5 rounded-full bg-primary" /> : null}
-                    </Link>
-                  );
-                })}
-              </div>
-            ) : null}
-
-            {showInstall ? (
-              <Button
-                type="button"
-                size="sm"
-                fullWidth
-                loading={installBusy}
-                leftIcon={<Download className="w-3.5 h-3.5" />}
-                onClick={() => {
-                  void install();
-                  setMobileMenuOpen(false);
-                }}
-              >
-                Installer l’application
-              </Button>
-            ) : null}
-
-            {/* Accent Picker & Options en mobile */}
-            <div className="flex items-center justify-between py-2 px-3 rounded-xl bg-surface-muted/50 border border-border/60">
-              <span className="text-xs font-semibold text-muted">Couleur d’accent</span>
-              <PublicAccentPicker />
-            </div>
-
-            {/* Connexion / Inscription en mobile */}
-            {user ? (
-              <div className="flex flex-col gap-2 pt-2 border-t border-border/60">
-                <Button
-                  href="/dashboard"
-                  size="sm"
-                  fullWidth
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Tableau de bord
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  fullWidth
-                  onClick={() => {
-                    logout();
-                    setMobileMenuOpen(false);
-                  }}
-                >
-                  Déconnexion
-                </Button>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2 pt-2 border-t border-border/60">
-                {site.allowRegistration ? (
-                  <Button
-                    href="/register"
-                    size="sm"
-                    fullWidth
-                    rightIcon={<Sparkles className="w-3.5 h-3.5" />}
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    Créer un compte gratuit
-                  </Button>
-                ) : null}
-                <Button
-                  href="/login"
-                  size="sm"
-                  variant="secondary"
-                  fullWidth
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Connexion
-                </Button>
-              </div>
-            )}
-          </div>
       </div>
     </header>
     <div
