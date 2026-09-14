@@ -9,7 +9,7 @@ import { AuthSplitLayout } from '@/components/AuthSplitLayout';
 import { Button, Alert, Card } from '@/components/ui';
 
 const FEATURES = [
-  { icon: Calendar, title: "Gestion d'événements & RSVP", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
+  { icon: Calendar, title: "Gestion d'événements et réponses à l’invitation", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
   { icon: Table, title: 'Planificateur de table', desc: 'Placement intuitif par glisser-déposer sur un plan 2D.' },
   { icon: MessageSquare, title: "Fil d'actualité & livre d'or", desc: 'Photos, vidéos et commentaires dans un espace privé.' },
   { icon: Sparkles, title: 'Statistiques & analyses', desc: 'Régimes alimentaires, réponses et exports en un clic.' },

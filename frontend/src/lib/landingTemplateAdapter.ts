@@ -177,6 +177,6 @@ export function getTemplateElementSummary(content: unknown): string {
   const parts = [`${elements.length} élément${elements.length > 1 ? 's' : ''}`];
   if (textCount) parts.push(`${textCount} texte`);
   if (btnCount) parts.push(`${btnCount} bouton`);
-  if (rsvpCount) parts.push(`${rsvpCount} RSVP`);
+  if (rsvpCount) parts.push(`${rsvpCount} réponse à l’invitation`);
   return parts.join(' · ');
 }

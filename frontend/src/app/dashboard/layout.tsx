@@ -127,7 +127,7 @@ const NAV_TOOLTIPS: Record<string, string> = {
 	'Tableau de bord': 'Vue d’ensemble et quotas',
 	'Mes réservations': 'Devis, réservations, packs et favoris',
 	'Mes billets': 'Inscriptions, filtres et badge QR',
-	Statistiques: 'RSVP, check-in, tâches et analyses d’événements',
+	Statistiques: 'Réponse à l’invitation, check-in, tâches et analyses d’événements',
  Modèles: 'Concepteur d’invitations',
  'Facturation & plan': 'Forfait, quotas et upgrade',
  Notifications: 'Alertes tâches, devis, factures et réservations',

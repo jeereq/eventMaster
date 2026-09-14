@@ -416,9 +416,9 @@ export default function TablePlanner({
 
   const [activeLightingPreset, setActiveLightingPreset] = useState<LightingPreset>(() => {
     return previewLightingPreset
-      ?? (initialTablePlan?.lightingPreset && initialTablePlan.lightingPreset !== 'auto'
-        ? initialTablePlan.lightingPreset
-        : 'dusk');
+   ?? (initialTablePlan?.lightingPreset && initialTablePlan.lightingPreset !== 'auto'
+     ? initialTablePlan.lightingPreset
+     : 'dusk');
   });
   const [is3DFullscreen, setIs3DFullscreen] = useState(false);
 
@@ -485,7 +485,7 @@ export default function TablePlanner({
      return;
    }
    setTables(tables.filter((t) => t.id !== tableId));
-   if (activeTableId === tableId) setActiveTableId(null);
+ if (activeTableId === tableId) setActiveTableId(null);
  };
 
  // Open edit modal for table
@@ -918,9 +918,9 @@ export default function TablePlanner({
               onFallbackTo2D={() => setPlannerView('2d')}
               onResetSafeMode={() => setSafe3DMode(true)}
             >
-              <RoomLayoutPreview
-                blueprint={previewBlueprint}
-                quality={previewQuality}
+          <RoomLayoutPreview
+            blueprint={previewBlueprint}
+            quality={previewQuality}
                 lightingPreset={activeLightingPreset}
                 selectedTableId={activeTableId}
                 onSelectTable={(tableId) => {
@@ -1615,7 +1615,7 @@ export default function TablePlanner({
  handleOpenEditTable(table);
  }}
                             className="relative p-1.5 min-h-[30px] min-w-[30px] flex items-center justify-center bg-surface hover:bg-surface-muted border border-border text-muted hover:text-primary rounded-full shadow-xs transition"
-                            title="Modifier la table"
+ title="Modifier la table"
                             aria-label="Modifier la table"
  >
                             <Edit2 className="w-3.5 h-3.5" />
@@ -1627,7 +1627,7 @@ export default function TablePlanner({
  handleDeleteTable(table.id);
  }}
                             className="relative p-1.5 min-h-[30px] min-w-[30px] flex items-center justify-center bg-surface hover:bg-rose-500/10 border border-border text-rose-600 rounded-full shadow-xs transition"
-                            title="Supprimer la table"
+ title="Supprimer la table"
                             aria-label="Supprimer la table"
  >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -1678,11 +1678,11 @@ export default function TablePlanner({
  )}
                           title={
                             guest
-                              ? `${guest.firstName} ${guest.lastName}${guest.category ? ` · ${guest.category}` : ''} · ${guest.rsvp === 'ACCEPTED' ? 'Présence confirmée' : 'RSVP en attente'} (Cliquer pour gérer)`
+                              ? `${guest.firstName} ${guest.lastName}${guest.category ? ` · ${guest.category}` : ''} · ${guest.rsvp === 'ACCEPTED' ? 'Présence confirmée' : 'Réponse en attente'} (Cliquer pour gérer)`
                               : `Siège ${index + 1} (libre) — Cliquer pour placer un invité`
                           }
  >
-                          {guest ? (
+ {guest ? (
                             <div className="relative flex items-center justify-center w-full h-full">
                               <span className="uppercase text-[8.5px] tracking-tight">{guest.firstName[0]}{guest.lastName[0]}</span>
                               {isRsvpAccepted && (
@@ -1694,7 +1694,7 @@ export default function TablePlanner({
                             </div>
                           ) : (
                             <span className="tabular-nums opacity-90">{index + 1}</span>
-                          )}
+ )}
  </div>
  );
  })}
@@ -1943,12 +1943,12 @@ export default function TablePlanner({
      )}
    </div>
    <p className="text-muted text-xs">
-     {roomName ? (
+ {roomName ? (
        <>Synchronisé avec la salle. Vous pouvez réimporter les dernières modifications de structure (murs, scènes) tout en conservant les places déjà assignées.</>
-     ) : (
-       'Importer le modèle de la salle liée (places conservées si possible).'
-     )}
-   </p>
+ ) : (
+ 'Importer le modèle de la salle liée (places conservées si possible).'
+ )}
+ </p>
  </div>
  <div className="flex flex-wrap items-center gap-2 shrink-0">
    <Link
@@ -1957,32 +1957,32 @@ export default function TablePlanner({
    >
      <span>Gérer les salles</span>
    </Link>
-   <button
-     type="button"
-     disabled={importingLayout}
-     onClick={() => onImportRoomLayout(tables.length > 0)}
+ <button
+ type="button"
+ disabled={importingLayout}
+ onClick={() => onImportRoomLayout(tables.length > 0)}
      className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-primary-solid hover:bg-primary-solid-hover disabled:opacity-60 text-primary-foreground text-xs font-bold rounded-[var(--radius-button)] transition shadow-2xs"
-   >
-     {importingLayout ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-     {tables.length > 0 ? 'Mettre à jour depuis la salle' : 'Importer depuis la salle'}
-   </button>
+ >
+ {importingLayout ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+ {tables.length > 0 ? 'Mettre à jour depuis la salle' : 'Importer depuis la salle'}
+ </button>
  </div>
  </div>
  )}
 
-      {caps.level !== 'complete' ? (
+ {caps.level !== 'complete' ? (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 border border-border bg-surface rounded-[var(--radius-card)] shadow-2xs">
-          <div className="text-sm">
+ <div className="text-sm">
             <p className="font-semibold text-foreground flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-primary" aria-hidden /> Éditeur {caps.label} · {tables.length}/{caps.maxTables} tables
-            </p>
+ </p>
             <p className="text-xs text-muted mt-0.5">{caps.description}</p>
-          </div>
+ </div>
           <Link href="/dashboard/billing" className="text-xs font-semibold text-primary hover:underline shrink-0">
-            Voir les forfaits →
-          </Link>
-        </div>
-      ) : null}
+ Voir les forfaits →
+ </Link>
+ </div>
+ ) : null}
 
  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
  <div>

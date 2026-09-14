@@ -43,7 +43,7 @@ function planBadgeClass() {
 }
 
 function exportGuestsCsv(rows: AdminGuestRow[]) {
-  const headers = ['Prénom', 'Nom', 'Email', 'Téléphone', 'Catégorie', 'Statut RSVP', 'Événement', 'Organisation'];
+  const headers = ['Prénom', 'Nom', 'Email', 'Téléphone', 'Catégorie', 'Statut de réponse', 'Événement', 'Organisation'];
   const body = rows.map((g) => {
     const phone = g.phone || '';
     const rsvp = g.rsvp === 'ACCEPTED' ? 'Accepté' : g.rsvp === 'DECLINED' ? 'Décliné' : 'En attente';
@@ -207,7 +207,7 @@ export default function AdminGuestsPage() {
     <div className="space-y-6 w-full">
       <PageHeader
         title="Invités (supervision)"
-        description="Liste globale, RSVP, PDF d’invitation et présence jour J. Export CSV limité aux 100 premiers résultats filtrés."
+        description="Liste globale, réponse à l’invitation, PDF d’invitation et présence jour J. Export CSV limité aux 100 premiers résultats filtrés."
         breadcrumbs={
           <Breadcrumbs
             items={[
@@ -267,10 +267,10 @@ export default function AdminGuestsPage() {
           <select
             value={rsvp}
             onChange={(e) => { setRsvp(e.target.value); setPage(1); }}
-            aria-label="Filtrer par statut RSVP"
+            aria-label="Filtrer par statut de réponse"
             className={filterClass}
           >
-            <option value="ALL">Tous les RSVP</option>
+            <option value="ALL">Toutes les réponses</option>
             <option value="PENDING">En attente</option>
             <option value="ACCEPTED">Accepté</option>
             <option value="DECLINED">Décliné</option>

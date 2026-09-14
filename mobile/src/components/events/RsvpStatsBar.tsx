@@ -11,7 +11,7 @@ export function RsvpStatsBar({ stats }: Props) {
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Text style={styles.title}>Statistiques RSVP</Text>
+        <Text style={styles.title}>Statistiques des réponses</Text>
         <Text style={styles.rate}>{stats.responseRate}% réponses</Text>
       </View>
       <View style={styles.grid}>

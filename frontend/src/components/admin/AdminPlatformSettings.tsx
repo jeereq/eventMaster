@@ -285,7 +285,7 @@ export default function AdminPlatformSettings({
                 <div>
                   <span className="text-sm font-bold text-foreground block">Mode maintenance</span>
                   <span className="text-xs text-muted font-medium">
-                    Bloque l&apos;API (sauf Super Admin, login, RSVP, site public).
+                    Bloque l&apos;API (sauf Super Admin, login, réponse à l’invitation, site public).
                   </span>
                 </div>
               </label>
@@ -460,7 +460,7 @@ export default function AdminPlatformSettings({
                   <div>
                     <h4 className="text-sm font-bold text-foreground">Studio Invitations IA</h4>
                     <p className="text-xs text-muted mt-1 leading-relaxed">
-                      Concepteur et générateur d’invitations graphiques 9:16 pour WhatsApp avec lien RSVP et confirmations instantanées.
+                      Concepteur et générateur d’invitations graphiques 9:16 pour WhatsApp avec lien de réponse à l’invitation et confirmations instantanées.
                     </p>
                   </div>
                 </div>
@@ -1013,7 +1013,7 @@ export default function AdminPlatformSettings({
         {section === 'audio' && (() => {
           const audio = sanitizeAudioNotifications(value.audioNotifications);
           const familyLabels: Record<AudioNotificationFamily, string> = {
-            events: 'Événements (RSVP, billets)',
+            events: 'Événements (Réponse à l’invitation, billets)',
             billing: 'Facturation & abonnements',
             commissions: 'Commissions',
             catalog: 'Catalogue / marketplace',
@@ -1143,7 +1143,7 @@ export default function AdminPlatformSettings({
         open={maintenanceConfirmOpen}
         onClose={() => setMaintenanceConfirmOpen(false)}
         title="Activer le mode maintenance ?"
-        description="Les utilisateurs hors Super Admin ne pourront plus utiliser l’API. Login, RSVP et pages publiques restent accessibles."
+        description="Les utilisateurs hors Super Admin ne pourront plus utiliser l’API. Login, réponse à l’invitation et pages publiques restent accessibles."
         size="sm"
         footer={
           <div className="flex w-full justify-end gap-2">

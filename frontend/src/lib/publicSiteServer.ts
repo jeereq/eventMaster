@@ -3,7 +3,7 @@ const DEFAULT_TAGLINE = 'Préparez votre événement en un clic.';
 const DEFAULT_PRIMARY = '#059669';
 const DEFAULT_ACCENT = '#10b981';
 const DEFAULT_DESCRIPTION =
-  'Invitez, placez, accueillez. Trouvez une salle ou un prestataire. RSVP, plan de table et scan QR dans le navigateur.';
+  'Invitez, placez, accueillez. Trouvez une salle ou un prestataire. réponse à l’invitation, plan de table et scan QR dans le navigateur.';
 
 export type PublicSiteSnapshot = {
   platformName: string;

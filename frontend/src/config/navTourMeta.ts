@@ -34,7 +34,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-guests': {
     title: 'Invités (supervision)',
     description:
-      'Liste globale des invités. Filtrez RSVP, PDF livré / manquant et présence. Détail, impersonation et suppression — sans création depuis cette file.',
+      'Liste globale des invités. Filtrez réponse à l’invitation, PDF livré / manquant et présence. Détail, impersonation et suppression — sans création depuis cette file.',
     route: '/dashboard/admin/guests',
   },
   'nav-templates': {
@@ -154,7 +154,7 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
   'nav-analytics-org': {
     title: 'Statistiques',
     description:
-      'Statistiques de votre organisation : RSVP, check-in, tâches ouvertes et indicateurs par événement.',
+      'Statistiques de votre organisation : réponse à l’invitation, check-in, tâches ouvertes et indicateurs par événement.',
     route: '/dashboard/analytics',
   },
   'nav-billing': {

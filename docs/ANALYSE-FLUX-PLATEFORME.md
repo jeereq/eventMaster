@@ -19,13 +19,13 @@ EventMaster est un monorepo **SaaS multi-tenant** en trois entités :
 | Entité | Stack | Port dev | Rôle |
 |--------|-------|----------|------|
 | `backend/` | Node.js, Express, Prisma, PostgreSQL | 5001 | API REST, notifications, PDF, workers |
-| `frontend/` | Next.js (App Router), Tailwind | 3000 | Dashboard organisateur, portail RSVP, protocole web |
-| `mobile/` | React Native, Expo SDK 57 | 8081 | RSVP invité, protocole natif, consultation |
+| `frontend/` | Next.js (App Router), Tailwind | 3000 | Dashboard organisateur, portail de réponse à l’invitation, protocole web |
+| `mobile/` | React Native, Expo SDK 57 | 8081 | réponse à l’invitation invité, protocole natif, consultation |
 
 **Isolation** : chaque `Tenant` (organisation) est cloisonné ; toutes les requêtes filtrent par `tenantId`.
 
 **Workers** :
-- `reminderService.ts` — rappels RSVP automatiques
+- `reminderService.ts` — rappels de réponse à l’invitation automatiques
 - `subscriptionExpiryService.ts` — alerte et désactivation licence
 
 ---
@@ -68,7 +68,7 @@ Fichier central : `backend/src/services/permissionsService.ts`
 
 ---
 
-## 3. Cycle événement → invitation → RSVP
+## 3. Cycle événement → invitation → réponse à l’invitation
 
 ### Phase organisateur (web)
 
@@ -77,7 +77,7 @@ Fichier central : `backend/src/services/permissionsService.ts`
 3. Concevoir modèle visuel (`dashboard/templates/`)
 4. Créer invitation et diffuser (`invitationController.ts`)
 
-**Envoi initial** : lien RSVP uniquement — **pas de PDF, pas de GPS WhatsApp**.
+**Envoi initial** : lien de réponse à l’invitation uniquement — **pas de PDF, pas de GPS WhatsApp**.
 
 ### Phase invité (portail public)
 
@@ -86,9 +86,9 @@ Fichier central : `backend/src/services/permissionsService.ts`
 | Consultation | `GET /api/rsvp/:guestId` | Template + événement ; GPS/plan masqués si non validé |
 | Réponse | `POST /api/rsvp/:guestId` | ACCEPTED / DECLINED + préférences |
 | Après acceptation | — | QR code envoyé (email + WhatsApp image) |
-| Organisateur | — | Notifié à chaque changement RSVP |
+| Organisateur | — | Notifié à chaque changement réponse à l’invitation |
 
-**Verrouillage** : RSVP impossible après la date de l'événement.
+**Verrouillage** : réponse à l’invitation impossible après la date de l'événement.
 
 Écrans : `frontend/src/app/rsvp/[guestId]/page.tsx`, `mobile/app/rsvp/[guestId].tsx`
 
@@ -101,7 +101,7 @@ Flux métier central d'EventMaster : **deux livraisons distinctes**.
 ### Schéma
 
 ```
-Invitation RSVP          Assignation table           Check-in protocole
+Invitation de réponse          Assignation table           Check-in protocole
      │                         │                            │
      ▼                         ▼                            ▼
  Lien seul              Annonce (table + voisins)    Livraison complète
@@ -115,7 +115,7 @@ Invitation RSVP          Assignation table           Check-in protocole
 | **Déclencheur** | `PUT /api/events/:id` avec `tablePlan` modifié |
 | **Service** | `tableAssignmentNotificationService.ts` |
 | **Mode** | `delivery: 'announcement'` dans `guestSeatNotificationService.ts` |
-| **Contenu** | Table, siège n°, voisins de table, lien RSVP |
+| **Contenu** | Table, siège n°, voisins de table, lien de réponse à l’invitation |
 | **Exclu** | PDF, localisation GPS WhatsApp |
 | **Forfait** | Tous forfaits **payants** (≠ FREE) |
 | **Détection** | `findAssignmentChanges()` — nouvel assigné ou déplacement |
@@ -136,7 +136,7 @@ Invitation RSVP          Assignation table           Check-in protocole
 
 | Donnée | Invitation | Après assignation | Après check-in |
 |--------|------------|-------------------|----------------|
-| Lien RSVP | ✅ | ✅ | ✅ |
+| Lien de réponse à l’invitation | ✅ | ✅ | ✅ |
 | Notif table + voisins | ❌ | ✅ (email/WA) | — |
 | Plan portail | ❌ | ❌ | ✅ |
 | PDF placement | ❌ | ❌ | ✅ (Premium 1+) |
@@ -149,7 +149,7 @@ Fichier règle : `backend/src/utils/guestPlacementAccess.ts` → `canGuestAccess
 
 - **Principal** : Puppeteer → `/rsvp/:guestId/print` → `GuestInvitationPrintDocument.tsx` (modèle visuel + QR + plan)
 - **Secours** : PDFKit redesigné → `invitationPdfService.ts`
-- **Print API** : `?print=1` sur GET RSVP pour inclure plan sans check-in (génération PDF uniquement)
+- **Print API** : `?print=1` sur GET réponse à l’invitation pour inclure plan sans check-in (génération PDF uniquement)
 
 ---
 
@@ -220,7 +220,7 @@ Config forfaits : `backend/src/config/plansConfig.ts`
 | Auth JWT + OTP | `(auth)/login`, `verify-otp` |
 | Événements | `(tabs)/events`, `events/[id]` |
 | Protocole QR | `protocol/[eventId]` |
-| RSVP invité public | `rsvp/[guestId]` |
+| réponse à l’invitation invité public | `rsvp/[guestId]` |
 | Push Expo | `POST /notifications/push-token` |
 | Deep links | `eventmaster://rsvp/:id`, `event/:id`, `protocol/:eventId` |
 
@@ -241,8 +241,8 @@ sequenceDiagram
 
   Org->>API: Créer event + guests + invitation
   Org->>API: POST send invitation
-  API->>G: Email/WhatsApp lien RSVP
-  G->>API: POST RSVP ACCEPTED
+  API->>G: Email/WhatsApp lien de réponse à l’invitation
+  G->>API: POST réponse à l’invitation ACCEPTED
   API->>G: QR confirmation
   Org->>API: PUT tablePlan (assignation)
   API->>G: Annonce table + voisins (sans PDF)
@@ -261,7 +261,7 @@ sequenceDiagram
 | Schéma BDD | `backend/prisma/schema.prisma` |
 | Auth + licence | `backend/src/middleware/auth.ts` |
 | Permissions | `backend/src/services/permissionsService.ts` |
-| RSVP public | `backend/src/controllers/rsvpController.ts` |
+| réponse à l’invitation public | `backend/src/controllers/rsvpController.ts` |
 | Annonce assignation | `backend/src/services/tableAssignmentNotificationService.ts` |
 | Livraison post check-in | `backend/src/services/guestPlacementDeliveryService.ts` |
 | Notifications placement | `backend/src/services/guestSeatNotificationService.ts` |
@@ -279,7 +279,7 @@ sequenceDiagram
 1. **Business** : protocole QR oui, livraison PDF/GPS post check-in non (Premium 1+ requis).
 2. **Annonce assignation** : active dès le premier forfait payant.
 3. **PDF Cloudinary** : URL stockée ; régénération au prochain check-in si absente.
-4. **Rappels RSVP** : pas de GPS dans les rappels (cohérent avec invitation initiale).
+4. **Rappels de réponse à l’invitation** : pas de GPS dans les rappels (cohérent avec invitation initiale).
 
 ---
 

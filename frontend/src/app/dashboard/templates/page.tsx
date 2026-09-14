@@ -114,9 +114,9 @@ interface CanvasElement {
  strokeWidth?: string;
  shapeSize?: string;
  
- // Customizable RSVP fields
+ // Customizabla réponse à l’invitation fields
  rsvpFields?: RsvpField[];
- /** inline = dans l'invitation ; outside = panneau sous la zone de design */
+ /** inline = dans l’invitation ; outside = panneau sous la zone de design */
  rsvpPlacement?: 'inline' | 'outside';
 
  // New properties for high-end styling
@@ -170,7 +170,7 @@ function getElementFieldInfo(el: Record<string, unknown>, index: number): {
  const lower = text.toLowerCase();
 
  if (type === 'rsvp-block') {
- return { label: 'Bouton RSVP / Confirmation', iconType: 'rsvp', placeholder: 'Ex: Confirmer votre présence' };
+ return { label: 'Bouton de confirmation de présence', iconType: 'rsvp', placeholder: 'Ex: Confirmer votre présence' };
  }
 
  const hasDateWords = /(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre|202[0-9]|\b\d{1,2}h\d{0,2}\b)/i.test(text);
@@ -939,7 +939,7 @@ export default function TemplatesPage() {
  : textMode === 'image-only'
  ? 'Maquette importée — fond image et palette uniquement. Ajoutez vos éléments.'
  : textMode === 'structure-only'
- ? 'Maquette importée — structure sans blocs texte (RSVP, boutons…).'
+ ? 'Maquette importée — structure sans blocs texte (Réponse à l’invitation, boutons…).'
  : 'Maquette importée — emplacements texte génériques ajoutés.',
  );
  } catch (err: any) {
@@ -998,7 +998,7 @@ export default function TemplatesPage() {
  {
  id: 'structure-only',
  title: 'Sans blocs texte',
- description: 'Conserve RSVP, boutons et séparateurs, mais supprime tous les blocs texte.',
+ description: 'Conserve réponse à l’invitation, boutons et séparateurs, mais supprime tous les blocs texte.',
  },
  {
  id: 'ocr',
@@ -1888,7 +1888,7 @@ export default function TemplatesPage() {
  }
  };
 
- // Customizable RSVP fields management
+ // Customizabla réponse à l’invitation fields management
  const handleEnsureReportingRsvpFields = () => {
  const updatedFields = ensureReportingRsvpFields(elRsvpFields);
  handlePropertyChange('rsvpFields', updatedFields);
@@ -2137,7 +2137,7 @@ export default function TemplatesPage() {
  setStudioRail('content');
  setPropsAdvanced(false);
  setError(
- `Formulaire RSVP incomplet : ${reportingIssues[0]} Ouvrez le bloc RSVP à droite pour corriger.`,
+ `Formulaire de réponse à l’invitation incomplet : ${reportingIssues[0]} Ouvrez le bloc de réponse à droite pour corriger.`,
  );
  return;
  }
@@ -2562,7 +2562,7 @@ export default function TemplatesPage() {
  </li>
  <li className="flex items-center gap-2">
  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden />
- <span>Formulaires RSVP personnalisés et suivi des présences</span>
+ <span>Formulaires de réponse à l’invitation personnalisés et suivi des présences</span>
  </li>
  <li className="flex items-center gap-2">
  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden />
@@ -2735,14 +2735,14 @@ export default function TemplatesPage() {
                   className="w-full sm:w-auto text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1.5 max-w-xs sm:text-right"
                   title={rsvpReportingIssues[0]}
                 >
-                  Formulaire RSVP à finaliser
+                  Formulaire de réponse à l’invitation à finaliser
                 </p>
               ) : canvasElements.some((el) => el.type === 'rsvp-block') ? (
                 <p
                   role="status"
                   className="w-full sm:w-auto text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2.5 py-1.5 sm:text-right"
                 >
-                  Formulaire RSVP prêt ✓
+                  Formulaire de réponse à l’invitation prêt ✓
                 </p>
               ) : null}
  <div className="flex items-center gap-1 border border-border rounded-xl p-1 bg-surface shadow-2xs">
@@ -3201,7 +3201,7 @@ export default function TemplatesPage() {
                 <CheckSquare className="w-4 h-4" />
               </span>
               <div className="min-w-0">
-                <span className="block font-bold">Formulaire RSVP</span>
+                <span className="block font-bold">Formulaire de réponse à l’invitation</span>
                 <span className="block text-[11px] text-muted font-normal">Validation de présence avec repas & accompagnants</span>
               </div>
             </button>
@@ -4228,7 +4228,7 @@ export default function TemplatesPage() {
  {canvasElements.some((el) => el.type === 'rsvp-block' && el.rsvpPlacement === 'outside') && (
           <div className="w-full space-y-3" style={{ maxWidth: 'min(100%, 42rem)' }}>
             <p className="text-center text-xs font-bold uppercase tracking-wider text-primary">
-              Formulaire RSVP sous la carte
+              Formulaire de réponse à l’invitation sous la carte
  </p>
  {canvasElements
  .filter((el) => el.type === 'rsvp-block' && el.rsvpPlacement === 'outside')
@@ -4276,7 +4276,7 @@ export default function TemplatesPage() {
               activeEl?.type === 'button' ? 'Bouton' :
               activeEl?.type === 'image' ? 'Image' :
               activeEl?.type === 'divider' ? 'Séparateur' :
-              activeEl?.type === 'rsvp-block' ? 'Formulaire RSVP' :
+              activeEl?.type === 'rsvp-block' ? 'Formulaire de réponse à l’invitation' :
               activeEl?.type === 'curve' ? 'Courbe décorative' :
               activeEl?.type === 'triangle' ? 'Triangle' : 'Élément';
             
@@ -4344,7 +4344,7 @@ export default function TemplatesPage() {
  <div className="flex justify-between items-center">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'image' ? "Texte alternatif" :
- canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' ? "Titre RSVP" :
+ canvasElements.find(e => e.id === selectedElementId)?.type === 'rsvp-block' ? "Titre de réponse" :
  "Texte"}
  </label>
  {canvasElements.find(e => e.id === selectedElementId)?.type === 'text' && (
@@ -4865,7 +4865,7 @@ export default function TemplatesPage() {
  </div>
  </div>
  <p className="text-xs text-muted leading-relaxed">
- Utilisée pour l&apos;aperçu, l&apos;invitation RSVP et les cartes du catalogue.
+ Utilisée pour l&apos;aperçu, l&apos;invitation de réponse et les cartes du catalogue.
  </p>
  </div>
 
@@ -5644,7 +5644,7 @@ export default function TemplatesPage() {
  </li>
  <li className="flex items-center gap-2">
  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden />
- <span>Formulaires RSVP personnalisés et suivi des présences</span>
+ <span>Formulaires de réponse à l’invitation personnalisés et suivi des présences</span>
  </li>
  <li className="flex items-center gap-2">
  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden />

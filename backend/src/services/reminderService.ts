@@ -207,7 +207,7 @@ export async function processReminders() {
               branding: orgBrand.branding,
               orgName: orgBrand.orgName,
               title: `Rappel : ${event.title || 'Événement'}`,
-              eyebrow: 'Réponse RSVP en attente',
+              eyebrow: 'Réponse à l’invitation en attente',
               headerEmoji: '🔔',
               innerHtml: `
                 ${alreadyGreets ? '' : `<p style="font-size:16px;font-weight:700;color:#1e1b4b;margin:0 0 15px;">Bonjour ${escapeHtml(guest.firstName || '')},</p>`}
@@ -217,7 +217,7 @@ export async function processReminders() {
                   { label: 'Lieu', value: event.location || 'Non spécifié' },
                 ])}
               `,
-              cta: { href: rsvpLink, label: 'Confirmer ma présence (RSVP)' },
+              cta: { href: rsvpLink, label: 'Confirmer ma présence' },
               footerNote: 'Merci de bien vouloir répondre avant la date de l’événement.',
             });
             await sendRealEmail(guest.email, subject, emailSource, htmlBody);

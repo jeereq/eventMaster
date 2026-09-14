@@ -66,7 +66,7 @@
     <div style="display:flex;align-items:center;gap:12px;font-size:24px;font-weight:900;">🎉 EventMaster</div>
     <div class="badge" style="margin-top:32px;">✦ Analyse technique · Juillet 2026</div>
     <h1>Flux métier <span>implémentés</span></h1>
-    <p class="cover-sub">Auth multi-tenant · RSVP · double notification placement · protocole QR · facturation · mobile — documentation alignée sur le code source.</p>
+    <p class="cover-sub">Auth multi-tenant · réponse à l’invitation · double notification placement · protocole QR · facturation · mobile — documentation alignée sur le code source.</p>
   </div>
   <div style="font-size:11px;opacity:.7;border-top:1px solid rgba(255,255,255,.15);padding-top:20px;">
     backend/ · frontend/ · mobile/ · docs/ANALYSE-FLUX-PLATEFORME.md
@@ -78,11 +78,11 @@
     <div class="hdr"><span class="hdr-brand">EventMaster</span><span class="hdr-num">02 / 07</span></div>
     <div class="label">Architecture</div>
     <h2>Trois entités, une API</h2>
-    <p class="sub">Isolation stricte par organisation (Tenant). Workers : rappels RSVP et expiration licence.</p>
+    <p class="sub">Isolation stricte par organisation (Tenant). Workers : rappels de réponse à l’invitation et expiration licence.</p>
     <div class="arch">
       <div class="a1"><h3>Backend</h3>Express + Prisma<br/>Port 5001<br/>Notifications · PDF · RBAC</div>
-      <div class="a2"><h3>Frontend</h3>Next.js App Router<br/>Port 3000<br/>Dashboard · RSVP · Protocole</div>
-      <div class="a3"><h3>Mobile</h3>Expo SDK 57<br/>RSVP · Scan QR natif<br/>Push · Deep links</div>
+      <div class="a2"><h3>Frontend</h3>Next.js App Router<br/>Port 3000<br/>Dashboard · réponse à l’invitation · Protocole</div>
+      <div class="a3"><h3>Mobile</h3>Expo SDK 57<br/>Réponse à l’invitation · Scan QR natif<br/>Push · Deep links</div>
     </div>
     <div class="label">Auth & RBAC</div>
     <table>
@@ -103,11 +103,11 @@
   <div class="inner">
     <div class="hdr"><span class="hdr-brand">EventMaster</span><span class="hdr-num">03 / 07</span></div>
     <div class="label">Cycle invité</div>
-    <h2>De l'invitation au check-in</h2>
-    <p class="sub">L'envoi initial ne contient que le lien RSVP — pas de PDF ni GPS.</p>
+    <h2>De l’invitation au check-in</h2>
+    <p class="sub">L'envoi initial ne contient que le lien de réponse à l’invitation — pas de PDF ni GPS.</p>
     <div class="flow">
-      <div class="flow-step"><h4>1 · Invitation</h4><p>Email / WhatsApp · lien RSVP personnalisé</p></div>
-      <div class="flow-step"><h4>2 · RSVP</h4><p>Acceptation · badge QR envoyé</p></div>
+      <div class="flow-step"><h4>1 · Invitation</h4><p>Email / WhatsApp · lien de réponse à l’invitation personnalisé</p></div>
+      <div class="flow-step"><h4>2 · réponse à l’invitation</h4><p>Acceptation · badge QR envoyé</p></div>
       <div class="flow-step"><h4>3 · Assignation</h4><p>Annonce table + voisins (sans PDF)</p></div>
       <div class="flow-step"><h4>4 · Check-in</h4><p>Scan QR · livraison PDF + GPS</p></div>
     </div>
@@ -122,7 +122,7 @@
     <div class="banner">
       <h3>⚡ Double notification — règle métier centrale</h3>
       <p><strong>Annonce</strong> (tableAssignmentNotificationService) : table + siège + voisins à l'assignation, forfaits payants.<br/>
-      <strong>Livraison complète</strong> (guestPlacementDeliveryService) : PDF Cloudinary + GPS WhatsApp dès acceptation RSVP, Premium 1+ (seatNotifications).</p>
+      <strong>Livraison complète</strong> (guestPlacementDeliveryService) : PDF Cloudinary + GPS WhatsApp dès confirmation de présence, Premium 1+ (seatNotifications).</p>
     </div>
   </div>
 </div>
@@ -169,7 +169,7 @@
     <div class="hdr"><span class="hdr-brand">EventMaster</span><span class="hdr-num">05 / 07</span></div>
     <div class="label">Protocole jour J</div>
     <h2>Scan QR web & mobile</h2>
-    <p class="sub">protocolController.ts — Business minimum (protocolQr). Check-in refusé si RSVP ≠ ACCEPTED.</p>
+    <p class="sub">protocolController.ts — Business minimum (protocolQr). Check-in refusé si réponse à l’invitation ≠ ACCEPTED.</p>
     <table>
       <thead><tr><th>Endpoint</th><th>Action</th></tr></thead>
       <tbody>
@@ -183,12 +183,12 @@
       <div class="card"><h3>Web</h3><p>GuestProtocolPanel.tsx · QrCameraScanner.tsx · dashboard/events</p></div>
       <div class="card"><h3>Mobile</h3><p>protocol/[eventId].tsx · QrScanner.tsx · protocolApi.ts</p></div>
     </div>
-    <div class="label" style="margin-top:20px;">Portail RSVP public</div>
+    <div class="label" style="margin-top:20px;">Portail de réponse à l’invitation public</div>
     <table>
       <thead><tr><th>Route API</th><th>Rôle</th></tr></thead>
       <tbody>
         <tr><td>GET /api/rsvp/:guestId</td><td>Détails + template · ?print=1 pour génération PDF</td></tr>
-        <tr><td>POST /api/rsvp/:guestId</td><td>Soumission RSVP + notif organisateur</td></tr>
+        <tr><td>POST /api/rsvp/:guestId</td><td>Soumission réponse à l’invitation + notif organisateur</td></tr>
         <tr><td>GET .../seating-invitation.pdf</td><td>PDF placement (gated post check-in)</td></tr>
         <tr><td>GET .../invitations</td><td>Multi-invitations même identité</td></tr>
       </tbody>
@@ -204,7 +204,7 @@
     <div class="grid-2" style="margin-bottom:16px;">
       <div class="card"><h3>Facturation tenant</h3><p>Quotas temps réel · demande upgrade · Stripe + factures PDF · subscriptionExpiryService</p></div>
       <div class="card"><h3>Commercial</h3><p>Parrainage 30 % · commercialController · org commercial Enterprise 2+</p></div>
-      <div class="card"><h3>Mobile implémenté</h3><p>Auth · événements · protocole QR natif · RSVP deep link · push Expo</p></div>
+      <div class="card"><h3>Mobile implémenté</h3><p>Auth · événements · protocole QR natif · réponse à l’invitation deep link · push Expo</p></div>
       <div class="card"><h3>Mobile hors scope</h3><p>Édition modèles · plan 2D · diffusion invitations · facturation (web only)</p></div>
     </div>
     <div class="label">Fichiers pivots</div>
@@ -229,9 +229,9 @@
     <div class="hdr"><span class="hdr-brand">EventMaster</span><span class="hdr-num">07 / 07</span></div>
     <div class="label">Synthèse</div>
     <h2>Parcours invité en 5 temps</h2>
-    <p class="sub">Ce qui distingue EventMaster d'un simple outil RSVP.</p>
+    <p class="sub">Ce qui distingue EventMaster d'un simple outil réponse à l’invitation.</p>
     <div class="flow" style="flex-direction:column;">
-      <div class="flow-step" style="border-top-color:var(--indigo);"><h4>① Invitation RSVP</h4><p>Lien personnalisé — email ou WhatsApp — sans données sensibles de placement</p></div>
+      <div class="flow-step" style="border-top-color:var(--indigo);"><h4>① Invitation de réponse</h4><p>Lien personnalisé — email ou WhatsApp — sans données sensibles de placement</p></div>
       <div class="flow-step" style="border-top-color:var(--violet);"><h4>② Réponse + badge QR</h4><p>Portail web/mobile · confirmation organisateur notifiée</p></div>
       <div class="flow-step" style="border-top-color:var(--amber);"><h4>③ Assignation table</h4><p>Notification annonce : table, siège, voisins — organisateur sauvegarde le plan</p></div>
       <div class="flow-step" style="border-top-color:var(--emerald);"><h4>④ Check-in protocole</h4><p>Scan QR jour J — web ou app native</p></div>

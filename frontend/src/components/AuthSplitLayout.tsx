@@ -194,5 +194,5 @@ export function MethodToggle<T extends string>({ value, onChange, options, label
 }
 
 export const AUTH_FEATURES = [
-  { icon: PartyPopper, title: "Gestion d'événements & RSVP", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
+  { icon: PartyPopper, title: "Gestion d'événements et réponses à l’invitation", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
 ] as const;

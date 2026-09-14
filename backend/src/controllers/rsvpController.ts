@@ -135,7 +135,7 @@ async function notifyOrganizerOfRsvp(params: {
   const ownerHtmlBody = wrapBrandedEmail({
     branding: orgBrand.branding,
     orgName: orgBrand.orgName,
-    title: 'Nouvelle réponse RSVP',
+    title: 'Nouvelle réponse à l’invitation',
     eyebrow: eventTitle,
     innerHtml: `
       <p style="color:#64748b;margin:0 0 18px;">Un invité a répondu pour <strong>${escapeHtml(eventTitle)}</strong>.</p>
@@ -163,7 +163,7 @@ async function notifyOrganizerOfRsvp(params: {
   if (params.tenantId) {
     await notifyTenantOperators(params.tenantId, {
       type: PLATFORM_NOTIFICATION_TYPE.EVENT_RSVP,
-      title: `RSVP — ${statusLabel}`,
+      title: `réponse à l’invitation — ${statusLabel}`,
       message: `${guest.firstName} ${guest.lastName} · ${eventTitle}`,
       metadata: {
         href: dashboardPath,
@@ -268,7 +268,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
     });
 
     if (!guest) {
-      return res.status(404).json({ error: 'Invité non trouvé ou lien RSVP invalide.' });
+      return res.status(404).json({ error: 'Invité non trouvé ou lien de réponse à l’invitation invalide.' });
     }
 
     // Si l'invité possède un billet ou s'il s'agit d'un événement public avec billetterie / inscription,
@@ -858,8 +858,8 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
       rsvpLocked: isEventDatePassed(guest.event.date),
     });
   } catch (error: any) {
-    console.error('Erreur lors de la récupération des détails RSVP de l\'invité:', error);
-    return res.status(500).json({ error: 'Erreur lors de la récupération du RSVP' });
+    console.error('Erreur lors de la récupération des détails réponse à l’invitation de l\'invité:', error);
+    return res.status(500).json({ error: 'Erreur lors de la récupération de la réponse à l’invitation' });
   }
 }
 
@@ -920,14 +920,14 @@ export async function getGuestAllInvitations(req: Request, res: Response) {
   }
 }
 
-// Public endpoint to submit RSVP response and preferences
+// Public endpoint to submit réponse à l’invitation response and preferences
 export async function submitRsvp(req: Request, res: Response) {
   try {
     const guestId = req.params.guestId as string;
     const { rsvp, preferences, firstName, lastName, phone, phoneCountryCode } = req.body;
 
     if (rsvp && !['ACCEPTED', 'DECLINED'].includes(rsvp)) {
-      return res.status(400).json({ error: 'Le statut RSVP doit être ACCEPTED ou DECLINED.' });
+      return res.status(400).json({ error: 'Le statut de réponse doit être ACCEPTED ou DECLINED.' });
     }
 
     const guest = await prisma.guest.findUnique({
@@ -946,7 +946,7 @@ export async function submitRsvp(req: Request, res: Response) {
     });
 
     if (!guest) {
-      return res.status(404).json({ error: 'Invité non trouvé ou lien RSVP invalide.' });
+      return res.status(404).json({ error: 'Invité non trouvé ou lien de réponse à l’invitation invalide.' });
     }
 
     if (isEventDatePassed(guest.event.date)) {
@@ -963,7 +963,7 @@ export async function submitRsvp(req: Request, res: Response) {
       guest.event?.ticketingEnabled
     );
 
-    // Déterminer le statut RSVP :
+    // Déterminer le statut de réponse :
     // Si explicitement fourni, on le prend. Sinon, pour un billet ou événement public, c'est 'ACCEPTED', sinon statut actuel.
     const targetRsvp: 'ACCEPTED' | 'DECLINED' = rsvp
       ? (rsvp as 'ACCEPTED' | 'DECLINED')
@@ -1022,7 +1022,7 @@ export async function submitRsvp(req: Request, res: Response) {
       data: updateData,
     });
 
-    // Send QR Code notifications asynchronously if RSVP is accepted AND (statusChanged or newly accepted)
+    // Send QR Code notifications asynchronously if réponse à l’invitation is accepted AND (statusChanged or newly accepted)
     const formattedDate = guest.event.date ? new Date(guest.event.date).toLocaleDateString('fr-FR', {
       weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
     }) : '';
@@ -1105,7 +1105,7 @@ export async function submitRsvp(req: Request, res: Response) {
       })();
     }
 
-    // Notifier l'organisateur (email + WhatsApp) à chaque changement de statut RSVP ou de coordonnées
+    // Notifier l'organisateur (email + WhatsApp) à chaque changement de statut de réponse ou de coordonnées
     if (statusChanged || nameChanged) {
       (async () => {
         try {
@@ -1141,7 +1141,7 @@ export async function submitRsvp(req: Request, res: Response) {
     return res.json({
       message: nameChanged
         ? 'Vos coordonnées ont été mises à jour avec succès.'
-        : 'Votre réponse RSVP a été enregistrée avec succès.',
+        : 'Votre réponse à l’invitation a été enregistrée avec succès.',
       guest: {
         id: updatedGuest.id,
         firstName: updatedGuest.firstName,
@@ -1154,8 +1154,8 @@ export async function submitRsvp(req: Request, res: Response) {
       },
     });
   } catch (error: any) {
-    console.error('Erreur lors de la soumission du RSVP:', error);
-    return res.status(500).json({ error: 'Erreur lors de l\'enregistrement de votre réponse RSVP.' });
+    console.error('Erreur lors de la soumission de la réponse à l’invitation:', error);
+    return res.status(500).json({ error: 'Erreur lors de l\'enregistrement de votre réponse à l’invitation.' });
   }
 }
 

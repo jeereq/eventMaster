@@ -338,12 +338,32 @@ export function resolveFloorMap(
   if (
     type === 'epoxy' || type === 'marbre' || type === 'epoxyMenthe'
     || type === 'marbreCalacatta' || type === 'marbreOr' || type === 'marbreBourgogne'
+    || type === 'damierMarbreNoirBlanc' || type === 'verreLumineux'
   ) {
-    roughness = type === 'epoxyMenthe' || type === 'marbreCalacatta' || type === 'marbreOr' ? 0.08 : 0.18;
-    metalness = 0.12;
-    clearcoat = 0.85;
-    envMapIntensity = 1.1;
-  } else if (type === 'moquette' || type === 'herbe' || type === 'pelouse' || type === 'prairie' || type === 'gazonSynth') {
+    roughness = type === 'verreLumineux' ? 0.05 : type === 'epoxyMenthe' || type === 'marbreCalacatta' || type === 'marbreOr' || type === 'damierMarbreNoirBlanc' ? 0.08 : 0.18;
+    metalness = type === 'verreLumineux' ? 0.25 : 0.12;
+    clearcoat = 0.95;
+    envMapIntensity = type === 'verreLumineux' ? 1.4 : 1.1;
+  } else if (type === 'terrazzoVenitien') {
+    roughness = 0.22;
+    metalness = 0.08;
+    clearcoat = 0.65;
+    envMapIntensity = 0.8;
+  } else if (type === 'dancefloorBoisVitrifié') {
+    roughness = 0.12;
+    metalness = 0.06;
+    clearcoat = 0.92;
+    envMapIntensity = 0.95;
+  } else if (type === 'tometteProvencale') {
+    roughness = 0.85;
+    metalness = 0.02;
+    clearcoat = 0.08;
+    envMapIntensity = 0.25;
+  } else if (type === 'pavesEventail') {
+    roughness = 0.82;
+    metalness = 0.04;
+    envMapIntensity = 0.32;
+  } else if (type === 'moquette' || type === 'herbe' || type === 'pelouse' || type === 'prairie' || type === 'gazonSynth' || type === 'gazonFleurie') {
     roughness = 0.98;
     metalness = 0;
     envMapIntensity = 0.15;
@@ -359,14 +379,15 @@ export function resolveFloorMap(
     type === 'parquet' || type === 'chevron' || type === 'chevronGris' || type === 'chevronGreige'
     || type === 'bois' || type === 'boisPanel' || type === 'boisHex' || type === 'boisAmber'
     || type === 'boisRustique' || type === 'boisBlond' || type === 'boisPetale'
-    || type === 'boisCharcoal' || type === 'boisMarqueterie'
+    || type === 'boisCharcoal' || type === 'boisMarqueterie' || type === 'pointDeHongrie'
   ) {
     roughness =
+      type === 'pointDeHongrie' ? 0.32 :
       type === 'boisAmber' ? 0.38 :
       type === 'boisBlond' || type === 'chevronGreige' ? 0.55 :
       type === 'boisPanel' || type === 'boisMarqueterie' ? 0.62 : 0.48;
     metalness = 0.05;
-    clearcoat = type === 'boisAmber' || type === 'boisBlond' ? 0.25 : 0.1;
+    clearcoat = type === 'pointDeHongrie' ? 0.45 : type === 'boisAmber' || type === 'boisBlond' ? 0.25 : 0.1;
     envMapIntensity = 0.55;
   }
 
@@ -375,7 +396,7 @@ export function resolveFloorMap(
     type === 'parquet' || type === 'chevron' || type === 'chevronGris' || type === 'chevronGreige'
     || type === 'bois' || type === 'boisPanel' || type === 'boisHex' || type === 'boisAmber'
     || type === 'boisRustique' || type === 'boisBlond' || type === 'boisPetale'
-    || type === 'boisCharcoal' || type === 'boisMarqueterie';
+    || type === 'boisCharcoal' || type === 'boisMarqueterie' || type === 'pointDeHongrie' || type === 'dancefloorBoisVitrifié';
   return {
     map,
     color: floorColor ? tint : '#ffffff',

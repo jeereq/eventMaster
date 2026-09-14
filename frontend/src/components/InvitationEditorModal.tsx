@@ -14,7 +14,7 @@ import { formatGuestGuidelinesBlock, normalizeGuestGuidelines, type GuestGuideli
 import { cn } from '@/lib/cn';
 
 const INVITATION_VARIABLES = [
-  { tag: '{{rsvpLink}}', label: 'Lien RSVP', desc: 'Indispensable pour confirmer & accéder au QR pass', isCrucial: true },
+  { tag: '{{rsvpLink}}', label: 'Lien de réponse à l’invitation', desc: 'Indispensable pour confirmer & accéder au QR pass', isCrucial: true },
   { tag: '{{firstName}}', label: 'Prénom', desc: 'Prénom de l’invité' },
   { tag: '{{lastName}}', label: 'Nom', desc: 'Nom de famille' },
   { tag: '{{title}}', label: 'Événement', desc: 'Titre de la réception' },
@@ -217,7 +217,7 @@ export default function InvitationEditorModal({
 
     if (selectedT) {
       setFeedbackMessage({
-        text: `Faire-part graphique « ${selectedT.name} » sélectionné pour la page RSVP.`,
+        text: `Faire-part graphique « ${selectedT.name} » sélectionné pour la page de réponse à l’invitation.`,
         type: 'info',
       });
       setTimeout(() => setFeedbackMessage(null), 3000);
@@ -402,7 +402,7 @@ export default function InvitationEditorModal({
             </span>
             <div>
               <span className="text-lg font-bold text-foreground block leading-tight">
-                {editingId ? "Modifier l'invitation" : "Créer une invitation"}
+                {editingId ? "Modifier l’invitation" : "Créer une invitation"}
               </span>
               <span className="text-xs text-muted block mt-0.5">
                 {eventTitle ? `Pour : ${eventTitle}` : 'Personnalisation des messages aux invités'}
@@ -504,7 +504,7 @@ export default function InvitationEditorModal({
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-muted flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full bg-primary-solid text-primary-foreground text-xs font-bold inline-flex items-center justify-center shrink-0">1</span>
-                Canal de diffusion & Page RSVP
+                Canal de diffusion & Page de réponse à l’invitation
               </span>
             </div>
 
@@ -577,12 +577,12 @@ export default function InvitationEditorModal({
               </button>
             </div>
 
-            {/* Faire-part graphique & Page RSVP */}
+            {/* Faire-part graphique & Page de réponse à l’invitation */}
             <div className="pt-2.5 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="space-y-0.5">
                 <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
                   <LayoutTemplate className="w-3.5 h-3.5 text-primary" />
-                  Modèle graphique de la page RSVP
+                  Modèle graphique de la page de réponse à l’invitation
                 </span>
                 <p className="text-xs text-muted leading-tight">
                   Le design affiché lorsque l'invité clique sur le lien pour confirmer sa venue.
@@ -591,12 +591,12 @@ export default function InvitationEditorModal({
 
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <select
-                  aria-label="Sélectionner le modèle graphique de la page RSVP"
+                  aria-label="Sélectionner le modèle graphique de la page de réponse à l’invitation"
                   value={data.templateId}
                   onChange={(e) => handleSelectGraphicTemplate(e.target.value)}
                   className="flex-1 min-h-11 px-3 py-1.5 bg-surface border border-border rounded-xl text-xs font-semibold focus:ring-2 focus:ring-primary/20 text-foreground cursor-pointer sm:max-w-xs"
                 >
-                  <option value="">-- Page RSVP standard EventMaster --</option>
+                  <option value="">-- Page de réponse à l’invitation standard EventMaster --</option>
                   {templates.map((t) => (
                     <option key={t.id} value={t.id}>
                       🎨 {t.name}
@@ -758,13 +758,13 @@ export default function InvitationEditorModal({
               </div>
             </div>
 
-            {/* Alerte si le lien RSVP est manquant dans le message en cours */}
+            {/* Alerte si le lien de réponse à l’invitation est manquant dans le message en cours */}
             {isRsvpLinkMissing && (
               <div className="p-3.5 rounded-xl border border-border bg-surface text-foreground text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs animate-in fade-in-50">
                 <div className="flex items-center gap-2 min-w-0">
                   <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
                   <span className="text-muted leading-relaxed">
-                    <strong className="text-foreground font-semibold">Pensez au lien RSVP :</strong> ajoutez <code className="text-foreground bg-surface-muted px-1 py-0.5 rounded border border-border">{"{{rsvpLink}}"}</code> pour que vos invités puissent confirmer leur présence et recevoir leur pass QR.
+                    <strong className="text-foreground font-semibold">Pensez au lien de réponse à l’invitation :</strong> ajoutez <code className="text-foreground bg-surface-muted px-1 py-0.5 rounded border border-border">{"{{rsvpLink}}"}</code> pour que vos invités puissent confirmer leur présence et recevoir leur pass QR.
                   </span>
                 </div>
                 <button
@@ -772,7 +772,7 @@ export default function InvitationEditorModal({
                   onClick={() => insertTextAtCursor(activeChannelTab === 'whatsapp' ? 'whatsappBody' : 'body', '\n\n{{rsvpLink}}\n')}
                   className="px-3 py-1.5 min-h-8 rounded-lg bg-surface-muted hover:bg-surface border border-border text-foreground text-xs font-medium transition shrink-0 cursor-pointer touch-manipulation self-start sm:self-auto"
                 >
-                  + Insérer le lien RSVP
+                  + Insérer le lien de réponse à l’invitation
                 </button>
               </div>
             )}
@@ -849,7 +849,7 @@ export default function InvitationEditorModal({
                 {!channelNeedsEmail && (
                   <div className="space-y-1">
                     <label htmlFor="invitation-ref-input" className="text-xs font-semibold text-muted uppercase tracking-wider block">
-                      Titre / Référence interne de l'invitation
+                      Titre / Référence interne de l’invitation
                     </label>
                     <input
                       id="invitation-ref-input"
@@ -953,7 +953,7 @@ export default function InvitationEditorModal({
               Annuler
             </Button>
             <Button type="submit" loading={saving} className="flex-1 min-h-11" leftIcon={<Check className="w-4 h-4" />}>
-              {editingId ? "Enregistrer les modifications" : "Créer l'invitation"}
+              {editingId ? "Enregistrer les modifications" : "Créer l’invitation"}
             </Button>
           </div>
         </div>

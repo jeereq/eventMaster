@@ -223,7 +223,7 @@ function getElementFieldInfo(el: Record<string, unknown>, index: number): {
   const lower = text.toLowerCase();
 
   if (type === 'rsvp-block') {
-    return { label: 'Bouton RSVP / Confirmation', iconType: 'rsvp', placeholder: 'Ex: Confirmer votre présence' };
+    return { label: 'Bouton de confirmation de présence', iconType: 'rsvp', placeholder: 'Ex: Confirmer votre présence' };
   }
 
   const hasDateWords = /(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre|202[0-9]|\b\d{1,2}h\d{0,2}\b)/i.test(text);
@@ -1273,7 +1273,7 @@ export default function LandingInvitationAiGenerator({
             steps={[
               'Décrivez la fête ou déposez une carte',
               'Générez la carte 9:16',
-              'Éditez les textes et le RSVP',
+              'Éditez les textes et la réponse à l’invitation',
             ]}
           />
           <div
@@ -1800,7 +1800,7 @@ export default function LandingInvitationAiGenerator({
               <div
                 className="flex flex-wrap items-center gap-1 p-1 rounded-[var(--radius-card)] bg-surface border border-border shadow-2xs"
                 role="tablist"
-                aria-label="Modes d'aperçu de l'invitation"
+                aria-label="Modes d'aperçu de l’invitation"
               >
                 <button
                   type="button"
@@ -2148,7 +2148,7 @@ export default function LandingInvitationAiGenerator({
 
               <p className="text-xs text-muted leading-relaxed">
                 {lastStageMeta?.backgroundReady
-                  ? 'Fond généré + structure texte / RSVP prêts à éditer.'
+                  ? 'Fond généré + structure texte / réponse à l’invitation prêts à éditer.'
                   : 'Structure prête. Affinez le fond dans le studio si besoin.'}
               </p>
 
@@ -2213,9 +2213,9 @@ export default function LandingInvitationAiGenerator({
                   <div className="h-2 w-20 mx-auto rounded bg-foreground/10" />
                 </div>
 
-                {/* Pied de carte avec badge QR & RSVP */}
+                {/* Pied de carte avec badge QR & réponse à l’invitation */}
                 <div className="w-full pt-2 border-t border-border/60 flex items-center justify-between text-[10px] text-muted relative z-10 px-1">
-                  <span className="font-semibold text-primary">Pass QR · RSVP</span>
+                  <span className="font-semibold text-primary">Pass QR · réponse à l’invitation</span>
                   <span className="font-mono text-[9px] opacity-75">Format 9:16</span>
                 </div>
               </div>
@@ -2258,7 +2258,7 @@ export default function LandingInvitationAiGenerator({
       >
         <p className="text-sm text-muted leading-relaxed">
           {studioIntent === 'clone'
-            ? 'La photo de votre carte guide le rendu. Vous pourrez encore ajuster textes et RSVP ensuite.'
+            ? 'La photo de votre carte guide le rendu. Vous pourrez encore ajuster textes et réponse à l’invitation ensuite.'
             : 'Le brief et les photos de visages, s’il y en a, composent l’invitation. Vous pourrez tout ajuster ensuite.'}
         </p>
       </Modal>

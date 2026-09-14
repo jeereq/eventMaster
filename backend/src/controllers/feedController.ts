@@ -3,7 +3,7 @@ import { prisma } from '../db';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { canManageEvent } from '../services/permissionsService';
 
-// 1. Submit Guest Share (Public - Guest RSVP page)
+// 1. Submit Guest Share (Public - Guest réponse à l’invitation page)
 export async function submitGuestShare(req: Request, res: Response) {
   try {
     const guestId = req.params.guestId as string;
@@ -77,7 +77,7 @@ export async function getEventShares(req: AuthenticatedRequest, res: Response) {
   }
 }
 
-// 2b. Get Public Event Shares (Public - Guest RSVP page)
+// 2b. Get Public Event Shares (Public - Guest réponse à l’invitation page)
 export async function getPublicEventShares(req: Request, res: Response) {
   try {
     const eventId = req.params.eventId as string;
@@ -102,7 +102,7 @@ export async function getPublicEventShares(req: Request, res: Response) {
   }
 }
 
-// 3. Get Event Feed (Public - Guest RSVP page and Dashboard)
+// 3. Get Event Feed (Public - Guest réponse à l’invitation page and Dashboard)
 export async function getEventFeed(req: Request, res: Response) {
   try {
     const eventId = req.params.eventId as string;
@@ -272,7 +272,7 @@ export async function deleteGuestShare(req: AuthenticatedRequest, res: Response)
   }
 }
 
-// 6. Create Event Comment (Public - Guest RSVP page and Dashboard)
+// 6. Create Event Comment (Public - Guest réponse à l’invitation page and Dashboard)
 export async function createEventComment(req: Request, res: Response) {
   try {
     const postId = req.params.postId as string;
@@ -327,7 +327,7 @@ export async function createEventComment(req: Request, res: Response) {
   }
 }
 
-// 7. Toggle Like on Event Post (Public - Guest RSVP page and Dashboard)
+// 7. Toggle Like on Event Post (Public - Guest réponse à l’invitation page and Dashboard)
 export async function toggleLikeEventPost(req: Request, res: Response) {
   try {
     const postId = req.params.postId as string;

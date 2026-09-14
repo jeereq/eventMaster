@@ -49,7 +49,7 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
       ctaLabel: 'Ouvrir l’éditeur',
     },
     {
-      title: 'Invitations & RSVP',
+      title: 'Invitations et réponses à l’invitation',
       badge: 'WhatsApp',
       description: 'Liens personnalisés et suivi des présences en temps réel.',
       icon: Heart,

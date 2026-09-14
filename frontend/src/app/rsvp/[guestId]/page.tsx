@@ -215,7 +215,7 @@ export default function RsvpPage() {
           setCustomFieldValues(restoreFieldValuesFromPreferences(rsvpFields, data.preferences));
         }
       } catch (err: any) {
-        console.error('Error fetching RSVP details:', err);
+        console.error('Error fetching réponse à l’invitation details:', err);
         setError('Le lien d\'invitation est invalide ou a expiré.');
       } finally {
         setLoading(false);

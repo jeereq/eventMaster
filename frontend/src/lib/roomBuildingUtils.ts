@@ -419,12 +419,22 @@ export function createCorridorFixture(
 
 export type SelectionStylePatch = {
   tableColor?: string;
+  tableSurface?: import('@/lib/roomLayoutUtils').TableSurfaceStyle;
   color?: string;
   locked?: boolean;
   material?: ZoneMaterial;
+  chairType?: import('@/lib/roomLayoutUtils').ChairType;
+  chairStyle?: import('@/lib/roomLayoutUtils').ChairStyle;
+  seatMaterial?: import('@/lib/roomLayoutUtils').SeatMaterial;
+  scaleDelta?: number;
+  rotationDelta?: number;
+  screenKind?: 'stageLedWall' | 'wallTv' | 'tableMonitor' | 'laptop' | 'desktopPc';
+  screenRatio?: '16:9' | '21:9' | '9:16' | '32:9';
+  screenElevationM?: number;
+  screenPowered?: boolean;
 };
 
-/** Applique un style à tous les éléments de la sélection (tables, zones, fixtures). */
+/** Applique un style, une rotation ou une échelle à tous les éléments de la sélection (tables, chaises, zones, fixtures). */
 export function applyStyleToSelection(
   blueprint: RoomLayoutBlueprint,
   selection: LayoutSelectionItem[],
@@ -434,30 +444,77 @@ export function applyStyleToSelection(
   const furniture = blueprint.furniture.map((f) => {
     if (!ids.has(f.id)) return f;
     if (f.kind === 'table') {
+      const rot = patch.rotationDelta !== undefined ? ((f.rotation ?? 0) + patch.rotationDelta + 360) % 360 : f.rotation;
+      const scale = patch.scaleDelta ?? 1;
       return {
         ...f,
         ...(patch.tableColor !== undefined ? { tableColor: patch.tableColor } : {}),
+        ...(patch.tableSurface !== undefined ? { tableSurface: patch.tableSurface } : {}),
+        ...(patch.chairType !== undefined ? { chairType: patch.chairType } : {}),
+        ...(patch.chairStyle !== undefined ? { chairStyle: patch.chairStyle } : {}),
+        ...(patch.seatMaterial !== undefined ? { seatMaterial: patch.seatMaterial } : {}),
         ...(patch.locked !== undefined ? { locked: patch.locked } : {}),
+        ...(patch.rotationDelta !== undefined ? { rotation: rot } : {}),
+        ...(patch.scaleDelta !== undefined
+          ? {
+              customWidthM: f.customWidthM ? Math.max(0.6, Math.min(6, f.customWidthM * scale)) : undefined,
+              customDepthM: f.customDepthM ? Math.max(0.6, Math.min(4, f.customDepthM * scale)) : undefined,
+              customRadiusM: f.customRadiusM ? Math.max(0.4, Math.min(4, f.customRadiusM * scale)) : undefined,
+            }
+          : {}),
+      };
+    }
+    if (f.kind === 'chair') {
+      const rot = patch.rotationDelta !== undefined ? ((f.rotation ?? 0) + patch.rotationDelta + 360) % 360 : f.rotation;
+      return {
+        ...f,
+        ...(patch.chairType !== undefined ? { chairType: patch.chairType } : {}),
+        ...(patch.chairStyle !== undefined ? { chairStyle: patch.chairStyle } : {}),
+        ...(patch.seatMaterial !== undefined ? { seatMaterial: patch.seatMaterial } : {}),
+        ...(patch.color !== undefined ? { color: patch.color } : {}),
+        ...(patch.locked !== undefined ? { locked: patch.locked } : {}),
+        ...(patch.rotationDelta !== undefined ? { rotation: rot } : {}),
       };
     }
     if (f.kind === 'zone') {
+      const rot = patch.rotationDelta !== undefined ? ((f.rotation ?? 0) + patch.rotationDelta + 360) % 360 : f.rotation;
+      const scale = patch.scaleDelta ?? 1;
       return {
         ...f,
         ...(patch.color !== undefined ? { color: patch.color } : {}),
         ...(patch.material !== undefined ? { material: patch.material } : {}),
+        ...(patch.locked !== undefined ? { locked: patch.locked } : {}),
+        ...(patch.rotationDelta !== undefined ? { rotation: rot } : {}),
+        ...(patch.scaleDelta !== undefined
+          ? {
+              w: Math.max(4, Math.min(95, f.w * scale)),
+              h: Math.max(4, Math.min(95, f.h * scale)),
+            }
+          : {}),
       };
-    }
-    if (f.kind === 'chair' && patch.locked !== undefined) {
-      return { ...f, locked: patch.locked };
     }
     return f;
   });
+
   const fixtures = blueprint.fixtures.map((f) => {
     if (!ids.has(f.id)) return f;
+    const rot = patch.rotationDelta !== undefined ? ((f.rotation ?? 0) + patch.rotationDelta + 360) % 360 : f.rotation;
+    const scale = patch.scaleDelta ?? 1;
     return {
       ...f,
       ...(patch.color !== undefined ? { color: patch.color } : {}),
       ...(patch.material !== undefined ? { material: patch.material } : {}),
+      ...(patch.rotationDelta !== undefined ? { rotation: rot } : {}),
+      ...(patch.scaleDelta !== undefined
+        ? {
+            w: Math.max(2, Math.min(95, f.w * scale)),
+            h: Math.max(2, Math.min(95, f.h * scale)),
+          }
+        : {}),
+      ...(patch.screenKind !== undefined ? { screenKind: patch.screenKind } : {}),
+      ...(patch.screenRatio !== undefined ? { screenRatio: patch.screenRatio } : {}),
+      ...(patch.screenElevationM !== undefined ? { screenElevationM: patch.screenElevationM } : {}),
+      ...(patch.screenPowered !== undefined ? { screenPowered: patch.screenPowered } : {}),
     };
   });
   return refreshBlueprintMetadata({ ...blueprint, furniture, fixtures });

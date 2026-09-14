@@ -9,9 +9,9 @@ Complète le frontend web (`frontend/`) sans dupliquer la logique métier côté
 
 | Persona | Usage mobile prioritaire |
 |---------|--------------------------|
-| **Organisateur** (owner, manager) | Consulter événements, invités, RSVP, stats ; notifications |
+| **Organisateur** (owner, manager) | Consulter événements, invités, réponse à l’invitation, stats ; notifications |
 | **Protocole** | Scan QR, confirmation de présence, recherche invité (jour J) |
-| **Invité** | RSVP, badge QR, plan de table, fil d'actualité |
+| **Invité** | réponse à l’invitation, badge QR, plan de table, fil d'actualité |
 | **Commercial org.** | Parrainage, commissions (lecture seule) |
 
 ---
@@ -22,7 +22,7 @@ Complète le frontend web (`frontend/`) sans dupliquer la logique métier côté
 mobile/
 ├── app/                    # Expo Router (navigation fichier)
 │   ├── (auth)/             # login, register, forgot-password
-│   ├── (guest)/            # portail RSVP invité (deep link /rsvp/:id)
+│   ├── (guest)/            # portail de réponse à l’invitation invité (deep link /rsvp/:id)
 │   ├── (app)/              # dashboard authentifié
 │   │   ├── events/
 │   │   ├── protocol/       # scan caméra natif
@@ -87,13 +87,13 @@ mobile/
 
 ---
 
-### Phase 2 — Invité & RSVP (Semaine 3) ✅
+### Phase 2 — Invité & réponse à l’invitation (Semaine 3) ✅
 
 Priorité : parcours invité sans compte (deeplink depuis e-mail / WhatsApp).
 
 - [x] Route `app/rsvp/[guestId]` (Expo Router)
 - [x] Affichage invitation + détails événement
-- [x] Formulaire RSVP (accept / decline + champs custom)
+- [x] Formulaire de réponse à l’invitation (accept / decline + champs custom)
 - [x] Badge QR de confirmation de présence
 - [x] Plan de table + voisins
 - [x] Infos invités (tenue, recommandations)
@@ -113,9 +113,9 @@ Priorité : parcours invité sans compte (deeplink depuis e-mail / WhatsApp).
 
 - [x] Liste événements (`GET /events`)
 - [x] Détail événement + parcours guidé (`eventWorkflow.ts`)
-- [x] Liste invités + filtres RSVP
+- [x] Liste invités + filtres réponse à l’invitation
 - [x] Consultation invitations (lecture)
-- [x] Statistiques RSVP (agrégation locale)
+- [x] Statistiques des réponses (agrégation locale)
 - [x] Notifications in-app (`GET /notifications`)
 - [x] Navigation par onglets (Accueil, Événements, Alertes)
 
@@ -134,7 +134,7 @@ Fonctionnalité clé différenciante sur mobile.
 - [x] Sélection événement du jour (depuis liste / détail événement)
 - [x] Scanner QR natif (`expo-camera` + `CameraView`)
 - [x] Appel `POST /events/:eventId/protocol/scan` + `check-in` + `verify-seat`
-- [x] Recherche manuelle invité (URL RSVP ou ID)
+- [x] Recherche manuelle invité (URL de réponse ou ID)
 - [x] Affichage placement (table, siège)
 - [x] Feedback visuel succès / erreur (`Alert`)
 - [x] Accès protocole-only (redirection directe vers écran protocole)
@@ -226,7 +226,7 @@ EXPO_PUBLIC_API_URL=http://localhost:5001/api
 
 | Élément | Stratégie |
 |---------|-----------|
-| Types TypeScript | Copier `frontend/src/lib/eventWorkflow.ts`, types RSVP → `mobile/src/types/` ou package `@eventmaster/shared` |
+| Types TypeScript | Copier `frontend/src/lib/eventWorkflow.ts`, types réponse à l’invitation → `mobile/src/types/` ou package `@eventmaster/shared` |
 | Logique métier pure | Extraire dans `packages/shared/` (npm workspaces) |
 | UI | Séparée (React Native ≠ React DOM) |
 
@@ -259,7 +259,7 @@ EXPO_PUBLIC_API_URL=http://localhost:5001/api
 
 ## Critères de succès v1
 
-- [ ] Invité : RSVP complet depuis un lien deep link
+- [ ] Invité : réponse à l’invitation complet depuis un lien deep link
 - [ ] Protocole : scan QR + confirmation de présence en < 3 s
-- [ ] Organisateur : voir liste événements + invités + stats RSVP
+- [ ] Organisateur : voir liste événements + invités + stats réponse à l’invitation
 - [ ] Build Android installable (APK interne via EAS)

@@ -311,11 +311,11 @@ const ADMIN_TAB_META: Record<AdminTabId, { title: string; description: string; t
  },
  guests: {
  title: 'Invités (supervision)',
- description: 'Liste globale, funnel RSVP, PDF non livré et présence jour J.',
+ description: 'Liste globale, funnel des réponses, PDF non livré et présence jour J.',
  },
  analytics: {
  title: 'Analyses & statistiques',
- description: 'Adoption des forfaits, check-in, tâches, événements publics, billets et funnel RSVP.',
+ description: 'Adoption des forfaits, check-in, tâches, événements publics, billets et funnel des réponses.',
  },
  settings: {
  title: 'Réglages plateforme',
@@ -1705,7 +1705,7 @@ function DashboardPageContent() {
  return;
  }
  
- const headers = ["Prénom", "Nom", "Email", "Téléphone", "Catégorie", "Statut RSVP", "Événement", "Organisation"];
+ const headers = ["Prénom", "Nom", "Email", "Téléphone", "Catégorie", "Statut de réponse", "Événement", "Organisation"];
  const rows = adminGuests.map(g => {
  const phone = g.phone || g.preferences?.phone || g.preferences?.telephone || "";
  return [
@@ -2333,8 +2333,8 @@ function DashboardPageContent() {
             {activeTab === 'guests' && (
               <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] w-full lg:w-auto shrink-0">
                 <Filter className="w-4 h-4 text-muted shrink-0 hidden sm:block" />
-                <select value={filterRsvp} onChange={(e) => setFilterRsvp(e.target.value)} className={filterSelectClass} aria-label="Filtrer par RSVP">
-                  <option value="ALL">Tous les RSVP</option>
+                <select value={filterRsvp} onChange={(e) => setFilterRsvp(e.target.value)} className={filterSelectClass} aria-label="Filtrer par réponse">
+                  <option value="ALL">Toutes les réponses</option>
                   <option value="PENDING">En attente</option>
                   <option value="ACCEPTED">Accepté</option>
                   <option value="DECLINED">Décliné</option>
@@ -3482,7 +3482,7 @@ function DashboardPageContent() {
  className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
  />
                                       <label htmlFor={`custom-rsvp-${planKey}`} className="text-xs font-bold text-muted uppercase tracking-wider cursor-pointer">
- Champs RSVP
+ Champs de réponse à l’invitation
  </label>
  </div>
                                     <div className="flex items-center gap-2">
@@ -3817,7 +3817,7 @@ function DashboardPageContent() {
  </div>
  <div>
  <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.guests.accepted}</span>
- <span className="text-xs text-muted dark:text-muted font-bold">RSVP acceptés</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Présences confirmées</span>
  </div>
  </div>
  <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
@@ -4313,7 +4313,7 @@ function DashboardPageContent() {
  <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
  <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
  <Users className="w-5 h-5 text-primary" />
- Funnel RSVP
+ Funnel des réponses
  </h3>
  <div className="space-y-3">
  {[
@@ -4334,7 +4334,7 @@ function DashboardPageContent() {
  ))}
  </div>
  <p className="text-xs text-muted pt-2">
- Le PDF et le plan de table partent après RSVP accepté et place assignée. Filtrez « PDF non livré » dans Invités pour le support.
+ Le PDF et le plan de table partent après présence confirmée et place assignée. Filtrez « PDF non livré » dans Invités pour le support.
  </p>
  <Button
  type="button"
@@ -4530,9 +4530,9 @@ function DashboardPageContent() {
  />
  </div>
 
- {/* Statut RSVP */}
+ {/* Statut de réponse */}
  <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider block">Statut RSVP</label>
+ <label className="text-xs font-bold text-muted uppercase tracking-wider block">Statut de réponse</label>
  <select
  value={modalGuestRsvp}
  onChange={(e) => setGuestRsvp(e.target.value)}

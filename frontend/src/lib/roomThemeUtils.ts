@@ -45,6 +45,14 @@ export type FloorType =
   | 'travertin'
   | 'moquetteRouge'
   | 'dancefloorLed'
+  | 'terrazzoVenitien'
+  | 'tometteProvencale'
+  | 'pointDeHongrie'
+  | 'damierMarbreNoirBlanc'
+  | 'dancefloorBoisVitrifié'
+  | 'verreLumineux'
+  | 'pavesEventail'
+  | 'gazonFleurie'
   | 'custom';
 
 export type BuiltInRoomThemeId =

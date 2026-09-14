@@ -188,7 +188,7 @@ export default function AnalyticsPage() {
  if (guests.length === 0) return;
  
  const customFields = getCustomRsvpFields();
- const headers = ['Nom', 'Prénom', 'Email', 'Catégorie', 'Statut RSVP', 'Allergies', 'Repas Spécial', 'Notes'];
+ const headers = ['Nom', 'Prénom', 'Email', 'Catégorie', 'Statut de réponse', 'Allergies', 'Repas Spécial', 'Notes'];
  customFields.forEach(f => headers.push(f.label));
  
  const csvRows = [
@@ -238,8 +238,8 @@ export default function AnalyticsPage() {
  title={protocolView ? 'Statistiques protocole' : 'Statistiques des événements'}
  description={
  protocolView
- ? 'Check-in, tâches du jour J et prochains accueils. Le détail RSVP reste disponible par événement.'
- : 'Vue organisation : événements, RSVP, check-in et tâches. Choisissez un événement pour le détail invités.'
+ ? 'Check-in, tâches du jour J et prochains accueils. Le détail réponse à l’invitation reste disponible par événement.'
+ : 'Vue organisation : événements, réponse à l’invitation, check-in et tâches. Choisissez un événement pour le détail invités.'
  }
  breadcrumbs={
  <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Statistiques' }]} />
@@ -295,7 +295,7 @@ export default function AnalyticsPage() {
  <div className="space-y-8">
  <div>
  <h2 className="text-sm font-bold uppercase tracking-wider text-muted mb-4">
- {protocolView ? 'Accueil' : 'RSVP'} — {selectedEvent?.title || 'événement'}
+ {protocolView ? 'Accueil' : 'Réponse à l’invitation'} — {selectedEvent?.title || 'événement'}
  </h2>
  {/* Quick Stats Cards */}
  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -549,7 +549,7 @@ export default function AnalyticsPage() {
  <tr className="border-b border-border-subtle dark:border-border text-muted font-bold uppercase tracking-wider">
  <th className="py-3 px-4">Invité</th>
  <th className="py-3 px-4">Catégorie</th>
- <th className="py-3 px-4">Statut RSVP</th>
+ <th className="py-3 px-4">Statut de réponse</th>
  <th className="py-3 px-4">Régime</th>
  <th className="py-3 px-4">Allergies</th>
  <th className="py-3 px-4">Notes</th>

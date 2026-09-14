@@ -45,18 +45,28 @@ export const floorTypeLabels: Record<FloorType, string> = {
   travertin: 'Dalles de travertin',
   moquetteRouge: 'Tapis rouge protocole',
   dancefloorLed: 'Dancefloor LED starlight',
+  terrazzoVenitien: 'Terrazzo vénitien (Éclats)',
+  tometteProvencale: 'Tomettes provençales terre cuite',
+  pointDeHongrie: 'Chêne Point de Hongrie',
+  damierMarbreNoirBlanc: 'Damier marbre noir & blanc',
+  dancefloorBoisVitrifié: 'Piste de danse chêne vitrifié',
+  verreLumineux: 'Dalles de verre luminescentes',
+  pavesEventail: 'Pavés de cour en éventail',
+  gazonFleurie: 'Pelouse anglaise fleurie',
   custom: 'Image importée',
 };
 
 /** Ordre d’affichage dans le sélecteur de sol (photos réalistes en tête). */
 export const FLOOR_TYPE_PICKER_ORDER: FloorType[] = [
-  'miroirNoir', 'dancefloorLed', 'parquetVersailles', 'moquetteRouge', 'betonCire', 'travertin',
+  'miroirNoir', 'dancefloorLed', 'verreLumineux', 'dancefloorBoisVitrifié',
+  'parquetVersailles', 'pointDeHongrie', 'damierMarbreNoirBlanc', 'moquetteRouge',
+  'betonCire', 'travertin', 'terrazzoVenitien', 'tometteProvencale', 'pavesEventail',
   'boisPanel', 'boisHex', 'boisAmber', 'boisRustique', 'boisBlond', 'boisPetale',
   'boisCharcoal', 'boisMarqueterie', 'bois', 'parquet', 'chevron', 'chevronGris', 'chevronGreige',
   'marbreCalacatta', 'marbreOr', 'marbreBourgogne', 'marbre', 'epoxyMenthe', 'epoxy',
   'pavesPinwheel', 'pierreModulaire', 'pavesGranit', 'dallesIrregulieres',
   'carrelage', 'damier', 'terrazzo', 'pierre', 'moquette',
-  'herbe', 'pelouse', 'gazonSynth', 'prairie', 'sable', 'gravier', 'gravierFonce', 'beton', 'brique',
+  'herbe', 'pelouse', 'gazonFleurie', 'gazonSynth', 'prairie', 'sable', 'gravier', 'gravierFonce', 'beton', 'brique',
 ];
 
 export type FloorCategory = 'all' | 'prestige' | 'wood' | 'stone' | 'outdoor';
@@ -71,19 +81,20 @@ export const FLOOR_CATEGORIES: Array<{ id: FloorCategory; label: string }> = [
 
 export const FLOOR_CATEGORY_MEMBERS: Record<Exclude<FloorCategory, 'all'>, FloorType[]> = {
   prestige: [
-    'miroirNoir', 'dancefloorLed', 'parquetVersailles', 'moquetteRouge',
-    'marbreCalacatta', 'marbreOr', 'marbreBourgogne', 'epoxyMenthe', 'epoxy',
+    'miroirNoir', 'dancefloorLed', 'verreLumineux', 'parquetVersailles', 'moquetteRouge',
+    'damierMarbreNoirBlanc', 'marbreCalacatta', 'marbreOr', 'marbreBourgogne', 'terrazzoVenitien', 'epoxyMenthe', 'epoxy',
   ],
   wood: [
-    'parquetVersailles', 'boisPanel', 'boisHex', 'boisAmber', 'boisRustique', 'boisBlond', 'boisPetale',
+    'dancefloorBoisVitrifié', 'pointDeHongrie', 'parquetVersailles', 'boisPanel', 'boisHex', 'boisAmber', 'boisRustique', 'boisBlond', 'boisPetale',
     'boisCharcoal', 'boisMarqueterie', 'bois', 'parquet', 'chevron', 'chevronGris', 'chevronGreige',
   ],
   stone: [
+    'terrazzoVenitien', 'tometteProvencale', 'pavesEventail', 'damierMarbreNoirBlanc',
     'travertin', 'betonCire', 'marbre', 'carrelage', 'damier', 'terrazzo', 'pierre', 'pierreModulaire', 'dallesIrregulieres',
     'pavesPinwheel', 'pavesGranit', 'beton', 'brique',
   ],
   outdoor: [
-    'moquette', 'herbe', 'pelouse', 'gazonSynth', 'prairie', 'sable', 'gravier', 'gravierFonce',
+    'gazonFleurie', 'pavesEventail', 'moquette', 'herbe', 'pelouse', 'gazonSynth', 'prairie', 'sable', 'gravier', 'gravierFonce',
   ],
 };
 
@@ -145,6 +156,14 @@ export const FLOOR_ASSETS: Record<Exclude<FloorType, 'custom'>, FloorAsset> = {
   travertin: { url: '/floors/tile.svg', size: '64px 64px', fallback: '#ded3be' },
   moquetteRouge: { url: '/floors/carpet.svg', size: '56px 56px', fallback: '#80131d' },
   dancefloorLed: { url: '/floors/epoxy-mint-gold.png', size: PHOTO, fallback: '#07090e' },
+  terrazzoVenitien: { url: '/floors/tile.svg', size: '64px 64px', fallback: '#e8e2d8' },
+  tometteProvencale: { url: '/floors/tile.svg', size: '48px 48px', fallback: '#c85a32' },
+  pointDeHongrie: { url: '/floors/wood-panel.png', size: PHOTO, fallback: '#be925f' },
+  damierMarbreNoirBlanc: { url: '/floors/damier.svg', size: DAMIER_TILE, fallback: '#1e2022' },
+  dancefloorBoisVitrifié: { url: '/floors/wood-panel.png', size: PHOTO, fallback: '#d4a373' },
+  verreLumineux: { url: '/floors/damier.svg', size: DAMIER_TILE, fallback: '#0f172a' },
+  pavesEventail: { url: '/floors/cobble-granite.png', size: PHOTO, fallback: '#6b7280' },
+  gazonFleurie: { url: '/floors/herbe.svg', size: '48px 48px', fallback: '#2e7d32' },
 };
 
 /** Répétition monde (mètres) pour textures WebGL. */
@@ -192,6 +211,14 @@ export const FLOOR_TEXTURE_REPEAT_M: Record<Exclude<FloorType, 'custom'>, number
   travertin: 2.0,
   moquetteRouge: 1.6,
   dancefloorLed: 2.0,
+  terrazzoVenitien: 1.8,
+  tometteProvencale: 1.2,
+  pointDeHongrie: 2.0,
+  damierMarbreNoirBlanc: 1.6,
+  dancefloorBoisVitrifié: 2.4,
+  verreLumineux: 2.0,
+  pavesEventail: 1.6,
+  gazonFleurie: 2.2,
 };
 
 export function getFloorAsset(floorType: FloorType | undefined): FloorAsset {

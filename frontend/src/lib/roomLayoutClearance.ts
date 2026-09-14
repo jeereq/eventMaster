@@ -686,7 +686,17 @@ export function detectLayoutClearanceConflicts(
   // 6. Non-incorporation dans les murs (cloisons et parois)
   const allWallSegments = extractWallSegmentsMeters(blueprint, widthM, heightM);
   const wallItems = [...tables, ...chairs, ...rows];
-  const solidFixtures = (blueprint.fixtures || []).filter((fx) => SOLID_FIXTURE_KINDS.has(fx.kind));
+  const solidFixtures = (blueprint.fixtures || []).filter(
+    (fx) =>
+      SOLID_FIXTURE_KINDS.has(fx.kind) &&
+      !(
+        fx.kind === 'screen' &&
+        (fx.screenKind === 'wallTv' ||
+          fx.screenKind === 'tableMonitor' ||
+          fx.screenKind === 'laptop' ||
+          fx.screenKind === 'desktopPc')
+      ),
+  );
 
   for (const wall of allWallSegments) {
     for (const item of wallItems) {
@@ -926,7 +936,15 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
     yM: pctToM_Y(fx.y),
     wM: pctToM_X(fx.w),
     hM: pctToM_Y(fx.h),
-    isSolid: SOLID_FIXTURE_KINDS.has(fx.kind),
+    isSolid:
+      SOLID_FIXTURE_KINDS.has(fx.kind) &&
+      !(
+        fx.kind === 'screen' &&
+        (fx.screenKind === 'wallTv' ||
+          fx.screenKind === 'tableMonitor' ||
+          fx.screenKind === 'laptop' ||
+          fx.screenKind === 'desktopPc')
+      ),
     storyId: fx.storyId,
   }));
 

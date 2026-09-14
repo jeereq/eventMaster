@@ -81,7 +81,7 @@ function applyPlacementVariables(
   return applyInvitationGuidelineVariables(result, guestGuidelines);
 }
 
-/** Notification lors de l'assignation au plan de table (canaux de l'invitation + PDF). */
+/** Notification lors de l'assignation au plan de table (canaux de l’invitation + PDF). */
 export async function notifyGuestTableAssignment(params: {
   guest: {
     id: string;
@@ -248,7 +248,7 @@ export async function notifyGuestTableAssignment(params: {
     `,
     cta: {
       href: rsvpUrl,
-      label: isAnnouncement ? 'Voir mon portail RSVP' : 'Voir mon invitation',
+      label: isAnnouncement ? 'Voir mon portail de réponse à l’invitation' : 'Voir mon invitation',
     },
     footerNote: isAnnouncement
       ? GUEST_COPY.tableAnnouncement
@@ -269,7 +269,7 @@ export async function notifyGuestTableAssignment(params: {
           formattedDate ? `\n📅 ${formattedDate}` : '',
           event.location ? `\n📍 ${event.location}` : '',
           '',
-          `🔗 Portail RSVP : ${rsvpUrl}`,
+          `🔗 Portail de réponse à l’invitation : ${rsvpUrl}`,
           '',
           `_${GUEST_COPY.tableAnnouncement}_`,
           '',

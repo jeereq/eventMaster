@@ -84,7 +84,7 @@ const REGISTRATION_KIND_CONFIGS: Record<string, RegistrationActionConfig> = {
     orgLabel: 'Nom de l’événement ou de l’organisation',
     orgPlaceholder: 'Ex: Mariage Sarah & David / Famille Dupont',
     features: [
-      { step: 1, icon: Calendar, title: 'Organiser', desc: 'Invitations, RSVP, plan de table et protocole QR.' },
+      { step: 1, icon: Calendar, title: 'Organiser', desc: 'Invitations, réponse à l’invitation, plan de table et protocole QR.' },
       { step: 2, icon: Store, title: 'Vendre (Business+)', desc: 'Salles publiables et prestations marketplace illimitées.' },
       { step: 3, icon: ScanLine, title: 'Accueillir', desc: 'Scannez vos invités à l’entrée, depuis votre smartphone.' },
     ],

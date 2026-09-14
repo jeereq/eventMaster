@@ -205,7 +205,7 @@ export default function EventGuestGuidelinesEditor({
         <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 space-y-4">
           <h3 className="text-sm font-semibold text-foreground">Avantages & recommandations</h3>
           <p className="text-[11px] text-muted leading-relaxed">
-            Parking, cadeaux, horaires, extras (welcome drink, open bar…) — visibles par les invités sur le RSVP.
+            Parking, cadeaux, horaires, extras (welcome drink, open bar…) — visibles par les invités sur la réponse à l’invitation.
           </p>
 
           <div className="flex flex-wrap gap-1.5">
@@ -291,7 +291,7 @@ export default function EventGuestGuidelinesEditor({
                 onChange={(e) => update({ showOnRsvp: e.target.checked })}
                 className="rounded border-border text-primary"
               />
-              Afficher sur le portail RSVP invité
+              Afficher sur le portail de réponse à l’invitation invité
             </label>
             <label className="flex items-center gap-2 font-semibold text-muted cursor-pointer">
               <input

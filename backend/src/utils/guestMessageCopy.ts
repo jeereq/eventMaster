@@ -1,4 +1,4 @@
-/** Copy invité : itinéraire dès le RSVP « oui » ; plan / PDF dès qu’une place est assignée. */
+/** Copy invité : itinéraire dès la réponse à l’invitation « oui » ; plan / PDF dès qu’une place est assignée. */
 
 export const GUEST_COPY = {
   afterInvite:
@@ -23,8 +23,8 @@ const STALE_BLOCKS: Array<{ needles: string[]; replacement: keyof typeof GUEST_C
   {
     replacement: 'afterInvite',
     needles: [
-      '_Votre plan de table, PDF et localisation GPS vous seront envoyés dès votre confirmation RSVP (si votre place est déjà assignée)._',
-      'Votre plan de table, PDF et localisation GPS vous seront envoyés dès votre confirmation RSVP (si votre place est déjà assignée).',
+      '_Votre plan de table, PDF et localisation GPS vous seront envoyés dès votre confirmation de présence (si votre place est déjà assignée)._',
+      'Votre plan de table, PDF et localisation GPS vous seront envoyés dès votre confirmation de présence (si votre place est déjà assignée).',
       'Dès confirmation, votre plan de table, invitation PDF et localisation GPS vous sont envoyés si votre place est déjà assignée.',
     ],
   },

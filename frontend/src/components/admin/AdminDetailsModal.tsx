@@ -63,7 +63,7 @@ const DESCRIPTIONS: Record<AdminDetailsType, string> = {
   user: 'Rôle plateforme, rôle organisation, forfait et rattachement.',
   template: 'Portée (global / privé) et visibilité sur la landing.',
   event: 'Planning, lieu et volumes d’invités.',
-  guest: 'Contact, RSVP, événement et préférences.',
+  guest: 'Contact, réponse à l’invitation, événement et préférences.',
 };
 
 function formatDate(value?: string | null, withTime = false) {
@@ -544,7 +544,7 @@ export default function AdminDetailsModal({
                 <span className="select-all">{data.email || '—'}</span>
               </DetailRow>
               <DetailRow label="Catégorie">{data.category || '—'}</DetailRow>
-              <DetailRow label="RSVP">
+              <DetailRow label="Réponse à l’invitation">
                 <Badge variant={rsvpVariant(data.rsvp)}>{rsvpLabel(data.rsvp)}</Badge>
               </DetailRow>
               <DetailRow label="Enregistré le">{formatDate(data.createdAt, true)}</DetailRow>

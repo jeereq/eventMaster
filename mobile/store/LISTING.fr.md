@@ -9,11 +9,11 @@
 
 ## Sous-titre iOS (30 car.)
 
-Invitations, RSVP & protocole
+Invitations, réponse à l’invitation & protocole
 
 ## Description courte Play Store (80 car.)
 
-Gérez invitations, RSVP et protocole jour J pour vos événements privés.
+Gérez invitations, réponse à l’invitation et protocole jour J pour vos événements privés.
 
 ## Description longue
 
@@ -21,12 +21,12 @@ EventMaster simplifie l'organisation d'événements privés pour les agences et 
 
 **Pour les organisateurs**
 - Tableau de bord mobile de vos événements
-- Suivi RSVP en temps réel
+- Suivi des réponses en temps réel
 - Notifications d'activité importantes
 - Protocole jour J : scan QR, confirmation de présence, vérification des sièges
 
 **Pour les invités**
-- Réponse RSVP depuis un lien ou QR code
+- Réponse à l’invitation depuis un lien ou QR code
 - Consultation du plan de table et des consignes pratiques
 - Badge d'invitation numérique
 
@@ -34,7 +34,7 @@ EventMaster mobile complète le tableau de bord web. La création avancée d'év
 
 ## Mots-clés iOS (100 car. max)
 
-événement,invitation,RSVP,mariage,protocole,QR,organisateur,plan de table,gala
+événement,invitation,réponse à l’invitation,mariage,protocole,QR,organisateur,plan de table,gala
 
 ## Catégorie
 
@@ -56,9 +56,9 @@ https://VOTRE_DOMAINE/privacy
 | # | Écran | Message |
 |---|-------|---------|
 | 1 | Accueil | Vos événements en un coup d'œil |
-| 2 | Détail événement | Suivi RSVP et workflow |
+| 2 | Détail événement | Suivi des réponses et workflow |
 | 3 | Protocole QR | Scan invités le jour J |
-| 4 | Portail RSVP invité | Réponse en 2 minutes |
+| 4 | Portail de réponse à l’invitation invité | Réponse en 2 minutes |
 | 5 | Notifications | Alertes en temps réel |
 
 Tailles : iPhone 6,7" (1290×2796), Android phone (1080×1920 minimum).

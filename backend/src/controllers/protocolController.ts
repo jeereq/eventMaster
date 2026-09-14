@@ -126,10 +126,10 @@ export async function checkInGuest(req: AuthenticatedRequest, res: Response) {
     if (guest.rsvp !== 'ACCEPTED') {
       const rsvpHint =
         guest.rsvp === 'PENDING'
-          ? 'RSVP encore en attente : orientez l\'invité vers son lien pour confirmer, puis réessayez le check-in.'
+          ? 'Réponse encore en attente : orientez l\'invité vers son lien pour confirmer, puis réessayez le check-in.'
           : guest.rsvp === 'DECLINED'
             ? 'Cet invité a décliné l\'invitation — check-in impossible.'
-            : 'Cet invité n\'a pas confirmé sa présence (RSVP non accepté).';
+            : 'Cet invité n\'a pas confirmé sa présence (Présence non confirmée).';
       return res.status(400).json({
         error: rsvpHint,
         guest: { id: guest.id, rsvp: guest.rsvp },

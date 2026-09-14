@@ -257,11 +257,88 @@ export default function FixtureRenderer({
     );
   }
 
-  if (isFountain || isGazebo || isDjBooth || isScreen) {
+  if (isScreen) {
+    const sKind = fixture.screenKind ?? 'stageLedWall';
+    const isWall = sKind === 'wallTv';
+    const isTable = sKind === 'tableMonitor';
+    const isLap = sKind === 'laptop';
+    const isPc = sKind === 'desktopPc';
+
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        {isWall ? (
+          <div className="w-full h-full relative flex items-center justify-center">
+            <div className="absolute -top-1 inset-x-1/4 h-1 bg-zinc-700 rounded-t-xs border border-zinc-500" />
+            <div className="w-full h-full rounded-xs bg-zinc-900 border border-cyan-500/60 shadow-xs flex items-center justify-between px-1 overflow-hidden">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+              <span className="text-[7.5px] font-mono font-bold text-cyan-300/90 tracking-tighter uppercase truncate mx-1">
+                TV {fixture.screenRatio ?? '16:9'}
+              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shrink-0" />
+            </div>
+          </div>
+        ) : isTable ? (
+          <div className="w-full h-full relative flex flex-col items-center justify-center">
+            <div className="w-full h-[70%] rounded-xs bg-slate-900 border border-blue-400/70 shadow-xs flex items-center justify-center">
+              <span className="text-[7px] font-mono font-semibold text-blue-300 tracking-tighter">ÉCRAN</span>
+            </div>
+            <div className="w-1/3 h-[25%] -mt-0.5 rounded-b-xs bg-slate-700 border-x border-b border-slate-500" />
+          </div>
+        ) : isLap ? (
+          <div className="w-full h-full relative flex flex-col rounded-xs bg-slate-200 border border-slate-400 shadow-xs overflow-hidden p-0.5">
+            <div className="w-full h-3/5 bg-slate-900 rounded-[2px] flex items-center justify-center">
+              <div className="w-4/5 h-3/5 bg-slate-800 rounded-xs grid grid-cols-4 gap-0.5 p-0.5 opacity-80">
+                <span className="bg-slate-500 rounded-[0.5px]" />
+                <span className="bg-slate-500 rounded-[0.5px]" />
+                <span className="bg-slate-500 rounded-[0.5px]" />
+                <span className="bg-slate-500 rounded-[0.5px]" />
+              </div>
+            </div>
+            <div className="w-1/3 h-1/4 mx-auto mt-0.5 bg-slate-300 rounded-[1px] border border-slate-400" />
+          </div>
+        ) : isPc ? (
+          <div className="w-full h-full relative flex flex-col justify-between p-0.5">
+            <div className="w-full h-1/2 rounded-xs bg-zinc-900 border border-indigo-400/70 flex items-center justify-center">
+              <span className="text-[7px] font-mono font-bold text-indigo-300">PC FIXE</span>
+            </div>
+            <div className="w-full h-2/5 flex items-center gap-1 justify-between">
+              <div className="flex-1 h-full bg-zinc-800 rounded-xs border border-zinc-600 flex items-center justify-center">
+                <div className="w-4/5 h-1/2 bg-zinc-700 rounded-[0.5px]" />
+              </div>
+              <div className="w-2 h-full bg-zinc-300 rounded-full border border-zinc-500" />
+            </div>
+          </div>
+        ) : (
+          <div className="w-full h-full rounded-xs bg-zinc-950 border-2 border-indigo-500/80 shadow-md flex items-center justify-between px-1 overflow-hidden">
+            <div className="w-2.5 h-full bg-slate-800 border-r border-slate-600 flex flex-col justify-around py-0.5 shrink-0">
+              <span className="h-0.5 bg-slate-400 w-full" />
+              <span className="h-0.5 bg-slate-400 w-full" />
+            </div>
+            <div className="flex-1 flex flex-col items-center justify-center px-1 overflow-hidden">
+              <span className="text-[7.5px] font-bold text-indigo-300 tracking-wider truncate uppercase">
+                MUR LED
+              </span>
+            </div>
+            <div className="w-2.5 h-full bg-slate-800 border-l border-slate-600 flex flex-col justify-around py-0.5 shrink-0">
+              <span className="h-0.5 bg-slate-400 w-full" />
+              <span className="h-0.5 bg-slate-400 w-full" />
+            </div>
+          </div>
+        )}
+        {showLabel && fixture.label ? (
+          <span className="absolute -bottom-4 text-[8px] font-bold text-muted whitespace-nowrap bg-surface/80 px-1 rounded shadow-xs">
+            {fixture.label}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (isFountain || isGazebo || isDjBooth) {
     return (
       <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
         <div
-          className={`w-full h-full border ${isFountain ? 'rounded-full bg-sky-100 border-sky-300' : isGazebo ? 'rounded-[0.4rem] bg-stone-50 border-stone-300' : isScreen ? 'bg-zinc-900 border-zinc-600' : 'bg-zinc-200 border-zinc-400'}`}
+          className={`w-full h-full border ${isFountain ? 'rounded-full bg-sky-100 border-sky-300' : isGazebo ? 'rounded-[0.4rem] bg-stone-50 border-stone-300' : 'bg-zinc-200 border-zinc-400'}`}
         />
         {showLabel && fixture.label ? (
           <span className="absolute -bottom-4 text-[8px] font-bold text-muted whitespace-nowrap bg-surface/80 px-1 rounded shadow-xs">

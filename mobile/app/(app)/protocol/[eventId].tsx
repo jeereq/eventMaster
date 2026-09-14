@@ -236,7 +236,7 @@ export default function ProtocolScreen() {
             style={styles.scanInput}
             value={scanInput}
             onChangeText={setScanInput}
-            placeholder="URL RSVP ou ID invité du QR code"
+            placeholder="URL de réponse ou ID invité du QR code"
             placeholderTextColor="#94a3b8"
             autoCapitalize="none"
             autoCorrect={false}
@@ -258,14 +258,14 @@ export default function ProtocolScreen() {
               {selectedGuest.firstName} {selectedGuest.lastName}
             </Text>
             <Text style={styles.guestEmail}>{selectedGuest.email}</Text>
-            <Text style={styles.guestMeta}>RSVP : {rsvpLabel(selectedGuest.rsvp)}</Text>
+            <Text style={styles.guestMeta}>Réponse à l’invitation : {rsvpLabel(selectedGuest.rsvp)}</Text>
             {selectedGuest.rsvp !== 'ACCEPTED' && !selectedGuest.checkedInAt ? (
               <Text style={styles.rsvpWarn}>
                 {selectedGuest.rsvp === 'PENDING'
-                  ? 'RSVP en attente : l’invité doit confirmer sur son lien avant le check-in.'
+                  ? 'Réponse en attente : l’invité doit confirmer sur son lien avant le check-in.'
                   : selectedGuest.rsvp === 'DECLINED'
                     ? 'Invitation déclinée — check-in impossible.'
-                    : 'RSVP non accepté — check-in bloqué.'}
+                    : 'Présence non confirmée — check-in bloqué.'}
               </Text>
             ) : null}
             {selectedGuest.assignedSeat ? (
@@ -281,7 +281,7 @@ export default function ProtocolScreen() {
                   selectedGuest.checkedInAt
                     ? 'Déjà confirmé'
                     : selectedGuest.rsvp !== 'ACCEPTED'
-                      ? 'Check-in bloqué (RSVP)'
+                      ? 'Check-in bloqué (Réponse à l’invitation)'
                       : 'Confirmer la présence'
                 }
                 onPress={() => handleCheckIn(selectedGuest.id)}

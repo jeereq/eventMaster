@@ -184,13 +184,13 @@ export function computeEventWorkflowState(input: {
     {
       id: 'invitation',
       title: 'Invitation',
-      description: 'Message et envoi RSVP',
+      description: 'Message et envoi de réponse',
       tab: 'invitations',
       detail: invitationDetail,
     },
     {
       id: 'rsvp',
-      title: 'RSVP',
+      title: 'Réponse à l’invitation',
       description: 'Réponses',
       tab: 'guests',
       detail:

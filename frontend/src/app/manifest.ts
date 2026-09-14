@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'EventMaster',
     short_name: 'EventMaster',
-    description: 'Plateforme SaaS Multi-tenant d\'organisation d\'événements, RSVP et invitations personnalisées',
+    description: 'Plateforme SaaS Multi-tenant d\'organisation d\'événements, réponse à l’invitation et invitations personnalisées',
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',

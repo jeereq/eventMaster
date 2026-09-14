@@ -216,7 +216,7 @@ export default function InvitationMessagePreview({
                 className="inline-block text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs"
                 style={{ backgroundColor: primary }}
               >
-                Confirmer ma présence (RSVP)
+                Confirmer ma présence
               </span>
             </div>
           </div>

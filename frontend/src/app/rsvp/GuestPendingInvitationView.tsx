@@ -1207,7 +1207,7 @@ export default function GuestPendingInvitationView({
                 className="text-left"
               />
 
-              {/* Default RSVP Form */}
+              {/* Default réponse à l’invitation Form */}
               <form onSubmit={onSubmit} className="space-y-6">
                 {renderRsvpLockedBanner()}
                 {submitError ? (

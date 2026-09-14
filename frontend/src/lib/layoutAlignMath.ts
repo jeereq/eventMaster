@@ -6,7 +6,10 @@ export type AlignMode =
   | 'bottom'
   | 'centerY'
   | 'distributeX'
-  | 'distributeY';
+  | 'distributeY'
+  | 'centerRoomX'
+  | 'centerRoomY'
+  | 'gridTidy';
 
 export type AlignBox = {
   id: string;
@@ -126,6 +129,56 @@ export function alignedPositions(
     sorted.forEach((box, index) => {
       const target = start + step * index;
       next.set(box.id, mode === 'distributeX' ? setCx(box, target) : setCy(box, target));
+    });
+    return next;
+  }
+
+  if (mode === 'centerRoomX') {
+    const currentCx = (Math.min(...boxes.map(leftOf)) + Math.max(...boxes.map(rightOf))) / 2;
+    const shiftX = 50 - currentCx;
+    for (const box of boxes) {
+      next.set(box.id, { x: clampPct(box.x + shiftX), y: box.y });
+    }
+    return next;
+  }
+
+  if (mode === 'centerRoomY') {
+    const currentCy = (Math.min(...boxes.map(topOf)) + Math.max(...boxes.map(bottomOf))) / 2;
+    const shiftY = 50 - currentCy;
+    for (const box of boxes) {
+      next.set(box.id, { x: box.x, y: clampPct(box.y + shiftY) });
+    }
+    return next;
+  }
+
+  if (mode === 'gridTidy') {
+    const count = boxes.length;
+    const cols = Math.max(2, Math.ceil(Math.sqrt(count)));
+    const rows = Math.ceil(count / cols);
+
+    const minL = Math.min(...boxes.map(leftOf));
+    const maxR = Math.max(...boxes.map(rightOf));
+    const minT = Math.min(...boxes.map(topOf));
+    const maxB = Math.max(...boxes.map(bottomOf));
+
+    // Conserver l'ordre spatial naturel (haut vers bas, gauche vers droite)
+    const sorted = [...boxes].sort((a, b) => {
+      const dy = cyOf(a) - cyOf(b);
+      if (Math.abs(dy) > 4) return dy;
+      return cxOf(a) - cxOf(b);
+    });
+
+    const stepX = cols > 1 ? (maxR - minL) / (cols - 1) : 0;
+    const stepY = rows > 1 ? (maxB - minT) / (rows - 1) : 0;
+
+    sorted.forEach((box, idx) => {
+      const c = idx % cols;
+      const r = Math.floor(idx / cols);
+      const targetCx = cols > 1 ? minL + c * stepX : (minL + maxR) / 2;
+      const targetCy = rows > 1 ? minT + r * stepY : (minT + maxB) / 2;
+      const nextX = box.isCenter ? targetCx : targetCx - box.w / 2;
+      const nextY = box.isCenter ? targetCy : targetCy - box.h / 2;
+      next.set(box.id, { x: nextX, y: nextY });
     });
     return next;
   }

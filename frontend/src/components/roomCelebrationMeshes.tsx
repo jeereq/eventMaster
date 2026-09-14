@@ -770,6 +770,295 @@ export function ScreenMesh({
   );
 }
 
+/** Télévision murale / écran accroché au mur avec support articulé VESA. */
+export function WallTvMesh({
+  w = 1.4,
+  ratio = '16:9',
+  tiltDeg = 5,
+  elevationM = 1.6,
+  selected = false,
+  powered = true,
+  frameColor = '#0f172a',
+}: {
+  w?: number;
+  ratio?: '16:9' | '21:9' | '9:16' | '32:9';
+  tiltDeg?: number;
+  elevationM?: number;
+  selected?: boolean;
+  powered?: boolean;
+  frameColor?: string;
+}) {
+  const aspect = ratio === '9:16' ? 9 / 16 : ratio === '21:9' ? 21 / 9 : ratio === '32:9' ? 32 / 9 : 16 / 9;
+  const h = w / aspect;
+  const tiltRad = (tiltDeg * Math.PI) / 180;
+  const emissiveColor = powered ? '#1e3a8a' : '#020617';
+  const emissiveInt = powered ? 0.65 : 0;
+
+  return (
+    <group position={[0, elevationM, 0]}>
+      {/* Support mural VESA arrière en acier noir */}
+      <mesh position={[0, 0, -0.06]} castShadow>
+        <boxGeometry args={[0.26, 0.22, 0.03]} />
+        <meshStandardMaterial color="#1e293b" metalness={0.85} roughness={0.3} />
+      </mesh>
+      {/* Bras articulé de fixation murale */}
+      <mesh position={[0, 0, -0.03]} castShadow>
+        <boxGeometry args={[0.08, 0.08, 0.05]} />
+        <meshStandardMaterial color="#334155" metalness={0.9} roughness={0.2} />
+      </mesh>
+
+      {/* Ensemble téléviseur orienté et incliné */}
+      <group rotation={[tiltRad, 0, 0]}>
+        {/* Châssis arrière ultra-fin */}
+        <mesh position={[0, 0, -0.012]} castShadow receiveShadow>
+          <boxGeometry args={[w, h, 0.024]} />
+          <meshStandardMaterial color={selected ? '#3b82f6' : frameColor} roughness={0.4} metalness={0.7} />
+        </mesh>
+        {/* Dalle écran OLED antireflet active */}
+        <mesh position={[0, 0, 0.002]}>
+          <planeGeometry args={[w * 0.985, h * 0.98]} />
+          <meshStandardMaterial
+            color="#090d16"
+            emissive={emissiveColor}
+            emissiveIntensity={emissiveInt}
+            roughness={0.12}
+            metalness={0.3}
+          />
+        </mesh>
+        {/* Cadre biseauté ultra-fin */}
+        <mesh position={[0, 0, 0.001]}>
+          <boxGeometry args={[w, h, 0.005]} />
+          <meshStandardMaterial color={frameColor} roughness={0.3} metalness={0.8} />
+        </mesh>
+        {/* Voyant LED de veille / sous tension discret */}
+        <mesh position={[w * 0.45, -h * 0.47, 0.004]}>
+          <sphereGeometry args={[0.006, 8, 8]} />
+          <meshStandardMaterial
+            color={powered ? '#38bdf8' : '#ef4444'}
+            emissive={powered ? '#0ea5e9' : '#dc2626'}
+            emissiveIntensity={1}
+          />
+        </mesh>
+        {/* Rétroéclairage d'ambiance mural arrière (Ambilight) */}
+        {powered && (
+          <pointLight position={[0, 0, -0.08]} intensity={0.5} color="#60a5fa" distance={2.5} />
+        )}
+        {/* Lueur frontale projetée */}
+        {powered && (
+          <pointLight position={[0, 0, 0.25]} intensity={0.4} color="#93c5fd" distance={3.5} />
+        )}
+      </group>
+    </group>
+  );
+}
+
+/** Écran / Moniteur sur table ou régie de conférence. */
+export function TableMonitorMesh({
+  w = 0.65,
+  ratio = '16:9',
+  surfaceElevationM = 0.76,
+  selected = false,
+  powered = true,
+}: {
+  w?: number;
+  ratio?: '16:9' | '21:9' | '9:16' | '32:9';
+  surfaceElevationM?: number;
+  selected?: boolean;
+  powered?: boolean;
+}) {
+  const aspect = ratio === '9:16' ? 9 / 16 : ratio === '21:9' ? 21 / 9 : ratio === '32:9' ? 32 / 9 : 16 / 9;
+  const h = w / aspect;
+  const standH = 0.16;
+
+  return (
+    <group position={[0, surfaceElevationM, 0]}>
+      {/* Base du pied de moniteur posé sur la table (forme épurée alu lourd) */}
+      <mesh position={[0, 0.006, 0.02]} castShadow receiveShadow>
+        <cylinderGeometry args={[0.11, 0.12, 0.012, 24]} />
+        <meshStandardMaterial color={selected ? '#60a5fa' : '#334155'} metalness={0.85} roughness={0.25} />
+      </mesh>
+      {/* Colonne / mât réglable en hauteur */}
+      <mesh position={[0, standH * 0.55, -0.01]} castShadow>
+        <cylinderGeometry args={[0.018, 0.02, standH, 16]} />
+        <meshStandardMaterial color="#1e293b" metalness={0.9} roughness={0.2} />
+      </mesh>
+      {/* Articulation rotule et attache écran */}
+      <mesh position={[0, standH + 0.02, 0.01]} castShadow>
+        <boxGeometry args={[0.05, 0.05, 0.04]} />
+        <meshStandardMaterial color="#475569" metalness={0.85} roughness={0.3} />
+      </mesh>
+
+      {/* Dalle et cadre du moniteur légèrement inclinés vers l'utilisateur (~8°) */}
+      <group position={[0, standH + h * 0.5, 0.03]} rotation={[-0.12, 0, 0]}>
+        {/* Dos du moniteur biseauté */}
+        <mesh position={[0, 0, -0.012]} castShadow>
+          <boxGeometry args={[w, h, 0.022]} />
+          <meshStandardMaterial color={selected ? '#3b82f6' : '#1e293b'} roughness={0.4} metalness={0.5} />
+        </mesh>
+        {/* Dalle active avec rétroéclairage fin */}
+        <mesh position={[0, 0, 0.001]}>
+          <planeGeometry args={[w * 0.98, h * 0.97]} />
+          <meshStandardMaterial
+            color="#0b1329"
+            emissive={powered ? '#1d4ed8' : '#030712'}
+            emissiveIntensity={powered ? 0.7 : 0}
+            roughness={0.14}
+            metalness={0.25}
+          />
+        </mesh>
+        {/* Voyant LED sous le logo */}
+        <mesh position={[0, -h * 0.48, 0.003]}>
+          <boxGeometry args={[0.012, 0.004, 0.002]} />
+          <meshStandardMaterial color={powered ? '#38bdf8' : '#64748b'} emissive={powered ? '#0284c7' : '#000000'} emissiveIntensity={1} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+/** Ordinateur portable (PC portable / laptop) posé sur table avec écran ouvert incliné. */
+export function LaptopMesh({
+  w = 0.36,
+  surfaceElevationM = 0.76,
+  selected = false,
+  powered = true,
+}: {
+  w?: number;
+  surfaceElevationM?: number;
+  selected?: boolean;
+  powered?: boolean;
+}) {
+  const depth = w * 0.72;
+  const chassisH = 0.012;
+  const screenAngle = 1.95; // ~112° d'ouverture réaliste
+
+  return (
+    <group position={[0, surfaceElevationM, 0]}>
+      {/* Châssis inférieur (base clavier en aluminium unibody) */}
+      <mesh position={[0, chassisH / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[w, chassisH, depth]} />
+        <meshStandardMaterial color={selected ? '#93c5fd' : '#cbd5e1'} metalness={0.88} roughness={0.22} />
+      </mesh>
+      {/* Emplacement clavier noir mat encastré */}
+      <mesh position={[0, chassisH + 0.0005, -depth * 0.12]}>
+        <planeGeometry args={[w * 0.88, depth * 0.48]} />
+        <meshStandardMaterial color="#18181b" roughness={0.65} metalness={0.2} />
+      </mesh>
+      {/* Pavé tactile (trackpad) en verre poli */}
+      <mesh position={[0, chassisH + 0.0005, depth * 0.26]}>
+        <planeGeometry args={[w * 0.38, depth * 0.28]} />
+        <meshStandardMaterial color="#94a3b8" roughness={0.18} metalness={0.6} />
+      </mesh>
+      {/* Charnière cylindrique fine */}
+      <mesh position={[0, chassisH, -depth / 2]} rotation={[0, 0, Math.PI / 2]} castShadow>
+        <cylinderGeometry args={[0.007, 0.007, w * 0.65, 12]} />
+        <meshStandardMaterial color="#475569" metalness={0.9} roughness={0.2} />
+      </mesh>
+
+      {/* Capot supérieur et écran ouvert incliné */}
+      <group position={[0, chassisH, -depth / 2]} rotation={[-screenAngle, 0, 0]}>
+        {/* Dos d'écran en aluminium brossé */}
+        <mesh position={[0, depth * 0.48, -0.004]} castShadow>
+          <boxGeometry args={[w, depth * 0.96, 0.008]} />
+          <meshStandardMaterial color={selected ? '#60a5fa' : '#cbd5e1'} metalness={0.88} roughness={0.22} />
+        </mesh>
+        {/* Dalle écran LCD / Retina active */}
+        <mesh position={[0, depth * 0.48, 0.001]}>
+          <planeGeometry args={[w * 0.94, depth * 0.9]} />
+          <meshStandardMaterial
+            color="#0c1938"
+            emissive={powered ? '#2563eb' : '#020617'}
+            emissiveIntensity={powered ? 0.8 : 0}
+            roughness={0.15}
+            metalness={0.2}
+          />
+        </mesh>
+        {/* Webcam discrète en haut de l'écran */}
+        <mesh position={[0, depth * 0.92, 0.002]}>
+          <circleGeometry args={[0.004, 12]} />
+          <meshStandardMaterial color="#020617" roughness={0.1} metalness={0.9} />
+        </mesh>
+        {/* Légère illumination projetée sur le clavier */}
+        {powered && (
+          <pointLight position={[0, depth * 0.4, 0.12]} intensity={0.25} color="#93c5fd" distance={0.9} />
+        )}
+      </group>
+    </group>
+  );
+}
+
+/** Ordinateur fixe (Desktop PC / Tout-en-un) avec grand écran, clavier fin et souris. */
+export function DesktopPcMesh({
+  w = 0.58,
+  surfaceElevationM = 0.76,
+  selected = false,
+  powered = true,
+}: {
+  w?: number;
+  surfaceElevationM?: number;
+  selected?: boolean;
+  powered?: boolean;
+}) {
+  const h = w * (9 / 16);
+  const standH = 0.12;
+
+  return (
+    <group position={[0, surfaceElevationM, 0]}>
+      {/* Moniteur sur pied aluminium contemporain */}
+      <group position={[0, 0, -0.06]}>
+        {/* Embase métallique rectangulaire au sol de la table */}
+        <mesh position={[0, 0.004, 0.04]} castShadow receiveShadow>
+          <boxGeometry args={[0.2, 0.008, 0.16]} />
+          <meshStandardMaterial color={selected ? '#60a5fa' : '#94a3b8'} metalness={0.88} roughness={0.25} />
+        </mesh>
+        {/* Pied incliné ergonomique */}
+        <mesh position={[0, standH * 0.55, 0.01]} rotation={[-0.22, 0, 0]} castShadow>
+          <boxGeometry args={[0.08, standH * 1.05, 0.012]} />
+          <meshStandardMaterial color="#94a3b8" metalness={0.9} roughness={0.2} />
+        </mesh>
+        {/* Écran d'ordinateur (All-in-one / Moniteur) */}
+        <group position={[0, standH + h * 0.5, 0]}>
+          <mesh position={[0, 0, -0.01]} castShadow>
+            <boxGeometry args={[w, h, 0.02]} />
+            <meshStandardMaterial color={selected ? '#3b82f6' : '#cbd5e1'} metalness={0.8} roughness={0.3} />
+          </mesh>
+          <mesh position={[0, 0, 0.001]}>
+            <planeGeometry args={[w * 0.98, h * 0.96]} />
+            <meshStandardMaterial
+              color="#09142e"
+              emissive={powered ? '#1e40af' : '#030712'}
+              emissiveIntensity={powered ? 0.75 : 0}
+              roughness={0.14}
+              metalness={0.2}
+            />
+          </mesh>
+        </group>
+      </group>
+
+      {/* Clavier fin posé à plat devant l'écran */}
+      <group position={[0, 0.005, 0.14]}>
+        <mesh castShadow receiveShadow>
+          <boxGeometry args={[0.34, 0.01, 0.12]} />
+          <meshStandardMaterial color="#cbd5e1" metalness={0.8} roughness={0.3} />
+        </mesh>
+        {/* Touches du clavier */}
+        <mesh position={[0, 0.006, 0]}>
+          <planeGeometry args={[0.32, 0.1]} />
+          <meshStandardMaterial color="#18181b" roughness={0.7} metalness={0.2} />
+        </mesh>
+      </group>
+
+      {/* Souris optique ergonomique à droite */}
+      <group position={[0.22, 0.008, 0.15]}>
+        <mesh castShadow>
+          <boxGeometry args={[0.065, 0.018, 0.11]} />
+          <meshStandardMaterial color="#f8fafc" roughness={0.25} metalness={0.4} />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
 /** Toit à pignon au-dessus d’une scène. */
 export function GabledStageRoof({
   w,

@@ -797,7 +797,7 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false,
               </div>
               <h4 className="font-semibold text-foreground text-sm">Le livre d&apos;or est vide</h4>
               <p className="text-muted text-sm max-w-sm mx-auto">
-                Les messages et photos partagés par vos invités depuis leur portail RSVP apparaîtront ici.
+                Les messages et photos partagés par vos invités depuis leur portail de réponse à l’invitation apparaîtront ici.
               </p>
             </div>
           ) : filteredShares.length === 0 ? (

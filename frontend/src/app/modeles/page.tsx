@@ -273,7 +273,7 @@ export default function ModelesPage() {
             <div className="space-y-1.5">
               <div className="inline-flex items-center gap-1.5 text-xs font-bold text-primary">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                Suivi RSVP en temps réel
+                Suivi des réponses en temps réel
               </div>
               <p className="text-xs text-muted leading-relaxed">
                 Vos invités confirment leur présence, leurs régimes et accompagnateurs instantanément.
@@ -295,11 +295,11 @@ export default function ModelesPage() {
 
       <PublicCtaBand
         title="Prêt à créer votre propre modèle d'invitation ?"
-        description="Personnalisez vos faire-part et suivez vos réponses RSVP en temps réel."
+        description="Personnalisez vos faire-part et suivez vos réponses à l’invitation en temps réel."
         highlights={[
           { icon: Wand2, label: 'Studio IA' },
           { icon: Mail, label: 'WhatsApp' },
-          { icon: Sparkles, label: 'RSVP live' },
+          { icon: Sparkles, label: 'Réponses en direct' },
           { icon: ScanLine, label: 'Pass QR' },
         ]}
         primaryHref={

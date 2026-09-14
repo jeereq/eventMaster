@@ -200,7 +200,7 @@ export default function NotificationPreferencesCard() {
           </Button>
 
           <p className="text-xs text-muted leading-relaxed">
-            Les messages envoyés aux invités (invitation, RSVP, PDF de table) restent sur le canal choisi pour
+            Les messages envoyés aux invités (invitation, réponse à l’invitation, PDF de table) restent sur le canal choisi pour
             l’événement — ce panneau ne les concerne pas.
           </p>
         </div>

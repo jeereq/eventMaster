@@ -108,13 +108,13 @@ export default function DashboardAiStudios({
           {
             id: 'invite' as DashboardAiStudioId,
             title: 'Studio Invitations',
-            subtitle: 'Cartes 9:16 WhatsApp & RSVP',
-            description: 'Cartons d’invitation personnalisés 9:16 pour WhatsApp avec confirmation RSVP invité.',
+            subtitle: 'Cartes 9:16 WhatsApp et réponse à l’invitation',
+            description: 'Cartons d’invitation personnalisés 9:16 pour WhatsApp avec confirmation de présence invité.',
             icon: Mail,
             badge: 'Format WhatsApp 9:16',
             pillColor: 'text-pink-700 bg-pink-500/15 border-pink-500/30 dark:text-pink-300',
             iconBg: 'bg-pink-500/10 text-pink-600 dark:text-pink-400',
-            features: ['Format 9:16 mobile', 'Partage WhatsApp', 'Lien RSVP invité'],
+            features: ['Format 9:16 mobile', 'Partage WhatsApp', 'Lien de réponse à l’invitation invité'],
           },
         ]
       : []),

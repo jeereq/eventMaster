@@ -190,7 +190,7 @@ export function computeEventWorkflowState(input: {
     sentCount > 0
       ? `✓ ${sentCount} envoi(s)`
       : hasInviteConfig && guestCount > 0
-        ? 'Prêt à envoyer le lien RSVP'
+        ? 'Prêt à envoyer le lien de réponse à l’invitation'
         : hasInviteConfig
           ? 'Ajoutez des invités puis envoyez'
           : 'Rédigez et envoyez le message';
@@ -231,13 +231,13 @@ export function computeEventWorkflowState(input: {
     {
       id: 'invitation',
       title: 'Invitation',
-      description: 'Rédigez le message et envoyez le lien RSVP.',
+      description: 'Rédigez le message et envoyez le lien de réponse à l’invitation.',
       tab: 'invitations',
       detail: invitationDetail,
     },
     {
       id: 'rsvp',
-      title: 'RSVP invités',
+      title: 'Réponses des invités',
       description: 'Les invités confirment via leur lien personnel.',
       tab: 'guests',
       detail:
@@ -250,7 +250,7 @@ export function computeEventWorkflowState(input: {
     {
       id: 'tablePlan',
       title: 'Plan de table',
-      description: 'Placez les invités ; le PDF et le GPS partent à l’acceptation RSVP.',
+      description: 'Placez les invités ; le PDF et le GPS partent à l’confirmation de présence.',
       tab: 'tablePlan',
       detail: tablePlanDetail,
     },

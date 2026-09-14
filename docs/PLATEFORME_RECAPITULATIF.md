@@ -23,7 +23,7 @@ EventMaster est une plateforme SaaS **multi-tenant** dédiée à l'organisation 
 | Phase | Capacités |
 |-------|-----------|
 | **Conception** | Salles 2D, modèles d'invitation visuels, consignes invités |
-| **Diffusion** | E-mail, WhatsApp, liens RSVP personnalisés |
+| **Diffusion** | E-mail, WhatsApp, liens réponse à l’invitation personnalisés |
 | **Réponse** | Portail invité web + mobile, formulaires analytiques |
 | **Jour J** | Protocole QR (web + app native), check-in, validation siège |
 | **Post-événement** | Fil d'actualité, livre d'or, rapports, facturation |
@@ -59,11 +59,11 @@ eventmaster/
 |---------|-----------------|
 | **Auth & équipe** | Inscription org., OTP, rôles (owner, manager, protocole, commercial…) |
 | **Événements** | CRUD, quotas, guidelines invités, coordonnées GPS |
-| **Invités** | Import CSV, RSVP, préférences, badge QR |
+| **Invités** | Import CSV, réponse à l’invitation, préférences, badge QR |
 | **Invitations** | Envoi multi-canal, variables dynamiques, templates |
 | **Salles & plans** | Éditeur 2D, fixtures, thèmes, placement drag-and-drop |
 | **Protocole** | Scan QR, check-in, verify-seat, notes protocole |
-| **Livraison placement** | PDF + plan + GPS **dès acceptation RSVP** (`guestPlacementDeliveryService`) |
+| **Livraison placement** | PDF + plan + GPS **dès confirmation de présence** (`guestPlacementDeliveryService`) |
 | **Commercial** | Parrainage, commissions 20 %, espaces dédiés |
 | **Facturation** | Forfaits en BD (`SubscriptionPlan`), demandes d'upgrade, factures PDF |
 | **Push mobile** | Modèle `PushDeviceToken`, service Expo Push |
@@ -75,7 +75,7 @@ eventmaster/
 | **Landing page** | Hero, parcours invité, mobile, rôles, modèles, tarifs, FAQ |
 | **Dashboard** | Événements, invités, modèles, salles, analytics, facturation |
 | **Concepteur visuel** | Éditeur drag-and-drop invitations + OCR maquette (Premium 2+) |
-| **Portail RSVP** | Invitation stylisée, formulaire, badge QR, plan de table (dès acceptation) |
+| **Portail de réponse à l’invitation** | Invitation stylisée, formulaire, badge QR, plan de table (dès acceptation) |
 | **Protocole web** | Scan caméra navigateur, confirmation présence |
 | **Pages légales** | CGU, confidentialité, contact, FAQ |
 
@@ -84,7 +84,7 @@ eventmaster/
 | Phase | Statut | Livrables |
 |-------|--------|-----------|
 | **Phase 0–1** Auth | ✅ | Login, register, OTP, SecureStore JWT |
-| **Phase 2** RSVP invité | ✅ | Deep link, badge QR, plan table, PDF |
+| **Phase 2** réponse à l’invitation invité | ✅ | Deep link, badge QR, plan table, PDF |
 | **Phase 3** Organisateur | ✅ | Événements, invités, stats, notifications in-app |
 | **Phase 4** Protocole | ✅ | Scan caméra natif, check-in, verify-seat |
 | **Phase 5** Polish | ✅ (partiel) | Push, deep links, thème sombre, EAS config |
@@ -101,20 +101,20 @@ eventmaster/
 
 ## 4. Parcours invité — règle métier clé (2026)
 
-EventMaster distingue **l'invitation RSVP** de la **livraison sensible** (placement, PDF, GPS).
+EventMaster distingue **l’invitation de réponse** de la **livraison sensible** (placement, PDF, GPS).
 
 ```
 ┌─────────────────┐    ┌──────────────┐    ┌─────────────────┐    ┌──────────────────────┐
-│ 1. Invitation   │───▶│ 2. RSVP      │───▶│ 3. Check-in     │───▶│ 4. Livraison auto.   │
-│ Lien RSVP seul  │    │ Badge QR     │    │ Scan protocole  │    │ PDF + plan + GPS WA  │
+│ 1. Invitation   │───▶│ 2. réponse à l’invitation      │───▶│ 3. Check-in     │───▶│ 4. Livraison auto.   │
+│ Lien de réponse à l’invitation seul  │    │ Badge QR     │    │ Scan protocole  │    │ PDF + plan + GPS WA  │
 │ (Email / WA)    │    │ Portail web  │    │ Web ou mobile   │    │ Email / WhatsApp     │
 └─────────────────┘    └──────────────┘    └─────────────────┘    └──────────────────────┘
 ```
 
-| Moment | PDF | Plan de table | GPS WhatsApp | Carte web RSVP |
+| Moment | PDF | Plan de table | GPS WhatsApp | Carte web réponse à l’invitation |
 |--------|-----|---------------|--------------|----------------|
 | Envoi invitation | ❌ | ❌ | ❌ | ❌ (texte lieu seul) |
-| Rappel RSVP | ❌ | ❌ | ❌ | ❌ |
+| Rappel de réponse à l’invitation | ❌ | ❌ | ❌ | ❌ |
 | Après check-in / verify-seat | ✅ | ✅ | ✅ | ✅ |
 
 **Services impliqués** :
@@ -128,9 +128,9 @@ EventMaster distingue **l'invitation RSVP** de la **livraison sensible** (placem
 
 | Forfait | Prix mensuel | Événements | Invités | Points clés |
 |---------|-------------|------------|---------|-------------|
-| **Essentials** (FREE) | 0 FC | 3 | 50 | RSVP, portail, 2 modèles |
+| **Essentials** (FREE) | 0 FC | 3 | 50 | réponse à l’invitation, portail, 2 modèles |
 | **Business** (STANDARD) | 30 000 FC | 8 | 150 | Protocole QR, 3 salles, app mobile |
-| **Premium 1** | 55 000 FC | 12 | 500 | Modèles custom, RSVP analytique, notifications placement |
+| **Premium 1** | 55 000 FC | 12 | 500 | Modèles custom, Réponses analytiques, notifications placement |
 | **Premium 2** | 85 000 FC | 20 | 1 000 | OCR, verify-seat, livraison différée PDF+GPS |
 | **Enterprise 1** | 350 000 FC | 40 | 3 500 | Rapports, export, support prioritaire |
 | **Enterprise 2** | 525 000 FC | 70 | 5 000 | Réseau commercial 20 % |

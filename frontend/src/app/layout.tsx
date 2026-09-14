@@ -26,7 +26,7 @@ const inter = Inter({
   weight: ["400", "500", "600", "700"],
 });
 
-/** Display Celebrate — titres landing / RSVP / auth. */
+/** Display Celebrate — titres landing / réponse à l’invitation / auth. */
 const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],

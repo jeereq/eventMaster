@@ -102,7 +102,7 @@ function capabilityLabels(commercialPct: number): Array<{
     { key: 'protocolQr', label: 'Protocole QR & confirmation de présence' },
     { key: 'seatNotifications', label: 'Notifications de siège' },
     { key: 'customTemplates', label: 'Modèles personnalisés' },
-    { key: 'customRsvpFields', label: 'Champs RSVP personnalisables' },
+    { key: 'customRsvpFields', label: 'Champs de réponse à l’invitation personnalisables' },
     { key: 'mockupOcr', label: 'OCR import maquette' },
     { key: 'roomThemesFixtures', label: 'Thèmes & fixtures salles' },
     { key: 'commercialNetwork', label: `Réseau commercial (${commercialPct} %)` },

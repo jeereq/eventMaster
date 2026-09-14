@@ -69,7 +69,7 @@ const REAL_EDITOR_FEATURES: RealEditorFeature[] = [
       'Numérotation automatique et nommage personnalisé des tables',
       'Attribution des sièges nominatifs ou libres par table',
       'Prise en compte des régimes et préférences de menu',
-      'Statut d’occupation en direct selon les confirmations RSVP',
+      'Statut d’occupation en direct selon les confirmations de présence',
     ],
     ctaLabel: 'Organiser le plan de table',
     href: (isLoggedIn) => (isLoggedIn ? '/dashboard/events' : '/register?kind=ORGANIZER&intent=personal&action=seating'),

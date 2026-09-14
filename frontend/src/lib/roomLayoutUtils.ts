@@ -724,20 +724,6 @@ export function isBlueprintWallsVisible(metadata?: RoomLayoutBlueprint['metadata
   return metadata?.showWalls !== false;
 }
 
-export function applyPlanSceneVisibility<T extends { metadata?: RoomLayoutBlueprint['metadata'] }>(
-  blueprint: T,
-  visibility: { showWalls: boolean; showRoof: boolean },
-): T {
-  return {
-    ...blueprint,
-    metadata: {
-      ...blueprint.metadata,
-      showWalls: visibility.showWalls,
-      showRoof: visibility.showRoof,
-    },
-  };
-}
-
 function uid(prefix: string) {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 }

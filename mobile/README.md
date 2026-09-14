@@ -53,7 +53,7 @@ Ouvre **http://localhost:8081** (ou le port indiqué). Le backend doit tourner s
 
 | Lien | Destination |
 |------|-------------|
-| `eventmaster://rsvp/:guestId` | Portail RSVP invité |
+| `eventmaster://rsvp/:guestId` | Portail de réponse à l’invitation invité |
 | `eventmaster://event/:id` | Détail événement (auth requise) |
 | `eventmaster://protocol/:eventId` | Protocole jour J (auth requise) |
 
@@ -98,7 +98,7 @@ mobile/
 │   │   ├── events/[id]      # détail événement
 │   │   └── protocol/[eventId]  # protocole jour J
 │   ├── event/[id]           # deep link eventmaster://event/:id
-│   ├── rsvp/[guestId]       # portail RSVP invité (public)
+│   ├── rsvp/[guestId]       # portail de réponse à l’invitation invité (public)
 │   └── _layout.tsx
 ├── src/
 │   ├── context/AuthContext.tsx

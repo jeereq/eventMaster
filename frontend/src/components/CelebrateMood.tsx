@@ -5,7 +5,7 @@ import { useViewPreferencesOptional } from '@/context/ViewPreferencesContext';
 
 /**
  * Force l’ambiance Celebrate sur les surfaces publiques / invité.
- * Compteur : plusieurs instances (layout RSVP + page) ne se marchent pas dessus.
+ * Compteur : plusieurs instances (layout réponse à l’invitation + page) ne se marchent pas dessus.
  * useLayoutEffect : appliqué avant le paint, pour éviter un flash de fond.
  */
 let celebrateLock = 0;

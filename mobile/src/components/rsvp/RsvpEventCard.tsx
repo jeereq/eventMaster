@@ -57,7 +57,7 @@ export function RsvpEventCard({ guest }: Props) {
 
       {guest.rsvpLocked ? (
         <Text style={styles.locked}>
-          La date de l&apos;événement est passée — la réponse RSVP n&apos;est plus modifiable.
+          La date de l&apos;événement est passée — la réponse à l’invitation n&apos;est plus modifiable.
         </Text>
       ) : null}
     </View>

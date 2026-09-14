@@ -559,7 +559,7 @@ export default function Plans3DPage() {
               <Users className="w-5 h-5 text-primary shrink-0 mt-0.5" aria-hidden />
               <div className="space-y-0.5 min-w-0">
                 <p className="text-sm font-semibold text-foreground">Placement des invités</p>
-                <p className="text-xs text-muted leading-relaxed">Sièges nominatifs liés à la liste et au RSVP.</p>
+                <p className="text-xs text-muted leading-relaxed">Sièges nominatifs liés à la liste et à la réponse à l’invitation.</p>
               </div>
             </li>
             <li className="flex gap-3">

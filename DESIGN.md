@@ -133,9 +133,9 @@ components:
 
 **Creative North Star: "L'Atelier de Célébration"**
 
-EventMaster se lit comme un atelier de réception : on y compose des invitations, on y dresse des salles en 2D/3D, on y envoie le RSVP WhatsApp et on y scanne le jour J. Le système est prestigieux et chaleureux, jamais froid. L’émeraude mène l’action ; l’ambre Kinshasa réchauffe la fête ; l’ardoise de scène inversée porte les moments de preuve (bandeau 3D, CTA inversé, chrome WebGL).
+EventMaster se lit comme un atelier de réception : on y compose des invitations, on y dresse des salles en 2D/3D, on y envoie la réponse à l’invitation WhatsApp et on y scanne le jour J. Le système est prestigieux et chaleureux, jamais froid. L’émeraude mène l’action ; l’ambre Kinshasa réchauffe la fête ; l’ardoise de scène inversée porte les moments de preuve (bandeau 3D, CTA inversé, chrome WebGL).
 
-Un seul système, deux humeurs. **Work** (dashboard, éditeurs, admin) reste scanable, émeraude et neutre. **Celebrate** (landing, RSVP, auth) laisse l’ambre et la scène respirer davantage — mêmes jetons, température plus haute. Le document décrit cette dualité ; il ne crée pas deux marques.
+Un seul système, deux humeurs. **Work** (dashboard, éditeurs, admin) reste scanable, émeraude et neutre. **Celebrate** (landing, réponse à l’invitation, auth) laisse l’ambre et la scène respirer davantage — mêmes jetons, température plus haute. Le document décrit cette dualité ; il ne crée pas deux marques.
 
 La fête est visible sans basculer dans le SaaS gris stérile. Anti-références confirmées : dashboard clinique sans chaleur, néon événementiel, glassmorphism généralisé, ombres théâtrales sur toute l’UI.
 

@@ -61,7 +61,7 @@ const UPGRADE_B2C_PLANS: UpgradePlanConfig[] = [
     periodLabel: '90 jours (trimestre)',
     guestsMax: 50,
     description: 'Petite célébration ou fête intime.',
-    highlights: ['3 événements · 50 invités', 'Invitations & RSVP WhatsApp', 'Éditeur de salle 2D/3D', 'Scan QR smartphone Jour J'],
+    highlights: ['3 événements · 50 invités', 'Invitations et réponses WhatsApp', 'Éditeur de salle 2D/3D', 'Scan QR smartphone Jour J'],
   },
   {
     id: 'PERSONAL_100',
@@ -82,7 +82,7 @@ const UPGRADE_B2C_PLANS: UpgradePlanConfig[] = [
     periodLabel: '90 jours (trimestre)',
     guestsMax: 200,
     description: 'Formule préférée pour mariages et réceptions.',
-    highlights: ['3 événements · 200 invités', 'Faire-part & RSVP en direct', 'Placement 2D/3D jusqu’à 80 tables', 'Émargement QR en direct'],
+    highlights: ['3 événements · 200 invités', 'Faire-part et réponses en direct', 'Placement 2D/3D jusqu’à 80 tables', 'Émargement QR en direct'],
   },
   {
     id: 'PERSONAL_PLUS',
@@ -527,7 +527,7 @@ export default function ClientDashboardHome() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                  <span>Faire-part WhatsApp nominatifs avec RSVP</span>
+                  <span>Faire-part WhatsApp nominatifs avec réponse à l’invitation</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="w-3.5 h-3.5 text-rose-600 shrink-0" />
@@ -705,7 +705,7 @@ export default function ClientDashboardHome() {
                       WhatsApp
                     </span>
                     <span className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                      Lien RSVP
+                      Lien de réponse à l’invitation
                     </span>
                   </div>
                 </div>

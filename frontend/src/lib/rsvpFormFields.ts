@@ -141,7 +141,7 @@ const MANDATORY_RSVP_KEY_ALIASES: Record<string, string[]> = {
   type_menu: ['type_menu', 'type_de_menu', 'special_meal', 'regime'],
 };
 
-/** Champs RSVP imposés sur tous les modèles (formulaire invité). */
+/** Champs de réponse à l’invitation imposés sur tous les modèles (formulaire invité). */
 export const MANDATORY_RSVP_FIELD_PRESETS: Array<
   Omit<RsvpField, 'id' | 'analyticsKey'> & { id: string; analyticsKey: string }
 > = [
@@ -199,7 +199,7 @@ export type RsvpFieldKindCatalogEntry = {
   category: RsvpFieldCategory;
 };
 
-/** Types de champs RSVP imposés : valeurs prédéfinies ou personnalisées par l’organisateur. */
+/** Types de champs de réponse à l’invitation imposés : valeurs prédéfinies ou personnalisées par l’organisateur. */
 export const RSVP_FIELD_KIND_CATALOG: RsvpFieldKindCatalogEntry[] = [
   {
     kind: 'genre',
@@ -310,7 +310,7 @@ export function parseEventRsvpForm(raw: unknown): RsvpField[] {
 }
 
 /**
- * Champs RSVP optionnels pour le reporting (stats + export).
+ * Champs de réponse à l’invitation optionnels pour le reporting (stats + export).
  * Les 4 champs obligatoires (genre, allergies, boissons, type de menu) sont ailleurs.
  */
 export const REPORTING_RSVP_FIELD_PRESETS: Array<Omit<RsvpField, 'id'> & { id?: string }> = [
@@ -745,7 +745,7 @@ export interface GuestCustomFieldDetail {
 }
 
 /**
- * Liste les champs personnalisés RSVP d’un invité pour l’affichage détail :
+ * Liste les champs personnalisés réponse à l’invitation d’un invité pour l’affichage détail :
  * champs du modèle (ordonnés) + réponses rsvpFormData / customFields restantes.
  */
 export function listGuestCustomFieldDetails(

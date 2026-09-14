@@ -6,7 +6,7 @@ import { applyBrandToDocument, deriveAuthPanelFromPrimary, type TenantBranding }
 export type AccentPresetId = 'indigo' | 'emerald' | 'sky' | 'amber' | 'rose' | 'violet';
 export type DensityId = 'comfortable' | 'compact';
 export type FontScaleId = 'sm' | 'md' | 'lg';
-/** Work = dashboard pro ; Celebrate = surfaces tièdes (option dashboard + auto sur landing/RSVP). */
+/** Work = dashboard pro ; Celebrate = surfaces tièdes (option dashboard + auto sur landing/réponse à l’invitation). */
 export type MoodId = 'work' | 'celebrate';
 
 export interface AccentPreset {

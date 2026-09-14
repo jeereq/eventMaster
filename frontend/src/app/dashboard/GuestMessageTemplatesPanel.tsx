@@ -98,7 +98,7 @@ export default function GuestMessageTemplatesPanel() {
       <Alert variant="info" icon={<Info className="w-5 h-5" />}>
         <p className="font-semibold text-sm mb-1">À quoi servent ces modèles ?</p>
         <p className="text-xs leading-relaxed">
-          Textes sont les messages système envoyés aux invités (invitation, rappel, confirmation RSVP, contact).
+          Textes sont les messages système envoyés aux invités (invitation, rappel, confirmation de présence, contact).
           Variables : {TEMPLATE_VARIABLES.slice(0, 6).join(' · ')}…
           Sur WhatsApp, utilisez *texte* pour le gras.
         </p>

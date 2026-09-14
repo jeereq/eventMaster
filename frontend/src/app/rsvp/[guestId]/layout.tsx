@@ -40,7 +40,7 @@ export async function generateMetadata({
     : `Invitation — ${site.platformName}`;
   const description = guest?.eventTitle
     ? `Confirmez votre présence et consultez votre badge pour « ${guest.eventTitle} ».`
-    : `Espace invité ${site.platformName} : RSVP, badge QR, itinéraire et plan de table.`;
+    : `Espace invité ${site.platformName} : réponse à l’invitation, badge QR, itinéraire et plan de table.`;
 
   return {
     title,

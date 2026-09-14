@@ -6,7 +6,7 @@ import {
   sanitizeDonationsAccess,
 } from './donationsAccess.ts';
 
-describe('Guest RSVP Placement & Donations Integration', () => {
+describe('Guest réponse à l’invitation Placement & Donations Integration', () => {
   describe('Résolution de place de billet invité', () => {
     it('calcule correctement le numéro de siège (1-based) pour un invité assigné', () => {
       const seatIndex = 3;

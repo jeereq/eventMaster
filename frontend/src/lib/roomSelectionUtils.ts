@@ -73,6 +73,9 @@ export const alignModeLabels: Record<AlignMode, string> = {
   centerY: 'Centrer verticalement',
   distributeX: 'Répartir horizontalement',
   distributeY: 'Répartir verticalement',
+  centerRoomX: 'Centrer dans la salle (horizontal)',
+  centerRoomY: 'Centrer dans la salle (vertical)',
+  gridTidy: 'Organiser en grille propre',
 };
 
 function clamp(n: number, min: number, max: number) {
@@ -729,4 +732,79 @@ export function isItemSelected(
   id: string,
 ) {
   return selection.some((s) => s.kind === kind && s.id === id);
+}
+
+/** Sélectionne l'intégralité des éléments mobiliers, zones et équipements du plan. */
+export function selectAllItems(blueprint: RoomLayoutBlueprint): LayoutSelectionItem[] {
+  const items: LayoutSelectionItem[] = [];
+  for (const f of blueprint.furniture) {
+    if (f.kind === 'table' || f.kind === 'chair' || f.kind === 'row' || f.kind === 'zone') {
+      items.push({ kind: f.kind, id: f.id });
+    }
+  }
+  for (const fix of blueprint.fixtures) {
+    items.push({ kind: 'fixture', id: fix.id });
+  }
+  return items;
+}
+
+/** Filtre et sélectionne les éléments selon une catégorie spécifique (ex. toutes les tables, ou tous les écrans). */
+export function selectItemsByKind(
+  blueprint: RoomLayoutBlueprint,
+  kindFilter: 'table' | 'chair' | 'row' | 'zone' | 'fixture' | 'screen',
+): LayoutSelectionItem[] {
+  if (kindFilter === 'screen') {
+    return blueprint.fixtures
+      .filter((f) => f.kind === 'screen')
+      .map((f) => ({ kind: 'fixture', id: f.id }));
+  }
+  if (kindFilter === 'fixture') {
+    return blueprint.fixtures.map((f) => ({ kind: 'fixture', id: f.id }));
+  }
+  return blueprint.furniture
+    .filter((f) => f.kind === kindFilter)
+    .map((f) => ({ kind: f.kind as LayoutSelectableKind, id: f.id }));
+}
+
+/** Inverse la sélection courante sur l'ensemble des éléments du plan. */
+export function invertSelection(
+  blueprint: RoomLayoutBlueprint,
+  current: LayoutSelectionItem[],
+): LayoutSelectionItem[] {
+  const all = selectAllItems(blueprint);
+  const currentKeys = new Set(current.map(selectionKey));
+  return all.filter((item) => !currentKeys.has(selectionKey(item)));
+}
+
+/** Sélectionne tous les éléments intersectant un rectangle tracé sur le canvas (% 0–100). */
+export function selectItemsInRect(
+  blueprint: RoomLayoutBlueprint,
+  rect: { x: number; y: number; w: number; h: number },
+): LayoutSelectionItem[] {
+  const minX = Math.min(rect.x, rect.x + rect.w);
+  const maxX = Math.max(rect.x, rect.x + rect.w);
+  const minY = Math.min(rect.y, rect.y + rect.h);
+  const maxY = Math.max(rect.y, rect.y + rect.h);
+
+  // Surface minimale pour éviter les clics stationnaires
+  if (maxX - minX < 0.5 && maxY - minY < 0.5) return [];
+
+  const all = selectAllItems(blueprint);
+  const hits: LayoutSelectionItem[] = [];
+
+  for (const item of all) {
+    const box = getSelectionBounds(blueprint, item);
+    if (!box) continue;
+    const boxL = box.isCenter ? box.x - box.w / 2 : box.x;
+    const boxR = box.isCenter ? box.x + box.w / 2 : box.x + box.w;
+    const boxT = box.isCenter ? box.y - box.h / 2 : box.y;
+    const boxB = box.isCenter ? box.y + box.h / 2 : box.y + box.h;
+
+    const noOverlap = boxR < minX || boxL > maxX || boxB < minY || boxT > maxY;
+    if (!noOverlap) {
+      hits.push(item);
+    }
+  }
+
+  return hits;
 }

@@ -12,7 +12,7 @@ const COLORS = [
 ];
 
 /**
- * Confetti one-shot (~1,5 s) — succès RSVP / moments émotionnels.
+ * Confetti one-shot (~1,5 s) — succès réponse à l’invitation / moments émotionnels.
  */
 export default function FestiveConfetti({
   active = true,

@@ -43,7 +43,7 @@ export const NOTIFICATION_FAMILY_LABELS: Record<NotificationPrefFamily, string> 
 };
 
 export const NOTIFICATION_FAMILY_DESCRIPTIONS: Record<NotificationPrefFamily, string> = {
-  events: 'Réponses RSVP, billets vendus et paiements de places qui n’aboutissent pas.',
+  events: 'Réponses à l’invitation, billets vendus et paiements de places qui n’aboutissent pas.',
   billing: 'Factures, abonnements, licences et demandes de rabais.',
   commissions: 'Commissions mensuelles à encaisser ou déjà payées.',
   catalog: 'Demandes et réservations marketplace (salles, services).',
@@ -105,7 +105,7 @@ export function notificationFamilyLabel(type: string): string {
 const TYPE_LABELS: Record<string, string> = {
   [PLATFORM_NOTIFICATION_TYPE.TICKET_SALE]: 'Billet',
   [PLATFORM_NOTIFICATION_TYPE.TICKET_PAYMENT_FAILED]: 'Paiement billet',
-  [PLATFORM_NOTIFICATION_TYPE.EVENT_RSVP]: 'RSVP',
+  [PLATFORM_NOTIFICATION_TYPE.EVENT_RSVP]: 'Réponse à l’invitation',
   [PLATFORM_NOTIFICATION_TYPE.PAYMENT_RECEIVED]: 'Paiement',
   [PLATFORM_NOTIFICATION_TYPE.SUBSCRIPTION_REQUEST_PENDING]: 'Abonnement',
   [PLATFORM_NOTIFICATION_TYPE.DISCOUNT_REQUEST_PENDING]: 'Rabais',

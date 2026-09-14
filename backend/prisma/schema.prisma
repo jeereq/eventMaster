@@ -269,7 +269,7 @@ model Event {
   longitude         Float?
   tablePlan         Json?        // Added for visual table planning
   guestGuidelines   Json?        // Dress code & practical recommendations for guests
-  /** Champs RSVP de l’événement (types + valeurs prédéfinies ou perso). */
+  /** Champs de réponse à l’invitation de l’événement (types + valeurs prédéfinies ou perso). */
   rsvpForm          Json?
   /** Préparation optionnelle : salle marketplace + prestataires (non bloquant). */
   eventPrep         Json?

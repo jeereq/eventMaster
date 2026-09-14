@@ -1720,7 +1720,7 @@ export default function OrganizerDashboardHome({
                   Invités & Protocole
                 </h4>
                 <p className="text-xs text-muted leading-relaxed">
-                  Faire-part WhatsApp, suivi RSVP et scan smartphone jour J.
+                  Faire-part WhatsApp, suivi des réponses et scan smartphone jour J.
                 </p>
               </div>
               <span className="text-xs font-bold text-blue-600 dark:text-blue-400 inline-flex items-center gap-1">
@@ -2055,7 +2055,7 @@ export default function OrganizerDashboardHome({
                 <h2 className="text-lg font-bold text-foreground">Invités & Accueil Jour J</h2>
               </div>
               <p className="text-xs text-muted mt-0.5">
-                Invitations WhatsApp, confirmations RSVP et émargement par scan QR.
+                Invitations WhatsApp, confirmations de présence et émargement par scan QR.
               </p>
             </div>
             <Link
@@ -2076,7 +2076,7 @@ export default function OrganizerDashboardHome({
                     <Mail className="w-5 h-5" />
                   </div>
                   <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
-                    Faire-part & RSVP
+                    Faire-part et réponses à l’invitation
                   </span>
                 </div>
 
@@ -2096,7 +2096,7 @@ export default function OrganizerDashboardHome({
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted">
                     <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                    <span>RSVP et préférences alimentaires</span>
+                    <span>Réponse à l’invitation et préférences alimentaires</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted">
                     <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />

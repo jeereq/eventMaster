@@ -9,7 +9,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const site = await fetchPublicSiteSnapshot();
   return {
     title: `Aide invité — ${site.platformName}`,
-    description: `Confirmer votre RSVP, consulter votre placement et utiliser l’espace invité ${site.platformName}.`,
+    description: `Confirmer votre réponse à l’invitation, consulter votre placement et utiliser l’espace invité ${site.platformName}.`,
   };
 }
 

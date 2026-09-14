@@ -53,7 +53,7 @@ export default function RsvpGuestScreen() {
 
   useEffect(() => {
     if (!guestId) {
-      setError('Lien RSVP invalide.');
+      setError('Lien de réponse à l’invitation invalide.');
       setLoading(false);
       return;
     }
@@ -105,7 +105,7 @@ export default function RsvpGuestScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.errorTitle}>Invitation introuvable</Text>
-        <Text style={styles.errorText}>{error || 'Ce lien RSVP est invalide ou expiré.'}</Text>
+        <Text style={styles.errorText}>{error || 'Ce lien de réponse à l’invitation est invalide ou expiré.'}</Text>
         <Text style={styles.errorHint}>
           Vérifiez le lien reçu par e-mail ou WhatsApp, ou contactez l&apos;organisateur. Aucun
           compte n&apos;est requis pour les invités.

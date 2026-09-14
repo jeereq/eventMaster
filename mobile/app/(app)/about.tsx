@@ -21,7 +21,7 @@ export default function AboutScreen() {
           <Text style={[styles.heroTitle, { color: colors.text }]}>EventMaster</Text>
           <Text style={[styles.heroVersion, { color: colors.textMuted }]}>Version {version}</Text>
           <Text style={[styles.heroDesc, { color: colors.textMuted }]}>
-            Gestion d&apos;événements privés : invitations, RSVP, protocole jour J et plan de table.
+            Gestion d&apos;événements privés : invitations, réponse à l’invitation, protocole jour J et plan de table.
           </Text>
         </View>
 

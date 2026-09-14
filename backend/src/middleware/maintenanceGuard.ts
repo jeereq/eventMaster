@@ -27,7 +27,7 @@ function isAllowedPath(path: string): boolean {
 
 /**
  * Bloque l’API en mode maintenance, sauf santé, site public, login Super Admin
- * et routes RSVP (invités).
+ * et routes réponse à l’invitation (invités).
  */
 export function maintenanceGuard(req: Request, res: Response, next: NextFunction) {
   try {

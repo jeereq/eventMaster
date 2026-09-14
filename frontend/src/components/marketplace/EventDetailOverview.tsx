@@ -292,7 +292,7 @@ export default function EventDetailOverview({
             <span className="text-[11px] text-muted">Confirmation :</span>
             <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              RSVP instantané
+              Réponse instantanée
             </span>
           </div>
         </div>

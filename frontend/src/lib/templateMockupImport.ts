@@ -275,7 +275,7 @@ export function buildMockupTemplate(imageUrl: string, palette: TemplatePalette):
       {
         id: uid(),
         type: 'rsvp-block',
-        text: 'Formulaire RSVP',
+        text: 'Formulaire de réponse à l’invitation',
         color: accent,
         fontSize: '15px',
         align: 'center',

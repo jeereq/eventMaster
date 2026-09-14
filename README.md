@@ -1,6 +1,6 @@
 # EventMaster SaaS — Plateforme multi-tenant d’événements et de marketplace
 
-EventMaster est une plateforme SaaS multi-tenant pour organiser un événement **et** trouver salle / prestataires en RDC. Chaque organisation a son espace isolé. Le cycle couvre invitations et RSVP, plan de table 2D, protocole QR le jour J, marketplace (favoris, packs budget, réservations de dates) et facturation par forfait. L’application mobile native est en construction : RSVP, protocole et tableau de bord fonctionnent déjà dans le navigateur, y compris sur téléphone.
+EventMaster est une plateforme SaaS multi-tenant pour organiser un événement **et** trouver salle / prestataires en RDC. Chaque organisation a son espace isolé. Le cycle couvre invitations et réponse à l’invitation, plan de table 2D, protocole QR le jour J, marketplace (favoris, packs budget, réservations de dates) et facturation par forfait. L’application mobile native est en construction : réponse à l’invitation, protocole et tableau de bord fonctionnent déjà dans le navigateur, y compris sur téléphone.
 
 ---
 
@@ -17,7 +17,7 @@ L'application est découpée en **trois entités distinctes** :
 
 - **Frontend (frontend/)** :
   - Next.js (App Router), Tailwind CSS, Lucide React.
-  - Landing, catalogue public, dashboard organisateur / prestataire / client, portail RSVP, protocole web.
+  - Landing, catalogue public, dashboard organisateur / prestataire / client, portail de réponse à l’invitation, protocole web.
   - Contexte d’auth et d’organisation (multi-tenant).
 
 - **Mobile (mobile/)** :
@@ -46,7 +46,7 @@ eventmaster/
 │   │   ├── schema.prisma        # Schéma de base de données relationnel
 │   │   └── migrations/          # Migrations SQL de la base
 │   ├── src/
-│   │   ├── controllers/         # Auth, Events, Guests, Templates, Billing, RSVP, Marketplace
+│   │   ├── controllers/         # Auth, Events, Guests, Templates, Billing, réponse à l’invitation, Marketplace
 │   │   ├── middleware/          # JWT, RBAC, licence
 │   │   ├── routes/              # Endpoints REST
 │   │   ├── services/            # Packs événement, commissions, notifications, PDF
@@ -62,7 +62,7 @@ eventmaster/
 │   │   │   ├── marketplace/     # Catalogue public
 │   │   │   ├── login/
 │   │   │   ├── register/
-│   │   │   └── rsvp/[guestId]/  # Portail RSVP public
+│   │   │   └── rsvp/[guestId]/  # Portail de réponse à l’invitation public
 │   │   ├── components/          # Landing, catalogue, desk marketplace, UI
 │   │   ├── config/              # Guides, FAQ, tarifs landing
 │   │   ├── context/
@@ -99,8 +99,8 @@ eventmaster/
 
 - **Types de compte** : organisateur, prestataire / salles, les deux, ou **client marketplace** (sans abo SaaS).
 - **Dashboard** : quotas selon le forfait (Essentials, Particulier, Business / Premium / Enterprise, Salle, Prestataire, Salle & presta).
-- **Événements** : **privés** (liste d’invités) ou **publics** (marketplace, carte, `/evenements`) avec inscription gratuite ou **billets payants** (Stripe ; simulé en local). À la création : modèle de formulaire RSVP, import du plan de salle, éditeur 2D. Invités, import CSV, protocole QR.
-- **Invitations & RSVP** : concepteur visuel, e-mail / WhatsApp, portail public, badge QR. PDF / plan / GPS partent **dès acceptation RSVP** (si place assignée, Premium 1+), pas à l’envoi de l’invitation.
+- **Événements** : **privés** (liste d’invités) ou **publics** (marketplace, carte, `/evenements`) avec inscription gratuite ou **billets payants** (Stripe ; simulé en local). À la création : modèle de formulaire de réponse à l’invitation, import du plan de salle, éditeur 2D. Invités, import CSV, protocole QR.
+- **Invitations et réponses à l’invitation** : concepteur visuel, e-mail / WhatsApp, portail public, badge QR. PDF / plan / GPS partent **dès confirmation de présence** (si place assignée, Premium 1+), pas à l’envoi de l’invitation.
 - **Marketplace** :
   - Catalogue public et hub client (`/dashboard/catalogue`) : salles, prestataires **et événements publics**, explorer, **favoris** (grille / liste, salles / prestas), **préparer un événement** (budget min. 50 000 FC → 3 packs distincts éco / équilibré / confort), packs sauvegardés.
   - Desk prestataire (`/dashboard/marketplace`) : prestations (pagination, vues grille / liste), **demandes** (contact, conversion), **réservations** (Demande → Acceptée → Acompte hors plateforme 30 % → Confirmée). Commission vendeur **8 %**, distincte de l’abonnement.
@@ -161,7 +161,7 @@ eventmaster/
    ```bash
    npm start
    ```
-4. Consultez `mobile/PLAN.md` pour la feuille de route complète (auth, RSVP, protocole QR).
+4. Consultez `mobile/PLAN.md` pour la feuille de route complète (auth, réponse à l’invitation, protocole QR).
 
 ---
 
@@ -169,8 +169,8 @@ eventmaster/
 
 1. **Création d’un compte** : http://localhost:3000/register — organisateur, prestataire, ou client (je cherche une salle / un presta).
 2. **Organisateur** : tableau de bord Essentials (gratuit) → quotas visibles → Facturation pour un forfait payant (simulation possible en local).
-3. **Événement** : Événements → créer → invités (saisie ou CSV) → Modèles → invitation → diffusion. Le lien RSVP ne contient pas encore PDF/GPS.
-4. **RSVP** : ouvrir un lien généré, confirmer, vérifier que le badge QR apparaît ; avec place assignée (Premium+), PDF / plan / GPS partent à l’acceptation.
+3. **Événement** : Événements → créer → invités (saisie ou CSV) → Modèles → invitation → diffusion. Le lien de réponse à l’invitation ne contient pas encore PDF/GPS.
+4. **réponse à l’invitation** : ouvrir un lien généré, confirmer, vérifier que le badge QR apparaît ; avec place assignée (Premium+), PDF / plan / GPS partent à l’acceptation.
 5. **Client marketplace** : Marketplace du dashboard → Explorer / Favoris / Préparer un événement (budget + type) → sauvegarder un pack → Mes réservations.
 6. **Prestataire** : Marketplace → Prestations (grille ou liste) → publier → Demandes (contacter / convertir) → Réservations (accepter → marquer l’acompte 30 % hors plateforme → confirmer).
 7. **Jour J** : mode Protocole, scan QR dans le navigateur.

@@ -287,7 +287,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
             value={scanInput}
             onChange={(e) => setScanInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleScan()}
-            placeholder="URL RSVP, ID, ou code du badge"
+            placeholder="URL de réponse, ID, ou code du badge"
             className="flex-1 px-4 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-sm"
           />
           <Button onClick={handleScan} disabled={busy || !scanInput.trim()}>
@@ -327,7 +327,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
             </p>
             <div className="flex flex-wrap gap-1.5 mt-2">
               <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-border bg-surface">
-                RSVP {rsvpLabel(selectedGuest.rsvp)}
+                réponse à l’invitation {rsvpLabel(selectedGuest.rsvp)}
               </span>
               {selectedGuest.category && (
                 <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full border border-border bg-surface">
@@ -343,10 +343,10 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
             {selectedGuest.rsvp !== 'ACCEPTED' && !selectedGuest.checkedInAt && (
               <p className="text-xs text-muted mt-3 bg-surface-muted border border-border rounded-[var(--radius-button)] px-3 py-2">
                 {selectedGuest.rsvp === 'PENDING'
-                  ? 'RSVP en attente : l’invité doit confirmer sur son lien avant le check-in.'
+                  ? 'Réponse en attente : l’invité doit confirmer sur son lien avant le check-in.'
                   : selectedGuest.rsvp === 'DECLINED'
                     ? 'Invitation déclinée — le check-in n’est pas possible.'
-                    : 'RSVP non accepté — check-in impossible.'}
+                    : 'Présence non confirmée — check-in impossible.'}
               </p>
             )}
             {selectedGuest.assignedSeat && (
@@ -365,7 +365,7 @@ export default function GuestProtocolPanel({ eventId }: { eventId: string }) {
               {selectedGuest.checkedInAt
                 ? 'Déjà authentifié'
                 : selectedGuest.rsvp !== 'ACCEPTED'
-                  ? 'Check-in bloqué (RSVP)'
+                  ? 'Check-in bloqué (Réponse à l’invitation)'
                   : 'Confirmer la présence'}
             </Button>
             <Button variant="secondary" onClick={() => handleVerifySeat(selectedGuest.id)} disabled={busy}>

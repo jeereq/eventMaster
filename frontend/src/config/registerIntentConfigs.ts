@@ -46,7 +46,7 @@ export const REGISTER_INTENT_CONFIGS: Record<string, RegistrationActionConfig> =
     orgPlaceholder: 'Ex: Mariage Sarah & David / Famille Dupont',
     features: [
       { step: 1, icon: Calendar, title: 'Créer la fête', desc: 'Date, lieu, programme et dress code en 1 clic.' },
-      { step: 2, icon: Mail, title: 'Inviter sur WhatsApp', desc: 'Lien direct et personnalisé avec choix de menu (RSVP).' },
+      { step: 2, icon: Mail, title: 'Inviter sur WhatsApp', desc: 'Lien direct et personnalisé avec choix de menu (Réponse à l’invitation).' },
       { step: 3, icon: ScanLine, title: 'Accueil le Jour J', desc: 'Badge QR nominatif et plan de table instantané.' },
     ],
   },
@@ -238,7 +238,7 @@ export const REGISTER_INTENT_CONFIGS: Record<string, RegistrationActionConfig> =
     orgPlaceholder: 'Ex: Mariage Sarah & David / Famille Dupont',
     features: [
       { step: 1, icon: Calendar, title: 'Créer la fête', desc: 'Date, lieu, programme et dress code en 1 clic.' },
-      { step: 2, icon: Mail, title: 'Inviter sur WhatsApp', desc: 'Lien direct et personnalisé avec choix de menu (RSVP).' },
+      { step: 2, icon: Mail, title: 'Inviter sur WhatsApp', desc: 'Lien direct et personnalisé avec choix de menu (Réponse à l’invitation).' },
       { step: 3, icon: ScanLine, title: 'Accueillir Jour J', desc: 'Badge QR nominatif et plan de table instantanés.' },
     ],
   },

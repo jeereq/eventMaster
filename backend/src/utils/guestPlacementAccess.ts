@@ -1,7 +1,7 @@
 type GuestPreferences = Record<string, unknown> | null | undefined;
 
 /**
- * Accès au plan / PDF / GPS : dès RSVP accepté, ou après check-in / vérification siège (legacy).
+ * Accès au plan / PDF / GPS : dès présence confirmée, ou après check-in / vérification siège (legacy).
  */
 export function canGuestAccessPlacement(guest: {
   checkedInAt?: Date | string | null;

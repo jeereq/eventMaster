@@ -89,7 +89,7 @@ export function collectInvitationFontFamilies(
   return [...out];
 }
 
-/** Charge uniquement les familles demandées (vue RSVP / impression). */
+/** Charge uniquement les familles demandées (vue réponse à l’invitation / impression). */
 export function useInvitationFonts(
   families: string[] | null | undefined,
   enabled = true,

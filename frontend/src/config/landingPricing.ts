@@ -321,7 +321,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaVariant: 'outline',
     tier: 'essentials',
     audience: 'B2B',
-    highlights: ['3 événements · 50 invités (essai)', '4 essais IA offerts, puis jetons', 'Invitations, RSVP, QR, PDF/GPS', '1 salle · 1 prestation / matériel'],
+    highlights: ['3 événements · 50 invités (essai)', '4 essais IA offerts, puis jetons', 'Invitations, réponse à l’invitation, QR, PDF/GPS', '1 salle · 1 prestation / matériel'],
   },
   {
     id: 'PERSONAL_50',
@@ -900,7 +900,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
   },
   {
     category: 'Protocole',
-    label: 'Livraison PDF + GPS dès acceptation RSVP',
+    label: 'Livraison PDF + GPS dès confirmation de présence',
     values: {
       FREE: true,
       ...b2cSame(true),
@@ -993,7 +993,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
   },
   {
     category: 'Invités',
-    label: 'Portail RSVP + badge QR',
+    label: 'Portail de réponse à l’invitation + badge QR',
     values: {
       FREE: true,
       ...b2cSame(true),
@@ -1010,7 +1010,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
   },
   {
     category: 'Invités',
-    label: 'Champs RSVP personnalisables (genre, allergies, boissons, menu)',
+    label: 'Champs de réponse à l’invitation personnalisables (genre, allergies, boissons, menu)',
     values: {
       FREE: true,
       ...b2cSame(true),
@@ -1027,7 +1027,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
   },
   {
     category: 'Invités',
-    label: 'Formulaires RSVP analytiques (export CSV)',
+    label: 'Formulaires de réponse à l’invitation analytiques (export CSV)',
     values: {
       FREE: false,
       ...b2cSame(true),
@@ -1145,7 +1145,7 @@ export const PLATFORM_PILLARS = [
     icon: 'smartphone',
   },
   {
-    title: 'Invitations & RSVP',
+    title: 'Invitations et réponses à l’invitation',
     description: 'Un lien par invité. PDF, plan et GPS après confirmation et place attribuée.',
     icon: 'mail',
   },
@@ -1218,12 +1218,12 @@ export function getPlanCapabilityBadges(planId: PlanId): PlanCapabilityBadge[] {
   const custom = FEATURE_COMPARISON.find((r) => r.label === 'Modèles personnalisés')?.values[planId];
   const mockup = FEATURE_COMPARISON.find((r) => r.label === 'Import maquette (image + palette)')?.values[planId];
   const ocr = FEATURE_COMPARISON.find((r) => r.label === 'OCR texte sur maquette')?.values[planId];
-  const rsvpAnalytics = FEATURE_COMPARISON.find((r) => r.label === 'Formulaires RSVP analytiques (export CSV)')?.values[planId];
+  const rsvpAnalytics = FEATURE_COMPARISON.find((r) => r.label === 'Formulaires de réponse à l’invitation analytiques (export CSV)')?.values[planId];
 
   if (custom && !B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'custom', label: 'Modèles custom', tone: 'violet' });
   if (mockup && !B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'mockup', label: 'Import maquette', tone: 'violet' });
   if (ocr && !B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'ocr', label: 'OCR maquette', tone: 'violet' });
-  if (rsvpAnalytics && !B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'rsvp', label: 'RSVP analytique', tone: 'emerald' });
+  if (rsvpAnalytics && !B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'rsvp', label: 'Réponses analytiques', tone: 'emerald' });
   if (planId.startsWith('ENTERPRISE_3')) badges.push({ id: 'unlimited', label: 'Volume illimité', tone: 'rose' });
 
   return badges;

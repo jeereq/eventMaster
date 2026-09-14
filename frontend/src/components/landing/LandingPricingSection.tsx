@@ -622,7 +622,7 @@ export default function LandingPricingSection({
 
  <p className="text-center text-xs text-muted mt-6 max-w-2xl mx-auto leading-relaxed">
  Réduction annuelle de {ANNUAL_DISCOUNT_PERCENT} % sur le total (12 mois ou 4 trimestres). Promotions configurables
- par l&apos;administrateur. Tous les forfaits incluent l&apos;isolation multi-tenant et le portail RSVP invité.
+ par l&apos;administrateur. Tous les forfaits incluent l&apos;isolation multi-tenant et le portail de réponse à l’invitation invité.
  </p>
  </div>
  </section>

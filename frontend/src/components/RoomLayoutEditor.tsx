@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, SlidersHorizontal,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, SlidersHorizontal, X,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -105,6 +105,8 @@ import {
   barStylePresets,
   nextOwnedLabel,
   roofStyleLabels,
+  screenKindLabels,
+  screenRatioLabels,
   centerpieceStyleLabels,
   wallsFromRoomOutline,
   resolveFurnitureSurfaceAt,
@@ -120,6 +122,8 @@ import {
   type InstrumentStyle,
   type BarStyle,
   type RoofStyle,
+  type ScreenKind,
+  type ScreenRatio,
   type TableSurfaceStyle,
   type ZoneKind,
   type ZoneMaterial,
@@ -183,6 +187,10 @@ import {
   selectionKey,
   toggleSelectionItem,
   ungroupLayoutSelection,
+  selectAllItems,
+  selectItemsByKind,
+  invertSelection,
+  selectItemsInRect,
   type AlignMode,
   type LayoutSelectionItem,
 } from '@/lib/roomSelectionUtils';
@@ -445,6 +453,8 @@ export default function RoomLayoutEditor({
   const [lastPlanPhotoUrl, setLastPlanPhotoUrl] = useState('');
   const [planPath, setPlanPath] = useState<PlanCreationPathId>(focusPlanImport ? 'photo' : 'manual');
   const [studioOpen, setStudioOpen] = useState(false);
+  const [hudAlignOpen, setHudAlignOpen] = useState(false);
+  const [hudColorOpen, setHudColorOpen] = useState(false);
   const aiPlanFileRef = useRef<HTMLInputElement>(null);
   const [arrangeDensity, setArrangeDensity] = useState<ArrangeDensity>('comfortable');
   const [keepTemplateStyle, setKeepTemplateStyle] = useState(true);
@@ -955,6 +965,11 @@ export default function RoomLayoutEditor({
         deleteSelected();
         return;
       }
+      if (key === 'r' && !mod && selection.length > 0) {
+        e.preventDefault();
+        rotateSelection();
+        return;
+      }
       if (selection.length > 0 && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.preventDefault();
         const step = e.shiftKey ? 2.5 : 1;
@@ -991,7 +1006,7 @@ export default function RoomLayoutEditor({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [readOnly, selection, blueprint, groupSelection, ungroupSelection, duplicateSelection, updateBlueprint]);
+  }, [readOnly, selection, blueprint, groupSelection, ungroupSelection, duplicateSelection, updateBlueprint, rotateSelection, deleteSelected]);
 
   const addTable = () => {
     const tableCount = blueprint.furniture.filter((f) => f.kind === 'table').length;
@@ -1340,6 +1355,37 @@ export default function RoomLayoutEditor({
       storyId: resolveActiveStoryId(blueprint),
     });
     updateBlueprint({ ...blueprint, fixtures: [...blueprint.fixtures, fixture] }, { message: `${fixture.label || kind} ajouté`, kind: 'add' });
+    setSelection([{ kind: 'fixture', id: fixture.id }]);
+  };
+
+  const addScreenFixture = (screenKind: ScreenKind = 'stageLedWall') => {
+    if (!caps.canFixtures || !caps.fixtureKinds.includes('screen')) {
+      log('Les écrans ne sont pas inclus dans votre forfait', 'info');
+      return;
+    }
+    const base = createBlueprintFixture('screen');
+    const sizeDefaults: Record<ScreenKind, { w: number; h: number; elev: number; tilt: number }> = {
+      stageLedWall: { w: 24, h: 6, elev: 0, tilt: 0 },
+      wallTv: { w: 10, h: 3, elev: 1.6, tilt: 4 },
+      tableMonitor: { w: 6, h: 4, elev: 0.76, tilt: 6 },
+      laptop: { w: 4, h: 3, elev: 0.76, tilt: 0 },
+      desktopPc: { w: 5, h: 4, elev: 0.76, tilt: 4 },
+    };
+    const def = sizeDefaults[screenKind];
+    const fixture = placeFixtureWithClearance(blueprint, {
+      ...base,
+      screenKind,
+      w: def.w,
+      h: def.h,
+      screenElevationM: def.elev,
+      screenTiltDeg: def.tilt,
+      label: screenKindLabels[screenKind],
+      storyId: resolveActiveStoryId(blueprint),
+    });
+    updateBlueprint(
+      { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
+      { message: `${screenKindLabels[screenKind]} ajouté`, kind: 'add' },
+    );
     setSelection([{ kind: 'fixture', id: fixture.id }]);
   };
 
@@ -2123,6 +2169,195 @@ export default function RoomLayoutEditor({
           className="z-10"
         />
       )}
+      {selection.length > 0 && !readOnly && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 p-1 rounded-full bg-surface/95 dark:bg-zinc-900/95 backdrop-blur-md border border-border shadow-xl text-foreground animate-in fade-in zoom-in-95 duration-150">
+          <div className="px-2.5 py-1 rounded-full bg-primary/10 text-primary font-semibold text-xs flex items-center gap-1 select-none">
+            <BoxSelect className="w-3.5 h-3.5" />
+            <span>{selection.length}</span>
+          </div>
+
+          <div className="h-4 w-px bg-border my-auto mx-0.5" />
+
+          {caps.canDuplicate && (
+            <button
+              type="button"
+              onClick={duplicateSelection}
+              className="p-1.5 rounded-full hover:bg-surface-muted text-foreground transition-colors"
+              title="Dupliquer (Cmd/Ctrl+D)"
+              aria-label="Dupliquer"
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={rotateSelection}
+            className="p-1.5 rounded-full hover:bg-surface-muted text-foreground transition-colors"
+            title="Pivoter 90°"
+            aria-label="Pivoter 90°"
+          >
+            <RotateCw className="w-3.5 h-3.5" />
+          </button>
+
+          {selection.length >= 2 && caps.canAlign && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setHudAlignOpen((v) => !v);
+                  setHudColorOpen(false);
+                }}
+                className={cn(
+                  'p-1.5 rounded-full hover:bg-surface-muted text-foreground transition-colors flex items-center gap-0.5',
+                  hudAlignOpen && 'bg-primary/15 text-primary',
+                )}
+                title="Aligner les éléments sélectionnés"
+                aria-label="Aligner les éléments sélectionnés"
+              >
+                <AlignCenter className="w-3.5 h-3.5" />
+                <ChevronDown className="w-2.5 h-2.5 opacity-60" />
+              </button>
+
+              {hudAlignOpen && (
+                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-2 rounded-xl bg-surface dark:bg-zinc-900 border border-border shadow-2xl z-40 w-52 space-y-1.5 animate-in fade-in slide-in-from-top-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-1">
+                    Aligner & répartir
+                  </span>
+                  <div className="grid grid-cols-4 gap-1">
+                    {([
+                      ['left', AlignLeft, 'Gauche'],
+                      ['centerX', AlignCenter, 'Centre X'],
+                      ['right', AlignRight, 'Droite'],
+                      ['distributeX', BetweenHorizontalStart, 'Répartir X'],
+                      ['top', AlignStartVertical, 'Haut'],
+                      ['centerY', AlignCenterVertical, 'Centre Y'],
+                      ['bottom', AlignEndVertical, 'Bas'],
+                      ['distributeY', BetweenVerticalStart, 'Répartir Y'],
+                    ] as const).map(([mode, Icon, lbl]) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => {
+                          applyAlign(mode);
+                          setHudAlignOpen(false);
+                        }}
+                        title={alignModeLabels[mode]}
+                        aria-label={alignModeLabels[mode]}
+                        className="p-1.5 rounded-md hover:bg-surface-muted flex flex-col items-center justify-center text-foreground"
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        <span className="text-[8px] font-mono opacity-60">{lbl}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="pt-1 border-t border-border flex flex-col gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        applyAlign('centerRoomX');
+                        setHudAlignOpen(false);
+                      }}
+                      className="w-full text-left px-2 py-1 rounded text-xs hover:bg-surface-muted flex items-center gap-2"
+                    >
+                      <Crosshair className="w-3 h-3 text-primary" /> Centrer dans la salle H
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        applyAlign('gridTidy');
+                        setHudAlignOpen(false);
+                      }}
+                      className="w-full text-left px-2 py-1 rounded text-xs hover:bg-surface-muted flex items-center gap-2"
+                    >
+                      <LayoutGrid className="w-3 h-3 text-primary" /> Ranger en grille propre
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Quick Color Picker */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setHudColorOpen((v) => !v);
+                setHudAlignOpen(false);
+              }}
+              className={cn(
+                'p-1.5 rounded-full hover:bg-surface-muted text-foreground transition-colors',
+                hudColorOpen && 'bg-primary/15 text-primary',
+              )}
+              title="Teinter le lot"
+              aria-label="Teinter le lot"
+            >
+              <Palette className="w-3.5 h-3.5" />
+            </button>
+
+            {hudColorOpen && (
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-2 rounded-xl bg-surface dark:bg-zinc-900 border border-border shadow-2xl z-40 w-44 space-y-2 animate-in fade-in slide-in-from-top-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-1">
+                  Palette rapide
+                </span>
+                <div className="grid grid-cols-4 gap-1.5 p-1">
+                  {[
+                    '#ffffff',
+                    '#d4a373',
+                    '#451a03',
+                    '#d4af37',
+                    '#065f46',
+                    '#1e3a8a',
+                    '#475569',
+                    '#09090b',
+                  ].map((hex) => (
+                    <button
+                      key={hex}
+                      type="button"
+                      onClick={() => {
+                        updateBlueprint(
+                          applyStyleToSelection(blueprint, selection, {
+                            tableColor: hex,
+                            color: hex,
+                          }),
+                          { message: 'Couleur appliquée', kind: 'edit' },
+                        );
+                        setHudColorOpen(false);
+                      }}
+                      className="size-6 rounded-full border border-black/20 hover:scale-110 transition-transform shadow-xs"
+                      style={{ backgroundColor: hex }}
+                      title={hex}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="h-4 w-px bg-border my-auto mx-0.5" />
+
+          <button
+            type="button"
+            onClick={deleteSelected}
+            className="p-1.5 rounded-full hover:bg-rose-500/10 text-rose-500 transition-colors"
+            title="Supprimer (Suppr / Backspace)"
+            aria-label="Supprimer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSelection([])}
+            className="p-1.5 rounded-full hover:bg-surface-muted text-muted hover:text-foreground transition-colors"
+            title="Désélectionner (Échap)"
+            aria-label="Désélectionner"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 
@@ -2178,21 +2413,119 @@ export default function RoomLayoutEditor({
     if (readOnly) return null;
 
     if (multiSelection) {
+      const selTables = selection.filter((s) => s.kind === 'table').length;
+      const selChairs = selection.filter((s) => s.kind === 'chair').length;
+      const selScreens = selection.filter((s) => s.kind === 'fixture' && blueprint.fixtures.some((f) => f.id === s.id && f.kind === 'screen')).length;
+      const selOtherFix = selection.filter((s) => s.kind === 'fixture' && !blueprint.fixtures.some((f) => f.id === s.id && f.kind === 'screen')).length;
+      const selZones = selection.filter((s) => s.kind === 'zone').length;
+
+      const QUICK_PALETTE = [
+        { name: 'Blanc Banquet', hex: '#ffffff' },
+        { name: 'Chêne clair', hex: '#d4a373' },
+        { name: 'Noyer noble', hex: '#451a03' },
+        { name: 'Or champagne', hex: '#d4af37' },
+        { name: 'Vert émeraude', hex: '#065f46' },
+        { name: 'Bleu nuit', hex: '#1e3a8a' },
+        { name: 'Gris ardoise', hex: '#475569' },
+        { name: 'Noir gala', hex: '#09090b' },
+      ];
+
       return (
         <div className="space-y-4">
           <div className="p-4 border border-border rounded-[var(--radius-card)] bg-surface space-y-3">
-            <p className="text-sm font-semibold flex items-center gap-2">
-              <BoxSelect className="w-4 h-4" />
-              {selection.length} éléments sélectionnés
-            </p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                <BoxSelect className="w-4 h-4 text-primary" />
+                {selection.length} éléments sélectionnés
+              </p>
+              <button
+                type="button"
+                onClick={() => setSelection([])}
+                className="text-xs text-muted hover:text-foreground font-medium underline"
+              >
+                Tout désélectionner
+              </button>
+            </div>
+
+            {/* Badges récapitulatifs du lot */}
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              {selTables > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary">
+                  {selTables} table{selTables > 1 ? 's' : ''}
+                </span>
+              )}
+              {selChairs > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                  {selChairs} chaise{selChairs > 1 ? 's' : ''}
+                </span>
+              )}
+              {selScreens > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-700 dark:text-cyan-300">
+                  {selScreens} écran{selScreens > 1 ? 's' : ''}
+                </span>
+              )}
+              {selOtherFix > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                  {selOtherFix} équipement{selOtherFix > 1 ? 's' : ''}
+                </span>
+              )}
+              {selZones > 0 && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-700 dark:text-purple-300">
+                  {selZones} zone{selZones > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+
+            {/* Filtres de sélection rapide */}
+            <div className="pt-2 border-t border-border flex flex-wrap gap-1">
+              <button
+                type="button"
+                onClick={() => setSelection(selectAllItems(blueprint))}
+                className="px-2 py-1 rounded text-xs font-medium border border-border bg-surface hover:bg-surface-muted"
+                title="Tout sélectionner sur le plan (Ctrl+A)"
+              >
+                Tout ({selectAllItems(blueprint).length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelection(selectItemsByKind(blueprint, 'table'))}
+                className="px-2 py-1 rounded text-xs font-medium border border-border bg-surface hover:bg-surface-muted"
+              >
+                Toutes les tables
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelection(selectItemsByKind(blueprint, 'chair'))}
+                className="px-2 py-1 rounded text-xs font-medium border border-border bg-surface hover:bg-surface-muted"
+              >
+                Toutes les chaises
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelection(selectItemsByKind(blueprint, 'screen'))}
+                className="px-2 py-1 rounded text-xs font-medium border border-border bg-surface hover:bg-surface-muted"
+              >
+                Tous les écrans
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelection(invertSelection(blueprint, selection))}
+                className="px-2 py-1 rounded text-xs font-medium border border-border bg-surface hover:bg-surface-muted"
+                title="Inverser la sélection"
+              >
+                Inverser
+              </button>
+            </div>
+
             <p className="text-xs text-muted">
               <span className="lg:hidden">Appui long ou onglet Régler pour les propriétés · tap pour sélectionner</span>
               <span className="hidden lg:inline">
-                Shift+clic pour ajouter / retirer · Échap pour tout désélectionner
+                Shift+clic pour ajouter / retirer · Échap pour désélectionner
                 {caps.canDuplicate ? ' · Cmd/Ctrl+D pour dupliquer' : ''}
                 {caps.canAlign ? ' · Cmd/Ctrl+G pour grouper' : ''}
               </span>
             </p>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {caps.canDuplicate ? (
                 <button type="button" onClick={duplicateSelection} className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}>
@@ -2206,9 +2539,10 @@ export default function RoomLayoutEditor({
                 <Trash2 className="w-3.5 h-3.5" aria-hidden /> Supprimer
               </button>
             </div>
-            <details className="rounded-[var(--radius-card)] border border-border bg-surface-muted/40">
+
+            <details open className="rounded-[var(--radius-card)] border border-border bg-surface-muted/40">
               <summary className="min-h-11 px-3 flex items-center justify-between gap-2 text-sm font-semibold text-foreground cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                Aligner, miroir & groupe
+                Aligner, ranger & grouper
                 <ChevronDown className="w-3.5 h-3.5 shrink-0 text-muted" aria-hidden />
               </summary>
               <div className="px-3 pb-3 space-y-2">
@@ -2220,6 +2554,7 @@ export default function RoomLayoutEditor({
                     <FlipVertical2 className="w-3.5 h-3.5" aria-hidden /> Miroir V
                   </button>
                 </div>
+
                 {caps.canAlign ? (
                   <>
                     <div className="grid grid-cols-4 gap-1.5">
@@ -2245,7 +2580,36 @@ export default function RoomLayoutEditor({
                         </button>
                       ))}
                     </div>
-                    <div className="flex gap-2">
+
+                    {/* Actions d'alignement avancées */}
+                    <div className="grid grid-cols-3 gap-1.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => applyAlign('centerRoomX')}
+                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'text-xs py-1.5')}
+                        title="Centrer horizontalement dans la pièce (axe central)"
+                      >
+                        <Crosshair className="w-3.5 h-3.5" aria-hidden /> Centrer X
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => applyAlign('centerRoomY')}
+                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'text-xs py-1.5')}
+                        title="Centrer verticalement dans la pièce"
+                      >
+                        <Crosshair className="w-3.5 h-3.5" aria-hidden /> Centrer Y
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => applyAlign('gridTidy')}
+                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'text-xs py-1.5')}
+                        title="Organiser automatiquement en grille rectangulaire ordonnée"
+                      >
+                        <LayoutGrid className="w-3.5 h-3.5" aria-hidden /> En grille
+                      </button>
+                    </div>
+
+                    <div className="flex gap-2 pt-1">
                       <button type="button" onClick={groupSelection} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1')}>
                         <Group className="w-3.5 h-3.5" aria-hidden /> Grouper
                       </button>
@@ -2253,6 +2617,7 @@ export default function RoomLayoutEditor({
                         <Ungroup className="w-3.5 h-3.5" aria-hidden /> Dégrouper
                       </button>
                     </div>
+
                     <button
                       type="button"
                       onClick={() => optimizeClearances()}
@@ -2265,24 +2630,47 @@ export default function RoomLayoutEditor({
                 ) : null}
               </div>
             </details>
-            <details className="rounded-[var(--radius-card)] border border-border bg-surface-muted/40">
+
+            <details open className="rounded-[var(--radius-card)] border border-border bg-surface-muted/40">
               <summary className="min-h-11 px-3 flex items-center justify-between gap-2 text-sm font-semibold text-foreground cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                Déplacer & style
+                Style, échelle & rotation par lot
                 <ChevronDown className="w-3.5 h-3.5 shrink-0 text-muted" aria-hidden />
               </summary>
-              <div className="px-3 pb-3 space-y-2">
-                <p className={EDITOR_HEADING}>Déplacer le groupe</p>
-                <div className="grid grid-cols-3 gap-1 place-items-center max-w-[140px] mx-auto">
-                  <span />
-                  <button type="button" aria-label="Déplacer le groupe vers le haut" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, 0, -3), { message: 'Groupe déplacé ↑', kind: 'edit' })} className={EDITOR_TOOL_ICON}><ArrowUp className="w-4 h-4" aria-hidden /></button>
-                  <span />
-                  <button type="button" aria-label="Déplacer le groupe vers la gauche" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, -3, 0), { message: 'Groupe déplacé ←', kind: 'edit' })} className={EDITOR_TOOL_ICON}><ArrowLeft className="w-4 h-4" aria-hidden /></button>
-                  <button type="button" aria-label="Déplacer le groupe vers le bas" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, 0, 3), { message: 'Groupe déplacé ↓', kind: 'edit' })} className={EDITOR_TOOL_ICON}><ArrowDown className="w-4 h-4" aria-hidden /></button>
-                  <button type="button" aria-label="Déplacer le groupe vers la droite" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, 3, 0), { message: 'Groupe déplacé →', kind: 'edit' })} className={EDITOR_TOOL_ICON}><ArrowRight className="w-4 h-4" aria-hidden /></button>
+              <div className="px-3 pb-3 space-y-3">
+                {/* Nuancier rapide d'harmonies événementielles */}
+                <div className="space-y-1.5">
+                  <span className="text-xs font-semibold text-muted">Palette rapide</span>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {QUICK_PALETTE.map((p) => (
+                      <button
+                        key={p.hex}
+                        type="button"
+                        onClick={() => {
+                          setGroupStyleColor(p.hex);
+                          updateBlueprint(
+                            applyStyleToSelection(blueprint, selection, {
+                              tableColor: p.hex,
+                              color: p.hex,
+                            }),
+                            { message: `Couleur ${p.name} appliquée`, kind: 'edit' },
+                          );
+                        }}
+                        className="flex items-center gap-1.5 px-2 py-1.5 rounded-[var(--radius-button)] border border-border bg-surface hover:bg-surface-muted text-xs font-medium truncate"
+                        title={p.name}
+                      >
+                        <span
+                          className="size-3.5 rounded-full border border-black/20 shrink-0"
+                          style={{ backgroundColor: p.hex }}
+                        />
+                        <span className="truncate text-xs">{p.name.split(' ')[0]}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <p className={cn(EDITOR_HEADING, 'pt-1')}>Style du groupe</p>
+
+                {/* Couleur personnalisée */}
                 <label className="flex items-center gap-2 text-xs">
-                  <span className="text-muted font-semibold">Couleur</span>
+                  <span className="text-muted font-semibold">Couleur personnalisée</span>
                   <input
                     type="color"
                     value={groupStyleColor}
@@ -2305,7 +2693,84 @@ export default function RoomLayoutEditor({
                     Appliquer
                   </button>
                 </label>
-                <div className="flex gap-2">
+
+                {/* Ajustement groupé d'échelle et de rotation fine */}
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold text-muted">Échelle par lot</span>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateBlueprint(
+                            applyStyleToSelection(blueprint, selection, { scaleDelta: 1.1 }),
+                            { message: 'Échelle +10%', kind: 'edit' },
+                          )
+                        }
+                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1 text-xs py-1.5')}
+                      >
+                        +10%
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateBlueprint(
+                            applyStyleToSelection(blueprint, selection, { scaleDelta: 0.9 }),
+                            { message: 'Échelle -10%', kind: 'edit' },
+                          )
+                        }
+                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1 text-xs py-1.5')}
+                      >
+                        -10%
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-xs font-semibold text-muted">Rotation pas fin</span>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateBlueprint(
+                            applyStyleToSelection(blueprint, selection, { rotationDelta: -15 }),
+                            { message: 'Rotation -15°', kind: 'edit' },
+                          )
+                        }
+                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1 text-xs py-1.5')}
+                      >
+                        -15°
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateBlueprint(
+                            applyStyleToSelection(blueprint, selection, { rotationDelta: 15 }),
+                            { message: 'Rotation +15°', kind: 'edit' },
+                          )
+                        }
+                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1 text-xs py-1.5')}
+                      >
+                        +15°
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Déplacer le groupe avec les touches fléchées */}
+                <div className="pt-2 border-t border-border">
+                  <p className={EDITOR_HEADING}>Déplacer le groupe</p>
+                  <div className="grid grid-cols-3 gap-1 place-items-center max-w-[140px] mx-auto">
+                    <span />
+                    <button type="button" aria-label="Déplacer le groupe vers le haut" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, 0, -3), { message: 'Groupe déplacé ↑', kind: 'edit' })} className={EDITOR_TOOL_ICON}><ArrowUp className="w-4 h-4" aria-hidden /></button>
+                    <span />
+                    <button type="button" aria-label="Déplacer le groupe vers la gauche" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, -3, 0), { message: 'Groupe déplacé ←', kind: 'edit' })} className={EDITOR_TOOL_ICON}><ArrowLeft className="w-4 h-4" aria-hidden /></button>
+                    <button type="button" aria-label="Déplacer le groupe vers le bas" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, 0, 3), { message: 'Groupe déplacé ↓', kind: 'edit' })} className={EDITOR_TOOL_ICON}><ArrowDown className="w-4 h-4" aria-hidden /></button>
+                    <button type="button" aria-label="Déplacer le groupe vers la droite" onClick={() => updateBlueprint(moveLayoutSelectionByDelta(blueprint, selection, 3, 0), { message: 'Groupe déplacé →', kind: 'edit' })} className={EDITOR_TOOL_ICON}><ArrowRight className="w-4 h-4" aria-hidden /></button>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2 border-t border-border">
                   <button
                     type="button"
                     onClick={() => updateBlueprint(applyStyleToSelection(blueprint, selection, { locked: true }), { message: 'Groupe verrouillé', kind: 'edit' })}
@@ -3832,7 +4297,8 @@ export default function RoomLayoutEditor({
       const isBuffet = selectedFixture.kind === 'buffet';
       const isStairs = selectedFixture.kind === 'stairs';
       const isBalcony = selectedFixture.kind === 'balcony';
-      const raisedSurface = (isInstrument || isBar)
+      const isScreen = selectedFixture.kind === 'screen';
+      const raisedSurface = (isInstrument || isBar || isScreen)
         ? resolveFurnitureSurfaceAt(
             blueprint,
             selectedFixture.x + selectedFixture.w / 2,
@@ -3854,6 +4320,8 @@ export default function RoomLayoutEditor({
                   ? 'Allée & Tapis'
                   : isChandelier
                     ? 'Lustre & Éclairage'
+                    : isScreen
+                      ? 'Écran, TV & Multimédia'
                     : isBalcony
                       ? 'Balcon'
                       : isStairs
@@ -4542,6 +5010,167 @@ export default function RoomLayoutEditor({
                 </label>
               </>
             )}
+
+            {isScreen ? (
+              <div className="space-y-3 pt-1 border-t border-border">
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-foreground">Type d’appareil & écran</span>
+                  <select
+                    value={selectedFixture.screenKind ?? 'stageLedWall'}
+                    onChange={(e) => {
+                      const nextKind = e.target.value as ScreenKind;
+                      const surfElev = raisedSurface?.elevationM ?? 0.76;
+                      const sizeDefaults: Record<ScreenKind, { w: number; h: number; elev: number; tilt: number }> = {
+                        stageLedWall: { w: 24, h: 6, elev: 0, tilt: 0 },
+                        wallTv: { w: 10, h: 3, elev: 1.6, tilt: 4 },
+                        tableMonitor: { w: 6, h: 4, elev: surfElev, tilt: 6 },
+                        laptop: { w: 4, h: 3, elev: surfElev, tilt: 0 },
+                        desktopPc: { w: 5, h: 4, elev: surfElev, tilt: 4 },
+                      };
+                      const def = sizeDefaults[nextKind];
+                      updateFixture(
+                        selectedFixture.id,
+                        {
+                          screenKind: nextKind,
+                          w: def.w,
+                          h: def.h,
+                          screenElevationM: def.elev,
+                          screenTiltDeg: def.tilt,
+                          label: nextOwnedLabel(
+                            selectedFixture.label,
+                            screenKindLabels[selectedFixture.screenKind ?? 'stageLedWall'],
+                            screenKindLabels[nextKind],
+                          ),
+                        },
+                        `Écran : ${screenKindLabels[nextKind]}`,
+                      );
+                    }}
+                    className={EDITOR_FIELD}
+                  >
+                    {(Object.keys(screenKindLabels) as ScreenKind[]).map((k) => (
+                      <option key={k} value={k}>
+                        {screenKindLabels[k]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="block text-xs space-y-1">
+                    <span className="font-semibold text-muted">Format / Ratio</span>
+                    <select
+                      value={selectedFixture.screenRatio ?? '16:9'}
+                      onChange={(e) =>
+                        updateFixture(
+                          selectedFixture.id,
+                          { screenRatio: e.target.value as ScreenRatio },
+                          `Ratio : ${e.target.value}`,
+                        )
+                      }
+                      className={EDITOR_FIELD}
+                    >
+                      {(Object.keys(screenRatioLabels) as ScreenRatio[]).map((r) => (
+                        <option key={r} value={r}>
+                          {screenRatioLabels[r as ScreenRatio]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block text-xs space-y-1">
+                    <span className="font-semibold text-muted">Hauteur (m)</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={4}
+                      step={0.05}
+                      value={selectedFixture.screenElevationM ?? (selectedFixture.screenKind === 'wallTv' ? 1.6 : (raisedSurface?.elevationM ?? 0))}
+                      onChange={(e) =>
+                        updateFixture(
+                          selectedFixture.id,
+                          { screenElevationM: parseFloat(e.target.value) || 0 },
+                          'Hauteur d’écran modifiée',
+                        )
+                      }
+                      className={EDITOR_FIELD}
+                    />
+                  </label>
+                </div>
+
+                {raisedSurface && (
+                  <div className="rounded-[var(--radius-button)] bg-primary/10 border border-primary/20 px-2.5 py-1.5 text-xs text-primary font-medium flex items-center justify-between">
+                    <span>Posé sur : <strong>{raisedSurface.label}</strong></span>
+                    <span className="font-mono text-xs">{raisedSurface.elevationM.toFixed(2)}m</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="block text-xs space-y-1">
+                    <span className="font-semibold text-muted">Inclinaison tilt (°)</span>
+                    <input
+                      type="number"
+                      min={-15}
+                      max={35}
+                      step={1}
+                      value={selectedFixture.screenTiltDeg ?? 0}
+                      onChange={(e) =>
+                        updateFixture(
+                          selectedFixture.id,
+                          { screenTiltDeg: parseFloat(e.target.value) || 0 },
+                          'Inclinaison modifiée',
+                        )
+                      }
+                      className={EDITOR_FIELD}
+                    />
+                  </label>
+
+                  <label className="flex items-center gap-2 pt-5 text-xs font-semibold text-foreground cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedFixture.screenPowered !== false}
+                      onChange={(e) =>
+                        updateFixture(
+                          selectedFixture.id,
+                          { screenPowered: e.target.checked },
+                          e.target.checked ? 'Écran allumé' : 'Écran éteint',
+                        )
+                      }
+                      className="rounded border-border size-4"
+                    />
+                    Écran allumé
+                  </label>
+                </div>
+
+                {selectedFixture.screenKind === 'wallTv' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Accrocher au mur périphérique le plus proche
+                      const fx = selectedFixture.x;
+                      const fy = selectedFixture.y;
+                      const distLeft = fx;
+                      const distRight = 100 - (fx + selectedFixture.w);
+                      const distTop = fy;
+                      const distBottom = 100 - (fy + selectedFixture.h);
+                      const minDist = Math.min(distLeft, distRight, distTop, distBottom);
+
+                      if (minDist === distTop) {
+                        updateFixture(selectedFixture.id, { y: 1.5, rotation: 0 }, 'Accroché au mur nord');
+                      } else if (minDist === distBottom) {
+                        updateFixture(selectedFixture.id, { y: 98.5 - selectedFixture.h, rotation: 180 }, 'Accroché au mur sud');
+                      } else if (minDist === distLeft) {
+                        updateFixture(selectedFixture.id, { x: 1.5, rotation: 90 }, 'Accroché au mur ouest');
+                      } else {
+                        updateFixture(selectedFixture.id, { x: 98.5 - selectedFixture.w, rotation: 270 }, 'Accroché au mur est');
+                      }
+                    }}
+                    className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'w-full text-xs font-semibold')}
+                  >
+                    Accrocher au mur le plus proche
+                  </button>
+                )}
+              </div>
+            ) : null}
 
             {isDecal ? (
               <>
@@ -6713,9 +7342,23 @@ export default function RoomLayoutEditor({
         </button>
       ) : null}
       {caps.fixtureKinds.includes('screen') ? (
-        <button type="button" onClick={() => addFixture('screen')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
-          Écran
-        </button>
+        <>
+          <button type="button" onClick={() => addScreenFixture('stageLedWall')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+            Mur LED
+          </button>
+          <button type="button" onClick={() => addScreenFixture('wallTv')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Télévision accrochée au mur">
+            TV Murale
+          </button>
+          <button type="button" onClick={() => addScreenFixture('tableMonitor')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Moniteur de table / régie">
+            Écran Table
+          </button>
+          <button type="button" onClick={() => addScreenFixture('laptop')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Ordinateur portable">
+            PC Portable
+          </button>
+          <button type="button" onClick={() => addScreenFixture('desktopPc')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Ordinateur fixe tout-en-un">
+            PC Fixe
+          </button>
+        </>
       ) : null}
       </EditorToolGroup>
       </ToolbarCluster>
