@@ -572,6 +572,8 @@ export interface MarketplaceBookingItem {
   createdAt: string;
   event: { id: string; title: string; date: string } | null;
   viewerRole?: 'vendor' | 'organizer';
+  /** Dates bloquées / confirmées sur la fiche du prestataire. */
+  blockedDates?: string[];
 }
 
 export function bookingPipelineIndex(item: MarketplaceBookingItem): number {
@@ -769,6 +771,36 @@ export function bookingDateKeys(booking: { eventDate: string; eventEndDate?: str
   const end = String(booking.eventEndDate || booking.eventDate || '').slice(0, 10);
   if (!start) return [];
   return eachDateKey(start, end || start);
+}
+
+export const BOOKING_CONFIRMED_STATUSES: MarketplaceBookingStatus[] = ['CONFIRMED', 'COMPLETED'];
+export const BOOKING_PENDING_STATUSES: MarketplaceBookingStatus[] = ['REQUESTED', 'ACCEPTED'];
+
+export function isConfirmedBookingStatus(status: MarketplaceBookingStatus) {
+  return status === 'CONFIRMED' || status === 'COMPLETED';
+}
+
+export function isPendingBookingStatus(status: MarketplaceBookingStatus) {
+  return status === 'REQUESTED' || status === 'ACCEPTED';
+}
+
+export function uniqueDateKeys(...groups: Array<string[] | undefined>): string[] {
+  return parseBlockedDates(groups.flatMap((group) => group || []));
+}
+
+export function subtractDateKeys(dates: string[], minus: string[]): string[] {
+  const skip = new Set(parseBlockedDates(minus));
+  return parseBlockedDates(dates).filter((key) => !skip.has(key));
+}
+
+export function bookingOverlapsDay(
+  booking: { eventDate: string; eventEndDate?: string | null },
+  day: string,
+) {
+  const start = String(booking.eventDate || '').slice(0, 10);
+  const end = String(booking.eventEndDate || booking.eventDate || '').slice(0, 10);
+  if (!start || !day) return false;
+  return day >= start && day <= (end || start);
 }
 
 export function formatDateKeyFr(key: string) {

@@ -270,6 +270,7 @@ export default function OrganizerDashboardHome({
   const [inquiries, setInquiries] = useState<MarketplaceInquiryItem[]>([]);
   const [bookings, setBookings] = useState<MarketplaceBookingItem[]>([]);
   const [commissionDueFc, setCommissionDueFc] = useState(0);
+  const [vendorBlockedDates, setVendorBlockedDates] = useState<string[]>([]);
   const [vendorHubLoading, setVendorHubLoading] = useState(false);
   const [vendorRolePerspective, setVendorRolePerspective] = useState<'vendor' | 'organizer'>(
     isVenueOrVendorOrCatalog ? 'vendor' : 'organizer'
@@ -285,6 +286,7 @@ export default function OrganizerDashboardHome({
       ]);
       setBookings(Array.isArray(bData?.bookings) ? bData.bookings : []);
       setCommissionDueFc(Number(bData?.commissionDueFc) || 0);
+      setVendorBlockedDates(Array.isArray(bData?.blockedDates) ? bData.blockedDates : []);
       setInquiries(Array.isArray(iData?.inquiries) ? iData.inquiries : []);
     } catch {
       // Tolérance aux erreurs réseau
@@ -2816,6 +2818,7 @@ export default function OrganizerDashboardHome({
               commissionDueFc={vendorRolePerspective === 'vendor' ? commissionDueFc : 0}
               onChanged={() => loadVendorHubData(vendorRolePerspective)}
               organizerView={vendorRolePerspective === 'organizer'}
+              vendorBlockedDates={vendorRolePerspective === 'vendor' ? vendorBlockedDates : []}
             />
           )}
         </div>

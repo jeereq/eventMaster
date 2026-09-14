@@ -24,6 +24,7 @@ function parseKey(key: string) {
 export default function AvailabilityCalendar({
   bookedDates = [],
   blockedDates = [],
+  pendingDates = [],
   selectedDate,
   selectedEndDate,
   onSelectDate,
@@ -35,9 +36,16 @@ export default function AvailabilityCalendar({
   compact = false,
   /** Permet de sélectionner aussi les jours réservés (filtre récap). */
   allowBookedSelection = false,
+  bookedTone = 'danger',
+  bookedLabel = 'Réservé',
+  pendingLabel = 'En cours',
+  blockedLabel = 'Indisponible',
+  className,
 }: {
   bookedDates?: string[];
   blockedDates?: string[];
+  /** Demandes ou acomptes en cours (pas encore confirmés). */
+  pendingDates?: string[];
   selectedDate?: string;
   selectedEndDate?: string;
   onSelectDate?: (key: string) => void;
@@ -49,12 +57,18 @@ export default function AvailabilityCalendar({
   /** Variante plus dense (colonne contact). */
   compact?: boolean;
   allowBookedSelection?: boolean;
+  bookedTone?: 'danger' | 'emerald';
+  bookedLabel?: string;
+  pendingLabel?: string;
+  blockedLabel?: string;
+  className?: string;
 }) {
   const now = new Date();
   const [cursor, setCursor] = useState({ year: now.getFullYear(), month: now.getMonth() });
   const [hint, setHint] = useState('');
   const booked = useMemo(() => new Set(parseBlockedDates(bookedDates)), [bookedDates]);
   const blocked = useMemo(() => new Set(parseBlockedDates(blockedDates)), [blockedDates]);
+  const pending = useMemo(() => new Set(parseBlockedDates(pendingDates)), [pendingDates]);
   const floor = minDate || todayKey();
   const today = todayKey();
   const rangeMode = Boolean(onSelectRange) && !editable;
@@ -89,7 +103,7 @@ export default function AvailabilityCalendar({
   });
 
   const rangeBusy = (from: string, to: string) => {
-    return eachDateKey(from, to).some((key) => booked.has(key) || blocked.has(key) || key < floor);
+    return eachDateKey(from, to).some((key) => booked.has(key) || blocked.has(key) || pending.has(key) || key < floor);
   };
 
   const clearSelection = () => {
@@ -101,8 +115,8 @@ export default function AvailabilityCalendar({
   const handleDay = (key: string) => {
     setHint('');
     if (key < floor) return;
-    if (booked.has(key) && !allowBookedSelection) {
-      setHint('Ce jour est déjà réservé.');
+    if ((booked.has(key) || pending.has(key)) && !allowBookedSelection) {
+      setHint(booked.has(key) ? 'Ce jour est déjà réservé.' : 'Ce jour est déjà demandé.');
       return;
     }
     if (editable && onToggleBlocked) {
@@ -154,6 +168,7 @@ export default function AvailabilityCalendar({
       className={cn(
         'border border-border rounded-2xl bg-surface space-y-3',
         compact ? 'p-3' : 'p-3 sm:p-4',
+        className,
       )}
     >
       <div className="flex items-center justify-between gap-2">
@@ -234,32 +249,40 @@ export default function AvailabilityCalendar({
           const isPast = cell.key < floor;
           const isBooked = booked.has(cell.key);
           const isBlocked = blocked.has(cell.key);
+          const isPending = pending.has(cell.key) && !isBooked;
           const isToday = cell.key === today;
           const inRange = Boolean(rangeStart && rangeEnd && cell.key >= rangeStart && cell.key <= rangeEnd);
           const isEdge = cell.key === rangeStart || cell.key === rangeEnd;
           const isSelected = !rangeMode && selectedDate === cell.key;
           const selectable = Boolean(onSelectRange || onSelectDate);
+          const occupied = isBooked || isBlocked || isPending;
           const clickable = !isPast && (
             editable
-              ? !isBooked
-              : selectable && (allowBookedSelection || (!isBooked && !isBlocked))
+              ? !isBooked && !isPending
+              : selectable && (allowBookedSelection || !occupied)
           );
           return (
             <button
               key={cell.key}
               type="button"
-              disabled={!clickable && !isBooked && !isBlocked}
+              disabled={!clickable && !occupied}
               onClick={() => handleDay(cell.key)}
               aria-current={isToday ? 'date' : undefined}
               className={cn(
                 'aspect-square min-h-9 sm:min-h-0 rounded-lg text-sm sm:text-xs font-medium border relative',
-                isBooked && !isEdge && !isSelected && !inRange && 'bg-danger/10 text-danger border-danger/30',
+                isBooked && !isEdge && !isSelected && !inRange && (
+                  bookedTone === 'emerald'
+                    ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/35'
+                    : 'bg-danger/10 text-danger border-danger/30'
+                ),
                 isBooked && (isEdge || isSelected || inRange) && 'bg-primary-solid text-primary-foreground border-primary-solid shadow-[var(--shadow-soft)]',
-                !isBooked && isBlocked && !isEdge && !isSelected && 'bg-festive-accent/10 text-festive-accent border-festive-accent/30',
-                isEdge && !isBooked && !isBlocked && 'bg-primary-solid text-primary-foreground border-primary-solid shadow-[var(--shadow-soft)]',
-                inRange && !isEdge && !isBooked && !isBlocked && 'bg-primary/15 text-foreground border-primary/25',
-                isSelected && !isBooked && !isBlocked && 'bg-primary-solid text-primary-foreground border-primary-solid shadow-[var(--shadow-soft)]',
-                !isBooked && !isBlocked && !inRange && !isSelected && !isPast && 'border-transparent hover:border-border hover:bg-surface-muted',
+                !isBooked && isPending && !isEdge && !isSelected && !inRange && 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/35',
+                !isBooked && isPending && (isEdge || isSelected || inRange) && 'bg-primary-solid text-primary-foreground border-primary-solid shadow-[var(--shadow-soft)]',
+                !isBooked && !isPending && isBlocked && !isEdge && !isSelected && 'bg-festive-accent/10 text-festive-accent border-festive-accent/30',
+                isEdge && !occupied && 'bg-primary-solid text-primary-foreground border-primary-solid shadow-[var(--shadow-soft)]',
+                inRange && !isEdge && !occupied && 'bg-primary/15 text-foreground border-primary/25',
+                isSelected && !occupied && 'bg-primary-solid text-primary-foreground border-primary-solid shadow-[var(--shadow-soft)]',
+                !occupied && !inRange && !isSelected && !isPast && 'border-transparent hover:border-border hover:bg-surface-muted',
                 isPast && 'text-muted/45 border-transparent',
                 isToday && !isEdge && !isSelected && 'ring-1 ring-primary/50',
               )}
@@ -272,12 +295,21 @@ export default function AvailabilityCalendar({
 
       <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted">
         <span className="inline-flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-sm bg-danger/40 border border-danger/40" />
-          Réservé
+          <span className={cn(
+            'w-2.5 h-2.5 rounded-sm border',
+            bookedTone === 'emerald' ? 'bg-emerald-500/40 border-emerald-500/40' : 'bg-danger/40 border-danger/40',
+          )} />
+          {bookedLabel}
         </span>
+        {pending.size > 0 ? (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-amber-500/40 border border-amber-500/40" />
+            {pendingLabel}
+          </span>
+        ) : null}
         <span className="inline-flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-sm bg-festive-accent/40 border border-festive-accent/40" />
-          Indisponible
+          {blockedLabel}
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-sm ring-1 ring-primary/50 bg-surface" />

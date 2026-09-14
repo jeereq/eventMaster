@@ -21,12 +21,23 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 const HOLD_STATUSES: MarketplaceBookingStatus[] = ['REQUESTED', 'ACCEPTED', 'CONFIRMED'];
 
 const bookingInclude = {
-  listing: { select: { slug: true, headline: true, roomId: true, address: true, latitude: true, longitude: true, room: { select: { name: true, location: true } } } },
-  offering: { select: { slug: true, title: true, category: true } },
+  listing: { select: { slug: true, headline: true, roomId: true, address: true, latitude: true, longitude: true, blockedDates: true, room: { select: { name: true, location: true } } } },
+  offering: { select: { slug: true, title: true, category: true, blockedDates: true } },
   event: { select: { id: true, title: true, date: true } },
   vendorTenant: { select: { id: true, name: true, managerId: true, manager: { select: { phone: true, phoneCountryCode: true } }, vendorProfile: { select: { slug: true, displayName: true } } } },
   organizerTenant: { select: { id: true, name: true } },
 };
+
+async function collectVendorBlockedDates(tenantId: string): Promise<string[]> {
+  const [listings, offerings] = await Promise.all([
+    prisma.venueListing.findMany({ where: { tenantId }, select: { blockedDates: true } }),
+    prisma.serviceOffering.findMany({ where: { tenantId }, select: { blockedDates: true } }),
+  ]);
+  return parseBlockedDates([
+    ...listings.flatMap((row) => parseBlockedDates(row.blockedDates)),
+    ...offerings.flatMap((row) => parseBlockedDates(row.blockedDates)),
+  ]);
+}
 
 function serializeBooking(row: {
   id: string;
@@ -48,8 +59,8 @@ function serializeBooking(row: {
   declinedAt?: Date | null;
   notes: string | null;
   createdAt: Date;
-  listing?: { slug: string; headline: string | null; room?: { name: string } | null } | null;
-  offering?: { slug: string; title: string; category: string } | null;
+  listing?: { slug: string; headline: string | null; blockedDates?: unknown; room?: { name: string } | null } | null;
+  offering?: { slug: string; title: string; category: string; blockedDates?: unknown } | null;
   event?: { id: string; title: string; date: Date } | null;
   vendorTenant?: { name: string; manager?: { phone?: string | null; phoneCountryCode?: string | null } | null; vendorProfile?: { slug: string; displayName: string } | null } | null;
   organizerTenant?: { name: string } | null;
@@ -83,6 +94,7 @@ function serializeBooking(row: {
     notes: row.notes,
     createdAt: row.createdAt,
     event: row.event,
+    blockedDates: parseBlockedDates(row.listing?.blockedDates ?? row.offering?.blockedDates),
   };
 }
 
@@ -382,11 +394,14 @@ export async function listBookings(req: AuthenticatedRequest, res: Response) {
       .filter((b) => b.vendorTenantId === tenantId && (b.status === 'CONFIRMED' || b.status === 'COMPLETED'))
       .reduce((sum, b) => sum + b.commissionFc, 0);
 
+    const vendorBlockedDates = role === 'organizer' ? [] : await collectVendorBlockedDates(tenantId);
+
     return res.json({
       bookings: rows.map((row) => ({
         ...serializeBooking(row),
         viewerRole: row.vendorTenantId === tenantId ? 'vendor' : 'organizer',
       })),
+      blockedDates: vendorBlockedDates,
       commissionDueFc: commissionDue,
       commissionRate: 0.08,
     });

@@ -90,6 +90,7 @@ export default function MarketplaceDeskPage() {
   const [inquiries, setInquiries] = useState<MarketplaceInquiryItem[]>([]);
   const [bookings, setBookings] = useState<MarketplaceBookingItem[]>([]);
   const [commissionDueFc, setCommissionDueFc] = useState(0);
+  const [vendorBlockedDates, setVendorBlockedDates] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -145,6 +146,7 @@ export default function MarketplaceDeskPage() {
       setInquiries(leads.inquiries || []);
       setBookings(books.bookings || []);
       setCommissionDueFc(books.commissionDueFc || 0);
+      setVendorBlockedDates(Array.isArray(books.blockedDates) ? books.blockedDates : []);
     } catch (err: any) {
       setError(err.message || 'Impossible de charger le marketplace.');
     } finally {
@@ -536,7 +538,12 @@ export default function MarketplaceDeskPage() {
           <Loader2 className="w-7 h-7 animate-spin text-primary" />
         </div>
       ) : tab === 'bookings' ? (
-        <MarketplaceBookingsPanel bookings={bookings} commissionDueFc={commissionDueFc} onChanged={load} />
+        <MarketplaceBookingsPanel
+          bookings={bookings}
+          commissionDueFc={commissionDueFc}
+          onChanged={load}
+          vendorBlockedDates={vendorBlockedDates}
+        />
       ) : tab === 'inquiries' ? (
         <MarketplaceInquiriesPanel
           inquiries={inquiries}

@@ -31,19 +31,26 @@ import {
   BOOKING_STATUS_LABELS,
   bookingDateKeys,
   bookingNextStep,
+  bookingOverlapsDay,
   bookingPipelineIndex,
+  eachDateKey,
   buildWhatsAppDirectLink,
   dashboardServiceHref,
   dashboardVenueHref,
   formatBookingPeriod,
+  formatDateKeyFr,
+  isConfirmedBookingStatus,
+  isPendingBookingStatus,
   isServiceRentalCategory,
   parseBlockedDates,
+  subtractDateKeys,
+  uniqueDateKeys,
   type MarketplaceBookingItem,
   type MarketplaceBookingStatus,
 } from '@/lib/marketplace';
 import { eventDashboardHref } from '@/lib/eventRoutes';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
-import { Building2, CalendarCheck, CheckCircle2, ChevronDown, Coins, CreditCard, KeyRound, MessageCircle, Phone, Sparkles, XCircle } from 'lucide-react';
+import { Ban, Building2, CalendarCheck, CalendarDays, CheckCircle2, ChevronDown, Coins, CreditCard, KeyRound, MessageCircle, Phone, Sparkles, XCircle } from 'lucide-react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { commissionPercent, depositPercent } from '@/lib/platformRates';
 
@@ -80,6 +87,76 @@ function kindIcon(item: MarketplaceBookingItem) {
   return <Sparkles className="w-4 h-4" />;
 }
 
+const MAX_UNAVAILABLE_PREVIEW = 5;
+const STATUS_SUMMARY_ORDER: MarketplaceBookingStatus[] = [
+  'REQUESTED',
+  'ACCEPTED',
+  'CONFIRMED',
+  'COMPLETED',
+  'CANCELLED',
+];
+
+function extraUnavailableDates(item: MarketplaceBookingItem): string[] {
+  const own = new Set(bookingDateKeys(item));
+  return parseBlockedDates(item.blockedDates).filter((day) => !own.has(day));
+}
+
+function formatDayLong(key: string) {
+  return new Date(`${key}T12:00:00`).toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+}
+
+function BookingUnavailability({
+  item,
+  onFocusDate,
+}: {
+  item: MarketplaceBookingItem;
+  onFocusDate?: (day: string) => void;
+}) {
+  const extras = extraUnavailableDates(item);
+  const confirmed = isConfirmedBookingStatus(item.status);
+  if (!confirmed && extras.length === 0) return null;
+  const preview = extras.slice(0, MAX_UNAVAILABLE_PREVIEW);
+  return (
+    <div className="rounded-xl border border-festive-accent/25 bg-festive-accent/8 p-2.5 space-y-1.5">
+      {confirmed ? (
+        <p className="text-[11px] font-semibold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+          <CalendarCheck className="w-3.5 h-3.5 shrink-0" />
+          Dates confirmées et bloquées au calendrier du prestataire
+        </p>
+      ) : null}
+      {extras.length ? (
+        <div className="space-y-1">
+          <p className="text-[11px] font-semibold text-festive-accent flex items-center gap-1.5">
+            <Ban className="w-3.5 h-3.5 shrink-0" />
+            Autres indisponibilités du prestataire
+          </p>
+          <div className="flex flex-wrap gap-1">
+            {preview.map((day) => (
+              <button
+                key={day}
+                type="button"
+                onClick={() => onFocusDate?.(day)}
+                className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-festive-accent/10 text-festive-accent border border-festive-accent/20 hover:bg-festive-accent/20"
+              >
+                {formatDateKeyFr(day)}
+              </button>
+            ))}
+            {extras.length > MAX_UNAVAILABLE_PREVIEW ? (
+              <span className="text-[10px] text-muted self-center">
+                +{extras.length - MAX_UNAVAILABLE_PREVIEW}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function BookingStepper({ item }: { item: MarketplaceBookingItem }) {
   if (item.status === 'CANCELLED') {
     return (
@@ -88,7 +165,7 @@ function BookingStepper({ item }: { item: MarketplaceBookingItem }) {
   }
   const idx = bookingPipelineIndex(item);
   return (
-    <ol className="flex flex-wrap items-center gap-1.5" aria-label="Étapes de la réservation">
+    <ol className="flex flex-nowrap sm:flex-wrap items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5" aria-label="Étapes de la réservation">
       {BOOKING_PIPELINE_STEPS.map((step, i) => {
         const isCurrent = i === idx;
         const isPassed = i < idx;
@@ -125,12 +202,14 @@ export default function MarketplaceBookingsPanel({
   onChanged,
   organizerView = false,
   highlightBookingId,
+  vendorBlockedDates = [],
 }: {
   bookings: MarketplaceBookingItem[];
   commissionDueFc: number;
   onChanged: () => Promise<void> | void;
   organizerView?: boolean;
   highlightBookingId?: string | null;
+  vendorBlockedDates?: string[];
 }) {
   const { site } = usePlatformSite();
   const commissionPct = commissionPercent(site);
@@ -141,7 +220,7 @@ export default function MarketplaceBookingsPanel({
   const [query, setQuery] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
-  const [calendarOpen, setCalendarOpen] = useState(!organizerView);
+  const [calendarOpen, setCalendarOpen] = useState(true);
   const [error, setError] = useState('');
   const [busyId, setBusyId] = useState('');
   const [acceptAmount, setAcceptAmount] = useState<Record<string, string>>({});
@@ -187,11 +266,64 @@ export default function MarketplaceBookingsPanel({
     setPage(1);
   }, [filter, status, kind, query, fromDate, toDate, pageSize, mode]);
 
-  const calendarDates = parseBlockedDates(
-    visible
-      .filter((b) => b.status !== 'CANCELLED')
-      .flatMap((b) => bookingDateKeys(b)),
+  const confirmedDates = useMemo(
+    () => uniqueDateKeys(...bookings.filter((b) => isConfirmedBookingStatus(b.status)).map((b) => bookingDateKeys(b))),
+    [bookings],
   );
+  const pendingDates = useMemo(
+    () => uniqueDateKeys(...bookings.filter((b) => isPendingBookingStatus(b.status)).map((b) => bookingDateKeys(b))),
+    [bookings],
+  );
+  const resourceBlockedDates = useMemo(
+    () => uniqueDateKeys(vendorBlockedDates, ...bookings.map((b) => b.blockedDates)),
+    [bookings, vendorBlockedDates],
+  );
+  const unavailableOnlyDates = useMemo(
+    () => subtractDateKeys(resourceBlockedDates, [...confirmedDates, ...pendingDates]),
+    [resourceBlockedDates, confirmedDates, pendingDates],
+  );
+  const unavailableOnlySet = useMemo(() => new Set(unavailableOnlyDates), [unavailableOnlyDates]);
+  const hasAgendaDates = confirmedDates.length + pendingDates.length + unavailableOnlyDates.length > 0;
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<MarketplaceBookingStatus, number> = {
+      REQUESTED: 0,
+      ACCEPTED: 0,
+      CONFIRMED: 0,
+      COMPLETED: 0,
+      CANCELLED: 0,
+    };
+    for (const item of bookings) counts[item.status] += 1;
+    return counts;
+  }, [bookings]);
+
+  const selectedRangeKeys = useMemo(
+    () => (fromDate ? eachDateKey(fromDate, toDate || fromDate) : []),
+    [fromDate, toDate],
+  );
+  const selectedDayBookings = useMemo(() => {
+    if (!fromDate) return [];
+    return visible.filter((item) => selectedRangeKeys.some((day) => bookingOverlapsDay(item, day)));
+  }, [visible, fromDate, selectedRangeKeys]);
+  const selectedRangeHasBlocked = selectedRangeKeys.some((day) => unavailableOnlySet.has(day));
+
+  const focusDay = (day: string) => {
+    setFromDate(day);
+    setToDate(day);
+    setCalendarOpen(true);
+  };
+
+  useEffect(() => {
+    if (!highlightBookingId) return;
+    const item = bookings.find((row) => row.id === highlightBookingId);
+    if (!item) return;
+    const start = String(item.eventDate || '').slice(0, 10);
+    const end = String(item.eventEndDate || item.eventDate || '').slice(0, 10);
+    if (!start) return;
+    setFromDate(start);
+    setToDate(end || start);
+    setCalendarOpen(true);
+  }, [highlightBookingId, bookings]);
 
   const chips: CatalogueFilterChip[] = [
     ...(!organizerView && filter && filter !== 'all'
@@ -228,39 +360,46 @@ export default function MarketplaceBookingsPanel({
   return (
     <div className="space-y-4">
       {!organizerView && (
-        <div className="border border-border rounded-[var(--radius-card)] bg-surface p-4 text-sm">
-          <p className="font-semibold text-foreground">Commission marketplace due</p>
-          <p className="text-lg font-semibold mt-1">{formatFc(commissionDueFc)}</p>
-          <p className="text-xs text-muted mt-1 leading-relaxed">
-            {commissionPct} % sur les réservations confirmées dont vous êtes le vendeur. Distincte de l’abonnement SaaS.
-            L’acompte ({depositPct} %) se verse hors plateforme.
-          </p>
+        <div className="flex flex-wrap items-center justify-between gap-3 border border-border rounded-[var(--radius-card)] bg-surface px-4 py-3">
+          <div>
+            <p className="text-xs font-semibold text-foreground">Commission marketplace due</p>
+            <p className="text-[11px] text-muted mt-0.5">
+              {commissionPct} % sur les réservations confirmées · acompte {depositPct} % hors plateforme
+            </p>
+          </div>
+          <p className="text-lg font-semibold tabular-nums">{formatFc(commissionDueFc)}</p>
         </div>
       )}
 
-      {calendarDates.length > 0 && (
-        <div className="space-y-2">
-          <button
-            type="button"
-            onClick={() => setCalendarOpen((open) => !open)}
-            className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-2xl border border-border bg-surface text-left"
-          >
-            <span className="text-xs font-semibold text-foreground">
-              Calendrier des réservations
-              {fromDate || toDate ? (
-                <span className="ml-2 text-primary font-medium">
-                  · filtre actif
-                </span>
-              ) : null}
-            </span>
-            <ChevronDown className={cn('w-4 h-4 text-muted transition', calendarOpen && 'rotate-180')} />
-          </button>
-          {calendarOpen ? (
+      {error && <Alert variant="error">{error}</Alert>}
+
+      <div className="lg:grid lg:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] lg:gap-5 lg:items-start">
+      <aside className="lg:sticky lg:top-4 space-y-3 mb-4 lg:mb-0">
+        <button
+          type="button"
+          onClick={() => setCalendarOpen((open) => !open)}
+          className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-2xl border border-border bg-surface text-left lg:hidden"
+        >
+          <span className="text-xs font-semibold text-foreground inline-flex items-center gap-2">
+            <CalendarDays className="w-4 h-4 text-primary" />
+            Agenda
+            {fromDate || toDate ? <span className="text-primary font-medium">· filtre actif</span> : null}
+          </span>
+          <ChevronDown className={cn('w-4 h-4 text-muted transition', calendarOpen && 'rotate-180')} />
+        </button>
+        <div className={cn('space-y-3', !calendarOpen && 'hidden lg:block')}>
             <AvailabilityCalendar
-              compact={organizerView}
-              title="Cliquez un jour pour filtrer"
-              bookedDates={calendarDates}
-              selectedDate={fromDate && toDate && fromDate === toDate ? fromDate : fromDate || undefined}
+              compact
+              className="shadow-[var(--shadow-soft)]"
+              title={organizerView ? 'Agenda de vos réservations' : 'Agenda prestataire'}
+              bookedDates={confirmedDates}
+              pendingDates={pendingDates}
+              blockedDates={unavailableOnlyDates}
+              bookedTone="emerald"
+              bookedLabel="Confirmé"
+              pendingLabel="En cours"
+              blockedLabel="Indisponible"
+              selectedDate={fromDate || undefined}
               selectedEndDate={fromDate && toDate ? toDate : undefined}
               onSelectRange={(from, to) => {
                 if (!from) {
@@ -274,11 +413,94 @@ export default function MarketplaceBookingsPanel({
               minDate="1970-01-01"
               allowBookedSelection
             />
-          ) : null}
+            {!hasAgendaDates ? (
+              <p className="text-[11px] text-muted px-1">
+                Aucune date confirmée ni indisponibilité pour le moment. Les jours bloqués par le prestataire apparaîtront ici.
+              </p>
+            ) : null}
+            {fromDate ? (
+              <div className="rounded-2xl border border-border bg-surface p-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted">Jour sélectionné</p>
+                    <p className="text-xs font-semibold text-foreground capitalize">
+                      {fromDate === (toDate || fromDate)
+                        ? formatDayLong(fromDate)
+                        : `${formatDateKeyFr(fromDate)} → ${formatDateKeyFr(toDate || fromDate)}`}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFromDate('');
+                      setToDate('');
+                    }}
+                    className="text-[11px] font-semibold text-muted hover:text-foreground underline-offset-2 hover:underline"
+                  >
+                    Effacer
+                  </button>
+                </div>
+                {selectedDayBookings.length ? (
+                  <ul className="space-y-1.5">
+                    {selectedDayBookings.map((item) => (
+                      <li key={item.id} className="text-xs leading-snug">
+                        <span className="font-semibold text-foreground">{item.title}</span>
+                        <span className="text-muted">
+                          {' '}· {BOOKING_STATUS_LABELS[item.status]} · {formatBookingPeriod(item.eventDate, item.eventEndDate)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-muted">Aucune réservation sur cette période.</p>
+                )}
+                {selectedRangeHasBlocked ? (
+                  <p className="text-[11px] font-semibold text-festive-accent flex items-center gap-1.5">
+                    <Ban className="w-3.5 h-3.5 shrink-0" />
+                    Le prestataire est aussi indisponible sur un ou plusieurs de ces jours.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
         </div>
-      )}
+      </aside>
 
-      {error && <Alert variant="error">{error}</Alert>}
+      <div className="space-y-4 min-w-0">
+      {bookings.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setStatus('')}
+            className={cn(
+              'px-2.5 py-1 rounded-full text-[11px] font-semibold border transition',
+              !status || status === 'all'
+                ? 'bg-foreground text-background border-foreground'
+                : 'border-border bg-surface text-muted hover:text-foreground',
+            )}
+          >
+            Toutes · {bookings.length}
+          </button>
+          {STATUS_SUMMARY_ORDER.map((id) => {
+            const count = statusCounts[id];
+            if (!count) return null;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setStatus(status === id ? '' : id)}
+                className={cn(
+                  'px-2.5 py-1 rounded-full text-[11px] font-semibold border transition',
+                  status === id
+                    ? 'bg-primary/10 text-primary border-primary/30'
+                    : 'border-border bg-surface text-muted hover:text-foreground',
+                )}
+              >
+                {BOOKING_STATUS_LABELS[id]} · {count}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
 
       <CatalogueFilterBar
         search={query}
@@ -393,10 +615,10 @@ export default function MarketplaceBookingsPanel({
               const metaBits = [
                 kindLabel(item),
                 isVendor ? item.organizerName || 'Organisateur' : item.vendorName,
-                formatBookingPeriod(item.eventDate, item.eventEndDate),
                 item.event?.title ? `événement ${item.event.title}` : null,
                 item.depositMarkedAt ? 'acompte marqué' : null,
               ].filter(Boolean);
+              const periodLabel = formatBookingPeriod(item.eventDate, item.eventEndDate);
 
               const waPresetMsg = isVendor
                 ? `Bonjour, je vous contacte au sujet de votre réservation pour « ${item.title} » (${formatBookingPeriod(item.eventDate, item.eventEndDate)}) sur EventMaster.`
@@ -531,14 +753,29 @@ export default function MarketplaceBookingsPanel({
                     icon={kindIcon(item)}
                     hideCta
                     status={statusChip}
-                    overlayMeta={`${kindLabel(item)} · ${isVendor ? 'Reçue' : 'Envoyée'}`}
+                    overlayMeta={`${periodLabel} · ${isVendor ? 'Reçue' : 'Envoyée'}`}
                     value={mode === 'list' ? formatFc(item.amountFc) : undefined}
                     valueMeta={mode === 'list' ? `Acompte ${formatFc(item.depositFc)}` : undefined}
                     meta={
                       mode === 'list' ? (
-                        <span className="truncate">{metaBits.join(' · ')}</span>
+                        <span className="truncate">{[periodLabel, ...metaBits].join(' · ')}</span>
                       ) : (
                         <div className="space-y-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const start = String(item.eventDate || '').slice(0, 10);
+                              const end = String(item.eventEndDate || item.eventDate || '').slice(0, 10);
+                              if (!start) return;
+                              setFromDate(start);
+                              setToDate(end || start);
+                              setCalendarOpen(true);
+                            }}
+                            className="text-xs font-semibold text-foreground flex items-center gap-1.5 hover:text-primary"
+                          >
+                            <CalendarDays className="w-3.5 h-3.5 text-primary shrink-0" />
+                            {periodLabel}
+                          </button>
                           <p className="truncate text-xs">{metaBits.join(' · ')}</p>
                           <p className="text-xs text-muted">
                             {formatFc(item.amountFc)} · acompte {formatFc(item.depositFc)}
@@ -563,6 +800,7 @@ export default function MarketplaceBookingsPanel({
                           <span className="font-semibold">Motif :</span> {item.declineReason}
                         </div>
                       ) : null}
+                      <BookingUnavailability item={item} onFocusDate={focusDay} />
                       {mode === 'grid' && item.notes ? (
                         <p className="text-xs text-muted line-clamp-3 whitespace-pre-line">{item.notes}</p>
                       ) : null}
@@ -582,6 +820,8 @@ export default function MarketplaceBookingsPanel({
           />
         </>
       )}
+      </div>
+      </div>
 
       {/* MODALE REFUS / ANNULATION RÉSERVATION */}
       <Modal
