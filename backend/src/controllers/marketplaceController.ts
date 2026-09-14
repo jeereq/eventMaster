@@ -589,14 +589,6 @@ export async function createVenueInquiry(req: AuthenticatedRequest, res: Respons
     }
 
     const identity = inquiryIdentity(account, { name, phone });
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const recent = await prisma.marketplaceInquiry.count({
-      where: { listingId: listing.id, fromEmail: identity.fromEmail, createdAt: { gte: since } },
-    });
-    if (recent >= 3) {
-      return res.status(429).json({ error: 'Trop de demandes aujourd’hui pour cette salle. Réessayez demain.' });
-    }
-
     const parsedDate = eventDate ? new Date(eventDate) : null;
     const parsedGuests = Number.parseInt(String(guestCount || ''), 10);
     const linkedEventId = await resolveLinkedEventId(req, eventId);
@@ -1124,14 +1116,6 @@ export async function createServiceInquiry(req: AuthenticatedRequest, res: Respo
     if (!offering) return res.status(404).json({ error: 'Prestation introuvable ou non publiée.' });
 
     const identity = inquiryIdentity(account, { name, phone });
-    const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const recent = await prisma.marketplaceInquiry.count({
-      where: { offeringId: offering.id, fromEmail: identity.fromEmail, createdAt: { gte: since } },
-    });
-    if (recent >= 3) {
-      return res.status(429).json({ error: 'Trop de demandes aujourd’hui pour ce prestataire. Réessayez demain.' });
-    }
-
     const parsedDate = eventDate ? new Date(eventDate) : null;
     const parsedGuests = Number.parseInt(String(guestCount || ''), 10);
     const linkedEventId = await resolveLinkedEventId(req, eventId);
