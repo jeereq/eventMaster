@@ -2508,6 +2508,7 @@ function FixtureMesh({
   yPct,
   wPct,
   hPct,
+  rotation = 0,
   kind,
   label,
   imageUrl,
@@ -2562,6 +2563,7 @@ function FixtureMesh({
   yPct: number;
   wPct: number;
   hPct: number;
+  rotation?: number;
   kind: string;
   label?: string;
   imageUrl?: string;
@@ -2680,6 +2682,7 @@ function FixtureMesh({
   return (
     <group
       position={[cx, surfaceElevationM, cz]}
+      rotation={[0, ((rotation ?? 0) * Math.PI) / 180, 0]}
       onClick={(e) => {
         if (!pickable) return;
         e.stopPropagation();
@@ -3477,6 +3480,7 @@ function SceneContent({
             yPct={f.y}
             wPct={f.w}
             hPct={f.h}
+            rotation={f.rotation ?? 0}
             kind={f.kind}
             label={f.label}
             imageUrl={f.imageUrl}

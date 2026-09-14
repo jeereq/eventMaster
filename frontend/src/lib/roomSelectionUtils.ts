@@ -649,10 +649,11 @@ function applyBoxTransform(
   return next;
 }
 
-/** Tourne la sélection de 90° autour de son centre (sens horaire). */
+/** Tourne la sélection d'un angle en degrés autour de son centre (sens horaire). Par défaut 90°. */
 export function rotateLayoutSelection(
   blueprint: RoomLayoutBlueprint,
   selection: LayoutSelectionItem[],
+  angleDeg = 90,
 ): RoomLayoutBlueprint {
   const boxes = selection
     .map((s) => getSelectionBounds(blueprint, s))
@@ -660,19 +661,122 @@ export function rotateLayoutSelection(
   if (boxes.length === 0) return blueprint;
   const origin = selectionCentroid(boxes);
   let next = blueprint;
+  const rad = (angleDeg * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+
   for (const box of boxes) {
     const dx = cxOf(box) - origin.x;
     const dy = cyOf(box) - origin.y;
-    const swapSize = !box.isCenter;
+    // Rotation 2D du centre de chaque boîte autour du barycentre
+    const nextDx = dx * cos - dy * sin;
+    const nextDy = dx * sin + dy * cos;
+
+    // Pour les zones (rectangles d'ambiance 2D sans propriété rotation CSS),
+    // on permute largeur et hauteur lors des rotations orthogonales (90° / 270°)
+    const isOrthogonal = Math.abs(angleDeg % 180) === 90;
+    const swapSize = isOrthogonal && box.kind === 'zone';
+
     next = applyBoxTransform(
       next,
       box,
-      { x: origin.x - dy, y: origin.y + dx },
+      { x: origin.x + nextDx, y: origin.y + nextDy },
       swapSize ? { w: box.h, h: box.w } : undefined,
-      90,
+      angleDeg,
     );
   }
   return refreshBlueprintMetadata(next);
+}
+
+/** Calcule l'angle d'orientation (en degrés 0..360) d'un point vers un autre. */
+export function calculateAngleToPoint(fromX: number, fromY: number, targetX: number, targetY: number): number {
+  const dx = targetX - fromX;
+  const dy = targetY - fromY;
+  if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) return 0;
+  // Convention EventMaster 2D & 3D : 0° = Sud, 90° = Est, 180° = Nord, 270° = Ouest
+  let deg = Math.round((Math.atan2(dx, dy) * 180) / Math.PI);
+  if (deg < 0) deg += 360;
+  return deg % 360;
+}
+
+/** Trouve le point focal de scène ou de podium du plan (ou le fond de scène par défaut). */
+export function findPrimaryStageFocus(blueprint: RoomLayoutBlueprint): { x: number; y: number } {
+  const stage = blueprint.fixtures.find((f) => f.kind === 'stage' || f.kind === 'podium');
+  if (stage) {
+    return { x: stage.x + stage.w / 2, y: stage.y + stage.h / 2 };
+  }
+  return { x: 50, y: 12 };
+}
+
+/** Trouve la table la plus proche d'un point (pour orienter une chaise libre par exemple). */
+export function findClosestTableCenter(
+  blueprint: RoomLayoutBlueprint,
+  xPct: number,
+  yPct: number,
+  ignoreId?: string,
+): { x: number; y: number } | null {
+  let closest: { x: number; y: number; dist: number } | null = null;
+  for (const item of blueprint.furniture) {
+    if (item.kind !== 'table' || item.id === ignoreId) continue;
+    const dist = Math.hypot(item.x - xPct, item.y - yPct);
+    if (!closest || dist < closest.dist) {
+      closest = { x: item.x, y: item.y, dist };
+    }
+  }
+  return closest ? { x: closest.x, y: closest.y } : null;
+}
+
+export type SmartOrientationTarget = 'stage' | 'center' | 'closestTable' | 'closestWall';
+
+/** Oriente chaque élément de la sélection vers une cible intelligente (scène, centre, table la plus proche, mur). */
+export function orientSelectionTowards(
+  blueprint: RoomLayoutBlueprint,
+  selection: LayoutSelectionItem[],
+  target: SmartOrientationTarget,
+): RoomLayoutBlueprint {
+  const ids = new Set(selection.map((s) => s.id));
+  const stageFocus = findPrimaryStageFocus(blueprint);
+
+  const getTargetPos = (x: number, y: number, id: string): { x: number; y: number } => {
+    if (target === 'stage') return stageFocus;
+    if (target === 'center') return { x: 50, y: 50 };
+    if (target === 'closestTable') {
+      const tbl = findClosestTableCenter(blueprint, x, y, id);
+      return tbl ?? stageFocus;
+    }
+    // closestWall : orienter vers l'intérieur de la salle (loin du mur le plus proche)
+    const distTop = y;
+    const distBottom = 100 - y;
+    const distLeft = x;
+    const distRight = 100 - x;
+    const minDist = Math.min(distTop, distBottom, distLeft, distRight);
+    if (minDist === distTop) return { x, y: 100 };
+    if (minDist === distBottom) return { x, y: 0 };
+    if (minDist === distLeft) return { x: 100, y };
+    return { x: 0, y };
+  };
+
+  const nextFurniture = blueprint.furniture.map((item) => {
+    if (!ids.has(item.id)) return item;
+    const targetPos = getTargetPos(item.x, item.y, item.id);
+    const rotation = calculateAngleToPoint(item.x, item.y, targetPos.x, targetPos.y);
+    return { ...item, rotation };
+  });
+
+  const nextFixtures = blueprint.fixtures.map((item) => {
+    if (!ids.has(item.id)) return item;
+    const cx = item.x + item.w / 2;
+    const cy = item.y + item.h / 2;
+    const targetPos = getTargetPos(cx, cy, item.id);
+    const rotation = calculateAngleToPoint(cx, cy, targetPos.x, targetPos.y);
+    return { ...item, rotation };
+  });
+
+  return refreshBlueprintMetadata({
+    ...blueprint,
+    furniture: nextFurniture,
+    fixtures: nextFixtures,
+  });
 }
 
 export type FlipAxis = 'horizontal' | 'vertical';

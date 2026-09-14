@@ -427,6 +427,7 @@ export type SelectionStylePatch = {
   chairStyle?: import('@/lib/roomLayoutUtils').ChairStyle;
   seatMaterial?: import('@/lib/roomLayoutUtils').SeatMaterial;
   scaleDelta?: number;
+  rotation?: number;
   rotationDelta?: number;
   screenKind?: 'stageLedWall' | 'wallTv' | 'tableMonitor' | 'laptop' | 'desktopPc';
   screenRatio?: '16:9' | '21:9' | '9:16' | '32:9';
@@ -434,17 +435,25 @@ export type SelectionStylePatch = {
   screenPowered?: boolean;
 };
 
-/** Applique un style, une rotation ou une échelle à tous les éléments de la sélection (tables, chaises, zones, fixtures). */
+/** Applique un style, une rotation ou une échelle à tous les éléments de la sélection (tables, chaises, rangées, zones, fixtures). */
 export function applyStyleToSelection(
   blueprint: RoomLayoutBlueprint,
   selection: LayoutSelectionItem[],
   patch: SelectionStylePatch,
 ): RoomLayoutBlueprint {
   const ids = new Set(selection.map((s) => s.id));
+  const resolveRot = (current?: number) => {
+    if (patch.rotation !== undefined) return ((Math.round(patch.rotation) % 360) + 360) % 360;
+    if (patch.rotationDelta !== undefined) return ((Math.round(current ?? 0) + patch.rotationDelta + 360) % 360) % 360;
+    return current;
+  };
+
   const furniture = blueprint.furniture.map((f) => {
     if (!ids.has(f.id)) return f;
+    const rot = resolveRot(f.rotation);
+    const hasRot = patch.rotation !== undefined || patch.rotationDelta !== undefined;
+
     if (f.kind === 'table') {
-      const rot = patch.rotationDelta !== undefined ? ((f.rotation ?? 0) + patch.rotationDelta + 360) % 360 : f.rotation;
       const scale = patch.scaleDelta ?? 1;
       return {
         ...f,
@@ -454,7 +463,7 @@ export function applyStyleToSelection(
         ...(patch.chairStyle !== undefined ? { chairStyle: patch.chairStyle } : {}),
         ...(patch.seatMaterial !== undefined ? { seatMaterial: patch.seatMaterial } : {}),
         ...(patch.locked !== undefined ? { locked: patch.locked } : {}),
-        ...(patch.rotationDelta !== undefined ? { rotation: rot } : {}),
+        ...(hasRot ? { rotation: rot } : {}),
         ...(patch.scaleDelta !== undefined
           ? {
               customWidthM: f.customWidthM ? Math.max(0.6, Math.min(6, f.customWidthM * scale)) : undefined,
@@ -465,7 +474,6 @@ export function applyStyleToSelection(
       };
     }
     if (f.kind === 'chair') {
-      const rot = patch.rotationDelta !== undefined ? ((f.rotation ?? 0) + patch.rotationDelta + 360) % 360 : f.rotation;
       return {
         ...f,
         ...(patch.chairType !== undefined ? { chairType: patch.chairType } : {}),
@@ -473,18 +481,24 @@ export function applyStyleToSelection(
         ...(patch.seatMaterial !== undefined ? { seatMaterial: patch.seatMaterial } : {}),
         ...(patch.color !== undefined ? { color: patch.color } : {}),
         ...(patch.locked !== undefined ? { locked: patch.locked } : {}),
-        ...(patch.rotationDelta !== undefined ? { rotation: rot } : {}),
+        ...(hasRot ? { rotation: rot } : {}),
+      };
+    }
+    if (f.kind === 'row') {
+      return {
+        ...f,
+        ...(patch.locked !== undefined ? { locked: patch.locked } : {}),
+        ...(hasRot ? { rotation: rot } : {}),
       };
     }
     if (f.kind === 'zone') {
-      const rot = patch.rotationDelta !== undefined ? ((f.rotation ?? 0) + patch.rotationDelta + 360) % 360 : f.rotation;
       const scale = patch.scaleDelta ?? 1;
       return {
         ...f,
         ...(patch.color !== undefined ? { color: patch.color } : {}),
         ...(patch.material !== undefined ? { material: patch.material } : {}),
         ...(patch.locked !== undefined ? { locked: patch.locked } : {}),
-        ...(patch.rotationDelta !== undefined ? { rotation: rot } : {}),
+        ...(hasRot ? { rotation: rot } : {}),
         ...(patch.scaleDelta !== undefined
           ? {
               w: Math.max(4, Math.min(95, f.w * scale)),
@@ -498,13 +512,14 @@ export function applyStyleToSelection(
 
   const fixtures = blueprint.fixtures.map((f) => {
     if (!ids.has(f.id)) return f;
-    const rot = patch.rotationDelta !== undefined ? ((f.rotation ?? 0) + patch.rotationDelta + 360) % 360 : f.rotation;
+    const rot = resolveRot(f.rotation);
+    const hasRot = patch.rotation !== undefined || patch.rotationDelta !== undefined;
     const scale = patch.scaleDelta ?? 1;
     return {
       ...f,
       ...(patch.color !== undefined ? { color: patch.color } : {}),
       ...(patch.material !== undefined ? { material: patch.material } : {}),
-      ...(patch.rotationDelta !== undefined ? { rotation: rot } : {}),
+      ...(hasRot ? { rotation: rot } : {}),
       ...(patch.scaleDelta !== undefined
         ? {
             w: Math.max(2, Math.min(95, f.w * scale)),

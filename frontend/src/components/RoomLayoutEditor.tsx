@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, SlidersHorizontal, X,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, SlidersHorizontal, X, Compass,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -191,6 +191,9 @@ import {
   selectItemsByKind,
   invertSelection,
   selectItemsInRect,
+  orientSelectionTowards,
+  calculateAngleToPoint,
+  type SmartOrientationTarget,
   type AlignMode,
   type LayoutSelectionItem,
 } from '@/lib/roomSelectionUtils';
@@ -398,6 +401,314 @@ const TEMPLATE_CATEGORIES: { id: TemplateCategory; label: string }[] = [
   { id: 'empty', label: 'Salles & Formes' },
 ];
 
+function getDirectionLabel(deg: number): string {
+  const norm = ((Math.round(deg) % 360) + 360) % 360;
+  if (norm >= 338 || norm < 23) return 'Sud (Face avant)';
+  if (norm >= 23 && norm < 68) return 'Sud-Est';
+  if (norm >= 68 && norm < 113) return 'Est (Droite)';
+  if (norm >= 113 && norm < 158) return 'Nord-Est';
+  if (norm >= 158 && norm < 203) return 'Nord (Face scène)';
+  if (norm >= 203 && norm < 248) return 'Nord-Ouest';
+  if (norm >= 248 && norm < 293) return 'Ouest (Gauche)';
+  return 'Sud-Ouest';
+}
+
+interface ElementRotationControlsProps {
+  rotation: number;
+  onChange: (angle: number, actionName?: string) => void;
+  onDelta?: (delta: number, actionName?: string) => void;
+  onSmartOrient?: (target: SmartOrientationTarget, label: string) => void;
+  isChair?: boolean;
+  isScreen?: boolean;
+  isMulti?: boolean;
+  title?: string;
+}
+
+function ElementRotationControls({
+  rotation,
+  onChange,
+  onDelta,
+  onSmartOrient,
+  isChair = false,
+  isScreen = false,
+  isMulti = false,
+  title = 'Rotation & Orientation',
+}: ElementRotationControlsProps) {
+  const normAngle = ((Math.round(rotation) % 360) + 360) % 360;
+  const dialRef = useRef<SVGSVGElement | null>(null);
+  const [isDraggingDial, setIsDraggingDial] = useState(false);
+
+  const updateFromPointer = useCallback(
+    (e: React.PointerEvent<SVGSVGElement> | PointerEvent) => {
+      if (!dialRef.current) return;
+      const rect = dialRef.current.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = e.clientX - cx;
+      const dy = e.clientY - cy;
+      if (Math.hypot(dx, dy) < 4) return;
+      let deg = Math.round((Math.atan2(dx, dy) * 180) / Math.PI);
+      if (deg < 0) deg += 360;
+      if (e.shiftKey) {
+        deg = Math.round(deg / 15) * 15;
+      }
+      onChange(deg % 360, `Orientation ${deg % 360}°`);
+    },
+    [onChange],
+  );
+
+  const handlePointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    e.preventDefault();
+    dialRef.current?.setPointerCapture(e.pointerId);
+    setIsDraggingDial(true);
+    updateFromPointer(e);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (!isDraggingDial) return;
+    updateFromPointer(e);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (isDraggingDial) {
+      dialRef.current?.releasePointerCapture(e.pointerId);
+      setIsDraggingDial(false);
+    }
+  };
+
+  // Coordonnées de l'aiguille : 0° = bas (+Y), 180° = haut (-Y), 90° = droite (+X), 270° = gauche (-X)
+  const rad = (normAngle * Math.PI) / 180;
+  const needleLen = 22;
+  const needleX = 36 + Math.sin(rad) * needleLen;
+  const needleY = 36 + Math.cos(rad) * needleLen;
+
+  return (
+    <div className="space-y-2.5 p-3 rounded-xl border border-border bg-surface dark:bg-surface-elevated/40">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
+          <Compass className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
+          {title}
+        </span>
+        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+          {normAngle}° · {getDirectionLabel(normAngle)}
+        </span>
+      </div>
+
+      {/* Cadran d'orientation interactif + Presets cardinaux */}
+      <div className="flex items-center gap-3">
+        <div className="relative shrink-0 flex flex-col items-center">
+          <svg
+            ref={dialRef}
+            viewBox="0 0 72 72"
+            className="w-18 h-18 cursor-grab active:cursor-grabbing select-none touch-none filter drop-shadow-xs"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            aria-label={`Cadran de rotation actuel ${normAngle} degrés. Glissez pour orienter.`}
+            role="slider"
+            aria-valuenow={normAngle}
+            aria-valuemin={0}
+            aria-valuemax={360}
+          >
+            {/* Fond du cadran */}
+            <circle cx="36" cy="36" r="33" className="fill-surface stroke-border stroke-[1.5]" />
+            <circle cx="36" cy="36" r="28" className="fill-surface-muted/60 stroke-border/40 stroke-1" />
+
+            {/* Repères cardinaux N, E, S, O */}
+            <text x="36" y="14" textAnchor="middle" className="text-[8px] font-extrabold fill-muted">N</text>
+            <text x="61" y="39" textAnchor="middle" className="text-[8px] font-extrabold fill-muted">E</text>
+            <text x="36" y="63" textAnchor="middle" className="text-[8px] font-extrabold fill-muted">S</text>
+            <text x="11" y="39" textAnchor="middle" className="text-[8px] font-extrabold fill-muted">O</text>
+
+            {/* Graduations à 45° */}
+            {[45, 135, 225, 315].map((d) => {
+              const r = (d * Math.PI) / 180;
+              const x1 = 36 + Math.sin(r) * 25;
+              const y1 = 36 + Math.cos(r) * 25;
+              const x2 = 36 + Math.sin(r) * 28;
+              const y2 = 36 + Math.cos(r) * 28;
+              return <line key={d} x1={x1} y1={y1} x2={x2} y2={y2} className="stroke-border stroke-1" />;
+            })}
+
+            {/* Aiguille de direction */}
+            <line
+              x1="36"
+              y1="36"
+              x2={needleX}
+              y2={needleY}
+              className="stroke-primary stroke-[2.5] stroke-linecap-round"
+            />
+            {/* Pointe de flèche / repère mobile */}
+            <circle cx={needleX} cy={needleY} r="3.5" className="fill-primary stroke-surface stroke-[1.5]" />
+            {/* Pivot central */}
+            <circle cx="36" cy="36" r="3" className="fill-foreground" />
+          </svg>
+          <span className="text-[10px] text-muted text-center mt-0.5">Glisser ou cliquer</span>
+        </div>
+
+        {/* 4 Directions cardinales instantanées */}
+        <div className="flex-1 grid grid-cols-2 gap-1.5">
+          {([
+            { deg: 180, label: 'Nord', hint: 'Face scène' },
+            { deg: 0, label: 'Sud', hint: 'Face avant' },
+            { deg: 90, label: 'Est', hint: 'Vers droite' },
+            { deg: 270, label: 'Ouest', hint: 'Vers gauche' },
+          ] as const).map(({ deg, label, hint }) => {
+            const active = normAngle === deg;
+            return (
+              <button
+                key={deg}
+                type="button"
+                onClick={() => onChange(deg, `Orienté ${label} (${deg}°)`)}
+                className={cn(
+                  'min-h-11 px-2 py-1 rounded-[var(--radius-button)] border text-left transition flex flex-col justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                  active
+                    ? 'bg-primary/15 border-primary text-primary font-bold shadow-xs'
+                    : 'bg-surface border-border hover:bg-surface-muted text-foreground',
+                )}
+                title={`${label} (${deg}°) - ${hint}`}
+              >
+                <span className="text-xs font-semibold leading-tight">{label}</span>
+                <span className="text-[10px] text-muted truncate leading-tight">{hint}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Boutons de pas fins (+/- 15° et 90°) */}
+      <div className="flex flex-wrap items-center gap-1 pt-1 border-t border-border/70">
+        <button
+          type="button"
+          onClick={() => (onDelta ? onDelta(-90, 'Pivoter -90°') : onChange((normAngle - 90 + 360) % 360, 'Pivoter -90°'))}
+          className="min-h-11 flex-1 px-2 rounded-lg border border-border bg-surface hover:bg-surface-muted text-xs font-semibold flex items-center justify-center gap-1 text-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          title="Tourner 90° anti-horaire"
+        >
+          <RotateCcw className="w-3.5 h-3.5" /> -90°
+        </button>
+        <button
+          type="button"
+          onClick={() => (onDelta ? onDelta(-15, 'Rotation fine -15°') : onChange((normAngle - 15 + 360) % 360, 'Rotation -15°'))}
+          className="min-h-11 flex-1 px-2 rounded-lg border border-border bg-surface hover:bg-surface-muted text-xs font-semibold flex items-center justify-center text-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          title="Ajustement fin -15°"
+        >
+          -15°
+        </button>
+        <button
+          type="button"
+          onClick={() => (onDelta ? onDelta(15, 'Rotation fine +15°') : onChange((normAngle + 15) % 360, 'Rotation +15°'))}
+          className="min-h-11 flex-1 px-2 rounded-lg border border-border bg-surface hover:bg-surface-muted text-xs font-semibold flex items-center justify-center text-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          title="Ajustement fin +15°"
+        >
+          +15°
+        </button>
+        <button
+          type="button"
+          onClick={() => (onDelta ? onDelta(90, 'Pivoter +90°') : onChange((normAngle + 90) % 360, 'Pivoter +90°'))}
+          className="min-h-11 flex-1 px-2 rounded-lg border border-border bg-surface hover:bg-surface-muted text-xs font-semibold flex items-center justify-center gap-1 text-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          title="Tourner 90° horaire (R)"
+        >
+          <RotateCw className="w-3.5 h-3.5" /> +90°
+        </button>
+      </div>
+
+      {/* Orientations intelligentes contextuelles */}
+      {onSmartOrient && (
+        <div className="pt-1.5 border-t border-border/70 space-y-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted block">
+            Orientation intelligente
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            <button
+              type="button"
+              onClick={() => onSmartOrient('stage', 'Face à la scène')}
+              className="min-h-11 px-2.5 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground flex items-center gap-2 text-xs font-medium text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              title="Oriente automatiquement pour faire face à la scène ou au podium"
+            >
+              <Presentation className="w-4 h-4 text-primary shrink-0" />
+              <div className="truncate">
+                <span className="block font-semibold">Face à la scène</span>
+                <span className="block text-[10px] text-muted">Oriente vers l'estrade</span>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => onSmartOrient('center', 'Face au centre')}
+              className="min-h-11 px-2.5 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground flex items-center gap-2 text-xs font-medium text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              title="Oriente vers le centre de la salle"
+            >
+              <Crosshair className="w-4 h-4 text-primary shrink-0" />
+              <div className="truncate">
+                <span className="block font-semibold">Face au centre</span>
+                <span className="block text-[10px] text-muted">Milieu de la pièce</span>
+              </div>
+            </button>
+            {isChair && (
+              <button
+                type="button"
+                onClick={() => onSmartOrient('closestTable', 'Face à la table')}
+                className="col-span-full min-h-11 px-2.5 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground flex items-center gap-2 text-xs font-medium text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                title="Oriente la chaise pour faire face à la table la plus proche"
+              >
+                <Circle className="w-4 h-4 text-emerald-500 shrink-0" />
+                <div className="truncate">
+                  <span className="block font-semibold">Face à la table la plus proche</span>
+                  <span className="block text-[10px] text-muted">Tourne le siège vers le convive / table</span>
+                </div>
+              </button>
+            )}
+            {isScreen && (
+              <button
+                type="button"
+                onClick={() => onSmartOrient('closestWall', 'Face à la salle')}
+                className="col-span-full min-h-11 px-2.5 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-muted text-foreground flex items-center gap-2 text-xs font-medium text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                title="Oriente l'écran ou la télé vers l'intérieur de la pièce"
+              >
+                <BrickWall className="w-4 h-4 text-amber-500 shrink-0" />
+                <div className="truncate">
+                  <span className="block font-semibold">Face à la salle</span>
+                  <span className="block text-[10px] text-muted">Projette vers les spectateurs</span>
+                </div>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Slider fluide & champ degré */}
+      <div className="pt-1.5 border-t border-border/70 flex items-center gap-2">
+        <label htmlFor="orientation-slider" className="sr-only">Angle d'orientation</label>
+        <input
+          id="orientation-slider"
+          type="range"
+          min={0}
+          max={360}
+          step={1}
+          value={normAngle}
+          onChange={(e) => onChange(parseFloat(e.target.value) || 0, `Rotation ${e.target.value}°`)}
+          className="flex-1 accent-primary cursor-pointer min-h-11"
+          aria-label="Ajuster l'angle de rotation avec le curseur"
+        />
+        <div className="flex items-center gap-1 shrink-0">
+          <input
+            type="number"
+            min={0}
+            max={360}
+            value={normAngle}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value);
+              onChange(isNaN(v) ? 0 : ((v % 360) + 360) % 360, `Angle ${v}°`);
+            }}
+            className="w-16 min-h-11 px-2 py-1 rounded-[var(--radius-button)] border border-border bg-surface text-xs font-bold text-center text-foreground"
+            aria-label="Degré exact de rotation"
+          />
+          <span className="text-xs font-bold text-muted">°</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface RoomLayoutEditorProps {
   blueprint: RoomLayoutBlueprint;
   onChange: (blueprint: RoomLayoutBlueprint) => void;
@@ -455,6 +766,7 @@ export default function RoomLayoutEditor({
   const [studioOpen, setStudioOpen] = useState(false);
   const [hudAlignOpen, setHudAlignOpen] = useState(false);
   const [hudColorOpen, setHudColorOpen] = useState(false);
+  const [hudRotateOpen, setHudRotateOpen] = useState(false);
   const aiPlanFileRef = useRef<HTMLInputElement>(null);
   const [arrangeDensity, setArrangeDensity] = useState<ArrangeDensity>('comfortable');
   const [keepTemplateStyle, setKeepTemplateStyle] = useState(true);
@@ -967,7 +1279,14 @@ export default function RoomLayoutEditor({
       }
       if (key === 'r' && !mod && selection.length > 0) {
         e.preventDefault();
-        rotateSelection();
+        if (e.shiftKey) {
+          updateBlueprint(rotateLayoutSelection(blueprint, expandSelectionWithGroups(blueprint, selection), -90), {
+            message: 'Sélection tournée de -90°',
+            kind: 'edit',
+          });
+        } else {
+          rotateSelection();
+        }
         return;
       }
       if (selection.length > 0 && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
@@ -2190,15 +2509,146 @@ export default function RoomLayoutEditor({
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={rotateSelection}
-            className="min-h-11 min-w-11 rounded-full hover:bg-surface-muted text-foreground flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            title="Pivoter 90° (R)"
-            aria-label="Pivoter la sélection de 90 degrés"
-          >
-            <RotateCw className="w-4 h-4" />
-          </button>
+          {/* Menu Rotation & Orientation Rapide */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setHudRotateOpen((v) => !v);
+                setHudAlignOpen(false);
+                setHudColorOpen(false);
+              }}
+              className={cn(
+                'min-h-11 min-w-11 rounded-full hover:bg-surface-muted text-foreground flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                hudRotateOpen && 'bg-primary/15 text-primary',
+              )}
+              title="Rotation & Orientation (R)"
+              aria-label="Menu rotation et orientation"
+              aria-expanded={hudRotateOpen}
+            >
+              <RotateCw className="w-4 h-4" />
+            </button>
+
+            {hudRotateOpen && (
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-2.5 rounded-xl bg-surface dark:bg-surface-elevated border border-border shadow-2xl z-40 w-64 space-y-2 animate-in fade-in slide-in-from-top-1">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted">
+                    Rotation & Angle
+                  </span>
+                  <span className="text-[10px] text-muted">Raccourci : R</span>
+                </div>
+
+                <div className="grid grid-cols-4 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateBlueprint(rotateLayoutSelection(blueprint, expandSelectionWithGroups(blueprint, selection), -90), {
+                        message: 'Rotation -90°',
+                        kind: 'edit',
+                      });
+                      setHudRotateOpen(false);
+                    }}
+                    className="min-h-11 rounded-lg hover:bg-surface-muted border border-border flex flex-col items-center justify-center text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    title="Pivoter -90° (anti-horaire)"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 mb-0.5" />
+                    <span>-90°</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateBlueprint(rotateLayoutSelection(blueprint, expandSelectionWithGroups(blueprint, selection), -15), {
+                        message: 'Rotation -15°',
+                        kind: 'edit',
+                      });
+                      setHudRotateOpen(false);
+                    }}
+                    className="min-h-11 rounded-lg hover:bg-surface-muted border border-border flex flex-col items-center justify-center text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    title="Pas fin -15°"
+                  >
+                    <span>-15°</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateBlueprint(rotateLayoutSelection(blueprint, expandSelectionWithGroups(blueprint, selection), 15), {
+                        message: 'Rotation +15°',
+                        kind: 'edit',
+                      });
+                      setHudRotateOpen(false);
+                    }}
+                    className="min-h-11 rounded-lg hover:bg-surface-muted border border-border flex flex-col items-center justify-center text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    title="Pas fin +15°"
+                  >
+                    <span>+15°</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      rotateSelection();
+                      setHudRotateOpen(false);
+                    }}
+                    className="min-h-11 rounded-lg hover:bg-surface-muted border border-border flex flex-col items-center justify-center text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    title="Pivoter +90° (horaire)"
+                  >
+                    <RotateCw className="w-3.5 h-3.5 mb-0.5" />
+                    <span>+90°</span>
+                  </button>
+                </div>
+
+                <div className="pt-1.5 border-t border-border flex flex-col gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateBlueprint(orientSelectionTowards(blueprint, expandSelectionWithGroups(blueprint, selection), 'stage'), {
+                        message: 'Orientation face à la scène',
+                        kind: 'edit',
+                      });
+                      setHudRotateOpen(false);
+                    }}
+                    className="w-full text-left min-h-11 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-surface-muted flex items-center gap-2 text-foreground"
+                  >
+                    <Presentation className="w-4 h-4 text-primary shrink-0" />
+                    <div>
+                      <span className="block font-semibold">Face à la scène</span>
+                      <span className="block text-[10px] text-muted font-normal">Oriente vers l'estrade / podium</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateBlueprint(orientSelectionTowards(blueprint, expandSelectionWithGroups(blueprint, selection), 'center'), {
+                        message: 'Orientation face au centre',
+                        kind: 'edit',
+                      });
+                      setHudRotateOpen(false);
+                    }}
+                    className="w-full text-left min-h-11 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-surface-muted flex items-center gap-2 text-foreground"
+                  >
+                    <Crosshair className="w-4 h-4 text-primary shrink-0" />
+                    <div>
+                      <span className="block font-semibold">Face au centre</span>
+                      <span className="block text-[10px] text-muted font-normal">Milieu de la pièce</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateBlueprint(applyStyleToSelection(blueprint, selection, { rotation: 0 }), {
+                        message: 'Rotation réinitialisée à 0°',
+                        kind: 'edit',
+                      });
+                      setHudRotateOpen(false);
+                    }}
+                    className="w-full text-left min-h-11 px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-surface-muted flex items-center gap-2 text-muted hover:text-foreground"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                    <span>Réinitialiser à 0° (Face avant)</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           {selection.length >= 2 && caps.canAlign && (
             <div className="relative">
@@ -2732,35 +3182,33 @@ export default function RoomLayoutEditor({
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <span className="text-xs font-semibold text-muted">Rotation pas fin</span>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateBlueprint(
-                            applyStyleToSelection(blueprint, selection, { rotationDelta: -15 }),
-                            { message: 'Rotation -15°', kind: 'edit' },
-                          )
-                        }
-                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1 text-xs')}
-                      >
-                        -15°
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateBlueprint(
-                            applyStyleToSelection(blueprint, selection, { rotationDelta: 15 }),
-                            { message: 'Rotation +15°', kind: 'edit' },
-                          )
-                        }
-                        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'flex-1 text-xs')}
-                      >
-                        +15°
-                      </button>
-                    </div>
-                  </div>
+                </div>
+
+                {/* Rotation groupée & Orientation intelligente du lot */}
+                <div className="pt-2 border-t border-border">
+                  <ElementRotationControls
+                    rotation={0}
+                    onChange={(rot, msg) =>
+                      updateBlueprint(
+                        applyStyleToSelection(blueprint, selection, { rotation: rot }),
+                        { message: msg || `Lot orienté à ${rot}°`, kind: 'edit' },
+                      )
+                    }
+                    onDelta={(delta, msg) =>
+                      updateBlueprint(
+                        rotateLayoutSelection(blueprint, expandSelectionWithGroups(blueprint, selection), delta),
+                        { message: msg || `Lot tourné de ${delta}°`, kind: 'edit' },
+                      )
+                    }
+                    onSmartOrient={(target, msg) =>
+                      updateBlueprint(
+                        orientSelectionTowards(blueprint, expandSelectionWithGroups(blueprint, selection), target),
+                        { message: msg, kind: 'edit' },
+                      )
+                    }
+                    isMulti={true}
+                    title="Rotation groupée du lot"
+                  />
                 </div>
 
                 {/* Déplacer le groupe avec les touches fléchées */}
@@ -5181,6 +5629,17 @@ export default function RoomLayoutEditor({
                     Accrocher au mur le plus proche
                   </button>
                 )}
+
+                <div className="pt-2">
+                  <ElementRotationControls
+                    rotation={selectedFixture.rotation ?? 0}
+                    onChange={(rot, msg) => updateFixture(selectedFixture.id, { rotation: rot }, msg || 'Orientation écran')}
+                    onDelta={(delta, msg) => updateFixture(selectedFixture.id, { rotation: ((selectedFixture.rotation ?? 0) + delta + 360) % 360 }, msg)}
+                    onSmartOrient={(target, msg) => updateBlueprint(orientSelectionTowards(blueprint, [{ kind: 'fixture', id: selectedFixture.id }], target), { message: msg, kind: 'edit' })}
+                    isScreen={true}
+                    title="Orientation de l'écran / télé"
+                  />
+                </div>
               </div>
             ) : null}
 
@@ -5269,10 +5728,6 @@ export default function RoomLayoutEditor({
                   <span className="font-semibold text-muted">Couleur (sans image)</span>
                   <input type="color" value={selectedFixture.color ?? '#78716c'} onChange={(e) => updateFixture(selectedFixture.id, { color: e.target.value })} aria-label="Couleur de la colonne" className="w-full min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer" />
                 </label>
-                <label className="block text-xs space-y-1">
-                  <span className="font-semibold text-muted">Rotation (°)</span>
-                  <input type="number" min={0} max={360} value={selectedFixture.rotation ?? 0} onChange={(e) => updateFixture(selectedFixture.id, { rotation: parseFloat(e.target.value) })} className={EDITOR_FIELD} />
-                </label>
                 <div className="space-y-1.5">
                   <p className={EDITOR_HEADING}>Position</p>
                   <div className="flex justify-center">
@@ -5327,6 +5782,18 @@ export default function RoomLayoutEditor({
                   <p className={cn(EDITOR_HINT, 'text-center')}>Ou glissez la colonne dans la vue 3D</p>
                 </div>
               </>
+            )}
+
+            {!isScreen && selectedFixture.kind !== 'door' && selectedFixture.kind !== 'stairs' && (
+              <div className="pt-2">
+                <ElementRotationControls
+                  rotation={selectedFixture.rotation ?? 0}
+                  onChange={(rot, msg) => updateFixture(selectedFixture.id, { rotation: rot }, msg || 'Orientation équipement')}
+                  onDelta={(delta, msg) => updateFixture(selectedFixture.id, { rotation: ((selectedFixture.rotation ?? 0) + delta + 360) % 360 }, msg)}
+                  onSmartOrient={(target, msg) => updateBlueprint(orientSelectionTowards(blueprint, [{ kind: 'fixture', id: selectedFixture.id }], target), { message: msg, kind: 'edit' })}
+                  title="Rotation & Orientation de l'équipement"
+                />
+              </div>
             )}
 
             <div className="grid grid-cols-2 gap-1.5 pt-2 border-t border-border">
@@ -5853,18 +6320,13 @@ export default function RoomLayoutEditor({
             {caps.canCustomImages ? renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl) : null}
             {caps.canCustomImages ? renderTableImageUpload(selectedFurniture.id, selectedFurniture.tableImageUrl) : null}
             {caps.canRotate ? (
-              <label className="block text-xs space-y-1">
-                <span className="font-semibold text-muted">Rotation (°)</span>
-                <input
-                  type="number"
-                  min={0}
-                  max={360}
-                  step={15}
-                  value={selectedFurniture.rotation ?? 0}
-                  onChange={(e) => updateFurniture(selectedFurniture.id, { rotation: parseFloat(e.target.value) || 0 }, 'Rotation de table')}
-                  className={EDITOR_FIELD}
-                />
-              </label>
+              <ElementRotationControls
+                rotation={selectedFurniture.rotation ?? 0}
+                onChange={(rot, msg) => updateFurniture(selectedFurniture.id, { rotation: rot }, msg || 'Rotation de table')}
+                onDelta={(delta, msg) => updateFurniture(selectedFurniture.id, { rotation: ((selectedFurniture.rotation ?? 0) + delta + 360) % 360 }, msg)}
+                onSmartOrient={(target, msg) => updateBlueprint(orientSelectionTowards(blueprint, [{ kind: 'table', id: selectedFurniture.id }], target), { message: msg, kind: 'edit' })}
+                title="Rotation & Orientation de la table"
+              />
             ) : null}
             <div className="flex gap-2">
               {caps.canLock ? (
@@ -6221,6 +6683,17 @@ export default function RoomLayoutEditor({
               </div>
             </div>
             {caps.canCustomImages ? renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl) : null}
+            {caps.canRotate ? (
+              <div className="pt-2">
+                <ElementRotationControls
+                  rotation={selectedFurniture.rotation ?? 0}
+                  onChange={(rot, msg) => updateFurniture(selectedFurniture.id, { rotation: rot }, msg || 'Orientation rangée')}
+                  onDelta={(delta, msg) => updateFurniture(selectedFurniture.id, { rotation: ((selectedFurniture.rotation ?? 0) + delta + 360) % 360 }, msg)}
+                  onSmartOrient={(target, msg) => updateBlueprint(orientSelectionTowards(blueprint, [{ kind: 'row', id: selectedFurniture.id }], target), { message: msg, kind: 'edit' })}
+                  title="Orientation de la rangée"
+                />
+              </div>
+            ) : null}
             <div className="grid grid-cols-2 gap-1.5 pt-1">
               <button
                 type="button"
@@ -6426,26 +6899,23 @@ export default function RoomLayoutEditor({
               </div>
             </div>
             {caps.canRotate ? (
-              <label className="block text-xs space-y-1">
-                <span className="font-semibold text-muted">Rotation °</span>
-                <input type="number" min={0} max={360} value={selectedFurniture.rotation ?? 0} onChange={(e) => updateFurniture(selectedFurniture.id, { rotation: parseFloat(e.target.value) || 0 })} className={EDITOR_FIELD} />
-              </label>
+              <ElementRotationControls
+                rotation={selectedFurniture.rotation ?? 0}
+                onChange={(rot, msg) => updateFurniture(selectedFurniture.id, { rotation: rot }, msg || 'Orientation chaise')}
+                onDelta={(delta, msg) => updateFurniture(selectedFurniture.id, { rotation: ((selectedFurniture.rotation ?? 0) + delta + 360) % 360 }, msg)}
+                onSmartOrient={(target, msg) => updateBlueprint(orientSelectionTowards(blueprint, [{ kind: 'chair', id: selectedFurniture.id }], target), { message: msg, kind: 'edit' })}
+                isChair={true}
+                title="Orientation de la chaise"
+              />
             ) : null}
             {caps.canCustomImages ? renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl) : null}
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="pt-1">
               <button
                 type="button"
                 onClick={duplicateSelectedChair}
-                className={cn(EDITOR_PANEL_BTN, 'border-border text-muted')}
+                className={cn(EDITOR_PANEL_BTN, 'w-full border-border text-muted')}
               >
-                <Copy className="w-3 h-3" /> Dupliquer
-              </button>
-              <button
-                type="button"
-                onClick={() => updateFurniture(selectedFurniture.id, { rotation: ((selectedFurniture.rotation ?? 0) + 90) % 360 }, 'Rotation +90°')}
-                className={cn(EDITOR_PANEL_BTN, 'border-border text-muted')}
-              >
-                Tourner 90°
+                <Copy className="w-3 h-3" /> Dupliquer la chaise
               </button>
             </div>
             {(() => {
