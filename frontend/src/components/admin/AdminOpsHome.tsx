@@ -207,7 +207,7 @@ function ActionBtn({
         onClick();
       }}
       title={title}
-      className="min-h-11 shrink-0"
+      className="min-h-11 shrink-0 flex-1 sm:flex-initial text-xs sm:text-sm"
     >
       {children}
     </Button>
@@ -449,13 +449,13 @@ export default function AdminOpsHome() {
             key={stat.label}
             href={stat.href}
             className={cn(
-              'bg-surface px-4 py-4 hover:bg-surface-muted transition',
+              'bg-surface px-3 sm:px-4 py-3 sm:py-4 hover:bg-surface-muted transition',
               'warn' in stat && stat.warn ? 'bg-amber-50 dark:bg-amber-950/30' : '',
             )}
           >
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">{stat.label}</p>
-            <p className="text-2xl font-semibold text-foreground tracking-tight mt-1">{stat.value}</p>
-            <p className="text-[11px] text-muted mt-1">{stat.hint}</p>
+            <p className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight mt-0.5 sm:mt-1">{stat.value}</p>
+            <p className="text-[11px] text-muted mt-0.5 sm:mt-1 line-clamp-1 sm:line-clamp-none">{stat.hint}</p>
           </Link>
         ))}
       </div>
@@ -481,7 +481,7 @@ export default function AdminOpsHome() {
         </div>
       )}
 
-      <div className="grid lg:grid-cols-2 gap-10">
+      <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-10">
         <QueueSection
           title="Demandes d’abonnement"
           count={pendingList.length}
@@ -668,14 +668,15 @@ export default function AdminOpsHome() {
         description="Fiche support : forfait, équipe, factures et journal."
         size="xl"
         footer={
-          <div className="flex w-full justify-end gap-2">
-            <Button type="button" variant="secondary" size="sm" onClick={() => setFicheOpen(false)}>
+          <div className="flex w-full flex-col-reverse sm:flex-row justify-end gap-2">
+            <Button type="button" variant="secondary" size="sm" className="w-full sm:w-auto min-h-11" onClick={() => setFicheOpen(false)}>
               Fermer
             </Button>
             {fiche?.canImpersonate && (
               <Button
                 type="button"
                 size="sm"
+                className="w-full sm:w-auto min-h-11"
                 loading={busyId === `impersonate:${fiche.tenant.id}`}
                 leftIcon={<LogIn className="w-4 h-4" />}
                 onClick={() => void openWorkspace(fiche.tenant.id)}

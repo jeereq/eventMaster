@@ -201,7 +201,7 @@ export default function AdminGuestsPage() {
   }
 
   const filterClass =
-    'bg-surface-muted border border-border rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary';
+    'bg-surface-muted border border-border rounded-xl px-3 py-2.5 text-xs sm:text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary min-h-11 shrink-0';
 
   return (
     <div className="space-y-6 w-full">
@@ -249,7 +249,7 @@ export default function AdminGuestsPage() {
             </button>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1.5 sm:pb-0 [scrollbar-width:none] w-full sm:w-auto shrink-0">
           <select
             value={category}
             onChange={(e) => { setCategory(e.target.value); setPage(1); }}

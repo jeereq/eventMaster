@@ -618,7 +618,7 @@ export default function AdminCataloguePage() {
 
       {error && <Alert variant="error">{error}</Alert>}
 
-      <nav aria-label="Aller à une section" className="flex flex-wrap gap-x-1 gap-y-1">
+      <nav aria-label="Aller à une section" className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] pb-1 shrink-0">
         {([
           { id: 'venues' as CatalogTab, label: 'Salles publiques', value: overview?.venues.publicCount ?? 0 },
           { id: 'offerings' as CatalogTab, label: 'Prestataires publics', value: overview?.trades?.publicCount ?? overview?.offerings.publicCount ?? 0 },
@@ -638,9 +638,9 @@ export default function AdminCataloguePage() {
               }
             }}
             className={cn(
-              'inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-button)] px-2.5 text-sm transition',
+              'inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-button)] px-2.5 text-sm transition whitespace-nowrap shrink-0',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-              tab === item.id ? 'text-foreground' : 'text-muted hover:text-foreground',
+              tab === item.id ? 'text-foreground font-semibold bg-surface-muted/60' : 'text-muted hover:text-foreground',
             )}
           >
             <span className="font-semibold tabular-nums text-foreground">{item.value}</span>
@@ -655,7 +655,7 @@ export default function AdminCataloguePage() {
           : ''}
       </p>
 
-      <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Sections du catalogue">
+      <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] pb-1 shrink-0" role="tablist" aria-label="Sections du catalogue">
         {tabs.map((item) => (
           <button
             key={item.id}
@@ -687,9 +687,9 @@ export default function AdminCataloguePage() {
               }
             }}
             className={cn(
-              'min-h-11 px-3.5 rounded-md text-sm font-medium border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+              'min-h-11 px-3.5 rounded-md text-sm font-medium border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 whitespace-nowrap shrink-0',
               tab === item.id
-                ? 'bg-surface text-foreground border-border shadow-[var(--shadow-soft)]'
+                ? 'bg-surface text-foreground border-border shadow-[var(--shadow-soft)] font-semibold'
                 : 'text-muted border-transparent hover:text-foreground',
             )}
           >

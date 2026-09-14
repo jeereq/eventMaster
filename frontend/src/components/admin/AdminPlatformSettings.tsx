@@ -118,7 +118,7 @@ const SECTIONS: Array<{ id: SettingsSectionId; label: string; icon: React.Compon
 const fieldClass =
   'w-full px-4 py-2.5 bg-surface border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition';
 const labelClass = 'text-xs font-bold text-muted uppercase tracking-wider';
-const sectionCardClass = 'bg-surface-muted border border-border rounded-[var(--radius-card)] p-5 space-y-4';
+const sectionCardClass = 'bg-surface-muted border border-border rounded-[var(--radius-card)] p-3.5 sm:p-5 space-y-4';
 
 function SectionTitle({
   icon: Icon,
@@ -191,7 +191,7 @@ export default function AdminPlatformSettings({
         className="space-y-6 animate-in fade-in duration-200"
       >
         <nav
-          className="flex flex-wrap gap-1 p-1 rounded-xl border border-border bg-muted/40"
+          className="flex gap-1.5 p-1 rounded-xl border border-border bg-surface-muted/50 overflow-x-auto [scrollbar-width:none] shrink-0"
           aria-label="Sections des réglages plateforme"
         >
           {SECTIONS.map((item) => {
@@ -204,7 +204,7 @@ export default function AdminPlatformSettings({
                 onClick={() => setSection(item.id)}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 py-2 text-xs sm:text-sm font-medium transition',
+                  'inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 py-2 text-xs sm:text-sm font-medium transition whitespace-nowrap shrink-0',
                   active
                     ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
                     : 'text-muted hover:bg-surface/70 hover:text-foreground',
@@ -1126,8 +1126,14 @@ export default function AdminPlatformSettings({
           );
         })()}
 
-        <div className="flex justify-end gap-3 sticky bottom-2 z-10">
-          <Button type="submit" disabled={saving} loading={saving} leftIcon={!saving ? <Check className="w-4 h-4" /> : undefined}>
+        <div className="flex justify-end gap-3 sticky bottom-[calc(var(--em-site-bottom-nav,4rem)+0.75rem)] md:bottom-4 z-20 bg-surface/85 md:bg-transparent backdrop-blur-md md:backdrop-blur-none p-2 md:p-0 rounded-2xl border md:border-0 border-border/60 shadow-lg md:shadow-none">
+          <Button
+            type="submit"
+            disabled={saving}
+            loading={saving}
+            className="w-full sm:w-auto min-h-11"
+            leftIcon={!saving ? <Check className="w-4 h-4" /> : undefined}
+          >
             {saving ? 'Enregistrement…' : 'Sauvegarder les configurations'}
           </Button>
         </div>

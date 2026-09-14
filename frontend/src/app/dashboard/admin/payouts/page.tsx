@@ -312,20 +312,20 @@ export default function AdminSaasPayoutsPage() {
       {error && <Alert variant="error">{error}</Alert>}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-xl p-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Dû</p>
-          <p className="text-xl font-extrabold text-amber-900 dark:text-amber-200 mt-1">{formatFc(data?.sums.dueFc ?? 0)}</p>
-          <p className="text-[11px] text-amber-700">{data?.sums.dueCount ?? 0} commercial(aux)</p>
+        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-xl p-3.5 sm:p-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-amber-700">Dû</p>
+          <p className="text-lg sm:text-xl font-extrabold text-amber-900 dark:text-amber-200 mt-1">{formatFc(data?.sums.dueFc ?? 0)}</p>
+          <p className="text-xs text-amber-700">{data?.sums.dueCount ?? 0} commercial(aux)</p>
         </div>
-        <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-4">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Versé</p>
-          <p className="text-xl font-extrabold text-emerald-800 dark:text-emerald-200 mt-1">{formatFc(data?.sums.paidFc ?? 0)}</p>
-          <p className="text-[11px] text-emerald-700">{data?.sums.paidCount ?? 0} dossier(s)</p>
+        <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-3.5 sm:p-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Versé</p>
+          <p className="text-lg sm:text-xl font-extrabold text-emerald-800 dark:text-emerald-200 mt-1">{formatFc(data?.sums.paidFc ?? 0)}</p>
+          <p className="text-xs text-emerald-700">{data?.sums.paidCount ?? 0} dossier(s)</p>
         </div>
-        <div className="bg-surface-muted border border-border rounded-xl p-4 col-span-2">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted">Payeur</p>
+        <div className="bg-surface-muted border border-border rounded-xl p-3.5 sm:p-4 col-span-2">
+          <p className="text-xs font-bold uppercase tracking-wider text-muted">Payeur</p>
           <p className="text-sm font-semibold text-foreground mt-1">EventMaster via FlexPay Pay Out (ou hors plateforme)</p>
-          <p className="text-[11px] text-muted mt-1">
+          <p className="text-xs text-muted mt-1">
             Distinct de la commission vendeur marketplace.{' '}
             <Link href="/dashboard/admin/catalogue" className="text-primary hover:underline">Ouvrir le catalogue</Link>
           </p>
@@ -502,10 +502,10 @@ export default function AdminSaasPayoutsPage() {
                         {amountChip}
                       </div>
                       <p className="text-xs truncate">{row.email}</p>
-                      <p className="text-[11px] text-muted truncate">
+                      <p className="text-xs text-muted truncate">
                         {row.period} · {row.orgCount} org. · {formatFc(row.totalCommission)}
                       </p>
-                      <p className="text-[11px] text-muted truncate">{row.orgNames.join(', ')}</p>
+                      <p className="text-xs text-muted truncate">{row.orgNames.join(', ')}</p>
                     </div>
                   )
                 }
@@ -534,9 +534,9 @@ export default function AdminSaasPayoutsPage() {
             : 'La ligne redevient due. Motif journalisé dans l’audit.'
         }
         footer={
-          <div className="flex w-full justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => setModal(null)}>Annuler</Button>
-            <Button type="button" onClick={() => void submitModal()} loading={Boolean(busyKey)}>
+          <div className="flex flex-col-reverse sm:flex-row w-full justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={() => setModal(null)} className="w-full sm:w-auto min-h-11">Annuler</Button>
+            <Button type="button" onClick={() => void submitModal()} loading={Boolean(busyKey)} className="w-full sm:w-auto min-h-11">
               Confirmer
             </Button>
           </div>
@@ -590,14 +590,15 @@ export default function AdminSaasPayoutsPage() {
         title="Verser via FlexPay"
         description="Pay Out Mobile Money vers le téléphone du commercial. La commission n’est marquée versée qu’après confirmation FlexPay."
         footer={
-          <div className="flex w-full flex-wrap justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => setFlexModal(null)}>Fermer</Button>
+          <div className="flex flex-col-reverse sm:flex-row w-full justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={() => setFlexModal(null)} className="w-full sm:w-auto min-h-11">Fermer</Button>
             {pendingTransferId && (
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => void verifyPendingFlex()}
                 loading={busyKey?.startsWith('verify:')}
+                className="w-full sm:w-auto min-h-11"
               >
                 Vérifier le statut
               </Button>
@@ -607,6 +608,7 @@ export default function AdminSaasPayoutsPage() {
               onClick={() => void submitFlexPay()}
               loading={busyKey?.startsWith('flex:')}
               disabled={Boolean(pendingTransferId)}
+              className="w-full sm:w-auto min-h-11"
             >
               Lancer le versement
             </Button>

@@ -127,42 +127,43 @@ export default function AdminDonationsPage() {
         ]}
       />
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <PageHeader
-          title="Reporting des dons solidaires"
-          description="Suivi consolidé de l’ensemble des collectes de fonds, dons libres et contributions sur la plateforme."
-        />
+      <PageHeader
+        title="Reporting des dons solidaires"
+        description="Suivi consolidé de l’ensemble des collectes de fonds, dons libres et contributions sur la plateforme."
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="min-h-11"
+              onClick={() => loadData(true)}
+              disabled={refreshing || loading}
+              leftIcon={<RefreshCw className={cn('w-3.5 h-3.5', refreshing && 'animate-spin')} />}
+            >
+              Actualiser
+            </Button>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => loadData(true)}
-            disabled={refreshing || loading}
-            leftIcon={<RefreshCw className={cn('w-3.5 h-3.5', refreshing && 'animate-spin')} />}
-          >
-            Actualiser
-          </Button>
-
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={handleExportCsv}
-            disabled={downloadingCsv || loading || (summary?.totalAttemptsCount ?? 0) === 0}
-            leftIcon={
-              downloadingCsv ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Download className="w-3.5 h-3.5" />
-              )
-            }
-          >
-            Exporter (CSV)
-          </Button>
-        </div>
-      </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="min-h-11"
+              onClick={handleExportCsv}
+              disabled={downloadingCsv || loading || (summary?.totalAttemptsCount ?? 0) === 0}
+              leftIcon={
+                downloadingCsv ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Download className="w-3.5 h-3.5" />
+                )
+              }
+            >
+              Exporter (CSV)
+            </Button>
+          </div>
+        }
+      />
 
       {error && (
         <Alert variant="error">{error}</Alert>
@@ -286,7 +287,7 @@ export default function AdminDonationsPage() {
       <div
         role="tablist"
         aria-label="Sections du reporting des dons solidaires"
-        className="flex flex-wrap items-center gap-2 border-b border-border pb-3"
+        className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] border-b border-border pb-3 shrink-0"
       >
         {([
           ['overview', 'Vue générale & Transactions', Heart],
@@ -300,7 +301,7 @@ export default function AdminDonationsPage() {
             aria-selected={viewTab === id}
             onClick={() => setViewTab(id)}
             className={cn(
-              'inline-flex items-center gap-2 px-3.5 py-2 min-h-11 rounded-xl text-xs font-semibold transition touch-manipulation',
+              'inline-flex items-center gap-2 px-3.5 py-2 min-h-11 rounded-xl text-xs font-semibold transition touch-manipulation whitespace-nowrap shrink-0',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
               viewTab === id
                 ? 'bg-primary text-primary-foreground shadow-xs'
@@ -310,10 +311,10 @@ export default function AdminDonationsPage() {
             <Icon className="w-3.5 h-3.5" />
             <span>{label}</span>
             {id === 'events' && data?.topEvents && (
-              <span className="ml-1 text-[11px] opacity-80">({data.topEvents.length})</span>
+              <span className="ml-1 text-xs opacity-80">({data.topEvents.length})</span>
             )}
             {id === 'tenants' && data?.topTenants && (
-              <span className="ml-1 text-[11px] opacity-80">({data.topTenants.length})</span>
+              <span className="ml-1 text-xs opacity-80">({data.topTenants.length})</span>
             )}
           </button>
         ))}
@@ -333,7 +334,7 @@ export default function AdminDonationsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs" aria-label="Top événements collecteurs">
                 <thead>
-                  <tr className="border-b border-border text-muted uppercase text-[10px] font-bold tracking-wider">
+                  <tr className="border-b border-border text-muted uppercase text-xs font-bold tracking-wider">
                     <th className="pb-3 pr-4">Événement</th>
                     <th className="pb-3 px-4">Organisation</th>
                     <th className="pb-3 px-4">Collecté (FC)</th>
@@ -347,7 +348,7 @@ export default function AdminDonationsPage() {
                   {data.topEvents.map((ev, idx) => (
                     <tr key={ev.eventId} className="hover:bg-surface-muted/50 transition">
                       <td className="py-3.5 pr-4 font-bold text-foreground flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-surface-muted flex items-center justify-center text-[10px] text-muted shrink-0">
+                        <span className="w-5 h-5 rounded-full bg-surface-muted flex items-center justify-center text-xs text-muted shrink-0">
                           {idx + 1}
                         </span>
                         <span className="truncate max-w-xs">{ev.eventTitle}</span>
@@ -408,7 +409,7 @@ export default function AdminDonationsPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs" aria-label="Top organisations collectrices">
                 <thead>
-                  <tr className="border-b border-border text-muted uppercase text-[10px] font-bold tracking-wider">
+                  <tr className="border-b border-border text-muted uppercase text-xs font-bold tracking-wider">
                     <th className="pb-3 pr-4">Organisation</th>
                     <th className="pb-3 px-4">Événements avec dons</th>
                     <th className="pb-3 px-4">Montant total collecté (FC)</th>
@@ -420,7 +421,7 @@ export default function AdminDonationsPage() {
                   {data.topTenants.map((t, idx) => (
                     <tr key={t.tenantId} className="hover:bg-surface-muted/50 transition">
                       <td className="py-3.5 pr-4 font-bold text-foreground flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-surface-muted flex items-center justify-center text-[10px] text-muted shrink-0">
+                        <span className="w-5 h-5 rounded-full bg-surface-muted flex items-center justify-center text-xs text-muted shrink-0">
                           {idx + 1}
                         </span>
                         <span>{t.tenantName}</span>
@@ -507,7 +508,7 @@ export default function AdminDonationsPage() {
               </div>
 
               {/* Statut de paiement */}
-              <div className="flex items-center gap-1 justify-end">
+              <div className="flex items-center gap-1 justify-start sm:justify-end">
                 {([
                   ['all', 'Tous statuts'],
                   ['paid', 'Payés'],
@@ -592,12 +593,12 @@ export default function AdminDonationsPage() {
                             {donation.buyerName}
                           </span>
                           {donation.isAnonymous ? (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-700 dark:text-rose-300 bg-rose-500/15 border border-rose-500/25 px-2 py-0.5 rounded-full">
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-rose-700 dark:text-rose-300 bg-rose-500/15 border border-rose-500/25 px-2 py-0.5 rounded-full">
                               <EyeOff className="w-3 h-3" />
                               Anonyme
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted bg-surface-muted px-2 py-0.5 rounded-full">
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-muted bg-surface-muted px-2 py-0.5 rounded-full">
                               <Eye className="w-3 h-3" />
                               {donation.buyerEmail}
                             </span>
@@ -620,7 +621,7 @@ export default function AdminDonationsPage() {
                           {donation.flexPayOrderNumber && (
                             <>
                               <span aria-hidden>·</span>
-                              <span className="font-mono text-[11px]">Réf : {donation.flexPayOrderNumber}</span>
+                              <span className="font-mono text-xs">Réf : {donation.flexPayOrderNumber}</span>
                             </>
                           )}
                         </p>

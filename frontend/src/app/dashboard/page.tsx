@@ -1894,7 +1894,8 @@ function DashboardPageContent() {
  const guestOrgOptions = [...new Set(adminGuests.map((g) => g.tenantName).filter(Boolean))].sort();
  const guestEventOptions = [...new Set(adminGuests.map((g) => g.eventTitle).filter(Boolean))].sort();
  const guestCategoryOptions = [...new Set(adminGuests.map((g) => g.category).filter(Boolean))].sort();
- const filterSelectClass = 'bg-surface-muted dark:bg-background border border-border rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition';
+  const filterSelectClass =
+    'bg-surface-muted dark:bg-background border border-border rounded-xl px-3 py-2.5 text-xs sm:text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition min-h-11 shrink-0 max-w-[170px] sm:max-w-none';
 
  const activeLicensesCount = adminData?.stats.licensesActive ?? 0;
  const paidPlansCount = Object.entries(adminData?.planCounts || {}).reduce(
@@ -2161,208 +2162,229 @@ function DashboardPageContent() {
  </div>
  )}
 
- {/* Filters and search */}
- {activeTab !== 'analytics' && activeTab !== 'settings' && activeTab !== 'subscription-requests' && activeTab !== 'subscription-plans' && activeTab !== 'invoices' && activeTab !== 'message-templates' && (
- <div className="p-6 border-b border-border-subtle dark:border-border bg-white dark:bg-background flex flex-col sm:flex-row gap-4">
- <div className="relative flex-1">
- <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-muted" />
- <input
- type="text"
- placeholder={
- activeTab === 'tenants' ? "Rechercher une organisation, un gérant..." :
- activeTab === 'users' ? "Rechercher un utilisateur, un email, une organisation..." :
- activeTab === 'events' ? "Rechercher un événement, un lieu, une organisation..." :
- activeTab === 'guests' ? "Rechercher un invité, un email, une catégorie..." :
- "Rechercher un modèle..."
- }
- value={searchTerm}
- onChange={(e) => setSearchTerm(e.target.value)}
- className="w-full pl-10 pr-4 py-2.5 bg-surface-muted dark:bg-background border border-border dark:border-border text-foreground dark:text-foreground rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
- />
- </div>
+        {/* Filters and search */}
+        {activeTab !== 'analytics' && activeTab !== 'settings' && activeTab !== 'subscription-requests' && activeTab !== 'subscription-plans' && activeTab !== 'invoices' && activeTab !== 'message-templates' && (
+          <div className="p-3.5 sm:p-5 border-b border-border bg-white dark:bg-background flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-muted pointer-events-none" />
+              <input
+                type="text"
+                placeholder={
+                  activeTab === 'tenants' ? "Rechercher une organisation, un gérant..." :
+                  activeTab === 'users' ? "Rechercher un utilisateur, un email, une organisation..." :
+                  activeTab === 'events' ? "Rechercher un événement, un lieu, une organisation..." :
+                  activeTab === 'guests' ? "Rechercher un invité, un email, une catégorie..." :
+                  "Rechercher un modèle..."
+                }
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-9 min-h-11 bg-surface-muted dark:bg-background border border-border dark:border-border text-foreground dark:text-foreground rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
+              />
+              {searchTerm ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  aria-label="Effacer la recherche"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-muted hover:text-foreground rounded-full hover:bg-surface-muted transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              ) : null}
+            </div>
 
- {activeTab === 'tenants' && (
- <div className="flex flex-wrap items-center gap-2">
- <Filter className="w-4.5 h-4.5 text-muted flex-shrink-0" />
- <select
- value={filterPlan}
- onChange={(e) => setFilterPlan(e.target.value)}
- className="bg-surface-muted dark:bg-background border border-border dark:border-border rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground dark:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
- >
- <option value="ALL">Tous les plans</option>
- {PLAN_IDS.map((p) => (
- <option key={p} value={p}>{p}</option>
- ))}
- </select>
- <select
- value={filterAccountKind}
- onChange={(e) => setFilterAccountKind(e.target.value)}
- className="bg-surface-muted dark:bg-background border border-border dark:border-border rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground dark:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
- >
- <option value="ALL">Tous les types</option>
- {(Object.keys(ACCOUNT_KIND_FILTER_LABELS) as TenantAccountKind[]).map((kind) => (
- <option key={kind} value={kind}>{ACCOUNT_KIND_FILTER_LABELS[kind]}</option>
- ))}
- </select>
- <ViewModeToggle
- storageKey="em-view-admin-tenants"
- value={tenantsViewMode}
- onChange={setTenantsViewMode}
- columns={tenantsColumns}
- onColumnsChange={setTenantsColumns}
- defaultMode="grid"
- defaultColumns={3}
- />
- </div>
- )}
+            {activeTab === 'tenants' && (
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] w-full lg:w-auto shrink-0">
+                <Filter className="w-4 h-4 text-muted shrink-0 hidden sm:block" />
+                <select
+                  value={filterPlan}
+                  onChange={(e) => setFilterPlan(e.target.value)}
+                  aria-label="Filtrer par forfait"
+                  className={filterSelectClass}
+                >
+                  <option value="ALL">Tous les plans</option>
+                  {PLAN_IDS.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+                <select
+                  value={filterAccountKind}
+                  onChange={(e) => setFilterAccountKind(e.target.value)}
+                  aria-label="Filtrer par type"
+                  className={filterSelectClass}
+                >
+                  <option value="ALL">Tous les types</option>
+                  {(Object.keys(ACCOUNT_KIND_FILTER_LABELS) as TenantAccountKind[]).map((kind) => (
+                    <option key={kind} value={kind}>{ACCOUNT_KIND_FILTER_LABELS[kind]}</option>
+                  ))}
+                </select>
+                <div className="shrink-0 ml-auto sm:ml-0">
+                  <ViewModeToggle
+                    storageKey="em-view-admin-tenants"
+                    value={tenantsViewMode}
+                    onChange={setTenantsViewMode}
+                    columns={tenantsColumns}
+                    onColumnsChange={setTenantsColumns}
+                    defaultMode="grid"
+                    defaultColumns={3}
+                  />
+                </div>
+              </div>
+            )}
 
- {activeTab === 'users' && (
- <div className="flex flex-wrap items-center gap-2">
- <Filter className="w-4.5 h-4.5 text-muted flex-shrink-0" />
- <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)} className={filterSelectClass}>
- <option value="ALL">Tous les rôles</option>
- <option value="USER">Membre d’organisation</option>
- <option value="COMMERCIAL">Commercial plateforme</option>
- <option value="SUPER_ADMIN">Super Admin</option>
- </select>
- <select value={filterOrgRole} onChange={(e) => setFilterOrgRole(e.target.value)} className={filterSelectClass}>
- <option value="ALL">Rôle org.</option>
- <option value="MANAGER">Manager</option>
- <option value="PROTOCOL">Protocole</option>
- <option value="COMMERCIAL">Commercial org.</option>
- </select>
- <select value={filterVerified} onChange={(e) => setFilterVerified(e.target.value)} className={filterSelectClass}>
- <option value="ALL">Vérification</option>
- <option value="verified">E-mail vérifié</option>
- <option value="unverified">Non vérifié</option>
- </select>
- <select value={filterUserOrg} onChange={(e) => setFilterUserOrg(e.target.value)} className={filterSelectClass}>
- <option value="ALL">Toutes les organisations</option>
- {userOrgOptions.map((name) => (
- <option key={name} value={name}>{name}</option>
- ))}
- </select>
- <ViewModeToggle
- storageKey="em-view-admin-users"
- value={usersViewMode}
- onChange={setUsersViewMode}
- columns={usersColumns}
- onColumnsChange={setUsersColumns}
- defaultMode="grid"
- defaultColumns={3}
- />
- </div>
- )}
+            {activeTab === 'users' && (
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] w-full lg:w-auto shrink-0">
+                <Filter className="w-4 h-4 text-muted shrink-0 hidden sm:block" />
+                <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)} className={filterSelectClass} aria-label="Filtrer par rôle">
+                  <option value="ALL">Tous les rôles</option>
+                  <option value="USER">Membre d’organisation</option>
+                  <option value="COMMERCIAL">Commercial plateforme</option>
+                  <option value="SUPER_ADMIN">Super Admin</option>
+                </select>
+                <select value={filterOrgRole} onChange={(e) => setFilterOrgRole(e.target.value)} className={filterSelectClass} aria-label="Filtrer par rôle dans l'organisation">
+                  <option value="ALL">Rôle org.</option>
+                  <option value="MANAGER">Manager</option>
+                  <option value="PROTOCOL">Protocole</option>
+                  <option value="COMMERCIAL">Commercial org.</option>
+                </select>
+                <select value={filterVerified} onChange={(e) => setFilterVerified(e.target.value)} className={filterSelectClass} aria-label="Filtrer par vérification">
+                  <option value="ALL">Vérification</option>
+                  <option value="verified">E-mail vérifié</option>
+                  <option value="unverified">Non vérifié</option>
+                </select>
+                <select value={filterUserOrg} onChange={(e) => setFilterUserOrg(e.target.value)} className={filterSelectClass} aria-label="Filtrer par organisation">
+                  <option value="ALL">Toutes les organisations</option>
+                  {userOrgOptions.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+                <div className="shrink-0 ml-auto sm:ml-0">
+                  <ViewModeToggle
+                    storageKey="em-view-admin-users"
+                    value={usersViewMode}
+                    onChange={setUsersViewMode}
+                    columns={usersColumns}
+                    onColumnsChange={setUsersColumns}
+                    defaultMode="grid"
+                    defaultColumns={3}
+                  />
+                </div>
+              </div>
+            )}
 
- {activeTab === 'events' && (
- <div className="flex flex-wrap items-center gap-2">
- <Filter className="w-4.5 h-4.5 text-muted flex-shrink-0" />
- <select value={filterEventWhen} onChange={(e) => setFilterEventWhen(e.target.value)} className={filterSelectClass}>
- <option value="ALL">Toutes les dates</option>
- <option value="upcoming">À venir</option>
- <option value="past">Passés</option>
- </select>
- <select value={filterEventOrg} onChange={(e) => setFilterEventOrg(e.target.value)} className={filterSelectClass}>
- <option value="ALL">Toutes les organisations</option>
- {eventOrgOptions.map((name) => (
- <option key={name} value={name}>{name}</option>
- ))}
- </select>
- <select value={filterEventGps} onChange={(e) => setFilterEventGps(e.target.value)} className={filterSelectClass}>
- <option value="ALL">Localisation</option>
- <option value="yes">Avec GPS</option>
- <option value="no">Sans GPS</option>
- </select>
- <select value={filterEventVisibility} onChange={(e) => setFilterEventVisibility(e.target.value)} className={filterSelectClass}>
- <option value="ALL">Visibilité</option>
- <option value="public">Publics</option>
- <option value="private">Privés</option>
- </select>
- <select value={filterEventTicketing} onChange={(e) => setFilterEventTicketing(e.target.value)} className={filterSelectClass}>
- <option value="ALL">Billets</option>
- <option value="yes">Billetterie</option>
- <option value="no">Sans billets</option>
- </select>
- <ViewModeToggle
- storageKey="em-view-admin-events"
- value={adminEventsViewMode}
- onChange={setAdminEventsViewMode}
- columns={adminEventsColumns}
- onColumnsChange={setAdminEventsColumns}
- defaultMode="grid"
- defaultColumns={3}
- />
- </div>
- )}
+            {activeTab === 'events' && (
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] w-full lg:w-auto shrink-0">
+                <Filter className="w-4 h-4 text-muted shrink-0 hidden sm:block" />
+                <select value={filterEventWhen} onChange={(e) => setFilterEventWhen(e.target.value)} className={filterSelectClass} aria-label="Filtrer par date">
+                  <option value="ALL">Toutes les dates</option>
+                  <option value="upcoming">À venir</option>
+                  <option value="past">Passés</option>
+                </select>
+                <select value={filterEventOrg} onChange={(e) => setFilterEventOrg(e.target.value)} className={filterSelectClass} aria-label="Filtrer par organisation">
+                  <option value="ALL">Toutes les organisations</option>
+                  {eventOrgOptions.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+                <select value={filterEventGps} onChange={(e) => setFilterEventGps(e.target.value)} className={filterSelectClass} aria-label="Filtrer par GPS">
+                  <option value="ALL">Localisation</option>
+                  <option value="yes">Avec GPS</option>
+                  <option value="no">Sans GPS</option>
+                </select>
+                <select value={filterEventVisibility} onChange={(e) => setFilterEventVisibility(e.target.value)} className={filterSelectClass} aria-label="Filtrer par visibilité">
+                  <option value="ALL">Visibilité</option>
+                  <option value="public">Publics</option>
+                  <option value="private">Privés</option>
+                </select>
+                <select value={filterEventTicketing} onChange={(e) => setFilterEventTicketing(e.target.value)} className={filterSelectClass} aria-label="Filtrer par billetterie">
+                  <option value="ALL">Billets</option>
+                  <option value="yes">Billetterie</option>
+                  <option value="no">Sans billets</option>
+                </select>
+                <div className="shrink-0 ml-auto sm:ml-0">
+                  <ViewModeToggle
+                    storageKey="em-view-admin-events"
+                    value={adminEventsViewMode}
+                    onChange={setAdminEventsViewMode}
+                    columns={adminEventsColumns}
+                    onColumnsChange={setAdminEventsColumns}
+                    defaultMode="grid"
+                    defaultColumns={3}
+                  />
+                </div>
+              </div>
+            )}
 
-                  {activeTab === 'templates' && canManageTemplates && (
- <div className="flex items-center gap-2">
- <Filter className="w-4.5 h-4.5 text-muted flex-shrink-0" />
- <select
- value={filterType}
- onChange={(e) => setFilterType(e.target.value as any)}
- className="bg-surface-muted dark:bg-background border border-border dark:border-border rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground dark:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
- >
- <option value="ALL">Tous les modèles</option>
- <option value="GLOBAL">Modèles Globaux (Publics)</option>
- <option value="TENANT">Modèles d'organisations</option>
- </select>
- </div>
- )}
+            {activeTab === 'templates' && canManageTemplates && (
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] w-full lg:w-auto shrink-0">
+                <Filter className="w-4 h-4 text-muted shrink-0 hidden sm:block" />
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value as any)}
+                  aria-label="Filtrer par portée de modèle"
+                  className={filterSelectClass}
+                >
+                  <option value="ALL">Tous les modèles</option>
+                  <option value="GLOBAL">Modèles Globaux (Publics)</option>
+                  <option value="TENANT">Modèles d'organisations</option>
+                </select>
+              </div>
+            )}
 
- {activeTab === 'guests' && (
- <div className="flex flex-wrap items-center gap-2">
- <Filter className="w-4.5 h-4.5 text-muted flex-shrink-0" />
- <select value={filterRsvp} onChange={(e) => setFilterRsvp(e.target.value)} className={filterSelectClass}>
- <option value="ALL">Tous les RSVP</option>
- <option value="PENDING">En attente</option>
- <option value="ACCEPTED">Accepté</option>
- <option value="DECLINED">Décliné</option>
- </select>
- <select value={filterGuestCheckin} onChange={(e) => setFilterGuestCheckin(e.target.value)} className={filterSelectClass}>
- <option value="ALL">Présence</option>
- <option value="in">Enregistrés</option>
- <option value="out">Non enregistrés</option>
- </select>
- <select value={filterGuestPdf} onChange={(e) => setFilterGuestPdf(e.target.value)} className={filterSelectClass}>
- <option value="ALL">PDF invitation</option>
- <option value="delivered">PDF livré</option>
- <option value="missing">PDF non livré</option>
- </select>
- <select value={filterGuestCategory} onChange={(e) => setFilterGuestCategory(e.target.value)} className={filterSelectClass}>
- <option value="ALL">Toutes les catégories</option>
- {guestCategoryOptions.map((name) => (
- <option key={name} value={name}>{name}</option>
- ))}
- </select>
- <select value={filterGuestEvent} onChange={(e) => setFilterGuestEvent(e.target.value)} className={filterSelectClass}>
- <option value="ALL">Tous les événements</option>
- {guestEventOptions.map((name) => (
- <option key={name} value={name}>{name}</option>
- ))}
- </select>
- <select value={filterGuestOrg} onChange={(e) => setFilterGuestOrg(e.target.value)} className={filterSelectClass}>
- <option value="ALL">Toutes les organisations</option>
- {guestOrgOptions.map((name) => (
- <option key={name} value={name}>{name}</option>
- ))}
- </select>
- <ViewModeToggle
- storageKey="em-view-admin-guests"
- value={guestsViewMode}
- onChange={setGuestsViewMode}
- columns={guestsColumns}
- onColumnsChange={setGuestsColumns}
- defaultMode="grid"
- defaultColumns={3}
- />
- </div>
- )}
- </div>
- )}
+            {activeTab === 'guests' && (
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] w-full lg:w-auto shrink-0">
+                <Filter className="w-4 h-4 text-muted shrink-0 hidden sm:block" />
+                <select value={filterRsvp} onChange={(e) => setFilterRsvp(e.target.value)} className={filterSelectClass} aria-label="Filtrer par RSVP">
+                  <option value="ALL">Tous les RSVP</option>
+                  <option value="PENDING">En attente</option>
+                  <option value="ACCEPTED">Accepté</option>
+                  <option value="DECLINED">Décliné</option>
+                </select>
+                <select value={filterGuestCheckin} onChange={(e) => setFilterGuestCheckin(e.target.value)} className={filterSelectClass} aria-label="Filtrer par présence">
+                  <option value="ALL">Présence</option>
+                  <option value="in">Enregistrés</option>
+                  <option value="out">Non enregistrés</option>
+                </select>
+                <select value={filterGuestPdf} onChange={(e) => setFilterGuestPdf(e.target.value)} className={filterSelectClass} aria-label="Filtrer par PDF">
+                  <option value="ALL">PDF invitation</option>
+                  <option value="delivered">PDF livré</option>
+                  <option value="missing">PDF non livré</option>
+                </select>
+                <select value={filterGuestCategory} onChange={(e) => setFilterGuestCategory(e.target.value)} className={filterSelectClass} aria-label="Filtrer par catégorie">
+                  <option value="ALL">Toutes les catégories</option>
+                  {guestCategoryOptions.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+                <select value={filterGuestEvent} onChange={(e) => setFilterGuestEvent(e.target.value)} className={filterSelectClass} aria-label="Filtrer par événement">
+                  <option value="ALL">Tous les événements</option>
+                  {guestEventOptions.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+                <select value={filterGuestOrg} onChange={(e) => setFilterGuestOrg(e.target.value)} className={filterSelectClass} aria-label="Filtrer par organisation">
+                  <option value="ALL">Toutes les organisations</option>
+                  {guestOrgOptions.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+                <div className="shrink-0 ml-auto sm:ml-0">
+                  <ViewModeToggle
+                    storageKey="em-view-admin-guests"
+                    value={guestsViewMode}
+                    onChange={setGuestsViewMode}
+                    columns={guestsColumns}
+                    onColumnsChange={setGuestsColumns}
+                    defaultMode="grid"
+                    defaultColumns={3}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
- {/* Content area */}
- <div className="p-5 sm:p-6 bg-surface">
+        {/* Content area */}
+        <div className="p-3.5 sm:p-5 lg:p-6 bg-surface">
  {/* Tenants Tab */}
  {activeTab === 'tenants' && (
  <div className="space-y-4">
@@ -4409,25 +4431,30 @@ function DashboardPageContent() {
  </div>
  )}
 
- {/* Modal: Create or Edit Guest (Super Admin) */}
- {isGuestModalOpen && (
- <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
-              <div role="dialog" aria-modal="true" aria-labelledby="sa-guest-modal-title" className="bg-surface rounded-2xl border border-border shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
- <div className="px-6 py-5 border-b border-border-subtle bg-surface-muted flex items-center justify-between">
-                  <h3 id="sa-guest-modal-title" className="font-bold text-foreground flex items-center gap-2">
- <Users className="w-5 h-5 text-primary" />
- {guestModalMode === 'create' ? 'Créer un Invité' : 'Modifier l\'Invité'}
- </h3>
- <button 
- onClick={() => setIsGuestModalOpen(false)}
-                    aria-label="Fermer la fenêtre"
- className="p-1.5 text-muted hover:text-muted hover:bg-surface-muted rounded-lg transition"
- >
- <X className="w-5 h-5" />
- </button>
- </div>
+        {/* Modal: Create or Edit Guest (Super Admin) */}
+        {isGuestModalOpen && (
+          <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="sa-guest-modal-title"
+              className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl max-w-md w-full max-h-[90dvh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200"
+            >
+              <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-border-subtle bg-surface-muted flex items-center justify-between shrink-0">
+                <h3 id="sa-guest-modal-title" className="font-bold text-foreground flex items-center gap-2 text-base">
+                  <Users className="w-5 h-5 text-primary" />
+                  {guestModalMode === 'create' ? 'Créer un Invité' : 'Modifier l\'Invité'}
+                </h3>
+                <button 
+                  onClick={() => setIsGuestModalOpen(false)}
+                  aria-label="Fermer la fenêtre"
+                  className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
- <form onSubmit={handleSaveGuest} className="p-6 space-y-5">
+              <form onSubmit={handleSaveGuest} className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1 overscroll-contain">
  {/* Événement */}
  <div className="space-y-2">
  <label className="text-xs font-bold text-muted uppercase tracking-wider block">Événement de destination</label>
@@ -4517,53 +4544,59 @@ function DashboardPageContent() {
  </select>
  </div>
 
- {/* Actions */}
- <div className="flex justify-end gap-3 pt-4 border-t border-border-subtle">
- <button
- type="button"
- onClick={() => setIsGuestModalOpen(false)}
- className="px-4 py-2.5 border border-border text-muted font-bold rounded-xl text-sm hover:bg-surface-muted transition"
- >
- Annuler
- </button>
- <button
- type="submit"
- disabled={updatingGuest}
- className="px-4 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition flex items-center gap-2 shadow-md disabled:opacity-50"
- >
- {updatingGuest ? (
- <>
- <Loader2 className="w-4 h-4 animate-spin" />
- Enregistrement...
- </>
- ) : (
- 'Enregistrer'
- )}
- </button>
- </div>
- </form>
+              {/* Actions */}
+              <div className="flex gap-3 pt-3 sticky bottom-0 -mx-5 -mb-5 sm:-mx-6 sm:-mb-6 p-4 sm:p-5 bg-surface/95 backdrop-blur-md border-t border-border mt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsGuestModalOpen(false)}
+                  className="flex-1 min-h-11 border border-border text-muted font-bold rounded-xl text-sm hover:bg-surface-muted transition"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={updatingGuest}
+                  className="flex-1 min-h-11 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
+                >
+                  {updatingGuest ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Enregistrement...
+                    </>
+                  ) : (
+                    'Enregistrer'
+                  )}
+                </button>
+              </div>
+            </form>
  </div>
  </div>
  )}
 
- {/* Modal: Create or Edit Tenant */}
- {isCreateTenantModalOpen && (
- <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
- <div className="bg-surface rounded-2xl border border-border shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
- <div className="px-6 py-5 border-b border-border-subtle bg-surface-muted flex items-center justify-between">
- <h3 className="font-bold text-foreground flex items-center gap-2">
- <Building2 className="w-5 h-5 text-primary" />
- {tenantModalMode === 'create' ? 'Créer une Organisation' : `Modifier l'Organisation : ${selectedTenant?.name}`}
- </h3>
- <button 
- onClick={() => setIsTenantModalOpen(false)}
- className="p-1.5 text-muted hover:text-muted hover:bg-surface-muted rounded-lg transition"
- >
- <X className="w-5 h-5" />
- </button>
- </div>
+        {/* Modal: Create or Edit Tenant */}
+        {isCreateTenantModalOpen && (
+          <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="sa-tenant-modal-title"
+              className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl max-w-md w-full max-h-[90dvh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200"
+            >
+              <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-border-subtle bg-surface-muted flex items-center justify-between shrink-0">
+                <h3 id="sa-tenant-modal-title" className="font-bold text-foreground flex items-center gap-2 text-base">
+                  <Building2 className="w-5 h-5 text-primary" />
+                  {tenantModalMode === 'create' ? 'Créer une Organisation' : `Modifier l'Organisation : ${selectedTenant?.name}`}
+                </h3>
+                <button 
+                  onClick={() => setIsTenantModalOpen(false)}
+                  aria-label="Fermer la fenêtre"
+                  className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
- <form onSubmit={handleSaveTenant} className="p-6 space-y-5">
+              <form onSubmit={handleSaveTenant} className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1 overscroll-contain">
  {/* Nom */}
  <div className="space-y-2">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Nom de l'organisation</label>
@@ -4776,47 +4809,53 @@ function DashboardPageContent() {
  </div>
  )}
 
- {/* Actions */}
- <div className="flex gap-3 pt-2">
- <button
- type="button"
- onClick={() => setIsTenantModalOpen(false)}
- className="flex-1 py-2.5 border border-border hover:bg-surface-muted text-foreground font-bold rounded-xl text-sm transition"
- >
- Annuler
- </button>
- <button
- type="submit"
- disabled={updatingTenant}
- className="flex-1 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md"
- >
- {updatingTenant ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
- Enregistrer
- </button>
- </div>
- </form>
+              {/* Actions */}
+              <div className="flex gap-3 pt-3 sticky bottom-0 -mx-5 -mb-5 sm:-mx-6 sm:-mb-6 p-4 sm:p-5 bg-surface/95 backdrop-blur-md border-t border-border mt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsTenantModalOpen(false)}
+                  className="flex-1 min-h-11 border border-border hover:bg-surface-muted text-foreground font-bold rounded-xl text-sm transition"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={updatingTenant}
+                  className="flex-1 min-h-11 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md"
+                >
+                  {updatingTenant ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Enregistrer
+                </button>
+              </div>
+            </form>
  </div>
  </div>
  )}
 
- {/* Modal: Create or Edit User */}
- {isUserModalOpen && (
- <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
- <div className="bg-surface rounded-2xl border border-border shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
- <div className="px-6 py-5 border-b border-border-subtle bg-surface-muted flex items-center justify-between">
- <h3 className="font-bold text-foreground flex items-center gap-2">
- <Users className="w-5 h-5 text-primary" />
- {userModalMode === 'create' ? 'Créer un Utilisateur' : `Modifier l'Utilisateur : ${selectedUser?.email}`}
- </h3>
- <button 
- onClick={() => setIsUserModalOpen(false)}
- className="p-1.5 text-muted hover:text-muted hover:bg-surface-muted rounded-lg transition"
- >
- <X className="w-5 h-5" />
- </button>
- </div>
+        {/* Modal: Create or Edit User */}
+        {isUserModalOpen && (
+          <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="sa-user-modal-title"
+              className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl max-w-md w-full max-h-[90dvh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200"
+            >
+              <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-border-subtle bg-surface-muted flex items-center justify-between shrink-0">
+                <h3 id="sa-user-modal-title" className="font-bold text-foreground flex items-center gap-2 text-base">
+                  <Users className="w-5 h-5 text-primary" />
+                  {userModalMode === 'create' ? 'Créer un Utilisateur' : `Modifier l'Utilisateur : ${selectedUser?.email}`}
+                </h3>
+                <button 
+                  onClick={() => setIsUserModalOpen(false)}
+                  aria-label="Fermer la fenêtre"
+                  className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
- <form onSubmit={handleSaveUser} className="p-6 space-y-5">
+              <form onSubmit={handleSaveUser} className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1 overscroll-contain">
  {/* Nom complet */}
  <div className="space-y-2">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Nom complet</label>
@@ -5065,47 +5104,53 @@ function DashboardPageContent() {
  </button>
  </div>
 
- {/* Actions */}
- <div className="flex gap-3 pt-2">
- <button
- type="button"
- onClick={() => setIsUserModalOpen(false)}
- className="flex-1 py-2.5 border border-border hover:bg-surface-muted text-foreground font-bold rounded-xl text-sm transition"
- >
- Annuler
- </button>
- <button
- type="submit"
- disabled={updatingUser}
- className="flex-1 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md"
- >
- {updatingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
- Enregistrer
- </button>
- </div>
- </form>
+              {/* Actions */}
+              <div className="flex gap-3 pt-3 sticky bottom-0 -mx-5 -mb-5 sm:-mx-6 sm:-mb-6 p-4 sm:p-5 bg-surface/95 backdrop-blur-md border-t border-border mt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsUserModalOpen(false)}
+                  className="flex-1 min-h-11 border border-border hover:bg-surface-muted text-foreground font-bold rounded-xl text-sm transition"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={updatingUser}
+                  className="flex-1 min-h-11 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md"
+                >
+                  {updatingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Enregistrer
+                </button>
+              </div>
+            </form>
  </div>
  </div>
  )}
 
- {/* Modal: Create or Edit Event (Super Admin) */}
- {isEventModalOpen && (
- <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
- <div className="bg-surface rounded-2xl border border-border shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
- <div className="px-6 py-5 border-b border-border-subtle bg-surface-muted flex items-center justify-between">
- <h3 className="font-bold text-foreground flex items-center gap-2">
- <Calendar className="w-5 h-5 text-primary" />
- {eventModalMode === 'create' ? 'Créer un Événement' : `Modifier l'Événement : ${selectedEvent?.title}`}
- </h3>
- <button 
- onClick={() => setIsEventModalOpen(false)}
- className="p-1.5 text-muted hover:text-muted hover:bg-surface-muted rounded-lg transition"
- >
- <X className="w-5 h-5" />
- </button>
- </div>
+        {/* Modal: Create or Edit Event (Super Admin) */}
+        {isEventModalOpen && (
+          <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="sa-event-modal-title"
+              className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl max-w-md w-full max-h-[90dvh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200"
+            >
+              <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-border-subtle bg-surface-muted flex items-center justify-between shrink-0">
+                <h3 id="sa-event-modal-title" className="font-bold text-foreground flex items-center gap-2 text-base">
+                  <Calendar className="w-5 h-5 text-primary" />
+                  {eventModalMode === 'create' ? 'Créer un Événement' : `Modifier l'Événement : ${selectedEvent?.title}`}
+                </h3>
+                <button 
+                  onClick={() => setIsEventModalOpen(false)}
+                  aria-label="Fermer la fenêtre"
+                  className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
- <form onSubmit={handleSaveEvent} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              <form onSubmit={handleSaveEvent} className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain">
  {/* Organisation */}
  <div className="space-y-1.5">
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Organisation (Tenant) *</label>
@@ -5250,25 +5295,25 @@ function DashboardPageContent() {
  </div>
  </div>
 
- {/* Actions */}
- <div className="flex gap-3 pt-4">
- <button
- type="button"
- onClick={() => setIsEventModalOpen(false)}
- className="flex-1 py-2.5 border border-border hover:bg-surface-muted text-foreground font-bold rounded-xl text-sm transition"
- >
- Annuler
- </button>
- <button
- type="submit"
- disabled={updatingEvent}
- className="flex-1 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md"
- >
- {updatingEvent ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
- {eventModalMode === 'create' ? 'Créer' : 'Enregistrer'}
- </button>
- </div>
- </form>
+              {/* Actions */}
+              <div className="flex gap-3 pt-3 sticky bottom-0 -mx-5 -mb-5 sm:-mx-6 sm:-mb-6 p-4 sm:p-5 bg-surface/95 backdrop-blur-md border-t border-border mt-4">
+                <button
+                  type="button"
+                  onClick={() => setIsEventModalOpen(false)}
+                  className="flex-1 min-h-11 border border-border hover:bg-surface-muted text-foreground font-bold rounded-xl text-sm transition"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={updatingEvent}
+                  className="flex-1 min-h-11 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md"
+                >
+                  {updatingEvent ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  {eventModalMode === 'create' ? 'Créer' : 'Enregistrer'}
+                </button>
+              </div>
+            </form>
  </div>
  </div>
  )}

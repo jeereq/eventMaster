@@ -164,7 +164,7 @@ export default function AdminFinanceDetailsModal({
       size="lg"
       footer={
         <div className="flex w-full justify-end">
-          <Button type="button" variant="secondary" size="sm" onClick={onClose}>
+          <Button type="button" variant="secondary" size="sm" onClick={onClose} className="w-full sm:w-auto min-h-11">
             Fermer
           </Button>
         </div>

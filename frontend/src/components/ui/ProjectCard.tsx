@@ -238,7 +238,7 @@ export function ProjectCard({
             interactive && 'cursor-pointer',
           )}
         >
-          <div className="w-20 h-16 sm:w-28 sm:h-20 rounded-md overflow-hidden bg-surface-muted shrink-0">
+          <div className="w-14 h-14 min-[380px]:w-20 min-[380px]:h-16 sm:w-28 sm:h-20 rounded-md overflow-hidden bg-surface-muted shrink-0">
             {coverUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -287,7 +287,7 @@ export function ProjectCard({
           )}
 
           {actions && (
-            <div className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            <div className="flex shrink-0 items-center gap-0.5 sm:gap-1" onClick={(e) => e.stopPropagation()}>
               {actions}
             </div>
           )}

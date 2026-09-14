@@ -522,7 +522,7 @@ export default function AdminAiTokensPage() {
                   ({data.generationReport.totalGenerations ? Math.round((data.generationReport.fastGenerations / data.generationReport.totalGenerations) * 100) : 0}%)
                 </span>
               </div>
-              <div className="text-[11px] text-muted mt-1">
+              <div className="text-xs text-muted mt-1">
                 Gemini 3.1 Flash (~$0.032 / 4–8s)
               </div>
             </div>
@@ -541,7 +541,7 @@ export default function AdminAiTokensPage() {
                   ({data.generationReport.totalGenerations ? Math.round((data.generationReport.qualityGenerations / data.generationReport.totalGenerations) * 100) : 0}%)
                 </span>
               </div>
-              <div className="text-[11px] text-muted mt-1">
+              <div className="text-xs text-muted mt-1">
                 Gemini 3 Pro 2K (~$0.067 / 15–22s)
               </div>
             </div>
@@ -557,7 +557,7 @@ export default function AdminAiTokensPage() {
               <div className="text-xl font-bold text-foreground tabular-nums">
                 {data.generationReport.multiVariantsGenerations}
               </div>
-              <div className="text-[11px] text-muted mt-1">
+              <div className="text-xs text-muted mt-1">
                 Propositions doubles simultanées
               </div>
             </div>
@@ -577,7 +577,7 @@ export default function AdminAiTokensPage() {
               <div className="text-xl font-bold text-foreground tabular-nums">
                 {data.generationReport.safetyFallbackGenerations}
               </div>
-              <div className="text-[11px] text-muted mt-1">
+              <div className="text-xs text-muted mt-1">
                 Décors sans visage générés
               </div>
             </div>
@@ -592,7 +592,7 @@ export default function AdminAiTokensPage() {
               <div className="text-xs font-medium tabular-nums text-emerald-700 dark:text-emerald-300 mt-0.5">
                 Recette : {data.generationReport.estimatedRevenueFc.toLocaleString('fr-FR')} FC
               </div>
-              <div className="text-[11px] text-muted mt-1">
+              <div className="text-xs text-muted mt-1">
                 Marge nette : +${data.generationReport.estimatedMarginUsd.toFixed(2)} USD
               </div>
             </div>
@@ -757,7 +757,7 @@ export default function AdminAiTokensPage() {
                       {row.composeDetails ? (
                         <div className="flex flex-wrap items-center gap-1">
                           <span className={cn(
-                            'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold',
+                            'inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-xs font-semibold',
                             row.composeDetails.speedMode === 'fast'
                               ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
                               : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-950/60 dark:text-indigo-300'
@@ -765,12 +765,12 @@ export default function AdminAiTokensPage() {
                             {row.composeDetails.speedMode === 'fast' ? '⚡ Flash' : '✨ Pro 2K'}
                           </span>
                           {row.composeDetails.variantsCount > 1 ? (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-violet-100 text-violet-800 dark:bg-violet-950/60 dark:text-violet-300">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-violet-100 text-violet-800 dark:bg-violet-950/60 dark:text-violet-300">
                               2x A/B
                             </span>
                           ) : null}
                           {row.composeDetails.safetyFallbackTriggered ? (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
                               Repli décor
                             </span>
                           ) : null}
@@ -789,7 +789,7 @@ export default function AdminAiTokensPage() {
                     <div className="flex flex-col gap-0.5">
                       {moneyBadge(row.moneyKind)}
                       {row.composeDetails ? (
-                        <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium whitespace-nowrap">
+                        <span className="text-xs text-emerald-700 dark:text-emerald-300 font-medium whitespace-nowrap">
                           +{row.composeDetails.estimatedMarginPct}% (${row.composeDetails.estimatedCostUsd.toFixed(3)})
                         </span>
                       ) : null}
@@ -807,7 +807,7 @@ export default function AdminAiTokensPage() {
                         event.stopPropagation();
                         setSelected(row);
                       }}
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary min-h-11"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-primary min-h-11"
                     >
                       <Eye className="w-3.5 h-3.5" aria-hidden />
                       Détail

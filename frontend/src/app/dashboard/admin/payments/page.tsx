@@ -356,7 +356,7 @@ export default function AdminPaymentsPage() {
         ].map((card) => (
           <div key={card.label} className="bg-surface px-4 py-3">
             <div className="text-lg font-semibold text-foreground">{card.value}</div>
-            <div className="text-[10px] uppercase tracking-wider text-muted">{card.label}</div>
+            <div className="text-xs uppercase tracking-wider text-muted">{card.label}</div>
           </div>
         ))}
       </div>
@@ -364,11 +364,11 @@ export default function AdminPaymentsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border border border-border rounded-[var(--radius-card)] overflow-hidden">
         <div className="bg-surface px-4 py-3">
           <div className="text-lg font-semibold text-foreground">{formatFc(totals?.amountPaidFc ?? 0)}</div>
-          <div className="text-[10px] uppercase tracking-wider text-muted">Montant encaissé</div>
+          <div className="text-xs uppercase tracking-wider text-muted">Montant encaissé</div>
         </div>
         <div className="bg-surface px-4 py-3">
           <div className="text-lg font-semibold text-foreground">{formatFc(totals?.amountAttemptedFc ?? 0)}</div>
-          <div className="text-[10px] uppercase tracking-wider text-muted">Volume tenté</div>
+          <div className="text-xs uppercase tracking-wider text-muted">Volume tenté</div>
         </div>
       </div>
 
@@ -387,7 +387,7 @@ export default function AdminPaymentsPage() {
           <div className="overflow-x-auto border border-border rounded-[var(--radius-card)] bg-surface">
             <table className="w-full text-sm" aria-label="Récapitulatif des paiements par source et canal">
               <thead>
-                <tr className="border-b border-border text-left text-[11px] uppercase tracking-wider text-muted">
+                <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted">
                   <th className="px-3 py-2.5 font-semibold">Source</th>
                   <th className="px-3 py-2.5 font-semibold">Canal</th>
                   <th className="px-3 py-2.5 font-semibold text-right">Tentatives</th>
@@ -594,11 +594,11 @@ export default function AdminPaymentsPage() {
                     {row.kind === 'donation' && <Heart className="w-3 h-3" />}
                     {row.kindLabel}
                   </Badge>
-                  <span className="text-[10px] text-muted">{row.channelLabel}</span>
+                  <span className="text-xs text-muted">{row.channelLabel}</span>
                   {row.paymentProvider ? (
-                    <span className="text-[10px] text-muted">{row.paymentProvider}</span>
+                    <span className="text-xs text-muted">{row.paymentProvider}</span>
                   ) : null}
-                  <span className="text-[10px] text-muted ml-auto">{formatWhen(row.createdAt)}</span>
+                  <span className="text-xs text-muted w-full sm:w-auto sm:ml-auto">{formatWhen(row.createdAt)}</span>
                 </div>
                 <p className="text-sm font-semibold text-foreground">{row.summary}</p>
                 <p className="text-xs text-muted">
@@ -606,7 +606,7 @@ export default function AdminPaymentsPage() {
                   {row.payerName || row.payerEmail ? ` · ${row.payerName || row.payerEmail}` : ''}
                   {row.payerPhone ? ` · ${row.payerPhone}` : ''}
                 </p>
-                <p className="text-[11px] text-muted font-mono truncate">
+                <p className="text-xs text-muted font-mono truncate">
                   {[
                     row.reference ? `réf. ${row.reference}` : null,
                     row.flexPayOrderNumber ? `order ${row.flexPayOrderNumber}` : null,
@@ -616,7 +616,7 @@ export default function AdminPaymentsPage() {
                     .filter(Boolean)
                     .join(' · ')}
                 </p>
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary min-h-11">
                   <Eye className="w-3.5 h-3.5" aria-hidden />
                   Voir le détail
                 </span>
