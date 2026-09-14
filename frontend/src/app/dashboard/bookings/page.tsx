@@ -102,7 +102,10 @@ function OrganizerDemandesPage() {
       const activeRole = role;
       const [bookingData, inquiryData, packData, eventsData] = await Promise.all([
         api.get(`/marketplace/bookings?role=${activeRole}`),
-        api.get(`/marketplace/inquiries?role=${activeRole}`),
+        api.get(`/marketplace/inquiries?role=${activeRole}`).catch((err: unknown) => {
+          setError(err instanceof Error ? err.message : 'Impossible de charger les demandes.');
+          return { inquiries: [] };
+        }),
         activeRole === 'organizer' && !isProtocol
           ? api.get('/marketplace/event-packs').catch(() => ({ packs: [] }))
           : Promise.resolve({ packs: [] }),

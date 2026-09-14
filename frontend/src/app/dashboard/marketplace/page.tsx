@@ -132,7 +132,10 @@ export default function MarketplaceDeskPage() {
     try {
       const [svc, leads, books] = await Promise.all([
         api.get('/marketplace/services'),
-        api.get('/marketplace/inquiries'),
+        api.get('/marketplace/inquiries').catch((err: unknown) => {
+          setError(err instanceof Error ? err.message : 'Impossible de charger les demandes.');
+          return { inquiries: [] };
+        }),
         api.get('/marketplace/bookings'),
       ]);
       setServices(svc.services || []);
@@ -140,8 +143,8 @@ export default function MarketplaceDeskPage() {
       setBookings(books.bookings || []);
       setCommissionDueFc(books.commissionDueFc || 0);
       setVendorBlockedDates(Array.isArray(books.blockedDates) ? books.blockedDates : []);
-    } catch (err: any) {
-      setError(err.message || 'Impossible de charger le marketplace.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Impossible de charger le marketplace.');
     } finally {
       setLoading(false);
     }

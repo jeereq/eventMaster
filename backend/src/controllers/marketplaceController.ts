@@ -1356,7 +1356,15 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
 
     if (role === 'vendor') {
       const access = await resolveOrgAccess(userId, tenantId);
-      if (!access.canManageRooms) return res.status(403).json({ error: 'Accès refusé.' });
+      const tenant = await prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { accountKind: true },
+      });
+      const isVendorDesk =
+        access.canManageRooms
+        || tenant?.accountKind === 'VENDOR'
+        || tenant?.accountKind === 'BOTH';
+      if (!isVendorDesk) return res.status(403).json({ error: 'Accès refusé.' });
     }
 
     const sender = role === 'organizer'
