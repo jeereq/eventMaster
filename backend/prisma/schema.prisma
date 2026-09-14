@@ -806,10 +806,23 @@ model MarketplaceInquiry {
   fromTenantId String?
   fromTenant   Tenant?                  @relation("InquiryFromTenant", fields: [fromTenantId], references: [id], onDelete: SetNull)
   createdAt   DateTime                  @default(now())
+  messages    MarketplaceInquiryMessage[]
 
   @@index([listingId, createdAt])
   @@index([offeringId, createdAt])
   @@index([fromEmail])
+}
+
+model MarketplaceInquiryMessage {
+  id           String             @id @default(uuid())
+  inquiryId    String
+  inquiry      MarketplaceInquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  authorRole   String
+  authorUserId String?
+  body         String
+  createdAt    DateTime           @default(now())
+
+  @@index([inquiryId, createdAt])
 }
 
 model MarketplaceBooking {

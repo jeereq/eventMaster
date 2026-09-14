@@ -438,6 +438,20 @@ export interface MarketplaceInquiryItem {
   offeringSlug?: string | null;
   offeringCategory?: string | null;
   viewerRole?: 'vendor' | 'organizer';
+  messageCount?: number;
+  lastMessage?: {
+    body: string;
+    createdAt: string;
+    authorRole: 'CLIENT' | 'VENDOR' | string;
+  } | null;
+}
+
+export interface MarketplaceInquiryThreadMessage {
+  id: string;
+  authorRole: 'CLIENT' | 'VENDOR' | string;
+  authorUserId?: string | null;
+  body: string;
+  createdAt: string;
 }
 
 export type MarketplaceBookingStatus =
@@ -614,8 +628,8 @@ export function inquiryNextStep(item: MarketplaceInquiryItem): { title: string; 
   if (item.status === 'QUOTED') {
     const formatted = item.quotedAmountFc != null ? `${formatFc(item.quotedAmountFc)} FC` : 'Chiffré';
     return asOrganizer
-      ? { title: `Devis chiffré (${formatted})`, detail: 'Le professionnel vous a transmis son devis. Réservez pour valider la date.' }
-      : { title: `Devis transmis (${formatted})`, detail: 'Proposition envoyée au client. Vous pouvez convertir en réservation.' };
+      ? { title: `Devis chiffré (${formatted})`, detail: 'Le professionnel vous a transmis son devis. Répondez-lui ou réservez pour valider la date.' }
+      : { title: `Devis transmis (${formatted})`, detail: 'Proposition envoyée au client. Il peut vous répondre ici ; vous pouvez aussi convertir en réservation.' };
   }
   if (item.status === 'NEW') {
     return asOrganizer

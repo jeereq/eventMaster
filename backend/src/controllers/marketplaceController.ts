@@ -55,6 +55,109 @@ function cityNotEnabledError(cityName: string): string | null {
 }
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+const INQUIRY_MESSAGE_MAX_CHARS = 2000;
+const INQUIRY_AUTHOR_CLIENT = 'CLIENT';
+const INQUIRY_AUTHOR_VENDOR = 'VENDOR';
+
+function inquiryClientHref(inquiryId: string) {
+  return `${FRONTEND_URL}/dashboard/bookings?tab=quotes&inquiryId=${inquiryId}`;
+}
+
+function inquiryVendorHref(inquiryId: string) {
+  return `${FRONTEND_URL}/dashboard/bookings?tab=quotes&role=vendor&inquiryId=${inquiryId}`;
+}
+
+function inquiryTitleOf(item: {
+  offering?: { title: string } | null;
+  listing?: { headline: string | null; room?: { name: string } | null } | null;
+}) {
+  return item.offering?.title || item.listing?.headline || item.listing?.room?.name || 'Demande';
+}
+
+async function notifyInquiryClient(opts: {
+  inquiry: { id: string; fromTenantId: string | null; fromEmail: string };
+  actorUserId?: string;
+  title: string;
+  message: string;
+  whatsapp?: string;
+}) {
+  const href = inquiryClientHref(opts.inquiry.id);
+  const payload = {
+    type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
+    title: opts.title,
+    message: opts.message,
+    metadata: { inquiryId: opts.inquiry.id, href },
+    whatsapp: opts.whatsapp || `${opts.message}\nConsultez la conversation : ${href}`,
+  };
+  const operatorIds = new Set<string>();
+  if (opts.inquiry.fromTenantId) {
+    const tenant = await prisma.tenant.findUnique({
+      where: { id: opts.inquiry.fromTenantId },
+      select: { managerId: true, users: { where: { orgRole: 'MANAGER' }, select: { id: true } } },
+    });
+    if (tenant?.managerId) operatorIds.add(tenant.managerId);
+    tenant?.users.forEach((user) => operatorIds.add(user.id));
+    await notifyTenantOperators(opts.inquiry.fromTenantId, payload);
+  }
+  const inquirer = await prisma.user.findFirst({
+    where: { email: { equals: opts.inquiry.fromEmail, mode: 'insensitive' } },
+    select: { id: true },
+  });
+  if (inquirer && inquirer.id !== opts.actorUserId && !operatorIds.has(inquirer.id)) {
+    void notifyUsers([inquirer.id], payload);
+  }
+}
+
+async function notifyInquiryVendor(opts: {
+  vendorTenantId: string;
+  inquiryId: string;
+  actorUserId?: string;
+  title: string;
+  message: string;
+}) {
+  const href = inquiryVendorHref(opts.inquiryId);
+  void notifyTenantOperators(opts.vendorTenantId, {
+    type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
+    title: opts.title,
+    message: opts.message,
+    metadata: { inquiryId: opts.inquiryId, href },
+    whatsapp: `${opts.message}\nRépondez dans EventMaster : ${href}`,
+  });
+}
+
+async function resolveInquiryAccess(opts: {
+  inquiryId: string;
+  userId: string;
+  tenantId: string;
+}) {
+  const user = await prisma.user.findUnique({
+    where: { id: opts.userId },
+    select: { email: true },
+  });
+  const email = user?.email?.trim().toLowerCase() || '';
+  const inquiry = await prisma.marketplaceInquiry.findFirst({
+    where: {
+      id: opts.inquiryId,
+      OR: [
+        { fromTenantId: opts.tenantId },
+        { listing: { tenantId: opts.tenantId } },
+        { offering: { tenantId: opts.tenantId } },
+        ...(email ? [{ fromEmail: { equals: email, mode: 'insensitive' as const } }] : []),
+      ],
+    },
+    include: {
+      listing: { select: { tenantId: true, headline: true, room: { select: { name: true } } } },
+      offering: { select: { tenantId: true, title: true } },
+    },
+  });
+  if (!inquiry) return null;
+  const vendorTenantId = inquiry.listing?.tenantId || inquiry.offering?.tenantId || null;
+  const isVendor = vendorTenantId === opts.tenantId;
+  const isClient =
+    inquiry.fromTenantId === opts.tenantId
+    || Boolean(email && inquiry.fromEmail.trim().toLowerCase() === email);
+  return { inquiry, isVendor, isClient, vendorTenantId };
+}
 
 async function resolveInquirer(req: AuthenticatedRequest) {
   if (!req.user?.id) return null;
@@ -1300,6 +1403,12 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
           },
         },
         event: { select: { id: true, title: true, date: true } },
+        messages: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { body: true, createdAt: true, authorRole: true },
+        },
+        _count: { select: { messages: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: 100,
@@ -1352,6 +1461,14 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
           offeringSlug: item.offering?.slug || null,
           offeringCategory: item.offering?.category || null,
           viewerRole: role,
+          messageCount: item._count.messages,
+          lastMessage: item.messages[0]
+            ? {
+                body: item.messages[0].body,
+                createdAt: item.messages[0].createdAt,
+                authorRole: item.messages[0].authorRole,
+              }
+            : null,
         };
       }),
     });
@@ -1403,30 +1520,21 @@ export async function updateInquiryStatus(req: AuthenticatedRequest, res: Respon
       };
 
       const amountFormatted = `${quotedAmountFc.toLocaleString('fr-FR')} FC`;
-      const notifMsg = `Devis chiffré reçu pour « ${inquiryTitle} » : ${amountFormatted}.${responseNotes ? ` Note : ${responseNotes}` : ''}`;
-      const quoteClientHref = `${FRONTEND_URL}/dashboard/bookings?tab=quotes&inquiryId=${existing.id}`;
-      if (existing.fromTenantId) {
-        void notifyTenantOperators(existing.fromTenantId, {
-          type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
-          title: `Devis chiffré — ${inquiryTitle}`,
-          message: notifMsg,
-          metadata: { inquiryId: existing.id, href: quoteClientHref },
-          whatsapp: `Devis chiffré pour « ${inquiryTitle} » : ${amountFormatted}.${responseNotes ? ` Note : ${responseNotes}` : ''}\nConsultez les détails sur EventMaster : ${quoteClientHref}`,
-        });
-      }
-      const inquirerUser = await prisma.user.findFirst({
-        where: { email: { equals: existing.fromEmail, mode: 'insensitive' } },
-        select: { id: true },
+      const quoteBody = [`Devis proposé : ${amountFormatted}`, responseNotes].filter(Boolean).join('\n\n');
+      await prisma.marketplaceInquiryMessage.create({
+        data: {
+          inquiryId: existing.id,
+          authorRole: INQUIRY_AUTHOR_VENDOR,
+          authorUserId: userId,
+          body: quoteBody.slice(0, INQUIRY_MESSAGE_MAX_CHARS),
+        },
       });
-      if (inquirerUser && inquirerUser.id !== userId) {
-        void notifyUsers([inquirerUser.id], {
-          type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
-          title: `Devis chiffré — ${inquiryTitle}`,
-          message: notifMsg,
-          metadata: { inquiryId: existing.id, href: quoteClientHref },
-          whatsapp: `Devis chiffré pour « ${inquiryTitle} » : ${amountFormatted}.\nConsultez les détails sur EventMaster : ${quoteClientHref}`,
-        });
-      }
+      void notifyInquiryClient({
+        inquiry: existing,
+        actorUserId: userId,
+        title: `Devis chiffré — ${inquiryTitle}`,
+        message: `Devis chiffré reçu pour « ${inquiryTitle} » : ${amountFormatted}.${responseNotes ? ` Note : ${responseNotes}` : ''} Vous pouvez répondre au professionnel.`,
+      });
     } else if (action === 'decline' || requestedStatus === 'DECLINED') {
       const declineReason = req.body?.declineReason
         ? String(req.body.declineReason).trim().slice(0, 500)
@@ -1439,28 +1547,21 @@ export async function updateInquiryStatus(req: AuthenticatedRequest, res: Respon
         respondedAt: new Date(),
       };
 
-      const notifMsg = `Votre demande pour « ${inquiryTitle} » a été déclinée. Motif : ${declineReason}.${responseNotes ? ` Précision : ${responseNotes}` : ''}`;
-      const quoteClientHref = `${FRONTEND_URL}/dashboard/bookings?tab=quotes&inquiryId=${existing.id}`;
-      if (existing.fromTenantId) {
-        void notifyTenantOperators(existing.fromTenantId, {
-          type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
-          title: `Demande déclinée — ${inquiryTitle}`,
-          message: notifMsg,
-          metadata: { inquiryId: existing.id, href: quoteClientHref },
-        });
-      }
-      const inquirerUser = await prisma.user.findFirst({
-        where: { email: { equals: existing.fromEmail, mode: 'insensitive' } },
-        select: { id: true },
+      const declineBody = [`Demande déclinée. Motif : ${declineReason}`, responseNotes].filter(Boolean).join('\n\n');
+      await prisma.marketplaceInquiryMessage.create({
+        data: {
+          inquiryId: existing.id,
+          authorRole: INQUIRY_AUTHOR_VENDOR,
+          authorUserId: userId,
+          body: declineBody.slice(0, INQUIRY_MESSAGE_MAX_CHARS),
+        },
       });
-      if (inquirerUser && inquirerUser.id !== userId) {
-        void notifyUsers([inquirerUser.id], {
-          type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
-          title: `Demande déclinée — ${inquiryTitle}`,
-          message: notifMsg,
-          metadata: { inquiryId: existing.id, href: quoteClientHref },
-        });
-      }
+      void notifyInquiryClient({
+        inquiry: existing,
+        actorUserId: userId,
+        title: `Demande déclinée — ${inquiryTitle}`,
+        message: `Votre demande pour « ${inquiryTitle} » a été déclinée. Motif : ${declineReason}.${responseNotes ? ` Précision : ${responseNotes}` : ''} Vous pouvez répondre au professionnel.`,
+      });
     } else if (action === 'contacted' || requestedStatus === 'CONTACTED') {
       updateData = {
         status: 'CONTACTED',
@@ -1482,6 +1583,114 @@ export async function updateInquiryStatus(req: AuthenticatedRequest, res: Respon
   } catch (error) {
     console.error('updateInquiryStatus:', error);
     return res.status(500).json({ error: 'Impossible de mettre à jour la demande.' });
+  }
+}
+
+export async function listInquiryMessages(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+    const inquiryId = req.params.id as string;
+    if (!tenantId || !userId) return res.status(403).json({ error: 'Organisation non identifiée.' });
+
+    const access = await resolveInquiryAccess({ inquiryId, userId, tenantId });
+    if (!access) return res.status(404).json({ error: 'Demande introuvable.' });
+
+    const messages = await prisma.marketplaceInquiryMessage.findMany({
+      where: { inquiryId },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        authorRole: true,
+        authorUserId: true,
+        body: true,
+        createdAt: true,
+      },
+    });
+
+    return res.json({
+      messages,
+      viewerRole: access.isVendor && !access.isClient
+        ? INQUIRY_AUTHOR_VENDOR
+        : access.isClient && !access.isVendor
+          ? INQUIRY_AUTHOR_CLIENT
+          : access.isVendor
+            ? INQUIRY_AUTHOR_VENDOR
+            : INQUIRY_AUTHOR_CLIENT,
+    });
+  } catch (error) {
+    console.error('listInquiryMessages:', error);
+    return res.status(500).json({ error: 'Impossible de charger la conversation.' });
+  }
+}
+
+export async function postInquiryMessage(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+    const inquiryId = req.params.id as string;
+    if (!tenantId || !userId) return res.status(403).json({ error: 'Organisation non identifiée.' });
+
+    const body = String(req.body?.body || '').trim();
+    if (!body) return res.status(400).json({ error: 'Écrivez un message pour répondre.' });
+    if (body.length > INQUIRY_MESSAGE_MAX_CHARS) {
+      return res.status(400).json({ error: `Le message ne peut pas dépasser ${INQUIRY_MESSAGE_MAX_CHARS} caractères.` });
+    }
+
+    const access = await resolveInquiryAccess({ inquiryId, userId, tenantId });
+    if (!access) return res.status(404).json({ error: 'Demande introuvable.' });
+    if (!access.isClient && !access.isVendor) {
+      return res.status(403).json({ error: 'Vous ne pouvez pas répondre à cette demande.' });
+    }
+
+    const requestedRole = String(req.body?.authorRole || '').toUpperCase();
+    let authorRole = access.isVendor && !access.isClient
+      ? INQUIRY_AUTHOR_VENDOR
+      : access.isClient && !access.isVendor
+        ? INQUIRY_AUTHOR_CLIENT
+        : requestedRole === INQUIRY_AUTHOR_CLIENT
+          ? INQUIRY_AUTHOR_CLIENT
+          : INQUIRY_AUTHOR_VENDOR;
+
+    const created = await prisma.marketplaceInquiryMessage.create({
+      data: {
+        inquiryId,
+        authorRole,
+        authorUserId: userId,
+        body,
+      },
+      select: {
+        id: true,
+        authorRole: true,
+        authorUserId: true,
+        body: true,
+        createdAt: true,
+      },
+    });
+
+    const title = inquiryTitleOf(access.inquiry);
+    const preview = body.length > 140 ? `${body.slice(0, 137)}…` : body;
+    if (authorRole === INQUIRY_AUTHOR_VENDOR) {
+      void notifyInquiryClient({
+        inquiry: access.inquiry,
+        actorUserId: userId,
+        title: `Réponse devis — ${title}`,
+        message: `Le professionnel a répondu à propos de « ${title} » : ${preview}`,
+      });
+    } else if (access.vendorTenantId) {
+      void notifyInquiryVendor({
+        vendorTenantId: access.vendorTenantId,
+        inquiryId,
+        actorUserId: userId,
+        title: `Réponse client — ${title}`,
+        message: `${access.inquiry.fromName} a répondu à propos de « ${title} » : ${preview}`,
+      });
+    }
+
+    return res.status(201).json({ message: created });
+  } catch (error) {
+    console.error('postInquiryMessage:', error);
+    return res.status(500).json({ error: 'Impossible d’envoyer la réponse.' });
   }
 }
 

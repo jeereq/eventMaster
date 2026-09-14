@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import {
@@ -30,6 +30,7 @@ import {
   inquiryNextStep,
   buildWhatsAppDirectLink,
   type MarketplaceInquiryItem,
+  type MarketplaceInquiryThreadMessage,
 } from '@/lib/marketplace';
 import { eventDashboardHref } from '@/lib/eventRoutes';
 import { formatFc } from '@/config/landingPricing';
@@ -134,6 +135,12 @@ export default function MarketplaceInquiriesPanel({
   const [declineCustomReason, setDeclineCustomReason] = useState('');
   const [declineNotes, setDeclineNotes] = useState('');
   const [declineSubmitting, setDeclineSubmitting] = useState(false);
+
+  const [threadTarget, setThreadTarget] = useState<MarketplaceInquiryItem | null>(null);
+  const [threadMessages, setThreadMessages] = useState<MarketplaceInquiryThreadMessage[]>([]);
+  const [threadLoading, setThreadLoading] = useState(false);
+  const [threadDraft, setThreadDraft] = useState('');
+  const [threadSending, setThreadSending] = useState(false);
 
   useEffect(() => {
     setInquiries(initialInquiries);
@@ -310,6 +317,79 @@ export default function MarketplaceInquiriesPanel({
       setPanelError(err instanceof Error ? err.message : 'Impossible de décliner la demande.');
     } finally {
       setDeclineSubmitting(false);
+    }
+  };
+
+  const loadThread = async (item: MarketplaceInquiryItem) => {
+    setThreadLoading(true);
+    try {
+      const data = await api.get(`/marketplace/inquiries/${item.id}/messages`) as {
+        messages?: MarketplaceInquiryThreadMessage[];
+      };
+      setThreadMessages(Array.isArray(data.messages) ? data.messages : []);
+    } catch (err: unknown) {
+      setPanelError(err instanceof Error ? err.message : 'Impossible de charger la conversation.');
+      setThreadMessages([]);
+    } finally {
+      setThreadLoading(false);
+    }
+  };
+
+  const openThread = (item: MarketplaceInquiryItem) => {
+    setThreadTarget(item);
+    setThreadDraft('');
+    setPanelError('');
+    void loadThread(item);
+  };
+
+  const openedHighlightRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!highlightInquiryId || openedHighlightRef.current === highlightInquiryId) return;
+    const highlighted = inquiries.find((item) => item.id === highlightInquiryId);
+    if (!highlighted) return;
+    openedHighlightRef.current = highlightInquiryId;
+    openThread(highlighted);
+  }, [highlightInquiryId, inquiries]);
+
+  const handleSendReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!threadTarget) return;
+    const body = threadDraft.trim();
+    if (!body) {
+      setPanelError('Écrivez un message pour répondre.');
+      return;
+    }
+    setThreadSending(true);
+    setPanelError('');
+    try {
+      const data = await api.post(`/marketplace/inquiries/${threadTarget.id}/messages`, {
+        body,
+        authorRole: organizerView ? 'CLIENT' : 'VENDOR',
+      }) as { message?: MarketplaceInquiryThreadMessage };
+      if (data.message) {
+        setThreadMessages((prev) => [...prev, data.message as MarketplaceInquiryThreadMessage]);
+      }
+      setThreadDraft('');
+      setInquiries((prev) =>
+        prev.map((item) =>
+          item.id === threadTarget.id
+            ? {
+                ...item,
+                messageCount: (item.messageCount || 0) + 1,
+                lastMessage: {
+                  body,
+                  createdAt: new Date().toISOString(),
+                  authorRole: organizerView ? 'CLIENT' : 'VENDOR',
+                },
+              }
+            : item,
+        ),
+      );
+      if (onChanged) await onChanged();
+    } catch (err: unknown) {
+      setPanelError(err instanceof Error ? err.message : 'Impossible d’envoyer la réponse.');
+    } finally {
+      setThreadSending(false);
     }
   };
 
@@ -531,6 +611,16 @@ export default function MarketplaceInquiriesPanel({
 
               const actions = (
                 <div className="flex flex-wrap items-center gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => openThread(item)}
+                    leftIcon={<MessageCircle className="w-3.5 h-3.5" />}
+                  >
+                    {organizerView ? 'Répondre' : 'Conversation'}
+                    {(item.messageCount || 0) > 0 ? ` (${item.messageCount})` : ''}
+                  </Button>
+
                   {waUrl ? (
                     <a
                       href={waUrl}
@@ -740,6 +830,11 @@ export default function MarketplaceInquiriesPanel({
                       {mode === 'grid' && item.message ? (
                         <p className="text-xs text-muted line-clamp-3 whitespace-pre-line">{item.message}</p>
                       ) : null}
+                      {item.lastMessage ? (
+                        <p className="text-[11px] text-muted line-clamp-2">
+                          Dernier message ({item.lastMessage.authorRole === 'CLIENT' ? 'client' : 'pro'}) : {item.lastMessage.body}
+                        </p>
+                      ) : null}
                     </div>
                   </ProjectCard>
                 </div>
@@ -934,6 +1029,81 @@ export default function MarketplaceInquiriesPanel({
             />
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={Boolean(threadTarget)}
+        onClose={() => {
+          if (!threadSending) setThreadTarget(null);
+        }}
+        title={threadTarget ? `Conversation — ${threadTarget.title}` : 'Conversation'}
+        description={
+          threadTarget
+            ? organizerView
+              ? `Échangez avec ${threadTarget.vendorName || 'le professionnel'} à propos de ce devis.`
+              : `Échangez avec ${threadTarget.fromName} à propos de sa demande.`
+            : undefined
+        }
+        size="lg"
+        footer={
+          <form onSubmit={handleSendReply} className="flex w-full flex-col sm:flex-row gap-2">
+            <textarea
+              rows={2}
+              value={threadDraft}
+              onChange={(e) => setThreadDraft(e.target.value)}
+              placeholder={organizerView ? 'Répondre au professionnel…' : 'Répondre au client…'}
+              className="flex-1 min-h-11 px-3 py-2 rounded-xl border border-border bg-surface text-sm text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary resize-none"
+            />
+            <Button type="submit" loading={threadSending} disabled={!threadDraft.trim()}>
+              Envoyer
+            </Button>
+          </form>
+        }
+      >
+        <div className="space-y-3">
+          {panelError && threadTarget ? <Alert variant="error">{panelError}</Alert> : null}
+          {threadTarget?.status === 'QUOTED' && threadTarget.quotedAmountFc != null ? (
+            <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-800 dark:text-emerald-200">
+              Devis en cours : {formatFc(threadTarget.quotedAmountFc)}
+            </div>
+          ) : null}
+          <div className="space-y-2 max-h-[45vh] overflow-y-auto overscroll-contain pr-1">
+            {threadTarget?.message ? (
+              <div className="rounded-2xl border border-border bg-surface-muted/70 px-3 py-2.5 text-sm">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted mb-1">
+                  Demande initiale · {threadTarget.fromName}
+                </p>
+                <p className="whitespace-pre-line text-foreground">{threadTarget.message}</p>
+              </div>
+            ) : null}
+            {threadLoading ? (
+              <p className="text-xs text-muted">Chargement de la conversation…</p>
+            ) : null}
+            {threadMessages.map((message) => {
+              const mine = organizerView
+                ? message.authorRole === 'CLIENT'
+                : message.authorRole === 'VENDOR';
+              return (
+                <div
+                  key={message.id}
+                  className={cn(
+                    'rounded-2xl px-3 py-2.5 text-sm whitespace-pre-line max-w-[92%]',
+                    mine
+                      ? 'ml-auto bg-primary/12 border border-primary/20'
+                      : 'mr-auto bg-surface-muted border border-border',
+                  )}
+                >
+                  <p className="text-[11px] font-semibold text-muted mb-1">
+                    {message.authorRole === 'CLIENT' ? threadTarget?.fromName || 'Client' : threadTarget?.vendorName || 'Professionnel'}
+                    {' · '}
+                    {new Date(message.createdAt).toLocaleString('fr-FR')}
+                  </p>
+                  <p>{message.body}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </Modal>
     </div>
   );

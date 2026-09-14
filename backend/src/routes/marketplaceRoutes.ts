@@ -6,6 +6,8 @@ import {
   deleteService,
   listMyInquiries,
   updateInquiryStatus,
+  listInquiryMessages,
+  postInquiryMessage,
   saveVendorOnboarding,
 } from '../controllers/marketplaceController';
 import {
@@ -56,6 +58,8 @@ router.post('/onboarding', saveVendorOnboarding);
 router.put('/services/:id', upsertService);
 router.delete('/services/:id', deleteService);
 router.get('/inquiries', listMyInquiries);
+router.get('/inquiries/:id/messages', listInquiryMessages);
+router.post('/inquiries/:id/messages', postInquiryMessage);
 router.patch('/inquiries/:id', updateInquiryStatus);
 router.post('/inquiries/:id/book', convertInquiryToBooking);
 router.get('/bookings', listBookings);

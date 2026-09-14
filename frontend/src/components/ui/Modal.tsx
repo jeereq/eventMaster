@@ -82,6 +82,7 @@ export default function Modal({
 
   const panelRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const [viewportMaxHeight, setViewportMaxHeight] = useState<number | null>(null);
 
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -95,6 +96,24 @@ export default function Modal({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!open || typeof window === 'undefined') return;
+    const viewport = window.visualViewport;
+    const sync = () => {
+      const height = viewport?.height ?? window.innerHeight;
+      setViewportMaxHeight(Math.round(height * 0.96));
+    };
+    sync();
+    viewport?.addEventListener('resize', sync);
+    viewport?.addEventListener('scroll', sync);
+    window.addEventListener('resize', sync);
+    return () => {
+      viewport?.removeEventListener('resize', sync);
+      viewport?.removeEventListener('scroll', sync);
+      window.removeEventListener('resize', sync);
+    };
+  }, [open]);
 
   useEffect(() => {
     const sync = () => setStackTop(openModalCount);
@@ -198,6 +217,7 @@ export default function Modal({
           onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
           className={cn(modalPanelClass, 'pointer-events-auto outline-none', sizeMap[size], className)}
+          style={viewportMaxHeight ? { maxHeight: viewportMaxHeight } : undefined}
         >
           {showHeader && (
             <div className="flex items-start justify-between gap-4 p-5 sm:p-6 border-b border-border shrink-0">

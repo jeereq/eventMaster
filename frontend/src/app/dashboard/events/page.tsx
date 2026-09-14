@@ -696,6 +696,7 @@ function EventsPageInner() {
 
   // Guest form
   const [showGuestModal, setShowGuestModal] = useState(false);
+  const [guestModalError, setGuestModalError] = useState('');
   const [guestFirstName, setGuestFirstName] = useState('');
   const [guestLastName, setGuestLastName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
@@ -1139,6 +1140,7 @@ Merci de confirmer votre présence :
     setGuestSpecialMeal('none');
     setGuestRsvp('PENDING');
     setGuestCategory('Famille');
+    setGuestModalError('');
     setShowGuestModal(true);
   };
 
@@ -1488,13 +1490,14 @@ Merci de confirmer votre présence :
     e.preventDefault();
     if (!selectedEvent) return;
     setError('');
+    setGuestModalError('');
     setSavingGuest(true);
 
     try {
       const e164 = composeE164(guestPhoneCountryCode, guestPhoneNational) || undefined;
       const resolvedEmail = resolveGuestFormEmail(guestEmail, e164);
       if (!resolvedEmail) {
-        setError(guestEmail.trim()
+        setGuestModalError(guestEmail.trim()
           ? 'Adresse e-mail invalide. Laissez vide si vous n’avez que le WhatsApp.'
           : 'Indiquez un e-mail ou un numéro WhatsApp.');
         setSavingGuest(false);
@@ -1539,13 +1542,14 @@ Merci de confirmer votre présence :
       setEditingGuestId(null);
       setShowGuestModal(false);
     } catch (err: any) {
-      setError(err.message || "Erreur lors de l'enregistrement de l'invité");
+      setGuestModalError(err.message || "Erreur lors de l'enregistrement de l'invité");
     } finally {
       setSavingGuest(false);
     }
   };
 
   const handleEditGuestClick = (guest: GuestItem) => {
+    setGuestModalError('');
     setEditingGuestId(guest.id);
     setGuestFirstName(guest.firstName);
     setGuestLastName(guest.lastName);
@@ -3606,169 +3610,167 @@ Merci de confirmer votre présence :
         }}
       />
 
-      {/* Guest Modal */}
-      {showGuestModal && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-foreground/60 backdrop-blur-sm">
-          <div role="dialog" aria-modal="true" aria-labelledby="guest-modal-title" className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-lg p-6 space-y-6">
-            <div className="flex items-center justify-between border-b border-border pb-4">
-              <h3 id="guest-modal-title" className="text-lg font-bold text-foreground">
-                {editingGuestId ? "Modifier l'invité" : "Ajouter un invité"}
-              </h3>
-              <button
-                type="button"
-                onClick={() => { setShowGuestModal(false); setEditingGuestId(null); }}
-                className="text-muted hover:text-foreground transition min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg hover:bg-surface-muted"
-                aria-label="Fermer la fenêtre"
-              >
-                <XCircle className="w-6 h-6" />
-              </button>
+      <Modal
+        open={showGuestModal}
+        onClose={() => {
+          if (savingGuest) return;
+          setShowGuestModal(false);
+          setEditingGuestId(null);
+          setGuestModalError('');
+        }}
+        title={editingGuestId ? "Modifier l'invité" : 'Ajouter un invité'}
+        description="E-mail ou WhatsApp : au moins un des deux. Les boutons restent visibles en bas de l’écran."
+        size="md"
+        footer={
+          <div className="flex w-full gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex-1"
+              disabled={savingGuest}
+              onClick={() => {
+                setShowGuestModal(false);
+                setEditingGuestId(null);
+                setGuestModalError('');
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              type="submit"
+              form="guest-form"
+              className="flex-1"
+              loading={savingGuest}
+              disabled={savingGuest || (!editingGuestId && guestsAtLimit)}
+              title={!editingGuestId && guestsQuotaMsg ? guestsQuotaMsg : undefined}
+            >
+              {editingGuestId ? 'Enregistrer' : 'Ajouter'}
+            </Button>
+          </div>
+        }
+      >
+        <form id="guest-form" onSubmit={handleAddGuest} className="space-y-4">
+          {guestModalError ? <Alert variant="error">{guestModalError}</Alert> : null}
+          <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted uppercase tracking-wider">Prénom</label>
+              <input
+                type="text"
+                value={guestFirstName}
+                onChange={(e) => setGuestFirstName(e.target.value)}
+                placeholder="ex. Jean"
+                autoComplete="given-name"
+                data-modal-initial-focus
+                className="w-full min-h-11 px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
+                required
+              />
             </div>
-            <form onSubmit={handleAddGuest} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted uppercase tracking-wider">Prénom</label>
-                  <input
-                    type="text"
-                    value={guestFirstName}
-                    onChange={(e) => setGuestFirstName(e.target.value)}
-                    placeholder="ex. Jean"
-                    className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted uppercase tracking-wider">Nom de famille</label>
-                  <input
-                    type="text"
-                    value={guestLastName}
-                    onChange={(e) => setGuestLastName(e.target.value)}
-                    placeholder="ex. Kabeya"
-                    className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
-                    required
-                  />
-                </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted uppercase tracking-wider">Nom de famille</label>
+              <input
+                type="text"
+                value={guestLastName}
+                onChange={(e) => setGuestLastName(e.target.value)}
+                placeholder="ex. Kabeya"
+                autoComplete="family-name"
+                className="w-full min-h-11 px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
+                required
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted uppercase tracking-wider">Email (optionnel)</label>
+              <input
+                type="email"
+                inputMode="email"
+                value={guestEmail}
+                onChange={(e) => setGuestEmail(e.target.value)}
+                placeholder="ex. jean.kabeya@gmail.com"
+                autoComplete="email"
+                className="w-full min-h-11 px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
+              />
+              <p className="text-xs text-muted">E-mail ou WhatsApp : au moins un des deux.</p>
+            </div>
+            <PhoneInput
+              label="Téléphone (WhatsApp)"
+              countryCode={guestPhoneCountryCode}
+              national={guestPhoneNational}
+              onCountryCodeChange={setGuestPhoneCountryCode}
+              onNationalChange={setGuestPhoneNational}
+              hint="Indicatif + numéro national (sans le 0)."
+            />
+          </div>
+          <div className="grid grid-cols-1 min-[380px]:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted uppercase tracking-wider">Catégorie</label>
+              <select
+                value={guestCategory}
+                onChange={(e) => setGuestCategory(e.target.value)}
+                className="w-full min-h-11 px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
+              >
+                <option value="Famille">Famille</option>
+                <option value="Ami">Ami</option>
+                <option value="Collègue">Collègue</option>
+                <option value="VIP">VIP</option>
+                <option value="Général">Général</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted uppercase tracking-wider">Répondez s’il vous plaît</label>
+              <select
+                value={guestRsvp}
+                onChange={(e) => setGuestRsvp(e.target.value as 'PENDING' | 'ACCEPTED' | 'DECLINED')}
+                className="w-full min-h-11 px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
+              >
+                <option value="PENDING">En attente</option>
+                <option value="ACCEPTED">Accepté</option>
+                <option value="DECLINED">Décliné</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/50 p-3 space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+              Reporting restauration
+            </p>
+            <div className="grid grid-cols-1 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted">Régime alimentaire</label>
+                <select
+                  value={guestSpecialMeal}
+                  onChange={(e) => setGuestSpecialMeal(e.target.value)}
+                  className="w-full min-h-11 px-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
+                >
+                  {SPECIAL_MEAL_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted uppercase tracking-wider">Email (optionnel)</label>
-                  <input
-                    type="email"
-                    value={guestEmail}
-                    onChange={(e) => setGuestEmail(e.target.value)}
-                    placeholder="ex. jean.kabeya@gmail.com"
-                    className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
-                  />
-                  <p className="text-xs text-muted">E-mail ou WhatsApp : au moins un des deux.</p>
-                </div>
-                <PhoneInput
-                  label="Téléphone (WhatsApp)"
-                  countryCode={guestPhoneCountryCode}
-                  national={guestPhoneNational}
-                  onCountryCodeChange={setGuestPhoneCountryCode}
-                  onNationalChange={setGuestPhoneNational}
-                  hint="Indicatif + numéro national (sans le 0)."
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted">Allergies</label>
+                <input
+                  type="text"
+                  value={guestAllergies}
+                  onChange={(e) => setGuestAllergies(e.target.value)}
+                  placeholder="ex. Arachides, gluten"
+                  className="w-full min-h-11 px-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted uppercase tracking-wider">Catégorie</label>
-                  <select
-                    value={guestCategory}
-                    onChange={(e) => setGuestCategory(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
-                  >
-                    <option value="Famille">Famille</option>
-                    <option value="Ami">Ami</option>
-                    <option value="Collègue">Collègue</option>
-                    <option value="VIP">VIP</option>
-                    <option value="Général">Général</option>
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-muted uppercase tracking-wider">Statut Répondez s’il vous plaît</label>
-                  <select
-                    value={guestRsvp}
-                    onChange={(e) => setGuestRsvp(e.target.value as 'PENDING' | 'ACCEPTED' | 'DECLINED')}
-                    className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
-                  >
-                    <option value="PENDING">En attente</option>
-                    <option value="ACCEPTED">Accepté</option>
-                    <option value="DECLINED">Décliné</option>
-                  </select>
-                </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted">Notes (optionnel)</label>
+                <input
+                  type="text"
+                  value={guestPrefs}
+                  onChange={(e) => setGuestPreferences(e.target.value)}
+                  placeholder="ex. Table d'honneur, mobilité réduite"
+                  className="w-full min-h-11 px-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
+                />
               </div>
-
-              <div className="rounded-[var(--radius-card)] border border-border bg-surface-muted/50 p-3 space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted">
-                  Reporting restauration
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted">Régime alimentaire</label>
-                    <select
-                      value={guestSpecialMeal}
-                      onChange={(e) => setGuestSpecialMeal(e.target.value)}
-                      className="w-full px-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
-                    >
-                      {SPECIAL_MEAL_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-muted">Allergies</label>
-                    <input
-                      type="text"
-                      value={guestAllergies}
-                      onChange={(e) => setGuestAllergies(e.target.value)}
-                      placeholder="ex. Arachides, gluten"
-                      className="w-full px-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted">Notes (optionnel)</label>
-                  <input
-                    type="text"
-                    value={guestPrefs}
-                    onChange={(e) => setGuestPreferences(e.target.value)}
-                    placeholder="ex. Table d'honneur, mobilité réduite"
-                    className="w-full px-3 py-2.5 bg-surface border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
-                  />
-                </div>
-                <p className="text-xs text-muted leading-relaxed">
-                  Ces informations alimentent les filtres, statistiques et exports CSV de reporting.
-                </p>
-              </div>
-              <div className="pt-4 flex gap-3 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => { setShowGuestModal(false); setEditingGuestId(null); }}
-                  className="flex-1 py-2.5 border border-border text-muted font-semibold rounded-xl text-sm hover:bg-surface-muted transition"
-                  disabled={savingGuest}
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingGuest || (!editingGuestId && guestsAtLimit)}
-                  title={!editingGuestId && guestsQuotaMsg ? guestsQuotaMsg : undefined}
-                  className="flex-1 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-xl text-sm transition shadow-md shadow-primary-solid/10 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {savingGuest ? (
-                    <>
-                      <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span>
-                      Enregistrement...
-                    </>
-                  ) : (
-                    editingGuestId ? "Enregistrer" : "Ajouter"
-                  )}
-                </button>
-              </div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
+        </form>
+      </Modal>
 
       {/* CSV & Excel Import Modal */}
       {showImportModal && (
