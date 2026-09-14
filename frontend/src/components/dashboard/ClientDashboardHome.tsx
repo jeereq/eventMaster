@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -37,7 +37,15 @@ import { api } from '@/lib/api';
 import { useListingFavorites } from '@/lib/listingFavorites';
 import { Modal, Button } from '@/components/ui';
 import SubscriptionFlexPayModal from '@/components/SubscriptionFlexPayModal';
-import { formatFc, type BillingCycle, type PlanId } from '@/config/landingPricing';
+import {
+  formatFc,
+  type BillingCycle,
+  type PlanId,
+  annualPayableFromPeriod,
+  annualPromoPayableFromPeriod,
+  computePromoSavingsPercent,
+  isB2cPlanId,
+} from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 
 interface UpgradePlanConfig {
@@ -50,6 +58,18 @@ interface UpgradePlanConfig {
   guestsMax: number;
   description: string;
   highlights: string[];
+}
+
+export interface DynamicPlanRow {
+  name?: string;
+  description?: string;
+  price?: string;
+  monthlyPriceFc?: number;
+  promoActive?: boolean;
+  promoPrice?: string;
+  promoMonthlyPriceFc?: number | null;
+  promoLabel?: string;
+  [key: string]: unknown;
 }
 
 const UPGRADE_B2C_PLANS: UpgradePlanConfig[] = [
@@ -106,7 +126,7 @@ const UPGRADE_B2B_PLANS: Array<Omit<UpgradePlanConfig, 'basePriceFc' | 'periodLa
     monthlyPriceFc: 30000,
     guestsMax: 150,
     description: 'Organisateurs réguliers, associations et PME.',
-    highlights: ['10 événements · 150 invités/évt', 'Billetterie & encaissements', 'Invitations & scan QR', 'Tableau de bord financier'],
+    highlights: ['8 événements · 150 invités/évt', 'Billetterie & encaissements', 'Invitations & scan QR', 'Tableau de bord financier'],
   },
   {
     id: 'PREMIUM_1',
@@ -219,11 +239,38 @@ export default function ClientDashboardHome() {
   const [savingOrgName, setSavingOrgName] = useState(false);
   const [flexPayOpen, setFlexPayOpen] = useState(false);
   const [upgradeSuccess, setUpgradeSuccess] = useState(false);
+  const [dynamicPlans, setDynamicPlans] = useState<Record<string, DynamicPlanRow> | null>(null);
 
   useEffect(() => {
     if (tenant?.name) setOrgName(tenant.name);
     else if (user?.name) setOrgName(user.name);
   }, [tenant?.name, user?.name]);
+
+  // Chargement des tarifs et promotions dynamiques depuis le catalogue SaaS
+  useEffect(() => {
+    let mounted = true;
+    api
+      .get('/subscriptions/plans')
+      .then((catalog) => {
+        if (!mounted || !catalog || typeof catalog !== 'object') return;
+        const rows: Record<string, DynamicPlanRow> = {};
+        for (const [key, val] of Object.entries(catalog)) {
+          if (val && typeof val === 'object') {
+            rows[key] = val as DynamicPlanRow;
+          }
+        }
+        if (Object.keys(rows).length > 0) {
+          setDynamicPlans(rows);
+        }
+      })
+      .catch(() => {
+        // Fallback silencieux sur les prix par défaut en cas d'erreur
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleOpenUpgrade = (category: UpgradeCategory) => {
     setUpgradeCategory(category);
@@ -231,56 +278,113 @@ export default function ClientDashboardHome() {
     setUpgradeModalOpen(true);
   };
 
+  /** Résolution du prix effectif, des promotions et de l'économie sur un forfait donné */
+  const resolvePlanPricing = useCallback(
+    (planId: PlanId, defaultMonthlyFc: number, cycle: BillingCycle) => {
+      const db = dynamicPlans?.[planId];
+      const promoActive = Boolean(db?.promoActive && db?.promoMonthlyPriceFc != null && planId !== 'FREE');
+      const promoFc = promoActive ? Number(db?.promoMonthlyPriceFc) : null;
+      const catalogMonthlyFc =
+        db?.monthlyPriceFc != null && Number.isFinite(db.monthlyPriceFc) && db.monthlyPriceFc > 0
+          ? db.monthlyPriceFc
+          : defaultMonthlyFc;
+
+      const isB2c = isB2cPlanId(planId);
+      const effectiveCycle = isB2c ? 'monthly' : cycle;
+
+      let catalogPriceFc: number;
+      let effectivePriceFc: number;
+
+      if (effectiveCycle === 'annual') {
+        catalogPriceFc = annualPayableFromPeriod(catalogMonthlyFc, planId);
+        effectivePriceFc =
+          promoFc != null
+            ? annualPromoPayableFromPeriod(catalogMonthlyFc, promoFc, planId)
+            : catalogPriceFc;
+      } else {
+        catalogPriceFc = catalogMonthlyFc;
+        effectivePriceFc = promoFc != null ? promoFc : catalogMonthlyFc;
+      }
+
+      const promoSavingsPercent =
+        promoActive && promoFc != null
+          ? computePromoSavingsPercent(catalogPriceFc, effectivePriceFc)
+          : effectiveCycle === 'annual'
+            ? 10
+            : null;
+
+      return {
+        catalogPriceFc,
+        effectivePriceFc,
+        priceLabel: formatFc(effectivePriceFc),
+        catalogPriceLabel: formatFc(catalogPriceFc),
+        promoActive,
+        promoLabel: db?.promoLabel || 'Offre promotionnelle',
+        promoSavingsPercent,
+        displayName: db?.name?.replace('Plan ', '') || undefined,
+        description: db?.description || undefined,
+      };
+    },
+    [dynamicPlans],
+  );
+
   const activePlanDetails = useMemo(() => {
     if (upgradeCategory === 'b2c') {
       const plan = UPGRADE_B2C_PLANS.find((p) => p.id === selectedPlanId) || UPGRADE_B2C_PLANS[2];
+      const pricing = resolvePlanPricing(plan.id, plan.basePriceFc, 'monthly');
       return {
         id: plan.id,
-        name: plan.name,
-        priceFc: plan.basePriceFc,
-        priceLabel: formatFc(plan.basePriceFc),
+        name: pricing.displayName || plan.name,
+        priceFc: pricing.effectivePriceFc,
+        priceLabel: pricing.priceLabel,
+        catalogPriceLabel: pricing.catalogPriceLabel,
+        promoActive: pricing.promoActive,
+        promoLabel: pricing.promoLabel,
+        promoSavingsPercent: pricing.promoSavingsPercent,
         durationLabel: '90 jours (trimestre)',
-        description: plan.description,
+        description: pricing.description || plan.description,
       };
     }
     if (upgradeCategory === 'b2b') {
       const plan = UPGRADE_B2B_PLANS.find((p) => p.id === selectedPlanId) || UPGRADE_B2B_PLANS[1];
-      const priceFc =
-        b2bBillingCycle === 'annual'
-          ? Math.round(plan.monthlyPriceFc * 12 * 0.9)
-          : plan.monthlyPriceFc;
+      const pricing = resolvePlanPricing(plan.id, plan.monthlyPriceFc, b2bBillingCycle);
       return {
         id: plan.id,
-        name: plan.name,
-        priceFc,
-        priceLabel: formatFc(priceFc),
+        name: pricing.displayName || plan.name,
+        priceFc: pricing.effectivePriceFc,
+        priceLabel: pricing.priceLabel,
+        catalogPriceLabel: pricing.catalogPriceLabel,
+        promoActive: pricing.promoActive,
+        promoLabel: pricing.promoLabel,
+        promoSavingsPercent: pricing.promoSavingsPercent,
         durationLabel:
           b2bBillingCycle === 'annual'
             ? '365 jours (annuel · −10 %)'
             : '30 jours (mensuel)',
-        description: plan.description,
+        description: pricing.description || plan.description,
       };
     }
     const vendorPlan =
       UPGRADE_VENDOR_PLANS.find((p) => p.id === selectedPlanId) ||
       UPGRADE_VENDOR_PLANS.find((p) => p.id === defaultPlanForCategory(upgradeCategory)) ||
       UPGRADE_VENDOR_PLANS[0];
-    const priceFc =
-      b2bBillingCycle === 'annual'
-        ? Math.round(vendorPlan.monthlyPriceFc * 12 * 0.9)
-        : vendorPlan.monthlyPriceFc;
+    const pricing = resolvePlanPricing(vendorPlan.id, vendorPlan.monthlyPriceFc, b2bBillingCycle);
     return {
       id: vendorPlan.id,
-      name: vendorPlan.name,
-      priceFc,
-      priceLabel: formatFc(priceFc),
+      name: pricing.displayName || vendorPlan.name,
+      priceFc: pricing.effectivePriceFc,
+      priceLabel: pricing.priceLabel,
+      catalogPriceLabel: pricing.catalogPriceLabel,
+      promoActive: pricing.promoActive,
+      promoLabel: pricing.promoLabel,
+      promoSavingsPercent: pricing.promoSavingsPercent,
       durationLabel:
         b2bBillingCycle === 'annual'
           ? '365 jours (annuel · −10 %)'
           : '30 jours (mensuel)',
-      description: vendorPlan.description,
+      description: pricing.description || vendorPlan.description,
     };
-  }, [upgradeCategory, selectedPlanId, b2bBillingCycle]);
+  }, [upgradeCategory, selectedPlanId, b2bBillingCycle, resolvePlanPricing]);
 
   const upgradeModalTitle = useMemo(() => {
     switch (upgradeCategory) {
@@ -1222,6 +1326,7 @@ export default function ClientDashboardHome() {
               {upgradeCategory === 'b2c'
                 ? UPGRADE_B2C_PLANS.map((plan) => {
                     const isSelected = selectedPlanId === plan.id;
+                    const pricing = resolvePlanPricing(plan.id, plan.basePriceFc, 'monthly');
                     return (
                       <div
                         key={plan.id}
@@ -1233,24 +1338,43 @@ export default function ClientDashboardHome() {
                             : 'border-border bg-surface hover:border-primary/40',
                         )}
                       >
-                        {plan.popular && (
-                          <span className="absolute -top-2.5 right-3 text-xs font-extrabold px-2 py-0.5 rounded-full bg-rose-600 text-white shadow-xs">
-                            Recommandé Mariage
-                          </span>
-                        )}
+                        <div className="flex flex-wrap items-center gap-1.5 absolute -top-2.5 right-3">
+                          {pricing.promoActive ? (
+                            <span className="text-xs font-black px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs flex items-center gap-1">
+                              <Sparkles className="w-3 h-3" />
+                              {pricing.promoLabel}
+                              {pricing.promoSavingsPercent ? ` (−${pricing.promoSavingsPercent} %)` : ''}
+                            </span>
+                          ) : plan.popular ? (
+                            <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-rose-600 text-white shadow-xs">
+                              Recommandé Mariage
+                            </span>
+                          ) : null}
+                        </div>
 
                         <div className="space-y-1">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-bold text-foreground">{plan.name}</span>
+                            <span className="text-sm font-bold text-foreground">
+                              {pricing.displayName || plan.name}
+                            </span>
                             <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">
                               {plan.badge}
                             </span>
                           </div>
-                          <p className="text-lg font-black text-foreground">
-                            {formatFc(plan.basePriceFc)}
-                            <span className="text-xs font-normal text-muted ml-1">/ 90 j</span>
+                          <div className="flex items-baseline gap-1.5 flex-wrap">
+                            <span className="text-lg font-black text-foreground">
+                              {pricing.priceLabel}
+                            </span>
+                            {pricing.promoActive && (
+                              <span className="text-xs line-through text-muted font-normal">
+                                {pricing.catalogPriceLabel}
+                              </span>
+                            )}
+                            <span className="text-xs font-normal text-muted">/ 90 j</span>
+                          </div>
+                          <p className="text-xs text-muted leading-relaxed mt-1">
+                            {pricing.description || plan.description}
                           </p>
-                          <p className="text-xs text-muted leading-relaxed mt-1">{plan.description}</p>
                         </div>
 
                         <div className="space-y-1 pt-2 border-t border-border/60 text-xs text-muted">
@@ -1267,10 +1391,7 @@ export default function ClientDashboardHome() {
                 : upgradeCategory === 'b2b'
                   ? UPGRADE_B2B_PLANS.map((plan) => {
                       const isSelected = selectedPlanId === plan.id;
-                      const priceFc =
-                        b2bBillingCycle === 'annual'
-                          ? Math.round(plan.monthlyPriceFc * 12 * 0.9)
-                          : plan.monthlyPriceFc;
+                      const pricing = resolvePlanPricing(plan.id, plan.monthlyPriceFc, b2bBillingCycle);
                       return (
                         <div
                           key={plan.id}
@@ -1282,26 +1403,45 @@ export default function ClientDashboardHome() {
                               : 'border-border bg-surface hover:border-primary/40',
                           )}
                         >
-                          {plan.popular && (
-                            <span className="absolute -top-2.5 right-3 text-xs font-extrabold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground shadow-xs">
-                              Recommandé Pro
-                            </span>
-                          )}
+                          <div className="flex flex-wrap items-center gap-1.5 absolute -top-2.5 right-3">
+                            {pricing.promoActive ? (
+                              <span className="text-xs font-black px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs flex items-center gap-1">
+                                <Sparkles className="w-3 h-3" />
+                                {pricing.promoLabel}
+                                {pricing.promoSavingsPercent ? ` (−${pricing.promoSavingsPercent} %)` : ''}
+                              </span>
+                            ) : plan.popular ? (
+                              <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground shadow-xs">
+                                Recommandé Pro
+                              </span>
+                            ) : null}
+                          </div>
 
                           <div className="space-y-1">
                             <div className="flex items-center justify-between">
-                              <span className="text-sm font-bold text-foreground">{plan.name}</span>
+                              <span className="text-sm font-bold text-foreground">
+                                {pricing.displayName || plan.name}
+                              </span>
                               <span className="text-xs font-semibold text-primary">
                                 {plan.badge}
                               </span>
                             </div>
-                            <p className="text-lg font-black text-foreground">
-                              {formatFc(priceFc)}
-                              <span className="text-xs font-normal text-muted ml-1">
+                            <div className="flex items-baseline gap-1.5 flex-wrap">
+                              <span className="text-lg font-black text-foreground">
+                                {pricing.priceLabel}
+                              </span>
+                              {pricing.promoActive && (
+                                <span className="text-xs line-through text-muted font-normal">
+                                  {pricing.catalogPriceLabel}
+                                </span>
+                              )}
+                              <span className="text-xs font-normal text-muted">
                                 {b2bBillingCycle === 'annual' ? '/ an' : '/ mois'}
                               </span>
+                            </div>
+                            <p className="text-xs text-muted leading-relaxed mt-1">
+                              {pricing.description || plan.description}
                             </p>
-                            <p className="text-xs text-muted leading-relaxed mt-1">{plan.description}</p>
                           </div>
 
                           <div className="space-y-1 pt-2 border-t border-border/60 text-xs text-muted">
@@ -1318,10 +1458,7 @@ export default function ClientDashboardHome() {
                   : UPGRADE_VENDOR_PLANS.filter((p) => p.id === defaultPlanForCategory(upgradeCategory)).map(
                       (plan) => {
                         const isSelected = selectedPlanId === plan.id;
-                        const priceFc =
-                          b2bBillingCycle === 'annual'
-                            ? Math.round(plan.monthlyPriceFc * 12 * 0.9)
-                            : plan.monthlyPriceFc;
+                        const pricing = resolvePlanPricing(plan.id, plan.monthlyPriceFc, b2bBillingCycle);
                         return (
                           <div
                             key={plan.id}
@@ -1333,23 +1470,42 @@ export default function ClientDashboardHome() {
                                 : 'border-border bg-surface hover:border-primary/40',
                             )}
                           >
-                            {plan.popular && (
-                              <span className="absolute -top-2.5 right-3 text-xs font-extrabold px-2 py-0.5 rounded-full bg-violet-600 text-white shadow-xs">
-                                Complet
-                              </span>
-                            )}
+                            <div className="flex flex-wrap items-center gap-1.5 absolute -top-2.5 right-3">
+                              {pricing.promoActive ? (
+                                <span className="text-xs font-black px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs flex items-center gap-1">
+                                  <Sparkles className="w-3 h-3" />
+                                  {pricing.promoLabel}
+                                  {pricing.promoSavingsPercent ? ` (−${pricing.promoSavingsPercent} %)` : ''}
+                                </span>
+                              ) : plan.popular ? (
+                                <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-violet-600 text-white shadow-xs">
+                                  Complet
+                                </span>
+                              ) : null}
+                            </div>
                             <div className="space-y-1">
                               <div className="flex items-center justify-between">
-                                <span className="text-sm font-bold text-foreground">{plan.name}</span>
+                                <span className="text-sm font-bold text-foreground">
+                                  {pricing.displayName || plan.name}
+                                </span>
                                 <span className="text-xs font-semibold text-primary">{plan.badge}</span>
                               </div>
-                              <p className="text-lg font-black text-foreground">
-                                {formatFc(priceFc)}
-                                <span className="text-xs font-normal text-muted ml-1">
+                              <div className="flex items-baseline gap-1.5 flex-wrap">
+                                <span className="text-lg font-black text-foreground">
+                                  {pricing.priceLabel}
+                                </span>
+                                {pricing.promoActive && (
+                                  <span className="text-xs line-through text-muted font-normal">
+                                    {pricing.catalogPriceLabel}
+                                  </span>
+                                )}
+                                <span className="text-xs font-normal text-muted">
                                   {b2bBillingCycle === 'annual' ? '/ an' : '/ mois'}
                                 </span>
+                              </div>
+                              <p className="text-xs text-muted leading-relaxed mt-1">
+                                {pricing.description || plan.description}
                               </p>
-                              <p className="text-xs text-muted leading-relaxed mt-1">{plan.description}</p>
                             </div>
                             <div className="space-y-1 pt-2 border-t border-border/60 text-xs text-muted">
                               {plan.highlights.map((h, idx) => (
@@ -1364,19 +1520,47 @@ export default function ClientDashboardHome() {
                       },
                     )}
             </div>
+
+            {/* Lien direct pour consulter tous les forfaits ou demander une remise sur devis */}
+            <div className="flex items-center justify-between px-1 text-xs text-muted">
+              <span>Besoin d’un volume supérieur ou d’un devis spécifique ?</span>
+              <Link
+                href="/dashboard/billing?tab=plans"
+                onClick={() => setUpgradeModalOpen(false)}
+                className="font-semibold text-primary hover:underline inline-flex items-center gap-1"
+              >
+                Voir tous les forfaits <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
           </div>
 
           <div className="p-4 rounded-2xl bg-surface-muted border border-border space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-bold text-foreground">
-                  Formule sélectionnée : <span className="text-primary">{activePlanDetails.name}</span>
-                </p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="text-xs font-bold text-foreground">
+                    Formule sélectionnée : <span className="text-primary">{activePlanDetails.name}</span>
+                  </p>
+                  {activePlanDetails.promoActive && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 font-extrabold border border-amber-500/30 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" />
+                      {activePlanDetails.promoLabel}
+                      {activePlanDetails.promoSavingsPercent ? ` (−${activePlanDetails.promoSavingsPercent} %)` : ''}
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-muted">Durée de couverture : {activePlanDetails.durationLabel}</p>
               </div>
-              <div className="text-right">
+              <div className="text-right shrink-0">
                 <span className="text-xs text-muted block">Total à payer</span>
-                <span className="text-lg font-black text-foreground">{activePlanDetails.priceLabel}</span>
+                <div className="flex items-baseline justify-end gap-1.5">
+                  {activePlanDetails.promoActive && (
+                    <span className="text-xs line-through text-muted font-normal">
+                      {activePlanDetails.catalogPriceLabel}
+                    </span>
+                  )}
+                  <span className="text-lg font-black text-foreground">{activePlanDetails.priceLabel}</span>
+                </div>
               </div>
             </div>
 
