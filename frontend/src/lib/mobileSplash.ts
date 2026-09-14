@@ -20,6 +20,13 @@ function nativeSplashEl(): HTMLElement | null {
   return document.getElementById('em-native-splash');
 }
 
+/** Lève un overflow:hidden laissé sur html/body (splash ou session précédente). */
+export function releaseSplashScrollLock(): void {
+  if (typeof document === 'undefined') return;
+  document.body.style.removeProperty('overflow');
+  document.documentElement.style.removeProperty('overflow');
+}
+
 /** Affiche le shell HTML immédiatement (avant React) et reporte le mode sombre. */
 export function showNativeSplashShell(): void {
   if (typeof document === 'undefined') return;
@@ -52,6 +59,7 @@ export function hideNativeSplashShell(): void {
     el.setAttribute('hidden', '');
   }
   document.documentElement.classList.remove('em-splash-boot');
+  releaseSplashScrollLock();
 
   try {
     const w = window as unknown as Record<string, unknown>;

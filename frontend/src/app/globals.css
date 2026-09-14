@@ -140,10 +140,12 @@ html {
 /* Splash boot — complément du CSS critique inline (layout head). */
 html.em-splash-boot {
   background-color: #f6f7f8 !important;
+  overflow: hidden;
 }
 
 html.em-splash-boot body {
   background-color: #f6f7f8 !important;
+  overflow: hidden;
 }
 
 ::selection {

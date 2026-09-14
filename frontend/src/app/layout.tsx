@@ -105,7 +105,7 @@ export default function RootLayout({
 #em-native-splash .em-ns-skip{margin-top:.85rem;min-height:2.75rem;padding:0 1rem;border:0;background:transparent;color:#6d6e6f;font-size:.875rem;font-weight:500;cursor:pointer}
 @keyframes em-ns-spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){#em-native-splash .em-ns-spin{animation:none;border-top-color:rgba(5,150,105,.28)}#em-native-splash{transition:none}}
-html.em-splash-boot,html.em-splash-boot body{background:#f6f7f8!important}
+html.em-splash-boot,html.em-splash-boot body{background:#f6f7f8!important;overflow:hidden}
 `.replace(/\n/g, ''),
           }}
         />

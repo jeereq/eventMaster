@@ -5,6 +5,7 @@ import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   hideNativeSplashShell,
   markMobileSplashSeen,
+  releaseSplashScrollLock,
   shouldShowMobileSplash,
   showNativeSplashShell,
 } from '@/lib/mobileSplash';
@@ -73,8 +74,6 @@ export default function MobileSplashScreen() {
 
     const quiet = prefersReducedMotion();
     const started = Date.now();
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
 
     const finishAuto = () => {
       if (leaveStartedRef.current) return;
@@ -107,7 +106,7 @@ export default function MobileSplashScreen() {
       window.removeEventListener('load', finishAuto);
       document.removeEventListener('keydown', onKeyDown);
       skipBtn?.removeEventListener('click', onSkip);
-      document.body.style.overflow = previousOverflow;
+      releaseSplashScrollLock();
     };
   };
 
