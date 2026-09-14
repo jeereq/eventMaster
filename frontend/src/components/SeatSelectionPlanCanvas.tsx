@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/cn';
 import FixtureRenderer from '@/components/FixtureRenderer';
-import { PlanZoomControls } from '@/components/PlanViewChrome';
+import { PlanSceneControls, PlanZoomControls, usePlanFullscreen } from '@/components/PlanViewChrome';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import { resolveFloorStyle } from '@/lib/roomFloorUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
@@ -118,6 +119,8 @@ export default function SeatSelectionPlanCanvas({
 }: SeatSelectionPlanCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
+  const [showWalls, setShowWalls] = useState(true);
+  const { expanded, setExpanded } = usePlanFullscreen();
 
   const theme = getRoomTheme(roomThemeId);
   const effectiveFloorType = (floorType as FloorType | undefined) ?? theme.defaultFloorType;
@@ -167,16 +170,25 @@ export default function SeatSelectionPlanCanvas({
     setZoom((z) => Math.max(0.65, Math.min(1.8, z + delta)));
   };
 
-  return (
-    <div className={cn('space-y-2', className)}>
-      <div className="flex items-center justify-between gap-2">
+  const viewer = (
+    <div className={cn('space-y-2', expanded && 'flex h-full min-h-0 flex-col p-3', className)}>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-[10px] text-muted">Touchez un siège libre sur le plan</p>
-        <PlanZoomControls
-          zoom={zoom}
-          onZoomOut={() => adjustZoom(-0.1)}
-          onZoomIn={() => adjustZoom(0.1)}
-          onReset={() => setZoom(1)}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <PlanSceneControls
+            showWalls={showWalls}
+            onToggleWalls={() => setShowWalls((current) => !current)}
+            showRoofControl={false}
+            onToggleFullscreen={() => setExpanded((current) => !current)}
+            isFullscreen={expanded}
+          />
+          <PlanZoomControls
+            zoom={zoom}
+            onZoomOut={() => adjustZoom(-0.1)}
+            onZoomIn={() => adjustZoom(0.1)}
+            onReset={() => setZoom(1)}
+          />
+        </div>
       </div>
 
       {showZonePricing && pricingZones.length > 0 && (
@@ -192,7 +204,10 @@ export default function SeatSelectionPlanCanvas({
 
       <div
         ref={containerRef}
-        className="relative w-full overflow-auto rounded-[var(--radius-card)] border border-border bg-surface-muted touch-pan-x touch-pan-y h-[min(70dvh,480px)] sm:h-[400px]"
+        className={cn(
+          'relative w-full overflow-auto rounded-[var(--radius-card)] border border-border bg-surface-muted touch-pan-x touch-pan-y',
+          expanded ? 'min-h-0 flex-1 h-auto' : 'h-[min(70dvh,480px)] sm:h-[400px]',
+        )}
       >
         <div
           className="relative origin-top-left em-floor-canvas em-floor-canvas--photo min-w-full min-h-full"
@@ -200,7 +215,7 @@ export default function SeatSelectionPlanCanvas({
             ...floorStyle,
             width: `${100 * zoom}%`,
             height: `${100 * zoom}%`,
-            minHeight: `${Math.round(height * zoom)}px`,
+            minHeight: `${Math.round((expanded ? Math.max(height, 640) : height) * zoom)}px`,
           }}
         >
           {roomOutline && (
@@ -216,7 +231,7 @@ export default function SeatSelectionPlanCanvas({
             />
           )}
 
-          {walls && walls.length > 0 && (
+          {showWalls && walls && walls.length > 0 && (
             <Room2DPlanWalls
               walls={walls}
               canvasWidthM={canvasWidthM}
@@ -424,4 +439,15 @@ export default function SeatSelectionPlanCanvas({
       </div>
     </div>
   );
+
+  if (expanded && typeof document !== 'undefined') {
+    return createPortal(
+      <div className="fixed inset-0 z-[250] flex flex-col bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+        {viewer}
+      </div>,
+      document.body,
+    );
+  }
+
+  return viewer;
 }

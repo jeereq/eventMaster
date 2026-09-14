@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { createPortal } from 'react-dom';
-import { Maximize2, Minimize2 } from 'lucide-react';
 import {
   RoomLayoutBlueprint,
   getRoomOutlineClipPath,
@@ -13,7 +12,9 @@ import {
   ensureBlueprintDefaults,
   resolveBlueprintWalls,
   isBlueprintWallsVisible,
+  applyPlanSceneVisibility,
 } from '@/lib/roomLayoutUtils';
+import { PlanSceneControls, usePlanFullscreen } from '@/components/PlanViewChrome';
 import { getSeatCoordinates, getTableVisualStyle } from '@/lib/tablePlanUtils';
 import { mapTicketSelectionsToWebGL, resolveTicketSeatPick } from '@/lib/seatSelectionLayout';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
@@ -55,8 +56,9 @@ interface RoomLayoutPreviewProps {
   force2d?: boolean;
   /** Remplace metadata.lightingPreset (ex. créneau programme événement). */
   lightingPreset?: LightingPreset;
-  /** Bouton plein écran sur mobile (showcase WebGL). */
+  /** Bouton plein écran (mobile et desktop). */
   allowMobileExpand?: boolean;
+  allowExpand?: boolean;
   /** Table sélectionnée active */
   selectedTableId?: string | null;
   /** Multi-sélection de tables */
@@ -71,20 +73,6 @@ interface RoomLayoutPreviewProps {
   blockedSeats?: Array<{ tableId: string; seatIndex: number }>;
   /** Clic sur une chaise attachée à une table. */
   onSelectSeat?: (tableId: string, seatIndex: number) => void;
-}
-
-function useIsMobileViewport(maxWidthPx = 639) {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${maxWidthPx}px)`);
-    const update = () => setIsMobile(mq.matches);
-    update();
-    mq.addEventListener('change', update);
-    return () => mq.removeEventListener('change', update);
-  }, [maxWidthPx]);
-
-  return isMobile;
 }
 
 type WebGLPreviewProps = {
@@ -559,6 +547,7 @@ export default function RoomLayoutPreview({
   force2d = false,
   lightingPreset: lightingPresetOverride,
   allowMobileExpand,
+  allowExpand,
   selectedTableId,
   selectedTableIds,
   onSelectTable,
@@ -570,22 +559,14 @@ export default function RoomLayoutPreview({
   const showHeader = showMeta ?? quality !== 'thumb';
   const blueprint = rawBlueprint ? ensureBlueprintDefaults(rawBlueprint) : null;
   const [mounted, setMounted] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const { expanded, setExpanded } = usePlanFullscreen();
   const [localForce2d, setLocalForce2d] = useState(false);
-  const isMobile = useIsMobileViewport();
+  const [showWalls, setShowWalls] = useState(true);
+  const [showRoof, setShowRoof] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  useEffect(() => {
-    if (!expanded) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [expanded]);
 
   const canvasClass = useMemo(() => {
     if (quality === 'thumb') return 'aspect-[4/3] h-full min-h-0';
@@ -606,22 +587,24 @@ export default function RoomLayoutPreview({
   const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
   const lightingPreset = lightingPresetOverride ?? blueprint.metadata.lightingPreset ?? 'auto';
   const useWebGL = !force2d && !localForce2d && quality !== 'thumb' && mounted;
-  const canExpand = (allowMobileExpand ?? quality === 'showcase') && useWebGL && isMobile;
+  const canExpand = (allowExpand ?? allowMobileExpand ?? quality !== 'thumb') && quality !== 'thumb';
+  const viewBlueprint = applyPlanSceneVisibility(blueprint, { showWalls, showRoof });
 
   const webglBlueprint = quality === 'showcase'
     ? {
-        ...blueprint,
+        ...viewBlueprint,
         metadata: {
-          ...blueprint.metadata,
-          showChandeliers: blueprint.metadata.showChandeliers ?? true,
-          showUplights: blueprint.metadata.showUplights ?? true,
-          showCurtains: blueprint.metadata.showCurtains ?? false,
-          showDecorPlants: blueprint.metadata.showDecorPlants ?? true,
-          showRoof: blueprint.metadata.showRoof ?? true,
+          ...viewBlueprint.metadata,
+          showChandeliers: viewBlueprint.metadata.showChandeliers ?? true,
+          showUplights: viewBlueprint.metadata.showUplights ?? true,
+          showCurtains: viewBlueprint.metadata.showCurtains ?? false,
+          showDecorPlants: viewBlueprint.metadata.showDecorPlants ?? true,
+          showRoof,
+          showWalls,
           renderQuality: 'showcase' as const,
         },
       }
-    : blueprint;
+    : viewBlueprint;
 
   return (
     <div className={cn('space-y-2', className)}>
@@ -659,7 +642,7 @@ export default function RoomLayoutPreview({
             </Room3DErrorBoundary>
           ) : (
             <FlatShowcasePreview
-              blueprint={blueprint}
+              blueprint={viewBlueprint}
               className="absolute inset-0 h-full w-full rounded-2xl"
             />
           )}
@@ -670,17 +653,16 @@ export default function RoomLayoutPreview({
               </span>
             </div>
           ) : null}
-          {canExpand ? (
-            <button
-              type="button"
-              onClick={() => setExpanded(true)}
-              className="absolute top-2 right-2 z-20 inline-flex items-center gap-1.5 rounded-full bg-foreground/80 px-3 py-2 min-h-[44px] text-xs font-bold text-background border border-background/20 active:scale-[0.98] transition"
-              aria-label="Agrandir la vue 3D"
-            >
-              <Maximize2 className="w-4 h-4 shrink-0" />
-              Agrandir
-            </button>
-          ) : null}
+          <PlanSceneControls
+            showWalls={showWalls}
+            showRoof={showRoof}
+            onToggleWalls={() => setShowWalls((current) => !current)}
+            onToggleRoof={() => setShowRoof((current) => !current)}
+            showRoofControl={useWebGL}
+            onToggleFullscreen={canExpand ? () => setExpanded(true) : undefined}
+            variant="overlay"
+            className="absolute bottom-2 left-2 z-20 max-w-[calc(100%-5.5rem)]"
+          />
         </div>
       )}
 
@@ -691,7 +673,7 @@ export default function RoomLayoutPreview({
             Orbitez pour inspecter la salle.
           </span>
           <span className="sm:hidden">
-            Vue 3D interactive — utilisez <span className="font-semibold text-foreground">Agrandir</span> pour le plein écran et orbiter la salle.
+            Vue 3D — masquez le toit ou les murs, puis passez en plein écran pour viser les sièges.
           </span>
         </p>
       ) : null}
@@ -701,50 +683,61 @@ export default function RoomLayoutPreview({
           className="fixed inset-0 z-[250] flex flex-col bg-foreground"
           role="dialog"
           aria-modal="true"
-          aria-label="Vue 3D plein écran"
+          aria-label="Vue du plan en plein écran"
         >
-          <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-background/15 pt-[max(0.5rem,env(safe-area-inset-top))]">
+          <div className="flex flex-col gap-2 px-3 py-2 border-b border-background/15 pt-[max(0.5rem,env(safe-area-inset-top))] sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
               <p className="text-xs font-bold text-background truncate">{roomTypeLabels[blueprint.roomType]} · {theme.name}</p>
               <p className="text-xs text-background/60 tabular-nums">
                 {blueprint.metadata.totalSeats} places · {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setExpanded(false)}
-              className="inline-flex items-center gap-1.5 rounded-full bg-background/10 px-3 py-2 min-h-[44px] min-w-[44px] text-xs font-bold text-background border border-background/20 shrink-0"
-              aria-label="Réduire la vue 3D"
-            >
-              <Minimize2 className="w-4 h-4" />
-              <span className="sr-only sm:not-sr-only">Réduire</span>
-            </button>
+            <PlanSceneControls
+              showWalls={showWalls}
+              showRoof={showRoof}
+              onToggleWalls={() => setShowWalls((current) => !current)}
+              onToggleRoof={() => setShowRoof((current) => !current)}
+              showRoofControl={useWebGL}
+              onToggleFullscreen={() => setExpanded(false)}
+              isFullscreen
+              variant="overlay"
+              className="justify-end"
+            />
           </div>
           <div className="relative flex-1 min-h-0">
-            <Room3DErrorBoundary
-              className="absolute inset-0 h-full w-full"
-              onFallbackTo2D={() => {
-                setLocalForce2d(true);
-                setExpanded(false);
-              }}
-            >
-              <WebGLPreviewCanvas
-                webglBlueprint={webglBlueprint}
-                quality={quality}
-                lightingPreset={lightingPreset}
-                selectedTableId={selectedTableId}
-                selectedTableIds={selectedTableIds}
-                onSelectTable={onSelectTable}
-                onSelectZone={onSelectZone}
-                selectedSeats={selectedSeats}
-                blockedSeats={blockedSeats}
-                onSelectSeat={onSelectSeat}
-                className="rounded-none"
+            {useWebGL ? (
+              <Room3DErrorBoundary
+                className="absolute inset-0 h-full w-full"
+                onFallbackTo2D={() => {
+                  setLocalForce2d(true);
+                  setExpanded(false);
+                }}
+              >
+                <WebGLPreviewCanvas
+                  webglBlueprint={webglBlueprint}
+                  quality={quality}
+                  lightingPreset={lightingPreset}
+                  selectedTableId={selectedTableId}
+                  selectedTableIds={selectedTableIds}
+                  onSelectTable={onSelectTable}
+                  onSelectZone={onSelectZone}
+                  selectedSeats={selectedSeats}
+                  blockedSeats={blockedSeats}
+                  onSelectSeat={onSelectSeat}
+                  className="rounded-none"
+                />
+              </Room3DErrorBoundary>
+            ) : (
+              <FlatShowcasePreview
+                blueprint={viewBlueprint}
+                className="absolute inset-0 h-full w-full rounded-none"
               />
-            </Room3DErrorBoundary>
+            )}
           </div>
           <p className="text-xs text-background/55 text-center px-4 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-            Glissez ou flèches pour orbiter · pincez ou +/− pour zoomer
+            {useWebGL
+              ? 'Glissez pour orbiter · pincez pour zoomer · masquez toit et murs pour mieux viser'
+              : 'Pincez pour zoomer · masquez les murs pour voir toutes les places'}
           </p>
         </div>,
         document.body,

@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { Box, LayoutGrid, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Box, BrickWall, Home, LayoutGrid, Maximize2, Minimize2, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 export type PlanViewMode = '2d' | '3d';
@@ -88,6 +88,107 @@ export function PlanZoomControls({
       <button type="button" onClick={onReset} className={btn} aria-label="Recentrer le plan" title="Recentrer le plan">
         <RotateCcw className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
       </button>
+    </div>
+  );
+}
+
+export function usePlanFullscreen() {
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setExpanded(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [expanded]);
+
+  return {
+    expanded,
+    setExpanded,
+    toggleExpanded: () => setExpanded((current) => !current),
+  };
+}
+
+export function PlanSceneControls({
+  showWalls,
+  showRoof,
+  onToggleWalls,
+  onToggleRoof,
+  onToggleFullscreen,
+  isFullscreen = false,
+  showRoofControl = true,
+  variant = 'surface',
+  className,
+}: {
+  showWalls: boolean;
+  showRoof?: boolean;
+  onToggleWalls: () => void;
+  onToggleRoof?: () => void;
+  onToggleFullscreen?: () => void;
+  isFullscreen?: boolean;
+  showRoofControl?: boolean;
+  variant?: 'surface' | 'overlay';
+  className?: string;
+}) {
+  const overlay = variant === 'overlay';
+  const btn = cn(
+    'inline-flex items-center justify-center gap-1 min-h-11 min-w-11 px-2.5 rounded-full text-xs font-semibold transition touch-manipulation active:scale-95',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+    overlay
+      ? 'border border-background/20 bg-foreground/80 text-background backdrop-blur-md'
+      : 'border border-border bg-surface text-foreground shadow-sm',
+  );
+  const pressed = overlay
+    ? 'bg-background text-foreground border-background'
+    : 'bg-foreground text-background border-foreground';
+
+  return (
+    <div
+      className={cn('flex flex-wrap items-center gap-1.5', className)}
+      role="toolbar"
+      aria-label="Affichage du plan"
+    >
+      <button
+        type="button"
+        aria-pressed={showWalls}
+        onClick={onToggleWalls}
+        className={cn(btn, showWalls && pressed)}
+        title={showWalls ? 'Masquer les murs' : 'Afficher les murs'}
+      >
+        <BrickWall className="w-3.5 h-3.5" aria-hidden />
+        <span>{showWalls ? 'Murs' : 'Sans murs'}</span>
+      </button>
+      {showRoofControl && onToggleRoof ? (
+        <button
+          type="button"
+          aria-pressed={Boolean(showRoof)}
+          onClick={onToggleRoof}
+          className={cn(btn, showRoof && pressed)}
+          title={showRoof ? 'Masquer le toit' : 'Afficher le toit'}
+        >
+          <Home className="w-3.5 h-3.5" aria-hidden />
+          <span>{showRoof ? 'Toit' : 'Sans toit'}</span>
+        </button>
+      ) : null}
+      {onToggleFullscreen ? (
+        <button
+          type="button"
+          aria-pressed={isFullscreen}
+          onClick={onToggleFullscreen}
+          className={btn}
+          title={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}
+        >
+          {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" aria-hidden /> : <Maximize2 className="w-3.5 h-3.5" aria-hidden />}
+          <span>{isFullscreen ? 'Réduire' : 'Plein écran'}</span>
+        </button>
+      ) : null}
     </div>
   );
 }

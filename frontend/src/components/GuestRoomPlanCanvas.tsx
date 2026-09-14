@@ -23,7 +23,7 @@ import {
 import FixtureRenderer from '@/components/FixtureRenderer';
 import Room2DPlanWalls from '@/components/Room2DPlanWalls';
 import Room2DScaleCompass from '@/components/Room2DScaleCompass';
-import { PlanZoomControls } from '@/components/PlanViewChrome';
+import { PlanSceneControls, PlanZoomControls } from '@/components/PlanViewChrome';
 import { MapPin, Sparkles } from 'lucide-react';
 import type { GuestPlanFixture, GuestRoomOutline, GuestTablePlanOverviewItem } from '@/app/rsvp/GuestTablePlanView';
 import type { PricingZone } from '@/lib/ticketPricing';
@@ -197,6 +197,7 @@ export default function GuestRoomPlanCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const pinchRef = useRef<{ dist: number; zoom: number } | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [showWalls, setShowWalls] = useState(true);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
 
   const theme = getRoomTheme(roomThemeId);
@@ -314,12 +315,19 @@ export default function GuestRoomPlanCanvas({
             <span>Mon emplacement</span>
           </button>
         ) : <div />}
-        <PlanZoomControls
-          zoom={zoom}
-          onZoomOut={() => adjustZoom(-0.15)}
-          onZoomIn={() => adjustZoom(0.15)}
-          onReset={fitToContainer}
-        />
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <PlanSceneControls
+            showWalls={showWalls}
+            onToggleWalls={() => setShowWalls((current) => !current)}
+            showRoofControl={false}
+          />
+          <PlanZoomControls
+            zoom={zoom}
+            onZoomOut={() => adjustZoom(-0.15)}
+            onZoomIn={() => adjustZoom(0.15)}
+            onReset={fitToContainer}
+          />
+        </div>
       </div>
 
       <div
@@ -375,7 +383,7 @@ export default function GuestRoomPlanCanvas({
               </div>
             )}
 
-            {effectiveWalls.length > 0 && (
+            {showWalls && effectiveWalls.length > 0 && (
               <Room2DPlanWalls
                 walls={effectiveWalls}
                 canvasWidthM={canvasWidthM ?? 20}
