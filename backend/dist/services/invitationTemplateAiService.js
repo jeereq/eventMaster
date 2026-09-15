@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.downloadReferenceImage = downloadReferenceImage;
 exports.preloadReferenceImages = preloadReferenceImages;
+exports.ensurePublicTemplateVariables = ensurePublicTemplateVariables;
 exports.composeInvitationTemplateAi = composeInvitationTemplateAi;
 const mandatoryRsvpFields_1 = require("../utils/mandatoryRsvpFields");
 const cloudinaryService_1 = require("./cloudinaryService");
@@ -346,10 +347,13 @@ function buildImagePrompt(userPrompt, backgroundPrompt, analysis, options) {
     if (hasPeople) {
         parts.push((0, invitationPromptFidelity_ts_1.buildGeminiSceneSteps)(Boolean(options?.embedText)));
     }
-    if (options?.embedText) {
+    if (options?.embedText && !options?.isPublic) {
         parts.push('=== EMBEDDED INVITATION TYPOGRAPHY (MANDATORY) ===', 'Incrust sharp, correctly spelled luxury invitation lettering ON the artwork itself: names, date, time, venue and greeting extracted from the USER BRIEF (and any cloned card). Elegant serif or script, gold-foil or ink, integrated into the 9:16 layout — not a floating UI overlay, not a watermark.', 'Keep faces fully visible; place typography in the lower third or in a refined cartouche that does not cover eyes, smile or cheeks.');
     }
     else {
+        if (options?.isPublic) {
+            parts.push('=== STRICT MANDATE FOR REUSABLE PUBLIC TEMPLATE ARTWORK ===', 'This image is a REUSABLE PUBLIC EVENTMASTER SHOWCASE TEMPLATE BACKGROUND.', 'STRICTLY FORBIDDEN: NEVER write, render, paint, or burn ANY text, letters, names, dates, numbers, words, calligraphy, script, or logos into the image pixels.', 'The generated image MUST be 100% clean visual artwork (pure background, arches, florals, ambient lighting, paper texture) so dynamic customizable variables ({{title}}, {{date}}, {{location}}, {{firstName}}) can be overlaid cleanly by any user.');
+        }
         parts.push(invitationPromptFidelity_ts_1.NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE);
     }
     if (hasPeople) {
@@ -357,11 +361,24 @@ function buildImagePrompt(userPrompt, backgroundPrompt, analysis, options) {
     }
     return parts.join('\n').slice(0, hasPeople ? 6400 : 5400);
 }
-function structureSystemPrompt(embedText, artStyle) {
+function structureSystemPrompt(embedText, artStyle, isPublic = false) {
     const style = (0, invitationArtStyle_ts_1.parseInvitationArtStyle)(artStyle);
-    return STRUCTURE_SYSTEM.replace('{{ART_STYLE_RULES}}', (0, invitationArtStyle_ts_1.invitationArtStyleStructureRules)(style)).replace('- Vertical print-ready image, NO readable text, names, dates, logos, watermarks (the editor adds text).', embedText
+    let basePrompt = STRUCTURE_SYSTEM.replace('{{ART_STYLE_RULES}}', (0, invitationArtStyle_ts_1.invitationArtStyleStructureRules)(style)).replace('- Vertical print-ready image, NO readable text, names, dates, logos, watermarks (the editor adds text).', embedText && !isPublic
         ? '- Vertical print-ready image WITH sharp embedded invitation typography (names, date, venue from the brief), correctly spelled, never covering faces.'
         : '- Vertical print-ready image, NO readable text, names, dates, logos, watermarks (the editor adds text).');
+    if (isPublic) {
+        basePrompt += `\n\n=== MANDATORY RULES FOR PUBLIC / SHOWCASE TEMPLATES (VARIABLES-FIRST) ===
+1) CLEAN ARTWORK ONLY: The generated background image must NEVER contain any baked-in text, letters, words, names, or dates.
+2) DYNAMIC CUSTOMIZATION VARIABLES:
+   Because this template is public and will be chosen and customized by multiple organizers and guests, ALL text elements MUST use EventMaster dynamic template variables instead of hardcoded private names or dates:
+   - For event title / celebration / couple: use {{title}} (e.g. "{{title}}", or "Mariage de {{title}}", "Célébration de {{title}}")
+   - For date and time: use {{date}} (e.g. "Le {{date}}", or "Samedi {{date}}")
+   - For venue / address: use {{location}} (e.g. "À {{location}}", or "{{location}}")
+   - For guest greeting: use {{firstName}} (e.g. "Cher(e) {{firstName}}")
+   - For confirmation of presence: an element of type 'rsvp-block' with text "Confirmer votre présence" and rsvpPlacement "outside"
+   DO NOT put hardcoded private names, personal surnames, or fixed calendar dates into text elements. Always use the variables {{title}}, {{date}}, {{location}}, {{firstName}}.`;
+    }
+    return basePrompt;
 }
 function visionUserText(prompt, hasRefs, options) {
     const original = options?.processed?.originalBrief || prompt;
@@ -457,7 +474,7 @@ async function visionStructure(key, prompt, imageUrls, options) {
     if ((0, geminiJsonClient_ts_1.getGeminiApiKey)()) {
         try {
             const parsed = await (0, geminiJsonClient_ts_1.requestGeminiJson)({
-                system: structureSystemPrompt(Boolean(options?.embedText), options?.artStyle),
+                system: structureSystemPrompt(Boolean(options?.embedText), options?.artStyle, Boolean(options?.isPublic)),
                 userText: visionUserText(prompt, hasRefs, options),
                 imageUrls,
                 temperature: 0.2,
@@ -500,7 +517,7 @@ async function visionStructure(key, prompt, imageUrls, options) {
                 temperature: 0.2,
                 response_format: { type: 'json_object' },
                 messages: [
-                    { role: 'system', content: structureSystemPrompt(Boolean(options?.embedText), options?.artStyle) },
+                    { role: 'system', content: structureSystemPrompt(Boolean(options?.embedText), options?.artStyle, Boolean(options?.isPublic)) },
                     { role: 'user', content: userContent },
                 ],
             }),
@@ -1253,13 +1270,118 @@ async function createNewInvitationImage(key, imageUrls, imagePrompt, tenantId, o
     const url = await generateBackgroundFromReference(key, primary, imagePrompt, tenantId);
     return { url, mode: 'edit', safetyFallbackTriggered: false };
 }
+function ensurePublicTemplateVariables(elements) {
+    const result = elements.map((el) => ({ ...el }));
+    const textEls = result.filter((el) => el.type === 'text' && typeof el.text === 'string' && el.text.trim().length > 0);
+    const hasTitleVar = result.some((el) => typeof el.text === 'string' && el.text.includes('{{title}}'));
+    const hasDateVar = result.some((el) => typeof el.text === 'string' && el.text.includes('{{date}}'));
+    const hasLocationVar = result.some((el) => typeof el.text === 'string' && el.text.includes('{{location}}'));
+    const hasFirstNameVar = result.some((el) => typeof el.text === 'string' && el.text.includes('{{firstName}}'));
+    // 1. Titre de l'événement (police la plus imposante ou première ligne de texte principale)
+    if (!hasTitleVar && textEls.length > 0) {
+        const mainTitleEl = [...textEls].sort((a, b) => {
+            const fsA = parseInt(String(a.fontSize || '16'), 10) || 16;
+            const fsB = parseInt(String(b.fontSize || '16'), 10) || 16;
+            return fsB - fsA;
+        })[0];
+        if (mainTitleEl) {
+            const current = String(mainTitleEl.text || '').trim();
+            if (/mariage|union|noces/i.test(current)) {
+                mainTitleEl.text = 'Mariage de {{title}}';
+            }
+            else if (/anniversaire|fête|célébration/i.test(current)) {
+                mainTitleEl.text = 'Célébration de {{title}}';
+            }
+            else if (/gala|soirée|nuit/i.test(current)) {
+                mainTitleEl.text = 'Gala : {{title}}';
+            }
+            else {
+                mainTitleEl.text = '{{title}}';
+            }
+        }
+    }
+    // 2. Date de l'événement
+    if (!hasDateVar) {
+        const dateEl = textEls.find((el) => {
+            const txt = String(el.text || '');
+            return (!txt.includes('{{title}}') &&
+                /\b(202\d|janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|\d{1,2}h\d{0,2}|date|heure)\b/i.test(txt));
+        });
+        if (dateEl) {
+            const txt = String(dateEl.text || '');
+            if (txt.includes('\n')) {
+                const parts = txt.split('\n');
+                dateEl.text = `Le {{date}}\n${parts[1] || '{{location}}'}`;
+            }
+            else {
+                dateEl.text = 'Le {{date}}';
+            }
+        }
+        else {
+            const candidate = textEls.find((el) => !String(el.text).includes('{{title}}'));
+            if (candidate) {
+                candidate.text = `${candidate.text} · Le {{date}}`;
+            }
+        }
+    }
+    // 3. Lieu de l'événement
+    if (!hasLocationVar) {
+        const locEl = textEls.find((el) => {
+            const txt = String(el.text || '');
+            return (!txt.includes('{{title}}') &&
+                !txt.includes('{{date}}') &&
+                /\b(salle|hôtel|palais|domaine|espace|salon|centre|kinshasa|lubumbashi|goma|avenue|boulevard|paris|lieu|adresse|villa|terrasse|rooftop)\b/i.test(txt));
+        });
+        if (locEl) {
+            locEl.text = 'À {{location}}';
+        }
+        else {
+            const dateElWithLoc = textEls.find((el) => String(el.text || '').includes('{{date}}'));
+            if (dateElWithLoc && !String(dateElWithLoc.text).includes('{{location}}')) {
+                dateElWithLoc.text = `${dateElWithLoc.text}\n{{location}}`;
+            }
+        }
+    }
+    // 4. Salutation invité personnalisable ({{firstName}})
+    if (!hasFirstNameVar) {
+        const introEl = textEls.find((el) => {
+            const txt = String(el.text || '');
+            return (!txt.includes('{{title}}') &&
+                !txt.includes('{{date}}') &&
+                !txt.includes('{{location}}') &&
+                /\b(cher|chère|invité|honneur|bienvenue|joie|prier|convier|invit|convi|présence)\b/i.test(txt));
+        });
+        if (introEl) {
+            const txt = String(introEl.text || '');
+            if (!/\{\{firstName\}\}/.test(txt)) {
+                introEl.text = `Cher(e) {{firstName}}, ${txt}`;
+            }
+        }
+        else if (textEls.length > 0) {
+            const titleIndex = result.findIndex((el) => typeof el.text === 'string' && el.text.includes('{{title}}'));
+            const insertIndex = titleIndex >= 0 ? titleIndex + 1 : 1;
+            result.splice(insertIndex, 0, {
+                id: `ai-guest-${Date.now()}`,
+                type: 'text',
+                text: 'Cher(e) {{firstName}}, vous êtes chaleureusement convié(e)',
+                color: textEls[0]?.color || '#475569',
+                fontSize: '13px',
+                align: 'center',
+                positionMode: 'flow',
+            });
+        }
+    }
+    return result;
+}
 async function composeInvitationTemplateAi(input) {
     rateLimit(input.userId);
     const prompt = String(input.prompt || '').trim();
     if (prompt.length < 8) {
         fail(400, 'Décrivez le style d’invitation souhaité (au moins quelques mots).');
     }
-    const embedText = Boolean(input.embedText);
+    const isPublic = Boolean(input.isPublic || !input.tenantId);
+    // Règle stricte : pour tout modèle public, interdiction d'écrire sur l'image directement
+    const embedText = isPublic ? false : Boolean(input.embedText);
     const artStyle = (0, invitationArtStyle_ts_1.parseInvitationArtStyle)(input.artStyle);
     const artStyleLine = (0, invitationArtStyle_ts_1.invitationArtStyleScaffoldLine)(artStyle);
     const isAlteration = Boolean(input.isAlteration) || /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
@@ -1304,6 +1426,7 @@ async function composeInvitationTemplateAi(input) {
         artStyle,
         isAlteration,
         existingElements,
+        isPublic,
     });
     if (!imageUrls.length && structured.visualAnalysis) {
         structured.visualAnalysis.hasPeople = false;
@@ -1315,6 +1438,7 @@ async function composeInvitationTemplateAi(input) {
         processed,
         artStyle,
         isAlteration,
+        isPublic,
     });
     let bgImageUrl = '';
     let imageMode = null;
@@ -1441,6 +1565,12 @@ async function composeInvitationTemplateAi(input) {
             rsvpPlacement: 'outside',
             positionMode: 'flow',
         });
+    }
+    // Règle stricte pour les modèles publics : intégration obligatoire des variables dynamiques pour la personnalisation
+    if (isPublic) {
+        elements = ensurePublicTemplateVariables(elements);
+        global.isPublicTemplate = true;
+        global.hasCustomizableVariables = true;
     }
     const content = (0, mandatoryRsvpFields_1.ensureMandatoryRsvpFieldsOnContent)({
         global,

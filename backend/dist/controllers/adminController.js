@@ -40,6 +40,7 @@ const platformAccess_1 = require("../middleware/platformAccess");
 const platformCommercialScope_1 = require("../services/platformCommercialScope");
 const invoiceService_1 = require("../services/invoiceService");
 const mandatoryRsvpFields_1 = require("../utils/mandatoryRsvpFields");
+const invitationTemplateAiService_1 = require("../services/invitationTemplateAiService");
 const tenantBillingService_1 = require("../services/tenantBillingService");
 const phone_1 = require("../utils/phone");
 const platformSettingsService_1 = require("../services/platformSettingsService");
@@ -949,10 +950,19 @@ async function createGlobalTemplate(req, res) {
         if (!name || !content) {
             return res.status(400).json({ error: 'Le nom et le contenu du modèle sont requis.' });
         }
+        const rawContent = (0, mandatoryRsvpFields_1.ensureMandatoryRsvpFieldsOnContent)(content);
+        // Pour les modèles publics / globaux : s'assurer que les calques textuels intègrent les variables dynamiques ({{title}}, {{date}}, {{location}}, {{firstName}})
+        if (Array.isArray(rawContent.elements)) {
+            rawContent.elements = (0, invitationTemplateAiService_1.ensurePublicTemplateVariables)(rawContent.elements);
+        }
+        if (rawContent.global && typeof rawContent.global === 'object') {
+            rawContent.global.isPublicTemplate = true;
+            rawContent.global.hasCustomizableVariables = true;
+        }
         const template = await db_1.prisma.template.create({
             data: {
                 name,
-                content: (0, mandatoryRsvpFields_1.ensureMandatoryRsvpFieldsOnContent)(content),
+                content: rawContent,
                 showOnLanding: showOnLanding !== undefined ? Boolean(showOnLanding) : false,
                 tenantId: null, // Null means it is a global template
             },

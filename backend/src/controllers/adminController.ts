@@ -18,6 +18,7 @@ import {
 } from '../services/platformCommercialScope';
 import { formatInvoiceForApi } from '../services/invoiceService';
 import { ensureMandatoryRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields';
+import { ensurePublicTemplateVariables } from '../services/invitationTemplateAiService';
 import {
   computeExtendedExpiry,
   issueTenantPlanInvoice,
@@ -1094,10 +1095,20 @@ export async function createGlobalTemplate(req: AuthenticatedRequest, res: Respo
       return res.status(400).json({ error: 'Le nom et le contenu du modèle sont requis.' });
     }
 
+    const rawContent = ensureMandatoryRsvpFieldsOnContent(content) as Record<string, unknown>;
+    // Pour les modèles publics / globaux : s'assurer que les calques textuels intègrent les variables dynamiques ({{title}}, {{date}}, {{location}}, {{firstName}})
+    if (Array.isArray(rawContent.elements)) {
+      rawContent.elements = ensurePublicTemplateVariables(rawContent.elements as Record<string, unknown>[]);
+    }
+    if (rawContent.global && typeof rawContent.global === 'object') {
+      (rawContent.global as Record<string, unknown>).isPublicTemplate = true;
+      (rawContent.global as Record<string, unknown>).hasCustomizableVariables = true;
+    }
+
     const template = await prisma.template.create({
       data: {
         name,
-        content: ensureMandatoryRsvpFieldsOnContent(content) as object,
+        content: rawContent as object,
         showOnLanding: showOnLanding !== undefined ? Boolean(showOnLanding) : false,
         tenantId: null, // Null means it is a global template
       },

@@ -43,6 +43,38 @@ export interface LandingInvitationPreviewProps {
   showCaption?: boolean;
   aspectRatio?: 'auto' | 'portrait' | 'card' | '9/16';
   fitMode?: 'cover' | 'contain';
+  /** Remplacement personnalisé des variables {{variable}} en prévisualisation */
+  variableOverrides?: Record<string, string>;
+  /** Si vrai, affiche les accolades brutes {{...}} au lieu des valeurs d'exemple */
+  showRawVariables?: boolean;
+}
+
+export function interpolatePreviewVariables(
+  text?: string,
+  sampleOverrides?: Record<string, string>,
+  showRawVariables = false,
+): string {
+  if (!text || typeof text !== 'string') return '';
+  if (showRawVariables) return text;
+
+  const samples: Record<string, string> = {
+    title: 'Sarah & Jean-Marc',
+    firstName: 'Grace',
+    lastName: 'Mujinga',
+    guestName: 'Grace Mujinga',
+    date: 'Samedi 24 Octobre 2026',
+    time: '16h30',
+    location: 'Kinshasa · Fleuve Congo Hotel',
+    venue: 'Fleuve Congo Hotel',
+    orgName: 'EventMaster',
+    description: 'Une célébration inoubliable en compagnie de nos proches',
+    rsvpLink: '#rsvp-section',
+    ...sampleOverrides,
+  };
+
+  return text.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, key) => {
+    return samples[key] !== undefined ? samples[key] : match;
+  });
 }
 
 function isTailwindTypography(value?: string): boolean {
@@ -169,7 +201,14 @@ function renderDivider(el: PreviewElement, compact?: boolean, accentColor = '#c5
   );
 }
 
-function renderElement(el: PreviewElement, compact?: boolean, paletteAccent = '#c5a059', textColor?: string) {
+function renderElement(
+  el: PreviewElement,
+  compact?: boolean,
+  paletteAccent = '#c5a059',
+  textColor?: string,
+  variableOverrides?: Record<string, string>,
+  showRawVariables = false,
+) {
   const typography = resolveTypography(el.fontSize, compact);
   const textStyle: React.CSSProperties = {
     color: el.color || textColor || 'inherit',
@@ -188,7 +227,7 @@ function renderElement(el: PreviewElement, compact?: boolean, paletteAccent = '#
           className={`leading-relaxed break-words ${typography.className || ''} ${compact ? 'line-clamp-3' : ''}`}
           style={textStyle}
         >
-          {el.text}
+          {interpolatePreviewVariables(el.text, variableOverrides, showRawVariables)}
         </div>
       );
 
@@ -212,7 +251,7 @@ function renderElement(el: PreviewElement, compact?: boolean, paletteAccent = '#
               compact ? 'text-xs px-3 py-1' : 'text-sm px-5 py-2.5'
             }`}
           >
-            {el.text || 'Confirmer votre présence'}
+            {interpolatePreviewVariables(el.text, variableOverrides, showRawVariables) || 'Confirmer votre présence'}
           </span>
         </div>
       );
@@ -252,7 +291,7 @@ function renderElement(el: PreviewElement, compact?: boolean, paletteAccent = '#
           }`}
           style={{ borderColor: accent, color: accent }}
         >
-          {el.text || 'Confirmer votre présence'}
+          {interpolatePreviewVariables(el.text, variableOverrides, showRawVariables) || 'Confirmer votre présence'}
         </div>
       );
     }
@@ -262,7 +301,12 @@ function renderElement(el: PreviewElement, compact?: boolean, paletteAccent = '#
   }
 }
 
-function renderLegacyElement(el: LandingTemplate['elements'][number], compact?: boolean) {
+function renderLegacyElement(
+  el: LandingTemplate['elements'][number],
+  compact?: boolean,
+  variableOverrides?: Record<string, string>,
+  showRawVariables = false,
+) {
   const typography = resolveTypography(el.fontSize, compact);
   if (el.type === 'button') {
     return (
@@ -272,7 +316,7 @@ function renderLegacyElement(el: LandingTemplate['elements'][number], compact?: 
             compact ? 'px-3 py-1 text-xs' : 'px-5 py-2.5 text-sm'
           }`}
         >
-          {el.content || 'Confirmer votre présence'}
+          {interpolatePreviewVariables(el.content, variableOverrides, showRawVariables) || 'Confirmer votre présence'}
         </span>
       </div>
     );
@@ -282,7 +326,7 @@ function renderLegacyElement(el: LandingTemplate['elements'][number], compact?: 
       className={`text-center leading-relaxed ${typography.className || ''} ${compact ? 'line-clamp-2' : ''}`}
       style={{ color: el.color || 'inherit', ...typography.style }}
     >
-      {el.content}
+      {interpolatePreviewVariables(el.content, variableOverrides, showRawVariables)}
     </div>
   );
 }
@@ -343,6 +387,8 @@ export default function LandingInvitationPreview({
   showCaption = true,
   aspectRatio = 'auto',
   fitMode = 'cover',
+  variableOverrides,
+  showRawVariables = false,
 }: LandingInvitationPreviewProps) {
   useHeadStylesheet(LANDING_PREVIEW_FONTS, 'em-landing-preview-fonts');
 
@@ -433,12 +479,12 @@ export default function LandingInvitationPreview({
                 {useLegacyOnly
                   ? template.elements.map((el, i) => (
                       <div key={i} className="w-full">
-                        {renderLegacyElement(el, isCompact)}
+                        {renderLegacyElement(el, isCompact, variableOverrides, showRawVariables)}
                       </div>
                     ))
                   : (elementsToRender as PreviewElement[]).map((el, i) => (
                       <div key={el.id || i} className={`${widthClass(el.width)} px-0.5`}>
-                        {renderElement(el, isCompact, paletteAccent, '#ffffff')}
+                        {renderElement(el, isCompact, paletteAccent, '#ffffff', variableOverrides, showRawVariables)}
                       </div>
                     ))}
               </div>
@@ -454,12 +500,12 @@ export default function LandingInvitationPreview({
               {useLegacyOnly
                 ? template.elements.map((el, i) => (
                     <div key={i} className="w-full">
-                      {renderLegacyElement(el, isCompact)}
+                      {renderLegacyElement(el, isCompact, variableOverrides, showRawVariables)}
                     </div>
                   ))
                 : (elementsToRender as PreviewElement[]).map((el, i) => (
                     <div key={el.id || i} className={`${widthClass(el.width)} px-0.5`}>
-                      {renderElement(el, isCompact, paletteAccent)}
+                      {renderElement(el, isCompact, paletteAccent, undefined, variableOverrides, showRawVariables)}
                     </div>
                   ))}
             </div>

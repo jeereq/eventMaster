@@ -424,7 +424,8 @@ async function composeTemplateWithAi(req, res) {
             ? body.existingElements
             : undefined;
         const generateBackground = body.generateBackground !== false;
-        const embedText = body.embedText === true;
+        const isPublic = !tenantId || body.isPublic === true;
+        const embedText = isPublic ? false : body.embedText === true;
         const contextSource = typeof body.contextSource === 'string' ? body.contextSource : 'none';
         const artStyle = typeof body.artStyle === 'string' ? body.artStyle : undefined;
         const variantsCount = typeof body.variantsCount === 'number' ? body.variantsCount : undefined;
@@ -435,6 +436,7 @@ async function composeTemplateWithAi(req, res) {
         const result = await (0, invitationTemplateAiService_1.composeInvitationTemplateAi)({
             userId: req.user.id,
             tenantId: isSuperAdmin ? null : tenantId,
+            isPublic,
             prompt,
             imageUrls,
             baseImageUrl,
@@ -510,7 +512,10 @@ async function publicComposeTemplateWithAi(req, res) {
             ? body.existingElements
             : undefined;
         const generateBackground = body.generateBackground !== false;
-        const embedText = body.embedText === true;
+        // Règle stricte pour la vitrine publique : JAMAIS de texte incrusté directement sur l'image
+        // L'image sert de fond d'ambiance propre et réutilisable, avec calques éditables utilisant des variables dynamiques.
+        const isPublic = true;
+        const embedText = false;
         const contextSource = typeof body.contextSource === 'string' ? body.contextSource : 'none';
         const artStyle = typeof body.artStyle === 'string' ? body.artStyle : undefined;
         const variantsCount = typeof body.variantsCount === 'number' ? body.variantsCount : undefined;
@@ -522,13 +527,14 @@ async function publicComposeTemplateWithAi(req, res) {
         const result = await (0, invitationTemplateAiService_1.composeInvitationTemplateAi)({
             userId: rateKey,
             tenantId: user?.tenantId || null,
+            isPublic: true,
             prompt,
             imageUrls,
             baseImageUrl,
             isAlteration,
             existingElements,
             generateBackground,
-            embedText,
+            embedText: false,
             deviceId,
             authUserId: user?.id || null,
             contextSource,

@@ -306,7 +306,6 @@ export default function LandingInvitationAiGenerator({
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-  const [embedText, setEmbedText] = useState(false);
   const [variantsCount, setVariantsCount] = useState<1 | 2>(1);
   const [speedMode, setSpeedMode] = useState<AiSpeedMode>('quality');
   const [artStyle, setArtStyle] = useState<InvitationArtStyleId>(DEFAULT_INVITATION_ART_STYLE);
@@ -594,26 +593,20 @@ export default function LandingInvitationAiGenerator({
         ? 'Lecture de la carte à cloner…'
         : files.length
           ? 'Analyse des visages et du brief…'
-          : embedText
-            ? 'Composition de la carte et de la typographie…'
-            : 'Composition de la carte à partir du brief…',
+          : 'Composition de la carte à partir du brief…',
     );
     if (stageTimeoutRef.current) clearTimeout(stageTimeoutRef.current);
     stageTimeoutRef.current = setTimeout(() => {
       if (seq !== generationSeq.current) return;
       setActiveStep(2);
-      setStage(
-        embedText
-          ? 'Incrustation des textes dans l’image…'
-          : 'Création de la nouvelle image…',
-      );
+      setStage('Création de la nouvelle image d’arrière-plan…');
     }, 2800);
 
     try {
       const data = await composeTemplateWithAiPublic({
         prompt: prompt.trim(),
         files,
-        embedText,
+        embedText: false,
         contextSource,
         artStyle,
         variantsCount,
@@ -803,7 +796,7 @@ export default function LandingInvitationAiGenerator({
         baseImageUrl: currentBgUrl,
         existingElements,
         isAlteration: true,
-        embedText,
+        embedText: false,
         contextSource,
         artStyle,
         variantsCount,
@@ -815,7 +808,7 @@ export default function LandingInvitationAiGenerator({
 
       // Si la retouche est visuelle/décorative, préserver intégralement les éléments textuels personnalisés
       let finalContent: TemplateAiComposeContent = data.content;
-      if (!textChangeRequested && existingElements.length > 0 && !embedText) {
+      if (!textChangeRequested && existingElements.length > 0) {
         finalContent = {
           ...data.content,
           elements: existingElements.map((el) => ({ ...el })),
@@ -1512,40 +1505,15 @@ export default function LandingInvitationAiGenerator({
                   />
                 </div>
 
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={embedText}
-                  disabled={busy}
-                  onClick={() => setEmbedText((v) => !v)}
-                  className={cn(
-                    'w-full flex items-start gap-3 rounded-[var(--radius-card)] border px-3.5 py-3 text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60',
-                    embedText
-                      ? 'border-primary/40 bg-primary/10'
-                      : 'border-border bg-surface-muted/40 hover:border-primary/30',
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'mt-0.5 w-9 h-5 rounded-full relative shrink-0 transition-colors',
-                      embedText ? 'bg-primary' : 'bg-border',
-                    )}
-                    aria-hidden
-                  >
-                    <span
-                      className={cn(
-                        'absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xs transition-transform',
-                        embedText && 'translate-x-4',
-                      )}
-                    />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-xs font-bold text-foreground">Incruster le texte dans l’image</span>
+                <div className="w-full flex items-start gap-3 rounded-[var(--radius-card)] border border-primary/20 bg-primary/5 px-3.5 py-3 text-left">
+                  <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                  <div className="min-w-0">
+                    <span className="block text-xs font-bold text-foreground">Arrière-plan pur & Variables dynamiques</span>
                     <span className="block text-xs text-muted mt-0.5 leading-relaxed">
-                      Noms, date et lieu du brief sont dessinés sur la carte.
+                      Aucun texte n’est gravé sur l’image : l’IA produit un visuel artistique propre et place les textes en calques éditables avec les variables <code className="text-primary font-mono text-[11px] font-semibold">{`{{title}}`}</code>, <code className="text-primary font-mono text-[11px] font-semibold">{`{{date}}`}</code>, <code className="text-primary font-mono text-[11px] font-semibold">{`{{location}}`}</code> et <code className="text-primary font-mono text-[11px] font-semibold">{`{{firstName}}`}</code> pour une personnalisation instantanée.
                     </span>
-                  </span>
-                </button>
+                  </div>
+                </div>
 
                 <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-3">
                   <div>
@@ -2328,7 +2296,7 @@ export default function LandingInvitationAiGenerator({
 
       <AiComposeFullscreenLoader
         active={(busy || refineBusy) && isExpanded}
-        embedText={embedText}
+        embedText={false}
         hasReferences={files.length > 0}
         title={refineBusy ? 'Retouche de l’invitation IA…' : undefined}
         stageHint={refineBusy ? (refineStage || 'Altération ciblée par l’IA…') : stage}

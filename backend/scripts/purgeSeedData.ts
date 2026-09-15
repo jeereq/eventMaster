@@ -159,11 +159,12 @@ async function main() {
   const deletedOrgRooms = await prisma.organizationRoom.deleteMany({});
   console.log(`- OrganizationRoom supprimés : ${deletedOrgRooms.count}`);
 
-  // Supprimer uniquement les templates liés à des organisations/tenants s'il y en a, conserver les templates vitrine globaux (tenantId === null)
-  const deletedTenantTemplates = await prisma.template.deleteMany({
-    where: { tenantId: { not: null } },
+  // Supprimer tous les modèles d'invitations (y compris les modèles vitrine)
+  await prisma.invitation.updateMany({
+    data: { templateId: null },
   });
-  console.log(`- Modèles de tenant supprimés (les modèles vitrine globaux sont conservés) : ${deletedTenantTemplates.count}`);
+  const deletedTemplates = await prisma.template.deleteMany({});
+  console.log(`- Modèles d'invitations supprimés : ${deletedTemplates.count}`);
 
   // 3. Déconnexion des relations de clé étrangère sur les Tenants
   await prisma.tenant.updateMany({

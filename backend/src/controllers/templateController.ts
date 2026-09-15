@@ -482,7 +482,8 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
       ? (body.existingElements as Record<string, unknown>[])
       : undefined;
     const generateBackground = body.generateBackground !== false;
-    const embedText = body.embedText === true;
+    const isPublic = !tenantId || body.isPublic === true;
+    const embedText = isPublic ? false : body.embedText === true;
     const contextSource = typeof body.contextSource === 'string' ? body.contextSource : 'none';
     const artStyle = typeof body.artStyle === 'string' ? body.artStyle : undefined;
     const variantsCount = typeof body.variantsCount === 'number' ? body.variantsCount : undefined;
@@ -494,6 +495,7 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
     const result = await composeInvitationTemplateAi({
       userId: req.user.id,
       tenantId: isSuperAdmin ? null : tenantId,
+      isPublic,
       prompt,
       imageUrls,
       baseImageUrl,
@@ -571,7 +573,10 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
       ? (body.existingElements as Record<string, unknown>[])
       : undefined;
     const generateBackground = body.generateBackground !== false;
-    const embedText = body.embedText === true;
+    // Règle stricte pour la vitrine publique : JAMAIS de texte incrusté directement sur l'image
+    // L'image sert de fond d'ambiance propre et réutilisable, avec calques éditables utilisant des variables dynamiques.
+    const isPublic = true;
+    const embedText = false;
     const contextSource = typeof body.contextSource === 'string' ? body.contextSource : 'none';
     const artStyle = typeof body.artStyle === 'string' ? body.artStyle : undefined;
     const variantsCount = typeof body.variantsCount === 'number' ? body.variantsCount : undefined;
@@ -584,13 +589,14 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
     const result = await composeInvitationTemplateAi({
       userId: rateKey,
       tenantId: user?.tenantId || null,
+      isPublic: true,
       prompt,
       imageUrls,
       baseImageUrl,
       isAlteration,
       existingElements,
       generateBackground,
-      embedText,
+      embedText: false,
       deviceId,
       authUserId: user?.id || null,
       contextSource,
