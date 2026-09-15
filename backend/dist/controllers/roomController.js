@@ -21,6 +21,7 @@ const roomLayoutService_1 = require("../services/roomLayoutService");
 const aiSimulationWalletService_1 = require("../services/aiSimulationWalletService");
 const roomPlanAiService_1 = require("../services/roomPlanAiService");
 const aiRoomPlanComposeHistoryService_1 = require("../services/aiRoomPlanComposeHistoryService");
+const platformSettingsService_1 = require("../services/platformSettingsService");
 async function persistRoomPlanCompose(opts) {
     try {
         const saved = await (0, aiRoomPlanComposeHistoryService_1.saveAiRoomPlanComposeRun)(opts);
@@ -435,6 +436,12 @@ function readRoomPlanComposeBody(body) {
 }
 async function composeRoomPlan(req, res) {
     try {
+        const settings = (0, platformSettingsService_1.loadPlatformSettings)();
+        if (settings.studioVisibility && settings.studioVisibility.room === false) {
+            return res.status(403).json({
+                error: 'Le studio de plans de salle 3D IA est une fonctionnalité à venir et n’est pas disponible actuellement.',
+            });
+        }
         const tenantId = req.user?.tenantId;
         const userId = req.user?.id;
         if (!tenantId || !userId) {
@@ -493,6 +500,12 @@ async function composeRoomPlan(req, res) {
 }
 async function publicComposeRoomPlan(req, res) {
     try {
+        const settings = (0, platformSettingsService_1.loadPlatformSettings)();
+        if (settings.studioVisibility && settings.studioVisibility.room === false) {
+            return res.status(403).json({
+                error: 'Le studio de plans de salle 3D IA est une fonctionnalité à venir et n’est pas disponible actuellement.',
+            });
+        }
         const user = req.user;
         if (user?.id && user.tenantId) {
             const denied = await (0, permissionsService_1.protocolCreativeDeniedMessage)(user.id, user.tenantId);

@@ -39,6 +39,9 @@ export default function GlobalAiSimulatorFab() {
   const { user, tenant, planFeatures, access } = useAuth();
   const { site } = usePlatformSite();
   const isBudgetBlocked = site?.studioVisibility?.budget === false;
+  const isInviteBlocked = site?.studioVisibility?.invite === false;
+  const isRoomBlocked = site?.studioVisibility?.room === false;
+  const allStudiosBlocked = isBudgetBlocked && isInviteBlocked && isRoomBlocked;
   const [open, setOpen] = useState(false);
   const [purchaseOpen, setPurchaseOpen] = useState(false);
   const [allowance, setAllowance] = useState<AiAllowance>(createEmptyAiAllowance);
@@ -75,7 +78,7 @@ export default function GlobalAiSimulatorFab() {
     return () => window.removeEventListener(AI_ALLOWANCE_CHANGED, sync);
   }, [open, pathname]);
 
-  if (hidden) return null;
+  if (hidden || allStudiosBlocked) return null;
 
   const showCounter = isAiSimulationThresholdReached(allowance);
   const Icon = placement.highlight === 'invite'
@@ -137,7 +140,11 @@ export default function GlobalAiSimulatorFab() {
           >
             {isBudgetBlocked && placement.highlight === 'budget'
               ? 'Fonctionnalité à venir'
-              : placement.subtitle}
+              : isInviteBlocked && placement.highlight === 'invite'
+                ? 'Fonctionnalité à venir'
+                : isRoomBlocked && placement.highlight === 'room'
+                  ? 'Fonctionnalité à venir'
+                  : placement.subtitle}
           </span>
         </span>
         {showCounter ? (
@@ -189,8 +196,8 @@ export default function GlobalAiSimulatorFab() {
             <ShortcutCard
               href={placement.inviteHref}
               icon={Mail}
-              title="Invitation"
-              detail={`${AI_INVITATION_COMPOSE_TOKEN_COST} jetons · carte éditable`}
+              title={isInviteBlocked ? 'Invitation (À venir)' : 'Invitation'}
+              detail={isInviteBlocked ? 'Fonctionnalité en préparation' : `${AI_INVITATION_COMPOSE_TOKEN_COST} jetons · carte éditable`}
               active={placement.highlight === 'invite'}
               onNavigate={() => setOpen(false)}
             />
@@ -198,8 +205,8 @@ export default function GlobalAiSimulatorFab() {
               <ShortcutCard
                 href={placement.roomsHref}
                 icon={Building2}
-                title="Plan de salle"
-                detail={`${AI_ROOM_PLAN_TOKEN_COST} jetons · photo`}
+                title={isRoomBlocked ? 'Plan de salle (À venir)' : 'Plan de salle'}
+                detail={isRoomBlocked ? 'Fonctionnalité en préparation' : `${AI_ROOM_PLAN_TOKEN_COST} jetons · photo`}
                 active={placement.highlight === 'room'}
                 onNavigate={() => setOpen(false)}
               />

@@ -548,13 +548,15 @@ export default function ClientDashboardHome() {
             >
               🎵 DJ &amp; Sono
             </Link>
-            <Link
-              href="/dashboard/catalogue?tab=plan&planView=ai"
-              className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/25 hover:border-primary text-primary font-bold transition inline-flex items-center gap-1"
-            >
-              <Sparkles className="w-3 h-3" />
-              Simulateur
-            </Link>
+            {activeStudiosCount > 0 && (
+              <Link
+                href="/dashboard/catalogue?tab=plan&planView=ai"
+                className="px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/25 hover:border-primary text-primary font-bold transition inline-flex items-center gap-1"
+              >
+                <Sparkles className="w-3 h-3" />
+                Simulateur
+              </Link>
+            )}
           </div>
         </div>
       </section>

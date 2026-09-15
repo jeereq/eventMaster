@@ -8,8 +8,9 @@ import type { LandingTemplate } from '@/config/landingTemplates';
 import { fetchPublicLandingTemplates } from '@/lib/landingTemplateAdapter';
 import { Button, Modal, Pagination, paginateItems, Skeleton, usePageSize } from '@/components/ui';
 import PublicCtaBand from '@/components/PublicCtaBand';
-import { Sparkles, Eye, ArrowRight, Search, X, CheckCircle2, Wand2, Mail, ScanLine } from 'lucide-react';
+import { Sparkles, Eye, ArrowRight, Search, X, CheckCircle2, Wand2, Mail, ScanLine, Clock } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { cn } from '@/lib/cn';
 import LandingInvitationAiGenerator from '@/components/landing/LandingInvitationAiGenerator';
 
@@ -28,6 +29,8 @@ const CATEGORIES = [
 
 export default function ModelesPage() {
   const { user, access } = useAuth();
+  const { site } = usePlatformSite();
+  const isInviteBlocked = site?.studioVisibility?.invite === false;
   const protocolLocked = Boolean(access?.isProtocolOnly);
   const [templates, setTemplates] = useState<LandingTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,7 +80,11 @@ export default function ModelesPage() {
     >
       <PublicPageHero
         title="Modèles d'invitations prêts à l'emploi"
-        description="Designs élégants pour vos réceptions, ou création sur mesure avec l'IA."
+        description={
+          isInviteBlocked
+            ? "Designs élégants pour vos réceptions. Le studio de création sur mesure par IA arrive prochainement."
+            : "Designs élégants pour vos réceptions, ou création sur mesure avec l'IA."
+        }
         compact
       >
         <div className="pt-1 flex flex-wrap items-center gap-2.5">
@@ -88,10 +95,15 @@ export default function ModelesPage() {
                 window.dispatchEvent(new HashChangeEvent('hashchange'));
               }
             }}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover active:scale-95 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            className={cn(
+              'inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold active:scale-95 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+              isInviteBlocked
+                ? 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/25'
+                : 'bg-primary text-primary-foreground hover:bg-primary-hover',
+            )}
           >
-            <Wand2 className="w-3.5 h-3.5" />
-            <span>Studio IA</span>
+            {isInviteBlocked ? <Clock className="w-3.5 h-3.5" /> : <Wand2 className="w-3.5 h-3.5" />}
+            <span>{isInviteBlocked ? 'Studio IA (À venir)' : 'Studio IA'}</span>
           </a>
           <Link
             href={user ? '/dashboard/events' : '/register?kind=ORGANIZER&intent=personal&action=template'}

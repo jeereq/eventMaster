@@ -395,6 +395,12 @@ async function deleteTemplate(req, res) {
 /** POST /templates/ai/compose — images + prompt → structure éditable + fond généré */
 async function composeTemplateWithAi(req, res) {
     try {
+        const settings = (0, platformSettingsService_1.loadPlatformSettings)();
+        if (settings.studioVisibility && settings.studioVisibility.invite === false) {
+            return res.status(403).json({
+                error: 'Le studio d’invitations IA est une fonctionnalité à venir et n’est pas disponible actuellement.',
+            });
+        }
         if (!req.user)
             return res.status(401).json({ error: 'Non authentifié.' });
         const isSuperAdmin = canManagePlatformTemplates(req.user);
@@ -492,6 +498,12 @@ async function composeTemplateWithAi(req, res) {
  */
 async function publicComposeTemplateWithAi(req, res) {
     try {
+        const settings = (0, platformSettingsService_1.loadPlatformSettings)();
+        if (settings.studioVisibility && settings.studioVisibility.invite === false) {
+            return res.status(403).json({
+                error: 'Le studio d’invitations IA est une fonctionnalité à venir et n’est pas disponible actuellement.',
+            });
+        }
         const user = req.user;
         if (user?.id && user.tenantId) {
             const denied = await (0, permissionsService_1.protocolCreativeDeniedMessage)(user.id, user.tenantId);

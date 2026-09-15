@@ -37,6 +37,7 @@ import {
   type AiRoomPlanComposeSource,
   type RoomPlanComposeDraft,
 } from '../services/aiRoomPlanComposeHistoryService';
+import { loadPlatformSettings } from '../services/platformSettingsService';
 
 async function persistRoomPlanCompose(opts: {
   userId?: string | null;
@@ -505,6 +506,13 @@ function readRoomPlanComposeBody(body: Record<string, unknown>) {
 
 export async function composeRoomPlan(req: AuthenticatedRequest, res: Response) {
   try {
+    const settings = loadPlatformSettings();
+    if (settings.studioVisibility && settings.studioVisibility.room === false) {
+      return res.status(403).json({
+        error: 'Le studio de plans de salle 3D IA est une fonctionnalité à venir et n’est pas disponible actuellement.',
+      });
+    }
+
     const tenantId = req.user?.tenantId;
     const userId = req.user?.id;
     if (!tenantId || !userId) {
@@ -568,6 +576,13 @@ export async function composeRoomPlan(req: AuthenticatedRequest, res: Response) 
 
 export async function publicComposeRoomPlan(req: AuthenticatedRequest, res: Response) {
   try {
+    const settings = loadPlatformSettings();
+    if (settings.studioVisibility && settings.studioVisibility.room === false) {
+      return res.status(403).json({
+        error: 'Le studio de plans de salle 3D IA est une fonctionnalité à venir et n’est pas disponible actuellement.',
+      });
+    }
+
     const user = req.user;
     if (user?.id && user.tenantId) {
       const denied = await protocolCreativeDeniedMessage(user.id, user.tenantId);

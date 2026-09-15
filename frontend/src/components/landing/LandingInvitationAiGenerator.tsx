@@ -33,6 +33,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { isProtocolUser, PROTOCOL_CREATIVE_DENIED } from '@/lib/protocolAccess';
 import { api } from '@/lib/api';
 import {
@@ -262,6 +263,8 @@ export default function LandingInvitationAiGenerator({
   defaultExpanded?: boolean;
 }) {
   const { user, tenant, access } = useAuth();
+  const { site } = usePlatformSite();
+  const isInviteBlocked = site?.studioVisibility?.invite === false;
   const protocolLocked = isProtocolUser(access);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -1131,6 +1134,57 @@ export default function LandingInvitationAiGenerator({
       </div>
     );
   };
+
+  if (isInviteBlocked) {
+    return (
+      <section
+        id={id}
+        aria-label="Studio Invitations IA - Fonctionnalité à venir"
+        className={cn(
+          'rounded-[var(--radius-card)] border border-amber-500/30 bg-surface p-6 sm:p-8 space-y-5 text-center shadow-xs',
+          className,
+        )}
+      >
+        <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center border border-amber-500/20">
+          <Clock className="w-7 h-7" />
+        </div>
+
+        <div className="space-y-2 max-w-lg mx-auto">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">
+            <Sparkles className="w-3.5 h-3.5" />
+            Fonctionnalité à venir
+          </span>
+          <h3 className="text-lg font-bold text-foreground">
+            Studio Invitations &amp; Cartes 9:16 IA
+          </h3>
+          <p className="text-xs sm:text-sm text-muted leading-relaxed">
+            La création et personnalisation automatique de cartons d’invitation par intelligence artificielle est actuellement en cours de préparation ou masquée par l’administration. Elle n’est pas disponible pour le moment.
+          </p>
+        </div>
+
+        <div className="p-4 rounded-xl bg-surface-muted/60 border border-border max-w-md mx-auto text-left space-y-2">
+          <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+            <Wand2 className="w-3.5 h-3.5 text-primary" />
+            Ce que proposera cette fonctionnalité prochainement :
+          </p>
+          <ul className="text-xs text-muted space-y-1.5 list-disc list-inside">
+            <li>Génération de visuels artistiques purs adaptés à votre thème de réception</li>
+            <li>Incrustation de variables dynamiques : date, lieu, nom des mariés ou hôtes</li>
+            <li>Partage direct en format WhatsApp 9:16 avec lien de réponse invité</li>
+          </ul>
+        </div>
+
+        <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+          <Button href="/modeles" variant="primary" size="sm">
+            Explorer les modèles existants
+          </Button>
+          <Button href="/marketplace" variant="secondary" size="sm">
+            Découvrir le catalogue
+          </Button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section

@@ -24,6 +24,7 @@ const RoomWebGLViewer = dynamic(() => import('@/components/RoomWebGLViewer'), {
 import RoomWallEditorPanel from '@/components/RoomWallEditorPanel';
 import { ChairTypePicker, SeatMaterialPicker, RoomAmbienceCard, TableSurfacePicker, ZoneMaterialPicker } from '@/components/room/RoomMaterialPreviews';
 import RoomAmbiencePreviewModal from '@/components/room/RoomAmbiencePreviewModal';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { AiRoomPlanFullscreenLoader } from '@/components/AiComposeFullscreenLoader';
 import {
   ChairType,
@@ -749,6 +750,8 @@ export default function RoomLayoutEditor({
   mobileDockOffset = 'none',
 }: RoomLayoutEditorProps) {
   const { user, tenant } = useAuth();
+  const { site } = usePlatformSite();
+  const isRoomBlocked = site?.studioVisibility?.room === false;
   const blueprint = ensureBlueprintDefaults(rawBlueprint);
   const caps = roomEditorCapabilities(editorLevel, allowThemesFixtures);
   const [selection, setSelection] = useState<LayoutSelectionItem[]>([]);
@@ -3251,7 +3254,7 @@ export default function RoomLayoutEditor({
     if (!selected) {
       return (
         <div className="space-y-4">
-          {caps.canPlanFromPhoto && !readOnly ? (
+          {caps.canPlanFromPhoto && !readOnly && !isRoomBlocked ? (
             <button
               type="button"
               disabled={aiPlanReading}

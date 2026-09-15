@@ -13,6 +13,8 @@ import {
   Users,
   MapPin,
   DollarSign,
+  Clock,
+  Sparkles,
 } from 'lucide-react';
 import { Button, Alert } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -206,7 +208,53 @@ export default function LandingAiSimulationShowcase() {
     }
   }, [visibleStudioTabs, studio]);
 
-  const fullPage = STUDIO_FULL_PAGE[studio] || STUDIO_FULL_PAGE.budget;
+  const fullPage = STUDIO_FULL_PAGE[studio] || STUDIO_FULL_PAGE[visibleStudioTabs[0]?.id || 'budget'] || STUDIO_FULL_PAGE.budget;
+
+  const dynamicHeading = useMemo(() => {
+    const hasB = visibility.budget;
+    const hasI = visibility.invite;
+    const hasR = visibility.room;
+    if (hasB && hasI && hasR) {
+      return {
+        mobile: <>Budget, invitation, <span className="text-primary">salle</span></>,
+        desktop: <>Trois ateliers IA : <span className="text-primary">budget, invitation et plan de salle</span></>,
+      };
+    }
+    if (hasB && hasI) {
+      return {
+        mobile: <>Budget &amp; <span className="text-primary">invitation</span></>,
+        desktop: <>Deux ateliers IA : <span className="text-primary">budget et invitations</span></>,
+      };
+    }
+    if (hasB && hasR) {
+      return {
+        mobile: <>Budget &amp; <span className="text-primary">plan 3D</span></>,
+        desktop: <>Deux ateliers IA : <span className="text-primary">budget et plans 3D</span></>,
+      };
+    }
+    if (hasI && hasR) {
+      return {
+        mobile: <>Invitation &amp; <span className="text-primary">plan 3D</span></>,
+        desktop: <>Deux ateliers IA : <span className="text-primary">invitations et plans 3D</span></>,
+      };
+    }
+    if (hasB) {
+      return {
+        mobile: <>Simulateur de <span className="text-primary">budget</span></>,
+        desktop: <>Atelier IA : <span className="text-primary">Simulateur de budget &amp; devis</span></>,
+      };
+    }
+    if (hasI) {
+      return {
+        mobile: <>Cartes &amp; <span className="text-primary">invitations</span></>,
+        desktop: <>Atelier IA : <span className="text-primary">Studio d’invitations WhatsApp</span></>,
+      };
+    }
+    return {
+      mobile: <>Plans &amp; <span className="text-primary">visite 3D</span></>,
+      desktop: <>Atelier IA : <span className="text-primary">Studio de plans de salle 3D</span></>,
+    };
+  }, [visibility]);
 
   useEffect(() => {
     setStudio(readLandingStudio());
@@ -233,6 +281,42 @@ export default function LandingAiSimulationShowcase() {
     setPreferDefaults(true);
     setViewMode('live');
   };
+
+  if (visibleStudioTabs.length === 0) {
+    return (
+      <section
+        ref={revealRef}
+        id="simulateur-ia"
+        className="em-reveal em-landing-defer scroll-mt-24 py-8 sm:py-20 border-t border-border bg-gradient-to-b from-surface/90 via-surface-muted/40 to-surface/90 relative overflow-hidden em-landing-section-glow"
+      >
+        <div className="page-container relative z-10 space-y-6 max-w-3xl mx-auto text-center">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center border border-amber-500/20">
+            <Clock className="w-7 h-7" />
+          </div>
+          <div className="space-y-2">
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">
+              <Sparkles className="w-3.5 h-3.5" />
+              Fonctionnalités à venir
+            </span>
+            <h2 className="em-landing-heading text-xl sm:text-3xl text-foreground">
+              Ateliers IA &amp; Simulateurs
+            </h2>
+            <p className="text-sm text-muted leading-relaxed max-w-xl mx-auto">
+              Les ateliers d’intelligence artificielle (chiffrage budgétaire, création d’invitations 9:16 et modélisation spatiale 3D) sont actuellement réservés ou temporairement masqués par l’administration de la plateforme. En attendant, explorez notre catalogue complet de prestataires et d’équipements vérifiés.
+            </p>
+          </div>
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+            <Button href="/marketplace" variant="primary">
+              Explorer le catalogue
+            </Button>
+            <Button href="/tarifs" variant="secondary">
+              Consulter nos forfaits
+            </Button>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section
@@ -265,11 +349,10 @@ export default function LandingAiSimulationShowcase() {
 
           <h2 className="em-landing-heading text-xl sm:text-4xl text-foreground">
             <span className="sm:hidden">
-              Budget, invitation, <span className="text-primary">salle</span>
+              {dynamicHeading.mobile}
             </span>
             <span className="hidden sm:inline">
-              Trois ateliers IA :{' '}
-              <span className="text-primary">budget, invitation et plan de salle</span>
+              {dynamicHeading.desktop}
             </span>
           </h2>
 

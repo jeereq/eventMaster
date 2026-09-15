@@ -21,7 +21,7 @@ import {
 import { uploadDataUrl } from '../services/cloudinaryService';
 import { getTemplateUploadFolder } from '../config/cloudinaryConfig';
 import { protocolCreativeDeniedMessage } from '../services/permissionsService';
-import { hasCommercialPermission } from '../services/platformSettingsService';
+import { hasCommercialPermission, loadPlatformSettings } from '../services/platformSettingsService';
 
 function canManagePlatformTemplates(user?: { id?: string; role?: string }): boolean {
   if (!user) return false;
@@ -452,6 +452,13 @@ export async function deleteTemplate(req: AuthenticatedRequest, res: Response) {
 /** POST /templates/ai/compose — images + prompt → structure éditable + fond généré */
 export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Response) {
   try {
+    const settings = loadPlatformSettings();
+    if (settings.studioVisibility && settings.studioVisibility.invite === false) {
+      return res.status(403).json({
+        error: 'Le studio d’invitations IA est une fonctionnalité à venir et n’est pas disponible actuellement.',
+      });
+    }
+
     if (!req.user) return res.status(401).json({ error: 'Non authentifié.' });
     const isSuperAdmin = canManagePlatformTemplates(req.user);
     const tenantId = req.user.tenantId || null;
@@ -552,6 +559,13 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
  */
 export async function publicComposeTemplateWithAi(req: Request, res: Response) {
   try {
+    const settings = loadPlatformSettings();
+    if (settings.studioVisibility && settings.studioVisibility.invite === false) {
+      return res.status(403).json({
+        error: 'Le studio d’invitations IA est une fonctionnalité à venir et n’est pas disponible actuellement.',
+      });
+    }
+
     const user = (req as AuthenticatedRequest).user;
     if (user?.id && user.tenantId) {
       const denied = await protocolCreativeDeniedMessage(user.id, user.tenantId);

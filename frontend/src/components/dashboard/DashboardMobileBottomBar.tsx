@@ -25,6 +25,7 @@ import {
 import type { OrgAccess } from '@/context/AuthContext';
 import type { TenantAccountKind } from '@/lib/marketplace';
 import type { WorkspaceModules } from '@/lib/planAccess';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { cn } from '@/lib/cn';
 
 export interface MobileBottomNavItem {
@@ -139,6 +140,7 @@ export function buildMobileBottomItems(
     workspace: WorkspaceModules;
     accountKind?: TenantAccountKind;
     isClientAccount?: boolean;
+    allStudiosBlocked?: boolean;
   },
 ): MobileBottomNavItem[] {
   return withSimulatorTab(buildRoleMobileBottomItems(input));
@@ -150,12 +152,14 @@ function buildRoleMobileBottomItems({
   workspace,
   accountKind,
   isClientAccount,
+  allStudiosBlocked,
 }: {
   role?: string;
   access?: OrgAccess | null;
   workspace: WorkspaceModules;
   accountKind?: TenantAccountKind;
   isClientAccount?: boolean;
+  allStudiosBlocked?: boolean;
 }): MobileBottomNavItem[] {
   // 1. Super Admin
   if (role === 'SUPER_ADMIN') {
@@ -205,7 +209,9 @@ function buildRoleMobileBottomItems({
     return [
       { id: 'home', name: 'Accueil', href: '/dashboard', icon: LayoutDashboard },
       { id: 'catalogue', name: 'Explorer', href: '/dashboard/catalogue', icon: Store },
-      { id: 'simulator', name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', icon: Sparkles },
+      allStudiosBlocked
+        ? { id: 'quotes', name: 'Devis', href: '/dashboard/bookings?tab=quotes', icon: Inbox }
+        : { id: 'simulator', name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', icon: Sparkles },
       { id: 'tickets', name: 'Billets', href: '/dashboard/tickets', icon: Ticket },
       { id: 'menu', name: 'Plus', href: '#menu', icon: Menu, isMenuTrigger: true },
     ];
@@ -282,6 +288,9 @@ export default function DashboardMobileBottomBar({
 }: DashboardMobileBottomBarProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { site } = usePlatformSite();
+  const visibility = site?.studioVisibility ?? { budget: true, invite: true, room: true };
+  const allStudiosBlocked = !visibility.budget && !visibility.invite && !visibility.room;
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -298,8 +307,9 @@ export default function DashboardMobileBottomBar({
       workspace,
       accountKind,
       isClientAccount,
+      allStudiosBlocked,
     });
-  }, [role, access, workspace, accountKind, isClientAccount]);
+  }, [role, access, workspace, accountKind, isClientAccount, allStudiosBlocked]);
 
   const nav = (
     <nav

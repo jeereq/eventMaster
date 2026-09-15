@@ -10,6 +10,7 @@ import {
   type RoomLayoutBlueprint,
 } from '@/lib/roomLayoutUtils';
 import { useAuth } from '@/context/AuthContext';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   Sparkles,
   LayoutGrid,
@@ -24,6 +25,7 @@ import {
   Pencil,
   Plus,
   SlidersHorizontal,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -111,6 +113,8 @@ function resolvePlanBlueprint(
 
 export default function Plans3DPage() {
   const { user, access } = useAuth();
+  const { site } = usePlatformSite();
+  const isRoomBlocked = site?.studioVisibility?.room === false;
   const protocolLocked = Boolean(access?.isProtocolOnly);
 
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
@@ -242,15 +246,25 @@ export default function Plans3DPage() {
       {/* ─── Hero épuré ─── */}
       <PublicPageHero
         title="Modèles de salles 2D & 3D interactifs"
-        description="Configurations témoins en 2D / 3D ou composition sur mesure avec l'IA."
+        description={
+          isRoomBlocked
+            ? "Configurations témoins en 2D / 3D. Le studio d'agencement par IA arrive prochainement."
+            : "Configurations témoins en 2D / 3D ou composition sur mesure avec l'IA."
+        }
         compact
       >
         <div className="pt-1 flex flex-wrap items-center gap-2.5">
           <Button href="#plan-viewer" size="sm">
             Voir le plan 2D / 3D
           </Button>
-          <Button href="#studio-ia" size="sm" variant="secondary" leftIcon={<Sparkles className="w-3.5 h-3.5" />}>
-            Composer avec l’IA
+          <Button
+            href="#studio-ia"
+            size="sm"
+            variant="secondary"
+            leftIcon={isRoomBlocked ? <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> : <Sparkles className="w-3.5 h-3.5" />}
+            className={isRoomBlocked ? 'border-amber-500/30 text-amber-800 dark:text-amber-300 bg-amber-500/10' : undefined}
+          >
+            {isRoomBlocked ? 'Studio IA (À venir)' : 'Composer avec l’IA'}
           </Button>
           <Button href="/marketplace/salles" size="sm" variant="ghost" leftIcon={<Building2 className="w-3.5 h-3.5" />}>
             Salles en RDC

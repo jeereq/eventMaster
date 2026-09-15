@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Eye } from 'lucide-react';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { Button, Pagination, paginateItems, Skeleton, usePageSize } from '@/components/ui';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import type { LandingTemplate } from '@/config/landingTemplates';
@@ -24,6 +25,8 @@ export default function LandingModelsSection({
   onPreview: (template: LandingTemplate) => void;
 }) {
   const revealRef = useLandingReveal<HTMLElement>();
+  const { site } = usePlatformSite();
+  const isInviteBlocked = site?.studioVisibility?.invite === false;
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('landing-models', 8);
   const shown = paginateItems(templates, page, pageSize);
@@ -50,9 +53,15 @@ export default function LandingModelsSection({
           </div>
 
           <div className="flex flex-wrap gap-2 shrink-0">
-            <Button href="/modeles#generateur-ia" rightIcon={<ArrowRight className="w-4 h-4" />}>
-              Créer avec l’IA
-            </Button>
+            {!isInviteBlocked ? (
+              <Button href="/modeles#generateur-ia" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                Créer avec l’IA
+              </Button>
+            ) : (
+              <Button href="/modeles" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                Explorer les modèles
+              </Button>
+            )}
             <Button href="/register?kind=ORGANIZER&intent=personal&action=template" variant="secondary" rightIcon={<ArrowRight className="w-4 h-4" />}>
               Créer mon invitation
             </Button>

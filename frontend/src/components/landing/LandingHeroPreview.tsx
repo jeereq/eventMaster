@@ -191,6 +191,8 @@ export default function LandingHeroPreview({
   const { user } = useAuth();
   const { site } = usePlatformSite();
   const isBudgetBlocked = site?.studioVisibility?.budget === false;
+  const isInviteBlocked = site?.studioVisibility?.invite === false;
+  const isRoomBlocked = site?.studioVisibility?.room === false;
   const isLoggedIn = Boolean(user);
   const actions = PROFILE_ACTIONS[profileId] || PROFILE_ACTIONS.personal;
 
@@ -235,12 +237,21 @@ export default function LandingHeroPreview({
             const targetHref = act.href(isLoggedIn);
             const isExternal = targetHref.startsWith('http');
             const isSimulatorAction = targetHref === '/simulateur' || targetHref.startsWith('/simulateur');
-            const isUpcoming = isSimulatorAction && isBudgetBlocked;
+            const isRoomAction = targetHref.includes('/rooms') || targetHref.includes('action=room_editor') || targetHref === '/plans-3d';
+            const isInviteAction = targetHref === '/modeles' || targetHref.includes('action=template');
+            const isUpcoming =
+              (isSimulatorAction && isBudgetBlocked) ||
+              (isRoomAction && isRoomBlocked) ||
+              (isInviteAction && isInviteBlocked);
 
             const displayBadge = isUpcoming ? 'À venir' : act.badge;
             const displayCta = isUpcoming ? 'Bientôt disponible' : act.ctaLabel;
             const displayDesc = isUpcoming
-              ? 'Prochainement : l’IA composera 3 formules réelles chiffrées selon votre budget (fonctionnalité à venir).'
+              ? isSimulatorAction
+                ? 'Prochainement : l’IA composera 3 formules réelles chiffrées selon votre budget (fonctionnalité à venir).'
+                : isRoomAction
+                  ? 'Prochainement : l’IA modélisera votre plan spatial 2D / 3D sur mesure (fonctionnalité à venir).'
+                  : 'Prochainement : création d’invitations graphiques sur mesure par IA (fonctionnalité à venir).'
               : act.description;
             const isHighlight = isUpcoming ? false : act.highlight;
 

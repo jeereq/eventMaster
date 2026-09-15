@@ -51,8 +51,9 @@ import {
  Spline, Triangle, Trash, Layout, Palette, Square,
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins,
  Undo2, Redo2, History, Download, Tag, SlidersHorizontal, LayoutTemplate,
- Calendar, MapPin, User, MessageSquare, Layers, Move, Crown, ArrowRight, Check,
+ Calendar, MapPin, User, MessageSquare, Layers, Move, Crown, ArrowRight, Check, Clock,
 } from 'lucide-react';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
 import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems, usePageSize, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -201,6 +202,8 @@ function getElementFieldInfo(el: Record<string, unknown>, index: number): {
 
 export default function TemplatesPage() {
  const { user, planFeatures, planQuota, tenant, access } = useAuth();
+ const { site } = usePlatformSite();
+ const isInviteBlocked = site?.studioVisibility?.invite === false;
  const router = useRouter();
  /** admin = ouvert depuis la console Super Admin (?tab=templates) ; studio = concepteur organisation */
  type StudioOrigin = 'admin' | 'studio';
@@ -1092,6 +1095,10 @@ export default function TemplatesPage() {
     presetPrompt?: string,
     options?: { isAlteration?: boolean },
   ) => {
+    if (isInviteBlocked) {
+      setError("Le studio d'invitations IA est une fonctionnalité à venir et n'est pas disponible actuellement.");
+      return;
+    }
     setError('');
     const isAlteration = Boolean(
       options?.isAlteration ||
@@ -2974,31 +2981,45 @@ export default function TemplatesPage() {
               </div>
             </div>
 
-            <button
-              type="button"
-              disabled={mockupImporting || imageUploading || aiComposeBusy}
-              onClick={() => openAiComposeModal()}
-              className="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs transition shadow-md shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
-            >
-              {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-              {aiComposeBusy ? 'Génération…' : 'Lancer l’assistant IA'}
-            </button>
+            {isInviteBlocked ? (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-center space-y-1">
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300">
+                  <Clock className="w-3.5 h-3.5" />
+                  Fonctionnalité à venir
+                </span>
+                <p className="text-[11px] text-muted leading-tight">
+                  L&apos;assistant IA est temporairement désactivé par l&apos;administration.
+                </p>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  disabled={mockupImporting || imageUploading || aiComposeBusy}
+                  onClick={() => openAiComposeModal()}
+                  className="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs transition shadow-md shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+                >
+                  {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                  {aiComposeBusy ? 'Génération…' : 'Lancer l’assistant IA'}
+                </button>
 
-            {canvasElements.length > 0 && (
-              <button
-                type="button"
-                disabled={aiComposeBusy}
-                onClick={() =>
-                  openAiComposeModal(
-                    'Conserver la base du carton actuel. Retouche demandée : ',
-                    { isAlteration: true },
-                  )
-                }
-                className="w-full flex items-center justify-center gap-1.5 p-2 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs transition cursor-pointer"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                Altérer légèrement avec l’IA ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons)
-              </button>
+                {canvasElements.length > 0 && (
+                  <button
+                    type="button"
+                    disabled={aiComposeBusy}
+                    onClick={() =>
+                      openAiComposeModal(
+                        'Conserver la base du carton actuel. Retouche demandée : ',
+                        { isAlteration: true },
+                      )
+                    }
+                    className="w-full flex items-center justify-center gap-1.5 p-2 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs transition cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Altérer légèrement avec l’IA ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons)
+                  </button>
+                )}
+              </>
             )}
 
             {canvasElements.some((el) => ['text', 'button', 'rsvp-block'].includes(el.type)) && (

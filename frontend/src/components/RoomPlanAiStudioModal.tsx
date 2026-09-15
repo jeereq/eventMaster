@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Loader2, Upload, Wand2, XCircle, Coins, Users } from 'lucide-react';
+import { Loader2, Upload, Wand2, XCircle, Coins, Users, Clock, Sparkles } from 'lucide-react';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   AI_ROOM_PLAN_TOKEN_COST,
   canAffordAiAction,
@@ -73,6 +74,8 @@ export default function RoomPlanAiStudioModal({
     selection: LayoutSelectionItem[];
   }) => void;
 }) {
+  const { site } = usePlatformSite();
+  const isRoomBlocked = site?.studioVisibility?.room === false;
   const fileRef = useRef<HTMLInputElement>(null);
   const [intent, setIntent] = useState<'brief' | 'photo'>('brief');
   const [prompt, setPrompt] = useState('');
@@ -213,6 +216,30 @@ export default function RoomPlanAiStudioModal({
         description="Décrivez la salle ou importez une photo. L’IA pose les éléments sur le plan 2D / 3D."
         size="lg"
       >
+        {isRoomBlocked ? (
+          <div className="rounded-2xl border border-amber-500/30 bg-surface p-6 sm:p-8 space-y-4 text-center">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center border border-amber-500/20">
+              <Clock className="w-6 h-6" />
+            </div>
+            <div className="space-y-1.5 max-w-md mx-auto">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">
+                <Sparkles className="w-3.5 h-3.5" />
+                Fonctionnalité à venir
+              </span>
+              <h3 className="text-base font-bold text-foreground">
+                Studio Plans 2D / 3D par IA
+              </h3>
+              <p className="text-xs text-muted leading-relaxed">
+                Le concepteur automatique de plan par photo ou brief IA est actuellement masqué par l’administration de la plateforme. Vous pouvez continuer d&apos;aménager votre salle manuellement à l&apos;aide des outils de l&apos;éditeur 2D et 3D.
+              </p>
+            </div>
+            <div className="pt-2">
+              <Button variant="secondary" size="sm" onClick={onClose}>
+                Fermer et éditer manuellement
+              </Button>
+            </div>
+          </div>
+        ) : (
         <div className="space-y-4">
           <input
             ref={fileRef}
@@ -450,6 +477,7 @@ export default function RoomPlanAiStudioModal({
             </Button>
           </div>
         </div>
+        )}
       </Modal>
       <AiRoomPlanFullscreenLoader active={busy} hasPhoto={Boolean(file)} />
       <AiTokenPurchaseModal open={tokenModalOpen} onClose={() => setTokenModalOpen(false)} />

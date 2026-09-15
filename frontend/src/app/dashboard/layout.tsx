@@ -34,6 +34,7 @@ import ViewCustomizerDrawer, {
 } from '@/components/ViewCustomizer';
 import { Tooltip } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { LANDING_PLANS } from '@/config/landingPricing';
 import { TourProvider } from '@/context/TourContext';
 import ProductTourOverlay from '@/components/guide/ProductTourOverlay';
@@ -185,8 +186,9 @@ function buildDashboardNav(opts: {
  tenantPlan?: string | null;
  audience?: string | null;
  commercialPermissions?: import('@/context/AuthContext').CommercialGrantedPermissions | null;
+ allStudiosBlocked?: boolean;
 }): NavSection[] {
- const { role, access, workspace, accountKind, isClientAccount, tenantPlan, audience, commercialPermissions } = opts;
+ const { role, access, workspace, accountKind, isClientAccount, tenantPlan, audience, commercialPermissions, allStudiosBlocked } = opts;
  const vendorOnly = accountKind === 'VENDOR';
  const isServiceProvider =
   tenantPlan === 'SERVICE' ||
@@ -336,7 +338,7 @@ function buildDashboardNav(opts: {
    navSection('Mon Espace', [
     { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-client-dashboard', icon: LayoutDashboard, description: 'Définir vos objectifs, recommandations et synthèse de vos activités' },
     { name: 'Marketplace', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, matériel & équipements et fiches publiques' },
-    { name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator', icon: Sparkles, description: 'Simulateur budget IA, assemblage de packs et devis groupés' },
+    ...(!allStudiosBlocked ? [{ name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator', icon: Sparkles, description: 'Simulateur budget IA, assemblage de packs et devis groupés' }] : []),
     { name: 'Événements', href: '/dashboard/catalogue?kind=event', tourId: 'nav-agenda', icon: Calendar, description: 'Événements publics du marketplace — inscriptions et billets' },
    ]),
    navSection('Mes activités', [
@@ -397,13 +399,13 @@ function buildDashboardNav(opts: {
 				icon: Store,
 				description: 'Catalogue partenaires : salles, confrères et équipements',
 			},
-			{
+			...(!allStudiosBlocked ? [{
 				name: 'Simulateur IA',
 				href: '/dashboard/catalogue?tab=plan&planView=ai',
 				tourId: 'nav-simulator-org',
 				icon: Sparkles,
 				description: 'Simulateur budget IA et packs 3 formules',
-			},
+			}] : []),
 		];
 
 		const billingItems: NavItem[] = [
@@ -471,7 +473,7 @@ function buildDashboardNav(opts: {
 		...(workspace.showBrowseCatalogue
 			? [
 					{ name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Catalogue acheteur : salles, prestataires, matériel & équipements (comme le client)' },
-					{ name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator-org', icon: Sparkles, description: 'Simulateur budget IA, 3 formules clés en main et devis' },
+					...(!allStudiosBlocked ? [{ name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator-org', icon: Sparkles, description: 'Simulateur budget IA, 3 formules clés en main et devis' }] : []),
 					{ name: 'Réalisations', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Grille de réalisations et création de posts liés aux salles / prestations' },
 				]
 			: []),
@@ -649,6 +651,9 @@ function DashboardMobileTitle() {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
  const { user, tenant, token, loading, logout, access, planFeatures, planQuota, supportSession } = useAuth();
+ const { site } = usePlatformSite();
+ const visibility = site?.studioVisibility ?? { budget: true, invite: true, room: true };
+ const allStudiosBlocked = !visibility.budget && !visibility.invite && !visibility.room;
  const { theme, toggleTheme } = useTheme();
  const router = useRouter();
  const pathname = usePathname();
@@ -862,6 +867,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   tenantPlan: tenant?.plan,
   audience: planFeatures?.audience,
   commercialPermissions: user?.commercialPermissions,
+  allStudiosBlocked,
  });
 
  const showNotifications = Boolean(user);
