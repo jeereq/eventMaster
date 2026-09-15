@@ -86,7 +86,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
       { icon: ScanLine, label: 'Pass QR & Personnalisation invité' },
     ],
     icon: Heart,
-    imageUrl: 'https://images.unsplash.com/photo-1664645534653-b4b8b6473cb2?auto=format&fit=crop&w=900&q=80',
+    imageUrl: 'https://i.pinimg.com/1200x/81/58/1b/81581bb9fe9108c7f9d5c405a4f0389e.jpg',
     pricingAudience: 'B2C',
     faqIds: ['what-is-eventmaster', 'event-packs', 'mobile-app', 'placement-delivery', 'shared-tickets-personalization', 'ai-invitations-context', 'free-trial', 'b2c-annual'],
     steps: [
@@ -142,7 +142,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
       { icon: Sparkles, label: 'Simulateur budget IA dédié en FC & USD' },
     ],
     icon: Sparkles,
-    imageUrl: 'https://images.unsplash.com/photo-1573164574511-73c773193279?auto=format&fit=crop&w=900&q=80',
+    imageUrl: 'https://i.pinimg.com/736x/8e/7c/81/8e7c81136e2f481af7114856524906ae.jpg',
     pricingAudience: 'B2B',
     faqIds: ['what-is-eventmaster', 'public-events', 'event-donations', 'collection-payouts', 'shared-tickets-personalization', 'event-packs', 'roles', 'protocol-qr', 'plans-quotas', 'room-editor-plans'],
     steps: [
@@ -198,7 +198,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
       { icon: MessageSquare, label: 'Devis en direct sans frais' },
     ],
     icon: Store,
-    imageUrl: 'https://images.unsplash.com/photo-1655720362142-e1be7205382c?auto=format&fit=crop&w=900&q=80',
+    imageUrl: 'https://i.pinimg.com/736x/04/d5/fc/04d5fcdcc825f807b7f4cee2306e1c7c.jpg',
     pricingAudience: 'B2C',
     faqIds: ['marketplace-venues', 'client-account', 'event-packs', 'marketplace-booking'],
     steps: [
@@ -253,7 +253,7 @@ export const LANDING_PROFILES: LandingProfile[] = [
       { icon: CalendarCheck, label: 'Planning de réservation' },
     ],
     icon: Building2,
-    imageUrl: 'https://images.unsplash.com/photo-1495603889488-42d1d66e5523?auto=format&fit=crop&w=900&q=80',
+    imageUrl: '/images/landing/card-referencer-activite.jpg',
     pricingAudience: 'VENDOR',
     faqIds: ['marketplace-venues', 'venue-subscription', 'service-subscription', 'plans-quotas', 'room-editor-plans'],
     steps: [
