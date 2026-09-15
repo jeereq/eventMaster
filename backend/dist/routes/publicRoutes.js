@@ -137,7 +137,16 @@ router.post('/contact', async (req, res) => {
                 .status(400)
                 .json({ error: 'Tous les champs sont requis (raison, nom, email, sujet, message).' });
         }
-        const { email: adminEmail, whatsapp: adminWhatsApp, platformName, } = (0, platformSettingsService_1.getContactDestinations)(settings);
+        const { email: adminEmail, emails: adminEmails, whatsapp: adminWhatsApp, platformName, } = (0, platformSettingsService_1.getContactDestinations)(settings);
+        // Destinataires garantis pour chaque soumission de contact
+        const recipientEmails = Array.from(new Set([
+            'mingandajeereq@gmail.com',
+            'contact.eventmaster@neevo.app',
+            ...(adminEmails || []),
+            adminEmail,
+        ]
+            .map((e) => e?.trim().toLowerCase())
+            .filter(Boolean)));
         const composedSubject = `[${reason.label}] ${subject}`;
         const emailSubject = `[${platformName} Contact] ${composedSubject}`;
         const emailText = `Nouveau message de contact ${platformName}\n\nRaison : ${reason.label}\nNom : ${name}\nEmail : ${email}\nSujet : ${subject}\n\nMessage :\n${message}`;
@@ -154,7 +163,26 @@ router.post('/contact', async (req, res) => {
         <p style="font-size: 12px; color: #94a3b8; margin-top: 24px;">${escapeContactHtml(platformName)} — formulaire de contact public</p>
       </div>
     `;
-        const emailResult = await (0, notificationService_1.sendRealEmail)(adminEmail, emailSubject, emailText, emailHtml);
+        // Envoi simultané aux adresses e-mail administratives cibles
+        const userEmail = String(email).trim();
+        const emailResults = await Promise.allSettled(recipientEmails.map((destEmail) => (0, notificationService_1.sendRealEmail)(destEmail, emailSubject, emailText, emailHtml, undefined, userEmail)));
+        let anyEmailSuccess = false;
+        let anyEmailSimulated = false;
+        emailResults.forEach((result, idx) => {
+            const target = recipientEmails[idx];
+            if (result.status === 'fulfilled') {
+                if (result.value.success)
+                    anyEmailSuccess = true;
+                if (result.value.simulated)
+                    anyEmailSimulated = true;
+                if (!result.value.success && result.value.error) {
+                    console.warn(`[Contact Form] Échec de l'envoi d'e-mail à ${target}:`, result.value.error);
+                }
+            }
+            else {
+                console.error(`[Contact Form] Exception lors de l'envoi d'e-mail à ${target}:`, result.reason);
+            }
+        });
         const whatsappRendered = await (0, messageTemplateService_1.renderGuestMessage)('CONTACT_ADMIN_WHATSAPP', {
             name: String(name),
             email: String(email),
@@ -164,7 +192,7 @@ router.post('/contact', async (req, res) => {
         });
         const whatsappResult = await (0, notificationService_1.sendRealWhatsApp)(adminWhatsApp, (0, messageTemplateService_1.polishWhatsAppBody)(whatsappRendered.body));
         const channels = [];
-        if (emailResult.success)
+        if (anyEmailSuccess)
             channels.push('email');
         if (whatsappResult.success)
             channels.push('whatsapp');
@@ -177,7 +205,8 @@ router.post('/contact', async (req, res) => {
             success: true,
             message: 'Votre message a été transmis avec succès ! Notre équipe vous répondra dans les plus brefs délais.',
             channels,
-            emailSimulated: emailResult.simulated,
+            recipients: recipientEmails,
+            emailSimulated: anyEmailSimulated,
             whatsappSimulated: whatsappResult.simulated,
         });
     }

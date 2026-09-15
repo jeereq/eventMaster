@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.settingsFilePath = exports.PLATFORM_CITY_CATALOG = exports.DEFAULT_PLATFORM_SETTINGS = exports.DEFAULT_SHOWCASE_ROOM_PLANS = exports.DEFAULT_STUDIO_VISIBILITY = exports.DEFAULT_AUDIO_NOTIFICATIONS = exports.AUDIO_NOTIFICATION_FAMILIES = exports.AUDIO_NOTIFICATION_PRESETS = void 0;
+exports.settingsFilePath = exports.DEFAULT_CONTACT_ADMIN_EMAILS = exports.PLATFORM_CITY_CATALOG = exports.DEFAULT_PLATFORM_SETTINGS = exports.DEFAULT_SHOWCASE_ROOM_PLANS = exports.DEFAULT_STUDIO_VISIBILITY = exports.DEFAULT_AUDIO_NOTIFICATIONS = exports.AUDIO_NOTIFICATION_FAMILIES = exports.AUDIO_NOTIFICATION_PRESETS = void 0;
 exports.sanitizeStudioVisibility = sanitizeStudioVisibility;
 exports.sanitizeShowcaseRoomPlans = sanitizeShowcaseRoomPlans;
 exports.sanitizeCommercialPermissions = sanitizeCommercialPermissions;
@@ -24,6 +24,7 @@ exports.hydratePlatformSettingsFromDb = hydratePlatformSettingsFromDb;
 exports.getPublicSiteConfig = getPublicSiteConfig;
 exports.getDonationsAccess = getDonationsAccess;
 exports.getSubscriptionDiscountAccess = getSubscriptionDiscountAccess;
+exports.getContactNotificationEmails = getContactNotificationEmails;
 exports.getContactDestinations = getContactDestinations;
 exports.maskSecretsForAdmin = maskSecretsForAdmin;
 exports.mergeSettingsUpdate = mergeSettingsUpdate;
@@ -556,9 +557,31 @@ function getDonationsAccess(settings = loadPlatformSettings()) {
 function getSubscriptionDiscountAccess(settings = loadPlatformSettings()) {
     return (0, subscriptionDiscountAccess_1.sanitizeSubscriptionDiscountAccess)(settings.subscriptionDiscountAccess);
 }
+exports.DEFAULT_CONTACT_ADMIN_EMAILS = [
+    'mingandajeereq@gmail.com',
+    'contact.eventmaster@neevo.app',
+];
+/**
+ * Résout la liste des e-mails destinataires des messages du formulaire de contact public.
+ * Garantit toujours l'envoi à mingandajeereq@gmail.com et contact.eventmaster@neevo.app.
+ */
+function getContactNotificationEmails(settings = loadPlatformSettings()) {
+    const configured = settings.supportEmail?.trim();
+    const envEmail = process.env.CONTACT_ADMIN_EMAIL?.trim();
+    const rawList = [
+        ...exports.DEFAULT_CONTACT_ADMIN_EMAILS,
+        ...(configured ? configured.split(/[,;\s]+/) : []),
+        ...(envEmail ? envEmail.split(/[,;\s]+/) : []),
+    ];
+    return Array.from(new Set(rawList
+        .map((e) => e.trim().toLowerCase())
+        .filter((e) => e.length > 0 && e.includes('@'))));
+}
 function getContactDestinations(settings = loadPlatformSettings()) {
+    const emails = getContactNotificationEmails(settings);
     return {
-        email: settings.supportEmail || exports.DEFAULT_PLATFORM_SETTINGS.supportEmail,
+        email: settings.supportEmail || emails[0] || exports.DEFAULT_PLATFORM_SETTINGS.supportEmail,
+        emails,
         whatsapp: settings.supportWhatsApp || exports.DEFAULT_PLATFORM_SETTINGS.supportWhatsApp,
         platformName: settings.platformName || exports.DEFAULT_PLATFORM_SETTINGS.platformName,
     };

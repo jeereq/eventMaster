@@ -18,7 +18,7 @@ const notificationDedup_1 = require("./notificationDedup");
 /**
  * Envoie un e-mail via SendGrid uniquement (aucune simulation).
  */
-async function sendRealEmail(to, subject, textBody, htmlBody, attachments) {
+async function sendRealEmail(to, subject, textBody, htmlBody, attachments, replyTo) {
     if (!(0, notificationConfig_1.isSendGridConfigured)()) {
         const errMsg = 'SendGrid non configuré. Définissez sendgridApiKey et sendgridFrom (settings.json ou variables d\'environnement).';
         console.error(`[Notification Service] ${errMsg} Destinataire: ${to}`);
@@ -44,6 +44,7 @@ async function sendRealEmail(to, subject, textBody, htmlBody, attachments) {
             subject,
             text: textBody,
             html: htmlBody || textBody.replace(/\n/g, '<br>'),
+            ...(replyTo ? { replyTo } : {}),
         };
         if (attachments?.length) {
             msg.attachments = attachments.map((a) => ({

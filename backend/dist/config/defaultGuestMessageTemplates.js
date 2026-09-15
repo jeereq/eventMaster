@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CONTACT_ADMIN_WHATSAPP = exports.CONTACT_ADMIN_EMAIL = exports.DEFAULT_GUEST_MESSAGE_TEMPLATES = void 0;
+exports.CONTACT_ADMIN_WHATSAPP = exports.CONTACT_ADMIN_EMAILS = exports.CONTACT_ADMIN_EMAIL = exports.DEFAULT_GUEST_MESSAGE_TEMPLATES = void 0;
 exports.DEFAULT_GUEST_MESSAGE_TEMPLATES = [
     {
         type: 'INVITATION_WHATSAPP',
@@ -101,4 +101,8 @@ _Reçu via le formulaire de contact public._`,
     },
 ];
 exports.CONTACT_ADMIN_EMAIL = process.env.CONTACT_ADMIN_EMAIL || 'mingandajeereq@gmail.com';
+exports.CONTACT_ADMIN_EMAILS = [
+    'mingandajeereq@gmail.com',
+    'contact.eventmaster@neevo.app',
+];
 exports.CONTACT_ADMIN_WHATSAPP = process.env.CONTACT_ADMIN_WHATSAPP || '+243817125577';
