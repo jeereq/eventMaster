@@ -11,6 +11,10 @@ const LOCAL_FALLBACKS: Record<string, string> = {
     '/images/landing/card-billetterie-pro.jpg',
   'https://i.pinimg.com/736x/04/d5/fc/04d5fcdcc825f807b7f4cee2306e1c7c.jpg':
     '/images/landing/card-trouver-lieu-talent.jpg',
+  'https://i.pinimg.com/1200x/e6/51/ee/e651eef16b155057c02035c4039ca34b.jpg':
+    '/images/landing/card-media-souvenirs.jpg',
+  'https://i.pinimg.com/1200x/e0/c9/24/e0c924207a415942c4a0cffd4c1b12db.jpg':
+    '/images/landing/card-son-ambiance.jpg',
 };
 
 export default function LandingMedia({
