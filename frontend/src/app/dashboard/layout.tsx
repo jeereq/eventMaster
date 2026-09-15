@@ -88,6 +88,13 @@ function navItemIsActive(pathname: string, search: string, item: NavItem, curren
    const haveTab = have.get('tab') || 'quotes';
    if (haveTab !== want.get('tab')) return false;
   }
+  // Onglets Catalogue (hub=plan vs tab=plan)
+  if (path === '/dashboard/catalogue' && (want.has('tab') || want.has('hub'))) {
+   const wantTab = want.get('hub') || want.get('tab');
+   const haveTab = have.get('hub') || have.get('tab') || 'explore';
+   if (haveTab !== wantTab) return false;
+   return true;
+  }
   return pathname === path || (path === '/dashboard/events' && eventsPathMatch);
  }
  // « Événements » (sans mode) : pas actif quand on est en desk protocole
@@ -99,7 +106,8 @@ function navItemIsActive(pathname: string, search: string, item: NavItem, curren
  }
  if (path === '/dashboard/catalogue' && pathname === '/dashboard/catalogue') {
   if (have.get('kind') === 'event') return false;
-  if (have.has('tab') && have.get('tab') !== 'explore') return false;
+  const currentTab = have.get('hub') || have.get('tab') || 'explore';
+  if (currentTab !== 'explore') return false;
   return true;
  }
  return true;
@@ -566,6 +574,17 @@ function SidebarNav({
  onClick={() => {
   if (document.body.dataset.emTour === '1') return;
   setMobileMenuOpen(false);
+  if (typeof window !== 'undefined' && pathname === '/dashboard/catalogue') {
+    if (item.href === '/dashboard/catalogue') {
+      window.dispatchEvent(new CustomEvent('em-switch-tab', { detail: 'explore' }));
+    } else if (item.href.includes('tab=plan') || item.href.includes('hub=plan')) {
+      window.dispatchEvent(new CustomEvent('em-switch-tab', { detail: 'plan' }));
+    } else if (item.href.includes('tab=favorites') || item.href.includes('hub=favorites')) {
+      window.dispatchEvent(new CustomEvent('em-switch-tab', { detail: 'favorites' }));
+    } else if (item.href.includes('tab=packs') || item.href.includes('hub=packs')) {
+      window.dispatchEvent(new CustomEvent('em-switch-tab', { detail: 'packs' }));
+    }
+  }
  }}
  aria-current={isActive ? 'page' : undefined}
  aria-label={unreadLabel ? `${item.name}, ${unreadLabel}` : undefined}

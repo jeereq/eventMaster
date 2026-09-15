@@ -170,9 +170,6 @@ function ClientMarketplaceInner() {
   const [tab, setTabState] = useState<HubTab>(urlTab);
   const [planView, setPlanViewState] = useState<PlanPrepView>(urlPlanView);
   const [aiStudio, setAiStudioState] = useState<DashboardAiStudioId>(urlAiStudio);
-  const pendingTab = useRef<HubTab | null>(null);
-  const pendingPlanView = useRef<PlanPrepView | null>(null);
-  const pendingAiStudio = useRef<DashboardAiStudioId | null>(null);
 
   const studioVisibility = site?.studioVisibility;
   useEffect(() => {
@@ -189,39 +186,31 @@ function ClientMarketplaceInner() {
     }
   }, [studioVisibility, aiStudio]);
 
+  // Synchronisation systématique de l'onglet avec l'URL (aucun blocage par ref)
   useEffect(() => {
-    if (pendingTab.current) {
-      if (urlTab === pendingTab.current) pendingTab.current = null;
-      return;
-    }
     setTabState(urlTab);
   }, [urlTab]);
 
   useEffect(() => {
-    if (pendingPlanView.current) {
-      if (urlPlanView === pendingPlanView.current) pendingPlanView.current = null;
-      return;
-    }
     setPlanViewState(urlPlanView);
   }, [urlPlanView]);
 
   useEffect(() => {
-    if (pendingAiStudio.current) {
-      if (urlAiStudio === pendingAiStudio.current) pendingAiStudio.current = null;
-      return;
-    }
     setAiStudioState(urlAiStudio);
   }, [urlAiStudio]);
 
-  const setTab = (next: HubTab) => {
-    pendingTab.current = next;
+  const setTab = useCallback((next: HubTab) => {
     setTabState(next);
-    const params = new URLSearchParams(
-      typeof window !== 'undefined' ? window.location.search : searchParams.toString(),
-    );
+    if (next !== 'plan') {
+      setPlanError('');
+    }
+    const params = new URLSearchParams(searchParams.toString());
     params.delete('tab');
-    if (next === 'explore') params.delete('hub');
-    else params.set('hub', next);
+    if (next === 'explore') {
+      params.delete('hub');
+    } else {
+      params.set('hub', next);
+    }
     if (next !== 'plan') {
       params.delete('planView');
       params.delete('studio');
@@ -229,14 +218,24 @@ function ClientMarketplaceInner() {
     const qs = params.toString();
     const href = qs ? `${pathname}?${qs}` : pathname;
     router.replace(href, { scroll: false });
-  };
+  }, [searchParams, pathname, router]);
 
-  const setPlanView = (next: PlanPrepView) => {
-    pendingPlanView.current = next;
+  // Écoute des demandes globales de changement d'onglet (ex: depuis la sidebar ou le bottom nav mobile)
+  useEffect(() => {
+    const handleSwitch = (e: Event) => {
+      const customEvent = e as CustomEvent<HubTab>;
+      if (customEvent.detail && HUB_TABS.includes(customEvent.detail)) {
+        setTab(customEvent.detail);
+      }
+    };
+    window.addEventListener('em-switch-tab', handleSwitch);
+    return () => window.removeEventListener('em-switch-tab', handleSwitch);
+  }, [setTab]);
+
+  const setPlanView = useCallback((next: PlanPrepView) => {
     setPlanViewState(next);
-    const params = new URLSearchParams(
-      typeof window !== 'undefined' ? window.location.search : searchParams.toString(),
-    );
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('tab');
     params.set('hub', 'plan');
     if (next === 'manual') {
       params.delete('planView');
@@ -248,21 +247,22 @@ function ClientMarketplaceInner() {
     const qs = params.toString();
     const href = qs ? `${pathname}?${qs}` : pathname;
     router.replace(href, { scroll: false });
-  };
+  }, [searchParams, pathname, router]);
 
-  const setAiStudio = (next: DashboardAiStudioId) => {
-    pendingAiStudio.current = next;
+  const setAiStudio = useCallback((next: DashboardAiStudioId) => {
     setAiStudioState(next);
-    const params = new URLSearchParams(
-      typeof window !== 'undefined' ? window.location.search : searchParams.toString(),
-    );
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('tab');
     params.set('hub', 'plan');
-    if (next === 'budget') params.delete('studio');
-    else params.set('studio', next);
+    if (next === 'budget') {
+      params.delete('studio');
+    } else {
+      params.set('studio', next);
+    }
     const qs = params.toString();
     const href = qs ? `${pathname}?${qs}` : pathname;
     router.replace(href, { scroll: false });
-  };
+  }, [searchParams, pathname, router]);
 
   const load = useCallback(async (filters: HubFilters, search: string) => {
     setLoading(true);

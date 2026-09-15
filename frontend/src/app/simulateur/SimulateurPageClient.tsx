@@ -163,14 +163,14 @@ export default function SimulateurPageClient() {
     const params = new URLSearchParams(window.location.search);
     const paramScenario = params.get('scenario');
     if (paramScenario) {
-      const match = visibleScenarios.find((s) => s.id === paramScenario);
+      const match = SCENARIOS.find((s) => s.id === paramScenario);
       if (match) {
         setSelectedScenarioId(match.id);
         setLiveDefaults(scenarioToDefaults(match, exchangeRate));
         setPreferDefaults(true);
       }
     }
-  }, [visibleScenarios, exchangeRate]);
+  }, [exchangeRate]);
 
   const handleSelectScenario = (scenario: ScenarioBrief) => {
     setSelectedScenarioId(scenario.id);

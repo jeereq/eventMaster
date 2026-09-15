@@ -37,10 +37,18 @@ export function enabledPublicCities(site?: { enabledCities?: string[] } | null):
   return sanitizeEnabledCities(site?.enabledCities);
 }
 
+const MARKETPLACE_CITIES_CACHE = new Map<string, RdcCityName[]>();
+
 /** Villes utilisables dans le catalogue et le simulateur (données géo). */
 export function enabledMarketplaceCities(site?: { enabledCities?: string[] } | null): RdcCityName[] {
+  const rawCities = site?.enabledCities;
+  const key = Array.isArray(rawCities) ? rawCities.slice().sort().join('|') : '__default__';
+  const cached = MARKETPLACE_CITIES_CACHE.get(key);
+  if (cached) return cached;
   const enabled = new Set(enabledPublicCities(site));
-  return MARKETPLACE_GPS_CITIES.filter((name) => enabled.has(name));
+  const filtered = Object.freeze(MARKETPLACE_GPS_CITIES.filter((name) => enabled.has(name))) as RdcCityName[];
+  MARKETPLACE_CITIES_CACHE.set(key, filtered);
+  return filtered;
 }
 
 export function formatCityList(cities: string[]): string {

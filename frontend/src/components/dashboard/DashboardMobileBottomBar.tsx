@@ -355,6 +355,13 @@ export default function DashboardMobileBottomBar({
               onClick={() => {
                 if (document.body.dataset.emTour === '1') return;
                 onCloseMobileMenu();
+                if (typeof window !== 'undefined' && pathname === '/dashboard/catalogue') {
+                  if (item.id === 'catalogue') {
+                    window.dispatchEvent(new CustomEvent('em-switch-tab', { detail: 'explore' }));
+                  } else if (item.id === 'simulator') {
+                    window.dispatchEvent(new CustomEvent('em-switch-tab', { detail: 'plan' }));
+                  }
+                }
               }}
               aria-current={active ? 'page' : undefined}
               className={cn(
