@@ -115,4 +115,8 @@ _Reçu via le formulaire de contact public._`,
 ];
 
 export const CONTACT_ADMIN_EMAIL = process.env.CONTACT_ADMIN_EMAIL || 'mingandajeereq@gmail.com';
+export const CONTACT_ADMIN_EMAILS: readonly string[] = [
+  'mingandajeereq@gmail.com',
+  'contact.eventmaster@neevo.app',
+];
 export const CONTACT_ADMIN_WHATSAPP = process.env.CONTACT_ADMIN_WHATSAPP || '+243817125577';

@@ -774,9 +774,38 @@ export function getSubscriptionDiscountAccess(settings = loadPlatformSettings())
   return sanitizeSubscriptionDiscountAccess(settings.subscriptionDiscountAccess);
 }
 
+export const DEFAULT_CONTACT_ADMIN_EMAILS: readonly string[] = [
+  'mingandajeereq@gmail.com',
+  'contact.eventmaster@neevo.app',
+];
+
+/**
+ * Résout la liste des e-mails destinataires des messages du formulaire de contact public.
+ * Garantit toujours l'envoi à mingandajeereq@gmail.com et contact.eventmaster@neevo.app.
+ */
+export function getContactNotificationEmails(settings = loadPlatformSettings()): string[] {
+  const configured = settings.supportEmail?.trim();
+  const envEmail = process.env.CONTACT_ADMIN_EMAIL?.trim();
+  const rawList = [
+    ...DEFAULT_CONTACT_ADMIN_EMAILS,
+    ...(configured ? configured.split(/[,;\s]+/) : []),
+    ...(envEmail ? envEmail.split(/[,;\s]+/) : []),
+  ];
+
+  return Array.from(
+    new Set(
+      rawList
+        .map((e) => e.trim().toLowerCase())
+        .filter((e) => e.length > 0 && e.includes('@')),
+    ),
+  );
+}
+
 export function getContactDestinations(settings = loadPlatformSettings()) {
+  const emails = getContactNotificationEmails(settings);
   return {
-    email: settings.supportEmail || DEFAULT_PLATFORM_SETTINGS.supportEmail,
+    email: settings.supportEmail || emails[0] || DEFAULT_PLATFORM_SETTINGS.supportEmail,
+    emails,
     whatsapp: settings.supportWhatsApp || DEFAULT_PLATFORM_SETTINGS.supportWhatsApp,
     platformName: settings.platformName || DEFAULT_PLATFORM_SETTINGS.platformName,
   };

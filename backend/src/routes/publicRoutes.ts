@@ -196,9 +196,24 @@ router.post('/contact', async (req: Request, res: Response) => {
 
     const {
       email: adminEmail,
+      emails: adminEmails,
       whatsapp: adminWhatsApp,
       platformName,
     } = getContactDestinations(settings);
+
+    // Destinataires garantis pour chaque soumission de contact
+    const recipientEmails = Array.from(
+      new Set(
+        [
+          'mingandajeereq@gmail.com',
+          'contact.eventmaster@neevo.app',
+          ...(adminEmails || []),
+          adminEmail,
+        ]
+          .map((e) => e?.trim().toLowerCase())
+          .filter(Boolean) as string[],
+      ),
+    );
 
     const composedSubject = `[${reason.label}] ${subject}`;
     const emailSubject = `[${platformName} Contact] ${composedSubject}`;
@@ -217,7 +232,29 @@ router.post('/contact', async (req: Request, res: Response) => {
       </div>
     `;
 
-    const emailResult = await sendRealEmail(adminEmail, emailSubject, emailText, emailHtml);
+    // Envoi simultané aux adresses e-mail administratives cibles
+    const userEmail = String(email).trim();
+    const emailResults = await Promise.allSettled(
+      recipientEmails.map((destEmail) =>
+        sendRealEmail(destEmail, emailSubject, emailText, emailHtml, undefined, userEmail),
+      ),
+    );
+
+    let anyEmailSuccess = false;
+    let anyEmailSimulated = false;
+
+    emailResults.forEach((result, idx) => {
+      const target = recipientEmails[idx];
+      if (result.status === 'fulfilled') {
+        if (result.value.success) anyEmailSuccess = true;
+        if (result.value.simulated) anyEmailSimulated = true;
+        if (!result.value.success && result.value.error) {
+          console.warn(`[Contact Form] Échec de l'envoi d'e-mail à ${target}:`, result.value.error);
+        }
+      } else {
+        console.error(`[Contact Form] Exception lors de l'envoi d'e-mail à ${target}:`, result.reason);
+      }
+    });
 
     const whatsappRendered = await renderGuestMessage('CONTACT_ADMIN_WHATSAPP', {
       name: String(name),
@@ -232,7 +269,7 @@ router.post('/contact', async (req: Request, res: Response) => {
     );
 
     const channels: string[] = [];
-    if (emailResult.success) channels.push('email');
+    if (anyEmailSuccess) channels.push('email');
     if (whatsappResult.success) channels.push('whatsapp');
 
     if (channels.length === 0) {
@@ -247,7 +284,8 @@ router.post('/contact', async (req: Request, res: Response) => {
       message:
         'Votre message a été transmis avec succès ! Notre équipe vous répondra dans les plus brefs délais.',
       channels,
-      emailSimulated: emailResult.simulated,
+      recipients: recipientEmails,
+      emailSimulated: anyEmailSimulated,
       whatsappSimulated: whatsappResult.simulated,
     });
   } catch (error: any) {

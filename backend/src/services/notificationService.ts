@@ -25,6 +25,7 @@ export async function sendRealEmail(
   textBody: string,
   htmlBody?: string,
   attachments?: Array<{ filename: string; content: Buffer; type?: string }>,
+  replyTo?: string,
 ): Promise<{ success: boolean; simulated: boolean; messageId?: string; error?: string }> {
   if (!isSendGridConfigured()) {
     const errMsg =
@@ -55,6 +56,7 @@ export async function sendRealEmail(
       subject,
       text: textBody,
       html: htmlBody || textBody.replace(/\n/g, '<br>'),
+      ...(replyTo ? { replyTo } : {}),
     };
 
     if (attachments?.length) {
