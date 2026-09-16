@@ -1,0 +1,8 @@
+.DS_Store
+*.pyc
+__pycache__/
+
+# Studio vidéo : caches Chrome, frames, pistes temporaires
+docs/videos/studio/_work/
+docs/videos/jdfkfd/
+docs/videos/oups1/

@@ -8,7 +8,8 @@ export type InvitationArtStyleId =
   | 'afro-luxe'
   | 'gravure-vintage'
   | 'minimaliste-luxe'
-  | 'cyber-neon';
+  | 'cyber-neon'
+  | 'encre-trait';
 
 export const DEFAULT_INVITATION_ART_STYLE: InvitationArtStyleId = 'realiste';
 
@@ -42,6 +43,10 @@ const ALIASES: Record<string, InvitationArtStyleId> = {
   'cyber-neon': 'cyber-neon',
   cyber: 'cyber-neon',
   neon: 'cyber-neon',
+  'encre-trait': 'encre-trait',
+  encre: 'encre-trait',
+  ink: 'encre-trait',
+  manga: 'encre-trait',
 };
 
 export function parseInvitationArtStyle(raw: unknown): InvitationArtStyleId {
@@ -60,6 +65,7 @@ export function invitationArtStyleLabel(id: InvitationArtStyleId): string {
   if (id === 'gravure-vintage') return 'Letterpress & Gravure';
   if (id === 'minimaliste-luxe') return 'Quiet Luxury';
   if (id === 'cyber-neon') return 'Cyber & Néon';
+  if (id === 'encre-trait') return 'encre & trait';
   return 'réaliste';
 }
 
@@ -93,6 +99,8 @@ export function invitationArtStyleScaffoldLine(id: InvitationArtStyleId): string
       return `2026 quiet luxury editorial print still, ${DEPTH_IMMERSE}, generous intentional whitespace, sculptural blind embossing without ink, micro-shadows on heavyweight textured stock, refined Haute Couture restraint`;
     case 'cyber-neon':
       return `futuristic tech-drop prestige invitation, ${DEPTH_IMMERSE}, dark anodized titanium, frosted glassmorphism layers, subtle electric cyan and violet edge neon glow, clean laser precision, modern luxury keynote aesthetic`;
+    case 'encre-trait':
+      return `museum-grade ink and graphite character poster, ${DEPTH_IMMERSE}, high-contrast hatching, clean contours on white or near-black paper, original likeness only — never a copyrighted franchise character`;
     default:
       return 'ultra-photoreal 35mm / 85mm editorial print: tactile cotton paper grain, real gold-foil specularity, fresh florals with dew and pollen, true melanin, pores and fabric weave, warm volumetric daylight; no CGI, no cartoon, no airbrushed beauty faces';
   }
@@ -164,6 +172,12 @@ export function invitationArtStyleImageDirective(id: InvitationArtStyleId): stri
         'ART STYLE — CYBER & NÉON TECH (MANDATORY): High-end keynote and VIP nightlife aesthetic.',
         `${DEPTH_IMMERSE}. Deep obsidian and brushed dark titanium surfaces, translucent frosted glass cards with luminous refraction, refined laser-sharp edge glow in electric cyan, magenta and gold. No cheap 80s arcade clutter; sleek contemporary product-launch luxury.`,
       ].join(' ');
+    case 'encre-trait':
+      return [
+        'ART STYLE — ENCRE & TRAIT (MANDATORY): Refined graphite and ink-line poster of the real hosts.',
+        `${DEPTH_IMMERSE}. High-contrast hatching, varied line weight, isolated figure on white or charcoal paper, print-ready 9:16.`,
+        'If reference photos exist: draw the same people (identity locked) as original illustration. Forbidden: any copyrighted anime, game or comic character, photoreal pores, cheap clipart.',
+      ].join(' ');
     default:
       return [
         'ART STYLE — RÉALISTE ULTRA (MANDATORY): Authentic 35mm / 85mm editorial photography of a real printed invitation held in space — cotton-paper tooth, deckled edges if fitting, gold foil catching a true specular, wax and satin with weave and drape, fresh florals with pollen and dew.',
@@ -228,6 +242,11 @@ ${depth}
       return `Chosen art style: CYBER & NÉON TECH.
 ${depth}
 - [Style] = dark titanium, frosted glassmorphism layers, refined laser neon edge accents (cyan/violet/gold).`;
+    case 'encre-trait':
+      return `Chosen art style: ENCRE & TRAIT.
+${depth}
+- [Style] = graphite and ink-line poster, hatching, isolated figure, original likeness only.
+- Forbidden: copyrighted franchise characters, photoreal collage.`;
     default:
       return `Chosen art style: RÉALISTE ULTRA (tactile photography).
 - People and décor must read as authentic 35mm photography: visible fine pores, natural melanin undertones, true foil specularity, paper tooth, volumetric shadows, shallow real depth of field.
@@ -267,6 +286,8 @@ export function invitationArtStyleLightNote(id: InvitationArtStyleId): string {
       return 'LIGHT RIG: soft diffused architectural daylight casting delicate tonal shadows on paper debossing.';
     case 'cyber-neon':
       return 'LIGHT RIG: dark obsidian base with dual-tone edge glow (electric cyan & magenta), subtle specular on frosted glass.';
+    case 'encre-trait':
+      return 'LIGHT RIG: implied raking studio light through hatch density — darker masses in shade, paper white as key.';
     default:
       return 'LIGHT RIG: single window or late-afternoon Kinshasa daylight, warm bounce, 85mm shallow focus, true specular on foil.';
   }

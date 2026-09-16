@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { Copy, Sparkles, Check, Heart, Building2, PartyPopper, Info, Languages, Crown } from 'lucide-react';
+import { Copy, Sparkles, Check, Heart, Building2, PartyPopper, Info, Languages, Crown, Image } from 'lucide-react';
 import {
   INVITATION_PROMPT_MODELS,
   PROMPT_CATEGORIES,
@@ -107,6 +107,8 @@ export default function PromptModelSelector({
         return <PartyPopper className="w-3.5 h-3.5" aria-hidden />;
       case 'rdc-langues':
         return <Languages className="w-3.5 h-3.5" aria-hidden />;
+      case 'visuel':
+        return <Image className="w-3.5 h-3.5" aria-hidden />;
       default:
         return <Sparkles className="w-3.5 h-3.5" aria-hidden />;
     }

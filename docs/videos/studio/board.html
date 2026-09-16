@@ -24,6 +24,18 @@
     }
     .shot.top { object-position: center top; }
     .shot.mid { object-position: center 40%; }
+    .tour { position: absolute; inset: 0; }
+    .tour img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: center 52%;
+      transform: scale(1.08);
+      opacity: 0;
+    }
+    .tour img.show { opacity: 1; }
+    .copy .slogan.hide, .copy .aside.hide { display: none; }
+    .copy .slogan.show, .copy .aside.show { display: block; }
     .veil {
       position: absolute; inset: 0;
       background: linear-gradient(180deg, rgba(23,22,20,.18) 0%, rgba(23,22,20,.08) 42%, rgba(23,22,20,.72) 100%);
@@ -88,9 +100,20 @@
     <div class="copy"><p class="slogan fx" style="animation-name:rise">Le vrai plan de table. Table d’honneur, 140 places.</p></div>
   </section>
   <section class="scene" data-v="ensemble" data-s="3">
-    <img class="shot fx" style="animation-name:ken" src="captures/plan3d-scene.png" alt="">
+    <div class="tour" data-frames="6">
+      <img src="captures/tour3d-02.png" alt="">
+      <img src="captures/tour3d-04.png" alt="">
+      <img src="captures/tour3d-06.png" alt="">
+      <img src="captures/plan3d-scene.png" alt="">
+      <img src="captures/tour3d-08.png" alt="">
+      <img src="captures/tour3d-10.png" alt="">
+    </div>
     <div class="veil"></div>
-    <div class="copy"><p class="slogan fx" style="animation-name:rise">La même salle, en 3D, dans le navigateur.</p></div>
+    <div class="copy">
+      <p class="slogan fx show" data-tour-copy data-from="0" data-to="0.34" style="animation-name:rise">On entre dans la salle.</p>
+      <p class="slogan hide" data-tour-copy data-from="0.34" data-to="0.67">Table d’honneur. On tourne autour des tables.</p>
+      <p class="slogan hide" data-tour-copy data-from="0.67" data-to="1.1">Scène, lustres, allées. Dans le navigateur.</p>
+    </div>
   </section>
   <section class="scene" data-v="ensemble" data-s="4">
     <img class="shot top fx" style="animation-name:ken" src="captures/marketplace-16x9.png" alt="">
@@ -124,9 +147,17 @@
     <div class="copy"><p class="slogan fx" style="animation-name:rise">Le plan de table est déjà là.</p></div>
   </section>
   <section class="scene" data-v="reel" data-s="2">
-    <img class="shot fx" style="animation-name:ken" src="captures/plan3d-scene.png" alt="">
+    <div class="tour" data-frames="4">
+      <img src="captures/tour3d-03.png" alt="">
+      <img src="captures/plan3d-scene.png" alt="">
+      <img src="captures/tour3d-07.png" alt="">
+      <img src="captures/tour3d-11.png" alt="">
+    </div>
     <div class="veil"></div>
-    <div class="copy"><p class="slogan fx" style="animation-name:rise">Et en 3D. Sans plugin.</p></div>
+    <div class="copy">
+      <p class="slogan fx show" data-tour-copy data-from="0" data-to="0.5" style="animation-name:rise">On fait le tour. En 3D.</p>
+      <p class="slogan hide" data-tour-copy data-from="0.5" data-to="1.1">Sans plugin. Dans le navigateur.</p>
+    </div>
   </section>
   <section class="scene" data-v="reel" data-s="3">
     <img class="shot fx" style="animation-name:ken" src="captures/plan3d-live.png" alt="">
@@ -150,9 +181,17 @@
     <div class="copy"><p class="slogan fx" style="animation-name:rise">Tu vois qui vient. Et qui s’assoit où.</p></div>
   </section>
   <section class="scene" data-v="familles" data-s="2">
-    <img class="shot fx" style="animation-name:ken" src="captures/plan3d-scene.png" alt="">
+    <div class="tour" data-frames="4">
+      <img src="captures/tour3d-02.png" alt="">
+      <img src="captures/plan3d-scene.png" alt="">
+      <img src="captures/tour3d-06.png" alt="">
+      <img src="captures/tour3d-10.png" alt="">
+    </div>
     <div class="veil"></div>
-    <div class="copy"><p class="slogan fx" style="animation-name:rise">La salle de mariage, déjà dressée.</p></div>
+    <div class="copy">
+      <p class="slogan fx show" data-tour-copy data-from="0" data-to="0.5" style="animation-name:rise">La salle de mariage, déjà dressée.</p>
+      <p class="slogan hide" data-tour-copy data-from="0.5" data-to="1.1">On entre. On tourne. Chaque table est là.</p>
+    </div>
   </section>
   <section class="scene" data-v="familles" data-s="3">
     <img class="shot top fx" style="animation-name:ken" src="captures/landing-live.png" alt="">
@@ -177,14 +216,26 @@
   </section>
 
   <section class="scene" data-v="salles" data-s="0">
-    <img class="shot fx" style="animation-name:ken" src="captures/plan3d-live.png" alt="">
+    <div class="tour" data-frames="4">
+      <img src="captures/tour3d-02.png" alt="">
+      <img src="captures/tour3d-05.png" alt="">
+      <img src="captures/tour3d-08.png" alt="">
+      <img src="captures/plan3d-scene.png" alt="">
+    </div>
     <div class="veil"></div>
-    <div class="copy"><p class="slogan fx" style="animation-name:rise">Montrez votre salle en 3D. Avant le devis.</p></div>
+    <div class="copy">
+      <p class="slogan fx show" data-tour-copy data-from="0" data-to="0.55" style="animation-name:rise">Montrez votre salle en 3D.</p>
+      <p class="slogan hide" data-tour-copy data-from="0.55" data-to="1.1">Avant le devis. Le client fait le tour.</p>
+    </div>
   </section>
   <section class="scene" data-v="salles" data-s="1">
-    <img class="shot fx" style="animation-name:ken" src="captures/plan3d-scene.png" alt="">
+    <div class="tour" data-frames="3">
+      <img src="captures/plan3d-scene.png" alt="">
+      <img src="captures/tour3d-07.png" alt="">
+      <img src="captures/tour3d-11.png" alt="">
+    </div>
     <div class="veil"></div>
-    <div class="copy"><p class="slogan fx" style="animation-name:rise">Le client visite. Vous discutez ensuite.</p></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Il visite. Vous discutez ensuite.</p></div>
   </section>
   <section class="scene" data-v="salles" data-s="2">
     <img class="shot top fx" style="animation-name:ken" src="captures/salles-16x9.png" alt="">
@@ -227,8 +278,31 @@
       document.body.classList.add("scrub");
       document.documentElement.style.setProperty("--t", String(t));
     }
-    window.go = function (v, s, t) { video = v; scene = String(s); show(video, scene, t); };
+    function scrubTour(t) {
+      const progress = Math.min(1, Math.max(0, Number(t) || 0));
+      const sceneNode = document.querySelector(".scene.on");
+      if (!sceneNode) return;
+      const frames = sceneNode.querySelectorAll(".tour img");
+      if (frames.length) {
+        const index = Math.min(frames.length - 1, Math.floor(progress * frames.length));
+        frames.forEach((img, n) => img.classList.toggle("show", n === index));
+      }
+      sceneNode.querySelectorAll("[data-tour-copy]").forEach((el) => {
+        const from = Number(el.getAttribute("data-from") || 0);
+        const to = Number(el.getAttribute("data-to") || 1);
+        const on = progress >= from && progress < to;
+        el.classList.toggle("show", on);
+        el.classList.toggle("hide", !on);
+      });
+    }
+    window.go = function (v, s, t) {
+      video = v;
+      scene = String(s);
+      show(video, scene, t);
+      scrubTour(t);
+    };
     show(video, scene, params.get("t"));
+    scrubTour(params.get("t"));
   </script>
 </body>
 </html>

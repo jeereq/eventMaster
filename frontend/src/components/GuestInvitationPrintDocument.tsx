@@ -23,6 +23,7 @@ import {
   collectInvitationFontFamilies,
   ensureHeadStylesheet,
 } from '@/lib/headStylesheet';
+import { templateImageStyleClass, templateImageStyleExtra } from '@/lib/templateImageStyle';
 
 function buildQrCodeUrl(guestId: string, size = 200): string {
   return getGuestQrImageUrl(guestId, size);
@@ -230,12 +231,13 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
           <img
             src={el.imageUrl}
             alt=""
+            className={templateImageStyleClass(el.imageStyle)}
             style={{
               width: el.imageWidth || '100%',
               height: el.imageHeight || 'auto',
               maxWidth: '100%',
               objectFit: (el.imageObjectFit as React.CSSProperties['objectFit']) || 'cover',
-              borderRadius: el.imageStyle === 'circle' ? '9999px' : '16px',
+              ...templateImageStyleExtra(el.imageStyle),
             }}
           />
         </div>
@@ -391,13 +393,18 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
               <div className="absolute inset-3 border border-amber-500/30 rounded-2xl pointer-events-none" />
             )}
 
-            <div className="p-8 space-y-6 relative z-10 flex-1">
+            <div className={`${global.layoutMode === 'free' ? 'relative z-10 flex-1' : 'p-8 space-y-6 relative z-10 flex-1'}`}>
               {hasTemplate ? (
                 <div
                   className={
                     global.layoutMode === 'free'
-                      ? 'relative min-h-[240px] w-full'
+                      ? 'relative w-full h-full'
                       : 'flex flex-wrap -mx-2'
+                  }
+                  style={
+                    global.layoutMode === 'free'
+                      ? { minHeight: canvasStyle.minHeight }
+                      : undefined
                   }
                 >
                   {elements.map((el, index) => {
