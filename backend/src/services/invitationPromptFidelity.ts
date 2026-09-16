@@ -107,7 +107,18 @@ Rules (non-negotiable):
 9) If no people photos: for wedding/gala/birthday, Black African hosts from Central Africa / RDC when people are implied; never invent a Caucasian stock couple.
 10) Strip any request to beautify, smooth, lighten, airbrush, or swap faces.
 11) Keep englishSceneBrief under 450 words. No markdown.
-12) If the brief is an ALTERATION / REFINEMENT (retouche, réajustement, altération, modification ciblée, conserver le carton existant): set intent="refine". Explicitly instruct to PRESERVE the existing card layout, framing, background composition, color harmony, and character identity, applying ONLY the specific targeted adjustment.`;
+12) If the brief is an ALTERATION / REFINEMENT (retouche, réajustement, altération, modification ciblée, conserver le carton existant): set intent="refine". Explicitly instruct to PRESERVE the existing card layout, framing, background composition, color harmony, and character identity, applying ONLY the specific targeted adjustment.
+13) If context flag coupleFaceSwap=yes: this is an organizer-requested face replacement. Set intent="refine". Image 1 is the incoming card/scene — keep layout, pose, bodies, wardrobe, décor, lighting and typography. Images 2+ are the couple identity. Instruct to replace ONLY the faces on Image 1. Do not strip this swap. Still strip beautify / smooth / lighten.`;
+
+export type InvitationPromptOptions = {
+  referenceCount?: number;
+  embedText?: boolean;
+  artStyleLine?: string;
+  coupleFaceSwap?: boolean;
+};
+
+export const COUPLE_FACE_SWAP_DEFAULT_PROMPT =
+  'Remplace uniquement les visages de cette invitation par les visages du couple. Conserve la pose, les tenues, le décor et la mise en page.';
 
 export type ProcessedInvitationPrompt = {
   originalBrief: string;
@@ -120,6 +131,7 @@ export type ProcessedInvitationPrompt = {
   referenceRoles: string;
   beautifyStripped: boolean;
   explicitAppearanceChange: boolean;
+  coupleFaceSwap?: boolean;
 };
 
 function collapseSpaces(value: string): string {
@@ -141,8 +153,30 @@ export function stripFaceBeautifyLanguage(prompt: string): { text: string; strip
   return { text, stripped };
 }
 
-export function buildReferenceRoles(referenceCount: number): string {
+export function buildReferenceRoles(
+  referenceCount: number,
+  options?: { coupleFaceSwap?: boolean },
+): string {
   if (referenceCount <= 0) return '';
+  if (options?.coupleFaceSwap) {
+    const lines = [
+      'REFERENCE ROLES (couple face replacement — organizer requested):',
+      'Image 1: INCOMING INVITATION / SCENE — object fidelity. Keep composition, pose, bodies, wardrobe, décor, lighting, ornaments and typography. Do NOT keep the original faces that appear on this card.',
+    ];
+    for (let i = 1; i < referenceCount; i += 1) {
+      const n = i + 1;
+      const side = i === 1 ? 'left / primary host' : i === 2 ? 'right / secondary host' : `host ${n - 1}`;
+      lines.push(
+        `Image ${n} (${side}): COUPLE IDENTITY lock. Replace a face on Image 1 with this exact person (or leftmost→rightmost people in that photo). Honest pixels only — no beautify, no lighten, no celebrity lookalike.`,
+      );
+    }
+    if (referenceCount >= 3) {
+      lines.push(
+        'SPATIAL CHARACTER BINDING: Place Image 2’s person on the left/primary and Image 3’s person on the right/secondary. Zero cross-blending of facial anatomy.',
+      );
+    }
+    return lines.join('\n');
+  }
   const lines = [
     'REFERENCE ROLES (Gemini character consistency + object fidelity):',
   ];
@@ -165,8 +199,25 @@ export function buildReferenceRoles(referenceCount: number): string {
  * En-tête d’identité placé EN PREMIER (Gemini : high-fidelity detail preservation).
  * Les pixels des photos = vérité ; le brief ne réécrit pas le visage.
  */
-export function buildHonestFaceIdentityHeader(referenceCount: number): string {
+export function buildHonestFaceIdentityHeader(
+  referenceCount: number,
+  options?: { coupleFaceSwap?: boolean },
+): string {
   if (referenceCount <= 0) return '';
+  if (options?.coupleFaceSwap && referenceCount >= 2) {
+    return [
+      '=== 1. COUPLE FACE REPLACEMENT (organizer requested — FIRST) ===',
+      'Image 1 is the incoming invitation or scene. Keep its layout, pose, bodies, clothes, décor, lighting and lettering.',
+      `Images 2–${referenceCount} are the couple identity photos. Replace ONLY the face(s) on Image 1 with these exact people.`,
+      'Render each replacement face as honestly as photographed: bone structure, eyes, smile, cheek volume, skin tone, pores, moles/scars, age. Do not beautify, symmetrize, slim, lighten or airbrush.',
+      'Do not invent a new couple. Do not keep the original faces from Image 1.',
+      NANO_BANANA_CRITICAL_CONSTRAINT,
+      NANO_BANANA_STYLE_INSTRUCTION,
+      NANO_BANANA_LIGHT_RIG_COHERENCE,
+      NANO_BANANA_OPTICAL_BOKEH,
+      'If any text in the brief conflicts with the couple photos, obey the couple photos for faces and Image 1 for the card.',
+    ].join('\n');
+  }
   const who =
     referenceCount === 1
       ? 'the person in Image 1'
@@ -190,26 +241,32 @@ export function buildHonestFaceIdentityHeader(referenceCount: number): string {
  */
 export function buildEnglishSceneBriefScaffold(
   decorBrief: string,
-  options?: { referenceCount?: number; embedText?: boolean; artStyleLine?: string },
+  options?: InvitationPromptOptions,
 ): string {
   const cleaned = collapseSpaces(decorBrief).slice(0, 900);
   if (!cleaned) return '';
 
   const referenceCount = Math.max(0, Math.min(options?.referenceCount ?? 0, 4));
+  const coupleFaceSwap = Boolean(options?.coupleFaceSwap) && referenceCount >= 2;
   const looksLikeRefine = /retouch|ajust|refin|altér|réajust|modifier/i.test(cleaned);
   const looksLikeClone = !looksLikeRefine && /copi|clon|reprodu|duplicate|faithful|moderni/i.test(cleaned);
-  const verb = looksLikeRefine
+  const verb = coupleFaceSwap
+    ? 'Replace'
+    : looksLikeRefine
     ? 'Refine and alter'
     : looksLikeClone
     ? 'Clone and redesign'
     : 'Compose';
 
-  const subject =
-    referenceCount > 0
+  const subject = coupleFaceSwap
+    ? 'a vertical print-ready luxury invitation card whose incoming layout comes from Image 1 and whose hosts are the exact couple from Images 2+'
+    : referenceCount > 0
       ? 'a vertical print-ready luxury invitation card featuring the exact people from the attached reference photos (faces unchanged)'
       : 'a vertical print-ready luxury invitation card for a real Central African / RDC celebration';
 
-  const action = looksLikeRefine
+  const action = coupleFaceSwap
+    ? 'keeping Image 1’s composition, pose, bodies, wardrobe, décor, lighting and typography while replacing only the faces with the couple identity photos'
+    : looksLikeRefine
     ? 'faithfully preserving the overall visual composition, layout, color palette, ornaments, framing, and existing typography/people of the reference card, applying precisely the requested targeted adjustment'
     : looksLikeClone
     ? 'faithfully echoing the reference card’s layout, ornamental borders, paper texture and visual hierarchy while refreshing the atmosphere to match the brief'
@@ -229,7 +286,9 @@ export function buildEnglishSceneBriefScaffold(
   } else {
     styleParts.push('clean negative space reserved for later typography — no readable names or dates yet');
   }
-  if (referenceCount > 0) {
+  if (coupleFaceSwap) {
+    styleParts.push('card and décor locked to Image 1 — faces locked to the couple photos only');
+  } else if (referenceCount > 0) {
     styleParts.push('décor and card only in this narrative — identity locked to reference pixels');
   }
 
@@ -249,7 +308,7 @@ export function buildEnglishSceneBriefScaffold(
 export function buildBriefReformulationUserText(
   originalBrief: string,
   decorBrief: string,
-  options?: { referenceCount?: number; embedText?: boolean; artStyleLine?: string },
+  options?: InvitationPromptOptions,
 ): string {
   const refs = Math.max(0, Math.min(options?.referenceCount ?? 0, 4));
   return `ORIGINAL USER BRIEF (any language — preserve facts):
@@ -266,6 +325,7 @@ Context flags:
 - referencePhotoCount: ${refs}
 - embedInvitationTypography: ${options?.embedText ? 'yes' : 'no'}
 - artStyle: ${options?.artStyleLine || 'photoreal 35mm editorial print look'}
+- coupleFaceSwap: ${options?.coupleFaceSwap ? 'yes' : 'no'}
 
 The [Style] clause of englishSceneBrief MUST follow artStyle. Do not force photoreal if another style is requested.
 
@@ -290,7 +350,18 @@ export function applyEnglishSceneBrief(
   if (!narrative) return processed;
 
   const hasRefs = Boolean(processed.identityHeader);
-  const imageBrief = hasRefs
+  const coupleFaceSwap = Boolean(processed.coupleFaceSwap);
+  const imageBrief = coupleFaceSwap
+    ? [
+        'USER BRIEF (English scene — replace faces on Image 1 with the couple in Images 2+):',
+        narrative,
+        'Replace ONLY the faces on the incoming card. Keep pose, bodies, wardrobe, décor, lighting and typography.',
+        NANO_BANANA_CRITICAL_CONSTRAINT,
+        NANO_BANANA_STYLE_INSTRUCTION,
+        NANO_BANANA_LIGHT_RIG_COHERENCE,
+        NANO_BANANA_OPTICAL_BOKEH,
+      ].join('\n')
+    : hasRefs
     ? [
         'USER BRIEF (English scene — décor / card / mood only — never rewrite faces):',
         narrative,
@@ -304,7 +375,11 @@ export function applyEnglishSceneBrief(
       ].join('\n')
     : narrative;
 
-  const honestyNote = hasRefs
+  const honestyNote = coupleFaceSwap
+    ? processed.beautifyStripped
+      ? ' (couple face replacement — beautify/smooth/lighten ignored; couple photos remain truth)'
+      : ' (couple face replacement — Image 1 card kept, faces from Images 2+)'
+    : hasRefs
     ? processed.beautifyStripped
       ? ' (face beautify / smooth / lighten requests were ignored — photos remain truth)'
       : ' (faces = reference photo pixels, no idealization)'
@@ -320,10 +395,11 @@ export function applyEnglishSceneBrief(
 
 export function processUserPromptForHonestFaces(
   prompt: string,
-  options?: { referenceCount?: number; embedText?: boolean; artStyleLine?: string },
+  options?: InvitationPromptOptions,
 ): ProcessedInvitationPrompt {
   const originalBrief = collapseSpaces(prompt).slice(0, 1500);
   const referenceCount = Math.max(0, Math.min(options?.referenceCount ?? 0, 4));
+  const coupleFaceSwap = Boolean(options?.coupleFaceSwap) && referenceCount >= 2;
   const { text: cleaned, stripped } = stripFaceBeautifyLanguage(originalBrief);
   const explicitAppearanceChange = EXPLICIT_FACE_CHANGE.test(originalBrief);
   const decorBrief = cleaned || originalBrief;
@@ -331,9 +407,14 @@ export function processUserPromptForHonestFaces(
     referenceCount,
     embedText: options?.embedText,
     artStyleLine: options?.artStyleLine,
+    coupleFaceSwap,
   });
 
-  const honestyNote = referenceCount
+  const honestyNote = coupleFaceSwap
+    ? stripped
+      ? ' (couple face replacement — beautify/smooth/lighten ignored; couple photos remain truth)'
+      : ' (couple face replacement — Image 1 card kept, faces from Images 2+)'
+    : referenceCount
     ? stripped
       ? ' (face beautify / smooth / lighten requests were ignored — photos remain truth)'
       : ' (faces = reference photo pixels, no idealization)'
@@ -341,7 +422,17 @@ export function processUserPromptForHonestFaces(
 
   const visionBrief = collapseSpaces(`${englishSceneBrief}${honestyNote}`);
 
-  const imageBrief = referenceCount
+  const imageBrief = coupleFaceSwap
+    ? [
+        'USER BRIEF (English scene — replace faces on Image 1 with the couple in Images 2+):',
+        englishSceneBrief,
+        'Replace ONLY the faces on the incoming card. Keep pose, bodies, wardrobe, décor, lighting and typography.',
+        NANO_BANANA_CRITICAL_CONSTRAINT,
+        NANO_BANANA_STYLE_INSTRUCTION,
+        NANO_BANANA_LIGHT_RIG_COHERENCE,
+        NANO_BANANA_OPTICAL_BOKEH,
+      ].join('\n')
+    : referenceCount
     ? [
         'USER BRIEF (English scene — décor / card / mood only — never rewrite faces):',
         englishSceneBrief,
@@ -361,18 +452,23 @@ export function processUserPromptForHonestFaces(
     englishSceneBrief,
     visionBrief,
     imageBrief,
-    identityHeader: buildHonestFaceIdentityHeader(referenceCount),
-    referenceRoles: buildReferenceRoles(referenceCount),
+    identityHeader: buildHonestFaceIdentityHeader(referenceCount, { coupleFaceSwap }),
+    referenceRoles: buildReferenceRoles(referenceCount, { coupleFaceSwap }),
     beautifyStripped: stripped,
     explicitAppearanceChange,
+    coupleFaceSwap,
   };
 }
 
-export function buildGeminiSceneSteps(embedText: boolean): string {
+export function buildGeminiSceneSteps(embedText: boolean, options?: { coupleFaceSwap?: boolean }): string {
   return [
     '=== SCENE STEPS (Gemini step-by-step) ===',
-    'First, lock every face from the character-consistency references — honest pixels, no idealization.',
-    'Then, compose one vertical 9:16 print-ready invitation (paper, florals, frame, lighting) from the English scene brief and organizer context.',
+    options?.coupleFaceSwap
+      ? 'First, keep Image 1’s card, pose, bodies and décor. Then lock replacement faces from Images 2+ — honest pixels, no idealization.'
+      : 'First, lock every face from the character-consistency references — honest pixels, no idealization.',
+    options?.coupleFaceSwap
+      ? 'Then, compose one vertical 9:16 print-ready invitation that is the incoming card with only the couple faces replaced.'
+      : 'Then, compose one vertical 9:16 print-ready invitation (paper, florals, frame, lighting) from the English scene brief and organizer context.',
     embedText
       ? 'Finally, embed sharp invitation lettering (names, date, venue from the brief) in the lower third or a cartouche that does not cover eyes, smile or cheeks.'
       : 'Finally, leave clean negative space for later typography — no readable names, dates, logos or watermarks.',

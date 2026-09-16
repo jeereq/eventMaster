@@ -25,6 +25,7 @@ import {
   optimizeReferenceImageUrl,
   parseEnglishSceneBriefFromJson,
   processUserPromptForHonestFaces,
+  COUPLE_FACE_SWAP_DEFAULT_PROMPT,
   type ProcessedInvitationPrompt,
 } from './invitationPromptFidelity.ts';
 import {
@@ -347,6 +348,9 @@ const FACE_POLICY_NO_PEOPLE =
 const FACE_POLICY_KEEP_PEOPLE =
   'IDENTITY LOCK — PIXELS WIN: The attached photo(s) are the only identity source. Keep EACH person as the SAME individual (not a sibling, celebrity, or beautified lookalike). Unchanged: bone structure, eyes and gaze, exact smile, cheek volume, skin tone (never lighten), age, hair, clothing, moles/scars. Forbidden: face swap, slim/contour, symmetry, doll eyes, invented grin, airbrush, CGI. If any text description conflicts with the photo, obey the photo.';
 
+const FACE_POLICY_COUPLE_SWAP =
+  'COUPLE FACE REPLACEMENT — ORGANIZER REQUESTED: Image 1 is the incoming invitation/scene. Keep composition, pose, bodies, wardrobe, décor, lighting, ornaments and typography. Images 2+ are the couple. Replace ONLY the face(s) on Image 1 with these exact people. Honest pixels: bone structure, eyes, smile, skin tone, moles. Forbidden: beautify, skin lightening, celebrity lookalike, inventing a new couple, keeping the original Image 1 faces.';
+
 function buildImagePrompt(
   userPrompt: string,
   backgroundPrompt: string,
@@ -358,15 +362,17 @@ function buildImagePrompt(
     artStyle?: InvitationArtStyleId;
     isAlteration?: boolean;
     isPublic?: boolean;
+    coupleFaceSwap?: boolean;
   },
 ): string {
   const processed = options?.processed;
+  const coupleFaceSwap = Boolean(options?.coupleFaceSwap || processed?.coupleFaceSwap);
   const brief = (
     processed?.imageBrief ||
     processed?.englishSceneBrief ||
     userPrompt
   ).trim().slice(0, 1200);
-  const hasPeople = Boolean(analysis?.hasPeople);
+  const hasPeople = coupleFaceSwap || Boolean(analysis?.hasPeople);
   const isClone = Boolean(
     analysis?.isInvitationClone ||
     /copi|clon|reprodu/i.test(brief)
@@ -395,7 +401,14 @@ function buildImagePrompt(
     parts.push(invitationArtStyleFaceLockNote(artStyle));
   }
 
-  if (isAlteration) {
+  if (coupleFaceSwap) {
+    parts.push(
+      '=== COUPLE FACE REPLACEMENT MANDATE ===',
+      'Image 1 is the incoming invitation or scene to keep. Images 2+ are the couple identity photos.',
+      'CRITICAL CONTEXT PRESERVATION: Keep Image 1’s composition, pose, bodies, wardrobe, décor, lighting, ornaments and typography.',
+      'Replace ONLY the face(s) on Image 1 with the exact people from Images 2+. Do not keep the original Image 1 faces.',
+    );
+  } else if (isAlteration) {
     parts.push(
       '=== TARGETED ALTERATION & REFINEMENT MANDATE ===',
       'The reference image shows the EXISTING INVITATION CARD to be adjusted.',
@@ -413,8 +426,10 @@ function buildImagePrompt(
 
   if (hasPeople) {
     parts.push(
-      FACE_POLICY_KEEP_PEOPLE,
-      `People count (must match refs): ${analysis?.peopleCount ?? 1}. Same people, same relative placement.`,
+      coupleFaceSwap ? FACE_POLICY_COUPLE_SWAP : FACE_POLICY_KEEP_PEOPLE,
+      coupleFaceSwap
+        ? 'People count: match the couple photos (Images 2+). Place them on the bodies already posed in Image 1.'
+        : `People count (must match refs): ${analysis?.peopleCount ?? 1}. Same people, same relative placement.`,
     );
     if (analysis) {
       if (analysis.peopleFaces && analysis.peopleFaces !== 'none') {
@@ -433,7 +448,13 @@ function buildImagePrompt(
         parts.push(`Clothes: ${analysis.clothingStyles}`);
       }
     }
-    parts.push(brief.startsWith('USER BRIEF') ? brief : `USER BRIEF (décor / card only — never rewrite faces):\n${brief}`);
+    parts.push(
+      brief.startsWith('USER BRIEF')
+        ? brief
+        : coupleFaceSwap
+          ? `USER BRIEF (replace faces on Image 1 with the couple):\n${brief}`
+          : `USER BRIEF (décor / card only — never rewrite faces):\n${brief}`,
+    );
   } else {
     parts.push(
       'FIDELITY RULE: No reference faces. If the brief implies hosts, a couple or guests, depict Black African men and/or women only.',
@@ -471,10 +492,12 @@ function buildImagePrompt(
   }
 
   parts.push(
-    'Conflict rule: faces/skin/hair/clothing from references ALWAYS win over décor; brief only wins for background, florals, paper, lighting mood.',
+    coupleFaceSwap
+      ? 'Conflict rule: faces from Images 2+ ALWAYS win; Image 1 ALWAYS wins for card, pose, bodies, clothes and décor.'
+      : 'Conflict rule: faces/skin/hair/clothing from references ALWAYS win over décor; brief only wins for background, florals, paper, lighting mood.',
   );
   if (hasPeople) {
-    parts.push(buildGeminiSceneSteps(Boolean(options?.embedText)));
+    parts.push(buildGeminiSceneSteps(Boolean(options?.embedText), { coupleFaceSwap }));
   }
   if (options?.embedText && !options?.isPublic) {
     parts.push(
@@ -547,10 +570,12 @@ function visionUserText(
     processed?: ProcessedInvitationPrompt;
     isAlteration?: boolean;
     existingElements?: Record<string, unknown>[];
+    coupleFaceSwap?: boolean;
   },
 ): string {
   const original = options?.processed?.originalBrief || prompt;
   const englishScene = options?.processed?.englishSceneBrief || options?.processed?.decorBrief || prompt;
+  const coupleFaceSwap = Boolean(options?.coupleFaceSwap || options?.processed?.coupleFaceSwap);
   const isAlteration = Boolean(
     options?.isAlteration ||
     /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt),
@@ -569,7 +594,13 @@ ${existingTexts ? `EXISTING TEXTS & DETAILS TO PRESERVE: ${existingTexts}` : ''}
 PRESERVATION RULE: Do NOT invent new replacement couple names, dates, or venues. Keep the established event hierarchy and names intact unless explicitly instructed to change them.\n`
     : '';
 
-  const honesty = hasRefs
+  const honesty = coupleFaceSwap
+    ? `REFERENCE PHOTOS ATTACHED: Image 1 = incoming card (keep décor/pose, discard original faces). Images 2+ = couple identity. Replace faces only. ${
+        options?.processed?.beautifyStripped
+          ? 'The brief asked to beautify / smooth / lighten faces — IGNORE those requests.'
+          : 'Do not idealize or beautify the couple photos.'
+      }`
+    : hasRefs
     ? `REFERENCE PHOTOS ATTACHED: faces = pixel truth (Gemini high-fidelity). ${
         options?.processed?.beautifyStripped
           ? 'The brief asked to beautify / smooth / lighten faces — IGNORE those requests.'
@@ -597,17 +628,21 @@ ${alterationBlock}
 ${honesty}
 
 Tasks (strict fidelity — faces first):
-1) If people are present: OBSERVED face inventory (peopleFaces + faceLandmarks) — one card per person, left→right. Eyes, exact smile, cheeks, skin, hair, clothes. Do not infer the invisible. Do not prettify. Gemini: face and features remain completely unchanged.
+1) ${coupleFaceSwap
+    ? 'Image 1 people are the OLD faces to replace. Inventory NEW identity from Images 2+ (peopleFaces + faceLandmarks). Keep Image 1 pose, bodies, clothes and décor. Do not prettify the couple.'
+    : 'If people are present: OBSERVED face inventory (peopleFaces + faceLandmarks) — one card per person, left→right. Eyes, exact smile, cheeks, skin, hair, clothes. Do not infer the invisible. Do not prettify. Gemini: face and features remain completely unchanged.'}
 2) briefNeeds = EXPLICITLY written needs; briefMustKeep / briefMustChange (décor vs people). Ignore beautify / smooth / lighten.
 3) Fill hasPeople, peopleCount, peopleFaces, faceLandmarks, skinTones, hairStyles, clothingStyles.
 4) Produce the JSON (editor structure + backgroundPrompt).
-5) backgroundPrompt: with people → DÉCOR ONLY ("USER BRIEF (décor):"). Do NOT rewrite facial identity there. Without people → "USER BRIEF:" then décor. Complete names/date/venue from connected context only if the brief is incomplete.
+5) backgroundPrompt: ${coupleFaceSwap
+    ? 'keep Image 1 card; replace faces with Images 2+ only.'
+    : 'with people → DÉCOR ONLY ("USER BRIEF (décor):"). Do NOT rewrite facial identity there. Without people → "USER BRIEF:" then décor. Complete names/date/venue from connected context only if the brief is incomplete.'}
 ${options?.embedText ? '6) Embed brief text (names, date, venue) in backgroundPrompt as invitation typography.' : ''}`;
 }
 
 async function reformulateUserBriefToEnglish(
   processed: ProcessedInvitationPrompt,
-  options?: { referenceCount?: number; embedText?: boolean; artStyle?: InvitationArtStyleId },
+  options?: { referenceCount?: number; embedText?: boolean; artStyle?: InvitationArtStyleId; coupleFaceSwap?: boolean },
 ): Promise<ProcessedInvitationPrompt> {
   if (!getGeminiApiKey()) return processed;
   try {
@@ -620,6 +655,7 @@ async function reformulateUserBriefToEnglish(
           referenceCount: options?.referenceCount,
           embedText: options?.embedText,
           artStyleLine: invitationArtStyleScaffoldLine(parseInvitationArtStyle(options?.artStyle)),
+          coupleFaceSwap: options?.coupleFaceSwap,
         },
       ),
       temperature: 0.25,
@@ -642,16 +678,24 @@ function visionResultFromParsed(
   parsed: Record<string, unknown>,
   prompt: string,
   hasRefs: boolean,
-  options?: { embedText?: boolean },
+  options?: { embedText?: boolean; coupleFaceSwap?: boolean },
 ): VisionResult {
   const visualAnalysis = parseVisualAnalysis(parsed.visualAnalysis);
-  const faceClause = visualAnalysis?.hasPeople
-    ? FACE_POLICY_KEEP_PEOPLE
-    : FACE_POLICY_NO_PEOPLE;
+  const coupleFaceSwap = Boolean(options?.coupleFaceSwap);
+  const faceClause = coupleFaceSwap
+    ? FACE_POLICY_COUPLE_SWAP
+    : visualAnalysis?.hasPeople
+      ? FACE_POLICY_KEEP_PEOPLE
+      : FACE_POLICY_NO_PEOPLE;
+  const identityPrefix = coupleFaceSwap
+    ? 'COUPLE FACE REPLACEMENT: Keep Image 1 card; replace faces with Images 2+. '
+    : hasRefs
+      ? 'IDENTITY LOCK: Match people in the references exactly (faces, skin, hair, clothing, eyes, smile, cheeks). '
+      : '';
   const backgroundPrompt =
     typeof parsed.backgroundPrompt === 'string' && parsed.backgroundPrompt.trim()
       ? parsed.backgroundPrompt.trim().slice(0, 1800)
-      : `${hasRefs ? 'IDENTITY LOCK: Match people in the references exactly (faces, skin, hair, clothing, eyes, smile, cheeks). ' : ''}USER BRIEF: ${prompt.slice(0, 350)}. ${faceClause} Soft print look, ${options?.embedText ? 'embed invitation typography from the brief.' : 'no readable text.'}`;
+      : `${identityPrefix}USER BRIEF: ${prompt.slice(0, 350)}. ${faceClause} Soft print look, ${options?.embedText ? 'embed invitation typography from the brief.' : 'no readable text.'}`;
   return {
     global: parsed.global,
     elements: parsed.elements,
@@ -672,6 +716,7 @@ async function visionStructure(
     isAlteration?: boolean;
     existingElements?: Record<string, unknown>[];
     isPublic?: boolean;
+    coupleFaceSwap?: boolean;
   },
 ): Promise<VisionResult> {
   const hasRefs = imageUrls.length > 0;
@@ -1819,9 +1864,16 @@ export async function composeInvitationTemplateAi(input: {
   variantsCount?: number;
   speedMode?: string | null;
   preferredModel?: string | null;
+  coupleFaceSwap?: boolean;
 }): Promise<InvitationAiComposeResult> {
   rateLimit(input.userId);
-  const prompt = String(input.prompt || '').trim();
+  const coupleFaceSwap = Boolean(input.coupleFaceSwap);
+  const promptRaw = String(input.prompt || '').trim();
+  const prompt = promptRaw.length >= 8
+    ? promptRaw
+    : coupleFaceSwap
+      ? COUPLE_FACE_SWAP_DEFAULT_PROMPT
+      : '';
   if (prompt.length < 8) {
     fail(400, 'Décrivez le style d’invitation souhaité (au moins quelques mots).');
   }
@@ -1831,7 +1883,9 @@ export async function composeInvitationTemplateAi(input: {
   const artStyle = parseInvitationArtStyle(input.artStyle);
   const artStyleLine = invitationArtStyleScaffoldLine(artStyle);
   const isAlteration =
-    Boolean(input.isAlteration) || /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
+    coupleFaceSwap ||
+    Boolean(input.isAlteration) ||
+    /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
 
   const rawImageUrls = (input.imageUrls || [])
     .filter((u): u is string => typeof u === 'string' && /^https?:\/\//i.test(u.trim()))
@@ -1840,6 +1894,9 @@ export async function composeInvitationTemplateAi(input: {
     rawImageUrls.unshift(input.baseImageUrl.trim());
   }
   const imageUrls = rawImageUrls.slice(0, 4);
+  if (coupleFaceSwap && imageUrls.length < 2) {
+    fail(400, 'Ajoutez l’image à modifier et au moins une photo du couple.');
+  }
 
   const existingElements = Array.isArray(input.existingElements) ? input.existingElements : [];
   const existingTextSummaries = existingElements
@@ -1854,11 +1911,13 @@ export async function composeInvitationTemplateAi(input: {
     referenceCount: imageUrls.length,
     embedText,
     artStyleLine,
+    coupleFaceSwap,
   });
   const processed = await reformulateUserBriefToEnglish(processedBase, {
     referenceCount: imageUrls.length,
     embedText,
     artStyle,
+    coupleFaceSwap,
   });
   const contextSource = parseInvitationContextSource(input.contextSource);
   const composeContext = await loadInvitationComposeContext({
@@ -1879,6 +1938,7 @@ export async function composeInvitationTemplateAi(input: {
     isAlteration,
     existingElements,
     isPublic,
+    coupleFaceSwap,
   });
   if (!imageUrls.length && structured.visualAnalysis) {
     structured.visualAnalysis.hasPeople = false;
@@ -1895,6 +1955,7 @@ export async function composeInvitationTemplateAi(input: {
       artStyle,
       isAlteration,
       isPublic,
+      coupleFaceSwap,
     },
   );
 

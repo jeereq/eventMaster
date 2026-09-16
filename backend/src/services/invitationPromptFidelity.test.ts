@@ -247,6 +247,27 @@ describe('buildHonestFaceIdentityHeader', () => {
     assert.match(header, /CRITICAL CONSTRAINT: Do NOT apply any beauty filters/);
     assert.match(header, /do NOT smooth skin, do NOT create perfect symmetry, do NOT use airbrushing/);
   });
+
+  it('sépare carton entrant et visages du couple', () => {
+    const roles = buildReferenceRoles(3, { coupleFaceSwap: true });
+    assert.match(roles, /Image 1: INCOMING INVITATION/);
+    assert.match(roles, /Image 2 \(left \/ primary host\)/);
+    assert.match(roles, /Image 3 \(right \/ secondary host\)/);
+    assert.doesNotMatch(roles, /do not invent a face from it/);
+
+    const header = buildHonestFaceIdentityHeader(3, { coupleFaceSwap: true });
+    assert.match(header, /COUPLE FACE REPLACEMENT/);
+    assert.match(header, /Do not keep the original faces from Image 1/);
+
+    const processed = processUserPromptForHonestFaces(
+      'Change les visages de cette carte par ceux du couple, sans lisser la peau',
+      { referenceCount: 3, coupleFaceSwap: true },
+    );
+    assert.equal(processed.coupleFaceSwap, true);
+    assert.match(processed.englishSceneBrief, /Replace/);
+    assert.match(processed.imageBrief, /replace faces on Image 1/i);
+    assert.doesNotMatch(processed.identityHeader, /Forbidden: face swap|IDENTITY ANCHOR/);
+  });
 });
 
 describe('optimizeReferenceImageUrl', () => {

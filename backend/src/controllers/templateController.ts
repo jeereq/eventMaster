@@ -483,8 +483,11 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
       typeof body.baseImageUrl === 'string' && /^https?:\/\//i.test(body.baseImageUrl.trim())
         ? body.baseImageUrl.trim()
         : null;
+    const coupleFaceSwap = body.coupleFaceSwap === true;
     const isAlteration =
-      body.isAlteration === true || /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
+      coupleFaceSwap ||
+      body.isAlteration === true ||
+      /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
     const existingElements = Array.isArray(body.existingElements)
       ? (body.existingElements as Record<string, unknown>[])
       : undefined;
@@ -517,6 +520,7 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
       variantsCount,
       speedMode,
       preferredModel: settings.aiStudioModels?.invitationModel,
+      coupleFaceSwap,
     });
     const historyId = await persistTemplateCompose({
       userId: req.user.id,
@@ -582,8 +586,11 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
       typeof body.baseImageUrl === 'string' && /^https?:\/\//i.test(body.baseImageUrl.trim())
         ? body.baseImageUrl.trim()
         : null;
+    const coupleFaceSwap = body.coupleFaceSwap === true;
     const isAlteration =
-      body.isAlteration === true || /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
+      coupleFaceSwap ||
+      body.isAlteration === true ||
+      /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
     const existingElements = Array.isArray(body.existingElements)
       ? (body.existingElements as Record<string, unknown>[])
       : undefined;
@@ -619,6 +626,7 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
       variantsCount,
       speedMode,
       preferredModel: settings.aiStudioModels?.invitationModel,
+      coupleFaceSwap,
     });
     const historyId = await persistTemplateCompose({
       userId: user?.id || null,
