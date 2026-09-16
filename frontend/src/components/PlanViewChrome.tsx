@@ -1,8 +1,26 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Box, BrickWall, Home, LayoutGrid, Maximize2, Minimize2, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import { cn } from '@/lib/cn';
+
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'textarea:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
+function focusableIn(panel: HTMLElement): HTMLElement[] {
+  return Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((el) => {
+    if (el.getAttribute('aria-hidden') === 'true') return false;
+    const style = window.getComputedStyle(el);
+    if (style.visibility === 'hidden' || style.display === 'none') return false;
+    return el.getClientRects().length > 0;
+  });
+}
 
 export type PlanViewMode = '2d' | '3d';
 
@@ -94,18 +112,58 @@ export function PlanZoomControls({
 
 export function usePlanFullscreen() {
   const [expanded, setExpanded] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!expanded) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    const inertRoots = [
+      document.getElementById('main-content'),
+      document.querySelector('header'),
+      document.querySelector('.em-site-bottom-nav'),
+    ].filter((el): el is HTMLElement => el instanceof HTMLElement);
+    inertRoots.forEach((el) => el.setAttribute('inert', ''));
+
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setExpanded(false);
+      if (event.key === 'Escape') {
+        setExpanded(false);
+        return;
+      }
+      if (event.key !== 'Tab' || !panelRef.current) return;
+      const nodes = focusableIn(panelRef.current);
+      if (nodes.length === 0) {
+        event.preventDefault();
+        panelRef.current.focus();
+        return;
+      }
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      const active = document.activeElement;
+      const inside = panelRef.current.contains(active);
+      if (event.shiftKey && (!inside || active === first)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (!inside || active === last)) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener('keydown', onKeyDown);
+    const focusTimer = window.setTimeout(() => {
+      const preferred = panelRef.current?.querySelector<HTMLElement>('[data-plan-fullscreen-close]');
+      (preferred || panelRef.current)?.focus();
+    }, 0);
+
     return () => {
       document.body.style.overflow = previousOverflow;
+      inertRoots.forEach((el) => el.removeAttribute('inert'));
       window.removeEventListener('keydown', onKeyDown);
+      window.clearTimeout(focusTimer);
+      previousFocusRef.current?.focus?.();
     };
   }, [expanded]);
 
@@ -113,6 +171,7 @@ export function usePlanFullscreen() {
     expanded,
     setExpanded,
     toggleExpanded: () => setExpanded((current) => !current),
+    panelRef,
   };
 }
 
@@ -184,6 +243,7 @@ export function PlanSceneControls({
           onClick={onToggleFullscreen}
           className={btn}
           title={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}
+          data-plan-fullscreen-close={isFullscreen ? '' : undefined}
         >
           {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" aria-hidden /> : <Maximize2 className="w-3.5 h-3.5" aria-hidden />}
           <span>{isFullscreen ? 'Réduire' : 'Plein écran'}</span>

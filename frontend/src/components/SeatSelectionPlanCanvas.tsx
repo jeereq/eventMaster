@@ -120,7 +120,7 @@ export default function SeatSelectionPlanCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   const [showWalls, setShowWalls] = useState(true);
-  const { expanded, setExpanded } = usePlanFullscreen();
+  const { expanded, setExpanded, panelRef } = usePlanFullscreen();
 
   const theme = getRoomTheme(roomThemeId);
   const effectiveFloorType = (floorType as FloorType | undefined) ?? theme.defaultFloorType;
@@ -442,7 +442,14 @@ export default function SeatSelectionPlanCanvas({
 
   if (expanded && typeof document !== 'undefined') {
     return createPortal(
-      <div className="fixed inset-0 z-[250] flex flex-col bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Plan de salle en plein écran"
+        className="fixed inset-0 z-[250] flex flex-col bg-background pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] outline-none"
+      >
         {viewer}
       </div>,
       document.body,

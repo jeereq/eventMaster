@@ -569,7 +569,7 @@ export default function RoomLayoutPreview({
   const showHeader = showMeta ?? quality !== 'thumb';
   const blueprint = rawBlueprint ? ensureBlueprintDefaults(rawBlueprint) : null;
   const [mounted, setMounted] = useState(false);
-  const { expanded, setExpanded } = usePlanFullscreen();
+  const { expanded, setExpanded, panelRef } = usePlanFullscreen();
   const [localForce2d, setLocalForce2d] = useState(false);
   const [showWalls, setShowWalls] = useState(true);
   const [showRoof, setShowRoof] = useState(false);
@@ -641,8 +641,10 @@ export default function RoomLayoutPreview({
       {quality === 'thumb' ? (
         <ThumbPreview blueprint={blueprint} className={className} />
       ) : (
-        <div className={cn('relative overflow-hidden rounded-2xl border border-border/60 bg-foreground', canvasClass, className)}>
-          {useWebGL ? (
+        <div className={cn('relative overflow-hidden rounded-2xl border border-border/60 bg-stage', canvasClass, className)}>
+          {expanded ? (
+            <div className="absolute inset-0 bg-stage" aria-hidden />
+          ) : useWebGL ? (
             <Room3DErrorBoundary
               className="absolute inset-0 h-full w-full"
               onFallbackTo2D={() => setLocalForce2d(true)}
@@ -700,15 +702,17 @@ export default function RoomLayoutPreview({
 
       {expanded && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-[250] flex flex-col bg-foreground"
+          ref={panelRef}
+          tabIndex={-1}
+          className="fixed inset-0 z-[250] flex flex-col bg-stage text-stage-foreground outline-none"
           role="dialog"
           aria-modal="true"
-          aria-label="Vue du plan en plein écran"
+          aria-labelledby="plan-fullscreen-title"
         >
-          <div className="flex flex-col gap-2 px-3 py-2 border-b border-background/15 pt-[max(0.5rem,env(safe-area-inset-top))] sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 px-3 py-2 border-b border-stage-foreground/15 pt-[max(0.5rem,env(safe-area-inset-top))] sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <p className="text-xs font-bold text-background truncate">{roomTypeLabels[blueprint.roomType]} · {theme.name}</p>
-              <p className="text-xs text-background/60 tabular-nums">
+              <p id="plan-fullscreen-title" className="text-xs font-bold text-stage-foreground truncate">{roomTypeLabels[blueprint.roomType]} · {theme.name}</p>
+              <p className="text-xs text-stage-foreground/80 tabular-nums">
                 {blueprint.metadata.totalSeats} places · {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m
               </p>
             </div>
@@ -736,10 +740,7 @@ export default function RoomLayoutPreview({
             {useWebGL ? (
               <Room3DErrorBoundary
                 className="absolute inset-0 h-full w-full"
-                onFallbackTo2D={() => {
-                  setLocalForce2d(true);
-                  setExpanded(false);
-                }}
+                onFallbackTo2D={() => setLocalForce2d(true)}
               >
                 <WebGLPreviewCanvas
                   webglBlueprint={webglBlueprint}
@@ -762,7 +763,7 @@ export default function RoomLayoutPreview({
               />
             )}
           </div>
-          <p className="text-xs text-background/55 text-center px-4 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <p className="text-xs text-stage-foreground/80 text-center px-4 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {useWebGL
               ? 'Glissez pour orbiter · pincez pour zoomer · masquez toit et murs pour mieux viser'
               : 'Pincez pour zoomer · masquez les murs pour voir toutes les places'}

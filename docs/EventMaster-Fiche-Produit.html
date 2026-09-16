@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>EventMaster — Fiche produit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #047857;
+      --primary-soft: #ecfdf5;
+      --festive: #d97706;
+      --festive-soft: #fff7ed;
+      --ink: #1e1f21;
+      --muted: #5c5e61;
+      --paper: #f6f7f8;
+      --surface: #ffffff;
+      --stage: #171614;
+      --ivory: #f7f4ef;
+      --border: #e4e5e6;
+    }
+    * { box-sizing: border-box; }
+    @page { size: A4; margin: 16mm 16mm 18mm; }
+    html, body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: Inter, Helvetica Neue, Helvetica, Arial, sans-serif;
+      font-size: 10.5pt;
+      line-height: 1.5;
+    }
+    h1, h2, h3 { font-family: Fraunces, Georgia, serif; letter-spacing: -0.02em; line-height: 1.2; }
+    h1 { font-size: 26pt; margin: 0 0 8px; }
+    h2 { font-size: 15pt; color: var(--primary); margin: 22px 0 8px; page-break-after: avoid; }
+    h3 { font-size: 11.5pt; margin: 14px 0 6px; }
+    p { margin: 0 0 8px; }
+    .cover {
+      background: var(--stage);
+      color: var(--ivory);
+      padding: 36px 32px 28px;
+      border-radius: 12px;
+      margin-bottom: 22px;
+    }
+    .kicker {
+      display: inline-block;
+      font-size: 8.5pt;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #fbbf24;
+      margin-bottom: 10px;
+    }
+    .cover p { color: #e8e4dc; max-width: 42rem; }
+    .meta { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 18px; font-size: 8.5pt; color: #cfc8bc; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      page-break-inside: avoid;
+    }
+    .card strong { display: block; margin-bottom: 4px; }
+    ul { margin: 0 0 10px 18px; padding: 0; }
+    li { margin-bottom: 4px; }
+    table { width: 100%; border-collapse: collapse; font-size: 9pt; margin: 8px 0 14px; }
+    th, td { border-bottom: 1px solid var(--border); text-align: left; padding: 7px 6px; vertical-align: top; }
+    th { color: var(--muted); font-size: 8pt; text-transform: uppercase; letter-spacing: 0.04em; }
+    .price { font-weight: 700; white-space: nowrap; color: var(--primary); }
+    .note { font-size: 8.5pt; color: var(--muted); }
+    .band {
+      background: var(--primary-soft);
+      border-left: 4px solid var(--primary);
+      padding: 10px 12px;
+      border-radius: 0 8px 8px 0;
+      margin: 12px 0;
+    }
+    .warm {
+      background: var(--festive-soft);
+      border-left: 4px solid var(--festive);
+    }
+    footer.page-end {
+      margin-top: 28px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      font-size: 8.5pt;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <div class="kicker">Fiche produit · Kinshasa, RDC · Septembre 2026</div>
+    <h1>EventMaster</h1>
+    <p>La plateforme événementielle tout-en-un pour l’Afrique centrale : invitations WhatsApp, plans de salle 2D/3D, billetterie Mobile Money en francs congolais, et accueil QR le jour J — sans application à installer.</p>
+    <div class="meta">
+      <span>100 % web &amp; PWA</span>
+      <span>Paiements FlexPay (M-Pesa, Orange, Airtel, Afrimoney, Visa/Mastercard)</span>
+      <span>Support : Lun–Sam, 8h–20h (Kinshasa)</span>
+    </div>
+  </section>
+
+  <h2>1. Pourquoi EventMaster existe</h2>
+  <p>Organiser un mariage, un gala ou une conférence en RDC exige encore trop d’outils séparés : un faire-part, un tableur d’invités, un plan de table papier, un paiement Mobile Money artisanal, puis un accueil improvisé le jour J. EventMaster relie toute la chaîne dans un seul navigateur.</p>
+  <div class="band">
+    <strong>Promesse.</strong> De la conception de la salle jusqu’au scan de l’invité à sa table, aucune rupture d’outil tiers. WhatsApp reste le canal n°1 ; le franc congolais et le Mobile Money sont natifs, pas « adaptés après coup ».
+  </div>
+
+  <h2>2. À qui s’adresse le produit</h2>
+  <div class="grid-2">
+    <div class="card">
+      <strong>Particuliers &amp; familles (B2C)</strong>
+      Mariages, anniversaires, fêtes privées. Ils veulent un faire-part élégant, un partage WhatsApp immédiat et un plan de table visuel, sans jargon.
+    </div>
+    <div class="card">
+      <strong>Professionnels &amp; agences (B2B)</strong>
+      Conférences, concerts, galas, festivals. Ils ont besoin de billetterie multi-zones, de recettes en direct, d’une équipe et d’un contrôle d’accès QR.
+    </div>
+    <div class="card">
+      <strong>Salles &amp; prestataires (marketplace)</strong>
+      Traiteurs, photographes, DJ, gestionnaires de salles. Ils cherchent une vitrine 3D, des demandes de devis et un planning, sans commission intermédiaire sur le devis.
+    </div>
+    <div class="card">
+      <strong>Invités &amp; acheteurs de billets</strong>
+      Ils répondent à l’invitation ou achètent un billet sur mobile, puis reçoivent un pass QR immédiat — sans télécharger d’application.
+    </div>
+  </div>
+
+  <h2>3. Ce que fait l’application</h2>
+  <h3>Invitations &amp; confirmations</h3>
+  <ul>
+    <li>Faire-part et modèles interactifs, liens uniques par invité.</li>
+    <li>Collecte des réponses en temps réel (WhatsApp, SMS, e-mail).</li>
+    <li>Choix de repas, préférences, et documents (badge QR, PDF, itinéraire) dès le « oui ».</li>
+    <li>Le plan de table et le PDF partent seulement quand une place est attribuée.</li>
+  </ul>
+  <h3>Plans de salle 2D / 3D</h3>
+  <ul>
+    <li>Éditeur web : tables rondes ou rectangulaires, portes, allées, scène, lustres, ambiances.</li>
+    <li>Visite 3D interactive dans le navigateur (WebGL), y compris en plein écran.</li>
+    <li>Placement d’invités nominatif, zones VIP, modèles vitrine publics.</li>
+    <li>Niveaux d’éditeur selon le forfait (Essentiel → Complet, jusqu’à 80 tables).</li>
+  </ul>
+  <h3>Billetterie &amp; paiements</h3>
+  <ul>
+    <li>Événements publics sur le marketplace, tarifs par zone, choix de place sur le plan.</li>
+    <li>Encaissement en CDF via FlexPay (Mobile Money et cartes).</li>
+    <li>Présence validée à l’achat ; pass QR généré immédiatement.</li>
+    <li>Dons solidaires possibles. Commission plateforme de 3 % à 5 % du montant collecté (5 % billets, 4 % dons par défaut), en plus de l’abonnement, hors frais FlexPay.</li>
+  </ul>
+  <h3>Jour J — desk protocole</h3>
+  <ul>
+    <li>Scan QR dans le navigateur, alertes sonores et haptiques.</li>
+    <li>Conçu pour le 3G/4G instable à l’entrée.</li>
+    <li>Aucune application native à imposer à l’équipe d’accueil.</li>
+  </ul>
+  <h3>Marketplace &amp; budget</h3>
+  <ul>
+    <li>Salles, métiers et matériel / équipements, avec devis directs.</li>
+    <li>Simulateur de budget IA (CDF et USD).</li>
+    <li>Compte client : recherche, favoris, packs — sans devoir être organisateur.</li>
+  </ul>
+
+  <h2>4. Parcours bout en bout</h2>
+  <ol>
+    <li><strong>Composer</strong> — créer l’événement, le plan 2D/3D, les modèles d’invitation.</li>
+    <li><strong>Inviter ou vendre</strong> — envoyer WhatsApp / e-mail, ou ouvrir la billetterie publique.</li>
+    <li><strong>Confirmer</strong> — l’invité répond ou paie ; le pass QR apparaît.</li>
+    <li><strong>Placer</strong> — attribuer les tables ; le plan et le PDF suivent.</li>
+    <li><strong>Accueillir</strong> — scan QR à l’entrée, orientation vers la table.</li>
+    <li><strong>Encaisser</strong> — recettes, dons et payouts suivis dans le tableau de bord.</li>
+  </ol>
+
+  <h2>5. Offres (catalogue public)</h2>
+  <p class="note">Montants catalogue en francs congolais. Les particuliers facturent au trimestre (90 j) ; les organisations et vendeurs au mois (30 j). −10 % si paiement annuel. Un forfait Essentiel gratuit permet de tester le flux.</p>
+
+  <h3>Particuliers</h3>
+  <table>
+    <thead><tr><th>Forfait</th><th>Prix</th><th>Capacité</th></tr></thead>
+    <tbody>
+      <tr><td>Particulier 50</td><td class="price">60 000 FC / trim.</td><td>3 événements · 50 invités · éditeur complet</td></tr>
+      <tr><td>Particulier 100</td><td class="price">90 000 FC / trim.</td><td>3 événements · 100 invités</td></tr>
+      <tr><td>Particulier 200</td><td class="price">120 000 FC / trim.</td><td>3 événements · 200 invités</td></tr>
+      <tr><td>Particulier +200</td><td class="price">180 000 FC / trim.</td><td>3 événements · invités illimités</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Professionnels</h3>
+  <table>
+    <thead><tr><th>Forfait</th><th>Prix</th><th>Repère</th></tr></thead>
+    <tbody>
+      <tr><td>Essentiel</td><td class="price">Gratuit</td><td>Essai : 3 événements · 50 invités · 1 salle / 1 presta</td></tr>
+      <tr><td>Business</td><td class="price">30 000 FC / mois</td><td>8 événements · 150 invités · vitrine catalogue</td></tr>
+      <tr><td>Premium</td><td class="price">55 000 FC / mois</td><td>12 événements · 500 invités</td></tr>
+      <tr><td>Premium Plus</td><td class="price">85 000 FC / mois</td><td>20 événements · 1 000 invités — le plus demandé</td></tr>
+      <tr><td>Enterprise</td><td class="price">350 000 FC / mois</td><td>40 événements · 3 500 invités</td></tr>
+      <tr><td>Enterprise Pro</td><td class="price">525 000 FC / mois</td><td>70 événements · 5 000 invités</td></tr>
+      <tr><td>Enterprise Unlimited</td><td class="price">700 000 FC / mois</td><td>Quotas illimités · SLA 24/7</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Salles &amp; prestataires</h3>
+  <table>
+    <thead><tr><th>Forfait</th><th>Prix</th><th>Périmètre</th></tr></thead>
+    <tbody>
+      <tr><td>Prestataire</td><td class="price">9 900 FC / mois</td><td>Prestations et matériel illimités — sans salles ni événements</td></tr>
+      <tr><td>Salle</td><td class="price">14 900 FC / mois</td><td>Salles illimitées, éditeur 2D/3D — sans événements</td></tr>
+      <tr><td>Salle &amp; presta</td><td class="price">19 900 FC / mois</td><td>Salles + métiers + matériel — sans événements</td></tr>
+    </tbody>
+  </table>
+  <p class="note">Dès Business, la vitrine salles et prestations est incluse pour un organisateur. Les jetons IA : 4 essais offerts, puis recharge. Les jetons consommés ne sont pas remboursables.</p>
+
+  <h2>6. Principes de conception</h2>
+  <ul>
+    <li><strong>Glanceability</strong> — l’action se lit en deux secondes : cartes, icônes, peu de texte.</li>
+    <li><strong>Zéro friction mobile</strong> — invités et agents d’accueil restent dans le navigateur.</li>
+    <li><strong>Ancrage local</strong> — indicatif +243, CDF, WhatsApp, Mobile Money.</li>
+    <li><strong>Ton</strong> — prestigieux, chaleureux, rassurant, direct. Fraunces pour la fête, Inter pour l’outil.</li>
+  </ul>
+
+  <h2>7. Contraintes à connaître</h2>
+  <ul>
+    <li>Pas d’application native mobile pour le moment (PWA / navigateur uniquement).</li>
+    <li>Références marchandes FlexPay limitées à 25 caractères.</li>
+    <li>Quotas d’événements, d’invités et d’éditeur selon le forfait.</li>
+    <li>Activation billetterie / dons : acceptation des conditions en vigueur.</li>
+  </ul>
+
+  <div class="band warm">
+    <strong>Contact commercial &amp; support</strong><br />
+    mingandajeereq@gmail.com · +243 817 125 577 (WhatsApp)<br />
+    Boulevard du 30 Juin, Gombe, Kinshasa, RD Congo<br />
+    Lun–Sam, 8h–20h (heure de Kinshasa)
+  </div>
+
+  <footer class="page-end">
+    Document interne et commercial · EventMaster · Données issues du produit (catalogue public, FAQ, conditions v1.9) · Septembre 2026 · Les prix affichés sont ceux du catalogue ; un tarif négocié ou une promo peut s’appliquer.
+  </footer>
+</body>
+</html>

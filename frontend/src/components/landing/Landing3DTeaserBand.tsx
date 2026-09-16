@@ -193,10 +193,10 @@ export default function Landing3DTeaserBand() {
                       size="sm"
                       variant="secondary"
                       onClick={() => setEditorModalOpen(true)}
-                      className="gap-1.5 text-xs font-bold border-amber-400/40 bg-amber-500/20 text-amber-200 hover:bg-amber-500/30 hover:text-white transition shadow-sm min-h-11 sm:min-h-9 px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/50"
+                      className="gap-1.5 text-xs font-bold border-festive-on-stage/40 bg-festive-on-stage/15 text-festive-on-stage hover:bg-festive-on-stage/25 transition shadow-sm min-h-11 px-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-festive-on-stage/50"
                       aria-label="Éditer le plan 2D/3D vitrine (Super Admin)"
                     >
-                      <Pencil className="w-3.5 h-3.5 text-amber-300" aria-hidden />
+                      <Pencil className="w-3.5 h-3.5 text-festive-on-stage" aria-hidden />
                       <span>Éditer ce plan</span>
                     </Button>
                   )}
@@ -206,15 +206,15 @@ export default function Landing3DTeaserBand() {
 
               {canManageShowcase && showcasePlans.length > 1 && (
                 <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-stage-foreground/5 border border-stage-foreground/10 text-xs text-stage-foreground/80">
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden />
-                  <span className="font-semibold text-amber-300 shrink-0">Vitrine Super Admin :</span>
+                  <ShieldCheck className="w-3.5 h-3.5 text-festive-on-stage shrink-0" aria-hidden />
+                  <span className="font-semibold text-festive-on-stage shrink-0">Vitrine Super Admin :</span>
                   <select
                     value={activePlan?.id || ''}
                     onChange={(e) => {
                       const found = showcasePlans.find((p) => p.id === e.target.value);
                       if (found) setActivePlan(found);
                     }}
-                    className="bg-stage-foreground/10 text-stage-foreground text-xs rounded-lg px-2.5 py-1.5 min-h-10 sm:min-h-9 border border-stage-foreground/20 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+                    className="bg-stage-foreground/10 text-stage-foreground text-xs rounded-lg px-2.5 py-1.5 min-h-11 border border-stage-foreground/20 focus:outline-none focus:ring-2 focus:ring-festive-on-stage/50"
                     aria-label="Sélectionner le plan à afficher et éditer"
                   >
                     {showcasePlans.map((p) => (
