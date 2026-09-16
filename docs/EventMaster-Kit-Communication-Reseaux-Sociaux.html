@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>EventMaster — Kit communication réseaux sociaux</title>
+  <style>
+    :root {
+      --primary: #047857;
+      --primary-soft: #ecfdf5;
+      --festive: #d97706;
+      --festive-soft: #fff7ed;
+      --ink: #1e1f21;
+      --muted: #5c5e61;
+      --paper: #f6f7f8;
+      --surface: #ffffff;
+      --stage: #171614;
+      --ivory: #f7f4ef;
+      --border: #e4e5e6;
+    }
+    * { box-sizing: border-box; }
+    @page { size: A4; margin: 15mm 15mm 17mm; }
+    html, body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 10.2pt;
+      line-height: 1.48;
+      letter-spacing: 0;
+      word-spacing: 0.02em;
+      font-kerning: none;
+      font-variant-ligatures: none;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; letter-spacing: 0; line-height: 1.18; }
+    h1 { font-size: 24pt; margin: 0 0 8px; }
+    h2 { font-size: 14pt; color: var(--primary); margin: 20px 0 8px; page-break-after: avoid; }
+    h3 { font-size: 11pt; margin: 12px 0 5px; }
+    p { margin: 0 0 7px; }
+    .cover {
+      background: var(--stage);
+      color: var(--ivory);
+      padding: 32px 28px 24px;
+      border-radius: 12px;
+      margin-bottom: 18px;
+    }
+    .kicker {
+      font-size: 8.2pt;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #fbbf24;
+      margin-bottom: 8px;
+    }
+    .cover p { color: #e8e4dc; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 12px;
+      page-break-inside: avoid;
+    }
+    .card strong { display: block; margin-bottom: 3px; }
+    .post {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--primary);
+      border-radius: 0 10px 10px 0;
+      padding: 10px 12px;
+      margin: 0 0 10px;
+      page-break-inside: avoid;
+      white-space: pre-wrap;
+      font-size: 9.4pt;
+    }
+    .post.warm { border-left-color: var(--festive); }
+    .label {
+      font-size: 7.8pt;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    ul { margin: 0 0 8px 17px; padding: 0; }
+    li { margin-bottom: 3px; }
+    table { width: 100%; border-collapse: collapse; font-size: 8.8pt; margin: 6px 0 12px; }
+    th, td { border-bottom: 1px solid var(--border); text-align: left; padding: 6px 5px; vertical-align: top; }
+    th { color: var(--muted); font-size: 7.6pt; text-transform: uppercase; letter-spacing: 0.04em; }
+    .do { background: var(--primary-soft); }
+    .dont { background: #fff1f2; }
+    footer.page-end {
+      margin-top: 22px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      font-size: 8.2pt;
+      color: var(--muted);
+    }
+    .hash { color: var(--primary); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <div class="kicker">Kit commercial · Réseaux sociaux · Septembre 2026</div>
+    <h1>Faire vendre EventMaster</h1>
+    <p>Playbook de communication pour WhatsApp, Facebook, Instagram, TikTok et LinkedIn. Ton de marque : prestigieux, chaleureux, rassurant, direct. On montre la fête et l’action — on n’explique pas un logiciel.</p>
+  </section>
+
+  <h2>1. Une phrase qui vend</h2>
+  <p><strong>EventMaster, c’est tout le jour J dans le téléphone : invitation WhatsApp, plan de salle 3D, paiement Mobile Money, et scan QR à l’entrée — sans application à installer.</strong></p>
+  <p>Ne pas dire « SaaS événementiel ». Dire : « ton mariage, tes invitations et tes tables, enfin au même endroit ».</p>
+
+  <h2>2. Promesses par public (ne pas tout dire à tout le monde)</h2>
+  <div class="grid-2">
+    <div class="card">
+      <strong>Mariés / familles</strong>
+      « Tes invités répondent sur WhatsApp. Toi, tu vois qui vient, qui s’assoit où, et le badge QR part tout seul. »
+      <br />CTA : Essai gratuit ou Particulier 50 (60 000 FC / trim.).
+    </div>
+    <div class="card">
+      <strong>Agences &amp; protocoles</strong>
+      « Billetterie par zone, recettes en CDF, équipe d’accueil qui scanne dans le navigateur. »
+      <br />CTA : Business 30 000 FC / mois ou démo.
+    </div>
+    <div class="card">
+      <strong>Salles &amp; prestataires</strong>
+      « Ta salle en 3D, tes devis en direct, sans commission sur la mise en relation. »
+      <br />CTA : Salle 14 900 FC ou Presta 9 900 FC / mois.
+    </div>
+    <div class="card">
+      <strong>Invités (preuve sociale)</strong>
+      « Un lien, un oui, un QR. Pas d’appli à télécharger. »
+      <br />Ne pas vendre un forfait ici : rassurer pour que l’organisateur convertisse.
+    </div>
+  </div>
+
+  <h2>3. Piliers de contenu (80 % preuve, 20 % offre)</h2>
+  <ul>
+    <li><strong>Avant</strong> — faire-part, liste, plan 2D/3D, budget IA.</li>
+    <li><strong>Pendant</strong> — WhatsApp, réponses en direct, billets Mobile Money.</li>
+    <li><strong>Jour J</strong> — scan QR, table trouvée en 2 secondes.</li>
+    <li><strong>Preuve locale</strong> — Kinshasa, CDF, M-Pesa / Orange / Airtel, +243.</li>
+    <li><strong>Offre claire</strong> — un prix, un public, un bouton. Jamais toute la grille tarifaire dans un Reel.</li>
+  </ul>
+
+  <h2>4. Visuels qui convertissent</h2>
+  <ul>
+    <li>Écran réel : invitation WhatsApp, plan 3D en plein écran, scan QR (pas de mockup générique « dashboard gris »).</li>
+    <li>Couleurs : émeraude d’action (#047857) + ambre Kinshasa (#d97706). Un accent conduit, l’autre orne.</li>
+    <li>Texte sur image : 6 mots max (« Réponds. Paie. Entre. »).</li>
+    <li>Format : 4:5 Instagram, 9:16 Stories/Reels/TikTok, 1:1 Facebook, 16:9 LinkedIn.</li>
+    <li>Interdit : stock « confettis neon », anglais, dollars seuls, promesse « n°1 en Afrique » non prouvée.</li>
+  </ul>
+
+  <h2>5. Légendes prêtes à poster</h2>
+
+  <div class="label">WhatsApp Status / diffusion · 15 s</div>
+  <div class="post">Ton mariage n’a plus besoin de 4 applis.
+Invitation. Tables 3D. Paiement M-Pesa. QR à l’entrée.
+EventMaster — tout dans le navigateur.
+Écris-nous : +243 817 125 577</div>
+
+  <div class="label">Facebook / Instagram — familles</div>
+  <div class="post">Le faire-part part sur WhatsApp.
+Le « oui » arrive tout seul.
+La table s’affiche quand tu l’as placée.
+Le badge QR est déjà dans le téléphone de l’invité.
+
+EventMaster, c’est l’organisation d’une fête à Kinshasa — sans Excel, sans appli à imposer à ta famille.
+
+Essaie gratuitement. Ou pars sur Particulier 50 : 60 000 FC le trimestre, jusqu’à 50 invités.
+
+Lien en bio · WhatsApp +243 817 125 577</div>
+
+  <div class="label">Reels / TikTok — script 20–25 s</div>
+  <div class="post warm">0–3 s  Écran noir, notif WhatsApp « Tu es invité(e) ».
+3–8 s  Pouce qui tape Oui. Badge QR qui apparaît.
+8–14 s  Plan 3D qui tourne, une table s’allume.
+14–20 s Accueil : scan, sourire, « Table 12 ».
+20–25 s Carton : EventMaster · Sans appli · Kinshasa
+Voix off : « Tes invités n’installent rien. Toi, tu vois tout. »
+
+Texte superposé : Réponds. Paie. Entre.</div>
+
+  <div class="label">Facebook — salles &amp; prestataires</div>
+  <div class="post">Propriétaires de salles, traiteurs, photographes, DJ :
+
+Votre client cherche déjà une salle à Kinshasa.
+Montrez-la en 3D. Recevez le devis. Discutez en direct.
+
+Pas de commission sur la mise en relation.
+Salle : 14 900 FC / mois · Presta : 9 900 FC / mois.
+
+EventMaster Marketplace — Gombe et partout en RDC.</div>
+
+  <div class="label">LinkedIn — agences &amp; B2B</div>
+  <div class="post">Les événements pro en RDC se perdent encore entre un tableur, un lien de paiement et un agent d’accueil sans outil.
+
+EventMaster unifie :
+• invitations et protocole QR dans le navigateur
+• billetterie multi-zones en CDF (FlexPay)
+• plan de salle 2D coté et visite 3D
+• recettes et équipe, le jour J
+
+Business dès 30 000 FC / mois. Premium Plus (le plus demandé) : 85 000 FC / mois.
+
+Démo : mingandajeereq@gmail.com</div>
+
+  <div class="label">Story interactive</div>
+  <div class="post">Question : Tu organises bientôt ?
+A. Mariage / fête privée
+B. Conférence / gala
+C. Je loue une salle ou un métier
+
+Réponse A → Particulier · B → Business · C → Marketplace
+Sticker lien : /register ou /tarifs</div>
+
+  <h2>6. Hashtags (peu, locaux)</h2>
+  <p><span class="hash">#EventMaster</span> <span class="hash">#Kinshasa</span> <span class="hash">#MariageRDC</span> <span class="hash">#WhatsApp</span> <span class="hash">#MobileMoney</span> <span class="hash">#PlanDeTable</span> <span class="hash">#Protocole</span> <span class="hash">#SalleDesFetes</span></p>
+  <p>Maximum 6 par post. Éviter les hashtags globaux vides (#event #weddingplanning).</p>
+
+  <h2>7. Calendrier 14 jours (à répéter)</h2>
+  <table>
+    <thead><tr><th>Jour</th><th>Canal</th><th>Sujet</th><th>CTA</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>WhatsApp + IG</td><td>Phrase d’accroche « 4 applis → 1 lien »</td><td>Essai gratuit</td></tr>
+      <tr><td>2</td><td>Reel / TikTok</td><td>Script Réponds · Paie · Entre</td><td>Lien bio</td></tr>
+      <tr><td>3</td><td>Facebook</td><td>Preuve plan 3D (capture produit)</td><td>/plans-3d</td></tr>
+      <tr><td>4</td><td>Story</td><td>Sondage A/B/C</td><td>DM WhatsApp</td></tr>
+      <tr><td>5</td><td>LinkedIn</td><td>Jour J protocole QR</td><td>Démo B2B</td></tr>
+      <tr><td>6</td><td>Facebook</td><td>Salles &amp; prestataires, prix</td><td>/marketplace</td></tr>
+      <tr><td>7</td><td>Pause preuve</td><td>Témoignage client ou making-of (si réel)</td><td>Partage</td></tr>
+      <tr><td>8</td><td>Reel</td><td>Paiement M-Pesa → pass QR</td><td>Particulier 50</td></tr>
+      <tr><td>9</td><td>Carrousel</td><td>3 forfaits seulement (Particulier / Business / Salle)</td><td>/tarifs</td></tr>
+      <tr><td>10</td><td>Story</td><td>FAQ : « Il faut une appli ? » → Non</td><td>Lien</td></tr>
+      <tr><td>11</td><td>WhatsApp</td><td>Diffusion organisateurs : « Combien d’invités ? »</td><td>Calendly / appel</td></tr>
+      <tr><td>12</td><td>Facebook</td><td>Simulateur budget IA</td><td>/simulateur</td></tr>
+      <tr><td>13</td><td>Reel</td><td>Avant / après tableur vs EventMaster</td><td>Essai</td></tr>
+      <tr><td>14</td><td>Tous</td><td>Offre claire + contact WhatsApp</td><td>+243 817 125 577</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8. Objections — réponses courtes</h2>
+  <div class="grid-2">
+    <div class="card"><strong>« Mes invités n’ont pas WhatsApp. »</strong> Le lien marche aussi par SMS et e-mail. WhatsApp reste le plus simple à Kinshasa.</div>
+    <div class="card"><strong>« Il faut une appli. »</strong> Non. Invité, acheteur et agent d’accueil restent dans le navigateur.</div>
+    <div class="card"><strong>« C’est cher. »</strong> Essentiel est gratuit. Une fête privée démarre à 60 000 FC / trimestre. Une salle à 14 900 FC / mois.</div>
+    <div class="card"><strong>« Et si le réseau tombe le jour J ? »</strong> Le desk protocole est pensé pour le 3G/4G instable à l’entrée — pas pour le wifi d’hôtel parfait.</div>
+  </div>
+
+  <h2>9. Ce qu’on dit / ce qu’on ne dit pas</h2>
+  <table>
+    <thead><tr><th class="do">On dit</th><th class="dont">On ne dit pas</th></tr></thead>
+    <tbody>
+      <tr><td>Paiement M-Pesa, Orange, Airtel, Afrimoney, carte — en CDF</td><td>« Tous les moyens de paiement du monde »</td></tr>
+      <tr><td>Commission plateforme 3 à 5 % sur billets et dons, en plus de l’abonnement</td><td>« Zéro frais » ou un pourcentage inventé</td></tr>
+      <tr><td>Devis marketplace sans commission de mise en relation</td><td>Confondre devis marketplace et commission billetterie</td></tr>
+      <tr><td>Positionnement : tout-en-un, ancré RDC</td><td>« La seule solution au monde » comme preuve</td></tr>
+      <tr><td>Prix catalogue, puis « un conseiller peut adapter »</td><td>Rabais improvisés en commentaire public</td></tr>
+      <tr><td>Captures du vrai produit</td><td>Chiffres d’utilisateurs non vérifiés</td></tr>
+    </tbody>
+  </table>
+
+  <h2>10. Contacts à coller partout</h2>
+  <div class="card">
+    <strong>WhatsApp / téléphone</strong> +243 817 125 577<br />
+    <strong>E-mail</strong> mingandajeereq@gmail.com<br />
+    <strong>Adresse</strong> Boulevard du 30 Juin, Gombe, Kinshasa<br />
+    <strong>Horaires</strong> Lun–Sam, 8h–20h (heure de Kinshasa)<br />
+    <strong>Pages à pousser</strong> /tarifs · /plans-3d · /marketplace · /register · /simulateur
+  </div>
+
+  <footer class="page-end">
+    Kit de vente EventMaster · À usage interne et agences partenaires · Prix et mentions alignés sur le catalogue et les conditions v1.9 · Septembre 2026 · Ne pas inventer de témoignages ni de volumes.
+  </footer>
+</body>
+</html>
