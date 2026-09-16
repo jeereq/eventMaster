@@ -83,6 +83,10 @@ export type AdminPlatformSettingsValues = Record<string, unknown> & {
     invite?: boolean;
     room?: boolean;
   };
+  aiStudioModels?: {
+    invitationModel?: string;
+    roomPlanModel?: string;
+  };
   subscriptionDiscountAccess?: {
     enabled?: boolean;
     periodStart?: string | null;
@@ -545,6 +549,117 @@ export default function AdminPlatformSettings({
                     }
                     className="w-5 h-5 text-primary border-border rounded focus:ring-primary cursor-pointer"
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Sélection des Modèles IA Principaux */}
+            <div className="pt-6 border-t border-border space-y-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary shrink-0" />
+                <h4 className="text-sm font-bold text-foreground">
+                  Modèles IA Principaux (Moteurs de génération)
+                </h4>
+              </div>
+              <p className="text-xs text-muted -mt-2 leading-relaxed">
+                Configurez les modèles d’intelligence artificielle prioritaires appelés lors de la composition des invitations graphiques et de l’agencement automatique des plans de salle 2D/3D.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                {/* Modèle Invitation */}
+                <div className="p-4 rounded-xl border border-border bg-surface-muted/40 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <label htmlFor="ai-invitation-model" className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5 text-pink-500" />
+                      Génération d&apos;Invitations (Image 9:16)
+                    </label>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                      {value.aiStudioModels?.invitationModel?.includes('flash')
+                        ? 'Rapide'
+                        : value.aiStudioModels?.invitationModel?.includes('imagen')
+                        ? 'Imagen'
+                        : 'Haute Définition'}
+                    </span>
+                  </div>
+
+                  <select
+                    id="ai-invitation-model"
+                    value={value.aiStudioModels?.invitationModel || 'gemini-3-pro-image'}
+                    onChange={(e) =>
+                      patch({
+                        aiStudioModels: {
+                          invitationModel: e.target.value,
+                          roomPlanModel: value.aiStudioModels?.roomPlanModel || 'gemini-3.1-pro-preview',
+                        },
+                      })
+                    }
+                    className="w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 min-h-11"
+                  >
+                    <option value="gemini-3-pro-image">
+                      Gemini 3 Pro Image (Nano Banana Pro · 2K Haute Définition)
+                    </option>
+                    <option value="gemini-3.1-flash-image">
+                      Gemini 3.1 Flash Image (Nano Banana Flash · Rendu rapide 4-8s)
+                    </option>
+                    <option value="imagen-3.0-generate-002">
+                      Google Imagen 3.0 (Photoréaliste standard)
+                    </option>
+                    <option value="imagen-3.0-fast-generate-001">
+                      Google Imagen 3.0 Fast (Économique &amp; rapide)
+                    </option>
+                  </select>
+
+                  <p className="text-[11px] text-muted leading-relaxed">
+                    Priorité au modèle sélectionné pour concevoir les visuels d&apos;invitation. Le moteur applique un repli automatique en cas d&apos;indisponibilité.
+                  </p>
+                </div>
+
+                {/* Modèle Salles 2D/3D */}
+                <div className="p-4 rounded-xl border border-border bg-surface-muted/40 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <label htmlFor="ai-room-plan-model" className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5 text-sky-500" />
+                      Plans &amp; Salles 2D / 3D (Raisonnement)
+                    </label>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-700 dark:text-sky-300">
+                      {value.aiStudioModels?.roomPlanModel?.includes('flash')
+                        ? 'Agile'
+                        : value.aiStudioModels?.roomPlanModel?.includes('2.5')
+                        ? 'Gemini 2.5'
+                        : 'Spatial Pro'}
+                    </span>
+                  </div>
+
+                  <select
+                    id="ai-room-plan-model"
+                    value={value.aiStudioModels?.roomPlanModel || 'gemini-3.1-pro-preview'}
+                    onChange={(e) =>
+                      patch({
+                        aiStudioModels: {
+                          invitationModel: value.aiStudioModels?.invitationModel || 'gemini-3-pro-image',
+                          roomPlanModel: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 min-h-11"
+                  >
+                    <option value="gemini-3.1-pro-preview">
+                      Gemini 3.1 Pro Preview (Raisonnement spatial &amp; cotation métrique)
+                    </option>
+                    <option value="gemini-3-flash">
+                      Gemini 3 Flash (Génération agile &amp; rapide)
+                    </option>
+                    <option value="gemini-2.5-pro">
+                      Gemini 2.5 Pro (Haute précision textuelle)
+                    </option>
+                    <option value="gemini-2.5-flash">
+                      Gemini 2.5 Flash (Standard stable)
+                    </option>
+                  </select>
+
+                  <p className="text-[11px] text-muted leading-relaxed">
+                    Modèle d&apos;analyse textuelle et topologique pour convertir les briefs et photos en blueprints de salle avec distances de circulation.
+                  </p>
                 </div>
               </div>
             </div>

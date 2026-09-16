@@ -538,7 +538,7 @@ export async function composeRoomPlan(req: AuthenticatedRequest, res: Response) 
     rateLimitRoomPlanAi(userId);
     const unlimited = isUnlimitedAiTokenUser(req.user);
     await requireAiSimulationCredit(deviceId, userId, AI_ROOM_PLAN_TOKEN_COST, { unlimited });
-    const draft = await composeRoomPlanAi(input);
+    const draft = await composeRoomPlanAi({ ...input, model: settings.aiStudioModels?.roomPlanModel });
     const historyId = await persistRoomPlanCompose({
       userId,
       deviceId,
@@ -603,7 +603,7 @@ export async function publicComposeRoomPlan(req: AuthenticatedRequest, res: Resp
     rateLimitRoomPlanAi(rateKey);
     const unlimited = isUnlimitedAiTokenUser(user);
     await requireAiSimulationCredit(deviceId, user?.id || null, AI_ROOM_PLAN_TOKEN_COST, { unlimited });
-    const draft = await composeRoomPlanAi(input);
+    const draft = await composeRoomPlanAi({ ...input, model: settings.aiStudioModels?.roomPlanModel });
     const historyId = await persistRoomPlanCompose({
       userId: user?.id || null,
       deviceId,

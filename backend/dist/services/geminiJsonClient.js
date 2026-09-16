@@ -89,7 +89,7 @@ async function loadGeminiInlineImage(imageUrl, failMessage = 'Impossible de tél
 }
 async function requestGeminiJson(input) {
     const key = requireGeminiApiKey();
-    const model = getGeminiTextModel();
+    const model = input.model?.trim() || getGeminiTextModel();
     const failMessage = input.failMessage || 'L’IA Gemini n’a pas renvoyé de JSON utilisable.';
     const parts = [{ text: input.userText }];
     const validImages = [];

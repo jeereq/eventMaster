@@ -8,6 +8,7 @@ const mandatoryRsvpFields_1 = require("../utils/mandatoryRsvpFields");
 const cloudinaryService_1 = require("./cloudinaryService");
 const cloudinaryConfig_1 = require("../config/cloudinaryConfig");
 const geminiJsonClient_ts_1 = require("./geminiJsonClient.js");
+const platformSettingsService_1 = require("./platformSettingsService");
 const invitationComposeContext_ts_1 = require("./invitationComposeContext.js");
 const invitationPromptFidelity_ts_1 = require("./invitationPromptFidelity.js");
 const invitationArtStyle_ts_1 = require("./invitationArtStyle.js");
@@ -962,7 +963,14 @@ function getNanoBananaFlashModel() {
  * En mode 'fast', le modèle Flash (gemini-3.1-flash-image) est interrogé en premier pour un rendu en ~4-8s.
  * En mode 'quality', le modèle Pro (gemini-3-pro-image 2K) est privilégié pour un piqué maximal.
  */
-function getNanoBananaModelChain(speedMode) {
+function getNanoBananaModelChain(speedMode, preferredModel) {
+    const custom = preferredModel?.trim();
+    if (custom) {
+        if (speedMode === 'fast') {
+            return [...new Set([custom, getNanoBananaFlashModel(), getNanoBananaProModel()])];
+        }
+        return [...new Set([custom, getNanoBananaProModel(), getNanoBananaFlashModel()])];
+    }
     if (speedMode === 'fast') {
         return [...new Set([getNanoBananaFlashModel(), getNanoBananaProModel()])];
     }
@@ -1209,7 +1217,9 @@ ${imagePrompt}`;
 async function createNewInvitationImage(key, imageUrls, imagePrompt, tenantId, options) {
     const nanoKey = getNanoBananaApiKey();
     if (nanoKey) {
-        const chain = getNanoBananaModelChain(options?.speedMode);
+        const settings = (0, platformSettingsService_1.loadPlatformSettings)();
+        const preferredModel = settings.aiStudioModels?.invitationModel;
+        const chain = getNanoBananaModelChain(options?.speedMode, preferredModel);
         for (let i = 0; i < chain.length; i++) {
             const model = chain[i];
             const next = chain[i + 1];

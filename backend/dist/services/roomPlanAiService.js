@@ -12,6 +12,7 @@ exports.analyzeRoomPlanPhoto = analyzeRoomPlanPhoto;
 exports.composeRoomPlanFromBrief = composeRoomPlanFromBrief;
 exports.composeRoomPlanAi = composeRoomPlanAi;
 const geminiJsonClient_ts_1 = require("./geminiJsonClient.js");
+const platformSettingsService_1 = require("./platformSettingsService");
 const roomPlanPromptFidelity_ts_1 = require("./roomPlanPromptFidelity.js");
 exports.ROOM_PLAN_AI_GROUP_ID = 'ai-import';
 exports.ROOM_PLAN_VISION_ITEM_MAX = 120;
@@ -1162,6 +1163,7 @@ async function reformulateRoomPlanBriefToEnglish(input) {
         };
     }
     try {
+        const settings = (0, platformSettingsService_1.loadPlatformSettings)();
         const parsed = await (0, geminiJsonClient_ts_1.requestGeminiJson)({
             system: roomPlanPromptFidelity_ts_1.ROOM_PLAN_BRIEF_REFORMULATION_SYSTEM,
             userText: (0, roomPlanPromptFidelity_ts_1.buildRoomPlanBriefReformulationUserText)(processed.originalBrief, {
@@ -1172,6 +1174,7 @@ async function reformulateRoomPlanBriefToEnglish(input) {
             temperature: 0.25,
             timeoutMs: 45_000,
             failMessage: 'Room-plan brief reformulation failed.',
+            model: settings.aiStudioModels?.roomPlanModel,
         });
         const english = (0, roomPlanPromptFidelity_ts_1.parseRoomPlanEnglishSceneBriefFromJson)(parsed);
         if (english.length >= 24) {
@@ -1191,12 +1194,14 @@ async function reformulateRoomPlanBriefToEnglish(input) {
     };
 }
 async function requestRoomPlanJson(input) {
+    const settings = (0, platformSettingsService_1.loadPlatformSettings)();
     const parsed = await (0, geminiJsonClient_ts_1.requestGeminiJson)({
         system: input.system,
         userText: input.userText,
         imageUrls: input.imageUrl ? [input.imageUrl] : undefined,
         temperature: input.temperature,
         failMessage: input.failMessage,
+        model: settings.aiStudioModels?.roomPlanModel,
     });
     return parseRoomPlanVisionDraft(parsed, { widthM: input.widthM, heightM: input.heightM });
 }

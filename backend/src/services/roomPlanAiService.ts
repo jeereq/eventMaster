@@ -1271,6 +1271,7 @@ async function reformulateRoomPlanBriefToEnglish(input: {
   roomType?: string;
   widthM: number;
   heightM: number;
+  model?: string;
 }): Promise<{ originalBrief: string; englishSceneBrief: string }> {
   const processed = processRoomPlanBrief(input.brief, {
     roomType: input.roomType,
@@ -1294,6 +1295,7 @@ async function reformulateRoomPlanBriefToEnglish(input: {
       temperature: 0.25,
       timeoutMs: 45_000,
       failMessage: 'Room-plan brief reformulation failed.',
+      model: input.model,
     });
     const english = parseRoomPlanEnglishSceneBriefFromJson(parsed);
     if (english.length >= 24) {
@@ -1323,6 +1325,7 @@ async function requestRoomPlanJson(input: {
   widthM: number;
   heightM: number;
   failMessage: string;
+  model?: string;
 }): Promise<RoomPlanVisionDraft> {
   const parsed = await requestGeminiJson({
     system: input.system,
@@ -1330,6 +1333,7 @@ async function requestRoomPlanJson(input: {
     imageUrls: input.imageUrl ? [input.imageUrl] : undefined,
     temperature: input.temperature,
     failMessage: input.failMessage,
+    model: input.model,
   });
   return parseRoomPlanVisionDraft(parsed, { widthM: input.widthM, heightM: input.heightM });
 }
@@ -1340,6 +1344,7 @@ export async function analyzeRoomPlanPhoto(input: {
   widthM: number;
   heightM: number;
   brief?: string;
+  model?: string;
 }): Promise<RoomPlanVisionDraft> {
   const roomType = input.roomType && ROOM_TYPES.has(input.roomType) ? input.roomType : 'CUSTOM';
   const rawBrief = (input.brief || '').trim().slice(0, 1500);
@@ -1350,6 +1355,7 @@ export async function analyzeRoomPlanPhoto(input: {
       roomType,
       widthM: input.widthM,
       heightM: input.heightM,
+      model: input.model,
     });
     englishNote = reformed.englishSceneBrief;
   }
@@ -1378,6 +1384,7 @@ Analyze the image, infer every visible element, then produce the import JSON.`;
     widthM: input.widthM,
     heightM: input.heightM,
     failMessage: 'Impossible d’analyser la photo de la salle.',
+    model: input.model,
   });
 }
 
@@ -1386,6 +1393,7 @@ export async function composeRoomPlanFromBrief(input: {
   roomType?: string;
   widthM: number;
   heightM: number;
+  model?: string;
 }): Promise<RoomPlanVisionDraft> {
   const brief = input.brief.trim();
   if (brief.length < 8) {
@@ -1397,6 +1405,7 @@ export async function composeRoomPlanFromBrief(input: {
     roomType,
     widthM: input.widthM,
     heightM: input.heightM,
+    model: input.model,
   });
   const userText = `ORIGINAL USER BRIEF (facts to preserve — any language):
 """
@@ -1420,6 +1429,7 @@ Produce the import JSON.`;
     widthM: input.widthM,
     heightM: input.heightM,
     failMessage: 'Impossible de composer le plan de salle.',
+    model: input.model,
   });
 }
 
@@ -1429,6 +1439,7 @@ export async function composeRoomPlanAi(input: {
   roomType?: string;
   widthM: number;
   heightM: number;
+  model?: string;
 }): Promise<RoomPlanVisionDraft> {
   const brief = (input.brief || '').trim();
   if (input.imageUrl) {
@@ -1438,6 +1449,7 @@ export async function composeRoomPlanAi(input: {
       widthM: input.widthM,
       heightM: input.heightM,
       brief,
+      model: input.model,
     });
   }
   return composeRoomPlanFromBrief({
@@ -1445,5 +1457,6 @@ export async function composeRoomPlanAi(input: {
     roomType: input.roomType,
     widthM: input.widthM,
     heightM: input.heightM,
+    model: input.model,
   });
 }

@@ -1238,7 +1238,14 @@ function getNanoBananaFlashModel(): string {
  * En mode 'fast', le modèle Flash (gemini-3.1-flash-image) est interrogé en premier pour un rendu en ~4-8s.
  * En mode 'quality', le modèle Pro (gemini-3-pro-image 2K) est privilégié pour un piqué maximal.
  */
-function getNanoBananaModelChain(speedMode?: AiSpeedMode): string[] {
+function getNanoBananaModelChain(speedMode?: AiSpeedMode, preferredModel?: string): string[] {
+  const custom = preferredModel?.trim();
+  if (custom) {
+    if (speedMode === 'fast') {
+      return [...new Set([custom, getNanoBananaFlashModel(), getNanoBananaProModel()])];
+    }
+    return [...new Set([custom, getNanoBananaProModel(), getNanoBananaFlashModel()])];
+  }
   if (speedMode === 'fast') {
     return [...new Set([getNanoBananaFlashModel(), getNanoBananaProModel()])];
   }
@@ -1554,11 +1561,12 @@ async function createNewInvitationImage(
     artStyle?: InvitationArtStyleId;
     speedMode?: AiSpeedMode;
     preloadedRefImages?: PreloadedRefImage[];
+    preferredModel?: string;
   },
 ): Promise<{ url: string; mode: 'edit' | 'generate'; safetyFallbackTriggered?: boolean }> {
   const nanoKey = getNanoBananaApiKey();
   if (nanoKey) {
-    const chain = getNanoBananaModelChain(options?.speedMode);
+    const chain = getNanoBananaModelChain(options?.speedMode, options?.preferredModel);
     for (let i = 0; i < chain.length; i++) {
       const model = chain[i];
       const next = chain[i + 1];
@@ -1810,6 +1818,7 @@ export async function composeInvitationTemplateAi(input: {
   artStyle?: string | null;
   variantsCount?: number;
   speedMode?: string | null;
+  preferredModel?: string | null;
 }): Promise<InvitationAiComposeResult> {
   rateLimit(input.userId);
   const prompt = String(input.prompt || '').trim();
@@ -1910,6 +1919,7 @@ export async function composeInvitationTemplateAi(input: {
         artStyle,
         speedMode,
         preloadedRefImages,
+        preferredModel: input.preferredModel || undefined,
       };
 
       if (requestedVariantsCount >= 2) {

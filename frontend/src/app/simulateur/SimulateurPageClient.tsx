@@ -12,7 +12,6 @@ import {
   getAiSimulationAllowance,
   createEmptyAiAllowance,
   syncDeviceAiTokensWithBackend,
-  aiTokenCostLegend,
   type AiAllowance,
   AI_ALLOWANCE_CHANGED,
 } from '@/lib/aiTokens';
@@ -34,9 +33,11 @@ import {
   Mail,
   Building2,
   Clock,
+  ArrowRight,
 } from 'lucide-react';
 import AiSimulationCounter, { isAiSimulationThresholdReached } from '@/components/AiSimulationCounter';
 import AiTokenBuyButton from '@/components/AiTokenBuyButton';
+import { cn } from '@/lib/cn';
 
 const EventPrepAiSimulator = dynamic(() => import('@/components/EventPrepAiSimulator'), {
   ssr: false,
@@ -55,10 +56,52 @@ const EventPrepAiSimulator = dynamic(() => import('@/components/EventPrepAiSimul
   ),
 });
 
+const LandingInvitationAiGenerator = dynamic(
+  () => import('@/components/landing/LandingInvitationAiGenerator'),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className="min-h-[28rem] rounded-[var(--radius-card)] border border-border bg-surface-muted/40 animate-pulse motion-reduce:animate-none flex items-center justify-center p-8 text-center"
+        aria-busy="true"
+        aria-label="Chargement du studio d’invitations IA"
+      >
+        <div className="space-y-2 max-w-sm">
+          <Sparkles className="w-8 h-8 text-pink-500 mx-auto animate-pulse motion-reduce:animate-none" />
+          <p className="text-sm font-semibold text-foreground">Chargement du studio d’invitations IA…</p>
+          <p className="text-xs text-muted">Préparation du moteur graphique de composition 9:16 WhatsApp.</p>
+        </div>
+      </div>
+    ),
+  },
+);
+
+const LandingRoomPlanAiStudio = dynamic(
+  () => import('@/components/landing/LandingRoomPlanAiStudio'),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        className="min-h-[28rem] rounded-[var(--radius-card)] border border-border bg-surface-muted/40 animate-pulse motion-reduce:animate-none flex items-center justify-center p-8 text-center"
+        aria-busy="true"
+        aria-label="Chargement du studio de plans 3D IA"
+      >
+        <div className="space-y-2 max-w-sm">
+          <Sparkles className="w-8 h-8 text-sky-500 mx-auto animate-pulse motion-reduce:animate-none" />
+          <p className="text-sm font-semibold text-foreground">Chargement du studio de plans 3D IA…</p>
+          <p className="text-xs text-muted">Initialisation de l’environnement spatial et de la visite 3D.</p>
+        </div>
+      </div>
+    ),
+  },
+);
+
 const AiTokenPurchaseModal = dynamic(
   () => import('@/components/AiTokenPurchaseModal'),
   { ssr: false },
 );
+
+export type SimulatorStudioTab = 'budget' | 'invite' | 'room';
 
 type ScenarioBrief = {
   id: string;
@@ -129,12 +172,24 @@ export default function SimulateurPageClient() {
   const exchangeRate = resolveUsdExchangeRateCdf(site?.usdExchangeRateCdf);
   const marketplaceCities = enabledMarketplaceCities(site);
 
+  const [activeStudio, setActiveStudio] = useState<SimulatorStudioTab>('budget');
   const [checkoutNotice, setCheckoutNotice] = useState<'success' | 'canceled' | null>(null);
   const [allowance, setAllowance] = useState<AiAllowance>(createEmptyAiAllowance);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [selectedScenarioId, setSelectedScenarioId] = useState<string | null>(null);
   const [liveDefaults, setLiveDefaults] = useState<EventPrepAiDefaults | undefined>(undefined);
   const [preferDefaults, setPreferDefaults] = useState(false);
+
+  const isBudgetBlocked = site?.studioVisibility?.budget === false;
+  const isInviteBlocked = site?.studioVisibility?.invite === false;
+  const isRoomBlocked = site?.studioVisibility?.room === false;
+
+  const isCurrentStudioBlocked =
+    activeStudio === 'budget'
+      ? isBudgetBlocked
+      : activeStudio === 'invite'
+      ? isInviteBlocked
+      : isRoomBlocked;
 
   const visibleScenarios = useMemo(() => {
     const filtered = SCENARIOS.filter((item) =>
@@ -157,10 +212,20 @@ export default function SimulateurPageClient() {
     return () => window.removeEventListener(AI_ALLOWANCE_CHANGED, onAllowance);
   }, []);
 
-  // Détection du paramètre URL initial ?scenario=...
+  // Détection du paramètre URL initial (?studio=... ou ?tab=... ou ?scenario=...)
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
+
+    const studioParam = params.get('studio') || params.get('tab') || params.get('atelier');
+    if (studioParam === 'invite' || studioParam === 'invitations' || studioParam === 'invitation') {
+      setActiveStudio('invite');
+    } else if (studioParam === 'room' || studioParam === 'plans-3d' || studioParam === 'plan' || studioParam === 'salle') {
+      setActiveStudio('room');
+    } else if (studioParam === 'budget') {
+      setActiveStudio('budget');
+    }
+
     const paramScenario = params.get('scenario');
     if (paramScenario) {
       const match = SCENARIOS.find((s) => s.id === paramScenario);
@@ -171,6 +236,15 @@ export default function SimulateurPageClient() {
       }
     }
   }, [exchangeRate]);
+
+  const handleSwitchStudio = (tab: SimulatorStudioTab) => {
+    setActiveStudio(tab);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('studio', tab);
+      window.history.replaceState(null, '', url.pathname + url.search);
+    }
+  };
 
   const handleSelectScenario = (scenario: ScenarioBrief) => {
     setSelectedScenarioId(scenario.id);
@@ -185,17 +259,37 @@ export default function SimulateurPageClient() {
   };
 
   const activeScenario = visibleScenarios.find((s) => s.id === selectedScenarioId);
-  const isBudgetBlocked = site?.studioVisibility?.budget === false;
+
+  const heroInfo = useMemo(() => {
+    if (activeStudio === 'invite') {
+      return {
+        title: 'Studio d’Invitations & Faire-part IA',
+        description: isInviteBlocked
+          ? 'Fonctionnalité à venir : composition graphique 9:16 WhatsApp avec RSVP instantané.'
+          : 'Créez vos faire-part 9:16 WhatsApp personnalisés avec confirmation de présence en direct.',
+      };
+    }
+    if (activeStudio === 'room') {
+      return {
+        title: 'Studio Plans de Salle 2D & Visite 3D',
+        description: isRoomBlocked
+          ? 'Fonctionnalité à venir : aménagement spatial de salle et visite 3D interactive.'
+          : 'Disposition des tables, cotation au millimètre et visite 3D interactive de votre réception.',
+      };
+    }
+    return {
+      title: 'Simulateur de Budget & Formules IA',
+      description: isBudgetBlocked
+        ? 'Fonctionnalité à venir : 3 formules chiffrées selon votre budget.'
+        : '3 formules clés en main (Éco, Équilibré, Confort) en 1 clic.',
+    };
+  }, [activeStudio, isBudgetBlocked, isInviteBlocked, isRoomBlocked]);
 
   return (
     <PublicPageShell faqHref="/faq" mobileFooterPad>
       <PublicPageHero
-        title="Simulateur de Budget & Formules IA"
-        description={
-          isBudgetBlocked
-            ? 'Fonctionnalité à venir : 3 formules chiffrées selon votre budget.'
-            : '3 formules clés en main (Éco, Équilibré, Confort) en 1 clic.'
-        }
+        title={heroInfo.title}
+        description={heroInfo.description}
         compact
       >
         <div className="pt-2 flex flex-wrap items-center gap-2">
@@ -205,7 +299,7 @@ export default function SimulateurPageClient() {
             Taux du jour : 1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
           </span>
 
-          {isBudgetBlocked ? (
+          {isCurrentStudioBlocked ? (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-xs font-bold text-amber-800 dark:text-amber-300">
               <Clock className="w-3.5 h-3.5" />
               Fonctionnalité à venir
@@ -235,13 +329,13 @@ export default function SimulateurPageClient() {
       <div className="page-container py-6 sm:py-10 space-y-8">
         {/* Messages d'achat de jetons */}
         {checkoutNotice === 'success' ? (
-          <Alert variant="success">Jetons IA crédités. Vous pouvez relancer votre simulation.</Alert>
+          <Alert variant="success">Jetons IA crédités. Vous pouvez lancer votre simulation.</Alert>
         ) : null}
         {checkoutNotice === 'canceled' ? (
           <Alert variant="warning">Paiement annulé — aucun jeton n’a été débité.</Alert>
         ) : null}
 
-        {!isBudgetBlocked && isAiSimulationThresholdReached(allowance) ? (
+        {!isCurrentStudioBlocked && isAiSimulationThresholdReached(allowance) ? (
           <div className="max-w-xl mx-auto">
             <AiSimulationCounter
               allowance={allowance}
@@ -250,34 +344,46 @@ export default function SimulateurPageClient() {
           </div>
         ) : null}
 
-        {/* ─── STUDIOS CRÉATIFS ACTIFS ─── */}
-        <section aria-label="Studios créatifs actifs" className="rounded-2xl border border-primary/20 bg-surface p-4 sm:p-5 shadow-xs space-y-3">
+        {/* ─── SÉLECTEUR DES 3 ATELIERS CRÉATIFS SUR LA PAGE ─── */}
+        <section aria-label="Ateliers créatifs de simulation" className="rounded-2xl border border-primary/20 bg-surface p-4 sm:p-5 shadow-xs space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/50 pb-3">
             <div className="space-y-0.5">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary text-primary-foreground">
                 <Sparkles className="w-3.5 h-3.5" />
-                Studios actifs
+                Ateliers IA unifiés
               </span>
               <h2 className="text-sm font-bold text-foreground">
-                Les 3 ateliers créatifs de préparation
+                Les 3 ateliers de préparation événementielle
               </h2>
             </div>
             <p className="text-xs text-muted max-w-sm sm:text-right">
-              Budget, invitations WhatsApp et plans 3D.
+              Basculez entre le budget, les invitations WhatsApp et les plans 3D sans quitter cette page.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            <div
-              className={`p-3 rounded-xl border flex items-center justify-between gap-2 ${
-                isBudgetBlocked
-                  ? 'border-amber-500/30 bg-amber-500/5'
-                  : 'border-2 border-primary bg-primary/5'
-              }`}
+          <div
+            role="tablist"
+            aria-label="Choix de l'atelier de simulation"
+            className="grid grid-cols-1 sm:grid-cols-3 gap-2.5"
+          >
+            {/* Atelier 1: Budget */}
+            <button
+              type="button"
+              role="tab"
+              id="studio-tab-budget"
+              aria-controls="studio-panel-budget"
+              aria-selected={activeStudio === 'budget'}
+              onClick={() => handleSwitchStudio('budget')}
+              className={cn(
+                'p-3.5 rounded-xl border text-left transition flex items-center justify-between gap-2 cursor-pointer min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                activeStudio === 'budget'
+                  ? 'border-2 border-primary bg-primary/10 shadow-sm ring-1 ring-primary/30'
+                  : 'border-border bg-surface hover:bg-surface-muted hover:border-primary/40'
+              )}
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                  <Wand2 className="w-4 h-4" />
+                  <Wand2 className="w-4 h-4" aria-hidden />
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-foreground truncate">Simulateur Budget</p>
@@ -287,237 +393,419 @@ export default function SimulateurPageClient() {
                 </div>
               </div>
               <span
-                className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                className={cn(
+                  'inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
                   isBudgetBlocked
                     ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
                     : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-                }`}
+                )}
               >
                 {isBudgetBlocked ? (
                   <>
-                    <Clock className="w-3 h-3" />
+                    <Clock className="w-3 h-3" aria-hidden />
                     À venir
                   </>
                 ) : (
                   <>
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" aria-hidden />
                     Actif
                   </>
                 )}
               </span>
-            </div>
+            </button>
 
-            <Link
-              href="/modeles"
-              className="p-3 rounded-xl border border-border bg-surface hover:border-pink-500/50 hover:bg-pink-500/5 transition flex items-center justify-between gap-2 group cursor-pointer"
+            {/* Atelier 2: Invitations */}
+            <button
+              type="button"
+              role="tab"
+              id="studio-tab-invite"
+              aria-controls="studio-panel-invite"
+              aria-selected={activeStudio === 'invite'}
+              onClick={() => handleSwitchStudio('invite')}
+              className={cn(
+                'p-3.5 rounded-xl border text-left transition flex items-center justify-between gap-2 cursor-pointer min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500',
+                activeStudio === 'invite'
+                  ? 'border-2 border-pink-500 bg-pink-500/10 shadow-sm ring-1 ring-pink-500/30'
+                  : 'border-border bg-surface hover:bg-surface-muted hover:border-pink-500/40'
+              )}
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
-                  <Mail className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-lg bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0">
+                  <Mail className="w-4 h-4" aria-hidden />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold text-foreground group-hover:text-pink-600 transition truncate">Studio Invitations</p>
-                  <p className="text-xs text-muted truncate">Cartes 9:16 WhatsApp et réponse à l’invitation</p>
+                  <p className="text-xs font-bold text-foreground truncate">Studio Invitations</p>
+                  <p className="text-xs text-muted truncate">
+                    {isInviteBlocked ? 'Bientôt disponible' : 'Faire-part 9:16 WhatsApp'}
+                  </p>
                 </div>
               </div>
-              <span className="text-xs font-bold text-muted group-hover:text-pink-600 transition shrink-0">
-                Ouvrir →
-              </span>
-            </Link>
-
-            <Link
-              href="/plans-3d"
-              className="p-3 rounded-xl border border-border bg-surface hover:border-sky-500/50 hover:bg-sky-500/5 transition flex items-center justify-between gap-2 group cursor-pointer"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
-                  <Building2 className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-foreground group-hover:text-sky-600 transition truncate">Studio Plans 3D</p>
-                  <p className="text-xs text-muted truncate">Visite &amp; tables 3D</p>
-                </div>
-              </div>
-              <span className="text-xs font-bold text-muted group-hover:text-sky-600 transition shrink-0">
-                Ouvrir →
-              </span>
-            </Link>
-          </div>
-        </section>
-
-        {/* Barre de sélection rapide de scénarios types */}
-        <section aria-labelledby="scenarios-heading" className="space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <h2 id="scenarios-heading" className="text-sm font-bold text-foreground flex items-center gap-2">
-                <Wand2 className="w-4 h-4 text-primary" />
-                <span>{isBudgetBlocked ? 'Aperçu des futurs projets types' : 'Projets types prêts à l’emploi'}</span>
-                {isBudgetBlocked && (
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300">
-                    À venir
-                  </span>
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
+                  isInviteBlocked
+                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
                 )}
-              </h2>
-              <p className="text-xs text-muted">
-                {isBudgetBlocked
-                  ? 'Exemples chiffrés dès l’activation du simulateur.'
-                  : 'Chargez un exemple type en 1 clic.'}
-              </p>
-            </div>
-
-            {selectedScenarioId && (
-              <button
-                type="button"
-                onClick={handleClearScenario}
-                className="text-xs text-muted hover:text-foreground underline underline-offset-2 self-start sm:self-auto touch-manipulation cursor-pointer min-h-11 inline-flex items-center px-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
-                Simulation libre
-              </button>
-            )}
-          </div>
+                {isInviteBlocked ? (
+                  <>
+                    <Clock className="w-3 h-3" aria-hidden />
+                    À venir
+                  </>
+                ) : (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" aria-hidden />
+                    Actif
+                  </>
+                )}
+              </span>
+            </button>
 
-          <div
-            className="flex gap-2.5 overflow-x-auto pb-1.5 pt-0.5 sm:grid sm:grid-cols-3 sm:overflow-visible scrollbar-none touch-pan-x"
-            role="group"
-            aria-label="Sélection de projet type"
-          >
-            {visibleScenarios.map((scenario) => {
-              const isSelected = scenario.id === selectedScenarioId;
-              const usdEst = Math.round(scenario.budgetTargetFc / exchangeRate);
-
-              return (
-                <button
-                  key={scenario.id}
-                  type="button"
-                  aria-pressed={isSelected}
-                  onClick={() => handleSelectScenario(scenario)}
-                  className={`min-w-[260px] sm:min-w-0 p-3.5 rounded-[var(--radius-card)] border text-left transition-all duration-200 cursor-pointer touch-manipulation flex flex-col justify-between shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                    isSelected
-                      ? 'border-primary-solid bg-primary/10 shadow-sm ring-1 ring-primary/30'
-                      : 'border-border bg-surface hover:bg-surface-muted hover:border-primary/40'
-                  }`}
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-bold text-foreground truncate">{scenario.name}</span>
-                      {isSelected && (
-                        <span className="w-2 h-2 rounded-full bg-primary-solid shrink-0" aria-hidden />
-                      )}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
-                      <span className="inline-flex items-center gap-1">
-                        <Users className="w-3 h-3 text-primary" />
-                        {scenario.guests} invités
-                      </span>
-                      <span>·</span>
-                      <span className="inline-flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-primary" />
-                        {scenario.city}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="pt-2.5 mt-2 border-t border-border/60 flex items-center justify-between text-xs">
-                    <span className="font-bold text-foreground tabular-nums">
-                      {formatFc(scenario.budgetTargetFc)}
-                    </span>
-                    <span className="text-muted tabular-nums">≈ {usdEst} $</span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {activeScenario && (
-            <div className="p-3 rounded-xl bg-surface-muted/70 border border-border text-xs text-muted flex items-start gap-2 animate-fade-in">
-              <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-              <div>
-                <span className="font-semibold text-foreground">Scénario actif : </span>
-                {activeScenario.prompt}
+            {/* Atelier 3: Plans 2D / 3D */}
+            <button
+              type="button"
+              role="tab"
+              id="studio-tab-room"
+              aria-controls="studio-panel-room"
+              aria-selected={activeStudio === 'room'}
+              onClick={() => handleSwitchStudio('room')}
+              className={cn(
+                'p-3.5 rounded-xl border text-left transition flex items-center justify-between gap-2 cursor-pointer min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500',
+                activeStudio === 'room'
+                  ? 'border-2 border-sky-500 bg-sky-500/10 shadow-sm ring-1 ring-sky-500/30'
+                  : 'border-border bg-surface hover:bg-surface-muted hover:border-sky-500/40'
+              )}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                  <Building2 className="w-4 h-4" aria-hidden />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-foreground truncate">Studio Plans 3D</p>
+                  <p className="text-xs text-muted truncate">
+                    {isRoomBlocked ? 'Bientôt disponible' : 'Visite & tables 3D'}
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
+                  isRoomBlocked
+                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
+                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                )}
+              >
+                {isRoomBlocked ? (
+                  <>
+                    <Clock className="w-3 h-3" aria-hidden />
+                    À venir
+                  </>
+                ) : (
+                  <>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" aria-hidden />
+                    Actif
+                  </>
+                )}
+              </span>
+            </button>
+          </div>
         </section>
 
-        {/* Zone interactive du simulateur */}
-        <section id="simulateur" className="scroll-mt-24 space-y-4">
-          {isBudgetBlocked && (
-            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0">
-                  <Clock className="w-5 h-5" />
-                </div>
+        {/* ─── CONTENU ATELIER 1 : BUDGET ─── */}
+        {activeStudio === 'budget' && (
+          <div id="studio-panel-budget" role="tabpanel" aria-labelledby="studio-tab-budget" className="space-y-8 animate-in fade-in duration-200">
+            {/* Barre de sélection rapide de scénarios types */}
+            <section aria-labelledby="scenarios-heading" className="space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <p className="text-xs sm:text-sm font-bold text-foreground">
-                    Simulateur de budget · Fonctionnalité à venir
-                  </p>
+                  <h2 id="scenarios-heading" className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <Wand2 className="w-4 h-4 text-primary" />
+                    <span>{isBudgetBlocked ? 'Aperçu des futurs projets types' : 'Projets types prêts à l’emploi'}</span>
+                    {isBudgetBlocked && (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                        À venir
+                      </span>
+                    )}
+                  </h2>
                   <p className="text-xs text-muted">
-                    L&apos;estimation IA est temporairement désactivée. Explorez nos espaces et prestataires certifiés.
+                    {isBudgetBlocked
+                      ? 'Exemples chiffrés dès l’activation du simulateur.'
+                      : 'Chargez un exemple type en 1 clic.'}
                   </p>
                 </div>
+
+                {selectedScenarioId && (
+                  <button
+                    type="button"
+                    onClick={handleClearScenario}
+                    className="text-xs text-muted hover:text-foreground underline underline-offset-2 self-start sm:self-auto touch-manipulation cursor-pointer min-h-11 inline-flex items-center px-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  >
+                    Simulation libre
+                  </button>
+                )}
               </div>
-              <Button href="/marketplace" size="sm" variant="primary" className="shrink-0">
-                Explorer le catalogue
-              </Button>
-            </div>
-          )}
 
-          <div className="border-t border-border pt-6">
-            <EventPrepAiSimulator
-              embedded
-              defaultOpen
-              defaults={liveDefaults}
-              preferDefaults={preferDefaults}
-            />
+              <div
+                className="flex gap-2.5 overflow-x-auto pb-1.5 pt-0.5 sm:grid sm:grid-cols-3 sm:overflow-visible scrollbar-none touch-pan-x"
+                role="group"
+                aria-label="Sélection de projet type"
+              >
+                {visibleScenarios.map((scenario) => {
+                  const isSelected = scenario.id === selectedScenarioId;
+                  const usdEst = Math.round(scenario.budgetTargetFc / exchangeRate);
+
+                  return (
+                    <button
+                      key={scenario.id}
+                      type="button"
+                      aria-pressed={isSelected}
+                      onClick={() => handleSelectScenario(scenario)}
+                      className={`min-w-[260px] sm:min-w-0 p-3.5 rounded-[var(--radius-card)] border text-left transition-all duration-200 cursor-pointer touch-manipulation flex flex-col justify-between shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                        isSelected
+                          ? 'border-primary-solid bg-primary/10 shadow-sm ring-1 ring-primary/30'
+                          : 'border-border bg-surface hover:bg-surface-muted hover:border-primary/40'
+                      }`}
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-foreground truncate">{scenario.name}</span>
+                          {isSelected && (
+                            <span className="w-2 h-2 rounded-full bg-primary-solid shrink-0" aria-hidden />
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
+                          <span className="inline-flex items-center gap-1">
+                            <Users className="w-3 h-3 text-primary" />
+                            {scenario.guests} invités
+                          </span>
+                          <span>·</span>
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-primary" />
+                            {scenario.city}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2.5 mt-2 border-t border-border/60 flex items-center justify-between text-xs">
+                        <span className="font-bold text-foreground tabular-nums">
+                          {formatFc(scenario.budgetTargetFc)}
+                        </span>
+                        <span className="text-muted tabular-nums">≈ {usdEst} $</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {activeScenario && (
+                <div className="p-3 rounded-xl bg-surface-muted/70 border border-border text-xs text-muted flex items-start gap-2 animate-fade-in">
+                  <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-foreground">Scénario actif : </span>
+                    {activeScenario.prompt}
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* Zone interactive du simulateur */}
+            <section id="simulateur" className="scroll-mt-24 space-y-4">
+              {isBudgetBlocked && (
+                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs sm:text-sm font-bold text-foreground">
+                        Simulateur de budget · Fonctionnalité à venir
+                      </p>
+                      <p className="text-xs text-muted">
+                        L&apos;estimation IA est temporairement désactivée. Explorez nos espaces et prestataires certifiés.
+                      </p>
+                    </div>
+                  </div>
+                  <Button href="/marketplace" size="sm" variant="primary" className="shrink-0 min-h-11">
+                    Explorer le catalogue
+                  </Button>
+                </div>
+              )}
+
+              <div className="border-t border-border pt-6">
+                <EventPrepAiSimulator
+                  embedded
+                  defaultOpen
+                  defaults={liveDefaults}
+                  preferDefaults={preferDefaults}
+                />
+              </div>
+            </section>
           </div>
-        </section>
+        )}
 
-        {/* Bandeau de découverte des autres ateliers IA */}
+        {/* ─── CONTENU ATELIER 2 : INVITATIONS ─── */}
+        {activeStudio === 'invite' && (
+          <section id="studio-panel-invite" role="tabpanel" aria-labelledby="studio-tab-invite" className="space-y-6 animate-in fade-in duration-200">
+            {isInviteBlocked ? (
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6 sm:p-8 text-center space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center mx-auto">
+                  <Clock className="w-6 h-6" />
+                </div>
+                <div className="space-y-1.5 max-w-lg mx-auto">
+                  <h3 className="text-base sm:text-lg font-bold text-foreground">
+                    Studio Invitations IA · Fonctionnalité à venir
+                  </h3>
+                  <p className="text-xs sm:text-sm text-muted leading-relaxed">
+                    La génération automatique d&apos;invitations IA est temporairement désactivée par l&apos;administration. Vous pouvez explorer notre catalogue de modèles prêts à l&apos;emploi.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                  <Button href="/modeles" variant="primary" size="sm" className="min-h-11">
+                    Consulter les modèles existants
+                  </Button>
+                  <Button href="/marketplace" variant="secondary" size="sm" className="min-h-11">
+                    Voir les prestataires
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <LandingInvitationAiGenerator
+                  defaultExpanded={true}
+                  className="rounded-2xl border border-border shadow-xs"
+                />
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ─── CONTENU ATELIER 3 : PLANS 2D / 3D ─── */}
+        {activeStudio === 'room' && (
+          <section id="studio-panel-room" role="tabpanel" aria-labelledby="studio-tab-room" className="space-y-6 animate-in fade-in duration-200">
+            {isRoomBlocked ? (
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6 sm:p-8 text-center space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center mx-auto">
+                  <Clock className="w-6 h-6" />
+                </div>
+                <div className="space-y-1.5 max-w-lg mx-auto">
+                  <h3 className="text-base sm:text-lg font-bold text-foreground">
+                    Studio Plans 2D / 3D IA · Fonctionnalité à venir
+                  </h3>
+                  <p className="text-xs sm:text-sm text-muted leading-relaxed">
+                    La composition automatique de plans de salle par IA est temporairement désactivée par l&apos;administration. Vous pouvez explorer les plans témoins ou ouvrir l&apos;éditeur manuel.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                  <Button href="/plans-3d" variant="primary" size="sm" className="min-h-11">
+                    Explorer les plans témoins 3D
+                  </Button>
+                  <Button href="/dashboard/rooms" variant="secondary" size="sm" className="min-h-11">
+                    Ouvrir l&apos;éditeur de salle
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <LandingRoomPlanAiStudio
+                  defaultExpanded={true}
+                  className="rounded-2xl border border-border shadow-xs"
+                />
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Bandeau de découverte et commutation directe */}
         <section className="p-5 sm:p-6 rounded-[var(--radius-card)] bg-surface border border-border shadow-xs space-y-4">
           <div className="space-y-1">
             <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-primary" />
-              <span>Explorez les autres outils créatifs</span>
+              <span>Explorez les 3 ateliers directement sur cette page</span>
             </h3>
             <p className="text-xs text-muted">
-              Vos jetons IA sont utilisables sur l’ensemble des ateliers.
+              Vos jetons IA sont automatiquement partagés entre le simulateur de budget, les invitations et les plans 3D.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            <Link
-              href="/modeles"
-              className="p-3.5 rounded-xl border border-border hover:border-primary/50 bg-surface-muted/40 hover:bg-surface-muted transition flex items-center gap-3 group"
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => handleSwitchStudio('budget')}
+              className={cn(
+                'p-3.5 rounded-xl border text-left transition flex items-center gap-3 group min-h-11 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                activeStudio === 'budget'
+                  ? 'border-primary bg-primary/10 shadow-xs'
+                  : 'border-border bg-surface-muted/40 hover:bg-surface-muted hover:border-primary/50'
+              )}
             >
-              <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <div className="w-9 h-9 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                <Wand2 className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
+                    Simulateur Budget
+                  </p>
+                  {isBudgetBlocked && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300">À venir</span>
+                  )}
+                </div>
+                <p className="text-xs text-muted truncate">3 formules chiffrées clés en main</p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSwitchStudio('invite')}
+              className={cn(
+                'p-3.5 rounded-xl border text-left transition flex items-center gap-3 group min-h-11 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500',
+                activeStudio === 'invite'
+                  ? 'border-pink-500 bg-pink-500/10 shadow-xs'
+                  : 'border-border bg-surface-muted/40 hover:bg-surface-muted hover:border-pink-500/50'
+              )}
+            >
+              <div className="w-9 h-9 rounded-lg bg-pink-500/15 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                 <FileText className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
-                  Studio Cartes & Invitations WhatsApp
-                </p>
-                <p className="text-xs text-muted truncate">
-                  Carte d’invitation 9:16 avec confirmation de présence
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-bold text-foreground group-hover:text-pink-600 transition-colors">
+                    Studio Invitations
+                  </p>
+                  {isInviteBlocked && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300">À venir</span>
+                  )}
+                </div>
+                <p className="text-xs text-muted truncate">Cartes 9:16 WhatsApp &amp; RSVP</p>
               </div>
-            </Link>
+            </button>
 
-            <Link
-              href="/plans-3d"
-              className="p-3.5 rounded-xl border border-border hover:border-primary/50 bg-surface-muted/40 hover:bg-surface-muted transition flex items-center gap-3 group"
+            <button
+              type="button"
+              onClick={() => handleSwitchStudio('room')}
+              className={cn(
+                'p-3.5 rounded-xl border text-left transition flex items-center gap-3 group min-h-11 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500',
+                activeStudio === 'room'
+                  ? 'border-sky-500 bg-sky-500/10 shadow-xs'
+                  : 'border-border bg-surface-muted/40 hover:bg-surface-muted hover:border-sky-500/50'
+              )}
             >
-              <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <div className="w-9 h-9 rounded-lg bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                 <LayoutGrid className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
-                  Studio Plans de Salle 2D & 3D
-                </p>
-                <p className="text-xs text-muted truncate">
-                  Disposition des tables et visite 3D
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs font-bold text-foreground group-hover:text-sky-600 transition-colors">
+                    Studio Plans 3D
+                  </p>
+                  {isRoomBlocked && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300">À venir</span>
+                  )}
+                </div>
+                <p className="text-xs text-muted truncate">Visite 3D &amp; disposition des tables</p>
               </div>
-            </Link>
+            </button>
           </div>
         </section>
       </div>

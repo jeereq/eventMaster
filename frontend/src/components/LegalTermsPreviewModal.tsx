@@ -297,7 +297,7 @@ export default function LegalTermsPreviewModal({
                   5. Studio IA, Rendu 3D photoréaliste &amp; Normes de sécurité
                 </h3>
                 <p className="text-muted">
-                  Modélisation 2D/3D WebGL (matériaux PBR, caméras cinéma, escaliers droits/hélicoïdaux, estrades et scènes), contextualisation des invitations et respect des visages réels (Google Gemini). L&apos;assistance logicielle aide à l&apos;aménagement mais ne remplace pas les diagnostics d&apos;architecte et les règlements de sécurité ERP/PMR.
+                  Modélisation 2D/3D WebGL (matériaux PBR, caméras cinéma, escaliers, estrades et scènes), contextualisation des invitations et respect des visages réels (Google Gemini). L&apos;utilisateur est informé que les modèles d&apos;IA peuvent occasionnellement présenter des imperfections ou altérations fortuites des visages, inhérentes à la technologie générative et ne constituant pas une faute d&apos;EventMaster. L&apos;assistance logicielle ne remplace pas les diagnostics d&apos;architecte et règlements ERP/PMR.
                 </p>
               </div>
 
@@ -398,7 +398,7 @@ export default function LegalTermsPreviewModal({
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">2. Studio IA, Médias importés &amp; Respect des visages</h4>
                 <p className="text-muted">
-                  Photographies de salle traitées pour extraire le plan 2D/3D sans reconnaissance faciale de surveillance. Pour les invitations, choix de la source de contexte et respect strict des visages de référence selon les directives Google Gemini (sans retouche artificielle déformante).
+                  Photographies de salle traitées pour extraire le plan 2D/3D sans reconnaissance faciale de surveillance. Pour les invitations, choix de la source de contexte et respect strict des visages de référence selon les directives Google Gemini (sans retouche artificielle déformante). Les éventuelles altérations ou approximations visuelles résultant des limites intrinsèques du modèle d&apos;IA ne sauraient engager la responsabilité d&apos;EventMaster.
                 </p>
               </section>
 

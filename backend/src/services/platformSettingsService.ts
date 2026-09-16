@@ -87,6 +87,46 @@ export function sanitizeStudioVisibility(raw: unknown): StudioVisibilitySettings
   };
 }
 
+export interface AiStudioModelsSettings {
+  invitationModel: string;
+  roomPlanModel: string;
+}
+
+export const DEFAULT_AI_STUDIO_MODELS: AiStudioModelsSettings = {
+  invitationModel: 'gemini-3-pro-image',
+  roomPlanModel: 'gemini-3.1-pro-preview',
+};
+
+export const AVAILABLE_INVITATION_MODELS = [
+  { id: 'gemini-3-pro-image', label: 'Gemini 3 Pro Image (Nano Banana Pro · Haute Fidélité 2K)', badge: '2K Pro' },
+  { id: 'gemini-3.1-flash-image', label: 'Gemini 3.1 Flash Image (Nano Banana Flash · Rendu rapide)', badge: 'Ultra-rapide' },
+  { id: 'imagen-3.0-generate-002', label: 'Google Imagen 3.0 (Photoréaliste standard)', badge: 'Photoréaliste' },
+  { id: 'imagen-3.0-fast-generate-001', label: 'Google Imagen 3.0 Fast (Économique & rapide)', badge: 'Éco rapide' },
+] as const;
+
+export const AVAILABLE_ROOM_PLAN_MODELS = [
+  { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (Raisonnement spatial & agencement coté)', badge: 'Spatial Pro' },
+  { id: 'gemini-3-flash', label: 'Gemini 3 Flash (Génération agile & rapide)', badge: 'Agile & Rapide' },
+  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Haute précision textuelle)', badge: 'Précision' },
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Standard stable)', badge: 'Stable' },
+] as const;
+
+export function sanitizeAiStudioModels(raw: unknown): AiStudioModelsSettings {
+  const src = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const validInv = AVAILABLE_INVITATION_MODELS.map((m) => m.id as string);
+  const validRoom = AVAILABLE_ROOM_PLAN_MODELS.map((m) => m.id as string);
+
+  const inv = typeof src.invitationModel === 'string' && validInv.includes(src.invitationModel)
+    ? src.invitationModel
+    : DEFAULT_AI_STUDIO_MODELS.invitationModel;
+
+  const room = typeof src.roomPlanModel === 'string' && validRoom.includes(src.roomPlanModel)
+    ? src.roomPlanModel
+    : DEFAULT_AI_STUDIO_MODELS.roomPlanModel;
+
+  return { invitationModel: inv, roomPlanModel: room };
+}
+
 export interface CommercialGrantedPermissions {
   canManageTemplates?: boolean;
   canManageMessageTemplates?: boolean;
@@ -351,6 +391,8 @@ export interface PlatformSettings {
   audioNotifications: AudioNotificationsSettings;
   /** Visibilité des studios IA (budget, invitations, plans 3D). */
   studioVisibility: StudioVisibilitySettings;
+  /** Modèles IA principaux configurés par le Super Admin pour invitations et salles. */
+  aiStudioModels: AiStudioModelsSettings;
   /** Droits délégués aux commerciaux pour les fonctionnalités réservées au Super Admin. */
   commercialPermissions: Record<string, CommercialGrantedPermissions>;
   /** Ouverture des demandes de rabais (période et/ou organisations). */
@@ -404,6 +446,7 @@ export interface PublicSiteConfig {
   welcomeAiGrants: WelcomeGrantRules;
   audioNotifications: AudioNotificationsSettings;
   studioVisibility: StudioVisibilitySettings;
+  aiStudioModels: AiStudioModelsSettings;
   subscriptionDiscountAccess: Pick<SubscriptionDiscountAccess, 'enabled' | 'periodStart' | 'periodEnd'>;
   donationsAccess: DonationsAccess;
 }
@@ -455,6 +498,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   welcomeAiGrants: DEFAULT_WELCOME_GRANT_RULES,
   audioNotifications: DEFAULT_AUDIO_NOTIFICATIONS,
   studioVisibility: DEFAULT_STUDIO_VISIBILITY,
+  aiStudioModels: DEFAULT_AI_STUDIO_MODELS,
   commercialPermissions: {},
   subscriptionDiscountAccess: DEFAULT_SUBSCRIPTION_DISCOUNT_ACCESS,
   donationsAccess: DEFAULT_DONATIONS_ACCESS,
@@ -618,6 +662,7 @@ function normalizeStoredRates(settings: PlatformSettings): PlatformSettings {
     welcomeAiGrants: sanitizeWelcomeGrantRules(settings.welcomeAiGrants),
     audioNotifications: sanitizeAudioNotifications(settings.audioNotifications),
     studioVisibility: sanitizeStudioVisibility(settings.studioVisibility),
+    aiStudioModels: sanitizeAiStudioModels(settings.aiStudioModels),
     commercialPermissions: sanitizeCommercialPermissions(settings.commercialPermissions),
     subscriptionDiscountAccess: sanitizeSubscriptionDiscountAccess(settings.subscriptionDiscountAccess),
     donationsAccess: sanitizeDonationsAccess(settings.donationsAccess),
@@ -653,6 +698,7 @@ function buildNextSettings(
   next.welcomeAiGrants = sanitizeWelcomeGrantRules(next.welcomeAiGrants);
   next.audioNotifications = sanitizeAudioNotifications(next.audioNotifications);
   next.studioVisibility = sanitizeStudioVisibility(next.studioVisibility);
+  next.aiStudioModels = sanitizeAiStudioModels(next.aiStudioModels);
   next.commercialPermissions = sanitizeCommercialPermissions(next.commercialPermissions);
   next.subscriptionDiscountAccess = sanitizeSubscriptionDiscountAccess(next.subscriptionDiscountAccess);
   next.donationsAccess = sanitizeDonationsAccess(next.donationsAccess);
@@ -776,6 +822,7 @@ export function getPublicSiteConfig(settings = loadPlatformSettings()): PublicSi
     welcomeAiGrants: sanitizeWelcomeGrantRules(settings.welcomeAiGrants),
     audioNotifications: sanitizeAudioNotifications(settings.audioNotifications),
     studioVisibility: sanitizeStudioVisibility(settings.studioVisibility),
+    aiStudioModels: sanitizeAiStudioModels(settings.aiStudioModels),
     subscriptionDiscountAccess: (() => {
       const access = sanitizeSubscriptionDiscountAccess(settings.subscriptionDiscountAccess);
       return {

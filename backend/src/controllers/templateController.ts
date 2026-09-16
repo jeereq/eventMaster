@@ -516,6 +516,7 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
       artStyle,
       variantsCount,
       speedMode,
+      preferredModel: settings.aiStudioModels?.invitationModel,
     });
     const historyId = await persistTemplateCompose({
       userId: req.user.id,
@@ -617,6 +618,7 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
       artStyle,
       variantsCount,
       speedMode,
+      preferredModel: settings.aiStudioModels?.invitationModel,
     });
     const historyId = await persistTemplateCompose({
       userId: user?.id || null,

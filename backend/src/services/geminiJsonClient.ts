@@ -98,9 +98,10 @@ export async function requestGeminiJson(input: {
   temperature?: number;
   timeoutMs?: number;
   failMessage?: string;
+  model?: string;
 }): Promise<unknown> {
   const key = requireGeminiApiKey();
-  const model = getGeminiTextModel();
+  const model = input.model?.trim() || getGeminiTextModel();
   const failMessage = input.failMessage || 'L’IA Gemini n’a pas renvoyé de JSON utilisable.';
   const parts: Array<Record<string, unknown>> = [{ text: input.userText }];
   const validImages: Array<{ inline_data: { mime_type: string; data: string } }> = [];

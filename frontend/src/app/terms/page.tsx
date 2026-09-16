@@ -513,6 +513,7 @@ export default function TermsPage() {
         <ul className="list-disc pl-5 space-y-1">
           <li><strong>Choix de la source de contexte :</strong> L&apos;utilisateur peut choisir d&apos;appliquer le profil contextuel de son organisation ou son historique de recherche récent pour personnaliser les propositions graphiques et textuelles générées.</li>
           <li><strong>Restitution honnête des visages :</strong> Conformément aux principes éthiques et aux directives techniques de Google Gemini, notre moteur applique un ancrage d&apos;identité strict assurant une représentation fidèle et honnête des personnes fournies en référence, sans embellissement artificiel trompeur, déformation ou retouche dégradante.</li>
+          <li><strong>Altération fortuite des visages &amp; Limitations intrinsèques des modèles d&apos;IA :</strong> L&apos;utilisateur reconnaît expressément et accepte que les modèles d&apos;intelligence artificielle générative tiers (tels que Google Gemini ou Google Imagen) peuvent occasionnellement présenter des imperfections, artefacts visuels ou une altération involontaire des traits du visage lors de la composition d&apos;images ou de simulations. Ces imperfections résultent des limites technologiques propres aux réseaux neuronaux génératifs actuels et ne constituent en aucun cas une faute, une négligence ou un défaut de conception imputable à EventMaster. La responsabilité d&apos;EventMaster ne saurait être recherchée ni engagée du fait de ces altérations inhérentes à la technologie.</li>
           <li>L&apos;organisateur est seul responsable de l&apos;exactitude des informations rédigées et de la bienséance des textes et images d&apos;invitation partagés.</li>
         </ul>
         <p>
@@ -586,6 +587,9 @@ export default function TermsPage() {
       <Section title="13. Responsabilité et limitation de garantie">
         <p>
           EventMaster fournit une infrastructure logicielle hautement disponible mais ne garantit pas une absence totale d&apos;interruptions indépendantes de sa volonté (pannes de réseau Internet, perturbations des opérateurs mobiles pour le Mobile Money, interruptions des API d&apos;intelligence artificielle tierces, cas de force majeure).
+        </p>
+        <p>
+          <strong>Limitation relative aux résultats de l&apos;intelligence artificielle générative :</strong> Les simulateurs, outils de chiffrage budgétaire, concepteurs de plans 2D/3D et générateurs graphiques d&apos;invitations s&apos;appuient sur des technologies d&apos;IA probabilistes tierces. EventMaster ne garantit pas l&apos;exactitude absolue, la fidélité photographique parfaite des visages ou l&apos;absence totale d&apos;artefacts visuels générés par les modèles d&apos;IA. L&apos;altération éventuelle des traits d&apos;un visage ou la non-conformité d&apos;un rendu visuel constitue un aléa technologique intrinsèque au modèle tiers ne pouvant constituer une faute d&apos;EventMaster ni engager sa responsabilité.
         </p>
         <p>
           EventMaster ne saurait être tenu responsable des litiges survenant entre un acheteur de billet / donateur et un organisateur (qualité de la prestation événementielle, retards, annulations, différends de placement, utilisation effective des dons), ni des transactions commerciales de location de matériel intervenant directement hors de la plateforme.
