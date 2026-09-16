@@ -406,7 +406,7 @@ export default function AdminPlatformSettings({
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-border flex items-center justify-between">
+                <label className="pt-3 border-t border-border flex items-center justify-between cursor-pointer min-h-11 select-none">
                   <span className="text-xs font-semibold text-foreground">Afficher ce studio</span>
                   <input
                     type="checkbox"
@@ -421,9 +421,9 @@ export default function AdminPlatformSettings({
                         },
                       })
                     }
-                    className="w-5 h-5 text-primary border-border rounded focus:ring-primary cursor-pointer"
+                    className="w-5 h-5 text-primary border-border rounded focus:ring-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
                   />
-                </div>
+                </label>
               </div>
 
               {/* Studio Invitations */}
@@ -469,7 +469,7 @@ export default function AdminPlatformSettings({
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-border flex items-center justify-between">
+                <label className="pt-3 border-t border-border flex items-center justify-between cursor-pointer min-h-11 select-none">
                   <span className="text-xs font-semibold text-foreground">Afficher ce studio</span>
                   <input
                     type="checkbox"
@@ -484,9 +484,9 @@ export default function AdminPlatformSettings({
                         },
                       })
                     }
-                    className="w-5 h-5 text-primary border-border rounded focus:ring-primary cursor-pointer"
+                    className="w-5 h-5 text-primary border-border rounded focus:ring-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
                   />
-                </div>
+                </label>
               </div>
 
               {/* Studio Plans 3D */}
@@ -532,7 +532,7 @@ export default function AdminPlatformSettings({
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-border flex items-center justify-between">
+                <label className="pt-3 border-t border-border flex items-center justify-between cursor-pointer min-h-11 select-none">
                   <span className="text-xs font-semibold text-foreground">Afficher ce studio</span>
                   <input
                     type="checkbox"
@@ -547,9 +547,9 @@ export default function AdminPlatformSettings({
                         },
                       })
                     }
-                    className="w-5 h-5 text-primary border-border rounded focus:ring-primary cursor-pointer"
+                    className="w-5 h-5 text-primary border-border rounded focus:ring-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
                   />
-                </div>
+                </label>
               </div>
             </div>
 
@@ -593,7 +593,7 @@ export default function AdminPlatformSettings({
                         },
                       })
                     }
-                    className="w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 min-h-11"
+                    className="w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-xs font-bold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-11 cursor-pointer transition shadow-2xs"
                   >
                     <option value="gemini-3-pro-image">
                       Gemini 3 Pro Image (Nano Banana Pro · 2K Haute Définition)
@@ -641,7 +641,7 @@ export default function AdminPlatformSettings({
                         },
                       })
                     }
-                    className="w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 min-h-11"
+                    className="w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-xs font-bold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-11 cursor-pointer transition shadow-2xs"
                   >
                     <option value="gemini-3.1-pro-preview">
                       Gemini 3.1 Pro Preview (Raisonnement spatial &amp; cotation métrique)

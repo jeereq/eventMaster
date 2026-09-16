@@ -246,6 +246,30 @@ export default function SimulateurPageClient() {
     }
   };
 
+  const handleTabKeyDown = (e: React.KeyboardEvent, currentTab: SimulatorStudioTab) => {
+    const tabs: SimulatorStudioTab[] = ['budget', 'invite', 'room'];
+    const currentIndex = tabs.indexOf(currentTab);
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      const nextTab = tabs[(currentIndex + 1) % tabs.length];
+      handleSwitchStudio(nextTab);
+      document.getElementById(`studio-tab-${nextTab}`)?.focus();
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const prevTab = tabs[(currentIndex - 1 + tabs.length) % tabs.length];
+      handleSwitchStudio(prevTab);
+      document.getElementById(`studio-tab-${prevTab}`)?.focus();
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      handleSwitchStudio(tabs[0]);
+      document.getElementById(`studio-tab-${tabs[0]}`)?.focus();
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      handleSwitchStudio(tabs[tabs.length - 1]);
+      document.getElementById(`studio-tab-${tabs[tabs.length - 1]}`)?.focus();
+    }
+  };
+
   const handleSelectScenario = (scenario: ScenarioBrief) => {
     setSelectedScenarioId(scenario.id);
     setLiveDefaults(scenarioToDefaults(scenario, exchangeRate));
@@ -374,6 +398,7 @@ export default function SimulateurPageClient() {
               aria-controls="studio-panel-budget"
               aria-selected={activeStudio === 'budget'}
               onClick={() => handleSwitchStudio('budget')}
+              onKeyDown={(e) => handleTabKeyDown(e, 'budget')}
               className={cn(
                 'p-3.5 rounded-xl border text-left transition flex items-center justify-between gap-2 cursor-pointer min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                 activeStudio === 'budget'
@@ -396,8 +421,8 @@ export default function SimulateurPageClient() {
                 className={cn(
                   'inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
                   isBudgetBlocked
-                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
-                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                    ? 'bg-amber-500/15 text-amber-800 dark:text-amber-200'
+                    : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
                 )}
               >
                 {isBudgetBlocked ? (
@@ -422,6 +447,7 @@ export default function SimulateurPageClient() {
               aria-controls="studio-panel-invite"
               aria-selected={activeStudio === 'invite'}
               onClick={() => handleSwitchStudio('invite')}
+              onKeyDown={(e) => handleTabKeyDown(e, 'invite')}
               className={cn(
                 'p-3.5 rounded-xl border text-left transition flex items-center justify-between gap-2 cursor-pointer min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500',
                 activeStudio === 'invite'
@@ -444,8 +470,8 @@ export default function SimulateurPageClient() {
                 className={cn(
                   'inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
                   isInviteBlocked
-                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
-                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                    ? 'bg-amber-500/15 text-amber-800 dark:text-amber-200'
+                    : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
                 )}
               >
                 {isInviteBlocked ? (
@@ -470,6 +496,7 @@ export default function SimulateurPageClient() {
               aria-controls="studio-panel-room"
               aria-selected={activeStudio === 'room'}
               onClick={() => handleSwitchStudio('room')}
+              onKeyDown={(e) => handleTabKeyDown(e, 'room')}
               className={cn(
                 'p-3.5 rounded-xl border text-left transition flex items-center justify-between gap-2 cursor-pointer min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500',
                 activeStudio === 'room'
@@ -492,8 +519,8 @@ export default function SimulateurPageClient() {
                 className={cn(
                   'inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
                   isRoomBlocked
-                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300'
-                    : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
+                    ? 'bg-amber-500/15 text-amber-800 dark:text-amber-200'
+                    : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
                 )}
               >
                 {isRoomBlocked ? (
@@ -514,7 +541,13 @@ export default function SimulateurPageClient() {
 
         {/* ─── CONTENU ATELIER 1 : BUDGET ─── */}
         {activeStudio === 'budget' && (
-          <div id="studio-panel-budget" role="tabpanel" aria-labelledby="studio-tab-budget" className="space-y-8 animate-in fade-in duration-200">
+          <div
+            id="studio-panel-budget"
+            role="tabpanel"
+            aria-labelledby="studio-tab-budget"
+            tabIndex={0}
+            className="space-y-8 animate-in fade-in duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-2xl"
+          >
             {/* Barre de sélection rapide de scénarios types */}
             <section aria-labelledby="scenarios-heading" className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -646,7 +679,13 @@ export default function SimulateurPageClient() {
 
         {/* ─── CONTENU ATELIER 2 : INVITATIONS ─── */}
         {activeStudio === 'invite' && (
-          <section id="studio-panel-invite" role="tabpanel" aria-labelledby="studio-tab-invite" className="space-y-6 animate-in fade-in duration-200">
+          <section
+            id="studio-panel-invite"
+            role="tabpanel"
+            aria-labelledby="studio-tab-invite"
+            tabIndex={0}
+            className="space-y-6 animate-in fade-in duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-pink-500/40 rounded-2xl"
+          >
             {isInviteBlocked ? (
               <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6 sm:p-8 text-center space-y-4">
                 <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center mx-auto">
@@ -682,7 +721,13 @@ export default function SimulateurPageClient() {
 
         {/* ─── CONTENU ATELIER 3 : PLANS 2D / 3D ─── */}
         {activeStudio === 'room' && (
-          <section id="studio-panel-room" role="tabpanel" aria-labelledby="studio-tab-room" className="space-y-6 animate-in fade-in duration-200">
+          <section
+            id="studio-panel-room"
+            role="tabpanel"
+            aria-labelledby="studio-tab-room"
+            tabIndex={0}
+            className="space-y-6 animate-in fade-in duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-500/40 rounded-2xl"
+          >
             {isRoomBlocked ? (
               <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6 sm:p-8 text-center space-y-4">
                 <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center mx-auto">
@@ -731,6 +776,7 @@ export default function SimulateurPageClient() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
             <button
               type="button"
+              aria-label="Basculer vers le simulateur de budget"
               onClick={() => handleSwitchStudio('budget')}
               className={cn(
                 'p-3.5 rounded-xl border text-left transition flex items-center gap-3 group min-h-11 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
@@ -748,7 +794,7 @@ export default function SimulateurPageClient() {
                     Simulateur Budget
                   </p>
                   {isBudgetBlocked && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300">À venir</span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-800 dark:text-amber-200">À venir</span>
                   )}
                 </div>
                 <p className="text-xs text-muted truncate">3 formules chiffrées clés en main</p>
@@ -757,6 +803,7 @@ export default function SimulateurPageClient() {
 
             <button
               type="button"
+              aria-label="Basculer vers le studio d’invitations"
               onClick={() => handleSwitchStudio('invite')}
               className={cn(
                 'p-3.5 rounded-xl border text-left transition flex items-center gap-3 group min-h-11 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500',
@@ -774,7 +821,7 @@ export default function SimulateurPageClient() {
                     Studio Invitations
                   </p>
                   {isInviteBlocked && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300">À venir</span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-800 dark:text-amber-200">À venir</span>
                   )}
                 </div>
                 <p className="text-xs text-muted truncate">Cartes 9:16 WhatsApp &amp; RSVP</p>
@@ -783,6 +830,7 @@ export default function SimulateurPageClient() {
 
             <button
               type="button"
+              aria-label="Basculer vers le studio de plans 3D"
               onClick={() => handleSwitchStudio('room')}
               className={cn(
                 'p-3.5 rounded-xl border text-left transition flex items-center gap-3 group min-h-11 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500',
@@ -800,7 +848,7 @@ export default function SimulateurPageClient() {
                     Studio Plans 3D
                   </p>
                   {isRoomBlocked && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300">À venir</span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-800 dark:text-amber-200">À venir</span>
                   )}
                 </div>
                 <p className="text-xs text-muted truncate">Visite 3D &amp; disposition des tables</p>
