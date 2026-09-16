@@ -695,8 +695,17 @@ export default function ClientDashboardHome() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Carte 1 : Organisation Particulier (B2C) */}
           <div
+            role="button"
+            tabIndex={0}
+            aria-label="Choisir la formule Particulier : Mariages & Célébrations Privées"
             onClick={() => handleOpenUpgrade('b2c')}
-            className="cursor-pointer group p-5 rounded-2xl border border-rose-500/25 bg-surface hover:border-rose-500/50 hover:shadow-md transition-all flex flex-col justify-between gap-4"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleOpenUpgrade('b2c');
+              }
+            }}
+            className="cursor-pointer group p-5 rounded-2xl border border-rose-500/25 bg-surface hover:border-rose-500/50 hover:shadow-md transition-all flex flex-col justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -751,8 +760,17 @@ export default function ClientDashboardHome() {
 
           {/* Carte 2 : Organisation Professionnelle (B2B) */}
           <div
+            role="button"
+            tabIndex={0}
+            aria-label="Choisir la formule Entreprise : Entreprises, Galas & Agences Pro"
             onClick={() => handleOpenUpgrade('b2b')}
-            className="cursor-pointer group p-5 rounded-2xl border border-primary/25 bg-surface hover:border-primary/50 hover:shadow-md transition-all flex flex-col justify-between gap-4"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleOpenUpgrade('b2b');
+              }
+            }}
+            className="cursor-pointer group p-5 rounded-2xl border border-primary/25 bg-surface hover:border-primary/50 hover:shadow-md transition-all flex flex-col justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -809,8 +827,17 @@ export default function ClientDashboardHome() {
 
           {/* Carte 3 : Salle */}
           <div
+            role="button"
+            tabIndex={0}
+            aria-label="Choisir la formule Salle : Mettre mes salles en ligne"
             onClick={() => handleOpenUpgrade('venue')}
-            className="cursor-pointer group p-5 rounded-2xl border border-amber-500/25 bg-surface hover:border-amber-500/50 hover:shadow-md transition-all flex flex-col justify-between gap-4"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleOpenUpgrade('venue');
+              }
+            }}
+            className="cursor-pointer group p-5 rounded-2xl border border-amber-500/25 bg-surface hover:border-amber-500/50 hover:shadow-md transition-all flex flex-col justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2">
@@ -848,8 +875,17 @@ export default function ClientDashboardHome() {
 
           {/* Carte 4 : Prestataire */}
           <div
+            role="button"
+            tabIndex={0}
+            aria-label="Choisir la formule Prestataire : Publier mes prestations"
             onClick={() => handleOpenUpgrade('service')}
-            className="cursor-pointer group p-5 rounded-2xl border border-sky-500/25 bg-surface hover:border-sky-500/50 hover:shadow-md transition-all flex flex-col justify-between gap-4"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleOpenUpgrade('service');
+              }
+            }}
+            className="cursor-pointer group p-5 rounded-2xl border border-sky-500/25 bg-surface hover:border-sky-500/50 hover:shadow-md transition-all flex flex-col justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
           >
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-2">
@@ -887,19 +923,28 @@ export default function ClientDashboardHome() {
 
           {/* Carte 5 : Salle & presta */}
           <div
+            role="button"
+            tabIndex={0}
+            aria-label="Choisir la formule Salle & presta : Vendre salles et métiers ensemble"
             onClick={() => handleOpenUpgrade('catalog')}
-            className="cursor-pointer group p-5 rounded-2xl border border-violet-500/25 bg-surface hover:border-violet-500/50 hover:shadow-md transition-all flex flex-col justify-between gap-4 md:col-span-2"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleOpenUpgrade('catalog');
+              }
+            }}
+            className="cursor-pointer group p-5 rounded-2xl border border-primary/25 bg-surface hover:border-primary/50 hover:shadow-md transition-all flex flex-col justify-between gap-4 md:col-span-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-violet-500/10 text-violet-800 dark:text-violet-300 border border-violet-500/20">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary-solid dark:text-emerald-300 border border-primary/20">
                   <Sparkles className="w-3.5 h-3.5" />
-                  Catalogue · Salle & presta
+                  Catalogue · Salle &amp; presta
                 </span>
                 <span className="text-xs font-black text-foreground">19 900 FC / mois</span>
               </div>
               <div>
-                <h3 className="text-base font-bold text-foreground group-hover:text-violet-700 dark:group-hover:text-violet-400 transition">
+                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
                   Vendre salles et métiers ensemble
                 </h3>
                 <p className="text-xs text-muted leading-relaxed mt-1 max-w-2xl">
@@ -917,9 +962,9 @@ export default function ClientDashboardHome() {
                   handleOpenUpgrade('catalog');
                 }}
                 rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-                className="bg-violet-600 hover:bg-violet-700 text-white shadow-xs"
+                className="shadow-xs shadow-primary/20"
               >
-                Choisir Salle & presta
+                Choisir Salle &amp; presta
               </Button>
             </div>
           </div>
@@ -1140,7 +1185,7 @@ export default function ClientDashboardHome() {
             className="group rounded-2xl border border-border bg-surface p-4 hover:border-primary/50 transition hover:shadow-xs flex flex-col justify-between gap-3"
           >
             <div className="space-y-2">
-              <div className="w-9 h-9 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center group-hover:scale-105 transition">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition">
                 <Truck className="w-4 h-4" />
               </div>
               <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition">
@@ -1230,7 +1275,7 @@ export default function ClientDashboardHome() {
                 { id: 'b2b' as const, label: 'Entreprise', icon: Building2, iconClass: 'text-primary' },
                 { id: 'venue' as const, label: 'Salle', icon: Utensils, iconClass: 'text-amber-600' },
                 { id: 'service' as const, label: 'Prestataire', icon: Truck, iconClass: 'text-sky-600' },
-                { id: 'catalog' as const, label: 'Salle & presta', icon: Sparkles, iconClass: 'text-violet-600' },
+                { id: 'catalog' as const, label: 'Salle & presta', icon: Sparkles, iconClass: 'text-primary' },
               ] as const
             ).map((tab) => (
               <button
@@ -1480,7 +1525,7 @@ export default function ClientDashboardHome() {
                                   {pricing.promoSavingsPercent ? ` (−${pricing.promoSavingsPercent} %)` : ''}
                                 </span>
                               ) : plan.popular ? (
-                                <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-violet-600 text-white shadow-xs">
+                                <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground shadow-xs">
                                   Complet
                                 </span>
                               ) : null}

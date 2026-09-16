@@ -224,7 +224,7 @@ export default function SimulateurPageClient() {
                 <AiTokenBuyButton
                   variant="secondary"
                   onClick={() => setPurchaseModalOpen(true)}
-                  className="text-xs min-h-9 py-1 px-3"
+                  className="text-xs min-h-11 py-2 px-3.5"
                 />
               )}
             </>
@@ -369,7 +369,7 @@ export default function SimulateurPageClient() {
               <button
                 type="button"
                 onClick={handleClearScenario}
-                className="text-xs text-muted hover:text-foreground underline underline-offset-2 self-start sm:self-auto touch-manipulation cursor-pointer min-h-8"
+                className="text-xs text-muted hover:text-foreground underline underline-offset-2 self-start sm:self-auto touch-manipulation cursor-pointer min-h-11 inline-flex items-center px-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 Simulation libre
               </button>

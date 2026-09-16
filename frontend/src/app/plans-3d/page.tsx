@@ -453,6 +453,10 @@ export default function Plans3DPage() {
               return (
                 <div
                   key={item.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Sélectionner le modèle ${item.name}`}
+                  aria-pressed={isSelected}
                   onClick={() => {
                     setStudioBlueprint(null);
                     if (item.id) setSelectedPlanId(item.id);
@@ -461,6 +465,18 @@ export default function Plans3DPage() {
                       block: 'start',
                       behavior: reduceMotion ? 'auto' : 'smooth',
                     });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setStudioBlueprint(null);
+                      if (item.id) setSelectedPlanId(item.id);
+                      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                      document.getElementById('plan-viewer')?.scrollIntoView({
+                        block: 'start',
+                        behavior: reduceMotion ? 'auto' : 'smooth',
+                      });
+                    }
                   }}
                   className={cn(
                     'group rounded-xl border p-4 flex flex-col justify-between transition-all duration-200 text-left w-full cursor-pointer relative',
