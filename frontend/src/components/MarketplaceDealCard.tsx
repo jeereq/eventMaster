@@ -29,7 +29,7 @@ function DealFacts({
               <button
                 type="button"
                 onClick={fact.onClick}
-                className="font-semibold text-foreground hover:text-primary"
+                className="min-h-11 font-semibold text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               >
                 {fact.value}
               </button>
@@ -47,7 +47,7 @@ function DealFacts({
       {facts.map((fact) => {
         const body = (
           <>
-            <dt className="text-[11px] text-muted">{fact.label}</dt>
+            <dt className="text-xs text-muted">{fact.label}</dt>
             <dd className="mt-0.5 text-sm font-semibold text-foreground break-words [overflow-wrap:anywhere]">
               {fact.value}
             </dd>
@@ -59,7 +59,7 @@ function DealFacts({
               key={fact.label}
               type="button"
               onClick={fact.onClick}
-              className="min-w-0 rounded-xl bg-surface-muted/80 px-2.5 py-2 text-left hover:bg-surface-muted"
+              className="min-h-11 min-w-0 rounded-xl bg-surface-muted/80 px-2.5 py-2 text-left hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               {body}
             </button>

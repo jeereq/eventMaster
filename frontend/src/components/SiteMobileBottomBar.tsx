@@ -269,7 +269,7 @@ export default function SiteMobileBottomBar({
                   {/* Badge d'alerte fonctionnalité à venir */}
                   {isSimulatorUpcoming ? (
                     <span
-                      className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-surface dark:ring-stage-elevated"
+                      className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-festive-accent ring-2 ring-surface dark:ring-stage-elevated"
                       title="Fonctionnalité à venir"
                     />
                   ) : null}
@@ -537,7 +537,7 @@ export default function SiteMobileBottomBar({
                     key={item.href}
                     href={item.href}
                     onClick={() => setSheetOpen(false)}
-                    className="hover:text-foreground transition underline-offset-4 hover:underline"
+                    className="inline-flex min-h-11 items-center px-1 hover:text-foreground transition underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-[var(--radius-button)]"
                   >
                     {item.label}
                   </Link>

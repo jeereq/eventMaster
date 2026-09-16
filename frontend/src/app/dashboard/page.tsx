@@ -20,7 +20,7 @@ import SubscriptionApprovalModal, { type SubscriptionApprovalRequest } from '@/c
 import SubscriptionRequestListPanel, { type AdminSubscriptionRequestItem } from '@/components/SubscriptionRequestListPanel';
 import { getBillingPricingFromFields } from '@/components/BillingDiscountFields';
 import type { QuotaSnapshot } from '@/lib/quotaDisplay';
-import { PageHeader, Alert, Button, ProjectCard, ListRowAction, StatusPill, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode, listStackClass, Breadcrumbs, Pagination, paginateItems, usePageSize, Card, EmptyState } from '@/components/ui';
+import { PageHeader, Alert, Button, ConfirmDialog, ProjectCard, ListRowAction, StatusPill, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode, listStackClass, Breadcrumbs, Pagination, paginateItems, usePageSize, Card, EmptyState } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { parseStoredPhone } from '@/components/ui/PhoneInput';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
@@ -59,22 +59,74 @@ const COMMERCIAL_PLATFORM_TABS = ['tenants', 'subscription-requests', 'invoices'
 
 function planBadgeClass(plan: string): string {
  if (plan === 'FREE') return 'bg-surface-muted border-border text-muted';
- if (plan.startsWith('PERSONAL')) return 'bg-emerald-50 border-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-300';
- if (plan === 'VENUE' || plan === 'SERVICE' || plan === 'CATALOG') return 'bg-violet-50 border-violet-100 text-violet-800 dark:bg-violet-500/10 dark:border-violet-500/20 dark:text-violet-300';
- if (plan === 'STANDARD') return 'bg-blue-50 border-blue-100 text-blue-700';
- if (plan.startsWith('PREMIUM')) return 'bg-primary/10 border-primary/20 text-primary';
- if (plan.startsWith('ENTERPRISE')) return 'bg-amber-50 border-amber-100 text-amber-700';
+ if (plan.startsWith('PERSONAL')) return 'bg-primary/10 border-primary/20 text-primary';
+ if (plan === 'VENUE' || plan === 'SERVICE' || plan === 'CATALOG') return 'bg-festive-accent-soft border-festive-accent/25 text-festive-accent';
+ if (plan === 'STANDARD' || plan.startsWith('PREMIUM')) return 'bg-primary/10 border-primary/20 text-primary';
+ if (plan.startsWith('ENTERPRISE')) return 'bg-festive-accent-soft border-festive-accent/25 text-festive-accent';
  return 'bg-surface-muted border-border text-muted';
 }
 
 function planBarClass(plan: string): string {
  if (plan === 'FREE') return 'bg-surface-muted';
- if (plan.startsWith('PERSONAL')) return 'bg-emerald-500';
- if (plan === 'VENUE' || plan === 'SERVICE' || plan === 'CATALOG') return 'bg-violet-500';
- if (plan === 'STANDARD') return 'bg-blue-500';
- if (plan.startsWith('PREMIUM')) return 'bg-primary';
- if (plan.startsWith('ENTERPRISE')) return 'bg-amber-500';
+ if (plan.startsWith('PERSONAL') || plan === 'STANDARD' || plan.startsWith('PREMIUM')) return 'bg-primary';
+ if (plan === 'VENUE' || plan === 'SERVICE' || plan === 'CATALOG' || plan.startsWith('ENTERPRISE')) return 'bg-festive-accent';
  return 'bg-surface-muted';
+}
+
+type PendingAdminConfirm =
+  | { kind: 'reject-sub'; id: string }
+  | { kind: 'delete-tenant'; id: string; name: string; phase: 'warn' | 'final' }
+  | { kind: 'delete-user'; id: string; label: string }
+  | { kind: 'delete-template'; id: string; label: string }
+  | { kind: 'delete-event'; id: string; label: string }
+  | { kind: 'delete-guest'; id: string; label: string };
+
+function adminConfirmCopy(pending: PendingAdminConfirm): { title: string; description: string; confirmLabel: string } {
+  switch (pending.kind) {
+    case 'reject-sub':
+      return {
+        title: 'Rejeter cette demande ?',
+        description: 'Le demandeur sera informé. Une nouvelle demande pourra être déposée plus tard.',
+        confirmLabel: 'Rejeter la demande',
+      };
+    case 'delete-tenant':
+      return pending.phase === 'warn'
+        ? {
+            title: `Supprimer « ${pending.name} » ?`,
+            description:
+              'Cette organisation, ses utilisateurs, événements, invités et invitations seront définitivement supprimés.',
+            confirmLabel: 'Continuer',
+          }
+        : {
+            title: 'Confirmer la suppression définitive',
+            description: `L’organisation « ${pending.name} » et toutes ses données seront détruites. Cette action est irréversible.`,
+            confirmLabel: 'Supprimer définitivement',
+          };
+    case 'delete-user':
+      return {
+        title: `Supprimer ${pending.label} ?`,
+        description: 'Le compte et ses accès à EventMaster seront retirés. Cette action est irréversible.',
+        confirmLabel: 'Supprimer le compte',
+      };
+    case 'delete-template':
+      return {
+        title: `Supprimer « ${pending.label} » ?`,
+        description: 'Ce modèle d’invitation ne sera plus disponible pour les organisations.',
+        confirmLabel: 'Supprimer le modèle',
+      };
+    case 'delete-event':
+      return {
+        title: `Supprimer « ${pending.label} » ?`,
+        description: 'L’événement et sa liste d’invités seront supprimés. Cette action est irréversible.',
+        confirmLabel: 'Supprimer l’événement',
+      };
+    case 'delete-guest':
+      return {
+        title: `Supprimer ${pending.label} ?`,
+        description: 'L’invité sera retiré de l’événement. Cette action est irréversible.',
+        confirmLabel: 'Supprimer l’invité',
+      };
+  }
 }
 
 interface BillingStatus extends QuotaSnapshot {
@@ -670,6 +722,8 @@ function DashboardPageContent() {
  const [modalDiscountPercent, setModalDiscountPercent] = useState('0');
  const [modalApprovedAmount, setModalApprovedAmount] = useState('');
  const [updatingTenant, setUpdatingTenant] = useState(false);
+ const [pendingConfirm, setPendingConfirm] = useState<PendingAdminConfirm | null>(null);
+ const [confirmBusy, setConfirmBusy] = useState(false);
 
  // User CRUD Modals states
  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -713,8 +767,8 @@ function DashboardPageContent() {
  const exportSubscriptionReportCsv = async () => {
    try {
      await api.download('/admin/reports/subscriptions/export', 'abonnements-eventmaster.csv');
-   } catch (err: any) {
-     alert(err.message || 'Erreur lors de l\'export');
+   } catch (err: unknown) {
+     setError(err instanceof Error ? err.message : 'Erreur lors de l’export.');
    }
  };
 
@@ -995,18 +1049,33 @@ function DashboardPageContent() {
 
  // Check if Leaflet is already loaded
  if (!(window as any).L) {
- // Load CSS
+ const markMapFailed = () => {
+ const mapContainer = document.getElementById('admin-map-picker');
+ if (mapContainer && !mapContainer.querySelector('[data-map-fallback]')) {
+ mapContainer.innerHTML = '';
+ const fallback = document.createElement('div');
+ fallback.dataset.mapFallback = '1';
+ fallback.className = 'absolute inset-0 flex items-center justify-center px-3 text-center text-xs text-muted';
+ fallback.textContent = 'Carte indisponible. Saisissez latitude et longitude ci-dessous.';
+ mapContainer.appendChild(fallback);
+ }
+ };
+
  const link = document.createElement('link');
  link.rel = 'stylesheet';
  link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+ link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+ link.crossOrigin = '';
  document.head.appendChild(link);
 
- // Load JS
  const script = document.createElement('script');
  script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+ script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
+ script.crossOrigin = '';
  script.onload = () => {
  initMap();
  };
+ script.onerror = markMapFailed;
  document.body.appendChild(script);
  } else {
  // Wait a brief moment for the modal transition to complete and container to be rendered
@@ -1197,8 +1266,8 @@ function DashboardPageContent() {
  `/admin/reports/revenue/export?period=${revenuePeriod}&format=${format}`,
  `eventmaster-revenus-${revenuePeriod}.${format}`,
  );
- } catch (err: any) {
- alert(err.message || 'Erreur lors de l\'export du rapport.');
+ } catch (err: unknown) {
+ setError(err instanceof Error ? err.message : 'Erreur lors de l’export du rapport.');
  }
  };
 
@@ -1207,9 +1276,9 @@ function DashboardPageContent() {
  setError('');
  try {
  const data = await api.post('/admin/reports/revenue/notify-payouts', { period: revenuePeriod, force: true });
- alert(data.message || 'Notifications de versement envoyées.');
- } catch (err: any) {
- setError(err.message || 'Impossible d\'envoyer les notifications de versement.');
+ setNotice(data.message || 'Notifications de versement envoyées.');
+ } catch (err: unknown) {
+ setError(err instanceof Error ? err.message : 'Impossible d’envoyer les notifications de versement.');
  } finally {
  setNotifyingPayouts(false);
  }
@@ -1271,9 +1340,6 @@ function DashboardPageContent() {
  };
 
  const handleRejectSubscription = async (id: string) => {
- if (!confirm('Êtes-vous sûr de vouloir rejeter cette demande d\'abonnement ?')) {
- return;
- }
     setBusySubRequestId(id);
     setAdminFeedback(null);
  try {
@@ -1288,12 +1354,14 @@ function DashboardPageContent() {
         message: msg,
       });
  await loadSubscriptionRequests();
- } catch (err: any) {
+ } catch (err: unknown) {
       await loadSubscriptionRequests();
+      const message = err instanceof Error ? err.message : 'Erreur lors du rejet de la demande.';
       setAdminFeedback({
         type: 'error',
-        message: err.message || 'Erreur lors du rejet de la demande.',
+        message,
       });
+      throw err instanceof Error ? err : new Error(message);
     } finally {
       setBusySubRequestId(null);
  }
@@ -1417,19 +1485,13 @@ function DashboardPageContent() {
  }
  };
 
- const handleDeleteTenant = async (id: string, name: string) => {
- if (!confirm(`Êtes-vous absolument sûr de vouloir supprimer définitivement l'organisation "${name}" ? Cette action supprimera également tous ses utilisateurs, événements, invités et invitations associés.`)) {
- return;
- }
- if (!confirm(`CONFIRMATION FINALE : Tapez OK pour confirmer la destruction de "${name}".`)) {
- return;
- }
-
+ const handleDeleteTenant = async (id: string) => {
  try {
  await api.delete(`/admin/tenants/${id}`);
  await refreshStats();
- } catch (err: any) {
- alert(err.message || 'Erreur lors de la suppression de l\'organisation');
+ } catch (err: unknown) {
+ setError(err instanceof Error ? err.message : 'Erreur lors de la suppression de l’organisation');
+ throw err;
  }
  };
 
@@ -1546,16 +1608,13 @@ function DashboardPageContent() {
  }
  };
 
- const handleDeleteUser = async (id: string, email: string) => {
- if (!confirm(`Êtes-vous sûr de vouloir supprimer l'utilisateur "${email}" ?`)) {
- return;
- }
-
+ const handleDeleteUser = async (id: string) => {
  try {
  await api.delete(`/admin/users/${id}`);
  await loadUsers();
- } catch (err: any) {
- alert(err.message || 'Erreur lors de la suppression de l\'utilisateur');
+ } catch (err: unknown) {
+ setError(err instanceof Error ? err.message : 'Erreur lors de la suppression de l’utilisateur');
+ throw err;
  }
  };
 
@@ -1566,37 +1625,33 @@ function DashboardPageContent() {
  showOnLanding: !currentStatus,
  });
  await loadTemplates();
- } catch (err: any) {
- alert(err.message || 'Erreur lors de la mise à jour de la visibilité sur la landing page');
+ } catch (err: unknown) {
+ setError(err instanceof Error ? err.message : 'Erreur lors de la mise à jour de la visibilité sur la landing page');
  }
  };
 
  const handleDuplicateAdminTemplate = async (t: any) => {
  try {
- // For admin templates, we can duplicate by posting to /templates using the visual editor's endpoint
  const payload = {
  name: `${t.name} (Copie)`,
  content: t.content,
  targetTenantId: t.tenantId || null
  };
  await api.post('/templates', payload);
- alert(`Modèle "${t.name}" dupliqué avec succès !`);
+ setNotice(`Modèle « ${t.name} » dupliqué.`);
  await loadTemplates();
- } catch (err: any) {
- alert(err.message || 'Erreur lors de la duplication du modèle');
+ } catch (err: unknown) {
+ setError(err instanceof Error ? err.message : 'Erreur lors de la duplication du modèle');
  }
  };
 
- const handleDeleteTemplate = async (id: string, name: string) => {
- if (!confirm(`Êtes-vous sûr de vouloir supprimer le modèle "${name}" ?`)) {
- return;
- }
-
+ const handleDeleteTemplate = async (id: string) => {
  try {
  await api.delete(`/admin/templates/${id}`);
  await loadTemplates();
- } catch (err: any) {
- alert(err.message || 'Erreur lors de la suppression du modèle');
+ } catch (err: unknown) {
+ setError(err instanceof Error ? err.message : 'Erreur lors de la suppression du modèle');
+ throw err;
  }
  };
 
@@ -1663,17 +1718,14 @@ function DashboardPageContent() {
  }
  };
 
- const handleDeleteEvent = async (id: string, title: string) => {
- if (!confirm(`Êtes-vous sûr de vouloir supprimer l'événement "${title}" ?`)) {
- return;
- }
-
+ const handleDeleteEvent = async (id: string) => {
  try {
  await api.delete(`/admin/events/${id}`);
  await loadAdminEvents();
  await refreshStats();
- } catch (err: any) {
- alert(err.message || 'Erreur lors de la suppression de l\'événement');
+ } catch (err: unknown) {
+ setError(err instanceof Error ? err.message : 'Erreur lors de la suppression de l’événement');
+ throw err;
  }
  };
 
@@ -1746,23 +1798,20 @@ function DashboardPageContent() {
  }
  };
 
- const handleDeleteGuest = async (id: string, name: string) => {
- if (!confirm(`Êtes-vous sûr de vouloir supprimer l'invité "${name}" ?`)) {
- return;
- }
-
+ const handleDeleteGuest = async (id: string) => {
  try {
  await api.delete(`/admin/guests/${id}`);
  await loadAdminGuests();
  await refreshStats();
- } catch (err: any) {
- alert(err.message || 'Erreur lors de la suppression de l\'invité');
+ } catch (err: unknown) {
+ setError(err instanceof Error ? err.message : 'Erreur lors de la suppression de l’invité');
+ throw err;
  }
  };
 
  const handleExportAdminGuests = () => {
  if (adminGuests.length === 0) {
- alert("Aucun invité à exporter.");
+ setError('Aucun invité à exporter.');
  return;
  }
  
@@ -1804,9 +1853,9 @@ function DashboardPageContent() {
  if (typeof window !== 'undefined') {
  window.dispatchEvent(new CustomEvent('em-platform-settings-updated'));
  }
- alert('Paramètres enregistrés. Le site public applique immédiatement les changements.');
- } catch (err: any) {
- alert(err.message || 'Erreur lors de l\'enregistrement des configurations');
+ setNotice('Paramètres enregistrés. Le site public applique immédiatement les changements.');
+ } catch (err: unknown) {
+ setError(err instanceof Error ? err.message : 'Erreur lors de l’enregistrement des configurations');
  } finally {
  setSavingSettings(false);
  }
@@ -1851,8 +1900,8 @@ function DashboardPageContent() {
  setOpeningWorkspaceId(tenantId);
  const payload = await api.post(`/admin/tenants/${tenantId}/impersonate`);
  enterSupportSession(payload);
- } catch (err: any) {
- alert(err.message || 'Impossible d’ouvrir l’espace de cette organisation.');
+ } catch (err: unknown) {
+ setError(err instanceof Error ? err.message : 'Impossible d’ouvrir l’espace de cette organisation.');
  setOpeningWorkspaceId(null);
  }
  };
@@ -2039,7 +2088,7 @@ function DashboardPageContent() {
  <div className={statCardClass}>
  <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-muted uppercase tracking-wider">En attente</span>
- <div className="bg-amber-50 dark:bg-amber-950/40 text-amber-600 p-1.5 rounded-[var(--radius-button)]">
+ <div className="bg-festive-accent-soft text-festive-accent p-1.5 rounded-[var(--radius-button)]">
  <Clock className="w-4 h-4" />
  </div>
  </div>
@@ -2051,7 +2100,7 @@ function DashboardPageContent() {
  <div className={statCardClass}>
  <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-muted uppercase tracking-wider">Commission</span>
- <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 p-1.5 rounded-[var(--radius-button)]">
+ <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
  <Wallet className="w-4 h-4" />
  </div>
  </div>
@@ -2087,7 +2136,7 @@ function DashboardPageContent() {
  <div className={statCardClass}>
  <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-muted uppercase tracking-wider">Événements</span>
- <div className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 p-1.5 rounded-[var(--radius-button)]">
+ <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
  <Calendar className="w-4 h-4" />
  </div>
  </div>
@@ -2104,8 +2153,8 @@ function DashboardPageContent() {
  <div className={cn(
  'p-1.5 rounded-[var(--radius-button)]',
  pendingSubscriptionCount > 0
- ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600'
- : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600',
+ ? 'bg-festive-accent-soft text-festive-accent'
+ : 'bg-festive-accent-soft text-festive-accent',
  )}>
  {pendingSubscriptionCount > 0 ? <Clock className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
  </div>
@@ -2539,7 +2588,7 @@ function DashboardPageContent() {
  </button>
  <button
  type="button"
- onClick={() => handleDeleteTenant(t.id, t.name)}
+ onClick={() => setPendingConfirm({ kind: 'delete-tenant', id: t.id, name: t.name, phase: 'warn' })}
                                     className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition"
  title="Supprimer"
                                     aria-label={`Supprimer l'organisation ${t.name}`}
@@ -2703,7 +2752,7 @@ function DashboardPageContent() {
  </button>
  <button
  type="button"
- onClick={() => handleDeleteUser(u.id, u.email)}
+ onClick={() => setPendingConfirm({ kind: 'delete-user', id: u.id, label: u.email })}
  disabled={u.id === user?.id}
                                   className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed"
  title="Supprimer"
@@ -2762,17 +2811,17 @@ function DashboardPageContent() {
                                             </span>
                                           )}
                                           {u.commercialPermissions?.canManageCatalog && (
-                                            <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                                            <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary">
                                               Catalogue
                                             </span>
                                           )}
                                           {u.commercialPermissions?.canManageEvents && (
-                                            <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                                            <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded bg-festive-accent-soft text-festive-accent">
                                               Événements
                                             </span>
                                           )}
                                           {u.commercialPermissions?.canManageGuests && (
-                                            <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded bg-purple-500/10 text-purple-700 dark:text-purple-300">
+                                            <span className="inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded bg-festive-accent-soft text-festive-accent">
                                               Invités
                                             </span>
                                           )}
@@ -2845,9 +2894,9 @@ function DashboardPageContent() {
                         <p className="text-xs font-bold text-primary uppercase tracking-wider">Modèles globaux</p>
  <p className="text-2xl font-extrabold text-primary mt-1">{templateCounts.global}</p>
  </div>
- <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-4">
-                        <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Sur la landing</p>
- <p className="text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-1">{templateCounts.landing}</p>
+ <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
+                        <p className="text-xs font-bold text-primary uppercase tracking-wider">Sur la landing</p>
+ <p className="text-2xl font-extrabold text-primary mt-1">{templateCounts.landing}</p>
  </div>
  <div className="bg-surface-muted dark:bg-background/50 border border-border dark:border-border rounded-xl p-4">
                         <p className="text-xs font-bold text-muted dark:text-muted uppercase tracking-wider">Organisations</p>
@@ -2889,7 +2938,7 @@ function DashboardPageContent() {
  editHref={(t) => `/dashboard/templates?edit=${t.id}&from=admin`}
  onViewDetails={(t) => handleOpenDetailsModal('template', paginatedTemplates.find((x) => x.id === t.id))}
  onDuplicate={(t) => handleDuplicateAdminTemplate(paginatedTemplates.find((x) => x.id === t.id))}
- onDelete={handleDeleteTemplate}
+ onDelete={(id, name) => setPendingConfirm({ kind: 'delete-template', id, label: name })}
  onToggleLanding={handleToggleTemplateLanding}
  />
 
@@ -2983,7 +3032,7 @@ function DashboardPageContent() {
  </button>
  <button
  type="button"
- onClick={() => handleDeleteEvent(e.id, e.title)}
+ onClick={() => setPendingConfirm({ kind: 'delete-event', id: e.id, label: e.title })}
                                   className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition"
  title="Supprimer"
                                   aria-label={`Supprimer l'événement ${e.title}`}
@@ -3118,7 +3167,7 @@ function DashboardPageContent() {
  </button>
  <button
  type="button"
- onClick={() => handleDeleteGuest(g.id, `${g.firstName} ${g.lastName}`)}
+ onClick={() => setPendingConfirm({ kind: 'delete-guest', id: g.id, label: `${g.firstName} ${g.lastName}` })}
                                   className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition"
  title="Supprimer"
                                   aria-label={`Supprimer l'invité ${g.firstName} ${g.lastName}`}
@@ -3237,7 +3286,7 @@ function DashboardPageContent() {
  tenant: req.tenant,
  })
  }
- onReject={(id) => void handleRejectSubscription(id)}
+ onReject={(id) => setPendingConfirm({ kind: 'reject-sub', id })}
  />
  </div>
  </div>
@@ -3345,7 +3394,7 @@ function DashboardPageContent() {
  </div>
 
  {planKey !== 'FREE' && (
- <div className="space-y-2 p-3 bg-amber-50/80 border border-amber-100 rounded-xl">
+ <div className="space-y-2 p-3 bg-festive-accent-soft border border-festive-accent/25 rounded-xl">
  <label className="flex items-center gap-2 cursor-pointer">
  <input
  type="checkbox"
@@ -3355,9 +3404,9 @@ function DashboardPageContent() {
  updatedPlans[planKey] = { ...plan, promoActive: e.target.checked };
  setAdminSettings({ ...adminSettings, plans: updatedPlans });
  }}
- className="w-4 h-4 text-amber-600 border-border rounded focus:ring-amber-500"
+ className="w-4 h-4 text-festive-accent border-border rounded focus:ring-festive-accent"
  />
-                                        <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">
+                                        <span className="text-xs font-bold text-festive-accent uppercase tracking-wider">
  Promotion active
  </span>
  </label>
@@ -3379,7 +3428,7 @@ function DashboardPageContent() {
  };
  setAdminSettings({ ...adminSettings, plans: updatedPlans });
  }}
- className="w-full px-3 py-2 bg-white border border-amber-200 rounded-xl text-xs font-bold focus:outline-none focus:border-amber-500 transition"
+ className="w-full px-3 py-2 bg-white border border-festive-accent/30 rounded-xl text-xs font-bold focus:outline-none focus:border-festive-accent transition"
  />
  </div>
  <div className="space-y-1">
@@ -3393,7 +3442,7 @@ function DashboardPageContent() {
  updatedPlans[planKey] = { ...plan, promoLabel: e.target.value };
  setAdminSettings({ ...adminSettings, plans: updatedPlans });
  }}
- className="w-full px-3 py-2 bg-white border border-amber-200 rounded-xl text-xs font-medium focus:outline-none focus:border-amber-500 transition"
+ className="w-full px-3 py-2 bg-white border border-festive-accent/30 rounded-xl text-xs font-medium focus:outline-none focus:border-festive-accent transition"
  />
  </div>
  </>
@@ -3633,10 +3682,10 @@ function DashboardPageContent() {
  setSavingSettings(true);
  try {
  await api.put('/admin/settings', { plans: adminSettings.plans });
- alert('Forfaits d\'abonnement mis à jour avec succès !');
+ setNotice('Forfaits d’abonnement mis à jour.');
  await loadAdminSettings();
- } catch (err: any) {
- alert(err.message || 'Erreur lors de la mise à jour des forfaits.');
+ } catch (err: unknown) {
+ setError(err instanceof Error ? err.message : 'Erreur lors de la mise à jour des forfaits.');
  } finally {
  setSavingSettings(false);
  }
@@ -3729,7 +3778,7 @@ function DashboardPageContent() {
  </div>
  </div>
  <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
- <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl">
+ <div className="p-3 bg-primary/10 text-primary rounded-xl">
  <Calendar className="w-6 h-6" />
  </div>
  <div>
@@ -3738,7 +3787,7 @@ function DashboardPageContent() {
  </div>
  </div>
  <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
- <div className="p-3 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 rounded-xl">
+ <div className="p-3 bg-festive-accent-soft text-festive-accent rounded-xl">
  <Mail className="w-6 h-6" />
  </div>
  <div>
@@ -3763,7 +3812,7 @@ function DashboardPageContent() {
  </div>
  </div>
  <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
- <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl">
+ <div className="p-3 bg-primary/10 text-primary rounded-xl">
  <Calendar className="w-6 h-6" />
  </div>
  <div>
@@ -3787,7 +3836,7 @@ function DashboardPageContent() {
  </div>
  </div>
  <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
- <div className="p-3 bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 rounded-xl">
+ <div className="p-3 bg-primary/10 text-primary rounded-xl">
  <CheckCircle className="w-6 h-6" />
  </div>
  <div>
@@ -3803,7 +3852,7 @@ function DashboardPageContent() {
 
  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
  <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
- <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl">
+ <div className="p-3 bg-primary/10 text-primary rounded-xl">
  <ScanLine className="w-6 h-6" />
  </div>
  <div>
@@ -3821,7 +3870,7 @@ function DashboardPageContent() {
  </div>
  </div>
  <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
- <div className="p-3 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 rounded-xl">
+ <div className="p-3 bg-festive-accent-soft text-festive-accent rounded-xl">
  <ClipboardList className="w-6 h-6" />
  </div>
  <div>
@@ -3852,7 +3901,7 @@ function DashboardPageContent() {
  </div>
  </div>
  <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
- <div className="p-3 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 rounded-xl">
+ <div className="p-3 bg-festive-accent-soft text-festive-accent rounded-xl">
  <Ticket className="w-6 h-6" />
  </div>
  <div>
@@ -3874,7 +3923,7 @@ function DashboardPageContent() {
                               </div>
                             </div>
  <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
- <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl">
+ <div className="p-3 bg-primary/10 text-primary rounded-xl">
  <CheckCircle className="w-6 h-6" />
  </div>
  <div>
@@ -3883,7 +3932,7 @@ function DashboardPageContent() {
  </div>
  </div>
  <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
- <div className="p-3 bg-violet-50 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 rounded-xl">
+ <div className="p-3 bg-festive-accent-soft text-festive-accent rounded-xl">
  <Wallet className="w-6 h-6" />
  </div>
  <div>
@@ -3899,7 +3948,7 @@ function DashboardPageContent() {
  {platformInsights && (
  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
  <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
- <div className="p-3 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-xl">
+ <div className="p-3 bg-primary/10 text-primary rounded-xl">
  <ScanLine className="w-6 h-6" />
  </div>
  <div>
@@ -3908,7 +3957,7 @@ function DashboardPageContent() {
  </div>
  </div>
  <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
- <div className="p-3 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 rounded-xl">
+ <div className="p-3 bg-festive-accent-soft text-festive-accent rounded-xl">
  <ClipboardList className="w-6 h-6" />
  </div>
  <div>
@@ -3990,33 +4039,33 @@ function DashboardPageContent() {
  <p className="text-xs text-primary/80">Revenu annuel projeté</p>
  </div>
 
- <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-3.5 sm:p-4">
- <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Taux de Conversion</p>
- <p className="text-lg sm:text-xl font-extrabold text-emerald-800 dark:text-emerald-200 mt-1">
+ <div className="bg-primary/10 border border-primary/20 rounded-xl p-3.5 sm:p-4">
+ <p className="text-xs font-bold uppercase tracking-wider text-primary">Taux de Conversion</p>
+ <p className="text-lg sm:text-xl font-extrabold text-primary mt-1">
  {subscriptionReport?.kpis?.conversionRatePercent ?? 0} %
  </p>
- <p className="text-xs text-emerald-700">{subscriptionReport?.kpis?.totalPaidAccounts ?? 0} comptes payants</p>
+ <p className="text-xs text-primary">{subscriptionReport?.kpis?.totalPaidAccounts ?? 0} comptes payants</p>
  </div>
 
- <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-xl p-3.5 sm:p-4">
- <p className="text-xs font-bold uppercase tracking-wider text-amber-700">Expirations &lt; 30j</p>
- <p className="text-lg sm:text-xl font-extrabold text-amber-900 dark:text-amber-200 mt-1">
+ <div className="bg-festive-accent-soft border border-festive-accent/25 rounded-xl p-3.5 sm:p-4">
+ <p className="text-xs font-bold uppercase tracking-wider text-festive-accent">Expirations &lt; 30j</p>
+ <p className="text-lg sm:text-xl font-extrabold text-festive-accent mt-1">
  {subscriptionReport?.kpis?.imminentExpirationsCount ?? 0}
  </p>
- <p className="text-xs text-amber-700">Renouvellements à sécuriser</p>
+ <p className="text-xs text-festive-accent">Renouvellements à sécuriser</p>
  </div>
  </div>
 
  {/* Expirations Imminentes */}
  {subscriptionReport?.imminentExpirations?.length > 0 && (
- <div className="p-4 bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/50 rounded-xl space-y-3">
+ <div className="p-4 bg-festive-accent-soft border border-festive-accent/25 rounded-xl space-y-3">
  <div className="flex items-center gap-2">
- <Clock className="w-4 h-4 text-amber-600 shrink-0" />
- <h4 className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-200">
+ <Clock className="w-4 h-4 text-festive-accent shrink-0" />
+ <h4 className="text-xs font-bold uppercase tracking-wider text-festive-accent">
  Expirations imminentes à traiter ({subscriptionReport.imminentExpirations.length})
  </h4>
  </div>
- <div className="divide-y divide-amber-200/60 dark:divide-amber-900/40 text-xs">
+ <div className="divide-y divide-festive-accent/20 text-xs">
  {subscriptionReport.imminentExpirations.slice(0, 5).map((exp: any) => (
  <div key={exp.id} className="py-2.5 flex items-center justify-between first:pt-0 last:pb-0">
  <div>
@@ -4029,7 +4078,7 @@ function DashboardPageContent() {
  "px-2 py-1 rounded-full font-bold text-[11px]",
  exp.daysRemaining <= 7
  ? "bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300"
- : "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300"
+ : "bg-festive-accent-soft text-festive-accent"
  )}>
  Dans {exp.daysRemaining} jour{exp.daysRemaining > 1 ? 's' : ''}
  </span>
@@ -4074,11 +4123,11 @@ function DashboardPageContent() {
  Statut Global des Licences
  </h4>
  <div className="grid grid-cols-2 gap-4">
- <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 text-center">
- <span className="block text-2xl font-extrabold text-emerald-700">
+ <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 text-center">
+ <span className="block text-2xl font-extrabold text-primary">
  {adminData?.stats.licensesActive ?? 0}
  </span>
- <span className="text-xs text-emerald-600 font-bold">Valides / Actives</span>
+ <span className="text-xs text-primary font-bold">Valides / Actives</span>
  </div>
  <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-center">
  <span className="block text-2xl font-extrabold text-rose-700">
@@ -4161,7 +4210,7 @@ function DashboardPageContent() {
  <button
  onClick={notifyRevenuePayouts}
  disabled={notifyingPayouts}
- className="px-4 py-2 border border-amber-200 bg-amber-50 text-amber-900 text-xs font-bold rounded-xl hover:bg-amber-100 transition flex items-center gap-1.5 disabled:opacity-60"
+ className="px-4 py-2 border border-festive-accent/30 bg-festive-accent-soft text-festive-accent text-xs font-bold rounded-xl hover:bg-festive-accent-soft transition flex items-center gap-1.5 disabled:opacity-60"
  >
  {notifyingPayouts ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
  Notifier les versements
@@ -4188,18 +4237,18 @@ function DashboardPageContent() {
  <p className="text-xl font-extrabold text-primary mt-1">{revenueReport.summary.totalRevenueFormatted}</p>
  <span className="text-xs text-primary">{revenueReport.summary.invoiceCount} facture(s)</span>
  </div>
- <div className="bg-amber-50 border border-amber-100 rounded-xl p-4">
- <span className="text-xs font-bold text-amber-600 uppercase">Commissions SaaS</span>
- <p className="text-xl font-extrabold text-amber-900 mt-1">{revenueReport.summary.totalCommissionsFormatted}</p>
+ <div className="bg-festive-accent-soft border border-festive-accent/25 rounded-xl p-4">
+ <span className="text-xs font-bold text-festive-accent uppercase">Commissions SaaS</span>
+ <p className="text-xl font-extrabold text-festive-accent mt-1">{revenueReport.summary.totalCommissionsFormatted}</p>
  {revenueReport.summary.unpaidCommissionsFormatted ? (
- <span className="text-xs text-amber-700">Dû : {revenueReport.summary.unpaidCommissionsFormatted} · {commercialPct}/{renewalPct} %</span>
+ <span className="text-xs text-festive-accent">Dû : {revenueReport.summary.unpaidCommissionsFormatted} · {commercialPct}/{renewalPct} %</span>
  ) : (
- <span className="text-xs text-amber-700">{commercialPct} % puis {renewalPct} %</span>
+ <span className="text-xs text-festive-accent">{commercialPct} % puis {renewalPct} %</span>
  )}
  </div>
- <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
- <span className="text-xs font-bold text-emerald-600 uppercase">Revenu net plateforme</span>
- <p className="text-xl font-extrabold text-emerald-900 mt-1">{revenueReport.summary.netRevenueFormatted}</p>
+ <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
+ <span className="text-xs font-bold text-primary uppercase">Revenu net plateforme</span>
+ <p className="text-xl font-extrabold text-primary mt-1">{revenueReport.summary.netRevenueFormatted}</p>
  </div>
  <div className="bg-surface-muted border border-border rounded-xl p-4">
  <span className="text-xs font-bold text-muted uppercase">Période</span>
@@ -4234,7 +4283,7 @@ function DashboardPageContent() {
  <p className="font-bold text-foreground">{c.name || c.email}</p>
  <p className="text-xs text-muted">{c.referralCode || '—'}{c.kind === 'org' ? ' · org' : ' · plateforme'}</p>
  </div>
- <span className="font-extrabold text-amber-600 shrink-0">
+ <span className="font-extrabold text-festive-accent shrink-0">
  {c.totalCommission.toLocaleString('fr-FR')} FC
  </span>
  </div>
@@ -4307,7 +4356,7 @@ function DashboardPageContent() {
  { label: 'Total des modèles', value: templateCounts.total, color: 'text-foreground dark:text-foreground' },
  { label: 'Modèles globaux (publics)', value: templateCounts.global, color: 'text-primary' },
  { label: 'Modèles d\'organisations', value: templateCounts.tenant, color: 'text-foreground dark:text-foreground' },
- { label: 'Affichés sur la landing page', value: templateCounts.landing, color: 'text-emerald-600 dark:text-emerald-400' },
+ { label: 'Affichés sur la landing page', value: templateCounts.landing, color: 'text-primary' },
  ].map((row) => (
  <div key={row.label} className="flex justify-between text-sm">
  <span className="text-muted dark:text-muted font-medium">{row.label}</span>
@@ -4326,7 +4375,7 @@ function DashboardPageContent() {
 
  <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
  <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
- <Globe className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+ <Globe className="w-5 h-5 text-primary" />
  Modèles visibles sur la landing
  </h3>
  {landingTemplates.length === 0 ? (
@@ -4361,18 +4410,18 @@ function DashboardPageContent() {
  {[
  { label: 'Total', value: adminData?.stats.users ?? 0, color: 'text-foreground dark:text-foreground' },
  { label: 'Super administrateurs', value: adminData?.userRoleCounts?.SUPER_ADMIN ?? 0, color: 'text-rose-600 dark:text-rose-400' },
-                              { label: 'Commerciaux plateforme', value: adminData?.userRoleCounts?.COMMERCIAL ?? 0, color: 'text-amber-600 dark:text-amber-400' },
+                              { label: 'Commerciaux plateforme', value: adminData?.userRoleCounts?.COMMERCIAL ?? 0, color: 'text-festive-accent' },
                               { label: 'Membres d’organisation', value: adminData?.userRoleCounts?.USER ?? 0, color: 'text-foreground dark:text-foreground' },
-                              { label: 'Propriétaires (gérants)', value: adminData?.stats.owners ?? 0, color: 'text-violet-600 dark:text-violet-400' },
+                              { label: 'Propriétaires (gérants)', value: adminData?.stats.owners ?? 0, color: 'text-festive-accent' },
  { label: 'Managers d’organisation', value: adminData?.orgRoleCounts?.MANAGER ?? 0, color: 'text-primary' },
  { label: 'Protocole', value: adminData?.orgRoleCounts?.PROTOCOL ?? 0, color: 'text-sky-600 dark:text-sky-400' },
- { label: 'Commerciaux org.', value: adminData?.orgRoleCounts?.COMMERCIAL ?? 0, color: 'text-amber-600 dark:text-amber-400' },
+ { label: 'Commerciaux org.', value: adminData?.orgRoleCounts?.COMMERCIAL ?? 0, color: 'text-festive-accent' },
                               { label: 'Sans rôle org.', value: adminData?.orgRoleCounts?.NONE ?? 0, color: 'text-muted' },
                               { label: 'Staff salle / événement', value: adminData?.stats.staffUsers ?? 0, color: 'text-foreground dark:text-foreground' },
-                              { label: 'Clients catalogue', value: adminData?.stats.clientUsers ?? 0, color: 'text-emerald-700 dark:text-emerald-300' },
+                              { label: 'Clients catalogue', value: adminData?.stats.clientUsers ?? 0, color: 'text-primary' },
                               { label: 'Sans organisation', value: adminData?.stats.noTenantUsers ?? 0, color: 'text-muted' },
-                              { label: 'E-mails vérifiés', value: adminData?.stats.verifiedUsers ?? 0, color: 'text-emerald-600 dark:text-emerald-400' },
-                              { label: 'E-mails non vérifiés', value: adminData?.stats.unverifiedUsers ?? 0, color: 'text-amber-700 dark:text-amber-300' },
+                              { label: 'E-mails vérifiés', value: adminData?.stats.verifiedUsers ?? 0, color: 'text-primary' },
+                              { label: 'E-mails non vérifiés', value: adminData?.stats.unverifiedUsers ?? 0, color: 'text-festive-accent' },
  ].map((row) => (
  <div key={row.label} className="flex justify-between text-sm">
  <span className="text-muted dark:text-muted font-medium">{row.label}</span>
@@ -4441,7 +4490,7 @@ function DashboardPageContent() {
  </div>
  <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
  <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
- <Activity className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+ <Activity className="w-5 h-5 text-primary" />
  Événements récents
  </h3>
  <div className="divide-y divide-border dark:divide-border max-h-64 overflow-y-auto">
@@ -4506,7 +4555,7 @@ function DashboardPageContent() {
  </div>
  <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
  <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
- <Wallet className="w-5 h-5 text-emerald-600" />
+ <Wallet className="w-5 h-5 text-primary" />
  Marketplace & packs
  </h3>
  <div className="space-y-3">
@@ -4765,6 +4814,46 @@ function DashboardPageContent() {
  }
  />
  </div>
+
+ <ConfirmDialog
+          open={Boolean(pendingConfirm)}
+          onClose={() => {
+            if (!confirmBusy) setPendingConfirm(null);
+          }}
+          title={pendingConfirm ? adminConfirmCopy(pendingConfirm).title : 'Confirmer'}
+          description={pendingConfirm ? adminConfirmCopy(pendingConfirm).description : ''}
+          confirmLabel={pendingConfirm ? adminConfirmCopy(pendingConfirm).confirmLabel : 'Confirmer'}
+          tone="danger"
+          loading={confirmBusy}
+          onConfirm={async () => {
+            if (!pendingConfirm) return;
+            if (pendingConfirm.kind === 'delete-tenant' && pendingConfirm.phase === 'warn') {
+              setPendingConfirm({ ...pendingConfirm, phase: 'final' });
+              return;
+            }
+            setConfirmBusy(true);
+            try {
+              if (pendingConfirm.kind === 'reject-sub') {
+                await handleRejectSubscription(pendingConfirm.id);
+              } else if (pendingConfirm.kind === 'delete-tenant') {
+                await handleDeleteTenant(pendingConfirm.id);
+              } else if (pendingConfirm.kind === 'delete-user') {
+                await handleDeleteUser(pendingConfirm.id);
+              } else if (pendingConfirm.kind === 'delete-template') {
+                await handleDeleteTemplate(pendingConfirm.id);
+              } else if (pendingConfirm.kind === 'delete-event') {
+                await handleDeleteEvent(pendingConfirm.id);
+              } else if (pendingConfirm.kind === 'delete-guest') {
+                await handleDeleteGuest(pendingConfirm.id);
+              }
+              setPendingConfirm(null);
+            } catch {
+              /* l’erreur est déjà affichée via setError */
+            } finally {
+              setConfirmBusy(false);
+            }
+          }}
+        />
 
  <SubscriptionApprovalModal
  request={approvalModalRequest}

@@ -191,6 +191,8 @@ export default function AdminEventFormModal({
           <p className="text-xs font-semibold text-muted">Position sur la carte</p>
           <div
             id="admin-map-picker"
+            role="img"
+            aria-label="Carte de localisation de l’événement"
             className="relative h-48 min-h-[11.25rem] w-full overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface-muted"
           >
             <div className="absolute inset-0 flex items-center justify-center text-xs text-muted">

@@ -692,14 +692,14 @@ export default function OrganizerDashboardHome({
               'p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-sm transition',
               daysUntilExpiry <= 0
                 ? 'bg-danger/10 border-danger/30 text-danger'
-                : 'bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-200'
+                : 'bg-festive-accent-soft border-festive-accent/30 text-festive-accent'
             )}
           >
             <div className="flex items-center gap-3">
               <div
                 className={cn(
                   'p-2 rounded-xl shrink-0',
-                  daysUntilExpiry <= 0 ? 'bg-danger/20 text-danger' : 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                  daysUntilExpiry <= 0 ? 'bg-danger/20 text-danger' : 'bg-festive-accent-soft text-festive-accent'
                 )}
               >
                 {daysUntilExpiry <= 0 ? <AlertTriangle className="w-5 h-5" /> : <Clock className="w-5 h-5" />}
@@ -771,8 +771,8 @@ export default function OrganizerDashboardHome({
                       daysUntilExpiry <= 0
                         ? 'bg-danger/10 border-danger/30 text-danger'
                         : daysUntilExpiry <= 15
-                        ? 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300'
-                        : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                        ? 'bg-festive-accent-soft border-festive-accent/30 text-festive-accent'
+                        : 'bg-primary/10 border-primary/30 text-primary'
                     )}
                   >
                     {daysUntilExpiry <= 0 ? 'Expiré' : `Licence · ${daysUntilExpiry}j restants`}
@@ -815,7 +815,7 @@ export default function OrganizerDashboardHome({
                 />
                 <button
                   type="submit"
-                  className="absolute right-1.5 min-h-9 px-3.5 py-1.5 rounded-lg bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition flex items-center gap-1.5 touch-manipulation cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary-solid"
+                  className="absolute right-1.5 min-h-11 px-3.5 py-1.5 rounded-lg bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition flex items-center gap-1.5 touch-manipulation cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary-solid"
                 >
                   <span>Rechercher</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -831,7 +831,7 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('spaces')}
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    className="min-h-11 px-3 py-1.5 rounded-lg bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
                   >
                     <Briefcase className="w-3.5 h-3.5" />
                     Mes prestations
@@ -839,12 +839,12 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('quotes')}
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-amber-500/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-festive-accent/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
-                    <Inbox className="w-3.5 h-3.5 text-amber-500" />
+                    <Inbox className="w-3.5 h-3.5 text-festive-accent" />
                     Devis reçus
                     {pendingQuotesCount > 0 && (
-                      <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-amber-500 text-white font-bold">
+                      <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-festive-accent text-primary-foreground font-bold">
                         {pendingQuotesCount}
                       </span>
                     )}
@@ -852,7 +852,7 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('reservations')}
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
                     <CalendarCheck className="w-3.5 h-3.5 text-primary" />
                     Planning réservations
@@ -865,22 +865,22 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('analytics')}
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
-                    <BarChart3 className="w-3.5 h-3.5 text-blue-500" />
+                    <BarChart3 className="w-3.5 h-3.5 text-primary" />
                     Analyses & CA
                   </button>
                   <button
                     type="button"
                     onClick={() => handleTabChange('explore')}
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
                     <Store className="w-3.5 h-3.5 text-primary" />
                     Explorer catalogue
                   </button>
                   <Link
                     href="/dashboard/marketplace?new=1"
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface-muted hover:bg-primary/10 hover:text-primary border border-border text-xs font-medium text-muted transition inline-flex items-center gap-1"
+                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface-muted hover:bg-primary/10 hover:text-primary border border-border text-xs font-medium text-muted transition inline-flex items-center gap-1"
                   >
                     <PlusCircle className="w-3.5 h-3.5 text-primary" />
                     + Nouvelle offre
@@ -891,7 +891,7 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('spaces')}
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    className="min-h-11 px-3 py-1.5 rounded-lg bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
                   >
                     <Building2 className="w-3.5 h-3.5" />
                     Mes salles
@@ -899,7 +899,7 @@ export default function OrganizerDashboardHome({
                   {canSell ? (
                     <Link
                       href="/dashboard/marketplace"
-                      className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
+                      className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
                     >
                       <Briefcase className="w-3.5 h-3.5 text-primary" />
                       Mes offres
@@ -908,7 +908,7 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('reservations')}
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
                     <CalendarCheck className="w-3.5 h-3.5 text-primary" />
                     Réservations
@@ -921,12 +921,12 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('quotes')}
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-amber-500/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-festive-accent/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
-                    <Inbox className="w-3.5 h-3.5 text-amber-500" />
+                    <Inbox className="w-3.5 h-3.5 text-festive-accent" />
                     Devis reçus
                     {pendingQuotesCount > 0 && (
-                      <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-amber-500 text-white font-bold">
+                      <span className="ml-1 px-1.5 py-0.5 rounded-full text-xs bg-festive-accent text-primary-foreground font-bold">
                         {pendingQuotesCount}
                       </span>
                     )}
@@ -934,7 +934,7 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('explore')}
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
                     <Store className="w-3.5 h-3.5 text-primary" />
                     Explorer catalogue
@@ -942,9 +942,9 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('analytics')}
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
-                    <BarChart3 className="w-3.5 h-3.5 text-blue-500" />
+                    <BarChart3 className="w-3.5 h-3.5 text-primary" />
                     Analyses
                   </button>
                 </>
@@ -952,14 +952,14 @@ export default function OrganizerDashboardHome({
                 <>
                   <Link
                     href="/dashboard/events"
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
+                    className="min-h-11 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
                   >
                     <PlusCircle className="w-3.5 h-3.5" />
                     Créer un événement
                   </Link>
                   <Link
                     href="/dashboard/tickets"
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
+                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
                   >
                     <Ticket className="w-3.5 h-3.5 text-primary" />
                     Billetterie
@@ -967,7 +967,7 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('reservations')}
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
                     <CalendarCheck className="w-3.5 h-3.5 text-primary" />
                     Réservations
@@ -979,7 +979,7 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('team')}
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
                     <UserCheck className="w-3.5 h-3.5 text-primary" />
                     Équipe
@@ -987,16 +987,16 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('billing')}
-                    className="min-h-9 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
-                    <Award className="w-3.5 h-3.5 text-emerald-600" />
+                    <Award className="w-3.5 h-3.5 text-primary" />
                     Abonnement
                   </button>
                 </>
               ) : null}
               <Link
                 href="/dashboard/catalogue?tab=plan&planView=ai"
-                className="min-h-9 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
+                className="min-h-11 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 Simulateur IA
@@ -1117,11 +1117,11 @@ export default function OrganizerDashboardHome({
                 <button
                   type="button"
                   onClick={() => handleTabChange('quotes')}
-                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-amber-500/40 hover:bg-amber-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
+                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-festive-accent/40 hover:bg-festive-accent-soft transition group flex flex-col justify-between h-full text-left cursor-pointer"
                 >
                   <div className="flex items-center justify-between w-full">
                     <span className="text-xs font-bold text-muted uppercase tracking-wider">Devis Reçus</span>
-                    <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition">
+                    <div className="p-2 rounded-xl bg-festive-accent-soft text-festive-accent group-hover:scale-110 transition">
                       <Inbox className="w-4 h-4" />
                     </div>
                   </div>
@@ -1131,7 +1131,7 @@ export default function OrganizerDashboardHome({
                     </p>
                     <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
                       <span>{pendingQuotesCount > 0 ? `${pendingQuotesCount} en attente` : 'Chiffrages'}</span>
-                      <span className="text-xs text-amber-600 dark:text-amber-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Répondre</span>
+                      <span className="text-xs text-festive-accent font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Répondre</span>
                     </p>
                   </div>
                 </button>
@@ -1163,11 +1163,11 @@ export default function OrganizerDashboardHome({
                 <button
                   type="button"
                   onClick={() => handleTabChange('analytics')}
-                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
+                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/40 hover:bg-primary/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
                 >
                   <div className="flex items-center justify-between w-full">
                     <span className="text-xs font-bold text-muted uppercase tracking-wider">Volume d'affaires</span>
-                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition">
+                    <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
                       <Wallet className="w-4 h-4" />
                     </div>
                   </div>
@@ -1177,7 +1177,7 @@ export default function OrganizerDashboardHome({
                     </p>
                     <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
                       <span>{bookings.length > 0 ? `${bookings.length} résa validées` : 'Revenus & Devis'}</span>
-                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Analyse</span>
+                      <span className="text-xs text-primary font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Analyse</span>
                     </p>
                   </div>
                 </button>
@@ -1187,11 +1187,11 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('team')}
-                    className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-blue-500/40 hover:bg-blue-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer col-span-2 md:col-span-1"
+                    className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/40 hover:bg-primary/5 transition group flex flex-col justify-between h-full text-left cursor-pointer col-span-2 md:col-span-1"
                   >
                     <div className="flex items-center justify-between w-full">
                       <span className="text-xs font-bold text-muted uppercase tracking-wider">Équipe</span>
-                      <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition">
+                      <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
                         <UserCheck className="w-4 h-4" />
                       </div>
                     </div>
@@ -1201,7 +1201,7 @@ export default function OrganizerDashboardHome({
                       </p>
                       <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
                         <span>Staff & Rôles</span>
-                        <span className="text-xs text-blue-600 dark:text-blue-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Gérer</span>
+                        <span className="text-xs text-primary font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Gérer</span>
                       </p>
                     </div>
                   </button>
@@ -1258,11 +1258,11 @@ export default function OrganizerDashboardHome({
                 <button
                   type="button"
                   onClick={() => handleTabChange('quotes')}
-                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-amber-500/40 hover:bg-amber-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
+                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-festive-accent/40 hover:bg-festive-accent-soft transition group flex flex-col justify-between h-full text-left cursor-pointer"
                 >
                   <div className="flex items-center justify-between w-full">
                     <span className="text-xs font-bold text-muted uppercase tracking-wider">Devis Reçus</span>
-                    <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition">
+                    <div className="p-2 rounded-xl bg-festive-accent-soft text-festive-accent group-hover:scale-110 transition">
                       <Inbox className="w-4 h-4" />
                     </div>
                   </div>
@@ -1272,7 +1272,7 @@ export default function OrganizerDashboardHome({
                     </p>
                     <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
                       <span>{pendingQuotesCount > 0 ? `${pendingQuotesCount} en attente` : 'Chiffrages'}</span>
-                      <span className="text-xs text-amber-600 dark:text-amber-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Répondre</span>
+                      <span className="text-xs text-festive-accent font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Répondre</span>
                     </p>
                   </div>
                 </button>
@@ -1281,13 +1281,13 @@ export default function OrganizerDashboardHome({
                 <button
                   type="button"
                   onClick={() => handleTabChange('spaces')}
-                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-purple-500/40 hover:bg-purple-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
+                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-festive-accent/40 hover:bg-festive-accent-soft transition group flex flex-col justify-between h-full text-left cursor-pointer"
                 >
                   <div className="flex items-center justify-between w-full">
                     <span className="text-xs font-bold text-muted uppercase tracking-wider">
                       {isVendor ? 'Prestations' : 'Salles & Plans'}
                     </span>
-                    <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition">
+                    <div className="p-2 rounded-xl bg-festive-accent-soft text-festive-accent group-hover:scale-110 transition">
                       {isVendor ? <Briefcase className="w-4 h-4" /> : <Building2 className="w-4 h-4" />}
                     </div>
                   </div>
@@ -1297,7 +1297,7 @@ export default function OrganizerDashboardHome({
                     </p>
                     <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
                       <span>{isVendor ? 'Offres actives' : 'Modélisées 2D/3D'}</span>
-                      <span className="text-xs text-purple-600 dark:text-purple-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Configurer</span>
+                      <span className="text-xs text-festive-accent font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Configurer</span>
                     </p>
                   </div>
                 </button>
@@ -1306,11 +1306,11 @@ export default function OrganizerDashboardHome({
                 <button
                   type="button"
                   onClick={() => handleTabChange('analytics')}
-                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
+                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/40 hover:bg-primary/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
                 >
                   <div className="flex items-center justify-between w-full">
                     <span className="text-xs font-bold text-muted uppercase tracking-wider">Volume d'affaires</span>
-                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition">
+                    <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
                       <Wallet className="w-4 h-4" />
                     </div>
                   </div>
@@ -1320,7 +1320,7 @@ export default function OrganizerDashboardHome({
                     </p>
                     <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
                       <span>{bookings.length > 0 ? `${bookings.length} résa validées` : 'Revenus & Devis'}</span>
-                      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Analyse</span>
+                      <span className="text-xs text-primary font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Analyse</span>
                     </p>
                   </div>
                 </button>
@@ -1330,11 +1330,11 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('team')}
-                    className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-blue-500/40 hover:bg-blue-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer col-span-2 md:col-span-1"
+                    className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/40 hover:bg-primary/5 transition group flex flex-col justify-between h-full text-left cursor-pointer col-span-2 md:col-span-1"
                   >
                     <div className="flex items-center justify-between w-full">
                       <span className="text-xs font-bold text-muted uppercase tracking-wider">Équipe</span>
-                      <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition">
+                      <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
                         <UserCheck className="w-4 h-4" />
                       </div>
                     </div>
@@ -1393,11 +1393,11 @@ export default function OrganizerDashboardHome({
                 <button
                   type="button"
                   onClick={() => handleTabChange('guests')}
-                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-amber-500/40 hover:bg-amber-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
+                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-festive-accent/40 hover:bg-festive-accent-soft transition group flex flex-col justify-between h-full text-left cursor-pointer"
                 >
                   <div className="flex items-center justify-between w-full">
                     <span className="text-xs font-bold text-muted uppercase tracking-wider">Invités</span>
-                    <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition">
+                    <div className="p-2 rounded-xl bg-festive-accent-soft text-festive-accent group-hover:scale-110 transition">
                       <Users className="w-4 h-4" />
                     </div>
                   </div>
@@ -1407,7 +1407,7 @@ export default function OrganizerDashboardHome({
                     </p>
                     <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
                       <span>Enregistrés</span>
-                      <span className="text-xs text-amber-600 dark:text-amber-400 font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Suivi</span>
+                      <span className="text-xs text-festive-accent font-semibold opacity-0 group-hover:opacity-100 transition">&rarr; Suivi</span>
                     </p>
                   </div>
                 </button>
@@ -1415,11 +1415,11 @@ export default function OrganizerDashboardHome({
                 {isOwner ? (
                   <Link
                     href="/dashboard/team"
-                    className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-blue-500/40 hover:bg-blue-500/5 transition group flex flex-col justify-between h-full"
+                    className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/40 hover:bg-primary/5 transition group flex flex-col justify-between h-full"
                   >
                     <div className="flex items-center justify-between w-full">
                       <span className="text-xs font-bold text-muted uppercase tracking-wider">Équipe</span>
-                      <div className="p-2 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition">
+                      <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
                         <UserCheck className="w-4 h-4" />
                       </div>
                     </div>
@@ -1434,13 +1434,13 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('spaces')}
-                    className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-purple-500/40 hover:bg-purple-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
+                    className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-festive-accent/40 hover:bg-festive-accent-soft transition group flex flex-col justify-between h-full text-left cursor-pointer"
                   >
                     <div className="flex items-center justify-between w-full">
                       <span className="text-xs font-bold text-muted uppercase tracking-wider">
                         {isVendor ? 'Prestations' : 'Salles & Plans'}
                       </span>
-                      <div className="p-2 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition">
+                      <div className="p-2 rounded-xl bg-festive-accent-soft text-festive-accent group-hover:scale-110 transition">
                         {isVendor ? <Briefcase className="w-4 h-4" /> : <Building2 className="w-4 h-4" />}
                       </div>
                     </div>
@@ -1456,17 +1456,17 @@ export default function OrganizerDashboardHome({
                 <button
                   type="button"
                   onClick={() => handleTabChange('spaces')}
-                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
+                  className="p-4 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/40 hover:bg-primary/5 transition group flex flex-col justify-between h-full text-left cursor-pointer"
                 >
                   <div className="flex items-center justify-between w-full">
                     <span className="text-xs font-bold text-muted uppercase tracking-wider">Devis & Packs</span>
-                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition">
+                    <div className="p-2 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition">
                       <Wallet className="w-4 h-4" />
                     </div>
                   </div>
                   <div className="mt-3">
                     <p className="text-2xl font-black text-foreground tracking-tight flex items-center gap-1">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 inline" />
+                      <CheckCircle2 className="w-4 h-4 text-primary inline" />
                       Actifs
                     </p>
                     <p className="text-xs text-muted mt-0.5">En cours</p>
@@ -1498,8 +1498,8 @@ export default function OrganizerDashboardHome({
                             daysUntilExpiry <= 0
                               ? 'bg-danger/10 text-danger border border-danger/20'
                               : daysUntilExpiry <= 15
-                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                              ? 'bg-festive-accent-soft text-festive-accent border border-festive-accent/20'
+                              : 'bg-primary/10 text-primary border border-primary/20'
                           )}
                         >
                           {daysUntilExpiry <= 0 ? 'Expiré' : `${daysUntilExpiry}j`}
@@ -1527,13 +1527,13 @@ export default function OrganizerDashboardHome({
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-surface p-4 sm:p-5 rounded-2xl border border-border shadow-2xs">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <span className="p-1.5 rounded-lg bg-primary/10 text-primary">
                       <TrendingUp className="w-4 h-4" />
                     </span>
                     <h2 className="text-base font-bold text-foreground">
                       Finances & Billetterie
                     </h2>
-                    <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                    <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                       Direction
                     </span>
                   </div>
@@ -1566,7 +1566,7 @@ export default function OrganizerDashboardHome({
                 <div className="p-4 rounded-2xl border border-border/80 bg-surface/90 flex flex-col justify-between">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-muted uppercase tracking-wider">Recettes Globales</span>
-                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <div className="p-2 rounded-xl bg-primary/10 text-primary">
                       <Wallet className="w-4 h-4" />
                     </div>
                   </div>
@@ -1617,7 +1617,7 @@ export default function OrganizerDashboardHome({
                 <div className="p-4 rounded-2xl border border-border/80 bg-surface/90 flex flex-col justify-between">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-muted uppercase tracking-wider">Émargement Jour J</span>
-                    <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    <div className="p-2 rounded-xl bg-festive-accent-soft text-festive-accent">
                       <ScanLine className="w-4 h-4" />
                     </div>
                   </div>
@@ -1715,20 +1715,20 @@ export default function OrganizerDashboardHome({
             <button
               type="button"
               onClick={() => handleTabChange('guests')}
-              className="p-4 rounded-2xl border border-border bg-surface hover:border-blue-500/40 hover:bg-blue-500/5 transition text-left flex flex-col justify-between gap-3 group cursor-pointer"
+              className="p-4 rounded-2xl border border-border bg-surface hover:border-primary/40 hover:bg-primary/5 transition text-left flex flex-col justify-between gap-3 group cursor-pointer"
             >
               <div className="space-y-1.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                   <Users className="w-4 h-4" />
                 </div>
-                <h4 className="font-bold text-sm text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">
+                <h4 className="font-bold text-sm text-foreground group-hover:text-primary transition">
                   Invités & Protocole
                 </h4>
                 <p className="text-xs text-muted leading-relaxed">
                   Faire-part WhatsApp, suivi des réponses et scan smartphone jour J.
                 </p>
               </div>
-              <span className="text-xs font-bold text-blue-600 dark:text-blue-400 inline-flex items-center gap-1">
+              <span className="text-xs font-bold text-primary inline-flex items-center gap-1">
                 <span>Ouvrir l’onglet</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </span>
@@ -1737,20 +1737,20 @@ export default function OrganizerDashboardHome({
             <button
               type="button"
               onClick={() => handleTabChange('spaces')}
-              className="p-4 rounded-2xl border border-border bg-surface hover:border-purple-500/40 hover:bg-purple-500/5 transition text-left flex flex-col justify-between gap-3 group cursor-pointer"
+              className="p-4 rounded-2xl border border-border bg-surface hover:border-festive-accent/40 hover:bg-festive-accent-soft transition text-left flex flex-col justify-between gap-3 group cursor-pointer"
             >
               <div className="space-y-1.5">
-                <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-festive-accent-soft text-festive-accent flex items-center justify-center">
                   <Building2 className="w-4 h-4" />
                 </div>
-                <h4 className="font-bold text-sm text-foreground group-hover:text-purple-600 dark:group-hover:text-purple-400 transition">
+                <h4 className="font-bold text-sm text-foreground group-hover:text-festive-accent transition">
                   Salles & Marketplace
                 </h4>
                 <p className="text-xs text-muted leading-relaxed">
                   Modélisation de plans 2D/3D, simulateur IA et devis.
                 </p>
               </div>
-              <span className="text-xs font-bold text-purple-600 dark:text-purple-400 inline-flex items-center gap-1">
+              <span className="text-xs font-bold text-festive-accent inline-flex items-center gap-1">
                 <span>Ouvrir l’onglet</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </span>
@@ -1759,20 +1759,20 @@ export default function OrganizerDashboardHome({
             <button
               type="button"
               onClick={() => handleTabChange('billing')}
-              className="p-4 rounded-2xl border border-border bg-surface hover:border-emerald-500/40 hover:bg-emerald-500/5 transition text-left flex flex-col justify-between gap-3 group cursor-pointer"
+              className="p-4 rounded-2xl border border-border bg-surface hover:border-primary/40 hover:bg-primary/5 transition text-left flex flex-col justify-between gap-3 group cursor-pointer"
             >
               <div className="space-y-1.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                   <Award className="w-4 h-4" />
                 </div>
-                <h4 className="font-bold text-sm text-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition">
+                <h4 className="font-bold text-sm text-foreground group-hover:text-primary transition">
                   Abonnement & Quotas
                 </h4>
                 <p className="text-xs text-muted leading-relaxed">
                   Suivi des jauges, licence, équipe et formules d’upgrade.
                 </p>
               </div>
-              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 inline-flex items-center gap-1">
+              <span className="text-xs font-bold text-primary inline-flex items-center gap-1">
                 <span>Ouvrir l’onglet</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </span>
@@ -1782,7 +1782,7 @@ export default function OrganizerDashboardHome({
           {/* Centre d'assistance & Conseils */}
           <section className="p-4 sm:p-5 rounded-2xl border border-border bg-surface flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-festive-accent-soft text-festive-accent flex items-center justify-center shrink-0">
                 <Zap className="w-4 h-4" />
               </div>
               <div>
@@ -1831,13 +1831,13 @@ export default function OrganizerDashboardHome({
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-surface p-4 sm:p-5 rounded-2xl border border-border shadow-2xs">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <span className="p-1.5 rounded-lg bg-primary/10 text-primary">
                       <TrendingUp className="w-4 h-4" />
                     </span>
                     <h2 className="text-base font-bold text-foreground">
                       Bilan Financier & Billetterie des Événements
                     </h2>
-                    <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                    <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                       Direction
                     </span>
                   </div>
@@ -1862,7 +1862,7 @@ export default function OrganizerDashboardHome({
                 <div className="p-4 rounded-2xl border border-border/80 bg-surface/90 flex flex-col justify-between">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-muted uppercase tracking-wider">Recettes Globales</span>
-                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <div className="p-2 rounded-xl bg-primary/10 text-primary">
                       <Wallet className="w-4 h-4" />
                     </div>
                   </div>
@@ -1913,7 +1913,7 @@ export default function OrganizerDashboardHome({
                 <div className="p-4 rounded-2xl border border-border/80 bg-surface/90 flex flex-col justify-between">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-muted uppercase tracking-wider">Émargement Jour J</span>
-                    <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                    <div className="p-2 rounded-xl bg-festive-accent-soft text-festive-accent">
                       <ScanLine className="w-4 h-4" />
                     </div>
                   </div>
@@ -2054,7 +2054,7 @@ export default function OrganizerDashboardHome({
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <span className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                <span className="p-1.5 rounded-lg bg-primary/10 text-primary">
                   <Users className="w-4 h-4" />
                 </span>
                 <h2 className="text-lg font-bold text-foreground">Invités & Accueil Jour J</h2>
@@ -2074,13 +2074,13 @@ export default function OrganizerDashboardHome({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Carte 1 : Faire-part & Invitations WhatsApp */}
-            <div className="p-5 rounded-2xl border border-border bg-surface hover:border-blue-500/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
+            <div className="p-5 rounded-2xl border border-border bg-surface hover:border-primary/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center">
                     <Mail className="w-5 h-5" />
                   </div>
-                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
+                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                     Faire-part et réponses à l’invitation
                   </span>
                 </div>
@@ -2096,15 +2096,15 @@ export default function OrganizerDashboardHome({
 
                 <div className="space-y-1.5 pt-1">
                   <div className="flex items-center gap-2 text-xs text-muted">
-                    <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <Check className="w-3.5 h-3.5 text-primary shrink-0" />
                     <span>Envois individuels WhatsApp et e-mail</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted">
-                    <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <Check className="w-3.5 h-3.5 text-primary shrink-0" />
                     <span>Réponse à l’invitation et préférences alimentaires</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted">
-                    <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <Check className="w-3.5 h-3.5 text-primary shrink-0" />
                     <span>Pass d&apos;accès numérique avec QR code</span>
                   </div>
                 </div>
@@ -2128,13 +2128,13 @@ export default function OrganizerDashboardHome({
             </div>
 
             {/* Carte 2 : Protocole & Contrôle d'Accès QR */}
-            <div className="p-5 rounded-2xl border border-border bg-surface hover:border-amber-500/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
+            <div className="p-5 rounded-2xl border border-border bg-surface hover:border-festive-accent/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-festive-accent-soft border border-festive-accent/20 text-festive-accent flex items-center justify-center">
                     <ScanLine className="w-5 h-5" />
                   </div>
-                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-festive-accent-soft text-festive-accent border border-festive-accent/20">
                     Accueil Jour J
                   </span>
                 </div>
@@ -2150,15 +2150,15 @@ export default function OrganizerDashboardHome({
 
                 <div className="space-y-1.5 pt-1">
                   <div className="flex items-center gap-2 text-xs text-muted">
-                    <Check className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <Check className="w-3.5 h-3.5 text-festive-accent shrink-0" />
                     <span>Scan instantané sans application native à installer</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted">
-                    <Check className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <Check className="w-3.5 h-3.5 text-festive-accent shrink-0" />
                     <span>Checklist protocolaire et affectation de portes</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted">
-                    <Check className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <Check className="w-3.5 h-3.5 text-festive-accent shrink-0" />
                     <span>Contrôle anti-doublon et numéro de table</span>
                   </div>
                 </div>
@@ -2243,7 +2243,7 @@ export default function OrganizerDashboardHome({
                       <p className="text-xs font-bold text-foreground">
                         Forfait Prestataire · {formatQuota(usage?.services, limits?.maxServices)} offres publiées
                       </p>
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                         En ligne
                       </span>
                     </div>
@@ -2322,13 +2322,13 @@ export default function OrganizerDashboardHome({
                 </div>
 
                 {/* 2. Matériel & Équipements à la location */}
-                <div className="p-5 rounded-2xl border border-border bg-surface hover:border-purple-500/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
+                <div className="p-5 rounded-2xl border border-border bg-surface hover:border-festive-accent/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center group-hover:scale-110 transition">
+                      <div className="w-10 h-10 rounded-xl bg-festive-accent-soft text-festive-accent flex items-center justify-center group-hover:scale-110 transition">
                         <Layers className="w-5 h-5" />
                       </div>
-                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-festive-accent-soft text-festive-accent border border-festive-accent/20">
                         Location
                       </span>
                     </div>
@@ -2344,11 +2344,11 @@ export default function OrganizerDashboardHome({
 
                     <div className="space-y-1 pt-1 text-xs text-muted">
                       <div className="flex items-center gap-1.5">
-                        <Check className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                        <Check className="w-3.5 h-3.5 text-festive-accent shrink-0" />
                         <span>Stock disponible par date</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Check className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                        <Check className="w-3.5 h-3.5 text-festive-accent shrink-0" />
                         <span>Options livraison & montage</span>
                       </div>
                     </div>
@@ -2368,13 +2368,13 @@ export default function OrganizerDashboardHome({
                 </div>
 
                 {/* 3. Demandes de devis & Chiffrages */}
-                <div className="p-5 rounded-2xl border border-border bg-surface hover:border-amber-500/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
+                <div className="p-5 rounded-2xl border border-border bg-surface hover:border-festive-accent/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-110 transition">
+                      <div className="w-10 h-10 rounded-xl bg-festive-accent-soft text-festive-accent flex items-center justify-center group-hover:scale-110 transition">
                         <Inbox className="w-5 h-5" />
                       </div>
-                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-festive-accent-soft text-festive-accent border border-festive-accent/20">
                         {pendingQuotesCount > 0 ? `${pendingQuotesCount} en attente` : 'Opportunités'}
                       </span>
                     </div>
@@ -2390,11 +2390,11 @@ export default function OrganizerDashboardHome({
 
                     <div className="space-y-1 pt-1 text-xs text-muted">
                       <div className="flex items-center gap-1.5">
-                        <Check className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <Check className="w-3.5 h-3.5 text-festive-accent shrink-0" />
                         <span>Chiffrage direct et rapide</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Check className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <Check className="w-3.5 h-3.5 text-festive-accent shrink-0" />
                         <span>Acomptes sécurisés par Mobile Money</span>
                       </div>
                     </div>
@@ -2414,13 +2414,13 @@ export default function OrganizerDashboardHome({
                 </div>
 
                 {/* 4. Portfolio & Réalisations */}
-                <div className="p-5 rounded-2xl border border-border bg-surface hover:border-blue-500/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
+                <div className="p-5 rounded-2xl border border-border bg-surface hover:border-primary/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-110 transition">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition">
                         <Rss className="w-5 h-5" />
                       </div>
-                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
+                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                         Vitrine
                       </span>
                     </div>
@@ -2436,11 +2436,11 @@ export default function OrganizerDashboardHome({
 
                     <div className="space-y-1 pt-1 text-xs text-muted">
                       <div className="flex items-center gap-1.5">
-                        <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <Check className="w-3.5 h-3.5 text-primary shrink-0" />
                         <span>Posts d’événements réussis</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <Check className="w-3.5 h-3.5 text-primary shrink-0" />
                         <span>Partage direct sur WhatsApp</span>
                       </div>
                     </div>
@@ -2464,7 +2464,7 @@ export default function OrganizerDashboardHome({
             <>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="p-1.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                  <span className="p-1.5 rounded-lg bg-festive-accent-soft text-festive-accent">
                     <Building2 className="w-4 h-4" />
                   </span>
                   <h2 className="text-lg font-bold text-foreground">
@@ -2546,13 +2546,13 @@ export default function OrganizerDashboardHome({
                 ) : null}
 
                 {/* Carte 1 : Plan de Salle 2D/3D */}
-                <div className="p-5 rounded-2xl border border-border bg-surface hover:border-purple-500/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
+                <div className="p-5 rounded-2xl border border-border bg-surface hover:border-festive-accent/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-xl bg-festive-accent-soft border border-festive-accent/20 text-festive-accent flex items-center justify-center">
                         <Building2 className="w-5 h-5" />
                       </div>
-                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-festive-accent-soft text-festive-accent border border-festive-accent/20">
                         Plan 2D/3D
                       </span>
                     </div>
@@ -2653,13 +2653,13 @@ export default function OrganizerDashboardHome({
                 </div>
 
                 {/* Carte 3 : Devis, Réservations & Suivi */}
-                <div className="p-5 rounded-2xl border border-border bg-surface hover:border-emerald-500/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
+                <div className="p-5 rounded-2xl border border-border bg-surface hover:border-primary/40 hover:shadow-xs transition group flex flex-col justify-between h-full gap-4">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center">
                         <Wallet className="w-5 h-5" />
                       </div>
-                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                      <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                         Devis & Contrats
                       </span>
                     </div>
@@ -2791,13 +2791,13 @@ export default function OrganizerDashboardHome({
               <p className="text-xs text-muted mt-0.5">Dossiers enregistrés</p>
             </div>
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
-              <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Confirmées / En cours</span>
-              <p className="text-2xl font-black text-emerald-600 mt-2">{confirmedBookingsCount}</p>
+              <span className="text-xs font-bold text-primary uppercase tracking-wider">Confirmées / En cours</span>
+              <p className="text-2xl font-black text-primary mt-2">{confirmedBookingsCount}</p>
               <p className="text-xs text-muted mt-0.5">Dates garanties</p>
             </div>
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
-              <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">En attente</span>
-              <p className="text-2xl font-black text-amber-600 mt-2">{pendingBookingsCount}</p>
+              <span className="text-xs font-bold text-festive-accent uppercase tracking-wider">En attente</span>
+              <p className="text-2xl font-black text-festive-accent mt-2">{pendingBookingsCount}</p>
               <p className="text-xs text-muted mt-0.5">À valider / acompte requis</p>
             </div>
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
@@ -2842,7 +2842,7 @@ export default function OrganizerDashboardHome({
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-5 rounded-2xl border border-border bg-surface/90 shadow-2xs">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600">
+                <div className="p-2 rounded-xl bg-festive-accent-soft text-festive-accent">
                   <Inbox className="w-5 h-5" />
                 </div>
                 <div>
@@ -2912,11 +2912,11 @@ export default function OrganizerDashboardHome({
               <p className="text-xs text-muted mt-0.5">Organisateurs intéressés</p>
             </div>
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
-              <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">En Attente de Réponse</span>
+              <span className="text-xs font-bold text-festive-accent uppercase tracking-wider">En Attente de Réponse</span>
               <div className="flex items-center gap-2 mt-2">
-                <p className="text-2xl font-black text-amber-600">{pendingQuotesCount}</p>
+                <p className="text-2xl font-black text-festive-accent">{pendingQuotesCount}</p>
                 {pendingQuotesCount > 0 && (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 animate-pulse">
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-festive-accent-soft text-festive-accent animate-pulse">
                     À traiter
                   </span>
                 )}
@@ -2924,8 +2924,8 @@ export default function OrganizerDashboardHome({
               <p className="text-xs text-muted mt-0.5">Réponse rapide recommandée</p>
             </div>
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
-              <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Devis Acceptés</span>
-              <p className="text-2xl font-black text-emerald-600 mt-2">{acceptedQuotesCount}</p>
+              <span className="text-xs font-bold text-primary uppercase tracking-wider">Devis Acceptés</span>
+              <p className="text-2xl font-black text-primary mt-2">{acceptedQuotesCount}</p>
               <p className="text-xs text-muted mt-0.5">Accords de principe</p>
             </div>
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
@@ -3028,7 +3028,7 @@ export default function OrganizerDashboardHome({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="p-5 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition flex flex-col justify-between group">
               <div className="space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center group-hover:scale-110 transition">
+                <div className="w-10 h-10 rounded-xl bg-festive-accent-soft text-festive-accent flex items-center justify-center group-hover:scale-110 transition">
                   <Building2 className="w-5 h-5" />
                 </div>
                 <div>
@@ -3049,13 +3049,13 @@ export default function OrganizerDashboardHome({
               </Link>
             </div>
 
-            <div className="p-5 rounded-2xl border border-border/80 bg-surface/90 hover:border-blue-500/50 hover:bg-blue-500/5 transition flex flex-col justify-between group">
+            <div className="p-5 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition flex flex-col justify-between group">
               <div className="space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center group-hover:scale-110 transition">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition">
                   <Briefcase className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-foreground group-hover:text-blue-600 transition">
+                  <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
                     Prestataires
                   </h3>
                   <p className="text-xs text-muted mt-1 leading-relaxed">
@@ -3065,20 +3065,20 @@ export default function OrganizerDashboardHome({
               </div>
               <Link
                 href="/dashboard/catalogue?kind=service"
-                className="mt-4 inline-flex items-center justify-between text-xs font-bold text-blue-600 group-hover:translate-x-0.5 transition"
+                className="mt-4 inline-flex items-center justify-between text-xs font-bold text-primary group-hover:translate-x-0.5 transition"
               >
                 <span>Trouver des prestataires</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
 
-            <div className="p-5 rounded-2xl border border-border/80 bg-surface/90 hover:border-amber-500/50 hover:bg-amber-500/5 transition flex flex-col justify-between group">
+            <div className="p-5 rounded-2xl border border-border/80 bg-surface/90 hover:border-festive-accent/50 hover:bg-festive-accent-soft transition flex flex-col justify-between group">
               <div className="space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center group-hover:scale-110 transition">
+                <div className="w-10 h-10 rounded-xl bg-festive-accent-soft text-festive-accent flex items-center justify-center group-hover:scale-110 transition">
                   <Layers className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-foreground group-hover:text-amber-600 transition">
+                  <h3 className="text-base font-bold text-foreground group-hover:text-festive-accent transition">
                     Location de Matériel
                   </h3>
                   <p className="text-xs text-muted mt-1 leading-relaxed">
@@ -3088,20 +3088,20 @@ export default function OrganizerDashboardHome({
               </div>
               <Link
                 href="/dashboard/catalogue?kind=rental"
-                className="mt-4 inline-flex items-center justify-between text-xs font-bold text-amber-600 group-hover:translate-x-0.5 transition"
+                className="mt-4 inline-flex items-center justify-between text-xs font-bold text-festive-accent group-hover:translate-x-0.5 transition"
               >
                 <span>Louer du matériel</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
 
-            <div className="p-5 rounded-2xl border border-border/80 bg-surface/90 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition flex flex-col justify-between group">
+            <div className="p-5 rounded-2xl border border-border/80 bg-surface/90 hover:border-primary/50 hover:bg-primary/5 transition flex flex-col justify-between group">
               <div className="space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-110 transition">
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-foreground group-hover:text-emerald-600 transition">
+                  <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
                     Simulateur IA & Packs
                   </h3>
                   <p className="text-xs text-muted mt-1 leading-relaxed">
@@ -3111,7 +3111,7 @@ export default function OrganizerDashboardHome({
               </div>
               <Link
                 href="/dashboard/catalogue?tab=plan&planView=ai"
-                className="mt-4 inline-flex items-center justify-between text-xs font-bold text-emerald-600 group-hover:translate-x-0.5 transition"
+                className="mt-4 inline-flex items-center justify-between text-xs font-bold text-primary group-hover:translate-x-0.5 transition"
               >
                 <span>Lancer le simulateur</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -3189,19 +3189,19 @@ export default function OrganizerDashboardHome({
               <p className="text-xs text-muted mt-0.5">Sur {bookings.length} réservation{bookings.length > 1 ? 's' : ''}</p>
             </div>
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
-              <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Taux de Conversion</span>
-              <p className="text-2xl font-black text-emerald-600 mt-2">
+              <span className="text-xs font-bold text-primary uppercase tracking-wider">Taux de Conversion</span>
+              <p className="text-2xl font-black text-primary mt-2">
                 {inquiries.length > 0 ? `${Math.round((confirmedBookingsCount / inquiries.length) * 100)} %` : '—'}
               </p>
               <p className="text-xs text-muted mt-0.5">Devis &rarr; Réservations validées</p>
             </div>
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
-              <span className="text-xs font-bold text-blue-600 uppercase tracking-wider">Demandes Actives</span>
-              <p className="text-2xl font-black text-blue-600 mt-2">{inquiries.length + bookings.length}</p>
+              <span className="text-xs font-bold text-primary uppercase tracking-wider">Demandes Actives</span>
+              <p className="text-2xl font-black text-primary mt-2">{inquiries.length + bookings.length}</p>
               <p className="text-xs text-muted mt-0.5">Intéractions clients cumulées</p>
             </div>
             <div className="p-4 rounded-2xl border border-border/80 bg-surface/90">
-              <span className="text-xs font-bold text-amber-600 uppercase tracking-wider">Billetterie directe</span>
+              <span className="text-xs font-bold text-festive-accent uppercase tracking-wider">Billetterie directe</span>
               <p className="text-2xl font-black text-foreground mt-2">
                 {ticketingSummary?.totalRevenueFc ? formatFc(ticketingSummary.totalRevenueFc) : '0 FC'}
               </p>
@@ -3222,11 +3222,11 @@ export default function OrganizerDashboardHome({
                 <div>
                   <div className="flex justify-between font-semibold mb-1">
                     <span className="text-muted">Réservations confirmées</span>
-                    <span className="text-emerald-600 font-bold">{confirmedBookingsCount}</span>
+                    <span className="text-primary font-bold">{confirmedBookingsCount}</span>
                   </div>
                   <div className="w-full h-2 rounded-full bg-surface-muted overflow-hidden">
                     <div
-                      className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                      className="h-full bg-primary rounded-full transition-all duration-500"
                       style={{ width: `${bookings.length > 0 ? Math.round((confirmedBookingsCount / bookings.length) * 100) : 0}%` }}
                     />
                   </div>
@@ -3235,11 +3235,11 @@ export default function OrganizerDashboardHome({
                 <div>
                   <div className="flex justify-between font-semibold mb-1">
                     <span className="text-muted">Réservations en attente</span>
-                    <span className="text-amber-600 font-bold">{pendingBookingsCount}</span>
+                    <span className="text-festive-accent font-bold">{pendingBookingsCount}</span>
                   </div>
                   <div className="w-full h-2 rounded-full bg-surface-muted overflow-hidden">
                     <div
-                      className="h-full bg-amber-500 rounded-full transition-all duration-500"
+                      className="h-full bg-festive-accent rounded-full transition-all duration-500"
                       style={{ width: `${bookings.length > 0 ? Math.round((pendingBookingsCount / bookings.length) * 100) : 0}%` }}
                     />
                   </div>
@@ -3261,11 +3261,11 @@ export default function OrganizerDashboardHome({
                 <div>
                   <div className="flex justify-between font-semibold mb-1">
                     <span className="text-muted">Devis acceptés</span>
-                    <span className="text-blue-600 font-bold">{acceptedQuotesCount}</span>
+                    <span className="text-primary font-bold">{acceptedQuotesCount}</span>
                   </div>
                   <div className="w-full h-2 rounded-full bg-surface-muted overflow-hidden">
                     <div
-                      className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                      className="h-full bg-primary rounded-full transition-all duration-500"
                       style={{ width: `${inquiries.length > 0 ? Math.round((acceptedQuotesCount / inquiries.length) * 100) : 0}%` }}
                     />
                   </div>
@@ -3276,7 +3276,7 @@ export default function OrganizerDashboardHome({
             {/* Colonne 2 : Bonnes pratiques et conseils de visibilité */}
             <div className="p-5 rounded-2xl border border-border bg-surface/90 space-y-4">
               <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-500" />
+                <Sparkles className="w-4 h-4 text-festive-accent" />
                 <span>Conseils d'Optimisation & Visibilité</span>
               </h3>
 
@@ -3360,7 +3360,7 @@ export default function OrganizerDashboardHome({
         >
           <div>
             <div className="flex items-center gap-2">
-              <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <span className="p-1.5 rounded-lg bg-primary/10 text-primary">
                 <Award className="w-4 h-4" />
               </span>
               <h2 className="text-lg font-bold text-foreground">
@@ -3398,8 +3398,8 @@ export default function OrganizerDashboardHome({
                         daysUntilExpiry <= 0
                           ? 'bg-danger/10 border-danger/30 text-danger'
                           : daysUntilExpiry <= 15
-                          ? 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300'
-                          : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                          ? 'bg-festive-accent-soft border-festive-accent/30 text-festive-accent'
+                          : 'bg-primary/10 border-primary/30 text-primary'
                       )}
                     >
                       {daysUntilExpiry <= 0 ? 'Expiré' : `Échéance dans ${daysUntilExpiry} jours`}
@@ -3454,11 +3454,11 @@ export default function OrganizerDashboardHome({
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-5 border-b border-border/80">
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                    <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-primary/15 text-primary border border-primary/30">
                       <Crown className="w-3.5 h-3.5" />
                       Formules
                     </span>
-                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-md border border-emerald-200 dark:border-emerald-800/40">
+                    <span className="text-xs font-semibold text-primary flex items-center gap-1 bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20">
                       <Percent className="w-3 h-3" /> −10 % en paiement annuel
                     </span>
                     <span className="text-xs font-medium text-primary flex items-center gap-1 bg-primary/10 px-2.5 py-1 rounded-md border border-primary/20">
@@ -3527,10 +3527,10 @@ export default function OrganizerDashboardHome({
                     </div>
 
                     {/* Salle */}
-                    <div className={cn('p-4 rounded-2xl border bg-surface flex flex-col justify-between transition', tenant?.plan === 'VENUE' ? 'border-primary ring-2 ring-primary/20 shadow-xs' : 'border-border hover:border-purple-500/40')}>
+                    <div className={cn('p-4 rounded-2xl border bg-surface flex flex-col justify-between transition', tenant?.plan === 'VENUE' ? 'border-primary ring-2 ring-primary/20 shadow-xs' : 'border-border hover:border-festive-accent/40')}>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-purple-600 uppercase tracking-wider">Salle</span>
+                          <span className="text-xs font-bold text-festive-accent uppercase tracking-wider">Salle</span>
                           {tenant?.plan === 'VENUE' && (
                             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
                           )}
@@ -3545,17 +3545,17 @@ export default function OrganizerDashboardHome({
                       </div>
                       <Link
                         href="/dashboard/billing"
-                        className="text-xs font-bold text-purple-600 hover:underline inline-flex items-center gap-1 pt-3 border-t border-border mt-3"
+                        className="text-xs font-bold text-festive-accent hover:underline inline-flex items-center gap-1 pt-3 border-t border-border mt-3"
                       >
                         {tenant?.plan === 'VENUE' ? 'Gérer mon forfait' : 'Activer Forfait Salle'} <ArrowRight className="w-3 h-3" />
                       </Link>
                     </div>
 
                     {/* Salle & Presta */}
-                    <div className={cn('p-4 rounded-2xl border bg-surface flex flex-col justify-between transition', tenant?.plan === 'CATALOG' ? 'border-primary ring-2 ring-primary/20 shadow-xs' : 'border-border hover:border-emerald-500/40')}>
+                    <div className={cn('p-4 rounded-2xl border bg-surface flex flex-col justify-between transition', tenant?.plan === 'CATALOG' ? 'border-primary ring-2 ring-primary/20 shadow-xs' : 'border-border hover:border-primary/40')}>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">Salle & Presta</span>
+                          <span className="text-xs font-bold text-primary uppercase tracking-wider">Salle & Presta</span>
                           {tenant?.plan === 'CATALOG' && (
                             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
                           )}
@@ -3570,7 +3570,7 @@ export default function OrganizerDashboardHome({
                       </div>
                       <Link
                         href="/dashboard/billing"
-                        className="text-xs font-bold text-emerald-600 hover:underline inline-flex items-center gap-1 pt-3 border-t border-border mt-3"
+                        className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1 pt-3 border-t border-border mt-3"
                       >
                         {tenant?.plan === 'CATALOG' ? 'Gérer mon forfait' : 'Activer Salle & Presta'} <ArrowRight className="w-3 h-3" />
                       </Link>
@@ -3641,10 +3641,10 @@ export default function OrganizerDashboardHome({
 
                     {/* Grandes Organisations & Entreprises */}
                     {showB2bUpsellCards && (
-                    <div className={cn('p-4 rounded-2xl border bg-surface flex flex-col justify-between transition', tenant?.plan?.startsWith('ENTERPRISE') ? 'border-primary ring-2 ring-primary/20 shadow-xs' : 'border-border hover:border-purple-500/40')}>
+                    <div className={cn('p-4 rounded-2xl border bg-surface flex flex-col justify-between transition', tenant?.plan?.startsWith('ENTERPRISE') ? 'border-primary ring-2 ring-primary/20 shadow-xs' : 'border-border hover:border-festive-accent/40')}>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-purple-600 uppercase tracking-wider">Entreprise & Grandes Envergures</span>
+                          <span className="text-xs font-bold text-festive-accent uppercase tracking-wider">Entreprise & Grandes Envergures</span>
                           {tenant?.plan?.startsWith('ENTERPRISE') && (
                             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
                           )}
@@ -3659,7 +3659,7 @@ export default function OrganizerDashboardHome({
                       </div>
                       <Link
                         href="/dashboard/billing"
-                        className="text-xs font-bold text-purple-600 hover:underline inline-flex items-center gap-1 pt-3 border-t border-border mt-3"
+                        className="text-xs font-bold text-festive-accent hover:underline inline-flex items-center gap-1 pt-3 border-t border-border mt-3"
                       >
                         Voir Gamme Enterprise <ArrowRight className="w-3 h-3" />
                       </Link>
