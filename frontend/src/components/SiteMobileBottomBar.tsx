@@ -348,10 +348,10 @@ export default function SiteMobileBottomBar({
             <div className="w-10 h-1 rounded-full bg-border-subtle dark:bg-border/60 mx-auto" />
 
             {/* En-tête du Bottom Sheet */}
-            <div className="flex items-center justify-between pb-2 border-b border-border/60 dark:border-border-subtle/30">
-              <div>
-                <h3 className="text-sm font-bold text-foreground">Menu & Services</h3>
-                <p className="text-xs text-muted">Pages et accès complémentaires</p>
+            <div className="flex items-center justify-between gap-3 pb-2 border-b border-border/60 dark:border-border-subtle/30">
+              <div className="min-w-0">
+                <h3 className="truncate text-sm font-bold text-foreground">Menu & Services</h3>
+                <p className="truncate text-xs text-muted">Pages et accès complémentaires</p>
               </div>
               <button
                 type="button"
@@ -378,30 +378,30 @@ export default function SiteMobileBottomBar({
                       href={item.href}
                       onClick={() => setSheetOpen(false)}
                       className={cn(
-                        'flex items-center justify-between min-h-12 p-2.5 rounded-2xl transition border touch-manipulation',
+                        'flex min-h-12 items-center justify-between gap-3 p-2.5 rounded-2xl transition border touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                         active
                           ? 'bg-primary/10 border-primary/30 text-primary-solid dark:text-primary font-bold'
                           : 'bg-surface-muted/40 dark:bg-surface-muted/20 border-border/60 dark:border-border-subtle/30 text-foreground hover:bg-surface-muted',
                       )}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex min-w-0 flex-1 items-center gap-3">
                         <div
                           className={cn(
-                            'p-2 rounded-xl flex items-center justify-center',
+                            'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl',
                             item.iconBg,
                             item.iconColor,
                           )}
                         >
                           <Icon className="w-4 h-4" aria-hidden />
                         </div>
-                        <div className="text-left">
-                          <p className="text-xs font-semibold leading-tight">{item.label}</p>
-                          <p className="text-xs text-muted leading-tight mt-0.5">
+                        <div className="min-w-0 text-left">
+                          <p className="truncate text-xs font-semibold leading-tight">{item.label}</p>
+                          <p className="mt-0.5 line-clamp-2 text-xs leading-snug text-muted">
                             {item.description}
                           </p>
                         </div>
                       </div>
-                      <ArrowRight className="w-3.5 h-3.5 text-muted shrink-0" aria-hidden />
+                      <ArrowRight className="w-3.5 h-3.5 shrink-0 text-muted" aria-hidden />
                     </Link>
                   );
                 })}
@@ -492,11 +492,13 @@ export default function SiteMobileBottomBar({
                 >
                   {theme === 'light' ? (
                     <>
-                      <Moon className="w-4 h-4 text-muted" /> Mode sombre
+                      <Moon className="w-4 h-4 shrink-0 text-muted" />
+                      <span className="truncate">Mode sombre</span>
                     </>
                   ) : (
                     <>
-                      <Sun className="w-4 h-4 text-amber-500" /> Mode clair
+                      <Sun className="w-4 h-4 shrink-0 text-primary" />
+                      <span className="truncate">Mode clair</span>
                     </>
                   )}
                 </button>

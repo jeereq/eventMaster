@@ -1010,51 +1010,54 @@ export default function OrganizerDashboardHome({
           BARRE D'ONGLETS ERGONOMIQUE DU TABLEAU DE BORD (TABS)
       ══════════════════════════════════════════════════════════════════════════ */}
       <nav aria-label="Navigation des sections du tableau de bord" className="space-y-1">
-        <div
-          role="tablist"
-          aria-label="Sections du tableau de bord"
-          onKeyDown={handleTabKeyDown}
-          className="flex items-center gap-1.5 overflow-x-auto no-scrollbar rounded-2xl border border-border bg-surface/90 p-1.5 shadow-2xs"
-        >
-          {tabs.map((tab) => {
-            const active = activeTab === tab.id;
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                id={`org-tab-${tab.id}`}
-                role="tab"
-                type="button"
-                aria-selected={active}
-                aria-controls={`org-panel-${tab.id}`}
-                tabIndex={active ? 0 : -1}
-                onClick={() => handleTabChange(tab.id)}
-                className={cn(
-                  'inline-flex min-h-11 items-center gap-2 rounded-xl px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-semibold transition whitespace-nowrap shrink-0 cursor-pointer',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                  active
-                    ? 'bg-primary-solid text-primary-foreground shadow-xs'
-                    : 'text-muted hover:bg-surface-muted hover:text-foreground',
-                )}
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span className="hidden sm:inline">{tab.label}</span>
-                <span className="sm:hidden">{tab.shortLabel}</span>
-                {tab.badge && (
-                  <span
-                    className={cn(
-                      'ml-1 px-2 py-0.5 rounded-full text-xs font-bold',
-                      active
-                        ? 'bg-primary-foreground/20 text-primary-foreground'
-                        : 'bg-surface-muted text-muted border border-border',
-                    )}
-                  >
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        <div className="relative">
+          <div
+            role="tablist"
+            aria-label="Sections du tableau de bord"
+            onKeyDown={handleTabKeyDown}
+            className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory rounded-2xl border border-border bg-surface/90 p-1.5 shadow-2xs"
+          >
+            {tabs.map((tab) => {
+              const active = activeTab === tab.id;
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  id={`org-tab-${tab.id}`}
+                  role="tab"
+                  type="button"
+                  aria-selected={active}
+                  aria-controls={`org-panel-${tab.id}`}
+                  tabIndex={active ? 0 : -1}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={cn(
+                    'inline-flex min-h-11 max-w-[min(100%,18rem)] snap-start items-center gap-2 rounded-xl px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold transition shrink-0 cursor-pointer',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                    active
+                      ? 'bg-primary-solid text-primary-foreground shadow-xs'
+                      : 'text-muted hover:bg-surface-muted hover:text-foreground',
+                  )}
+                >
+                  <Icon className="w-4 h-4 shrink-0" aria-hidden />
+                  <span className="hidden min-w-0 truncate sm:inline">{tab.label}</span>
+                  <span className="min-w-0 truncate sm:hidden">{tab.shortLabel}</span>
+                  {tab.badge ? (
+                    <span
+                      title={tab.badge}
+                      className={cn(
+                        'ml-0.5 max-w-[7.5rem] truncate rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums',
+                        active
+                          ? 'bg-primary-foreground/20 text-primary-foreground'
+                          : 'bg-surface-muted text-muted border border-border',
+                      )}
+                    >
+                      {tab.badge}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </nav>
 

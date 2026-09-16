@@ -623,6 +623,7 @@ function SidebarNav({
  title={collapsed ? (unreadLabel ? `${item.name} · ${unreadLabel}` : item.name) : undefined}
  className={cn(
  'group relative flex w-full items-center rounded-[var(--radius-button)] text-sm font-medium transition-colors duration-150 touch-manipulation select-none active:scale-[0.99]',
+ 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
  isSheet
   ? 'justify-between min-h-12 gap-3 p-2.5 rounded-2xl border'
   : collapsed

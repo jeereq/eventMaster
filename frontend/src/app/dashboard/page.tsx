@@ -9,7 +9,7 @@ import {
  Calendar, Users, Mail, CreditCard, 
  PlusCircle, AlertCircle, Award, CheckCircle, Shield,
  Building2, Activity, TrendingUp, Clock, Trash2, Edit2, Key,
- CalendarDays, Globe, Search, Filter, Check, X, FileText, Plus, Loader2, Copy, Eye,
+ Globe, Search, Filter, Check, X, FileText, Plus, Loader2, Copy, Eye,
   BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare, History, Briefcase, Wallet, LogIn, Ticket, ClipboardList, ScanLine, Heart
 } from 'lucide-react';
 import GuestMessageTemplatesPanel from './GuestMessageTemplatesPanel';
@@ -18,9 +18,9 @@ import InvoiceListPanel, { type PlatformInvoiceItem } from '@/components/Invoice
 import QuotaUsagePanel from '@/components/QuotaUsagePanel';
 import SubscriptionApprovalModal, { type SubscriptionApprovalRequest } from '@/components/SubscriptionApprovalModal';
 import SubscriptionRequestListPanel, { type AdminSubscriptionRequestItem } from '@/components/SubscriptionRequestListPanel';
-import BillingDiscountFields, { getBillingPricingFromFields } from '@/components/BillingDiscountFields';
+import { getBillingPricingFromFields } from '@/components/BillingDiscountFields';
 import type { QuotaSnapshot } from '@/lib/quotaDisplay';
-import { PageHeader, Alert, Button, ProjectCard, ListRowAction, StatusPill, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode, listStackClass, Breadcrumbs, Pagination, paginateItems, PhoneInput, usePageSize, Card, EmptyState } from '@/components/ui';
+import { PageHeader, Alert, Button, ProjectCard, ListRowAction, StatusPill, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode, listStackClass, Breadcrumbs, Pagination, paginateItems, usePageSize, Card, EmptyState } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { parseStoredPhone } from '@/components/ui/PhoneInput';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
@@ -36,7 +36,10 @@ import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
 import AdminOpsHome from '@/components/admin/AdminOpsHome';
 import AdminPlatformSettings from '@/components/admin/AdminPlatformSettings';
 import AdminUserFormModal from '@/components/admin/AdminUserFormModal';
-import { ACCOUNT_KIND_FILTER_LABELS, ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
+import AdminGuestFormModal from '@/components/admin/AdminGuestFormModal';
+import AdminTenantFormModal from '@/components/admin/AdminTenantFormModal';
+import AdminEventFormModal from '@/components/admin/AdminEventFormModal';
+import { ACCOUNT_KIND_FILTER_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 import { unwrapAdminList, adminListParams } from '@/lib/adminList';
 import {
   platformRoleLabel,
@@ -431,6 +434,7 @@ function DashboardPageContent() {
  const [topTenants, setTopTenants] = useState<AdminTenantItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
  const searchParams = useSearchParams();
  const router = useRouter();
@@ -1006,7 +1010,7 @@ function DashboardPageContent() {
  document.body.appendChild(script);
  } else {
  // Wait a brief moment for the modal transition to complete and container to be rendered
- const timer = setTimeout(initMap, 200);
+ const timer = setTimeout(initMap, 250);
  return () => clearTimeout(timer);
  }
 
@@ -1020,6 +1024,19 @@ function DashboardPageContent() {
  }
  };
  }, [isEventModalOpen]);
+
+ const syncEventMapMarker = (latStr: string, lngStr: string) => {
+ const lat = parseFloat(latStr);
+ const lng = parseFloat(lngStr);
+ const L = (window as any).L;
+ if (Number.isNaN(lat) || Number.isNaN(lng) || !L || !mapRef.current) return;
+ mapRef.current.setView([lat, lng]);
+ if (markerRef.current) {
+ markerRef.current.setLatLng([lat, lng]);
+ } else {
+ markerRef.current = L.marker([lat, lng], { draggable: true }).addTo(mapRef.current);
+ }
+ };
 
  const loadTenantOptions = async () => {
  try {
@@ -1310,6 +1327,7 @@ function DashboardPageContent() {
  setModalBillingAction('AUTO');
  setModalDiscountPercent('0');
  setModalApprovedAmount('');
+ setNotice('');
  setIsTenantModalOpen(true);
  };
 
@@ -1331,18 +1349,18 @@ function DashboardPageContent() {
  setModalDiscountMode('percent');
  setModalDiscountPercent(t.billingCycle === 'ANNUAL' ? String(ANNUAL_DISCOUNT_PERCENT) : '0');
  setModalApprovedAmount('');
+ setNotice('');
  setIsTenantModalOpen(true);
  };
 
- const handleSaveTenant = async (e: React.FormEvent) => {
- e.preventDefault();
- if (!modalTenantName) {
- alert('Le nom de l\'organisation est requis.');
- return;
+ const handleSaveTenant = async () => {
+ if (!modalTenantName.trim()) {
+ throw new Error('Le nom de l’organisation est requis.');
  }
 
  setUpdatingTenant(true);
  try {
+ setNotice('');
  if (tenantModalMode === 'create') {
  await api.post('/admin/tenants', {
  name: modalTenantName,
@@ -1381,8 +1399,8 @@ function DashboardPageContent() {
  }
  const response = await api.put(`/admin/tenants/${selectedTenant.id}`, payload);
  if (response.billing?.invoice) {
- alert(
- `${response.message || 'Organisation mise à jour.'}\n\nFacture ${response.billing.invoice.invoiceNumber} — ${response.billing.invoice.amount?.toLocaleString('fr-FR')} FC`,
+ setNotice(
+ `${response.message || 'Organisation mise à jour.'} Facture ${response.billing.invoice.invoiceNumber} — ${response.billing.invoice.amount?.toLocaleString('fr-FR')} FC`,
  );
  }
  }
@@ -1392,8 +1410,8 @@ function DashboardPageContent() {
  const data = await api.get('/admin/invoices');
  setAdminInvoices(data.invoices || []);
  }
- } catch (err: any) {
- alert(err.message || 'Erreur lors de l\'enregistrement de l\'organisation');
+ } catch (err: unknown) {
+ throw err instanceof Error ? err : new Error('Erreur lors de l’enregistrement de l’organisation');
  } finally {
  setUpdatingTenant(false);
  }
@@ -1611,11 +1629,9 @@ function DashboardPageContent() {
  setIsEventModalOpen(true);
  };
 
- const handleSaveEvent = async (e: React.FormEvent) => {
- e.preventDefault();
- if (!modalEventTitle || !modalEventDate || !modalEventLocation || !modalEventTenantId) {
- alert('Veuillez remplir tous les champs obligatoires (Titre, Date, Lieu, Organisation).');
- return;
+ const handleSaveEvent = async () => {
+ if (!modalEventTitle.trim() || !modalEventDate || !modalEventLocation.trim() || !modalEventTenantId) {
+ throw new Error('Organisation, titre, date et lieu sont requis.');
  }
 
  setUpdatingEvent(true);
@@ -1633,17 +1649,15 @@ function DashboardPageContent() {
 
  if (eventModalMode === 'create') {
  await api.post('/admin/events', payload);
- alert('Événement créé avec succès !');
  } else {
  await api.put(`/admin/events/${selectedEvent.id}`, payload);
- alert('Événement mis à jour avec succès !');
  }
 
  setIsEventModalOpen(false);
  await loadAdminEvents();
  await refreshStats();
- } catch (err: any) {
- alert(err.message || 'Erreur lors de l\'enregistrement de l\'événement');
+ } catch (err: unknown) {
+ throw err instanceof Error ? err : new Error('Erreur lors de l’enregistrement de l’événement');
  } finally {
  setUpdatingEvent(false);
  }
@@ -1695,11 +1709,9 @@ function DashboardPageContent() {
  setIsGuestModalOpen(true);
  };
 
- const handleSaveGuest = async (e: React.FormEvent) => {
- e.preventDefault();
- if (!modalGuestFirstName || !modalGuestLastName || !modalGuestEmail || !modalGuestEventId) {
- alert('Veuillez remplir tous les champs obligatoires.');
- return;
+ const handleSaveGuest = async () => {
+ if (!modalGuestFirstName.trim() || !modalGuestLastName.trim() || !modalGuestEmail.trim() || !modalGuestEventId) {
+ throw new Error('Événement, prénom, nom et e-mail sont requis.');
  }
 
  setUpdatingGuest(true);
@@ -1720,17 +1732,15 @@ function DashboardPageContent() {
 
  if (guestModalMode === 'create') {
  await api.post('/admin/guests', payload);
- alert('Invité créé avec succès !');
  } else {
  await api.put(`/admin/guests/${selectedGuest.id}`, payload);
- alert('Invité mis à jour avec succès !');
  }
 
  setIsGuestModalOpen(false);
  await loadAdminGuests();
  await refreshStats();
- } catch (err: any) {
- alert(err.message || 'Erreur lors de l\'enregistrement de l\'invité');
+ } catch (err: unknown) {
+ throw err instanceof Error ? err : new Error('Erreur lors de l’enregistrement de l’invité');
  } finally {
  setUpdatingGuest(false);
  }
@@ -1987,6 +1997,7 @@ function DashboardPageContent() {
  />
 
  {error && <Alert variant="error">{error}</Alert>}
+ {notice && <Alert variant="success">{notice}</Alert>}
 
  {adminData && activeTab !== 'overview' && (
  <div className={`grid gap-3 ${isCommercialPlatform ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-2 xl:grid-cols-4'}`}>
@@ -4579,406 +4590,67 @@ function DashboardPageContent() {
  </div>
  )}
 
-        {/* Modal: Create or Edit Guest (Super Admin) */}
-        {isGuestModalOpen && (
-          <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="sa-guest-modal-title"
-              className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl max-w-md w-full max-h-[90dvh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200"
-            >
-              <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-border-subtle bg-surface-muted flex items-center justify-between shrink-0">
-                <h3 id="sa-guest-modal-title" className="font-bold text-foreground flex items-center gap-2 text-base">
-                  <Users className="w-5 h-5 text-primary" />
-                  {guestModalMode === 'create' ? 'Créer un Invité' : 'Modifier l\'Invité'}
-                </h3>
-                <button 
-                  onClick={() => setIsGuestModalOpen(false)}
-                  aria-label="Fermer la fenêtre"
-                  className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+        <AdminGuestFormModal
+          open={isGuestModalOpen}
+          mode={guestModalMode}
+          submitting={updatingGuest}
+          events={adminEvents}
+          eventId={modalGuestEventId}
+          firstName={modalGuestFirstName}
+          lastName={modalGuestLastName}
+          email={modalGuestEmail}
+          category={modalGuestCategory}
+          rsvp={modalGuestRsvp}
+          phoneCountryCode={modalGuestPhoneCountryCode}
+          phoneNational={modalGuestPhoneNational}
+          onClose={() => setIsGuestModalOpen(false)}
+          onSubmit={handleSaveGuest}
+          setEventId={setGuestEventId}
+          setFirstName={setGuestFirstName}
+          setLastName={setGuestLastName}
+          setEmail={setGuestEmail}
+          setCategory={setGuestCategory}
+          setRsvp={setGuestRsvp}
+          setPhoneCountryCode={setModalGuestPhoneCountryCode}
+          setPhoneNational={setModalGuestPhoneNational}
+        />
 
-              <form onSubmit={handleSaveGuest} className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1 overscroll-contain">
- {/* Événement */}
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider block">Événement de destination</label>
- <select
- value={modalGuestEventId}
- onChange={(e) => setGuestEventId(e.target.value)}
- className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
- required
- >
- <option value="" disabled>Sélectionner un événement</option>
- {adminEvents.map((evt) => (
- <option key={evt.id} value={evt.id}>
- {evt.title} ({evt.tenantName})
- </option>
- ))}
- </select>
- </div>
-
- {/* Prénom & Nom */}
- <div className="grid grid-cols-2 gap-4">
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider block">Prénom</label>
- <input
- type="text"
- value={modalGuestFirstName}
- onChange={(e) => setGuestFirstName(e.target.value)}
- className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
- required
- />
- </div>
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider block">Nom de famille</label>
- <input
- type="text"
- value={modalGuestLastName}
- onChange={(e) => setGuestLastName(e.target.value)}
- className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
- required
- />
- </div>
- </div>
-
- {/* Email */}
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider block">Adresse Email</label>
- <input
- type="email"
- value={modalGuestEmail}
- onChange={(e) => setGuestEmail(e.target.value)}
- className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
- required
- />
- </div>
-
- <PhoneInput
- label="Téléphone (WhatsApp)"
- countryCode={modalGuestPhoneCountryCode}
- national={modalGuestPhoneNational}
- onCountryCodeChange={setModalGuestPhoneCountryCode}
- onNationalChange={setModalGuestPhoneNational}
- hint="Indicatif + numéro national (sans le 0)."
- />
-
- {/* Catégorie */}
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider block">Catégorie</label>
- <input
- type="text"
- value={modalGuestCategory}
- onChange={(e) => setGuestCategory(e.target.value)}
- className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
- placeholder="ex: Famille, VIP, Collègue..."
- />
- </div>
-
- {/* Statut de réponse */}
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider block">Statut de réponse</label>
- <select
- value={modalGuestRsvp}
- onChange={(e) => setGuestRsvp(e.target.value)}
- className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-medium"
- >
- <option value="PENDING">En attente (PENDING)</option>
- <option value="ACCEPTED">Accepté (ACCEPTED)</option>
- <option value="DECLINED">Décliné (DECLINED)</option>
- </select>
- </div>
-
-              {/* Actions */}
-              <div className="flex gap-3 pt-3 sticky bottom-0 -mx-5 -mb-5 sm:-mx-6 sm:-mb-6 p-4 sm:p-5 bg-surface/95 backdrop-blur-md border-t border-border mt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsGuestModalOpen(false)}
-                  className="flex-1 min-h-11 border border-border text-muted font-bold rounded-xl text-sm hover:bg-surface-muted transition"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={updatingGuest}
-                  className="flex-1 min-h-11 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
-                >
-                  {updatingGuest ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Enregistrement...
-                    </>
-                  ) : (
-                    'Enregistrer'
-                  )}
-                </button>
-              </div>
-            </form>
- </div>
- </div>
- )}
-
-        {/* Modal: Create or Edit Tenant */}
-        {isCreateTenantModalOpen && (
-          <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="sa-tenant-modal-title"
-              className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl max-w-md w-full max-h-[90dvh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200"
-            >
-              <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-border-subtle bg-surface-muted flex items-center justify-between shrink-0">
-                <h3 id="sa-tenant-modal-title" className="font-bold text-foreground flex items-center gap-2 text-base">
-                  <Building2 className="w-5 h-5 text-primary" />
-                  {tenantModalMode === 'create' ? 'Créer une Organisation' : `Modifier l'Organisation : ${selectedTenant?.name}`}
-                </h3>
-                <button 
-                  onClick={() => setIsTenantModalOpen(false)}
-                  aria-label="Fermer la fenêtre"
-                  className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleSaveTenant} className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1 overscroll-contain">
- {/* Nom */}
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Nom de l'organisation</label>
- <input
- type="text"
- placeholder="Ex: ITM Africa, Agence Événementielle..."
- value={modalTenantName}
- onChange={(e) => setTenantName(e.target.value)}
- className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-semibold"
- required
- />
- </div>
-
- {/* Forfait / Plan */}
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Forfait d'Abonnement</label>
- <select
- value={modalPlan}
- onChange={(e) => {
- const next = e.target.value as PlanId;
- setModalPlan(next);
- setModalBillingDurationDays(String(durationDaysForPlan(next)));
- setModalDiscountPercent('0');
- }}
- className="w-full bg-surface-muted border border-border rounded-xl px-3.5 py-2.5 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
- >
- {PLAN_IDS.map((p) => (
- <option key={p} value={p}>{p}</option>
- ))}
- </select>
- </div>
-
-                  {user?.role === 'SUPER_ADMIN' && (
-                  <div className="space-y-2">
-                    <label htmlFor="admin-tenant-account-kind" className="text-xs font-bold text-muted uppercase tracking-wider">Type de compte</label>
-                    <select
-                      id="admin-tenant-account-kind"
-                      value={modalAccountKind}
-                      onChange={(e) => setModalAccountKind(e.target.value as TenantAccountKind)}
-                      className="w-full min-h-11 bg-surface-muted border border-border rounded-xl px-3.5 py-2.5 text-sm font-semibold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus:border-primary transition"
-                    >
-                      {(Object.keys(ACCOUNT_KIND_LABELS) as TenantAccountKind[]).map((kind) => (
-                        <option key={kind} value={kind}>{ACCOUNT_KIND_LABELS[kind]}</option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-muted">Seul le Super Admin peut modifier ce champ. Le forfait n’y est plus couplé automatiquement.</p>
-                  </div>
-                  )}
-
- {/* License Active */}
- <div className="flex items-center justify-between p-4 bg-surface-muted rounded-xl border border-border">
- <div className="space-y-0.5">
- <div className="text-sm font-bold text-foreground">Statut de la Licence</div>
- <div className="text-xs text-muted">Activer ou suspendre l'accès de l'organisation</div>
- </div>
- <button
- type="button"
-                      role="switch"
-                      aria-checked={modalLicenseActive}
-                      aria-label="Statut de la licence de l'organisation"
- onClick={() => setModalLicenseActive(!modalLicenseActive)}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${modalLicenseActive ? 'bg-primary' : 'bg-surface-muted border-border'}`}
- >
- <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${modalLicenseActive ? 'translate-x-5' : 'translate-x-0'}`} />
- </button>
- </div>
-
- {/* Expiration Date */}
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1">
- <CalendarDays className="w-4 h-4 text-muted" />
- Date d'Expiration
- </label>
- <input
- type="date"
- value={modalLicenseExpiresAt}
- onChange={(e) => setModalLicenseExpiresAt(e.target.value)}
- className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
- />
-                    <p className="text-xs text-muted">Laissez vide pour une licence à durée illimitée.</p>
- </div>
-
- {/* License Key */}
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Clé de Licence Personnalisée</label>
- <div className="flex gap-2">
- <input
- type="text"
- placeholder="Générer ou saisir une clé..."
- value={modalLicenseKey}
- onChange={(e) => setModalLicenseKey(e.target.value)}
- className="flex-1 px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
- />
- <button
- type="button"
- onClick={() => setModalLicenseKey(`LIC-${Math.random().toString(36).substring(2, 11).toUpperCase()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`)}
- className="px-3 py-2 bg-surface-muted hover:bg-surface-muted border border-border rounded-xl text-xs font-bold text-foreground transition"
- >
- Générer
- </button>
- </div>
- </div>
-
- {tenantModalMode === 'edit' && modalPlan !== 'FREE' && (
- <div className="space-y-4 p-4 bg-primary/10 rounded-xl border border-primary/20">
- <div className="flex items-center justify-between">
-            <div>
- <div className="text-sm font-bold text-foreground">Facturation</div>
- <div className="text-xs text-muted">Renouvellement ou changement de forfait</div>
-              </div>
- <button
- type="button"
-                          role="switch"
-                          aria-checked={modalIssueInvoice}
-                          aria-label="Facturation automatique ou émission de facture"
- onClick={() => setModalIssueInvoice(!modalIssueInvoice)}
-                          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${modalIssueInvoice ? 'bg-primary' : 'bg-surface-muted border-border'}`}
- >
- <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${modalIssueInvoice ? 'translate-x-5' : 'translate-x-0'}`} />
- </button>
- </div>
-
- {modalIssueInvoice && (
- <>
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Type d&apos;opération</label>
- <select
- value={modalBillingAction}
- onChange={(e) => setModalBillingAction(e.target.value as typeof modalBillingAction)}
- className="w-full bg-white border border-border rounded-xl px-3 py-2 text-sm font-semibold"
- >
- <option value="AUTO">Automatique (selon changement)</option>
- <option value="RENEWAL">Renouvellement</option>
- <option value="PLAN_CHANGE">Changement de forfait</option>
- <option value="ACTIVATION">Activation</option>
- </select>
- </div>
- <div className="grid grid-cols-2 gap-3">
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Durée (jours)</label>
- <div className="flex flex-wrap gap-1.5 mb-1">
- {durationPresetsForPlan(modalPlan).map((preset) => {
- const selected = Number(modalBillingDurationDays) === preset.days;
- return (
- <button
- key={preset.days}
- type="button"
- onClick={() => {
- setModalBillingDurationDays(String(preset.days));
- setModalDiscountMode('percent');
- setModalDiscountPercent(preset.annual ? String(ANNUAL_DISCOUNT_PERCENT) : '0');
- setModalApprovedAmount('');
- }}
-                                      className={`px-2.5 py-1 rounded-md text-xs font-semibold border transition ${selected
-                                          ? 'bg-primary-solid text-primary-foreground border-primary-solid'
- : 'bg-white text-muted border-border hover:text-foreground'
- }`}
- >
- {preset.label}
- {preset.annual ? ` · −${ANNUAL_DISCOUNT_PERCENT} %` : ''}
- </button>
- );
- })}
- </div>
- <input
- type="number"
- min={1}
- value={modalBillingDurationDays}
- onChange={(e) => setModalBillingDurationDays(e.target.value)}
- className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-white"
- />
- {Number(modalBillingDurationDays) === 365 && (
-                                <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
- Paiement annuel : catalogue {isB2cPlanId(modalPlan) ? '4 trimestres' : '12 mois'} puis −{ANNUAL_DISCOUNT_PERCENT} % prérempli.
- </p>
- )}
- {isB2cPlanId(modalPlan) && Number(modalBillingDurationDays) === 90 && (
-                                <p className="text-xs text-muted">Période de base Particulier : trimestre 90 jours.</p>
- )}
- </div>
- <div className="flex items-end pb-1">
- <label className="flex items-center gap-2 text-xs font-semibold text-muted cursor-pointer">
- <input
- type="checkbox"
- checked={modalExtendLicense}
- onChange={(e) => setModalExtendLicense(e.target.checked)}
- className="rounded border-border"
- />
- Prolonger la licence
- </label>
- </div>
- </div>
- <BillingDiscountFields
- planId={modalPlan}
- catalogPriceFc={planCatalogPrices?.[modalPlan]}
- durationDays={parseInt(modalBillingDurationDays, 10) || durationDaysForPlan(modalPlan)}
- discountMode={modalDiscountMode}
- onDiscountModeChange={setModalDiscountMode}
- discountPercent={modalDiscountPercent}
- onDiscountPercentChange={setModalDiscountPercent}
- approvedAmount={modalApprovedAmount}
- onApprovedAmountChange={setModalApprovedAmount}
- compact
- />
-                          <p className="text-xs text-muted">
- Facture au propriétaire et managers. Commerciaux liés informés par e-mail.
- </p>
- </>
- )}
- </div>
- )}
-
-              {/* Actions */}
-              <div className="flex gap-3 pt-3 sticky bottom-0 -mx-5 -mb-5 sm:-mx-6 sm:-mb-6 p-4 sm:p-5 bg-surface/95 backdrop-blur-md border-t border-border mt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsTenantModalOpen(false)}
-                  className="flex-1 min-h-11 border border-border hover:bg-surface-muted text-foreground font-bold rounded-xl text-sm transition"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={updatingTenant}
-                  className="flex-1 min-h-11 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md"
-                >
-                  {updatingTenant ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  Enregistrer
-                </button>
-              </div>
-            </form>
- </div>
- </div>
- )}
+        <AdminTenantFormModal
+          open={isCreateTenantModalOpen}
+          mode={tenantModalMode}
+          nameLabel={selectedTenant?.name}
+          submitting={updatingTenant}
+          canManageAccountKind={user?.role === 'SUPER_ADMIN'}
+          name={modalTenantName}
+          plan={modalPlan}
+          accountKind={modalAccountKind}
+          licenseActive={modalLicenseActive}
+          licenseExpiresAt={modalLicenseExpiresAt}
+          licenseKey={modalLicenseKey}
+          issueInvoice={modalIssueInvoice}
+          extendLicense={modalExtendLicense}
+          billingAction={modalBillingAction}
+          billingDurationDays={modalBillingDurationDays}
+          discountMode={modalDiscountMode}
+          discountPercent={modalDiscountPercent}
+          approvedAmount={modalApprovedAmount}
+          catalogPriceFc={planCatalogPrices?.[modalPlan]}
+          onClose={() => setIsTenantModalOpen(false)}
+          onSubmit={handleSaveTenant}
+          setName={setTenantName}
+          setPlan={setModalPlan}
+          setAccountKind={setModalAccountKind}
+          setLicenseActive={setModalLicenseActive}
+          setLicenseExpiresAt={setModalLicenseExpiresAt}
+          setLicenseKey={setModalLicenseKey}
+          setIssueInvoice={setModalIssueInvoice}
+          setExtendLicense={setModalExtendLicense}
+          setBillingAction={setModalBillingAction}
+          setBillingDurationDays={setModalBillingDurationDays}
+          setDiscountMode={setModalDiscountMode}
+          setDiscountPercent={setModalDiscountPercent}
+          setApprovedAmount={setModalApprovedAmount}
+        />
 
         <AdminUserFormModal
           open={isUserModalOpen}
@@ -5018,196 +4690,41 @@ function DashboardPageContent() {
           setComplimentary={setModalUserComplimentary}
         />
 
-        {/* Modal: Create or Edit Event (Super Admin) */}
-        {isEventModalOpen && (
-          <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="sa-event-modal-title"
-              className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl max-w-md w-full max-h-[90dvh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200"
-            >
-              <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-border-subtle bg-surface-muted flex items-center justify-between shrink-0">
-                <h3 id="sa-event-modal-title" className="font-bold text-foreground flex items-center gap-2 text-base">
-                  <Calendar className="w-5 h-5 text-primary" />
-                  {eventModalMode === 'create' ? 'Créer un Événement' : `Modifier l'Événement : ${selectedEvent?.title}`}
-                </h3>
-                <button 
-                  onClick={() => setIsEventModalOpen(false)}
-                  aria-label="Fermer la fenêtre"
-                  className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleSaveEvent} className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain">
- {/* Organisation */}
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Organisation (Tenant) *</label>
- <select
- value={modalEventTenantId}
- onChange={(e) => setEventTenantId(e.target.value)}
- className="w-full bg-surface-muted border border-border rounded-xl px-3.5 py-2.5 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
- required
- >
- <option value="">Sélectionner une organisation</option>
- {tenantOptions.map((t) => (
- <option key={t.id} value={t.id}>{t.name}</option>
- ))}
- </select>
- </div>
-
- {/* Titre */}
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Titre de l'événement *</label>
- <input
- type="text"
- placeholder="Ex: Mariage de Marc & Sophie"
- value={modalEventTitle}
- onChange={(e) => setEventTitle(e.target.value)}
- className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-semibold"
- required
- />
- </div>
-
- {/* Description */}
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Description</label>
- <textarea
- placeholder="Détails de l'événement..."
- value={modalEventDescription}
- onChange={(e) => setEventDescription(e.target.value)}
- className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-semibold min-h-[80px]"
- />
- </div>
-
- {/* Date */}
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Date et Heure *</label>
- <input
- type="datetime-local"
- value={modalEventDate}
- onChange={(e) => setEventDate(e.target.value)}
- className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-semibold"
- required
- />
- </div>
-
- {/* Lieu */}
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Lieu *</label>
- <input
- type="text"
- placeholder="Ex: Salle de fête Palace, Paris"
- value={modalEventLocation}
- onChange={(e) => setEventLocation(e.target.value)}
- className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-semibold"
- required
- />
- </div>
-
- {/* Fréquence de rappel */}
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Fréquence de rappel</label>
- <select
- value={modalEventReminderFrequency}
- onChange={(e) => setEventReminderFrequency(e.target.value as any)}
- className="w-full bg-surface-muted border border-border rounded-xl px-3.5 py-2.5 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
- >
- <option value="NONE">Aucun rappel automatique</option>
- <option value="DAILY">Quotidien (Tous les jours)</option>
- <option value="WEEKLY">Hebdomadaire (Toutes les semaines)</option>
- </select>
- </div>
-
- {/* Coordonnées GPS */}
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider block">Sélectionner sur la carte</label>
- <div 
- id="admin-map-picker" 
- className="w-full h-48 bg-surface-muted rounded-xl border border-border overflow-hidden relative"
- style={{ minHeight: '180px' }}
- >
- <div className="absolute inset-0 flex items-center justify-center text-muted text-xs">
- Chargement de la carte...
- </div>
- </div>
- </div>
-
- <div className="grid grid-cols-2 gap-4">
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Latitude (GPS)</label>
- <input
- type="number"
- step="any"
- placeholder="Ex: -4.325"
- value={modalEventLatitude}
- onChange={(e) => {
- setEventLatitude(e.target.value);
- const lat = parseFloat(e.target.value);
- const lng = parseFloat(modalEventLongitude);
- const L = (window as any).L;
- if (!isNaN(lat) && !isNaN(lng) && L && mapRef.current) {
- mapRef.current.setView([lat, lng]);
- if (markerRef.current) {
- markerRef.current.setLatLng([lat, lng]);
- } else {
- markerRef.current = L.marker([lat, lng], { draggable: true }).addTo(mapRef.current);
- }
- }
- }}
- className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-semibold"
-                />
-              </div>
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Longitude (GPS)</label>
- <input
- type="number"
- step="any"
- placeholder="Ex: 15.305"
- value={modalEventLongitude}
- onChange={(e) => {
- setEventLongitude(e.target.value);
- const lat = parseFloat(modalEventLatitude);
- const lng = parseFloat(e.target.value);
- const L = (window as any).L;
- if (!isNaN(lat) && !isNaN(lng) && L && mapRef.current) {
- mapRef.current.setView([lat, lng]);
- if (markerRef.current) {
- markerRef.current.setLatLng([lat, lng]);
- } else {
- markerRef.current = L.marker([lat, lng], { draggable: true }).addTo(mapRef.current);
- }
- }
- }}
- className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition font-semibold"
- />
- </div>
- </div>
-
-              {/* Actions */}
-              <div className="flex gap-3 pt-3 sticky bottom-0 -mx-5 -mb-5 sm:-mx-6 sm:-mb-6 p-4 sm:p-5 bg-surface/95 backdrop-blur-md border-t border-border mt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsEventModalOpen(false)}
-                  className="flex-1 min-h-11 border border-border hover:bg-surface-muted text-foreground font-bold rounded-xl text-sm transition"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={updatingEvent}
-                  className="flex-1 min-h-11 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md"
-                >
-                  {updatingEvent ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  {eventModalMode === 'create' ? 'Créer' : 'Enregistrer'}
-                </button>
-              </div>
-            </form>
- </div>
- </div>
- )}
+        <AdminEventFormModal
+          open={isEventModalOpen}
+          mode={eventModalMode}
+          titleLabel={selectedEvent?.title}
+          submitting={updatingEvent}
+          tenantOptions={tenantOptions}
+          tenantId={modalEventTenantId}
+          title={modalEventTitle}
+          description={modalEventDescription}
+          date={modalEventDate}
+          location={modalEventLocation}
+          reminderFrequency={modalEventReminderFrequency}
+          latitude={modalEventLatitude}
+          longitude={modalEventLongitude}
+          onClose={() => setIsEventModalOpen(false)}
+          onSubmit={handleSaveEvent}
+          setTenantId={setEventTenantId}
+          setTitle={setEventTitle}
+          setDescription={setEventDescription}
+          setDate={setEventDate}
+          setLocation={setEventLocation}
+          setReminderFrequency={(value) =>
+            setEventReminderFrequency(value as 'NONE' | 'DAILY' | 'WEEKLY')
+          }
+          setLatitude={setEventLatitude}
+          setLongitude={setEventLongitude}
+          onLatitudeChange={(value) => {
+            setEventLatitude(value);
+            syncEventMapMarker(value, modalEventLongitude);
+          }}
+          onLongitudeChange={(value) => {
+            setEventLongitude(value);
+            syncEventMapMarker(modalEventLatitude, value);
+          }}
+        />
 
  <AdminDetailsModal
  open={isDetailsModalOpen && Boolean(detailsData)}
