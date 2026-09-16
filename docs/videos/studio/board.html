@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>EventMaster — Film réel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,650&family=Inter:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary-solid: #047857;
+      --ivory: #f7f4ef;
+      --stage: #171614;
+      --t: 0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: var(--stage); color: var(--ivory); font-family: Inter, sans-serif; }
+    .scene { display: none; width: 100%; height: 100%; position: relative; overflow: hidden; }
+    .scene.on { display: block; }
+    .shot {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      object-position: center 20%;
+    }
+    .shot.top { object-position: center top; }
+    .shot.mid { object-position: center 40%; }
+    .veil {
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(23,22,20,.18) 0%, rgba(23,22,20,.08) 42%, rgba(23,22,20,.72) 100%);
+    }
+    .copy {
+      position: absolute; left: 6vw; right: 6vw; bottom: 8vh;
+      max-width: 18ch;
+    }
+    body.r-9x16 .copy { max-width: 12ch; bottom: 10vh; }
+    .slogan {
+      font-family: Fraunces, Georgia, serif;
+      font-weight: 650;
+      font-size: clamp(32px, 3.6vw, 58px);
+      line-height: 1.12;
+      letter-spacing: -0.025em;
+      text-shadow: 0 10px 28px rgba(0,0,0,.45);
+    }
+    body.r-9x16 .slogan { font-size: clamp(34px, 7vw, 52px); }
+    .aside {
+      display: block;
+      margin-top: 12px;
+      font-size: clamp(15px, 1.3vw, 20px);
+      color: color-mix(in srgb, #f7f4ef 82%, #171614);
+    }
+    .mark {
+      position: absolute; left: 6vw; top: 5vh;
+      font-weight: 650; font-size: 14px; letter-spacing: 0.04em;
+    }
+    body.scrub .fx {
+      animation-duration: 1s !important;
+      animation-delay: calc(var(--t) * -1s) !important;
+      animation-play-state: paused !important;
+      animation-fill-mode: both !important;
+    }
+    body:not(.scrub) .fx { animation-duration: 3.4s; animation-fill-mode: both; }
+    @keyframes ken {
+      from { transform: scale(1.1); }
+      to { transform: scale(1); }
+    }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(16px); filter: blur(6px); }
+      28% { opacity: 1; transform: none; filter: none; }
+      to { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <section class="scene" data-v="ensemble" data-s="0">
+    <img class="shot top fx" style="animation-name:ken" src="captures/landing-16x9.png" alt="">
+    <div class="veil"></div>
+    <p class="mark">eventmaster.neevo.app</p>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Votre événement, de A à Z — parfaitement orchestré.</p></div>
+  </section>
+  <section class="scene" data-v="ensemble" data-s="1">
+    <img class="shot mid fx" style="animation-name:ken" src="captures/landing-16x9.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">WhatsApp, plan 2D/3D, Mobile Money. En RDC.</p><span class="aside fx" style="animation-name:rise">100 % web, sans appli.</span></div>
+  </section>
+  <section class="scene" data-v="ensemble" data-s="2">
+    <img class="shot mid fx" style="animation-name:ken" src="captures/plans3d-16x9.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Le vrai plan de table. Table d’honneur, 140 places.</p></div>
+  </section>
+  <section class="scene" data-v="ensemble" data-s="3">
+    <img class="shot fx" style="animation-name:ken" src="captures/plan3d-scene.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">La même salle, en 3D, dans le navigateur.</p></div>
+  </section>
+  <section class="scene" data-v="ensemble" data-s="4">
+    <img class="shot top fx" style="animation-name:ken" src="captures/marketplace-16x9.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">La billetterie s’ouvre sur le marketplace.</p><span class="aside">Kilelo · Gombe · 40 000 FC</span></div>
+  </section>
+  <section class="scene" data-v="ensemble" data-s="5">
+    <img class="shot fx" style="animation-name:ken" src="captures/plan3d-live.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Le jour J, le QR mène à la table.</p></div>
+  </section>
+  <section class="scene" data-v="ensemble" data-s="6">
+    <img class="shot mid fx" style="animation-name:ken" src="captures/landing-live.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Mariage, gala, salle, métier. Un seul site.</p></div>
+  </section>
+  <section class="scene" data-v="ensemble" data-s="7">
+    <img class="shot top fx" style="animation-name:ken" src="captures/tarifs-16x9.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Compte gratuit. Une minute. Sans carte.</p><span class="aside">WhatsApp +243 817 125 577</span></div>
+  </section>
+
+  <section class="scene" data-v="reel" data-s="0">
+    <img class="shot top fx" style="animation-name:ken" src="captures/landing-live.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Tu prépares une fête à Kinshasa ?</p></div>
+  </section>
+  <section class="scene" data-v="reel" data-s="1">
+    <img class="shot mid fx" style="animation-name:ken" src="captures/plans3d-16x9.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Le plan de table est déjà là.</p></div>
+  </section>
+  <section class="scene" data-v="reel" data-s="2">
+    <img class="shot fx" style="animation-name:ken" src="captures/plan3d-scene.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Et en 3D. Sans plugin.</p></div>
+  </section>
+  <section class="scene" data-v="reel" data-s="3">
+    <img class="shot fx" style="animation-name:ken" src="captures/plan3d-live.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Tes invités trouvent leur table.</p></div>
+  </section>
+  <section class="scene" data-v="reel" data-s="4">
+    <img class="shot top fx" style="animation-name:ken" src="captures/landing-16x9.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">EventMaster. 100 % web, sans appli.</p></div>
+  </section>
+
+  <section class="scene" data-v="familles" data-s="0">
+    <img class="shot top fx" style="animation-name:ken" src="captures/landing-16x9.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Faire-part WhatsApp, plan de table, accueil au téléphone.</p></div>
+  </section>
+  <section class="scene" data-v="familles" data-s="1">
+    <img class="shot mid fx" style="animation-name:ken" src="captures/plans3d-16x9.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Tu vois qui vient. Et qui s’assoit où.</p></div>
+  </section>
+  <section class="scene" data-v="familles" data-s="2">
+    <img class="shot fx" style="animation-name:ken" src="captures/plan3d-scene.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">La salle de mariage, déjà dressée.</p></div>
+  </section>
+  <section class="scene" data-v="familles" data-s="3">
+    <img class="shot top fx" style="animation-name:ken" src="captures/landing-live.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Essai gratuit. Sans carte bancaire.</p><span class="aside">Particulier 50 · 60 000 FC / trim.</span></div>
+  </section>
+
+  <section class="scene" data-v="pro" data-s="0">
+    <img class="shot mid fx" style="animation-name:ken" src="captures/landing-16x9.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Concerts, conférences, galas. La billetterie reste dans le navigateur.</p></div>
+  </section>
+  <section class="scene" data-v="pro" data-s="1">
+    <img class="shot top fx" style="animation-name:ken" src="captures/marketplace-16x9.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Événement public, tarifs en CDF, pass QR.</p></div>
+  </section>
+  <section class="scene" data-v="pro" data-s="2">
+    <img class="shot top fx" style="animation-name:ken" src="captures/tarifs-16x9.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Business dès 30 000 FC / mois.</p><span class="aside">Catalogue salle et prestations inclus.</span></div>
+  </section>
+
+  <section class="scene" data-v="salles" data-s="0">
+    <img class="shot fx" style="animation-name:ken" src="captures/plan3d-live.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Montrez votre salle en 3D. Avant le devis.</p></div>
+  </section>
+  <section class="scene" data-v="salles" data-s="1">
+    <img class="shot fx" style="animation-name:ken" src="captures/plan3d-scene.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Le client visite. Vous discutez ensuite.</p></div>
+  </section>
+  <section class="scene" data-v="salles" data-s="2">
+    <img class="shot top fx" style="animation-name:ken" src="captures/salles-16x9.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Publiez votre fiche. Salle 14 900 FC / mois.</p></div>
+  </section>
+
+  <section class="scene" data-v="invites" data-s="0">
+    <img class="shot top fx" style="animation-name:ken" src="captures/modeles-16x9.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Un lien. WhatsApp, SMS ou e-mail.</p></div>
+  </section>
+  <section class="scene" data-v="invites" data-s="1">
+    <img class="shot mid fx" style="animation-name:ken" src="captures/plans3d-16x9.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Un oui. La table s’affiche après le placement.</p></div>
+  </section>
+  <section class="scene" data-v="invites" data-s="2">
+    <img class="shot fx" style="animation-name:ken" src="captures/plan3d-live.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Un QR. Pas d’appli à télécharger.</p></div>
+  </section>
+  <section class="scene" data-v="invites" data-s="3">
+    <img class="shot top fx" style="animation-name:ken" src="captures/landing-16x9.png" alt="">
+    <div class="veil"></div>
+    <div class="copy"><p class="slogan fx" style="animation-name:rise">Tes invités restent dans le navigateur.</p></div>
+  </section>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    let video = params.get("v") || "ensemble";
+    let scene = params.get("s") || "0";
+    const ratio = params.get("r") || "16x9";
+    document.body.classList.add(ratio === "9x16" ? "r-9x16" : "r-16x9");
+    function show(v, s, t) {
+      document.querySelectorAll(".scene").forEach((n) => n.classList.remove("on"));
+      const node = document.querySelector('[data-v="' + v + '"][data-s="' + String(s) + '"]');
+      if (node) node.classList.add("on");
+      if (t == null || t === "") { document.body.classList.remove("scrub"); return; }
+      document.body.classList.add("scrub");
+      document.documentElement.style.setProperty("--t", String(t));
+    }
+    window.go = function (v, s, t) { video = v; scene = String(s); show(video, scene, t); };
+    show(video, scene, params.get("t"));
+  </script>
+</body>
+</html>

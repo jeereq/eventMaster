@@ -1,0 +1,149 @@
+[
+  {
+    "id": "ensemble",
+    "filename": "EventMaster-Ensemble-Presentation-16x9.mp4",
+    "ratio": "16x9",
+    "size": [
+      1920,
+      1080
+    ],
+    "scenes": [
+      {
+        "voice": "EventMaster. Tout le jour J, dans le téléphone."
+      },
+      {
+        "voice": "Aujourd'hui, un mariage ou un gala se perd entre un faire-part, un tableur, un paiement, et un accueil improvisé."
+      },
+      {
+        "voice": "Tes invités reçoivent le lien sur WhatsApp. Ils répondent. Le badge QR part tout seul."
+      },
+      {
+        "voice": "Tu places les tables en deux et trois dimensions. Chacun sait où il s'assoit."
+      },
+      {
+        "voice": "La billetterie encaisse en francs congolais, Mobile Money ou carte. Pas d'application à installer."
+      },
+      {
+        "voice": "Le jour J, l'accueil scanne. Table douze. Deux secondes."
+      },
+      {
+        "voice": "Familles, agences, salles et prestataires, invités. Un seul navigateur."
+      },
+      {
+        "voice": "Essaie gratuitement. WhatsApp, plus deux quatre trois, huit un sept, un deux cinq, cinq sept sept."
+      }
+    ]
+  },
+  {
+    "id": "reel",
+    "filename": "EventMaster-Ensemble-Reel-9x16.mp4",
+    "ratio": "9x16",
+    "size": [
+      1080,
+      1920
+    ],
+    "scenes": [
+      {
+        "voice": "Une notification. Tu es invité."
+      },
+      {
+        "voice": "Tu tapes oui. Le badge QR apparaît tout de suite."
+      },
+      {
+        "voice": "Le plan de salle tourne. Ta table s'allume."
+      },
+      {
+        "voice": "À l'entrée, on scanne. Table douze."
+      },
+      {
+        "voice": "EventMaster. Kinshasa. Tes invités n'installent rien. Toi, tu vois tout."
+      }
+    ]
+  },
+  {
+    "id": "familles",
+    "filename": "EventMaster-Role-Familles-9x16.mp4",
+    "ratio": "9x16",
+    "size": [
+      1080,
+      1920
+    ],
+    "scenes": [
+      {
+        "voice": "Tes invités répondent sur WhatsApp."
+      },
+      {
+        "voice": "Toi, tu vois qui vient, et qui s'assoit où. Le badge QR part tout seul."
+      },
+      {
+        "voice": "Le plan de table est déjà dans leur téléphone."
+      },
+      {
+        "voice": "EventMaster. Sans Excel, sans appli à imposer à ta famille. Essai gratuit, ou Particulier cinquante, soixante mille francs le trimestre."
+      }
+    ]
+  },
+  {
+    "id": "pro",
+    "filename": "EventMaster-Role-Professionnels-16x9.mp4",
+    "ratio": "16x9",
+    "size": [
+      1920,
+      1080
+    ],
+    "scenes": [
+      {
+        "voice": "Les événements pro en RDC se perdent encore entre un tableur, un lien de paiement, et un agent d'accueil sans outil."
+      },
+      {
+        "voice": "EventMaster unifie la billetterie par zone, les recettes en francs congolais, le plan de salle, et le protocole QR."
+      },
+      {
+        "voice": "Business dès trente mille francs par mois. Écris-nous sur WhatsApp, plus deux quatre trois, huit un sept, un deux cinq, cinq sept sept."
+      }
+    ]
+  },
+  {
+    "id": "salles",
+    "filename": "EventMaster-Role-Salles-Prestataires-9x16.mp4",
+    "ratio": "9x16",
+    "size": [
+      1080,
+      1920
+    ],
+    "scenes": [
+      {
+        "voice": "Votre client cherche déjà une salle à Kinshasa. Montrez-la en trois D."
+      },
+      {
+        "voice": "Recevez le devis. Discutez en direct. Sans commission sur la mise en relation."
+      },
+      {
+        "voice": "Salle, quatorze mille neuf cents francs par mois. Prestataire, neuf mille neuf cents. EventMaster Marketplace."
+      }
+    ]
+  },
+  {
+    "id": "invites",
+    "filename": "EventMaster-Role-Invites-9x16.mp4",
+    "ratio": "9x16",
+    "size": [
+      1080,
+      1920
+    ],
+    "scenes": [
+      {
+        "voice": "Un lien. WhatsApp, SMS, ou e-mail."
+      },
+      {
+        "voice": "Un oui. Ou un billet payé en Mobile Money."
+      },
+      {
+        "voice": "Un QR. Tout de suite, dans le navigateur."
+      },
+      {
+        "voice": "Tes invités n'installent rien. Toi, tu vois tout. EventMaster."
+      }
+    ]
+  }
+]
