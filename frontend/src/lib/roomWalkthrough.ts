@@ -80,6 +80,13 @@ function findMainDoor(blueprint: RoomLayoutBlueprint): DoorAnchor | null {
   return best;
 }
 
+function furnitureSearchText(entry: RoomLayoutBlueprint['furniture'][number]): string {
+  if (entry.kind === 'table') return `${entry.name} ${entry.id}`;
+  if (entry.kind === 'row') return `${entry.label} ${entry.rowName ?? ''} ${entry.id}`;
+  if (entry.kind === 'zone') return `${entry.label} ${entry.id}`;
+  return `${entry.label ?? ''} ${entry.id}`;
+}
+
 function findNamedFocus(
   blueprint: RoomLayoutBlueprint,
   widthM: number,
@@ -89,7 +96,7 @@ function findNamedFocus(
 ): [number, number, number] | null {
   const item = blueprint.furniture.find((entry) => {
     if (kind && entry.kind !== kind) return false;
-    return nameRe.test(entry.name ?? '') || nameRe.test(entry.id ?? '');
+    return nameRe.test(furnitureSearchText(entry));
   });
   if (!item || typeof item.x !== 'number' || typeof item.y !== 'number') return null;
   const [x, z] = pctToWorld(item.x, item.y, widthM, heightM);
