@@ -176,7 +176,7 @@ export default function ShowcasePlanEditorModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] flex flex-col bg-background/95 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[1000] flex h-[100dvh] max-h-[100dvh] flex-col bg-background animate-in fade-in duration-200">
       {/* ─── Barre d'en-tête de l'éditeur vitrine ─── */}
       <header className="px-4 py-2.5 sm:px-6 bg-surface border-b border-border flex items-center justify-between gap-3 shrink-0 shadow-xs">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -345,12 +345,13 @@ export default function ShowcasePlanEditorModal({
       )}
 
       {/* ─── Corps : Éditeur spatial 2D / 3D complet ─── */}
-      <main className="flex-1 relative overflow-hidden flex flex-col">
+      <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         <RoomLayoutEditor
           blueprint={blueprint}
           onChange={setBlueprint}
           allowThemesFixtures={true}
           editorLevel="complete"
+          layout="fill"
         />
       </main>
     </div>

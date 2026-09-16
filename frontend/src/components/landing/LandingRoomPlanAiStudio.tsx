@@ -543,8 +543,11 @@ export default function LandingRoomPlanAiStudio({
                     blueprint={preview.blueprint}
                     quality="showcase"
                     force2d={force2d}
+                    onForce2dChange={setForce2d}
                     showDepthControls={false}
                     showMeta={false}
+                    allowExpand
+                    expandWhen3d
                     className="w-full h-full"
                   />
                 ) : (

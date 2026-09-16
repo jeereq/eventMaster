@@ -15,6 +15,7 @@ import {
   applyPlanSceneVisibility,
 } from '@/lib/roomLayoutUtils';
 import { PlanSceneControls, usePlanFullscreen } from '@/components/PlanViewChrome';
+import PlanViewModeToggle from '@/components/PlanViewModeToggle';
 import { getSeatCoordinates, getTableVisualStyle } from '@/lib/tablePlanUtils';
 import { mapTicketSelectionsToWebGL, resolveTicketSeatPick } from '@/lib/seatSelectionLayout';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
@@ -59,6 +60,13 @@ interface RoomLayoutPreviewProps {
   /** Bouton plein écran (mobile et desktop). */
   allowMobileExpand?: boolean;
   allowExpand?: boolean;
+  /**
+   * Landing / plans 2D-3D : ouvrir automatiquement le plein écran
+   * dès que le visiteur bascule Plan 2D ↔ Vue 3D.
+   */
+  expandWhen3d?: boolean;
+  /** Synchronise le toggle 2D/3D depuis le chrome plein écran. */
+  onForce2dChange?: (force2d: boolean) => void;
   /** Table sélectionnée active */
   selectedTableId?: string | null;
   /** Multi-sélection de tables */
@@ -548,6 +556,8 @@ export default function RoomLayoutPreview({
   lightingPreset: lightingPresetOverride,
   allowMobileExpand,
   allowExpand,
+  expandWhen3d = false,
+  onForce2dChange,
   selectedTableId,
   selectedTableIds,
   onSelectTable,
@@ -563,10 +573,20 @@ export default function RoomLayoutPreview({
   const [localForce2d, setLocalForce2d] = useState(false);
   const [showWalls, setShowWalls] = useState(true);
   const [showRoof, setShowRoof] = useState(false);
+  const skipAutoExpandRef = React.useRef(true);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!expandWhen3d) return;
+    if (skipAutoExpandRef.current) {
+      skipAutoExpandRef.current = false;
+      return;
+    }
+    setExpanded(true);
+  }, [expandWhen3d, force2d, setExpanded]);
 
   const canvasClass = useMemo(() => {
     if (quality === 'thumb') return 'aspect-[4/3] h-full min-h-0';
@@ -692,17 +712,25 @@ export default function RoomLayoutPreview({
                 {blueprint.metadata.totalSeats} places · {blueprint.canvas.widthM}×{blueprint.canvas.heightM} m
               </p>
             </div>
-            <PlanSceneControls
-              showWalls={showWalls}
-              showRoof={showRoof}
-              onToggleWalls={() => setShowWalls((current) => !current)}
-              onToggleRoof={() => setShowRoof((current) => !current)}
-              showRoofControl={useWebGL}
-              onToggleFullscreen={() => setExpanded(false)}
-              isFullscreen
-              variant="overlay"
-              className="justify-end"
-            />
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {onForce2dChange ? (
+                <PlanViewModeToggle
+                  force2d={force2d}
+                  onChange={onForce2dChange}
+                  tone="stage"
+                />
+              ) : null}
+              <PlanSceneControls
+                showWalls={showWalls}
+                showRoof={showRoof}
+                onToggleWalls={() => setShowWalls((current) => !current)}
+                onToggleRoof={() => setShowRoof((current) => !current)}
+                showRoofControl={useWebGL}
+                onToggleFullscreen={() => setExpanded(false)}
+                isFullscreen
+                variant="overlay"
+              />
+            </div>
           </div>
           <div className="relative flex-1 min-h-0">
             {useWebGL ? (

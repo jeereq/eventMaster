@@ -4680,9 +4680,9 @@ function DashboardPageContent() {
           extendLicense={modalExtendLicense}
           billingAction={modalBillingAction}
           billingDurationDays={modalBillingDurationDays}
-          discountMode={modalDiscountMode}
-          discountPercent={modalDiscountPercent}
-          approvedAmount={modalApprovedAmount}
+ discountMode={modalDiscountMode}
+ discountPercent={modalDiscountPercent}
+ approvedAmount={modalApprovedAmount}
           catalogPriceFc={planCatalogPrices?.[modalPlan]}
           onClose={() => setIsTenantModalOpen(false)}
           onSubmit={handleSaveTenant}

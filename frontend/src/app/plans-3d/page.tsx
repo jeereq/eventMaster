@@ -377,9 +377,11 @@ export default function Plans3DPage() {
                   blueprint={activeBlueprint}
                   quality="showcase"
                   force2d={force2d}
+                  onForce2dChange={setForce2d}
                   showDepthControls={false}
                   showMeta={false}
-                  allowMobileExpand
+                  allowExpand
+                  expandWhen3d
                   className="w-full h-full"
                 />
               ) : (

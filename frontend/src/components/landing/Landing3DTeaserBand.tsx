@@ -232,8 +232,10 @@ export default function Landing3DTeaserBand() {
                     blueprint={blueprint}
                     quality="standard"
                     force2d={force2d}
+                    onForce2dChange={setForce2d}
                     showMeta={false}
-                    allowMobileExpand
+                    allowExpand
+                    expandWhen3d
                     className="w-full h-full min-h-[240px] sm:min-h-[320px]"
                   />
                 ) : (

@@ -732,6 +732,11 @@ interface RoomLayoutEditorProps {
    * - `dashboard` : page dashboard avec bottom-nav visible.
    */
   mobileDockOffset?: 'none' | 'dashboard';
+  /**
+   * `fill` : occupe tout l’hôte déjà plein écran (landing / plans 2D-3D).
+   * Évite un second overlay `fixed` derrière la modale vitrine.
+   */
+  layout?: 'inline' | 'fill';
 }
 
 type CropTarget = { kind: 'fixture'; id: string } | null;
@@ -748,7 +753,9 @@ export default function RoomLayoutEditor({
   seedPlanPhoto = null,
   onSeedPlanPhotoConsumed,
   mobileDockOffset = 'none',
+  layout = 'inline',
 }: RoomLayoutEditorProps) {
+  const fillHost = layout === 'fill';
   const { user, tenant } = useAuth();
   const { site } = usePlatformSite();
   const isRoomBlocked = site?.studioVisibility?.room === false;
@@ -8589,14 +8596,16 @@ export default function RoomLayoutEditor({
       <p className="text-sm font-semibold text-foreground truncate min-w-0">
         Plan — {roomTypeLabels[blueprint.roomType as RoomType]} · {blueprint.metadata.totalSeats} places
       </p>
-      <button
-        type="button"
-        onClick={() => setIsExpanded((v) => !v)}
-        className={cn(EDITOR_TOOL, EDITOR_TOOL_MUTED)}
-      >
-        {isExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-        {isExpanded ? 'Réduire' : 'Agrandir'}
-      </button>
+      {layout !== 'fill' ? (
+        <button
+          type="button"
+          onClick={() => setIsExpanded((v) => !v)}
+          className={cn(EDITOR_TOOL, EDITOR_TOOL_MUTED)}
+        >
+          {isExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+          {isExpanded ? 'Réduire' : 'Agrandir'}
+        </button>
+      ) : null}
     </div>
   );
 
@@ -9098,7 +9107,7 @@ export default function RoomLayoutEditor({
     </div>
   ) : null;
 
-  if (isExpanded) {
+  if (isExpanded || fillHost) {
     return (
       <>
         {aiPlanFileInput}
@@ -9111,8 +9120,22 @@ export default function RoomLayoutEditor({
           initialImageUrl={cropFixture?.imageUrl}
           initialCrop={cropFixture?.imageCrop}
         />
-        <div className="fixed inset-0 z-[70] bg-background/70 backdrop-blur-sm flex flex-col p-1.5 sm:p-3">
-          <div className="bg-background sm:bg-surface rounded-none sm:rounded-2xl shadow-2xl flex flex-col flex-1 min-h-0 overflow-hidden">
+        <div
+          className={cn(
+            'flex min-h-0 flex-1 flex-col',
+            fillHost
+              ? 'h-full w-full'
+              : 'fixed inset-0 z-[1100] bg-background/70 backdrop-blur-sm p-1.5 sm:p-3',
+          )}
+        >
+          <div
+            className={cn(
+              'flex min-h-0 flex-1 flex-col overflow-hidden',
+              fillHost
+                ? 'bg-background'
+                : 'rounded-none bg-background shadow-2xl sm:rounded-2xl sm:bg-surface',
+            )}
+          >
             <div className="p-2.5 sm:p-4 space-y-2 sm:space-y-3 border-b border-border-subtle shrink-0">
               {header}
               <div className="hidden lg:block space-y-2">
