@@ -531,6 +531,8 @@ function resolvePendingSignupPlan(planKey, accountKind) {
         return null;
     if (!exports.PLAN_KEYS.includes(normalized))
         return null;
+    if (accountKind === 'CLIENT')
+        return null;
     if (!isPlanAllowedForAccountKind(normalized, accountKind))
         return null;
     return normalized;

@@ -2,7 +2,12 @@ import Link from 'next/link';
 import { LegalPageShell, Section } from '@/components/LegalPageShell';
 import LegalSupportEmail from '@/components/LegalSupportEmail';
 import TermsMarketplaceRates from '@/components/TermsMarketplaceRates';
-import { collectionCommissionRangeLabel, TERMS_VERSION } from '@/config/legalConfig';
+import {
+  collectionCommissionRangeLabel,
+  TERMS_VERSION,
+  TICKETING_RETENTION_PERCENT,
+  DONATIONS_RETENTION_PERCENT,
+} from '@/config/legalConfig';
 
 export const metadata = {
   title: 'Conditions d\'utilisation — EventMaster',
@@ -15,7 +20,7 @@ export default function TermsPage() {
     <LegalPageShell
       title="Conditions d'utilisation"
       subtitle="Les présentes conditions régissent l'accès et l'utilisation de la plateforme EventMaster, incluant le Studio IA, la billetterie multi-zone avec présence auto-validée, les dons solidaires, le simulateur de budget, la modélisation de salle 2D/3D et les paiements sécurisés."
-      lastUpdated="14 septembre 2026"
+      lastUpdated="16 septembre 2026"
       version={TERMS_VERSION}
     >
       <Section title="1. Objet & Présentation de la plateforme">
@@ -58,7 +63,7 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="2. Comptes, organisations et rôles d'utilisateurs">
+      <Section title="2. Comptes, organisations, gestion des abonnements et rôles d'utilisateurs">
         <p>
           Chaque organisation bénéficie d&apos;un espace logique strictement cloisonné et isolé (multi-tenant). Le{' '}
           <strong>propriétaire</strong> du compte est le principal interlocuteur et responsable vis-à-vis
@@ -75,6 +80,14 @@ export default function TermsPage() {
           L&apos;organisation peut habiliter des collaborateurs (managers, régisseurs, agents protocole de scan QR,
           équipe commerciale). L&apos;organisation est responsable de l&apos;attribution et de la révocation de ces
           privilèges d&apos;accès, ainsi que de la confidentialité des identifiants associés.
+        </p>
+        <p className="mt-2">
+          <strong>Gestion administrative centralisée des abonnements :</strong> L&apos;administration de la plateforme (Super Admin)
+          dispose des prérogatives techniques et contractuelles pour attribuer, activer, reconduire, suspendre ou ajuster les
+          licences et forfaits d&apos;abonnements, que ce soit à l&apos;échelle individuelle d&apos;un utilisateur autonome ou au niveau
+          de l&apos;espace d&apos;une organisation. Elle peut notamment allouer des périodes de gratuité gracieuse (« complimentary »),
+          des extensions de durée personnalisées ou des régularisations d&apos;échéances, dûment tracées dans le registre d&apos;audit
+          sécurisé d&apos;EventMaster.
         </p>
       </Section>
 
@@ -174,7 +187,7 @@ export default function TermsPage() {
         </ul>
 
         <p>
-          <strong>3.5 Reversement des recettes de billetterie (Payouts) &amp; Commission plateforme.</strong>
+          <strong>3.5 Reversement des recettes de billetterie (Payouts), Taux de Retenue &amp; Modalités de Versement.</strong>
         </p>
         <ul className="list-disc pl-5 space-y-1">
           <li>
@@ -182,21 +195,33 @@ export default function TermsPage() {
             mandataire technique d&apos;encaissement.
           </li>
           <li>
-            <strong>Commission de collecte :</strong> En plus de l&apos;abonnement SaaS déjà payé, EventMaster se
-            réserve le droit de prélever une commission de <strong>{collectionCommissionRangeLabel()}</strong> du
-            montant global collecté au titre de la billetterie de l&apos;événement. Cette commission s&apos;ajoute aux
-            frais de transaction du
-            prestataire de paiement (FlexPay) et est déduite avant reversement.
+            <strong>Taux de retenue plateforme (Commission de billetterie) :</strong> En application des conditions de service
+            et en sus de l&apos;abonnement SaaS souscrit, EventMaster applique un taux de retenue contractuel standard de{' '}
+            <strong>{TICKETING_RETENTION_PERCENT} %</strong> (dans la fourchette statutaire de {collectionCommissionRangeLabel()})
+            sur l&apos;ensemble des recettes brutes de billetterie collectées. Cette retenue couvre les frais d&apos;infrastructure,
+            la sécurisation cryptographique des QR Codes, le moteur anti-doublon et le routage des transactions.
           </li>
           <li>
-            Les recettes nettes (montant brut des ventes après déduction des frais de transaction et de la commission
-            plateforme) sont reversées à l&apos;organisation selon le calendrier et le moyen de paiement convenu
-            (virement bancaire ou paiement électronique / Mobile Money FlexPay Payout).
+            <strong>Calcul du Net à Reverser :</strong> Le montant net dû à l&apos;organisation est déterminé selon la formule :{' '}
+            <code>Net Reversable = Montant Brut Encaissé - Retenue Plateforme ({TICKETING_RETENTION_PERCENT} %) - Frais Opérateur éventuels</code>.
+            Cette déduction est opérée de plein droit par le système préalablement à tout transfert de fonds.
           </li>
           <li>
-            <strong>Acceptation à l&apos;activation :</strong> L&apos;activation de la billetterie sur un événement
-            n&apos;est possible qu&apos;après validation expresse, par le créateur, des conditions de la plateforme
-            en vigueur (y compris la présente commission).
+            <strong>Délais et canaux de reversement :</strong> Le reversement des fonds nets intervient sous un délai de{' '}
+            <strong>48 à 72 heures ouvrées</strong> suivant la tenue effective et la clôture de l&apos;événement (ou selon un calendrier
+            périodique pour les événements à billetterie récurrente), sous réserve de l&apos;absence de litige avéré ou de suspicion
+            de fraude. Les reversements sont opérés au choix par <strong>Virement bancaire</strong> ou via{' '}
+            <strong>Mobile Money (M-Pesa, Orange Money, Airtel Money, Afrimoney via FlexPay Pay Out)</strong> vers les coordonnées
+            officielles renseignées par le gestionnaire de l&apos;organisation.
+          </li>
+          <li>
+            <strong>Preuve et traçabilité comptable :</strong> Chaque opération de versement donne lieu à l&apos;enregistrement
+            d&apos;une référence de transaction infalsifiable, de la date de règlement et d&apos;un justificatif ou bordereau
+            consultable dans l&apos;espace administratif et exportable au format normalisé.
+          </li>
+          <li>
+            <strong>Acceptation préalable obligatoire :</strong> L&apos;activation de la billetterie sur un événement
+            est subordonnée à l&apos;acceptation expresse et préalable des présentes conditions et du taux de retenue en vigueur.
           </li>
           <li>
             L&apos;organisateur est seul redevable des éventuelles taxes, droits d&apos;auteurs ou prélèvements fiscaux
@@ -268,8 +293,8 @@ export default function TermsPage() {
             sur EventMaster sont rigoureusement exacts, sincères et véridiques ;
           </li>
           <li>
-            Qu&apos;elle affectera la totalité des sommes nettes perçues (après frais FlexPay et commission plateforme
-            de {collectionCommissionRangeLabel()}) à la réalisation exclusive de la cause annoncée,
+            Qu&apos;elle affectera la totalité des sommes nettes perçues (après déduction de la retenue plateforme de{' '}
+            <strong>{DONATIONS_RETENTION_PERCENT} %</strong> et des frais éventuels FlexPay) à la réalisation exclusive de la cause annoncée,
             à l&apos;exclusion de tout usage détourné ou illicite ;
           </li>
           <li>
@@ -317,7 +342,7 @@ export default function TermsPage() {
         </p>
 
         <p>
-          <strong>4.6 Reversement des dons (Payouts) &amp; Commission plateforme.</strong>
+          <strong>4.6 Reversement des dons (Payouts), Taux de Retenue Solidaire &amp; Modalités de Versement.</strong>
         </p>
         <ul className="list-disc pl-5 space-y-1">
           <li>
@@ -325,16 +350,24 @@ export default function TermsPage() {
             technique d&apos;encaissement.
           </li>
           <li>
-            <strong>Commission de collecte :</strong> En plus de l&apos;abonnement SaaS déjà payé, EventMaster se
-            réserve le droit de prélever une commission de <strong>{collectionCommissionRangeLabel()}</strong> du
-            montant global collecté au titre des dons de l&apos;événement. Cette commission s&apos;ajoute aux frais de
-            transaction FlexPay et est
-            déduite avant reversement.
+            <strong>Taux de retenue solidaire :</strong> En application des conditions de service et afin de couvrir
+            les coûts d&apos;infrastructure sécurisée, d&apos;encaissement multicanal et de vérification de conformité,
+            EventMaster applique un taux de retenue préférentiel standard de <strong>{DONATIONS_RETENTION_PERCENT} %</strong> (dans
+            la fourchette de {collectionCommissionRangeLabel()}) sur l&apos;ensemble des montants bruts versés au titre des dons solidaires.
+          </li>
+          <li>
+            <strong>Calcul du Net à Reverser :</strong> Le montant net reversé à l&apos;organisation s&apos;établit comme suit :{' '}
+            <code>Net Dons Reversable = Total Dons Bruts - Retenue Solidaire ({DONATIONS_RETENTION_PERCENT} %) - Frais Opérateur éventuels</code>.
+          </li>
+          <li>
+            <strong>Modalités et calendrier de versement :</strong> Le reversement des dons collectés s&apos;opère sous{' '}
+            <strong>48 à 72 heures ouvrées</strong> à la demande de l&apos;organisation ou à l&apos;issue de la campagne de collecte,
+            par <strong>Virement bancaire</strong> ou <strong>Mobile Money FlexPay Payout</strong>.
           </li>
           <li>
             <strong>Acceptation à l&apos;activation :</strong> L&apos;activation de la collecte de dons sur un
             événement n&apos;est possible qu&apos;après validation expresse, par le créateur, des conditions de la
-            plateforme en vigueur (y compris la présente commission).
+            plateforme en vigueur (y compris la présente retenue solidaire de {DONATIONS_RETENTION_PERCENT} %).
           </li>
         </ul>
       </Section>
@@ -365,7 +398,7 @@ export default function TermsPage() {
         </ul>
 
         <p>
-          <strong>5.3 Forfaits SaaS, renouvellement et facturation.</strong>
+          <strong>5.3 Forfaits SaaS, Gestion des Licences (Utilisateurs &amp; Organisations), Renouvellement et Facturation.</strong>
         </p>
         <ul className="list-disc pl-5 space-y-1">
           <li>
@@ -377,19 +410,26 @@ export default function TermsPage() {
             (90 jours), éditeur 2D/3D complet, hors marketplace ;
           </li>
           <li>
-            <strong>Business, Premium, Premium Plus &amp; Enterprise</strong> : forfaits professionnels mensuels. Dès
+            <strong>Business, Premium, Premium Plus &amp; Enterprise</strong> : forfaits professionnels d&apos;organisation. Dès
             Business, la vitrine salles publiables et les prestations marketplace (y compris Matériel &amp; Équipements)
             sont incluses — pas besoin d&apos;un forfait marketplace séparé pour publier le catalogue. Le quota
-            d&apos;invités se renouvelle à chaque période payée ;
+            d&apos;invités et d&apos;événements se renouvelle à chaque période payée ;
           </li>
           <li>
             <strong>Forfaits Marketplace dédiés (Salle, Prestataire, Salle &amp; presta)</strong> : pour le compte pro
             sans événements ni quota d&apos;invités. Distincts des forfaits Business+ organisateur, qui incluent déjà
             la vitrine.
           </li>
+          <li>
+            <strong>Gestion et attribution par l&apos;Administration :</strong> L&apos;administration Super Admin peut affecter,
+            prolonger ou suspendre un forfait directement pour un utilisateur indépendant ou pour une organisation entière,
+            définir des dates d&apos;expiration personnalisées ou accorder des accès gracieux (« complimentary ») dans le cadre
+            d&apos;accords institutionnels ou de partenariats.
+          </li>
         </ul>
         <p>
-          Les tarifs sont indiqués en Francs Congolais (FC / CDF) ou devise applicable. Les abonnements annuels peuvent bénéficier d&apos;une réduction tarifaire (notamment 10% de remise sur l&apos;engagement 12 mois).
+          Les tarifs sont indiqués en Francs Congolais (FC / CDF) ou devise applicable. Les abonnements annuels bénéficient
+          d&apos;une réduction tarifaire contractuelle de <strong>10 % de remise</strong> par rapport au paiement mensuel ou trimestriel standard.
         </p>
         <TermsMarketplaceRates />
 

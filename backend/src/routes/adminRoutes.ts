@@ -46,12 +46,22 @@ import {
   deleteShowcasePlan,
   updateShowcasePlansSelection,
 } from '../controllers/showcasePlanController';
-import { 
+import {
   getAdminSubscriptionRequests, 
   approveSubscriptionRequest, 
   rejectSubscriptionRequest,
   quoteSubscriptionDiscount,
 } from '../controllers/subscriptionController';
+import {
+  getAdminSubscriptionReport,
+  exportAdminSubscriptionReport,
+  manageAdminSubscription,
+} from '../controllers/adminSubscriptionReportController';
+import {
+  getAdminEventPayoutsReport,
+  exportAdminEventPayoutsReport,
+  settleAdminEventPayout,
+} from '../controllers/eventPayoutController';
 import { getRevenueReport, exportRevenueReport, notifyRevenuePayouts, markRevenuePayoutPaid } from '../controllers/revenueReportController';
 import {
   initiateAdminSaasFlexPayPayout,
@@ -141,6 +151,12 @@ router.get('/reports/revenue', requireRole(['SUPER_ADMIN']), getRevenueReport);
 router.get('/reports/revenue/export', requireRole(['SUPER_ADMIN']), exportRevenueReport);
 router.post('/reports/revenue/notify-payouts', requireRole(['SUPER_ADMIN']), notifyRevenuePayouts);
 router.post('/reports/revenue/mark-paid', requireRole(['SUPER_ADMIN']), markRevenuePayoutPaid);
+router.get('/reports/subscriptions', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), getAdminSubscriptionReport);
+router.get('/reports/subscriptions/export', requireRole(['SUPER_ADMIN', 'COMMERCIAL']), exportAdminSubscriptionReport);
+router.post('/subscriptions/manage', requireRole(['SUPER_ADMIN']), manageAdminSubscription);
+router.get('/reports/event-payouts', requireRole(['SUPER_ADMIN']), getAdminEventPayoutsReport);
+router.get('/reports/event-payouts/export', requireRole(['SUPER_ADMIN']), exportAdminEventPayoutsReport);
+router.post('/reports/event-payouts/:eventId/settle', requireRole(['SUPER_ADMIN']), settleAdminEventPayout);
 router.get('/donations/report', requireRole(['SUPER_ADMIN']), getAdminDonationsReport);
 router.get('/donations/export', requireRole(['SUPER_ADMIN']), exportAdminDonationsReport);
 router.get('/payouts', requireRole(['SUPER_ADMIN']), listAdminSaasPayouts);

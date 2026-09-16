@@ -599,6 +599,7 @@ export function resolvePendingSignupPlan(
   const normalized = normalizePlanKey(planKey);
   if (normalized === 'FREE') return null;
   if (!PLAN_KEYS.includes(normalized)) return null;
+  if (accountKind === 'CLIENT') return null;
   if (!isPlanAllowedForAccountKind(normalized, accountKind)) return null;
   return normalized;
 }

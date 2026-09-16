@@ -1,7 +1,12 @@
 import Link from 'next/link';
 import { LegalPageShell, Section } from '@/components/LegalPageShell';
 import LegalSupportEmail from '@/components/LegalSupportEmail';
-import { collectionCommissionRangeLabel, REFUND_VERSION } from '@/config/legalConfig';
+import {
+  collectionCommissionRangeLabel,
+  REFUND_VERSION,
+  TICKETING_RETENTION_PERCENT,
+  DONATIONS_RETENTION_PERCENT,
+} from '@/config/legalConfig';
 
 export const metadata = {
   title: 'Politique de remboursement — EventMaster',
@@ -14,7 +19,7 @@ export default function RefundPage() {
     <LegalPageShell
       title="Politique de remboursement"
       subtitle="Règles applicables aux billets, dons solidaires, abonnements, jetons d’intelligence artificielle, acomptes et cautions marketplace, et erreurs de paiement."
-      lastUpdated="14 septembre 2026"
+      lastUpdated="16 septembre 2026"
       version={REFUND_VERSION}
     >
       <Section title="1. Objet">
@@ -24,13 +29,14 @@ export default function RefundPage() {
           <Link href="/terms" className="text-primary font-semibold hover:underline">
             conditions d’utilisation
           </Link>{' '}
-          (articles 3.6, 4 et 5).
+          (articles 3.5, 3.6, 4.6 et 5).
         </p>
         <p>
           EventMaster est un intermédiaire technique. Les fonds de billetterie et de dons solidaires sont encaissés
-          pour le compte de l’organisateur. En plus de l’abonnement SaaS, EventMaster se réserve le droit de prélever
-          une commission de {collectionCommissionRangeLabel()} du montant global collecté (billets et/ou dons) avant
-          reversement. Cette commission, distincte de l’abonnement SaaS, n’est pas remboursable. Les acomptes
+          pour le compte de l’organisateur. En plus de l’abonnement SaaS, EventMaster applique un taux de retenue contractuel
+          de <strong>{TICKETING_RETENTION_PERCENT} %</strong> sur la billetterie et de <strong>{DONATIONS_RETENTION_PERCENT} %</strong> sur les dons solidaires
+          (dans la fourchette statutaire de {collectionCommissionRangeLabel()}) déduit préalablement au reversement.
+          Cette retenue plateforme couvre les coûts techniques d&apos;émission, d&apos;authentification QR cryptographique et de sécurisation financière : elle n&apos;est pas remboursable une fois la prestation technique réalisée. Les acomptes
           et cautions du marketplace relèvent de l’accord direct entre l’organisateur et le professionnel
           (salle, métier de service ou Matériel &amp; Équipements).
         </p>
@@ -93,7 +99,7 @@ export default function RefundPage() {
 
       <Section title="4. Abonnements et forfaits SaaS">
         <p>
-          L’abonnement donne accès à l’espace d’organisation pour la période souscrite (mensuelle, trimestrielle ou
+          L’abonnement donne accès à l’espace d’organisation ou au profil utilisateur pour la période souscrite (mensuelle, trimestrielle ou
           annuelle, selon le forfait).
         </p>
         <ul className="list-disc pl-5 space-y-1">
@@ -108,6 +114,11 @@ export default function RefundPage() {
           <li>
             Un forfait souscrit par erreur (mauvais palier, mauvais compte) peut être examiné par le support s’il n’a
             pas encore été utilisé de manière substantielle.
+          </li>
+          <li>
+            <strong>Accès gracieux (« complimentary ») et ajustements administratifs :</strong> Les périodes de gratuité, remises exceptionnelles
+            ou extensions accordées à titre gracieux par l&apos;administration Super Admin ne possèdent aucune valeur monétaire rachetable
+            et ne peuvent en aucun cas donner lieu à une demande d&apos;indemnisation ou de remboursement financier.
           </li>
         </ul>
       </Section>

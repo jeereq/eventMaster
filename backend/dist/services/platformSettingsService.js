@@ -271,6 +271,8 @@ exports.DEFAULT_PLATFORM_SETTINGS = {
     twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || '',
     marketplaceCommissionRate: 0.08,
     marketplaceDepositRate: 0.3,
+    eventTicketingRetentionRate: 0.05,
+    eventDonationsRetentionRate: 0.04,
     commercialFirstCommissionRate: 0.3,
     commercialRenewalCommissionRate: 0.2,
     usdExchangeRateCdf: 2800,
@@ -405,6 +407,8 @@ function normalizeStoredRates(settings) {
         ...settings,
         marketplaceCommissionRate: (0, ratePercent_1.parseRateInput)(settings.marketplaceCommissionRate, 0.08, 0.01, 0.5),
         marketplaceDepositRate: (0, ratePercent_1.parseRateInput)(settings.marketplaceDepositRate, 0.3, 0.05, 0.9),
+        eventTicketingRetentionRate: (0, ratePercent_1.parseRateInput)(settings.eventTicketingRetentionRate, 0.05, 0.01, 0.2),
+        eventDonationsRetentionRate: (0, ratePercent_1.parseRateInput)(settings.eventDonationsRetentionRate, 0.04, 0.01, 0.2),
         commercialFirstCommissionRate: (0, ratePercent_1.parseRateInput)(settings.commercialFirstCommissionRate, 0.3, 0, 1),
         commercialRenewalCommissionRate: (0, ratePercent_1.parseRateInput)(settings.commercialRenewalCommissionRate, 0.2, 0, 1),
         usdExchangeRateCdf: Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? Math.round(parsedUsdRate) : 2800,
@@ -432,6 +436,8 @@ function buildNextSettings(partial) {
     }
     next.marketplaceCommissionRate = (0, ratePercent_1.parseRateInput)(next.marketplaceCommissionRate, 0.08, 0.01, 0.5);
     next.marketplaceDepositRate = (0, ratePercent_1.parseRateInput)(next.marketplaceDepositRate, 0.3, 0.05, 0.9);
+    next.eventTicketingRetentionRate = (0, ratePercent_1.parseRateInput)(next.eventTicketingRetentionRate, 0.05, 0.01, 0.2);
+    next.eventDonationsRetentionRate = (0, ratePercent_1.parseRateInput)(next.eventDonationsRetentionRate, 0.04, 0.01, 0.2);
     next.commercialFirstCommissionRate = (0, ratePercent_1.parseRateInput)(next.commercialFirstCommissionRate, 0.3, 0, 1);
     next.commercialRenewalCommissionRate = (0, ratePercent_1.parseRateInput)(next.commercialRenewalCommissionRate, 0.2, 0, 1);
     const parsedUsdRate = Number(next.usdExchangeRateCdf);
@@ -528,6 +534,10 @@ function getPublicSiteConfig(settings = loadPlatformSettings()) {
         marketplaceDepositRate: (0, ratePercent_1.parseRateInput)(settings.marketplaceDepositRate, 0.3, 0.05, 0.9),
         marketplaceCommissionPercent: (0, ratePercent_1.rateToPercent)((0, ratePercent_1.parseRateInput)(settings.marketplaceCommissionRate, 0.08, 0.01, 0.5)),
         marketplaceDepositPercent: (0, ratePercent_1.rateToPercent)((0, ratePercent_1.parseRateInput)(settings.marketplaceDepositRate, 0.3, 0.05, 0.9)),
+        eventTicketingRetentionRate: (0, ratePercent_1.parseRateInput)(settings.eventTicketingRetentionRate, 0.05, 0.01, 0.2),
+        eventTicketingRetentionPercent: (0, ratePercent_1.rateToPercent)((0, ratePercent_1.parseRateInput)(settings.eventTicketingRetentionRate, 0.05, 0.01, 0.2)),
+        eventDonationsRetentionRate: (0, ratePercent_1.parseRateInput)(settings.eventDonationsRetentionRate, 0.04, 0.01, 0.2),
+        eventDonationsRetentionPercent: (0, ratePercent_1.rateToPercent)((0, ratePercent_1.parseRateInput)(settings.eventDonationsRetentionRate, 0.04, 0.01, 0.2)),
         commercialFirstCommissionRate: (0, ratePercent_1.parseRateInput)(settings.commercialFirstCommissionRate, 0.3, 0, 1),
         commercialRenewalCommissionRate: (0, ratePercent_1.parseRateInput)(settings.commercialRenewalCommissionRate, 0.2, 0, 1),
         commercialFirstCommissionPercent: (0, ratePercent_1.rateToPercent)((0, ratePercent_1.parseRateInput)(settings.commercialFirstCommissionRate, 0.3, 0, 1)),

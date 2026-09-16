@@ -9,6 +9,7 @@ import {
   csvEscape,
   type DonationMeta,
 } from '../utils/donationReportUtils';
+import { loadPlatformSettings } from '../services/platformSettingsService';
 
 /**
  * Rapport détaillé des dons d'un événement pour les organisateurs / gestionnaires.
@@ -82,11 +83,17 @@ export async function getEventDonationsReport(req: AuthenticatedRequest, res: Re
     const channelMap = new Map<string, { label: string; count: number; amountFc: number }>();
     const timelineMap = new Map<string, { date: string; amountFc: number; count: number }>();
 
+    const settings = loadPlatformSettings();
+    const retentionRate = settings.eventDonationsRetentionRate || 0.04;
+    const retentionRatePercent = Math.round(retentionRate * 100);
+
     const donationsList = orders.map((ord) => {
       const meta = parseDonationMeta(ord.selectedSeats);
       const isPaid = ord.status === 'PAID';
       const isPending = ord.status === 'PENDING';
       const channelLabel = resolveChannelLabel(ord.flexPayChannel, ord.paymentProvider);
+      const retentionFc = isPaid ? Math.round(ord.amountFc * retentionRate) : 0;
+      const netFc = isPaid ? ord.amountFc - retentionFc : 0;
 
       if (isPaid) {
         collectedAmountFc += ord.amountFc;
@@ -127,6 +134,9 @@ export async function getEventDonationsReport(req: AuthenticatedRequest, res: Re
         createdAt: ord.createdAt.toISOString(),
         paidAt: ord.paidAt ? ord.paidAt.toISOString() : null,
         amountFc: ord.amountFc,
+        retentionRatePercent,
+        retentionFc,
+        netFc,
         status: ord.status,
         buyerName: meta.isAnonymous ? 'Donateur anonyme' : ord.buyerName,
         actualBuyerName: ord.buyerName,
@@ -157,6 +167,9 @@ export async function getEventDonationsReport(req: AuthenticatedRequest, res: Re
       targetAmountFc && targetAmountFc > 0
         ? Math.min(100, Math.round((collectedAmountFc / targetAmountFc) * 100))
         : null;
+
+    const retentionAmountFc = Math.round(collectedAmountFc * retentionRate);
+    const netPayoutAmountFc = collectedAmountFc - retentionAmountFc;
 
     const averageDonationFc = donationsPaidCount > 0 ? Math.round(collectedAmountFc / donationsPaidCount) : 0;
 
@@ -189,6 +202,9 @@ export async function getEventDonationsReport(req: AuthenticatedRequest, res: Re
       },
       summary: {
         collectedAmountFc,
+        retentionRatePercent,
+        retentionAmountFc,
+        netPayoutAmountFc,
         pendingAmountFc,
         targetAmountFc,
         progressPercent,
@@ -249,12 +265,19 @@ export async function exportEventDonationsReport(req: AuthenticatedRequest, res:
       orderBy: { createdAt: 'desc' },
     });
 
+    const settings = loadPlatformSettings();
+    const retentionRate = settings.eventDonationsRetentionRate || 0.04;
+    const retentionRatePercent = Math.round(retentionRate * 100);
+
     const header = [
       'ID Commande',
       'Date création',
       'Date paiement',
       'Statut',
-      'Montant (FC)',
+      'Montant Brut (FC)',
+      'Taux retenue (%)',
+      'Retenue plateforme (FC)',
+      'Net reversé (FC)',
       'Nom donateur',
       'Email donateur',
       'Téléphone',
@@ -271,6 +294,8 @@ export async function exportEventDonationsReport(req: AuthenticatedRequest, res:
       const isPaid = ord.status === 'PAID';
       const channelLabel = resolveChannelLabel(ord.flexPayChannel, ord.paymentProvider);
       const guest = ord.guests?.[0];
+      const retentionFc = isPaid ? Math.round(ord.amountFc * retentionRate) : 0;
+      const netFc = isPaid ? ord.amountFc - retentionFc : 0;
 
       return [
         csvEscape(ord.id),
@@ -278,6 +303,9 @@ export async function exportEventDonationsReport(req: AuthenticatedRequest, res:
         csvEscape(ord.paidAt ? ord.paidAt.toISOString().slice(0, 19).replace('T', ' ') : ''),
         csvEscape(ord.status === 'PAID' ? 'PAYÉ' : ord.status === 'PENDING' ? 'EN ATTENTE' : ord.status),
         ord.amountFc,
+        retentionRatePercent,
+        retentionFc,
+        netFc,
         csvEscape(meta.isAnonymous ? 'Donateur anonyme' : ord.buyerName),
         csvEscape(meta.isAnonymous ? 'masqué' : ord.buyerEmail),
         csvEscape(meta.isAnonymous ? '' : ord.buyerPhone || ''),
@@ -513,14 +541,26 @@ export async function getAdminDonationsReport(req: AuthenticatedRequest, res: Re
 
     const timeline = Array.from(timelineMap.values()).sort((a, b) => a.date.localeCompare(b.date));
 
+    const settings = loadPlatformSettings();
+    const retentionRate = settings.eventDonationsRetentionRate || 0.04;
+    const retentionRatePercent = Math.round(retentionRate * 100);
+    const totalRetentionFc = Math.round(totalCollectedFc * retentionRate);
+    const totalNetPayoutFc = totalCollectedFc - totalRetentionFc;
+
     // Liste des dons avec aperçu
     const recentDonations = allDonationOrders.slice(0, 150).map((ord) => {
       const meta = parseDonationMeta(ord.selectedSeats);
+      const isPaid = ord.status === 'PAID';
+      const retentionFc = isPaid ? Math.round(ord.amountFc * retentionRate) : 0;
+      const netFc = isPaid ? ord.amountFc - retentionFc : 0;
       return {
         id: ord.id,
         createdAt: ord.createdAt.toISOString(),
         paidAt: ord.paidAt ? ord.paidAt.toISOString() : null,
         amountFc: ord.amountFc,
+        retentionRatePercent,
+        retentionFc,
+        netFc,
         status: ord.status,
         buyerName: meta.isAnonymous ? 'Donateur anonyme' : ord.buyerName,
         actualBuyerName: ord.buyerName,
@@ -549,6 +589,9 @@ export async function getAdminDonationsReport(req: AuthenticatedRequest, res: Re
     return res.json({
       summary: {
         totalCollectedFc,
+        retentionRatePercent,
+        totalRetentionFc,
+        totalNetPayoutFc,
         totalDonationsPaid,
         totalDonationsPending,
         pendingAmountFc,
@@ -611,6 +654,10 @@ export async function exportAdminDonationsReport(req: AuthenticatedRequest, res:
       orderBy: { createdAt: 'desc' },
     });
 
+    const settings = loadPlatformSettings();
+    const retentionRate = settings.eventDonationsRetentionRate || 0.04;
+    const retentionRatePercent = Math.round(retentionRate * 100);
+
     const header = [
       'ID Commande',
       'Organisation',
@@ -618,7 +665,10 @@ export async function exportAdminDonationsReport(req: AuthenticatedRequest, res:
       'Date création',
       'Date paiement',
       'Statut',
-      'Montant (FC)',
+      'Montant Brut (FC)',
+      'Taux retenue (%)',
+      'Retenue plateforme (FC)',
+      'Net reversé (FC)',
       'Nom donateur',
       'Email donateur',
       'Téléphone',
@@ -630,7 +680,10 @@ export async function exportAdminDonationsReport(req: AuthenticatedRequest, res:
 
     const lines = orders.map((ord) => {
       const meta = parseDonationMeta(ord.selectedSeats);
+      const isPaid = ord.status === 'PAID';
       const channelLabel = resolveChannelLabel(ord.flexPayChannel, ord.paymentProvider);
+      const retentionFc = isPaid ? Math.round(ord.amountFc * retentionRate) : 0;
+      const netFc = isPaid ? ord.amountFc - retentionFc : 0;
 
       return [
         csvEscape(ord.id),
@@ -640,6 +693,9 @@ export async function exportAdminDonationsReport(req: AuthenticatedRequest, res:
         csvEscape(ord.paidAt ? ord.paidAt.toISOString().slice(0, 19).replace('T', ' ') : ''),
         csvEscape(ord.status === 'PAID' ? 'PAYÉ' : ord.status === 'PENDING' ? 'EN ATTENTE' : ord.status),
         ord.amountFc,
+        retentionRatePercent,
+        retentionFc,
+        netFc,
         csvEscape(meta.isAnonymous ? 'Donateur anonyme' : ord.buyerName),
         csvEscape(meta.isAnonymous ? 'masqué' : ord.buyerEmail),
         csvEscape(meta.isAnonymous ? '' : ord.buyerPhone || ''),

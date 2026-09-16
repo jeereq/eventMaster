@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest, invalidateLicenseCache } from '../middleware/auth';
 import { prisma } from '../db';
-import { PlanType, Role } from '@prisma/client';
+import { PlanType, Role, TenantAccountKind } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import { parseAccountKind } from '../utils/tenantAccess';
 import { getPlansConfiguration, PAID_PLAN_KEYS, accountKindForPlanAssignment, normalizePlanKey, resolveDurationDaysForPlan, billingCycleFromDurationDays } from '../config/plansConfig';
@@ -917,7 +917,17 @@ export async function updateUserRoleOrStatus(req: AuthenticatedRequest, res: Res
     }
 
     const id = req.params.id as string;
-    const { name, email, password, role, isEmailVerified, tenantId, commissionRate, renewalCommissionRate } = req.body;
+    const {
+      name,
+      email,
+      password,
+      role,
+      isEmailVerified,
+      tenantId,
+      commissionRate,
+      renewalCommissionRate,
+      subscription,
+    } = req.body;
 
     const updateData: any = {
       name: name !== undefined ? name : undefined,
@@ -954,16 +964,79 @@ export async function updateUserRoleOrStatus(req: AuthenticatedRequest, res: Res
       }
     }
 
+    // Gestion directe de l'abonnement utilisateur (Particulier ou Organisation)
+    if (subscription && typeof subscription === 'object') {
+      const planKey = (subscription.plan as PlanType) || 'PERSONAL_50';
+      const licenseActive = subscription.licenseActive !== undefined ? Boolean(subscription.licenseActive) : true;
+      let licenseExpiresAt: Date | null | undefined = undefined;
+
+      if (subscription.licenseExpiresAt !== undefined) {
+        licenseExpiresAt = subscription.licenseExpiresAt ? new Date(subscription.licenseExpiresAt) : null;
+      } else if (subscription.durationDays) {
+        const days = Number(subscription.durationDays);
+        licenseExpiresAt = new Date(Date.now() + days * 24 * 3600 * 1000);
+      } else if (subscription.complimentary) {
+        licenseExpiresAt = null; // Illimité / offert gracieusement
+      }
+
+      if (updatedUser.tenantId) {
+        await prisma.tenant.update({
+          where: { id: updatedUser.tenantId },
+          data: {
+            plan: planKey,
+            licenseActive,
+            ...(licenseExpiresAt !== undefined ? { licenseExpiresAt } : {}),
+            accountKind: subscription.accountKind ? (subscription.accountKind as TenantAccountKind) : undefined,
+          },
+        });
+      } else if (planKey !== 'FREE') {
+        const newTenant = await prisma.tenant.create({
+          data: {
+            name: `Espace ${updatedUser.name || updatedUser.email.split('@')[0]}`,
+            plan: planKey,
+            accountKind: subscription.accountKind ? (subscription.accountKind as TenantAccountKind) : 'ORGANIZER',
+            licenseActive,
+            licenseExpiresAt: licenseExpiresAt !== undefined ? licenseExpiresAt : new Date(Date.now() + 30 * 24 * 3600 * 1000),
+            managerId: updatedUser.id,
+          },
+        });
+        await prisma.user.update({
+          where: { id: updatedUser.id },
+          data: {
+            tenantId: newTenant.id,
+            orgRole: 'MANAGER',
+          },
+        });
+        updatedUser.tenantId = newTenant.id;
+      }
+    }
+
     await auditReq(req, {
       action: 'USER_UPDATE',
       targetType: 'user',
       targetId: updatedUser.id,
       tenantId: updatedUser.tenantId,
       summary: `Utilisateur ${updatedUser.email} mis à jour (${updatedUser.role})`,
-      metadata: { role: updatedUser.role, tenantId: updatedUser.tenantId },
+      metadata: { role: updatedUser.role, tenantId: updatedUser.tenantId, subscription },
     });
 
-    return res.json({ message: 'Utilisateur mis à jour avec succès', user: updatedUser });
+    const fullUser = await prisma.user.findUnique({
+      where: { id: updatedUser.id },
+      include: {
+        tenant: {
+          select: {
+            id: true,
+            name: true,
+            plan: true,
+            accountKind: true,
+            licenseActive: true,
+            licenseExpiresAt: true,
+          },
+        },
+      },
+    });
+
+    return res.json({ message: 'Utilisateur mis à jour avec succès', user: fullUser || updatedUser });
   } catch (error: any) {
     console.error('Erreur lors de la mise à jour de l\'utilisateur:', error);
     return res.status(500).json({ error: 'Erreur lors de la mise à jour de l\'utilisateur' });

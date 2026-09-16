@@ -322,6 +322,10 @@ export interface PlatformSettings {
   marketplaceCommissionRate: number;
   /** Acompte organisateur hors plateforme (0.3 = 30 %). */
   marketplaceDepositRate: number;
+  /** Retenue / commission plateforme sur la billetterie d'événement (0.05 = 5 %). */
+  eventTicketingRetentionRate: number;
+  /** Retenue / commission plateforme sur les dons solidaires d'événement (0.04 = 4 %). */
+  eventDonationsRetentionRate: number;
   /** Commission commerciale plateforme au premier paiement (0.3 = 30 %). */
   commercialFirstCommissionRate: number;
   /** Commission commerciale plateforme sur les paiements suivants (0.2 = 20 %). */
@@ -381,6 +385,10 @@ export interface PublicSiteConfig {
   marketplaceDepositRate: number;
   marketplaceCommissionPercent: number;
   marketplaceDepositPercent: number;
+  eventTicketingRetentionRate: number;
+  eventTicketingRetentionPercent: number;
+  eventDonationsRetentionRate: number;
+  eventDonationsRetentionPercent: number;
   commercialFirstCommissionRate: number;
   commercialRenewalCommissionRate: number;
   commercialFirstCommissionPercent: number;
@@ -435,6 +443,8 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || '',
   marketplaceCommissionRate: 0.08,
   marketplaceDepositRate: 0.3,
+  eventTicketingRetentionRate: 0.05,
+  eventDonationsRetentionRate: 0.04,
   commercialFirstCommissionRate: 0.3,
   commercialRenewalCommissionRate: 0.2,
   usdExchangeRateCdf: 2800,
@@ -593,6 +603,8 @@ function normalizeStoredRates(settings: PlatformSettings): PlatformSettings {
     ...settings,
     marketplaceCommissionRate: parseRateInput(settings.marketplaceCommissionRate, 0.08, 0.01, 0.5),
     marketplaceDepositRate: parseRateInput(settings.marketplaceDepositRate, 0.3, 0.05, 0.9),
+    eventTicketingRetentionRate: parseRateInput(settings.eventTicketingRetentionRate, 0.05, 0.01, 0.2),
+    eventDonationsRetentionRate: parseRateInput(settings.eventDonationsRetentionRate, 0.04, 0.01, 0.2),
     commercialFirstCommissionRate: parseRateInput(settings.commercialFirstCommissionRate, 0.3, 0, 1),
     commercialRenewalCommissionRate: parseRateInput(settings.commercialRenewalCommissionRate, 0.2, 0, 1),
     usdExchangeRateCdf: Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? Math.round(parsedUsdRate) : 2800,
@@ -628,6 +640,8 @@ function buildNextSettings(
 
   next.marketplaceCommissionRate = parseRateInput(next.marketplaceCommissionRate, 0.08, 0.01, 0.5);
   next.marketplaceDepositRate = parseRateInput(next.marketplaceDepositRate, 0.3, 0.05, 0.9);
+  next.eventTicketingRetentionRate = parseRateInput(next.eventTicketingRetentionRate, 0.05, 0.01, 0.2);
+  next.eventDonationsRetentionRate = parseRateInput(next.eventDonationsRetentionRate, 0.04, 0.01, 0.2);
   next.commercialFirstCommissionRate = parseRateInput(next.commercialFirstCommissionRate, 0.3, 0, 1);
   next.commercialRenewalCommissionRate = parseRateInput(next.commercialRenewalCommissionRate, 0.2, 0, 1);
   const parsedUsdRate = Number(next.usdExchangeRateCdf);
@@ -735,6 +749,14 @@ export function getPublicSiteConfig(settings = loadPlatformSettings()): PublicSi
       parseRateInput(settings.marketplaceCommissionRate, 0.08, 0.01, 0.5),
     ),
     marketplaceDepositPercent: rateToPercent(parseRateInput(settings.marketplaceDepositRate, 0.3, 0.05, 0.9)),
+    eventTicketingRetentionRate: parseRateInput(settings.eventTicketingRetentionRate, 0.05, 0.01, 0.2),
+    eventTicketingRetentionPercent: rateToPercent(
+      parseRateInput(settings.eventTicketingRetentionRate, 0.05, 0.01, 0.2),
+    ),
+    eventDonationsRetentionRate: parseRateInput(settings.eventDonationsRetentionRate, 0.04, 0.01, 0.2),
+    eventDonationsRetentionPercent: rateToPercent(
+      parseRateInput(settings.eventDonationsRetentionRate, 0.04, 0.01, 0.2),
+    ),
     commercialFirstCommissionRate: parseRateInput(settings.commercialFirstCommissionRate, 0.3, 0, 1),
     commercialRenewalCommissionRate: parseRateInput(settings.commercialRenewalCommissionRate, 0.2, 0, 1),
     commercialFirstCommissionPercent: rateToPercent(

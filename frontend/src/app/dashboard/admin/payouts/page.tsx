@@ -3,9 +3,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Download, Loader2, Wallet, Eye } from 'lucide-react';
+import { Download, Loader2, Wallet, Eye, Ticket, HeartHandshake, CheckCircle2, Clock, ShieldCheck, Building2, Calendar, FileText } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import { cn } from '@/lib/cn';
 import {
   PageHeader, Breadcrumbs, Alert, EmptyState, Pagination, Button, Modal, usePageSize,
   ViewModeToggle, useViewMode, ProjectCard, StatusPill, listStackClass,
@@ -19,6 +20,56 @@ import { formatFc } from '@/config/landingPricing';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { commercialPercent, renewalPercent } from '@/lib/platformRates';
 import { uploadImageFile } from '@/lib/cloudinaryUpload';
+
+interface EventPayoutRow {
+  eventId: string;
+  eventTitle: string;
+  eventSlug: string | null;
+  eventDate: string;
+  tenantId: string;
+  tenantName: string;
+  managerName: string | null;
+  managerEmail: string | null;
+  managerPhone: string | null;
+
+  ticketingOrdersCount: number;
+  ticketingGrossFc: number;
+  ticketingRetentionRatePercent: number;
+  ticketingRetentionFc: number;
+  ticketingNetFc: number;
+
+  donationsOrdersCount: number;
+  donationsGrossFc: number;
+  donationsRetentionRatePercent: number;
+  donationsRetentionFc: number;
+  donationsNetFc: number;
+
+  totalGrossFc: number;
+  totalRetentionFc: number;
+  totalNetPayoutFc: number;
+
+  payoutStatus: 'DUE' | 'PAID' | 'PARTIAL' | 'NONE';
+  settledAt: string | null;
+  settledBy: string | null;
+  settledAmountFc: number | null;
+  proofUrl: string | null;
+  notes: string | null;
+  paymentMethod: string | null;
+}
+
+interface EventPayoutsResponse {
+  generatedAt: string;
+  kpis: {
+    totalEventsWithRevenue: number;
+    totalGrossCollectedFc: number;
+    totalPlatformRetentionFc: number;
+    totalNetPayoutDueFc: number;
+    totalNetPayoutPaidFc: number;
+    eventsDueCount: number;
+    eventsPaidCount: number;
+  };
+  events: EventPayoutRow[];
+}
 
 interface PayoutRow {
   commercialId: string;
@@ -86,6 +137,70 @@ export default function AdminSaasPayoutsPage() {
   const [reason, setReason] = useState('');
   const [proofUrl, setProofUrl] = useState('');
   const [uploading, setUploading] = useState(false);
+
+  // ─── État des reversements d'événements (Billetterie & Dons) ───
+  const [payoutTab, setPayoutTab] = useState<'saas' | 'events'>('saas');
+  const [eventPayoutsData, setEventPayoutsData] = useState<EventPayoutsResponse | null>(null);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+  const [eventPayoutStatusFilter, setEventPayoutStatusFilter] = useState<'all' | 'due' | 'paid'>('all');
+  const [eventSearchQuery, setEventSearchQuery] = useState('');
+  const [settleEventModal, setSettleEventModal] = useState<EventPayoutRow | null>(null);
+  const [settleAmountFc, setSettleAmountFc] = useState('');
+  const [settleProofUrl, setSettleProofUrl] = useState('');
+  const [settleNotes, setSettleNotes] = useState('');
+  const [settlePaymentMethod, setSettlePaymentMethod] = useState('Virement Bancaire');
+  const [settlingEvent, setSettlingEvent] = useState(false);
+  const [eventProofUploading, setEventProofUploading] = useState(false);
+
+  const loadEventPayouts = useCallback(async () => {
+    if (user?.role !== 'SUPER_ADMIN') return;
+    setLoadingEvents(true);
+    try {
+      const params = new URLSearchParams();
+      if (eventPayoutStatusFilter !== 'all') params.set('status', eventPayoutStatusFilter);
+      if (eventSearchQuery.trim()) params.set('q', eventSearchQuery.trim());
+      const res = await api.get(`/admin/reports/event-payouts?${params}`);
+      setEventPayoutsData(res);
+    } catch (err: unknown) {
+      console.error('Erreur chargement reversements événements:', err);
+    } finally {
+      setLoadingEvents(false);
+    }
+  }, [user?.role, eventPayoutStatusFilter, eventSearchQuery]);
+
+  useEffect(() => {
+    if (payoutTab === 'events') {
+      void loadEventPayouts();
+    }
+  }, [payoutTab, loadEventPayouts]);
+
+  const exportEventPayoutsCsv = async () => {
+    const params = new URLSearchParams();
+    if (eventPayoutStatusFilter !== 'all') params.set('status', eventPayoutStatusFilter);
+    if (eventSearchQuery.trim()) params.set('q', eventSearchQuery.trim());
+    await api.download(`/admin/reports/event-payouts/export?${params}`, 'reversements-evenements.csv');
+  };
+
+  const handleSettleEventPayout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!settleEventModal) return;
+    setSettlingEvent(true);
+    try {
+      await api.post(`/admin/reports/event-payouts/${settleEventModal.eventId}/settle`, {
+        status: 'PAID',
+        settledAmountFc: settleAmountFc ? parseInt(settleAmountFc, 10) : settleEventModal.totalNetPayoutFc,
+        proofUrl: settleProofUrl || undefined,
+        notes: settleNotes || undefined,
+        paymentMethod: settlePaymentMethod,
+      });
+      setSettleEventModal(null);
+      await loadEventPayouts();
+    } catch (err: any) {
+      alert(err.message || 'Erreur lors du versement.');
+    } finally {
+      setSettlingEvent(false);
+    }
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -281,37 +396,81 @@ export default function AdminSaasPayoutsPage() {
   return (
     <div className="space-y-6 w-full">
       <PageHeader
-        title="Versements SaaS"
-        description={`Commissions des commerciaux plateforme (${firstPct} % premier paiement, ${renewPct} % renouvellement). Préférez « Verser via FlexPay » (Mobile Money) ; le marquage manuel avec preuve reste disponible. Les commerciaux org. sont payés par l’organisation parrainante — pas ici.`}
+        title={payoutTab === 'saas' ? "Versements SaaS" : "Reversements Événements (Billetterie & Dons)"}
+        description={
+          payoutTab === 'saas'
+            ? `Commissions des commerciaux plateforme (${firstPct} % premier paiement, ${renewPct} % renouvellement). Préférez « Verser via FlexPay » (Mobile Money) ; le marquage manuel avec preuve reste disponible. Les commerciaux org. sont payés par l’organisation parrainante — pas ici.`
+            : `Reversement des recettes de billetterie et des dons solidaires aux organisations après application de la retenue plateforme (5 % sur la billetterie et 4 % sur les dons solidaires). Marquez versé après confirmation de virement bancaire ou Mobile Money.`
+        }
         breadcrumbs={
           <Breadcrumbs
             items={[
               { label: 'Accueil', href: '/dashboard?tab=overview' },
-              { label: 'Versements SaaS' },
+              { label: payoutTab === 'saas' ? 'Versements SaaS' : 'Reversements Événements' },
             ]}
           />
         }
         action={
           <div className="flex items-center gap-2">
-            <ViewModeToggle
-              storageKey="em-view-admin-payouts"
-              value={layout}
-              onChange={setViewMode}
-              columns={columns}
-              onColumnsChange={setGridColumns}
-              defaultMode="list"
-              defaultColumns={3}
-            />
-            <Button type="button" size="sm" variant="secondary" onClick={() => void exportCsv()} leftIcon={<Download className="w-4 h-4" />}>
-              Exporter CSV
-            </Button>
+            {payoutTab === 'saas' ? (
+              <>
+                <ViewModeToggle
+                  storageKey="em-view-admin-payouts"
+                  value={layout}
+                  onChange={setViewMode}
+                  columns={columns}
+                  onColumnsChange={setGridColumns}
+                  defaultMode="list"
+                  defaultColumns={3}
+                />
+                <Button type="button" size="sm" variant="secondary" onClick={() => void exportCsv()} leftIcon={<Download className="w-4 h-4" />}>
+                  Exporter CSV
+                </Button>
+              </>
+            ) : (
+              <Button type="button" size="sm" variant="secondary" onClick={() => void exportEventPayoutsCsv()} leftIcon={<Download className="w-4 h-4" />}>
+                Exporter CSV
+              </Button>
+            )}
           </div>
         }
       />
 
-      {error && <Alert variant="error">{error}</Alert>}
+      {/* Onglets de navigation : Commissions SaaS vs Reversements Événements */}
+      <div className="flex border-b border-border gap-2">
+        <button
+          type="button"
+          onClick={() => setPayoutTab('saas')}
+          className={cn(
+            "px-4 py-2.5 text-sm font-bold border-b-2 transition flex items-center gap-2",
+            payoutTab === 'saas'
+              ? "border-primary text-primary"
+              : "border-transparent text-muted hover:text-foreground"
+          )}
+        >
+          <Wallet className="w-4 h-4" />
+          Commissions Commerciales SaaS
+        </button>
+        <button
+          type="button"
+          onClick={() => setPayoutTab('events')}
+          className={cn(
+            "px-4 py-2.5 text-sm font-bold border-b-2 transition flex items-center gap-2",
+            payoutTab === 'events'
+              ? "border-primary text-primary"
+              : "border-transparent text-muted hover:text-foreground"
+          )}
+        >
+          <Ticket className="w-4 h-4" />
+          Reversements Événements (Billetterie & Dons)
+        </button>
+      </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {payoutTab === 'saas' && (
+        <>
+          {error && <Alert variant="error">{error}</Alert>}
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-xl p-3.5 sm:p-4">
           <p className="text-xs font-bold uppercase tracking-wider text-amber-700">Dû</p>
           <p className="text-lg sm:text-xl font-extrabold text-amber-900 dark:text-amber-200 mt-1">{formatFc(data?.sums.dueFc ?? 0)}</p>
@@ -637,6 +796,364 @@ export default function AdminSaasPayoutsPage() {
               </p>
             )}
           </div>
+        )}
+      </Modal>
+        </>
+      )}
+
+      {/* ─── VUE DES REVERSEMENTS D'ÉVÉNEMENTS (BILLETTERIE & DONS) ─── */}
+      {payoutTab === 'events' && (
+        <div className="space-y-6">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="bg-surface-muted border border-border rounded-xl p-3.5 sm:p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted">Total Encaissé Brut</p>
+              <p className="text-lg sm:text-xl font-extrabold text-foreground mt-1">
+                {formatFc(eventPayoutsData?.kpis?.totalGrossCollectedFc ?? 0)}
+              </p>
+              <p className="text-xs text-muted">{eventPayoutsData?.kpis?.totalEventsWithRevenue ?? 0} événement(s)</p>
+            </div>
+
+            <div className="bg-primary/10 border border-primary/20 rounded-xl p-3.5 sm:p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-wider text-primary">Retenue Plateforme</p>
+                <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-primary/20 text-primary">3% - 5%</span>
+              </div>
+              <p className="text-lg sm:text-xl font-extrabold text-primary mt-1">
+                {formatFc(eventPayoutsData?.kpis?.totalPlatformRetentionFc ?? 0)}
+              </p>
+              <p className="text-xs text-primary/80">Commission légale déduite</p>
+            </div>
+
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-xl p-3.5 sm:p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-amber-700">Net À Reverser</p>
+              <p className="text-lg sm:text-xl font-extrabold text-amber-900 dark:text-amber-200 mt-1">
+                {formatFc(eventPayoutsData?.kpis?.totalNetPayoutDueFc ?? 0)}
+              </p>
+              <p className="text-xs text-amber-700">{eventPayoutsData?.kpis?.eventsDueCount ?? 0} en attente</p>
+            </div>
+
+            <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-3.5 sm:p-4">
+              <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Net Déjà Reversé</p>
+              <p className="text-lg sm:text-xl font-extrabold text-emerald-800 dark:text-emerald-200 mt-1">
+                {formatFc(eventPayoutsData?.kpis?.totalNetPayoutPaidFc ?? 0)}
+              </p>
+              <p className="text-xs text-emerald-700">{eventPayoutsData?.kpis?.eventsPaidCount ?? 0} réglé(s)</p>
+            </div>
+          </div>
+
+          {/* Barre de filtres */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-surface p-3 rounded-xl border border-border">
+            <input
+              type="text"
+              value={eventSearchQuery}
+              onChange={(e) => setEventSearchQuery(e.target.value)}
+              placeholder="Rechercher un événement, une organisation..."
+              className="flex-1 bg-surface-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/25"
+            />
+            <div className="flex items-center gap-1.5 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setEventPayoutStatusFilter('all')}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-semibold rounded-lg transition",
+                  eventPayoutStatusFilter === 'all'
+                    ? "bg-primary text-white"
+                    : "bg-surface-muted text-muted hover:text-foreground"
+                )}
+              >
+                Tous
+              </button>
+              <button
+                type="button"
+                onClick={() => setEventPayoutStatusFilter('due')}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-semibold rounded-lg transition",
+                  eventPayoutStatusFilter === 'due'
+                    ? "bg-amber-500 text-white"
+                    : "bg-surface-muted text-muted hover:text-foreground"
+                )}
+              >
+                À reverser
+              </button>
+              <button
+                type="button"
+                onClick={() => setEventPayoutStatusFilter('paid')}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-semibold rounded-lg transition",
+                  eventPayoutStatusFilter === 'paid'
+                    ? "bg-emerald-600 text-white"
+                    : "bg-surface-muted text-muted hover:text-foreground"
+                )}
+              >
+                Versés
+              </button>
+            </div>
+          </div>
+
+          {/* Liste des événements */}
+          {loadingEvents ? (
+            <div className="flex justify-center py-16">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : !eventPayoutsData?.events?.length ? (
+            <EmptyState
+              icon={<Ticket className="w-8 h-8 text-muted" />}
+              title="Aucun événement avec recettes"
+              description="Aucun événement avec des billets vendus ou des dons collectés ne correspond aux critères."
+            />
+          ) : (
+            <div className="space-y-4">
+              {eventPayoutsData.events.map((ev) => {
+                const isPaid = ev.payoutStatus === 'PAID';
+                return (
+                  <div
+                    key={ev.eventId}
+                    className="bg-surface rounded-2xl border border-border p-5 sm:p-6 space-y-4 shadow-sm hover:border-primary/30 transition"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="text-base font-bold text-foreground">{ev.eventTitle}</h4>
+                          <StatusPill tone={isPaid ? 'emerald' : 'amber'}>
+                            {isPaid ? 'Reversé' : 'À reverser'}
+                          </StatusPill>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
+                          <span className="flex items-center gap-1">
+                            <Building2 className="w-3.5 h-3.5" />
+                            {ev.tenantName}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5" />
+                            {ev.eventDate.slice(0, 10)}
+                          </span>
+                          {ev.managerEmail && (
+                            <span>Contact : {ev.managerEmail} {ev.managerPhone ? `(${ev.managerPhone})` : ''}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <span className="text-xs text-muted block uppercase font-bold">Net à reverser</span>
+                        <span className="text-lg sm:text-xl font-extrabold text-primary block">
+                          {formatFc(ev.totalNetPayoutFc)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Détails Billetterie et Dons */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                      {/* Bloc Billetterie */}
+                      <div className="p-3.5 bg-surface-muted rounded-xl border border-border/80 space-y-2">
+                        <div className="flex items-center justify-between text-xs font-bold text-foreground">
+                          <span className="flex items-center gap-1.5">
+                            <Ticket className="w-4 h-4 text-primary" />
+                            Billetterie ({ev.ticketingOrdersCount} ventes)
+                          </span>
+                          <span className="text-muted">Retenue {ev.ticketingRetentionRatePercent}%</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-xs pt-1 border-t border-border/60">
+                          <div>
+                            <span className="text-[11px] text-muted block">Brut</span>
+                            <span className="font-semibold">{formatFc(ev.ticketingGrossFc)}</span>
+                          </div>
+                          <div>
+                            <span className="text-[11px] text-muted block">Retenue</span>
+                            <span className="font-semibold text-rose-600">-{formatFc(ev.ticketingRetentionFc)}</span>
+                          </div>
+                          <div>
+                            <span className="text-[11px] text-muted block">Net</span>
+                            <span className="font-bold text-primary">{formatFc(ev.ticketingNetFc)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Bloc Dons */}
+                      <div className="p-3.5 bg-surface-muted rounded-xl border border-border/80 space-y-2">
+                        <div className="flex items-center justify-between text-xs font-bold text-foreground">
+                          <span className="flex items-center gap-1.5">
+                            <HeartHandshake className="w-4 h-4 text-emerald-600" />
+                            Dons solidaires ({ev.donationsOrdersCount} dons)
+                          </span>
+                          <span className="text-muted">Retenue {ev.donationsRetentionRatePercent}%</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-xs pt-1 border-t border-border/60">
+                          <div>
+                            <span className="text-[11px] text-muted block">Brut</span>
+                            <span className="font-semibold">{formatFc(ev.donationsGrossFc)}</span>
+                          </div>
+                          <div>
+                            <span className="text-[11px] text-muted block">Retenue</span>
+                            <span className="font-semibold text-rose-600">-{formatFc(ev.donationsRetentionFc)}</span>
+                          </div>
+                          <div>
+                            <span className="text-[11px] text-muted block">Net</span>
+                            <span className="font-bold text-primary">{formatFc(ev.donationsNetFc)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Récapitulatif et Actions */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 text-xs text-muted">
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <span>Total Brut : <strong>{formatFc(ev.totalGrossFc)}</strong></span>
+                        <span>Retenue totale : <strong className="text-rose-600">-{formatFc(ev.totalRetentionFc)}</strong></span>
+                        {isPaid && ev.settledAt && (
+                          <span className="text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Versé le {ev.settledAt.slice(0, 10)} via {ev.paymentMethod || 'Virement'}
+                          </span>
+                        )}
+                        {ev.proofUrl && (
+                          <a
+                            href={ev.proofUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-primary hover:underline font-semibold flex items-center gap-1"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            Voir la preuve
+                          </a>
+                        )}
+                      </div>
+
+                      <div>
+                        {!isPaid ? (
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            onClick={() => {
+                              setSettleEventModal(ev);
+                              setSettleAmountFc(String(ev.totalNetPayoutFc));
+                              setSettleProofUrl('');
+                              setSettleNotes('');
+                              setSettlePaymentMethod('Virement Bancaire');
+                            }}
+                            className="min-h-10"
+                          >
+                            Marquer le reversement
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                              setSettleEventModal(ev);
+                              setSettleAmountFc(String(ev.settledAmountFc || ev.totalNetPayoutFc));
+                              setSettleProofUrl(ev.proofUrl || '');
+                              setSettleNotes(ev.notes || '');
+                              setSettlePaymentMethod(ev.paymentMethod || 'Virement Bancaire');
+                            }}
+                            className="min-h-10"
+                          >
+                            Modifier le versement
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modale de versement d'événement */}
+      <Modal
+        open={Boolean(settleEventModal)}
+        onClose={() => setSettleEventModal(null)}
+        title={`Régler le reversement : ${settleEventModal?.eventTitle}`}
+        description={`Reversement net à l'organisation ${settleEventModal?.tenantName} après déduction de la retenue plateforme.`}
+        footer={
+          <div className="flex flex-col-reverse sm:flex-row w-full justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setSettleEventModal(null)}
+              className="w-full sm:w-auto min-h-11"
+            >
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              onClick={(e) => void handleSettleEventPayout(e)}
+              loading={settlingEvent}
+              className="w-full sm:w-auto min-h-11"
+            >
+              Valider le reversement
+            </Button>
+          </div>
+        }
+      >
+        {settleEventModal && (
+          <form onSubmit={handleSettleEventPayout} className="space-y-4">
+            <div className="p-3 bg-surface-muted rounded-xl border border-border text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="text-muted">Total brut collecté :</span>
+                <span className="font-semibold">{formatFc(settleEventModal.totalGrossFc)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted">Retenue plateforme EventMaster :</span>
+                <span className="font-semibold text-rose-600">-{formatFc(settleEventModal.totalRetentionFc)}</span>
+              </div>
+              <div className="flex justify-between pt-1 border-t border-border font-bold text-foreground text-sm">
+                <span>Net calculé :</span>
+                <span className="text-primary">{formatFc(settleEventModal.totalNetPayoutFc)}</span>
+              </div>
+            </div>
+
+            <label className="block space-y-1">
+              <span className="text-xs font-semibold text-muted">Montant net reversé (FC)</span>
+              <input
+                type="number"
+                value={settleAmountFc}
+                onChange={(e) => setSettleAmountFc(e.target.value)}
+                required
+                className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2.5 text-sm font-semibold"
+              />
+            </label>
+
+            <label className="block space-y-1">
+              <span className="text-xs font-semibold text-muted">Mode de versement</span>
+              <select
+                value={settlePaymentMethod}
+                onChange={(e) => setSettlePaymentMethod(e.target.value)}
+                className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2.5 text-sm"
+              >
+                <option value="Virement Bancaire">Virement Bancaire</option>
+                <option value="M-Pesa (Vodacom)">M-Pesa (Vodacom)</option>
+                <option value="Orange Money">Orange Money</option>
+                <option value="Airtel Money">Airtel Money</option>
+                <option value="Afrimoney">Afrimoney</option>
+                <option value="FlexPay Pay Out">FlexPay Pay Out</option>
+                <option value="Chèque / Espèces">Chèque / Espèces</option>
+              </select>
+            </label>
+
+            <label className="block space-y-1">
+              <span className="text-xs font-semibold text-muted">Référence de transaction ou lien de preuve</span>
+              <input
+                value={settleProofUrl}
+                onChange={(e) => setSettleProofUrl(e.target.value)}
+                placeholder="Ex. VIREMENT-BCC-2026-..., réf bordereau ou lien reçu"
+                className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2.5 text-sm"
+              />
+            </label>
+
+            <label className="block space-y-1">
+              <span className="text-xs font-semibold text-muted">Notes / Motif administratif</span>
+              <textarea
+                value={settleNotes}
+                onChange={(e) => setSettleNotes(e.target.value)}
+                rows={2}
+                placeholder="Ex. Versement net exécuté le 15 sept suite à clôture de l'événement..."
+                className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2 text-sm"
+              />
+            </label>
+          </form>
         )}
       </Modal>
     </div>

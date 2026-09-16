@@ -22,6 +22,8 @@ import {
   PRIVACY_VERSION,
   REFUND_VERSION,
   TERMS_VERSION,
+  TICKETING_RETENTION_PERCENT,
+  DONATIONS_RETENTION_PERCENT,
 } from '@/config/legalConfig';
 import { cn } from '@/lib/cn';
 
@@ -262,30 +264,30 @@ export default function LegalTermsPreviewModal({
               <div className="p-3.5 rounded-lg bg-surface border border-border space-y-2">
                 <h3 className="font-bold text-foreground text-xs flex items-center gap-1.5">
                   <Ticket className="w-4 h-4 text-primary" />
-                  2. Billetterie multi-zones, Présence auto-validée &amp; Personnalisation
+                  2. Billetterie multi-zones, Présence auto-validée &amp; Reversement Net ({TICKETING_RETENTION_PERCENT} %)
                 </h3>
                 <p className="text-muted">
-                  Tarification par zone avec choix de place sur le plan et placement PMR. Tout achat de billet valide immédiatement la présence de l&apos;invité (Répondez s’il vous plaît « accepté »). Pour les billets partagés entre proches ou collègues, chaque bénéficiaire peut personnaliser ses nom, prénom, numéro WhatsApp et régimes alimentaires sur son portail. Le jour J, le contrôle d’accès applique la règle du <strong>scan unique</strong>.
+                  Tarification par zone avec choix de place sur le plan et placement PMR. Tout achat de billet valide immédiatement la présence de l&apos;invité (Répondez s’il vous plaît « accepté »). Pour les billets partagés entre proches ou collègues, chaque bénéficiaire peut personnaliser ses nom, prénom, numéro WhatsApp et régimes alimentaires sur son portail. Le jour J, le contrôle d’accès applique la règle du <strong>scan unique</strong>. Les recettes nettes sont reversées sous 48-72h ouvrées après déduction de la retenue contractuelle de <strong>{TICKETING_RETENTION_PERCENT} %</strong>.
                 </p>
               </div>
 
               <div className="p-3.5 rounded-lg bg-surface border border-border space-y-2">
                 <h3 className="font-bold text-foreground text-xs flex items-center gap-1.5">
                   <Heart className="w-4 h-4 text-primary" />
-                  3. Dons Solidaires &amp; Collectes de Fonds
+                  3. Dons Solidaires &amp; Collectes de Fonds ({DONATIONS_RETENTION_PERCENT} %)
                 </h3>
                 <p className="text-muted">
-                  Collectes à montant libre en Francs Congolais (CDF) pour causes déclarées. EventMaster intervient en qualité d&apos;intermédiaire technique d&apos;encaissement. L&apos;organisateur est seul garant de la sincérité de la cause et de l&apos;affectation des fonds. Les dons confirmés sont des libéralités volontaires irrévocables. En plus de l’abonnement, une commission de {collectionCommissionRangeLabel()} du montant collecté peut être prélevée avant reversement. L’activation de l’option exige l’acceptation des conditions en vigueur.
+                  Collectes à montant libre en Francs Congolais (CDF) pour causes déclarées. EventMaster intervient en qualité d&apos;intermédiaire technique d&apos;encaissement. L&apos;organisateur est seul garant de la sincérité de la cause et de l&apos;affectation des fonds. Les dons confirmés sont des libéralités volontaires irrévocables. Une retenue solidaire de <strong>{DONATIONS_RETENTION_PERCENT} %</strong> (dans la fourchette de {collectionCommissionRangeLabel()}) est appliquée sur les montants bruts collectés avant reversement net à l&apos;organisation.
                 </p>
               </div>
 
               <div className="p-3.5 rounded-lg bg-surface border border-border space-y-2">
                 <h3 className="font-bold text-foreground text-xs flex items-center gap-1.5">
                   <CreditCard className="w-4 h-4 text-primary" />
-                  4. Paiements FlexPay, Abonnements, Jetons IA &amp; Locations
+                  4. Paiements FlexPay, Abonnements, Licences &amp; Jetons IA
                 </h3>
                 <p className="text-muted">
-                  Paiements sécurisés via <strong>FlexPay</strong> (Visa, Mastercard, M-Pesa, Orange Money, Airtel Money, Afrimoney) en Francs Congolais (CDF) et devises. Recharges de jetons d&apos;IA pour l’aménagement et les invitations. Marketplace de salles, prestataires et locations de matériel (tentes, sono, mobilier). En plus de l’abonnement, EventMaster se réserve le droit de prélever une commission de {collectionCommissionRangeLabel()} du montant global collecté (billets et dons) avant reversement (payouts).
+                  Paiements sécurisés via <strong>FlexPay</strong> (Visa, Mastercard, M-Pesa, Orange Money, Airtel Money, Afrimoney) en Francs Congolais (CDF) et devises. Recharges de jetons d&apos;IA pour l’aménagement et les invitations. Gestion centralisée des abonnements par le Super Admin pour les comptes utilisateurs et organisations (licences, durée, gratuités gracieuses). Remise annuelle de 10 % sur tous les forfaits.
                 </p>
               </div>
 
