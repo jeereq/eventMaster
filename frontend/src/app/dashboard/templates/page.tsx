@@ -14,7 +14,7 @@ import { editorialLayoutById, fillEditorialTokens, type EditorialLayoutId } from
 import EditorialLayoutPicker from '@/components/EditorialLayoutPicker';
 import { buildMockupTemplate, applyMockupToEditor, applyMockupTextMode, buildTextElementsFromOcrLines, type MockupImportTextMode } from '@/lib/templateMockupImport';
 import { extractTextFromImageSource, mergeOcrIntoMockupElements } from '@/lib/templateOcrImport';
-import { composeTemplateWithAi, applyAiComposeToEditor, loadAiTemplateDraft, clearAiTemplateDraft, downloadAiGeneratedImage, type AiSpeedMode } from '@/lib/templateAiCompose';
+import { composeTemplateWithAi, applyAiComposeToEditor, loadAiTemplateDraft, clearAiTemplateDraft, downloadAiGeneratedImage, COUPLE_FACE_SWAP_DEFAULT_PROMPT, type AiSpeedMode } from '@/lib/templateAiCompose';
 import AiComposeFullscreenLoader from '@/components/AiComposeFullscreenLoader';
 import {
  fetchAiTemplateComposeHistoryStudio,
@@ -54,7 +54,7 @@ import {
  Spline, Triangle, Trash, Layout, Palette, Square,
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins,
  Undo2, Redo2, History, Download, Tag, SlidersHorizontal, LayoutTemplate,
- Calendar, MapPin, User, MessageSquare, Layers, Move, Crown, ArrowRight, Check, Clock,
+ Calendar, MapPin, User, Users, MessageSquare, Layers, Move, Crown, ArrowRight, Check, Clock,
 } from 'lucide-react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
@@ -413,11 +413,15 @@ export default function TemplatesPage() {
  const mockupInputRef = useRef<HTMLInputElement>(null);
  const mockupEditorInputRef = useRef<HTMLInputElement>(null);
  const aiComposeInputRef = useRef<HTMLInputElement>(null);
+ const aiComposeIncomingInputRef = useRef<HTMLInputElement>(null);
  const [aiComposeModalOpen, setAiComposeModalOpen] = useState(false);
  const [aiComposePrompt, setAiComposePrompt] = useState('');
  const [aiComposeFiles, setAiComposeFiles] = useState<File[]>([]);
  const [aiComposePreviewUrls, setAiComposePreviewUrls] = useState<string[]>([]);
   const [aiComposeIsAlteration, setAiComposeIsAlteration] = useState(false);
+  const [aiComposeCoupleFaceSwap, setAiComposeCoupleFaceSwap] = useState(false);
+  const [aiComposeIncomingFile, setAiComposeIncomingFile] = useState<File | null>(null);
+  const [aiComposeIncomingPreview, setAiComposeIncomingPreview] = useState('');
   const [aiComposeBusy, setAiComposeBusy] = useState(false);
  const [aiComposeStage, setAiComposeStage] = useState<string | null>(null);
  const [aiComposeEmbedText, setAiComposeEmbedText] = useState(false);
@@ -1085,33 +1089,42 @@ export default function TemplatesPage() {
 
   const resetAiComposeModal = () => {
     aiComposePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+    if (aiComposeIncomingPreview) URL.revokeObjectURL(aiComposeIncomingPreview);
     setAiComposeFiles([]);
     setAiComposePreviewUrls([]);
     setAiComposePrompt('');
     setAiComposeStage(null);
     setAiComposeBusy(false);
     setAiComposeIsAlteration(false);
+    setAiComposeCoupleFaceSwap(false);
+    setAiComposeIncomingFile(null);
+    setAiComposeIncomingPreview('');
     setAiComposeHistoryId(null);
     setAiComposeStudioTab('create');
   };
 
   const openAiComposeModal = async (
     presetPrompt?: string,
-    options?: { isAlteration?: boolean },
+    options?: { isAlteration?: boolean; coupleFaceSwap?: boolean },
   ) => {
     if (isInviteBlocked) {
       setError("Le studio d'invitations IA est une fonctionnalité à venir et n'est pas disponible actuellement.");
       return;
     }
     setError('');
+    const coupleFaceSwap = Boolean(options?.coupleFaceSwap);
     const isAlteration = Boolean(
+      coupleFaceSwap ||
       options?.isAlteration ||
       presetPrompt?.toLowerCase().includes('retouche') ||
       presetPrompt?.toLowerCase().includes('altér'),
     );
+    setAiComposeCoupleFaceSwap(coupleFaceSwap);
     setAiComposeIsAlteration(isAlteration);
     if (presetPrompt) {
       setAiComposePrompt(presetPrompt);
+    } else if (coupleFaceSwap) {
+      setAiComposePrompt(COUPLE_FACE_SWAP_DEFAULT_PROMPT);
     }
     setAiComposeModalOpen(true);
     void fetchAiTemplateComposeHistoryStudio().then(setAiComposeHistory);
@@ -1193,15 +1206,27 @@ export default function TemplatesPage() {
 
  const addAiComposeFiles = (list: File[]) => {
  if (!list.length) return;
- const images = list.filter((f) => f.type.startsWith('image/')).slice(0, 4);
+ const maxPhotos = aiComposeCoupleFaceSwap ? 2 : 4;
+ const images = list.filter((f) => f.type.startsWith('image/')).slice(0, maxPhotos);
  if (!images.length) {
  setError('Sélectionnez des images (JPEG, PNG, WebP).');
  return;
  }
  aiComposePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
- const merged = [...aiComposeFiles, ...images].slice(0, 4);
+ const merged = [...aiComposeFiles, ...images].slice(0, maxPhotos);
  setAiComposeFiles(merged);
  setAiComposePreviewUrls(merged.map((f) => URL.createObjectURL(f)));
+ };
+
+ const setAiComposeIncomingFromFile = (file: File | null) => {
+ if (aiComposeIncomingPreview) URL.revokeObjectURL(aiComposeIncomingPreview);
+ if (!file || !file.type.startsWith('image/')) {
+ setAiComposeIncomingFile(null);
+ setAiComposeIncomingPreview('');
+ return;
+ }
+ setAiComposeIncomingFile(file);
+ setAiComposeIncomingPreview(URL.createObjectURL(file));
  };
 
  const handleAiComposeFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1224,7 +1249,18 @@ export default function TemplatesPage() {
 
  const handleAiComposeGenerate = async () => {
  if (aiComposeBusy) return;
- if (aiComposePrompt.trim().length < 8) {
+ const currentCanvasBg =
+   bgImageUrl && /^https?:\/\//i.test(bgImageUrl.trim()) ? bgImageUrl.trim() : '';
+ if (aiComposeCoupleFaceSwap) {
+   if (aiComposeFiles.length < 1) {
+     setError('Ajoutez au moins une photo du couple.');
+     return;
+   }
+   if (!aiComposeIncomingFile && !currentCanvasBg) {
+     setError('Ajoutez l’image d’invitation dont les visages doivent être remplacés.');
+     return;
+   }
+ } else if (aiComposePrompt.trim().length < 8) {
  setError('Décrivez le style souhaité (quelques mots minimum).');
  return;
  }
@@ -1255,19 +1291,29 @@ export default function TemplatesPage() {
  : 'Composition de la carte à partir du brief…',
  );
     const isAlteration =
+      aiComposeCoupleFaceSwap ||
       aiComposeIsAlteration ||
       /retouch|ajust|refin|altér|réajust|modifier/i.test(aiComposePrompt);
 
     const currentBgUrl =
       bgImageUrl && /^https?:\/\//i.test(bgImageUrl.trim()) ? bgImageUrl.trim() : undefined;
+    let incomingUrl = currentBgUrl;
+    if (aiComposeCoupleFaceSwap && aiComposeIncomingFile) {
+      setAiComposeStage('Upload de l’image d’invitation…');
+      incomingUrl = (await uploadImageFile(aiComposeIncomingFile)).url;
+    }
 
     const existingTextSummaries = canvasElements
       .filter((el) => typeof el.text === 'string' && el.text.trim().length > 0)
       .map((el) => `${el.type}: "${String(el.text).trim()}"`)
       .join(', ');
 
-    const promptToSend =
-      isAlteration && existingTextSummaries
+    const couplePrompt = aiComposePrompt.trim().length >= 8
+      ? aiComposePrompt.trim()
+      : COUPLE_FACE_SWAP_DEFAULT_PROMPT;
+    const promptToSend = aiComposeCoupleFaceSwap
+      ? couplePrompt
+      : isAlteration && existingTextSummaries
         ? [
             `Consigne de retouche ciblée : ${aiComposePrompt.trim()}`,
             `Éléments clés actuels du carton à préserver impérativement : ${existingTextSummaries}`,
@@ -1278,7 +1324,7 @@ export default function TemplatesPage() {
     const resultPromise = composeTemplateWithAi({
       prompt: promptToSend,
       imageUrls: uploadedUrls,
-      baseImageUrl: isAlteration ? currentBgUrl : undefined,
+      baseImageUrl: aiComposeCoupleFaceSwap ? incomingUrl : isAlteration ? currentBgUrl : undefined,
       existingElements: isAlteration ? canvasElements : undefined,
       isAlteration,
       generateBackground: true,
@@ -1287,6 +1333,7 @@ export default function TemplatesPage() {
       artStyle: aiComposeArtStyle,
       variantsCount: aiComposeVariantsCount,
       speedMode: aiComposeSpeedMode,
+      coupleFaceSwap: aiComposeCoupleFaceSwap,
     });
     // Affiche l’étape « création d’image » pendant l’appel API (analyse + génération côté serveur)
     const stageTimer = window.setTimeout(() => {
@@ -1348,7 +1395,9 @@ export default function TemplatesPage() {
     resetAiComposeModal();
     playAiGenerationCompleteSound();
     setSuccess(
-      isAlteration
+      aiComposeCoupleFaceSwap
+        ? 'Visages du couple appliqués sur l’image. Pose, décor et mise en page ont été conservés.'
+        : isAlteration
         ? 'Retouche appliquée avec succès ! Les éléments du carton et textes existants ont été conservés.'
         : result.stage?.backgroundReady
         ? result.stage?.imageMode === 'edit'
@@ -1382,11 +1431,13 @@ export default function TemplatesPage() {
  <div className="px-5 pt-5 pb-3 border-b border-border-subtle flex items-start justify-between gap-3">
  <div>
             <h2 id="ai-compose-title" className="text-sm font-bold text-foreground flex items-center gap-2">
-              <Wand2 className="w-4 h-4 text-primary" />
-              {aiComposeIsAlteration ? 'Retoucher avec l’IA' : 'Créer avec l’IA'}
+              {aiComposeCoupleFaceSwap ? <Users className="w-4 h-4 text-primary" /> : <Wand2 className="w-4 h-4 text-primary" />}
+              {aiComposeCoupleFaceSwap ? 'Visages du couple' : aiComposeIsAlteration ? 'Retoucher avec l’IA' : 'Créer avec l’IA'}
             </h2>
             <p className="hidden sm:block text-[11px] text-muted mt-1 leading-relaxed">
-              {aiComposeIsAlteration
+              {aiComposeCoupleFaceSwap
+                ? `Remplace les visages de l’image par ceux du couple, sans changer la pose ni le décor (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons).`
+                : aiComposeIsAlteration
                 ? `Conserve la disposition, les textes et l'ambiance du carton actuel en appliquant votre retouche (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons).`
                 : `Brief seul ou photos + brief (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons). Yeux, sourire et joues restent fidèles aux photos.`}
             </p>
@@ -1433,6 +1484,161 @@ export default function TemplatesPage() {
  <div className="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
  {aiComposeStudioTab === 'create' ? (
  <>
+ <div
+   role="radiogroup"
+   aria-label="Mode de l’assistant"
+   className="grid grid-cols-3 gap-1.5"
+ >
+   {([
+     { id: 'create', label: 'Créer', hint: 'Nouveau carton' },
+     { id: 'alter', label: 'Retoucher', hint: 'Garder le fond' },
+     { id: 'couple', label: 'Visages', hint: 'Couple' },
+   ] as const).map((mode) => {
+     const active =
+       mode.id === 'couple'
+         ? aiComposeCoupleFaceSwap
+         : mode.id === 'alter'
+           ? aiComposeIsAlteration && !aiComposeCoupleFaceSwap
+           : !aiComposeIsAlteration && !aiComposeCoupleFaceSwap;
+     return (
+       <button
+         key={mode.id}
+         type="button"
+         role="radio"
+         aria-checked={active}
+         disabled={aiComposeBusy}
+         onClick={() => {
+           if (mode.id === 'couple') {
+             setAiComposeCoupleFaceSwap(true);
+             setAiComposeIsAlteration(true);
+             if (aiComposePrompt.trim().length < 8) {
+               setAiComposePrompt(COUPLE_FACE_SWAP_DEFAULT_PROMPT);
+             }
+             if (aiComposeFiles.length > 2) {
+               aiComposePreviewUrls.slice(2).forEach((url) => URL.revokeObjectURL(url));
+               setAiComposeFiles((prev) => prev.slice(0, 2));
+               setAiComposePreviewUrls((prev) => prev.slice(0, 2));
+             }
+           } else {
+             setAiComposeCoupleFaceSwap(false);
+             setAiComposeIsAlteration(mode.id === 'alter');
+             if (aiComposePrompt.trim() === COUPLE_FACE_SWAP_DEFAULT_PROMPT) {
+               setAiComposePrompt('');
+             }
+           }
+         }}
+         className={`min-h-11 px-2 py-2 rounded-xl border text-left transition ${
+           active
+             ? 'border-primary bg-primary/10 shadow-xs'
+             : 'border-border bg-surface hover:border-primary/40'
+         }`}
+       >
+         <span className="block text-[11px] font-bold text-foreground">{mode.label}</span>
+         <span className="block text-[10px] text-muted mt-0.5">{mode.hint}</span>
+       </button>
+     );
+   })}
+ </div>
+
+ {aiComposeCoupleFaceSwap ? (
+ <div className="space-y-3">
+   <div>
+     <label className="text-xs font-bold text-muted uppercase tracking-wider">Image à modifier</label>
+     <input
+       ref={aiComposeIncomingInputRef}
+       type="file"
+       accept="image/jpeg,image/png,image/webp"
+       className="hidden"
+       onChange={(e) => {
+         const file = e.target.files?.[0] || null;
+         e.target.value = '';
+         setAiComposeIncomingFromFile(file);
+       }}
+     />
+     <button
+       type="button"
+       disabled={aiComposeBusy}
+       onClick={() => aiComposeIncomingInputRef.current?.click()}
+       className="mt-1.5 w-full flex items-center gap-3 p-3 border-2 border-dashed rounded-2xl text-left transition border-primary/30 hover:border-primary hover:bg-primary/5"
+     >
+       {(aiComposeIncomingPreview || (bgImageUrl && /^https?:\/\//i.test(bgImageUrl))) ? (
+         // eslint-disable-next-line @next/next/no-img-element
+         <img
+           src={aiComposeIncomingPreview || bgImageUrl}
+           alt=""
+           className="w-14 h-14 rounded-lg object-cover border border-border shrink-0"
+         />
+       ) : (
+         <span className="w-14 h-14 rounded-lg bg-surface-muted border border-border flex items-center justify-center shrink-0">
+           <Image className="w-5 h-5 text-primary" />
+         </span>
+       )}
+       <span className="min-w-0">
+         <span className="block text-xs font-bold text-foreground">
+           {aiComposeIncomingFile ? aiComposeIncomingFile.name : bgImageUrl ? 'Carton actuel du studio' : 'Choisir une invitation'}
+         </span>
+         <span className="block text-[11px] text-muted mt-0.5">
+           Les visages de cette image seront remplacés. Pose et décor restent.
+         </span>
+       </span>
+     </button>
+   </div>
+   <div>
+     <label className="text-xs font-bold text-muted uppercase tracking-wider">Photos du couple (1 ou 2)</label>
+     <input
+       ref={aiComposeInputRef}
+       type="file"
+       accept="image/jpeg,image/png,image/webp"
+       multiple
+       className="hidden"
+       onChange={handleAiComposeFilesSelected}
+     />
+     <div
+       onDragOver={(e) => {
+         e.preventDefault();
+         setAiComposeDragging(true);
+       }}
+       onDragLeave={() => setAiComposeDragging(false)}
+       onDrop={(e) => {
+         e.preventDefault();
+         setAiComposeDragging(false);
+         const dropped = Array.from(e.dataTransfer.files || []);
+         if (dropped.length) addAiComposeFiles(dropped);
+       }}
+       onClick={() => aiComposeInputRef.current?.click()}
+       className={`mt-1.5 w-full flex items-center justify-center gap-2 p-3.5 border-2 border-dashed rounded-2xl cursor-pointer text-xs font-bold transition ${
+         aiComposeDragging
+           ? 'border-primary bg-primary/15 text-primary'
+           : 'border-primary/30 hover:border-primary hover:bg-primary/5 text-primary'
+       }`}
+     >
+       <Users className="w-4 h-4" />
+       {aiComposeFiles.length > 0
+         ? `Ajouter une autre photo (${aiComposeFiles.length}/2)`
+         : 'Elle / lui — photos nettes, visage visible'}
+     </div>
+     {aiComposePreviewUrls.length > 0 && (
+       <div className="mt-2 flex flex-wrap gap-2">
+         {aiComposePreviewUrls.map((url, i) => (
+           <div key={url} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border">
+             {/* eslint-disable-next-line @next/next/no-img-element */}
+             <img src={url} alt={i === 0 ? 'Premier visage du couple' : 'Second visage du couple'} className="w-full h-full object-cover" />
+             <button
+               type="button"
+               disabled={aiComposeBusy}
+               onClick={() => removeAiComposeFile(i)}
+               className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full p-0.5"
+               aria-label="Retirer"
+             >
+               <XCircle className="w-3.5 h-3.5" />
+             </button>
+           </div>
+         ))}
+       </div>
+     )}
+   </div>
+ </div>
+ ) : (
  <div>
  <label className="text-xs font-bold text-muted uppercase tracking-wider">Images optionnelles (1–4)</label>
  <input
@@ -1495,12 +1701,15 @@ export default function TemplatesPage() {
  </div>
  )}
  </div>
+ )}
 
  <div>
  <div className="flex items-center justify-between">
  <label htmlFor="ai-compose-prompt" className="text-xs font-bold text-muted uppercase tracking-wider">
  <span className="sm:hidden">Brief</span>
- <span className="hidden sm:inline">Brief de style ou demande de clonage</span>
+ <span className="hidden sm:inline">
+   {aiComposeCoupleFaceSwap ? 'Consigne (optionnelle)' : 'Brief de style ou demande de clonage'}
+ </span>
  </label>
  <span className="hidden sm:inline text-[11px] text-muted font-mono">
  {aiComposePrompt.length} car. · {aiComposePrompt.trim().split(/\s+/).filter(Boolean).length} mot{aiComposePrompt.trim().split(/\s+/).filter(Boolean).length > 1 ? 's' : ''}
@@ -1512,7 +1721,9 @@ export default function TemplatesPage() {
  value={aiComposePrompt}
  disabled={aiComposeBusy}
  onChange={(e) => setAiComposePrompt(e.target.value)}
- placeholder="Ex. Copier fidèlement cette invitation en or et ivoire, ou décrire l’ambiance : mariage princier, éclairage naturel chaleureux…"
+ placeholder={aiComposeCoupleFaceSwap
+   ? 'Optionnel : préciser qui est à gauche / à droite, ou garder une tenue…'
+   : 'Ex. Copier fidèlement cette invitation en or et ivoire, ou décrire l’ambiance : mariage princier, éclairage naturel chaleureux…'}
  className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-xs text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[4.5rem]"
  />
 
@@ -1711,12 +1922,21 @@ export default function TemplatesPage() {
  </button>
  <button
  type="button"
- disabled={aiComposeBusy || aiComposePrompt.trim().length < 8}
+ disabled={
+   aiComposeBusy ||
+   (aiComposeCoupleFaceSwap
+     ? aiComposeFiles.length < 1 || (!aiComposeIncomingFile && !(bgImageUrl && /^https?:\/\//i.test(bgImageUrl)))
+     : aiComposePrompt.trim().length < 8)
+ }
  onClick={handleAiComposeGenerate}
  className="px-5 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-xs font-bold rounded-xl transition shadow-md inline-flex items-center gap-2"
  >
             {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-            {aiComposeBusy ? 'Génération…' : `Générer (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
+            {aiComposeBusy
+              ? 'Génération…'
+              : aiComposeCoupleFaceSwap
+                ? `Remplacer les visages (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`
+                : `Générer (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
  </button>
  </div>
  </div>
@@ -3049,6 +3269,15 @@ export default function TemplatesPage() {
                     Altérer légèrement avec l’IA ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons)
                   </button>
                 )}
+                <button
+                  type="button"
+                  disabled={aiComposeBusy}
+                  onClick={() => openAiComposeModal(undefined, { coupleFaceSwap: true })}
+                  className="w-full flex items-center justify-center gap-1.5 p-2 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs transition cursor-pointer"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  Visages du couple ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons)
+                </button>
               </>
             )}
 

@@ -15,6 +15,9 @@ import type { TemplatePalette } from '@/lib/imagePalette';
 
 export const AI_TEMPLATE_DRAFT_KEY = 'em_ai_template_draft';
 
+export const COUPLE_FACE_SWAP_DEFAULT_PROMPT =
+  'Remplace uniquement les visages de cette invitation par les visages du couple. Conserve la pose, les tenues, le décor et la mise en page.';
+
 export type AiSpeedMode = 'fast' | 'quality';
 
 export type TemplateAiComposeContent = {
@@ -65,6 +68,7 @@ export async function composeTemplateWithAi(input: {
   artStyle?: InvitationArtStyleId;
   variantsCount?: number;
   speedMode?: AiSpeedMode;
+  coupleFaceSwap?: boolean;
 }): Promise<TemplateAiComposeResult> {
   const deviceId = getOrCreateDeviceId();
   const imageUrls = [...(input.imageUrls || [])];
@@ -84,6 +88,7 @@ export async function composeTemplateWithAi(input: {
     artStyle: input.artStyle || 'realiste',
     variantsCount: input.variantsCount,
     speedMode: input.speedMode || 'quality',
+    coupleFaceSwap: Boolean(input.coupleFaceSwap),
   });
   if (data?.allowance) {
     applyServerAllowance(data.allowance);
@@ -107,6 +112,7 @@ export async function composeTemplateWithAiPublic(input: {
   artStyle?: InvitationArtStyleId;
   variantsCount?: number;
   speedMode?: AiSpeedMode;
+  coupleFaceSwap?: boolean;
 }): Promise<TemplateAiComposeResult> {
   const deviceId = getOrCreateDeviceId();
   const imageDataUrls: string[] = [];
@@ -131,6 +137,7 @@ export async function composeTemplateWithAiPublic(input: {
     artStyle: input.artStyle || 'realiste',
     variantsCount: input.variantsCount,
     speedMode: input.speedMode || 'quality',
+    coupleFaceSwap: Boolean(input.coupleFaceSwap),
   });
   if (data?.allowance) {
     applyServerAllowance(data.allowance);

@@ -27,6 +27,7 @@ import {
   Calendar,
   MapPin,
   User,
+  Users,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -49,6 +50,7 @@ import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import {
   composeTemplateWithAiPublic,
+  COUPLE_FACE_SWAP_DEFAULT_PROMPT,
   saveAiTemplateDraft,
   downloadAiGeneratedImage,
   generatedImageUrlFromContent,
@@ -273,7 +275,10 @@ export default function LandingInvitationAiGenerator({
   const [prompt, setPrompt] = useState('');
   const [promptHistory, setPromptHistory] = useState<string[]>(['']);
   const [promptHistoryIndex, setPromptHistoryIndex] = useState<number>(0);
-  const [studioIntent, setStudioIntent] = useState<'create' | 'clone'>('create');
+  const [studioIntent, setStudioIntent] = useState<'create' | 'clone' | 'couple'>('create');
+  const incomingInputRef = useRef<HTMLInputElement>(null);
+  const [incomingFile, setIncomingFile] = useState<File | null>(null);
+  const [incomingPreview, setIncomingPreview] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [studioTab, setStudioTab] = useState<StudioAiTabId>('create');
   const [historySubTab, setHistorySubTab] = useState<'generations' | 'actions'>('generations');
@@ -459,7 +464,8 @@ export default function LandingInvitationAiGenerator({
   const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
   const addFiles = (list: File[]) => {
-    const validImages = list.filter((f) => ALLOWED_IMAGE_TYPES.includes(f.type)).slice(0, 4);
+    const maxPhotos = studioIntent === 'couple' ? 2 : 4;
+    const validImages = list.filter((f) => ALLOWED_IMAGE_TYPES.includes(f.type)).slice(0, maxPhotos);
     if (!validImages.length) {
       setError('Format non supporté. Veuillez sélectionner des photos JPEG, PNG ou WebP.');
       return;
@@ -470,17 +476,33 @@ export default function LandingInvitationAiGenerator({
       return;
     }
     previews.forEach((url) => URL.revokeObjectURL(url));
-    const merged = [...files, ...validImages].slice(0, 4);
+    const merged = [...files, ...validImages].slice(0, maxPhotos);
     setFiles(merged);
     setPreviews(merged.map((f) => URL.createObjectURL(f)));
     setError('');
     logAction(
       'upload',
-      studioIntent === 'clone' ? 'Carte ajoutée' : 'Photos ajoutées',
+      studioIntent === 'clone' ? 'Carte ajoutée' : studioIntent === 'couple' ? 'Photos du couple' : 'Photos ajoutées',
       studioIntent === 'clone'
         ? `${validImages.length} vue(s) de la carte à cloner`
         : `${validImages.length} photo(s) de visages`,
     );
+  };
+
+  const setIncomingFromFile = (file: File | null) => {
+    if (incomingPreview) URL.revokeObjectURL(incomingPreview);
+    if (!file || !ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setIncomingFile(null);
+      setIncomingPreview('');
+      return;
+    }
+    if (file.size > MAX_IMAGE_FILE_SIZE) {
+      setError(`L’image « ${file.name} » dépasse la taille maximale de 10 Mo.`);
+      return;
+    }
+    setIncomingFile(file);
+    setIncomingPreview(URL.createObjectURL(file));
+    setError('');
   };
 
   const onPickFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -498,13 +520,21 @@ export default function LandingInvitationAiGenerator({
     logAction('remove_image', 'Image retirée', `Référence visuelle #${index + 1} retirée`);
   };
 
-  const switchIntent = (next: 'create' | 'clone') => {
+  const switchIntent = (next: 'create' | 'clone' | 'couple') => {
     if (next === studioIntent) return;
     previews.forEach((url) => URL.revokeObjectURL(url));
+    if (incomingPreview) URL.revokeObjectURL(incomingPreview);
     setFiles([]);
     setPreviews([]);
+    setIncomingFile(null);
+    setIncomingPreview('');
     setStudioIntent(next);
     setError('');
+    if (next === 'couple' && prompt.trim().length < 8) {
+      setPrompt(COUPLE_FACE_SWAP_DEFAULT_PROMPT);
+    } else if (studioIntent === 'couple' && prompt.trim() === COUPLE_FACE_SWAP_DEFAULT_PROMPT) {
+      setPrompt('');
+    }
   };
 
   const scrollResultIntoView = () => {
@@ -526,7 +556,16 @@ export default function LandingInvitationAiGenerator({
       setError(PROTOCOL_CREATIVE_DENIED);
       return;
     }
-    if (prompt.trim().length < 8) {
+    if (studioIntent === 'couple') {
+      if (!incomingFile) {
+        setError('Ajoutez l’image d’invitation dont les visages doivent être remplacés.');
+        return;
+      }
+      if (files.length < 1) {
+        setError('Ajoutez au moins une photo du couple.');
+        return;
+      }
+    } else if (prompt.trim().length < 8) {
       setError(
         studioIntent === 'clone'
           ? 'Décrivez ce qu’il faut reprendre de la carte (or, date, noms…).'
@@ -559,7 +598,16 @@ export default function LandingInvitationAiGenerator({
       setError(PROTOCOL_CREATIVE_DENIED);
       return;
     }
-    if (prompt.trim().length < 8) {
+    if (studioIntent === 'couple') {
+      if (!incomingFile) {
+        setError('Ajoutez l’image d’invitation dont les visages doivent être remplacés.');
+        return;
+      }
+      if (files.length < 1) {
+        setError('Ajoutez au moins une photo du couple.');
+        return;
+      }
+    } else if (prompt.trim().length < 8) {
       setError(
         studioIntent === 'clone'
           ? 'Décrivez ce qu’il faut reprendre de la carte (or, date, noms…).'
@@ -592,7 +640,9 @@ export default function LandingInvitationAiGenerator({
     setActiveHistoryId(null);
     setActiveStep(1);
     setStage(
-      studioIntent === 'clone'
+      studioIntent === 'couple'
+        ? 'Remplacement des visages du couple…'
+        : studioIntent === 'clone'
         ? 'Lecture de la carte à cloner…'
         : files.length
           ? 'Analyse des visages et du brief…'
@@ -607,13 +657,18 @@ export default function LandingInvitationAiGenerator({
 
     try {
       const data = await composeTemplateWithAiPublic({
-        prompt: prompt.trim(),
-        files,
+        prompt:
+          studioIntent === 'couple' && prompt.trim().length < 8
+            ? COUPLE_FACE_SWAP_DEFAULT_PROMPT
+            : prompt.trim(),
+        files: studioIntent === 'couple' && incomingFile ? [incomingFile, ...files] : files,
         embedText: false,
         contextSource,
         artStyle,
         variantsCount,
         speedMode,
+        coupleFaceSwap: studioIntent === 'couple',
+        isAlteration: studioIntent === 'couple',
       });
       if (seq !== generationSeq.current) return;
       setResult(data.content);
@@ -1317,16 +1372,24 @@ export default function LandingInvitationAiGenerator({
           {studioTab === 'create' ? (
           <>
           <StudioHowTo
-            steps={[
-              'Décrivez la fête ou déposez une carte',
-              'Générez la carte 9:16',
-              'Éditez les textes et la réponse à l’invitation',
-            ]}
+            steps={
+              studioIntent === 'couple'
+                ? [
+                    'Déposez la carte, puis les photos du couple',
+                    'Remplacez uniquement les visages',
+                    'Éditez les textes et la réponse à l’invitation',
+                  ]
+                : [
+                    'Décrivez la fête ou déposez une carte',
+                    'Générez la carte 9:16',
+                    'Éditez les textes et la réponse à l’invitation',
+                  ]
+            }
           />
           <div
             role="radiogroup"
             aria-label="Comment créer la carte"
-            className="grid grid-cols-2 gap-2"
+            className="grid grid-cols-3 gap-2"
           >
             <button
               type="button"
@@ -1360,32 +1423,88 @@ export default function LandingInvitationAiGenerator({
               <span className="block text-xs font-bold text-foreground">Cloner une carte</span>
               <span className="block text-xs text-muted mt-0.5">Photo obligatoire</span>
             </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={studioIntent === 'couple'}
+              disabled={busy}
+              onClick={() => switchIntent('couple')}
+              className={cn(
+                'min-h-11 px-3 py-2.5 rounded-[var(--radius-card)] border text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                studioIntent === 'couple'
+                  ? 'border-primary bg-primary/10 shadow-xs'
+                  : 'border-border bg-surface hover:border-primary/40',
+              )}
+            >
+              <span className="block text-xs font-bold text-foreground">Visages du couple</span>
+              <span className="block text-xs text-muted mt-0.5">Carte + photos</span>
+            </button>
           </div>
 
           <div className="space-y-4">
+              {studioIntent === 'couple' ? (
+                <>
+                  <input
+                    ref={incomingInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      e.target.value = '';
+                      setIncomingFromFile(file);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => incomingInputRef.current?.click()}
+                    className="w-full flex items-center gap-3 rounded-[var(--radius-card)] border-2 border-dashed p-3 text-left transition border-primary/25 hover:border-primary/50 hover:bg-primary/5"
+                  >
+                    {incomingPreview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={incomingPreview} alt="" className="w-14 h-14 rounded-lg object-cover border border-border shrink-0" />
+                    ) : (
+                      <span className="w-14 h-14 rounded-lg bg-surface-muted border border-border flex items-center justify-center shrink-0">
+                        <ImageIcon className="w-5 h-5 text-primary" />
+                      </span>
+                    )}
+                    <span className="min-w-0">
+                      <span className="block text-sm font-bold text-foreground">
+                        {incomingFile ? incomingFile.name : 'Image d’invitation à modifier'}
+                      </span>
+                      <span className="block text-xs text-muted mt-0.5">
+                        Les visages de cette carte seront remplacés. Pose et décor restent.
+                      </span>
+                    </span>
+                  </button>
+                </>
+              ) : null}
               <button
                 type="button"
                 aria-label={
-                  files.length >= 4
-                    ? 'Maximum de 4 images atteint'
+                  files.length >= (studioIntent === 'couple' ? 2 : 4)
+                    ? 'Maximum d’images atteint'
                     : studioIntent === 'clone'
                       ? 'Ajouter une photo de la carte à cloner (JPEG, PNG ou WebP)'
+                      : studioIntent === 'couple'
+                        ? 'Ajouter jusqu’à 2 photos du couple (JPEG, PNG ou WebP)'
                       : 'Ajouter jusqu’à 4 photos de visages, optionnel (JPEG, PNG ou WebP)'
                 }
-                aria-disabled={busy || files.length >= 4}
+                aria-disabled={busy || files.length >= (studioIntent === 'couple' ? 2 : 4)}
                 aria-controls={previews.length ? `${id}-refs` : undefined}
                 onClick={() => {
-                  if (!busy && files.length < 4) inputRef.current?.click();
+                  if (!busy && files.length < (studioIntent === 'couple' ? 2 : 4)) inputRef.current?.click();
                 }}
                 onDragOver={(e) => {
                   e.preventDefault();
-                  if (!busy && files.length < 4) setDragOver(true);
+                  if (!busy && files.length < (studioIntent === 'couple' ? 2 : 4)) setDragOver(true);
                 }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={(e) => {
                   e.preventDefault();
                   setDragOver(false);
-                  if (busy || files.length >= 4) return;
+                  if (busy || files.length >= (studioIntent === 'couple' ? 2 : 4)) return;
                   addFiles(Array.from(e.dataTransfer.files || []));
                 }}
                 className={cn(
@@ -1393,18 +1512,26 @@ export default function LandingInvitationAiGenerator({
                   dragOver
                     ? 'border-primary bg-primary/10'
                     : 'border-primary/25 hover:border-primary/50 hover:bg-primary/5',
-                  (busy || files.length >= 4) && 'opacity-70 cursor-not-allowed',
+                  (busy || files.length >= (studioIntent === 'couple' ? 2 : 4)) && 'opacity-70 cursor-not-allowed',
                 )}
               >
-                <Upload className="w-5 h-5 text-primary mx-auto mb-1.5" aria-hidden />
+                {studioIntent === 'couple' ? (
+                  <Users className="w-5 h-5 text-primary mx-auto mb-1.5" aria-hidden />
+                ) : (
+                  <Upload className="w-5 h-5 text-primary mx-auto mb-1.5" aria-hidden />
+                )}
                 <p className="text-sm font-bold text-foreground">
                   {studioIntent === 'clone'
                     ? 'Photo de la carte à reproduire'
+                    : studioIntent === 'couple'
+                      ? 'Photos du couple (1 ou 2)'
                     : 'Photos de visages (optionnel)'}
                 </p>
                 <p className="text-xs text-muted mt-0.5">
                   {studioIntent === 'clone'
                     ? 'Une photo nette de l’invitation à cloner. JPEG, PNG ou WebP, jusqu’à 4 vues.'
+                    : studioIntent === 'couple'
+                      ? 'Visages nets, bien cadrés. Ils remplaceront uniquement les visages de la carte.'
                     : 'Sans photo : carte depuis le brief. Avec photos : visages conservés (yeux, sourire, joues).'}
                 </p>
               </button>
@@ -1437,7 +1564,7 @@ export default function LandingInvitationAiGenerator({
 
               <div className="space-y-2.5">
                 {/* Inspirations prêtes à l'emploi en 1 clic */}
-                {studioIntent !== 'clone' ? (
+                {studioIntent === 'create' ? (
                   <div className="space-y-1.5" role="group" aria-label="Inspirations festives instantanées">
                     <span className="text-[11px] text-muted font-medium flex items-center gap-1">
                       <Sparkles className="w-3 h-3 text-primary" />
@@ -1474,7 +1601,7 @@ export default function LandingInvitationAiGenerator({
 
                 <div className="flex items-center justify-between gap-2">
                   <label htmlFor={`${id}-brief`} className="text-xs font-bold text-foreground">
-                    {studioIntent === 'clone' ? 'Ce qu’il faut reprendre' : 'Décrivez la fête'}
+                    {studioIntent === 'clone' ? 'Ce qu’il faut reprendre' : studioIntent === 'couple' ? 'Consigne (optionnelle)' : 'Décrivez la fête'}
                   </label>
                   <div className="flex items-center gap-2">
                     {/* Boutons d'action annuler/rétablir */}
@@ -1516,6 +1643,8 @@ export default function LandingInvitationAiGenerator({
                   placeholder={
                     studioIntent === 'clone'
                       ? 'Ex. Reprendre l’or et l’ivoire, garder la date en haut, noms en script…'
+                      : studioIntent === 'couple'
+                        ? 'Optionnel : elle à gauche, lui à droite, garder les tenues…'
                       : 'Ex. Mariage princier, or et ivoire, éclairage naturel, invitation WhatsApp…'
                   }
                   className="w-full rounded-[var(--radius-card)] border border-border bg-surface px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[5.5rem] disabled:opacity-60"
@@ -1523,7 +1652,11 @@ export default function LandingInvitationAiGenerator({
 
                 {/* Indicateur de statut de saisie dynamique */}
                 <div className="flex items-center justify-between text-[11px] text-muted px-0.5">
-                  {prompt.trim().length === 0 ? (
+                  {studioIntent === 'couple' && prompt.trim().length < 8 ? (
+                    <span className="text-muted">
+                      La consigne est optionnelle : les photos suffisent pour remplacer les visages.
+                    </span>
+                  ) : prompt.trim().length === 0 ? (
                     <span className="text-muted">
                       💡 Cliquez sur une inspiration ci-dessus ou décrivez votre célébration.
                     </span>
@@ -1666,7 +1799,13 @@ export default function LandingInvitationAiGenerator({
                 <Button
                   type="button"
                   onClick={requestGenerate}
-                  disabled={protocolLocked || busy || prompt.trim().length < 8 || (studioIntent === 'clone' && files.length === 0)}
+                  disabled={
+                    protocolLocked ||
+                    busy ||
+                    (studioIntent === 'couple'
+                      ? !incomingFile || files.length < 1
+                      : prompt.trim().length < 8 || (studioIntent === 'clone' && files.length === 0))
+                  }
                   leftIcon={
                     busy ? (
                       <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />
@@ -1675,7 +1814,11 @@ export default function LandingInvitationAiGenerator({
                     )
                   }
                 >
-                  {busy ? 'Création…' : `Créer la carte (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
+                  {busy
+                    ? 'Création…'
+                    : studioIntent === 'couple'
+                      ? `Remplacer les visages (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`
+                      : `Créer la carte (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
                 </Button>
                 {result ? (
                   <Button type="button" variant="secondary" onClick={resetResult} disabled={busy}>
@@ -1790,7 +1933,7 @@ export default function LandingInvitationAiGenerator({
 
               {studioTab === 'prompts' ? (
                 <PromptModelSelector
-                  intent={studioIntent}
+                  intent={studioIntent === 'clone' ? 'clone' : 'create'}
                   layout="panel"
                   defaultCategory={studioIntent === 'clone' ? 'clone' : 'coutumier'}
                   onSelectPrompt={(selected) => {
@@ -2279,7 +2422,9 @@ export default function LandingInvitationAiGenerator({
         }
       >
         <p className="text-sm text-muted leading-relaxed">
-          {studioIntent === 'clone'
+          {studioIntent === 'couple'
+            ? 'Les visages du couple remplaceront ceux de l’image. Pose, tenues et décor restent. Vous pourrez encore ajuster les textes ensuite.'
+            : studioIntent === 'clone'
             ? 'La photo de votre carte guide le rendu. Vous pourrez encore ajuster textes et réponse à l’invitation ensuite.'
             : 'Le brief et les photos de visages, s’il y en a, composent l’invitation. Vous pourrez tout ajuster ensuite.'}
         </p>
