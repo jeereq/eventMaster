@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EventMaster — Choix de voix</title>
+  <style>
+    :root {
+      --stage: #171614;
+      --ivory: #f7f4ef;
+      --muted: #cfc8bc;
+      --amber: #fbbf24;
+      --emerald: #047857;
+      --card: #221f1c;
+      --line: rgba(247, 244, 239, 0.12);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--stage);
+      color: var(--ivory);
+      font-family: Helvetica, Arial, sans-serif;
+    }
+    main { max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+    h1 { font-family: Georgia, serif; font-weight: 500; margin: 8px 0 12px; }
+    p { color: var(--muted); line-height: 1.5; }
+    .meta {
+      font-size: 13px;
+      color: var(--amber);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+    }
+    .phrase {
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      border-radius: 12px;
+      color: var(--ivory);
+    }
+    ol { list-style: none; padding: 0; margin: 28px 0 0; display: grid; gap: 12px; }
+    li {
+      display: grid;
+      gap: 10px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      border-radius: 14px;
+    }
+    li.current { border-color: rgba(4, 120, 87, 0.55); }
+    .row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+    strong { font-size: 18px; }
+    .tag {
+      font-size: 12px;
+      color: var(--emerald);
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    audio { width: 100%; height: 36px; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="meta">Échantillons · même phrase · débit vidéo</p>
+    <h1>Choisis la voix des films</h1>
+    <p>Chaque fichier dit la même ligne. Écoute, puis dis-moi le nom à utiliser.</p>
+    <p class="phrase">« EventMaster. Votre événement, de A à Z. Parfaitement orchestré. »</p>
+    <ol>
+      <li class="current">
+        <div class="row"><strong>Thomas</strong><span class="tag">Actuelle</span></div>
+        <audio controls preload="metadata" src="./studio/voix/thomas.mp3"></audio>
+      </li>
+      <li>
+        <div class="row"><strong>Jacques</strong><span>France · homme</span></div>
+        <audio controls preload="metadata" src="./studio/voix/jacques.mp3"></audio>
+      </li>
+      <li>
+        <div class="row"><strong>Eddy</strong><span>France · homme</span></div>
+        <audio controls preload="metadata" src="./studio/voix/eddy.mp3"></audio>
+      </li>
+      <li>
+        <div class="row"><strong>Flo</strong><span>France · homme</span></div>
+        <audio controls preload="metadata" src="./studio/voix/flo.mp3"></audio>
+      </li>
+      <li>
+        <div class="row"><strong>Rocko</strong><span>France · homme</span></div>
+        <audio controls preload="metadata" src="./studio/voix/rocko.mp3"></audio>
+      </li>
+      <li>
+        <div class="row"><strong>Sandy</strong><span>France · femme</span></div>
+        <audio controls preload="metadata" src="./studio/voix/sandy.mp3"></audio>
+      </li>
+      <li>
+        <div class="row"><strong>Shelley</strong><span>France · femme</span></div>
+        <audio controls preload="metadata" src="./studio/voix/shelley.mp3"></audio>
+      </li>
+      <li>
+        <div class="row"><strong>Amélie</strong><span>Canada · femme</span></div>
+        <audio controls preload="metadata" src="./studio/voix/amelie.mp3"></audio>
+      </li>
+      <li>
+        <div class="row"><strong>Eddy Canada</strong><span>Canada · homme</span></div>
+        <audio controls preload="metadata" src="./studio/voix/eddy-ca.mp3"></audio>
+      </li>
+      <li>
+        <div class="row"><strong>Reed</strong><span>Canada · homme</span></div>
+        <audio controls preload="metadata" src="./studio/voix/reed.mp3"></audio>
+      </li>
+    </ol>
+  </main>
+</body>
+</html>

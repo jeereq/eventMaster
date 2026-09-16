@@ -80,6 +80,34 @@ function findMainDoor(blueprint: RoomLayoutBlueprint): DoorAnchor | null {
   return best;
 }
 
+function findNamedFocus(
+  blueprint: RoomLayoutBlueprint,
+  widthM: number,
+  heightM: number,
+  nameRe: RegExp,
+  kind?: string,
+): [number, number, number] | null {
+  const item = blueprint.furniture.find((entry) => {
+    if (kind && entry.kind !== kind) return false;
+    return nameRe.test(entry.name ?? '') || nameRe.test(entry.id ?? '');
+  });
+  if (!item || typeof item.x !== 'number' || typeof item.y !== 'number') return null;
+  const [x, z] = pctToWorld(item.x, item.y, widthM, heightM);
+  return [x, 1.15, z];
+}
+
+function findKindFocus(
+  blueprint: RoomLayoutBlueprint,
+  widthM: number,
+  heightM: number,
+  kind: string,
+): [number, number, number] | null {
+  const item = blueprint.furniture.find((entry) => entry.kind === kind);
+  if (!item || typeof item.x !== 'number' || typeof item.y !== 'number') return null;
+  const [x, z] = pctToWorld(item.x, item.y, widthM, heightM);
+  return [x, 1.3, z];
+}
+
 function fallbackEntrance(widthM: number, heightM: number): DoorAnchor {
   return {
     x: 0,
@@ -117,14 +145,18 @@ export function buildRoomWalkthrough(blueprint: RoomLayoutBlueprint): Walkthroug
     door.z + iz * 1.4,
   ];
 
+  const honor = findNamedFocus(blueprint, widthM, heightM, /honneur|honor/i, 'table');
+  const stage = findKindFocus(blueprint, widthM, heightM, 'stage');
+  const roomCenter: [number, number, number] = [0, 1.15, 0];
+
   const rx = widthM * 0.28;
   const rz = heightM * 0.28;
-  const tourRing: [number, number][] = [
-    [rx * 0.2, rz],
-    [rx, rz * 0.15],
-    [rx * 0.15, -rz],
-    [-rx, -rz * 0.2],
-    [-rx * 0.2, rz * 0.55],
+  const tourStops: Array<{ pos: [number, number]; look: [number, number, number]; label: string }> = [
+    { pos: [rx * 0.15, rz], look: honor ?? roomCenter, label: honor ? 'Table d’honneur' : 'Allée centrale' },
+    { pos: [rx, rz * 0.1], look: stage ?? [rx * 0.2, 1.2, -rz * 0.4], label: stage ? 'La scène' : 'Côté jardin' },
+    { pos: [rx * 0.1, -rz], look: [0, 1.4, 0], label: 'Lustres et allées' },
+    { pos: [-rx, -rz * 0.15], look: honor ?? roomCenter, label: 'Côté cour' },
+    { pos: [-rx * 0.15, rz * 0.5], look: [door.x, eye, door.z], label: 'Retour vers l’entrée' },
   ];
 
   const waypoints: WalkthroughWaypoint[] = [
@@ -142,20 +174,18 @@ export function buildRoomWalkthrough(blueprint: RoomLayoutBlueprint): Walkthroug
     },
     {
       position: justInside,
-      lookAt: [0, 1.2, 0],
+      lookAt: honor ?? roomCenter,
       duration: 2.4,
       label: 'Entrée dans la salle',
     },
   ];
 
-  for (let i = 0; i < tourRing.length; i += 1) {
-    const [px, pz] = tourRing[i];
-    const [nx, nz] = tourRing[(i + 1) % tourRing.length];
+  for (const stop of tourStops) {
     waypoints.push({
-      position: [px, eye + 0.05, pz],
-      lookAt: [(px + nx) * 0.35, 1.1, (pz + nz) * 0.35],
+      position: [stop.pos[0], eye + 0.05, stop.pos[1]],
+      lookAt: stop.look,
       duration: 2.6,
-      label: `Visite ${i + 1}/${tourRing.length}`,
+      label: stop.label,
     });
   }
 

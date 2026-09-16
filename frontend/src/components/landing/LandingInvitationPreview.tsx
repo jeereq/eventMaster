@@ -6,9 +6,10 @@ import { getTemplateBackgroundStyle } from '@/lib/templateBackgroundStyle';
 import { useHeadStylesheet } from '@/lib/headStylesheet';
 import { ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { templateImageStyleClass, templateImageStyleExtra } from '@/lib/templateImageStyle';
 
 const LANDING_PREVIEW_FONTS =
-  'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Great+Vibes&family=Playfair+Display:wght@400;700&display=swap';
+  'https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Great+Vibes&family=Playfair+Display:wght@400;700&display=swap';
 
 interface PreviewElement {
   id?: string;
@@ -30,6 +31,11 @@ interface PreviewElement {
   imageStyle?: string;
   dividerStyle?: string;
   width?: 'full' | 'half' | 'third';
+  positionMode?: 'flow' | 'absolute';
+  xPct?: number;
+  yPct?: number;
+  wPct?: number;
+  zIndex?: number;
 }
 
 export interface LandingInvitationPreviewProps {
@@ -224,7 +230,7 @@ function renderElement(
     case 'text':
       return (
         <div
-          className={`leading-relaxed break-words ${typography.className || ''} ${compact ? 'line-clamp-3' : ''}`}
+          className={`leading-relaxed break-words whitespace-pre-line ${typography.className || ''} ${compact ? 'line-clamp-3' : ''}`}
           style={textStyle}
         >
           {interpolatePreviewVariables(el.text, variableOverrides, showRawVariables)}
@@ -265,14 +271,13 @@ function renderElement(
           <PreviewImage
             src={el.imageUrl}
             compact={compact}
-            className={`border border-border/80 bg-surface-muted object-cover ${
-              compact ? 'rounded-md' : 'rounded-xl'
-            }`}
+            className={`bg-surface-muted object-cover ${compact ? 'rounded-md' : templateImageStyleClass(el.imageStyle)}`}
             style={{
               width: imgWidth,
               height: imgHeight,
               maxWidth: '100%',
               objectFit: (el.imageObjectFit as React.CSSProperties['objectFit']) || 'cover',
+              ...(!compact ? templateImageStyleExtra(el.imageStyle) : {}),
             }}
           />
         </div>
@@ -426,9 +431,15 @@ export default function LandingInvitationPreview({
     ? template.elements
     : rawElements.filter((el) => ['text', 'button', 'image', 'divider', 'rsvp-block'].includes(el.type || ''));
 
-  const elementsToRender = isCompact
-    ? (visibleElements as PreviewElement[]).slice(0, isHero ? 5 : hasBackgroundImage ? 5 : 6)
-    : visibleElements;
+  const isFreeLayout =
+    !useLegacyOnly &&
+    (global?.layoutMode === 'free' ||
+      rawElements.some((el) => el.positionMode === 'absolute'));
+
+  const elementsToRender =
+    isCompact && !isFreeLayout
+      ? (visibleElements as PreviewElement[]).slice(0, isHero ? 5 : hasBackgroundImage ? 5 : 6)
+      : visibleElements;
 
   // Calcul du format physique de carte proportionnel 9:16
   const is916 = aspectRatio === '9/16' || aspectRatio === 'card' || aspectRatio === 'portrait' || (!isCompact && aspectRatio === 'auto');
@@ -442,7 +453,7 @@ export default function LandingInvitationPreview({
           : isCompact
             ? 'min-h-[180px] max-h-[240px] p-3'
             : is916
-              ? 'w-full max-w-[min(100%,28rem)] sm:max-w-[min(100%,32rem)] mx-auto aspect-[9/16] justify-end'
+              ? `w-full max-w-[min(100%,28rem)] sm:max-w-[min(100%,32rem)] mx-auto aspect-[9/16] ${isFreeLayout ? '' : 'justify-end'}`
               : 'p-6 sm:p-8 min-h-[280px] max-h-[min(520px,70vh)]',
         className,
       )}
@@ -475,25 +486,44 @@ export default function LandingInvitationPreview({
                   : 'bg-gradient-to-t from-black/90 via-black/50 to-transparent pt-14 pb-4 px-3.5 sm:px-4 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] rounded-b-[inherit]',
               )}
             >
-              <div className="flex flex-wrap gap-y-1 w-full">
+              <div className={cn(isFreeLayout && !isCompact ? 'relative w-full min-h-[12rem]' : 'flex flex-wrap gap-y-1 w-full')}>
                 {useLegacyOnly
                   ? template.elements.map((el, i) => (
                       <div key={i} className="w-full">
                         {renderLegacyElement(el, isCompact, variableOverrides, showRawVariables)}
                       </div>
                     ))
-                  : (elementsToRender as PreviewElement[]).map((el, i) => (
-                      <div key={el.id || i} className={`${widthClass(el.width)} px-0.5`}>
+                  : (elementsToRender as PreviewElement[]).map((el, i) => {
+                      const free = isFreeLayout && !isCompact && (el.positionMode === 'absolute' || global?.layoutMode === 'free');
+                      return (
+                      <div
+                        key={el.id || i}
+                        className={free ? '' : `${widthClass(el.width)} px-0.5`}
+                        style={
+                          free
+                            ? {
+                                position: 'absolute',
+                                left: `${el.xPct ?? 8}%`,
+                                top: `${el.yPct ?? 8}%`,
+                                width: `${el.wPct ?? 84}%`,
+                                zIndex: el.zIndex ?? i + 1,
+                              }
+                            : undefined
+                        }
+                      >
                         {renderElement(el, isCompact, paletteAccent, '#ffffff', variableOverrides, showRawVariables)}
                       </div>
-                    ))}
+                      );
+                    })}
               </div>
             </div>
           ) : (
             /* Arrière-plan uni ou texturé (papier, parchemin) */
             <div
               className={cn(
-                'relative z-10 flex flex-wrap gap-y-1.5 w-full p-4 sm:p-5',
+                isFreeLayout && !isCompact
+                  ? 'relative z-10 w-full h-full'
+                  : 'relative z-10 flex flex-wrap gap-y-1.5 w-full p-4 sm:p-5',
                 isHero && 'overflow-hidden max-h-full',
               )}
             >
@@ -503,11 +533,28 @@ export default function LandingInvitationPreview({
                       {renderLegacyElement(el, isCompact, variableOverrides, showRawVariables)}
                     </div>
                   ))
-                : (elementsToRender as PreviewElement[]).map((el, i) => (
-                    <div key={el.id || i} className={`${widthClass(el.width)} px-0.5`}>
+                : (elementsToRender as PreviewElement[]).map((el, i) => {
+                    const free = isFreeLayout && !isCompact && (el.positionMode === 'absolute' || global?.layoutMode === 'free');
+                    return (
+                    <div
+                      key={el.id || i}
+                      className={free ? '' : `${widthClass(el.width)} px-0.5`}
+                      style={
+                        free
+                          ? {
+                              position: 'absolute',
+                              left: `${el.xPct ?? 8}%`,
+                              top: `${el.yPct ?? 8}%`,
+                              width: `${el.wPct ?? 84}%`,
+                              zIndex: el.zIndex ?? i + 1,
+                            }
+                          : undefined
+                      }
+                    >
                       {renderElement(el, isCompact, paletteAccent, undefined, variableOverrides, showRawVariables)}
                     </div>
-                  ))}
+                    );
+                  })}
             </div>
           )}
         </>

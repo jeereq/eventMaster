@@ -23,6 +23,7 @@ import { guestRsvpUrl } from '@/lib/share';
 import { applyOrgInvitationThemeIfNeeded } from '@/lib/templateColorThemes';
 import { DEFAULT_BRAND_PALETTE } from '@/lib/brandTheme';
 import type { GuestRsvpData } from './guestRsvpTypes';
+import { templateImageStyleClass, templateImageStyleExtra } from '@/lib/templateImageStyle';
 
 const darkenColor = (hex: string, percent = 30) => {
   if (!hex || !hex.startsWith('#')) return hex || '#000000';
@@ -917,14 +918,19 @@ export default function GuestPendingInvitationView({
         )}
 
         {/* Event Card Content */}
-        <div className="p-8 space-y-8 flex-1 relative z-10">
+        <div className={`${global.layoutMode === 'free' ? 'relative flex-1 z-10' : 'p-8 space-y-8 flex-1 relative z-10'}`}>
           {/* Header */}
           {template ? (
             <div
               className={
                 global.layoutMode === 'free'
-                  ? 'relative pt-2 min-h-[240px] w-full'
+                  ? 'relative w-full h-full min-h-full'
                   : 'flex flex-wrap gap-y-4 -mx-2 pt-2'
+              }
+              style={
+                global.layoutMode === 'free'
+                  ? { minHeight: canvasStyle.minHeight }
+                  : undefined
               }
             >
               {inlineTemplateElements.map((el: any, index: number) => {
@@ -964,7 +970,7 @@ export default function GuestPendingInvitationView({
                           fontWeight: el.bold ? 'bold' : 'normal',
                           fontStyle: el.italic ? 'italic' : 'normal'
                         }}
-                        className="leading-relaxed break-words"
+                        className="leading-relaxed break-words whitespace-pre-line"
                       >
                         {formatText(el.text)}
                       </div>
@@ -1059,16 +1065,8 @@ export default function GuestPendingInvitationView({
                           <img 
                             src={el.imageUrl} 
                             alt="Invitation" 
-                            style={{ width: el.imageWidth || '100%', height: el.imageHeight || 'auto', objectFit: el.imageObjectFit || 'cover' }}
-                            className={`border border-border shadow-sm ${
- el.imageStyle === 'circle' ? 'rounded-full border-2 border-amber-200 aspect-square' :
- el.imageStyle === 'arch' ? 'rounded-t-[120px] border-2 border-amber-100' :
- el.imageStyle === 'oval' ? 'rounded-[50%] border-2 border-amber-100 aspect-[3/4]' :
- el.imageStyle === 'gold-frame' ? 'rounded-2xl border-4 border-amber-400/80 p-1 bg-surface shadow-lg' :
- el.imageStyle === 'vintage' ? 'rounded-none border-8 border-amber-950/10 shadow-xl sepia contrast-[1.1]' :
- el.imageStyle === 'shadow-luxury' ? 'rounded-3xl border border-border shadow-[0_15px_30px_rgba(197,160,89,0.12)]' :
- 'rounded-2xl'
- }`}
+                            style={{ width: el.imageWidth || '100%', height: el.imageHeight || 'auto', objectFit: el.imageObjectFit || 'cover', ...templateImageStyleExtra(el.imageStyle) }}
+                            className={templateImageStyleClass(el.imageStyle)}
                           />
                         ) : (
                           <div className="bg-surface-muted border border-border rounded-xl p-6 text-center text-xs text-muted font-semibold w-full">

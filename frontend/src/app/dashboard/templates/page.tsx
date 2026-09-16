@@ -9,6 +9,9 @@ import { uploadImageFile, uploadDataUrlImage, isCloudinaryUrl } from '@/lib/clou
 import { extractPaletteFromSource, type TemplatePalette } from '@/lib/imagePalette';
 import { applyPaletteToElements, invitationColorThemes, ORG_BRAND_THEME_ID, buildOrgBrandInvitationTheme } from '@/lib/templateColorThemes';
 import { FONT_THEMES, applyFontThemeToElements, getFontTheme } from '@/lib/templateFontThemes';
+import { TEMPLATE_IMAGE_STYLES, templateImageStyleClass, templateImageStyleExtra, type TemplateImageStyleId } from '@/lib/templateImageStyle';
+import { editorialLayoutById, fillEditorialTokens, type EditorialLayoutId } from '@/lib/invitationEditorialLayouts';
+import EditorialLayoutPicker from '@/components/EditorialLayoutPicker';
 import { buildMockupTemplate, applyMockupToEditor, applyMockupTextMode, buildTextElementsFromOcrLines, type MockupImportTextMode } from '@/lib/templateMockupImport';
 import { extractTextFromImageSource, mergeOcrIntoMockupElements } from '@/lib/templateOcrImport';
 import { composeTemplateWithAi, applyAiComposeToEditor, loadAiTemplateDraft, clearAiTemplateDraft, downloadAiGeneratedImage, type AiSpeedMode } from '@/lib/templateAiCompose';
@@ -128,7 +131,7 @@ interface CanvasElement {
  italic?: boolean;
  dividerStyle?: 'solid' | 'dashed' | 'ornament-flower' | 'ornament-diamond' | 'ornament-star' | 'ornament-leaves' | 'ornament-lace';
  curveStyle?: 'wave' | 'arc' | 'flourish-1' | 'flourish-2' | 'spiral' | 'infinity';
- imageStyle?: 'rounded' | 'circle' | 'arch' | 'oval' | 'gold-frame' | 'vintage' | 'shadow-luxury';
+ imageStyle?: TemplateImageStyleId;
  buttonStyle?: 'filled' | 'outline' | 'pill' | 'gold-glow' | 'double-border' | 'minimalist';
  buttonLink?: string;
  /** Disposition : flux (défaut) ou libre (x/y %) */
@@ -368,7 +371,7 @@ export default function TemplatesPage() {
  const [elItalic, setElItalic] = useState(false);
  const [elDividerStyle, setElDividerStyle] = useState<'solid' | 'dashed' | 'ornament-flower' | 'ornament-diamond' | 'ornament-star' | 'ornament-leaves' | 'ornament-lace'>('ornament-flower');
  const [elCurveStyle, setElCurveStyle] = useState<'wave' | 'arc' | 'flourish-1' | 'flourish-2' | 'spiral' | 'infinity'>('wave');
- const [elImageStyle, setElImageStyle] = useState<'rounded' | 'circle' | 'arch' | 'oval' | 'gold-frame' | 'vintage' | 'shadow-luxury'>('rounded');
+ const [elImageStyle, setElImageStyle] = useState<TemplateImageStyleId>('rounded');
  const [elButtonStyle, setElButtonStyle] = useState<'filled' | 'outline' | 'pill' | 'gold-glow' | 'double-border' | 'minimalist'>('filled');
  const [elButtonLink, setElButtonLink] = useState('');
 
@@ -393,6 +396,7 @@ export default function TemplatesPage() {
  const [importedPalette, setImportedPalette] = useState<TemplatePalette | null>(null);
  const [colorThemeId, setColorThemeId] = useState(ORG_BRAND_THEME_ID);
  const [layoutMode, setLayoutMode] = useState<'flow' | 'free'>('flow');
+ const [editorialLayoutId, setEditorialLayoutId] = useState<EditorialLayoutId | null>(null);
  const [showGuestPreview, setShowGuestPreview] = useState(false);
  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
@@ -819,7 +823,7 @@ export default function TemplatesPage() {
  if (field === 'shapeSize') setElShapeSize(value);
  if (field === 'dividerStyle') setElDividerStyle(value);
  if (field === 'curveStyle') setElCurveStyle(value);
- if (field === 'imageStyle') setElImageStyle(value);
+ if (field === 'imageStyle') setElImageStyle(value as TemplateImageStyleId);
  if (field === 'buttonStyle') setElButtonStyle(value);
  if (field === 'buttonLink') setElButtonLink(value);
  if (field === 'rsvpFields') setElRsvpFields(value);
@@ -1963,6 +1967,32 @@ export default function TemplatesPage() {
  })),
  );
  setLayoutMode('free');
+ };
+
+ const applyEditorialLayout = (id: EditorialLayoutId) => {
+ const layout = editorialLayoutById(id);
+ const stamp = Date.now();
+ const tokens = { title: templateName, date: undefined, location: undefined };
+ const next = layout.elements.map((el, index) => ({
+ ...el,
+ id: `${el.id}-${stamp}-${index}`,
+ text: fillEditorialTokens(el.text, tokens),
+ })) as CanvasElement[];
+ setLayoutMode('free');
+ setBgType(layout.bgType);
+ setBgColor(layout.bgColor);
+ setBgImageUrl(layout.bgImageUrl || '');
+ setFrameType(layout.frameType as typeof frameType);
+ setFontTheme(layout.fontTheme);
+ setCanvasSizePreset(layout.canvasSizePreset);
+ setCanvasWidth(layout.canvasWidth);
+ setCanvasHeight(layout.canvasHeight);
+ setSelectedElementId(null);
+ setAiComposeArtStyle(layout.suggestedArtStyle);
+ persistInvitationArtStyle(layout.suggestedArtStyle);
+ setEditorialLayoutId(layout.id);
+ recordStudioAction(`Mise en page ${layout.name}`, next);
+ setCanvasElements(next);
  };
 
  const convertToFlowLayout = () => {
@@ -3170,6 +3200,8 @@ export default function TemplatesPage() {
  </div>
  </div>
 
+        <EditorialLayoutPicker onSelect={applyEditorialLayout} selectedId={editorialLayoutId} />
+
         <div className="space-y-2.5">
           <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Composants</h3>
           <div className="grid grid-cols-2 gap-2">
@@ -3813,7 +3845,7 @@ export default function TemplatesPage() {
  ref={freeCanvasRef}
  className={
  layoutMode === 'free'
- ? 'relative z-10 w-full min-h-[320px]'
+ ? 'absolute inset-0 z-10 w-full h-full'
  : 'relative z-10 flex flex-wrap gap-y-4 -mx-2'
  }
  onPointerMove={handleFreePointerMove}
@@ -3930,7 +3962,7 @@ export default function TemplatesPage() {
  : undefined
  }
  >
-                    <div className={`p-2.5 rounded-xl border transition ${isSelected ? 'border-primary bg-primary/5 shadow-xs ring-2 ring-primary/20' : 'border-dashed border-transparent hover:border-border/60'}`}>
+                    <div className={`${el.type === 'image' && isFree && !isSelected ? 'p-0' : 'p-2.5'} rounded-xl border transition ${isSelected ? 'border-primary bg-primary/5 shadow-xs ring-2 ring-primary/20' : 'border-dashed border-transparent hover:border-border/60'}`}>
  {/* Element Controls (Delete & Reorder) */}
                       <div className={`absolute -top-3.5 right-2 flex items-center gap-1 z-20 transition-opacity ${
                         isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
@@ -4016,7 +4048,7 @@ export default function TemplatesPage() {
  fontWeight: el.bold ? 'bold' : 'normal',
  fontStyle: el.italic ? 'italic' : 'normal'
  }}
- className="leading-relaxed break-words"
+ className="leading-relaxed break-words whitespace-pre-line"
  >
  {showGuestPreview ? substitutePreviewVars(el.text) : el.text}
  </div>
@@ -4058,29 +4090,13 @@ export default function TemplatesPage() {
  <img 
  src={el.imageUrl} 
  alt="Invitation" 
- style={{ width: el.imageWidth || '100%', height: el.imageHeight || 'auto', objectFit: el.imageObjectFit || 'cover' }}
- className={`border border-border shadow-sm ${
- el.imageStyle === 'circle' ? 'rounded-full border-2 border-amber-200 aspect-square' :
- el.imageStyle === 'arch' ? 'rounded-t-[120px] border-2 border-amber-100' :
- el.imageStyle === 'oval' ? 'rounded-[50%] border-2 border-amber-100 aspect-[3/4]' :
- el.imageStyle === 'gold-frame' ? 'rounded-2xl border-4 border-amber-400/80 p-1 bg-white shadow-lg' :
- el.imageStyle === 'vintage' ? 'rounded-none border-8 border-amber-950/10 shadow-xl sepia contrast-[1.1]' :
- el.imageStyle === 'shadow-luxury' ? 'rounded-3xl border border-border-subtle shadow-[0_15px_30px_rgba(197,160,89,0.12)]' :
- 'rounded-2xl'
- }`}
+ style={{ width: el.imageWidth || '100%', height: el.imageHeight || 'auto', objectFit: el.imageObjectFit || 'cover', ...templateImageStyleExtra(el.imageStyle) }}
+ className={templateImageStyleClass(el.imageStyle)}
  />
  ) : (
  <label 
- style={{ width: el.imageWidth || '100%', height: el.imageHeight || '150px' }}
- className={`bg-surface-muted border border-border flex flex-col items-center justify-center text-muted gap-2 p-4 cursor-pointer hover:bg-surface-muted/50 transition ${
- el.imageStyle === 'circle' ? 'rounded-full border-2 border-amber-200 aspect-square' :
- el.imageStyle === 'arch' ? 'rounded-t-[120px] border-2 border-amber-100' :
- el.imageStyle === 'oval' ? 'rounded-[50%] border-2 border-amber-100 aspect-[3/4]' :
- el.imageStyle === 'gold-frame' ? 'rounded-2xl border-4 border-amber-400/80 p-1 bg-white shadow-lg' :
- el.imageStyle === 'vintage' ? 'rounded-none border-8 border-amber-950/10 shadow-xl sepia contrast-[1.1]' :
- el.imageStyle === 'shadow-luxury' ? 'rounded-3xl border border-border-subtle shadow-[0_15px_30px_rgba(197,160,89,0.12)]' :
- 'rounded-2xl'
- }`}
+ style={{ width: el.imageWidth || '100%', height: el.imageHeight || '150px', ...templateImageStyleExtra(el.imageStyle) }}
+ className={`bg-surface-muted flex flex-col items-center justify-center text-muted gap-2 p-4 cursor-pointer hover:bg-surface-muted/50 transition ${templateImageStyleClass(el.imageStyle)}`}
  >
  <input 
  type="file" 
@@ -4670,13 +4686,9 @@ export default function TemplatesPage() {
  onChange={(e) => handlePropertyChange('imageStyle', e.target.value)}
  className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
  >
- <option value="rounded">Arrondi</option>
- <option value="circle">Cercle</option>
- <option value="arch">Arche</option>
- <option value="oval">Ovale</option>
- <option value="gold-frame">Cadre doré</option>
- <option value="vintage">Sépia</option>
- <option value="shadow-luxury">Ombre douce</option>
+ {TEMPLATE_IMAGE_STYLES.map((style) => (
+ <option key={style.id} value={style.id}>{style.label}</option>
+ ))}
  </select>
  </div>
  <div className="grid grid-cols-2 gap-2">

@@ -3,15 +3,19 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
+import os
 import shutil
 import subprocess
+import sys
 import time
 import urllib.request
 import wave
 from pathlib import Path
 
+import edge_tts
 import imageio_ffmpeg
 import websocket
 
@@ -22,11 +26,15 @@ WORK = STUDIO / "_work"
 OUT = ROOT
 CHROME = Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
 FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
-VOICE = "Thomas"
+VOICE = "fr-FR-VivienneMultilingualNeural"
+VOICE_RATE = "-5%"
 FPS = 25
 CAPTURE_FPS = 12
 MIN_SCENE_SECONDS = 3.4
 DEBUG_PORT = 9333
+
+for _proxy in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"):
+    os.environ.pop(_proxy, None)
 
 VIDEOS = [
     {
@@ -38,7 +46,7 @@ VIDEOS = [
             {"voice": "EventMaster. Votre événement, de A à Z. Parfaitement orchestré."},
             {"voice": "Invitations WhatsApp, plans deux D trois D, et Mobile Money. En RDC. Cent pour cent web, sans appli."},
             {"voice": "Voici le vrai plan. Table d'honneur, cent quarante places. Chacun sait où il s'assoit."},
-            {"voice": "La même salle, en trois D, dans le navigateur. Lustres, scène, tables."},
+            {"voice": "On entre dans la salle. Table d'honneur. On tourne : scène, lustres, allées. Dans le navigateur."},
             {"voice": "La billetterie s'ouvre sur le marketplace. On paie en francs congolais."},
             {"voice": "Le jour J, on scanne le pass. La table est déjà sur l'invitation."},
             {"voice": "Mariage, gala, salle ou métier. Un seul site."},
@@ -53,7 +61,7 @@ VIDEOS = [
         "scenes": [
             {"voice": "Tu prépares une fête à Kinshasa ?"},
             {"voice": "Le plan de table est déjà là."},
-            {"voice": "Et en trois D. Sans plugin."},
+            {"voice": "On fait le tour. En trois D. Sans plugin."},
             {"voice": "Tes invités trouvent leur table."},
             {"voice": "EventMaster. Cent pour cent web, sans appli."},
         ],
@@ -66,7 +74,7 @@ VIDEOS = [
         "scenes": [
             {"voice": "Faire-part WhatsApp, plan de table, et accueil au téléphone."},
             {"voice": "Tu vois qui vient. Et qui s'assoit où."},
-            {"voice": "La salle de mariage, déjà dressée, en trois D."},
+            {"voice": "La salle de mariage, déjà dressée. On entre, on tourne, chaque table est là."},
             {"voice": "Essai gratuit. Sans carte bancaire. Ou Particulier cinquante, soixante mille francs le trimestre."},
         ],
     },
@@ -87,8 +95,8 @@ VIDEOS = [
         "ratio": "9x16",
         "size": (1080, 1920),
         "scenes": [
-            {"voice": "Montrez votre salle en trois D. Avant le devis."},
-            {"voice": "Le client visite. Vous discutez ensuite."},
+            {"voice": "Montrez votre salle en trois D. Le client fait le tour avant le devis."},
+            {"voice": "Il visite. Vous discutez ensuite."},
             {"voice": "Publiez votre fiche. Salle, quatorze mille neuf cents francs par mois."},
         ],
     },
@@ -116,11 +124,16 @@ def wav_duration(path: Path) -> float:
         return handle.getnframes() / float(handle.getframerate())
 
 
+async def _edge_save(text: str, dest: Path) -> None:
+    communicate = edge_tts.Communicate(text, VOICE, rate=VOICE_RATE)
+    await communicate.save(str(dest))
+
+
 def speak(text: str, dest: Path) -> float:
-    aiff = dest.with_suffix(".aiff")
+    mp3 = dest.with_suffix(".mp3")
     raw = dest.with_name(dest.stem + "-raw.wav")
-    run(["say", "-v", VOICE, "-r", "168", "-o", str(aiff), text])
-    run(["afconvert", "-f", "WAVE", "-d", "LEI16", str(aiff), str(raw)])
+    asyncio.run(_edge_save(text, mp3))
+    run([FFMPEG, "-y", "-i", str(mp3), "-ac", "1", "-ar", "24000", str(raw)])
     spoken = wav_duration(raw)
     target = max(spoken + 0.55, MIN_SCENE_SECONDS)
     run(
@@ -136,9 +149,109 @@ def speak(text: str, dest: Path) -> float:
             str(dest),
         ]
     )
-    aiff.unlink(missing_ok=True)
+    mp3.unlink(missing_ok=True)
     raw.unlink(missing_ok=True)
     return wav_duration(dest)
+
+
+def media_duration(path: Path) -> float:
+    probe = subprocess.run(
+        [
+            FFMPEG,
+            "-i",
+            str(path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    # imageio ffmpeg binary is ffmpeg; parse Duration from stderr
+    for line in (probe.stderr or "").splitlines():
+        if "Duration:" in line:
+            stamp = line.split("Duration:")[1].split(",")[0].strip()
+            hours, minutes, seconds = stamp.split(":")
+            return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+    raise RuntimeError(f"durée introuvable: {path}")
+
+
+def build_voice_track(spec: dict) -> Path:
+    work = WORK / spec["id"]
+    if work.exists():
+        shutil.rmtree(work)
+    work.mkdir(parents=True)
+    wavs = []
+    for index, scene in enumerate(spec["scenes"]):
+        wav = work / f"vo-{index:02d}.wav"
+        speak(scene["voice"], wav)
+        wavs.append(wav)
+    voice = work / "voice.wav"
+    concat_audio(wavs, voice)
+    return voice
+
+
+def remux_audio(spec: dict) -> Path:
+    dest = OUT / spec["filename"]
+    if not dest.exists():
+        raise FileNotFoundError(dest)
+    voice = build_voice_track(spec)
+    video_seconds = media_duration(dest)
+    audio_seconds = wav_duration(voice)
+    fitted = voice.with_name("voice-fitted.wav")
+    if audio_seconds < video_seconds:
+        pad = video_seconds - audio_seconds
+        run(
+            [
+                FFMPEG,
+                "-y",
+                "-i",
+                str(voice),
+                "-af",
+                f"apad=pad_dur={pad:.3f}",
+                "-t",
+                f"{video_seconds:.3f}",
+                str(fitted),
+            ]
+        )
+    else:
+        run(
+            [
+                FFMPEG,
+                "-y",
+                "-i",
+                str(voice),
+                "-t",
+                f"{video_seconds:.3f}",
+                str(fitted),
+            ]
+        )
+    tmp = dest.with_suffix(".tmp.mp4")
+    run(
+        [
+            FFMPEG,
+            "-y",
+            "-i",
+            str(dest),
+            "-i",
+            str(fitted),
+            "-map",
+            "0:v:0",
+            "-map",
+            "1:a:0",
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-shortest",
+            "-movflags",
+            "+faststart",
+            str(tmp),
+        ]
+    )
+    tmp.replace(dest)
+    print(f"remux {spec['id']} video={video_seconds:.1f}s voice={audio_seconds:.1f}s", flush=True)
+    return dest
 
 
 def concat_audio(wavs: list[Path], dest: Path) -> None:
@@ -308,7 +421,16 @@ def render_video(client: ChromeCdp, spec: dict) -> Path:
 def main() -> None:
     WORK.mkdir(parents=True, exist_ok=True)
     OUT.mkdir(parents=True, exist_ok=True)
+    audio_only = "--audio-only" in sys.argv
     rendered = []
+    if audio_only:
+        for spec in VIDEOS:
+            print("voice", spec["id"], flush=True)
+            rendered.append(remux_audio(spec))
+        for path in rendered:
+            print(path, path.stat().st_size)
+        return
+
     chrome = None
     client = None
     current_size = None

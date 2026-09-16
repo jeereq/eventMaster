@@ -1,4 +1,4 @@
-export type PromptCategory = 'coutumier' | 'clone' | 'wedding' | 'gala' | 'birthday' | 'rdc-langues';
+export type PromptCategory = 'coutumier' | 'clone' | 'wedding' | 'gala' | 'birthday' | 'rdc-langues' | 'visuel';
 
 export interface PromptModel {
   id: string;
@@ -18,6 +18,7 @@ export const PROMPT_CATEGORIES: Array<{ id: PromptCategory; label: string; short
   { id: 'gala', label: 'Galas & Entreprises', shortLabel: 'Galas' },
   { id: 'birthday', label: 'Anniversaires & Soirées', shortLabel: 'Soirées' },
   { id: 'rdc-langues', label: '4 Langues nationales RDC', shortLabel: 'Langues' },
+  { id: 'visuel', label: 'Affiches & éditorial', shortLabel: 'Visuel' },
 ];
 
 export const INVITATION_PROMPT_MODELS: PromptModel[] = [
@@ -239,5 +240,78 @@ export const INVITATION_PROMPT_MODELS: PromptModel[] = [
     summary: 'Invitation de fête d’honneur en Tshiluba (« Tshibilu tshia Butumbi ne Disanka »), rouge bordeaux, or ciselé et perles royales.',
     prompt:
       'Compose a high-prestige celebration invitation in Tshiluba. [Subject] An honored Congolese host or couple celebrated by their community. [Action] Announcing a grand reception with customary Tshiluba title: "Dibikila dia Butumbi : Luayi tuakidile tshibilu tshia disanka ne bunene". Details in Tshiluba: "Dituku : {{date}}", "Muaba : {{location}}", "Kudisangisha mu disanka". [Location/context] Grand Kasai banquet in Mbuji-Mayi or Kananga. [Composition] 9:16 vertical card with burgundy and chiseled gold fillet borders, centered hierarchy. [Style] Rich burgundy velvet texture, warm gold foil reflections, authentic African melanin portrait fidelity, photoreal editorial print look.',
+  },
+
+  {
+    id: 'visuel-affiche-hero',
+    title: 'Affiche héro cinématique',
+    category: 'visuel',
+    badge: 'Affiche',
+    summary: 'Portrait dramatique plein cadre, clair-obscur, titre en bas. Utilise vos photos, pas un personnage connu.',
+    prompt:
+      'Compose a cinematic hero poster invitation from the attached photos of the real hosts. [Subject] The exact people in the photos, heroic full-body or three-quarter pose, raised or powerful stance if it fits the photo. [Action] A dark prestige event poster, not a licensed character. [Location/context] Kinshasa / RDC celebration. [Composition] Tall 9:16 full-bleed figure, generous lower band for {{title}}, {{date}}, {{location}}. [Style] Dramatic rim light, ember or gold sparks, deep black ground, print-ready poster — original artwork only, never a copyrighted anime or game character.',
+  },
+  {
+    id: 'visuel-encre-trait',
+    title: 'Encre & trait',
+    category: 'visuel',
+    badge: 'Dessin',
+    summary: 'Dessin au trait noir et blanc à partir de vos portraits.',
+    prompt:
+      'Draw an ink-line invitation portrait from the attached photos. [Subject] The same people, translated into refined graphite and ink line art. [Action] Prestige character-poster invitation. [Location/context] Printed 9:16 card. [Composition] Figure isolated on white or near-black paper, lower third reserved for {{title}} and {{date}}. [Style] High-contrast hatching, clean contours, editorial illustration — original likeness only, no existing franchise character.',
+  },
+  {
+    id: 'visuel-portrait-regard',
+    title: 'Portrait regard',
+    category: 'visuel',
+    badge: 'Éditorial',
+    summary: 'Gros plan visage, lumière chaude, texte discret.',
+    prompt:
+      'Photograph an editorial close-up invitation from the attached portraits. [Subject] The exact face, eyes sharp, natural melanin, glasses or jewelry only if present in the photo. [Action] Quiet luxury event card. [Location/context] Studio warmth, Kinshasa evening. [Composition] Tight 9:16 face crop filling the frame, tiny lower caption for {{title}} and {{date}}. [Style] 85mm, warm key, glossy lip if already there, no beauty filter, no invented features.',
+  },
+  {
+    id: 'visuel-club-black',
+    title: 'Soirée All Black',
+    category: 'visuel',
+    badge: 'Club',
+    summary: 'Visage voilé ou regard, gros titre blanc, line-up.',
+    prompt:
+      'Design a nightlife All Black party flyer from the attached portraits. [Subject] The real host, face emerging from black fabric or shadow. [Action] Club invitation for {{title}}. [Location/context] {{location}}, {{date}}. [Composition] Centered eyes, huge condensed white title overlapping the lower face, date and lineup in small caps. [Style] Pure black, razor typography, photoreal 35mm, no watermark.',
+  },
+  {
+    id: 'visuel-magazine',
+    title: 'Couverture magazine',
+    category: 'visuel',
+    badge: 'Magazine',
+    summary: 'Masthead, portrait en pied, date et code-barres.',
+    prompt:
+      'Compose a fashion-magazine cover invitation from the attached full-body photo. [Subject] The exact person in a tailored suit or dress, standing. [Action] Birthday or gala magazine cover titled {{title}}. [Location/context] Studio gray seamless. [Composition] 9:16, large masthead at top, figure centered, {{date}} stacked on the right, barcode corner. [Style] Editorial catalog lighting, matte paper grain, photoreal, faces unchanged.',
+  },
+  {
+    id: 'visuel-arche-or',
+    title: 'Mariage arche dorée',
+    category: 'visuel',
+    badge: 'Mariage',
+    summary: 'Couple en arche, noms empilés, filet or.',
+    prompt:
+      'Compose a gold-arch wedding invitation from the attached couple photos. [Subject] The exact couple seated or standing, looking at each other. [Action] Formal wedding announcement. [Location/context] {{location}}, {{date}}. [Composition] 9:16 navy card, gold-outlined arch around the photo, stacked names for {{title}}, date with a gold numeral, venue below. [Style] Deep navy, burnished gold, photoreal stationery, faces locked.',
+  },
+  {
+    id: 'visuel-moodboard',
+    title: 'Moodboard N&B',
+    category: 'visuel',
+    badge: 'Collage',
+    summary: 'Grille noir et blanc, mots d’inspiration, palette.',
+    prompt:
+      'Design a black-and-white luxury moodboard invitation from the attached couple and still-life photos. [Subject] Real hosts plus roses, hands, city night if provided. [Action] Inspiration board titled INSPO for {{title}}. [Location/context] Quiet luxury wedding. [Composition] 9:16 collage grid, mixed circles and rectangles, a vertical word list, small {{date}}. [Style] True monochrome, high contrast, fashion lookbook, no color except optional gold type.',
+  },
+  {
+    id: 'visuel-losanges',
+    title: 'Galerie losanges',
+    category: 'visuel',
+    badge: 'Collage',
+    summary: 'Photos en losange sur fond or.',
+    prompt:
+      'Compose a diamond-frame photo collage invitation from the attached portraits. [Subject] The same couple and individual portraits. [Action] Gallery card for {{title}}. [Location/context] Celebration keepsake. [Composition] 9:16 mustard or gold field, five black-framed diamond photos, title at the bottom. [Style] Studio black backgrounds inside frames, sharp print, faces unchanged.',
   },
 ];

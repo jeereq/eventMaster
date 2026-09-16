@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { createPortal } from 'react-dom';
+import { DoorOpen } from 'lucide-react';
 import {
   RoomLayoutBlueprint,
   getRoomOutlineClipPath,
@@ -95,6 +96,9 @@ type WebGLPreviewProps = {
   selectedSeats?: Array<{ tableId: string; seatIndex: number }>;
   blockedSeats?: Array<{ tableId: string; seatIndex: number }>;
   onSelectSeat?: (tableId: string, seatIndex: number) => void;
+  walkthroughActive?: boolean;
+  onWalkthroughProgress?: (label: string) => void;
+  onWalkthroughComplete?: () => void;
 };
 
 function WebGLPreviewCanvas({
@@ -109,6 +113,9 @@ function WebGLPreviewCanvas({
   selectedSeats,
   blockedSeats,
   onSelectSeat,
+  walkthroughActive = false,
+  onWalkthroughProgress,
+  onWalkthroughComplete,
 }: WebGLPreviewProps) {
   const selected = useMemo(() => {
     return mapTicketSelectionsToWebGL(
@@ -138,6 +145,10 @@ function WebGLPreviewCanvas({
       }}
       readOnly
       previewMode
+      presentationMode={!walkthroughActive}
+      walkthroughActive={walkthroughActive}
+      onWalkthroughProgress={onWalkthroughProgress}
+      onWalkthroughComplete={onWalkthroughComplete}
       renderQuality={quality === 'showcase' ? 'showcase' : 'standard'}
       lightingPreset={lightingPreset}
       className={cn('absolute inset-0 h-full w-full shadow-[var(--shadow-soft)] touch-none', className)}
@@ -573,6 +584,8 @@ export default function RoomLayoutPreview({
   const [localForce2d, setLocalForce2d] = useState(false);
   const [showWalls, setShowWalls] = useState(true);
   const [showRoof, setShowRoof] = useState(false);
+  const [walkthroughActive, setWalkthroughActive] = useState(false);
+  const [walkthroughLabel, setWalkthroughLabel] = useState('');
   const skipAutoExpandRef = React.useRef(true);
 
   useEffect(() => {
@@ -691,8 +704,8 @@ export default function RoomLayoutPreview({
       {quality === 'showcase' && useWebGL ? (
         <p className="text-xs text-muted leading-relaxed">
           <span className="hidden sm:inline">
-            Visualisation <span className="font-semibold text-foreground">3D showcase</span> : textures, bloom, vignette et architecture.
-            Orbitez pour inspecter la salle.
+            Visualisation <span className="font-semibold text-foreground">vitrine 3D</span> : textures, lumière et architecture.
+            Tournez la salle pour visiter les tables.
           </span>
           <span className="sm:hidden">
             Vue 3D — masquez le toit ou les murs, puis passez en plein écran pour viser les sièges.
@@ -724,13 +737,41 @@ export default function RoomLayoutPreview({
                   tone="stage"
                 />
               ) : null}
+              {useWebGL ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (walkthroughActive) {
+                      setWalkthroughActive(false);
+                      setWalkthroughLabel('');
+                      return;
+                    }
+                    setWalkthroughActive(true);
+                    setWalkthroughLabel('Approche de l’entrée');
+                  }}
+                  aria-pressed={walkthroughActive}
+                  className={cn(
+                    'inline-flex items-center justify-center gap-1 min-h-11 min-w-11 px-2.5 rounded-full text-xs font-semibold transition touch-manipulation',
+                    'border border-background/20 bg-foreground/80 text-background backdrop-blur-md',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                    walkthroughActive && 'bg-background text-foreground border-background',
+                  )}
+                >
+                  <DoorOpen className="w-3.5 h-3.5" aria-hidden />
+                  <span>{walkthroughActive ? (walkthroughLabel || 'Visite…') : 'Faire le tour'}</span>
+                </button>
+              ) : null}
               <PlanSceneControls
                 showWalls={showWalls}
                 showRoof={showRoof}
                 onToggleWalls={() => setShowWalls((current) => !current)}
                 onToggleRoof={() => setShowRoof((current) => !current)}
                 showRoofControl={useWebGL}
-                onToggleFullscreen={() => setExpanded(false)}
+                onToggleFullscreen={() => {
+                  setWalkthroughActive(false);
+                  setWalkthroughLabel('');
+                  setExpanded(false);
+                }}
                 isFullscreen
                 variant="overlay"
               />
@@ -753,6 +794,12 @@ export default function RoomLayoutPreview({
                   selectedSeats={selectedSeats}
                   blockedSeats={blockedSeats}
                   onSelectSeat={onSelectSeat}
+                  walkthroughActive={walkthroughActive}
+                  onWalkthroughProgress={setWalkthroughLabel}
+                  onWalkthroughComplete={() => {
+                    setWalkthroughActive(false);
+                    setWalkthroughLabel('');
+                  }}
                   className="rounded-none"
                 />
               </Room3DErrorBoundary>
@@ -765,7 +812,9 @@ export default function RoomLayoutPreview({
           </div>
           <p className="text-xs text-stage-foreground/80 text-center px-4 py-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
             {useWebGL
-              ? 'Glissez pour orbiter · pincez pour zoomer · masquez toit et murs pour mieux viser'
+              ? walkthroughActive
+                ? `Visite guidée · ${walkthroughLabel || 'entrée par la porte'}`
+                : 'Glissez pour tourner la salle · ou lancez « Faire le tour »'
               : 'Pincez pour zoomer · masquez les murs pour voir toutes les places'}
           </p>
         </div>,

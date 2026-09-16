@@ -3832,6 +3832,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   blockedSeats = [],
 }, ref) {
   const blueprint = useMemo(() => ensureBlueprintDefaults(rawBlueprint), [rawBlueprint]);
+  const [tourCaption, setTourCaption] = useState('entrée par la porte');
   const presentationMode = presentationModeProp ?? blueprint.metadata.presentationMode === true;
   const orbitLocked = previewMode || presentationMode || walkthroughActive ? false : lockOrbit;
   const hideLabels = presentationMode || previewMode || walkthroughActive;
@@ -4123,7 +4124,10 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             hideLabels={hideLabels || !qualitySettings.showHints}
             walkthroughActive={walkthroughActive}
             reduceMotion={reduceMotion}
-            onWalkthroughProgress={onWalkthroughProgress}
+            onWalkthroughProgress={(label, progress) => {
+              setTourCaption(label);
+              onWalkthroughProgress?.(label, progress);
+            }}
             onWalkthroughComplete={onWalkthroughComplete}
             orbitControlsRef={orbitControlsRef}
             blockedSeats={blockedSeats}
@@ -4135,13 +4139,13 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       {walkthroughActive ? (
         <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
           <div className="rounded-md bg-foreground/85 px-2.5 py-1.5 text-xs font-bold text-background">
-            Visite guidée · entrée par la porte
+            Visite guidée · {tourCaption || 'entrée par la porte'}
           </div>
         </div>
       ) : presentationMode ? (
         <div className="pointer-events-none absolute bottom-2 left-2">
           <div className="rounded-md bg-foreground/85 px-2 py-1 text-xs font-bold text-background">
-            Présentation · orbit automatique
+            Présentation · la salle tourne toute seule
           </div>
         </div>
       ) : qualitySettings.showHints ? (
@@ -4161,8 +4165,8 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
         </div>
       ) : (
         <div className="pointer-events-none absolute bottom-2 right-2">
-          <div className="rounded-md bg-foreground/85 px-2 py-1 text-xs font-bold text-background">
-            Showcase · {renderQualityLabelsSafe(qualitySettings.quality)}
+            <div className="rounded-md bg-foreground/85 px-2 py-1 text-xs font-bold text-background">
+            Vitrine 3D · {renderQualityLabelsSafe(qualitySettings.quality)}
           </div>
         </div>
       )}
@@ -4174,6 +4178,6 @@ export default memo(RoomWebGLViewer);
 
 function renderQualityLabelsSafe(q: RenderQuality) {
   if (q === 'draft') return 'Brouillon';
-  if (q === 'showcase') return 'Showcase';
+  if (q === 'showcase') return 'Vitrine';
   return 'Standard';
 }

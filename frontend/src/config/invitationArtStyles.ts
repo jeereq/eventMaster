@@ -8,7 +8,8 @@ export type InvitationArtStyleId =
   | 'afro-luxe'
   | 'gravure-vintage'
   | 'minimaliste-luxe'
-  | 'cyber-neon';
+  | 'cyber-neon'
+  | 'encre-trait';
 
 export const DEFAULT_INVITATION_ART_STYLE: InvitationArtStyleId = 'realiste';
 
@@ -66,6 +67,11 @@ export const INVITATION_ART_STYLES: Array<{
     id: 'cyber-neon',
     label: 'Cyber & Néon',
     summary: 'Obsidian, lueur néon holographique, contrastes futuristes.',
+  },
+  {
+    id: 'encre-trait',
+    label: 'Encre & trait',
+    summary: 'Dessin au trait, noir et blanc, affiche de personnage.',
   },
 ];
 
