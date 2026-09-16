@@ -25,7 +25,10 @@ import {
   useNotificationInbox,
 } from '@/context/NotificationInboxContext';
 import DashboardTopBar, { useDashboardTitle } from '@/components/DashboardTopBar';
-import DashboardMobileBottomBar from '@/components/dashboard/DashboardMobileBottomBar';
+import DashboardMobileBottomBar, {
+  buildMobileBottomItems,
+  type MobileBottomNavItem,
+} from '@/components/dashboard/DashboardMobileBottomBar';
 import DashboardMobileMenuSheet from '@/components/dashboard/DashboardMobileMenuSheet';
 import UserAvatar from '@/components/UserAvatar';
 import ViewCustomizerDrawer, {
@@ -53,6 +56,29 @@ interface NavItem {
 interface NavSection {
  label?: string;
  items: NavItem[];
+}
+
+function navHrefKey(href: string, tab?: string) {
+  const qIndex = href.indexOf('?');
+  const path = qIndex >= 0 ? href.slice(0, qIndex) : href;
+  const query = qIndex >= 0 ? href.slice(qIndex + 1) : '';
+  const params = new URLSearchParams(query);
+  if (tab) params.set('tab', tab);
+  return [path, params.get('hub') || params.get('tab') || '', params.get('kind') || '', params.get('mode') || ''].join('|');
+}
+
+function filterNavForMobileSheet(sections: NavSection[], bottomItems: MobileBottomNavItem[]): NavSection[] {
+  const bottomKeys = new Set(
+    bottomItems
+      .filter((item) => !item.isMenuTrigger)
+      .map((item) => navHrefKey(item.href, item.tab)),
+  );
+  return sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !bottomKeys.has(navHrefKey(item.href, item.tab))),
+    }))
+    .filter((section) => section.items.length > 0);
 }
 
 function navItemIsActive(pathname: string, search: string, item: NavItem, currentTab: string) {
@@ -421,12 +447,12 @@ function buildDashboardNav(opts: {
 			navSection('Accueil', [
 				{ name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard },
 			]),
+			navSection('Abonnement & quotas', billingItems),
 			navSection('Prestations & Devis', providerActivityItems),
 			navSection('Réseau & Marketplace', providerNetworkItems),
 			navSection('Organisation', workspace.showTeam
 				? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users }]
 				: []),
-			navSection('Facturation', billingItems),
 			navSection('Compte', compteNavItems()),
 		);
 	}
@@ -501,12 +527,12 @@ function buildDashboardNav(opts: {
 		navSection('Accueil', [
 			{ name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard },
 		]),
+		navSection('Abonnement & quotas', billingItems),
 		navSection(primarySectionLabel, primaryItems),
 		navSection(vendorOnly ? 'Offres & Marketplace' : 'Marketplace', marketItems),
 		navSection('Organisation', workspace.showTeam
 			? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users }]
 			: []),
-		navSection('Facturation', billingItems),
 		navSection('Compte', compteNavItems()),
 	);
 }
@@ -517,30 +543,34 @@ function SidebarNav({
  setMobileMenuOpen,
  collapsed,
  fallbackTab = 'tenants',
+ variant = 'rail',
 }: {
  sections: NavSection[];
  pathname: string;
  setMobileMenuOpen: (open: boolean) => void;
  collapsed: boolean;
  fallbackTab?: string;
+ variant?: 'rail' | 'sheet';
 }) {
  const searchParams = useSearchParams();
  const currentTab = searchParams.get('tab') || fallbackTab;
  const { unreadCount } = useNotificationInbox();
 
+ const isSheet = variant === 'sheet';
+
  return (
- <nav className={cn('space-y-4', collapsed && 'space-y-2.5')} aria-label="Navigation principale">
+ <nav className={cn(isSheet ? 'space-y-3' : 'space-y-4', collapsed && 'space-y-2.5')} aria-label="Navigation principale">
  {sections.filter((section) => section.items.length > 0).map((section, sectionIdx) => (
  <div key={section.label ?? sectionIdx}>
  {section.label && !collapsed && (
- <p className="px-3 mb-1.5 text-xs font-bold uppercase tracking-wider text-muted">
+ <p className={cn('mb-1.5 text-xs font-semibold text-muted', isSheet ? 'px-1' : 'px-3')}>
  {section.label}
  </p>
  )}
  {section.label && collapsed && (
  <div className="mx-auto mb-1.5 h-px w-5 bg-border" aria-hidden title={section.label} />
  )}
- <div className="space-y-0.5">
+ <div className={cn(isSheet ? 'grid grid-cols-1 gap-1.5' : 'space-y-0.5')}>
  {section.items.map((item) => {
  const Icon = item.icon;
  const isActive = navItemIsActive(pathname, searchParams.toString(), item, currentTab);
@@ -593,13 +623,21 @@ function SidebarNav({
  title={collapsed ? (unreadLabel ? `${item.name} · ${unreadLabel}` : item.name) : undefined}
  className={cn(
  'group relative flex w-full items-center rounded-[var(--radius-button)] text-sm font-medium transition-colors duration-150 touch-manipulation select-none active:scale-[0.99]',
- collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5 min-h-[40px]',
+ isSheet
+  ? 'justify-between min-h-12 gap-3 p-2.5 rounded-2xl border'
+  : collapsed
+    ? 'justify-center px-2 py-2.5'
+    : 'gap-3 px-3 py-2.5 min-h-11',
  isActive
- ? 'bg-surface text-foreground shadow-[var(--shadow-soft)] font-semibold'
- : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
+  ? isSheet
+    ? 'bg-primary/10 border-primary/30 text-foreground font-semibold'
+    : 'bg-surface text-foreground shadow-[var(--shadow-soft)] font-semibold'
+  : isSheet
+    ? 'bg-surface-muted/40 border-border/60 text-foreground hover:bg-surface-muted'
+    : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
  )}
  >
- {isActive && (
+ {isActive && !isSheet && (
  <span
  className={cn(
  'absolute bg-primary rounded-full',
@@ -610,11 +648,11 @@ function SidebarNav({
  aria-hidden
  />
  )}
- <span className="relative shrink-0">
+ <span className={cn('relative shrink-0', isSheet && 'flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10')}>
  <Icon
  className={cn(
  'w-[18px] h-[18px] shrink-0 transition-colors',
- isActive ? 'text-primary' : 'text-muted group-hover:text-foreground',
+ isActive || isSheet ? 'text-primary' : 'text-muted group-hover:text-foreground',
  )}
  />
  {collapsed && isNotifications ? (
@@ -625,7 +663,12 @@ function SidebarNav({
  ) : null}
  </span>
  {!collapsed && (
- <span className="truncate text-[13px] leading-snug flex-1">{item.name}</span>
+ <span className="min-w-0 flex-1 text-left">
+  <span className="block truncate text-sm leading-snug">{item.name}</span>
+  {isSheet && item.description ? (
+    <span className="mt-0.5 block text-xs font-normal text-muted leading-snug line-clamp-2">{item.description}</span>
+  ) : null}
+ </span>
  )}
  {!collapsed && isNotifications ? (
   <UnreadCountBadge
@@ -818,7 +861,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
  if (loading || !token || !user) {
  return (
- <div className="min-h-screen flex items-center justify-center bg-[#f6f7f8] dark:bg-background px-4">
+ <div className="min-h-screen flex items-center justify-center bg-background px-4">
  <div className="flex flex-col items-center gap-4 animate-fade-in text-center max-w-sm">
  <SiteBrandMark href={null} size="lg" showLabel={false} />
  <Loader2 className="w-6 h-6 text-primary animate-spin" />
@@ -869,6 +912,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   commercialPermissions: user?.commercialPermissions,
   allStudiosBlocked,
  });
+ const bottomNavItems = buildMobileBottomItems({
+  role: user?.role,
+  access,
+  workspace,
+  accountKind: tenant?.accountKind,
+  isClientAccount,
+  allStudiosBlocked,
+ });
+ const sheetNavSections = filterNavForMobileSheet(navSections, bottomNavItems);
 
  const showNotifications = Boolean(user);
 
@@ -1151,11 +1203,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             }
           >
             <SidebarNav
-              sections={withNavTips(navSections)}
+              sections={withNavTips(sheetNavSections)}
               pathname={pathname}
               setMobileMenuOpen={setMobileMenuOpen}
               collapsed={false}
               fallbackTab={user.role === 'SUPER_ADMIN' ? 'overview' : 'tenants'}
+              variant="sheet"
             />
           </Suspense>
 
@@ -1212,7 +1265,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={toggleSidebarCollapsed}
         />
-        <div className="page-container relative z-10 pt-3 sm:pt-6 lg:pt-8 pb-[calc(6.25rem+var(--em-site-install-bar)+env(safe-area-inset-bottom,0px))] md:pb-6 lg:pb-8 flex-1 em-dashboard-content">
+        <div className="em-auth-container relative z-10 pt-3 sm:pt-6 lg:pt-8 pb-[calc(6.25rem+var(--em-site-install-bar)+env(safe-area-inset-bottom,0px))] md:pb-6 lg:pb-8 flex-1 em-dashboard-content">
           <UserLegalGate>
             {children}
             <FirstLoginTourHost />

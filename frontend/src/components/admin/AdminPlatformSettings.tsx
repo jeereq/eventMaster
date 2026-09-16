@@ -577,8 +577,8 @@ export default function AdminPlatformSettings({
                       {value.aiStudioModels?.invitationModel?.includes('flash')
                         ? 'Rapide'
                         : value.aiStudioModels?.invitationModel?.includes('imagen')
-                        ? 'Imagen'
-                        : 'Haute Définition'}
+                          ? 'Imagen'
+                          : 'Haute Définition'}
                     </span>
                   </div>
 
@@ -625,8 +625,8 @@ export default function AdminPlatformSettings({
                       {value.aiStudioModels?.roomPlanModel?.includes('flash')
                         ? 'Agile'
                         : value.aiStudioModels?.roomPlanModel?.includes('2.5')
-                        ? 'Gemini 2.5'
-                        : 'Spatial Pro'}
+                          ? 'Gemini 2.5'
+                          : 'Spatial Pro'}
                     </span>
                   </div>
 
@@ -738,46 +738,46 @@ export default function AdminPlatformSettings({
               onChange={(donationsAccess) => patch({ donationsAccess })}
             />
             <div className="pt-4 mt-2 border-t border-border space-y-4">
-                <SectionTitle icon={Wallet}>Jetons IA</SectionTitle>
-                <p className="text-xs text-muted -mt-2">
-                  Prix unitaire et montant minimum d’achat. Appliqués immédiatement au checkout FlexPay.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className={labelClass}>Prix d’un jeton (FC)</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={1000000}
-                      step={1}
-                      value={Number(value.aiTokenPriceCdf ?? 416)}
-                      onChange={(e) => patch({ aiTokenPriceCdf: Math.max(1, Number(e.target.value) || 416) })}
-                      className={cn(fieldClass, 'font-medium')}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className={labelClass}>Seuil d’achat (FC)</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={100000000}
-                      step={100}
-                      value={Number(value.aiTokenMinPurchaseCdf ?? 2500)}
-                      onChange={(e) => patch({ aiTokenMinPurchaseCdf: Math.max(1, Number(e.target.value) || 2500) })}
-                      className={cn(fieldClass, 'font-medium')}
-                    />
-                  </div>
+              <SectionTitle icon={Wallet}>Jetons IA</SectionTitle>
+              <p className="text-xs text-muted -mt-2">
+                Prix unitaire et montant minimum d’achat. Appliqués immédiatement au checkout FlexPay.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className={labelClass}>Prix d’un jeton (FC)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={1000000}
+                    step={1}
+                    value={Number(value.aiTokenPriceCdf ?? 416)}
+                    onChange={(e) => patch({ aiTokenPriceCdf: Math.max(1, Number(e.target.value) || 416) })}
+                    className={cn(fieldClass, 'font-medium')}
+                  />
                 </div>
-                <p className="text-xs text-muted">
-                  Exemple : {Math.max(1, Math.floor(Number(value.aiTokenMinPurchaseCdf || 2500) / Number(value.aiTokenPriceCdf || 416)))} jeton
-                  {Math.floor(Number(value.aiTokenMinPurchaseCdf || 2500) / Number(value.aiTokenPriceCdf || 416)) > 1 ? 's' : ''} pour{' '}
-                  {Number(value.aiTokenMinPurchaseCdf || 2500).toLocaleString('fr-FR')} FC.
-                </p>
-                <WelcomeAiGrantsEditor
-                  value={sanitizeWelcomeAiGrants(value.welcomeAiGrants)}
-                  priceCdf={Number(value.aiTokenPriceCdf || 416)}
-                  onChange={(welcomeAiGrants) => patch({ welcomeAiGrants })}
-                />
+                <div className="space-y-1.5">
+                  <label className={labelClass}>Seuil d’achat (FC)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100000000}
+                    step={100}
+                    value={Number(value.aiTokenMinPurchaseCdf ?? 2500)}
+                    onChange={(e) => patch({ aiTokenMinPurchaseCdf: Math.max(1, Number(e.target.value) || 2500) })}
+                    className={cn(fieldClass, 'font-medium')}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted">
+                Exemple : {Math.max(1, Math.floor(Number(value.aiTokenMinPurchaseCdf || 2500) / Number(value.aiTokenPriceCdf || 416)))} jeton
+                {Math.floor(Number(value.aiTokenMinPurchaseCdf || 2500) / Number(value.aiTokenPriceCdf || 416)) > 1 ? 's' : ''} pour{' '}
+                {Number(value.aiTokenMinPurchaseCdf || 2500).toLocaleString('fr-FR')} FC.
+              </p>
+              <WelcomeAiGrantsEditor
+                value={sanitizeWelcomeAiGrants(value.welcomeAiGrants)}
+                priceCdf={Number(value.aiTokenPriceCdf || 416)}
+                onChange={(welcomeAiGrants) => patch({ welcomeAiGrants })}
+              />
             </div>
           </div>
         )}

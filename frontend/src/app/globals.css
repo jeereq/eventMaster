@@ -1604,7 +1604,8 @@ html[data-mood="celebrate"] .font-display {
 
 /* Conteneur page unique — même largeur pour tous les rôles (USER, COMMERCIAL, SUPER_ADMIN) */
 .app-container,
-.page-container {
+.page-container,
+.em-auth-container {
   width: 91.666667%; /* Tailwind w-11/12 */
   max-width: 1440px;
   margin-left: auto;
@@ -1620,6 +1621,13 @@ html[data-mood="celebrate"] .font-display {
     max-width: none;
     padding-left: 0.75rem;
     padding-right: 0.75rem;
+  }
+
+  .em-auth-container {
+    width: 91.666667%;
+    max-width: 1440px;
+    padding-left: 0;
+    padding-right: 0;
   }
 }
 

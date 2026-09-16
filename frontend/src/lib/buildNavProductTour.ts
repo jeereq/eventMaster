@@ -67,6 +67,8 @@ export function buildOrgNavTourIds(
   access?: OrgAccess | null,
 ): Array<{ tourId: string; route?: string }> {
   const tabs: Array<{ tourId: string; route?: string }> = [{ tourId: 'nav-dashboard' }];
+  if (access?.canViewBilling) tabs.push({ tourId: 'nav-billing' });
+  if (access?.canViewInvoices) tabs.push({ tourId: 'nav-invoices', route: '/dashboard/invoices' });
   if (!workspace || workspace.showEvents) tabs.push({ tourId: 'nav-events' });
   if (workspace?.showRooms) tabs.push({ tourId: 'nav-rooms' });
   if (workspace?.showBrowseCatalogue) tabs.push({ tourId: 'nav-catalogue' });
@@ -81,8 +83,6 @@ export function buildOrgNavTourIds(
   }
   if (workspace?.showTemplates) tabs.push({ tourId: 'nav-templates', route: '/dashboard/templates' });
   if (workspace?.showAnalytics) tabs.push({ tourId: 'nav-analytics-org' });
-  if (access?.canViewBilling) tabs.push({ tourId: 'nav-billing' });
-  if (access?.canViewInvoices) tabs.push({ tourId: 'nav-invoices', route: '/dashboard/invoices' });
   tabs.push({ tourId: 'nav-guide' }, { tourId: 'nav-profile' });
   return tabs;
 }
@@ -223,6 +223,7 @@ export function buildFirstLoginTour(
 
     default: {
       push('nav-dashboard', home);
+      if (access?.canViewBilling) push('nav-billing');
       if (!workspace || workspace.showEvents) {
         push('nav-events');
         if (workspace?.showBrowseCatalogue) push('nav-catalogue');
@@ -232,7 +233,6 @@ export function buildFirstLoginTour(
       } else {
         if (workspace.showRooms) push('nav-rooms');
         if (workspace.showMarketplace) push('nav-marketplace');
-        if (access?.canViewBilling) push('nav-billing');
       }
       const nextHint = workspace && !workspace.showEvents
         ? 'Ensuite : publiez une fiche salle ou prestation, puis choisissez un forfait marketplace.'

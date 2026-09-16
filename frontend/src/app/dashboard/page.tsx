@@ -35,6 +35,7 @@ import { getTemplateElementSummary } from '@/lib/landingTemplateAdapter';
 import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
 import AdminOpsHome from '@/components/admin/AdminOpsHome';
 import AdminPlatformSettings from '@/components/admin/AdminPlatformSettings';
+import AdminUserFormModal from '@/components/admin/AdminUserFormModal';
 import { ACCOUNT_KIND_FILTER_LABELS, ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
 import { unwrapAdminList, adminListParams } from '@/lib/adminList';
 import {
@@ -1469,15 +1470,12 @@ function DashboardPageContent() {
  setIsUserModalOpen(true);
  };
 
- const handleSaveUser = async (e: React.FormEvent) => {
- e.preventDefault();
+ const handleSaveUser = async () => {
  if (!modalUserEmail) {
- alert('L\'adresse email est requise.');
- return;
+ throw new Error('L’adresse e-mail est requise.');
  }
  if (userModalMode === 'create' && !modalUserPassword) {
- alert('Le mot de passe est requis pour un nouvel utilisateur.');
- return;
+ throw new Error('Le mot de passe est requis pour un nouvel utilisateur.');
  }
 
  setUpdatingUser(true);
@@ -1523,8 +1521,8 @@ function DashboardPageContent() {
  }
  setIsUserModalOpen(false);
  await loadUsers();
- } catch (err: any) {
- alert(err.message || 'Erreur lors de l\'enregistrement de l\'utilisateur');
+ } catch (err: unknown) {
+ throw err instanceof Error ? err : new Error('Erreur lors de l’enregistrement de l’utilisateur');
  } finally {
  setUpdatingUser(false);
  }
@@ -4982,389 +4980,43 @@ function DashboardPageContent() {
  </div>
  )}
 
-        {/* Modal: Create or Edit User */}
-        {isUserModalOpen && (
-          <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="sa-user-modal-title"
-              className="bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl max-w-md w-full max-h-[90dvh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200"
-            >
-              <div className="px-5 py-4 sm:px-6 sm:py-5 border-b border-border-subtle bg-surface-muted flex items-center justify-between shrink-0">
-                <h3 id="sa-user-modal-title" className="font-bold text-foreground flex items-center gap-2 text-base">
-                  <Users className="w-5 h-5 text-primary" />
-                  {userModalMode === 'create' ? 'Créer un Utilisateur' : `Modifier l'Utilisateur : ${selectedUser?.email}`}
-                </h3>
-                <button 
-                  onClick={() => setIsUserModalOpen(false)}
-                  aria-label="Fermer la fenêtre"
-                  className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleSaveUser} className="p-5 sm:p-6 space-y-5 overflow-y-auto flex-1 overscroll-contain">
- {/* Nom complet */}
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Nom complet</label>
- <input
- type="text"
- placeholder="Ex: Jean Dupont"
- value={modalUserName}
- onChange={(e) => setUserName(e.target.value)}
- className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
- />
- </div>
-
- {/* Email */}
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Adresse Email</label>
- <input
- type="email"
- placeholder="Ex: jean.dupont@gmail.com"
- value={modalUserEmail}
- onChange={(e) => setUserEmail(e.target.value)}
- className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
- required
- />
- </div>
-
- {/* Mot de passe */}
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">
- {userModalMode === 'create' ? 'Mot de passe' : 'Nouveau mot de passe'}
- </label>
- <input
- type="password"
- placeholder={userModalMode === 'create' ? "Saisir le mot de passe..." : "Laisser vide pour ne pas modifier..."}
- value={modalUserPassword}
- onChange={(e) => setUserPassword(e.target.value)}
- className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
- required={userModalMode === 'create'}
- />
- </div>
-
- {/* Rôle */}
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Rôle de l'Utilisateur</label>
- <select
- value={modalRole}
- onChange={(e) => setModalRole(e.target.value as any)}
- className="w-full bg-surface-muted border border-border rounded-xl px-3.5 py-2.5 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
- >
- <option value="USER">USER</option>
- <option value="COMMERCIAL">COMMERCIAL</option>
- <option value="SUPER_ADMIN">SUPER_ADMIN</option>
- </select>
- </div>
-
- {modalRole === 'COMMERCIAL' && (
-                    <>
- <div className="grid grid-cols-2 gap-3">
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">1er paiement (%)</label>
- <input
- type="number"
- min={0}
- max={100}
- value={modalCommissionRate}
- onChange={(e) => setModalCommissionRate(e.target.value)}
- className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm"
- />
- </div>
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Paiements suivants (%)</label>
- <input
- type="number"
- min={0}
- max={100}
- value={modalRenewalCommissionRate}
- onChange={(e) => setModalRenewalCommissionRate(e.target.value)}
- className="w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-xl text-sm"
- />
- </div>
-                        <p className="col-span-2 text-xs text-muted">Par défaut : 30 % au premier paiement, puis 20 %.</p>
- </div>
-
-                      {/* Droits délégués Super Admin */}
-                      <div className="space-y-3 p-4 bg-surface rounded-xl border border-border">
-                        <div className="flex items-center gap-2">
-                          <Shield className="w-4 h-4 text-primary shrink-0" />
-                          <span className="text-xs font-bold text-foreground uppercase tracking-wider">
-                            Droits délégués (Accès réservés)
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted leading-relaxed">
-                          Attribuez à ce commercial l&apos;accès à certaines fonctionnalités réservées au Super Admin pour lui permettre d&apos;administrer la plateforme.
-                        </p>
-
-                        <div className="space-y-2 pt-1">
-                          <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border hover:bg-surface-muted/50 cursor-pointer transition">
-                            <input
-                              type="checkbox"
-                              checked={modalCommercialPermissions.canManageTemplates}
-                              onChange={(e) =>
-                                setModalCommercialPermissions((prev) => ({ ...prev, canManageTemplates: e.target.checked }))
-                              }
-                              className="mt-0.5 w-4 h-4 text-primary rounded border-border focus:ring-primary"
-                            />
-                            <div>
-                              <span className="text-sm font-semibold text-foreground block">
-                                Conception & Édition des modèles
-                              </span>
-                              <span className="text-xs text-muted block mt-0.5">
-                                Accès à la gestion, conception visuelle et publication des modèles d&apos;invitation sur la vitrine.
-                              </span>
-                            </div>
-                          </label>
-
-                          <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border hover:bg-surface-muted/50 cursor-pointer transition">
-                            <input
-                              type="checkbox"
-                              checked={modalCommercialPermissions.canManageMessageTemplates}
-                              onChange={(e) =>
-                                setModalCommercialPermissions((prev) => ({ ...prev, canManageMessageTemplates: e.target.checked }))
-                              }
-                              className="mt-0.5 w-4 h-4 text-primary rounded border-border focus:ring-primary"
-                            />
-                            <div>
-                              <span className="text-sm font-semibold text-foreground block">
-                                Modèles de messages automatiques
-                              </span>
-                              <span className="text-xs text-muted block mt-0.5">
-                                Création et personnalisation des templates de messages WhatsApp, SMS et e-mail.
-                              </span>
-                            </div>
-                          </label>
-
-                          <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border hover:bg-surface-muted/50 cursor-pointer transition">
-                            <input
-                              type="checkbox"
-                              checked={modalCommercialPermissions.canManageCatalog}
-                              onChange={(e) =>
-                                setModalCommercialPermissions((prev) => ({ ...prev, canManageCatalog: e.target.checked }))
-                              }
-                              className="mt-0.5 w-4 h-4 text-primary rounded border-border focus:ring-primary"
-                            />
-                            <div>
-                              <span className="text-sm font-semibold text-foreground block">
-                                Modération du catalogue prestataire
-                              </span>
-                              <span className="text-xs text-muted block mt-0.5">
-                                Validation et gestion des salles, prestataires et offres de service.
-                              </span>
-                            </div>
-                          </label>
-
-                          <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border hover:bg-surface-muted/50 cursor-pointer transition">
-                            <input
-                              type="checkbox"
-                              checked={modalCommercialPermissions.canManageEvents}
-                              onChange={(e) =>
-                                setModalCommercialPermissions((prev) => ({ ...prev, canManageEvents: e.target.checked }))
-                              }
-                              className="mt-0.5 w-4 h-4 text-primary rounded border-border focus:ring-primary"
-                            />
-                            <div>
-                              <span className="text-sm font-semibold text-foreground block">
-                                Supervision des événements plateforme
-                              </span>
-                              <span className="text-xs text-muted block mt-0.5">
-                                Consultation et supervision des événements de toutes les organisations.
-                              </span>
-                            </div>
-                          </label>
-
-                          <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border hover:bg-surface-muted/50 cursor-pointer transition">
-                            <input
-                              type="checkbox"
-                              checked={modalCommercialPermissions.canManageGuests}
-                              onChange={(e) =>
-                                setModalCommercialPermissions((prev) => ({ ...prev, canManageGuests: e.target.checked }))
-                              }
-                              className="mt-0.5 w-4 h-4 text-primary rounded border-border focus:ring-primary"
-                            />
-                            <div>
-                              <span className="text-sm font-semibold text-foreground block">
-                                Supervision des listes d&apos;invités
-                              </span>
-                              <span className="text-xs text-muted block mt-0.5">
-                                Suivi des listes d&apos;invités, pointages et exports des événements plateforme.
-                              </span>
-                            </div>
-                          </label>
-
-                          <label className="flex items-start gap-3 p-2.5 rounded-lg border border-border hover:bg-surface-muted/50 cursor-pointer transition">
-                            <input
-                              type="checkbox"
-                              checked={modalCommercialPermissions.canManageShowcasePlans}
-                              onChange={(e) =>
-                                setModalCommercialPermissions((prev) => ({ ...prev, canManageShowcasePlans: e.target.checked }))
-                              }
-                              className="mt-0.5 w-4 h-4 text-primary rounded border-border focus:ring-primary"
-                            />
-                            <div>
-                              <span className="text-sm font-semibold text-foreground block">
-                                Plans 2D / 3D témoins & vitrine
-                              </span>
-                              <span className="text-xs text-muted block mt-0.5">
-                                Création, édition dans l&apos;éditeur de salle 3D, sélection et publication des plans affichés sur la vitrine publique.
-                              </span>
-                            </div>
-                          </label>
-                        </div>
-                      </div>
-                    </>
- )}
-
- {/* Rattachement Tenant */}
- {modalRole !== 'SUPER_ADMIN' && (
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Rattachement à une Organisation</label>
- <select
- value={modalUserTenantId}
- onChange={(e) => setUserTenantId(e.target.value)}
- className="w-full bg-surface-muted border border-border rounded-xl px-3.5 py-2.5 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
- >
- <option value="">Aucun rattachement</option>
- {tenantOptions.map(t => (
- <option key={t.id} value={t.id}>{t.name}</option>
- ))}
- </select>
- </div>
- )}
-
- {/* Gestion d'Abonnement & Licence (Super Admin) */}
- {user?.role === 'SUPER_ADMIN' && (
- <div className="space-y-3 p-4 bg-surface rounded-xl border border-border">
- <div className="flex items-center gap-2">
- <CreditCard className="w-4 h-4 text-primary shrink-0" />
- <span className="text-xs font-bold text-foreground uppercase tracking-wider">
- Gestion d'Abonnement &amp; Licence
- </span>
- </div>
- <p className="text-xs text-muted leading-relaxed">
- Attribuez un forfait, activez la licence ou accordez un accès gracieux pour cet utilisateur ou son organisation.
- </p>
- <div className="space-y-3 pt-1">
- <div className="space-y-1">
- <label className="text-xs font-semibold text-muted">Forfait attribué</label>
- <select
- value={modalUserPlan}
- onChange={(e) => setModalUserPlan(e.target.value)}
- className="w-full bg-surface-muted border border-border rounded-xl px-3.5 py-2.5 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 min-h-11"
- >
- <option value="FREE">Essentiel (FREE - Gratuit)</option>
- <optgroup label="Particuliers (B2C)">
- <option value="PERSONAL_50">Particulier 50 (50 invités)</option>
- <option value="PERSONAL_100">Particulier 100 (100 invités)</option>
- <option value="PERSONAL_200">Particulier 200 (200 invités)</option>
- <option value="PERSONAL_PLUS">Particulier Plus (&gt;200 invités)</option>
- </optgroup>
- <optgroup label="Professionnels (B2B)">
- <option value="STANDARD">Business (Standard)</option>
- <option value="PREMIUM">Premium</option>
- <option value="PREMIUM_PLUS">Premium Plus</option>
- <option value="ENTERPRISE_1">Enterprise 1</option>
- <option value="ENTERPRISE_2">Enterprise 2</option>
- <option value="ENTERPRISE_3">Enterprise 3</option>
- </optgroup>
- <optgroup label="Marketplace Dédié">
- <option value="VENUE">Salle uniquement</option>
- <option value="SERVICE">Prestataire uniquement</option>
- <option value="CATALOG">Salle &amp; Presta</option>
- </optgroup>
- </select>
- </div>
-
- <div className="grid grid-cols-2 gap-3">
- <div className="space-y-1">
- <label className="text-xs font-semibold text-muted">Durée (jours)</label>
- <input
- type="number"
- min={1}
- value={modalUserDurationDays}
- onChange={(e) => setModalUserDurationDays(parseInt(e.target.value) || 30)}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-sm min-h-11"
- />
- </div>
- <div className="space-y-1">
- <label className="text-xs font-semibold text-muted">Date fin (optionnelle)</label>
- <input
- type="date"
- value={modalUserExpiresAt}
- onChange={(e) => setModalUserExpiresAt(e.target.value)}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-sm min-h-11"
- />
- </div>
- </div>
-
- <div className="flex flex-col gap-2 pt-1">
- <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
- <input
- type="checkbox"
- checked={modalUserLicenseActive}
- onChange={(e) => setModalUserLicenseActive(e.target.checked)}
- className="w-4 h-4 text-primary rounded border-border focus:ring-primary"
- />
- <span>Licence contractuelle active</span>
- </label>
- <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-amber-700 dark:text-amber-400">
- <input
- type="checkbox"
- checked={modalUserComplimentary}
- onChange={(e) => setModalUserComplimentary(e.target.checked)}
- className="w-4 h-4 text-amber-600 rounded border-border focus:ring-amber-500"
- />
- <span>Accès gracieux offert (« complimentary »)</span>
- </label>
- </div>
- </div>
- </div>
- )}
-
- {/* Email Verified */}
- <div className="flex items-center justify-between p-4 bg-surface-muted rounded-xl border border-border">
- <div className="space-y-0.5">
- <div className="text-sm font-bold text-foreground">Vérification de l'Email</div>
- <div className="text-xs text-muted">Marquer l'adresse email comme confirmée</div>
- </div>
- <button
- type="button"
-                      role="switch"
-                      aria-checked={modalIsEmailVerified}
-                      aria-label="Vérification de l'adresse e-mail"
- onClick={() => setModalIsEmailVerified(!modalIsEmailVerified)}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${modalIsEmailVerified ? 'bg-primary' : 'bg-surface-muted border-border'}`}
- >
- <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${modalIsEmailVerified ? 'translate-x-5' : 'translate-x-0'}`} />
- </button>
- </div>
-
-              {/* Actions */}
-              <div className="flex gap-3 pt-3 sticky bottom-0 -mx-5 -mb-5 sm:-mx-6 sm:-mb-6 p-4 sm:p-5 bg-surface/95 backdrop-blur-md border-t border-border mt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsUserModalOpen(false)}
-                  className="flex-1 min-h-11 border border-border hover:bg-surface-muted text-foreground font-bold rounded-xl text-sm transition"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  disabled={updatingUser}
-                  className="flex-1 min-h-11 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md"
-                >
-                  {updatingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  Enregistrer
-                </button>
-              </div>
-            </form>
- </div>
- </div>
- )}
+        <AdminUserFormModal
+          open={isUserModalOpen}
+          mode={userModalMode}
+          emailLabel={selectedUser?.email}
+          submitting={updatingUser}
+          name={modalUserName}
+          email={modalUserEmail}
+          password={modalUserPassword}
+          role={modalRole}
+          tenantId={modalUserTenantId}
+          tenantOptions={tenantOptions}
+          isEmailVerified={modalIsEmailVerified}
+          commissionRate={modalCommissionRate}
+          renewalCommissionRate={modalRenewalCommissionRate}
+          commercialPermissions={modalCommercialPermissions}
+          plan={modalUserPlan}
+          licenseActive={modalUserLicenseActive}
+          durationDays={modalUserDurationDays}
+          expiresAt={modalUserExpiresAt}
+          complimentary={modalUserComplimentary}
+          onClose={() => setIsUserModalOpen(false)}
+          onSubmit={handleSaveUser}
+          setName={setUserName}
+          setEmail={setUserEmail}
+          setPassword={setUserPassword}
+          setRole={setModalRole}
+          setTenantId={setUserTenantId}
+          setIsEmailVerified={setModalIsEmailVerified}
+          setCommissionRate={setModalCommissionRate}
+          setRenewalCommissionRate={setModalRenewalCommissionRate}
+          setCommercialPermissions={setModalCommercialPermissions}
+          setPlan={setModalUserPlan}
+          setLicenseActive={setModalUserLicenseActive}
+          setDurationDays={setModalUserDurationDays}
+          setExpiresAt={setModalUserExpiresAt}
+          setComplimentary={setModalUserComplimentary}
+        />
 
         {/* Modal: Create or Edit Event (Super Admin) */}
         {isEventModalOpen && (

@@ -405,6 +405,13 @@ export default function OrganizerDashboardHome({
           badge: null,
         },
         {
+          id: 'billing' as const,
+          label: isManager ? 'Organisation & Quotas' : 'Abonnement Prestataire',
+          shortLabel: isManager ? 'Quotas' : 'Abonnement',
+          icon: isManager ? Shield : Crown,
+          badge: currentPlanDisplayName,
+        },
+        {
           id: 'spaces' as const,
           label: 'Prestations & Offres',
           shortLabel: 'Prestations',
@@ -468,13 +475,6 @@ export default function OrganizerDashboardHome({
               },
             ]
           : []),
-        {
-          id: 'billing' as const,
-          label: isManager ? 'Organisation & Quotas' : 'Abonnement Prestataire',
-          shortLabel: isManager ? 'Quotas' : 'Abonnement',
-          icon: isManager ? Shield : Crown,
-          badge: currentPlanDisplayName,
-        },
       ];
     }
 
@@ -489,6 +489,13 @@ export default function OrganizerDashboardHome({
           shortLabel: 'Synthèse',
           icon: LayoutDashboard,
           badge: null,
+        },
+        {
+          id: 'billing' as const,
+          label: isManager ? 'Organisation & Quotas' : 'Abonnement & Quotas',
+          shortLabel: isManager ? 'Quotas' : 'Abonnement',
+          icon: isManager ? Shield : Crown,
+          badge: currentPlanDisplayName,
         },
         {
           id: 'spaces' as const,
@@ -554,13 +561,6 @@ export default function OrganizerDashboardHome({
               },
             ]
           : []),
-        {
-          id: 'billing' as const,
-          label: isManager ? 'Organisation & Quotas' : 'Abonnement & Quotas',
-          shortLabel: isManager ? 'Quotas' : 'Abonnement',
-          icon: isManager ? Shield : Crown,
-          badge: currentPlanDisplayName,
-        },
       ];
     }
 
@@ -571,6 +571,13 @@ export default function OrganizerDashboardHome({
         shortLabel: 'Synthèse',
         icon: LayoutDashboard,
         badge: null,
+      },
+      {
+        id: 'billing' as const,
+        label: isManager ? 'Organisation & Quotas' : 'Abonnement & Quotas',
+        shortLabel: isManager ? 'Quotas' : 'Abonnement',
+        icon: isManager ? Shield : Crown,
+        badge: currentPlanDisplayName,
       },
       {
         id: 'events' as const,
@@ -632,13 +639,6 @@ export default function OrganizerDashboardHome({
             },
           ]
         : []),
-      {
-        id: 'billing' as const,
-        label: isManager ? 'Organisation & Quotas' : 'Abonnement & Quotas',
-        shortLabel: isManager ? 'Quotas' : 'Abonnement',
-        icon: isManager ? Shield : Crown,
-        badge: currentPlanDisplayName,
-      },
     ];
   }, [
     isServiceProvider,
