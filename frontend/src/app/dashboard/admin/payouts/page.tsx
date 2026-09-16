@@ -437,37 +437,45 @@ export default function AdminSaasPayoutsPage() {
       />
 
       {/* Onglets de navigation : Commissions SaaS vs Reversements Événements */}
-      <div className="flex border-b border-border gap-2">
+      <div role="tablist" aria-label="Catégories de versements et reversements" className="flex border-b border-border gap-2">
         <button
           type="button"
+          role="tab"
+          id="tab-payouts-saas"
+          aria-controls="panel-payouts-saas"
+          aria-selected={payoutTab === 'saas'}
           onClick={() => setPayoutTab('saas')}
           className={cn(
-            "px-4 py-2.5 text-sm font-bold border-b-2 transition flex items-center gap-2",
+            "px-4 py-2.5 min-h-11 text-sm font-bold border-b-2 transition flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
             payoutTab === 'saas'
               ? "border-primary text-primary"
               : "border-transparent text-muted hover:text-foreground"
           )}
         >
-          <Wallet className="w-4 h-4" />
+          <Wallet className="w-4 h-4" aria-hidden />
           Commissions Commerciales SaaS
         </button>
         <button
           type="button"
+          role="tab"
+          id="tab-payouts-events"
+          aria-controls="panel-payouts-events"
+          aria-selected={payoutTab === 'events'}
           onClick={() => setPayoutTab('events')}
           className={cn(
-            "px-4 py-2.5 text-sm font-bold border-b-2 transition flex items-center gap-2",
+            "px-4 py-2.5 min-h-11 text-sm font-bold border-b-2 transition flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
             payoutTab === 'events'
               ? "border-primary text-primary"
               : "border-transparent text-muted hover:text-foreground"
           )}
         >
-          <Ticket className="w-4 h-4" />
+          <Ticket className="w-4 h-4" aria-hidden />
           Reversements Événements (Billetterie & Dons)
         </button>
       </div>
 
       {payoutTab === 'saas' && (
-        <>
+        <div id="panel-payouts-saas" role="tabpanel" aria-labelledby="tab-payouts-saas" className="space-y-6">
           {error && <Alert variant="error">{error}</Alert>}
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -798,12 +806,12 @@ export default function AdminSaasPayoutsPage() {
           </div>
         )}
       </Modal>
-        </>
+        </div>
       )}
 
       {/* ─── VUE DES REVERSEMENTS D'ÉVÉNEMENTS (BILLETTERIE & DONS) ─── */}
       {payoutTab === 'events' && (
-        <div className="space-y-6">
+        <div id="panel-payouts-events" role="tabpanel" aria-labelledby="tab-payouts-events" className="space-y-6">
           {/* KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="bg-surface-muted border border-border rounded-xl p-3.5 sm:p-4">
@@ -849,14 +857,17 @@ export default function AdminSaasPayoutsPage() {
               value={eventSearchQuery}
               onChange={(e) => setEventSearchQuery(e.target.value)}
               placeholder="Rechercher un événement, une organisation..."
-              className="flex-1 bg-surface-muted border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/25"
+              aria-label="Rechercher un événement ou une organisation"
+              className="flex-1 bg-surface-muted border border-border rounded-lg px-3 py-2 text-sm min-h-11 focus:outline-none focus:ring-2 focus:ring-primary/25"
             />
-            <div className="flex items-center gap-1.5 self-end sm:self-auto">
+            <div role="group" aria-label="Filtrer par statut de versement" className="flex items-center gap-1.5 self-end sm:self-auto">
               <button
                 type="button"
+                aria-pressed={eventPayoutStatusFilter === 'all'}
+                aria-label="Afficher tous les statuts"
                 onClick={() => setEventPayoutStatusFilter('all')}
                 className={cn(
-                  "px-3 py-1.5 text-xs font-semibold rounded-lg transition",
+                  "px-3 py-1.5 min-h-11 text-xs font-semibold rounded-lg transition inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
                   eventPayoutStatusFilter === 'all'
                     ? "bg-primary text-white"
                     : "bg-surface-muted text-muted hover:text-foreground"
@@ -866,11 +877,13 @@ export default function AdminSaasPayoutsPage() {
               </button>
               <button
                 type="button"
+                aria-pressed={eventPayoutStatusFilter === 'due'}
+                aria-label="Afficher les reversements dus"
                 onClick={() => setEventPayoutStatusFilter('due')}
                 className={cn(
-                  "px-3 py-1.5 text-xs font-semibold rounded-lg transition",
+                  "px-3 py-1.5 min-h-11 text-xs font-semibold rounded-lg transition inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
                   eventPayoutStatusFilter === 'due'
-                    ? "bg-amber-500 text-white"
+                    ? "bg-amber-600 text-white"
                     : "bg-surface-muted text-muted hover:text-foreground"
                 )}
               >
@@ -878,11 +891,13 @@ export default function AdminSaasPayoutsPage() {
               </button>
               <button
                 type="button"
+                aria-pressed={eventPayoutStatusFilter === 'paid'}
+                aria-label="Afficher les reversements réglés"
                 onClick={() => setEventPayoutStatusFilter('paid')}
                 className={cn(
-                  "px-3 py-1.5 text-xs font-semibold rounded-lg transition",
+                  "px-3 py-1.5 min-h-11 text-xs font-semibold rounded-lg transition inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
                   eventPayoutStatusFilter === 'paid'
-                    ? "bg-emerald-600 text-white"
+                    ? "bg-primary-solid text-primary-foreground"
                     : "bg-surface-muted text-muted hover:text-foreground"
                 )}
               >
@@ -1031,7 +1046,8 @@ export default function AdminSaasPayoutsPage() {
                               setSettleNotes('');
                               setSettlePaymentMethod('Virement Bancaire');
                             }}
-                            className="min-h-10"
+                            className="min-h-11 sm:min-h-10"
+                            aria-label={`Marquer le reversement pour l'événement ${ev.eventTitle}`}
                           >
                             Marquer le reversement
                           </Button>
@@ -1046,7 +1062,8 @@ export default function AdminSaasPayoutsPage() {
                               setSettleNotes(ev.notes || '');
                               setSettlePaymentMethod(ev.paymentMethod || 'Virement Bancaire');
                             }}
-                            className="min-h-10"
+                            className="min-h-11 sm:min-h-10"
+                            aria-label={`Modifier le reversement pour l'événement ${ev.eventTitle}`}
                           >
                             Modifier le versement
                           </Button>

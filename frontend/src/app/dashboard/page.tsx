@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useRef, Suspense, useMemo } from 'react';
+import React, { useEffect, useState, useRef, Suspense, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -553,6 +553,8 @@ function DashboardPageContent() {
  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
  });
  const [loadingRevenueReport, setLoadingRevenueReport] = useState(false);
+ const [subscriptionReport, setSubscriptionReport] = useState<any>(null);
+ const [loadingSubReport, setLoadingSubReport] = useState(false);
  const [notifyingPayouts, setNotifyingPayouts] = useState(false);
  const [usersLoading, setUsersLoading] = useState(false);
  const [templatesLoading, setTemplatesLoading] = useState(false);
@@ -684,7 +686,32 @@ function DashboardPageContent() {
     canManageGuests: false,
     canManageShowcasePlans: false,
   });
+ const [modalUserPlan, setModalUserPlan] = useState<string>('FREE');
+ const [modalUserLicenseActive, setModalUserLicenseActive] = useState<boolean>(true);
+ const [modalUserDurationDays, setModalUserDurationDays] = useState<number>(30);
+ const [modalUserExpiresAt, setModalUserExpiresAt] = useState<string>('');
+ const [modalUserComplimentary, setModalUserComplimentary] = useState<boolean>(false);
  const [updatingUser, setUpdatingUser] = useState(false);
+
+ const loadSubscriptionReport = useCallback(async () => {
+   setLoadingSubReport(true);
+   try {
+     const rep = await api.get('/admin/reports/subscriptions');
+     setSubscriptionReport(rep);
+   } catch (err: unknown) {
+     console.error('Erreur chargement rapport abonnements:', err);
+   } finally {
+     setLoadingSubReport(false);
+   }
+ }, []);
+
+ const exportSubscriptionReportCsv = async () => {
+   try {
+     await api.download('/admin/reports/subscriptions/export', 'abonnements-eventmaster.csv');
+   } catch (err: any) {
+     alert(err.message || 'Erreur lors de l\'export');
+   }
+ };
 
  // Template CRUD Modals states — édition via concepteur visuel uniquement
 
@@ -864,6 +891,12 @@ function DashboardPageContent() {
   .catch(console.error);
  }
  }, [activeTab, user, revenuePeriod]);
+
+ useEffect(() => {
+   if (user?.role === 'SUPER_ADMIN' && activeTab === 'analytics' && activeAnalyticsSection === 'plans') {
+     void loadSubscriptionReport();
+   }
+ }, [activeTab, user, activeAnalyticsSection, loadSubscriptionReport]);
 
  useEffect(() => {
  if (user?.role === 'SUPER_ADMIN' && tabParam === 'analytics' && !sectionParam) {
@@ -1393,6 +1426,11 @@ function DashboardPageContent() {
  setUserTenantId('');
  setModalCommissionRate('30');
  setModalRenewalCommissionRate('20');
+ setModalUserPlan('FREE');
+ setModalUserLicenseActive(true);
+ setModalUserDurationDays(30);
+ setModalUserExpiresAt('');
+ setModalUserComplimentary(false);
     setModalCommercialPermissions({
       canManageTemplates: false,
       canManageMessageTemplates: false,
@@ -1415,6 +1453,11 @@ function DashboardPageContent() {
  setUserTenantId(u.tenantId || '');
  setModalCommissionRate(String(Math.round((u.commissionRate ?? 0.3) * 100)));
  setModalRenewalCommissionRate(String(Math.round((u.renewalCommissionRate ?? 0.2) * 100)));
+ setModalUserPlan(u.tenantPlan || 'FREE');
+ setModalUserLicenseActive(u.tenantLicenseActive ?? true);
+ setModalUserDurationDays(30);
+ setModalUserExpiresAt(u.tenantLicenseExpiresAt ? u.tenantLicenseExpiresAt.slice(0, 10) : '');
+ setModalUserComplimentary(false);
     setModalCommercialPermissions({
       canManageTemplates: Boolean(u.commercialPermissions?.canManageTemplates),
       canManageMessageTemplates: Boolean(u.commercialPermissions?.canManageMessageTemplates),
@@ -1439,6 +1482,14 @@ function DashboardPageContent() {
 
  setUpdatingUser(true);
  try {
+ const subscriptionPayload = {
+ plan: modalUserPlan,
+ licenseActive: modalUserLicenseActive,
+ durationDays: modalUserDurationDays ? Number(modalUserDurationDays) : undefined,
+ licenseExpiresAt: modalUserExpiresAt || undefined,
+ complimentary: modalUserComplimentary,
+ };
+
  if (userModalMode === 'create') {
  await api.post('/admin/users', {
  name: modalUserName || null,
@@ -1447,6 +1498,7 @@ function DashboardPageContent() {
  role: modalRole,
  isEmailVerified: modalIsEmailVerified,
  tenantId: modalUserTenantId || null,
+ subscription: subscriptionPayload,
  ...(modalRole === 'COMMERCIAL' ? {
  commissionRate: parseFloat(modalCommissionRate) / 100,
  renewalCommissionRate: parseFloat(modalRenewalCommissionRate) / 100,
@@ -1461,6 +1513,7 @@ function DashboardPageContent() {
  role: modalRole,
  isEmailVerified: modalIsEmailVerified,
  tenantId: modalUserTenantId || null,
+ subscription: subscriptionPayload,
  ...(modalRole === 'COMMERCIAL' ? {
  commissionRate: parseFloat(modalCommissionRate) / 100,
  renewalCommissionRate: parseFloat(modalRenewalCommissionRate) / 100,
@@ -3879,12 +3932,109 @@ function DashboardPageContent() {
 
  {activeAnalyticsSection === 'plans' && (
                       <div className="bg-surface border border-border rounded-2xl p-6 space-y-6 shadow-sm">
+ <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+ <div>
  <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
  <PieChart className="w-5 h-5 text-primary" />
- Répartition des Plans d'Abonnement
+ Pilotage &amp; Reporting des Abonnements SaaS
  </h3>
- 
+ <p className="text-xs text-muted mt-0.5">
+ Suivi des revenus récurrents (MRR/ARR), licences actives et expirations contractuelles.
+ </p>
+ </div>
+ <div className="flex flex-wrap items-center gap-2">
+ <button
+ type="button"
+ onClick={() => void loadSubscriptionReport()}
+ disabled={loadingSubReport}
+ className="px-3.5 py-2 bg-surface-muted hover:bg-surface border border-border text-foreground text-xs font-semibold rounded-xl transition min-h-11 inline-flex items-center gap-1.5"
+ >
+ {loadingSubReport ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+ Actualiser
+ </button>
+ <button
+ type="button"
+ onClick={() => void exportSubscriptionReportCsv()}
+ className="px-3.5 py-2 bg-primary-solid text-primary-foreground text-xs font-bold rounded-xl hover:opacity-90 transition min-h-11 inline-flex items-center gap-1.5 shadow-sm"
+ >
+ <Download className="w-3.5 h-3.5" />
+ Exporter CSV
+ </button>
+ </div>
+ </div>
+
+ {/* KPIs Abonnements */}
+ <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+ <div className="bg-surface-muted border border-border rounded-xl p-3.5 sm:p-4">
+ <p className="text-xs font-bold uppercase tracking-wider text-muted">MRR Estimé</p>
+ <p className="text-lg sm:text-xl font-extrabold text-foreground mt-1">
+ {subscriptionReport?.kpis?.estimatedMrrFc ? formatFc(subscriptionReport.kpis.estimatedMrrFc) : '0 FC'}
+ </p>
+ <p className="text-xs text-muted">Revenu mensuel récurrent</p>
+ </div>
+
+ <div className="bg-primary/10 border border-primary/20 rounded-xl p-3.5 sm:p-4">
+ <p className="text-xs font-bold uppercase tracking-wider text-primary">ARR Estimé</p>
+ <p className="text-lg sm:text-xl font-extrabold text-primary mt-1">
+ {subscriptionReport?.kpis?.estimatedArrFc ? formatFc(subscriptionReport.kpis.estimatedArrFc) : '0 FC'}
+ </p>
+ <p className="text-xs text-primary/80">Revenu annuel projeté</p>
+ </div>
+
+ <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 rounded-xl p-3.5 sm:p-4">
+ <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Taux de Conversion</p>
+ <p className="text-lg sm:text-xl font-extrabold text-emerald-800 dark:text-emerald-200 mt-1">
+ {subscriptionReport?.kpis?.conversionRatePercent ?? 0} %
+ </p>
+ <p className="text-xs text-emerald-700">{subscriptionReport?.kpis?.totalPaidAccounts ?? 0} comptes payants</p>
+ </div>
+
+ <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/40 rounded-xl p-3.5 sm:p-4">
+ <p className="text-xs font-bold uppercase tracking-wider text-amber-700">Expirations &lt; 30j</p>
+ <p className="text-lg sm:text-xl font-extrabold text-amber-900 dark:text-amber-200 mt-1">
+ {subscriptionReport?.kpis?.imminentExpirationsCount ?? 0}
+ </p>
+ <p className="text-xs text-amber-700">Renouvellements à sécuriser</p>
+ </div>
+ </div>
+
+ {/* Expirations Imminentes */}
+ {subscriptionReport?.imminentExpirations?.length > 0 && (
+ <div className="p-4 bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/50 rounded-xl space-y-3">
+ <div className="flex items-center gap-2">
+ <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+ <h4 className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-200">
+ Expirations imminentes à traiter ({subscriptionReport.imminentExpirations.length})
+ </h4>
+ </div>
+ <div className="divide-y divide-amber-200/60 dark:divide-amber-900/40 text-xs">
+ {subscriptionReport.imminentExpirations.slice(0, 5).map((exp: any) => (
+ <div key={exp.id} className="py-2.5 flex items-center justify-between first:pt-0 last:pb-0">
+ <div>
+ <span className="font-bold text-foreground block">{exp.name}</span>
+ <span className="text-muted block text-[11px]">
+ {exp.targetType === 'ORGANIZATION' ? 'Organisation' : 'Utilisateur'} · Forfait {exp.planName} · Échéance : {exp.licenseExpiresAt.slice(0, 10)}
+ </span>
+ </div>
+ <span className={cn(
+ "px-2 py-1 rounded-full font-bold text-[11px]",
+ exp.daysRemaining <= 7
+ ? "bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300"
+ : "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300"
+ )}>
+ Dans {exp.daysRemaining} jour{exp.daysRemaining > 1 ? 's' : ''}
+ </span>
+ </div>
+ ))}
+ </div>
+ </div>
+ )}
+
  <div className="space-y-4">
+ <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+ <BarChart3 className="w-4 h-4 text-primary" />
+ Répartition par Forfait
+ </h4>
  {PLAN_IDS.map((plan) => {
  const count = adminData?.planCounts?.[plan] || 0;
  const total = adminData?.stats.tenants || 1;
@@ -3912,7 +4062,7 @@ function DashboardPageContent() {
  <div className="border-t border-border-subtle pt-6">
  <h4 className="text-sm font-bold text-foreground mb-4 flex items-center gap-2">
  <Sparkles className="w-4 h-4 text-primary" />
- Statut des Licences Contractuelles
+ Statut Global des Licences
  </h4>
  <div className="grid grid-cols-2 gap-4">
  <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 text-center">
@@ -5083,6 +5233,95 @@ function DashboardPageContent() {
  <option key={t.id} value={t.id}>{t.name}</option>
  ))}
  </select>
+ </div>
+ )}
+
+ {/* Gestion d'Abonnement & Licence (Super Admin) */}
+ {user?.role === 'SUPER_ADMIN' && (
+ <div className="space-y-3 p-4 bg-surface rounded-xl border border-border">
+ <div className="flex items-center gap-2">
+ <CreditCard className="w-4 h-4 text-primary shrink-0" />
+ <span className="text-xs font-bold text-foreground uppercase tracking-wider">
+ Gestion d'Abonnement &amp; Licence
+ </span>
+ </div>
+ <p className="text-xs text-muted leading-relaxed">
+ Attribuez un forfait, activez la licence ou accordez un accès gracieux pour cet utilisateur ou son organisation.
+ </p>
+ <div className="space-y-3 pt-1">
+ <div className="space-y-1">
+ <label className="text-xs font-semibold text-muted">Forfait attribué</label>
+ <select
+ value={modalUserPlan}
+ onChange={(e) => setModalUserPlan(e.target.value)}
+ className="w-full bg-surface-muted border border-border rounded-xl px-3.5 py-2.5 text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 min-h-11"
+ >
+ <option value="FREE">Essentiel (FREE - Gratuit)</option>
+ <optgroup label="Particuliers (B2C)">
+ <option value="PERSONAL_50">Particulier 50 (50 invités)</option>
+ <option value="PERSONAL_100">Particulier 100 (100 invités)</option>
+ <option value="PERSONAL_200">Particulier 200 (200 invités)</option>
+ <option value="PERSONAL_PLUS">Particulier Plus (&gt;200 invités)</option>
+ </optgroup>
+ <optgroup label="Professionnels (B2B)">
+ <option value="STANDARD">Business (Standard)</option>
+ <option value="PREMIUM">Premium</option>
+ <option value="PREMIUM_PLUS">Premium Plus</option>
+ <option value="ENTERPRISE_1">Enterprise 1</option>
+ <option value="ENTERPRISE_2">Enterprise 2</option>
+ <option value="ENTERPRISE_3">Enterprise 3</option>
+ </optgroup>
+ <optgroup label="Marketplace Dédié">
+ <option value="VENUE">Salle uniquement</option>
+ <option value="SERVICE">Prestataire uniquement</option>
+ <option value="CATALOG">Salle &amp; Presta</option>
+ </optgroup>
+ </select>
+ </div>
+
+ <div className="grid grid-cols-2 gap-3">
+ <div className="space-y-1">
+ <label className="text-xs font-semibold text-muted">Durée (jours)</label>
+ <input
+ type="number"
+ min={1}
+ value={modalUserDurationDays}
+ onChange={(e) => setModalUserDurationDays(parseInt(e.target.value) || 30)}
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-sm min-h-11"
+ />
+ </div>
+ <div className="space-y-1">
+ <label className="text-xs font-semibold text-muted">Date fin (optionnelle)</label>
+ <input
+ type="date"
+ value={modalUserExpiresAt}
+ onChange={(e) => setModalUserExpiresAt(e.target.value)}
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-sm min-h-11"
+ />
+ </div>
+ </div>
+
+ <div className="flex flex-col gap-2 pt-1">
+ <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+ <input
+ type="checkbox"
+ checked={modalUserLicenseActive}
+ onChange={(e) => setModalUserLicenseActive(e.target.checked)}
+ className="w-4 h-4 text-primary rounded border-border focus:ring-primary"
+ />
+ <span>Licence contractuelle active</span>
+ </label>
+ <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-amber-700 dark:text-amber-400">
+ <input
+ type="checkbox"
+ checked={modalUserComplimentary}
+ onChange={(e) => setModalUserComplimentary(e.target.checked)}
+ className="w-4 h-4 text-amber-600 rounded border-border focus:ring-amber-500"
+ />
+ <span>Accès gracieux offert (« complimentary »)</span>
+ </label>
+ </div>
+ </div>
  </div>
  )}
 
