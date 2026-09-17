@@ -44,6 +44,25 @@ export function resolveInvitationIdentity(identity: InvitationIdentity): {
   };
 }
 
+export function invitationIdentityForCard(identity: InvitationIdentity): InvitationIdentity {
+  const title = String(identity.title || '').trim();
+  const honorees = String(identity.honorees || '').trim();
+  return {
+    title,
+    honorees: honorees || title,
+    date: String(identity.date || '').trim(),
+    applyTitleToCard: Boolean(title && honorees && title !== honorees),
+  };
+}
+
+export function hasInvitationIdentity(identity: InvitationIdentity): boolean {
+  return Boolean(
+    String(identity.title || '').trim()
+    || String(identity.honorees || '').trim()
+    || String(identity.date || '').trim(),
+  );
+}
+
 export function identityFromTemplateContent(content: unknown): InvitationIdentity {
   const global = content && typeof content === 'object'
     ? (content as { global?: { identity?: InvitationIdentity } }).global
