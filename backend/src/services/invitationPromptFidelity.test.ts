@@ -18,7 +18,9 @@ import {
   NANO_BANANA_OPTICAL_BOKEH,
   NANO_BANANA_STYLE_INSTRUCTION,
   applyEnglishSceneBrief,
+  applyInvitationCopyToElements,
   buildCompactImagePrompt,
+  buildInvitationCopyUserText,
   buildEnglishSceneBriefScaffold,
   buildGenericThematicBackgroundPrompt,
   buildHonestFaceIdentityHeader,
@@ -32,6 +34,8 @@ import {
   isSafetyFilterTriggered,
   optimizeReferenceImageUrl,
   parseEnglishSceneBriefFromJson,
+  detectInvitationCopyLanguage,
+  parseInvitationCopyDraft,
   parseInvitationImageJudgeVerdict,
   parseInvitationLocks,
   processUserPromptForHonestFaces,
@@ -638,6 +642,60 @@ describe('invitation image judge', () => {
     assert.match(text, /expectedPeople: 2/);
     assert.match(text, /textInPixels: forbidden/);
     assert.match(text, /Images 2\+/);
+  });
+});
+
+describe('invitation overlay copy', () => {
+  it('détecte les langues nationales congolaises', () => {
+    assert.equal(detectInvitationCopyLanguage('Libyangi ya Libala na Lingala'), 'ln');
+    assert.equal(detectInvitationCopyLanguage('Mwaliko wa Harusi en swahili'), 'sw');
+    assert.equal(detectInvitationCopyLanguage('Mariage floral or ivoire à Kinshasa'), 'fr');
+  });
+
+  it('refuse un brouillon trop court et complète le RSVP', () => {
+    assert.equal(parseInvitationCopyDraft({ language: 'fr', lines: [] }), null);
+    const draft = parseInvitationCopyDraft({
+      language: 'ln',
+      lines: [
+        { role: 'title', text: 'Libyangi ya Libala' },
+        { role: 'greeting', text: 'Boya tosepela elongo' },
+        { role: 'datetime', text: 'Mokolo : {{date}}' },
+      ],
+    });
+    assert.ok(draft);
+    assert.equal(draft?.language, 'ln');
+    assert.ok(draft?.lines.some((line) => line.role === 'rsvp' && /Kondima/i.test(line.text)));
+  });
+
+  it('monte une pile d’éditeur avec titre, séparateur et RSVP', () => {
+    const elements = applyInvitationCopyToElements(
+      {
+        language: 'fr',
+        lines: [
+          { role: 'greeting', text: 'Cher(e) {{firstName}}' },
+          { role: 'title', text: '{{title}}' },
+          { role: 'datetime', text: 'Le {{date}}' },
+          { role: 'venue', text: '{{location}}' },
+          { role: 'rsvp', text: 'Confirmer votre présence' },
+        ],
+      },
+      { primary: '#1e293b', secondary: '#475569', accent: '#c5a059' },
+    );
+    assert.ok(elements.some((el) => el.type === 'divider'));
+    assert.ok(elements.some((el) => el.type === 'rsvp-block'));
+    const title = elements.find((el) => el.fontSize === '32px');
+    assert.equal(title?.text, '{{title}}');
+  });
+
+  it('demande les variables publiques dans le brief copy', () => {
+    const text = buildInvitationCopyUserText({
+      originalBrief: 'Gala bleu nuit',
+      language: 'fr',
+      isPublic: true,
+      intent: 'create',
+    });
+    assert.match(text, /\{\{title\}\}/);
+    assert.match(text, /TEMPLATE: public/);
   });
 });
 

@@ -6,6 +6,7 @@ import { getOpenAiApiKey, requestOpenAiJson } from './openaiJsonClient.ts';
 import { isOpenAiStudioModel } from './aiStudioModels.ts';
 import {
   formatContextForImage,
+  formatContextForVision,
   hasUsableComposeContext,
   loadInvitationComposeContext,
   parseInvitationContextSource,
@@ -18,9 +19,13 @@ import {
   buildGenericThematicBackgroundPrompt,
   buildInvitationImageJudgeUserText,
   buildInvitationImageRetryPrompt,
+  applyInvitationCopyToElements,
   buildAmpleImagePrompt,
   buildFaithfulImagePrompt,
+  buildInvitationCopyUserText,
   buildInvitationLocks,
+  detectInvitationCopyLanguage,
+  parseInvitationCopyDraft,
   invitationPipelineVisionMandate,
   isSafetyFilterTriggered,
   optimizeReferenceImageUrl,
@@ -31,7 +36,9 @@ import {
   resolveInvitationPipelineIntent,
   shouldRetryInvitationImage,
   COUPLE_FACE_SWAP_DEFAULT_PROMPT,
+  INVITATION_COPY_SYSTEM,
   INVITATION_IMAGE_JUDGE_SYSTEM,
+  type InvitationCopyDraft,
   type InvitationImageJudgeVerdict,
   type InvitationPipelineIntent,
   type ProcessedInvitationPrompt,
@@ -159,7 +166,8 @@ People:
 - Forbidden: lookalike, celebrity, stock model, beautify, smooth, lighten, invented smile.
 
 Layout:
-- 6–12 centered flow elements. Use {{title}}, {{date}}, {{location}}, {{firstName}} when relevant.
+- Overlay copy is written later by a text model. elements may be a short skeleton (title/date placeholders only).
+- 4–8 centered flow elements. Use {{title}}, {{date}}, {{location}}, {{firstName}} when relevant.
 - Exactly one rsvp-block, rsvpPlacement "outside", text "Confirmer votre présence" or Congolese national-language equivalent (Lingala "Kondima kozala wana", Swahili "Thibitisha uwepo wako", Kikongo "Tula kimbangi ya kukwiza", Tshiluba "Jadika dikalapu diebe").
 - Language fidelity: if the brief is Lingala, Swahili, Kikongo or Tshiluba, write ALL text elements in that language. Do not revert to French.
 - Vertical print-ready image, NO readable text, names, dates, logos, watermarks (the editor adds text).
@@ -1801,6 +1809,72 @@ async function generateInvitationImageWithJudge(
   }
 }
 
+async function writeInvitationOverlayCopy(input: {
+  key: string;
+  originalBrief: string;
+  isPublic: boolean;
+  intent: InvitationPipelineIntent;
+  organizerContext?: string;
+  preferredModel?: string;
+}): Promise<InvitationCopyDraft | null> {
+  const language = detectInvitationCopyLanguage(input.originalBrief);
+  const userText = buildInvitationCopyUserText({
+    originalBrief: input.originalBrief,
+    language,
+    isPublic: input.isPublic,
+    organizerContext: input.organizerContext,
+    intent: input.intent,
+  });
+
+  const tryGemini = async (): Promise<InvitationCopyDraft | null> => {
+    if (!getGeminiApiKey()) return null;
+    const parsed = await requestGeminiJson({
+      system: INVITATION_COPY_SYSTEM,
+      userText,
+      temperature: 0.35,
+      timeoutMs: 25_000,
+      failMessage: 'Invitation copy failed.',
+    });
+    return parseInvitationCopyDraft(parsed, language);
+  };
+
+  try {
+    const gemini = await tryGemini();
+    if (gemini) return gemini;
+  } catch (error) {
+    console.warn(
+      '[invitationTemplateAi] Gemini overlay copy failed, trying OpenAI:',
+      (error as Error)?.message,
+    );
+  }
+
+  if (!input.key) return null;
+
+  try {
+    const model =
+      input.preferredModel &&
+      isOpenAiStudioModel(input.preferredModel) &&
+      !input.preferredModel.includes('gpt-image')
+        ? input.preferredModel
+        : process.env.OPENAI_VISION_MODEL || process.env.OPENAI_MODEL || 'gpt-5.6-luna';
+    const parsed = await requestOpenAiJson({
+      system: INVITATION_COPY_SYSTEM,
+      userText,
+      temperature: 0.35,
+      timeoutMs: 25_000,
+      failMessage: 'Invitation copy failed.',
+      model,
+    });
+    return parseInvitationCopyDraft(parsed, language);
+  } catch (error) {
+    console.warn(
+      '[invitationTemplateAi] Overlay copy skipped (fail-open):',
+      (error as Error)?.message,
+    );
+    return null;
+  }
+}
+
 export type InvitationAiComposeResult = {
   content: {
     global: Record<string, unknown>;
@@ -1815,6 +1889,7 @@ export type InvitationAiComposeResult = {
     speedMode?: AiSpeedMode;
     judgeRetried?: boolean;
     judgeScore?: number | null;
+    copyWritten?: boolean;
   };
 };
 
@@ -2028,6 +2103,7 @@ export async function composeInvitationTemplateAi(input: {
     source: contextSource,
   });
   const organizerContextEn = formatContextForImage(composeContext, contextSource);
+  const organizerContextCopy = formatContextForVision(composeContext, contextSource);
 
   const key = requireAiConfigured();
   const structured = await visionStructure(key, processed.originalBrief, imageUrls, {
@@ -2231,13 +2307,35 @@ export async function composeInvitationTemplateAi(input: {
   }
   (global as Record<string, unknown>).aiJudgeRetried = imageJudgeRetried;
   let elements = sanitizeElements(structured.elements);
+  let preservedExistingCopy = false;
   if (isAlteration && existingElements.length > 0 && !embedText) {
     const textChangeExplicit =
       /texte|nom|prénom|date|lieu|heure|écrit|adresse|titre|rsvp/i.test(prompt);
     if (!textChangeExplicit) {
-      // Le réajustement est visuel ou décoratif : préserver fidèlement les éléments personnalisés existants
       elements = existingElements.map((el) => ({ ...el }));
+      preservedExistingCopy = true;
     }
+  }
+  let copyWritten = false;
+  if (!embedText && !preservedExistingCopy) {
+    const copyDraft = await writeInvitationOverlayCopy({
+      key,
+      originalBrief: processed.originalBrief,
+      isPublic,
+      intent: resolvedIntent,
+      organizerContext: organizerContextCopy || organizerContextEn,
+      preferredModel: input.preferredModel || undefined,
+    });
+    if (copyDraft) {
+      const palette = global.palette as { primary: string; secondary: string; accent: string };
+      elements = applyInvitationCopyToElements(copyDraft, palette);
+      (global as Record<string, unknown>).aiCopyLanguage = copyDraft.language;
+      (global as Record<string, unknown>).aiCopyWritten = true;
+      copyWritten = true;
+    }
+  }
+  if (!copyWritten) {
+    (global as Record<string, unknown>).aiCopyWritten = false;
   }
   if (embedText) {
     elements = elements.filter((el) => el.type === 'rsvp-block');
@@ -2284,6 +2382,7 @@ export async function composeInvitationTemplateAi(input: {
       speedMode,
       judgeRetried: imageJudgeRetried,
       judgeScore: imageJudge?.score ?? null,
+      copyWritten,
     },
   };
 }

@@ -1029,3 +1029,199 @@ export function buildVariantImagePrompt(
     : buildAmpleImagePrompt(basePrompt, hasReferences);
 }
 
+export type InvitationCopyLanguage = 'fr' | 'ln' | 'sw' | 'kg' | 'lua';
+export type InvitationCopyRole =
+  | 'greeting'
+  | 'kicker'
+  | 'title'
+  | 'datetime'
+  | 'venue'
+  | 'body'
+  | 'rsvp';
+
+export type InvitationCopyLine = {
+  role: InvitationCopyRole;
+  text: string;
+};
+
+export type InvitationCopyDraft = {
+  language: InvitationCopyLanguage;
+  lines: InvitationCopyLine[];
+};
+
+const COPY_LANGUAGES: readonly InvitationCopyLanguage[] = ['fr', 'ln', 'sw', 'kg', 'lua'];
+const COPY_ROLES: readonly InvitationCopyRole[] = [
+  'greeting',
+  'kicker',
+  'title',
+  'datetime',
+  'venue',
+  'body',
+  'rsvp',
+];
+
+export const INVITATION_COPY_RSVP: Record<InvitationCopyLanguage, string> = {
+  fr: 'Confirmer votre présence',
+  ln: 'Kondima kozala wana',
+  sw: 'Thibitisha uwepo wako',
+  kg: 'Tula kimbangi ya kukwiza',
+  lua: 'Jadika dikalapu diebe',
+};
+
+export const INVITATION_COPY_SYSTEM = `You write EventMaster invitation overlay copy for Central Africa / RDC.
+The artwork already exists. You ONLY write editor text layers. Do not describe the image.
+
+Rules:
+- Return ONLY valid JSON (json_object).
+- One language for every line. If the brief is Lingala, Swahili, Kikongo or Tshiluba, write ALL lines in that language. Do not fall back to French.
+- Public templates: never invent private names or fixed calendar dates. Use {{title}}, {{date}}, {{location}}, {{firstName}}.
+- Private templates: keep names, date and venue from the brief. Do not invent missing facts.
+- 5–7 short ceremonial lines. No hashtags, no emoji, no markdown.
+- Include exactly one rsvp line.
+
+Exact schema:
+{
+  "language": "fr" | "ln" | "sw" | "kg" | "lua",
+  "lines": [
+    { "role": "greeting" | "kicker" | "title" | "datetime" | "venue" | "body" | "rsvp", "text": "string" }
+  ]
+}`;
+
+export function detectInvitationCopyLanguage(brief: string): InvitationCopyLanguage {
+  const text = String(brief || '');
+  if (/\blingala\b|libyangi|boya tosepela|mokolo\s*:|esika\s*:|kondima kozala/i.test(text)) return 'ln';
+  if (/\bswahili\b|kiswahili|mwaliko wa|karibuni|tarehe\s*:|mahali\s*:|thibitisha uwepo/i.test(text)) return 'sw';
+  if (/\bkikongo\b|mbila ya nkinsi|kwizeno|kilumbu\s*:|kisika\s*:/i.test(text)) return 'kg';
+  if (/\btshiluba\b|ciluba|dibikila|luayi tusankidile|dituku\s*:|muaba\s*:/i.test(text)) return 'lua';
+  return 'fr';
+}
+
+export function parseInvitationCopyLanguage(
+  value: unknown,
+  fallback: InvitationCopyLanguage = 'fr',
+): InvitationCopyLanguage {
+  return typeof value === 'string' && (COPY_LANGUAGES as readonly string[]).includes(value)
+    ? (value as InvitationCopyLanguage)
+    : fallback;
+}
+
+export function parseInvitationCopyDraft(
+  raw: unknown,
+  fallbackLanguage: InvitationCopyLanguage = 'fr',
+): InvitationCopyDraft | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const parsed = raw as Record<string, unknown>;
+  const language = parseInvitationCopyLanguage(parsed.language, fallbackLanguage);
+  const source = Array.isArray(parsed.lines)
+    ? parsed.lines
+    : Array.isArray(parsed.elements)
+      ? parsed.elements
+      : [];
+  const seen = new Set<InvitationCopyRole>();
+  const lines: InvitationCopyLine[] = [];
+  for (const item of source) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+    const row = item as Record<string, unknown>;
+    const role = typeof row.role === 'string' ? row.role.trim() : '';
+    const text = collapseSpaces(typeof row.text === 'string' ? row.text : '').slice(0, 220);
+    if (!(COPY_ROLES as readonly string[]).includes(role) || !text) continue;
+    const typedRole = role as InvitationCopyRole;
+    if (seen.has(typedRole)) continue;
+    seen.add(typedRole);
+    lines.push({ role: typedRole, text });
+    if (lines.length >= 7) break;
+  }
+  if (!seen.has('rsvp')) {
+    lines.push({ role: 'rsvp', text: INVITATION_COPY_RSVP[language] });
+  }
+  if (lines.length < 3) return null;
+  return { language, lines };
+}
+
+export function buildInvitationCopyUserText(input: {
+  originalBrief: string;
+  language: InvitationCopyLanguage;
+  isPublic?: boolean;
+  organizerContext?: string;
+  intent?: InvitationPipelineIntent;
+}): string {
+  return [
+    `MODE: ${input.intent || 'create'}`,
+    `LANGUAGE: ${input.language}`,
+    input.isPublic ? 'TEMPLATE: public — use {{title}}, {{date}}, {{location}}, {{firstName}} only.' : 'TEMPLATE: private — keep brief facts, do not invent missing names.',
+    `BRIEF:\n"""\n${collapseSpaces(input.originalBrief).slice(0, 900)}\n"""`,
+    input.organizerContext ? input.organizerContext.slice(0, 400) : '',
+    'Write the overlay lines now.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+const COPY_STACK: InvitationCopyRole[] = [
+  'greeting',
+  'kicker',
+  'title',
+  'datetime',
+  'venue',
+  'body',
+  'rsvp',
+];
+
+export function applyInvitationCopyToElements(
+  draft: InvitationCopyDraft,
+  palette: { primary: string; secondary: string; accent: string },
+): Record<string, unknown>[] {
+  const byRole = new Map(draft.lines.map((line) => [line.role, line.text]));
+  const elements: Record<string, unknown>[] = [];
+  let index = 0;
+  for (const role of COPY_STACK) {
+    const text = byRole.get(role);
+    if (!text) continue;
+    if (role === 'rsvp') {
+      elements.push({
+        id: `ai-copy-rsvp-${index}`,
+        type: 'rsvp-block',
+        text,
+        color: palette.accent,
+        fontSize: '16px',
+        align: 'center',
+        width: 'full',
+        rsvpPlacement: 'outside',
+        positionMode: 'flow',
+      });
+      index += 1;
+      continue;
+    }
+    const isTitle = role === 'title';
+    const isGreeting = role === 'greeting';
+    elements.push({
+      id: `ai-copy-${role}-${index}`,
+      type: 'text',
+      text,
+      color: isTitle ? palette.primary : palette.secondary,
+      fontSize: isTitle ? '32px' : isGreeting ? '13px' : '16px',
+      fontFamily: isTitle ? 'Playfair Display' : isGreeting ? 'Great Vibes' : 'Lora',
+      align: 'center',
+      width: 'full',
+      bold: isTitle,
+      italic: isGreeting,
+      positionMode: 'flow',
+    });
+    index += 1;
+    if (isTitle) {
+      elements.push({
+        id: `ai-copy-div-${index}`,
+        type: 'divider',
+        text: '',
+        color: palette.accent,
+        dividerStyle: 'ornament-diamond',
+        align: 'center',
+        width: 'full',
+        positionMode: 'flow',
+      });
+      index += 1;
+    }
+  }
+  return elements;
+}
+
