@@ -29,7 +29,7 @@ export default function InvitationIdentityFields({
       disabled={disabled}
       aria-labelledby={headingId}
       aria-describedby={descriptionId}
-      className="space-y-3 rounded-[var(--radius-card)] border border-border bg-surface-muted/40 p-3"
+      className="space-y-4 rounded-[var(--radius-card)] border border-border bg-surface-muted/40 p-4 sm:p-5"
     >
       <legend id={headingId} className="px-0.5 text-xs font-semibold text-foreground">
         Textes de cette invitation

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -11,7 +12,6 @@ import { applyPaletteToElements, invitationColorThemes, ORG_BRAND_THEME_ID, buil
 import { FONT_THEMES, applyFontThemeToElements, getFontTheme } from '@/lib/templateFontThemes';
 import { TEMPLATE_IMAGE_STYLES, templateImageStyleClass, templateImageStyleExtra, type TemplateImageStyleId } from '@/lib/templateImageStyle';
 import { editorialLayoutById, fillEditorialTokens, type EditorialLayoutId } from '@/lib/invitationEditorialLayouts';
-import EditorialLayoutPicker from '@/components/EditorialLayoutPicker';
 import { buildMockupTemplate, applyMockupToEditor, applyMockupTextMode, buildTextElementsFromOcrLines, type MockupImportTextMode } from '@/lib/templateMockupImport';
 import { extractTextFromImageSource, mergeOcrIntoMockupElements } from '@/lib/templateOcrImport';
 import { composeTemplateWithAi, applyAiComposeToEditor, loadAiTemplateDraft, clearAiTemplateDraft, downloadAiGeneratedImage, COUPLE_FACE_SWAP_DEFAULT_PROMPT, type AiSpeedMode } from '@/lib/templateAiCompose';
@@ -24,10 +24,7 @@ import {
  extractItemVariants,
 } from '@/lib/aiTemplateComposeHistory';
 import AiTemplateComposeHistoryList from '@/components/AiTemplateComposeHistoryList';
-import PromptModelSelector from '@/components/PromptModelSelector';
-import { StudioAiTabs, type StudioAiTabId } from '@/components/StudioAiTabs';
-import InvitationContextSourcePicker from '@/components/InvitationContextSourcePicker';
-import InvitationArtStylePicker from '@/components/InvitationArtStylePicker';
+import { StudioAiTabs, StudioHowTo, type StudioAiTabId } from '@/components/StudioAiTabs';
 import {
  persistInvitationArtStyle,
  readStoredInvitationArtStyle,
@@ -93,6 +90,11 @@ import {
  useHeadStylesheet,
 } from '@/lib/headStylesheet';
 import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
+
+const EditorialLayoutPicker = dynamic(() => import('@/components/EditorialLayoutPicker'), { ssr: false });
+const PromptModelSelector = dynamic(() => import('@/components/PromptModelSelector'), { ssr: false });
+const InvitationContextSourcePicker = dynamic(() => import('@/components/InvitationContextSourcePicker'), { ssr: false });
+const InvitationArtStylePicker = dynamic(() => import('@/components/InvitationArtStylePicker'), { ssr: false });
 
 interface TemplateItem {
  id: string;
@@ -456,6 +458,7 @@ export default function TemplatesPage() {
  const [aiComposeHistory, setAiComposeHistory] = useState<AiTemplateComposeHistoryItem[]>([]);
  const [aiComposeHistoryId, setAiComposeHistoryId] = useState<string | null>(null);
  const [aiComposeStudioTab, setAiComposeStudioTab] = useState<StudioAiTabId>('create');
+ const [aiComposeAdvancedOpen, setAiComposeAdvancedOpen] = useState(false);
  const [aiTokenModalOpen, setAiTokenModalOpen] = useState(false);
  const [aiAllowance, setAiAllowance] = useState<AiAllowance>(() => createEmptyAiAllowance());
  const [studioRail, setStudioRail] = useState<'content' | 'style'>('content');
@@ -565,9 +568,9 @@ export default function TemplatesPage() {
  setSuccess('');
  setStudioOrigin(origin);
  setEditingTemplateId(null);
- setTemplateName('Nouveau Modèle d\'Invitation');
- setInvitationHonorees('Hassan & Ayesha');
- setInvitationDate('2026-06-15');
+ setTemplateName('Nouvelle invitation');
+ setInvitationHonorees('');
+ setInvitationDate('');
  setSelectedTenantId('');
  const orgTheme = buildOrgBrandInvitationTheme(tenant?.branding);
  setImportedPalette(orgTheme.palette);
@@ -576,12 +579,12 @@ export default function TemplatesPage() {
  setColorThemeId(ORG_BRAND_THEME_ID);
  const initialElements: CanvasElement[] = applyPaletteToElements([
  { id: '1', type: 'text', text: 'CÉLÉBRATION UNIQUE', color: orgTheme.palette.accent, fontSize: '12px', align: 'center', width: 'full', fontFamily: 'Montserrat', letterSpacing: '0.2em', bold: true },
- { id: '2', type: 'text', text: 'Hassan & Ayesha', color: orgTheme.palette.primary, fontSize: '32px', align: 'center', width: 'full', fontFamily: 'Great Vibes' },
+ { id: '2', type: 'text', text: '{{title}}', color: orgTheme.palette.primary, fontSize: '32px', align: 'center', width: 'full', fontFamily: 'Great Vibes' },
  { id: '3', type: 'divider', text: '', color: orgTheme.palette.accent, fontSize: '14px', align: 'center', width: 'full', dividerStyle: 'ornament-flower' },
- { id: '4', type: 'text', text: 'Rejoignez-nous pour célébrer notre union le dimanche 15 juin à 19h00.', color: orgTheme.palette.secondary, fontSize: '16px', align: 'center', width: 'full', fontFamily: 'Cormorant Garamond', italic: true },
- { id: '5', type: 'text', text: 'DIMANCHE', color: orgTheme.palette.primary, fontSize: '12px', align: 'center', width: 'third', fontFamily: 'Montserrat', letterSpacing: '0.1em', bold: true },
- { id: '6', type: 'text', text: '15 JUIN', color: orgTheme.palette.accent, fontSize: '16px', align: 'center', width: 'third', fontFamily: 'Cormorant Garamond', bold: true },
- { id: '7', type: 'text', text: '19H00', color: orgTheme.palette.primary, fontSize: '12px', align: 'center', width: 'third', fontFamily: 'Montserrat', letterSpacing: '0.1em', bold: true },
+ { id: '4', type: 'text', text: 'Rejoignez-nous pour célébrer le {{date}}.', color: orgTheme.palette.secondary, fontSize: '16px', align: 'center', width: 'full', fontFamily: 'Cormorant Garamond', italic: true },
+ { id: '5', type: 'text', text: 'JOUR', color: orgTheme.palette.primary, fontSize: '12px', align: 'center', width: 'third', fontFamily: 'Montserrat', letterSpacing: '0.1em', bold: true },
+ { id: '6', type: 'text', text: '{{date}}', color: orgTheme.palette.accent, fontSize: '16px', align: 'center', width: 'third', fontFamily: 'Cormorant Garamond', bold: true },
+ { id: '7', type: 'text', text: 'HEURE', color: orgTheme.palette.primary, fontSize: '12px', align: 'center', width: 'third', fontFamily: 'Montserrat', letterSpacing: '0.1em', bold: true },
  { id: '8', type: 'divider', text: '', color: orgTheme.palette.secondary, fontSize: '12px', align: 'center', width: 'full', dividerStyle: 'solid' },
  { 
  id: '9', 
@@ -1058,15 +1061,38 @@ export default function TemplatesPage() {
  ];
 
  return (
- <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
-      <div className="bg-surface rounded-[28px] border border-border-subtle shadow-2xl max-w-lg w-full overflow-hidden flex flex-col animate-fade-in">
- <div className="p-6 border-b border-border-subtle">
- <h3 className="text-lg font-bold text-foreground">Comment importer cette image ?</h3>
- <p className="text-xs text-muted mt-1 leading-relaxed">
- Fichier : <span className="font-semibold text-foreground">{pendingMockupFile.name}</span>
- </p>
- </div>
- <div className="p-6 space-y-3 max-h-[60vh] overflow-y-auto">
+ <Modal
+   open
+   size="lg"
+   title="Comment importer cette image ?"
+   description={`Fichier : ${pendingMockupFile.name}`}
+   onClose={() => {
+     setMockupImportModalOpen(false);
+     setPendingMockupFile(null);
+   }}
+   footer={
+     <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end w-full">
+       <Button
+         type="button"
+         variant="secondary"
+         onClick={() => {
+           setMockupImportModalOpen(false);
+           setPendingMockupFile(null);
+         }}
+       >
+         Annuler
+       </Button>
+       <Button
+         type="button"
+         disabled={mockupImportMode === 'ocr' && !canUseMockupOcr}
+         onClick={handleConfirmMockupImport}
+       >
+         Importer l&apos;image
+       </Button>
+     </div>
+   }
+ >
+ <div className="space-y-3">
  {modes.map((mode) => (
  <label
  key={mode.id}
@@ -1099,28 +1125,7 @@ export default function TemplatesPage() {
  </label>
  ))}
  </div>
- <div className="p-6 border-t border-border-subtle flex gap-3 justify-end bg-surface-muted/50">
- <button
- type="button"
- onClick={() => {
- setMockupImportModalOpen(false);
- setPendingMockupFile(null);
- }}
- className="px-4 py-2.5 text-xs font-bold text-muted hover:bg-surface-muted rounded-xl transition"
- >
- Annuler
- </button>
- <button
- type="button"
- onClick={handleConfirmMockupImport}
- disabled={mockupImportMode === 'ocr' && !canUseMockupOcr}
- className="px-5 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-xs font-bold rounded-xl transition shadow-md"
- >
- Importer l&apos;image
- </button>
- </div>
- </div>
- </div>
+ </Modal>
  );
  };
 
@@ -1166,15 +1171,13 @@ export default function TemplatesPage() {
     } else if (coupleFaceSwap) {
       setAiComposePrompt(COUPLE_FACE_SWAP_DEFAULT_PROMPT);
     }
-    if (coupleFaceSwap) {
-      setAiComposeTitle(
-        templateName.trim() && !/^Nouveau Modèle|^Invitation IA$/i.test(templateName)
-          ? templateName
-          : '',
-      );
-      setAiComposeHonorees(invitationHonorees === 'Hassan & Ayesha' ? '' : invitationHonorees);
-      setAiComposeDate(invitationDate === '2026-06-15' ? '' : invitationDate);
-    }
+    setAiComposeTitle(
+      templateName.trim() && !/^Nouveau Modèle|^Nouvelle invitation|^Invitation IA$/i.test(templateName)
+        ? templateName
+        : '',
+    );
+    setAiComposeHonorees(invitationHonorees === 'Hassan & Ayesha' ? '' : invitationHonorees);
+    setAiComposeDate(invitationDate === '2026-06-15' ? '' : invitationDate);
     setAiComposeModalOpen(true);
     void fetchAiTemplateComposeHistoryStudio().then(setAiComposeHistory);
     try {
@@ -1322,7 +1325,7 @@ export default function TemplatesPage() {
      return;
    }
  } else if (aiComposePrompt.trim().length < 8) {
- setError('Décrivez le style souhaité (quelques mots minimum).');
+ setError('Décrivez la fête en quelques mots (au moins 8 caractères), puis générez.');
  return;
  }
  if (!canAffordAiAction(aiAllowance, AI_INVITATION_COMPOSE_TOKEN_COST)) {
@@ -1406,7 +1409,7 @@ export default function TemplatesPage() {
     } finally {
       window.clearTimeout(stageTimer);
     }
-    if (aiComposeCoupleFaceSwap) {
+    if (hasInvitationIdentity({ title: aiComposeTitle, honorees: aiComposeHonorees, date: aiComposeDate })) {
       pendingCoupleIdentityRef.current = {
         title: aiComposeTitle,
         honorees: aiComposeHonorees,
@@ -1466,7 +1469,7 @@ export default function TemplatesPage() {
     }
     setAiComposeHistoryId(typeof result.historyId === 'string' ? result.historyId : null);
     void fetchAiTemplateComposeHistoryStudio().then(setAiComposeHistory);
-    if (aiComposeCoupleFaceSwap) {
+    if (hasInvitationIdentity({ title: aiComposeTitle, honorees: aiComposeHonorees, date: aiComposeDate })) {
       commitIdentityToEditor({
         title: aiComposeTitle,
         honorees: aiComposeHonorees,
@@ -1503,26 +1506,34 @@ export default function TemplatesPage() {
 
  const renderAiComposeModal = () => {
  if (!aiComposeModalOpen) return null;
+ const hasIncomingCard = Boolean(aiComposeIncomingFile || (bgImageUrl && /^https?:\/\//i.test(bgImageUrl)));
+ const composeBlockedReason = aiComposeCoupleFaceSwap
+   ? (aiComposeFiles.length < 1
+     ? 'Ajoutez au moins une photo du couple.'
+     : !hasIncomingCard
+       ? 'Ajoutez la carte dont les visages doivent être remplacés.'
+       : null)
+   : (aiComposePrompt.trim().length < 8 ? 'Décrivez la fête en quelques mots.' : null);
  return (
- <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/45 p-0 sm:p-4">
+ <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-foreground/40 p-0 sm:p-4 lg:p-6">
  <div
  role="dialog"
  aria-modal="true"
  aria-labelledby="ai-compose-title"
- className="w-full sm:max-w-xl bg-surface rounded-t-2xl sm:rounded-2xl shadow-xl border border-border overflow-hidden"
+ className="flex w-full max-w-[100vw] sm:max-w-[min(98vw,92rem)] h-[96dvh] sm:h-[min(94dvh,62rem)] flex-col bg-surface rounded-t-2xl sm:rounded-2xl shadow-2xl border border-border overflow-hidden"
  >
- <div className="px-5 pt-5 pb-3 border-b border-border-subtle flex items-start justify-between gap-3">
- <div>
-            <h2 id="ai-compose-title" className="text-sm font-bold text-foreground flex items-center gap-2">
-              {aiComposeCoupleFaceSwap ? <Users className="w-4 h-4 text-primary" /> : <Wand2 className="w-4 h-4 text-primary" />}
+ <div className="shrink-0 px-5 sm:px-8 lg:px-10 pt-5 sm:pt-7 pb-4 border-b border-border-subtle flex items-start justify-between gap-3">
+ <div className="min-w-0">
+            <h2 id="ai-compose-title" className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2.5">
+              {aiComposeCoupleFaceSwap ? <Users className="w-6 h-6 text-primary" aria-hidden /> : <Wand2 className="w-6 h-6 text-primary" aria-hidden />}
               {aiComposeCoupleFaceSwap ? 'Visages du couple' : aiComposeIsAlteration ? 'Retoucher avec l’IA' : 'Créer avec l’IA'}
             </h2>
-            <p className="hidden sm:block text-xs text-muted mt-1 leading-relaxed">
+            <p className="text-sm sm:text-base text-muted mt-1.5 leading-relaxed max-w-4xl">
               {aiComposeCoupleFaceSwap
-                ? `Les visages du couple remplacent ceux de la carte. Pose et décor restent. ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`
+                ? `Posez la carte, puis les photos du couple. Les visages changent ; le décor reste. ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`
                 : aiComposeIsAlteration
-                ? `La carte actuelle est conservée. Décrivez seulement ce qu’il faut changer. ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`
-                : `Décrivez la fête, avec ou sans photos. ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`}
+                ? `Dites seulement ce qui change. Le reste de la carte est conservé. ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`
+                : `Trois gestes : choisir le mode, décrire la fête, générer. Les photos sont optionnelles. ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`}
             </p>
  </div>
  <button
@@ -1532,15 +1543,15 @@ export default function TemplatesPage() {
  setAiComposeModalOpen(false);
  resetAiComposeModal();
  }}
- className="p-1.5 rounded-lg text-muted hover:bg-surface-muted disabled:opacity-50"
+ className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--radius-button)] text-muted hover:bg-surface-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  aria-label="Fermer"
  >
- <XCircle className="w-5 h-5" />
+ <XCircle className="w-5 h-5" aria-hidden />
  </button>
  </div>
 
- <div className="px-5 pt-3 space-y-3">
- <div className="flex items-center justify-between gap-2 text-[11px]">
+ <div className="shrink-0 px-5 sm:px-8 lg:px-10 pt-4 space-y-3">
+ <div className="flex items-center justify-between gap-2 text-xs">
  <span className="inline-flex items-center gap-1.5 font-bold text-muted">
  <Coins className="w-3.5 h-3.5" />
  {aiAllowance.unlimited ? 'Jetons illimités' : `${aiTokenBalanceLabel(aiAllowance)} jeton${aiAllowance.totalRemaining === 1 ? '' : 's'} restant${aiAllowance.totalRemaining === 1 ? '' : 's'}`}
@@ -1557,6 +1568,7 @@ export default function TemplatesPage() {
  )}
  </div>
  <StudioAiTabs
+ idPrefix="ai-compose"
  value={aiComposeStudioTab}
  onChange={setAiComposeStudioTab}
  historyCount={aiComposeHistory.length}
@@ -1564,18 +1576,31 @@ export default function TemplatesPage() {
  />
  </div>
 
- <div className="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
+ <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 sm:px-8 lg:px-10 py-6">
  {aiComposeStudioTab === 'create' ? (
  <>
+ <StudioHowTo
+   steps={
+     aiComposeCoupleFaceSwap
+       ? ['Ajoutez la carte à modifier', 'Ajoutez 1 ou 2 photos du couple', 'Générez']
+       : aiComposeIsAlteration
+         ? ['Gardez cette carte', 'Dites uniquement ce qui change', 'Générez']
+         : ['Choisissez Nouveau carton', 'Décrivez la fête (photos optionnelles)', 'Générez']
+   }
+ />
+ <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-10 xl:gap-12 lg:items-start space-y-6 lg:space-y-0">
+ <div className="space-y-6">
+ <div>
+ <p className="text-sm font-semibold text-foreground mb-2">1. Que voulez-vous faire ?</p>
  <div
    role="radiogroup"
    aria-label="Mode de l’assistant"
-   className="grid grid-cols-3 gap-1.5"
+   className="grid grid-cols-3 gap-3"
  >
    {([
-     { id: 'create', label: 'Créer', hint: 'Nouveau carton' },
-     { id: 'alter', label: 'Retoucher', hint: 'Garder le fond' },
-     { id: 'couple', label: 'Visages', hint: 'Couple' },
+     { id: 'create', label: 'Nouveau carton', hint: 'À partir d’un brief' },
+     { id: 'alter', label: 'Retoucher', hint: 'Garder cette carte' },
+     { id: 'couple', label: 'Visages', hint: 'Mettre le couple' },
    ] as const).map((mode) => {
      const active =
        mode.id === 'couple'
@@ -1595,7 +1620,7 @@ export default function TemplatesPage() {
              setAiComposeCoupleFaceSwap(true);
              setAiComposeIsAlteration(true);
              setAiComposeTitle(
-               templateName.trim() && !/^Nouveau Modèle|^Invitation IA$/i.test(templateName)
+               templateName.trim() && !/^Nouveau Modèle|^Nouvelle invitation|^Invitation IA$/i.test(templateName)
                  ? templateName
                  : '',
              );
@@ -1617,23 +1642,25 @@ export default function TemplatesPage() {
              }
            }
          }}
-         className={`min-h-11 px-2 py-2 rounded-[var(--radius-button)] border text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+         className={`min-h-14 px-3 py-3 rounded-[var(--radius-button)] border text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
            active
              ? 'border-primary bg-primary/10 shadow-xs'
              : 'border-border bg-surface hover:border-primary/40'
          }`}
        >
-         <span className="block text-xs font-bold text-foreground">{mode.label}</span>
+         <span className="block text-sm font-bold text-foreground">{mode.label}</span>
          <span className="block text-xs text-muted mt-0.5">{mode.hint}</span>
        </button>
      );
    })}
  </div>
+ </div>
 
  {aiComposeCoupleFaceSwap ? (
  <div className="space-y-3">
+   <p className="text-sm font-semibold text-foreground">2. Photos du couple</p>
    <div>
-     <label htmlFor="ai-compose-incoming" className="text-xs font-semibold text-muted">Image à modifier</label>
+     <label htmlFor="ai-compose-incoming" className="text-sm font-semibold text-muted">Carte à modifier</label>
      <input
        id="ai-compose-incoming"
        ref={aiComposeIncomingInputRef}
@@ -1650,17 +1677,17 @@ export default function TemplatesPage() {
        type="button"
        disabled={aiComposeBusy}
        onClick={() => aiComposeIncomingInputRef.current?.click()}
-       className="mt-1.5 min-h-11 w-full flex items-center gap-3 p-3 border-2 border-dashed rounded-[var(--radius-card)] text-left transition border-primary/30 hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+       className="mt-1.5 min-h-28 w-full flex items-center gap-4 p-4 border-2 border-dashed rounded-[var(--radius-card)] text-left transition border-primary/30 hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
      >
        {(aiComposeIncomingPreview || (bgImageUrl && /^https?:\/\//i.test(bgImageUrl))) ? (
          // eslint-disable-next-line @next/next/no-img-element
          <img
            src={aiComposeIncomingPreview || bgImageUrl}
            alt="Invitation dont les visages seront remplacés"
-           className="w-14 h-14 rounded-[var(--radius-button)] object-cover border border-border shrink-0"
+           className="w-20 h-20 sm:w-24 sm:h-24 rounded-[var(--radius-button)] object-cover border border-border shrink-0"
          />
        ) : (
-         <span className="w-14 h-14 rounded-lg bg-surface-muted border border-border flex items-center justify-center shrink-0">
+         <span className="w-20 h-20 sm:w-24 sm:h-24 rounded-[var(--radius-button)] bg-surface-muted border border-border flex items-center justify-center shrink-0">
            <Image className="w-5 h-5 text-primary" />
          </span>
        )}
@@ -1675,7 +1702,7 @@ export default function TemplatesPage() {
      </button>
    </div>
    <div>
-     <label htmlFor="ai-compose-couple-photos" className="text-xs font-semibold text-muted">Photos du couple (1 ou 2)</label>
+     <label htmlFor="ai-compose-couple-photos" className="text-sm font-semibold text-muted">Photos du couple (1 ou 2)</label>
      <input
        id="ai-compose-couple-photos"
        ref={aiComposeInputRef}
@@ -1700,13 +1727,13 @@ export default function TemplatesPage() {
          if (dropped.length) addAiComposeFiles(dropped);
        }}
        onClick={() => aiComposeInputRef.current?.click()}
-       className={`mt-1.5 min-h-11 w-full flex items-center justify-center gap-2 p-3.5 border-2 border-dashed rounded-[var(--radius-card)] text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+       className={`mt-1.5 min-h-28 w-full flex items-center justify-center gap-2 p-6 border-2 border-dashed rounded-[var(--radius-card)] text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
          aiComposeDragging
            ? 'border-primary bg-primary/15 text-primary'
            : 'border-primary/30 hover:border-primary hover:bg-primary/5 text-primary'
        }`}
      >
-       <Users className="w-4 h-4" aria-hidden />
+       <Users className="w-5 h-5" aria-hidden />
        {aiComposeFiles.length > 0
          ? `Ajouter une autre photo (${aiComposeFiles.length}/2)`
          : 'Elle / lui — photos nettes, visage visible'}
@@ -1714,9 +1741,9 @@ export default function TemplatesPage() {
      {aiComposePreviewUrls.length > 0 && (
        <div className="mt-2 flex flex-wrap gap-2">
          {aiComposePreviewUrls.map((url, i) => (
-           <div key={url} className="relative w-16 h-16 rounded-[var(--radius-button)] overflow-hidden border border-border">
+           <div key={url} className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-[var(--radius-button)] overflow-hidden border border-border">
              {/* eslint-disable-next-line @next/next/no-img-element */}
-             <img src={url} alt={i === 0 ? 'Premier visage du couple' : 'Second visage du couple'} className="w-full h-full object-cover" />
+             <img src={url} alt={i === 0 ? 'Premier visage du couple' : 'Second visage du couple'} className="w-full h-full object-cover" loading="lazy" />
              <button
                type="button"
                disabled={aiComposeBusy}
@@ -1733,7 +1760,7 @@ export default function TemplatesPage() {
    </div>
    <InvitationIdentityFields
      disabled={aiComposeBusy}
-     description="Préremplissez le carton : ces textes s’appliqueront après le remplacement des visages."
+     description="Ces textes s’écrivent sur le carton après le remplacement des visages."
      value={{ title: aiComposeTitle, honorees: aiComposeHonorees, date: aiComposeDate }}
      onChange={(next) => {
        setAiComposeTitle(next.title || '');
@@ -1743,8 +1770,9 @@ export default function TemplatesPage() {
    />
  </div>
  ) : (
- <div>
- <label htmlFor="ai-compose-optional-photos" className="text-xs font-semibold text-muted">Images optionnelles (1–4)</label>
+ <div className="space-y-3">
+ <p className="text-sm font-semibold text-foreground">2. Photos (optionnel)</p>
+ <label htmlFor="ai-compose-optional-photos" className="text-sm font-semibold text-muted">Images de référence (1–4)</label>
  <input
  id="ai-compose-optional-photos"
  ref={aiComposeInputRef}
@@ -1769,13 +1797,13 @@ export default function TemplatesPage() {
  if (dropped.length) addAiComposeFiles(dropped);
  }}
  onClick={() => aiComposeInputRef.current?.click()}
- className={`mt-1.5 min-h-11 w-full flex items-center justify-center gap-2 p-3.5 border-2 border-dashed rounded-[var(--radius-card)] text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+ className={`mt-1.5 min-h-36 w-full flex flex-col items-center justify-center gap-2 p-8 border-2 border-dashed rounded-[var(--radius-card)] text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
  aiComposeDragging
  ? 'border-primary bg-primary/15 text-primary'
  : 'border-primary/30 hover:border-primary hover:bg-primary/5 text-primary'
  }`}
  >
- <Upload className="w-4 h-4" />
+ <Upload className="w-6 h-6" />
  {aiComposeFiles.length > 0 ? (
  <>
  <span className="sm:hidden">Ajouter ({aiComposeFiles.length}/4)</span>
@@ -1791,9 +1819,9 @@ export default function TemplatesPage() {
  {aiComposePreviewUrls.length > 0 && (
  <div className="mt-2 flex flex-wrap gap-2">
  {aiComposePreviewUrls.map((url, i) => (
- <div key={url} className="relative w-16 h-16 rounded-[var(--radius-button)] overflow-hidden border border-border">
+ <div key={url} className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-[var(--radius-button)] overflow-hidden border border-border">
  {/* eslint-disable-next-line @next/next/no-img-element */}
- <img src={url} alt={`Référence ${i + 1}`} className="w-full h-full object-cover" />
+ <img src={url} alt={`Référence ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
  <button
  type="button"
  disabled={aiComposeBusy}
@@ -1807,13 +1835,30 @@ export default function TemplatesPage() {
  ))}
  </div>
  )}
+ {!aiComposeIsAlteration && (
+   <InvitationIdentityFields
+     disabled={aiComposeBusy}
+     description="Ces textes s’écrivent sur le carton après la génération."
+     value={{ title: aiComposeTitle, honorees: aiComposeHonorees, date: aiComposeDate }}
+     onChange={(next) => {
+       setAiComposeTitle(next.title || '');
+       setAiComposeHonorees(next.honorees || '');
+       setAiComposeDate(next.date || '');
+     }}
+   />
+ )}
  </div>
  )}
+ </div>
 
+ <div className="space-y-6">
  <div>
+ <p className="text-sm font-semibold text-foreground mb-2">
+   {aiComposeCoupleFaceSwap ? '3. Précision (optionnelle)' : '3. Décrivez la fête'}
+ </p>
  <div className="flex items-center justify-between">
- <label htmlFor="ai-compose-prompt" className="text-xs font-semibold text-muted">
-   {aiComposeCoupleFaceSwap ? 'Précision (optionnelle)' : 'Décrivez la fête'}
+ <label htmlFor="ai-compose-prompt" className="text-sm font-semibold text-muted">
+   {aiComposeCoupleFaceSwap ? 'Qui est à gauche, tenue à garder…' : 'Ambiance, couleurs, cérémonie'}
  </label>
  <span className="hidden sm:inline text-xs text-muted tabular-nums">
  {aiComposePrompt.length} car.
@@ -1821,20 +1866,37 @@ export default function TemplatesPage() {
  </div>
  <textarea
  id="ai-compose-prompt"
- rows={3}
+ rows={8}
  value={aiComposePrompt}
  disabled={aiComposeBusy}
  onChange={(e) => setAiComposePrompt(e.target.value)}
  placeholder={aiComposeCoupleFaceSwap
    ? 'Optionnel : préciser qui est à gauche / à droite, ou garder une tenue…'
    : 'Ex. Copier fidèlement cette invitation en or et ivoire, ou décrire l’ambiance : mariage princier, éclairage naturel chaleureux…'}
- className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-xs text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[4.5rem]"
+ className="mt-1.5 w-full rounded-[var(--radius-card)] border border-border bg-surface-muted px-4 py-4 text-sm sm:text-base text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[16rem]"
  />
 
- <div className="mt-2 flex items-center gap-1.5 flex-wrap">
- <span className="text-[11px] font-semibold text-muted flex items-center gap-1">
+ <p className="mt-2 text-xs text-muted">
+ Besoin d’un exemple ? Ouvrez <button type="button" className="font-bold text-primary hover:underline" onClick={() => setAiComposeStudioTab('prompts')}>Exemples</button> — quatre mariages coutumiers prêts à lancer.
+ </p>
+
+ <button
+   type="button"
+   aria-expanded={aiComposeAdvancedOpen}
+   disabled={aiComposeBusy}
+   onClick={() => setAiComposeAdvancedOpen((open) => !open)}
+   className="mt-4 min-h-11 w-full inline-flex items-center justify-between gap-2 px-3 rounded-[var(--radius-button)] border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+ >
+   <span>Options avancées</span>
+   <span className="text-xs font-medium text-muted">{aiComposeAdvancedOpen ? 'Masquer' : 'Style, jetons, variations'}</span>
+ </button>
+
+ {aiComposeAdvancedOpen ? (
+ <div className="mt-3 space-y-3 rounded-[var(--radius-card)] border border-border bg-surface-muted/40 p-4">
+ <div className="flex items-center gap-1.5 flex-wrap">
+ <span className="text-xs font-semibold text-muted flex items-center gap-1">
  <Tag className="w-3 h-3 text-primary" />
- Insérer :
+ Insérer dans le brief
  </span>
  {[
  { tag: '{{firstName}}', label: 'Prénom' },
@@ -1848,19 +1910,13 @@ export default function TemplatesPage() {
  type="button"
  disabled={aiComposeBusy}
  onClick={() => insertAiComposeVariable(v.tag)}
- className="px-2 py-0.5 rounded-md text-[10px] font-bold border border-border bg-surface hover:border-primary/40 hover:bg-primary/5 text-foreground transition"
+ className="min-h-11 px-3 rounded-md text-xs font-bold border border-border bg-surface hover:border-primary/40 hover:bg-primary/5 text-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  title={`Insérer ${v.tag}`}
  >
  {v.label}
  </button>
  ))}
  </div>
-
- <p className="hidden sm:block mt-2 text-[11px] text-muted">
- Besoin d’un brief prêt ? Ouvrez l’onglet <button type="button" className="font-bold text-primary hover:underline" onClick={() => setAiComposeStudioTab('prompts')}>Prompts</button> — les 4 mariages coutumiers sont en un tap.
- </p>
-
- <div className="mt-3">
  <InvitationArtStylePicker
  id="ai-compose-art-style"
  value={aiComposeArtStyle}
@@ -1870,9 +1926,6 @@ export default function TemplatesPage() {
  }}
  disabled={aiComposeBusy}
  />
- </div>
-
- <div className="mt-3">
  <InvitationContextSourcePicker
  id="ai-compose-context"
  value={aiComposeContextSource}
@@ -1883,7 +1936,6 @@ export default function TemplatesPage() {
  disabled={aiComposeBusy}
  canUseOrg={Boolean(tenant?.id) || isSuperAdmin}
  />
- </div>
 
  <button
  type="button"
@@ -1891,10 +1943,10 @@ export default function TemplatesPage() {
  aria-checked={aiComposeEmbedText}
  disabled={aiComposeBusy}
  onClick={() => setAiComposeEmbedText((v) => !v)}
- className={`mt-3 w-full flex items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition disabled:opacity-60 ${
+ className={`min-h-11 w-full flex items-start gap-3 rounded-[var(--radius-button)] border px-3 py-2.5 text-left transition disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
  aiComposeEmbedText
  ? 'border-primary/40 bg-primary/10'
- : 'border-border bg-surface-muted/40 hover:border-primary/30'
+ : 'border-border bg-surface hover:border-primary/30'
  }`}
  >
  <span
@@ -1904,69 +1956,73 @@ export default function TemplatesPage() {
  aria-hidden
  >
  <span
- className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xs transition-transform ${
+ className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-surface shadow-xs transition-transform ${
  aiComposeEmbedText ? 'translate-x-4' : ''
  }`}
  />
  </span>
  <span className="min-w-0">
- <span className="block text-xs font-bold text-foreground">Incruster le texte dans l’image</span>
- <span className="hidden sm:block text-[11px] text-muted mt-0.5 leading-relaxed">
- Noms, date et lieu du brief sont dessinés sur la carte. Aucune photo n’est obligatoire.
+ <span className="block text-sm font-bold text-foreground">Écrire les noms sur l’image</span>
+ <span className="block text-xs text-muted mt-0.5 leading-relaxed">
+ Titre, date et lieu du brief sont dessinés sur la carte.
  </span>
  </span>
  </button>
 
- <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-3">
+ <div className="pt-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
    <div>
-     <span className="block text-xs font-bold text-foreground">Vitesse & Qualité</span>
-     <span className="block text-[11px] text-muted">Rapide (~5s Flash) ou Haute Définition (Pro 2K)</span>
+     <span className="block text-sm font-bold text-foreground">Vitesse</span>
+     <span className="block text-xs text-muted">Rapide ou plus net</span>
    </div>
-   <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-lg border border-border">
+   <div className="flex items-center gap-1 bg-surface p-1 rounded-lg border border-border">
      <button
        type="button"
        disabled={aiComposeBusy}
        onClick={() => setAiComposeSpeedMode('fast')}
-       className={`px-2.5 py-1 text-xs font-bold rounded-md transition ${aiComposeSpeedMode === 'fast' ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground'}`}
-       title="Génération ultra-rapide en 4-8s via Gemini 3.1 Flash Image"
+       className={`min-h-11 px-3 text-xs font-bold rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${aiComposeSpeedMode === 'fast' ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground'}`}
+       title="Génération en 4 à 8 secondes"
      >
-       ⚡ Rapide (Flash)
+       Rapide
      </button>
      <button
        type="button"
        disabled={aiComposeBusy}
        onClick={() => setAiComposeSpeedMode('quality')}
-       className={`px-2.5 py-1 text-xs font-bold rounded-md transition ${aiComposeSpeedMode === 'quality' ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground'}`}
-       title="Résolution 2K et piqué maximal via Gemini 3 Pro Image"
+       className={`min-h-11 px-3 text-xs font-bold rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${aiComposeSpeedMode === 'quality' ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground'}`}
+       title="Image plus nette, un peu plus longue"
      >
-       ✨ Qualité (Pro 2K)
+       Plus nette
      </button>
    </div>
  </div>
 
- <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-3">
+ <div className="pt-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
    <div>
-     <span className="block text-xs font-bold text-foreground">Nombre d'échantillons (Variations A/B)</span>
-     <span className="block text-[11px] text-muted">Générez 1 ou 2 propositions d'arrière-plan pour comparer</span>
+     <span className="block text-sm font-bold text-foreground">Comparer deux fonds</span>
+     <span className="block text-xs text-muted">Une ou deux propositions à choisir ensuite</span>
    </div>
-   <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-lg border border-border">
+   <div className="flex items-center gap-1 bg-surface p-1 rounded-lg border border-border">
      <button
        type="button"
        disabled={aiComposeBusy}
        onClick={() => setAiComposeVariantsCount(1)}
-       className={`px-2.5 py-1 text-xs font-bold rounded-md transition ${aiComposeVariantsCount === 1 ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground'}`}
+       className={`min-h-11 px-3 text-xs font-bold rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${aiComposeVariantsCount === 1 ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground'}`}
      >
-       1
+       1 carte
      </button>
      <button
        type="button"
        disabled={aiComposeBusy}
        onClick={() => setAiComposeVariantsCount(2)}
-       className={`px-2.5 py-1 text-xs font-bold rounded-md transition ${aiComposeVariantsCount === 2 ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground'}`}
+       className={`min-h-11 px-3 text-xs font-bold rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${aiComposeVariantsCount === 2 ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground'}`}
      >
-       2 (A/B)
+       2 cartes
      </button>
    </div>
+ </div>
+ </div>
+ ) : null}
+ </div>
  </div>
  </div>
 
@@ -1984,7 +2040,7 @@ export default function TemplatesPage() {
  items={aiComposeHistory}
  activeId={aiComposeHistoryId}
  onOpen={applyAiComposeHistoryItem}
- listClassName="max-h-[min(28rem,52vh)]"
+ listClassName="max-h-[min(40rem,68vh)]"
  showEmpty
  emptyAction={(
  <button
@@ -2012,7 +2068,13 @@ export default function TemplatesPage() {
  ) : null}
  </div>
 
- <div className="px-5 py-4 border-t border-border-subtle flex flex-col-reverse sm:flex-row sm:justify-end gap-2 bg-surface-muted/40">
+ <div className="px-5 sm:px-8 lg:px-10 py-4 sm:py-5 border-t border-border-subtle flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-surface-muted/40">
+ {composeBlockedReason && aiComposeStudioTab === 'create' ? (
+   <p className="text-sm text-muted sm:max-w-sm" role="status">{composeBlockedReason}</p>
+ ) : (
+   <p className="text-sm text-muted hidden sm:block">La carte s’ouvre dans l’éditeur dès que la génération est prête.</p>
+ )}
+ <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
  <button
  type="button"
  disabled={aiComposeBusy}
@@ -2020,20 +2082,15 @@ export default function TemplatesPage() {
  setAiComposeModalOpen(false);
  resetAiComposeModal();
  }}
- className="min-h-11 px-4 py-2.5 text-xs font-bold text-muted hover:bg-surface-muted rounded-[var(--radius-button)] transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+ className="min-h-12 px-5 py-3 text-sm font-bold text-muted hover:bg-surface-muted rounded-[var(--radius-button)] transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
  Annuler
  </button>
  <button
  type="button"
- disabled={
-   aiComposeBusy ||
-   (aiComposeCoupleFaceSwap
-     ? aiComposeFiles.length < 1 || (!aiComposeIncomingFile && !(bgImageUrl && /^https?:\/\//i.test(bgImageUrl)))
-     : aiComposePrompt.trim().length < 8)
- }
+ disabled={aiComposeBusy || Boolean(composeBlockedReason)}
  onClick={handleAiComposeGenerate}
- className="min-h-11 px-5 py-2.5 bg-primary-solid hover:bg-primary-solid-hover disabled:opacity-50 text-primary-foreground text-xs font-bold rounded-[var(--radius-button)] transition inline-flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+ className="min-h-12 px-6 py-3 bg-primary-solid hover:bg-primary-solid-hover disabled:opacity-50 text-primary-foreground text-sm font-bold rounded-[var(--radius-button)] transition inline-flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
             {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
             {aiComposeBusy
@@ -2042,6 +2099,7 @@ export default function TemplatesPage() {
                 ? `Remplacer les visages (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`
                 : `Générer (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
  </button>
+ </div>
  </div>
  </div>
  </div>
@@ -2295,6 +2353,12 @@ export default function TemplatesPage() {
 
  const applyEditorialLayout = (id: EditorialLayoutId) => {
  const layout = editorialLayoutById(id);
+ if (
+   canvasElements.length > 0 &&
+   !window.confirm(`Remplacer la carte actuelle par « ${layout.name} » ? Les textes et photos en place seront perdus.`)
+ ) {
+   return;
+ }
  const stamp = Date.now();
  const resolvedIdentity = resolveInvitationIdentity({
  title: templateName,
@@ -2735,6 +2799,16 @@ export default function TemplatesPage() {
  });
  };
 
+ useEffect(() => {
+   if (!editorOpen) return;
+   const timer = window.setTimeout(() => {
+     writeIdentityToCanvas();
+   }, 400);
+   return () => window.clearTimeout(timer);
+   // Intentionnel : n’écrire que lorsque l’identité change, pas à chaque rendu du canevas.
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [editorOpen, templateName, invitationHonorees, invitationDate]);
+
  const catalogTemplates = templates.filter((t) => t.isGlobal ?? !t.tenantId);
  const ownTemplates = templates.filter((t) => t.isOwned ?? Boolean(t.tenantId));
  const canDuplicateAny = isSuperAdmin || catalogTemplates.length > 0 || canUseCustomTemplates;
@@ -3032,25 +3106,33 @@ export default function TemplatesPage() {
  </ul>
  </div>
 
- <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+ <div className="flex flex-col gap-2.5 pt-2">
+ <Link
+   href="/dashboard/events"
+   className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-xl text-xs transition"
+ >
+   Continuer vers un événement
+ </Link>
+ <p className="text-xs text-muted text-center">Depuis l’événement, vous pourrez l’envoyer sur WhatsApp.</p>
+ <div className="flex flex-col sm:flex-row gap-2.5">
  <button 
  type="button"
  onClick={() => {
  window.open('/dashboard/billing', '_blank');
  }}
- className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-xl text-xs transition shadow-2xs cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+ className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 border border-border bg-surface hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer"
  >
  <Sparkles className="w-4 h-4" aria-hidden />
- <span>Passer au forfait supérieur</span>
- <ArrowRight className="w-4 h-4" aria-hidden />
+ <span>Voir les formules</span>
  </button>
  <button
  type="button"
  onClick={() => setSaveUpgradeModalOpen(false)}
- className="inline-flex min-h-11 items-center justify-center px-4 py-2.5 border border-border bg-surface hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+ className="inline-flex min-h-11 items-center justify-center px-4 py-2.5 border border-border bg-surface hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer"
  >
  Continuer à peaufiner
  </button>
+ </div>
  </div>
  </div>
  </Modal>
@@ -3152,7 +3234,7 @@ export default function TemplatesPage() {
  value={templateName}
  onChange={(e) => setTemplateName(e.target.value)}
                       maxLength={120}
-                      className="w-full min-w-0 text-lg sm:text-xl font-extrabold text-foreground bg-transparent border-b border-border/40 hover:border-border focus:border-primary focus:outline-none focus-visible:border-primary pr-6 py-0.5 transition"
+                      className="w-full min-w-0 text-lg sm:text-xl font-semibold text-foreground bg-transparent border-b border-border/40 hover:border-border focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary pr-6 py-0.5 transition"
  placeholder="Titre de l’invitation"
                       aria-label="Titre de l’invitation"
                     />
@@ -3160,7 +3242,7 @@ export default function TemplatesPage() {
                   </div>
                   {draftSavedAt && (
                     <span
-                      className="shrink-0 text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md whitespace-nowrap"
+                      className="shrink-0 text-xs font-bold uppercase tracking-wider text-festive-accent bg-festive-accent/10 border border-festive-accent/20 px-2 py-0.5 rounded-md whitespace-nowrap"
                       title="Modifications locales non encore enregistrées"
                     >
                       Brouillon
@@ -3175,7 +3257,6 @@ export default function TemplatesPage() {
                     label="Cérémonie, couple ou personne"
                     value={invitationHonorees}
                     onChange={(e) => setInvitationHonorees(e.target.value)}
-                    onBlur={(e) => writeIdentityToCanvas({ honorees: e.target.value })}
                     placeholder="ex. Amina & Jean-Marc"
                     leftIcon={<Users className="h-4 w-4" aria-hidden />}
                     hint="Nom affiché en grand sur le carton."
@@ -3185,9 +3266,8 @@ export default function TemplatesPage() {
                     type="date"
                     value={invitationDate}
                     onChange={(e) => setInvitationDate(e.target.value)}
-                    onBlur={(e) => writeIdentityToCanvas({ date: e.target.value })}
                     leftIcon={<Calendar className="h-4 w-4" aria-hidden />}
-                    hint="S’écrit sur le carton en quittant le champ."
+                    hint="S’écrit tout de suite sur le carton."
                   />
                 </div>
                 <div className="mt-1 flex items-center gap-2">
@@ -3457,7 +3537,7 @@ export default function TemplatesPage() {
               </span>
               <div className="min-w-0">
                 <h3 className="text-xs font-bold text-foreground">
-                  Créer avec l’IA
+                  Créer le carton
                 </h3>
                 <p className="text-xs text-muted leading-relaxed mt-0.5">
                   Décrivez la fête, ou déposez une carte et les photos du couple. {AI_INVITATION_COMPOSE_TOKEN_COST} jetons par création.
@@ -3667,7 +3747,7 @@ export default function TemplatesPage() {
  <button 
               type="button"
  onClick={() => handleAddElement('text')}
-              className="flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+              className="min-h-11 flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
  >
               <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
                 <Type className="w-4 h-4" />
@@ -3677,7 +3757,7 @@ export default function TemplatesPage() {
  <button 
               type="button"
  onClick={() => handleAddElement('button')}
-              className="flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+              className="min-h-11 flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
  >
               <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
                 <Columns className="w-4 h-4" />
@@ -3687,7 +3767,7 @@ export default function TemplatesPage() {
  <button 
               type="button"
  onClick={() => handleAddElement('image')}
-              className="flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+              className="min-h-11 flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
  >
               <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
                 <Image className="w-4 h-4" />
@@ -3697,7 +3777,7 @@ export default function TemplatesPage() {
  <button 
               type="button"
  onClick={() => handleAddElement('divider')}
-              className="flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+              className="min-h-11 flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
  >
               <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
                 <Palette className="w-4 h-4" />
@@ -3816,7 +3896,7 @@ export default function TemplatesPage() {
  <div className="grid grid-cols-2 gap-2">
  {(showAllThemes
  ? invitationColorThemes(tenant?.branding)
- : invitationColorThemes(tenant?.branding).slice(0, 4)
+ : invitationColorThemes(tenant?.branding).filter((theme) => theme.id !== 'cyber-neon').slice(0, 4)
  ).map((theme) => (
  <button 
  key={theme.id}
@@ -3846,9 +3926,9 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => setShowAllThemes((v) => !v)}
- className="w-full text-xs font-bold text-primary hover:underline py-1"
+ className="w-full min-h-11 text-xs font-bold text-primary hover:underline"
  >
- {showAllThemes ? 'Moins de thèmes' : `Tous les thèmes (${invitationColorThemes(tenant?.branding).length})`}
+ {showAllThemes ? 'Moins de thèmes' : 'Autres ambiances (soirée, néon)'}
  </button>
  )}
  </div>
@@ -3874,7 +3954,7 @@ export default function TemplatesPage() {
  </div>
 
  <p className="text-xs text-muted leading-relaxed rounded-xl bg-surface-muted border border-border px-3 py-2">
- Pour le fond et le format de la carte, cliquez à côté d’un texte, puis ouvrez Apparence.
+ Fond, format et cadre : ouvrez l’onglet Apparence.
  </p>
  </>
  )}
@@ -5661,22 +5741,29 @@ export default function TemplatesPage() {
 
  {/* Image Cropper Modal */}
  {cropperOpen && (
- <div className="fixed inset-0 bg-surface-muted/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-surface rounded-[32px] border border-border-subtle shadow-2xl max-w-lg w-full overflow-hidden flex flex-col animate-fade-in">
+ <div className="fixed inset-0 bg-foreground/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="presentation">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cropper-title"
+        className="bg-surface rounded-t-2xl sm:rounded-[var(--radius-card)] border border-border max-w-lg w-full overflow-hidden flex flex-col"
+      >
  {/* Modal Header */}
- <div className="p-6 border-b border-border-subtle flex items-center justify-between">
- <div className="flex items-center gap-2">
- <div className="bg-primary/10 text-primary p-2 rounded-xl">
+ <div className="p-5 sm:p-6 border-b border-border-subtle flex items-center justify-between gap-3">
+ <div className="flex items-center gap-2 min-w-0">
+ <div className="bg-primary/10 text-primary p-2 rounded-[var(--radius-button)]">
  <Crop className="w-5 h-5" />
  </div>
- <div>
- <h3 className="text-base font-bold text-foreground">Recadrer / Rogner l'image</h3>
- <p className="text-xs text-muted font-medium">Ajustez le zoom et déplacez l'image pour la recadrer</p>
+ <div className="min-w-0">
+ <h3 id="cropper-title" className="text-base font-bold text-foreground">Recadrer l’image</h3>
+ <p className="text-xs text-muted font-medium">Zoomez et déplacez pour cadrer</p>
  </div>
  </div>
  <button 
+ type="button"
  onClick={() => setCropperOpen(false)}
- className="p-2 hover:bg-surface-muted rounded-xl transition text-muted hover:text-muted"
+ aria-label="Fermer le recadrage"
+ className="inline-flex min-h-11 min-w-11 items-center justify-center hover:bg-surface-muted rounded-[var(--radius-button)] transition text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
  <XCircle className="w-5 h-5" />
  </button>
@@ -5685,8 +5772,8 @@ export default function TemplatesPage() {
  {/* Modal Body */}
  <div className="p-6 space-y-6 flex-1 flex flex-col items-center">
  {error && (
- <div className="w-full p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center gap-2 text-xs">
- <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0" />
+ <div className="w-full p-3 bg-danger/10 border border-danger/20 text-danger rounded-xl flex items-center gap-2 text-xs">
+ <AlertCircle className="w-4 h-4 shrink-0" />
  <span>{error}</span>
  </div>
  )}
@@ -5711,7 +5798,7 @@ export default function TemplatesPage() {
  setCropPanY(0);
  setCropZoom(1);
  }}
- className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${cropAspectRatio === ratio.id ? 'bg-primary-solid text-primary-foreground shadow-md shadow-primary-solid/10' : 'bg-surface-muted border border-border text-muted hover:bg-surface-muted'}`}
+ className={`min-h-11 px-3 rounded-xl text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${cropAspectRatio === ratio.id ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted border border-border text-muted hover:bg-surface'}`}
  >
  {ratio.label}
  </button>
@@ -5721,7 +5808,7 @@ export default function TemplatesPage() {
 
  {/* Cropping Viewport Container */}
  <div 
- className="w-[400px] h-[300px] bg-background rounded-2xl relative overflow-hidden flex items-center justify-center select-none shadow-inner border border-border"
+ className="w-[400px] max-w-full h-[300px] mx-auto bg-background rounded-2xl relative overflow-hidden flex items-center justify-center select-none border border-border"
  onMouseDown={handleCropMouseDown}
  onMouseMove={handleCropMouseMove}
  onMouseUp={handleCropMouseUp}
@@ -5860,12 +5947,12 @@ export default function TemplatesPage() {
  title={
  isSuperAdmin
  ? 'Concepteur de modèles'
- : "Vos modèles d'invitation"
+ : 'Vos cartons d’invitation'
  }
  description={
  isSuperAdmin
  ? 'Atelier de création visuelle. Pour le catalogue plateforme, les filtres et la vitrine landing, utilisez la console Super Admin.'
- : 'Créez des invitations interactives — à la main, depuis une maquette, ou avec l’IA (images + brief).'
+ : 'Nommez la cérémonie, créez le carton, puis envoyez-le. La bibliothèque est là si vous préférez partir d’un modèle.'
  }
  breadcrumbs={
  <Breadcrumbs
@@ -5896,10 +5983,10 @@ export default function TemplatesPage() {
  <Button
  onClick={startAiComposeFromList}
  disabled={aiComposeBusy}
- title={`Créer une invitation à partir d’images et d’un brief (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons IA)`}
+ title={`Créer un carton à partir d’un brief (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons IA)`}
  leftIcon={aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
  >
- Créer avec l’IA
+ Créer un carton
  </Button>
  <>
  <input
@@ -5915,15 +6002,15 @@ export default function TemplatesPage() {
  disabled={mockupImporting}
  leftIcon={mockupImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
  >
- {mockupImporting ? (ocrProgress !== null ? `Texte ${ocrProgress}%` : 'Import…') : 'Importer une maquette'}
+ {mockupImporting ? (ocrProgress !== null ? `Texte ${ocrProgress}%` : 'Import…') : 'Importer'}
  </Button>
  </>
  <Button
- variant="secondary"
+ variant="ghost"
  onClick={() => handleCreateTemplateClick('studio')}
  leftIcon={<PlusCircle className="w-4 h-4" />}
  >
- Nouveau modèle
+ Éditeur
  </Button>
  </div>
  }
@@ -5955,9 +6042,17 @@ export default function TemplatesPage() {
  {error && <Alert variant="error">{error}</Alert>}
 
  {success && (
- <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-3 text-sm">
- <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
- <span>{success}</span>
+ <div className="p-4 bg-primary/10 border border-primary/20 text-foreground rounded-xl flex flex-col sm:flex-row sm:items-center gap-3 text-sm">
+ <div className="flex items-start gap-3 min-w-0">
+ <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
+ <span className="min-w-0 break-words">{success}</span>
+ </div>
+ <Link
+   href="/dashboard/events"
+   className="min-h-11 inline-flex items-center justify-center px-3 rounded-[var(--radius-button)] text-sm font-semibold text-primary hover:bg-primary/10 shrink-0"
+ >
+   Lier à un événement
+ </Link>
  </div>
  )}
 
@@ -6022,38 +6117,45 @@ export default function TemplatesPage() {
  emptyMessage={
  isSuperAdmin
  ? "Aucun modèle. Créez un modèle global ou pour une organisation."
- : "Aucun modèle personnel pour l'instant. Créez-en un avec l’IA, importez une maquette, ou partez de la bibliothèque."
+ : "Votre premier carton n’est pas encore là. En 2 minutes : décrivez la fête, voyez le faire-part, envoyez-le."
  }
  emptyAction={
- <div className="flex flex-col sm:flex-row gap-3 justify-center">
+ <div className="flex flex-col gap-3 items-center">
  <button
  type="button"
  onClick={startAiComposeFromList}
  disabled={aiComposeBusy}
- className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/20 cursor-pointer"
+ className="inline-flex min-h-11 items-center gap-2 px-5 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-[var(--radius-button)] text-sm transition cursor-pointer"
  >
  {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
- Créer avec l’IA
+ Créer mon carton
  </button>
+ <details className="text-center">
+   <summary className="min-h-11 inline-flex items-center text-sm font-semibold text-muted cursor-pointer hover:text-foreground">
+     Autre départ
+   </summary>
+   <div className="mt-2 flex flex-col sm:flex-row gap-2 justify-center">
  {canUseMockupImport && (
  <button
  type="button"
  onClick={() => mockupInputRef.current?.click()}
  disabled={mockupImporting}
- className="inline-flex items-center gap-2 px-5 py-2.5 border border-primary/30 text-primary font-semibold rounded-xl text-sm transition hover:bg-primary/10 disabled:opacity-50 cursor-pointer"
+ className="inline-flex min-h-11 items-center gap-2 px-4 py-2 border border-border text-foreground font-semibold rounded-[var(--radius-button)] text-sm transition hover:bg-surface-muted disabled:opacity-50 cursor-pointer"
  >
  {mockupImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
- Importer ma maquette
+ Importer une image
  </button>
  )}
  <button
  type="button"
  onClick={() => handleCreateTemplateClick('studio')}
- className="inline-flex items-center gap-2 px-5 py-2.5 border border-border text-foreground font-semibold rounded-xl text-sm transition hover:bg-surface-muted cursor-pointer"
+ className="inline-flex min-h-11 items-center gap-2 px-4 py-2 border border-border text-foreground font-semibold rounded-[var(--radius-button)] text-sm transition hover:bg-surface-muted cursor-pointer"
  >
  <PlusCircle className="w-4 h-4" />
- Éditeur manuel
+ Éditeur vide
  </button>
+   </div>
+ </details>
  </div>
  }
  onEdit={(t) => handleEditTemplateClick(t as TemplateItem)}
@@ -6152,39 +6254,47 @@ export default function TemplatesPage() {
  </p>
  <ul className="space-y-1.5 text-muted pl-1">
  <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden />
+ <Check className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
  <span>Enregistrement et utilisation illimitée de modèles sur-mesure</span>
  </li>
  <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden />
+ <Check className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
  <span>Formulaires de réponse à l’invitation personnalisés et suivi des présences</span>
  </li>
  <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden />
+ <Check className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
  <span>Génération d&apos;invitations avancées par Intelligence Artificielle</span>
  </li>
  </ul>
  </div>
 
- <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+ <div className="flex flex-col gap-2.5 pt-2">
+ <Link
+   href="/dashboard/events"
+   className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-xl text-xs transition"
+ >
+   Continuer vers un événement
+ </Link>
+ <p className="text-xs text-muted text-center">Depuis l’événement, vous pourrez l’envoyer sur WhatsApp.</p>
+ <div className="flex flex-col sm:flex-row gap-2.5">
  <button
  type="button"
  onClick={() => {
  window.open('/dashboard/billing', '_blank');
  }}
- className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-xl text-xs transition shadow-2xs cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+ className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 border border-border bg-surface hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer"
  >
  <Sparkles className="w-4 h-4" aria-hidden />
- <span>Passer au forfait supérieur</span>
- <ArrowRight className="w-4 h-4" aria-hidden />
+ <span>Voir les formules</span>
  </button>
  <button
  type="button"
  onClick={() => setSaveUpgradeModalOpen(false)}
- className="inline-flex min-h-11 items-center justify-center px-4 py-2.5 border border-border bg-surface hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+ className="inline-flex min-h-11 items-center justify-center px-4 py-2.5 border border-border bg-surface hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer"
  >
  Continuer à peaufiner
  </button>
+ </div>
  </div>
  </div>
  </Modal>

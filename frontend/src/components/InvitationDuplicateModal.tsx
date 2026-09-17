@@ -52,7 +52,7 @@ export default function InvitationDuplicateModal({
     <Modal
       open={open}
       onClose={loading ? () => undefined : onClose}
-      size="md"
+      size="xl"
       title={
         <div className="flex items-center gap-2.5">
           <span className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-button)] bg-primary/10 text-primary">

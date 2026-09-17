@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import {
   EDITORIAL_LAYOUT_CATEGORIES,
   EDITORIAL_LAYOUTS,
@@ -8,6 +9,8 @@ import {
   type EditorialLayoutId,
 } from '@/lib/invitationEditorialLayouts';
 import { cn } from '@/lib/cn';
+
+const CEREMONY_CATEGORIES = new Set<EditorialLayoutCategory>(['mariage']);
 
 function LayoutThumb({ layout }: { layout: EditorialLayout }) {
   if (layout.id === 'wedding-arch') {
@@ -91,15 +94,19 @@ export default function EditorialLayoutPicker({
   onSelect: (id: EditorialLayoutId) => void;
   selectedId?: EditorialLayoutId | null;
 }) {
+  const [showOtherFormats, setShowOtherFormats] = useState(false);
+  const ceremony = EDITORIAL_LAYOUT_CATEGORIES.filter((category) => CEREMONY_CATEGORIES.has(category.id));
+  const others = EDITORIAL_LAYOUT_CATEGORIES.filter((category) => !CEREMONY_CATEGORIES.has(category.id));
+
   return (
     <div className="space-y-3">
       <div>
-        <h3 className="text-xs font-bold text-foreground">Mises en page photo</h3>
-        <p className="text-[11px] text-muted leading-relaxed mt-0.5">
-          Un clic pose le canevas. Remplacez ensuite les photos par les vôtres.
+        <h3 className="text-sm font-bold text-foreground">Mises en page de cérémonie</h3>
+        <p className="text-xs text-muted leading-relaxed mt-0.5">
+          Un clic remplace la carte. Confirmez avant d’écraser votre travail.
         </p>
       </div>
-      {EDITORIAL_LAYOUT_CATEGORIES.map((category) => (
+      {ceremony.map((category) => (
         <LayoutCategoryGroup
           key={category.id}
           category={category.id}
@@ -108,6 +115,25 @@ export default function EditorialLayoutPicker({
           onSelect={onSelect}
         />
       ))}
+      <button
+        type="button"
+        aria-expanded={showOtherFormats}
+        onClick={() => setShowOtherFormats((open) => !open)}
+        className="min-h-11 w-full text-left text-xs font-semibold text-muted hover:text-foreground rounded-[var(--radius-button)] px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+      >
+        {showOtherFormats ? 'Masquer soirée et affiche' : 'Autres formats (soirée, affiche)'}
+      </button>
+      {showOtherFormats
+        ? others.map((category) => (
+          <LayoutCategoryGroup
+            key={category.id}
+            category={category.id}
+            label={category.label}
+            selectedId={selectedId}
+            onSelect={onSelect}
+          />
+        ))
+        : null}
     </div>
   );
 }
@@ -126,7 +152,7 @@ function LayoutCategoryGroup({
   const layouts = EDITORIAL_LAYOUTS.filter((layout) => layout.category === category);
   return (
     <div className="space-y-1.5">
-      <p className="text-[11px] font-semibold text-muted">{label}</p>
+      <p className="text-xs font-semibold text-muted">{label}</p>
       <div className="grid grid-cols-2 gap-1.5">
         {layouts.map((layout) => {
           const selected = selectedId === layout.id;
@@ -149,7 +175,7 @@ function LayoutCategoryGroup({
               </div>
               <span className="block px-2 py-1.5">
                 <span className="block text-xs font-bold text-foreground leading-tight">{layout.name}</span>
-                <span className="block text-[11px] text-muted leading-snug mt-0.5">{layout.hint}</span>
+                <span className="block text-xs text-muted leading-snug mt-0.5">{layout.hint}</span>
               </span>
             </button>
           );
