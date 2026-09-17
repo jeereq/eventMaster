@@ -2,6 +2,7 @@ import { ensureMandatoryRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields
 import { uploadImageBuffer } from './cloudinaryService';
 import { getTemplateUploadFolder } from '../config/cloudinaryConfig';
 import { getGeminiApiKey, requestGeminiJson } from './geminiJsonClient.ts';
+import { getOpenAiApiKey, requestOpenAiJson } from './openaiJsonClient.ts';
 import { isOpenAiStudioModel } from './aiStudioModels.ts';
 import {
   formatContextForImage,
@@ -66,12 +67,8 @@ function rateLimit(userId: string) {
   bucket.count += 1;
 }
 
-function getOpenAiKey(): string {
-  return String(process.env.OPENAI_API_KEY || '').trim();
-}
-
 function requireAiConfigured(): string {
-  const key = getOpenAiKey();
+  const key = getOpenAiApiKey();
   if (!getGeminiApiKey() && !key) {
     fail(503, 'La génération IA n’est pas configurée (GEMINI_API_KEY ou OPENAI_API_KEY).');
   }
@@ -772,47 +769,17 @@ async function visionStructure(
     !options.preferredModel.includes('gpt-image')
       ? options.preferredModel
       : process.env.OPENAI_VISION_MODEL || process.env.OPENAI_MODEL || 'gpt-5.6-luna';
-  const userContent: Array<Record<string, unknown>> = [
-    {
-      type: 'text',
-      text: visionUserText(prompt, hasRefs, options),
-    },
-    ...imageUrls.slice(0, 4).map((url) => ({
-      type: 'image_url',
-      image_url: { url, detail: 'high' as const },
-    })),
-  ];
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 90_000);
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: visionModel,
-        temperature: 0.2,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: structureSystemPrompt(Boolean(options?.embedText), options?.artStyle, Boolean(options?.isPublic)) },
-          { role: 'user', content: userContent },
-        ],
-      }),
+    const parsed = await requestOpenAiJson({
+      system: structureSystemPrompt(Boolean(options?.embedText), options?.artStyle, Boolean(options?.isPublic)),
+      userText: visionUserText(prompt, hasRefs, options),
+      imageUrls,
+      temperature: 0.2,
+      failMessage: 'Échec de l’analyse IA des images.',
+      model: visionModel,
     });
-    const payload = (await response.json().catch(() => ({}))) as {
-      error?: { message?: string };
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    if (!response.ok) {
-      fail(502, payload.error?.message || 'Échec de l’analyse IA des images.');
-    }
-    const raw = payload.choices?.[0]?.message?.content || '{}';
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    return visionResultFromParsed(parsed, prompt, hasRefs, options);
+    return visionResultFromParsed(parsed as Record<string, unknown>, prompt, hasRefs, options);
   } catch (error) {
     if (preferOpenAi) {
       console.warn(
@@ -831,8 +798,6 @@ async function visionStructure(
     }
     if ((error as HttpError)?.status) throw error;
     fail(502, (error as Error)?.message || 'Impossible d’analyser les images avec l’IA.');
-  } finally {
-    clearTimeout(timer);
   }
 }
 
