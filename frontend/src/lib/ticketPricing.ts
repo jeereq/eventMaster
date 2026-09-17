@@ -87,7 +87,32 @@ export function priceFromFcForEvent(event: {
   if (mode !== 'by_zone') return Math.max(0, event.ticketPriceFc);
   const prices = zones.map((z) => z.priceFc).filter((p) => p > 0);
   if (prices.length) return Math.min(...prices);
-  return Math.max(0, event.ticketPriceFc) || null;
+  return null;
+}
+
+export function eventPublicPriceDisplay(event: {
+  ticketPricingMode?: string;
+  ticketPriceFc?: number;
+  ticketingEnabled?: boolean;
+  paid?: boolean;
+  pricingZones?: PricingZone[];
+  tablePlan?: unknown;
+}): { amountFc: number | null; unitLabel: string | null; zoned: boolean } {
+  const amountFc = priceFromFcForEvent({
+    ticketPricingMode: event.ticketPricingMode,
+    ticketPriceFc: event.ticketPriceFc ?? 0,
+    ticketingEnabled: event.ticketingEnabled,
+    paid: event.paid,
+    pricingZones: event.pricingZones,
+    tablePlan: event.tablePlan,
+  });
+  const zoned = normalizeTicketPricingMode(event.ticketPricingMode) === 'by_zone';
+  if (amountFc == null) return { amountFc: null, unitLabel: null, zoned };
+  return {
+    amountFc,
+    unitLabel: zoned ? 'à partir de' : '/ personne',
+    zoned,
+  };
 }
 
 export function formatPriceRangeFc(minFc: number, maxFc: number): string {

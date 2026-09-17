@@ -146,7 +146,7 @@ export function priceFromFcForEvent(event: {
   const zones = pricingZonesFromPlan(event.tablePlan);
   const prices = zones.map((z) => z.priceFc).filter((p) => p > 0);
   if (prices.length) return Math.min(...prices);
-  return Math.max(0, event.ticketPriceFc) || null;
+  return null;
 }
 
 /** Applique pricingZoneId sur les tables selon position / rang. */

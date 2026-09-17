@@ -191,8 +191,18 @@ export function firstInvalidEventConfigTab(input: {
   return null;
 }
 
-export function photosFromEvent(photos?: string[] | null): string[] {
-  return Array.isArray(photos) ? photos.filter((url): url is string => typeof url === 'string' && url.length > 0) : [];
+export function photosFromEvent(photos?: unknown): string[] {
+  if (!Array.isArray(photos)) return [];
+  const urls: string[] = [];
+  for (const item of photos) {
+    const url = typeof item === 'string'
+      ? item.trim()
+      : item && typeof item === 'object' && 'url' in item
+        ? String((item as { url?: unknown }).url || '').trim()
+        : '';
+    if (url) urls.push(url);
+  }
+  return urls;
 }
 
 export function kindFromEvent(value?: string | null): EventKindId | '' {
