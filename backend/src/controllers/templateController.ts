@@ -4,6 +4,7 @@ import { prisma } from '../db';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
 import { assertPlanFeature, PlanFeatureError } from '../services/planFeaturesService';
 import { ensureMandatoryRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields';
+import { applyInvitationIdentityToContent } from '../utils/invitationIdentity';
 import { composeInvitationTemplateAi } from '../services/invitationTemplateAiService';
 import {
   consumeAiSimulationCredit,
@@ -321,7 +322,7 @@ export async function duplicateTemplate(req: AuthenticatedRequest, res: Response
     const isSuperAdmin = canManagePlatformTemplates(req.user);
     const tenantId = req.user?.tenantId;
     const id = req.params.id as string;
-    const { name, targetTenantId } = req.body ?? {};
+    const { name, targetTenantId, title, honorees, date } = req.body ?? {};
 
     if (!isSuperAdmin && !tenantId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
@@ -387,18 +388,32 @@ export async function duplicateTemplate(req: AuthenticatedRequest, res: Response
       }
     }
 
+    const identityTitle = typeof title === 'string' ? title.trim() : '';
+    const identityHonorees = typeof honorees === 'string' ? honorees.trim() : '';
+    const identityDate = typeof date === 'string' ? date.trim() : '';
     const copyName =
-      typeof name === 'string' && name.trim()
+      identityTitle
+      || (typeof name === 'string' && name.trim()
         ? name.trim()
         : isCatalogSource
           ? source.name
-          : `${source.name} (Copie)`;
+          : `${source.name} (Copie)`);
+
+    const withIdentity = applyInvitationIdentityToContent(
+      ensureMandatoryRsvpFieldsOnContent(source.content),
+      {
+        title: copyName,
+        honorees: identityHonorees || copyName,
+        date: identityDate,
+        applyTitleToCard: true,
+      },
+    );
 
     const template = await prisma.template.create({
       data: {
         tenantId: finalTenantId,
         name: copyName,
-        content: ensureMandatoryRsvpFieldsOnContent(source.content) as object,
+        content: withIdentity as object,
         showOnLanding: false,
       },
     });
