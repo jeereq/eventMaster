@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -11,7 +12,6 @@ import { applyPaletteToElements, invitationColorThemes, ORG_BRAND_THEME_ID, buil
 import { FONT_THEMES, applyFontThemeToElements, getFontTheme } from '@/lib/templateFontThemes';
 import { TEMPLATE_IMAGE_STYLES, templateImageStyleClass, templateImageStyleExtra, type TemplateImageStyleId } from '@/lib/templateImageStyle';
 import { editorialLayoutById, fillEditorialTokens, type EditorialLayoutId } from '@/lib/invitationEditorialLayouts';
-import EditorialLayoutPicker from '@/components/EditorialLayoutPicker';
 import { buildMockupTemplate, applyMockupToEditor, applyMockupTextMode, buildTextElementsFromOcrLines, type MockupImportTextMode } from '@/lib/templateMockupImport';
 import { extractTextFromImageSource, mergeOcrIntoMockupElements } from '@/lib/templateOcrImport';
 import { composeTemplateWithAi, applyAiComposeToEditor, loadAiTemplateDraft, clearAiTemplateDraft, downloadAiGeneratedImage, COUPLE_FACE_SWAP_DEFAULT_PROMPT, type AiSpeedMode } from '@/lib/templateAiCompose';
@@ -24,10 +24,7 @@ import {
  extractItemVariants,
 } from '@/lib/aiTemplateComposeHistory';
 import AiTemplateComposeHistoryList from '@/components/AiTemplateComposeHistoryList';
-import PromptModelSelector from '@/components/PromptModelSelector';
 import { StudioAiTabs, StudioHowTo, type StudioAiTabId } from '@/components/StudioAiTabs';
-import InvitationContextSourcePicker from '@/components/InvitationContextSourcePicker';
-import InvitationArtStylePicker from '@/components/InvitationArtStylePicker';
 import {
  persistInvitationArtStyle,
  readStoredInvitationArtStyle,
@@ -93,6 +90,11 @@ import {
  useHeadStylesheet,
 } from '@/lib/headStylesheet';
 import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
+
+const EditorialLayoutPicker = dynamic(() => import('@/components/EditorialLayoutPicker'), { ssr: false });
+const PromptModelSelector = dynamic(() => import('@/components/PromptModelSelector'), { ssr: false });
+const InvitationContextSourcePicker = dynamic(() => import('@/components/InvitationContextSourcePicker'), { ssr: false });
+const InvitationArtStylePicker = dynamic(() => import('@/components/InvitationArtStylePicker'), { ssr: false });
 
 interface TemplateItem {
  id: string;
@@ -1059,15 +1061,38 @@ export default function TemplatesPage() {
  ];
 
  return (
- <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-background/60 backdrop-blur-sm">
-      <div className="bg-surface rounded-[28px] border border-border-subtle shadow-2xl max-w-lg w-full overflow-hidden flex flex-col animate-fade-in">
- <div className="p-6 border-b border-border-subtle">
- <h3 className="text-lg font-bold text-foreground">Comment importer cette image ?</h3>
- <p className="text-xs text-muted mt-1 leading-relaxed">
- Fichier : <span className="font-semibold text-foreground">{pendingMockupFile.name}</span>
- </p>
- </div>
- <div className="p-6 space-y-3 max-h-[60vh] overflow-y-auto">
+ <Modal
+   open
+   size="lg"
+   title="Comment importer cette image ?"
+   description={`Fichier : ${pendingMockupFile.name}`}
+   onClose={() => {
+     setMockupImportModalOpen(false);
+     setPendingMockupFile(null);
+   }}
+   footer={
+     <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end w-full">
+       <Button
+         type="button"
+         variant="secondary"
+         onClick={() => {
+           setMockupImportModalOpen(false);
+           setPendingMockupFile(null);
+         }}
+       >
+         Annuler
+       </Button>
+       <Button
+         type="button"
+         disabled={mockupImportMode === 'ocr' && !canUseMockupOcr}
+         onClick={handleConfirmMockupImport}
+       >
+         Importer l&apos;image
+       </Button>
+     </div>
+   }
+ >
+ <div className="space-y-3">
  {modes.map((mode) => (
  <label
  key={mode.id}
@@ -1100,28 +1125,7 @@ export default function TemplatesPage() {
  </label>
  ))}
  </div>
- <div className="p-6 border-t border-border-subtle flex gap-3 justify-end bg-surface-muted/50">
- <button
- type="button"
- onClick={() => {
- setMockupImportModalOpen(false);
- setPendingMockupFile(null);
- }}
- className="px-4 py-2.5 text-xs font-bold text-muted hover:bg-surface-muted rounded-xl transition"
- >
- Annuler
- </button>
- <button
- type="button"
- onClick={handleConfirmMockupImport}
- disabled={mockupImportMode === 'ocr' && !canUseMockupOcr}
- className="px-5 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white text-xs font-bold rounded-xl transition shadow-md"
- >
- Importer l&apos;image
- </button>
- </div>
- </div>
- </div>
+ </Modal>
  );
  };
 
@@ -1321,7 +1325,7 @@ export default function TemplatesPage() {
      return;
    }
  } else if (aiComposePrompt.trim().length < 8) {
- setError('Décrivez le style souhaité (quelques mots minimum).');
+ setError('Décrivez la fête en quelques mots (au moins 8 caractères), puis générez.');
  return;
  }
  if (!canAffordAiAction(aiAllowance, AI_INVITATION_COMPOSE_TOKEN_COST)) {
@@ -1739,7 +1743,7 @@ export default function TemplatesPage() {
          {aiComposePreviewUrls.map((url, i) => (
            <div key={url} className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-[var(--radius-button)] overflow-hidden border border-border">
              {/* eslint-disable-next-line @next/next/no-img-element */}
-             <img src={url} alt={i === 0 ? 'Premier visage du couple' : 'Second visage du couple'} className="w-full h-full object-cover" />
+             <img src={url} alt={i === 0 ? 'Premier visage du couple' : 'Second visage du couple'} className="w-full h-full object-cover" loading="lazy" />
              <button
                type="button"
                disabled={aiComposeBusy}
@@ -1817,7 +1821,7 @@ export default function TemplatesPage() {
  {aiComposePreviewUrls.map((url, i) => (
  <div key={url} className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-[var(--radius-button)] overflow-hidden border border-border">
  {/* eslint-disable-next-line @next/next/no-img-element */}
- <img src={url} alt={`Référence ${i + 1}`} className="w-full h-full object-cover" />
+ <img src={url} alt={`Référence ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
  <button
  type="button"
  disabled={aiComposeBusy}
@@ -2349,6 +2353,12 @@ export default function TemplatesPage() {
 
  const applyEditorialLayout = (id: EditorialLayoutId) => {
  const layout = editorialLayoutById(id);
+ if (
+   canvasElements.length > 0 &&
+   !window.confirm(`Remplacer la carte actuelle par « ${layout.name} » ? Les textes et photos en place seront perdus.`)
+ ) {
+   return;
+ }
  const stamp = Date.now();
  const resolvedIdentity = resolveInvitationIdentity({
  title: templateName,
@@ -2789,6 +2799,16 @@ export default function TemplatesPage() {
  });
  };
 
+ useEffect(() => {
+   if (!editorOpen) return;
+   const timer = window.setTimeout(() => {
+     writeIdentityToCanvas();
+   }, 400);
+   return () => window.clearTimeout(timer);
+   // Intentionnel : n’écrire que lorsque l’identité change, pas à chaque rendu du canevas.
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [editorOpen, templateName, invitationHonorees, invitationDate]);
+
  const catalogTemplates = templates.filter((t) => t.isGlobal ?? !t.tenantId);
  const ownTemplates = templates.filter((t) => t.isOwned ?? Boolean(t.tenantId));
  const canDuplicateAny = isSuperAdmin || catalogTemplates.length > 0 || canUseCustomTemplates;
@@ -3086,25 +3106,33 @@ export default function TemplatesPage() {
  </ul>
  </div>
 
- <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+ <div className="flex flex-col gap-2.5 pt-2">
+ <Link
+   href="/dashboard/events"
+   className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-xl text-xs transition"
+ >
+   Continuer vers un événement
+ </Link>
+ <p className="text-xs text-muted text-center">Depuis l’événement, vous pourrez l’envoyer sur WhatsApp.</p>
+ <div className="flex flex-col sm:flex-row gap-2.5">
  <button 
  type="button"
  onClick={() => {
  window.open('/dashboard/billing', '_blank');
  }}
- className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-xl text-xs transition shadow-2xs cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+ className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 border border-border bg-surface hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer"
  >
  <Sparkles className="w-4 h-4" aria-hidden />
- <span>Passer au forfait supérieur</span>
- <ArrowRight className="w-4 h-4" aria-hidden />
+ <span>Voir les formules</span>
  </button>
  <button
  type="button"
  onClick={() => setSaveUpgradeModalOpen(false)}
- className="inline-flex min-h-11 items-center justify-center px-4 py-2.5 border border-border bg-surface hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+ className="inline-flex min-h-11 items-center justify-center px-4 py-2.5 border border-border bg-surface hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer"
  >
  Continuer à peaufiner
  </button>
+ </div>
  </div>
  </div>
  </Modal>
@@ -3206,7 +3234,7 @@ export default function TemplatesPage() {
  value={templateName}
  onChange={(e) => setTemplateName(e.target.value)}
                       maxLength={120}
-                      className="w-full min-w-0 text-lg sm:text-xl font-extrabold text-foreground bg-transparent border-b border-border/40 hover:border-border focus:border-primary focus:outline-none focus-visible:border-primary pr-6 py-0.5 transition"
+                      className="w-full min-w-0 text-lg sm:text-xl font-semibold text-foreground bg-transparent border-b border-border/40 hover:border-border focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary pr-6 py-0.5 transition"
  placeholder="Titre de l’invitation"
                       aria-label="Titre de l’invitation"
                     />
@@ -3214,7 +3242,7 @@ export default function TemplatesPage() {
                   </div>
                   {draftSavedAt && (
                     <span
-                      className="shrink-0 text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md whitespace-nowrap"
+                      className="shrink-0 text-xs font-bold uppercase tracking-wider text-festive-accent bg-festive-accent/10 border border-festive-accent/20 px-2 py-0.5 rounded-md whitespace-nowrap"
                       title="Modifications locales non encore enregistrées"
                     >
                       Brouillon
@@ -3229,7 +3257,6 @@ export default function TemplatesPage() {
                     label="Cérémonie, couple ou personne"
                     value={invitationHonorees}
                     onChange={(e) => setInvitationHonorees(e.target.value)}
-                    onBlur={(e) => writeIdentityToCanvas({ honorees: e.target.value })}
                     placeholder="ex. Amina & Jean-Marc"
                     leftIcon={<Users className="h-4 w-4" aria-hidden />}
                     hint="Nom affiché en grand sur le carton."
@@ -3239,9 +3266,8 @@ export default function TemplatesPage() {
                     type="date"
                     value={invitationDate}
                     onChange={(e) => setInvitationDate(e.target.value)}
-                    onBlur={(e) => writeIdentityToCanvas({ date: e.target.value })}
                     leftIcon={<Calendar className="h-4 w-4" aria-hidden />}
-                    hint="S’écrit sur le carton en quittant le champ."
+                    hint="S’écrit tout de suite sur le carton."
                   />
                 </div>
                 <div className="mt-1 flex items-center gap-2">
@@ -3511,7 +3537,7 @@ export default function TemplatesPage() {
               </span>
               <div className="min-w-0">
                 <h3 className="text-xs font-bold text-foreground">
-                  Créer avec l’IA
+                  Créer le carton
                 </h3>
                 <p className="text-xs text-muted leading-relaxed mt-0.5">
                   Décrivez la fête, ou déposez une carte et les photos du couple. {AI_INVITATION_COMPOSE_TOKEN_COST} jetons par création.
@@ -3721,7 +3747,7 @@ export default function TemplatesPage() {
  <button 
               type="button"
  onClick={() => handleAddElement('text')}
-              className="flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+              className="min-h-11 flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
  >
               <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
                 <Type className="w-4 h-4" />
@@ -3731,7 +3757,7 @@ export default function TemplatesPage() {
  <button 
               type="button"
  onClick={() => handleAddElement('button')}
-              className="flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+              className="min-h-11 flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
  >
               <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
                 <Columns className="w-4 h-4" />
@@ -3741,7 +3767,7 @@ export default function TemplatesPage() {
  <button 
               type="button"
  onClick={() => handleAddElement('image')}
-              className="flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+              className="min-h-11 flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
  >
               <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
                 <Image className="w-4 h-4" />
@@ -3751,7 +3777,7 @@ export default function TemplatesPage() {
  <button 
               type="button"
  onClick={() => handleAddElement('divider')}
-              className="flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+              className="min-h-11 flex items-center gap-2.5 p-2.5 border border-border rounded-xl hover:border-primary/50 hover:bg-primary/5 text-foreground hover:text-primary font-semibold text-xs transition text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
  >
               <span className="p-1.5 rounded-lg bg-surface-muted text-muted group-hover:bg-primary/10 group-hover:text-primary transition shrink-0">
                 <Palette className="w-4 h-4" />
@@ -3870,7 +3896,7 @@ export default function TemplatesPage() {
  <div className="grid grid-cols-2 gap-2">
  {(showAllThemes
  ? invitationColorThemes(tenant?.branding)
- : invitationColorThemes(tenant?.branding).slice(0, 4)
+ : invitationColorThemes(tenant?.branding).filter((theme) => theme.id !== 'cyber-neon').slice(0, 4)
  ).map((theme) => (
  <button 
  key={theme.id}
@@ -3900,9 +3926,9 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => setShowAllThemes((v) => !v)}
- className="w-full text-xs font-bold text-primary hover:underline py-1"
+ className="w-full min-h-11 text-xs font-bold text-primary hover:underline"
  >
- {showAllThemes ? 'Moins de thèmes' : `Tous les thèmes (${invitationColorThemes(tenant?.branding).length})`}
+ {showAllThemes ? 'Moins de thèmes' : 'Autres ambiances (soirée, néon)'}
  </button>
  )}
  </div>
@@ -3928,7 +3954,7 @@ export default function TemplatesPage() {
  </div>
 
  <p className="text-xs text-muted leading-relaxed rounded-xl bg-surface-muted border border-border px-3 py-2">
- Pour le fond et le format de la carte, cliquez à côté d’un texte, puis ouvrez Apparence.
+ Fond, format et cadre : ouvrez l’onglet Apparence.
  </p>
  </>
  )}
@@ -5715,22 +5741,29 @@ export default function TemplatesPage() {
 
  {/* Image Cropper Modal */}
  {cropperOpen && (
- <div className="fixed inset-0 bg-surface-muted/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-surface rounded-[32px] border border-border-subtle shadow-2xl max-w-lg w-full overflow-hidden flex flex-col animate-fade-in">
+ <div className="fixed inset-0 bg-foreground/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="presentation">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cropper-title"
+        className="bg-surface rounded-t-2xl sm:rounded-[var(--radius-card)] border border-border max-w-lg w-full overflow-hidden flex flex-col"
+      >
  {/* Modal Header */}
- <div className="p-6 border-b border-border-subtle flex items-center justify-between">
- <div className="flex items-center gap-2">
- <div className="bg-primary/10 text-primary p-2 rounded-xl">
+ <div className="p-5 sm:p-6 border-b border-border-subtle flex items-center justify-between gap-3">
+ <div className="flex items-center gap-2 min-w-0">
+ <div className="bg-primary/10 text-primary p-2 rounded-[var(--radius-button)]">
  <Crop className="w-5 h-5" />
  </div>
- <div>
- <h3 className="text-base font-bold text-foreground">Recadrer / Rogner l'image</h3>
- <p className="text-xs text-muted font-medium">Ajustez le zoom et déplacez l'image pour la recadrer</p>
+ <div className="min-w-0">
+ <h3 id="cropper-title" className="text-base font-bold text-foreground">Recadrer l’image</h3>
+ <p className="text-xs text-muted font-medium">Zoomez et déplacez pour cadrer</p>
  </div>
  </div>
  <button 
+ type="button"
  onClick={() => setCropperOpen(false)}
- className="p-2 hover:bg-surface-muted rounded-xl transition text-muted hover:text-muted"
+ aria-label="Fermer le recadrage"
+ className="inline-flex min-h-11 min-w-11 items-center justify-center hover:bg-surface-muted rounded-[var(--radius-button)] transition text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
  <XCircle className="w-5 h-5" />
  </button>
@@ -5739,8 +5772,8 @@ export default function TemplatesPage() {
  {/* Modal Body */}
  <div className="p-6 space-y-6 flex-1 flex flex-col items-center">
  {error && (
- <div className="w-full p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl flex items-center gap-2 text-xs">
- <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0" />
+ <div className="w-full p-3 bg-danger/10 border border-danger/20 text-danger rounded-xl flex items-center gap-2 text-xs">
+ <AlertCircle className="w-4 h-4 shrink-0" />
  <span>{error}</span>
  </div>
  )}
@@ -5765,7 +5798,7 @@ export default function TemplatesPage() {
  setCropPanY(0);
  setCropZoom(1);
  }}
- className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${cropAspectRatio === ratio.id ? 'bg-primary-solid text-primary-foreground shadow-md shadow-primary-solid/10' : 'bg-surface-muted border border-border text-muted hover:bg-surface-muted'}`}
+ className={`min-h-11 px-3 rounded-xl text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${cropAspectRatio === ratio.id ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted border border-border text-muted hover:bg-surface'}`}
  >
  {ratio.label}
  </button>
@@ -5775,7 +5808,7 @@ export default function TemplatesPage() {
 
  {/* Cropping Viewport Container */}
  <div 
- className="w-[400px] h-[300px] bg-background rounded-2xl relative overflow-hidden flex items-center justify-center select-none shadow-inner border border-border"
+ className="w-[400px] max-w-full h-[300px] mx-auto bg-background rounded-2xl relative overflow-hidden flex items-center justify-center select-none border border-border"
  onMouseDown={handleCropMouseDown}
  onMouseMove={handleCropMouseMove}
  onMouseUp={handleCropMouseUp}
@@ -5914,12 +5947,12 @@ export default function TemplatesPage() {
  title={
  isSuperAdmin
  ? 'Concepteur de modèles'
- : "Vos modèles d'invitation"
+ : 'Vos cartons d’invitation'
  }
  description={
  isSuperAdmin
  ? 'Atelier de création visuelle. Pour le catalogue plateforme, les filtres et la vitrine landing, utilisez la console Super Admin.'
- : 'Créez des invitations interactives — à la main, depuis une maquette, ou avec l’IA (images + brief).'
+ : 'Nommez la cérémonie, créez le carton, puis envoyez-le. La bibliothèque est là si vous préférez partir d’un modèle.'
  }
  breadcrumbs={
  <Breadcrumbs
@@ -5950,10 +5983,10 @@ export default function TemplatesPage() {
  <Button
  onClick={startAiComposeFromList}
  disabled={aiComposeBusy}
- title={`Créer une invitation à partir d’images et d’un brief (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons IA)`}
+ title={`Créer un carton à partir d’un brief (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons IA)`}
  leftIcon={aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
  >
- Créer avec l’IA
+ Créer un carton
  </Button>
  <>
  <input
@@ -5969,15 +6002,15 @@ export default function TemplatesPage() {
  disabled={mockupImporting}
  leftIcon={mockupImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
  >
- {mockupImporting ? (ocrProgress !== null ? `Texte ${ocrProgress}%` : 'Import…') : 'Importer une maquette'}
+ {mockupImporting ? (ocrProgress !== null ? `Texte ${ocrProgress}%` : 'Import…') : 'Importer'}
  </Button>
  </>
  <Button
- variant="secondary"
+ variant="ghost"
  onClick={() => handleCreateTemplateClick('studio')}
  leftIcon={<PlusCircle className="w-4 h-4" />}
  >
- Nouveau modèle
+ Éditeur
  </Button>
  </div>
  }
@@ -6009,9 +6042,17 @@ export default function TemplatesPage() {
  {error && <Alert variant="error">{error}</Alert>}
 
  {success && (
- <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center gap-3 text-sm">
- <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
- <span>{success}</span>
+ <div className="p-4 bg-primary/10 border border-primary/20 text-foreground rounded-xl flex flex-col sm:flex-row sm:items-center gap-3 text-sm">
+ <div className="flex items-start gap-3 min-w-0">
+ <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
+ <span className="min-w-0 break-words">{success}</span>
+ </div>
+ <Link
+   href="/dashboard/events"
+   className="min-h-11 inline-flex items-center justify-center px-3 rounded-[var(--radius-button)] text-sm font-semibold text-primary hover:bg-primary/10 shrink-0"
+ >
+   Lier à un événement
+ </Link>
  </div>
  )}
 
@@ -6076,38 +6117,45 @@ export default function TemplatesPage() {
  emptyMessage={
  isSuperAdmin
  ? "Aucun modèle. Créez un modèle global ou pour une organisation."
- : "Aucun modèle personnel pour l'instant. Créez-en un avec l’IA, importez une maquette, ou partez de la bibliothèque."
+ : "Votre premier carton n’est pas encore là. En 2 minutes : décrivez la fête, voyez le faire-part, envoyez-le."
  }
  emptyAction={
- <div className="flex flex-col sm:flex-row gap-3 justify-center">
+ <div className="flex flex-col gap-3 items-center">
  <button
  type="button"
  onClick={startAiComposeFromList}
  disabled={aiComposeBusy}
- className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-semibold rounded-xl text-sm transition shadow-md shadow-primary/20 cursor-pointer"
+ className="inline-flex min-h-11 items-center gap-2 px-5 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-[var(--radius-button)] text-sm transition cursor-pointer"
  >
  {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
- Créer avec l’IA
+ Créer mon carton
  </button>
+ <details className="text-center">
+   <summary className="min-h-11 inline-flex items-center text-sm font-semibold text-muted cursor-pointer hover:text-foreground">
+     Autre départ
+   </summary>
+   <div className="mt-2 flex flex-col sm:flex-row gap-2 justify-center">
  {canUseMockupImport && (
  <button
  type="button"
  onClick={() => mockupInputRef.current?.click()}
  disabled={mockupImporting}
- className="inline-flex items-center gap-2 px-5 py-2.5 border border-primary/30 text-primary font-semibold rounded-xl text-sm transition hover:bg-primary/10 disabled:opacity-50 cursor-pointer"
+ className="inline-flex min-h-11 items-center gap-2 px-4 py-2 border border-border text-foreground font-semibold rounded-[var(--radius-button)] text-sm transition hover:bg-surface-muted disabled:opacity-50 cursor-pointer"
  >
  {mockupImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
- Importer ma maquette
+ Importer une image
  </button>
  )}
  <button
  type="button"
  onClick={() => handleCreateTemplateClick('studio')}
- className="inline-flex items-center gap-2 px-5 py-2.5 border border-border text-foreground font-semibold rounded-xl text-sm transition hover:bg-surface-muted cursor-pointer"
+ className="inline-flex min-h-11 items-center gap-2 px-4 py-2 border border-border text-foreground font-semibold rounded-[var(--radius-button)] text-sm transition hover:bg-surface-muted cursor-pointer"
  >
  <PlusCircle className="w-4 h-4" />
- Éditeur manuel
+ Éditeur vide
  </button>
+   </div>
+ </details>
  </div>
  }
  onEdit={(t) => handleEditTemplateClick(t as TemplateItem)}
@@ -6206,39 +6254,47 @@ export default function TemplatesPage() {
  </p>
  <ul className="space-y-1.5 text-muted pl-1">
  <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden />
+ <Check className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
  <span>Enregistrement et utilisation illimitée de modèles sur-mesure</span>
  </li>
  <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden />
+ <Check className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
  <span>Formulaires de réponse à l’invitation personnalisés et suivi des présences</span>
  </li>
  <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden />
+ <Check className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
  <span>Génération d&apos;invitations avancées par Intelligence Artificielle</span>
  </li>
  </ul>
  </div>
 
- <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+ <div className="flex flex-col gap-2.5 pt-2">
+ <Link
+   href="/dashboard/events"
+   className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-xl text-xs transition"
+ >
+   Continuer vers un événement
+ </Link>
+ <p className="text-xs text-muted text-center">Depuis l’événement, vous pourrez l’envoyer sur WhatsApp.</p>
+ <div className="flex flex-col sm:flex-row gap-2.5">
  <button
  type="button"
  onClick={() => {
  window.open('/dashboard/billing', '_blank');
  }}
- className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-xl text-xs transition shadow-2xs cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+ className="flex-1 inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 border border-border bg-surface hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer"
  >
  <Sparkles className="w-4 h-4" aria-hidden />
- <span>Passer au forfait supérieur</span>
- <ArrowRight className="w-4 h-4" aria-hidden />
+ <span>Voir les formules</span>
  </button>
  <button
  type="button"
  onClick={() => setSaveUpgradeModalOpen(false)}
- className="inline-flex min-h-11 items-center justify-center px-4 py-2.5 border border-border bg-surface hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+ className="inline-flex min-h-11 items-center justify-center px-4 py-2.5 border border-border bg-surface hover:bg-surface-muted text-foreground font-semibold rounded-xl text-xs transition cursor-pointer"
  >
  Continuer à peaufiner
  </button>
+ </div>
  </div>
  </div>
  </Modal>
