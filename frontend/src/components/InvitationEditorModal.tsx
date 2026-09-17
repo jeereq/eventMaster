@@ -9,6 +9,8 @@ import {
 import { Button, Modal } from '@/components/ui';
 import InvitationMessagePreview from './InvitationMessagePreview';
 import TemplatePreviewModal from '@/components/templates/TemplatePreviewModal';
+import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
+import { templateContentToLandingPreview } from '@/lib/landingTemplateAdapter';
 import { toWhatsAppTone } from '@/lib/whatsappTone';
 import { formatGuestGuidelinesBlock, normalizeGuestGuidelines, type GuestGuidelines } from '@/lib/guestGuidelines';
 import { cn } from '@/lib/cn';
@@ -58,7 +60,9 @@ interface InvitationEditorModalProps {
   eventTitle: string;
   orgName: string;
   guestGuidelines?: GuestGuidelines;
+  eventDate?: string;
   onSave: (data: InvitationFormData) => Promise<void>;
+  onOpenStudio?: (template: GraphicTemplateItem) => void;
 }
 
 export default function InvitationEditorModal({
@@ -71,7 +75,9 @@ export default function InvitationEditorModal({
   eventTitle,
   orgName,
   guestGuidelines,
+  eventDate,
   onSave,
+  onOpenStudio,
 }: InvitationEditorModalProps) {
   const [data, setData] = useState<InvitationFormData>(initialData);
   const [saving, setSaving] = useState(false);
@@ -394,6 +400,7 @@ export default function InvitationEditorModal({
     <Modal
       open={open}
       onClose={onClose}
+      containerClassName="pointer-events-auto"
       title={
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2.5">
@@ -616,8 +623,37 @@ export default function InvitationEditorModal({
                     <span>Aperçu</span>
                   </button>
                 )}
+                {selectedGraphicTemplate && onOpenStudio ? (
+                  <button
+                    type="button"
+                    onClick={() => onOpenStudio(selectedGraphicTemplate)}
+                    className="inline-flex min-h-11 items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold transition cursor-pointer shrink-0 active:scale-[0.98] motion-reduce:active:scale-100 touch-manipulation hover:bg-primary-solid-hover"
+                  >
+                    <LayoutTemplate className="w-4 h-4" aria-hidden />
+                    <span>Studio</span>
+                  </button>
+                ) : null}
               </div>
             </div>
+            {selectedGraphicTemplate ? (
+              <div className="pt-3 border-t border-border">
+                <p className="text-xs font-semibold text-foreground mb-2">Aperçu du carton (mis à jour avec ce modèle)</p>
+                <div className="max-w-[220px] mx-auto sm:mx-0 rounded-[var(--radius-card)] border border-border overflow-hidden bg-surface">
+                  <LandingInvitationPreview
+                    template={templateContentToLandingPreview({
+                      id: selectedGraphicTemplate.id,
+                      name: selectedGraphicTemplate.name,
+                      content: selectedGraphicTemplate.content,
+                    })}
+                    compact
+                    variableOverrides={{
+                      title: eventTitle,
+                      date: eventDate || '',
+                    }}
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {/* ══════════════════════════════════════════════════════════════════════════

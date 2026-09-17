@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -469,6 +470,7 @@ export default function TemplatesPage() {
  const [aiImageDownloading, setAiImageDownloading] = useState(false);
  const [aiComposeHistory, setAiComposeHistory] = useState<AiTemplateComposeHistoryItem[]>([]);
  const [aiComposeHistoryId, setAiComposeHistoryId] = useState<string | null>(null);
+ const studioQueryAppliedRef = useRef(false);
  const [aiComposeStudioTab, setAiComposeStudioTab] = useState<StudioAiTabId>('create');
  const [aiComposeAdvancedOpen, setAiComposeAdvancedOpen] = useState(false);
  const [aiTokenModalOpen, setAiTokenModalOpen] = useState(false);
@@ -749,6 +751,27 @@ export default function TemplatesPage() {
  window.history.replaceState({}, document.title, window.location.pathname);
  // eslint-disable-next-line react-hooks/exhaustive-deps -- import unique via ?aiDraft=1
  }, []);
+
+ useEffect(() => {
+   if (studioQueryAppliedRef.current || loading || !templates.length) return;
+   if (typeof window === 'undefined') return;
+   const params = new URLSearchParams(window.location.search);
+   if (params.get('studio') !== '1') return;
+   const templateId = params.get('templateId');
+   if (!templateId) return;
+   const match = templates.find((item) => item.id === templateId);
+   if (!match) return;
+   studioQueryAppliedRef.current = true;
+   handleEditTemplateClick(match);
+   const title = params.get('title')?.trim();
+   const date = params.get('date')?.trim();
+   const honorees = params.get('honorees')?.trim();
+   if (title) setTemplateName(title);
+   if (date) setInvitationDate(date);
+   if (honorees) setInvitationHonorees(honorees);
+   window.history.replaceState({}, document.title, window.location.pathname);
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [loading, templates]);
 
  const handleAddElement = (type: 'text' | 'image' | 'button' | 'rsvp-block' | 'curve' | 'triangle' | 'divider') => {
  const themeFonts = getFontTheme(fontTheme);
@@ -1562,8 +1585,9 @@ export default function TemplatesPage() {
        ? 'Ajoutez la carte dont les visages doivent être remplacés.'
        : null)
    : (aiComposePrompt.trim().length < 8 ? 'Décrivez la fête en quelques mots.' : null);
- return (
- <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-foreground/40 p-0 sm:p-4 lg:p-6">
+ if (typeof document === 'undefined') return null;
+ return createPortal(
+ <div className="fixed inset-0 z-[11040] flex items-end sm:items-center justify-center bg-foreground/40 p-0 sm:p-4 lg:p-6">
  <div
  role="dialog"
  aria-modal="true"
@@ -2187,6 +2211,8 @@ export default function TemplatesPage() {
  </div>
  </div>
  </div>
+ ,
+ document.body,
  );
  };
 
@@ -2893,6 +2919,28 @@ export default function TemplatesPage() {
    // eslint-disable-next-line react-hooks/exhaustive-deps
  }, [editorOpen, templateName, invitationHonorees, invitationDate]);
 
+ useEffect(() => {
+   if (!editorOpen || !aiComposeModalOpen) return;
+   const timer = window.setTimeout(() => {
+     if (aiComposeTitle.trim()) setTemplateName(aiComposeTitle.trim());
+     setInvitationHonorees(aiComposeHonorees);
+     setInvitationDate(aiComposeDate);
+     writeIdentityToCanvas({
+       title: aiComposeTitle || templateName,
+       honorees: aiComposeHonorees,
+       date: aiComposeDate,
+     });
+   }, 280);
+   return () => window.clearTimeout(timer);
+   // eslint-disable-next-line react-hooks/exhaustive-deps
+ }, [editorOpen, aiComposeModalOpen, aiComposeTitle, aiComposeHonorees, aiComposeDate]);
+
+ useEffect(() => {
+   if (!aiComposeModalOpen || !aiComposeModelPhoto?.imageUrl) return;
+   setBgType('image');
+   setBgImageUrl(aiComposeModelPhoto.imageUrl);
+ }, [aiComposeModalOpen, aiComposeModelPhoto?.imageUrl]);
+
 const catalogTemplates = templates.filter((t) => t.isGlobal ?? !t.tenantId);
 const ownTemplates = templates.filter((t) => t.isOwned ?? Boolean(t.tenantId));
 const studioModelPhotos = useMemo(
@@ -3081,8 +3129,8 @@ const studioModelPhotos = useMemo(
  }
 
  if (editorOpen) {
- return (
- <>
+ const editorTree = (
+ <div className="fixed inset-0 z-[11020] bg-background overflow-y-auto overscroll-contain">
  {renderMockupImportModal()}
  {renderAiComposeModal()}
  {renderQuickTextModal()}
@@ -3283,7 +3331,7 @@ const studioModelPhotos = useMemo(
  )}
  </div>
  </Modal>
- <div className="flex flex-col gap-4 max-lg:fixed max-lg:inset-0 max-lg:z-[55] max-lg:bg-background max-lg:px-3 max-lg:pt-[max(0.75rem,env(safe-area-inset-top))] max-lg:overflow-hidden">
+ <div className="flex flex-col gap-4 min-h-full px-3 sm:px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] lg:px-6 lg:pt-4">
         {(!canUseCustomTemplates || templatesAtLimit) && !isSuperAdmin && (
           <div className="bg-surface border border-border rounded-xl px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs text-foreground shadow-2xs">
             <div className="flex items-center gap-2 min-w-0">
@@ -5830,7 +5878,7 @@ const studioModelPhotos = useMemo(
 
  {/* Image Cropper Modal */}
  {cropperOpen && (
- <div className="fixed inset-0 bg-foreground/40 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" role="presentation">
+ <div className="fixed inset-0 bg-foreground/40 z-[11050] flex items-end sm:items-center justify-center p-0 sm:p-4" role="presentation">
       <div
         role="dialog"
         aria-modal="true"
@@ -6007,8 +6055,9 @@ const studioModelPhotos = useMemo(
  </div>
  )}
  </div>
- </>
+ </div>
  );
+ return typeof document === 'undefined' ? editorTree : createPortal(editorTree, document.body);
  }
 
  return (
