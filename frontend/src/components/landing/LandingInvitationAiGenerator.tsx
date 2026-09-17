@@ -1622,6 +1622,7 @@ export default function LandingInvitationAiGenerator({
               {studioIntent === 'couple' ? (
                 <InvitationIdentityFields
                   disabled={busy}
+                  description="Préremplissez le carton : ces textes s’appliqueront après le remplacement des visages."
                   value={{ title: coupleTitle, honorees: coupleHonorees, date: coupleDate }}
                   onChange={(next) => {
                     setCoupleTitle(next.title || '');
