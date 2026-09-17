@@ -62,6 +62,12 @@ import InvitationDuplicateModal, { type InvitationDuplicateValues } from '@/comp
 import InvitationIdentityFields from '@/components/InvitationIdentityFields';
 import InvitationStructuredBriefFields from '@/components/InvitationStructuredBriefFields';
 import { emptyInvitationStructuredBrief, type InvitationStructuredBrief } from '@/config/invitationStructuredBrief';
+import InvitationModelPhotoPicker from '@/components/InvitationModelPhotoPicker';
+import {
+  invitationModelPhotoFromContent,
+  invitationModelPhotosFromItems,
+  type InvitationModelPhoto,
+} from '@/lib/invitationModelPhoto';
 import {
  applyInvitationIdentityToContent,
  hasInvitationIdentity,
@@ -438,6 +444,7 @@ export default function TemplatesPage() {
  const [aiComposeModalOpen, setAiComposeModalOpen] = useState(false);
  const [aiComposePrompt, setAiComposePrompt] = useState('');
  const [aiComposeStructured, setAiComposeStructured] = useState<InvitationStructuredBrief>(() => emptyInvitationStructuredBrief());
+ const [aiComposeModelPhoto, setAiComposeModelPhoto] = useState<InvitationModelPhoto | null>(null);
  const [aiComposeFiles, setAiComposeFiles] = useState<File[]>([]);
  const [aiComposePreviewUrls, setAiComposePreviewUrls] = useState<string[]>([]);
   const [aiComposeIsAlteration, setAiComposeIsAlteration] = useState(false);
@@ -1141,6 +1148,7 @@ export default function TemplatesPage() {
     setAiComposePreviewUrls([]);
     setAiComposePrompt('');
     setAiComposeStructured(emptyInvitationStructuredBrief());
+    setAiComposeModelPhoto(null);
     setAiComposeStage(null);
     setAiComposeBusy(false);
     setAiComposeIsAlteration(false);
@@ -1156,7 +1164,7 @@ export default function TemplatesPage() {
 
   const openAiComposeModal = async (
     presetPrompt?: string,
-    options?: { isAlteration?: boolean; coupleFaceSwap?: boolean },
+    options?: { isAlteration?: boolean; coupleFaceSwap?: boolean; modelPhoto?: InvitationModelPhoto | null },
   ) => {
     if (isInviteBlocked) {
       setError("Le studio d'invitations IA est une fonctionnalité à venir et n'est pas disponible actuellement.");
@@ -1171,7 +1179,10 @@ export default function TemplatesPage() {
       presetPrompt?.toLowerCase().includes('altér'),
     );
     setAiComposeCoupleFaceSwap(coupleFaceSwap);
-    setAiComposeIsAlteration(isAlteration);
+    setAiComposeIsAlteration(isAlteration || Boolean(options?.modelPhoto));
+    if (options?.modelPhoto) {
+      setAiComposeModelPhoto(options.modelPhoto);
+    }
     if (presetPrompt) {
       setAiComposePrompt(presetPrompt);
     } else if (coupleFaceSwap) {
@@ -1262,6 +1273,22 @@ export default function TemplatesPage() {
  await openAiComposeModal();
  };
 
+ const startAiComposeFromModel = async (item: { id: string; name: string; content?: unknown }) => {
+   const photo = invitationModelPhotoFromContent(item.id, item.name, item.content);
+   if (!photo) {
+     setError('Ce modèle n’a pas encore de photo de carte à envoyer au studio.');
+     return;
+   }
+   setError('');
+   if (!editorOpen) {
+     handleCreateTemplateClick('studio');
+   }
+   await openAiComposeModal(`Reprendre le style de « ${photo.name} », or, ivoire et composition fidèle.`, {
+     isAlteration: true,
+     modelPhoto: photo,
+   });
+ };
+
  const addAiComposeFiles = (list: File[]) => {
  if (!list.length) return;
  const maxPhotos = aiComposeCoupleFaceSwap ? 2 : 4;
@@ -1285,6 +1312,7 @@ export default function TemplatesPage() {
  }
  setAiComposeIncomingFile(file);
  setAiComposeIncomingPreview(URL.createObjectURL(file));
+ setAiComposeModelPhoto(null);
  };
 
  const handleAiComposeFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1326,7 +1354,7 @@ export default function TemplatesPage() {
      setError('Ajoutez au moins une photo du couple.');
      return;
    }
-   if (!aiComposeIncomingFile && !currentCanvasBg) {
+   if (!aiComposeIncomingFile && !currentCanvasBg && !aiComposeModelPhoto) {
      setError('Ajoutez l’image d’invitation dont les visages doivent être remplacés.');
      return;
    }
@@ -1368,10 +1396,13 @@ export default function TemplatesPage() {
 
     const currentBgUrl =
       bgImageUrl && /^https?:\/\//i.test(bgImageUrl.trim()) ? bgImageUrl.trim() : undefined;
-    let incomingUrl = currentBgUrl;
+    const modelUrl = aiComposeModelPhoto?.imageUrl;
+    let incomingUrl = currentBgUrl || modelUrl;
     if (aiComposeCoupleFaceSwap && aiComposeIncomingFile) {
       setAiComposeStage('Upload de l’image d’invitation…');
       incomingUrl = (await uploadImageFile(aiComposeIncomingFile)).url;
+    } else if (aiComposeCoupleFaceSwap && modelUrl) {
+      incomingUrl = modelUrl;
     }
 
     const existingTextSummaries = canvasElements
@@ -1392,10 +1423,15 @@ export default function TemplatesPage() {
           ].join('. ')
         : aiComposePrompt.trim();
 
+    const composeImageUrls = modelUrl && !aiComposeCoupleFaceSwap && !uploadedUrls.includes(modelUrl)
+      ? [modelUrl, ...uploadedUrls]
+      : uploadedUrls;
     const resultPromise = composeTemplateWithAi({
       prompt: promptToSend,
-      imageUrls: uploadedUrls,
-      baseImageUrl: aiComposeCoupleFaceSwap ? incomingUrl : isAlteration ? currentBgUrl : undefined,
+      imageUrls: composeImageUrls,
+      baseImageUrl: aiComposeCoupleFaceSwap
+        ? incomingUrl
+        : modelUrl || (isAlteration ? currentBgUrl : undefined),
       existingElements: isAlteration ? canvasElements : undefined,
       isAlteration,
       generateBackground: true,
@@ -1514,7 +1550,11 @@ export default function TemplatesPage() {
 
  const renderAiComposeModal = () => {
  if (!aiComposeModalOpen) return null;
- const hasIncomingCard = Boolean(aiComposeIncomingFile || (bgImageUrl && /^https?:\/\//i.test(bgImageUrl)));
+ const hasIncomingCard = Boolean(
+   aiComposeIncomingFile ||
+   aiComposeModelPhoto ||
+   (bgImageUrl && /^https?:\/\//i.test(bgImageUrl)),
+ );
  const composeBlockedReason = aiComposeCoupleFaceSwap
    ? (aiComposeFiles.length < 1
      ? 'Ajoutez au moins une photo du couple.'
@@ -1687,10 +1727,10 @@ export default function TemplatesPage() {
        onClick={() => aiComposeIncomingInputRef.current?.click()}
        className="mt-1.5 min-h-28 w-full flex items-center gap-4 p-4 border-2 border-dashed rounded-[var(--radius-card)] text-left transition border-primary/30 hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
      >
-       {(aiComposeIncomingPreview || (bgImageUrl && /^https?:\/\//i.test(bgImageUrl))) ? (
+       {(aiComposeIncomingPreview || aiComposeModelPhoto?.imageUrl || (bgImageUrl && /^https?:\/\//i.test(bgImageUrl))) ? (
          // eslint-disable-next-line @next/next/no-img-element
          <img
-           src={aiComposeIncomingPreview || bgImageUrl}
+           src={aiComposeIncomingPreview || aiComposeModelPhoto?.imageUrl || bgImageUrl}
            alt="Invitation dont les visages seront remplacés"
            className="w-20 h-20 sm:w-24 sm:h-24 rounded-[var(--radius-button)] object-cover border border-border shrink-0"
          />
@@ -1701,13 +1741,32 @@ export default function TemplatesPage() {
        )}
        <span className="min-w-0">
          <span className="block text-xs font-bold text-foreground">
-           {aiComposeIncomingFile ? aiComposeIncomingFile.name : bgImageUrl ? 'Carton actuel du studio' : 'Choisir une invitation'}
+           {aiComposeIncomingFile
+             ? aiComposeIncomingFile.name
+             : aiComposeModelPhoto
+               ? aiComposeModelPhoto.name
+               : bgImageUrl
+                 ? 'Carton actuel du studio'
+                 : 'Choisir une invitation'}
          </span>
          <span className="block text-xs text-muted mt-0.5">
            Les visages de cette image seront remplacés. Pose et décor restent.
          </span>
        </span>
      </button>
+     <div className="mt-3">
+       <InvitationModelPhotoPicker
+         id="ai-compose-model-incoming"
+         selectedId={aiComposeModelPhoto?.id || null}
+         models={studioModelPhotos}
+         disabled={aiComposeBusy}
+         onSelect={(photo) => {
+           setAiComposeIncomingFromFile(null);
+           setAiComposeModelPhoto(photo);
+         }}
+         onClear={() => setAiComposeModelPhoto(null)}
+       />
+     </div>
    </div>
    <div>
      <label htmlFor="ai-compose-couple-photos" className="text-sm font-semibold text-muted">Photos du couple (1 ou 2)</label>
@@ -1780,6 +1839,17 @@ export default function TemplatesPage() {
  ) : (
  <div className="space-y-3">
  <p className="text-sm font-semibold text-foreground">2. Photos (optionnel)</p>
+ <InvitationModelPhotoPicker
+   id="ai-compose-model-photos"
+   selectedId={aiComposeModelPhoto?.id || null}
+   models={studioModelPhotos}
+   disabled={aiComposeBusy}
+   onSelect={(photo) => {
+     setAiComposeModelPhoto(photo);
+     if (!aiComposeCoupleFaceSwap) setAiComposeIsAlteration(true);
+   }}
+   onClear={() => setAiComposeModelPhoto(null)}
+ />
  <label htmlFor="ai-compose-optional-photos" className="text-sm font-semibold text-muted">Images de référence (1–4)</label>
  <input
  id="ai-compose-optional-photos"
@@ -2823,8 +2893,12 @@ export default function TemplatesPage() {
    // eslint-disable-next-line react-hooks/exhaustive-deps
  }, [editorOpen, templateName, invitationHonorees, invitationDate]);
 
- const catalogTemplates = templates.filter((t) => t.isGlobal ?? !t.tenantId);
- const ownTemplates = templates.filter((t) => t.isOwned ?? Boolean(t.tenantId));
+const catalogTemplates = templates.filter((t) => t.isGlobal ?? !t.tenantId);
+const ownTemplates = templates.filter((t) => t.isOwned ?? Boolean(t.tenantId));
+const studioModelPhotos = useMemo(
+  () => invitationModelPhotosFromItems(templates),
+  [templates],
+);
  const canDuplicateAny = isSuperAdmin || catalogTemplates.length > 0 || canUseCustomTemplates;
  const listTemplates = isSuperAdmin ? templates : ownTemplates;
  const paginatedCatalog = paginateItems(catalogTemplates, catalogPage, templatesPageSize);
@@ -6097,6 +6171,7 @@ export default function TemplatesPage() {
  layout={templatesViewMode}
  columns={templatesColumns}
  onViewDetails={(t) => setPreviewTemplate(t as TemplateItem)}
+ onUseInStudio={(t) => void startAiComposeFromModel(t)}
  onDuplicate={
  canDuplicateAny && !templatesAtLimit
  ? (t) => handleDuplicateTemplate(t as TemplateItem)
@@ -6130,6 +6205,7 @@ export default function TemplatesPage() {
  layout={templatesViewMode}
  columns={templatesColumns}
  onViewDetails={(t) => setPreviewTemplate(t as TemplateItem)}
+ onUseInStudio={(t) => void startAiComposeFromModel(t)}
  emptyMessage={
  isSuperAdmin
  ? "Aucun modèle. Créez un modèle global ou pour une organisation."
@@ -6227,6 +6303,10 @@ export default function TemplatesPage() {
  onDuplicate={(t) => {
  setPreviewTemplate(null);
  handleDuplicateTemplate(t as TemplateItem);
+ }}
+ onUseInStudio={(t) => {
+ setPreviewTemplate(null);
+ void startAiComposeFromModel(t);
  }}
  isOwnerOrManager={isOwnerOrManager}
  />

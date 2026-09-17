@@ -85,6 +85,8 @@ import { Button, Modal, Alert } from '@/components/ui';
 import InvitationIdentityFields from '@/components/InvitationIdentityFields';
 import InvitationStructuredBriefFields from '@/components/InvitationStructuredBriefFields';
 import { emptyInvitationStructuredBrief, type InvitationStructuredBrief } from '@/config/invitationStructuredBrief';
+import InvitationModelPhotoPicker from '@/components/InvitationModelPhotoPicker';
+import type { InvitationModelPhoto } from '@/lib/invitationModelPhoto';
 import {
   applyInvitationIdentityToContent,
   hasInvitationIdentity,
@@ -270,10 +272,12 @@ export default function LandingInvitationAiGenerator({
   className,
   id = 'generateur-ia',
   defaultExpanded = false,
+  preselectedModelPhoto = null,
 }: {
   className?: string;
   id?: string;
   defaultExpanded?: boolean;
+  preselectedModelPhoto?: InvitationModelPhoto | null;
 }) {
   const { user, tenant, access } = useAuth();
   const { site } = usePlatformSite();
@@ -287,6 +291,7 @@ export default function LandingInvitationAiGenerator({
 
   const [prompt, setPrompt] = useState('');
   const [structuredBrief, setStructuredBrief] = useState<InvitationStructuredBrief>(() => emptyInvitationStructuredBrief());
+  const [selectedModelPhoto, setSelectedModelPhoto] = useState<InvitationModelPhoto | null>(null);
   const [promptHistory, setPromptHistory] = useState<string[]>(['']);
   const [promptHistoryIndex, setPromptHistoryIndex] = useState<number>(0);
   const [studioIntent, setStudioIntent] = useState<'create' | 'clone' | 'couple'>('create');
@@ -541,6 +546,7 @@ export default function LandingInvitationAiGenerator({
     }
     setIncomingFile(file);
     setIncomingPreview(URL.createObjectURL(file));
+    setSelectedModelPhoto(null);
     setError('');
   };
 
@@ -559,6 +565,33 @@ export default function LandingInvitationAiGenerator({
     logAction('remove_image', 'Image retirée', `Référence visuelle #${index + 1} retirée`);
   };
 
+  const applyModelPhoto = (photo: InvitationModelPhoto) => {
+    setSelectedModelPhoto(photo);
+    setError('');
+    setIsExpanded(true);
+    if (studioIntent === 'create') {
+      setStudioIntent('clone');
+    }
+    if (studioIntent === 'couple' || studioIntent === 'create') {
+      if (incomingPreview) URL.revokeObjectURL(incomingPreview);
+      setIncomingFile(null);
+      setIncomingPreview('');
+    }
+  };
+
+  const clearModelPhoto = () => {
+    setSelectedModelPhoto(null);
+  };
+
+  useEffect(() => {
+    if (!preselectedModelPhoto) return;
+    applyModelPhoto(preselectedModelPhoto);
+    if (preselectedModelPhoto.name && prompt.trim().length < 8) {
+      setPrompt(`Reprendre le style de « ${preselectedModelPhoto.name} », or, ivoire et composition fidèle.`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- seed from parent card
+  }, [preselectedModelPhoto?.id, preselectedModelPhoto?.imageUrl]);
+
   const switchIntent = (next: 'create' | 'clone' | 'couple') => {
     if (next === studioIntent) return;
     previews.forEach((url) => URL.revokeObjectURL(url));
@@ -567,6 +600,7 @@ export default function LandingInvitationAiGenerator({
     setPreviews([]);
     setIncomingFile(null);
     setIncomingPreview('');
+    if (next === 'create') setSelectedModelPhoto(null);
     setStudioIntent(next);
     setError('');
     if (next === 'couple' && prompt.trim().length < 8) {
@@ -596,7 +630,7 @@ export default function LandingInvitationAiGenerator({
       return;
     }
     if (studioIntent === 'couple') {
-      if (!incomingFile) {
+      if (!incomingFile && !selectedModelPhoto) {
         setError('Ajoutez l’image d’invitation dont les visages doivent être remplacés.');
         return;
       }
@@ -612,8 +646,8 @@ export default function LandingInvitationAiGenerator({
       );
       return;
     }
-    if (studioIntent === 'clone' && files.length === 0) {
-      setError('Ajoutez une photo nette de la carte à cloner.');
+    if (studioIntent === 'clone' && files.length === 0 && !selectedModelPhoto) {
+      setError('Ajoutez une photo nette de la carte à cloner, ou choisissez un modèle.');
       return;
     }
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -638,7 +672,7 @@ export default function LandingInvitationAiGenerator({
       return;
     }
     if (studioIntent === 'couple') {
-      if (!incomingFile) {
+      if (!incomingFile && !selectedModelPhoto) {
         setError('Ajoutez l’image d’invitation dont les visages doivent être remplacés.');
         return;
       }
@@ -654,8 +688,8 @@ export default function LandingInvitationAiGenerator({
       );
       return;
     }
-    if (studioIntent === 'clone' && files.length === 0) {
-      setError('Ajoutez une photo nette de la carte à cloner.');
+    if (studioIntent === 'clone' && files.length === 0 && !selectedModelPhoto) {
+      setError('Ajoutez une photo nette de la carte à cloner, ou choisissez un modèle.');
       return;
     }
     if (typeof navigator !== 'undefined' && navigator.onLine === false) {
@@ -702,13 +736,14 @@ export default function LandingInvitationAiGenerator({
             ? COUPLE_FACE_SWAP_DEFAULT_PROMPT
             : prompt.trim(),
         files: studioIntent === 'couple' && incomingFile ? [incomingFile, ...files] : files,
+        baseImageUrl: studioIntent === 'couple' && incomingFile ? undefined : selectedModelPhoto?.imageUrl,
         embedText: false,
         contextSource,
         artStyle,
         variantsCount,
         speedMode,
         coupleFaceSwap: studioIntent === 'couple',
-        isAlteration: studioIntent === 'couple',
+        isAlteration: studioIntent === 'couple' || studioIntent === 'clone',
         structuredBrief,
       });
       if (seq !== generationSeq.current) return;
@@ -1526,9 +1561,9 @@ export default function LandingInvitationAiGenerator({
                     onClick={() => incomingInputRef.current?.click()}
                     className="w-full flex items-center gap-3 rounded-[var(--radius-card)] border-2 border-dashed p-3 text-left transition border-primary/25 hover:border-primary/50 hover:bg-primary/5"
                   >
-                    {incomingPreview ? (
+                    {(incomingPreview || selectedModelPhoto?.imageUrl) ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={incomingPreview} alt="" className="w-14 h-14 rounded-lg object-cover border border-border shrink-0" />
+                      <img src={incomingPreview || selectedModelPhoto?.imageUrl} alt="" className="w-14 h-14 rounded-lg object-cover border border-border shrink-0" />
                     ) : (
                       <span className="w-14 h-14 rounded-lg bg-surface-muted border border-border flex items-center justify-center shrink-0">
                         <ImageIcon className="w-5 h-5 text-primary" />
@@ -1536,7 +1571,11 @@ export default function LandingInvitationAiGenerator({
                     )}
                     <span className="min-w-0">
                       <span className="block text-sm font-bold text-foreground">
-                        {incomingFile ? incomingFile.name : 'Image d’invitation à modifier'}
+                        {incomingFile
+                          ? incomingFile.name
+                          : selectedModelPhoto
+                            ? selectedModelPhoto.name
+                            : 'Image d’invitation à modifier'}
                       </span>
                       <span className="block text-xs text-muted mt-0.5">
                         Les visages de cette carte seront remplacés. Pose et décor restent.
@@ -1600,6 +1639,14 @@ export default function LandingInvitationAiGenerator({
                     : 'Sans photo : carte depuis le brief. Avec photos : visages conservés (yeux, sourire, joues).'}
                 </p>
               </button>
+
+              <InvitationModelPhotoPicker
+                id={`${id}-model-photos`}
+                selectedId={selectedModelPhoto?.id || null}
+                onSelect={applyModelPhoto}
+                onClear={clearModelPhoto}
+                disabled={busy}
+              />
 
               {previews.length > 0 && (
                 <div id={`${id}-refs`} className="flex flex-wrap gap-2">
@@ -1889,8 +1936,8 @@ export default function LandingInvitationAiGenerator({
                     protocolLocked ||
                     busy ||
                     (studioIntent === 'couple'
-                      ? !incomingFile || files.length < 1
-                      : prompt.trim().length < 8 || (studioIntent === 'clone' && files.length === 0))
+                      ? (!incomingFile && !selectedModelPhoto) || files.length < 1
+                      : prompt.trim().length < 8 || (studioIntent === 'clone' && files.length === 0 && !selectedModelPhoto))
                   }
                   leftIcon={
                     busy ? (

@@ -13,6 +13,10 @@ import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { cn } from '@/lib/cn';
 import LandingInvitationAiGenerator from '@/components/landing/LandingInvitationAiGenerator';
+import {
+  invitationModelPhotoFromContent,
+  type InvitationModelPhoto,
+} from '@/lib/invitationModelPhoto';
 
 function categoryLabel(category: string) {
   if (category === 'private') return 'Célébrations & Mariages';
@@ -37,6 +41,7 @@ export default function ModelesPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [modalTemplate, setModalTemplate] = useState<LandingTemplate | null>(null);
+  const [studioModelPhoto, setStudioModelPhoto] = useState<InvitationModelPhoto | null>(null);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('modeles-page', 12);
@@ -68,6 +73,20 @@ export default function ModelesPage() {
   }, [templates, selectedCategory, search]);
 
   const shown = paginateItems(filtered, page, pageSize);
+
+  const modelPhotoFor = (template: LandingTemplate): InvitationModelPhoto | null =>
+    invitationModelPhotoFromContent(template.id, template.name, template.previewContent);
+
+  const useTemplateInStudio = (template: LandingTemplate) => {
+    const photo = modelPhotoFor(template);
+    if (!photo) return;
+    setModalTemplate(null);
+    setStudioModelPhoto(photo);
+    if (typeof window !== 'undefined') {
+      window.location.hash = 'generateur-ia';
+      document.getElementById('generateur-ia')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   useEffect(() => {
     setPage(1);
@@ -123,7 +142,10 @@ export default function ModelesPage() {
       </PublicPageHero>
 
       <div className="page-container py-8 sm:py-12 space-y-8 max-w-7xl mx-auto">
-        <LandingInvitationAiGenerator />
+        <LandingInvitationAiGenerator
+          preselectedModelPhoto={studioModelPhoto}
+          defaultExpanded={Boolean(studioModelPhoto)}
+        />
         {/* Filtres et recherche */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-border/70">
           <div className="flex gap-1.5 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
@@ -237,21 +259,33 @@ export default function ModelesPage() {
                     <button
                       type="button"
                       onClick={() => setModalTemplate(template)}
-                      className="text-xs font-semibold text-muted hover:text-foreground transition flex items-center gap-1 touch-manipulation py-1"
+                      className="min-h-11 text-xs font-semibold text-muted hover:text-foreground transition flex items-center gap-1 touch-manipulation px-1"
                     >
                       <Eye className="w-3.5 h-3.5" /> Aperçu
                     </button>
-                    <Link
-                      href={
-                        user
-                          ? `/dashboard/events`
-                          : `/register?kind=ORGANIZER&intent=personal&action=template&templateId=${encodeURIComponent(template.id)}`
-                      }
-                      className="py-1 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover active:scale-95 transition inline-flex items-center gap-1 touch-manipulation shadow-2xs"
-                    >
-                      <span>Utiliser</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </Link>
+                    <div className="flex items-center gap-1.5">
+                      {!isInviteBlocked && modelPhotoFor(template) ? (
+                        <button
+                          type="button"
+                          onClick={() => useTemplateInStudio(template)}
+                          className="min-h-11 py-1 px-3 rounded-lg border border-border bg-surface text-xs font-semibold text-foreground hover:border-primary/40 hover:bg-primary/5 active:scale-95 transition inline-flex items-center gap-1 touch-manipulation"
+                        >
+                          <Wand2 className="w-3 h-3" />
+                          <span>Studio</span>
+                        </button>
+                      ) : null}
+                      <Link
+                        href={
+                          user
+                            ? `/dashboard/events`
+                            : `/register?kind=ORGANIZER&intent=personal&action=template&templateId=${encodeURIComponent(template.id)}`
+                        }
+                        className="min-h-11 py-1 px-3 rounded-lg bg-primary-solid text-primary-foreground text-xs font-semibold hover:bg-primary-solid-hover active:scale-95 transition inline-flex items-center gap-1 touch-manipulation shadow-2xs"
+                      >
+                        <span>Utiliser</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </Link>
+                    </div>
                   </div>
                 </article>
               ))}
@@ -340,17 +374,24 @@ export default function ModelesPage() {
               Fermer
             </Button>
             {protocolLocked ? null : (
-              <Link
-                href={
-                  user
-                    ? '/dashboard/templates'
-                    : modalTemplate
-                      ? `/register?kind=ORGANIZER&intent=personal&action=template&templateId=${encodeURIComponent(modalTemplate.id)}`
-                      : '/register?kind=ORGANIZER&intent=personal&action=template'
-                }
-              >
-                <Button size="sm">Utiliser ce modèle</Button>
-              </Link>
+              <>
+                {!isInviteBlocked && modalTemplate && modelPhotoFor(modalTemplate) ? (
+                  <Button type="button" variant="secondary" size="sm" onClick={() => useTemplateInStudio(modalTemplate)}>
+                    Préselectionner dans le studio
+                  </Button>
+                ) : null}
+                <Link
+                  href={
+                    user
+                      ? '/dashboard/templates'
+                      : modalTemplate
+                        ? `/register?kind=ORGANIZER&intent=personal&action=template&templateId=${encodeURIComponent(modalTemplate.id)}`
+                        : '/register?kind=ORGANIZER&intent=personal&action=template'
+                  }
+                >
+                  <Button size="sm">Utiliser ce modèle</Button>
+                </Link>
+              </>
             )}
           </div>
         }
