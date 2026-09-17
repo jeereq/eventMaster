@@ -3,6 +3,7 @@ import {
   invitationArtStyleCraftNotes,
   invitationArtStyleImageDirective,
   invitationArtStyleLightNote,
+  invitationArtStyleScaffoldLine,
   parseInvitationArtStyle,
   type InvitationArtStyleId,
 } from './invitationArtStyle.ts';
@@ -116,6 +117,254 @@ export type InvitationPromptOptions = {
   artStyleLine?: string;
   coupleFaceSwap?: boolean;
 };
+
+export type InvitationPipelineIntent = 'create' | 'clone' | 'refine' | 'couple';
+
+export const INVITATION_PIPELINE_INTENTS: readonly InvitationPipelineIntent[] = [
+  'create',
+  'clone',
+  'refine',
+  'couple',
+];
+
+/** Prompt image cible : ~400–700 mots, jamais un monolithe de 6 000 caractères. */
+export const COMPACT_IMAGE_PROMPT_MAX_CHARS = 3800;
+
+const REFINE_BRIEF_RE = /retouch|ajust|refin|altér|réajust|modifier|swap|remplace.{0,24}visage/i;
+const CLONE_BRIEF_RE = /copi|clon|reprodu|duplicate/i;
+
+export const NANO_BANANA_COMPACT_FACE_LOCK =
+  'RAW candid faces: exact reference texture, visible pores, slight asymmetry. No beauty filter, no smooth skin, no airbrush. One warm light, 85mm feel.';
+
+export type InvitationImageAnalysisHint = {
+  hasPeople?: boolean;
+  peopleCount?: number;
+  isInvitationClone?: boolean;
+  clonedCardFeatures?: string;
+  briefMustKeep?: string[];
+  briefMustChange?: string[];
+  colors?: string[];
+};
+
+export function isInvitationPipelineIntent(value: unknown): value is InvitationPipelineIntent {
+  return typeof value === 'string' && (INVITATION_PIPELINE_INTENTS as readonly string[]).includes(value);
+}
+
+export function parseInvitationPipelineIntent(
+  value: unknown,
+  fallback: InvitationPipelineIntent = 'create',
+): InvitationPipelineIntent {
+  return isInvitationPipelineIntent(value) ? value : fallback;
+}
+
+export function resolveInvitationPipelineIntent(input: {
+  coupleFaceSwap?: boolean;
+  isAlteration?: boolean;
+  brief?: string;
+  isInvitationClone?: boolean;
+}): InvitationPipelineIntent {
+  if (input.coupleFaceSwap) return 'couple';
+  const brief = String(input.brief || '');
+  if (input.isAlteration || REFINE_BRIEF_RE.test(brief)) return 'refine';
+  if (input.isInvitationClone || CLONE_BRIEF_RE.test(brief)) return 'clone';
+  return 'create';
+}
+
+export function resolveFinalInvitationPipelineIntent(input: {
+  local: InvitationPipelineIntent;
+  vision?: unknown;
+  isInvitationClone?: boolean;
+}): InvitationPipelineIntent {
+  if (input.local === 'couple') return 'couple';
+  const vision = parseInvitationPipelineIntent(input.vision, input.local);
+  if (vision === 'couple') return input.local;
+  if (input.local === 'refine') return 'refine';
+  if (vision === 'clone' || input.isInvitationClone) return 'clone';
+  return vision;
+}
+
+export function invitationPipelineModeSentence(intent: InvitationPipelineIntent): string {
+  switch (intent) {
+    case 'couple':
+      return 'MODE couple: Keep Image 1 card, pose, bodies, wardrobe, décor and lighting. Replace ONLY faces with Images 2+. Honest pixels.';
+    case 'clone':
+      return 'MODE clone: Duplicate the reference card architecture (borders, foil, paper, ornaments). Place any attached people inside that frame, identity locked.';
+    case 'refine':
+      return 'MODE refine: Preserve the existing card. Apply ONLY the requested delta. Do not redesign.';
+    default:
+      return 'MODE create: Compose a new vertical luxury invitation for a real Central Africa / RDC celebration.';
+  }
+}
+
+export function invitationPipelineVisionMandate(intent: InvitationPipelineIntent): string {
+  switch (intent) {
+    case 'couple':
+      return `PIPELINE couple (non-negotiable):
+- Image 1 = incoming card/scene. Keep composition, pose, bodies, clothes, décor, lighting, ornaments.
+- Images 2+ = couple identity. Inventory NEW faces only. Discard Image 1 faces.
+- Forbidden: beautify, lighten, celebrity lookalike, inventing a new couple.`;
+    case 'clone':
+      return `PIPELINE clone (non-negotiable):
+- Card photo / Image 1 = layout truth: frame, borders, foil, paper, ornaments, palette.
+- Set isInvitationClone=true and fill clonedCardFeatures.
+- People photos (if any) sit inside that cloned frame, identity locked.
+- Do not invent a new card architecture.`;
+    case 'refine':
+      return `PIPELINE refine (non-negotiable):
+- Keep existing card composition, framing, palette, ornaments and identity.
+- Apply ONLY explicit brief changes (décor/mood/text if asked).
+- Do not replace the whole design.`;
+    default:
+      return `PIPELINE create (non-negotiable):
+- Invent a new luxury card from the brief.
+- Photos lock people only — do not clone a card unless a photo is clearly stationery.
+- Without people photos: décor-first; if hosts are implied, Black African RDC default.`;
+  }
+}
+
+function compactLockList(raw: unknown, max = 8): string[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const locks: string[] = [];
+  for (const item of raw) {
+    if (typeof item !== 'string') continue;
+    const lock = collapseSpaces(item).slice(0, 140);
+    const key = lock.toLowerCase();
+    if (!lock || seen.has(key)) continue;
+    seen.add(key);
+    locks.push(lock);
+    if (locks.length >= max) break;
+  }
+  return locks;
+}
+
+export function parseInvitationLocks(raw: unknown, max = 8): string[] {
+  return compactLockList(raw, max);
+}
+
+export function buildInvitationLocks(input: {
+  intent: InvitationPipelineIntent;
+  analysis?: InvitationImageAnalysisHint | null;
+  embedText?: boolean;
+  isPublic?: boolean;
+  referenceCount?: number;
+  explicitAppearanceChange?: boolean;
+}): string[] {
+  const analysis = input.analysis || {};
+  const hasPeople =
+    input.intent === 'couple' ||
+    Boolean(analysis.hasPeople) ||
+    (input.intent !== 'create' && (input.referenceCount || 0) > 0 && Boolean(analysis.hasPeople));
+  const peopleCount = Math.max(1, Number(analysis.peopleCount) || 1);
+  const locks: string[] = [];
+
+  if (input.intent === 'couple') {
+    locks.push('Image 1 wins for card, pose, bodies, wardrobe, décor and lighting.');
+    locks.push('Images 2+ are the only face source. Discard Image 1 faces. No beautify, no lighten.');
+  } else if (hasPeople) {
+    locks.push('Attached photos are the only identity source. Same people — no lookalike, no beautify, no skin lightening.');
+    locks.push(`People count ${peopleCount}, left-to-right order unchanged.`);
+  } else {
+    locks.push('No reference faces. If hosts appear, depict Black African men and/or women from Central Africa / RDC only.');
+  }
+
+  if (input.intent === 'clone' || analysis.isInvitationClone) {
+    locks.push(
+      analysis.clonedCardFeatures
+        ? `Clone card architecture: ${collapseSpaces(analysis.clonedCardFeatures).slice(0, 120)}`
+        : 'Clone the reference card architecture, palette, foil and paper.',
+    );
+  } else if (input.intent === 'refine') {
+    locks.push('Keep the existing card. Change only what the brief names.');
+  }
+
+  if (hasPeople && !input.explicitAppearanceChange && input.intent !== 'couple') {
+    locks.push('Keep hair, clothes and skin as photographed unless the brief names a wardrobe or hair change.');
+  }
+
+  if (input.isPublic || !input.embedText) {
+    locks.push('No painted letters, names, dates or logos in the pixels.');
+  } else {
+    locks.push('Embed brief typography in the lower third without covering faces.');
+  }
+
+  if (analysis.briefMustKeep?.length) {
+    locks.push(`Keep: ${analysis.briefMustKeep.slice(0, 3).join('; ')}`.slice(0, 140));
+  }
+  if (analysis.briefMustChange?.length && input.intent !== 'couple') {
+    locks.push(`Change only: ${analysis.briefMustChange.slice(0, 3).join('; ')}`.slice(0, 140));
+  }
+
+  if (analysis.colors?.length) {
+    locks.push(`Stay near palette ${analysis.colors.slice(0, 4).join(', ')}.`);
+  }
+
+  return compactLockList(locks, 8);
+}
+
+function compactTextRule(embedText?: boolean, isPublic?: boolean): string {
+  if (isPublic) {
+    return 'FORMAT: Vertical 9:16, 1024x1536. Clean reusable artwork — no painted text. Editor overlays {{title}}, {{date}}, {{location}}, {{firstName}}.';
+  }
+  if (embedText) {
+    return 'FORMAT: Vertical 9:16, 1024x1536. Embed sharp invitation lettering from the brief (names, date, venue) in the lower third or a cartouche. Do not cover faces.';
+  }
+  return `FORMAT: Vertical 9:16, 1024x1536. ${NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE}`;
+}
+
+export function buildCompactImagePrompt(input: {
+  intent: InvitationPipelineIntent;
+  originalBrief: string;
+  decorParagraph: string;
+  locks?: string[];
+  analysis?: InvitationImageAnalysisHint | null;
+  organizerContext?: string;
+  artStyle?: InvitationArtStyleId;
+  embedText?: boolean;
+  isPublic?: boolean;
+  coupleFaceSwap?: boolean;
+  referenceCount?: number;
+  explicitAppearanceChange?: boolean;
+}): string {
+  const intent = input.coupleFaceSwap ? 'couple' : input.intent;
+  const hasPeople = intent === 'couple' || Boolean(input.analysis?.hasPeople);
+  const locks = (input.locks && input.locks.length
+    ? compactLockList(input.locks, 8)
+    : buildInvitationLocks({
+        intent,
+        analysis: input.analysis,
+        embedText: input.embedText,
+        isPublic: input.isPublic,
+        referenceCount: input.referenceCount,
+        explicitAppearanceChange: input.explicitAppearanceChange,
+      }));
+
+  const artStyle = parseInvitationArtStyle(input.artStyle);
+  const decor = collapseSpaces(input.decorParagraph || input.originalBrief).slice(0, 1100);
+  const organizer = collapseSpaces(input.organizerContext || '').slice(0, 360);
+
+  const parts = [
+    'Create ONE vertical print-ready invitation (9:16, 1024x1536) for a real event in Central Africa / RDC.',
+    invitationPipelineModeSentence(intent),
+    'LOCKS:',
+    ...locks.map((lock) => `- ${lock}`),
+    'DECOR:',
+    decor,
+    `STYLE: ${invitationArtStyleScaffoldLine(artStyle)} ${invitationArtStyleLightNote(artStyle)}`,
+  ];
+
+  if (organizer) {
+    parts.push(organizer);
+  }
+
+  parts.push(compactTextRule(input.embedText, input.isPublic));
+
+  if (hasPeople) {
+    parts.push(NANO_BANANA_COMPACT_FACE_LOCK);
+  }
+
+  return collapseSpaces(parts.filter(Boolean).join('\n')).slice(0, COMPACT_IMAGE_PROMPT_MAX_CHARS);
+}
 
 export const COUPLE_FACE_SWAP_DEFAULT_PROMPT =
   'Remplace uniquement les visages de cette invitation par les visages du couple. Conserve la pose, les tenues, le décor et la mise en page.';
@@ -623,22 +872,16 @@ export function buildGenericThematicBackgroundPrompt(
  * 2. Altération légère et contrôlée du prompt (jamais totale) : préserve 90-95% du décor, de l'ambiance et de la palette, en modulant uniquement l'angle de vue, les drapés/fleurs ou les accents lumineux.
  */
 export function buildVariantImagePrompt(basePrompt: string, hasReferences: boolean = false): string {
-  const variantDirectives = [
-    'ALTERNATIVE COMPOSITION VARIANT (A/B VARIATION 2):',
-    '- STRICT REFERENCE IMAGE & HOST IDENTITY ANCHORING (MANDATORY):',
-    '  * The individuals depicted MUST BE THE EXACT SAME PEOPLE as provided in the reference images.',
-    '  * Retain 100% of their facial bone structure, natural skin texture, realistic gaze, genuine smile, undertone, age, hair, and clothing attire.',
-    '  * NEVER replace the reference hosts with stock models, different individuals, or generic AI faces. Do not alter their core physical traits.',
-    '- GENTLE, CONTROLLED PROMPT ALTERATION (NEVER A TOTAL REWRITE):',
-    '  * Preserve 90% to 95% of the base prompt instructions: keep the exact same event celebration theme, color palette, luxury stationery ambience, and vertical 9:16 aspect ratio.',
-    '  * DO NOT overhaul the scene or invent a completely unrelated environment.',
-    '- SUBTLE ARTISTIC VARIATIONS ONLY:',
-    '  * Nuanced camera angle or subtle variation in framing: adopt a slightly varied perspective (e.g., 10-15° angle modulation, subtly altered camera elevation, or refined depth-of-field).',
-    '  * Delicate decorative reorganization: elegantly vary the floral arch geometry, drapery folds, or candle/golden accent placements.',
-    '  * Refined lighting nuance: subtle shift in ambient warmth, soft rim highlights, or silky bokeh texture while preserving the overall color temperature.',
-    '- The second proposition must be immediately recognizable as a harmonious, premium alternative choice for the EXACT SAME event and the EXACT SAME hosts.',
-  ].join('\n');
-
-  return `${basePrompt}\n\n${variantDirectives}`;
+  const identity = hasReferences
+    ? 'Same hosts as the references — faces, skin, hair and clothes stay locked.'
+    : 'Same celebration and palette.';
+  return collapseSpaces(
+    [
+      basePrompt,
+      'ALTERNATIVE B: Same event, same people. Keep 90% of the décor.',
+      identity,
+      'Change only camera angle (~10°) or floral / light accents. Do not change faces.',
+    ].join('\n'),
+  ).slice(0, COMPACT_IMAGE_PROMPT_MAX_CHARS);
 }
 

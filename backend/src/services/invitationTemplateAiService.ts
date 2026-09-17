@@ -11,31 +11,27 @@ import {
   parseInvitationContextSource,
 } from './invitationComposeContext.ts';
 import {
-  BRIEF_REFORMULATION_SYSTEM,
-  NANO_BANANA_CRITICAL_CONSTRAINT,
   NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE,
-  NANO_BANANA_LIGHT_RIG_COHERENCE,
-  NANO_BANANA_OPTICAL_BOKEH,
+  NANO_BANANA_COMPACT_FACE_LOCK,
   NANO_BANANA_STYLE_INSTRUCTION,
-  applyEnglishSceneBrief,
-  buildBriefReformulationUserText,
-  buildGeminiSceneSteps,
+  buildCompactImagePrompt,
   buildGenericThematicBackgroundPrompt,
-  buildNanoBananaRawDirectives,
+  buildInvitationLocks,
   buildVariantImagePrompt,
+  invitationPipelineVisionMandate,
   isSafetyFilterTriggered,
   optimizeReferenceImageUrl,
-  parseEnglishSceneBriefFromJson,
+  parseInvitationLocks,
   processUserPromptForHonestFaces,
+  resolveFinalInvitationPipelineIntent,
+  resolveInvitationPipelineIntent,
   COUPLE_FACE_SWAP_DEFAULT_PROMPT,
+  type InvitationPipelineIntent,
   type ProcessedInvitationPrompt,
 } from './invitationPromptFidelity.ts';
 import {
-  invitationArtStyleCompositionNote,
   invitationArtStyleCraftNotes,
-  invitationArtStyleFaceLockNote,
   invitationArtStyleImageDirective,
-  invitationArtStyleLightNote,
   invitationArtStyleScaffoldLine,
   invitationArtStyleStructureRules,
   parseInvitationArtStyle,
@@ -78,51 +74,44 @@ function requireAiConfigured(): string {
 const STRUCTURE_SYSTEM = `You are EventMaster’s invitation designer for Central Africa / RDC.
 Analyze any reference images, then return ONLY valid JSON (json_object).
 
-Visual truth (non-negotiable):
-- Detect ONLY what is actually visible. Do not invent, idealize, lighten, or guess missing details.
-- Forbidden: inventing ethnicity, age, hairstyle, outfit, skin tone, or people who are not in the photos.
-- Skin & morphology: record exact melanin tone (golden / warm / mahogany / ebony, Fitzpatrick IV–VI when visible), facial structure, and hair texture (4A–4C, taper fade, braids, locs, bun, wig) as observed.
-- If a detail is blurry, cropped, or unclear: write "unclear" — never fill gaps.
+{{PIPELINE_MANDATE}}
+
+Visual truth:
+- Detect ONLY visible pixels. Never invent ethnicity, age, hair, outfit, skin, or people.
+- If a detail is blurry or cropped: write "unclear".
+- Photos win for faces / skin / hair / clothes. Brief wins for décor and mood.
+- Without people photos: any generated person MUST be a Black African man and/or woman. Forbidden: invented white couples or Caucasian stock faces.
+- Beautify / smooth / lighten may already be stripped. Do not reintroduce them.
 
 {{ART_STYLE_RULES}}
 
-Invitation cloning (when a card is present or the brief says copy / clone / reproduce):
-1) Read exact layout: frame, double gold border, floral arch, baroque or Kuba / art-deco ornaments, margins, paper texture.
-2) Extract the exact palette (background, type, ornaments, foils).
-3) Mirror that structure in JSON (elements, global.frameType, global.palette, fontTheme) and set isInvitationClone=true with clonedCardFeatures filled.
-4) If people photos are also attached, place those exact people inside the cloned card frame in the chosen art style, identity locked.
-
-Priority order:
-1) Reference images = visual truth for people (faces, skin, hair, clothes, pose) AND for any card to clone (layout, ornaments, palette).
-2) User brief = explicit décor / mood / floral / environment requests only.
-3) Change clothes / hair / skin / faces ONLY when the brief asks explicitly. Otherwise keep identical.
-4) EventMaster / RDC default without people photos: any generated person MUST be a Black African man and/or woman with natural melanin. Forbidden: invented white couples or generic Caucasian “luxury” faces.
-
-Mission:
-1) Detect faces, faceLandmarks, real skin tones, hair, clothing, colors, motifs, composition, and whether an invitation card should be cloned.
-2) Parse the brief into mustKeep / mustChange — only what is written.
-3) Write backgroundPrompt as a detailed ENGLISH décor narrative for a luxury print invitation (Nano Banana style: Subject + Action + Location + Composition + Style).
+Write decorParagraph with Subject + Action + Location + Composition + Style (120–180 English words).
+With people photos: décor / card / mood only — never rewrite faces.
+Without people: full scene then décor. Clone: replicate borders, foil and paper.
 
 Exact schema:
 {
+  "intent": "create" | "clone" | "refine" | "couple",
+  "locks": ["max 8 short English lock sentences"],
+  "decorParagraph": "120-180 words English décor narrative",
   "visualAnalysis": {
     "colors": ["#hex", "..."],
-    "style": "observed decorative style (paper, luxury, floral…) — do not invent",
+    "style": "observed decorative style — do not invent",
     "motifs": "observed motifs / textures / décor",
     "composition": "observed layout / framing",
     "hasPeople": true | false,
     "peopleCount": 0,
-    "peopleFaces": "none | PERSON 1 / PERSON 2 (left-to-right): sex if visible, apparent age, face shape, EYES, SMILE, CHEEKS, brows, nose, jaw, marks — OBSERVED pixels only",
-    "faceLandmarks": "none | lock list: bone structure, eye spacing & slant, smile geometry, cheek volume, facial hair, scars/moles — refuse lookalikes; unclear if unsure",
-    "skinTones": "none | precise observed skin tone(s) per person — NEVER lighten",
-    "hairStyles": "none | length, texture, hairline OBSERVED per person",
-    "clothingStyles": "none | cuts, fabrics (wax pagne, tux, satin, embroidery), colors, accessories OBSERVED",
+    "peopleFaces": "none | PERSON 1 / PERSON 2 left-to-right: observed eyes, smile, cheeks, marks only",
+    "faceLandmarks": "none | observed bone structure, eye spacing, smile, scars — unclear if unsure",
+    "skinTones": "none | observed skin — NEVER lighten",
+    "hairStyles": "none | observed length, texture, hairline",
+    "clothingStyles": "none | observed cuts, fabrics, colors",
     "isInvitationClone": true | false,
-    "clonedCardFeatures": "none | borders, frame, ornaments, typography, textures to clone",
-    "briefNeeds": ["explicit need 1", "..."],
-    "briefInterpretation": "how each brief need applies to the references, point by point",
-    "briefMustKeep": ["keep: refs (faces/skin/hair/clothes/card) + brief facts"],
-    "briefMustChange": ["ONLY explicit brief change requests"]
+    "clonedCardFeatures": "none | borders, frame, ornaments, textures to clone",
+    "briefNeeds": ["explicit need 1"],
+    "briefInterpretation": "how each brief need applies",
+    "briefMustKeep": ["refs + brief facts"],
+    "briefMustChange": ["ONLY explicit brief changes"]
   },
   "global": {
     "bgType": "color" | "pattern",
@@ -152,30 +141,20 @@ Exact schema:
       "rsvpPlacement": "inline" | "outside",
       "imageUrl": "https://..."
     }
-  ],
-  "backgroundPrompt": "English décor-only narrative. Card clone: replicate borders/textures. With people: décor only — never rewrite faces. Without people: full scene then décor."
+  ]
 }
 
-Brief rules:
-- Card clone: backgroundPrompt MUST replicate reference borders, foils and paper.
-- With people: backgroundPrompt = DÉCOR ONLY (paper, florals, light, frame). Do NOT describe faces. Start with "USER BRIEF (décor):".
-- Without people: start with "USER BRIEF:" then sumptuous décor without inventing unwanted humans unless the brief implies hosts.
-- Apply every brief need for décor (mood, colors, ornaments, sobriety, luxury, florals).
-- If brief and refs conflict: brief wins for décor & mood; refs win for faces / skin / hair / clothes (unless explicit wardrobe/hair change).
-- Connected organizer context (if provided) may only fill event type, language, names/date/venue and décor taste — never invent a face from it.
-- Beautify / smooth / lighten requests may already be stripped. Do not reintroduce facial idealization. Gemini: "face and features remain completely unchanged".
+Lock rules: 8 items max, ~20 words each. Always cover identity source, skin honesty if people, mode preservation, and text-in-pixels.
+Organizer context may fill event type, language, names/date/venue and décor taste — never invent a face.
 
-People rules (non-negotiable):
-- hasPeople=true: photo pixels are truth. peopleFaces / faceLandmarks are lock lists, not “pretty face” briefs.
-- Forbidden: lookalike, celebrity, stock model, beautify, smooth, lighten, wrong age/ethnicity, invented smile.
-- hasPeople=false: no people, no faces, no silhouettes unless the English scene brief explicitly asks for hosts — then RDC Black African default applies.
+People:
+- hasPeople=true: pixels are truth. peopleFaces / faceLandmarks are lock lists, not pretty-face briefs.
+- Forbidden: lookalike, celebrity, stock model, beautify, smooth, lighten, invented smile.
 
-Layout rules:
-- Palette and element style = colors from images (or cloned card) + brief.
-- 6–12 elements max, stacked flow, centered.
-- Use {{title}}, {{date}}, {{location}}, {{firstName}} in text when relevant.
-- Exactly one "rsvp-block" with rsvpPlacement "outside" and text "Confirmer votre présence" (or the appropriate Congolese national language equivalent: e.g. "Kondima kozala wana" in Lingala, "Thibitisha uwepo wako" in Swahili, "Tula kimbangi ya kukwiza" in Kikongo, "Jadika dikalapu diebe" in Tshiluba).
-- Language fidelity (RDC): If the brief, title or prompt specifies or is written in one of the Congolese national languages (Lingala, Swahili, Kikongo, Tshiluba), generate all invitation text elements in that exact language (e.g. Lingala: "Libyangi ya Libala", "Boya tosepela elongo", "Mokolo : {{date}}", "Esika : {{location}}"; Swahili: "Mwaliko wa Harusi", "Karibuni sana tusherehekee", "Tarehe : {{date}}", "Mahali : {{location}}"; Kikongo: "Mbila ya Nkinsi ya Makwela", "Kwizeno beto sepela kintwadi", "Kilumbu : {{date}}", "Kisika : {{location}}"; Tshiluba: "Dibikila dia Tshibilu tshia Dibaka", "Luayi tusankidile pamue", "Dituku : {{date}}", "Muaba : {{location}}"). Do not revert to French when a national language is requested.
+Layout:
+- 6–12 centered flow elements. Use {{title}}, {{date}}, {{location}}, {{firstName}} when relevant.
+- Exactly one rsvp-block, rsvpPlacement "outside", text "Confirmer votre présence" or Congolese national-language equivalent (Lingala "Kondima kozala wana", Swahili "Thibitisha uwepo wako", Kikongo "Tula kimbangi ya kukwiza", Tshiluba "Jadika dikalapu diebe").
+- Language fidelity: if the brief is Lingala, Swahili, Kikongo or Tshiluba, write ALL text elements in that language. Do not revert to French.
 - Vertical print-ready image, NO readable text, names, dates, logos, watermarks (the editor adds text).
 - No markdown. JSON only.`;
 
@@ -267,6 +246,9 @@ type VisionResult = {
   elements: unknown;
   backgroundPrompt: string;
   visualAnalysis: VisualAnalysis | null;
+  intent: InvitationPipelineIntent;
+  locks: string[];
+  decorParagraph: string;
 };
 
 function parseStringList(raw: unknown, max = 8): string[] {
@@ -337,9 +319,6 @@ function parseVisualAnalysis(raw: unknown): VisualAnalysis | null {
   };
 }
 
-const FACE_POLICY_DEFAULT_BLACK_AFRICAN =
-  'REPRESENTATION DEFAULT (EventMaster / RDC — MANDATORY): Any person depicted MUST be a Black African man and/or woman from Central Africa — rich natural melanin (bronze, caramel, mahogany, deep ebony), authentic facial features, natural hair textures (4A–4C, braids, locs, fade, afro, bun). STRICTLY FORBIDDEN: Caucasian / European / white stock-model faces, pale default skin, invented white wedding couples, East Asian substitute faces, or mixed-white “generic luxury” models. If the brief is a wedding, birthday or gala without a reference photo, show Black African hosts (man and/or woman) — never a white couple.';
-
 const FACE_POLICY_NO_PEOPLE =
   'FACE POLICY: Prefer decorative artwork. If any person still appears, they MUST follow the RDC representation default: Black African men and/or women only — never Caucasian stock models.';
 
@@ -361,179 +340,55 @@ function buildImagePrompt(
     isAlteration?: boolean;
     isPublic?: boolean;
     coupleFaceSwap?: boolean;
+    intent?: InvitationPipelineIntent;
+    locks?: string[];
+    decorParagraph?: string;
+    referenceCount?: number;
   },
 ): string {
   const processed = options?.processed;
   const coupleFaceSwap = Boolean(options?.coupleFaceSwap || processed?.coupleFaceSwap);
-  const brief = (
-    processed?.imageBrief ||
+  const intent = resolveInvitationPipelineIntent({
+    coupleFaceSwap,
+    isAlteration: options?.isAlteration,
+    brief: processed?.originalBrief || userPrompt,
+    isInvitationClone: analysis?.isInvitationClone,
+  });
+  const resolvedIntent = options?.intent || intent;
+  const decorParagraph = (
+    options?.decorParagraph ||
+    backgroundPrompt ||
     processed?.englishSceneBrief ||
     userPrompt
-  ).trim().slice(0, 1200);
-  const hasPeople = coupleFaceSwap || Boolean(analysis?.hasPeople);
-  const isClone = Boolean(
-    analysis?.isInvitationClone ||
-    /copi|clon|reprodu/i.test(brief)
-  );
-  const isAlteration = Boolean(
-    options?.isAlteration ||
-    /retouch|ajust|refin|altér|réajust|modifier/i.test(brief) ||
-    /retouch|ajust|refin|altér|réajust|modifier/i.test(userPrompt),
-  );
+  ).trim();
 
-  const parts: string[] = [];
-  if (hasPeople && processed?.identityHeader) {
-    parts.push(processed.identityHeader);
-    if (processed.referenceRoles) parts.push(processed.referenceRoles);
-  }
-
-  const artStyle = parseInvitationArtStyle(options?.artStyle);
-  parts.push(
-    'Create ONE vertical print-ready invitation artwork (9:16, 1024x1536). Purpose: luxury printed invitation card for a real event in Central Africa / RDC.',
-    invitationArtStyleImageDirective(artStyle),
-    invitationArtStyleCompositionNote(artStyle),
-    invitationArtStyleLightNote(artStyle),
-    invitationArtStyleCraftNotes(),
-  );
-  if (hasPeople) {
-    parts.push(invitationArtStyleFaceLockNote(artStyle));
-  }
-
-  if (coupleFaceSwap) {
-    parts.push(
-      '=== COUPLE FACE REPLACEMENT MANDATE ===',
-      'Image 1 is the incoming invitation or scene to keep. Images 2+ are the couple identity photos.',
-      'CRITICAL CONTEXT PRESERVATION: Keep Image 1’s composition, pose, bodies, wardrobe, décor, lighting, ornaments and typography.',
-      'Replace ONLY the face(s) on Image 1 with the exact people from Images 2+. Do not keep the original Image 1 faces.',
-    );
-  } else if (isAlteration) {
-    parts.push(
-      '=== TARGETED ALTERATION & REFINEMENT MANDATE ===',
-      'The reference image shows the EXISTING INVITATION CARD to be adjusted.',
-      'CRITICAL CONTEXT PRESERVATION: You MUST faithfully preserve the existing card’s overall composition, luxury layout, framing, ornamental arches, paper texture, lighting, and color harmony.',
-      'If people or faces appear in the card, their facial identity and expressions must remain completely unchanged.',
-      'Apply ONLY the specific targeted adjustment requested in the brief. Do NOT replace or redesign the whole card from scratch.',
-    );
-  } else if (isClone) {
-    parts.push(
-      '=== INVITATION CARD CLONING & DUPLICATION MANDATE ===',
-      'The reference image contains an existing INVITATION CARD. You MUST faithfully duplicate and replicate its architectural composition, ornamental borders, arches, filigree flourishes, paper textures, background gradients, and color harmonies.',
-      analysis?.clonedCardFeatures ? `Cloned card layout details: ${analysis.clonedCardFeatures}` : '',
-    );
-  }
-
-  if (hasPeople) {
-    parts.push(
-      coupleFaceSwap ? FACE_POLICY_COUPLE_SWAP : FACE_POLICY_KEEP_PEOPLE,
-      coupleFaceSwap
-        ? 'People count: match the couple photos (Images 2+). Place them on the bodies already posed in Image 1.'
-        : `People count (must match refs): ${analysis?.peopleCount ?? 1}. Same people, same relative placement.`,
-    );
-    if (analysis) {
-      if (analysis.peopleFaces && analysis.peopleFaces !== 'none') {
-        parts.push(`FACE INVENTORY (lock, do not beautify): ${analysis.peopleFaces}`);
-      }
-      if (analysis.faceLandmarks && analysis.faceLandmarks !== 'none') {
-        parts.push(`LANDMARKS (lock): ${analysis.faceLandmarks}`);
-      }
-      if (analysis.skinTones && analysis.skinTones !== 'none') {
-        parts.push(`Skin (never lighten): ${analysis.skinTones}`);
-      }
-      if (analysis.hairStyles && analysis.hairStyles !== 'none') {
-        parts.push(`Hair: ${analysis.hairStyles}`);
-      }
-      if (analysis.clothingStyles && analysis.clothingStyles !== 'none') {
-        parts.push(`Clothes: ${analysis.clothingStyles}`);
-      }
-    }
-    parts.push(
-      brief.startsWith('USER BRIEF')
-        ? brief
-        : coupleFaceSwap
-          ? `USER BRIEF (replace faces on Image 1 with the couple):\n${brief}`
-          : `USER BRIEF (décor / card only — never rewrite faces):\n${brief}`,
-    );
-  } else {
-    parts.push(
-      'FIDELITY RULE: No reference faces. If the brief implies hosts, a couple or guests, depict Black African men and/or women only.',
-      FACE_POLICY_DEFAULT_BLACK_AFRICAN,
-      'USER BRIEF:',
-      brief,
-      FACE_POLICY_NO_PEOPLE,
-    );
-  }
-
-  if (options?.organizerContext) {
-    parts.push(options.organizerContext);
-  }
-
-  if (analysis?.briefNeeds?.length) {
-    parts.push(`Brief needs (expressed): ${analysis.briefNeeds.join('; ')}`);
-  }
-  if (analysis?.briefInterpretation) {
-    parts.push(`Brief interpretation: ${analysis.briefInterpretation}`);
-  }
-  if (analysis?.briefMustKeep?.length) {
-    parts.push(`Must keep: ${analysis.briefMustKeep.join('; ')}`);
-  }
-  if (analysis?.briefMustChange?.length) {
-    parts.push(`Must change (brief only — never faces unless explicit): ${analysis.briefMustChange.join('; ')}`);
-  }
-
-  parts.push(`Décor notes: ${backgroundPrompt.slice(0, hasPeople ? 700 : 1400)}`);
-
-  if (analysis) {
-    if (analysis.style) parts.push(`Reference décor style: ${analysis.style}`);
-    if (analysis.motifs) parts.push(`Reference motifs/textures: ${analysis.motifs}`);
-    if (analysis.composition) parts.push(`Reference composition: ${analysis.composition}`);
-    if (analysis.colors.length) parts.push(`Palette close to: ${analysis.colors.join(', ')}`);
-  }
-
-  parts.push(
-    coupleFaceSwap
-      ? 'Conflict rule: faces from Images 2+ ALWAYS win; Image 1 ALWAYS wins for card, pose, bodies, clothes and décor.'
-      : 'Conflict rule: faces/skin/hair/clothing from references ALWAYS win over décor; brief only wins for background, florals, paper, lighting mood.',
-  );
-  if (hasPeople) {
-    parts.push(buildGeminiSceneSteps(Boolean(options?.embedText), { coupleFaceSwap }));
-  }
-  if (options?.embedText && !options?.isPublic) {
-    parts.push(
-      '=== EMBEDDED INVITATION TYPOGRAPHY (MANDATORY) ===',
-      'Incrust sharp, correctly spelled luxury invitation lettering ON the artwork itself: names, date, time, venue and greeting extracted from the USER BRIEF (and any cloned card). Elegant serif or script, gold-foil or ink, integrated into the 9:16 layout — not a floating UI overlay, not a watermark.',
-      'Keep faces fully visible; place typography in the lower third or in a refined cartouche that does not cover eyes, smile or cheeks.',
-    );
-  } else {
-    if (options?.isPublic) {
-      parts.push(
-        '=== STRICT MANDATE FOR REUSABLE PUBLIC TEMPLATE ARTWORK ===',
-        'This image is a REUSABLE PUBLIC EVENTMASTER SHOWCASE TEMPLATE BACKGROUND.',
-        'STRICTLY FORBIDDEN: NEVER write, render, paint, or burn ANY text, letters, names, dates, numbers, words, calligraphy, script, or logos into the image pixels.',
-        'The generated image MUST be 100% clean visual artwork (pure background, arches, florals, ambient lighting, paper texture) so dynamic customizable variables ({{title}}, {{date}}, {{location}}, {{firstName}}) can be overlaid cleanly by any user.',
-      );
-    }
-    parts.push(
-      NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE,
-    );
-  }
-  if (hasPeople) {
-    parts.push(
-      NANO_BANANA_CRITICAL_CONSTRAINT,
-      NANO_BANANA_STYLE_INSTRUCTION,
-      NANO_BANANA_LIGHT_RIG_COHERENCE,
-      NANO_BANANA_OPTICAL_BOKEH,
-    );
-  }
-  return parts.join('\n').slice(0, hasPeople ? 6400 : 5400);
+  return buildCompactImagePrompt({
+    intent: resolvedIntent,
+    originalBrief: processed?.originalBrief || userPrompt,
+    decorParagraph,
+    locks: options?.locks,
+    analysis,
+    organizerContext: options?.organizerContext,
+    artStyle: options?.artStyle,
+    embedText: options?.embedText,
+    isPublic: options?.isPublic,
+    coupleFaceSwap,
+    referenceCount: options?.referenceCount,
+    explicitAppearanceChange: processed?.explicitAppearanceChange,
+  });
 }
 
 function structureSystemPrompt(
   embedText: boolean,
   artStyle?: InvitationArtStyleId,
   isPublic = false,
+  intent: InvitationPipelineIntent = 'create',
 ): string {
   const style = parseInvitationArtStyle(artStyle);
   let basePrompt = STRUCTURE_SYSTEM.replace(
+    '{{PIPELINE_MANDATE}}',
+    invitationPipelineVisionMandate(intent),
+  ).replace(
     '{{ART_STYLE_RULES}}',
     invitationArtStyleStructureRules(style),
   ).replace(
@@ -569,15 +424,19 @@ function visionUserText(
     isAlteration?: boolean;
     existingElements?: Record<string, unknown>[];
     coupleFaceSwap?: boolean;
+    intent?: InvitationPipelineIntent;
   },
 ): string {
   const original = options?.processed?.originalBrief || prompt;
-  const englishScene = options?.processed?.englishSceneBrief || options?.processed?.decorBrief || prompt;
+  const localScaffold = options?.processed?.englishSceneBrief || options?.processed?.decorBrief || prompt;
   const coupleFaceSwap = Boolean(options?.coupleFaceSwap || options?.processed?.coupleFaceSwap);
-  const isAlteration = Boolean(
-    options?.isAlteration ||
-    /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt),
-  );
+  const intent =
+    options?.intent ||
+    resolveInvitationPipelineIntent({
+      coupleFaceSwap,
+      isAlteration: options?.isAlteration,
+      brief: original,
+    });
   const existingTexts = Array.isArray(options?.existingElements)
     ? options.existingElements
         .filter((el) => el && typeof el.text === 'string' && (el.text as string).trim().length > 0)
@@ -585,101 +444,80 @@ function visionUserText(
         .join('; ')
     : '';
 
-  const alterationBlock = isAlteration
-    ? `\n=== REFINEMENT & ALTERATION MANDATE ===
-The user is adjusting an existing luxury invitation design.
-${existingTexts ? `EXISTING TEXTS & DETAILS TO PRESERVE: ${existingTexts}` : ''}
-PRESERVATION RULE: Do NOT invent new replacement couple names, dates, or venues. Keep the established event hierarchy and names intact unless explicitly instructed to change them.\n`
-    : '';
+  const refineBlock =
+    intent === 'refine' && existingTexts
+      ? `\nEXISTING TEXTS TO PRESERVE: ${existingTexts}\nDo not invent new names, dates or venues unless the brief says so.\n`
+      : '';
 
   const honesty = coupleFaceSwap
-    ? `REFERENCE PHOTOS ATTACHED: Image 1 = incoming card (keep décor/pose, discard original faces). Images 2+ = couple identity. Replace faces only. ${
+    ? `PHOTOS: Image 1 = incoming card (keep décor/pose, discard original faces). Images 2+ = couple identity. ${
         options?.processed?.beautifyStripped
-          ? 'The brief asked to beautify / smooth / lighten faces — IGNORE those requests.'
-          : 'Do not idealize or beautify the couple photos.'
+          ? 'Ignore beautify / smooth / lighten requests.'
+          : 'Do not idealize the couple photos.'
       }`
     : hasRefs
-    ? `REFERENCE PHOTOS ATTACHED: faces = pixel truth (Gemini high-fidelity). ${
+    ? `PHOTOS ATTACHED: faces = pixel truth. ${
         options?.processed?.beautifyStripped
-          ? 'The brief asked to beautify / smooth / lighten faces — IGNORE those requests.'
-          : 'Do not idealize or beautify.'
+          ? 'Ignore beautify / smooth / lighten requests.'
+          : 'Do not idealize.'
       }`
-    : 'NO REFERENCE IMAGES: compose from the English scene brief only (décor + text facts). hasPeople=false unless the brief explicitly asks for hosts.';
-  const contextBlock = options?.organizerContext
-    ? `\n${options.organizerContext}\n`
-    : '';
-  const roles = options?.processed?.referenceRoles
-    ? `\n${options.processed.referenceRoles}\n`
-    : '';
+    : 'NO PHOTOS: hasPeople=false unless the brief explicitly asks for hosts.';
+  const contextBlock = options?.organizerContext ? `\n${options.organizerContext}\n` : '';
+  const roles = options?.processed?.referenceRoles ? `\n${options.processed.referenceRoles}\n` : '';
 
-  return `ORIGINAL USER BRIEF (facts to preserve — any language):
+  return `MODE: ${intent}
+
+ORIGINAL USER BRIEF (facts to preserve — any language):
 """
 ${original.slice(0, 1500)}
 """
 
-ENGLISH SCENE BRIEF (Nano Banana narrative — use this as the creative brief):
+LOCAL SCENE SCAFFOLD (refine it — do not copy blindly):
 """
-${englishScene.slice(0, 1400)}
+${localScaffold.slice(0, 900)}
 """
-${contextBlock}${roles}
-${alterationBlock}
+${contextBlock}${roles}${refineBlock}
 ${honesty}
 
-Tasks (strict fidelity — faces first):
-1) ${coupleFaceSwap
-    ? 'Image 1 people are the OLD faces to replace. Inventory NEW identity from Images 2+ (peopleFaces + faceLandmarks). Keep Image 1 pose, bodies, clothes and décor. Do not prettify the couple.'
-    : 'If people are present: OBSERVED face inventory (peopleFaces + faceLandmarks) — one card per person, left→right. Eyes, exact smile, cheeks, skin, hair, clothes. Do not infer the invisible. Do not prettify. Gemini: face and features remain completely unchanged.'}
-2) briefNeeds = EXPLICITLY written needs; briefMustKeep / briefMustChange (décor vs people). Ignore beautify / smooth / lighten.
-3) Fill hasPeople, peopleCount, peopleFaces, faceLandmarks, skinTones, hairStyles, clothingStyles.
-4) Produce the JSON (editor structure + backgroundPrompt).
-5) backgroundPrompt: ${coupleFaceSwap
-    ? 'keep Image 1 card; replace faces with Images 2+ only.'
-    : 'with people → DÉCOR ONLY ("USER BRIEF (décor):"). Do NOT rewrite facial identity there. Without people → "USER BRIEF:" then décor. Complete names/date/venue from connected context only if the brief is incomplete.'}
-${options?.embedText ? '6) Embed brief text (names, date, venue) in backgroundPrompt as invitation typography.' : ''}`;
-}
-
-async function reformulateUserBriefToEnglish(
-  processed: ProcessedInvitationPrompt,
-  options?: { referenceCount?: number; embedText?: boolean; artStyle?: InvitationArtStyleId; coupleFaceSwap?: boolean },
-): Promise<ProcessedInvitationPrompt> {
-  if (!getGeminiApiKey()) return processed;
-  try {
-    const parsed = await requestGeminiJson({
-      system: BRIEF_REFORMULATION_SYSTEM,
-      userText: buildBriefReformulationUserText(
-        processed.originalBrief,
-        processed.decorBrief,
-        {
-          referenceCount: options?.referenceCount,
-          embedText: options?.embedText,
-          artStyleLine: invitationArtStyleScaffoldLine(parseInvitationArtStyle(options?.artStyle)),
-          coupleFaceSwap: options?.coupleFaceSwap,
-        },
-      ),
-      temperature: 0.25,
-      timeoutMs: 45_000,
-      failMessage: 'Brief reformulation failed.',
-    });
-    const english = parseEnglishSceneBriefFromJson(parsed);
-    if (!english || english.length < 24) return processed;
-    return applyEnglishSceneBrief(processed, english);
-  } catch (error) {
-    console.warn(
-      '[invitationTemplateAi] English brief reformulation failed, using local scaffold:',
-      (error as Error)?.message,
-    );
-    return processed;
+Tasks:
+1) Confirm intent (${intent} unless images clearly show a card to clone and mode is create).
+2) Fill visualAnalysis from pixels only.
+3) Write locks (max 8 short sentences).
+4) Write decorParagraph (120–180 words). ${
+    coupleFaceSwap
+      ? 'Keep Image 1 card; replace faces with Images 2+ only.'
+      : hasRefs
+        ? 'Décor / card / mood only — never rewrite faces.'
+        : 'Full scene then décor. Complete names/date/venue from connected context only if the brief is incomplete.'
   }
+5) Fill global + elements for the editor.
+${options?.embedText ? '6) Mention brief typography (names, date, venue) in decorParagraph.' : ''}`;
 }
 
 function visionResultFromParsed(
   parsed: Record<string, unknown>,
   prompt: string,
   hasRefs: boolean,
-  options?: { embedText?: boolean; coupleFaceSwap?: boolean },
+  options?: {
+    embedText?: boolean;
+    coupleFaceSwap?: boolean;
+    intent?: InvitationPipelineIntent;
+  },
 ): VisionResult {
   const visualAnalysis = parseVisualAnalysis(parsed.visualAnalysis);
   const coupleFaceSwap = Boolean(options?.coupleFaceSwap);
+  const localIntent =
+    options?.intent ||
+    resolveInvitationPipelineIntent({
+      coupleFaceSwap,
+      brief: prompt,
+      isInvitationClone: visualAnalysis?.isInvitationClone,
+    });
+  const intent = resolveFinalInvitationPipelineIntent({
+    local: localIntent,
+    vision: parsed.intent,
+    isInvitationClone: visualAnalysis?.isInvitationClone,
+  });
   const faceClause = coupleFaceSwap
     ? FACE_POLICY_COUPLE_SWAP
     : visualAnalysis?.hasPeople
@@ -688,17 +526,22 @@ function visionResultFromParsed(
   const identityPrefix = coupleFaceSwap
     ? 'COUPLE FACE REPLACEMENT: Keep Image 1 card; replace faces with Images 2+. '
     : hasRefs
-      ? 'IDENTITY LOCK: Match people in the references exactly (faces, skin, hair, clothing, eyes, smile, cheeks). '
+      ? 'IDENTITY LOCK: Match people in the references exactly. '
       : '';
-  const backgroundPrompt =
-    typeof parsed.backgroundPrompt === 'string' && parsed.backgroundPrompt.trim()
-      ? parsed.backgroundPrompt.trim().slice(0, 1800)
-      : `${identityPrefix}USER BRIEF: ${prompt.slice(0, 350)}. ${faceClause} Soft print look, ${options?.embedText ? 'embed invitation typography from the brief.' : 'no readable text.'}`;
+  const decorParagraph = (
+    (typeof parsed.decorParagraph === 'string' && parsed.decorParagraph.trim()) ||
+    (typeof parsed.backgroundPrompt === 'string' && parsed.backgroundPrompt.trim()) ||
+    `${identityPrefix}USER BRIEF: ${prompt.slice(0, 350)}. ${faceClause} Soft print look, ${options?.embedText ? 'embed invitation typography from the brief.' : 'no readable text.'}`
+  ).slice(0, 1400);
+  const locks = parseInvitationLocks(parsed.locks, 8);
   return {
     global: parsed.global,
     elements: parsed.elements,
-    backgroundPrompt,
+    backgroundPrompt: decorParagraph,
     visualAnalysis,
+    intent,
+    locks,
+    decorParagraph,
   };
 }
 
@@ -716,22 +559,39 @@ async function visionStructure(
     isPublic?: boolean;
     coupleFaceSwap?: boolean;
     preferredModel?: string;
+    intent?: InvitationPipelineIntent;
   },
 ): Promise<VisionResult> {
   const hasRefs = imageUrls.length > 0;
   const preferOpenAi = isOpenAiStudioModel(options?.preferredModel);
+  const intent =
+    options?.intent ||
+    resolveInvitationPipelineIntent({
+      coupleFaceSwap: options?.coupleFaceSwap,
+      isAlteration: options?.isAlteration,
+      brief: options?.processed?.originalBrief || prompt,
+    });
 
   const tryGemini = async (): Promise<VisionResult | null> => {
     if (!getGeminiApiKey()) return null;
     const parsed = await requestGeminiJson({
-      system: structureSystemPrompt(Boolean(options?.embedText), options?.artStyle, Boolean(options?.isPublic)),
-      userText: visionUserText(prompt, hasRefs, options),
+      system: structureSystemPrompt(
+        Boolean(options?.embedText),
+        options?.artStyle,
+        Boolean(options?.isPublic),
+        intent,
+      ),
+      userText: visionUserText(prompt, hasRefs, { ...options, intent }),
       imageUrls,
       temperature: 0.2,
       failMessage: 'Échec de l’analyse IA des images.',
     });
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      return visionResultFromParsed(parsed as Record<string, unknown>, prompt, hasRefs, options);
+      return visionResultFromParsed(parsed as Record<string, unknown>, prompt, hasRefs, {
+        embedText: options?.embedText,
+        coupleFaceSwap: options?.coupleFaceSwap,
+        intent,
+      });
     }
     return null;
   };
@@ -772,14 +632,23 @@ async function visionStructure(
 
   try {
     const parsed = await requestOpenAiJson({
-      system: structureSystemPrompt(Boolean(options?.embedText), options?.artStyle, Boolean(options?.isPublic)),
-      userText: visionUserText(prompt, hasRefs, options),
+      system: structureSystemPrompt(
+        Boolean(options?.embedText),
+        options?.artStyle,
+        Boolean(options?.isPublic),
+        intent,
+      ),
+      userText: visionUserText(prompt, hasRefs, { ...options, intent }),
       imageUrls,
       temperature: 0.2,
       failMessage: 'Échec de l’analyse IA des images.',
       model: visionModel,
     });
-    return visionResultFromParsed(parsed as Record<string, unknown>, prompt, hasRefs, options);
+    return visionResultFromParsed(parsed as Record<string, unknown>, prompt, hasRefs, {
+      embedText: options?.embedText,
+      coupleFaceSwap: options?.coupleFaceSwap,
+      intent,
+    });
   } catch (error) {
     if (preferOpenAi) {
       console.warn(
@@ -1554,11 +1423,14 @@ async function generateImageWithNanoBanana(
     refImages = await preloadReferenceImages(referenceUrls);
   }
 
-  // Verrouillage anti-lissage : injection des directives de style RAW, lumière et contraintes fermes
   let promptText = imagePrompt;
   if (hasPeople || hasRefs) {
-    if (!promptText.includes(NANO_BANANA_STYLE_INSTRUCTION)) {
-      promptText = `${promptText}\n\n${NANO_BANANA_CRITICAL_CONSTRAINT}\n${NANO_BANANA_STYLE_INSTRUCTION}\n${NANO_BANANA_LIGHT_RIG_COHERENCE}\n${NANO_BANANA_OPTICAL_BOKEH}`;
+    const hasFaceLock =
+      promptText.includes(NANO_BANANA_COMPACT_FACE_LOCK) ||
+      promptText.includes('RAW candid') ||
+      promptText.includes(NANO_BANANA_STYLE_INSTRUCTION);
+    if (!hasFaceLock) {
+      promptText = `${promptText}\n\n${NANO_BANANA_COMPACT_FACE_LOCK}`;
     }
   } else {
     promptText = `Vertical 9:16 luxury invitation. ${invitationArtStyleImageDirective(parseInvitationArtStyle(options?.artStyle))} ${invitationArtStyleCraftNotes()} If people appear, Black African hosts only — never Caucasian stock faces.
@@ -1980,17 +1852,16 @@ export async function composeInvitationTemplateAi(input: {
     ? `${prompt}. PRESERVATION DU CONTEXTE : Le carton existant contient [${existingTextSummaries.join(', ')}]. Conserver impérativement ces informations clés (noms, date, lieu) et la disposition générale, en appliquant avec précision la retouche demandée.`
     : prompt;
 
-  const processedBase = processUserPromptForHonestFaces(enrichedPrompt, {
+  const processed = processUserPromptForHonestFaces(enrichedPrompt, {
     referenceCount: imageUrls.length,
     embedText,
     artStyleLine,
     coupleFaceSwap,
   });
-  const processed = await reformulateUserBriefToEnglish(processedBase, {
-    referenceCount: imageUrls.length,
-    embedText,
-    artStyle,
+  const pipelineIntent = resolveInvitationPipelineIntent({
     coupleFaceSwap,
+    isAlteration,
+    brief: enrichedPrompt,
   });
   const contextSource = parseInvitationContextSource(input.contextSource);
   const composeContext = await loadInvitationComposeContext({
@@ -2003,7 +1874,7 @@ export async function composeInvitationTemplateAi(input: {
   const organizerContextEn = formatContextForImage(composeContext, contextSource);
 
   const key = requireAiConfigured();
-      const structured = await visionStructure(key, processed.visionBrief, imageUrls, {
+  const structured = await visionStructure(key, processed.originalBrief, imageUrls, {
     embedText,
     organizerContext: organizerContextEn,
     processed,
@@ -2013,14 +1884,30 @@ export async function composeInvitationTemplateAi(input: {
     isPublic,
     coupleFaceSwap,
     preferredModel: input.preferredModel || undefined,
+    intent: pipelineIntent,
   });
   if (!imageUrls.length && structured.visualAnalysis) {
     structured.visualAnalysis.hasPeople = false;
     structured.visualAnalysis.peopleCount = 0;
   }
+  const resolvedIntent = resolveFinalInvitationPipelineIntent({
+    local: pipelineIntent,
+    vision: structured.intent,
+    isInvitationClone: structured.visualAnalysis?.isInvitationClone,
+  });
+  const imageLocks = structured.locks.length
+    ? structured.locks
+    : buildInvitationLocks({
+        intent: resolvedIntent,
+        analysis: structured.visualAnalysis,
+        embedText,
+        isPublic,
+        referenceCount: imageUrls.length,
+        explicitAppearanceChange: processed.explicitAppearanceChange,
+      });
   const imagePrompt = buildImagePrompt(
-    processed.imageBrief,
-    structured.backgroundPrompt,
+    processed.originalBrief,
+    structured.decorParagraph || structured.backgroundPrompt,
     structured.visualAnalysis,
     {
       embedText,
@@ -2030,6 +1917,10 @@ export async function composeInvitationTemplateAi(input: {
       isAlteration,
       isPublic,
       coupleFaceSwap,
+      intent: resolvedIntent,
+      locks: imageLocks,
+      decorParagraph: structured.decorParagraph,
+      referenceCount: imageUrls.length,
     },
   );
 
@@ -2049,7 +1940,7 @@ export async function composeInvitationTemplateAi(input: {
         : [];
 
       const imageOptions = {
-        hasPeople: Boolean(structured.visualAnalysis?.hasPeople) && imageUrls.length > 0,
+        hasPeople: (coupleFaceSwap || Boolean(structured.visualAnalysis?.hasPeople)) && imageUrls.length > 0,
         embedText,
         artStyle,
         speedMode,
@@ -2143,8 +2034,11 @@ export async function composeInvitationTemplateAi(input: {
   if (processed.beautifyStripped) {
     (global as Record<string, unknown>).aiFaceHonesty = 'beautify-stripped';
   }
-  (global as Record<string, unknown>).aiEnglishSceneBrief = processed.englishSceneBrief;
+  (global as Record<string, unknown>).aiEnglishSceneBrief =
+    structured.decorParagraph || processed.englishSceneBrief;
   (global as Record<string, unknown>).aiOriginalBrief = processed.originalBrief;
+  (global as Record<string, unknown>).aiPipelineIntent = resolvedIntent;
+  (global as Record<string, unknown>).aiLocks = imageLocks;
   let elements = sanitizeElements(structured.elements);
   if (isAlteration && existingElements.length > 0 && !embedText) {
     const textChangeExplicit =

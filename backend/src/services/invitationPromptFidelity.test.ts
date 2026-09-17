@@ -10,22 +10,30 @@ import {
   type InvitationComposeContext,
 } from './invitationComposeContextUtils.ts';
 import {
+  COMPACT_IMAGE_PROMPT_MAX_CHARS,
   NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE,
+  NANO_BANANA_COMPACT_FACE_LOCK,
   NANO_BANANA_CRITICAL_CONSTRAINT,
   NANO_BANANA_LIGHT_RIG_COHERENCE,
   NANO_BANANA_OPTICAL_BOKEH,
   NANO_BANANA_STYLE_INSTRUCTION,
   applyEnglishSceneBrief,
+  buildCompactImagePrompt,
   buildEnglishSceneBriefScaffold,
   buildGenericThematicBackgroundPrompt,
   buildHonestFaceIdentityHeader,
+  buildInvitationLocks,
   buildNanoBananaRawDirectives,
   buildReferenceRoles,
   buildVariantImagePrompt,
+  invitationPipelineModeSentence,
   isSafetyFilterTriggered,
   optimizeReferenceImageUrl,
   parseEnglishSceneBriefFromJson,
+  parseInvitationLocks,
   processUserPromptForHonestFaces,
+  resolveFinalInvitationPipelineIntent,
+  resolveInvitationPipelineIntent,
   stripFaceBeautifyLanguage,
 } from './invitationPromptFidelity.ts';
 
@@ -425,14 +433,130 @@ describe('Nano Banana Robustesse & Safety Filter Fallback', () => {
 
   it('génère un prompt de variante A/B préservant l’identité avec une alternative de composition', () => {
     const original = 'Soirée de fiançailles or et vert émeraude au bord du fleuve Congo.';
-    const variant = buildVariantImagePrompt(original);
+    const variant = buildVariantImagePrompt(original, true);
 
     assert.match(variant, /Soirée de fiançailles or et vert émeraude/);
-    assert.match(variant, /ALTERNATIVE COMPOSITION VARIANT \(A\/B VARIATION 2\)/);
-    assert.match(variant, /subtle variation in framing/i);
-    assert.match(variant, /vertical 9:16/i);
-    assert.match(variant, /STRICT REFERENCE IMAGE & HOST IDENTITY ANCHORING/);
-    assert.match(variant, /GENTLE, CONTROLLED PROMPT ALTERATION/);
+    assert.match(variant, /ALTERNATIVE B/);
+    assert.match(variant, /Same hosts as the references/);
+    assert.match(variant, /camera angle/);
+    assert.match(variant, /Do not change faces/);
+  });
+});
+
+describe('invitation pipeline intent', () => {
+  it('classe couple, refine, clone et create sans se tromper de mode', () => {
+    assert.equal(
+      resolveInvitationPipelineIntent({ coupleFaceSwap: true, brief: 'copier cette carte' }),
+      'couple',
+    );
+    assert.equal(
+      resolveInvitationPipelineIntent({ isAlteration: true, brief: 'Mariage floral or ivoire' }),
+      'refine',
+    );
+    assert.equal(
+      resolveInvitationPipelineIntent({ brief: 'Retouche le cadre doré seulement' }),
+      'refine',
+    );
+    assert.equal(
+      resolveInvitationPipelineIntent({ brief: 'Copier cette invitation Kuba' }),
+      'clone',
+    );
+    assert.equal(
+      resolveInvitationPipelineIntent({ brief: 'Mariage floral or ivoire à Kinshasa' }),
+      'create',
+    );
+  });
+
+  it('ne laisse pas la vision promouvoir un couple sans drapeau organisateur', () => {
+    assert.equal(
+      resolveFinalInvitationPipelineIntent({ local: 'create', vision: 'couple' }),
+      'create',
+    );
+    assert.equal(
+      resolveFinalInvitationPipelineIntent({
+        local: 'create',
+        vision: 'clone',
+        isInvitationClone: true,
+      }),
+      'clone',
+    );
+    assert.equal(
+      resolveFinalInvitationPipelineIntent({ local: 'refine', vision: 'clone' }),
+      'refine',
+    );
+    assert.equal(
+      resolveFinalInvitationPipelineIntent({ local: 'couple', vision: 'create' }),
+      'couple',
+    );
+  });
+});
+
+describe('compact image prompt', () => {
+  it('reste court et spécialisé par pipeline', () => {
+    const createPrompt = buildCompactImagePrompt({
+      intent: 'create',
+      originalBrief: 'Mariage floral or ivoire à Kinshasa',
+      decorParagraph:
+        'Compose a gold-and-ivory floral wedding card. [Subject] Luxury stationery. [Action] Presenting tropical florals. [Location] Kinshasa. [Composition] Tall 9:16. [Style] Photoreal print.',
+      analysis: { hasPeople: false, colors: ['#c5a059', '#faf7f2'] },
+      artStyle: 'realiste',
+    });
+    assert.equal(createPrompt.length <= COMPACT_IMAGE_PROMPT_MAX_CHARS, true);
+    assert.match(createPrompt, /MODE create/);
+    assert.match(createPrompt, /LOCKS/);
+    assert.match(createPrompt, /DECOR/);
+    assert.match(createPrompt, /Black African/);
+    assert.doesNotMatch(createPrompt, /IDENTITY ANCHOR/);
+    assert.doesNotMatch(createPrompt, /FACE INVENTORY/);
+    assert.doesNotMatch(createPrompt, /SCENE STEPS/);
+
+    const couplePrompt = buildCompactImagePrompt({
+      intent: 'couple',
+      originalBrief: 'Remplace uniquement les visages',
+      decorParagraph: 'Keep Image 1 card. Replace faces with Images 2+.',
+      analysis: { hasPeople: true, peopleCount: 2 },
+      coupleFaceSwap: true,
+      referenceCount: 3,
+      embedText: false,
+    });
+    assert.match(couplePrompt, /MODE couple/);
+    assert.match(couplePrompt, /Images 2\+/);
+    assert.match(couplePrompt, /RAW candid faces/);
+    assert.ok(couplePrompt.includes(NANO_BANANA_COMPACT_FACE_LOCK));
+    assert.doesNotMatch(couplePrompt, /IDENTITY ANCHOR/);
+    assert.ok(couplePrompt.length < 2500);
+  });
+
+  it('interdit le texte peint sur un modèle public', () => {
+    const prompt = buildCompactImagePrompt({
+      intent: 'create',
+      originalBrief: 'Gala bleu nuit',
+      decorParagraph: 'Compose a midnight gala card with gold foil.',
+      isPublic: true,
+    });
+    assert.match(prompt, /\{\{title\}\}/);
+    assert.match(prompt, /no painted text/i);
+  });
+
+  it('dérive au plus 8 verrous et ignore les doublons', () => {
+    const locks = buildInvitationLocks({
+      intent: 'clone',
+      analysis: {
+        hasPeople: true,
+        peopleCount: 2,
+        isInvitationClone: true,
+        clonedCardFeatures: 'double gold border, floral arch',
+        briefMustKeep: ['visages', 'cadre'],
+        briefMustChange: ['plus de roses'],
+        colors: ['#c5a059'],
+      },
+      referenceCount: 2,
+    });
+    assert.ok(locks.length <= 8);
+    assert.ok(locks.some((lock) => /identity|photos/i.test(lock)));
+    assert.ok(locks.some((lock) => /gold border/i.test(lock)));
+    assert.deepEqual(parseInvitationLocks(['  Keep faces  ', 'Keep faces', '', 12]), ['Keep faces']);
+    assert.match(invitationPipelineModeSentence('refine'), /MODE refine/);
   });
 });
 
