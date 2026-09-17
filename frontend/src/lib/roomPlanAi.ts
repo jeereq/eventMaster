@@ -1,4 +1,5 @@
 import { api } from '@/lib/api';
+import { isStudioJobAccepted, type StudioJobAccepted } from '@/lib/studioJobs';
 import { applyServerAllowance, getOrCreateDeviceId, AI_ROOM_PLAN_TOKEN_COST, type AiAllowance } from '@/lib/aiTokens';
 import { roomEditorCapabilities, type RoomEditorCapabilities } from '@/lib/roomEditorAccess';
 import { normalizeDoorOrthogonal } from '@/lib/roomLayoutClearance';
@@ -1010,7 +1011,7 @@ export async function composeRoomPlanWithAi(input: {
   roomType: RoomLayoutBlueprint['roomType'];
   widthM: number;
   heightM: number;
-}): Promise<RoomPlanAiResult> {
+}): Promise<RoomPlanAiResult | StudioJobAccepted> {
   const deviceId = getOrCreateDeviceId();
   const data = await api.post('/rooms/ai/compose', {
     deviceId,
@@ -1019,7 +1020,9 @@ export async function composeRoomPlanWithAi(input: {
     roomType: input.roomType,
     widthM: input.widthM,
     heightM: input.heightM,
+    background: true,
   });
+  if (isStudioJobAccepted(data)) return data;
   if (data?.allowance) applyServerAllowance(data.allowance);
   return data as RoomPlanAiResult;
 }
@@ -1030,7 +1033,7 @@ export async function composeRoomPlanWithAiPublic(input: {
   roomType: RoomLayoutBlueprint['roomType'];
   widthM: number;
   heightM: number;
-}): Promise<RoomPlanAiResult> {
+}): Promise<RoomPlanAiResult | StudioJobAccepted> {
   const deviceId = getOrCreateDeviceId();
   const imageDataUrl = input.file ? await roomPlanFileToDataUrl(input.file) : undefined;
   const data = await api.post('/public/rooms/ai/compose', {
@@ -1040,7 +1043,9 @@ export async function composeRoomPlanWithAiPublic(input: {
     roomType: input.roomType,
     widthM: input.widthM,
     heightM: input.heightM,
+    background: true,
   });
+  if (isStudioJobAccepted(data)) return data;
   if (data?.allowance) applyServerAllowance(data.allowance);
   return data as RoomPlanAiResult;
 }

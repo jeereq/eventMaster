@@ -22,6 +22,14 @@ import { uploadDataUrl } from '../services/cloudinaryService';
 import { getTemplateUploadFolder } from '../config/cloudinaryConfig';
 import { protocolCreativeDeniedMessage } from '../services/permissionsService';
 import { hasCommercialPermission, loadPlatformSettings } from '../services/platformSettingsService';
+import {
+  createStudioJob,
+  runStudioJob,
+  completeStudioJob,
+  failStudioJob,
+} from '../services/studioJobService';
+import { notifyUsers } from '../services/platformNotificationService';
+import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 
 function canManagePlatformTemplates(user?: { id?: string; role?: string }): boolean {
   if (!user) return false;
@@ -502,7 +510,7 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
 
     const unlimited = isUnlimitedAiTokenUser(req.user);
     await requireAiSimulationCredit(deviceId, req.user.id, AI_INVITATION_COMPOSE_TOKEN_COST, { unlimited });
-    const result = await composeInvitationTemplateAi({
+    const composeInput = {
       userId: req.user.id,
       tenantId: isSuperAdmin ? null : tenantId,
       isPublic,
@@ -521,30 +529,50 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
       speedMode,
       preferredModel: settings.aiStudioModels?.invitationModel,
       coupleFaceSwap,
-    });
-    const historyId = await persistTemplateCompose({
-      userId: req.user.id,
-      deviceId,
-      source: 'studio',
-      prompt,
-      referenceUrls: imageUrls,
-      content: result.content,
-      stage: result.stage,
-    });
-    const allowance = await consumeAiSimulationCredit(deviceId, req.user.id, AI_INVITATION_COMPOSE_TOKEN_COST, {
-      action: 'invitation_compose',
-      source: unlimited && req.user.impersonatedBy ? 'support' : 'studio',
-      relatedId: historyId,
-      unlimited,
-    });
+    };
+    const runCompose = async () => {
+      const result = await composeInvitationTemplateAi(composeInput);
+      const historyId = await persistTemplateCompose({
+        userId: req.user.id,
+        deviceId,
+        source: 'studio',
+        prompt,
+        referenceUrls: imageUrls,
+        content: result.content,
+        stage: result.stage,
+      });
+      const allowance = await consumeAiSimulationCredit(deviceId, req.user.id, AI_INVITATION_COMPOSE_TOKEN_COST, {
+        action: 'invitation_compose',
+        source: unlimited && req.user.impersonatedBy ? 'support' : 'studio',
+        relatedId: historyId,
+        unlimited,
+      });
+      if (req.user?.id) {
+        void notifyUsers([req.user.id], {
+          type: PLATFORM_NOTIFICATION_TYPE.STUDIO_GENERATION_READY,
+          title: 'Invitation prête',
+          message: 'La génération IA est terminée. Ouvrez le studio pour l’appliquer.',
+          metadata: { href: '/dashboard/templates', historyId, kind: 'invitation' },
+        });
+      }
+      return { content: result.content, stage: result.stage, historyId, remaining: allowance.totalRemaining, allowance };
+    };
 
-    return res.json({
-      content: result.content,
-      stage: result.stage,
-      historyId,
-      remaining: allowance.totalRemaining,
-      allowance,
-    });
+    if (body.background === true) {
+      const job = createStudioJob({ kind: 'invitation', userId: req.user.id, deviceId, prompt });
+      runStudioJob(job.id, async () => {
+        try {
+          const payload = await runCompose();
+          completeStudioJob(job.id, { result: payload, historyId: payload.historyId });
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : 'Impossible de générer le modèle avec l’IA.';
+          failStudioJob(job.id, message);
+        }
+      });
+      return res.status(202).json({ jobId: job.id, status: 'queued', background: true });
+    }
+
+    return res.json(await runCompose());
   } catch (error: unknown) {
     if (error instanceof PlanFeatureError) {
       return res.status(error.statusCode).json({ error: error.message });
@@ -608,49 +636,68 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
 
     const unlimited = isUnlimitedAiTokenUser(user);
     await requireAiSimulationCredit(deviceId, user?.id || null, AI_INVITATION_COMPOSE_TOKEN_COST, { unlimited });
-    const result = await composeInvitationTemplateAi({
-      userId: rateKey,
-      tenantId: user?.tenantId || null,
-      isPublic: true,
-      prompt,
-      imageUrls,
-      baseImageUrl,
-      isAlteration,
-      existingElements,
-      generateBackground,
-      embedText: false,
-      deviceId,
-      authUserId: user?.id || null,
-      contextSource,
-      artStyle,
-      variantsCount,
-      speedMode,
-      preferredModel: settings.aiStudioModels?.invitationModel,
-      coupleFaceSwap,
-    });
-    const historyId = await persistTemplateCompose({
-      userId: user?.id || null,
-      deviceId,
-      source: user?.id ? 'studio' : 'landing',
-      prompt,
-      referenceUrls: imageUrls,
-      content: result.content,
-      stage: result.stage,
-    });
-    const allowance = await consumeAiSimulationCredit(deviceId, user?.id || null, AI_INVITATION_COMPOSE_TOKEN_COST, {
-      action: 'invitation_compose',
-      source: unlimited && user?.impersonatedBy ? 'support' : user?.id ? 'studio' : 'landing',
-      relatedId: historyId,
-      unlimited,
-    });
+    const runCompose = async () => {
+      const result = await composeInvitationTemplateAi({
+        userId: rateKey,
+        tenantId: user?.tenantId || null,
+        isPublic: true,
+        prompt,
+        imageUrls,
+        baseImageUrl,
+        isAlteration,
+        existingElements,
+        generateBackground,
+        embedText: false,
+        deviceId,
+        authUserId: user?.id || null,
+        contextSource,
+        artStyle,
+        variantsCount,
+        speedMode,
+        preferredModel: settings.aiStudioModels?.invitationModel,
+        coupleFaceSwap,
+      });
+      const historyId = await persistTemplateCompose({
+        userId: user?.id || null,
+        deviceId,
+        source: user?.id ? 'studio' : 'landing',
+        prompt,
+        referenceUrls: imageUrls,
+        content: result.content,
+        stage: result.stage,
+      });
+      const allowance = await consumeAiSimulationCredit(deviceId, user?.id || null, AI_INVITATION_COMPOSE_TOKEN_COST, {
+        action: 'invitation_compose',
+        source: unlimited && user?.impersonatedBy ? 'support' : user?.id ? 'studio' : 'landing',
+        relatedId: historyId,
+        unlimited,
+      });
+      if (user?.id) {
+        void notifyUsers([user.id], {
+          type: PLATFORM_NOTIFICATION_TYPE.STUDIO_GENERATION_READY,
+          title: 'Invitation prête',
+          message: 'La génération IA est terminée. Ouvrez le studio pour l’appliquer.',
+          metadata: { href: '/modeles', historyId, kind: 'invitation' },
+        });
+      }
+      return { content: result.content, stage: result.stage, historyId, remaining: allowance.totalRemaining, allowance };
+    };
 
-    return res.json({
-      content: result.content,
-      stage: result.stage,
-      historyId,
-      remaining: allowance.totalRemaining,
-      allowance,
-    });
+    if (body.background === true) {
+      const job = createStudioJob({ kind: 'invitation', userId: user?.id || null, deviceId, prompt });
+      runStudioJob(job.id, async () => {
+        try {
+          const payload = await runCompose();
+          completeStudioJob(job.id, { result: payload, historyId: payload.historyId });
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : 'Impossible de générer le modèle avec l’IA.';
+          failStudioJob(job.id, message);
+        }
+      });
+      return res.status(202).json({ jobId: job.id, status: 'queued', background: true });
+    }
+
+    return res.json(await runCompose());
   } catch (error: unknown) {
     const err = error as { status?: number; message?: string };
     if (err?.status) {

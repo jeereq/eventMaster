@@ -15,6 +15,8 @@ import EditorialLayoutPicker from '@/components/EditorialLayoutPicker';
 import { buildMockupTemplate, applyMockupToEditor, applyMockupTextMode, buildTextElementsFromOcrLines, type MockupImportTextMode } from '@/lib/templateMockupImport';
 import { extractTextFromImageSource, mergeOcrIntoMockupElements } from '@/lib/templateOcrImport';
 import { composeTemplateWithAi, applyAiComposeToEditor, loadAiTemplateDraft, clearAiTemplateDraft, downloadAiGeneratedImage, COUPLE_FACE_SWAP_DEFAULT_PROMPT, type AiSpeedMode } from '@/lib/templateAiCompose';
+import { isStudioJobAccepted, onStudioJob } from '@/lib/studioJobs';
+import { useStudioJobs } from '@/context/StudioJobsContext';
 import AiComposeFullscreenLoader from '@/components/AiComposeFullscreenLoader';
 import {
  fetchAiTemplateComposeHistoryStudio,
@@ -205,6 +207,7 @@ function getElementFieldInfo(el: Record<string, unknown>, index: number): {
 
 export default function TemplatesPage() {
  const { user, planFeatures, planQuota, tenant, access } = useAuth();
+ const { trackJob } = useStudioJobs();
  const { site } = usePlatformSite();
  const isInviteBlocked = site?.studioVisibility?.invite === false;
  const router = useRouter();
@@ -1345,6 +1348,13 @@ export default function TemplatesPage() {
     } finally {
       window.clearTimeout(stageTimer);
     }
+    if (isStudioJobAccepted(result)) {
+      trackJob(result.jobId, 'invitation', promptToSend);
+      setAiComposeModalOpen(false);
+      resetAiComposeModal();
+      setSuccess('Génération lancée en arrière-plan. Vous pouvez quitter cette page, la carte arrivera toute seule.');
+      return;
+    }
     setAiComposeStage('Application du modèle…');
     const isTextChangeRequested =
       /texte|nom|prénom|date|lieu|heure|écrit|adresse|titre|rsvp/i.test(aiComposePrompt);
@@ -2294,6 +2304,46 @@ export default function TemplatesPage() {
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [editorOpen, draftSavedAt]);
+
+  useEffect(() => {
+    return onStudioJob((job) => {
+      if (job.kind !== 'invitation' || job.status !== 'done') return;
+      const content = job.result?.content;
+      if (!content || typeof content !== 'object') return;
+      applyAiComposeToEditor(
+        content as Parameters<typeof applyAiComposeToEditor>[0],
+        {
+          setCanvasElements,
+          setBgType,
+          setBgColor,
+          setBgImageUrl,
+          setBgPattern,
+          setFrameType,
+          setFontTheme,
+          setFloralColor,
+          setFloralType,
+          setFloralDensity,
+          setImportedPalette,
+          setColorThemeId,
+          setLayoutMode,
+          setCanvasSizePreset,
+          setCanvasWidth,
+          setCanvasHeight,
+          setSelectedElementId,
+          setAiVariants,
+          setAiSafetyFallback: setAiSafetyFallbackNotice,
+        },
+        {},
+      );
+      setGeneratedByAi(true);
+      setImportedWithOcr(false);
+      if (typeof job.historyId === 'string') setAiComposeHistoryId(job.historyId);
+      void fetchAiTemplateComposeHistoryStudio().then(setAiComposeHistory);
+      if (editorOpen) {
+        setSuccess('Invitation générée en arrière-plan et appliquée à l’éditeur.');
+      }
+    });
+  }, [editorOpen]);
 
   useEffect(() => {
     if (!editorOpen) return;

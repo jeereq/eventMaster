@@ -84,6 +84,8 @@ import type { LandingTemplate } from '@/config/landingTemplates';
 import { Button, Modal, Alert } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
+import { isStudioJobAccepted, onStudioJob } from '@/lib/studioJobs';
+import { useStudioJobs } from '@/context/StudioJobsContext';
 
 function contentToLandingTemplate(
   content: TemplateAiComposeContent,
@@ -269,6 +271,7 @@ export default function LandingInvitationAiGenerator({
   const isInviteBlocked = site?.studioVisibility?.invite === false;
   const protocolLocked = isProtocolUser(access);
   const router = useRouter();
+  const { trackJob } = useStudioJobs();
   const inputRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
@@ -431,6 +434,24 @@ export default function LandingInvitationAiGenerator({
       setAllowance(getAiSimulationAllowance());
     });
     void fetchAiTemplateComposeHistory().then(setHistory);
+  }, []);
+
+  useEffect(() => {
+    return onStudioJob((job) => {
+      if (job.kind !== 'invitation' || job.status !== 'done') return;
+      const content = job.result?.content;
+      if (!content || typeof content !== 'object') return;
+      const next = content as TemplateAiComposeContent;
+      setResult(next);
+      setLastStageMeta((job.result?.stage as TemplateAiComposeResult['stage']) || null);
+      setActiveHistoryId(typeof job.historyId === 'string' ? job.historyId : null);
+      setAllowance(getAiSimulationAllowance());
+      saveAiTemplateDraft(next, job.prompt);
+      void fetchAiTemplateComposeHistory().then(setHistory);
+      setActiveStep(3);
+      setStage(null);
+      scrollResultIntoView();
+    });
   }, []);
 
   useEffect(() => {
@@ -671,6 +692,12 @@ export default function LandingInvitationAiGenerator({
         isAlteration: studioIntent === 'couple',
       });
       if (seq !== generationSeq.current) return;
+      if (isStudioJobAccepted(data)) {
+        trackJob(data.jobId, 'invitation', prompt.trim());
+        setStage(null);
+        setActiveStep(0);
+        return;
+      }
       setResult(data.content);
       setLastStageMeta(data.stage || null);
       setActiveHistoryId(typeof data.historyId === 'string' ? data.historyId : null);
@@ -860,6 +887,11 @@ export default function LandingInvitationAiGenerator({
         variantsCount,
         speedMode,
       });
+      if (isStudioJobAccepted(data)) {
+        trackJob(data.jobId, 'invitation', rawRefine);
+        setRefineSuccess('Retouche lancée en arrière-plan. Vous pouvez continuer.');
+        return;
+      }
 
       const textChangeRequested =
         /texte|nom|prénom|date|lieu|heure|écrit|adresse|titre|rsvp/i.test(rawRefine);

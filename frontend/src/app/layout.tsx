@@ -3,6 +3,8 @@ import { Suspense } from "react";
 import { Inter, Geist_Mono, Fraunces } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { StudioJobsProvider } from "@/context/StudioJobsContext";
+import StudioJobsDock from "@/components/StudioJobsDock";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { PlatformSiteProvider } from "@/context/PlatformSiteContext";
 import PWARegister from "@/components/PWARegister";
@@ -15,6 +17,7 @@ import MobileSplashScreen from "@/components/MobileSplashScreen";
 import NavigationProgressBar from "@/components/NavigationProgressBar";
 import NavigationScrollTop from "@/components/NavigationScrollTop";
 import SessionExpiredDialog from "@/components/SessionExpiredDialog";
+import AiTokenShortageAlert from "@/components/AiTokenShortageAlert";
 import { fetchPublicSiteSnapshot, resolveMetadataBase } from "@/lib/publicSiteServer";
 
 /** Inter ≈ substitut open-source de TWK Lausanne / Asana Sans (UI produit Asana). */
@@ -137,7 +140,9 @@ html.em-splash-boot,html.em-splash-boot body{background:#f6f7f8!important;overfl
         <ThemeProvider>
           <PlatformSiteProvider>
             <AuthProvider>
+              <StudioJobsProvider>
               <SessionExpiredDialog />
+              <AiTokenShortageAlert />
               <PwaInstallProvider>
                 <ViewPreferencesBridge>
                   <BrandFaviconSync />
@@ -154,8 +159,10 @@ html.em-splash-boot,html.em-splash-boot body{background:#f6f7f8!important;overfl
                   <Suspense fallback={null}>
                     <GlobalAiSimulatorFabHost />
                   </Suspense>
+                  <StudioJobsDock />
                 </ViewPreferencesBridge>
               </PwaInstallProvider>
+              </StudioJobsProvider>
             </AuthProvider>
           </PlatformSiteProvider>
         </ThemeProvider>

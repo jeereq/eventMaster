@@ -50,6 +50,8 @@ import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import { Alert, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
+import { isStudioJobAccepted, onStudioJob } from '@/lib/studioJobs';
+import { useStudioJobs } from '@/context/StudioJobsContext';
 
 const ROOM_TYPES: RoomType[] = ['SIMPLE', 'BANQUET', 'CONFERENCE', 'AMPHITHEATER', 'TENT', 'CUSTOM'];
 
@@ -72,6 +74,7 @@ export default function LandingRoomPlanAiStudio({
   className?: string;
 }) {
   const { user, access } = useAuth();
+  const { trackJob } = useStudioJobs();
   const { site } = usePlatformSite();
   const isRoomBlocked = site?.studioVisibility?.room === false;
   const protocolLocked = isProtocolUser(access);
@@ -102,6 +105,21 @@ export default function LandingRoomPlanAiStudio({
   useEffect(() => {
     setAllowance(getAiSimulationAllowance());
   }, []);
+
+  useEffect(() => {
+    return onStudioJob((job) => {
+      if (job.kind !== 'room' || job.status !== 'done') return;
+      const draft = job.result?.draft as RoomPlanVisionDraft | undefined;
+      if (!draft) return;
+      setDraft(draft);
+      setActiveHistoryId(typeof job.historyId === 'string' ? job.historyId : null);
+      setAllowance(getAiSimulationAllowance());
+      saveRoomPlanAiDraft(draft, { prompt: job.prompt, roomType, widthM: 20, heightM: 16 });
+      void fetchAiRoomPlanComposeHistory().then(setHistory);
+      const applied = previewRoomPlanDraft(draft, roomType);
+      onBlueprintChange?.(applied.blueprint);
+    });
+  }, [onBlueprintChange, roomType]);
 
   const asRoomType = (value?: string | null): RoomType => (
     value && ROOM_TYPES.includes(value as RoomType) ? (value as RoomType) : 'BANQUET'
@@ -162,6 +180,10 @@ export default function LandingRoomPlanAiStudio({
         widthM: 20,
         heightM: 16,
       });
+      if (isStudioJobAccepted(result)) {
+        trackJob(result.jobId, 'room', prompt.trim());
+        return;
+      }
       setDraft(result.draft);
       setLastImageUrl(imageUrl);
       setActiveHistoryId(typeof result.historyId === 'string' ? result.historyId : null);

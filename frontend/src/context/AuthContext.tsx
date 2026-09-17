@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '../lib/api';
 import type { PlanId } from '@/config/landingPricing';
@@ -246,32 +246,82 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (savedAccess) setAccess(JSON.parse(savedAccess));
       setSupportSession(Boolean(readSupportBackup()) || Boolean(JSON.parse(savedUser)?.impersonatedBy));
 
-      api.get('/auth/profile')
-        .then((data) => {
-          if (data.user) {
-            setUser(data.user);
-            localStorage.setItem('user', JSON.stringify(data.user));
-            if (data.user.impersonatedBy) setSupportSession(true);
-          }
-          if (data.tenant) {
-            setTenant(data.tenant);
-            localStorage.setItem('tenant', JSON.stringify(data.tenant));
-          }
-          if (data.access !== undefined) {
-            setAccess(data.access);
-            persistAccess(data.access);
-          }
-        })
-        .catch((err: Error & { status?: number }) => {
-          if (err?.status === 401) {
-            setSessionExpired(true);
-            return;
-          }
-          console.error('Error auto-refreshing profile on mount:', err);
-        });
+      void refreshLiveSession();
     }
     setLoading(false);
   }, []);
+
+  const applySessionPayload = (data: {
+    token?: string;
+    user?: User;
+    tenant?: Tenant | null;
+    access?: OrgAccess | null;
+  }) => {
+    if (data.token) {
+      localStorage.setItem('token', data.token);
+      setToken(data.token);
+    }
+    if (data.user) {
+      setUser(data.user);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      if (data.user.impersonatedBy) setSupportSession(true);
+    }
+    if (data.tenant) {
+      setTenant(data.tenant);
+      localStorage.setItem('tenant', JSON.stringify(data.tenant));
+    } else if (data.tenant === null) {
+      setTenant(null);
+      localStorage.removeItem('tenant');
+    }
+    if (data.access !== undefined) {
+      setAccess(data.access);
+      persistAccess(data.access);
+    }
+  };
+
+  const SESSION_HEARTBEAT_MS = 10 * 60 * 1000;
+  const SESSION_VISIBLE_MIN_MS = 45 * 1000;
+  const lastSessionRefreshAt = useRef(0);
+
+  const refreshLiveSession = async () => {
+    const savedToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    if (!savedToken) return;
+    try {
+      const data = await api.post('/auth/refresh');
+      applySessionPayload(data);
+      lastSessionRefreshAt.current = Date.now();
+    } catch (err: unknown) {
+      const status = err && typeof err === 'object' && 'status' in err
+        ? Number((err as { status?: number }).status)
+        : 0;
+      if (status === 401) {
+        setSessionExpired(true);
+        return;
+      }
+      console.error('Error auto-refreshing session:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (!token) return;
+    const tick = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      void refreshLiveSession();
+    };
+    const interval = window.setInterval(tick, SESSION_HEARTBEAT_MS);
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - lastSessionRefreshAt.current < SESSION_VISIBLE_MIN_MS) return;
+      void refreshLiveSession();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [token]);
 
   const login = async (email: string, password: string, options?: { next?: string | null }) => {
     setLoading(true);
@@ -534,21 +584,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshProfile = async () => {
     try {
       const data = await api.get('/auth/profile');
-      if (data.user) {
-        setUser(data.user);
-        localStorage.setItem('user', JSON.stringify(data.user));
-      }
-      if (data.tenant) {
-        setTenant(data.tenant);
-        localStorage.setItem('tenant', JSON.stringify(data.tenant));
-      } else {
-        setTenant(null);
-        localStorage.removeItem('tenant');
-      }
-      if (data.access !== undefined) {
-        setAccess(data.access);
-        persistAccess(data.access);
-      }
+      applySessionPayload(data);
     } catch (error) {
       console.error('Error refreshing profile:', error);
     }
