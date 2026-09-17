@@ -114,6 +114,7 @@ export default function InvitationModelPhotoPicker({
                   aria-selected={active}
                   disabled={disabled}
                   onClick={() => onSelect(photo)}
+                  aria-label={`Préselectionner ${photo.name}`}
                   className={cn(
                     'w-20 shrink-0 text-left rounded-[var(--radius-button)] border overflow-hidden transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60',
                     active
@@ -127,7 +128,7 @@ export default function InvitationModelPhotoPicker({
                     alt=""
                     className="w-full h-24 object-cover bg-surface-muted"
                   />
-                  <span className="block px-1.5 py-1 text-[11px] font-semibold text-foreground line-clamp-2 leading-tight">
+                  <span className="block px-1.5 py-1 text-xs font-semibold text-foreground line-clamp-2 leading-tight">
                     {photo.name}
                   </span>
                 </button>

@@ -42,7 +42,7 @@ export default function InvitationStructuredBriefFields({
                 className={cn(
                   'min-h-11 px-3 rounded-md text-xs font-bold border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60',
                   selected
-                    ? 'border-primary/40 bg-primary text-white'
+                    ? 'border-primary/40 bg-primary-solid text-primary-foreground'
                     : 'border-border bg-surface text-foreground hover:border-primary/40',
                 )}
               >
@@ -69,7 +69,7 @@ export default function InvitationStructuredBriefFields({
                 className={cn(
                   'min-h-11 px-3 rounded-md text-xs font-bold border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60',
                   selected
-                    ? 'border-primary/40 bg-primary text-white'
+                    ? 'border-primary/40 bg-primary-solid text-primary-foreground'
                     : 'border-border bg-surface text-foreground hover:border-primary/40',
                 )}
               >
