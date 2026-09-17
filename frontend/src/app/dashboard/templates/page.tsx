@@ -25,7 +25,7 @@ import {
 } from '@/lib/aiTemplateComposeHistory';
 import AiTemplateComposeHistoryList from '@/components/AiTemplateComposeHistoryList';
 import PromptModelSelector from '@/components/PromptModelSelector';
-import { StudioAiTabs, type StudioAiTabId } from '@/components/StudioAiTabs';
+import { StudioAiTabs, StudioHowTo, type StudioAiTabId } from '@/components/StudioAiTabs';
 import InvitationContextSourcePicker from '@/components/InvitationContextSourcePicker';
 import InvitationArtStylePicker from '@/components/InvitationArtStylePicker';
 import {
@@ -456,6 +456,7 @@ export default function TemplatesPage() {
  const [aiComposeHistory, setAiComposeHistory] = useState<AiTemplateComposeHistoryItem[]>([]);
  const [aiComposeHistoryId, setAiComposeHistoryId] = useState<string | null>(null);
  const [aiComposeStudioTab, setAiComposeStudioTab] = useState<StudioAiTabId>('create');
+ const [aiComposeAdvancedOpen, setAiComposeAdvancedOpen] = useState(false);
  const [aiTokenModalOpen, setAiTokenModalOpen] = useState(false);
  const [aiAllowance, setAiAllowance] = useState<AiAllowance>(() => createEmptyAiAllowance());
  const [studioRail, setStudioRail] = useState<'content' | 'style'>('content');
@@ -565,9 +566,9 @@ export default function TemplatesPage() {
  setSuccess('');
  setStudioOrigin(origin);
  setEditingTemplateId(null);
- setTemplateName('Nouveau Modèle d\'Invitation');
- setInvitationHonorees('Hassan & Ayesha');
- setInvitationDate('2026-06-15');
+ setTemplateName('Nouvelle invitation');
+ setInvitationHonorees('');
+ setInvitationDate('');
  setSelectedTenantId('');
  const orgTheme = buildOrgBrandInvitationTheme(tenant?.branding);
  setImportedPalette(orgTheme.palette);
@@ -576,12 +577,12 @@ export default function TemplatesPage() {
  setColorThemeId(ORG_BRAND_THEME_ID);
  const initialElements: CanvasElement[] = applyPaletteToElements([
  { id: '1', type: 'text', text: 'CÉLÉBRATION UNIQUE', color: orgTheme.palette.accent, fontSize: '12px', align: 'center', width: 'full', fontFamily: 'Montserrat', letterSpacing: '0.2em', bold: true },
- { id: '2', type: 'text', text: 'Hassan & Ayesha', color: orgTheme.palette.primary, fontSize: '32px', align: 'center', width: 'full', fontFamily: 'Great Vibes' },
+ { id: '2', type: 'text', text: '{{title}}', color: orgTheme.palette.primary, fontSize: '32px', align: 'center', width: 'full', fontFamily: 'Great Vibes' },
  { id: '3', type: 'divider', text: '', color: orgTheme.palette.accent, fontSize: '14px', align: 'center', width: 'full', dividerStyle: 'ornament-flower' },
- { id: '4', type: 'text', text: 'Rejoignez-nous pour célébrer notre union le dimanche 15 juin à 19h00.', color: orgTheme.palette.secondary, fontSize: '16px', align: 'center', width: 'full', fontFamily: 'Cormorant Garamond', italic: true },
- { id: '5', type: 'text', text: 'DIMANCHE', color: orgTheme.palette.primary, fontSize: '12px', align: 'center', width: 'third', fontFamily: 'Montserrat', letterSpacing: '0.1em', bold: true },
- { id: '6', type: 'text', text: '15 JUIN', color: orgTheme.palette.accent, fontSize: '16px', align: 'center', width: 'third', fontFamily: 'Cormorant Garamond', bold: true },
- { id: '7', type: 'text', text: '19H00', color: orgTheme.palette.primary, fontSize: '12px', align: 'center', width: 'third', fontFamily: 'Montserrat', letterSpacing: '0.1em', bold: true },
+ { id: '4', type: 'text', text: 'Rejoignez-nous pour célébrer le {{date}}.', color: orgTheme.palette.secondary, fontSize: '16px', align: 'center', width: 'full', fontFamily: 'Cormorant Garamond', italic: true },
+ { id: '5', type: 'text', text: 'JOUR', color: orgTheme.palette.primary, fontSize: '12px', align: 'center', width: 'third', fontFamily: 'Montserrat', letterSpacing: '0.1em', bold: true },
+ { id: '6', type: 'text', text: '{{date}}', color: orgTheme.palette.accent, fontSize: '16px', align: 'center', width: 'third', fontFamily: 'Cormorant Garamond', bold: true },
+ { id: '7', type: 'text', text: 'HEURE', color: orgTheme.palette.primary, fontSize: '12px', align: 'center', width: 'third', fontFamily: 'Montserrat', letterSpacing: '0.1em', bold: true },
  { id: '8', type: 'divider', text: '', color: orgTheme.palette.secondary, fontSize: '12px', align: 'center', width: 'full', dividerStyle: 'solid' },
  { 
  id: '9', 
@@ -1166,15 +1167,13 @@ export default function TemplatesPage() {
     } else if (coupleFaceSwap) {
       setAiComposePrompt(COUPLE_FACE_SWAP_DEFAULT_PROMPT);
     }
-    if (coupleFaceSwap) {
-      setAiComposeTitle(
-        templateName.trim() && !/^Nouveau Modèle|^Invitation IA$/i.test(templateName)
-          ? templateName
-          : '',
-      );
-      setAiComposeHonorees(invitationHonorees === 'Hassan & Ayesha' ? '' : invitationHonorees);
-      setAiComposeDate(invitationDate === '2026-06-15' ? '' : invitationDate);
-    }
+    setAiComposeTitle(
+      templateName.trim() && !/^Nouveau Modèle|^Nouvelle invitation|^Invitation IA$/i.test(templateName)
+        ? templateName
+        : '',
+    );
+    setAiComposeHonorees(invitationHonorees === 'Hassan & Ayesha' ? '' : invitationHonorees);
+    setAiComposeDate(invitationDate === '2026-06-15' ? '' : invitationDate);
     setAiComposeModalOpen(true);
     void fetchAiTemplateComposeHistoryStudio().then(setAiComposeHistory);
     try {
@@ -1406,7 +1405,7 @@ export default function TemplatesPage() {
     } finally {
       window.clearTimeout(stageTimer);
     }
-    if (aiComposeCoupleFaceSwap) {
+    if (hasInvitationIdentity({ title: aiComposeTitle, honorees: aiComposeHonorees, date: aiComposeDate })) {
       pendingCoupleIdentityRef.current = {
         title: aiComposeTitle,
         honorees: aiComposeHonorees,
@@ -1466,7 +1465,7 @@ export default function TemplatesPage() {
     }
     setAiComposeHistoryId(typeof result.historyId === 'string' ? result.historyId : null);
     void fetchAiTemplateComposeHistoryStudio().then(setAiComposeHistory);
-    if (aiComposeCoupleFaceSwap) {
+    if (hasInvitationIdentity({ title: aiComposeTitle, honorees: aiComposeHonorees, date: aiComposeDate })) {
       commitIdentityToEditor({
         title: aiComposeTitle,
         honorees: aiComposeHonorees,
@@ -1503,6 +1502,14 @@ export default function TemplatesPage() {
 
  const renderAiComposeModal = () => {
  if (!aiComposeModalOpen) return null;
+ const hasIncomingCard = Boolean(aiComposeIncomingFile || (bgImageUrl && /^https?:\/\//i.test(bgImageUrl)));
+ const composeBlockedReason = aiComposeCoupleFaceSwap
+   ? (aiComposeFiles.length < 1
+     ? 'Ajoutez au moins une photo du couple.'
+     : !hasIncomingCard
+       ? 'Ajoutez la carte dont les visages doivent être remplacés.'
+       : null)
+   : (aiComposePrompt.trim().length < 8 ? 'Décrivez la fête en quelques mots.' : null);
  return (
  <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-foreground/40 p-0 sm:p-4 lg:p-6">
  <div
@@ -1519,10 +1526,10 @@ export default function TemplatesPage() {
             </h2>
             <p className="text-sm sm:text-base text-muted mt-1.5 leading-relaxed max-w-4xl">
               {aiComposeCoupleFaceSwap
-                ? `Les visages du couple remplacent ceux de la carte. Pose et décor restent. ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`
+                ? `Posez la carte, puis les photos du couple. Les visages changent ; le décor reste. ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`
                 : aiComposeIsAlteration
-                ? `La carte actuelle est conservée. Décrivez seulement ce qu’il faut changer. ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`
-                : `Décrivez la fête, avec ou sans photos. ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`}
+                ? `Dites seulement ce qui change. Le reste de la carte est conservé. ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`
+                : `Trois gestes : choisir le mode, décrire la fête, générer. Les photos sont optionnelles. ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`}
             </p>
  </div>
  <button
@@ -1557,6 +1564,7 @@ export default function TemplatesPage() {
  )}
  </div>
  <StudioAiTabs
+ idPrefix="ai-compose"
  value={aiComposeStudioTab}
  onChange={setAiComposeStudioTab}
  historyCount={aiComposeHistory.length}
@@ -1567,17 +1575,28 @@ export default function TemplatesPage() {
  <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 sm:px-8 lg:px-10 py-6">
  {aiComposeStudioTab === 'create' ? (
  <>
+ <StudioHowTo
+   steps={
+     aiComposeCoupleFaceSwap
+       ? ['Ajoutez la carte à modifier', 'Ajoutez 1 ou 2 photos du couple', 'Générez']
+       : aiComposeIsAlteration
+         ? ['Gardez cette carte', 'Dites uniquement ce qui change', 'Générez']
+         : ['Choisissez Nouveau carton', 'Décrivez la fête (photos optionnelles)', 'Générez']
+   }
+ />
  <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-10 xl:gap-12 lg:items-start space-y-6 lg:space-y-0">
  <div className="space-y-6">
+ <div>
+ <p className="text-sm font-semibold text-foreground mb-2">1. Que voulez-vous faire ?</p>
  <div
    role="radiogroup"
    aria-label="Mode de l’assistant"
    className="grid grid-cols-3 gap-3"
  >
    {([
-     { id: 'create', label: 'Créer', hint: 'Nouveau carton' },
-     { id: 'alter', label: 'Retoucher', hint: 'Garder le fond' },
-     { id: 'couple', label: 'Visages', hint: 'Couple' },
+     { id: 'create', label: 'Nouveau carton', hint: 'À partir d’un brief' },
+     { id: 'alter', label: 'Retoucher', hint: 'Garder cette carte' },
+     { id: 'couple', label: 'Visages', hint: 'Mettre le couple' },
    ] as const).map((mode) => {
      const active =
        mode.id === 'couple'
@@ -1597,7 +1616,7 @@ export default function TemplatesPage() {
              setAiComposeCoupleFaceSwap(true);
              setAiComposeIsAlteration(true);
              setAiComposeTitle(
-               templateName.trim() && !/^Nouveau Modèle|^Invitation IA$/i.test(templateName)
+               templateName.trim() && !/^Nouveau Modèle|^Nouvelle invitation|^Invitation IA$/i.test(templateName)
                  ? templateName
                  : '',
              );
@@ -1631,11 +1650,13 @@ export default function TemplatesPage() {
      );
    })}
  </div>
+ </div>
 
  {aiComposeCoupleFaceSwap ? (
  <div className="space-y-3">
+   <p className="text-sm font-semibold text-foreground">2. Photos du couple</p>
    <div>
-     <label htmlFor="ai-compose-incoming" className="text-xs font-semibold text-muted">Image à modifier</label>
+     <label htmlFor="ai-compose-incoming" className="text-sm font-semibold text-muted">Carte à modifier</label>
      <input
        id="ai-compose-incoming"
        ref={aiComposeIncomingInputRef}
@@ -1677,7 +1698,7 @@ export default function TemplatesPage() {
      </button>
    </div>
    <div>
-     <label htmlFor="ai-compose-couple-photos" className="text-xs font-semibold text-muted">Photos du couple (1 ou 2)</label>
+     <label htmlFor="ai-compose-couple-photos" className="text-sm font-semibold text-muted">Photos du couple (1 ou 2)</label>
      <input
        id="ai-compose-couple-photos"
        ref={aiComposeInputRef}
@@ -1735,7 +1756,7 @@ export default function TemplatesPage() {
    </div>
    <InvitationIdentityFields
      disabled={aiComposeBusy}
-     description="Préremplissez le carton : ces textes s’appliqueront après le remplacement des visages."
+     description="Ces textes s’écrivent sur le carton après le remplacement des visages."
      value={{ title: aiComposeTitle, honorees: aiComposeHonorees, date: aiComposeDate }}
      onChange={(next) => {
        setAiComposeTitle(next.title || '');
@@ -1745,8 +1766,9 @@ export default function TemplatesPage() {
    />
  </div>
  ) : (
- <div>
- <label htmlFor="ai-compose-optional-photos" className="text-xs font-semibold text-muted">Images optionnelles (1–4)</label>
+ <div className="space-y-3">
+ <p className="text-sm font-semibold text-foreground">2. Photos (optionnel)</p>
+ <label htmlFor="ai-compose-optional-photos" className="text-sm font-semibold text-muted">Images de référence (1–4)</label>
  <input
  id="ai-compose-optional-photos"
  ref={aiComposeInputRef}
@@ -1809,15 +1831,30 @@ export default function TemplatesPage() {
  ))}
  </div>
  )}
+ {!aiComposeIsAlteration && (
+   <InvitationIdentityFields
+     disabled={aiComposeBusy}
+     description="Ces textes s’écrivent sur le carton après la génération."
+     value={{ title: aiComposeTitle, honorees: aiComposeHonorees, date: aiComposeDate }}
+     onChange={(next) => {
+       setAiComposeTitle(next.title || '');
+       setAiComposeHonorees(next.honorees || '');
+       setAiComposeDate(next.date || '');
+     }}
+   />
+ )}
  </div>
  )}
  </div>
 
  <div className="space-y-6">
  <div>
+ <p className="text-sm font-semibold text-foreground mb-2">
+   {aiComposeCoupleFaceSwap ? '3. Précision (optionnelle)' : '3. Décrivez la fête'}
+ </p>
  <div className="flex items-center justify-between">
  <label htmlFor="ai-compose-prompt" className="text-sm font-semibold text-muted">
-   {aiComposeCoupleFaceSwap ? 'Précision (optionnelle)' : 'Décrivez la fête'}
+   {aiComposeCoupleFaceSwap ? 'Qui est à gauche, tenue à garder…' : 'Ambiance, couleurs, cérémonie'}
  </label>
  <span className="hidden sm:inline text-xs text-muted tabular-nums">
  {aiComposePrompt.length} car.
@@ -1835,10 +1872,27 @@ export default function TemplatesPage() {
  className="mt-1.5 w-full rounded-[var(--radius-card)] border border-border bg-surface-muted px-4 py-4 text-sm sm:text-base text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[16rem]"
  />
 
- <div className="mt-2 flex items-center gap-1.5 flex-wrap">
- <span className="text-[11px] font-semibold text-muted flex items-center gap-1">
+ <p className="mt-2 text-xs text-muted">
+ Besoin d’un exemple ? Ouvrez <button type="button" className="font-bold text-primary hover:underline" onClick={() => setAiComposeStudioTab('prompts')}>Exemples</button> — quatre mariages coutumiers prêts à lancer.
+ </p>
+
+ <button
+   type="button"
+   aria-expanded={aiComposeAdvancedOpen}
+   disabled={aiComposeBusy}
+   onClick={() => setAiComposeAdvancedOpen((open) => !open)}
+   className="mt-4 min-h-11 w-full inline-flex items-center justify-between gap-2 px-3 rounded-[var(--radius-button)] border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+ >
+   <span>Options avancées</span>
+   <span className="text-xs font-medium text-muted">{aiComposeAdvancedOpen ? 'Masquer' : 'Style, jetons, variations'}</span>
+ </button>
+
+ {aiComposeAdvancedOpen ? (
+ <div className="mt-3 space-y-3 rounded-[var(--radius-card)] border border-border bg-surface-muted/40 p-4">
+ <div className="flex items-center gap-1.5 flex-wrap">
+ <span className="text-xs font-semibold text-muted flex items-center gap-1">
  <Tag className="w-3 h-3 text-primary" />
- Insérer :
+ Insérer dans le brief
  </span>
  {[
  { tag: '{{firstName}}', label: 'Prénom' },
@@ -1852,19 +1906,13 @@ export default function TemplatesPage() {
  type="button"
  disabled={aiComposeBusy}
  onClick={() => insertAiComposeVariable(v.tag)}
- className="px-2 py-0.5 rounded-md text-[10px] font-bold border border-border bg-surface hover:border-primary/40 hover:bg-primary/5 text-foreground transition"
+ className="min-h-11 px-3 rounded-md text-xs font-bold border border-border bg-surface hover:border-primary/40 hover:bg-primary/5 text-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  title={`Insérer ${v.tag}`}
  >
  {v.label}
  </button>
  ))}
  </div>
-
- <p className="hidden sm:block mt-2 text-[11px] text-muted">
- Besoin d’un brief prêt ? Ouvrez l’onglet <button type="button" className="font-bold text-primary hover:underline" onClick={() => setAiComposeStudioTab('prompts')}>Prompts</button> — les 4 mariages coutumiers sont en un tap.
- </p>
-
- <div className="mt-3">
  <InvitationArtStylePicker
  id="ai-compose-art-style"
  value={aiComposeArtStyle}
@@ -1874,9 +1922,6 @@ export default function TemplatesPage() {
  }}
  disabled={aiComposeBusy}
  />
- </div>
-
- <div className="mt-3">
  <InvitationContextSourcePicker
  id="ai-compose-context"
  value={aiComposeContextSource}
@@ -1887,7 +1932,6 @@ export default function TemplatesPage() {
  disabled={aiComposeBusy}
  canUseOrg={Boolean(tenant?.id) || isSuperAdmin}
  />
- </div>
 
  <button
  type="button"
@@ -1895,10 +1939,10 @@ export default function TemplatesPage() {
  aria-checked={aiComposeEmbedText}
  disabled={aiComposeBusy}
  onClick={() => setAiComposeEmbedText((v) => !v)}
- className={`mt-3 w-full flex items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition disabled:opacity-60 ${
+ className={`min-h-11 w-full flex items-start gap-3 rounded-[var(--radius-button)] border px-3 py-2.5 text-left transition disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
  aiComposeEmbedText
  ? 'border-primary/40 bg-primary/10'
- : 'border-border bg-surface-muted/40 hover:border-primary/30'
+ : 'border-border bg-surface hover:border-primary/30'
  }`}
  >
  <span
@@ -1908,70 +1952,72 @@ export default function TemplatesPage() {
  aria-hidden
  >
  <span
- className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-xs transition-transform ${
+ className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-surface shadow-xs transition-transform ${
  aiComposeEmbedText ? 'translate-x-4' : ''
  }`}
  />
  </span>
  <span className="min-w-0">
- <span className="block text-xs font-bold text-foreground">Incruster le texte dans l’image</span>
- <span className="hidden sm:block text-[11px] text-muted mt-0.5 leading-relaxed">
- Noms, date et lieu du brief sont dessinés sur la carte. Aucune photo n’est obligatoire.
+ <span className="block text-sm font-bold text-foreground">Écrire les noms sur l’image</span>
+ <span className="block text-xs text-muted mt-0.5 leading-relaxed">
+ Titre, date et lieu du brief sont dessinés sur la carte.
  </span>
  </span>
  </button>
 
- <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-3">
+ <div className="pt-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
    <div>
-     <span className="block text-xs font-bold text-foreground">Vitesse & Qualité</span>
-     <span className="block text-[11px] text-muted">Rapide (~5s Flash) ou Haute Définition (Pro 2K)</span>
+     <span className="block text-sm font-bold text-foreground">Vitesse</span>
+     <span className="block text-xs text-muted">Rapide ou plus net</span>
    </div>
-   <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-lg border border-border">
+   <div className="flex items-center gap-1 bg-surface p-1 rounded-lg border border-border">
      <button
        type="button"
        disabled={aiComposeBusy}
        onClick={() => setAiComposeSpeedMode('fast')}
-       className={`px-2.5 py-1 text-xs font-bold rounded-md transition ${aiComposeSpeedMode === 'fast' ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground'}`}
-       title="Génération ultra-rapide en 4-8s via Gemini 3.1 Flash Image"
+       className={`min-h-11 px-3 text-xs font-bold rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${aiComposeSpeedMode === 'fast' ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground'}`}
+       title="Génération en 4 à 8 secondes"
      >
-       ⚡ Rapide (Flash)
+       Rapide
      </button>
      <button
        type="button"
        disabled={aiComposeBusy}
        onClick={() => setAiComposeSpeedMode('quality')}
-       className={`px-2.5 py-1 text-xs font-bold rounded-md transition ${aiComposeSpeedMode === 'quality' ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground'}`}
-       title="Résolution 2K et piqué maximal via Gemini 3 Pro Image"
+       className={`min-h-11 px-3 text-xs font-bold rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${aiComposeSpeedMode === 'quality' ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground'}`}
+       title="Image plus nette, un peu plus longue"
      >
-       ✨ Qualité (Pro 2K)
+       Plus nette
      </button>
    </div>
  </div>
 
- <div className="mt-3 pt-3 border-t border-border flex items-center justify-between gap-3">
+ <div className="pt-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
    <div>
-     <span className="block text-xs font-bold text-foreground">Nombre d'échantillons (Variations A/B)</span>
-     <span className="block text-[11px] text-muted">Générez 1 ou 2 propositions d'arrière-plan pour comparer</span>
+     <span className="block text-sm font-bold text-foreground">Comparer deux fonds</span>
+     <span className="block text-xs text-muted">Une ou deux propositions à choisir ensuite</span>
    </div>
-   <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-lg border border-border">
+   <div className="flex items-center gap-1 bg-surface p-1 rounded-lg border border-border">
      <button
        type="button"
        disabled={aiComposeBusy}
        onClick={() => setAiComposeVariantsCount(1)}
-       className={`px-2.5 py-1 text-xs font-bold rounded-md transition ${aiComposeVariantsCount === 1 ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground'}`}
+       className={`min-h-11 px-3 text-xs font-bold rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${aiComposeVariantsCount === 1 ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground'}`}
      >
-       1
+       1 carte
      </button>
      <button
        type="button"
        disabled={aiComposeBusy}
        onClick={() => setAiComposeVariantsCount(2)}
-       className={`px-2.5 py-1 text-xs font-bold rounded-md transition ${aiComposeVariantsCount === 2 ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground'}`}
+       className={`min-h-11 px-3 text-xs font-bold rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${aiComposeVariantsCount === 2 ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground'}`}
      >
-       2 (A/B)
+       2 cartes
      </button>
    </div>
  </div>
+ </div>
+ ) : null}
  </div>
  </div>
  </div>
@@ -2018,7 +2064,13 @@ export default function TemplatesPage() {
  ) : null}
  </div>
 
- <div className="px-5 sm:px-8 lg:px-10 py-4 sm:py-5 border-t border-border-subtle flex flex-col-reverse sm:flex-row sm:justify-end gap-3 bg-surface-muted/40">
+ <div className="px-5 sm:px-8 lg:px-10 py-4 sm:py-5 border-t border-border-subtle flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between bg-surface-muted/40">
+ {composeBlockedReason && aiComposeStudioTab === 'create' ? (
+   <p className="text-sm text-muted sm:max-w-sm" role="status">{composeBlockedReason}</p>
+ ) : (
+   <p className="text-sm text-muted hidden sm:block">La carte s’ouvre dans l’éditeur dès que la génération est prête.</p>
+ )}
+ <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
  <button
  type="button"
  disabled={aiComposeBusy}
@@ -2032,12 +2084,7 @@ export default function TemplatesPage() {
  </button>
  <button
  type="button"
- disabled={
-   aiComposeBusy ||
-   (aiComposeCoupleFaceSwap
-     ? aiComposeFiles.length < 1 || (!aiComposeIncomingFile && !(bgImageUrl && /^https?:\/\//i.test(bgImageUrl)))
-     : aiComposePrompt.trim().length < 8)
- }
+ disabled={aiComposeBusy || Boolean(composeBlockedReason)}
  onClick={handleAiComposeGenerate}
  className="min-h-12 px-6 py-3 bg-primary-solid hover:bg-primary-solid-hover disabled:opacity-50 text-primary-foreground text-sm font-bold rounded-[var(--radius-button)] transition inline-flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
@@ -2048,6 +2095,7 @@ export default function TemplatesPage() {
                 ? `Remplacer les visages (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`
                 : `Générer (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
  </button>
+ </div>
  </div>
  </div>
  </div>
