@@ -1504,20 +1504,20 @@ export default function TemplatesPage() {
  const renderAiComposeModal = () => {
  if (!aiComposeModalOpen) return null;
  return (
- <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/45 p-0 sm:p-4">
+ <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-foreground/40 p-0 sm:p-4 lg:p-6">
  <div
  role="dialog"
  aria-modal="true"
  aria-labelledby="ai-compose-title"
- className="w-full sm:max-w-xl bg-surface rounded-t-2xl sm:rounded-2xl shadow-xl border border-border overflow-hidden"
+ className="flex w-full max-w-[100vw] sm:max-w-[min(98vw,92rem)] h-[96dvh] sm:h-[min(94dvh,62rem)] flex-col bg-surface rounded-t-2xl sm:rounded-2xl shadow-2xl border border-border overflow-hidden"
  >
- <div className="px-5 pt-5 pb-3 border-b border-border-subtle flex items-start justify-between gap-3">
- <div>
-            <h2 id="ai-compose-title" className="text-sm font-bold text-foreground flex items-center gap-2">
-              {aiComposeCoupleFaceSwap ? <Users className="w-4 h-4 text-primary" /> : <Wand2 className="w-4 h-4 text-primary" />}
+ <div className="shrink-0 px-5 sm:px-8 lg:px-10 pt-5 sm:pt-7 pb-4 border-b border-border-subtle flex items-start justify-between gap-3">
+ <div className="min-w-0">
+            <h2 id="ai-compose-title" className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2.5">
+              {aiComposeCoupleFaceSwap ? <Users className="w-6 h-6 text-primary" aria-hidden /> : <Wand2 className="w-6 h-6 text-primary" aria-hidden />}
               {aiComposeCoupleFaceSwap ? 'Visages du couple' : aiComposeIsAlteration ? 'Retoucher avec l’IA' : 'Créer avec l’IA'}
             </h2>
-            <p className="hidden sm:block text-xs text-muted mt-1 leading-relaxed">
+            <p className="text-sm sm:text-base text-muted mt-1.5 leading-relaxed max-w-4xl">
               {aiComposeCoupleFaceSwap
                 ? `Les visages du couple remplacent ceux de la carte. Pose et décor restent. ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`
                 : aiComposeIsAlteration
@@ -1532,15 +1532,15 @@ export default function TemplatesPage() {
  setAiComposeModalOpen(false);
  resetAiComposeModal();
  }}
- className="p-1.5 rounded-lg text-muted hover:bg-surface-muted disabled:opacity-50"
+ className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-[var(--radius-button)] text-muted hover:bg-surface-muted disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  aria-label="Fermer"
  >
- <XCircle className="w-5 h-5" />
+ <XCircle className="w-5 h-5" aria-hidden />
  </button>
  </div>
 
- <div className="px-5 pt-3 space-y-3">
- <div className="flex items-center justify-between gap-2 text-[11px]">
+ <div className="shrink-0 px-5 sm:px-8 lg:px-10 pt-4 space-y-3">
+ <div className="flex items-center justify-between gap-2 text-xs">
  <span className="inline-flex items-center gap-1.5 font-bold text-muted">
  <Coins className="w-3.5 h-3.5" />
  {aiAllowance.unlimited ? 'Jetons illimités' : `${aiTokenBalanceLabel(aiAllowance)} jeton${aiAllowance.totalRemaining === 1 ? '' : 's'} restant${aiAllowance.totalRemaining === 1 ? '' : 's'}`}
@@ -1564,13 +1564,15 @@ export default function TemplatesPage() {
  />
  </div>
 
- <div className="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
+ <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 sm:px-8 lg:px-10 py-6">
  {aiComposeStudioTab === 'create' ? (
  <>
+ <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-10 xl:gap-12 lg:items-start space-y-6 lg:space-y-0">
+ <div className="space-y-6">
  <div
    role="radiogroup"
    aria-label="Mode de l’assistant"
-   className="grid grid-cols-3 gap-1.5"
+   className="grid grid-cols-3 gap-3"
  >
    {([
      { id: 'create', label: 'Créer', hint: 'Nouveau carton' },
@@ -1617,13 +1619,13 @@ export default function TemplatesPage() {
              }
            }
          }}
-         className={`min-h-11 px-2 py-2 rounded-[var(--radius-button)] border text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+         className={`min-h-14 px-3 py-3 rounded-[var(--radius-button)] border text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
            active
              ? 'border-primary bg-primary/10 shadow-xs'
              : 'border-border bg-surface hover:border-primary/40'
          }`}
        >
-         <span className="block text-xs font-bold text-foreground">{mode.label}</span>
+         <span className="block text-sm font-bold text-foreground">{mode.label}</span>
          <span className="block text-xs text-muted mt-0.5">{mode.hint}</span>
        </button>
      );
@@ -1650,17 +1652,17 @@ export default function TemplatesPage() {
        type="button"
        disabled={aiComposeBusy}
        onClick={() => aiComposeIncomingInputRef.current?.click()}
-       className="mt-1.5 min-h-11 w-full flex items-center gap-3 p-3 border-2 border-dashed rounded-[var(--radius-card)] text-left transition border-primary/30 hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+       className="mt-1.5 min-h-28 w-full flex items-center gap-4 p-4 border-2 border-dashed rounded-[var(--radius-card)] text-left transition border-primary/30 hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
      >
        {(aiComposeIncomingPreview || (bgImageUrl && /^https?:\/\//i.test(bgImageUrl))) ? (
          // eslint-disable-next-line @next/next/no-img-element
          <img
            src={aiComposeIncomingPreview || bgImageUrl}
            alt="Invitation dont les visages seront remplacés"
-           className="w-14 h-14 rounded-[var(--radius-button)] object-cover border border-border shrink-0"
+           className="w-20 h-20 sm:w-24 sm:h-24 rounded-[var(--radius-button)] object-cover border border-border shrink-0"
          />
        ) : (
-         <span className="w-14 h-14 rounded-lg bg-surface-muted border border-border flex items-center justify-center shrink-0">
+         <span className="w-20 h-20 sm:w-24 sm:h-24 rounded-[var(--radius-button)] bg-surface-muted border border-border flex items-center justify-center shrink-0">
            <Image className="w-5 h-5 text-primary" />
          </span>
        )}
@@ -1700,13 +1702,13 @@ export default function TemplatesPage() {
          if (dropped.length) addAiComposeFiles(dropped);
        }}
        onClick={() => aiComposeInputRef.current?.click()}
-       className={`mt-1.5 min-h-11 w-full flex items-center justify-center gap-2 p-3.5 border-2 border-dashed rounded-[var(--radius-card)] text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+       className={`mt-1.5 min-h-28 w-full flex items-center justify-center gap-2 p-6 border-2 border-dashed rounded-[var(--radius-card)] text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
          aiComposeDragging
            ? 'border-primary bg-primary/15 text-primary'
            : 'border-primary/30 hover:border-primary hover:bg-primary/5 text-primary'
        }`}
      >
-       <Users className="w-4 h-4" aria-hidden />
+       <Users className="w-5 h-5" aria-hidden />
        {aiComposeFiles.length > 0
          ? `Ajouter une autre photo (${aiComposeFiles.length}/2)`
          : 'Elle / lui — photos nettes, visage visible'}
@@ -1714,7 +1716,7 @@ export default function TemplatesPage() {
      {aiComposePreviewUrls.length > 0 && (
        <div className="mt-2 flex flex-wrap gap-2">
          {aiComposePreviewUrls.map((url, i) => (
-           <div key={url} className="relative w-16 h-16 rounded-[var(--radius-button)] overflow-hidden border border-border">
+           <div key={url} className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-[var(--radius-button)] overflow-hidden border border-border">
              {/* eslint-disable-next-line @next/next/no-img-element */}
              <img src={url} alt={i === 0 ? 'Premier visage du couple' : 'Second visage du couple'} className="w-full h-full object-cover" />
              <button
@@ -1769,13 +1771,13 @@ export default function TemplatesPage() {
  if (dropped.length) addAiComposeFiles(dropped);
  }}
  onClick={() => aiComposeInputRef.current?.click()}
- className={`mt-1.5 min-h-11 w-full flex items-center justify-center gap-2 p-3.5 border-2 border-dashed rounded-[var(--radius-card)] text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+ className={`mt-1.5 min-h-36 w-full flex flex-col items-center justify-center gap-2 p-8 border-2 border-dashed rounded-[var(--radius-card)] text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
  aiComposeDragging
  ? 'border-primary bg-primary/15 text-primary'
  : 'border-primary/30 hover:border-primary hover:bg-primary/5 text-primary'
  }`}
  >
- <Upload className="w-4 h-4" />
+ <Upload className="w-6 h-6" />
  {aiComposeFiles.length > 0 ? (
  <>
  <span className="sm:hidden">Ajouter ({aiComposeFiles.length}/4)</span>
@@ -1791,7 +1793,7 @@ export default function TemplatesPage() {
  {aiComposePreviewUrls.length > 0 && (
  <div className="mt-2 flex flex-wrap gap-2">
  {aiComposePreviewUrls.map((url, i) => (
- <div key={url} className="relative w-16 h-16 rounded-[var(--radius-button)] overflow-hidden border border-border">
+ <div key={url} className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-[var(--radius-button)] overflow-hidden border border-border">
  {/* eslint-disable-next-line @next/next/no-img-element */}
  <img src={url} alt={`Référence ${i + 1}`} className="w-full h-full object-cover" />
  <button
@@ -1809,10 +1811,12 @@ export default function TemplatesPage() {
  )}
  </div>
  )}
+ </div>
 
+ <div className="space-y-6">
  <div>
  <div className="flex items-center justify-between">
- <label htmlFor="ai-compose-prompt" className="text-xs font-semibold text-muted">
+ <label htmlFor="ai-compose-prompt" className="text-sm font-semibold text-muted">
    {aiComposeCoupleFaceSwap ? 'Précision (optionnelle)' : 'Décrivez la fête'}
  </label>
  <span className="hidden sm:inline text-xs text-muted tabular-nums">
@@ -1821,14 +1825,14 @@ export default function TemplatesPage() {
  </div>
  <textarea
  id="ai-compose-prompt"
- rows={3}
+ rows={8}
  value={aiComposePrompt}
  disabled={aiComposeBusy}
  onChange={(e) => setAiComposePrompt(e.target.value)}
  placeholder={aiComposeCoupleFaceSwap
    ? 'Optionnel : préciser qui est à gauche / à droite, ou garder une tenue…'
    : 'Ex. Copier fidèlement cette invitation en or et ivoire, ou décrire l’ambiance : mariage princier, éclairage naturel chaleureux…'}
- className="mt-1.5 w-full rounded-xl border border-border bg-surface px-3 py-2 text-xs text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[4.5rem]"
+ className="mt-1.5 w-full rounded-[var(--radius-card)] border border-border bg-surface-muted px-4 py-4 text-sm sm:text-base text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[16rem]"
  />
 
  <div className="mt-2 flex items-center gap-1.5 flex-wrap">
@@ -1969,6 +1973,8 @@ export default function TemplatesPage() {
    </div>
  </div>
  </div>
+ </div>
+ </div>
 
  {aiComposeStage && (
  <p className="text-[11px] font-bold text-primary flex items-center gap-2">
@@ -1984,7 +1990,7 @@ export default function TemplatesPage() {
  items={aiComposeHistory}
  activeId={aiComposeHistoryId}
  onOpen={applyAiComposeHistoryItem}
- listClassName="max-h-[min(28rem,52vh)]"
+ listClassName="max-h-[min(40rem,68vh)]"
  showEmpty
  emptyAction={(
  <button
@@ -2012,7 +2018,7 @@ export default function TemplatesPage() {
  ) : null}
  </div>
 
- <div className="px-5 py-4 border-t border-border-subtle flex flex-col-reverse sm:flex-row sm:justify-end gap-2 bg-surface-muted/40">
+ <div className="px-5 sm:px-8 lg:px-10 py-4 sm:py-5 border-t border-border-subtle flex flex-col-reverse sm:flex-row sm:justify-end gap-3 bg-surface-muted/40">
  <button
  type="button"
  disabled={aiComposeBusy}
@@ -2020,7 +2026,7 @@ export default function TemplatesPage() {
  setAiComposeModalOpen(false);
  resetAiComposeModal();
  }}
- className="min-h-11 px-4 py-2.5 text-xs font-bold text-muted hover:bg-surface-muted rounded-[var(--radius-button)] transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+ className="min-h-12 px-5 py-3 text-sm font-bold text-muted hover:bg-surface-muted rounded-[var(--radius-button)] transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
  Annuler
  </button>
@@ -2033,7 +2039,7 @@ export default function TemplatesPage() {
      : aiComposePrompt.trim().length < 8)
  }
  onClick={handleAiComposeGenerate}
- className="min-h-11 px-5 py-2.5 bg-primary-solid hover:bg-primary-solid-hover disabled:opacity-50 text-primary-foreground text-xs font-bold rounded-[var(--radius-button)] transition inline-flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+ className="min-h-12 px-6 py-3 bg-primary-solid hover:bg-primary-solid-hover disabled:opacity-50 text-primary-foreground text-sm font-bold rounded-[var(--radius-button)] transition inline-flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
             {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
             {aiComposeBusy
