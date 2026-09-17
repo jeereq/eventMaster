@@ -1587,12 +1587,22 @@ export default function TemplatesPage() {
    : (aiComposePrompt.trim().length < 8 ? 'Décrivez la fête en quelques mots.' : null);
  if (typeof document === 'undefined') return null;
  return createPortal(
- <div className="fixed inset-0 z-[11040] flex items-end sm:items-center justify-center bg-foreground/40 p-0 sm:p-4 lg:p-6">
  <div
+   className="fixed inset-0 z-[11040] flex items-end sm:items-center justify-center bg-foreground/40 p-0 sm:p-4 lg:p-6"
+   onClick={() => {
+     if (aiComposeBusy) return;
+     setAiComposeModalOpen(false);
+     resetAiComposeModal();
+   }}
+ >
+ <div
+ id="ai-compose-dialog"
  role="dialog"
  aria-modal="true"
  aria-labelledby="ai-compose-title"
- className="flex w-full max-w-[100vw] sm:max-w-[min(98vw,92rem)] h-[96dvh] sm:h-[min(94dvh,62rem)] flex-col bg-surface rounded-t-2xl sm:rounded-2xl shadow-2xl border border-border overflow-hidden"
+ tabIndex={-1}
+ onClick={(event) => event.stopPropagation()}
+ className="flex w-full max-w-[100vw] sm:max-w-[min(98vw,92rem)] h-[96dvh] sm:h-[min(94dvh,62rem)] flex-col bg-surface rounded-t-2xl sm:rounded-2xl shadow-2xl border border-border overflow-hidden outline-none"
  >
  <div className="shrink-0 px-5 sm:px-8 lg:px-10 pt-5 sm:pt-7 pb-4 border-b border-border-subtle flex items-start justify-between gap-3">
  <div className="min-w-0">
@@ -1632,7 +1642,7 @@ export default function TemplatesPage() {
  <button
  type="button"
  onClick={() => setAiTokenModalOpen(true)}
- className="text-primary font-bold hover:underline"
+ className="min-h-11 px-2 text-primary font-bold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-[var(--radius-button)]"
  >
  <span className="sm:hidden">Recharger</span>
  <span className="hidden sm:inline">Recharger ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons / invitation)</span>
@@ -2636,7 +2646,12 @@ export default function TemplatesPage() {
     if (!editorOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (selectedElementId) {
+        if (aiComposeModalOpen) {
+          if (!aiComposeBusy) {
+            setAiComposeModalOpen(false);
+            resetAiComposeModal();
+          }
+        } else if (selectedElementId) {
           setSelectedElementId(null);
         } else if (studioHistoryModalOpen) {
           setStudioHistoryModalOpen(false);
@@ -2662,7 +2677,7 @@ export default function TemplatesPage() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [editorOpen, selectedElementId, studioHistoryModalOpen, cropperOpen, studioHistoryIndex, studioHistory]);
+  }, [editorOpen, selectedElementId, studioHistoryModalOpen, cropperOpen, studioHistoryIndex, studioHistory, aiComposeModalOpen, aiComposeBusy]);
 
  useEffect(() => {
  if (!editorOpen) return;
@@ -2940,6 +2955,61 @@ export default function TemplatesPage() {
    setBgType('image');
    setBgImageUrl(aiComposeModelPhoto.imageUrl);
  }, [aiComposeModalOpen, aiComposeModelPhoto?.imageUrl]);
+
+ useEffect(() => {
+   if (!aiComposeModalOpen) return;
+   const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+   const previousOverflow = document.body.style.overflow;
+   document.body.style.overflow = 'hidden';
+   const focusable = (panel: HTMLElement) =>
+     Array.from(
+       panel.querySelectorAll<HTMLElement>(
+         'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])',
+       ),
+     ).filter((el) => el.getClientRects().length > 0);
+   const onKeyDown = (e: KeyboardEvent) => {
+     const panel = document.getElementById('ai-compose-dialog');
+     if (!panel) return;
+     if (e.key === 'Escape') {
+       e.preventDefault();
+       e.stopPropagation();
+       if (!aiComposeBusy) {
+         setAiComposeModalOpen(false);
+         resetAiComposeModal();
+       }
+       return;
+     }
+     if (e.key !== 'Tab') return;
+     const nodes = focusable(panel);
+     if (nodes.length === 0) {
+       e.preventDefault();
+       panel.focus();
+       return;
+     }
+     const first = nodes[0];
+     const last = nodes[nodes.length - 1];
+     const active = document.activeElement;
+     if (e.shiftKey && (!panel.contains(active) || active === first)) {
+       e.preventDefault();
+       last.focus();
+     } else if (!e.shiftKey && (!panel.contains(active) || active === last)) {
+       e.preventDefault();
+       first.focus();
+     }
+   };
+   window.addEventListener('keydown', onKeyDown, true);
+   const focusTimer = window.setTimeout(() => {
+     const panel = document.getElementById('ai-compose-dialog');
+     const firstField = panel ? focusable(panel)[0] : null;
+     (firstField || panel)?.focus();
+   }, 0);
+   return () => {
+     window.clearTimeout(focusTimer);
+     window.removeEventListener('keydown', onKeyDown, true);
+     document.body.style.overflow = previousOverflow;
+     previous?.focus?.();
+   };
+ }, [aiComposeModalOpen, aiComposeBusy]);
 
 const catalogTemplates = templates.filter((t) => t.isGlobal ?? !t.tenantId);
 const ownTemplates = templates.filter((t) => t.isOwned ?? Boolean(t.tenantId));
@@ -3343,7 +3413,7 @@ const studioModelPhotos = useMemo(
             <button
               type="button"
               onClick={() => setSaveUpgradeModalOpen(true)}
-              className="inline-flex min-h-9 items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-foreground bg-surface-muted hover:bg-surface border border-border transition shrink-0 cursor-pointer self-start sm:self-auto touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+              className="inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-foreground bg-surface-muted hover:bg-surface border border-border transition shrink-0 cursor-pointer self-start sm:self-auto touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
               <span>Voir les formules</span>
               <ArrowRight className="w-3.5 h-3.5" aria-hidden />

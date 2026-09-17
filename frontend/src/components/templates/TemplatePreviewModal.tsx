@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X,
@@ -45,15 +45,58 @@ export default function TemplatePreviewModal({
   isOwnerOrManager = true,
 }: TemplatePreviewModalProps) {
   const [deviceView, setDeviceView] = useState<'mobile' | 'desktop'>('mobile');
+  const panelRef = useRef<HTMLDivElement>(null);
 
-  // Fermeture avec la touche Échap
   useEffect(() => {
     if (!open) return;
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const focusable = () =>
+      Array.from(
+        panelRef.current?.querySelectorAll<HTMLElement>(
+          'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((el) => el.getClientRects().length > 0);
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab' || !panelRef.current) return;
+      const nodes = focusable();
+      if (nodes.length === 0) {
+        e.preventDefault();
+        panelRef.current.focus();
+        return;
+      }
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && (!panelRef.current.contains(active) || active === first)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (!panelRef.current.contains(active) || active === last)) {
+        e.preventDefault();
+        first.focus();
+      }
     };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    const focusTimer = window.setTimeout(() => {
+      const closeBtn = panelRef.current?.querySelector<HTMLElement>('[data-modal-close]');
+      (closeBtn || panelRef.current)?.focus();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(focusTimer);
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previous?.focus?.();
+    };
   }, [open, onClose]);
 
   const landingPreview = useMemo(() => {
@@ -79,31 +122,37 @@ export default function TemplatePreviewModal({
 
   return createPortal(
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="template-preview-title"
-      className="fixed inset-0 z-[11120] flex items-center justify-center p-3 sm:p-6 bg-foreground/60 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-[11120] flex items-center justify-center p-3 sm:p-6 bg-foreground/60 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-200"
+      onClick={onClose}
     >
-      <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col bg-surface rounded-2xl sm:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="template-preview-title"
+        tabIndex={-1}
+        onClick={(event) => event.stopPropagation()}
+        className="relative w-full max-w-4xl max-h-[92vh] flex flex-col bg-surface rounded-2xl sm:rounded-3xl border border-border shadow-2xl overflow-hidden outline-none motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:duration-150"
+      >
         {/* En-tête de la modale */}
         <div className="px-5 py-4 border-b border-border flex items-center justify-between gap-4 bg-surface-muted/50">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5" />
+                <Sparkles className="w-3.5 h-3.5" aria-hidden />
                 Aperçu du modèle d&apos;invitation
               </span>
               {isOwnerOrManager && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
                   Vue organisateur
                 </span>
               )}
               {isGlobal ? (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-surface-muted text-foreground border border-border">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-surface-muted text-foreground border border-border">
                   Bibliothèque EventMaster
                 </span>
               ) : (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-surface-muted text-foreground border border-border">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-surface-muted text-foreground border border-border">
                   Modèle d&apos;organisation
                 </span>
               )}
@@ -120,7 +169,8 @@ export default function TemplatePreviewModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 text-muted hover:text-foreground hover:bg-surface-muted rounded-xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer shrink-0"
+            data-modal-close
+            className="inline-flex min-h-11 min-w-11 items-center justify-center text-muted hover:text-foreground hover:bg-surface-muted rounded-xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer shrink-0"
             aria-label="Fermer l'aperçu"
           >
             <X className="w-5 h-5" />
