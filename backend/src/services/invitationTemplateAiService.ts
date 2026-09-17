@@ -2,6 +2,7 @@ import { ensureMandatoryRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields
 import { uploadImageBuffer } from './cloudinaryService';
 import { getTemplateUploadFolder } from '../config/cloudinaryConfig';
 import { getGeminiApiKey, requestGeminiJson } from './geminiJsonClient.ts';
+import { isOpenAiStudioModel } from './aiStudioModels.ts';
 import {
   formatContextForImage,
   hasUsableComposeContext,
@@ -717,21 +718,31 @@ async function visionStructure(
     existingElements?: Record<string, unknown>[];
     isPublic?: boolean;
     coupleFaceSwap?: boolean;
+    preferredModel?: string;
   },
 ): Promise<VisionResult> {
   const hasRefs = imageUrls.length > 0;
-  if (getGeminiApiKey()) {
+  const preferOpenAi = isOpenAiStudioModel(options?.preferredModel);
+
+  const tryGemini = async (): Promise<VisionResult | null> => {
+    if (!getGeminiApiKey()) return null;
+    const parsed = await requestGeminiJson({
+      system: structureSystemPrompt(Boolean(options?.embedText), options?.artStyle, Boolean(options?.isPublic)),
+      userText: visionUserText(prompt, hasRefs, options),
+      imageUrls,
+      temperature: 0.2,
+      failMessage: 'Échec de l’analyse IA des images.',
+    });
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return visionResultFromParsed(parsed as Record<string, unknown>, prompt, hasRefs, options);
+    }
+    return null;
+  };
+
+  if (!preferOpenAi) {
     try {
-      const parsed = await requestGeminiJson({
-        system: structureSystemPrompt(Boolean(options?.embedText), options?.artStyle, Boolean(options?.isPublic)),
-        userText: visionUserText(prompt, hasRefs, options),
-        imageUrls,
-        temperature: 0.2,
-        failMessage: 'Échec de l’analyse IA des images.',
-      });
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        return visionResultFromParsed(parsed as Record<string, unknown>, prompt, hasRefs, options);
-      }
+      const gemini = await tryGemini();
+      if (gemini) return gemini;
     } catch (error) {
       console.warn(
         '[invitationTemplateAi] Gemini structure failed, falling back to OpenAI:',
@@ -741,11 +752,26 @@ async function visionStructure(
   }
 
   if (!key) {
+    if (preferOpenAi) {
+      try {
+        const gemini = await tryGemini();
+        if (gemini) return gemini;
+      } catch (error) {
+        console.warn(
+          '[invitationTemplateAi] Gemini fallback after missing OpenAI key failed:',
+          (error as Error)?.message,
+        );
+      }
+    }
     fail(503, 'La génération IA n’est pas configurée (GEMINI_API_KEY ou OPENAI_API_KEY).');
   }
 
   const visionModel =
-    process.env.OPENAI_VISION_MODEL || process.env.OPENAI_MODEL || 'gpt-5.6-luna';
+    options?.preferredModel &&
+    isOpenAiStudioModel(options.preferredModel) &&
+    !options.preferredModel.includes('gpt-image')
+      ? options.preferredModel
+      : process.env.OPENAI_VISION_MODEL || process.env.OPENAI_MODEL || 'gpt-5.6-luna';
   const userContent: Array<Record<string, unknown>> = [
     {
       type: 'text',
@@ -788,6 +814,21 @@ async function visionStructure(
     const parsed = JSON.parse(raw) as Record<string, unknown>;
     return visionResultFromParsed(parsed, prompt, hasRefs, options);
   } catch (error) {
+    if (preferOpenAi) {
+      console.warn(
+        '[invitationTemplateAi] OpenAI structure failed, falling back to Gemini:',
+        (error as Error)?.message,
+      );
+      try {
+        const gemini = await tryGemini();
+        if (gemini) return gemini;
+      } catch (geminiErr) {
+        console.warn(
+          '[invitationTemplateAi] Gemini fallback after OpenAI failed:',
+          (geminiErr as Error)?.message,
+        );
+      }
+    }
     if ((error as HttpError)?.status) throw error;
     fail(502, (error as Error)?.message || 'Impossible d’analyser les images avec l’IA.');
   } finally {
@@ -1284,7 +1325,9 @@ function getNanoBananaFlashModel(): string {
  * En mode 'quality', le modèle Pro (gemini-3-pro-image 2K) est privilégié pour un piqué maximal.
  */
 function getNanoBananaModelChain(speedMode?: AiSpeedMode, preferredModel?: string): string[] {
-  const custom = preferredModel?.trim();
+  const custom = preferredModel?.trim() && !isOpenAiStudioModel(preferredModel)
+    ? preferredModel.trim()
+    : '';
   if (custom) {
     if (speedMode === 'fast') {
       return [...new Set([custom, getNanoBananaFlashModel(), getNanoBananaProModel()])];
@@ -1595,6 +1638,78 @@ ${imagePrompt}`;
  * 4) Images API edits sur la 1re référence
  * 5) Images API generate classique
  */
+async function generateInvitationImageWithOpenAi(
+  key: string,
+  imageUrls: string[],
+  imagePrompt: string,
+  tenantId: string | null | undefined,
+  options?: {
+    hasPeople?: boolean;
+    embedText?: boolean;
+    artStyle?: InvitationArtStyleId;
+    speedMode?: AiSpeedMode;
+    preloadedRefImages?: PreloadedRefImage[];
+    preferredModel?: string;
+  },
+): Promise<{ url: string; mode: 'edit' | 'generate'; safetyFallbackTriggered?: boolean }> {
+  const preferImageApi = (options?.preferredModel || '').includes('gpt-image');
+  const tryLuna = async () => {
+    const lunaRes = await generateImageWithGpt56Luna(key, imagePrompt, imageUrls, tenantId, options);
+    return { ...lunaRes, safetyFallbackTriggered: false as const };
+  };
+
+  if (!preferImageApi) {
+    try {
+      return await tryLuna();
+    } catch (lunaErr) {
+      console.warn(
+        '[invitationTemplateAi] gpt-5.6-luna image failed, falling back:',
+        (lunaErr as Error)?.message,
+      );
+    }
+  }
+
+  if (options?.hasPeople && imageUrls.length > 0) {
+    try {
+      const url = await generateBackgroundFromReference(key, imageUrls[0], imagePrompt, tenantId);
+      return { url, mode: 'edit', safetyFallbackTriggered: false };
+    } catch (editErr) {
+      console.warn(
+        '[invitationTemplateAi] image edit fallback failed, falling back to text generation:',
+        (editErr as Error)?.message,
+      );
+    }
+  }
+
+  try {
+    const url = await generateBackgroundFromPrompt(key, imagePrompt, tenantId);
+    return { url, mode: 'generate', safetyFallbackTriggered: false };
+  } catch (genErr) {
+    console.warn(
+      '[invitationTemplateAi] images/generations failed, trying edits:',
+      (genErr as Error)?.message,
+    );
+  }
+
+  if (preferImageApi) {
+    try {
+      return await tryLuna();
+    } catch (lunaErr) {
+      console.warn(
+        '[invitationTemplateAi] gpt-5.6-luna after Images API failed:',
+        (lunaErr as Error)?.message,
+      );
+    }
+  }
+
+  const primary = imageUrls[0];
+  if (!primary) {
+    fail(502, 'Impossible de créer la nouvelle image via OpenAI.');
+  }
+  const url = await generateBackgroundFromReference(key, primary, imagePrompt, tenantId);
+  return { url, mode: 'edit', safetyFallbackTriggered: false };
+}
+
 async function createNewInvitationImage(
   key: string,
   imageUrls: string[],
@@ -1610,6 +1725,20 @@ async function createNewInvitationImage(
   },
 ): Promise<{ url: string; mode: 'edit' | 'generate'; safetyFallbackTriggered?: boolean }> {
   const nanoKey = getNanoBananaApiKey();
+  const prefersOpenAi = isOpenAiStudioModel(options?.preferredModel);
+
+  if (prefersOpenAi && key) {
+    try {
+      console.log(`[invitationTemplateAi] Generating with OpenAI (${options?.preferredModel}) as principal model...`);
+      return await generateInvitationImageWithOpenAi(key, imageUrls, imagePrompt, tenantId, options);
+    } catch (openAiErr) {
+      console.warn(
+        '[invitationTemplateAi] OpenAI principal failed, falling back to Nano Banana:',
+        (openAiErr as Error)?.message,
+      );
+    }
+  }
+
   if (nanoKey) {
     const chain = getNanoBananaModelChain(options?.speedMode, options?.preferredModel);
     for (let i = 0; i < chain.length; i++) {
@@ -1634,72 +1763,43 @@ async function createNewInvitationImage(
     }
   }
 
-  if (!key) {
-    fail(502, 'Impossible de créer la nouvelle image (Nano Banana). Ajoutez OPENAI_API_KEY pour le repli.');
-  }
-
-  // 2) GPT-5.6 Luna (Responses + image_generation)
-  try {
-    const lunaRes = await generateImageWithGpt56Luna(key, imagePrompt, imageUrls, tenantId, options);
-    return { ...lunaRes, safetyFallbackTriggered: false };
-  } catch (lunaErr) {
-    console.warn(
-      '[invitationTemplateAi] gpt-5.6-luna image failed, falling back:',
-      (lunaErr as Error)?.message,
-    );
-  }
-
-  // Si des personnes sont présentes dans les références, le repli DOIT conserver l'image
-  // via l'API d'édition d'image plutôt que d'inventer une personne à partir du texte seul.
-  if (options?.hasPeople && imageUrls.length > 0) {
+  if (key && !prefersOpenAi) {
     try {
-      const url = await generateBackgroundFromReference(key, imageUrls[0], imagePrompt, tenantId);
-      return { url, mode: 'edit', safetyFallbackTriggered: false };
-    } catch (editErr) {
+      return await generateInvitationImageWithOpenAi(key, imageUrls, imagePrompt, tenantId, options);
+    } catch (openAiErr) {
       console.warn(
-        '[invitationTemplateAi] image edit fallback failed, falling back to text generation:',
-        (editErr as Error)?.message,
+        '[invitationTemplateAi] OpenAI fallback failed:',
+        (openAiErr as Error)?.message,
       );
     }
   }
 
-  try {
-    const url = await generateBackgroundFromPrompt(key, imagePrompt, tenantId);
-    return { url, mode: 'generate', safetyFallbackTriggered: false };
-  } catch (genErr) {
-    console.warn(
-      '[invitationTemplateAi] images/generations failed, trying edits:',
-      (genErr as Error)?.message,
-    );
+  if (!imageUrls[0] && nanoKey) {
+    try {
+      console.warn(
+        '[invitationTemplateAi] Filet de sécurité anti-blocage: tentative finale d\'arrière-plan décoratif sans humains via Nano Banana...',
+      );
+      const fallbackPrompt = buildGenericThematicBackgroundPrompt(imagePrompt, options);
+      const fallbackB64 = await executeNanoBananaRawRequest(
+        nanoKey,
+        fallbackPrompt,
+        [],
+        getNanoBananaProModel(),
+      );
+      const url = await uploadGeneratedB64(fallbackB64, tenantId);
+      return { url, mode: 'generate', safetyFallbackTriggered: true };
+    } catch (finalFallbackErr) {
+      console.warn(
+        '[invitationTemplateAi] Échec du filet de sécurité décoratif Nano Banana:',
+        (finalFallbackErr as Error)?.message,
+      );
+    }
   }
 
-  const primary = imageUrls[0];
-  if (!primary) {
-    if (nanoKey) {
-      try {
-        console.warn(
-          '[invitationTemplateAi] Filet de sécurité anti-blocage: tentative finale d\'arrière-plan décoratif sans humains via Nano Banana...',
-        );
-        const fallbackPrompt = buildGenericThematicBackgroundPrompt(imagePrompt, options);
-        const fallbackB64 = await executeNanoBananaRawRequest(
-          nanoKey,
-          fallbackPrompt,
-          [],
-          getNanoBananaProModel(),
-        );
-        const url = await uploadGeneratedB64(fallbackB64, tenantId);
-        return { url, mode: 'generate', safetyFallbackTriggered: true };
-      } catch (finalFallbackErr) {
-        console.warn(
-          '[invitationTemplateAi] Échec du filet de sécurité décoratif Nano Banana:',
-          (finalFallbackErr as Error)?.message,
-        );
-      }
-    }
-    fail(502, 'Impossible de créer la nouvelle image (Nano Banana + Luna + Images API).');
+  if (!key) {
+    fail(502, 'Impossible de créer la nouvelle image (Nano Banana). Ajoutez OPENAI_API_KEY pour le repli.');
   }
-  const url = await generateBackgroundFromReference(key, primary, imagePrompt, tenantId);
-  return { url, mode: 'edit', safetyFallbackTriggered: false };
+  fail(502, 'Impossible de créer la nouvelle image (Nano Banana + Luna + Images API).');
 }
 
 export type InvitationAiComposeResult = {
@@ -1930,7 +2030,7 @@ export async function composeInvitationTemplateAi(input: {
   const organizerContextEn = formatContextForImage(composeContext, contextSource);
 
   const key = requireAiConfigured();
-  const structured = await visionStructure(key, processed.visionBrief, imageUrls, {
+      const structured = await visionStructure(key, processed.visionBrief, imageUrls, {
     embedText,
     organizerContext: organizerContextEn,
     processed,
@@ -1939,6 +2039,7 @@ export async function composeInvitationTemplateAi(input: {
     existingElements,
     isPublic,
     coupleFaceSwap,
+    preferredModel: input.preferredModel || undefined,
   });
   if (!imageUrls.length && structured.visualAnalysis) {
     structured.visualAnalysis.hasPeople = false;

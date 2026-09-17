@@ -3,7 +3,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
-import { notificationFamily } from '@/config/platformNotifications';
+import { notificationFamily, PLATFORM_NOTIFICATION_TYPE } from '@/config/platformNotifications';
+import { notifyAiTokensInsufficient } from '@/lib/aiTokenEvents';
 import {
   isLocalAudioMuted,
   playFamilyNotificationSound,
@@ -60,7 +61,11 @@ export function NotificationInboxProvider({ children }: { children: React.ReactN
         knownIdsRef.current = new Set(items.map((item) => item.id));
       } else {
         const newcomers = items.filter((item) => !item.readAt && !knownIdsRef.current!.has(item.id));
-        if (newcomers.length > 0 && !isLocalAudioMuted()) {
+        const tokenAlert = newcomers.find((item) => item.type === PLATFORM_NOTIFICATION_TYPE.AI_TOKENS_INSUFFICIENT);
+        if (tokenAlert) {
+          notifyAiTokensInsufficient(tokenAlert.message);
+        }
+        if (newcomers.length > 0 && !isLocalAudioMuted() && !tokenAlert) {
           const family = notificationFamily(newcomers[0].type);
           playFamilyNotificationSound(
             site.audioNotifications,

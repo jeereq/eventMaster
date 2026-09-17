@@ -24,6 +24,20 @@ import {
   sanitizeDonationsAccess,
   type DonationsAccess,
 } from './donationsAccess';
+import {
+  DEFAULT_AI_STUDIO_MODELS,
+  sanitizeAiStudioModels,
+  type AiStudioModelsSettings,
+} from './aiStudioModels';
+
+export {
+  AVAILABLE_INVITATION_MODELS,
+  AVAILABLE_ROOM_PLAN_MODELS,
+  DEFAULT_AI_STUDIO_MODELS,
+  isOpenAiStudioModel,
+  sanitizeAiStudioModels,
+} from './aiStudioModels';
+export type { AiStudioModelsSettings } from './aiStudioModels';
 
 const settingsFilePath = path.join(__dirname, '..', 'config', 'settings.json');
 const PLATFORM_CONFIG_ID = 'default';
@@ -85,46 +99,6 @@ export function sanitizeStudioVisibility(raw: unknown): StudioVisibilitySettings
     invite: src.invite !== false,
     room: src.room !== false,
   };
-}
-
-export interface AiStudioModelsSettings {
-  invitationModel: string;
-  roomPlanModel: string;
-}
-
-export const DEFAULT_AI_STUDIO_MODELS: AiStudioModelsSettings = {
-  invitationModel: 'gemini-3-pro-image',
-  roomPlanModel: 'gemini-3.1-pro-preview',
-};
-
-export const AVAILABLE_INVITATION_MODELS = [
-  { id: 'gemini-3-pro-image', label: 'Gemini 3 Pro Image (Nano Banana Pro · Haute Fidélité 2K)', badge: '2K Pro' },
-  { id: 'gemini-3.1-flash-image', label: 'Gemini 3.1 Flash Image (Nano Banana Flash · Rendu rapide)', badge: 'Ultra-rapide' },
-  { id: 'imagen-3.0-generate-002', label: 'Google Imagen 3.0 (Photoréaliste standard)', badge: 'Photoréaliste' },
-  { id: 'imagen-3.0-fast-generate-001', label: 'Google Imagen 3.0 Fast (Économique & rapide)', badge: 'Éco rapide' },
-] as const;
-
-export const AVAILABLE_ROOM_PLAN_MODELS = [
-  { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (Raisonnement spatial & agencement coté)', badge: 'Spatial Pro' },
-  { id: 'gemini-3-flash', label: 'Gemini 3 Flash (Génération agile & rapide)', badge: 'Agile & Rapide' },
-  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Haute précision textuelle)', badge: 'Précision' },
-  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Standard stable)', badge: 'Stable' },
-] as const;
-
-export function sanitizeAiStudioModels(raw: unknown): AiStudioModelsSettings {
-  const src = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
-  const validInv = AVAILABLE_INVITATION_MODELS.map((m) => m.id as string);
-  const validRoom = AVAILABLE_ROOM_PLAN_MODELS.map((m) => m.id as string);
-
-  const inv = typeof src.invitationModel === 'string' && validInv.includes(src.invitationModel)
-    ? src.invitationModel
-    : DEFAULT_AI_STUDIO_MODELS.invitationModel;
-
-  const room = typeof src.roomPlanModel === 'string' && validRoom.includes(src.roomPlanModel)
-    ? src.roomPlanModel
-    : DEFAULT_AI_STUDIO_MODELS.roomPlanModel;
-
-  return { invitationModel: inv, roomPlanModel: room };
 }
 
 export interface CommercialGrantedPermissions {

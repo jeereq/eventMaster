@@ -1,4 +1,6 @@
 import { parseGeminiJson, requestGeminiJson, getGeminiApiKey } from './geminiJsonClient.ts';
+import { requestOpenAiJson, getOpenAiApiKey } from './openaiJsonClient.ts';
+import { isOpenAiStudioModel } from './aiStudioModels.ts';
 import {
   ROOM_PLAN_BRIEF_REFORMULATION_SYSTEM,
   applyRoomPlanEnglishSceneBrief,
@@ -1278,14 +1280,34 @@ async function reformulateRoomPlanBriefToEnglish(input: {
     widthM: input.widthM,
     heightM: input.heightM,
   });
-  if (!getGeminiApiKey() || processed.originalBrief.length < 8) {
+  if (processed.originalBrief.length < 8) {
+    return {
+      originalBrief: processed.originalBrief,
+      englishSceneBrief: processed.englishSceneBrief,
+    };
+  }
+  const preferOpenAi = isOpenAiStudioModel(input.model);
+  if (!preferOpenAi && !getGeminiApiKey()) {
     return {
       originalBrief: processed.originalBrief,
       englishSceneBrief: processed.englishSceneBrief,
     };
   }
   try {
-    const parsed = await requestGeminiJson({
+    const parsed = preferOpenAi && getOpenAiApiKey()
+      ? await requestOpenAiJson({
+        system: ROOM_PLAN_BRIEF_REFORMULATION_SYSTEM,
+        userText: buildRoomPlanBriefReformulationUserText(processed.originalBrief, {
+          roomType: input.roomType,
+          widthM: input.widthM,
+          heightM: input.heightM,
+        }),
+        temperature: 0.25,
+        timeoutMs: 45_000,
+        failMessage: 'Room-plan brief reformulation failed.',
+        model: input.model,
+      })
+      : await requestGeminiJson({
       system: ROOM_PLAN_BRIEF_REFORMULATION_SYSTEM,
       userText: buildRoomPlanBriefReformulationUserText(processed.originalBrief, {
         roomType: input.roomType,
@@ -1295,7 +1317,7 @@ async function reformulateRoomPlanBriefToEnglish(input: {
       temperature: 0.25,
       timeoutMs: 45_000,
       failMessage: 'Room-plan brief reformulation failed.',
-      model: input.model,
+      model: isOpenAiStudioModel(input.model) ? undefined : input.model,
     });
     const english = parseRoomPlanEnglishSceneBriefFromJson(parsed);
     if (english.length >= 24) {
@@ -1327,14 +1349,43 @@ async function requestRoomPlanJson(input: {
   failMessage: string;
   model?: string;
 }): Promise<RoomPlanVisionDraft> {
-  const parsed = await requestGeminiJson({
+  const preferOpenAi = isOpenAiStudioModel(input.model);
+  const imageUrls = input.imageUrl ? [input.imageUrl] : undefined;
+
+  const askGemini = () => requestGeminiJson({
     system: input.system,
     userText: input.userText,
-    imageUrls: input.imageUrl ? [input.imageUrl] : undefined,
+    imageUrls,
+    temperature: input.temperature,
+    failMessage: input.failMessage,
+    model: preferOpenAi ? undefined : input.model,
+  });
+
+  const askOpenAi = () => requestOpenAiJson({
+    system: input.system,
+    userText: input.userText,
+    imageUrls,
     temperature: input.temperature,
     failMessage: input.failMessage,
     model: input.model,
   });
+
+  let parsed: unknown;
+  if (preferOpenAi && getOpenAiApiKey()) {
+    try {
+      parsed = await askOpenAi();
+    } catch (error) {
+      console.warn(
+        '[roomPlanAi] OpenAI principal failed, falling back to Gemini:',
+        (error as Error)?.message,
+      );
+      if (!getGeminiApiKey()) throw error;
+      parsed = await askGemini();
+    }
+  } else {
+    parsed = await askGemini();
+  }
+
   return parseRoomPlanVisionDraft(parsed, { widthM: input.widthM, heightM: input.heightM });
 }
 

@@ -15,6 +15,7 @@ import {
   type StudioJobKind,
   type StudioJobPayload,
 } from '@/lib/studioJobs';
+import { isAiTokenShortageMessage, notifyAiTokensInsufficient } from '@/lib/aiTokenEvents';
 
 const STORAGE_KEY = 'em_studio_jobs';
 const POLL_MS = 2500;
@@ -129,6 +130,10 @@ export function StudioJobsProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     return onStudioJob((job) => {
+      if (job.status === 'error' && isAiTokenShortageMessage(job.error) && !seenDone.current.has(`err:${job.id}`)) {
+        seenDone.current.add(`err:${job.id}`);
+        notifyAiTokensInsufficient(job.error || undefined);
+      }
       if (job.status !== 'done' || seenDone.current.has(job.id)) return;
       seenDone.current.add(job.id);
       const result = job.result || {};

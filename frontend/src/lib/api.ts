@@ -1,3 +1,4 @@
+import { notifyAiTokensInsufficient } from '@/lib/aiTokenEvents';
 import { isAuthExemptPath, notifySessionExpired } from '@/lib/sessionEvents';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:5001/api';
@@ -66,6 +67,9 @@ async function request(path: string, options: FetchOptions = {}) {
       }
       if (response.status === 401 && token && !isAuthExemptPath(path)) {
         notifySessionExpired();
+      }
+      if (response.status === 402) {
+        notifyAiTokensInsufficient(err.message);
       }
       throw err;
     }

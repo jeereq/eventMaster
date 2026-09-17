@@ -17,6 +17,7 @@ import MobileSplashScreen from "@/components/MobileSplashScreen";
 import NavigationProgressBar from "@/components/NavigationProgressBar";
 import NavigationScrollTop from "@/components/NavigationScrollTop";
 import SessionExpiredDialog from "@/components/SessionExpiredDialog";
+import AiTokenShortageAlert from "@/components/AiTokenShortageAlert";
 import { fetchPublicSiteSnapshot, resolveMetadataBase } from "@/lib/publicSiteServer";
 
 /** Inter ≈ substitut open-source de TWK Lausanne / Asana Sans (UI produit Asana). */
@@ -141,6 +142,7 @@ html.em-splash-boot,html.em-splash-boot body{background:#f6f7f8!important;overfl
             <AuthProvider>
               <StudioJobsProvider>
               <SessionExpiredDialog />
+              <AiTokenShortageAlert />
               <PwaInstallProvider>
                 <ViewPreferencesBridge>
                   <BrandFaviconSync />

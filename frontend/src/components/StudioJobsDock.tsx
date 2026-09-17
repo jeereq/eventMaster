@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { CheckCircle2, Loader2, XCircle, X } from 'lucide-react';
 import { useStudioJobs } from '@/context/StudioJobsContext';
+import { isAiTokenShortageMessage, notifyAiTokensInsufficient } from '@/lib/aiTokenEvents';
 
 export default function StudioJobsDock() {
   const { jobs, dismissJob, activeCount } = useStudioJobs();
@@ -41,6 +42,15 @@ export default function StudioJobsDock() {
                   >
                     Ouvrir le résultat
                   </Link>
+                ) : null}
+                {job.status === 'error' && isAiTokenShortageMessage(job.error) ? (
+                  <button
+                    type="button"
+                    onClick={() => notifyAiTokensInsufficient(job.error || undefined)}
+                    className="inline-block mt-1.5 text-[11px] font-bold text-amber-700 dark:text-amber-300 hover:underline"
+                  >
+                    Recharger des jetons
+                  </button>
                 ) : null}
               </div>
               {!running ? (

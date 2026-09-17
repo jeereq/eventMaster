@@ -1,7 +1,9 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
+import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 import { calculateTokensForAmount, currentAiTokenPricing } from './aiTokenFlexPayService';
 import { resolveLedgerAction, type AiTokenAction } from './aiTokenUsageQuery';
+import { notifyUsers } from './platformNotificationService';
 
 export const USER_GRANT_DEVICE_PREFIX = 'user-grant:';
 export const TENANT_GRANT_DEVICE_PREFIX = 'tenant-grant:';
@@ -427,6 +429,26 @@ function insufficientCreditMessage(need: number, remaining: number) {
   return `Plus de jetons disponibles. ${hint}`;
 }
 
+function notifyInsufficientAiTokens(
+  userId: string | null | undefined,
+  message: string,
+  need: number,
+  remaining: number,
+) {
+  if (!userId) return;
+  void notifyUsers([userId], {
+    type: PLATFORM_NOTIFICATION_TYPE.AI_TOKENS_INSUFFICIENT,
+    title: 'Jetons IA insuffisants',
+    message,
+    metadata: {
+      href: '/dashboard',
+      kind: 'ai_tokens',
+      need,
+      remaining,
+    },
+  });
+}
+
 export async function requireAiSimulationCredit(
   deviceId: string,
   userId?: string | null,
@@ -439,7 +461,9 @@ export async function requireAiSimulationCredit(
     return { ...allowance, unlimited: true, canSimulate: true };
   }
   if (allowance.totalRemaining < need) {
-    fail(402, insufficientCreditMessage(need, allowance.totalRemaining));
+    const message = insufficientCreditMessage(need, allowance.totalRemaining);
+    notifyInsufficientAiTokens(userId, message, need, allowance.totalRemaining);
+    fail(402, message);
   }
   return allowance;
 }
@@ -498,7 +522,9 @@ export async function consumeAiSimulationCredit(
     const orgGranted = Math.max(0, orgWallet?.grantedTokens ?? 0);
     const remaining = freeRemaining + bonus + granted + orgGranted;
     if (remaining < need) {
-      fail(402, insufficientCreditMessage(need, remaining));
+      const message = insufficientCreditMessage(need, remaining);
+      notifyInsufficientAiTokens(userId, message, need, remaining);
+      fail(402, message);
     }
 
     let left = need;

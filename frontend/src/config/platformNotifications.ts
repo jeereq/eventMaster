@@ -22,6 +22,7 @@ export const PLATFORM_NOTIFICATION_TYPE = {
   DISCOUNT_REQUEST_PENDING: 'DISCOUNT_REQUEST_PENDING',
   DISCOUNT_QUOTE_READY: 'DISCOUNT_QUOTE_READY',
   STUDIO_GENERATION_READY: 'STUDIO_GENERATION_READY',
+  AI_TOKENS_INSUFFICIENT: 'AI_TOKENS_INSUFFICIENT',
 } as const;
 
 export type NotificationFamily = 'events' | 'billing' | 'commissions' | 'catalog' | 'tasks' | 'all';
@@ -45,7 +46,7 @@ export const NOTIFICATION_FAMILY_LABELS: Record<NotificationPrefFamily, string> 
 
 export const NOTIFICATION_FAMILY_DESCRIPTIONS: Record<NotificationPrefFamily, string> = {
   events: 'Réponses à l’invitation, billets vendus et paiements de places qui n’aboutissent pas.',
-  billing: 'Factures, abonnements, licences et demandes de rabais.',
+  billing: 'Factures, abonnements, licences, jetons IA et demandes de rabais.',
   commissions: 'Commissions mensuelles à encaisser ou déjà payées.',
   catalog: 'Demandes et réservations marketplace (salles, services).',
   tasks: 'Tâches d’événement assignées, à échéance ou terminées.',
@@ -69,6 +70,7 @@ const BILLING_TYPES = new Set([
   PLATFORM_NOTIFICATION_TYPE.PAYMENT_RECEIVED,
   PLATFORM_NOTIFICATION_TYPE.DISCOUNT_REQUEST_PENDING,
   PLATFORM_NOTIFICATION_TYPE.DISCOUNT_QUOTE_READY,
+  PLATFORM_NOTIFICATION_TYPE.AI_TOKENS_INSUFFICIENT,
 ]);
 
 const COMMISSION_TYPES = new Set([
@@ -118,6 +120,7 @@ const TYPE_LABELS: Record<string, string> = {
   [PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY]: 'Demande',
   [PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING]: 'Réservation',
   [PLATFORM_NOTIFICATION_TYPE.STUDIO_GENERATION_READY]: 'Studio IA',
+  [PLATFORM_NOTIFICATION_TYPE.AI_TOKENS_INSUFFICIENT]: 'Jetons IA',
 };
 
 export function notificationTypeLabel(type: string): string {

@@ -574,11 +574,13 @@ export default function AdminPlatformSettings({
                       Génération d&apos;Invitations (Image 9:16)
                     </label>
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                      {value.aiStudioModels?.invitationModel?.includes('flash')
-                        ? 'Rapide'
-                        : value.aiStudioModels?.invitationModel?.includes('imagen')
-                          ? 'Imagen'
-                          : 'Haute Définition'}
+                      {value.aiStudioModels?.invitationModel?.includes('gpt') || value.aiStudioModels?.invitationModel?.includes('luna')
+                        ? 'OpenAI'
+                        : value.aiStudioModels?.invitationModel?.includes('flash')
+                          ? 'Rapide'
+                          : value.aiStudioModels?.invitationModel?.includes('imagen')
+                            ? 'Imagen'
+                            : 'Haute Définition'}
                     </span>
                   </div>
 
@@ -595,22 +597,32 @@ export default function AdminPlatformSettings({
                     }
                     className="w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-xs font-bold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-11 cursor-pointer transition shadow-2xs"
                   >
-                    <option value="gemini-3-pro-image">
-                      Gemini 3 Pro Image (Nano Banana Pro · 2K Haute Définition)
-                    </option>
-                    <option value="gemini-3.1-flash-image">
-                      Gemini 3.1 Flash Image (Nano Banana Flash · Rendu rapide 4-8s)
-                    </option>
-                    <option value="imagen-3.0-generate-002">
-                      Google Imagen 3.0 (Photoréaliste standard)
-                    </option>
-                    <option value="imagen-3.0-fast-generate-001">
-                      Google Imagen 3.0 Fast (Économique &amp; rapide)
-                    </option>
+                    <optgroup label="Google Gemini">
+                      <option value="gemini-3-pro-image">
+                        Gemini 3 Pro Image (Nano Banana Pro · 2K Haute Définition)
+                      </option>
+                      <option value="gemini-3.1-flash-image">
+                        Gemini 3.1 Flash Image (Nano Banana Flash · Rendu rapide 4-8s)
+                      </option>
+                      <option value="imagen-3.0-generate-002">
+                        Google Imagen 3.0 (Photoréaliste standard)
+                      </option>
+                      <option value="imagen-3.0-fast-generate-001">
+                        Google Imagen 3.0 Fast (Économique &amp; rapide)
+                      </option>
+                    </optgroup>
+                    <optgroup label="OpenAI">
+                      <option value="gpt-5.6-luna">
+                        GPT-5.6 Luna (OpenAI · Agent image + références)
+                      </option>
+                      <option value="gpt-image-2">
+                        GPT Image 2 (OpenAI · Images API photoréaliste)
+                      </option>
+                    </optgroup>
                   </select>
 
                   <p className="text-[11px] text-muted leading-relaxed">
-                    Priorité au modèle sélectionné pour concevoir les visuels d&apos;invitation. Le moteur applique un repli automatique en cas d&apos;indisponibilité.
+                    Le modèle choisi est appelé en premier. Gemini et OpenAI se relaient automatiquement si le moteur principal est indisponible.
                   </p>
                 </div>
 
@@ -622,11 +634,13 @@ export default function AdminPlatformSettings({
                       Plans &amp; Salles 2D / 3D (Raisonnement)
                     </label>
                     <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-700 dark:text-sky-300">
-                      {value.aiStudioModels?.roomPlanModel?.includes('flash')
-                        ? 'Agile'
-                        : value.aiStudioModels?.roomPlanModel?.includes('2.5')
-                          ? 'Gemini 2.5'
-                          : 'Spatial Pro'}
+                      {value.aiStudioModels?.roomPlanModel?.includes('gpt') || value.aiStudioModels?.roomPlanModel?.includes('luna')
+                        ? 'OpenAI'
+                        : value.aiStudioModels?.roomPlanModel?.includes('flash')
+                          ? 'Agile'
+                          : value.aiStudioModels?.roomPlanModel?.includes('2.5')
+                            ? 'Gemini 2.5'
+                            : 'Spatial Pro'}
                     </span>
                   </div>
 
@@ -643,18 +657,28 @@ export default function AdminPlatformSettings({
                     }
                     className="w-full bg-surface border border-border rounded-xl px-3 py-2.5 text-xs font-bold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-11 cursor-pointer transition shadow-2xs"
                   >
-                    <option value="gemini-3.1-pro-preview">
-                      Gemini 3.1 Pro Preview (Raisonnement spatial &amp; cotation métrique)
-                    </option>
-                    <option value="gemini-3-flash">
-                      Gemini 3 Flash (Génération agile &amp; rapide)
-                    </option>
-                    <option value="gemini-2.5-pro">
-                      Gemini 2.5 Pro (Haute précision textuelle)
-                    </option>
-                    <option value="gemini-2.5-flash">
-                      Gemini 2.5 Flash (Standard stable)
-                    </option>
+                    <optgroup label="Google Gemini">
+                      <option value="gemini-3.1-pro-preview">
+                        Gemini 3.1 Pro Preview (Raisonnement spatial &amp; cotation métrique)
+                      </option>
+                      <option value="gemini-3-flash">
+                        Gemini 3 Flash (Génération agile &amp; rapide)
+                      </option>
+                      <option value="gemini-2.5-pro">
+                        Gemini 2.5 Pro (Haute précision textuelle)
+                      </option>
+                      <option value="gemini-2.5-flash">
+                        Gemini 2.5 Flash (Standard stable)
+                      </option>
+                    </optgroup>
+                    <optgroup label="OpenAI">
+                      <option value="gpt-5.6-luna">
+                        GPT-5.6 Luna (OpenAI · Raisonnement spatial)
+                      </option>
+                      <option value="gpt-4o">
+                        GPT-4o (OpenAI · Vision &amp; plans de salle)
+                      </option>
+                    </optgroup>
                   </select>
 
                   <p className="text-[11px] text-muted leading-relaxed">
