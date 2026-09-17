@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, verifyEmail, verifyOtp, resendOtp, getProfile, updateProfile, forgotPassword, resetPassword } from '../controllers/authController';
+import { register, login, verifyEmail, verifyOtp, resendOtp, getProfile, refreshSession, updateProfile, forgotPassword, resetPassword } from '../controllers/authController';
 import { requireAuth } from '../middleware/auth';
 import { acceptUserLegalHandler, getUserLegalStatusHandler } from '../controllers/legalController';
 
@@ -15,6 +15,7 @@ router.post('/reset-password', resetPassword);
 router.get('/legal-status', requireAuth, getUserLegalStatusHandler);
 router.post('/legal-accept', requireAuth, acceptUserLegalHandler);
 router.get('/profile', requireAuth, getProfile);
+router.post('/refresh', requireAuth, refreshSession);
 router.put('/profile', requireAuth, updateProfile);
 
 export default router;

@@ -509,7 +509,12 @@ export async function getProfile(req: AuthenticatedRequest, res: Response) {
       ? await resolveOrgAccess(user.id, user.tenantId)
       : null;
 
+    const token = buildAuthToken(user, {
+      impersonatedBy: req.user.impersonatedBy,
+    });
+
     return res.json({
+      token,
       user: {
         ...publicUser(user),
         impersonatedBy: req.user.impersonatedBy || null,
@@ -521,6 +526,10 @@ export async function getProfile(req: AuthenticatedRequest, res: Response) {
     console.error('Erreur lors de la récupération du profil:', error);
     return res.status(500).json({ error: 'Erreur interne lors de la récupération du profil.' });
   }
+}
+
+export async function refreshSession(req: AuthenticatedRequest, res: Response) {
+  return getProfile(req, res);
 }
 
 export async function updateProfile(req: AuthenticatedRequest, res: Response) {

@@ -21,6 +21,7 @@ export const PLATFORM_NOTIFICATION_TYPE = {
   EVENT_RSVP: 'EVENT_RSVP',
   DISCOUNT_REQUEST_PENDING: 'DISCOUNT_REQUEST_PENDING',
   DISCOUNT_QUOTE_READY: 'DISCOUNT_QUOTE_READY',
+  STUDIO_GENERATION_READY: 'STUDIO_GENERATION_READY',
 } as const;
 
 export type NotificationFamily = 'events' | 'billing' | 'commissions' | 'catalog' | 'tasks' | 'all';
@@ -116,6 +117,7 @@ const TYPE_LABELS: Record<string, string> = {
   [PLATFORM_NOTIFICATION_TYPE.DISCOUNT_QUOTE_READY]: 'Devis',
   [PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY]: 'Demande',
   [PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING]: 'Réservation',
+  [PLATFORM_NOTIFICATION_TYPE.STUDIO_GENERATION_READY]: 'Studio IA',
 };
 
 export function notificationTypeLabel(type: string): string {

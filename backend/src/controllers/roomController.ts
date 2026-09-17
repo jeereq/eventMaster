@@ -38,6 +38,14 @@ import {
   type RoomPlanComposeDraft,
 } from '../services/aiRoomPlanComposeHistoryService';
 import { loadPlatformSettings } from '../services/platformSettingsService';
+import {
+  createStudioJob,
+  runStudioJob,
+  completeStudioJob,
+  failStudioJob,
+} from '../services/studioJobService';
+import { notifyUsers } from '../services/platformNotificationService';
+import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 
 async function persistRoomPlanCompose(opts: {
   userId?: string | null;
@@ -538,32 +546,49 @@ export async function composeRoomPlan(req: AuthenticatedRequest, res: Response) 
     rateLimitRoomPlanAi(userId);
     const unlimited = isUnlimitedAiTokenUser(req.user);
     await requireAiSimulationCredit(deviceId, userId, AI_ROOM_PLAN_TOKEN_COST, { unlimited });
-    const draft = await composeRoomPlanAi({ ...input, model: settings.aiStudioModels?.roomPlanModel });
-    const historyId = await persistRoomPlanCompose({
-      userId,
-      deviceId,
-      source: 'studio',
-      prompt: input.brief,
-      imageUrl: input.imageUrl,
-      roomType: input.roomType,
-      widthM: input.widthM,
-      heightM: input.heightM,
-      draft,
-    });
-    const allowance = await consumeAiSimulationCredit(deviceId, userId, AI_ROOM_PLAN_TOKEN_COST, {
-      action: 'room_plan_from_photo',
-      source: unlimited && req.user?.impersonatedBy ? 'support' : 'studio',
-      relatedId: historyId,
-      unlimited,
-    });
+    const runCompose = async () => {
+      const draft = await composeRoomPlanAi({ ...input, model: settings.aiStudioModels?.roomPlanModel });
+      const historyId = await persistRoomPlanCompose({
+        userId,
+        deviceId,
+        source: 'studio',
+        prompt: input.brief,
+        imageUrl: input.imageUrl,
+        roomType: input.roomType,
+        widthM: input.widthM,
+        heightM: input.heightM,
+        draft,
+      });
+      const allowance = await consumeAiSimulationCredit(deviceId, userId, AI_ROOM_PLAN_TOKEN_COST, {
+        action: 'room_plan_from_photo',
+        source: unlimited && req.user?.impersonatedBy ? 'support' : 'studio',
+        relatedId: historyId,
+        unlimited,
+      });
+      void notifyUsers([userId], {
+        type: PLATFORM_NOTIFICATION_TYPE.STUDIO_GENERATION_READY,
+        title: 'Plan de salle prêt',
+        message: 'La génération IA est terminée. Ouvrez le studio pour l’appliquer.',
+        metadata: { href: '/dashboard/rooms', historyId, kind: 'room' },
+      });
+      return { draft, historyId, remaining: allowance.totalRemaining, allowance, tokenCost: AI_ROOM_PLAN_TOKEN_COST };
+    };
 
-    return res.json({
-      draft,
-      historyId,
-      remaining: allowance.totalRemaining,
-      allowance,
-      tokenCost: AI_ROOM_PLAN_TOKEN_COST,
-    });
+    if (body.background === true) {
+      const job = createStudioJob({ kind: 'room', userId, deviceId, prompt: input.brief });
+      runStudioJob(job.id, async () => {
+        try {
+          const payload = await runCompose();
+          completeStudioJob(job.id, { result: payload as unknown as Record<string, unknown>, historyId: payload.historyId });
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : 'Impossible de composer le plan de salle.';
+          failStudioJob(job.id, message);
+        }
+      });
+      return res.status(202).json({ jobId: job.id, status: 'queued', background: true });
+    }
+
+    return res.json(await runCompose());
   } catch (error: unknown) {
     const err = error as { status?: number; message?: string };
     if (err?.status) {
@@ -603,32 +628,51 @@ export async function publicComposeRoomPlan(req: AuthenticatedRequest, res: Resp
     rateLimitRoomPlanAi(rateKey);
     const unlimited = isUnlimitedAiTokenUser(user);
     await requireAiSimulationCredit(deviceId, user?.id || null, AI_ROOM_PLAN_TOKEN_COST, { unlimited });
-    const draft = await composeRoomPlanAi({ ...input, model: settings.aiStudioModels?.roomPlanModel });
-    const historyId = await persistRoomPlanCompose({
-      userId: user?.id || null,
-      deviceId,
-      source: user?.id ? 'studio' : 'landing',
-      prompt: input.brief,
-      imageUrl: input.imageUrl,
-      roomType: input.roomType,
-      widthM: input.widthM,
-      heightM: input.heightM,
-      draft,
-    });
-    const allowance = await consumeAiSimulationCredit(deviceId, user?.id || null, AI_ROOM_PLAN_TOKEN_COST, {
-      action: 'room_plan_from_photo',
-      source: unlimited && user?.impersonatedBy ? 'support' : user?.id ? 'studio' : 'landing',
-      relatedId: historyId,
-      unlimited,
-    });
+    const runCompose = async () => {
+      const draft = await composeRoomPlanAi({ ...input, model: settings.aiStudioModels?.roomPlanModel });
+      const historyId = await persistRoomPlanCompose({
+        userId: user?.id || null,
+        deviceId,
+        source: user?.id ? 'studio' : 'landing',
+        prompt: input.brief,
+        imageUrl: input.imageUrl,
+        roomType: input.roomType,
+        widthM: input.widthM,
+        heightM: input.heightM,
+        draft,
+      });
+      const allowance = await consumeAiSimulationCredit(deviceId, user?.id || null, AI_ROOM_PLAN_TOKEN_COST, {
+        action: 'room_plan_from_photo',
+        source: unlimited && user?.impersonatedBy ? 'support' : user?.id ? 'studio' : 'landing',
+        relatedId: historyId,
+        unlimited,
+      });
+      if (user?.id) {
+        void notifyUsers([user.id], {
+          type: PLATFORM_NOTIFICATION_TYPE.STUDIO_GENERATION_READY,
+          title: 'Plan de salle prêt',
+          message: 'La génération IA est terminée. Ouvrez le studio pour l’appliquer.',
+          metadata: { href: '/plans-3d', historyId, kind: 'room' },
+        });
+      }
+      return { draft, historyId, remaining: allowance.totalRemaining, allowance };
+    };
 
-    return res.json({
-      draft,
-      historyId,
-      remaining: allowance.totalRemaining,
-      allowance,
-      tokenCost: AI_ROOM_PLAN_TOKEN_COST,
-    });
+    if (body.background === true) {
+      const job = createStudioJob({ kind: 'room', userId: user?.id || null, deviceId, prompt: input.brief });
+      runStudioJob(job.id, async () => {
+        try {
+          const payload = await runCompose();
+          completeStudioJob(job.id, { result: payload as unknown as Record<string, unknown>, historyId: payload.historyId });
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : 'Impossible de composer le plan de salle.';
+          failStudioJob(job.id, message);
+        }
+      });
+      return res.status(202).json({ jobId: job.id, status: 'queued', background: true });
+    }
+
+    return res.json(await runCompose());
   } catch (error: unknown) {
     const err = error as { status?: number; message?: string };
     if (err?.status) {

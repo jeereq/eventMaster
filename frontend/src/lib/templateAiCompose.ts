@@ -12,6 +12,7 @@ import {
   CANVAS_SIZE_PRESETS,
 } from '@/lib/rsvpFormFields';
 import type { TemplatePalette } from '@/lib/imagePalette';
+import { isStudioJobAccepted, type StudioJobAccepted } from '@/lib/studioJobs';
 
 export const AI_TEMPLATE_DRAFT_KEY = 'em_ai_template_draft';
 
@@ -69,7 +70,7 @@ export async function composeTemplateWithAi(input: {
   variantsCount?: number;
   speedMode?: AiSpeedMode;
   coupleFaceSwap?: boolean;
-}): Promise<TemplateAiComposeResult> {
+}): Promise<TemplateAiComposeResult | StudioJobAccepted> {
   const deviceId = getOrCreateDeviceId();
   const imageUrls = [...(input.imageUrls || [])];
   if (input.baseImageUrl && /^https?:\/\//i.test(input.baseImageUrl.trim()) && !imageUrls.includes(input.baseImageUrl.trim())) {
@@ -89,7 +90,9 @@ export async function composeTemplateWithAi(input: {
     variantsCount: input.variantsCount,
     speedMode: input.speedMode || 'quality',
     coupleFaceSwap: Boolean(input.coupleFaceSwap),
+    background: true,
   });
+  if (isStudioJobAccepted(data)) return data;
   if (data?.allowance) {
     applyServerAllowance(data.allowance);
   }
@@ -113,7 +116,7 @@ export async function composeTemplateWithAiPublic(input: {
   variantsCount?: number;
   speedMode?: AiSpeedMode;
   coupleFaceSwap?: boolean;
-}): Promise<TemplateAiComposeResult> {
+}): Promise<TemplateAiComposeResult | StudioJobAccepted> {
   const deviceId = getOrCreateDeviceId();
   const imageDataUrls: string[] = [];
   for (const file of input.files.slice(0, 4)) {
@@ -138,7 +141,9 @@ export async function composeTemplateWithAiPublic(input: {
     variantsCount: input.variantsCount,
     speedMode: input.speedMode || 'quality',
     coupleFaceSwap: Boolean(input.coupleFaceSwap),
+    background: true,
   });
+  if (isStudioJobAccepted(data)) return data;
   if (data?.allowance) {
     applyServerAllowance(data.allowance);
   }

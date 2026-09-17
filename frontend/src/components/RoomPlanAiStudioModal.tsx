@@ -36,6 +36,8 @@ import { Alert, Button, Modal } from '@/components/ui';
 import { uploadImageFile } from '@/lib/cloudinaryUpload';
 import { cn } from '@/lib/cn';
 import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
+import { isStudioJobAccepted, onStudioJob } from '@/lib/studioJobs';
+import { useStudioJobs } from '@/context/StudioJobsContext';
 
 async function readImageFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -75,6 +77,7 @@ export default function RoomPlanAiStudioModal({
   }) => void;
 }) {
   const { site } = usePlatformSite();
+  const { trackJob } = useStudioJobs();
   const isRoomBlocked = site?.studioVisibility?.room === false;
   const fileRef = useRef<HTMLInputElement>(null);
   const [intent, setIntent] = useState<'brief' | 'photo'>('brief');
@@ -90,12 +93,34 @@ export default function RoomPlanAiStudioModal({
   const [aiAllowance, setAiAllowance] = useState<AiAllowance>(createEmptyAiAllowance);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
+  const currentRef = useRef(current);
+  const capsRef = useRef(caps);
+  currentRef.current = current;
+  capsRef.current = caps;
+
   useEffect(() => {
     if (!open) return;
     setStudioTab('create');
     setAiAllowance(getAiSimulationAllowance());
     void fetchAiRoomPlanComposeHistoryStudio().then(setHistory);
   }, [open]);
+
+  useEffect(() => {
+    return onStudioJob((job) => {
+      if (job.kind !== 'room' || job.status !== 'done') return;
+      const draft = job.result?.draft as RoomPlanVisionDraft | undefined;
+      if (!draft) return;
+      const applied = applyRoomPlanVisionDraft(currentRef.current, draft, capsRef.current, {});
+      onApplied({
+        blueprint: applied.blueprint,
+        warnings: applied.warnings,
+        draft,
+        selection: applied.selection,
+      });
+      if (typeof job.historyId === 'string') setActiveHistoryId(job.historyId);
+      void fetchAiRoomPlanComposeHistoryStudio().then(setHistory);
+    });
+  }, [onApplied]);
 
   const setPhoto = (next: File | null) => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -163,6 +188,11 @@ export default function RoomPlanAiStudioModal({
         widthM: current.canvas.widthM,
         heightM: current.canvas.heightM,
       });
+      if (isStudioJobAccepted(result)) {
+        trackJob(result.jobId, 'room', prompt.trim());
+        onClose();
+        return;
+      }
       const applied = applyRoomPlanVisionDraft(current, result.draft, caps, { imageUrl });
       onApplied({
         blueprint: applied.blueprint,

@@ -47,6 +47,7 @@ import {
   getPublicAiTemplateCompose,
   claimPublicAiTemplateComposes,
 } from '../controllers/templateController';
+import { getPublicStudioJob, listPublicStudioJobs } from '../controllers/studioJobController';
 import {
   publicComposeRoomPlan,
   listPublicAiRoomPlanComposes,
@@ -147,6 +148,8 @@ router.get('/ticket-orders/session/:sessionId', getTicketOrderBySession);
 router.post('/event-plan-ai', optionalAuth, publicPlanEventAi);
 router.post('/templates/ai/compose', optionalAuth, publicComposeTemplateWithAi);
 router.post('/rooms/ai/compose', optionalAuth, publicComposeRoomPlan);
+router.get('/studio/jobs', optionalAuth, listPublicStudioJobs);
+router.get('/studio/jobs/:jobId', optionalAuth, getPublicStudioJob);
 router.get('/rooms/ai/history', optionalAuth, listPublicAiRoomPlanComposes);
 router.get('/rooms/ai/history/:id', optionalAuth, getPublicAiRoomPlanCompose);
 router.post('/rooms/ai/history/claim', requireAuth, claimPublicAiRoomPlanComposes);
