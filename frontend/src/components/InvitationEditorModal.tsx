@@ -422,7 +422,7 @@ export default function InvitationEditorModal({
               type="button"
               onClick={handleUndo}
               disabled={historyIndex <= 0}
-              className="min-h-11 min-w-11 p-2.5 flex items-center justify-center text-muted hover:text-foreground disabled:opacity-30 rounded-xl hover:bg-surface-muted transition touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="min-h-[44px] min-w-[44px] p-2.5 flex items-center justify-center text-muted hover:text-foreground disabled:opacity-30 rounded-xl hover:bg-surface-muted transition touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               title="Annuler (Ctrl+Z)"
               aria-label="Annuler la modification"
             >
@@ -432,7 +432,7 @@ export default function InvitationEditorModal({
               type="button"
               onClick={handleRedo}
               disabled={historyIndex >= history.length - 1}
-              className="min-h-11 min-w-11 p-2.5 flex items-center justify-center text-muted hover:text-foreground disabled:opacity-30 rounded-xl hover:bg-surface-muted transition touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="min-h-[44px] min-w-[44px] p-2.5 flex items-center justify-center text-muted hover:text-foreground disabled:opacity-30 rounded-xl hover:bg-surface-muted transition touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               title="Rétablir (Ctrl+Y)"
               aria-label="Rétablir la modification"
             >
@@ -453,7 +453,7 @@ export default function InvitationEditorModal({
           aria-controls="mobile-panel-editor"
           onClick={() => setMobileTab('editor')}
           className={cn(
-            'flex-1 min-h-11 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer touch-manipulation',
+            'flex-1 min-h-[44px] flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer touch-manipulation',
             mobileTab === 'editor' ? 'bg-surface text-foreground shadow-2xs' : 'text-muted hover:text-foreground',
           )}
         >
@@ -468,7 +468,7 @@ export default function InvitationEditorModal({
           aria-controls="mobile-panel-preview"
           onClick={() => setMobileTab('preview')}
           className={cn(
-            'flex-1 min-h-11 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer touch-manipulation',
+            'flex-1 min-h-[44px] flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold transition cursor-pointer touch-manipulation',
             mobileTab === 'preview' ? 'bg-surface text-foreground shadow-2xs' : 'text-muted hover:text-foreground',
           )}
         >
@@ -606,7 +606,7 @@ export default function InvitationEditorModal({
                   aria-label="Sélectionner le modèle graphique de la page de réponse à l’invitation"
                   value={data.templateId}
                   onChange={(e) => handleSelectGraphicTemplate(e.target.value)}
-                  className="flex-1 min-w-0 min-h-11 px-3 py-1.5 bg-surface border border-border rounded-xl text-xs font-semibold focus:ring-2 focus:ring-primary/20 text-foreground cursor-pointer sm:max-w-xs"
+                  className="flex-1 min-w-0 min-h-[44px] px-3 py-1.5 bg-surface border border-border rounded-xl text-xs font-semibold focus:ring-2 focus:ring-primary/20 text-foreground cursor-pointer sm:max-w-xs"
                 >
                   <option value="">Page de réponse à l’invitation standard EventMaster</option>
                   {templates.map((t) => (
@@ -620,7 +620,7 @@ export default function InvitationEditorModal({
                   <button
                     type="button"
                     onClick={() => setPreviewGraphicModalOpen(true)}
-                    className="inline-flex min-h-11 items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition cursor-pointer shrink-0 active:scale-[0.98] motion-reduce:active:scale-100 touch-manipulation"
+                    className="inline-flex min-h-[44px] items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition cursor-pointer shrink-0 active:scale-[0.98] motion-reduce:active:scale-100 touch-manipulation"
                     title="Voir l'aperçu du faire-part graphique"
                     aria-label={`Voir l'aperçu du modèle graphique ${selectedGraphicTemplate.name}`}
                   >
@@ -633,7 +633,7 @@ export default function InvitationEditorModal({
                     type="button"
                     onClick={() => onOpenStudio(selectedGraphicTemplate)}
                     aria-label={`Ouvrir ${selectedGraphicTemplate.name} dans le studio`}
-                    className="inline-flex min-h-11 items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold transition cursor-pointer shrink-0 active:scale-[0.98] motion-reduce:active:scale-100 touch-manipulation hover:bg-primary-solid-hover"
+                    className="inline-flex min-h-[44px] items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold transition cursor-pointer shrink-0 active:scale-[0.98] motion-reduce:active:scale-100 touch-manipulation hover:bg-primary-solid-hover"
                   >
                     <LayoutTemplate className="w-4 h-4" aria-hidden />
                     <span>Studio</span>
@@ -683,7 +683,7 @@ export default function InvitationEditorModal({
                   key={mt.id}
                   type="button"
                   onClick={() => handleApplyMessageTemplate(mt.id)}
-                  className="inline-flex min-h-11 items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-surface hover:border-primary hover:bg-primary/10 text-xs font-semibold text-foreground transition touch-manipulation cursor-pointer shadow-2xs active:scale-[0.98] motion-reduce:active:scale-100"
+                  className="inline-flex min-h-[44px] items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-surface hover:border-primary hover:bg-primary/10 text-xs font-semibold text-foreground transition touch-manipulation cursor-pointer shadow-2xs active:scale-[0.98] motion-reduce:active:scale-100"
                 >
                   <span>{mt.name}</span>
                 </button>
@@ -720,7 +720,7 @@ export default function InvitationEditorModal({
                       setActiveField('body');
                     }}
                     className={cn(
-                      'inline-flex min-h-11 items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer touch-manipulation',
+                      'inline-flex min-h-[44px] items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer touch-manipulation',
                       activeChannelTab === 'email'
                         ? 'bg-primary-solid text-primary-foreground shadow-2xs'
                         : 'text-muted hover:text-foreground',
@@ -740,7 +740,7 @@ export default function InvitationEditorModal({
                       setActiveField('whatsappBody');
                     }}
                     className={cn(
-                      'inline-flex min-h-11 items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer touch-manipulation',
+                      'inline-flex min-h-[44px] items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer touch-manipulation',
                       activeChannelTab === 'whatsapp'
                         ? 'bg-primary-solid text-primary-foreground shadow-2xs'
                         : 'text-muted hover:text-foreground',
@@ -772,7 +772,7 @@ export default function InvitationEditorModal({
                     type="button"
                     onClick={() => insertTextAtCursor(activeField, v.tag)}
                     className={cn(
-                      'inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer shadow-2xs active:scale-[0.98] motion-reduce:active:scale-100',
+                      'inline-flex min-h-[44px] items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition touch-manipulation cursor-pointer shadow-2xs active:scale-[0.98] motion-reduce:active:scale-100',
                       v.isCrucial
                         ? 'bg-primary-solid text-primary-foreground border border-primary shadow-xs hover:bg-primary-solid-hover'
                         : 'bg-surface-muted hover:bg-primary/10 hover:text-primary text-foreground border border-border',
@@ -790,7 +790,7 @@ export default function InvitationEditorModal({
                   <button
                     type="button"
                     onClick={() => handleInsertGuidelines(activeChannelTab === 'whatsapp' ? 'whatsappBody' : 'body')}
-                    className="inline-flex min-h-11 items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-muted text-foreground border border-border text-xs font-medium hover:bg-surface transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+                    className="inline-flex min-h-[44px] items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-muted text-foreground border border-border text-xs font-medium hover:bg-surface transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
                     title="Insérer les consignes d'accueil et le dress code de l'événement"
                   >
                     <Shirt className="w-3.5 h-3.5 text-muted" aria-hidden />
@@ -815,7 +815,7 @@ export default function InvitationEditorModal({
                 <button
                   type="button"
                   onClick={() => insertTextAtCursor(activeChannelTab === 'whatsapp' ? 'whatsappBody' : 'body', '\n\n{{rsvpLink}}\n')}
-                  className="px-3 py-1.5 min-h-11 rounded-lg bg-surface-muted hover:bg-surface border border-border text-foreground text-xs font-medium transition shrink-0 cursor-pointer touch-manipulation self-start sm:self-auto"
+                  className="px-3 py-1.5 min-h-[44px] rounded-lg bg-surface-muted hover:bg-surface border border-border text-foreground text-xs font-medium transition shrink-0 cursor-pointer touch-manipulation self-start sm:self-auto"
                 >
                   + Insérer le lien de réponse à l’invitation
                 </button>
@@ -841,7 +841,7 @@ export default function InvitationEditorModal({
                     onChange={(e) => updateField('subject', e.target.value)}
                     onFocus={() => setActiveField('subject')}
                     placeholder="Ex : Invitation officielle : Gala d'Élite"
-                    className="w-full min-h-11 px-3.5 py-2.5 bg-surface border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 text-foreground"
+                    className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 text-foreground"
                     required
                   />
                 </div>
@@ -872,7 +872,7 @@ export default function InvitationEditorModal({
                     <button
                       type="button"
                       onClick={handleSyncToWhatsApp}
-                      className="inline-flex min-h-11 items-center gap-1.5 px-3.5 py-2 rounded-xl border border-primary/30 bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+                      className="inline-flex min-h-[44px] items-center gap-1.5 px-3.5 py-2 rounded-xl border border-primary/30 bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
                     >
                       <RefreshCw className="w-3.5 h-3.5" />
                       <span>Adapter et synchroniser pour WhatsApp</span>
@@ -903,7 +903,7 @@ export default function InvitationEditorModal({
                       onChange={(e) => updateField('subject', e.target.value)}
                       onFocus={() => setActiveField('subject')}
                       placeholder="Ex : Invitation WhatsApp - Soirée Anniversaire"
-                      className="w-full min-h-11 px-3.5 py-2.5 bg-surface border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 text-foreground"
+                      className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 text-foreground"
                       required
                     />
                   </div>
@@ -915,7 +915,7 @@ export default function InvitationEditorModal({
                   <button
                     type="button"
                     onClick={() => wrapWhatsAppFormat('*')}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 min-h-11 rounded-lg border border-border hover:bg-surface-muted text-foreground transition font-bold cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg border border-border hover:bg-surface-muted text-foreground transition font-bold cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
                     title="Mettre en gras (*texte*)"
                     aria-label="Mettre en gras"
                   >
@@ -924,7 +924,7 @@ export default function InvitationEditorModal({
                   <button
                     type="button"
                     onClick={() => wrapWhatsAppFormat('_')}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 min-h-11 rounded-lg border border-border hover:bg-surface-muted text-foreground transition italic cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg border border-border hover:bg-surface-muted text-foreground transition italic cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
                     title="Mettre en italique (_texte_)"
                     aria-label="Mettre en italique"
                   >
@@ -933,7 +933,7 @@ export default function InvitationEditorModal({
                   <button
                     type="button"
                     onClick={() => wrapWhatsAppFormat('~')}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 min-h-11 rounded-lg border border-border hover:bg-surface-muted text-foreground transition line-through cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 min-h-[44px] rounded-lg border border-border hover:bg-surface-muted text-foreground transition line-through cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
                     title="Barrer le texte (~texte~)"
                     aria-label="Barrer le texte"
                   >
@@ -946,7 +946,7 @@ export default function InvitationEditorModal({
                       key={emoji}
                       type="button"
                       onClick={() => insertTextAtCursor('whatsappBody', emoji)}
-                      className="p-1 min-h-11 min-w-11 rounded-lg hover:bg-surface-muted transition text-sm flex items-center justify-center cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+                      className="p-1 min-h-[44px] min-w-[44px] rounded-lg hover:bg-surface-muted transition text-sm flex items-center justify-center cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
                       title={`Insérer ${emoji}`}
                       aria-label={`Insérer ${emoji}`}
                     >
@@ -981,7 +981,7 @@ export default function InvitationEditorModal({
                     <button
                       type="button"
                       onClick={handleSyncToEmail}
-                      className="inline-flex min-h-11 items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-surface hover:bg-surface-muted text-xs font-bold text-foreground transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+                      className="inline-flex min-h-[44px] items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-surface hover:bg-surface-muted text-xs font-bold text-foreground transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
                     >
                       <Copy className="w-3.5 h-3.5 text-muted" />
                       <span>Copier ce texte vers le message E-mail</span>
@@ -994,10 +994,10 @@ export default function InvitationEditorModal({
 
           {/* Boutons d'action finaux */}
           <div className="flex gap-3 pt-3 border-t border-border">
-            <Button variant="secondary" onClick={onClose} className="flex-1 min-h-11">
+            <Button variant="secondary" onClick={onClose} className="flex-1 min-h-[44px]">
               Annuler
             </Button>
-            <Button type="submit" loading={saving} className="flex-1 min-h-11" leftIcon={<Check className="w-4 h-4" />}>
+            <Button type="submit" loading={saving} className="flex-1 min-h-[44px]" leftIcon={<Check className="w-4 h-4" />}>
               {editingId ? "Enregistrer les modifications" : "Créer l’invitation"}
             </Button>
           </div>
@@ -1035,7 +1035,7 @@ export default function InvitationEditorModal({
                 type="button"
                 variant="secondary"
                 onClick={() => setMobileTab('editor')}
-                className="w-full mt-4 min-h-11 lg:hidden"
+                className="w-full mt-4 min-h-[44px] lg:hidden"
                 leftIcon={<Edit3 className="w-4 h-4" />}
               >
                 Retour à la rédaction du message

@@ -40,7 +40,7 @@ export default function InvitationStructuredBriefFields({
                 aria-pressed={selected}
                 onClick={() => onChange({ ...value, ceremony: selected ? null : option.id })}
                 className={cn(
-                  'min-h-11 px-3 rounded-md text-xs font-bold border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60',
+                  'min-h-[44px] px-3 rounded-md text-xs font-bold border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60',
                   selected
                     ? 'border-primary/40 bg-primary-solid text-primary-foreground'
                     : 'border-border bg-surface text-foreground hover:border-primary/40',
@@ -67,7 +67,7 @@ export default function InvitationStructuredBriefFields({
                 aria-pressed={selected}
                 onClick={() => onChange({ ...value, language: selected ? null : option.id })}
                 className={cn(
-                  'min-h-11 px-3 rounded-md text-xs font-bold border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60',
+                  'min-h-[44px] px-3 rounded-md text-xs font-bold border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60',
                   selected
                     ? 'border-primary/40 bg-primary-solid text-primary-foreground'
                     : 'border-border bg-surface text-foreground hover:border-primary/40',
@@ -96,7 +96,7 @@ export default function InvitationStructuredBriefFields({
                 aria-pressed={selected}
                 onClick={() => onChange({ ...value, mood: toggleInvitationMood(value.mood, chip) })}
                 className={cn(
-                  'min-h-11 px-3 rounded-md text-xs font-bold border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60',
+                  'min-h-[44px] px-3 rounded-md text-xs font-bold border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60',
                   selected
                     ? 'border-primary/40 bg-primary/10 text-primary'
                     : 'border-border bg-surface text-foreground hover:border-primary/40',
@@ -121,7 +121,7 @@ export default function InvitationStructuredBriefFields({
           maxLength={160}
           onChange={(event) => onChange({ ...value, mustKeep: event.target.value })}
           placeholder="Ex. cadre doré, visages tels quels, date en haut…"
-          className="mt-1.5 min-h-11 w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60"
+          className="mt-1.5 min-h-[44px] w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60"
         />
       </div>
     </div>

@@ -76,7 +76,7 @@ export default function InvitationModelPhotoPicker({
             type="button"
             disabled={disabled}
             onClick={onClear}
-            className="min-h-11 px-2.5 rounded-[var(--radius-button)] text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50"
+            className="min-h-[44px] px-2.5 rounded-[var(--radius-button)] text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50"
           >
             Retirer
           </button>
@@ -152,7 +152,7 @@ export default function InvitationModelPhotoPicker({
               type="button"
               disabled={disabled}
               onClick={onClear}
-              className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-full text-muted hover:text-foreground hover:bg-surface transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full text-muted hover:text-foreground hover:bg-surface transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               aria-label="Retirer le modèle présélectionné"
             >
               <X className="w-4 h-4" aria-hidden />

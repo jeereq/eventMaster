@@ -19,8 +19,8 @@ const variants = {
 } as const;
 
 const sizes = {
-  sm: 'min-h-11 px-3 py-1.5 text-xs gap-1.5 rounded-[var(--radius-button)]',
-  md: 'min-h-11 px-3.5 py-2 text-sm gap-2 rounded-[var(--radius-button)]',
+  sm: 'min-h-[44px] px-3 py-1.5 text-xs gap-1.5 rounded-[var(--radius-button)]',
+  md: 'min-h-[44px] px-3.5 py-2 text-sm gap-2 rounded-[var(--radius-button)]',
   lg: 'min-h-[44px] px-4 py-2.5 text-sm gap-2 rounded-[var(--radius-button)]',
 } as const;
 

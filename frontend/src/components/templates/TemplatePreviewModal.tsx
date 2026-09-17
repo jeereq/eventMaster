@@ -170,7 +170,7 @@ export default function TemplatePreviewModal({
             type="button"
             onClick={onClose}
             data-modal-close
-            className="inline-flex min-h-11 min-w-11 items-center justify-center text-muted hover:text-foreground hover:bg-surface-muted rounded-xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer shrink-0"
+            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-muted hover:text-foreground hover:bg-surface-muted rounded-xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer shrink-0"
             aria-label="Fermer l'aperçu"
           >
             <X className="w-5 h-5" />
@@ -189,7 +189,7 @@ export default function TemplatePreviewModal({
               aria-pressed={deviceView === 'mobile'}
               onClick={() => setDeviceView('mobile')}
               className={cn(
-                'inline-flex min-h-11 items-center gap-1.5 px-3.5 py-2 rounded-lg font-semibold transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100',
+                'inline-flex min-h-[44px] items-center gap-1.5 px-3.5 py-2 rounded-lg font-semibold transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100',
                 deviceView === 'mobile'
                   ? 'bg-surface text-foreground shadow-2xs border border-border/60'
                   : 'text-muted hover:text-foreground',
@@ -203,7 +203,7 @@ export default function TemplatePreviewModal({
               aria-pressed={deviceView === 'desktop'}
               onClick={() => setDeviceView('desktop')}
               className={cn(
-                'inline-flex min-h-11 items-center gap-1.5 px-3.5 py-2 rounded-lg font-semibold transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100',
+                'inline-flex min-h-[44px] items-center gap-1.5 px-3.5 py-2 rounded-lg font-semibold transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100',
                 deviceView === 'desktop'
                   ? 'bg-surface text-foreground shadow-2xs border border-border/60'
                   : 'text-muted hover:text-foreground',
@@ -275,7 +275,7 @@ export default function TemplatePreviewModal({
                   onClose();
                   onUseInStudio(template);
                 }}
-                className="inline-flex min-h-11 items-center justify-center gap-1.5 px-4 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl text-xs transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+                className="inline-flex min-h-[44px] items-center justify-center gap-1.5 px-4 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl text-xs transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
               >
                 <Wand2 className="w-3.5 h-3.5" aria-hidden />
                 <span>Préselectionner dans le studio</span>
@@ -288,7 +288,7 @@ export default function TemplatePreviewModal({
                   onClose();
                   onDuplicate(template);
                 }}
-                className="inline-flex min-h-11 items-center justify-center gap-1.5 px-4 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-bold rounded-xl text-xs transition shadow-sm cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+                className="inline-flex min-h-[44px] items-center justify-center gap-1.5 px-4 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-bold rounded-xl text-xs transition shadow-sm cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
               >
                 <Copy className="w-3.5 h-3.5" aria-hidden />
                 <span>Utiliser ce modèle</span>
@@ -302,7 +302,7 @@ export default function TemplatePreviewModal({
                   onClose();
                   onEdit(template);
                 }}
-                className="inline-flex min-h-11 items-center justify-center gap-1.5 px-4 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl text-xs transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+                className="inline-flex min-h-[44px] items-center justify-center gap-1.5 px-4 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl text-xs transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
               >
                 <Edit3 className="w-3.5 h-3.5" aria-hidden />
                 <span>Modifier le modèle</span>
@@ -312,7 +312,7 @@ export default function TemplatePreviewModal({
             <button
               type="button"
               onClick={onClose}
-              className="inline-flex min-h-11 items-center justify-center gap-1.5 px-4 py-2.5 border border-border hover:bg-surface text-foreground font-semibold rounded-xl text-xs transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+              className="inline-flex min-h-[44px] items-center justify-center gap-1.5 px-4 py-2.5 border border-border hover:bg-surface text-foreground font-semibold rounded-xl text-xs transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
             >
               Fermer
             </button>

@@ -115,10 +115,10 @@ export default function ModelesPage() {
               }
             }}
             className={cn(
-              'inline-flex min-h-11 items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold active:scale-95 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+              'inline-flex min-h-[44px] items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold active:scale-95 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
               isInviteBlocked
-                ? 'bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30 hover:bg-amber-500/25'
-                : 'bg-primary text-primary-foreground hover:bg-primary-hover',
+                ? 'bg-festive-accent/15 text-festive-accent border border-festive-accent/30 hover:bg-festive-accent/25'
+                : 'bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover',
             )}
           >
             {isInviteBlocked ? <Clock className="w-3.5 h-3.5" /> : <Wand2 className="w-3.5 h-3.5" />}
@@ -126,14 +126,14 @@ export default function ModelesPage() {
           </a>
           <Link
             href={user ? '/dashboard/events' : '/register?kind=ORGANIZER&intent=personal&action=template'}
-            className="inline-flex min-h-11 items-center gap-1.5 px-4 py-2 rounded-full bg-surface border border-border text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            className="inline-flex min-h-[44px] items-center gap-1.5 px-4 py-2 rounded-full bg-surface border border-border text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>{user ? 'Créer un événement' : 'Créer mon invitation'}</span>
           </Link>
           <Link
             href="/tarifs"
-            className="inline-flex min-h-11 items-center gap-1.5 px-4 py-2 rounded-full bg-surface border border-border text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            className="inline-flex min-h-[44px] items-center gap-1.5 px-4 py-2 rounded-full bg-surface border border-border text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             <span>Voir les forfaits & tarifs</span>
             <ArrowRight className="w-3 h-3" />
@@ -156,9 +156,9 @@ export default function ModelesPage() {
                 onClick={() => setSelectedCategory(cat.id)}
                 aria-pressed={selectedCategory === cat.id}
                 className={cn(
-                  'px-3.5 min-h-11 inline-flex items-center justify-center rounded-full text-xs font-semibold transition whitespace-nowrap shrink-0 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer touch-manipulation',
+                  'px-3.5 min-h-[44px] inline-flex items-center justify-center rounded-full text-xs font-semibold transition whitespace-nowrap shrink-0 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer touch-manipulation',
                   selectedCategory === cat.id
-                    ? 'bg-primary text-primary-foreground border-primary shadow-xs'
+                    ? 'bg-primary-solid text-primary-foreground border-primary shadow-xs'
                     : 'bg-surface border-border text-muted hover:text-foreground hover:bg-surface-muted',
                 )}
               >
@@ -174,14 +174,14 @@ export default function ModelesPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher un modèle…"
-              className="w-full pl-9 pr-10 py-2.5 min-h-11 rounded-xl border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+              className="w-full pl-9 pr-10 py-2.5 min-h-[44px] rounded-xl border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
               aria-label="Rechercher parmi les modèles"
             />
             {search && (
               <button
                 type="button"
                 onClick={() => setSearch('')}
-                className="absolute right-1 top-1/2 -translate-y-1/2 text-muted hover:text-foreground min-w-11 min-h-11 inline-flex items-center justify-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+                className="absolute right-1 top-1/2 -translate-y-1/2 text-muted hover:text-foreground min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
                 aria-label="Effacer la recherche"
               >
                 <X className="w-3.5 h-3.5" />
@@ -210,7 +210,7 @@ export default function ModelesPage() {
               <button
                 type="button"
                 onClick={() => { setSearch(''); setSelectedCategory('all'); }}
-                className="px-3 py-1.5 rounded-xl border border-border text-xs font-semibold text-foreground hover:bg-surface-muted transition"
+                className="min-h-[44px] px-3 rounded-xl border border-border text-xs font-semibold text-foreground hover:bg-surface-muted transition"
               >
                 Réinitialiser les filtres
               </button>
@@ -240,7 +240,7 @@ export default function ModelesPage() {
 
                     <div className="space-y-1">
                       <div className="flex items-center justify-between gap-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted px-2 py-0.5 rounded-full bg-surface-muted border border-border">
+                        <span className="text-xs font-bold uppercase tracking-wider text-muted px-2 py-0.5 rounded-full bg-surface-muted border border-border">
                           {categoryLabel(template.category)}
                         </span>
                       </div>
@@ -259,7 +259,7 @@ export default function ModelesPage() {
                     <button
                       type="button"
                       onClick={() => setModalTemplate(template)}
-                      className="min-h-11 text-xs font-semibold text-muted hover:text-foreground transition flex items-center gap-1 touch-manipulation px-1"
+                      className="min-h-[44px] text-xs font-semibold text-muted hover:text-foreground transition flex items-center gap-1 touch-manipulation px-1"
                     >
                       <Eye className="w-3.5 h-3.5" /> Aperçu
                     </button>
@@ -268,7 +268,7 @@ export default function ModelesPage() {
                         <button
                           type="button"
                           onClick={() => useTemplateInStudio(template)}
-                          className="min-h-11 py-1 px-3 rounded-lg border border-border bg-surface text-xs font-semibold text-foreground hover:border-primary/40 hover:bg-primary/5 active:scale-95 transition inline-flex items-center gap-1 touch-manipulation"
+                          className="min-h-[44px] py-1 px-3 rounded-lg border border-border bg-surface text-xs font-semibold text-foreground hover:border-primary/40 hover:bg-primary/5 active:scale-95 transition inline-flex items-center gap-1 touch-manipulation"
                         >
                           <Wand2 className="w-3 h-3" />
                           <span>Studio</span>
@@ -280,7 +280,7 @@ export default function ModelesPage() {
                             ? `/dashboard/events`
                             : `/register?kind=ORGANIZER&intent=personal&action=template&templateId=${encodeURIComponent(template.id)}`
                         }
-                        className="min-h-11 py-1 px-3 rounded-lg bg-primary-solid text-primary-foreground text-xs font-semibold hover:bg-primary-solid-hover active:scale-95 transition inline-flex items-center gap-1 touch-manipulation shadow-2xs"
+                        className="min-h-[44px] py-1 px-3 rounded-lg bg-primary-solid text-primary-foreground text-xs font-semibold hover:bg-primary-solid-hover active:scale-95 transition inline-flex items-center gap-1 touch-manipulation shadow-2xs"
                       >
                         <span>Utiliser</span>
                         <ArrowRight className="w-3 h-3" />
@@ -310,7 +310,7 @@ export default function ModelesPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
             <div className="space-y-1.5">
               <div className="inline-flex items-center gap-1.5 text-xs font-bold text-primary">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <CheckCircle2 className="w-4 h-4 text-primary" aria-hidden />
                 Partage WhatsApp en 1 clic
               </div>
               <p className="text-xs text-muted leading-relaxed">
@@ -319,7 +319,7 @@ export default function ModelesPage() {
             </div>
             <div className="space-y-1.5">
               <div className="inline-flex items-center gap-1.5 text-xs font-bold text-primary">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <CheckCircle2 className="w-4 h-4 text-primary" aria-hidden />
                 Suivi des réponses en temps réel
               </div>
               <p className="text-xs text-muted leading-relaxed">
@@ -328,7 +328,7 @@ export default function ModelesPage() {
             </div>
             <div className="space-y-1.5">
               <div className="inline-flex items-center gap-1.5 text-xs font-bold text-primary">
-                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <CheckCircle2 className="w-4 h-4 text-primary" aria-hidden />
                 Scan QR le jour J
               </div>
               <p className="text-xs text-muted leading-relaxed">
@@ -380,7 +380,8 @@ export default function ModelesPage() {
                     Préselectionner dans le studio
                   </Button>
                 ) : null}
-                <Link
+                <Button
+                  size="sm"
                   href={
                     user
                       ? '/dashboard/templates'
@@ -389,8 +390,8 @@ export default function ModelesPage() {
                         : '/register?kind=ORGANIZER&intent=personal&action=template'
                   }
                 >
-                  <Button size="sm">Utiliser ce modèle</Button>
-                </Link>
+                  Utiliser ce modèle
+                </Button>
               </>
             )}
           </div>
@@ -398,7 +399,7 @@ export default function ModelesPage() {
       >
         {modalTemplate && (
           <div className="space-y-3">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted">
               {categoryLabel(modalTemplate.category)}
             </span>
             <LandingInvitationPreview template={modalTemplate} className="max-h-[min(420px,60vh)] overflow-hidden" />
