@@ -612,6 +612,9 @@ export default function AdminPlatformSettings({
                       </option>
                     </optgroup>
                     <optgroup label="OpenAI">
+                      <option value="gpt-6-astra">
+                        GPT-6 Astra (OpenAI · Agent image + raisonnement)
+                      </option>
                       <option value="gpt-5.6-luna">
                         GPT-5.6 Luna (OpenAI · Agent image + références)
                       </option>
@@ -672,6 +675,9 @@ export default function AdminPlatformSettings({
                       </option>
                     </optgroup>
                     <optgroup label="OpenAI">
+                      <option value="gpt-6-astra">
+                        GPT-6 Astra (OpenAI · Raisonnement spatial avancé)
+                      </option>
                       <option value="gpt-5.6-luna">
                         GPT-5.6 Luna (OpenAI · Raisonnement spatial)
                       </option>

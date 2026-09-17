@@ -483,13 +483,14 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
     }
 
     if (!req.user) return res.status(401).json({ error: 'Non authentifié.' });
-    const isSuperAdmin = canManagePlatformTemplates(req.user);
-    const tenantId = req.user.tenantId || null;
+    const authUser = req.user;
+    const isSuperAdmin = canManagePlatformTemplates(authUser);
+    const tenantId = authUser.tenantId || null;
     if (!isSuperAdmin && !tenantId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
     }
-    if (!isSuperAdmin && req.user.id && tenantId) {
-      const denied = await protocolCreativeDeniedMessage(req.user.id, tenantId);
+    if (!isSuperAdmin && authUser.id && tenantId) {
+      const denied = await protocolCreativeDeniedMessage(authUser.id, tenantId);
       if (denied) return res.status(403).json({ error: denied });
     }
     if (!isSuperAdmin && tenantId) {
@@ -523,10 +524,10 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
     const speedMode = body.speedMode === 'fast' ? 'fast' : 'quality';
     const imageUrls = await resolveComposeImageUrls(body, isSuperAdmin ? null : tenantId);
 
-    const unlimited = isUnlimitedAiTokenUser(req.user);
-    await requireAiSimulationCredit(deviceId, req.user.id, AI_INVITATION_COMPOSE_TOKEN_COST, { unlimited });
+    const unlimited = isUnlimitedAiTokenUser(authUser);
+    await requireAiSimulationCredit(deviceId, authUser.id, AI_INVITATION_COMPOSE_TOKEN_COST, { unlimited });
     const composeInput = {
-      userId: req.user.id,
+      userId: authUser.id,
       tenantId: isSuperAdmin ? null : tenantId,
       isPublic,
       prompt,
@@ -537,7 +538,7 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
       generateBackground,
       embedText,
       deviceId,
-      authUserId: req.user.id,
+      authUserId: authUser.id,
       contextSource,
       artStyle,
       variantsCount,
@@ -548,7 +549,7 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
     const runCompose = async () => {
       const result = await composeInvitationTemplateAi(composeInput);
       const historyId = await persistTemplateCompose({
-        userId: req.user.id,
+        userId: authUser.id,
         deviceId,
         source: 'studio',
         prompt,
@@ -556,14 +557,14 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
         content: result.content,
         stage: result.stage,
       });
-      const allowance = await consumeAiSimulationCredit(deviceId, req.user.id, AI_INVITATION_COMPOSE_TOKEN_COST, {
+      const allowance = await consumeAiSimulationCredit(deviceId, authUser.id, AI_INVITATION_COMPOSE_TOKEN_COST, {
         action: 'invitation_compose',
-        source: unlimited && req.user.impersonatedBy ? 'support' : 'studio',
+        source: unlimited && authUser.impersonatedBy ? 'support' : 'studio',
         relatedId: historyId,
         unlimited,
       });
-      if (req.user?.id) {
-        void notifyUsers([req.user.id], {
+      if (authUser.id) {
+        void notifyUsers([authUser.id], {
           type: PLATFORM_NOTIFICATION_TYPE.STUDIO_GENERATION_READY,
           title: 'Invitation prête',
           message: 'La génération IA est terminée. Ouvrez le studio pour l’appliquer.',
@@ -574,7 +575,7 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
     };
 
     if (body.background === true) {
-      const job = createStudioJob({ kind: 'invitation', userId: req.user.id, deviceId, prompt });
+      const job = createStudioJob({ kind: 'invitation', userId: authUser.id, deviceId, prompt });
       runStudioJob(job.id, async () => {
         try {
           const payload = await runCompose();

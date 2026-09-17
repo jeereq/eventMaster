@@ -917,7 +917,11 @@ function isDallEModel(model: string): boolean {
   return /^dall-e/i.test(model.trim());
 }
 
-function responsesModel(): string {
+function responsesModel(preferred?: string): string {
+  const id = String(preferred || '').trim();
+  if (id && isOpenAiStudioModel(id) && !id.includes('gpt-image')) {
+    return id;
+  }
   return (
     process.env.OPENAI_RESPONSES_MODEL ||
     process.env.OPENAI_IMAGE_AGENT_MODEL ||
@@ -977,17 +981,17 @@ async function referenceToDataUrl(url: string): Promise<string> {
 }
 
 /**
- * Génération / édition via GPT-5.6 Luna (Responses API + outil image_generation).
- * Les images de référence sont fournies en input_image ; Luna orchestre gpt-image-*.
+ * Génération / édition via l’agent OpenAI (Responses API + outil image_generation).
+ * Les images de référence sont fournies en input_image ; Astra ou Luna orchestre gpt-image-*.
  */
 async function generateImageWithGpt56Luna(
   key: string,
   imagePrompt: string,
   referenceUrls: string[],
   tenantId: string | null | undefined,
-  options?: { hasPeople?: boolean; embedText?: boolean },
+  options?: { hasPeople?: boolean; embedText?: boolean; preferredModel?: string },
 ): Promise<{ url: string; mode: 'edit' | 'generate' }> {
-  const model = responsesModel();
+  const model = responsesModel(options?.preferredModel);
   const hasRefs = referenceUrls.length > 0;
   const textRule = options?.embedText
     ? 'Embed sharp invitation typography (names, date, venue from the brief) on the card without covering faces.'
@@ -1654,7 +1658,11 @@ async function generateInvitationImageWithOpenAi(
 ): Promise<{ url: string; mode: 'edit' | 'generate'; safetyFallbackTriggered?: boolean }> {
   const preferImageApi = (options?.preferredModel || '').includes('gpt-image');
   const tryLuna = async () => {
-    const lunaRes = await generateImageWithGpt56Luna(key, imagePrompt, imageUrls, tenantId, options);
+    const lunaRes = await generateImageWithGpt56Luna(key, imagePrompt, imageUrls, tenantId, {
+      hasPeople: options?.hasPeople,
+      embedText: options?.embedText,
+      preferredModel: options?.preferredModel,
+    });
     return { ...lunaRes, safetyFallbackTriggered: false as const };
   };
 

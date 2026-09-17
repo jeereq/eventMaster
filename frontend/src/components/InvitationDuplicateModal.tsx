@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Calendar, Copy, Sparkles, User } from 'lucide-react';
-import { Button, Input, Modal } from '@/components/ui';
+import { Copy, Sparkles } from 'lucide-react';
+import { Button, Modal } from '@/components/ui';
+import InvitationIdentityFields from '@/components/InvitationIdentityFields';
 
 export type InvitationDuplicateValues = {
   title: string;
@@ -35,12 +36,12 @@ export default function InvitationDuplicateModal({
     setDate('');
   }, [open, sourceName]);
 
-  const canSubmit = title.trim().length >= 2 || honorees.trim().length >= 2;
+  const canSubmit = title.trim().length >= 2;
 
   const submit = (openEditor: boolean) => {
     if (!canSubmit || loading) return;
     onConfirm({
-      title: title.trim() || honorees.trim(),
+      title: title.trim(),
       honorees: honorees.trim(),
       date: date.trim(),
       openEditor,
@@ -54,8 +55,8 @@ export default function InvitationDuplicateModal({
       size="md"
       title={
         <div className="flex items-center gap-2.5">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <Copy className="h-4.5 w-4.5" aria-hidden />
+          <span className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-button)] bg-primary/10 text-primary">
+            <Copy className="h-4 w-4" aria-hidden />
           </span>
           <div>
             <span className="block text-base font-semibold text-foreground">Personnaliser la copie</span>
@@ -71,7 +72,7 @@ export default function InvitationDuplicateModal({
           <Button type="button" variant="secondary" loading={loading} disabled={!canSubmit} onClick={() => submit(false)}>
             Dupliquer seulement
           </Button>
-          <Button type="button" loading={loading} disabled={!canSubmit} onClick={() => submit(true)} leftIcon={<Sparkles className="h-4 w-4" />}>
+          <Button type="button" loading={loading} disabled={!canSubmit} onClick={() => submit(true)} leftIcon={<Sparkles className="h-4 w-4" aria-hidden />}>
             Dupliquer et ouvrir
           </Button>
         </div>
@@ -82,29 +83,16 @@ export default function InvitationDuplicateModal({
           Le modèle « <span className="font-semibold text-foreground">{sourceName}</span> » sera copié
           dans votre organisation. Indiquez les textes propres à cette cérémonie.
         </p>
-        <Input
-          label="Titre de l’invitation"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="ex. Mariage princier, 30 ans de Grâce, Gala de l’indépendance"
-          maxLength={120}
-          required
-        />
-        <Input
-          label="Cérémonie, couple ou personne"
-          value={honorees}
-          onChange={(e) => setHonorees(e.target.value)}
-          placeholder="ex. Amina & Jean-Marc, Famille Kabongo, Grâce Mujinga"
-          leftIcon={<User className="h-4 w-4" />}
-          hint="Nom affiché sur le carton à la place de {{title}}."
-        />
-        <Input
-          label="Date de la cérémonie"
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          leftIcon={<Calendar className="h-4 w-4" />}
-          hint="Remplace {{date}} sur le faire-part."
+        <InvitationIdentityFields
+          titleRequired
+          disabled={loading}
+          description="Le titre nomme la copie. Les hôtes et la date s’écrivent sur le carton."
+          value={{ title, honorees, date }}
+          onChange={(next) => {
+            setTitle(next.title || '');
+            setHonorees(next.honorees || '');
+            setDate(next.date || '');
+          }}
         />
       </div>
     </Modal>
