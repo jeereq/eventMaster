@@ -12,6 +12,7 @@ import {
   dispatchStudioJob,
   studioJobHref,
   studioJobLabel,
+  isStudioJobRunning,
   type StudioJobKind,
   type StudioJobPayload,
 } from '@/lib/studioJobs';
@@ -178,4 +179,19 @@ export function useStudioJobs(): StudioJobsContextValue {
 
 export function useOptionalStudioJobs(): StudioJobsContextValue | null {
   return useContext(StudioJobsContext);
+}
+
+/** Loader plein écran tant que la tâche tourne, sauf si l’utilisateur continue en arrière-plan. */
+export function useStudioLoaderOverlay(kind: StudioJobKind) {
+  const { jobs } = useStudioJobs();
+  const [hidden, setHidden] = useState(false);
+  const runningJob = jobs.find((job) => isStudioJobRunning(job, kind)) || null;
+
+  return {
+    runningJob,
+    isHidden: hidden,
+    overlayActive: Boolean(runningJob) && !hidden,
+    hideOverlay: () => setHidden(true),
+    showOverlay: () => setHidden(false),
+  };
 }

@@ -473,6 +473,7 @@ export function AiProcessFullscreenLoader({
   stageHint,
   icon: Icon = Sparkles,
   variant = 'invitation',
+  onContinueInBackground,
 }: {
   active: boolean;
   title: string;
@@ -481,6 +482,7 @@ export function AiProcessFullscreenLoader({
   stageHint?: string | null;
   icon?: LucideIcon;
   variant?: AiLoaderVariant;
+  onContinueInBackground?: () => void;
 }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [progress, setProgress] = useState(0);
@@ -580,6 +582,7 @@ export function AiProcessFullscreenLoader({
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
+        if (onContinueInBackground) onContinueInBackground();
         return;
       }
       if (event.key !== 'Tab') return;
@@ -601,7 +604,7 @@ export function AiProcessFullscreenLoader({
       document.removeEventListener('keydown', onKeyDown, true);
       document.removeEventListener('focusin', onFocusIn);
     };
-  }, [active]);
+  }, [active, onContinueInBackground]);
 
   // Gestion des événements Pointer pour manipuler l'artefact 3D
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -873,8 +876,20 @@ export function AiProcessFullscreenLoader({
       </main>
 
       {/* ─── 4. PIED DE PAGE : CARROUSEL D'ASTUCES STYLE LORE DE JEU ─── */}
-      <footer className="relative z-30 w-full max-w-2xl mx-auto mt-2">
+      <footer className="relative z-30 w-full max-w-2xl mx-auto mt-2 space-y-3">
         <GameTipsCarousel variant={variant} />
+        {onContinueInBackground ? (
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={onContinueInBackground}
+              className="inline-flex items-center justify-center gap-2 min-h-11 px-5 py-2 rounded-full bg-stage-elevated/90 hover:bg-stage-elevated border border-stage-foreground/20 text-sm font-semibold text-stage-foreground transition shadow-xl backdrop-blur-md active:scale-95"
+            >
+              Continuer en arrière-plan
+              <ChevronRight className="w-4 h-4" aria-hidden />
+            </button>
+          </div>
+        ) : null}
       </footer>
     </div>,
     document.body,
@@ -891,6 +906,7 @@ export default function AiComposeFullscreenLoader({
   stageHint,
   title = 'Synthèse 3D de l’invitation',
   footnote,
+  onContinueInBackground,
 }: {
   active: boolean;
   embedText?: boolean;
@@ -898,6 +914,7 @@ export default function AiComposeFullscreenLoader({
   stageHint?: string | null;
   title?: string;
   footnote?: string;
+  onContinueInBackground?: () => void;
 }) {
   const steps = COMPOSE_STEPS.map((step) => {
     if (step.id === 'faces' && !hasReferences) {
@@ -916,6 +933,7 @@ export default function AiComposeFullscreenLoader({
       title={title}
       stageHint={stageHint}
       steps={steps}
+      onContinueInBackground={onContinueInBackground}
       footnote={
         footnote ||
         (hasReferences
@@ -949,10 +967,12 @@ export function AiRoomPlanFullscreenLoader({
   active,
   hasPhoto = false,
   stageHint,
+  onContinueInBackground,
 }: {
   active: boolean;
   hasPhoto?: boolean;
   stageHint?: string | null;
+  onContinueInBackground?: () => void;
 }) {
   const steps = hasPhoto
     ? ROOM_PLAN_STEPS
@@ -965,6 +985,7 @@ export function AiRoomPlanFullscreenLoader({
       title="Architecture spatiale 3D"
       stageHint={stageHint}
       steps={steps}
+      onContinueInBackground={onContinueInBackground}
       footnote={
         hasPhoto
           ? 'Analyse volumétrique LiDAR de la photo de votre salle.'

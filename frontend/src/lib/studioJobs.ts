@@ -30,6 +30,10 @@ export function isStudioJobAccepted(data: unknown): data is StudioJobAccepted {
   return typeof row.jobId === 'string' && row.background === true;
 }
 
+export function isStudioJobRunning(job: { kind?: StudioJobKind; status?: StudioJobStatus } | null | undefined, kind: StudioJobKind): boolean {
+  return job?.kind === kind && (job.status === 'queued' || job.status === 'running');
+}
+
 export async function fetchStudioJob(jobId: string): Promise<StudioJobPayload> {
   const deviceId = getOrCreateDeviceId();
   return api.get(`/public/studio/jobs/${encodeURIComponent(jobId)}?deviceId=${encodeURIComponent(deviceId)}`) as Promise<StudioJobPayload>;
