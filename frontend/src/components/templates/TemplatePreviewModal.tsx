@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Smartphone,
@@ -70,17 +71,18 @@ export default function TemplatePreviewModal({
   }, [template?.content]);
 
   if (!open || !template || !landingPreview) return null;
+  if (typeof document === 'undefined') return null;
 
   const isGlobal = !template.tenantId;
   const elementsCount = template.content?.elements?.length ?? 0;
   const fontTheme = (template.content?.global as Record<string, unknown> | undefined)?.fontTheme;
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="template-preview-title"
-      className="fixed inset-0 z-[10060] flex items-center justify-center p-3 sm:p-6 bg-foreground/60 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-[11120] flex items-center justify-center p-3 sm:p-6 bg-foreground/60 backdrop-blur-sm animate-in fade-in duration-200"
     >
       <div className="relative w-full max-w-4xl max-h-[92vh] flex flex-col bg-surface rounded-2xl sm:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
         {/* En-tête de la modale */}
@@ -267,6 +269,7 @@ export default function TemplatePreviewModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

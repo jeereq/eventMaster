@@ -4261,9 +4261,20 @@ Merci de confirmer votre présence :
         templates={templates}
         messageTemplates={MESSAGE_TEMPLATES}
         eventTitle={selectedEvent?.title || 'Événement'}
+        eventDate={selectedEvent?.date}
         orgName={tenant?.name || 'Organisation'}
         guestGuidelines={selectedEvent?.guestGuidelines || undefined}
         onSave={handleSaveInvitation}
+        onOpenStudio={(template) => {
+          const params = new URLSearchParams({
+            studio: '1',
+            templateId: template.id,
+          });
+          if (selectedEvent?.title) params.set('title', selectedEvent.title);
+          if (selectedEvent?.date) params.set('date', selectedEvent.date);
+          setShowInviteModal(false);
+          router.push(`/dashboard/templates?${params.toString()}`);
+        }}
       />
 
       {/* Broadcast Results Modal */}

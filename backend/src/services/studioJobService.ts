@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { Prisma } from '@prisma/client';
 import { toPrismaJson } from '../utils/prismaJson.ts';
 
 export type StudioJobKind = 'invitation' | 'room';
@@ -100,7 +101,7 @@ async function persistStudioJob(job: StudioJobRecord): Promise<void> {
       prompt: job.prompt,
       error: job.error || null,
       historyId: job.historyId || null,
-      result: job.result ? toPrismaJson(job.result) : null,
+      result: job.result ? toPrismaJson(job.result) : Prisma.DbNull,
       createdAt: new Date(job.createdAt),
       updatedAt: new Date(job.updatedAt),
     };
