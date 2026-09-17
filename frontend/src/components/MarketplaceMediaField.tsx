@@ -50,6 +50,8 @@ export default function MarketplaceMediaField({
   onChange: (next: string[]) => void;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const urlsRef = useRef(urls);
+  urlsRef.current = urls;
   const [staging, setStaging] = useState<StagingItem[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [galleryIndex, setGalleryIndex] = useState(0);
@@ -112,9 +114,50 @@ export default function MarketplaceMediaField({
     if (next.length) {
       setStaging((prev) => [...prev, ...next]);
       setActiveId(next[0].id);
+      void uploadItems(next);
     }
     if (skippedVideos) {
       setLocalError(`Maximum ${MARKETPLACE_MAX_VIDEOS} vidéos. ${skippedVideos} fichier(s) ignoré(s).`);
+    }
+  };
+
+  const uploadItems = async (items: StagingItem[]) => {
+    if (!items.length) return;
+    setUploading(true);
+    setLocalError('');
+    try {
+      const uploaded: string[] = [];
+      for (const item of items) {
+        let file = item.file;
+        if (item.kind === 'image') {
+          const customCrop = item.crop.x !== 0 || item.crop.y !== 0 || item.crop.w !== 1 || item.crop.h !== 1;
+          if (customCrop) {
+            try {
+              const source = await readImageFile(item.file);
+              const cropped = await cropImageToDataUrl(source, item.crop, 1600);
+              file = dataUrlToFile(cropped, item.file.name.replace(/\.[^.]+$/, '') + '.jpg');
+            } catch {
+              file = item.file;
+            }
+          }
+        }
+        const result = await uploadMarketplaceMedia(file);
+        if (!result?.url) throw new Error('Réponse upload invalide.');
+        uploaded.push(result.url);
+      }
+      const nextUrls = [...urlsRef.current, ...uploaded].slice(0, MARKETPLACE_MAX_PHOTOS);
+      onChange(nextUrls);
+      items.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+      setStaging((prev) => {
+        const sent = new Set(items.map((item) => item.id));
+        return prev.filter((item) => !sent.has(item.id));
+      });
+      setActiveId(null);
+      setGalleryIndex(Math.max(0, nextUrls.length - uploaded.length));
+    } catch (err: unknown) {
+      setLocalError(err instanceof Error ? err.message : 'Upload média impossible.');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -145,39 +188,7 @@ export default function MarketplaceMediaField({
   };
 
   const uploadStaging = async () => {
-    if (!staging.length) return;
-    setUploading(true);
-    setLocalError('');
-    try {
-      const uploaded: string[] = [];
-      for (const item of staging) {
-        let file = item.file;
-        if (item.kind === 'image') {
-          const customCrop = item.crop.x !== 0 || item.crop.y !== 0 || item.crop.w !== 1 || item.crop.h !== 1;
-          if (customCrop) {
-            try {
-              const source = await readImageFile(item.file);
-              const cropped = await cropImageToDataUrl(source, item.crop, 1600);
-              file = dataUrlToFile(cropped, item.file.name.replace(/\.[^.]+$/, '') + '.jpg');
-            } catch {
-              file = item.file;
-            }
-          }
-        }
-        const result = await uploadMarketplaceMedia(file);
-        if (!result?.url) throw new Error('Réponse upload invalide.');
-        uploaded.push(result.url);
-      }
-      onChange([...urls, ...uploaded].slice(0, MARKETPLACE_MAX_PHOTOS));
-      staging.forEach((item) => URL.revokeObjectURL(item.previewUrl));
-      setStaging([]);
-      setActiveId(null);
-      setGalleryIndex(urls.length);
-    } catch (err: unknown) {
-      setLocalError(err instanceof Error ? err.message : 'Upload média impossible.');
-    } finally {
-      setUploading(false);
-    }
+    await uploadItems(staging);
   };
 
   const recropExisting = async (url: string, crop: ImageCropRect) => {
@@ -226,6 +237,36 @@ export default function MarketplaceMediaField({
         </p>
         {urls.length === 0 && staging.length === 0 ? (
           <p className="text-xs text-muted py-2">Aucune photo ni vidéo pour l’instant.</p>
+        ) : null}
+
+        {staging.length > 0 ? (
+          <div className="flex gap-1.5 overflow-x-auto pb-2">
+            {staging.map((item) => (
+              <div
+                key={item.id}
+                className="relative w-20 h-20 shrink-0 rounded-lg overflow-hidden border border-primary/40 bg-surface-muted"
+              >
+                {item.kind === 'video' ? (
+                  <video src={item.previewUrl} className="w-full h-full object-cover" muted playsInline />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.previewUrl}
+                    alt={item.file.name || 'Image sélectionnée'}
+                    className="w-full h-full object-cover"
+                    onError={(event) => {
+                      event.currentTarget.style.display = 'none';
+                    }}
+                  />
+                )}
+                {uploading ? (
+                  <span className="absolute inset-x-0 bottom-0 bg-black/55 text-[9px] font-bold text-white text-center py-0.5">
+                    Envoi…
+                  </span>
+                ) : null}
+              </div>
+            ))}
+          </div>
         ) : null}
 
         {urls.length > 0 && currentUrl ? (
@@ -355,7 +396,7 @@ export default function MarketplaceMediaField({
         </div>
         <p className="text-[11px] text-muted">
           Glissez-déposez ici. JPEG, PNG, WebP, HEIC jusqu’à 10 Mo · MP4, WebM, MOV jusqu’à 80 Mo.
-          Recadrez les photos puis validez l’envoi.
+          Les fichiers s’affichent et s’envoient automatiquement. Vous pouvez recadrer ensuite.
         </p>
 
         {staging.length > 0 && (

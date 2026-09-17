@@ -1374,8 +1374,8 @@ export function venueToCatalogueItem(venue: PublicVenue): CatalogueItem {
 
 export function eventToCatalogueItem(event: PublicEventCard): CatalogueItem | null {
   if (!event.slug) return null;
-  const paid = event.paid || (event.ticketingEnabled && event.ticketPriceFc > 0);
   const priceFrom = priceFromFcForEvent(event);
+  const paid = event.paid || priceFrom != null;
   const dateLabel = event.date
     ? new Date(event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
     : 'Événement';

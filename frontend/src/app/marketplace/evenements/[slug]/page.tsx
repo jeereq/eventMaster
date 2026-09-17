@@ -24,6 +24,8 @@ import { useAuth } from '@/context/AuthContext';
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import { Ticket } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { eventPublicPriceDisplay } from '@/lib/ticketPricing';
+import { photosFromEvent } from '@/lib/eventConfig';
 
 function eventDateKey(iso: string) {
   return String(iso || '').slice(0, 10);
@@ -100,7 +102,7 @@ function MarketplaceEventDetailInner() {
   }, [slug, reloadNonce]);
 
   const item = event ? eventToCatalogueItem(event) : null;
-  const photos = event?.photos?.filter(Boolean) || [];
+  const photos = photosFromEvent(event?.photos);
   const posts = event?.posts || [];
   const heroUrl = event?.coverUrl || photos[0] || null;
 
@@ -165,8 +167,8 @@ function MarketplaceEventDetailInner() {
         onPhotoIndex={setPhotoIndex}
         tab={tab}
         onTab={setTab}
-        priceFromFc={event?.paid ? event.ticketPriceFc : null}
-        priceUnitLabel={event?.paid ? '/ personne' : null}
+        priceFromFc={event ? eventPublicPriceDisplay(event).amountFc : null}
+        priceUnitLabel={event ? eventPublicPriceDisplay(event).unitLabel : null}
         priceCaption={event && !event.paid ? (hasDonations ? 'Entrée libre & Dons' : 'Entrée libre') : undefined}
         hideBooking
         paymentInProgress={paymentInProgress}

@@ -265,7 +265,11 @@ export default function EventDetailOverview({
                 {event.soldOut
                   ? 'Événement Complet'
                   : event.paid
-                    ? `À partir de ${formatFc(event.priceFromFc || event.ticketPriceFc)}`
+                    ? event.ticketPricingMode === 'by_zone'
+                      ? event.priceFromFc
+                        ? `À partir de ${formatFc(event.priceFromFc)}`
+                        : 'Tarifs par zone'
+                      : formatFc(event.priceFromFc || event.ticketPriceFc)
                     : 'Entrée gratuite / libre'}
               </p>
               <div className="flex flex-wrap items-center gap-1.5 mt-1">

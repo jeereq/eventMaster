@@ -447,7 +447,7 @@ export default function OrgTicketingView({
                 <option value="all">Tous les événements ({eventsList.length})</option>
                 {eventsList.map((ev) => (
                   <option key={ev.id} value={ev.id}>
-                    {ev.title} {ev.ticketPriceFc ? `(${formatFc(ev.ticketPriceFc)})` : ''}
+                    {ev.title}{ev.ticketPricingMode === 'by_zone' ? '' : ev.ticketPriceFc ? ` (${formatFc(ev.ticketPriceFc)})` : ''}
                   </option>
                 ))}
               </select>

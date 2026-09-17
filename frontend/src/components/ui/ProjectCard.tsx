@@ -26,9 +26,17 @@ export function accentFromId(id: string): string {
   return ACCENT_STRIPES[hash % ACCENT_STRIPES.length];
 }
 
-export function coverFromPhotos(photos?: Array<string | null> | null): string | undefined {
+export function coverFromPhotos(photos?: unknown): string | undefined {
   if (!Array.isArray(photos)) return undefined;
-  return photos.find((u): u is string => typeof u === 'string' && u.trim().length > 0);
+  for (const item of photos) {
+    const url = typeof item === 'string'
+      ? item.trim()
+      : item && typeof item === 'object' && 'url' in item
+        ? String((item as { url?: unknown }).url || '').trim()
+        : '';
+    if (url) return url;
+  }
+  return undefined;
 }
 
 export type ProjectCardLayout = 'grid' | 'list';

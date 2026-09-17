@@ -793,7 +793,7 @@ export default function EventConfigForm({
         ? paid
           ? ticketPricingMode === 'global'
             ? Number(ticketPrice) || 0
-            : Number(ticketPrice) || 0
+            : 0
           : 0
         : initialEvent?.ticketPriceFc ?? 0,
       ticketPricingMode: complete && paid ? ticketPricingMode : normalizeTicketPricingMode(initialEvent?.ticketPricingMode),
@@ -989,9 +989,9 @@ export default function EventConfigForm({
     }
     if (complete && isPublic && ticketing && ticketPricingMode === 'by_zone') {
       const validZones = pricingZones.filter((z) => z.name.trim() && z.priceFc > 0);
-      if (validZones.length === 0 && !ticketPrice) {
+      if (validZones.length === 0) {
         setTab('access');
-        setFormError('Ajoutez au moins une zone avec un prix, ou un prix par défaut.');
+        setFormError('Ajoutez au moins une zone tarifaire avec un prix.');
         return;
       }
     }
@@ -1066,7 +1066,7 @@ export default function EventConfigForm({
       if (!complete || !isPublic) return true;
       if (!ticketing) return true;
       if (ticketPricingMode === 'global') return Boolean(ticketPrice && Number(ticketPrice) > 0);
-      return pricingZones.length > 0 || Boolean(ticketPrice);
+      return pricingZones.some((zone) => zone.name.trim() && zone.priceFc > 0);
     }
     if (tabId === 'welcome') return true;
     return false;
@@ -1081,7 +1081,7 @@ export default function EventConfigForm({
       !ticketing ||
       (ticketPricingMode === 'global'
         ? Boolean(ticketPrice && Number(ticketPrice) > 0)
-        : pricingZones.length > 0 || Boolean(ticketPrice));
+        : pricingZones.some((zone) => zone.name.trim() && zone.priceFc > 0));
     const allRequiredDone = essentialsDone && placeDone && accessDone;
 
     return {
@@ -2153,6 +2153,7 @@ export default function EventConfigForm({
                                 type="button"
                                 onClick={() => {
                                   setTicketPricingMode('by_zone');
+                                  setTicketPrice('');
                                   if (pricingZones.length === 0) {
                                     setPricingZones([createEmptyPricingZone(0), createEmptyPricingZone(1)]);
                                   }
@@ -2216,24 +2217,14 @@ export default function EventConfigForm({
                                 onOpenRoomPicker={() => setTab('place')}
                               />
 
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                                <Input
-                                  label="Prix par défaut (FC, optionnel)"
-                                  type="number"
-                                  min={0}
-                                  value={ticketPrice}
-                                  onChange={(e) => setTicketPrice(e.target.value)}
-                                  placeholder="ex. 15000"
-                                />
-                                <Input
-                                  label="Nombre de places total (optionnel)"
-                                  type="number"
-                                  min={1}
-                                  value={ticketsTotal}
-                                  onChange={(e) => setTicketsTotal(e.target.value)}
-                                  placeholder="Illimité"
-                                />
-                              </div>
+                              <Input
+                                label="Nombre de places total (optionnel)"
+                                type="number"
+                                min={1}
+                                value={ticketsTotal}
+                                onChange={(e) => setTicketsTotal(e.target.value)}
+                                placeholder="Illimité"
+                              />
                             </div>
                           )}
                         </div>

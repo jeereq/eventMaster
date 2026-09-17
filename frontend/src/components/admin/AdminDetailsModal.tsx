@@ -686,7 +686,11 @@ export default function AdminDetailsModal({
                 <DetailRow label="Statut billetterie">
                   <Badge variant="success">Activée</Badge>
                 </DetailRow>
-                <DetailRow label="Tarif standard">{formatFc(data.ticketPriceFc || 0)}</DetailRow>
+                {data.ticketPricingMode !== 'by_zone' ? (
+                  <DetailRow label="Tarif standard">{formatFc(data.ticketPriceFc || 0)}</DetailRow>
+                ) : (
+                  <DetailRow label="Tarification">Prix par zones</DetailRow>
+                )}
                 <DetailRow label="Ventes">{data.ticketsSold || 0} billet(s) écoulé(s)</DetailRow>
                 {data.ticketsTotal != null && (
                   <DetailRow label="Capacité maximale">{data.ticketsTotal} places</DetailRow>
