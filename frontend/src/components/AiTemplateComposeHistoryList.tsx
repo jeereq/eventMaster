@@ -167,7 +167,7 @@ export default function AiTemplateComposeHistoryList({
                     {hasDualVariants && (
                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20">
                         <Layers className="w-2.5 h-2.5" />
-                        2 propositions (A/B)
+                        Fidèle + ample
                       </span>
                     )}
                     <span>{item.source === 'studio' ? 'Studio' : 'Modèles'}</span>

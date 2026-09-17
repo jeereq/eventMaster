@@ -1810,8 +1810,8 @@ export default function LandingInvitationAiGenerator({
 
                 <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-3">
                   <div>
-                    <span className="block text-xs font-bold text-foreground">Variations A/B</span>
-                    <span className="block text-[11px] text-muted">1 ou 2 propositions de décors</span>
+                    <span className="block text-xs font-bold text-foreground">Deux fonds</span>
+                    <span className="block text-[11px] text-muted">Fidèle au brief, ou fidèle + ample</span>
                   </div>
                   <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-lg border border-border">
                     <button
@@ -1834,7 +1834,7 @@ export default function LandingInvitationAiGenerator({
                         variantsCount === 2 ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground',
                       )}
                     >
-                      2 (A/B)
+                      2 (fidèle + ample)
                     </button>
                   </div>
                 </div>
@@ -2351,7 +2351,7 @@ export default function LandingInvitationAiGenerator({
               {lastStageMeta?.variants && lastStageMeta.variants.length > 1 && (
                 <div className="space-y-1.5 pt-1">
                   <span className="text-xs font-bold text-muted uppercase tracking-wider block">
-                    Variantes A/B ({lastStageMeta.variants.length})
+                    Fidèle ou ample ({lastStageMeta.variants.length})
                   </span>
                   <div className="grid grid-cols-2 gap-2">
                     {lastStageMeta.variants.map((vUrl, idx) => {
@@ -2373,9 +2373,9 @@ export default function LandingInvitationAiGenerator({
                             isSelected ? 'border-primary ring-2 ring-primary/30 shadow-md' : 'border-border hover:border-primary/50',
                           )}
                         >
-                          <img src={vUrl} alt={`Variante ${idx + 1}`} className="w-full h-full object-cover" />
+                          <img src={vUrl} alt={idx === 0 ? 'Proposition fidèle' : 'Proposition ample'} className="w-full h-full object-cover" />
                           <span className={cn('absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[10px] font-bold', isSelected ? 'bg-primary text-white' : 'bg-black/60 text-white')}>
-                            Prop. {String.fromCharCode(65 + idx)} {isSelected && '✓'}
+                            {idx === 0 ? 'Fidèle' : 'Ample'} {isSelected && '✓'}
                           </span>
                         </button>
                       );

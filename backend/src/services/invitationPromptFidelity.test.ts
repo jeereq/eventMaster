@@ -440,10 +440,15 @@ describe('Nano Banana Robustesse & Safety Filter Fallback', () => {
     const variant = buildVariantImagePrompt(original, true);
 
     assert.match(variant, /Soirée de fiançailles or et vert émeraude/);
-    assert.match(variant, /ALTERNATIVE B/);
+    assert.match(variant, /VARIANT B — AMPLE/);
     assert.match(variant, /Same hosts as the references/);
-    assert.match(variant, /camera angle/);
+    assert.match(variant, /breathing room/);
     assert.match(variant, /Do not change faces/);
+
+    const faithful = buildVariantImagePrompt(original, true, 'faithful');
+    assert.match(faithful, /VARIANT A — FAITHFUL/);
+    assert.match(faithful, /Tight ceremonial framing/);
+    assert.doesNotMatch(faithful, /wider ceremonial space/);
   });
 });
 

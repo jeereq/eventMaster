@@ -19,6 +19,12 @@ export const AI_TEMPLATE_DRAFT_KEY = 'em_ai_template_draft';
 export const COUPLE_FACE_SWAP_DEFAULT_PROMPT =
   'Remplace uniquement les visages de cette invitation par les visages du couple. Conserve la pose, les tenues, le décor et la mise en page.';
 
+export const INVITATION_VARIANT_LABELS = ['Fidèle', 'Ample'] as const;
+
+export function invitationVariantLabel(index: number): string {
+  return INVITATION_VARIANT_LABELS[index] || `Variante ${index + 1}`;
+}
+
 export type AiSpeedMode = 'fast' | 'quality';
 
 export type TemplateAiComposeContent = {

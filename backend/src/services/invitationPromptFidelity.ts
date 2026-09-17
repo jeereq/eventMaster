@@ -991,22 +991,41 @@ export function buildGenericThematicBackgroundPrompt(
   return lines.filter(Boolean).join('\n');
 }
 
-/**
- * Construit un prompt de variante A/B (Variante 2 / Proposition B) à partir du prompt initial :
- * 1. Ancrage strict et absolu sur les photos de référence passées (mêmes visages, mêmes personnes, morphologie, regard, carnation et tenues identiques).
- * 2. Altération légère et contrôlée du prompt (jamais totale) : préserve 90-95% du décor, de l'ambiance et de la palette, en modulant uniquement l'angle de vue, les drapés/fleurs ou les accents lumineux.
- */
-export function buildVariantImagePrompt(basePrompt: string, hasReferences: boolean = false): string {
-  const identity = hasReferences
-    ? 'Same hosts as the references — faces, skin, hair and clothes stay locked.'
-    : 'Same celebration and palette.';
+export type InvitationImageVariantRole = 'faithful' | 'ample';
+
+/** Variante A : coller au brief, cadrage serré, aucun extra. */
+export function buildFaithfulImagePrompt(basePrompt: string): string {
   return collapseSpaces(
     [
       basePrompt,
-      'ALTERNATIVE B: Same event, same people. Keep 90% of the décor.',
-      identity,
-      'Change only camera angle (~10°) or floral / light accents. Do not change faces.',
+      'VARIANT A — FAITHFUL: Follow the brief and locks exactly. Tight ceremonial framing. Do not add extra crowds, extra ornaments, or a wider scene.',
     ].join('\n'),
   ).slice(0, COMPACT_IMAGE_PROMPT_MAX_CHARS);
+}
+
+/** Variante B : même événement et mêmes visages, plus d’espace et de matière. */
+export function buildAmpleImagePrompt(basePrompt: string, hasReferences = false): string {
+  const identity = hasReferences
+    ? 'Same hosts as the references — faces, skin, hair and clothes stay locked.'
+    : 'Same celebration, same palette, same locks.';
+  return collapseSpaces(
+    [
+      basePrompt,
+      'VARIANT B — AMPLE: Same event and same people.',
+      identity,
+      'Give more breathing room: wider ceremonial space, richer florals and materials, more paper and foil atmosphere.',
+      'Do not change faces, people count, or invent a new event.',
+    ].join('\n'),
+  ).slice(0, COMPACT_IMAGE_PROMPT_MAX_CHARS);
+}
+
+export function buildVariantImagePrompt(
+  basePrompt: string,
+  hasReferences = false,
+  role: InvitationImageVariantRole = 'ample',
+): string {
+  return role === 'faithful'
+    ? buildFaithfulImagePrompt(basePrompt)
+    : buildAmpleImagePrompt(basePrompt, hasReferences);
 }
 

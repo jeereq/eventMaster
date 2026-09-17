@@ -18,8 +18,9 @@ import {
   buildGenericThematicBackgroundPrompt,
   buildInvitationImageJudgeUserText,
   buildInvitationImageRetryPrompt,
+  buildAmpleImagePrompt,
+  buildFaithfulImagePrompt,
   buildInvitationLocks,
-  buildVariantImagePrompt,
   invitationPipelineVisionMandate,
   isSafetyFilterTriggered,
   optimizeReferenceImageUrl,
@@ -2085,6 +2086,7 @@ export async function composeInvitationTemplateAi(input: {
   let imageJudge: InvitationImageJudgeVerdict | null = null;
   let imageJudgeRetried = false;
   const variants: string[] = [];
+  const variantRoles: Array<'faithful' | 'ample'> = [];
   const wantBg = input.generateBackground !== false;
   const requestedVariantsCount = Math.min(2, Math.max(1, Number(input.variantsCount) || 1));
   const speedMode: AiSpeedMode = input.speedMode === 'fast' ? 'fast' : 'quality';
@@ -2115,8 +2117,8 @@ export async function composeInvitationTemplateAi(input: {
       };
 
       if (requestedVariantsCount >= 2) {
-        const promptA = imagePrompt;
-        const promptB = buildVariantImagePrompt(imagePrompt, imageUrls.length > 0);
+        const promptA = buildFaithfulImagePrompt(imagePrompt);
+        const promptB = buildAmpleImagePrompt(imagePrompt, imageUrls.length > 0);
 
         const [resA, resB] = await Promise.allSettled([
           generateInvitationImageWithJudge(
@@ -2137,17 +2139,20 @@ export async function composeInvitationTemplateAi(input: {
           imageJudge = resA.value.judge;
           imageJudgeRetried = resA.value.retried;
           variants.push(bgImageUrl);
+          variantRoles.push('faithful');
         }
 
         if (resB.status === 'fulfilled') {
           const urlB = resB.value.url;
           if (urlB && urlB !== bgImageUrl) {
             variants.push(urlB);
+            variantRoles.push('ample');
           }
           if (!bgImageUrl && urlB) {
             bgImageUrl = urlB;
             imageMode = resB.value.mode;
             safetyFallbackTriggered = Boolean(resB.value.safetyFallbackTriggered);
+            if (!variantRoles.includes('ample')) variantRoles.push('ample');
           }
         } else {
           console.warn('[invitationTemplateAi] Échec de la variante B (non-bloquant):', resB.reason?.message);
@@ -2174,6 +2179,7 @@ export async function composeInvitationTemplateAi(input: {
         imageJudgeRetried = created.retried;
         if (bgImageUrl) {
           variants.push(bgImageUrl);
+          variantRoles.push('faithful');
         }
       }
     } catch (err) {
@@ -2187,6 +2193,7 @@ export async function composeInvitationTemplateAi(input: {
   if (variants.length > 0) {
     (global as Record<string, unknown>).aiVariants = variants;
     (global as Record<string, unknown>).variants = variants;
+    (global as Record<string, unknown>).aiVariantRoles = variantRoles;
   }
   if (safetyFallbackTriggered) {
     (global as Record<string, unknown>).aiSafetyFallbackTriggered = true;

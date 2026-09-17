@@ -18,7 +18,7 @@ export async function getPublicStudioJob(req: Request, res: Response) {
   if (!access.userId && !access.deviceId) {
     return res.status(400).json({ error: 'Identifiant d’appareil manquant.' });
   }
-  const job = getStudioJob(String(req.params.jobId || ''), access);
+  const job = await getStudioJob(String(req.params.jobId || ''), access);
   if (!job) return res.status(404).json({ error: 'Tâche introuvable.' });
   return res.json(serializeStudioJob(job));
 }
@@ -28,5 +28,6 @@ export async function listPublicStudioJobs(req: Request, res: Response) {
   if (!access.userId && !access.deviceId) {
     return res.status(400).json({ error: 'Identifiant d’appareil manquant.' });
   }
-  return res.json({ items: listStudioJobs(access).map(serializeStudioJob) });
+  const items = await listStudioJobs(access);
+  return res.json({ items: items.map(serializeStudioJob) });
 }

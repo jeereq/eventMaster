@@ -240,6 +240,7 @@ model User {
   aiTemplateComposeRuns AiTemplateComposeRun[]
   aiRoomPlanComposeRuns AiRoomPlanComposeRun[]
   aiTokenLedgers        AiTokenLedger[]
+  studioJobs            StudioJob[]
 }
 
 model Event {
@@ -1219,6 +1220,26 @@ model AiSimulationRun {
 
   @@index([userId, createdAt])
   @@index([deviceId, createdAt])
+}
+
+/** Tâches studio (invitation / plan de salle) persistées au-delà d’un redémarrage. */
+model StudioJob {
+  id        String   @id @default(uuid())
+  kind      String
+  status    String
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  deviceId  String
+  prompt    String   @default("")
+  error     String?
+  historyId String?
+  result    Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([deviceId, updatedAt])
+  @@index([userId, updatedAt])
+  @@index([status, updatedAt])
 }
 
 /** Historique des générations de modèles d’invitation IA (studio + /modeles). */

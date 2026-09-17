@@ -2002,7 +2002,7 @@ export default function TemplatesPage() {
  <div className="pt-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
    <div>
      <span className="block text-sm font-bold text-foreground">Comparer deux fonds</span>
-     <span className="block text-xs text-muted">Une ou deux propositions à choisir ensuite</span>
+     <span className="block text-xs text-muted">Fidèle au brief, ou fidèle + ample</span>
    </div>
    <div className="flex items-center gap-1 bg-surface p-1 rounded-lg border border-border">
      <button
@@ -2019,7 +2019,7 @@ export default function TemplatesPage() {
        onClick={() => setAiComposeVariantsCount(2)}
        className={`min-h-11 px-3 text-xs font-bold rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${aiComposeVariantsCount === 2 ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground'}`}
      >
-       2 cartes
+       2 cartes (fidèle + ample)
      </button>
    </div>
  </div>
@@ -5594,7 +5594,7 @@ export default function TemplatesPage() {
  {aiVariants.length > 1 && (
    <div className="space-y-1.5 pt-1">
      <label className="text-xs font-bold text-muted uppercase tracking-wider flex items-center justify-between">
-       <span>Variantes A/B générées ({aiVariants.length})</span>
+       <span>Fidèle ou ample ({aiVariants.length})</span>
        <span className="text-[10px] text-primary lowercase font-normal">cliquez pour basculer</span>
      </label>
      <div className="grid grid-cols-2 gap-2">
@@ -5607,9 +5607,9 @@ export default function TemplatesPage() {
              onClick={() => setBgImageUrl(varUrl)}
              className={`relative aspect-[9/16] rounded-xl overflow-hidden border-2 transition group ${isSelected ? 'border-primary shadow-md ring-2 ring-primary/30' : 'border-border hover:border-primary/50'}`}
            >
-             <img src={varUrl} alt={`Variante ${idx + 1}`} className="w-full h-full object-cover" />
+             <img src={varUrl} alt={idx === 0 ? 'Proposition fidèle' : 'Proposition ample'} className="w-full h-full object-cover" />
              <span className={`absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${isSelected ? 'bg-primary text-white shadow-xs' : 'bg-black/60 text-white backdrop-blur-xs'}`}>
-               Proposition {String.fromCharCode(65 + idx)} {isSelected && '✓'}
+               {idx === 0 ? 'Fidèle' : 'Ample'} {isSelected && '✓'}
              </span>
            </button>
          );
