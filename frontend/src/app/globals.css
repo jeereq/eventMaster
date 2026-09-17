@@ -402,6 +402,37 @@ h1, h2, h3, h4 {
   animation: em-holo-glow 3.2s ease-in-out infinite;
 }
 
+@keyframes em-studio-idle-invite {
+  0%, 100% { transform: rotateX(-10deg) rotateY(10deg); }
+  50% { transform: rotateX(-4deg) rotateY(24deg); }
+}
+
+@keyframes em-studio-idle-room {
+  0%, 100% { transform: rotateX(25deg) rotateZ(-20deg); }
+  50% { transform: rotateX(32deg) rotateZ(-8deg); }
+}
+
+@keyframes em-studio-idle-budget {
+  0%, 100% { transform: rotateX(18deg) rotateY(-12deg); }
+  50% { transform: rotateX(26deg) rotateY(6deg); }
+}
+
+.em-studio-idle-invite,
+.em-studio-idle-room,
+.em-studio-idle-budget {
+  transform-style: preserve-3d;
+}
+
+.em-studio-idle-invite { animation: em-studio-idle-invite 8s ease-in-out infinite; }
+.em-studio-idle-room { animation: em-studio-idle-room 9s ease-in-out infinite; }
+.em-studio-idle-budget { animation: em-studio-idle-budget 8s ease-in-out infinite; }
+
+.em-studio-idle-invite.is-manual,
+.em-studio-idle-room.is-manual,
+.em-studio-idle-budget.is-manual {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .em-studio-scan,
   .em-studio-float,
@@ -413,7 +444,10 @@ h1, h2, h3, h4 {
   .em-gyro-ring-3,
   .em-laser-scanner-3d,
   .em-radar-sweep,
-  .em-holo-glow {
+  .em-holo-glow,
+  .em-studio-idle-invite,
+  .em-studio-idle-room,
+  .em-studio-idle-budget {
     animation: none !important;
   }
   .em-studio-dot-in {
