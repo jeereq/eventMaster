@@ -60,7 +60,13 @@ import {
 } from 'lucide-react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
-import { PageHeader, Alert, Button, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems, usePageSize, Modal } from '@/components/ui';
+import { PageHeader, Alert, Button, Input, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems, usePageSize, Modal } from '@/components/ui';
+import InvitationDuplicateModal, { type InvitationDuplicateValues } from '@/components/InvitationDuplicateModal';
+import {
+ applyInvitationIdentityToContent,
+ identityFromTemplateContent,
+ resolveInvitationIdentity,
+} from '@/lib/invitationIdentity';
 import { cn } from '@/lib/cn';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
 import RsvpFieldTypeEditor from '@/components/RsvpFieldTypeEditor';
@@ -256,6 +262,10 @@ export default function TemplatesPage() {
  useHeadStylesheet(INVITATION_GOOGLE_FONTS_HREF, INVITATION_GOOGLE_FONTS_ID, editorOpen);
  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
  const [templateName, setTemplateName] = useState('');
+ const [invitationHonorees, setInvitationHonorees] = useState('');
+ const [invitationDate, setInvitationDate] = useState('');
+ const [duplicateTarget, setDuplicateTarget] = useState<TemplateItem | null>(null);
+ const [duplicating, setDuplicating] = useState(false);
  const [canvasElements, setCanvasElements] = useState<CanvasElement[]>([]);
  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
 
@@ -548,6 +558,8 @@ export default function TemplatesPage() {
  setStudioOrigin(origin);
  setEditingTemplateId(null);
  setTemplateName('Nouveau Modèle d\'Invitation');
+ setInvitationHonorees('Hassan & Ayesha');
+ setInvitationDate('2026-06-15');
  setSelectedTenantId('');
  const orgTheme = buildOrgBrandInvitationTheme(tenant?.branding);
  setImportedPalette(orgTheme.palette);
@@ -612,6 +624,9 @@ export default function TemplatesPage() {
  setStudioOrigin(origin);
  setEditingTemplateId(t.id);
  setTemplateName(t.name);
+ const identity = identityFromTemplateContent(t.content);
+ setInvitationHonorees(identity.honorees || '');
+ setInvitationDate(identity.date || '');
  const loadedElements = ensureMandatoryRsvpFieldsOnElements((t.content?.elements || []) as CanvasElement[]);
  setCanvasElements(loadedElements);
  setStudioHistory([{
@@ -695,6 +710,8 @@ export default function TemplatesPage() {
  setGeneratedByAi(true);
  setImportedWithOcr(false);
  setTemplateName('Invitation IA');
+ setInvitationHonorees('');
+ setInvitationDate('');
  setSuccess('Modèle IA importé depuis la page Modèles. Ajustez puis enregistrez.');
  clearAiTemplateDraft();
  window.history.replaceState({}, document.title, window.location.pathname);
@@ -2202,7 +2219,16 @@ export default function TemplatesPage() {
  const applyEditorialLayout = (id: EditorialLayoutId) => {
  const layout = editorialLayoutById(id);
  const stamp = Date.now();
- const tokens = { title: templateName, date: undefined, location: undefined };
+ const resolvedIdentity = resolveInvitationIdentity({
+ title: templateName,
+ honorees: invitationHonorees,
+ date: invitationDate,
+ });
+ const tokens = {
+ title: resolvedIdentity.honorees || templateName,
+ date: resolvedIdentity.date || undefined,
+ location: undefined,
+ };
  const next = layout.elements.map((el, index) => ({
  ...el,
  id: `${el.id}-${stamp}-${index}`,
@@ -2258,13 +2284,19 @@ export default function TemplatesPage() {
 
  const handleFreePointerUp = () => setFreeDragId(null);
 
+ const previewIdentity = resolveInvitationIdentity({
+ title: templateName,
+ honorees: invitationHonorees,
+ date: invitationDate,
+ });
  const substitutePreviewVars = (text: string) =>
  text
  .replace(/\{\{firstName\}\}/gi, 'Amina')
  .replace(/\{\{lastName\}\}/gi, 'Kabongo')
- .replace(/\{\{title\}\}/gi, 'Mariage Hassan & Ayesha')
+ .replace(/\{\{title\}\}/gi, previewIdentity.honorees || previewIdentity.title || 'Mariage Hassan & Ayesha')
+ .replace(/\{\{eventTitle\}\}/gi, previewIdentity.title || templateName)
  .replace(/\{\{location\}\}/gi, 'Kinshasa')
- .replace(/\{\{date\}\}/gi, '15 juin 2026');
+ .replace(/\{\{date\}\}/gi, previewIdentity.date || '15 juin 2026');
 
  const draftKey = `em-template-draft-${editingTemplateId || 'new'}-${tenant?.id || 'global'}`;
 
@@ -2383,6 +2415,8 @@ export default function TemplatesPage() {
  try {
  const draft = {
  templateName,
+ invitationHonorees,
+ invitationDate,
  canvasElements,
  bgType,
  bgColor,
@@ -2410,6 +2444,8 @@ export default function TemplatesPage() {
  editorOpen,
  draftKey,
  templateName,
+ invitationHonorees,
+ invitationDate,
  canvasElements,
  bgType,
  bgColor,
@@ -2460,6 +2496,8 @@ export default function TemplatesPage() {
  const draft = {
  savedAt: new Date().toISOString(),
  name: templateName,
+ invitationHonorees,
+ invitationDate,
  elements: canvasElements,
  bgType,
  bgColor,
@@ -2490,7 +2528,7 @@ export default function TemplatesPage() {
  const isGlobalTemplate = isSuperAdmin && !selectedTenantId;
  const payload: Record<string, unknown> = {
  name: templateName,
- content: { 
+ content: applyInvitationIdentityToContent({
  global: {
  bgType,
  bgColor,
@@ -2511,8 +2549,12 @@ export default function TemplatesPage() {
  ...(importedWithOcr ? { importedFromMockup: true, importedWithOcr } : {}),
  ...(generatedByAi ? { generatedByAi: true } : {}),
  },
- elements: ensureMandatoryRsvpFieldsOnElements(canvasElements), 
- },
+ elements: ensureMandatoryRsvpFieldsOnElements(canvasElements),
+ }, {
+ title: templateName,
+ honorees: invitationHonorees,
+ date: invitationDate,
+ }),
  targetTenantId: isSuperAdmin ? (selectedTenantId || null) : undefined,
  };
  if (isGlobalTemplate) {
@@ -2561,24 +2603,54 @@ export default function TemplatesPage() {
  }
  };
 
- const handleDuplicateTemplate = async (t: TemplateItem) => {
+ const handleDuplicateTemplate = (t: TemplateItem) => {
  if (templatesAtLimit && !isSuperAdmin) {
  setError(templatesQuotaMsg || 'Quota modèles atteint.');
  return;
  }
- const isCatalog = t.isGlobal ?? !t.tenantId;
+ setError('');
+ setDuplicateTarget(t);
+ };
+
+ const confirmDuplicateTemplate = async (values: InvitationDuplicateValues) => {
+ if (!duplicateTarget) return;
  try {
- setLoading(true);
- const response = await api.post(`/templates/${t.id}/duplicate`, {
- name: isCatalog ? t.name : `${t.name} (Copie)`,
+ setDuplicating(true);
+ const response = await api.post(`/templates/${duplicateTarget.id}/duplicate`, {
+ name: values.title,
+ title: values.title,
+ honorees: values.honorees,
+ date: values.date,
  });
- setSuccess(response.message || `Modèle "${t.name}" ajouté à votre organisation.`);
+ setSuccess(response.message || `Invitation « ${values.title} » ajoutée à votre organisation.`);
+ const created = response.template as TemplateItem | undefined;
+ setDuplicateTarget(null);
  await loadTemplates();
+ if (values.openEditor && created) {
+ handleEditTemplateClick({
+ ...created,
+ content: created.content,
+ name: created.name || values.title,
+ }, 'studio');
+ }
  } catch (err: any) {
  setError(err.message || 'Erreur lors de la duplication du modèle.');
  } finally {
- setLoading(false);
+ setDuplicating(false);
  }
+ };
+
+ const writeIdentityToCanvas = (next?: { title?: string; honorees?: string; date?: string }) => {
+ const applied = applyInvitationIdentityToContent(
+ { elements: canvasElements, global: {} },
+ {
+ title: next?.title ?? templateName,
+ honorees: next?.honorees ?? invitationHonorees,
+ date: next?.date ?? invitationDate,
+ },
+ );
+ const nextElements = Array.isArray(applied.elements) ? applied.elements as CanvasElement[] : canvasElements;
+ setCanvasElements(nextElements);
  };
 
  const catalogTemplates = templates.filter((t) => t.isGlobal ?? !t.tenantId);
@@ -2999,8 +3071,8 @@ export default function TemplatesPage() {
  onChange={(e) => setTemplateName(e.target.value)}
                       maxLength={120}
                       className="w-full min-w-0 text-lg sm:text-xl font-extrabold text-foreground bg-transparent border-b border-border/40 hover:border-border focus:border-primary focus:outline-none focus-visible:border-primary pr-6 py-0.5 transition"
- placeholder="Nom du modèle"
-                      aria-label="Nom du modèle"
+ placeholder="Titre de l’invitation"
+                      aria-label="Titre de l’invitation"
                     />
                     <Edit3 className="w-3.5 h-3.5 text-muted/40 group-hover:text-muted pointer-events-none absolute right-1 top-2 transition-colors" />
                   </div>
@@ -3016,6 +3088,24 @@ export default function TemplatesPage() {
                 {templateName.length >= 100 && (
                   <p className="text-xs text-muted mt-0.5">{templateName.length}/120 caractères</p>
                 )}
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-2xl">
+                  <Input
+                    label="Cérémonie, couple ou personne"
+                    value={invitationHonorees}
+                    onChange={(e) => setInvitationHonorees(e.target.value)}
+                    onBlur={(e) => writeIdentityToCanvas({ honorees: e.target.value })}
+                    placeholder="ex. Amina & Jean-Marc"
+                    leftIcon={<Users className="h-4 w-4" />}
+                  />
+                  <Input
+                    label="Date de la cérémonie"
+                    type="date"
+                    value={invitationDate}
+                    onChange={(e) => setInvitationDate(e.target.value)}
+                    onBlur={(e) => writeIdentityToCanvas({ date: e.target.value })}
+                    leftIcon={<Calendar className="h-4 w-4" />}
+                  />
+                </div>
                 <div className="mt-1 flex items-center gap-2">
  {fromAdminConsole ? (
                     <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md">
@@ -5884,6 +5974,17 @@ export default function TemplatesPage() {
  />
  </section>
  </div>
+
+ <InvitationDuplicateModal
+ open={Boolean(duplicateTarget)}
+ sourceName={duplicateTarget?.name || ''}
+ loading={duplicating}
+ onClose={() => {
+ if (duplicating) return;
+ setDuplicateTarget(null);
+ }}
+ onConfirm={confirmDuplicateTemplate}
+ />
 
  <TemplatePreviewModal
  open={Boolean(previewTemplate)}
