@@ -10,6 +10,7 @@ import {
   Layers,
   Palette,
   Sparkles,
+  Wand2,
 } from 'lucide-react';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import {
@@ -25,6 +26,7 @@ interface TemplatePreviewModalProps {
   template: TemplateCardItem | null;
   onEdit?: (t: TemplateCardItem) => void;
   onDuplicate?: (t: TemplateCardItem) => void;
+  onUseInStudio?: (t: TemplateCardItem) => void;
   canEdit?: boolean;
   canDuplicate?: boolean;
   isOwnerOrManager?: boolean;
@@ -36,6 +38,7 @@ export default function TemplatePreviewModal({
   template,
   onEdit,
   onDuplicate,
+  onUseInStudio,
   canEdit = false,
   canDuplicate = false,
   isOwnerOrManager = true,
@@ -213,6 +216,19 @@ export default function TemplatePreviewModal({
           </p>
 
           <div className="flex items-center gap-2 flex-wrap">
+            {onUseInStudio && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onUseInStudio(template);
+                }}
+                className="inline-flex min-h-11 items-center justify-center gap-1.5 px-4 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl text-xs transition cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100"
+              >
+                <Wand2 className="w-3.5 h-3.5" aria-hidden />
+                <span>Préselectionner dans le studio</span>
+              </button>
+            )}
             {canDuplicate && onDuplicate && (
               <button
                 type="button"

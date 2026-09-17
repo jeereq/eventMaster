@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Copy, Edit3, Eye, Globe, Trash2 } from 'lucide-react';
+import { Copy, Edit3, Eye, Globe, Trash2, Wand2 } from 'lucide-react';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import { getTemplateElementSummary, templateContentToLandingPreview } from '@/lib/landingTemplateAdapter';
 import { cn } from '@/lib/cn';
@@ -39,6 +39,7 @@ interface TemplateCardGridProps {
   onDuplicate?: (t: TemplateCardItem) => void;
   onToggleLanding?: (id: string, current: boolean) => void;
   onViewDetails?: (t: TemplateCardItem) => void;
+  onUseInStudio?: (t: TemplateCardItem) => void;
   /** Défaut grille (aligné plateforme). */
   layout?: ViewMode;
   columns?: GridColumns;
@@ -125,6 +126,7 @@ export default function TemplateCardGrid({
   onDuplicate,
   onToggleLanding,
   onViewDetails,
+  onUseInStudio,
   layout = 'grid',
   columns = 3,
   className,
@@ -234,6 +236,20 @@ export default function TemplateCardGrid({
               </button>
             )}
 
+            {onUseInStudio && (
+              <button
+                type="button"
+                onClick={() => onUseInStudio(t)}
+                className={cn(
+                  layout === 'list'
+                    ? 'inline-flex items-center justify-center min-h-11 px-3 rounded-xl text-xs font-bold bg-primary/10 text-primary hover:bg-primary/15 transition'
+                    : 'p-2.5 min-h-11 min-w-11 text-primary hover:bg-primary/10 rounded-xl transition',
+                )}
+                title="Préselectionner cette carte dans le studio"
+              >
+                {layout === 'list' ? 'Studio' : <Wand2 className="w-4 h-4" />}
+              </button>
+            )}
             {onViewDetails && (
               <button
                 type="button"
