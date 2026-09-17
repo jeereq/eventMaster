@@ -460,6 +460,7 @@ export default function TemplatesPage() {
  const [aiAllowance, setAiAllowance] = useState<AiAllowance>(() => createEmptyAiAllowance());
  const [studioRail, setStudioRail] = useState<'content' | 'style'>('content');
  const [mobilePane, setMobilePane] = useState<'canvas' | 'tools' | 'inspect'>('canvas');
+ const [studioGuideDismissed, setStudioGuideDismissed] = useState(false);
  const [showAllThemes, setShowAllThemes] = useState(false);
  const [showDecorTools, setShowDecorTools] = useState(false);
  const [propsAdvanced, setPropsAdvanced] = useState(false);
@@ -622,6 +623,7 @@ export default function TemplatesPage() {
  setCanvasHeight(CANVAS_SIZE_PRESETS.standard.height);
  
  setSelectedElementId(null);
+ setStudioGuideDismissed(false);
  setEditorOpen(true);
  };
 
@@ -672,6 +674,7 @@ export default function TemplatesPage() {
  setCanvasHeight(global.canvasHeight || dims?.height || CANVAS_SIZE_PRESETS.standard.height);
  
  setSelectedElementId(null);
+ setStudioGuideDismissed(true);
  setEditorOpen(true);
  };
 
@@ -1514,12 +1517,12 @@ export default function TemplatesPage() {
               {aiComposeCoupleFaceSwap ? <Users className="w-4 h-4 text-primary" /> : <Wand2 className="w-4 h-4 text-primary" />}
               {aiComposeCoupleFaceSwap ? 'Visages du couple' : aiComposeIsAlteration ? 'Retoucher avec l’IA' : 'Créer avec l’IA'}
             </h2>
-            <p className="hidden sm:block text-[11px] text-muted mt-1 leading-relaxed">
+            <p className="hidden sm:block text-xs text-muted mt-1 leading-relaxed">
               {aiComposeCoupleFaceSwap
-                ? `Remplace les visages de l’image par ceux du couple, sans changer la pose ni le décor (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons).`
+                ? `Les visages du couple remplacent ceux de la carte. Pose et décor restent. ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`
                 : aiComposeIsAlteration
-                ? `Conserve la disposition, les textes et l'ambiance du carton actuel en appliquant votre retouche (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons).`
-                : `Brief seul ou photos + brief (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons). Yeux, sourire et joues restent fidèles aux photos.`}
+                ? `La carte actuelle est conservée. Décrivez seulement ce qu’il faut changer. ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`
+                : `Décrivez la fête, avec ou sans photos. ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`}
             </p>
  </div>
  <button
@@ -1809,14 +1812,11 @@ export default function TemplatesPage() {
 
  <div>
  <div className="flex items-center justify-between">
- <label htmlFor="ai-compose-prompt" className="text-xs font-bold text-muted uppercase tracking-wider">
- <span className="sm:hidden">Brief</span>
- <span className="hidden sm:inline">
-   {aiComposeCoupleFaceSwap ? 'Consigne (optionnelle)' : 'Brief de style ou demande de clonage'}
- </span>
+ <label htmlFor="ai-compose-prompt" className="text-xs font-semibold text-muted">
+   {aiComposeCoupleFaceSwap ? 'Précision (optionnelle)' : 'Décrivez la fête'}
  </label>
- <span className="hidden sm:inline text-[11px] text-muted font-mono">
- {aiComposePrompt.length} car. · {aiComposePrompt.trim().split(/\s+/).filter(Boolean).length} mot{aiComposePrompt.trim().split(/\s+/).filter(Boolean).length > 1 ? 's' : ''}
+ <span className="hidden sm:inline text-xs text-muted tabular-nums">
+ {aiComposePrompt.length} car.
  </span>
  </div>
  <textarea
@@ -3294,7 +3294,7 @@ export default function TemplatesPage() {
  }`}
  >
  <Eye className="w-4 h-4" />
- <span className="hidden sm:inline">Aperçu invité</span>
+ <span className="hidden sm:inline">Voir comme un invité</span>
  <span className="sm:hidden">Aperçu</span>
  </button>
  <button 
@@ -3302,7 +3302,7 @@ export default function TemplatesPage() {
  onClick={handleSaveTemplate}
  disabled={saving}
  title={rsvpReportingIssues.length > 0 ? rsvpReportingIssues[0] : undefined}
- className="inline-flex min-h-11 items-center justify-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-[var(--radius-button)] text-sm transition shadow-md shadow-primary/20 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2"
+ className="inline-flex min-h-11 items-center justify-center gap-2 px-5 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-bold rounded-[var(--radius-button)] text-sm transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2"
  >
  {saving ? (
  <>
@@ -3352,6 +3352,21 @@ export default function TemplatesPage() {
  )}
  </header>
 
+ {!studioGuideDismissed && (
+          <div className="px-4 py-3 rounded-[var(--radius-card)] bg-surface border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3" role="note">
+            <p className="text-sm text-foreground leading-relaxed">
+              <span className="font-semibold">Pour composer :</span>{' '}
+              renseignez le titre, les hôtes et la date, puis créez avec l’IA ou ajoutez des textes. Enregistrez quand la carte est prête.
+            </p>
+            <button
+              type="button"
+              onClick={() => setStudioGuideDismissed(true)}
+              className="inline-flex min-h-11 shrink-0 items-center justify-center px-3 rounded-[var(--radius-button)] border border-border bg-surface-muted text-xs font-semibold text-foreground hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            >
+              Compris
+            </button>
+          </div>
+        )}
  {draftSavedAt && (
           <div className="px-4 py-2.5 rounded-xl bg-surface border border-border text-foreground text-xs flex items-center justify-between gap-3 shadow-2xs" role="status">
             <span className="flex items-center gap-2 text-muted">
@@ -3412,7 +3427,7 @@ export default function TemplatesPage() {
  : 'text-muted hover:text-foreground'
  }`}
  >
- Contenu
+ Ajouter
  </button>
  <button
  type="button"
@@ -3428,29 +3443,24 @@ export default function TemplatesPage() {
  : 'text-muted hover:text-foreground'
  }`}
  >
- Style
+ Apparence
  </button>
  </div>
 
  {studioRail === 'content' ? (
  <>
         {canUseCustomTemplates && (
-          <div className="rounded-2xl border border-primary/25 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent p-3.5 space-y-2.5 shadow-2xs">
+          <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3.5 space-y-2.5">
             <div className="flex items-start gap-2.5">
-              <span className="w-8 h-8 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-sm shadow-primary/20">
-                <Wand2 className="w-4 h-4" />
+              <span className="w-8 h-8 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground flex items-center justify-center shrink-0">
+                <Wand2 className="w-4 h-4" aria-hidden />
               </span>
               <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <h3 className="text-xs font-bold text-foreground tracking-tight">
-                    Assistant IA du Studio
-                  </h3>
-                  <span className="text-[10px] font-bold text-primary bg-primary/15 px-1.5 py-0.2 rounded font-mono">
-                    2 jetons
-                  </span>
-                </div>
-                <p className="text-[11px] text-muted leading-relaxed mt-0.5">
-                  Générez ou retouchez votre invitation à partir d’un brief et de photos.
+                <h3 className="text-xs font-bold text-foreground">
+                  Créer avec l’IA
+                </h3>
+                <p className="text-xs text-muted leading-relaxed mt-0.5">
+                  Décrivez la fête, ou déposez une carte et les photos du couple. {AI_INVITATION_COMPOSE_TOKEN_COST} jetons par création.
                 </p>
               </div>
             </div>
@@ -3471,10 +3481,10 @@ export default function TemplatesPage() {
                   type="button"
                   disabled={mockupImporting || imageUploading || aiComposeBusy}
                   onClick={() => openAiComposeModal()}
-                  className="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl bg-primary hover:bg-primary-hover text-white font-bold text-xs transition shadow-md shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+                  className="w-full min-h-11 flex items-center justify-center gap-2 p-2.5 rounded-[var(--radius-button)] bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-bold text-xs transition disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
                 >
-                  {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-                  {aiComposeBusy ? 'Génération…' : 'Lancer l’assistant IA'}
+                  {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden /> : <Wand2 className="w-4 h-4" aria-hidden />}
+                  {aiComposeBusy ? 'Création en cours…' : 'Décrire et créer'}
                 </button>
 
                 {canvasElements.length > 0 && (
@@ -3487,20 +3497,20 @@ export default function TemplatesPage() {
                         { isAlteration: true },
                       )
                     }
-                    className="w-full flex items-center justify-center gap-1.5 p-2 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs transition cursor-pointer"
+                    className="w-full min-h-11 flex items-center justify-center gap-1.5 p-2 rounded-[var(--radius-button)] border border-border bg-surface hover:bg-surface-muted text-foreground font-bold text-xs transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    Altérer légèrement avec l’IA ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons)
+                    <Sparkles className="w-3.5 h-3.5" aria-hidden />
+                    Retoucher cette carte
                   </button>
                 )}
                 <button
                   type="button"
                   disabled={aiComposeBusy}
                   onClick={() => openAiComposeModal(undefined, { coupleFaceSwap: true })}
-                  className="w-full flex items-center justify-center gap-1.5 p-2 rounded-xl border border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary font-bold text-xs transition cursor-pointer"
+                  className="w-full min-h-11 flex items-center justify-center gap-1.5 p-2 rounded-[var(--radius-button)] border border-border bg-surface hover:bg-surface-muted text-foreground font-bold text-xs transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 >
-                  <Users className="w-3.5 h-3.5" />
-                  Visages du couple ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons)
+                  <Users className="w-3.5 h-3.5" aria-hidden />
+                  Mettre les visages du couple
                 </button>
               </>
             )}
@@ -3509,28 +3519,24 @@ export default function TemplatesPage() {
               <button
                 type="button"
                 onClick={() => setQuickTextModalOpen(true)}
-                className="w-full flex items-center justify-center gap-1.5 p-2 rounded-xl border border-border bg-surface hover:bg-surface-muted text-foreground font-bold text-xs transition cursor-pointer"
+                className="w-full min-h-11 flex items-center justify-center gap-1.5 p-2 rounded-[var(--radius-button)] border border-border bg-surface hover:bg-surface-muted text-foreground font-bold text-xs transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
-                <Edit3 className="w-3.5 h-3.5 text-primary" />
-                Modifier les textes clés (noms, dates…)
+                <Edit3 className="w-3.5 h-3.5 text-primary" aria-hidden />
+                Changer les noms et la date
               </button>
             )}
-
-            <p className="text-[11px] text-muted text-center pt-0.5">
-              Jetons partagés avec la simulation budget
-            </p>
           </div>
         )}
 
  {canUseMockupImport && (
  <div className="space-y-2">
- <h3 className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
- <Sparkles className="w-3.5 h-3.5" />
- Importer une image
+ <h3 className="text-xs font-bold text-muted flex items-center gap-1.5">
+ <Upload className="w-3.5 h-3.5" aria-hidden />
+ Partir d’une maquette
  </h3>
  <p className="text-xs text-muted leading-relaxed">
- Crée une palette à partir de votre maquette
- {canUseMockupOcr ? '. La détection de texte est disponible en Premium 2+.' : '.'}
+ Importez une photo de faire-part pour reprendre ses couleurs
+ {canUseMockupOcr ? ', et le texte s’il est lisible.' : '.'}
  </p>
  {ocrProgress !== null && (
  <p className="text-xs text-primary font-bold">Détection du texte… {ocrProgress}%</p>
@@ -3620,35 +3626,35 @@ export default function TemplatesPage() {
  )}
 
         <div className="space-y-2">
-          <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Disposition des éléments</h3>
- <div className="grid grid-cols-2 gap-1.5">
+          <h3 className="text-xs font-bold text-muted">Placement sur la carte</h3>
+ <div className="grid grid-cols-1 gap-1.5">
  <button
  type="button"
  onClick={() => convertToFlowLayout()}
               title="Les éléments se placent les uns sous les autres"
               aria-pressed={layoutMode === 'flow'}
-              className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`min-h-11 py-2 px-2.5 rounded-[var(--radius-button)] text-xs font-bold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
  layoutMode === 'flow'
                   ? 'border-primary bg-primary/10 text-primary shadow-2xs'
                   : 'border-border text-muted hover:bg-surface-muted hover:text-foreground'
  }`}
  >
               <Layers className="w-3.5 h-3.5" />
-              <span>Empilée</span>
+              <span>L’un sous l’autre</span>
  </button>
  <button
  type="button"
  onClick={() => (layoutMode === 'free' ? setLayoutMode('free') : convertToFreeLayout())}
               title="Glissez-déposez librement sur la carte"
               aria-pressed={layoutMode === 'free'}
-              className={`py-2 px-2.5 rounded-xl text-xs font-bold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`min-h-11 py-2 px-2.5 rounded-[var(--radius-button)] text-xs font-bold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
  layoutMode === 'free'
                   ? 'border-primary bg-primary/10 text-primary shadow-2xs'
                   : 'border-border text-muted hover:bg-surface-muted hover:text-foreground'
  }`}
  >
               <Move className="w-3.5 h-3.5" />
-              <span>Libre</span>
+              <span>Glisser où je veux</span>
  </button>
  </div>
  </div>
@@ -3656,7 +3662,7 @@ export default function TemplatesPage() {
         <EditorialLayoutPicker onSelect={applyEditorialLayout} selectedId={editorialLayoutId} />
 
         <div className="space-y-2.5">
-          <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Composants</h3>
+          <h3 className="text-xs font-bold text-muted">Ajouter sur la carte</h3>
           <div className="grid grid-cols-2 gap-2">
  <button 
               type="button"
@@ -3868,7 +3874,7 @@ export default function TemplatesPage() {
  </div>
 
  <p className="text-xs text-muted leading-relaxed rounded-xl bg-surface-muted border border-border px-3 py-2">
- Pour le fond, le cadre et le format : désélectionnez un élément, puis utilisez le panneau de droite.
+ Pour le fond et le format de la carte, cliquez à côté d’un texte, puis ouvrez Apparence.
  </p>
  </>
  )}
@@ -3889,8 +3895,8 @@ export default function TemplatesPage() {
                 ({canvasSizePreset !== 'custom' ? (CANVAS_SIZE_PRESETS[canvasSizePreset as Exclude<CanvasSizePreset, 'custom'>]?.label.split(' (')[0] || canvasSizePreset) : 'Personnalisé'})
  </span>
             </span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-primary/10 text-primary">
-              {layoutMode === 'free' ? 'Placement libre' : 'Disposition empilée'}
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold bg-primary/10 text-primary">
+              {layoutMode === 'free' ? 'Glisser où je veux' : 'L’un sous l’autre'}
             </span>
  </div>
  
@@ -3906,7 +3912,7 @@ export default function TemplatesPage() {
                 <kbd className="hidden sm:inline px-1 py-0.5 text-[10px] font-mono rounded bg-surface border border-border/80 text-foreground">Échap</kbd>
               </button>
             ) : (
-              <span className="text-[11px] text-muted hidden sm:inline">Fond & carte actifs</span>
+              <span className="text-xs text-muted hidden sm:inline">Cliquez un texte pour le modifier</span>
             )}
             <button
               type="button"
@@ -3919,8 +3925,8 @@ export default function TemplatesPage() {
               title="Aperçu des balises de personnalisation {{firstName}}, etc."
             >
               <User className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Aperçu invité</span>
-              <span className="sm:hidden">Variables</span>
+              <span className="hidden sm:inline">Voir comme un invité</span>
+              <span className="sm:hidden">Invité</span>
             </button>
           </div>
         </div>
@@ -4311,18 +4317,28 @@ export default function TemplatesPage() {
                 <Sparkles className="w-6 h-6" />
               </div>
               <div className="space-y-1 text-center max-w-sm">
-                <p className="text-sm font-bold text-foreground">Votre carte est vierge</p>
+                <p className="text-sm font-bold text-foreground">La carte est vide</p>
                 <p className="text-xs text-muted leading-relaxed">
-                  Démarrez en ajoutant un texte ou appliquez le préréglage d&apos;invitation type pour démarrer rapidement.
+                  Ajoutez un texte, ou créez avec l’IA depuis le panneau de gauche.
                 </p>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                {canUseCustomTemplates && (
+                  <button
+                    type="button"
+                    onClick={() => openAiComposeModal()}
+                    className="inline-flex min-h-11 items-center gap-1.5 px-3 py-2 rounded-[var(--radius-button)] bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+                  >
+                    <Wand2 className="w-3.5 h-3.5" aria-hidden />
+                    Créer avec l’IA
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => handleAddElement('text')}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary/90 transition shadow-2xs cursor-pointer"
+                  className="inline-flex min-h-11 items-center gap-1.5 px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface hover:bg-surface-muted text-foreground text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
                 >
-                  <PlusCircle className="w-3.5 h-3.5" />
+                  <PlusCircle className="w-3.5 h-3.5" aria-hidden />
                   Ajouter un texte
                 </button>
                 <button
@@ -4376,10 +4392,10 @@ export default function TemplatesPage() {
                     ];
                     setCanvasElements((prev) => [...prev, ...presets]);
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border bg-surface hover:bg-surface-muted text-foreground text-xs font-bold transition shadow-2xs cursor-pointer"
+                  className="inline-flex min-h-11 items-center gap-1.5 px-3 py-2 rounded-[var(--radius-button)] border border-border bg-surface hover:bg-surface-muted text-foreground text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-primary" />
-                  Appliquer le préréglage
+                  <Sparkles className="w-3.5 h-3.5 text-primary" aria-hidden />
+                  Modèle tout prêt
                 </button>
               </div>
  </div>
@@ -4784,7 +4800,7 @@ export default function TemplatesPage() {
                   </span>
                   <div className="min-w-0">
                     <span className="block text-xs font-bold text-foreground truncate">{typeLabel}</span>
-                    <span className="block text-[11px] text-muted">Propriétés de l&apos;élément</span>
+                    <span className="block text-xs text-muted">Réglages de cet élément</span>
                   </div>
                 </div>
  <button 

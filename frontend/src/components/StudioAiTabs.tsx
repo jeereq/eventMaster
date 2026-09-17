@@ -11,9 +11,9 @@ const TABS: Array<{
   label: string;
   icon: LucideIcon;
 }> = [
-  { id: 'create', label: 'Création', icon: Wand2 },
+  { id: 'create', label: 'Composer', icon: Wand2 },
   { id: 'history', label: 'Historique', icon: Clock },
-  { id: 'prompts', label: 'Prompts', icon: Sparkles },
+  { id: 'prompts', label: 'Exemples', icon: Sparkles },
 ];
 
 export function studioAiTabPanelId(prefix: string, tab: StudioAiTabId) {
