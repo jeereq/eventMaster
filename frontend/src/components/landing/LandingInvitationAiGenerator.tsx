@@ -82,6 +82,13 @@ import {
 } from '@/lib/invitationContextSource';
 import type { LandingTemplate } from '@/config/landingTemplates';
 import { Button, Modal, Alert } from '@/components/ui';
+import InvitationIdentityFields from '@/components/InvitationIdentityFields';
+import {
+  applyInvitationIdentityToContent,
+  hasInvitationIdentity,
+  invitationIdentityForCard,
+  type InvitationIdentity,
+} from '@/lib/invitationIdentity';
 import { cn } from '@/lib/cn';
 import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
 import { isStudioJobAccepted, onStudioJob } from '@/lib/studioJobs';
@@ -279,6 +286,10 @@ export default function LandingInvitationAiGenerator({
   const [promptHistory, setPromptHistory] = useState<string[]>(['']);
   const [promptHistoryIndex, setPromptHistoryIndex] = useState<number>(0);
   const [studioIntent, setStudioIntent] = useState<'create' | 'clone' | 'couple'>('create');
+  const [coupleTitle, setCoupleTitle] = useState('');
+  const [coupleHonorees, setCoupleHonorees] = useState('');
+  const [coupleDate, setCoupleDate] = useState('');
+  const pendingCoupleIdentityRef = useRef<InvitationIdentity>({});
   const incomingInputRef = useRef<HTMLInputElement>(null);
   const [incomingFile, setIncomingFile] = useState<File | null>(null);
   const [incomingPreview, setIncomingPreview] = useState('');
@@ -441,7 +452,10 @@ export default function LandingInvitationAiGenerator({
       if (job.kind !== 'invitation' || job.status !== 'done') return;
       const content = job.result?.content;
       if (!content || typeof content !== 'object') return;
-      const next = content as TemplateAiComposeContent;
+      const identity = pendingCoupleIdentityRef.current;
+      const next = hasInvitationIdentity(identity)
+        ? applyInvitationIdentityToContent(content as TemplateAiComposeContent, invitationIdentityForCard(identity))
+        : content as TemplateAiComposeContent;
       setResult(next);
       setLastStageMeta((job.result?.stage as TemplateAiComposeResult['stage']) || null);
       setActiveHistoryId(typeof job.historyId === 'string' ? job.historyId : null);
@@ -692,17 +706,28 @@ export default function LandingInvitationAiGenerator({
         isAlteration: studioIntent === 'couple',
       });
       if (seq !== generationSeq.current) return;
+      const coupleIdentity = {
+        title: coupleTitle,
+        honorees: coupleHonorees,
+        date: coupleDate,
+      };
+      if (studioIntent === 'couple') {
+        pendingCoupleIdentityRef.current = coupleIdentity;
+      }
       if (isStudioJobAccepted(data)) {
         trackJob(data.jobId, 'invitation', prompt.trim());
         setStage(null);
         setActiveStep(0);
         return;
       }
-      setResult(data.content);
+      const nextContent = studioIntent === 'couple' && hasInvitationIdentity(coupleIdentity)
+        ? applyInvitationIdentityToContent(data.content, invitationIdentityForCard(coupleIdentity))
+        : data.content;
+      setResult(nextContent);
       setLastStageMeta(data.stage || null);
       setActiveHistoryId(typeof data.historyId === 'string' ? data.historyId : null);
       setAllowance(getAiSimulationAllowance());
-      saveAiTemplateDraft(data.content, prompt.trim());
+      saveAiTemplateDraft(nextContent, prompt.trim());
       void fetchAiTemplateComposeHistory().then(setHistory);
       logAction('generate_success', 'Carte créée', `Invitation composée : « ${prompt.slice(0, 50)}… »`);
       playAiGenerationCompleteSound();
@@ -1593,6 +1618,18 @@ export default function LandingInvitationAiGenerator({
                   ))}
                 </div>
               )}
+
+              {studioIntent === 'couple' ? (
+                <InvitationIdentityFields
+                  disabled={busy}
+                  value={{ title: coupleTitle, honorees: coupleHonorees, date: coupleDate }}
+                  onChange={(next) => {
+                    setCoupleTitle(next.title || '');
+                    setCoupleHonorees(next.honorees || '');
+                    setCoupleDate(next.date || '');
+                  }}
+                />
+              ) : null}
 
               <div className="space-y-2.5">
                 {/* Inspirations prêtes à l'emploi en 1 clic */}

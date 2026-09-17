@@ -62,9 +62,12 @@ import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
 import { PageHeader, Alert, Button, Input, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems, usePageSize, Modal } from '@/components/ui';
 import InvitationDuplicateModal, { type InvitationDuplicateValues } from '@/components/InvitationDuplicateModal';
+import InvitationIdentityFields from '@/components/InvitationIdentityFields';
 import {
  applyInvitationIdentityToContent,
+ hasInvitationIdentity,
  identityFromTemplateContent,
+ invitationIdentityForCard,
  resolveInvitationIdentity,
 } from '@/lib/invitationIdentity';
 import { cn } from '@/lib/cn';
@@ -435,6 +438,10 @@ export default function TemplatesPage() {
   const [aiComposeCoupleFaceSwap, setAiComposeCoupleFaceSwap] = useState(false);
   const [aiComposeIncomingFile, setAiComposeIncomingFile] = useState<File | null>(null);
   const [aiComposeIncomingPreview, setAiComposeIncomingPreview] = useState('');
+  const [aiComposeTitle, setAiComposeTitle] = useState('');
+  const [aiComposeHonorees, setAiComposeHonorees] = useState('');
+  const [aiComposeDate, setAiComposeDate] = useState('');
+  const pendingCoupleIdentityRef = useRef<{ title?: string; honorees?: string; date?: string } | null>(null);
   const [aiComposeBusy, setAiComposeBusy] = useState(false);
  const [aiComposeStage, setAiComposeStage] = useState<string | null>(null);
  const [aiComposeEmbedText, setAiComposeEmbedText] = useState(false);
@@ -709,9 +716,16 @@ export default function TemplatesPage() {
  });
  setGeneratedByAi(true);
  setImportedWithOcr(false);
- setTemplateName('Invitation IA');
- setInvitationHonorees('');
- setInvitationDate('');
+ const importedIdentity = identityFromTemplateContent(draft.content);
+ setTemplateName(importedIdentity.title || 'Invitation IA');
+ setInvitationHonorees(importedIdentity.honorees || '');
+ setInvitationDate(importedIdentity.date || '');
+ if (hasInvitationIdentity(importedIdentity)) {
+   const applied = applyInvitationIdentityToContent(draft.content, invitationIdentityForCard(importedIdentity));
+   if (Array.isArray(applied.elements)) {
+     setCanvasElements(applied.elements as CanvasElement[]);
+   }
+ }
  setSuccess('Modèle IA importé depuis la page Modèles. Ajustez puis enregistrez.');
  clearAiTemplateDraft();
  window.history.replaceState({}, document.title, window.location.pathname);
@@ -1119,6 +1133,9 @@ export default function TemplatesPage() {
     setAiComposeCoupleFaceSwap(false);
     setAiComposeIncomingFile(null);
     setAiComposeIncomingPreview('');
+    setAiComposeTitle('');
+    setAiComposeHonorees('');
+    setAiComposeDate('');
     setAiComposeHistoryId(null);
     setAiComposeStudioTab('create');
   };
@@ -1145,6 +1162,15 @@ export default function TemplatesPage() {
       setAiComposePrompt(presetPrompt);
     } else if (coupleFaceSwap) {
       setAiComposePrompt(COUPLE_FACE_SWAP_DEFAULT_PROMPT);
+    }
+    if (coupleFaceSwap) {
+      setAiComposeTitle(
+        templateName.trim() && !/^Nouveau Modèle|^Invitation IA$/i.test(templateName)
+          ? templateName
+          : '',
+      );
+      setAiComposeHonorees(invitationHonorees === 'Hassan & Ayesha' ? '' : invitationHonorees);
+      setAiComposeDate(invitationDate === '2026-06-15' ? '' : invitationDate);
     }
     setAiComposeModalOpen(true);
     void fetchAiTemplateComposeHistoryStudio().then(setAiComposeHistory);
@@ -1267,6 +1293,18 @@ export default function TemplatesPage() {
  });
  };
 
+ const commitIdentityToEditor = (raw: { title?: string; honorees?: string; date?: string }) => {
+   const identity = invitationIdentityForCard(raw);
+   if (!hasInvitationIdentity(raw)) return;
+   if (identity.title) setTemplateName(identity.title);
+   setInvitationHonorees(String(raw.honorees || '').trim());
+   setInvitationDate(String(raw.date || '').trim());
+   setCanvasElements((prev) => {
+     const applied = applyInvitationIdentityToContent({ elements: prev, global: {} }, identity);
+     return Array.isArray(applied.elements) ? applied.elements as CanvasElement[] : prev;
+   });
+ };
+
  const handleAiComposeGenerate = async () => {
  if (aiComposeBusy) return;
  const currentCanvasBg =
@@ -1365,6 +1403,13 @@ export default function TemplatesPage() {
     } finally {
       window.clearTimeout(stageTimer);
     }
+    if (aiComposeCoupleFaceSwap) {
+      pendingCoupleIdentityRef.current = {
+        title: aiComposeTitle,
+        honorees: aiComposeHonorees,
+        date: aiComposeDate,
+      };
+    }
     if (isStudioJobAccepted(result)) {
       trackJob(result.jobId, 'invitation', promptToSend);
       setAiComposeModalOpen(false);
@@ -1418,6 +1463,14 @@ export default function TemplatesPage() {
     }
     setAiComposeHistoryId(typeof result.historyId === 'string' ? result.historyId : null);
     void fetchAiTemplateComposeHistoryStudio().then(setAiComposeHistory);
+    if (aiComposeCoupleFaceSwap) {
+      commitIdentityToEditor({
+        title: aiComposeTitle,
+        honorees: aiComposeHonorees,
+        date: aiComposeDate,
+      });
+      pendingCoupleIdentityRef.current = null;
+    }
     setAiComposeModalOpen(false);
     resetAiComposeModal();
     playAiGenerationCompleteSound();
@@ -1538,6 +1591,13 @@ export default function TemplatesPage() {
            if (mode.id === 'couple') {
              setAiComposeCoupleFaceSwap(true);
              setAiComposeIsAlteration(true);
+             setAiComposeTitle(
+               templateName.trim() && !/^Nouveau Modèle|^Invitation IA$/i.test(templateName)
+                 ? templateName
+                 : '',
+             );
+             setAiComposeHonorees(invitationHonorees === 'Hassan & Ayesha' ? '' : invitationHonorees);
+             setAiComposeDate(invitationDate === '2026-06-15' ? '' : invitationDate);
              if (aiComposePrompt.trim().length < 8) {
                setAiComposePrompt(COUPLE_FACE_SWAP_DEFAULT_PROMPT);
              }
@@ -1664,6 +1724,15 @@ export default function TemplatesPage() {
        </div>
      )}
    </div>
+   <InvitationIdentityFields
+     disabled={aiComposeBusy}
+     value={{ title: aiComposeTitle, honorees: aiComposeHonorees, date: aiComposeDate }}
+     onChange={(next) => {
+       setAiComposeTitle(next.title || '');
+       setAiComposeHonorees(next.honorees || '');
+       setAiComposeDate(next.date || '');
+     }}
+   />
  </div>
  ) : (
  <div>
@@ -2369,6 +2438,10 @@ export default function TemplatesPage() {
       );
       setGeneratedByAi(true);
       setImportedWithOcr(false);
+      if (pendingCoupleIdentityRef.current) {
+        commitIdentityToEditor(pendingCoupleIdentityRef.current);
+        pendingCoupleIdentityRef.current = null;
+      }
       if (typeof job.historyId === 'string') setAiComposeHistoryId(job.historyId);
       void fetchAiTemplateComposeHistoryStudio().then(setAiComposeHistory);
       if (editorOpen) {
@@ -2641,16 +2714,17 @@ export default function TemplatesPage() {
  };
 
  const writeIdentityToCanvas = (next?: { title?: string; honorees?: string; date?: string }) => {
+ setCanvasElements((prev) => {
  const applied = applyInvitationIdentityToContent(
- { elements: canvasElements, global: {} },
+ { elements: prev, global: {} },
  {
  title: next?.title ?? templateName,
  honorees: next?.honorees ?? invitationHonorees,
  date: next?.date ?? invitationDate,
  },
  );
- const nextElements = Array.isArray(applied.elements) ? applied.elements as CanvasElement[] : canvasElements;
- setCanvasElements(nextElements);
+ return Array.isArray(applied.elements) ? applied.elements as CanvasElement[] : prev;
+ });
  };
 
  const catalogTemplates = templates.filter((t) => t.isGlobal ?? !t.tenantId);
