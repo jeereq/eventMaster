@@ -16,7 +16,7 @@ import { buildMockupTemplate, applyMockupToEditor, applyMockupTextMode, buildTex
 import { extractTextFromImageSource, mergeOcrIntoMockupElements } from '@/lib/templateOcrImport';
 import { composeTemplateWithAi, applyAiComposeToEditor, loadAiTemplateDraft, clearAiTemplateDraft, downloadAiGeneratedImage, COUPLE_FACE_SWAP_DEFAULT_PROMPT, type AiSpeedMode } from '@/lib/templateAiCompose';
 import { isStudioJobAccepted, onStudioJob } from '@/lib/studioJobs';
-import { useStudioJobs } from '@/context/StudioJobsContext';
+import { useStudioJobs, useStudioLoaderOverlay } from '@/context/StudioJobsContext';
 import AiComposeFullscreenLoader from '@/components/AiComposeFullscreenLoader';
 import {
  fetchAiTemplateComposeHistoryStudio,
@@ -219,6 +219,7 @@ function getElementFieldInfo(el: Record<string, unknown>, index: number): {
 export default function TemplatesPage() {
  const { user, planFeatures, planQuota, tenant, access } = useAuth();
  const { trackJob } = useStudioJobs();
+ const { runningJob: invitationStudioJob, isHidden: invitationLoaderHidden, hideOverlay: hideInvitationLoader, showOverlay: showInvitationLoader } = useStudioLoaderOverlay('invitation');
  const { site } = usePlatformSite();
  const isInviteBlocked = site?.studioVisibility?.invite === false;
  const router = useRouter();
@@ -445,6 +446,7 @@ export default function TemplatesPage() {
   const [aiComposeDate, setAiComposeDate] = useState('');
   const pendingCoupleIdentityRef = useRef<{ title?: string; honorees?: string; date?: string } | null>(null);
   const [aiComposeBusy, setAiComposeBusy] = useState(false);
+  const showInvitationStudioLoader = !invitationLoaderHidden && (aiComposeBusy || Boolean(invitationStudioJob));
  const [aiComposeStage, setAiComposeStage] = useState<string | null>(null);
  const [aiComposeEmbedText, setAiComposeEmbedText] = useState(false);
  const [aiComposeVariantsCount, setAiComposeVariantsCount] = useState<1 | 2>(1);
@@ -1338,6 +1340,7 @@ export default function TemplatesPage() {
 
  setError('');
  unlockAudioNotifications();
+ showInvitationLoader();
  setAiComposeBusy(true);
  setAiComposeStage(aiComposeFiles.length ? 'Envoi des images…' : 'Lecture du brief…');
  try {
@@ -3004,7 +3007,7 @@ export default function TemplatesPage() {
  onSuccess={() => setAiAllowance(getAiSimulationAllowance())}
  />
  <AiComposeFullscreenLoader
- active={aiComposeBusy}
+ active={showInvitationStudioLoader}
  embedText={aiComposeEmbedText}
  hasReferences={aiComposeFiles.length > 0}
  title={
@@ -3012,12 +3015,13 @@ export default function TemplatesPage() {
  ? 'Retouche de l’invitation IA…'
  : undefined
  }
- stageHint={aiComposeStage}
+ stageHint={aiComposeStage || (invitationStudioJob ? 'La génération continue même si vous quittez cet écran.' : null)}
  footnote={
  aiComposePrompt.toLowerCase().includes('retouche') || aiComposePrompt.toLowerCase().includes('altér')
  ? 'Conservation de la base avec ajustement précis par l’IA.'
  : undefined
  }
+ onContinueInBackground={hideInvitationLoader}
  />
  <Modal
  open={exitConfirmOpen}
@@ -5932,7 +5936,7 @@ export default function TemplatesPage() {
         onSuccess={() => setAiAllowance(getAiSimulationAllowance())}
       />
       <AiComposeFullscreenLoader
-        active={aiComposeBusy}
+        active={showInvitationStudioLoader}
         embedText={aiComposeEmbedText}
         hasReferences={aiComposeFiles.length > 0}
         title={
@@ -5940,7 +5944,8 @@ export default function TemplatesPage() {
             ? 'Retouche de l’invitation IA…'
             : undefined
         }
-        stageHint={aiComposeStage}
+        stageHint={aiComposeStage || (invitationStudioJob ? 'La génération continue même si vous quittez cet écran.' : null)}
+        onContinueInBackground={hideInvitationLoader}
       />
  <div className="space-y-6">
  <PageHeader

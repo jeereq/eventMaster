@@ -51,7 +51,7 @@ import { Alert, Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
 import { isStudioJobAccepted, onStudioJob } from '@/lib/studioJobs';
-import { useStudioJobs } from '@/context/StudioJobsContext';
+import { useStudioJobs, useStudioLoaderOverlay } from '@/context/StudioJobsContext';
 
 const ROOM_TYPES: RoomType[] = ['SIMPLE', 'BANQUET', 'CONFERENCE', 'AMPHITHEATER', 'TENT', 'CUSTOM'];
 
@@ -75,6 +75,7 @@ export default function LandingRoomPlanAiStudio({
 }) {
   const { user, access } = useAuth();
   const { trackJob } = useStudioJobs();
+  const { runningJob: roomStudioJob, isHidden: roomLoaderHidden, hideOverlay: hideRoomLoader, showOverlay: showRoomLoader } = useStudioLoaderOverlay('room');
   const { site } = usePlatformSite();
   const isRoomBlocked = site?.studioVisibility?.room === false;
   const protocolLocked = isProtocolUser(access);
@@ -170,6 +171,7 @@ export default function LandingRoomPlanAiStudio({
 
     setError('');
     unlockAudioNotifications();
+    showRoomLoader();
     setBusy(true);
     try {
       const imageUrl = file ? await roomPlanFileToDataUrl(file) : undefined;
@@ -597,7 +599,12 @@ export default function LandingRoomPlanAiStudio({
         </div>
       )}
 
-      <AiRoomPlanFullscreenLoader active={busy} hasPhoto={Boolean(file)} />
+      <AiRoomPlanFullscreenLoader
+        active={!roomLoaderHidden && (busy || Boolean(roomStudioJob))}
+        hasPhoto={Boolean(file)}
+        stageHint={roomStudioJob ? 'La génération continue même si vous quittez cet écran.' : null}
+        onContinueInBackground={hideRoomLoader}
+      />
       <AiTokenPurchaseModal
         open={tokenModalOpen}
         onClose={() => setTokenModalOpen(false)}

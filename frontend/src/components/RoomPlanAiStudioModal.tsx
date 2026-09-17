@@ -37,7 +37,7 @@ import { uploadImageFile } from '@/lib/cloudinaryUpload';
 import { cn } from '@/lib/cn';
 import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
 import { isStudioJobAccepted, onStudioJob } from '@/lib/studioJobs';
-import { useStudioJobs } from '@/context/StudioJobsContext';
+import { useStudioJobs, useStudioLoaderOverlay } from '@/context/StudioJobsContext';
 
 async function readImageFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -78,6 +78,7 @@ export default function RoomPlanAiStudioModal({
 }) {
   const { site } = usePlatformSite();
   const { trackJob } = useStudioJobs();
+  const { runningJob: roomStudioJob, isHidden: roomLoaderHidden, hideOverlay: hideRoomLoader, showOverlay: showRoomLoader } = useStudioLoaderOverlay('room');
   const isRoomBlocked = site?.studioVisibility?.room === false;
   const fileRef = useRef<HTMLInputElement>(null);
   const [intent, setIntent] = useState<'brief' | 'photo'>('brief');
@@ -170,6 +171,7 @@ export default function RoomPlanAiStudioModal({
 
     setError('');
     unlockAudioNotifications();
+    showRoomLoader();
     setBusy(true);
     try {
       let imageUrl: string | undefined;
@@ -509,7 +511,12 @@ export default function RoomPlanAiStudioModal({
         </div>
         )}
       </Modal>
-      <AiRoomPlanFullscreenLoader active={busy} hasPhoto={Boolean(file)} />
+      <AiRoomPlanFullscreenLoader
+        active={!roomLoaderHidden && (busy || Boolean(roomStudioJob))}
+        hasPhoto={Boolean(file)}
+        stageHint={roomStudioJob ? 'La génération continue même si vous quittez cet écran.' : null}
+        onContinueInBackground={hideRoomLoader}
+      />
       <AiTokenPurchaseModal open={tokenModalOpen} onClose={() => setTokenModalOpen(false)} />
     </>
   );

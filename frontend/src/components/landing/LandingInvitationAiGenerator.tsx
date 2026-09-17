@@ -92,7 +92,7 @@ import {
 import { cn } from '@/lib/cn';
 import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
 import { isStudioJobAccepted, onStudioJob } from '@/lib/studioJobs';
-import { useStudioJobs } from '@/context/StudioJobsContext';
+import { useStudioJobs, useStudioLoaderOverlay } from '@/context/StudioJobsContext';
 
 function contentToLandingTemplate(
   content: TemplateAiComposeContent,
@@ -279,6 +279,7 @@ export default function LandingInvitationAiGenerator({
   const protocolLocked = isProtocolUser(access);
   const router = useRouter();
   const { trackJob } = useStudioJobs();
+  const { runningJob: invitationStudioJob, isHidden: invitationLoaderHidden, hideOverlay: hideInvitationLoader, showOverlay: showInvitationLoader } = useStudioLoaderOverlay('invitation');
   const inputRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
@@ -669,6 +670,7 @@ export default function LandingInvitationAiGenerator({
     const seq = ++generationSeq.current;
     setError('');
     unlockAudioNotifications();
+    showInvitationLoader();
     setBusy(true);
     setResult(null);
     setLastStageMeta(null);
@@ -867,6 +869,7 @@ export default function LandingInvitationAiGenerator({
       return;
     }
 
+    showInvitationLoader();
     setRefineBusy(true);
     setRefineStage('Ajustement de la proposition par l’IA…');
     setRefineSuccess(null);
@@ -2564,12 +2567,17 @@ export default function LandingInvitationAiGenerator({
       />
 
       <AiComposeFullscreenLoader
-        active={(busy || refineBusy) && isExpanded}
+        active={!invitationLoaderHidden && (busy || refineBusy || Boolean(invitationStudioJob))}
         embedText={false}
         hasReferences={files.length > 0}
         title={refineBusy ? 'Retouche de l’invitation IA…' : undefined}
-        stageHint={refineBusy ? (refineStage || 'Altération ciblée par l’IA…') : stage}
+        stageHint={
+          refineBusy
+            ? (refineStage || 'Altération ciblée par l’IA…')
+            : stage || (invitationStudioJob ? 'La génération continue même si vous quittez cet écran.' : null)
+        }
         footnote={refineBusy ? 'Conservation du style et des éléments avec application précise de la retouche.' : undefined}
+        onContinueInBackground={hideInvitationLoader}
       />
     </section>
   );
