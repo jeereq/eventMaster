@@ -12,7 +12,7 @@ export function getOpenAiApiKey(): string {
 
 export function getOpenAiJsonModel(preferred?: string | null): string {
   const custom = String(preferred || '').trim();
-  if (custom && (custom.startsWith('gpt-') || custom.includes('luna'))) {
+  if (custom && (custom.startsWith('gpt-') || custom.includes('luna') || custom.includes('astra'))) {
     return custom;
   }
   return process.env.OPENAI_MODEL || 'gpt-4o';
