@@ -6,6 +6,7 @@ import { assertPlanFeature, PlanFeatureError } from '../services/planFeaturesSer
 import { ensureMandatoryRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields';
 import { applyInvitationIdentityToContent } from '../utils/invitationIdentity';
 import { composeInvitationTemplateAi } from '../services/invitationTemplateAiService';
+import { parseInvitationStructuredBrief } from '../services/invitationStructuredBrief';
 import {
   consumeAiSimulationCredit,
   requireAiSimulationCredit,
@@ -545,6 +546,7 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
       speedMode,
       preferredModel: settings.aiStudioModels?.invitationModel,
       coupleFaceSwap,
+      structuredBrief: parseInvitationStructuredBrief(body.structuredBrief),
     };
     const runCompose = async () => {
       const result = await composeInvitationTemplateAi(composeInput);
@@ -672,6 +674,7 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
         speedMode,
         preferredModel: settings.aiStudioModels?.invitationModel,
         coupleFaceSwap,
+        structuredBrief: parseInvitationStructuredBrief(body.structuredBrief),
       });
       const historyId = await persistTemplateCompose({
         userId: user?.id || null,

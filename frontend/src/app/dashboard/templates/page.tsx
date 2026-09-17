@@ -60,6 +60,8 @@ import { StudioMobileDock } from '@/components/StudioMobileDock';
 import { PageHeader, Alert, Button, Input, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems, usePageSize, Modal } from '@/components/ui';
 import InvitationDuplicateModal, { type InvitationDuplicateValues } from '@/components/InvitationDuplicateModal';
 import InvitationIdentityFields from '@/components/InvitationIdentityFields';
+import InvitationStructuredBriefFields from '@/components/InvitationStructuredBriefFields';
+import { emptyInvitationStructuredBrief, type InvitationStructuredBrief } from '@/config/invitationStructuredBrief';
 import {
  applyInvitationIdentityToContent,
  hasInvitationIdentity,
@@ -435,6 +437,7 @@ export default function TemplatesPage() {
  const aiComposeIncomingInputRef = useRef<HTMLInputElement>(null);
  const [aiComposeModalOpen, setAiComposeModalOpen] = useState(false);
  const [aiComposePrompt, setAiComposePrompt] = useState('');
+ const [aiComposeStructured, setAiComposeStructured] = useState<InvitationStructuredBrief>(() => emptyInvitationStructuredBrief());
  const [aiComposeFiles, setAiComposeFiles] = useState<File[]>([]);
  const [aiComposePreviewUrls, setAiComposePreviewUrls] = useState<string[]>([]);
   const [aiComposeIsAlteration, setAiComposeIsAlteration] = useState(false);
@@ -1137,6 +1140,7 @@ export default function TemplatesPage() {
     setAiComposeFiles([]);
     setAiComposePreviewUrls([]);
     setAiComposePrompt('');
+    setAiComposeStructured(emptyInvitationStructuredBrief());
     setAiComposeStage(null);
     setAiComposeBusy(false);
     setAiComposeIsAlteration(false);
@@ -1401,6 +1405,7 @@ export default function TemplatesPage() {
       variantsCount: aiComposeVariantsCount,
       speedMode: aiComposeSpeedMode,
       coupleFaceSwap: aiComposeCoupleFaceSwap,
+      structuredBrief: aiComposeStructured,
     });
     // Affiche l’étape « création d’image » pendant l’appel API (analyse + génération côté serveur)
     const stageTimer = window.setTimeout(() => {
@@ -1859,7 +1864,13 @@ export default function TemplatesPage() {
  <p className="text-sm font-semibold text-foreground mb-2">
    {aiComposeCoupleFaceSwap ? '3. Précision (optionnelle)' : '3. Décrivez la fête'}
  </p>
- <div className="flex items-center justify-between">
+ <InvitationStructuredBriefFields
+   id="ai-compose-structured"
+   value={aiComposeStructured}
+   onChange={setAiComposeStructured}
+   disabled={aiComposeBusy}
+ />
+ <div className="flex items-center justify-between mt-4">
  <label htmlFor="ai-compose-prompt" className="text-sm font-semibold text-muted">
    {aiComposeCoupleFaceSwap ? 'Qui est à gauche, tenue à garder…' : 'Ambiance, couleurs, cérémonie'}
  </label>

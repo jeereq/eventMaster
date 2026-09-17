@@ -12,6 +12,14 @@ import {
   parseInvitationContextSource,
 } from './invitationComposeContext.ts';
 import {
+  EVENTMASTER_STYLE_FEWSHOT,
+  hasInvitationStructuredBrief,
+  mergeInvitationStructuredBrief,
+  parseInvitationStructuredBrief,
+  type InvitationStructuredBrief,
+} from './invitationStructuredBrief.ts';
+import { loadEventMasterStyleRefUrls } from './invitationStyleRefs.ts';
+import {
   NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE,
   NANO_BANANA_COMPACT_FACE_LOCK,
   NANO_BANANA_STYLE_INSTRUCTION,
@@ -440,6 +448,8 @@ function visionUserText(
     existingElements?: Record<string, unknown>[];
     coupleFaceSwap?: boolean;
     intent?: InvitationPipelineIntent;
+    styleRefsOnly?: boolean;
+    styleFewshot?: string;
   },
 ): string {
   const original = options?.processed?.originalBrief || prompt;
@@ -470,6 +480,8 @@ function visionUserText(
           ? 'Ignore beautify / smooth / lighten requests.'
           : 'Do not idealize the couple photos.'
       }`
+    : options?.styleRefsOnly
+    ? 'STYLE REFERENCE PHOTOS ONLY: paper, foil, frame and palette taste. hasPeople=false unless the brief explicitly asks for hosts. Do not copy faces from these cards.'
     : hasRefs
     ? `PHOTOS ATTACHED: faces = pixel truth. ${
         options?.processed?.beautifyStripped
@@ -479,6 +491,7 @@ function visionUserText(
     : 'NO PHOTOS: hasPeople=false unless the brief explicitly asks for hosts.';
   const contextBlock = options?.organizerContext ? `\n${options.organizerContext}\n` : '';
   const roles = options?.processed?.referenceRoles ? `\n${options.processed.referenceRoles}\n` : '';
+  const fewshot = options?.styleFewshot ? `\n${options.styleFewshot}\n` : '';
 
   return `MODE: ${intent}
 
@@ -491,7 +504,7 @@ LOCAL SCENE SCAFFOLD (refine it — do not copy blindly):
 """
 ${localScaffold.slice(0, 900)}
 """
-${contextBlock}${roles}${refineBlock}
+${contextBlock}${roles}${fewshot}${refineBlock}
 ${honesty}
 
 Tasks:
@@ -575,6 +588,8 @@ async function visionStructure(
     coupleFaceSwap?: boolean;
     preferredModel?: string;
     intent?: InvitationPipelineIntent;
+    styleRefsOnly?: boolean;
+    styleFewshot?: string;
   },
 ): Promise<VisionResult> {
   const hasRefs = imageUrls.length > 0;
@@ -1816,8 +1831,9 @@ async function writeInvitationOverlayCopy(input: {
   intent: InvitationPipelineIntent;
   organizerContext?: string;
   preferredModel?: string;
+  language?: InvitationCopyDraft['language'] | null;
 }): Promise<InvitationCopyDraft | null> {
-  const language = detectInvitationCopyLanguage(input.originalBrief);
+  const language = input.language || detectInvitationCopyLanguage(input.originalBrief);
   const userText = buildInvitationCopyUserText({
     originalBrief: input.originalBrief,
     language,
@@ -2041,14 +2057,16 @@ export async function composeInvitationTemplateAi(input: {
   speedMode?: string | null;
   preferredModel?: string | null;
   coupleFaceSwap?: boolean;
+  structuredBrief?: InvitationStructuredBrief | null;
 }): Promise<InvitationAiComposeResult> {
   rateLimit(input.userId);
   const coupleFaceSwap = Boolean(input.coupleFaceSwap);
-  const promptRaw = String(input.prompt || '').trim();
+  const structuredBrief = parseInvitationStructuredBrief(input.structuredBrief);
+  const promptRaw = mergeInvitationStructuredBrief(String(input.prompt || '').trim(), structuredBrief);
   const prompt = promptRaw.length >= 8
     ? promptRaw
     : coupleFaceSwap
-      ? COUPLE_FACE_SWAP_DEFAULT_PROMPT
+      ? mergeInvitationStructuredBrief(COUPLE_FACE_SWAP_DEFAULT_PROMPT, structuredBrief)
       : '';
   if (prompt.length < 8) {
     fail(400, 'Décrivez le style d’invitation souhaité (au moins quelques mots).');
@@ -2069,10 +2087,24 @@ export async function composeInvitationTemplateAi(input: {
   if (input.baseImageUrl && /^https?:\/\//i.test(input.baseImageUrl.trim()) && !rawImageUrls.includes(input.baseImageUrl.trim())) {
     rawImageUrls.unshift(input.baseImageUrl.trim());
   }
-  const imageUrls = rawImageUrls.slice(0, 4);
+  let imageUrls = rawImageUrls.slice(0, 4);
   if (coupleFaceSwap && imageUrls.length < 2) {
     fail(400, 'Ajoutez l’image à modifier et au moins une photo du couple.');
   }
+  const pipelineIntentEarly = resolveInvitationPipelineIntent({
+    coupleFaceSwap,
+    isAlteration,
+    brief: prompt,
+  });
+  let styleRefsOnly = false;
+  if (pipelineIntentEarly === 'create' && imageUrls.length === 0) {
+    const styleRefs = await loadEventMasterStyleRefUrls(2);
+    if (styleRefs.length) {
+      imageUrls = styleRefs;
+      styleRefsOnly = true;
+    }
+  }
+  const styleFewshot = pipelineIntentEarly === 'create' ? EVENTMASTER_STYLE_FEWSHOT : '';
 
   const existingElements = Array.isArray(input.existingElements) ? input.existingElements : [];
   const existingTextSummaries = existingElements
@@ -2084,7 +2116,7 @@ export async function composeInvitationTemplateAi(input: {
     : prompt;
 
   const processed = processUserPromptForHonestFaces(enrichedPrompt, {
-    referenceCount: imageUrls.length,
+    referenceCount: styleRefsOnly ? 0 : imageUrls.length,
     embedText,
     artStyleLine,
     coupleFaceSwap,
@@ -2106,7 +2138,7 @@ export async function composeInvitationTemplateAi(input: {
   const organizerContextCopy = formatContextForVision(composeContext, contextSource);
 
   const key = requireAiConfigured();
-  const structured = await visionStructure(key, processed.originalBrief, imageUrls, {
+      const structured = await visionStructure(key, processed.originalBrief, imageUrls, {
     embedText,
     organizerContext: organizerContextEn,
     processed,
@@ -2117,8 +2149,10 @@ export async function composeInvitationTemplateAi(input: {
     coupleFaceSwap,
     preferredModel: input.preferredModel || undefined,
     intent: pipelineIntent,
+    styleRefsOnly,
+    styleFewshot,
   });
-  if (!imageUrls.length && structured.visualAnalysis) {
+  if ((!imageUrls.length || styleRefsOnly) && structured.visualAnalysis) {
     structured.visualAnalysis.hasPeople = false;
     structured.visualAnalysis.peopleCount = 0;
   }
@@ -2143,7 +2177,7 @@ export async function composeInvitationTemplateAi(input: {
     structured.visualAnalysis,
     {
       embedText,
-      organizerContext: organizerContextEn,
+      organizerContext: [organizerContextEn, styleFewshot].filter(Boolean).join('\n'),
       processed,
       artStyle,
       isAlteration,
@@ -2175,7 +2209,7 @@ export async function composeInvitationTemplateAi(input: {
         : [];
 
       const imageOptions = {
-        hasPeople: (coupleFaceSwap || Boolean(structured.visualAnalysis?.hasPeople)) && imageUrls.length > 0,
+        hasPeople: (coupleFaceSwap || Boolean(structured.visualAnalysis?.hasPeople)) && imageUrls.length > 0 && !styleRefsOnly,
         embedText,
         artStyle,
         speedMode,
@@ -2299,6 +2333,12 @@ export async function composeInvitationTemplateAi(input: {
   (global as Record<string, unknown>).aiOriginalBrief = processed.originalBrief;
   (global as Record<string, unknown>).aiPipelineIntent = resolvedIntent;
   (global as Record<string, unknown>).aiLocks = imageLocks;
+  if (hasInvitationStructuredBrief(structuredBrief)) {
+    (global as Record<string, unknown>).aiStructuredBrief = structuredBrief;
+  }
+  if (styleRefsOnly) {
+    (global as Record<string, unknown>).aiStyleRefsUsed = imageUrls.length;
+  }
   if (imageJudge) {
     (global as Record<string, unknown>).aiJudgeScore = imageJudge.score;
     (global as Record<string, unknown>).aiJudgePass = imageJudge.pass;
@@ -2325,6 +2365,7 @@ export async function composeInvitationTemplateAi(input: {
       intent: resolvedIntent,
       organizerContext: organizerContextCopy || organizerContextEn,
       preferredModel: input.preferredModel || undefined,
+      language: structuredBrief.language,
     });
     if (copyDraft) {
       const palette = global.palette as { primary: string; secondary: string; accent: string };

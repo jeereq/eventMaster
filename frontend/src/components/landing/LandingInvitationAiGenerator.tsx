@@ -83,6 +83,8 @@ import {
 import type { LandingTemplate } from '@/config/landingTemplates';
 import { Button, Modal, Alert } from '@/components/ui';
 import InvitationIdentityFields from '@/components/InvitationIdentityFields';
+import InvitationStructuredBriefFields from '@/components/InvitationStructuredBriefFields';
+import { emptyInvitationStructuredBrief, type InvitationStructuredBrief } from '@/config/invitationStructuredBrief';
 import {
   applyInvitationIdentityToContent,
   hasInvitationIdentity,
@@ -284,6 +286,7 @@ export default function LandingInvitationAiGenerator({
   const resultRef = useRef<HTMLDivElement>(null);
 
   const [prompt, setPrompt] = useState('');
+  const [structuredBrief, setStructuredBrief] = useState<InvitationStructuredBrief>(() => emptyInvitationStructuredBrief());
   const [promptHistory, setPromptHistory] = useState<string[]>(['']);
   const [promptHistoryIndex, setPromptHistoryIndex] = useState<number>(0);
   const [studioIntent, setStudioIntent] = useState<'create' | 'clone' | 'couple'>('create');
@@ -706,6 +709,7 @@ export default function LandingInvitationAiGenerator({
         speedMode,
         coupleFaceSwap: studioIntent === 'couple',
         isAlteration: studioIntent === 'couple',
+        structuredBrief,
       });
       if (seq !== generationSeq.current) return;
       const coupleIdentity = {
@@ -914,6 +918,7 @@ export default function LandingInvitationAiGenerator({
         artStyle,
         variantsCount,
         speedMode,
+        structuredBrief,
       });
       if (isStudioJobAccepted(data)) {
         trackJob(data.jobId, 'invitation', rawRefine);
@@ -1671,6 +1676,14 @@ export default function LandingInvitationAiGenerator({
                     </div>
                   </div>
                 ) : null}
+
+                <InvitationStructuredBriefFields
+                  id={`${id}-structured`}
+                  value={structuredBrief}
+                  onChange={setStructuredBrief}
+                  disabled={busy}
+                  compact
+                />
 
                 <div className="flex items-center justify-between gap-2">
                   <label htmlFor={`${id}-brief`} className="text-xs font-bold text-foreground">

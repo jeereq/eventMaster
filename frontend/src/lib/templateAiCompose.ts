@@ -13,6 +13,7 @@ import {
 } from '@/lib/rsvpFormFields';
 import type { TemplatePalette } from '@/lib/imagePalette';
 import { isStudioJobAccepted, type StudioJobAccepted } from '@/lib/studioJobs';
+import type { InvitationStructuredBrief } from '@/config/invitationStructuredBrief';
 
 export const AI_TEMPLATE_DRAFT_KEY = 'em_ai_template_draft';
 
@@ -76,6 +77,7 @@ export async function composeTemplateWithAi(input: {
   variantsCount?: number;
   speedMode?: AiSpeedMode;
   coupleFaceSwap?: boolean;
+  structuredBrief?: InvitationStructuredBrief;
 }): Promise<TemplateAiComposeResult | StudioJobAccepted> {
   const deviceId = getOrCreateDeviceId();
   const imageUrls = [...(input.imageUrls || [])];
@@ -96,6 +98,7 @@ export async function composeTemplateWithAi(input: {
     variantsCount: input.variantsCount,
     speedMode: input.speedMode || 'quality',
     coupleFaceSwap: Boolean(input.coupleFaceSwap),
+    structuredBrief: input.structuredBrief,
     background: true,
   });
   if (isStudioJobAccepted(data)) return data;
@@ -122,6 +125,7 @@ export async function composeTemplateWithAiPublic(input: {
   variantsCount?: number;
   speedMode?: AiSpeedMode;
   coupleFaceSwap?: boolean;
+  structuredBrief?: InvitationStructuredBrief;
 }): Promise<TemplateAiComposeResult | StudioJobAccepted> {
   const deviceId = getOrCreateDeviceId();
   const imageDataUrls: string[] = [];
@@ -147,6 +151,7 @@ export async function composeTemplateWithAiPublic(input: {
     variantsCount: input.variantsCount,
     speedMode: input.speedMode || 'quality',
     coupleFaceSwap: Boolean(input.coupleFaceSwap),
+    structuredBrief: input.structuredBrief,
     background: true,
   });
   if (isStudioJobAccepted(data)) return data;
