@@ -18,6 +18,44 @@ export function getOpenAiJsonModel(preferred?: string | null): string {
   return process.env.OPENAI_MODEL || 'gpt-4o';
 }
 
+/** gpt-5 / o1–o4 n’acceptent que la température par défaut (1). */
+export function openAiLocksSampling(model: string): boolean {
+  const id = model.trim().toLowerCase();
+  return (
+    id.startsWith('gpt-5') ||
+    id.startsWith('o1') ||
+    id.startsWith('o3') ||
+    id.startsWith('o4') ||
+    id.includes('luna') ||
+    id.includes('astra')
+  );
+}
+
+function isTemperatureUnsupportedError(message: string): boolean {
+  return /temperature/i.test(message) && /unsupported|does not support|only the default/i.test(message);
+}
+
+function openAiChatBody(params: {
+  model: string;
+  system: string;
+  userContent: unknown;
+  temperature?: number;
+  includeTemperature: boolean;
+}): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    model: params.model,
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: params.system },
+      { role: 'user', content: params.userContent },
+    ],
+  };
+  if (params.includeTemperature && params.temperature !== undefined) {
+    body.temperature = params.temperature;
+  }
+  return body;
+}
+
 export async function requestOpenAiJson(input: {
   system: string;
   userText: string;
@@ -33,6 +71,8 @@ export async function requestOpenAiJson(input: {
   }
 
   const failMessage = input.failMessage || 'OpenAI n’a pas renvoyé de JSON utilisable.';
+  const model = getOpenAiJsonModel(input.model);
+  const temperature = input.temperature ?? 0.3;
   const userContent: Array<Record<string, unknown>> = [
     { type: 'text', text: input.userText },
     ...(input.imageUrls || []).slice(0, 4).map((url) => ({
@@ -43,7 +83,8 @@ export async function requestOpenAiJson(input: {
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), input.timeoutMs ?? 90_000);
-  try {
+
+  const post = async (includeTemperature: boolean) => {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       signal: controller.signal,
@@ -51,15 +92,15 @@ export async function requestOpenAiJson(input: {
         Authorization: `Bearer ${key}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: getOpenAiJsonModel(input.model),
-        temperature: input.temperature ?? 0.3,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: input.system },
-          { role: 'user', content: userContent },
-        ],
-      }),
+      body: JSON.stringify(
+        openAiChatBody({
+          model,
+          system: input.system,
+          userContent,
+          temperature,
+          includeTemperature,
+        }),
+      ),
     });
     const payload = (await response.json().catch(() => ({}))) as {
       error?: { message?: string };
@@ -73,9 +114,17 @@ export async function requestOpenAiJson(input: {
     const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== 'object') fail(502, failMessage);
     return parsed;
+  };
+
+  try {
+    return await post(!openAiLocksSampling(model));
   } catch (error) {
+    const message = (error as Error)?.message || '';
+    if (!openAiLocksSampling(model) && isTemperatureUnsupportedError(message)) {
+      return await post(false);
+    }
     if ((error as HttpError)?.status) throw error;
-    fail(502, (error as Error)?.message || failMessage);
+    fail(502, message || failMessage);
   } finally {
     clearTimeout(timer);
   }

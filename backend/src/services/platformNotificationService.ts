@@ -66,11 +66,16 @@ function titleForEvent(event: CommercialBillingEvent, tenantName: string): strin
   }
 }
 
+function asDeliveryProviderId(value: unknown): string | null {
+  if (value == null || value === '') return null;
+  return String(value);
+}
+
 async function logDelivery(params: {
   notificationId: string;
   channel: 'EMAIL' | 'WHATSAPP' | 'PUSH';
   status: 'SENT' | 'FAILED' | 'SIMULATED';
-  providerId?: string;
+  providerId?: unknown;
   error?: string;
 }) {
   try {
@@ -79,7 +84,7 @@ async function logDelivery(params: {
         notificationId: params.notificationId,
         channel: params.channel,
         status: params.status,
-        providerId: params.providerId || null,
+        providerId: asDeliveryProviderId(params.providerId),
         error: params.error ? params.error.slice(0, 500) : null,
       },
     });

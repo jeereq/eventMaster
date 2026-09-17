@@ -326,7 +326,7 @@ export default function AdminFinanceDetailsModal({
                 <span className="inline-flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-muted" />
                   {token.composeDetails.variantsCount > 1 ? (
-                    <Badge variant="warning">2 visuels (Variations A/B)</Badge>
+                    <Badge variant="warning">2 visuels (fidèle + ample)</Badge>
                   ) : (
                     <span>1 proposition unique</span>
                   )}

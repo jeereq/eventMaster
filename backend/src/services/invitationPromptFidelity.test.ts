@@ -10,22 +10,38 @@ import {
   type InvitationComposeContext,
 } from './invitationComposeContextUtils.ts';
 import {
+  COMPACT_IMAGE_PROMPT_MAX_CHARS,
   NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE,
+  NANO_BANANA_COMPACT_FACE_LOCK,
   NANO_BANANA_CRITICAL_CONSTRAINT,
   NANO_BANANA_LIGHT_RIG_COHERENCE,
   NANO_BANANA_OPTICAL_BOKEH,
   NANO_BANANA_STYLE_INSTRUCTION,
   applyEnglishSceneBrief,
+  applyInvitationCopyToElements,
+  buildCompactImagePrompt,
+  buildInvitationCopyUserText,
   buildEnglishSceneBriefScaffold,
   buildGenericThematicBackgroundPrompt,
   buildHonestFaceIdentityHeader,
+  buildInvitationImageJudgeUserText,
+  buildInvitationImageRetryPrompt,
+  buildInvitationLocks,
   buildNanoBananaRawDirectives,
   buildReferenceRoles,
   buildVariantImagePrompt,
+  invitationPipelineModeSentence,
   isSafetyFilterTriggered,
   optimizeReferenceImageUrl,
   parseEnglishSceneBriefFromJson,
+  detectInvitationCopyLanguage,
+  parseInvitationCopyDraft,
+  parseInvitationImageJudgeVerdict,
+  parseInvitationLocks,
   processUserPromptForHonestFaces,
+  resolveFinalInvitationPipelineIntent,
+  resolveInvitationPipelineIntent,
+  shouldRetryInvitationImage,
   stripFaceBeautifyLanguage,
 } from './invitationPromptFidelity.ts';
 
@@ -425,14 +441,261 @@ describe('Nano Banana Robustesse & Safety Filter Fallback', () => {
 
   it('génère un prompt de variante A/B préservant l’identité avec une alternative de composition', () => {
     const original = 'Soirée de fiançailles or et vert émeraude au bord du fleuve Congo.';
-    const variant = buildVariantImagePrompt(original);
+    const variant = buildVariantImagePrompt(original, true);
 
     assert.match(variant, /Soirée de fiançailles or et vert émeraude/);
-    assert.match(variant, /ALTERNATIVE COMPOSITION VARIANT \(A\/B VARIATION 2\)/);
-    assert.match(variant, /subtle variation in framing/i);
-    assert.match(variant, /vertical 9:16/i);
-    assert.match(variant, /STRICT REFERENCE IMAGE & HOST IDENTITY ANCHORING/);
-    assert.match(variant, /GENTLE, CONTROLLED PROMPT ALTERATION/);
+    assert.match(variant, /VARIANT B — AMPLE/);
+    assert.match(variant, /Same hosts as the references/);
+    assert.match(variant, /breathing room/);
+    assert.match(variant, /Do not change faces/);
+
+    const faithful = buildVariantImagePrompt(original, true, 'faithful');
+    assert.match(faithful, /VARIANT A — FAITHFUL/);
+    assert.match(faithful, /Tight ceremonial framing/);
+    assert.doesNotMatch(faithful, /wider ceremonial space/);
+  });
+});
+
+describe('invitation pipeline intent', () => {
+  it('classe couple, refine, clone et create sans se tromper de mode', () => {
+    assert.equal(
+      resolveInvitationPipelineIntent({ coupleFaceSwap: true, brief: 'copier cette carte' }),
+      'couple',
+    );
+    assert.equal(
+      resolveInvitationPipelineIntent({ isAlteration: true, brief: 'Mariage floral or ivoire' }),
+      'refine',
+    );
+    assert.equal(
+      resolveInvitationPipelineIntent({ brief: 'Retouche le cadre doré seulement' }),
+      'refine',
+    );
+    assert.equal(
+      resolveInvitationPipelineIntent({ brief: 'Copier cette invitation Kuba' }),
+      'clone',
+    );
+    assert.equal(
+      resolveInvitationPipelineIntent({ brief: 'Mariage floral or ivoire à Kinshasa' }),
+      'create',
+    );
+  });
+
+  it('ne laisse pas la vision promouvoir un couple sans drapeau organisateur', () => {
+    assert.equal(
+      resolveFinalInvitationPipelineIntent({ local: 'create', vision: 'couple' }),
+      'create',
+    );
+    assert.equal(
+      resolveFinalInvitationPipelineIntent({
+        local: 'create',
+        vision: 'clone',
+        isInvitationClone: true,
+      }),
+      'clone',
+    );
+    assert.equal(
+      resolveFinalInvitationPipelineIntent({ local: 'refine', vision: 'clone' }),
+      'refine',
+    );
+    assert.equal(
+      resolveFinalInvitationPipelineIntent({ local: 'couple', vision: 'create' }),
+      'couple',
+    );
+  });
+});
+
+describe('compact image prompt', () => {
+  it('reste court et spécialisé par pipeline', () => {
+    const createPrompt = buildCompactImagePrompt({
+      intent: 'create',
+      originalBrief: 'Mariage floral or ivoire à Kinshasa',
+      decorParagraph:
+        'Compose a gold-and-ivory floral wedding card. [Subject] Luxury stationery. [Action] Presenting tropical florals. [Location] Kinshasa. [Composition] Tall 9:16. [Style] Photoreal print.',
+      analysis: { hasPeople: false, colors: ['#c5a059', '#faf7f2'] },
+      artStyle: 'realiste',
+    });
+    assert.equal(createPrompt.length <= COMPACT_IMAGE_PROMPT_MAX_CHARS, true);
+    assert.match(createPrompt, /MODE create/);
+    assert.match(createPrompt, /LOCKS/);
+    assert.match(createPrompt, /DECOR/);
+    assert.match(createPrompt, /Black African/);
+    assert.doesNotMatch(createPrompt, /IDENTITY ANCHOR/);
+    assert.doesNotMatch(createPrompt, /FACE INVENTORY/);
+    assert.doesNotMatch(createPrompt, /SCENE STEPS/);
+
+    const couplePrompt = buildCompactImagePrompt({
+      intent: 'couple',
+      originalBrief: 'Remplace uniquement les visages',
+      decorParagraph: 'Keep Image 1 card. Replace faces with Images 2+.',
+      analysis: { hasPeople: true, peopleCount: 2 },
+      coupleFaceSwap: true,
+      referenceCount: 3,
+      embedText: false,
+    });
+    assert.match(couplePrompt, /MODE couple/);
+    assert.match(couplePrompt, /Images 2\+/);
+    assert.match(couplePrompt, /RAW candid faces/);
+    assert.ok(couplePrompt.includes(NANO_BANANA_COMPACT_FACE_LOCK));
+    assert.doesNotMatch(couplePrompt, /IDENTITY ANCHOR/);
+    assert.ok(couplePrompt.length < 2500);
+  });
+
+  it('interdit le texte peint sur un modèle public', () => {
+    const prompt = buildCompactImagePrompt({
+      intent: 'create',
+      originalBrief: 'Gala bleu nuit',
+      decorParagraph: 'Compose a midnight gala card with gold foil.',
+      isPublic: true,
+    });
+    assert.match(prompt, /\{\{title\}\}/);
+    assert.match(prompt, /no painted text/i);
+  });
+
+  it('dérive au plus 8 verrous et ignore les doublons', () => {
+    const locks = buildInvitationLocks({
+      intent: 'clone',
+      analysis: {
+        hasPeople: true,
+        peopleCount: 2,
+        isInvitationClone: true,
+        clonedCardFeatures: 'double gold border, floral arch',
+        briefMustKeep: ['visages', 'cadre'],
+        briefMustChange: ['plus de roses'],
+        colors: ['#c5a059'],
+      },
+      referenceCount: 2,
+    });
+    assert.ok(locks.length <= 8);
+    assert.ok(locks.some((lock) => /identity|photos/i.test(lock)));
+    assert.ok(locks.some((lock) => /gold border/i.test(lock)));
+    assert.deepEqual(parseInvitationLocks(['  Keep faces  ', 'Keep faces', '', 12]), ['Keep faces']);
+    assert.match(invitationPipelineModeSentence('refine'), /MODE refine/);
+  });
+});
+
+describe('invitation image judge', () => {
+  it('échoue ouvert si le JSON est invalide', () => {
+    assert.equal(parseInvitationImageJudgeVerdict(null), null);
+    assert.equal(parseInvitationImageJudgeVerdict('ok'), null);
+    assert.equal(shouldRetryInvitationImage(null), false);
+  });
+
+  it('force un échec si des défauts durs sont listés malgré pass=true', () => {
+    const verdict = parseInvitationImageJudgeVerdict({
+      pass: true,
+      score: 9,
+      defects: ['painted_text', 'skin_lightened'],
+      retryDirective: 'Remove painted letters and restore photographed skin tone.',
+    });
+    assert.ok(verdict);
+    assert.equal(verdict?.pass, false);
+    assert.deepEqual(verdict?.defects, ['painted_text', 'skin_lightened']);
+    assert.equal(shouldRetryInvitationImage(verdict), true);
+  });
+
+  it('ne relance pas une image déjà bonne', () => {
+    const verdict = parseInvitationImageJudgeVerdict({
+      pass: true,
+      score: 8,
+      defects: [],
+      retryDirective: '',
+    });
+    assert.equal(verdict?.pass, true);
+    assert.equal(shouldRetryInvitationImage(verdict), false);
+  });
+
+  it('relance si le score est trop bas même sans défaut nommé', () => {
+    const verdict = parseInvitationImageJudgeVerdict({
+      pass: true,
+      score: 5,
+      defects: [],
+      retryDirective: 'Restore the gold palette from the brief.',
+    });
+    assert.equal(shouldRetryInvitationImage(verdict), true);
+  });
+
+  it('ajoute une consigne de retry courte sans casser les verrous', () => {
+    const retry = buildInvitationImageRetryPrompt(
+      'MODE create\nLOCKS:\n- Keep faces\nDECOR: gold ivory',
+      {
+        pass: false,
+        score: 4,
+        defects: ['painted_text'],
+        retryDirective: 'Remove painted names and dates.',
+      },
+    );
+    assert.match(retry, /MODE create/);
+    assert.match(retry, /Remove painted names/);
+    assert.match(retry, /RETRY/);
+    assert.ok(retry.length <= COMPACT_IMAGE_PROMPT_MAX_CHARS);
+  });
+
+  it('prépare le brief juge avec le mode couple et l’interdiction de texte', () => {
+    const text = buildInvitationImageJudgeUserText({
+      intent: 'couple',
+      originalBrief: 'Remplace uniquement les visages',
+      locks: ['Images 2+ are the only face source.'],
+      expectedPeople: 2,
+      isPublic: true,
+    });
+    assert.match(text, /MODE: couple/);
+    assert.match(text, /expectedPeople: 2/);
+    assert.match(text, /textInPixels: forbidden/);
+    assert.match(text, /Images 2\+/);
+  });
+});
+
+describe('invitation overlay copy', () => {
+  it('détecte les langues nationales congolaises', () => {
+    assert.equal(detectInvitationCopyLanguage('Libyangi ya Libala na Lingala'), 'ln');
+    assert.equal(detectInvitationCopyLanguage('Mwaliko wa Harusi en swahili'), 'sw');
+    assert.equal(detectInvitationCopyLanguage('Mariage floral or ivoire à Kinshasa'), 'fr');
+  });
+
+  it('refuse un brouillon trop court et complète le RSVP', () => {
+    assert.equal(parseInvitationCopyDraft({ language: 'fr', lines: [] }), null);
+    const draft = parseInvitationCopyDraft({
+      language: 'ln',
+      lines: [
+        { role: 'title', text: 'Libyangi ya Libala' },
+        { role: 'greeting', text: 'Boya tosepela elongo' },
+        { role: 'datetime', text: 'Mokolo : {{date}}' },
+      ],
+    });
+    assert.ok(draft);
+    assert.equal(draft?.language, 'ln');
+    assert.ok(draft?.lines.some((line) => line.role === 'rsvp' && /Kondima/i.test(line.text)));
+  });
+
+  it('monte une pile d’éditeur avec titre, séparateur et RSVP', () => {
+    const elements = applyInvitationCopyToElements(
+      {
+        language: 'fr',
+        lines: [
+          { role: 'greeting', text: 'Cher(e) {{firstName}}' },
+          { role: 'title', text: '{{title}}' },
+          { role: 'datetime', text: 'Le {{date}}' },
+          { role: 'venue', text: '{{location}}' },
+          { role: 'rsvp', text: 'Confirmer votre présence' },
+        ],
+      },
+      { primary: '#1e293b', secondary: '#475569', accent: '#c5a059' },
+    );
+    assert.ok(elements.some((el) => el.type === 'divider'));
+    assert.ok(elements.some((el) => el.type === 'rsvp-block'));
+    const title = elements.find((el) => el.fontSize === '32px');
+    assert.equal(title?.text, '{{title}}');
+  });
+
+  it('demande les variables publiques dans le brief copy', () => {
+    const text = buildInvitationCopyUserText({
+      originalBrief: 'Gala bleu nuit',
+      language: 'fr',
+      isPublic: true,
+      intent: 'create',
+    });
+    assert.match(text, /\{\{title\}\}/);
+    assert.match(text, /TEMPLATE: public/);
   });
 });
 

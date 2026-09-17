@@ -6,6 +6,7 @@ import { collectUnavailableDates, isRangeAvailable, toDateKey } from '../utils/m
 import { allowedCityPrismaFilter, normalizeAllowedCity, normalizeAllowedCommune } from '../utils/rdcCities';
 import { EVENT_PLAN_TYPES, type EventPlanType } from './eventPlanBrief';
 import { getGeminiApiKey, requestGeminiJson } from './geminiJsonClient.ts';
+import { requestOpenAiJson } from './openaiJsonClient.ts';
 
 const HOLD_BOOKING_STATUSES: MarketplaceBookingStatus[] = ['REQUESTED', 'ACCEPTED', 'CONFIRMED'];
 const RATE_WINDOW_MS = 60_000;
@@ -304,40 +305,17 @@ async function askPlannerJson(system: string, user: string): Promise<Record<stri
 }
 
 async function askOpenAi(system: string, user: string): Promise<Record<string, unknown>> {
-  const key = String(process.env.OPENAI_API_KEY || '').trim();
-  if (!key) {
+  if (!String(process.env.OPENAI_API_KEY || '').trim()) {
     return { packages: [] };
   }
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 45_000);
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-        temperature: 0.55,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
-      }),
+    const parsed = await requestOpenAiJson({
+      system,
+      userText: user,
+      temperature: 0.55,
+      timeoutMs: 45_000,
+      failMessage: 'OpenAI n’a pas renvoyé de packs utilisables.',
     });
-    const payload = await response.json().catch(() => ({})) as {
-      error?: { message?: string };
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    if (!response.ok) {
-      console.warn('OpenAI API warning:', payload.error?.message);
-      return { packages: [] };
-    }
-    const raw = payload.choices?.[0]?.message?.content || '{}';
-    const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
       return { packages: [] };
     }
@@ -345,8 +323,6 @@ async function askOpenAi(system: string, user: string): Promise<Record<string, u
   } catch (error) {
     console.warn('Simulation IA fetch fallback to heuristic:', (error as Error)?.message);
     return { packages: [] };
-  } finally {
-    clearTimeout(timer);
   }
 }
 

@@ -766,7 +766,7 @@ export default function AdminAiTokensPage() {
                           </span>
                           {row.composeDetails.variantsCount > 1 ? (
                             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-semibold bg-violet-100 text-violet-800 dark:bg-violet-950/60 dark:text-violet-300">
-                              2x A/B
+                              Fidèle + ample
                             </span>
                           ) : null}
                           {row.composeDetails.safetyFallbackTriggered ? (
