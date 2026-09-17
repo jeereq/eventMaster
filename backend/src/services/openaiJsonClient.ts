@@ -18,17 +18,36 @@ export function getOpenAiJsonModel(preferred?: string | null): string {
   return process.env.OPENAI_MODEL || 'gpt-4o';
 }
 
-/** gpt-5 / o1–o4 n’acceptent que la température par défaut (1). */
-export function openAiLocksSampling(model: string): boolean {
+/**
+ * Modèles qui acceptent encore une température ≠ 1.
+ * gpt-5 / o-series / luna / astra / gpt-4.1+ n’acceptent que la valeur par défaut (1) :
+ * on omet alors le champ `temperature` plutôt que d’envoyer 0.2.
+ */
+export function openAiSupportsCustomTemperature(model: string): boolean {
   const id = model.trim().toLowerCase();
-  return (
+  if (
     id.startsWith('gpt-5') ||
+    id.startsWith('gpt-6') ||
     id.startsWith('o1') ||
     id.startsWith('o3') ||
     id.startsWith('o4') ||
     id.includes('luna') ||
     id.includes('astra')
+  ) {
+    return false;
+  }
+  return (
+    id.startsWith('gpt-4o') ||
+    id.startsWith('gpt-4-turbo') ||
+    id.startsWith('gpt-3.5') ||
+    id === 'gpt-4' ||
+    /^gpt-4-\d{4}/.test(id) // ex. gpt-4-0613
   );
+}
+
+/** @deprecated Préférer openAiSupportsCustomTemperature (logique inversée plus sûre). */
+export function openAiLocksSampling(model: string): boolean {
+  return !openAiSupportsCustomTemperature(model);
 }
 
 function isTemperatureUnsupportedError(message: string): boolean {
@@ -117,11 +136,17 @@ export async function requestOpenAiJson(input: {
   };
 
   try {
-    return await post(!openAiLocksSampling(model));
+    return await post(openAiSupportsCustomTemperature(model));
   } catch (error) {
     const message = (error as Error)?.message || '';
-    if (!openAiLocksSampling(model) && isTemperatureUnsupportedError(message)) {
-      return await post(false);
+    // Toujours retenter sans temperature si l’API la refuse (nouveaux modèles non listés).
+    if (isTemperatureUnsupportedError(message)) {
+      try {
+        return await post(false);
+      } catch (retryError) {
+        if ((retryError as HttpError)?.status) throw retryError;
+        fail(502, (retryError as Error)?.message || failMessage);
+      }
     }
     if ((error as HttpError)?.status) throw error;
     fail(502, message || failMessage);

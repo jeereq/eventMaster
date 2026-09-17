@@ -2145,7 +2145,7 @@ export default function TemplatesPage() {
  </div>
 
  {aiComposeStage && (
- <p className="text-[11px] font-bold text-primary flex items-center gap-2">
+ <p className="text-xs font-bold text-primary flex items-center gap-2">
  <Loader2 className="w-3.5 h-3.5 animate-spin" />
  {aiComposeStage}
  </p>
@@ -3299,15 +3299,15 @@ const studioModelPhotos = useMemo(
  </p>
  <ul className="space-y-1.5 text-muted pl-1">
  <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden />
+ <Check className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
  <span>Enregistrement et utilisation illimitée de modèles sur-mesure</span>
  </li>
  <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden />
+ <Check className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
  <span>Formulaires de réponse à l’invitation personnalisés et suivi des présences</span>
  </li>
  <li className="flex items-center gap-2">
- <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" aria-hidden />
+ <Check className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
  <span>Génération d&apos;invitations avancées par Intelligence Artificielle</span>
  </li>
  </ul>
@@ -3508,7 +3508,7 @@ const studioModelPhotos = useMemo(
               ) : canvasElements.some((el) => el.type === 'rsvp-block') ? (
                 <p
                   role="status"
-                  className="w-full sm:w-auto text-xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2.5 py-1.5 sm:text-right"
+                  className="w-full sm:w-auto text-xs font-semibold text-primary bg-primary/10 border border-primary/20 rounded-lg px-2.5 py-1.5 sm:text-right"
                 >
                   Formulaire de réponse à l’invitation prêt ✓
                 </p>
@@ -3614,7 +3614,7 @@ const studioModelPhotos = useMemo(
  id="template-scope"
  value={selectedTenantId}
  onChange={(e) => setSelectedTenantId(e.target.value)}
- className="text-[11px] font-bold text-foreground bg-surface-muted border border-border rounded-lg px-2 py-1.5 min-h-9 focus:outline-none focus:border-primary"
+ className="text-xs font-bold text-foreground bg-surface-muted border border-border rounded-lg px-2 py-1.5 min-h-[44px] focus:outline-none focus:border-primary"
  title="Global = catalogue EventMaster. Privé = une organisation uniquement."
  >
  <option value="">Toutes les organisations (catalogue)</option>
@@ -3625,7 +3625,7 @@ const studioModelPhotos = useMemo(
  ))}
  </select>
  {!selectedTenantId && (
- <label className="inline-flex min-h-9 items-center gap-1.5 text-[11px] font-bold text-primary cursor-pointer px-2 rounded-lg hover:bg-primary/5 focus-within:ring-2 focus-within:ring-primary/40">
+ <label className="inline-flex min-h-[44px] items-center gap-1.5 text-xs font-bold text-primary cursor-pointer px-2 rounded-lg hover:bg-primary/5 focus-within:ring-2 focus-within:ring-primary/40">
  <input
  type="checkbox"
  checked={showOnLanding}
@@ -5811,7 +5811,7 @@ const studioModelPhotos = useMemo(
              className={`relative aspect-[9/16] rounded-xl overflow-hidden border-2 transition group ${isSelected ? 'border-primary shadow-md ring-2 ring-primary/30' : 'border-border hover:border-primary/50'}`}
            >
              <img src={varUrl} alt={idx === 0 ? 'Proposition fidèle' : 'Proposition ample'} className="w-full h-full object-cover" />
-             <span className={`absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${isSelected ? 'bg-primary text-white shadow-xs' : 'bg-black/60 text-white backdrop-blur-xs'}`}>
+             <span className={`absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md text-xs font-bold ${isSelected ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'bg-foreground/70 text-background'}`}>
                {idx === 0 ? 'Fidèle' : 'Ample'} {isSelected && '✓'}
              </span>
            </button>

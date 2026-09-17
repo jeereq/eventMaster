@@ -237,7 +237,7 @@ export default function Modal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-[var(--radius-button)] text-muted hover:text-foreground hover:bg-surface-muted transition shrink-0"
+                  className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] rounded-[var(--radius-button)] text-muted hover:text-foreground hover:bg-surface-muted transition shrink-0"
                   aria-label="Fermer la fenêtre"
                   data-modal-close
                 >

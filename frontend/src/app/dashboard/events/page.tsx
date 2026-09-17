@@ -1,6 +1,7 @@
 'use client';
 
 import React, { Suspense, useEffect, useState, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -85,8 +86,18 @@ const EventPrepPanel = dynamic(() => import('@/components/EventPrepPanel'), { ss
 const OrgTicketingView = dynamic(() => import('@/components/OrgTicketingView'), { ssr: false });
 const EventDonationsReportView = dynamic(() => import('@/components/EventDonationsReportView'), { ssr: false });
 
+function EventsFixedOverlay({ children }: { children: React.ReactNode }) {
+  if (typeof document === 'undefined') return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[11100] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-foreground/60">
+      {children}
+    </div>,
+    document.body,
+  );
+}
+
 const GUEST_FILTER_CONTROL =
-  'w-full min-h-11 px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs font-semibold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary';
+  'w-full min-h-[44px] px-3 py-2 bg-surface-muted border border-border rounded-[var(--radius-button)] text-xs font-semibold text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary';
 
 const GUEST_DATA_TABS = new Set(['guests', 'invitations', 'tablePlan', 'protocol']);
 
@@ -3774,7 +3785,7 @@ Merci de confirmer votre présence :
 
       {/* CSV & Excel Import Modal */}
       {showImportModal && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-foreground/60 backdrop-blur-sm">
+        <EventsFixedOverlay>
           <div role="dialog" aria-modal="true" aria-labelledby="import-modal-title" className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-2xl p-6 space-y-6 overflow-y-auto max-h-[90vh]">
             <div className="flex items-center justify-between border-b border-border pb-4">
               <div className="flex items-center gap-2">
@@ -4009,12 +4020,12 @@ Merci de confirmer votre présence :
               </div>
             </form>
           </div>
-        </div>
+        </EventsFixedOverlay>
       )}
 
       {/* Bulk Invitation Sending Modal */}
       {showBulkInviteModal && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-foreground/60 backdrop-blur-sm">
+        <EventsFixedOverlay>
           <div role="dialog" aria-modal="true" aria-labelledby="bulk-invite-modal-title" className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-lg p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-border pb-4">
               <div className="flex items-center gap-2">
@@ -4108,7 +4119,7 @@ Merci de confirmer votre présence :
               </div>
             </form>
           </div>
-        </div>
+        </EventsFixedOverlay>
       )}
 
       <Modal
@@ -4279,7 +4290,7 @@ Merci de confirmer votre présence :
 
       {/* Broadcast Results Modal */}
       {showBroadcastModal && broadcastResults && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-foreground/60 backdrop-blur-sm">
+        <EventsFixedOverlay>
           <div role="dialog" aria-modal="true" aria-labelledby="broadcast-results-title" className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-4xl p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-border-subtle pb-4">
               <div className="flex items-center gap-2">
@@ -4547,12 +4558,12 @@ Merci de confirmer votre présence :
               </button>
             </div>
           </div>
-        </div>
+        </EventsFixedOverlay>
       )}
 
       {/* Individual Guest Sharing Modal */}
       {sharingGuest && (
-        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-foreground/60 backdrop-blur-sm">
+        <EventsFixedOverlay>
           <div role="dialog" aria-modal="true" aria-labelledby="share-guest-title" className="bg-surface rounded-3xl border border-border shadow-2xl w-full max-w-lg p-6 space-y-6">
             <div className="flex items-center justify-between border-b border-border-subtle pb-4">
               <div className="flex items-center gap-2">
@@ -4665,7 +4676,7 @@ Merci de confirmer votre présence :
               </button>
             </div>
           </div>
-        </div>
+        </EventsFixedOverlay>
       )}
 
       <Modal

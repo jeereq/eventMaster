@@ -1063,17 +1063,17 @@ export default function LandingInvitationAiGenerator({
               <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
               Modifier les éléments spécifiques
             </h4>
-            <p className="text-[11px] text-muted">
+            <p className="text-xs text-muted">
               Modifiez en direct les noms, dates, lieux et textes de la carte.
             </p>
           </div>
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
-            Aperçu instantané ✓
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 shrink-0">
+            Aperçu instantané
           </span>
         </div>
 
         {resultEmbedText && (
-          <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
+          <div className="p-2.5 rounded-xl bg-festive-accent/10 border border-festive-accent/20 text-xs text-festive-accent leading-relaxed">
             <span className="font-bold block">Texte incrusté dans l’illustration :</span>
             Les écritures sont peintes dans l’image par l’IA. Pour retoucher le texte directement dans l’image, utilisez l’onglet <strong>« Altérer l’IA »</strong>.
           </div>
@@ -1105,10 +1105,11 @@ export default function LandingInvitationAiGenerator({
                   <button
                     type="button"
                     onClick={() => handleDeleteElement(idx)}
-                    className="opacity-60 hover:opacity-100 text-muted hover:text-red-500 transition p-1 rounded hover:bg-surface-muted cursor-pointer"
+                    className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center opacity-60 hover:opacity-100 text-muted hover:text-danger transition rounded hover:bg-surface-muted cursor-pointer"
                     title="Supprimer cet élément"
+                    aria-label="Supprimer cet élément"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3.5 h-3.5" aria-hidden />
                   </button>
                 </div>
 
@@ -1130,7 +1131,7 @@ export default function LandingInvitationAiGenerator({
                   />
                 )}
 
-                <div className="flex items-center justify-between text-[11px] text-muted pt-1 border-t border-border/40">
+                <div className="flex items-center justify-between text-xs text-muted pt-1 border-t border-border/40">
                   <div className="flex items-center gap-1.5">
                     <span>Alignement :</span>
                     <div className="inline-flex rounded border border-border bg-surface-muted/60 p-0.5">
@@ -1138,34 +1139,40 @@ export default function LandingInvitationAiGenerator({
                         type="button"
                         onClick={() => handleUpdateElementAlign(idx, 'left')}
                         className={cn(
-                          'p-1 rounded text-muted hover:text-foreground cursor-pointer',
-                          alignValue === 'left' && 'bg-primary text-white shadow-2xs',
+                          'min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded text-muted hover:text-foreground cursor-pointer',
+                          alignValue === 'left' && 'bg-primary-solid text-primary-foreground shadow-2xs',
                         )}
                         title="Aligner à gauche"
+                        aria-label="Aligner à gauche"
+                        aria-pressed={alignValue === 'left'}
                       >
-                        <AlignLeft className="w-3 h-3" />
+                        <AlignLeft className="w-3 h-3" aria-hidden />
                       </button>
                       <button
                         type="button"
                         onClick={() => handleUpdateElementAlign(idx, 'center')}
                         className={cn(
-                          'p-1 rounded text-muted hover:text-foreground cursor-pointer',
-                          alignValue === 'center' && 'bg-primary text-white shadow-2xs',
+                          'min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded text-muted hover:text-foreground cursor-pointer',
+                          alignValue === 'center' && 'bg-primary-solid text-primary-foreground shadow-2xs',
                         )}
                         title="Centrer"
+                        aria-label="Centrer"
+                        aria-pressed={alignValue === 'center'}
                       >
-                        <AlignCenter className="w-3 h-3" />
+                        <AlignCenter className="w-3 h-3" aria-hidden />
                       </button>
                       <button
                         type="button"
                         onClick={() => handleUpdateElementAlign(idx, 'right')}
                         className={cn(
-                          'p-1 rounded text-muted hover:text-foreground cursor-pointer',
-                          alignValue === 'right' && 'bg-primary text-white shadow-2xs',
+                          'min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded text-muted hover:text-foreground cursor-pointer',
+                          alignValue === 'right' && 'bg-primary-solid text-primary-foreground shadow-2xs',
                         )}
                         title="Aligner à droite"
+                        aria-label="Aligner à droite"
+                        aria-pressed={alignValue === 'right'}
                       >
-                        <AlignRight className="w-3 h-3" />
+                        <AlignRight className="w-3 h-3" aria-hidden />
                       </button>
                     </div>
                   </div>
@@ -1208,7 +1215,7 @@ export default function LandingInvitationAiGenerator({
             <Sparkles className="w-3.5 h-3.5 text-primary" />
             Altérer légèrement cette proposition avec l’IA
           </h4>
-          <p className="text-[11px] text-muted leading-relaxed">
+          <p className="text-xs text-muted leading-relaxed">
             Donnez une consigne de retouche ciblée : l’IA conserve les photos fournies et le style existant tout en appliquant précisément votre ajustement.
           </p>
         </div>
@@ -1219,7 +1226,7 @@ export default function LandingInvitationAiGenerator({
             <button
               type="button"
               onClick={() => setRefineSuccess(null)}
-              className="underline font-bold text-[11px] ml-2 shrink-0 cursor-pointer"
+              className="underline font-bold text-xs ml-2 shrink-0 cursor-pointer"
             >
               Fermer
             </button>
@@ -1238,7 +1245,7 @@ export default function LandingInvitationAiGenerator({
           />
 
           <div className="space-y-1.5">
-            <span className="text-[11px] font-semibold text-muted block">Suggestions de retouche rapide :</span>
+            <span className="text-xs font-semibold text-muted block">Suggestions de retouche rapide :</span>
             <div className="flex flex-wrap gap-1.5">
               {QUICK_ALTERATION_SUGGESTIONS.map((sug) => (
                 <button
@@ -1249,7 +1256,7 @@ export default function LandingInvitationAiGenerator({
                     setRefinePrompt(sug.prompt);
                     void handleRefineProposition(sug.prompt);
                   }}
-                  className="text-[11px] px-2.5 py-1 rounded-full border border-border bg-surface hover:border-primary/50 hover:bg-primary/10 text-foreground transition cursor-pointer disabled:opacity-50"
+                  className="text-xs px-2.5 py-1 rounded-full border border-border bg-surface hover:border-primary/50 hover:bg-primary/10 text-foreground transition cursor-pointer disabled:opacity-50"
                 >
                   {sug.label}
                 </button>
@@ -1257,7 +1264,7 @@ export default function LandingInvitationAiGenerator({
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-[11px] font-mono text-muted pt-0.5">
+          <div className="flex items-center justify-between text-xs font-mono text-muted pt-0.5">
             <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
               <Coins className="w-3.5 h-3.5" />
               {allowance.unlimited
@@ -1691,7 +1698,7 @@ export default function LandingInvitationAiGenerator({
                 {/* Inspirations prêtes à l'emploi en 1 clic */}
                 {studioIntent === 'create' ? (
                   <div className="space-y-1.5" role="group" aria-label="Inspirations festives instantanées">
-                    <span className="text-[11px] text-muted font-medium flex items-center gap-1">
+                    <span className="text-xs text-muted font-medium flex items-center gap-1">
                       <Sparkles className="w-3 h-3 text-primary" />
                       Inspirations festives en 1 clic :
                     </span>
@@ -1709,9 +1716,9 @@ export default function LandingInvitationAiGenerator({
                               persistInvitationArtStyle(item.artStyle);
                             }}
                             className={cn(
-                              'text-xs font-semibold px-2.5 py-1 min-h-[36px] rounded-full border transition cursor-pointer inline-flex items-center gap-1.5 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                              'text-xs font-semibold px-2.5 py-1 min-h-[44px] rounded-full border transition cursor-pointer inline-flex items-center gap-1.5 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                               active
-                                ? 'border-primary bg-primary text-white shadow-2xs'
+                                ? 'border-primary bg-primary-solid text-primary-foreground shadow-2xs'
                                 : 'border-border bg-surface hover:border-primary/50 hover:bg-surface-muted text-foreground',
                             )}
                           >
@@ -1784,7 +1791,7 @@ export default function LandingInvitationAiGenerator({
                 />
 
                 {/* Indicateur de statut de saisie dynamique */}
-                <div className="flex items-center justify-between text-[11px] text-muted px-0.5">
+                <div className="flex items-center justify-between text-xs text-muted px-0.5">
                   {studioIntent === 'couple' && prompt.trim().length < 8 ? (
                     <span className="text-muted">
                       La consigne est optionnelle : les photos suffisent pour remplacer les visages.
@@ -1830,7 +1837,7 @@ export default function LandingInvitationAiGenerator({
                   <div className="min-w-0">
                     <span className="block text-xs font-bold text-foreground">Arrière-plan pur & Variables dynamiques</span>
                     <span className="block text-xs text-muted mt-0.5 leading-relaxed">
-                      Aucun texte n’est gravé sur l’image : l’IA produit un visuel artistique propre et place les textes en calques éditables avec les variables <code className="text-primary font-mono text-[11px] font-semibold">{`{{title}}`}</code>, <code className="text-primary font-mono text-[11px] font-semibold">{`{{date}}`}</code>, <code className="text-primary font-mono text-[11px] font-semibold">{`{{location}}`}</code> et <code className="text-primary font-mono text-[11px] font-semibold">{`{{firstName}}`}</code> pour une personnalisation instantanée.
+                      Aucun texte n’est gravé sur l’image : l’IA produit un visuel artistique propre et place les textes en calques éditables avec les variables <code className="text-primary font-mono text-xs font-semibold">{`{{title}}`}</code>, <code className="text-primary font-mono text-xs font-semibold">{`{{date}}`}</code>, <code className="text-primary font-mono text-xs font-semibold">{`{{location}}`}</code> et <code className="text-primary font-mono text-xs font-semibold">{`{{firstName}}`}</code> pour une personnalisation instantanée.
                     </span>
                   </div>
                 </div>
@@ -1838,32 +1845,34 @@ export default function LandingInvitationAiGenerator({
                 <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-3">
                   <div>
                     <span className="block text-xs font-bold text-foreground">Vitesse & Rendu</span>
-                    <span className="block text-[11px] text-muted">Rapide (~5s Flash) ou Haute Définition (Pro 2K)</span>
+                    <span className="block text-xs text-muted">Rapide ou haute définition</span>
                   </div>
                   <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-lg border border-border">
                     <button
                       type="button"
                       disabled={busy}
                       onClick={() => setSpeedMode('fast')}
+                      aria-pressed={speedMode === 'fast'}
                       className={cn(
-                        'px-2.5 py-1 text-xs font-bold rounded-md transition',
-                        speedMode === 'fast' ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground',
+                        'min-h-[44px] px-2.5 py-1 text-xs font-bold rounded-md transition',
+                        speedMode === 'fast' ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
                       )}
-                      title="Génération ultra-rapide via Gemini 3.1 Flash Image"
+                      title="Génération rapide"
                     >
-                      ⚡ Rapide (Flash)
+                      Rapide
                     </button>
                     <button
                       type="button"
                       disabled={busy}
                       onClick={() => setSpeedMode('quality')}
+                      aria-pressed={speedMode === 'quality'}
                       className={cn(
-                        'px-2.5 py-1 text-xs font-bold rounded-md transition',
-                        speedMode === 'quality' ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground',
+                        'min-h-[44px] px-2.5 py-1 text-xs font-bold rounded-md transition',
+                        speedMode === 'quality' ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
                       )}
-                      title="Rendu 2K haute fidélité via Gemini 3 Pro Image"
+                      title="Rendu haute définition"
                     >
-                      ✨ Qualité (Pro)
+                      Qualité
                     </button>
                   </div>
                 </div>
@@ -1871,16 +1880,17 @@ export default function LandingInvitationAiGenerator({
                 <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-3">
                   <div>
                     <span className="block text-xs font-bold text-foreground">Deux fonds</span>
-                    <span className="block text-[11px] text-muted">Fidèle au brief, ou fidèle + ample</span>
+                    <span className="block text-xs text-muted">Fidèle au brief, ou fidèle + ample</span>
                   </div>
                   <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-lg border border-border">
                     <button
                       type="button"
                       disabled={busy}
                       onClick={() => setVariantsCount(1)}
+                      aria-pressed={variantsCount === 1}
                       className={cn(
-                        'px-2.5 py-1 text-xs font-bold rounded-md transition',
-                        variantsCount === 1 ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground',
+                        'min-h-[44px] px-2.5 py-1 text-xs font-bold rounded-md transition',
+                        variantsCount === 1 ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
                       )}
                     >
                       1
@@ -1889,9 +1899,10 @@ export default function LandingInvitationAiGenerator({
                       type="button"
                       disabled={busy}
                       onClick={() => setVariantsCount(2)}
+                      aria-pressed={variantsCount === 2}
                       className={cn(
-                        'px-2.5 py-1 text-xs font-bold rounded-md transition',
-                        variantsCount === 2 ? 'bg-primary text-white shadow-xs' : 'text-muted hover:text-foreground',
+                        'min-h-[44px] px-2.5 py-1 text-xs font-bold rounded-md transition',
+                        variantsCount === 2 ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
                       )}
                     >
                       2 (fidèle + ample)
@@ -2237,7 +2248,7 @@ export default function LandingInvitationAiGenerator({
                       <span className="flex items-center gap-2">
                         <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
                         <span>Modifier les noms, dates et textes</span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                           {Array.isArray(result?.elements) ? result.elements.length : 0}
                         </span>
                       </span>
@@ -2434,7 +2445,7 @@ export default function LandingInvitationAiGenerator({
                           )}
                         >
                           <img src={vUrl} alt={idx === 0 ? 'Proposition fidèle' : 'Proposition ample'} className="w-full h-full object-cover" />
-                          <span className={cn('absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[10px] font-bold', isSelected ? 'bg-primary text-white' : 'bg-black/60 text-white')}>
+                          <span className={cn('absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-xs font-bold', isSelected ? 'bg-primary-solid text-primary-foreground' : 'bg-foreground/70 text-background')}>
                             {idx === 0 ? 'Fidèle' : 'Ample'} {isSelected && '✓'}
                           </span>
                         </button>
@@ -2512,9 +2523,9 @@ export default function LandingInvitationAiGenerator({
                 </div>
 
                 {/* Pied de carte avec badge QR & réponse à l’invitation */}
-                <div className="w-full pt-2 border-t border-border/60 flex items-center justify-between text-[10px] text-muted relative z-10 px-1">
+                <div className="w-full pt-2 border-t border-border/60 flex items-center justify-between text-xs text-muted relative z-10 px-1">
                   <span className="font-semibold text-primary">Pass QR · réponse à l’invitation</span>
-                  <span className="font-mono text-[9px] opacity-75">Format 9:16</span>
+                  <span className="font-mono text-xs opacity-75">Format 9:16</span>
                 </div>
               </div>
 
