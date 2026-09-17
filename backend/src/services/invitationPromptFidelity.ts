@@ -366,6 +366,131 @@ export function buildCompactImagePrompt(input: {
   return collapseSpaces(parts.filter(Boolean).join('\n')).slice(0, COMPACT_IMAGE_PROMPT_MAX_CHARS);
 }
 
+export const INVITATION_IMAGE_JUDGE_MIN_SCORE = 7;
+
+export const INVITATION_IMAGE_JUDGE_SYSTEM = `You score ONE generated EventMaster invitation image for Central Africa / RDC.
+Return ONLY valid JSON (json_object).
+
+Image 1 is the GENERATED card to score. Any other images are references (people and/or a card to clone).
+
+Be strict on:
+- Identity: same people as references, no lookalike, no beautify, no skin lightening.
+- Couple mode: Image 1 references after the generated card are the couple; generated faces must match them, not the incoming card faces.
+- People count vs expectedPeople.
+- Painted letters / names / dates when textInPixels is "forbidden".
+- Invented Caucasian / white luxury hosts when no people refs exist.
+- Mode: create vs clone vs refine vs couple.
+
+Be lenient on minor floral density, foil shine, or taste.
+
+Exact schema:
+{
+  "pass": true | false,
+  "score": 0,
+  "defects": ["painted_text" | "wrong_faces" | "wrong_people_count" | "skin_lightened" | "beautified" | "wrong_mode" | "invented_white_hosts" | "kept_original_faces"],
+  "retryDirective": "one English sentence: the single fix to apply, positive framing, no redesign"
+}
+
+score is 0-10. pass=false if any hard identity / text / ethnicity defect. retryDirective empty only if pass=true.`;
+
+export type InvitationImageJudgeDefect =
+  | 'painted_text'
+  | 'wrong_faces'
+  | 'wrong_people_count'
+  | 'skin_lightened'
+  | 'beautified'
+  | 'wrong_mode'
+  | 'invented_white_hosts'
+  | 'kept_original_faces';
+
+export type InvitationImageJudgeVerdict = {
+  pass: boolean;
+  score: number;
+  defects: string[];
+  retryDirective: string;
+};
+
+const KNOWN_JUDGE_DEFECTS = new Set<string>([
+  'painted_text',
+  'wrong_faces',
+  'wrong_people_count',
+  'skin_lightened',
+  'beautified',
+  'wrong_mode',
+  'invented_white_hosts',
+  'kept_original_faces',
+]);
+
+export function parseInvitationImageJudgeVerdict(raw: unknown): InvitationImageJudgeVerdict | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const v = raw as Record<string, unknown>;
+  const scoreRaw = Number(v.score);
+  const score = Number.isFinite(scoreRaw) ? Math.min(10, Math.max(0, Math.round(scoreRaw))) : 5;
+  const defects = (Array.isArray(v.defects) ? v.defects : [])
+    .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+    .map((item) => {
+      const key = item.trim().toLowerCase().replace(/\s+/g, '_').slice(0, 40);
+      return KNOWN_JUDGE_DEFECTS.has(key) ? key : key;
+    })
+    .slice(0, 8);
+  const retryDirective = collapseSpaces(typeof v.retryDirective === 'string' ? v.retryDirective : '').slice(0, 240);
+  return {
+    pass: v.pass === true && defects.length === 0,
+    score,
+    defects,
+    retryDirective,
+  };
+}
+
+export function shouldRetryInvitationImage(
+  verdict: InvitationImageJudgeVerdict | null | undefined,
+  minScore = INVITATION_IMAGE_JUDGE_MIN_SCORE,
+): boolean {
+  if (!verdict) return false;
+  return !verdict.pass || verdict.score < minScore;
+}
+
+export function buildInvitationImageJudgeUserText(input: {
+  intent: InvitationPipelineIntent;
+  originalBrief: string;
+  locks: string[];
+  expectedPeople: number;
+  embedText?: boolean;
+  isPublic?: boolean;
+}): string {
+  const textRule = input.isPublic || !input.embedText
+    ? 'textInPixels: forbidden'
+    : 'textInPixels: allowed (names, date, venue from the brief)';
+  const locks = input.locks.slice(0, 8).map((lock) => `- ${lock}`).join('\n');
+  return [
+    `MODE: ${input.intent}`,
+    `BRIEF: ${collapseSpaces(input.originalBrief).slice(0, 500)}`,
+    `LOCKS:\n${locks || '- none'}`,
+    `expectedPeople: ${Math.max(0, Math.round(input.expectedPeople))}`,
+    textRule,
+    'Image 1 is the GENERATED invitation to score. Other images are references only.',
+  ].join('\n');
+}
+
+export function buildInvitationImageRetryPrompt(
+  basePrompt: string,
+  verdict: InvitationImageJudgeVerdict,
+): string {
+  const directive =
+    verdict.retryDirective ||
+    (verdict.defects[0]
+      ? `Fix ${verdict.defects[0].replace(/_/g, ' ')} while keeping every lock.`
+      : 'Restore honest faces, correct people count, and no painted letters unless requested. Do not redesign.');
+  return collapseSpaces(
+    [
+      basePrompt,
+      'RETRY (one pass only): Fix this defect without redesigning.',
+      directive,
+      'Keep every LOCK. Same people. Same 9:16.',
+    ].join('\n'),
+  ).slice(0, COMPACT_IMAGE_PROMPT_MAX_CHARS);
+}
+
 export const COUPLE_FACE_SWAP_DEFAULT_PROMPT =
   'Remplace uniquement les visages de cette invitation par les visages du couple. Conserve la pose, les tenues, le décor et la mise en page.';
 

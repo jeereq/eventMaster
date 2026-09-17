@@ -22,6 +22,8 @@ import {
   buildEnglishSceneBriefScaffold,
   buildGenericThematicBackgroundPrompt,
   buildHonestFaceIdentityHeader,
+  buildInvitationImageJudgeUserText,
+  buildInvitationImageRetryPrompt,
   buildInvitationLocks,
   buildNanoBananaRawDirectives,
   buildReferenceRoles,
@@ -30,10 +32,12 @@ import {
   isSafetyFilterTriggered,
   optimizeReferenceImageUrl,
   parseEnglishSceneBriefFromJson,
+  parseInvitationImageJudgeVerdict,
   parseInvitationLocks,
   processUserPromptForHonestFaces,
   resolveFinalInvitationPipelineIntent,
   resolveInvitationPipelineIntent,
+  shouldRetryInvitationImage,
   stripFaceBeautifyLanguage,
 } from './invitationPromptFidelity.ts';
 
@@ -557,6 +561,78 @@ describe('compact image prompt', () => {
     assert.ok(locks.some((lock) => /gold border/i.test(lock)));
     assert.deepEqual(parseInvitationLocks(['  Keep faces  ', 'Keep faces', '', 12]), ['Keep faces']);
     assert.match(invitationPipelineModeSentence('refine'), /MODE refine/);
+  });
+});
+
+describe('invitation image judge', () => {
+  it('échoue ouvert si le JSON est invalide', () => {
+    assert.equal(parseInvitationImageJudgeVerdict(null), null);
+    assert.equal(parseInvitationImageJudgeVerdict('ok'), null);
+    assert.equal(shouldRetryInvitationImage(null), false);
+  });
+
+  it('force un échec si des défauts durs sont listés malgré pass=true', () => {
+    const verdict = parseInvitationImageJudgeVerdict({
+      pass: true,
+      score: 9,
+      defects: ['painted_text', 'skin_lightened'],
+      retryDirective: 'Remove painted letters and restore photographed skin tone.',
+    });
+    assert.ok(verdict);
+    assert.equal(verdict?.pass, false);
+    assert.deepEqual(verdict?.defects, ['painted_text', 'skin_lightened']);
+    assert.equal(shouldRetryInvitationImage(verdict), true);
+  });
+
+  it('ne relance pas une image déjà bonne', () => {
+    const verdict = parseInvitationImageJudgeVerdict({
+      pass: true,
+      score: 8,
+      defects: [],
+      retryDirective: '',
+    });
+    assert.equal(verdict?.pass, true);
+    assert.equal(shouldRetryInvitationImage(verdict), false);
+  });
+
+  it('relance si le score est trop bas même sans défaut nommé', () => {
+    const verdict = parseInvitationImageJudgeVerdict({
+      pass: true,
+      score: 5,
+      defects: [],
+      retryDirective: 'Restore the gold palette from the brief.',
+    });
+    assert.equal(shouldRetryInvitationImage(verdict), true);
+  });
+
+  it('ajoute une consigne de retry courte sans casser les verrous', () => {
+    const retry = buildInvitationImageRetryPrompt(
+      'MODE create\nLOCKS:\n- Keep faces\nDECOR: gold ivory',
+      {
+        pass: false,
+        score: 4,
+        defects: ['painted_text'],
+        retryDirective: 'Remove painted names and dates.',
+      },
+    );
+    assert.match(retry, /MODE create/);
+    assert.match(retry, /Remove painted names/);
+    assert.match(retry, /RETRY/);
+    assert.ok(retry.length <= COMPACT_IMAGE_PROMPT_MAX_CHARS);
+  });
+
+  it('prépare le brief juge avec le mode couple et l’interdiction de texte', () => {
+    const text = buildInvitationImageJudgeUserText({
+      intent: 'couple',
+      originalBrief: 'Remplace uniquement les visages',
+      locks: ['Images 2+ are the only face source.'],
+      expectedPeople: 2,
+      isPublic: true,
+    });
+    assert.match(text, /MODE: couple/);
+    assert.match(text, /expectedPeople: 2/);
+    assert.match(text, /textInPixels: forbidden/);
+    assert.match(text, /Images 2\+/);
   });
 });
 

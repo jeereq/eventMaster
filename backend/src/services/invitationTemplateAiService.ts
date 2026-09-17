@@ -16,16 +16,22 @@ import {
   NANO_BANANA_STYLE_INSTRUCTION,
   buildCompactImagePrompt,
   buildGenericThematicBackgroundPrompt,
+  buildInvitationImageJudgeUserText,
+  buildInvitationImageRetryPrompt,
   buildInvitationLocks,
   buildVariantImagePrompt,
   invitationPipelineVisionMandate,
   isSafetyFilterTriggered,
   optimizeReferenceImageUrl,
+  parseInvitationImageJudgeVerdict,
   parseInvitationLocks,
   processUserPromptForHonestFaces,
   resolveFinalInvitationPipelineIntent,
   resolveInvitationPipelineIntent,
+  shouldRetryInvitationImage,
   COUPLE_FACE_SWAP_DEFAULT_PROMPT,
+  INVITATION_IMAGE_JUDGE_SYSTEM,
+  type InvitationImageJudgeVerdict,
   type InvitationPipelineIntent,
   type ProcessedInvitationPrompt,
 } from './invitationPromptFidelity.ts';
@@ -1647,6 +1653,153 @@ async function createNewInvitationImage(
   fail(502, 'Impossible de créer la nouvelle image (Nano Banana + Luna + Images API).');
 }
 
+type InvitationGeneratedImage = {
+  url: string;
+  mode: 'edit' | 'generate';
+  safetyFallbackTriggered?: boolean;
+};
+
+type InvitationJudgedImage = InvitationGeneratedImage & {
+  judge: InvitationImageJudgeVerdict | null;
+  retried: boolean;
+};
+
+async function judgeInvitationImage(input: {
+  key: string;
+  generatedUrl: string;
+  referenceUrls: string[];
+  intent: InvitationPipelineIntent;
+  originalBrief: string;
+  locks: string[];
+  expectedPeople: number;
+  embedText?: boolean;
+  isPublic?: boolean;
+  preferredModel?: string;
+}): Promise<InvitationImageJudgeVerdict | null> {
+  const userText = buildInvitationImageJudgeUserText({
+    intent: input.intent,
+    originalBrief: input.originalBrief,
+    locks: input.locks,
+    expectedPeople: input.expectedPeople,
+    embedText: input.embedText,
+    isPublic: input.isPublic,
+  });
+  const refs = input.referenceUrls
+    .filter((url) => typeof url === 'string' && /^https?:\/\//i.test(url))
+    .slice(0, 3);
+  const geminiImages = [...refs, input.generatedUrl];
+  const openAiImages = [input.generatedUrl, ...refs];
+
+  const tryGemini = async (): Promise<InvitationImageJudgeVerdict | null> => {
+    if (!getGeminiApiKey()) return null;
+    const parsed = await requestGeminiJson({
+      system: INVITATION_IMAGE_JUDGE_SYSTEM,
+      userText,
+      imageUrls: geminiImages,
+      temperature: 0.1,
+      timeoutMs: 25_000,
+      failMessage: 'Invitation image judge failed.',
+    });
+    return parseInvitationImageJudgeVerdict(parsed);
+  };
+
+  try {
+    const gemini = await tryGemini();
+    if (gemini) return gemini;
+  } catch (error) {
+    console.warn(
+      '[invitationTemplateAi] Gemini image judge failed, trying OpenAI:',
+      (error as Error)?.message,
+    );
+  }
+
+  if (!input.key) return null;
+
+  try {
+    const visionModel =
+      input.preferredModel &&
+      isOpenAiStudioModel(input.preferredModel) &&
+      !input.preferredModel.includes('gpt-image')
+        ? input.preferredModel
+        : process.env.OPENAI_VISION_MODEL || process.env.OPENAI_MODEL || 'gpt-5.6-luna';
+    const parsed = await requestOpenAiJson({
+      system: INVITATION_IMAGE_JUDGE_SYSTEM,
+      userText,
+      imageUrls: openAiImages,
+      temperature: 0.1,
+      timeoutMs: 25_000,
+      failMessage: 'Invitation image judge failed.',
+      model: visionModel,
+    });
+    return parseInvitationImageJudgeVerdict(parsed);
+  } catch (error) {
+    console.warn(
+      '[invitationTemplateAi] Image judge skipped (fail-open):',
+      (error as Error)?.message,
+    );
+    return null;
+  }
+}
+
+async function generateInvitationImageWithJudge(
+  key: string,
+  imageUrls: string[],
+  imagePrompt: string,
+  tenantId: string | null | undefined,
+  imageOptions: {
+    hasPeople?: boolean;
+    embedText?: boolean;
+    artStyle?: InvitationArtStyleId;
+    speedMode?: AiSpeedMode;
+    preloadedRefImages?: PreloadedRefImage[];
+    preferredModel?: string;
+  },
+  judgeInput: {
+    intent: InvitationPipelineIntent;
+    originalBrief: string;
+    locks: string[];
+    expectedPeople: number;
+    isPublic?: boolean;
+  },
+): Promise<InvitationJudgedImage> {
+  const created = await createNewInvitationImage(key, imageUrls, imagePrompt, tenantId, imageOptions);
+  if (created.safetyFallbackTriggered || !created.url) {
+    return { ...created, judge: null, retried: false };
+  }
+
+  const judge = await judgeInvitationImage({
+    key,
+    generatedUrl: created.url,
+    referenceUrls: imageUrls,
+    intent: judgeInput.intent,
+    originalBrief: judgeInput.originalBrief,
+    locks: judgeInput.locks,
+    expectedPeople: judgeInput.expectedPeople,
+    embedText: imageOptions.embedText,
+    isPublic: judgeInput.isPublic,
+    preferredModel: imageOptions.preferredModel,
+  });
+
+  if (!shouldRetryInvitationImage(judge)) {
+    return { ...created, judge, retried: false };
+  }
+
+  try {
+    const retryPrompt = buildInvitationImageRetryPrompt(imagePrompt, judge as InvitationImageJudgeVerdict);
+    const retried = await createNewInvitationImage(key, imageUrls, retryPrompt, tenantId, imageOptions);
+    if (retried.safetyFallbackTriggered || !retried.url) {
+      return { ...created, judge, retried: false };
+    }
+    return { ...retried, judge, retried: true };
+  } catch (error) {
+    console.warn(
+      '[invitationTemplateAi] Image judge retry failed, keeping first image:',
+      (error as Error)?.message,
+    );
+    return { ...created, judge, retried: false };
+  }
+}
+
 export type InvitationAiComposeResult = {
   content: {
     global: Record<string, unknown>;
@@ -1659,6 +1812,8 @@ export type InvitationAiComposeResult = {
     variants?: string[];
     safetyFallbackTriggered?: boolean;
     speedMode?: AiSpeedMode;
+    judgeRetried?: boolean;
+    judgeScore?: number | null;
   };
 };
 
@@ -1927,6 +2082,8 @@ export async function composeInvitationTemplateAi(input: {
   let bgImageUrl = '';
   let imageMode: 'edit' | 'generate' | null = null;
   let safetyFallbackTriggered = false;
+  let imageJudge: InvitationImageJudgeVerdict | null = null;
+  let imageJudgeRetried = false;
   const variants: string[] = [];
   const wantBg = input.generateBackground !== false;
   const requestedVariantsCount = Math.min(2, Math.max(1, Number(input.variantsCount) || 1));
@@ -1947,14 +2104,29 @@ export async function composeInvitationTemplateAi(input: {
         preloadedRefImages,
         preferredModel: input.preferredModel || undefined,
       };
+      const judgeInput = {
+        intent: resolvedIntent,
+        originalBrief: processed.originalBrief,
+        locks: imageLocks,
+        expectedPeople: coupleFaceSwap
+          ? Math.max(1, imageUrls.length - 1)
+          : structured.visualAnalysis?.peopleCount || 0,
+        isPublic,
+      };
 
       if (requestedVariantsCount >= 2) {
-        // Levier A: Parallélisation simultanée des 2 variantes A et B via Promise.allSettled
         const promptA = imagePrompt;
         const promptB = buildVariantImagePrompt(imagePrompt, imageUrls.length > 0);
 
         const [resA, resB] = await Promise.allSettled([
-          createNewInvitationImage(key, imageUrls, promptA, input.tenantId, imageOptions),
+          generateInvitationImageWithJudge(
+            key,
+            imageUrls,
+            promptA,
+            input.tenantId,
+            imageOptions,
+            judgeInput,
+          ),
           createNewInvitationImage(key, imageUrls, promptB, input.tenantId, imageOptions),
         ]);
 
@@ -1962,6 +2134,8 @@ export async function composeInvitationTemplateAi(input: {
           bgImageUrl = resA.value.url;
           imageMode = resA.value.mode;
           safetyFallbackTriggered = Boolean(resA.value.safetyFallbackTriggered);
+          imageJudge = resA.value.judge;
+          imageJudgeRetried = resA.value.retried;
           variants.push(bgImageUrl);
         }
 
@@ -1985,16 +2159,19 @@ export async function composeInvitationTemplateAi(input: {
           fail(502, (errA as Error)?.message || 'La création de la nouvelle image a échoué.');
         }
       } else {
-        const created = await createNewInvitationImage(
+        const created = await generateInvitationImageWithJudge(
           key,
           imageUrls,
           imagePrompt,
           input.tenantId,
           imageOptions,
+          judgeInput,
         );
         bgImageUrl = created.url;
         imageMode = created.mode;
         safetyFallbackTriggered = Boolean(created.safetyFallbackTriggered);
+        imageJudge = created.judge;
+        imageJudgeRetried = created.retried;
         if (bgImageUrl) {
           variants.push(bgImageUrl);
         }
@@ -2039,6 +2216,13 @@ export async function composeInvitationTemplateAi(input: {
   (global as Record<string, unknown>).aiOriginalBrief = processed.originalBrief;
   (global as Record<string, unknown>).aiPipelineIntent = resolvedIntent;
   (global as Record<string, unknown>).aiLocks = imageLocks;
+  if (imageJudge) {
+    (global as Record<string, unknown>).aiJudgeScore = imageJudge.score;
+    (global as Record<string, unknown>).aiJudgePass = imageJudge.pass;
+    (global as Record<string, unknown>).aiJudgeDefects = imageJudge.defects;
+    (global as Record<string, unknown>).aiJudgeRetryDirective = imageJudge.retryDirective;
+  }
+  (global as Record<string, unknown>).aiJudgeRetried = imageJudgeRetried;
   let elements = sanitizeElements(structured.elements);
   if (isAlteration && existingElements.length > 0 && !embedText) {
     const textChangeExplicit =
@@ -2091,6 +2275,8 @@ export async function composeInvitationTemplateAi(input: {
       variants: variants.length > 0 ? variants : (bgImageUrl ? [bgImageUrl] : []),
       safetyFallbackTriggered,
       speedMode,
+      judgeRetried: imageJudgeRetried,
+      judgeScore: imageJudge?.score ?? null,
     },
   };
 }
