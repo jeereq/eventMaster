@@ -60,6 +60,7 @@ import {
   ProjectCard,
   ListRowAction,
   Pagination,
+  usePaginateItems,
   listStackClass,
   Card,
   type GridColumns,
@@ -387,8 +388,7 @@ export default function OrganizerDashboardHome({
   };
 
   // Pagination des événements récents
-  const startIdx = (homeEventsPage - 1) * homeEventsPageSize;
-  const paginatedEvents = events.slice(startIdx, startIdx + homeEventsPageSize);
+  const paginatedEvents = usePaginateItems(events, homeEventsPage, homeEventsPageSize);
 
   // Définition des onglets ergonomiques du tableau de bord
   const tabs = useMemo(() => {

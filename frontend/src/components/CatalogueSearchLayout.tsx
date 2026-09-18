@@ -9,7 +9,7 @@ import MarketplacePublicNav, { type MarketplaceNavId } from '@/components/Market
 import MarketplaceLocationsMap, { type MarketplaceMapMarker } from '@/components/MarketplaceLocationsMap';
 import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
 import CatalogueMobileExplore from '@/components/CatalogueMobileExplore';
-import { Pagination, paginateItems } from '@/components/ui';
+import { Pagination, usePaginateItems } from '@/components/ui';
 import useIsMobile from '@/hooks/useIsMobile';
 import {
   isCatalogueMapView,
@@ -201,6 +201,7 @@ export default function CatalogueSearchLayout({
   gridCols?: CatalogueGridCols;
 }) {
   const isMobile = useIsMobile();
+  const visibleItems = usePaginateItems(items, page, pageSize);
   const mapMode = isCatalogueMapView(mode);
   const lastBrowseRef = useRef<Exclude<CatalogueViewMode, 'map' | 'focus'>>('grid');
 
@@ -334,7 +335,7 @@ export default function CatalogueSearchLayout({
         ) : (
           <>
             <CatalogueResults
-              items={paginateItems(items, page, pageSize)}
+              items={visibleItems}
               mode={mode === 'list' ? 'list' : 'grid'}
               gridCols={gridCols}
               emptyTitle={emptyTitle}
@@ -347,6 +348,7 @@ export default function CatalogueSearchLayout({
               onPageChange={onPageChange}
               onPageSizeChange={onPageSizeChange}
               itemLabel={itemLabel}
+              loading={loading}
             />
           </>
         )}

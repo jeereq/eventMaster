@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
  Building2, Loader2, TrendingUp, Users, Wallet,
 } from 'lucide-react';
-import { Button, PageHeader, SkeletonCommercialView, Pagination, paginateItems, usePageSize } from '@/components/ui';
+import { Button, PageHeader, SkeletonCommercialView, Pagination, usePaginateItems, usePageSize } from '@/components/ui';
 import ReferralShareButtons from '@/components/commercial/ReferralShareButtons';
 
  interface OrgCommercialDashboard {
@@ -70,8 +70,8 @@ export default function OrgCommercialPage() {
  return <SkeletonCommercialView />;
  }
 
- const paginatedOrgs = paginateItems(data.organizations, orgsPage, orgsPageSize);
- const paginatedComms = paginateItems(data.commissions, commPage, commPageSize);
+ const paginatedOrgs = usePaginateItems(data.organizations, orgsPage, orgsPageSize);
+ const paginatedComms = usePaginateItems(data.commissions, commPage, commPageSize);
 
  return (
  <div className="space-y-6">

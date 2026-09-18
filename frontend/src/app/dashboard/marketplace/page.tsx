@@ -9,7 +9,7 @@ import { getQuotaLockMessage, getQuotaActionMessage } from '@/lib/planAccess';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
 import {
   PageHeader, Button, Breadcrumbs, Alert, Modal, EmptyState, StatusPill,
-  Pagination, paginateItems, usePageSize, ViewModeToggle, useViewMode, listStackClass,
+  Pagination, usePaginateItems, usePageSize, ViewModeToggle, useViewMode, listStackClass,
 } from '@/components/ui';
 import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
 import {
@@ -348,6 +348,7 @@ export default function MarketplaceDeskPage() {
       || (filterMobility === 'travels' && travels !== false);
     return matchesSearch && matchesCategory && matchesCity && matchesVisibility && matchesMobility;
   });
+  const pagedServices = usePaginateItems(filteredServices, servicesPage, servicesPageSize);
 
   const publishGaps = getOfferingPublishGaps(draft);
 
@@ -567,7 +568,7 @@ export default function MarketplaceDeskPage() {
         ) : (
           <>
           <div className={servicesViewMode === 'grid' ? servicesGridClass : listStackClass}>
-            {paginateItems(filteredServices, servicesPage, servicesPageSize).map((item) => {
+            {pagedServices.map((item) => {
               const photos = photosOf(item);
               const cover = photos[0] ? mediaPosterUrl(photos[0]) : null;
               const meta = [

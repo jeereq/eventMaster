@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
-import { Button, Pagination, paginateItems, usePageSize } from '@/components/ui';
+import { Button, Pagination, usePaginateItems, usePageSize } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
 import CatalogueFilterBar, { CatalogueEntityFilterFields } from '@/components/CatalogueFilterBar';
@@ -199,10 +199,10 @@ export default function LandingVitrineSection() {
     }
   };
 
-  const pagedVenues = paginateItems(venueItems, page, pageSize);
-  const pagedServices = paginateItems(serviceItems, page, pageSize);
-  const pagedRentals = paginateItems(rentalItems, page, pageSize);
-  const pagedEvents = paginateItems(eventItems, page, pageSize);
+  const pagedVenues = usePaginateItems(venueItems, page, pageSize);
+  const pagedServices = usePaginateItems(serviceItems, page, pageSize);
+  const pagedRentals = usePaginateItems(rentalItems, page, pageSize);
+  const pagedEvents = usePaginateItems(eventItems, page, pageSize);
   const chips = catalogueGeoChips(applied, catalogueEntityExtraChips({ ...applied, kind: entity }));
   const hasFilterOrSearch = Boolean(query.trim() || chips.length > 0);
 

@@ -10,7 +10,7 @@ import {
 import {
   SkeletonGrid, ViewModeToggle, useViewMode, listStackClass,
   ProjectCard, StatusPill, ListRowAction, PhoneInput,
-  Button, Modal, EmptyState, Alert, Input, Badge, Pagination, paginateItems, usePageSize,
+  Button, Modal, EmptyState, Alert, Input, Badge, Pagination, usePaginateItems, usePageSize,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
@@ -106,6 +106,7 @@ export default function TeamManagement() {
   const [editRenewalCommissionValue, setEditRenewalCommissionValue] = useState('');
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [showNotifModal, setShowNotifModal] = useState(false);
+  const pagedMembers = usePaginateItems(members, membersPage, membersPageSize);
 
   useEffect(() => {
     setVerificationMethod(defaultAuthOtpMethod(authChannels));
@@ -518,7 +519,7 @@ export default function TeamManagement() {
         />
       ) : (
         <div className={teamViewMode === 'list' ? listStackClass : teamGridClass}>
-          {paginateItems(members, membersPage, membersPageSize).map((member) => {
+          {pagedMembers.map((member) => {
             const roleTone =
               member.isOwner
                 ? 'amber'

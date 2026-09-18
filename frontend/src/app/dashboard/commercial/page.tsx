@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import {
  Building2, Loader2, PlusCircle, TrendingUp, Users, Wallet, Mail, MessageSquare, RefreshCw, AlertCircle, CheckCircle2,
 } from 'lucide-react';
-import { Button, PageHeader, SkeletonCommercialView, Pagination, paginateItems, PhoneInput, usePageSize } from '@/components/ui';
+import { Button, PageHeader, SkeletonCommercialView, Pagination, usePaginateItems, PhoneInput, usePageSize } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import ReferralShareButtons from '@/components/commercial/ReferralShareButtons';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -149,8 +149,8 @@ export default function CommercialDashboardPage() {
  return <SkeletonCommercialView />;
  }
 
- const paginatedOrgs = paginateItems(data.organizations, orgsPage, orgsPageSize);
- const paginatedComms = paginateItems(data.commissions, commPage, commPageSize);
+ const paginatedOrgs = usePaginateItems(data.organizations, orgsPage, orgsPageSize);
+ const paginatedComms = usePaginateItems(data.commissions, commPage, commPageSize);
 
  return (
  <div className="space-y-6">

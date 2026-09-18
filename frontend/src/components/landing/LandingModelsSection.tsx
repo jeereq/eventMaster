@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Eye } from 'lucide-react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
-import { Button, Pagination, paginateItems, Skeleton, usePageSize } from '@/components/ui';
+import { Button, Pagination, usePaginateItems, Skeleton, usePageSize } from '@/components/ui';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import type { LandingTemplate } from '@/config/landingTemplates';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
@@ -29,7 +29,7 @@ export default function LandingModelsSection({
   const isInviteBlocked = site?.studioVisibility?.invite === false;
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('landing-models', 8);
-  const shown = paginateItems(templates, page, pageSize);
+  const shown = usePaginateItems(templates, page, pageSize);
 
   useEffect(() => {
     setPage(1);

@@ -10,7 +10,7 @@ import CatalogueFilterBar, {
 } from '@/components/CatalogueFilterBar';
 import {
   Pagination,
-  paginateItems,
+  usePaginateItems,
   ProjectCard,
   StatusPill,
   ListRowAction,
@@ -100,7 +100,7 @@ export default function InvoiceListPanel({
     setPage(1);
   }, [search, status, type, cycle, commission, invoices.length]);
 
-  const paginated = paginateItems(filtered, page, pageSize);
+  const paginated = usePaginateItems(filtered, page, pageSize);
 
   const chips: CatalogueFilterChip[] = [
     ...(status && status !== 'all'

@@ -38,7 +38,7 @@ export { default as EmptyState } from './EmptyState';
 export { default as Badge } from './Badge';
 export { default as Breadcrumbs } from './Breadcrumbs';
 export type { BreadcrumbItem } from './Breadcrumbs';
-export { default as Pagination, paginateItems, totalPagesFor, usePageSize, PAGE_SIZE_OPTIONS } from './Pagination';
+export { default as Pagination, paginateItems, usePaginateItems, totalPagesFor, usePageSize, PAGE_SIZE_OPTIONS } from './Pagination';
 export type { PaginationProps } from './Pagination';
 export { default as Tooltip } from './Tooltip';
 export type { TooltipSide } from './Tooltip';

@@ -6,7 +6,7 @@ import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import type { LandingTemplate } from '@/config/landingTemplates';
 import { fetchPublicLandingTemplates } from '@/lib/landingTemplateAdapter';
-import { Button, Modal, Pagination, paginateItems, Skeleton, usePageSize } from '@/components/ui';
+import { Button, Modal, Pagination, usePaginateItems, Skeleton, usePageSize } from '@/components/ui';
 import PublicCtaBand from '@/components/PublicCtaBand';
 import { Sparkles, Eye, ArrowRight, Search, X, CheckCircle2, Wand2, Mail, ScanLine, Clock } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -72,7 +72,7 @@ export default function ModelesPage() {
     });
   }, [templates, selectedCategory, search]);
 
-  const shown = paginateItems(filtered, page, pageSize);
+  const shown = usePaginateItems(filtered, page, pageSize);
 
   const modelPhotoFor = (template: LandingTemplate): InvitationModelPhoto | null =>
     invitationModelPhotoFromContent(template.id, template.name, template.previewContent);

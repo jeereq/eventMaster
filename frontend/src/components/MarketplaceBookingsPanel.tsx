@@ -9,7 +9,7 @@ import {
   Input,
   Modal,
   Pagination,
-  paginateItems,
+  usePaginateItems,
   StatusPill,
   listStackClass,
   usePageSize,
@@ -267,6 +267,7 @@ export default function MarketplaceBookingsPanel({
     if (toDate && day && day > toDate) return false;
     return true;
   }), [bookings, filter, status, kind, query, fromDate, toDate]);
+  const pagedVisible = usePaginateItems(visible, page, pageSize);
 
   useEffect(() => {
     setPage(1);
@@ -605,7 +606,7 @@ export default function MarketplaceBookingsPanel({
       ) : (
         <>
           <div className={mode === 'grid' ? gridClassName : listStackClass}>
-            {paginateItems(visible, page, pageSize).map((item) => {
+            {pagedVisible.map((item) => {
               const isVendor = item.viewerRole === 'vendor';
               const busy = busyId === item.id;
               const amountDraft = acceptAmount[item.id] ?? String(item.amountFc);
