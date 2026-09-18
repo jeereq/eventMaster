@@ -360,7 +360,8 @@ export default function LandingRoomPlanAiStudio({
         ) : null}
         </div>
       ) : (
-        <div>
+        <div className={cn(lockExpanded && 'flex flex-col min-h-0')}>
+          {!lockExpanded ? (
           <div className="px-5 sm:px-7 pt-5 pb-4 border-b border-border bg-[linear-gradient(135deg,color-mix(in_oklab,var(--primary)_12%,transparent),transparent_55%)]">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-3.5 min-w-0">
@@ -381,26 +382,42 @@ export default function LandingRoomPlanAiStudio({
                   <Coins className="w-3.5 h-3.5 text-primary-solid" aria-hidden />
                   {allowance.unlimited ? 'Illimité' : `${aiTokenBalanceLabel(allowance)} jeton${allowance.totalRemaining === 1 ? '' : 's'}`}
                 </span>
-                {!lockExpanded ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={busy}
-                    onClick={() => setExpanded(false)}
-                    rightIcon={<ChevronUp className="w-4 h-4" />}
-                    aria-expanded
-                    aria-controls={`${id}-body`}
-                  >
-                    Réduire
-                  </Button>
-                ) : null}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => setExpanded(false)}
+                  rightIcon={<ChevronUp className="w-4 h-4" />}
+                  aria-expanded
+                  aria-controls={`${id}-body`}
+                >
+                  Réduire
+                </Button>
               </div>
             </div>
           </div>
+          ) : (
+            <div className="px-4 sm:px-6 py-2.5 border-b border-border bg-surface sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2">
+              <h2 id={`${id}-title`} className="sr-only">
+                Studio IA — plan de salle
+              </h2>
+              <p className="text-xs text-muted">
+                <span className="font-semibold text-foreground">1.</span> Brief ou photo{' '}
+                <span className="text-border mx-1">→</span>
+                <span className="font-semibold text-foreground">2.</span> Générer{' '}
+                <span className="text-border mx-1">→</span>
+                <span className="font-semibold text-foreground">3.</span> Explorer le plan
+              </p>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-foreground px-3 py-1.5 rounded-full bg-surface-muted border border-border tabular-nums">
+                <Coins className="w-3.5 h-3.5 text-primary-solid" aria-hidden />
+                {allowance.unlimited ? 'Illimité' : `${aiTokenBalanceLabel(allowance)} jeton${allowance.totalRemaining === 1 ? '' : 's'}`}
+              </span>
+            </div>
+          )}
 
           <div id={`${id}-body`} className="grid grid-cols-1 xl:grid-cols-[minmax(18rem,26rem)_minmax(0,1fr)] xl:divide-x divide-border">
-            <div className="p-4 sm:p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-4 flex flex-col">
               <input
                 ref={fileRef}
                 type="file"
@@ -420,7 +437,7 @@ export default function LandingRoomPlanAiStudio({
                 historyCount={history.length}
                 disabled={busy}
               />
-              {studioTab === 'create' ? (
+              {studioTab === 'create' && !lockExpanded ? (
                 <StudioHowTo
                   steps={[
                     'Décrivez la salle ou déposez une photo',
@@ -523,15 +540,23 @@ export default function LandingRoomPlanAiStudio({
               {protocolLocked ? <Alert variant="info">{PROTOCOL_CREATIVE_DENIED}</Alert> : null}
               {error ? <Alert variant="error">{error}</Alert> : null}
 
-              <Button
-                type="button"
-                className="w-full min-h-11"
-                disabled={protocolLocked || busy}
-                onClick={() => void generate()}
-                leftIcon={busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+              <div
+                className={cn(
+                  'sticky bottom-0 z-30 mt-auto -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 border-t border-border',
+                  'bg-surface/95 backdrop-blur-md shadow-[0_-10px_28px_-16px_rgba(0,0,0,0.35)]',
+                  'pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+                )}
               >
-                {busy ? 'Composition…' : `Générer (${AI_ROOM_PLAN_TOKEN_COST} jetons)`}
-              </Button>
+                <Button
+                  type="button"
+                  className="w-full min-h-11"
+                  disabled={protocolLocked || busy}
+                  onClick={() => void generate()}
+                  leftIcon={busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                >
+                  {busy ? 'Composition…' : `Générer (${AI_ROOM_PLAN_TOKEN_COST} jetons)`}
+                </Button>
+              </div>
               </>
               ) : null}
 

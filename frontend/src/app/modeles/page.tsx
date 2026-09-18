@@ -242,8 +242,7 @@ export default function ModelesPage() {
         <Modal
           open={studioOpen}
           onClose={closeInvitationStudio}
-          title="Studio IA — invitations"
-          description="Décrivez la fête ou déposez une carte à reproduire."
+          title="Créer une invitation"
           size="full"
           contentClassName="p-0 sm:p-0"
         >

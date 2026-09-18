@@ -1406,7 +1406,8 @@ export default function LandingInvitationAiGenerator({
         </button>
       ) : (
         /* ─── ATELIER COMPLET DÉROULÉ ─── */
-        <div className="animate-fade-in">
+        <div className={cn('animate-fade-in', lockExpanded && 'flex flex-col min-h-0')}>
+          {!lockExpanded ? (
           <div className="px-5 sm:px-7 pt-5 sm:pt-6 pb-4 border-b border-border/80 bg-[linear-gradient(135deg,color-mix(in_oklab,var(--primary)_12%,transparent),transparent_55%)]">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-3.5 min-w-0">
@@ -1441,31 +1442,57 @@ export default function LandingInvitationAiGenerator({
                     Recharger
                   </Button>
                 ) : null}
-                {!lockExpanded ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={busy}
-                    onClick={() => setIsExpanded(false)}
-                    rightIcon={<ChevronUp className="w-4 h-4" />}
-                    aria-expanded={true}
-                    aria-controls={`${id}-body`}
-                    title="Réduire"
-                  >
-                    Réduire
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => setIsExpanded(false)}
+                  rightIcon={<ChevronUp className="w-4 h-4" />}
+                  aria-expanded={true}
+                  aria-controls={`${id}-body`}
+                  title="Réduire"
+                >
+                  Réduire
+                </Button>
+              </div>
+            </div>
+          </div>
+          ) : (
+            <div className="px-4 sm:px-6 py-2.5 border-b border-border/80 bg-surface sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2">
+              <h2 id={`${id}-title`} className="sr-only">
+                Créer une invitation
+              </h2>
+              <p className="text-xs text-muted">
+                <span className="font-semibold text-foreground">1.</span> Brief ou photo{' '}
+                <span className="text-border mx-1">→</span>
+                <span className="font-semibold text-foreground">2.</span> Générer{' '}
+                <span className="text-border mx-1">→</span>
+                <span className="font-semibold text-foreground">3.</span> Éditer
+              </p>
+              <div className="flex items-center gap-2 shrink-0">
+                <span
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-foreground px-3 py-1.5 rounded-full bg-surface-muted border border-border tabular-nums"
+                  title="Jetons IA disponibles"
+                >
+                  <Coins className="w-3.5 h-3.5 text-primary" aria-hidden />
+                  {allowance.unlimited ? 'Illimité' : `${aiTokenBalanceLabel(allowance)} jeton${allowance.totalRemaining === 1 ? '' : 's'}`}
+                </span>
+                {!canAffordAiAction(allowance, AI_INVITATION_COMPOSE_TOKEN_COST) ? (
+                  <Button type="button" size="sm" variant="secondary" onClick={() => setTokenModalOpen(true)}>
+                    Recharger
                   </Button>
                 ) : null}
               </div>
             </div>
-          </div>
+          )}
 
           <div
             id={`${id}-body`}
             className="grid grid-cols-1 xl:grid-cols-[minmax(18rem,26rem)_minmax(0,1fr)] gap-0 xl:divide-x divide-border"
           >
         {/* Compose */}
-        <div className="p-4 sm:p-6 space-y-4">
+        <div className="p-4 sm:p-6 space-y-4 flex flex-col">
           <input
             ref={inputRef}
             type="file"
@@ -1484,21 +1511,23 @@ export default function LandingInvitationAiGenerator({
 
           {studioTab === 'create' ? (
           <>
-          <StudioHowTo
-            steps={
-              studioIntent === 'couple'
-                ? [
-                    'Déposez la carte, puis les photos du couple',
-                    'Remplacez uniquement les visages',
-                    'Éditez les textes et la réponse à l’invitation',
-                  ]
-                : [
-                    'Décrivez la fête ou déposez une carte',
-                    'Générez la carte 9:16',
-                    'Éditez les textes et la réponse à l’invitation',
-                  ]
-            }
-          />
+          {!lockExpanded ? (
+            <StudioHowTo
+              steps={
+                studioIntent === 'couple'
+                  ? [
+                      'Déposez la carte, puis les photos du couple',
+                      'Remplacez uniquement les visages',
+                      'Éditez les textes et la réponse à l’invitation',
+                    ]
+                  : [
+                      'Décrivez la fête ou déposez une carte',
+                      'Générez la carte 9:16',
+                      'Éditez les textes et la réponse à l’invitation',
+                    ]
+              }
+            />
+          ) : null}
           <div
             role="radiogroup"
             aria-label="Comment créer la carte"
@@ -1945,38 +1974,6 @@ export default function LandingInvitationAiGenerator({
 
               {protocolLocked ? <Alert variant="info">{PROTOCOL_CREATIVE_DENIED}</Alert> : null}
 
-              <div className="flex flex-wrap gap-2 pt-1">
-                <Button
-                  type="button"
-                  onClick={requestGenerate}
-                  disabled={
-                    protocolLocked ||
-                    busy ||
-                    (studioIntent === 'couple'
-                      ? (!incomingFile && !selectedModelPhoto) || files.length < 1
-                      : prompt.trim().length < 8 || (studioIntent === 'clone' && files.length === 0 && !selectedModelPhoto))
-                  }
-                  leftIcon={
-                    busy ? (
-                      <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />
-                    ) : (
-                      <Wand2 className="w-4 h-4" />
-                    )
-                  }
-                >
-                  {busy
-                    ? 'Création…'
-                    : studioIntent === 'couple'
-                      ? `Remplacer les visages (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`
-                      : `Créer la carte (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
-                </Button>
-                {result ? (
-                  <Button type="button" variant="secondary" onClick={resetResult} disabled={busy}>
-                    Recommencer
-                  </Button>
-                ) : null}
-              </div>
-
               <p className="text-xs text-muted">
                 Briefs coutumiers Kongo, Luba, Mongo et Lunda :{' '}
                 <button type="button" className="font-bold text-primary hover:underline" onClick={() => setStudioTab('prompts')}>
@@ -1984,6 +1981,57 @@ export default function LandingInvitationAiGenerator({
                 </button>
                 .
               </p>
+
+              <div
+                className={cn(
+                  'sticky bottom-0 z-30 mt-auto -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 border-t border-border',
+                  'bg-surface/95 backdrop-blur-md shadow-[0_-10px_28px_-16px_rgba(0,0,0,0.35)]',
+                  'pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+                )}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+                  <Button
+                    type="button"
+                    className="w-full sm:flex-1 min-h-11"
+                    onClick={requestGenerate}
+                    disabled={
+                      protocolLocked ||
+                      busy ||
+                      (studioIntent === 'couple'
+                        ? (!incomingFile && !selectedModelPhoto) || files.length < 1
+                        : prompt.trim().length < 8 || (studioIntent === 'clone' && files.length === 0 && !selectedModelPhoto))
+                    }
+                    leftIcon={
+                      busy ? (
+                        <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />
+                      ) : (
+                        <Wand2 className="w-4 h-4" />
+                      )
+                    }
+                  >
+                    {busy
+                      ? 'Création…'
+                      : studioIntent === 'couple'
+                        ? `Remplacer les visages (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`
+                        : `Créer la carte (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
+                  </Button>
+                  {result ? (
+                    <Button type="button" variant="secondary" className="min-h-11" onClick={resetResult} disabled={busy}>
+                      Recommencer
+                    </Button>
+                  ) : null}
+                </div>
+                {studioIntent === 'create' && prompt.trim().length > 0 && prompt.trim().length < 8 ? (
+                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                    Ajoutez encore quelques mots au brief (8 caractères min.).
+                  </p>
+                ) : null}
+                {studioIntent === 'clone' && files.length === 0 && !selectedModelPhoto ? (
+                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                    Déposez une carte modèle ou choisissez-en une pour cloner.
+                  </p>
+                ) : null}
+              </div>
               </div>
               </>
               ) : null}
