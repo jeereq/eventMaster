@@ -952,7 +952,12 @@ async function generateImageWithGpt56Luna(
   imagePrompt: string,
   referenceUrls: string[],
   tenantId: string | null | undefined,
-  options?: { hasPeople?: boolean; embedText?: boolean; preferredModel?: string },
+  options?: {
+    hasPeople?: boolean;
+    embedText?: boolean;
+    preferredModel?: string;
+    coupleFaceSwap?: boolean;
+  },
 ): Promise<{ url: string; mode: 'edit' | 'generate' }> {
   const model = responsesModel(options?.preferredModel);
   const hasRefs = referenceUrls.length > 0;
@@ -960,6 +965,7 @@ async function generateImageWithGpt56Luna(
     ? 'Embed sharp invitation typography (names, date, venue from the brief) on the card without covering faces.'
     : NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE;
   const hasPeople = Boolean(options?.hasPeople);
+  const coupleFaceSwap = Boolean(options?.coupleFaceSwap);
 
   // Convertir en data URL pour éviter les échecs de téléchargement côté OpenAI.
   const refDataUrls: string[] = [];
@@ -971,22 +977,28 @@ async function generateImageWithGpt56Luna(
     }
   }
 
-  const faceBlock = hasPeople ? FACE_POLICY_KEEP_PEOPLE : FACE_POLICY_NO_PEOPLE;
+  const faceBlock = coupleFaceSwap
+    ? FACE_POLICY_COUPLE_SWAP
+    : hasPeople
+      ? FACE_POLICY_KEEP_PEOPLE
+      : FACE_POLICY_NO_PEOPLE;
   // Édition prioritaire si des personnes sont présentes (préserve mieux les visages).
   const imageAction = refDataUrls.length
-    ? hasPeople
+    ? hasPeople || coupleFaceSwap
       ? 'edit'
       : 'auto'
     : 'generate';
 
   const imageQuality =
     process.env.OPENAI_IMAGE_QUALITY ||
-    (hasPeople ? 'high' : 'medium');
+    (hasPeople || coupleFaceSwap ? 'high' : 'medium');
 
   // Refs d’abord quand il y a des personnes : ancre mieux l’identité faciale.
-  const identityPreamble = hasPeople
-    ? `EDIT the attached photo(s). Keep the SAME faces — pixels win over any text. Do not invent lookalikes.\n\n${imagePrompt}`
-    : imagePrompt;
+  const identityPreamble = coupleFaceSwap
+    ? `COUPLE FACE SWAP on the attached photo(s). Keep Image 1 composition, bodies, wardrobe, décor and expressions. Swap faces with the couple in Images 2+. Pixels win over any text.\n\n${imagePrompt}`
+    : hasPeople
+      ? `EDIT the attached photo(s). Keep the SAME faces — pixels win over any text. Do not invent lookalikes.\n\n${imagePrompt}`
+      : imagePrompt;
 
   const content: Array<Record<string, unknown>> = hasPeople
     ? [
@@ -1627,6 +1639,7 @@ async function generateInvitationImageWithOpenAi(
     speedMode?: AiSpeedMode;
     preloadedRefImages?: PreloadedRefImage[];
     preferredModel?: string;
+    coupleFaceSwap?: boolean;
   },
 ): Promise<{ url: string; mode: 'edit' | 'generate'; safetyFallbackTriggered?: boolean }> {
   const preferImageApi = (options?.preferredModel || '').includes('gpt-image');
@@ -1635,6 +1648,7 @@ async function generateInvitationImageWithOpenAi(
       hasPeople: options?.hasPeople,
       embedText: options?.embedText,
       preferredModel: options?.preferredModel,
+      coupleFaceSwap: options?.coupleFaceSwap,
     });
     return { ...lunaRes, safetyFallbackTriggered: false as const };
   };
@@ -1703,6 +1717,7 @@ async function createNewInvitationImage(
     speedMode?: AiSpeedMode;
     preloadedRefImages?: PreloadedRefImage[];
     preferredModel?: string;
+    coupleFaceSwap?: boolean;
   },
 ): Promise<{ url: string; mode: 'edit' | 'generate'; safetyFallbackTriggered?: boolean }> {
   const nanoKey = getNanoBananaApiKey();
@@ -1824,32 +1839,10 @@ async function judgeInvitationImage(input: {
   const geminiImages = [input.generatedUrl, ...refs];
   const openAiImages = [input.generatedUrl, ...refs];
 
-  const tryGemini = async (): Promise<InvitationImageJudgeVerdict | null> => {
-    if (!getGeminiApiKey()) return null;
-    const parsed = await requestGeminiJson({
-      system: INVITATION_IMAGE_JUDGE_SYSTEM,
-      userText,
-      imageUrls: geminiImages,
-      temperature: 0.1,
-      timeoutMs: 25_000,
-      failMessage: 'Invitation image judge failed.',
-    });
-    return parseInvitationImageJudgeVerdict(parsed);
-  };
+  const preferOpenAi = isOpenAiStudioModel(input.preferredModel);
 
-  try {
-    const gemini = await tryGemini();
-    if (gemini) return gemini;
-  } catch (error) {
-    console.warn(
-      '[invitationTemplateAi] Gemini image judge failed, trying OpenAI:',
-      (error as Error)?.message,
-    );
-  }
-
-  if (!input.key) return null;
-
-  try {
+  const tryOpenAi = async (): Promise<InvitationImageJudgeVerdict | null> => {
+    if (!input.key) return null;
     const visionModel =
       input.preferredModel &&
       isOpenAiStudioModel(input.preferredModel) &&
@@ -1866,13 +1859,56 @@ async function judgeInvitationImage(input: {
       model: visionModel,
     });
     return parseInvitationImageJudgeVerdict(parsed);
-  } catch (error) {
-    console.warn(
-      '[invitationTemplateAi] Image judge skipped (fail-open):',
-      (error as Error)?.message,
-    );
-    return null;
+  };
+
+  const tryGemini = async (): Promise<InvitationImageJudgeVerdict | null> => {
+    if (!getGeminiApiKey()) return null;
+    const parsed = await requestGeminiJson({
+      system: INVITATION_IMAGE_JUDGE_SYSTEM,
+      userText,
+      imageUrls: geminiImages,
+      temperature: 0.1,
+      timeoutMs: 25_000,
+      failMessage: 'Invitation image judge failed.',
+    });
+    return parseInvitationImageJudgeVerdict(parsed);
+  };
+
+  if (preferOpenAi) {
+    try {
+      const openAi = await tryOpenAi();
+      if (openAi) return openAi;
+    } catch (openAiErr) {
+      console.warn('[invitationTemplateAi] OpenAI image judge failed, trying Gemini fallback:', (openAiErr as Error)?.message);
+    }
+    try {
+      const gemini = await tryGemini();
+      if (gemini) return gemini;
+    } catch (geminiErr) {
+      console.warn('[invitationTemplateAi] Gemini image judge fallback failed:', (geminiErr as Error)?.message);
+    }
+  } else {
+    try {
+      const gemini = await tryGemini();
+      if (gemini) return gemini;
+    } catch (error) {
+      console.warn(
+        '[invitationTemplateAi] Gemini image judge failed, trying OpenAI:',
+        (error as Error)?.message,
+      );
+    }
+    try {
+      const openAi = await tryOpenAi();
+      if (openAi) return openAi;
+    } catch (error) {
+      console.warn(
+        '[invitationTemplateAi] Image judge skipped (fail-open):',
+        (error as Error)?.message,
+      );
+    }
   }
+
+  return null;
 }
 
 async function generateInvitationImageWithJudge(
@@ -1887,6 +1923,7 @@ async function generateInvitationImageWithJudge(
     speedMode?: AiSpeedMode;
     preloadedRefImages?: PreloadedRefImage[];
     preferredModel?: string;
+    coupleFaceSwap?: boolean;
   },
   judgeInput: {
     intent: InvitationPipelineIntent;
@@ -1956,31 +1993,10 @@ async function writeInvitationOverlayCopy(input: {
     intent: input.intent,
   });
 
-  const tryGemini = async (): Promise<InvitationCopyDraft | null> => {
-    if (!getGeminiApiKey()) return null;
-    const parsed = await requestGeminiJson({
-      system: INVITATION_COPY_SYSTEM,
-      userText,
-      temperature: 0.35,
-      timeoutMs: 25_000,
-      failMessage: 'Invitation copy failed.',
-    });
-    return parseInvitationCopyDraft(parsed, language);
-  };
+  const preferOpenAi = isOpenAiStudioModel(input.preferredModel);
 
-  try {
-    const gemini = await tryGemini();
-    if (gemini) return gemini;
-  } catch (error) {
-    console.warn(
-      '[invitationTemplateAi] Gemini overlay copy failed, trying OpenAI:',
-      (error as Error)?.message,
-    );
-  }
-
-  if (!input.key) return null;
-
-  try {
+  const tryOpenAi = async (): Promise<InvitationCopyDraft | null> => {
+    if (!input.key) return null;
     const model =
       input.preferredModel &&
       isOpenAiStudioModel(input.preferredModel) &&
@@ -1996,13 +2012,55 @@ async function writeInvitationOverlayCopy(input: {
       model,
     });
     return parseInvitationCopyDraft(parsed, language);
-  } catch (error) {
-    console.warn(
-      '[invitationTemplateAi] Overlay copy skipped (fail-open):',
-      (error as Error)?.message,
-    );
-    return null;
+  };
+
+  const tryGemini = async (): Promise<InvitationCopyDraft | null> => {
+    if (!getGeminiApiKey()) return null;
+    const parsed = await requestGeminiJson({
+      system: INVITATION_COPY_SYSTEM,
+      userText,
+      temperature: 0.35,
+      timeoutMs: 25_000,
+      failMessage: 'Invitation copy failed.',
+    });
+    return parseInvitationCopyDraft(parsed, language);
+  };
+
+  if (preferOpenAi) {
+    try {
+      const openAi = await tryOpenAi();
+      if (openAi) return openAi;
+    } catch (openAiErr) {
+      console.warn('[invitationTemplateAi] OpenAI overlay copy failed, trying Gemini fallback:', (openAiErr as Error)?.message);
+    }
+    try {
+      const gemini = await tryGemini();
+      if (gemini) return gemini;
+    } catch (geminiErr) {
+      console.warn('[invitationTemplateAi] Gemini overlay copy fallback failed:', (geminiErr as Error)?.message);
+    }
+  } else {
+    try {
+      const gemini = await tryGemini();
+      if (gemini) return gemini;
+    } catch (error) {
+      console.warn(
+        '[invitationTemplateAi] Gemini overlay copy failed, trying OpenAI:',
+        (error as Error)?.message,
+      );
+    }
+    try {
+      const openAi = await tryOpenAi();
+      if (openAi) return openAi;
+    } catch (error) {
+      console.warn(
+        '[invitationTemplateAi] Overlay copy skipped (fail-open):',
+        (error as Error)?.message,
+      );
+    }
   }
+
+  return null;
 }
 
 export type InvitationAiComposeResult = {
@@ -2337,6 +2395,7 @@ export async function composeInvitationTemplateAi(input: {
         speedMode,
         preloadedRefImages,
         preferredModel: input.preferredModel || undefined,
+        coupleFaceSwap,
       };
       const judgeInput = {
         intent: resolvedIntent,

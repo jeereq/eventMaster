@@ -690,6 +690,7 @@ async function generateImageWithGpt56Luna(key, imagePrompt, referenceUrls, tenan
         ? 'Embed sharp invitation typography (names, date, venue from the brief) on the card without covering faces.'
         : invitationPromptFidelity_ts_1.NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE;
     const hasPeople = Boolean(options?.hasPeople);
+    const coupleFaceSwap = Boolean(options?.coupleFaceSwap);
     // Convertir en data URL pour éviter les échecs de téléchargement côté OpenAI.
     const refDataUrls = [];
     for (const ref of referenceUrls.slice(0, 4)) {
@@ -700,19 +701,25 @@ async function generateImageWithGpt56Luna(key, imagePrompt, referenceUrls, tenan
             console.warn('[invitationTemplateAi] skip ref download:', err?.message);
         }
     }
-    const faceBlock = hasPeople ? FACE_POLICY_KEEP_PEOPLE : FACE_POLICY_NO_PEOPLE;
+    const faceBlock = coupleFaceSwap
+        ? FACE_POLICY_COUPLE_SWAP
+        : hasPeople
+            ? FACE_POLICY_KEEP_PEOPLE
+            : FACE_POLICY_NO_PEOPLE;
     // Édition prioritaire si des personnes sont présentes (préserve mieux les visages).
     const imageAction = refDataUrls.length
-        ? hasPeople
+        ? hasPeople || coupleFaceSwap
             ? 'edit'
             : 'auto'
         : 'generate';
     const imageQuality = process.env.OPENAI_IMAGE_QUALITY ||
-        (hasPeople ? 'high' : 'medium');
+        (hasPeople || coupleFaceSwap ? 'high' : 'medium');
     // Refs d’abord quand il y a des personnes : ancre mieux l’identité faciale.
-    const identityPreamble = hasPeople
-        ? `EDIT the attached photo(s). Keep the SAME faces — pixels win over any text. Do not invent lookalikes.\n\n${imagePrompt}`
-        : imagePrompt;
+    const identityPreamble = coupleFaceSwap
+        ? `COUPLE FACE SWAP on the attached photo(s). Keep Image 1 composition, bodies, wardrobe, décor and expressions. Swap faces with the couple in Images 2+. Pixels win over any text.\n\n${imagePrompt}`
+        : hasPeople
+            ? `EDIT the attached photo(s). Keep the SAME faces — pixels win over any text. Do not invent lookalikes.\n\n${imagePrompt}`
+            : imagePrompt;
     const content = hasPeople
         ? [
             ...refDataUrls.map((image_url) => ({
@@ -1252,6 +1259,7 @@ async function generateInvitationImageWithOpenAi(key, imageUrls, imagePrompt, te
             hasPeople: options?.hasPeople,
             embedText: options?.embedText,
             preferredModel: options?.preferredModel,
+            coupleFaceSwap: options?.coupleFaceSwap,
         });
         return { ...lunaRes, safetyFallbackTriggered: false };
     };
@@ -1362,30 +1370,10 @@ async function judgeInvitationImage(input) {
         .slice(0, 3);
     const geminiImages = [input.generatedUrl, ...refs];
     const openAiImages = [input.generatedUrl, ...refs];
-    const tryGemini = async () => {
-        if (!(0, geminiJsonClient_ts_1.getGeminiApiKey)())
+    const preferOpenAi = (0, aiStudioModels_ts_1.isOpenAiStudioModel)(input.preferredModel);
+    const tryOpenAi = async () => {
+        if (!input.key)
             return null;
-        const parsed = await (0, geminiJsonClient_ts_1.requestGeminiJson)({
-            system: invitationPromptFidelity_ts_1.INVITATION_IMAGE_JUDGE_SYSTEM,
-            userText,
-            imageUrls: geminiImages,
-            temperature: 0.1,
-            timeoutMs: 25_000,
-            failMessage: 'Invitation image judge failed.',
-        });
-        return (0, invitationPromptFidelity_ts_1.parseInvitationImageJudgeVerdict)(parsed);
-    };
-    try {
-        const gemini = await tryGemini();
-        if (gemini)
-            return gemini;
-    }
-    catch (error) {
-        console.warn('[invitationTemplateAi] Gemini image judge failed, trying OpenAI:', error?.message);
-    }
-    if (!input.key)
-        return null;
-    try {
         const visionModel = input.preferredModel &&
             (0, aiStudioModels_ts_1.isOpenAiStudioModel)(input.preferredModel) &&
             !input.preferredModel.includes('gpt-image')
@@ -1401,11 +1389,57 @@ async function judgeInvitationImage(input) {
             model: visionModel,
         });
         return (0, invitationPromptFidelity_ts_1.parseInvitationImageJudgeVerdict)(parsed);
+    };
+    const tryGemini = async () => {
+        if (!(0, geminiJsonClient_ts_1.getGeminiApiKey)())
+            return null;
+        const parsed = await (0, geminiJsonClient_ts_1.requestGeminiJson)({
+            system: invitationPromptFidelity_ts_1.INVITATION_IMAGE_JUDGE_SYSTEM,
+            userText,
+            imageUrls: geminiImages,
+            temperature: 0.1,
+            timeoutMs: 25_000,
+            failMessage: 'Invitation image judge failed.',
+        });
+        return (0, invitationPromptFidelity_ts_1.parseInvitationImageJudgeVerdict)(parsed);
+    };
+    if (preferOpenAi) {
+        try {
+            const openAi = await tryOpenAi();
+            if (openAi)
+                return openAi;
+        }
+        catch (openAiErr) {
+            console.warn('[invitationTemplateAi] OpenAI image judge failed, trying Gemini fallback:', openAiErr?.message);
+        }
+        try {
+            const gemini = await tryGemini();
+            if (gemini)
+                return gemini;
+        }
+        catch (geminiErr) {
+            console.warn('[invitationTemplateAi] Gemini image judge fallback failed:', geminiErr?.message);
+        }
     }
-    catch (error) {
-        console.warn('[invitationTemplateAi] Image judge skipped (fail-open):', error?.message);
-        return null;
+    else {
+        try {
+            const gemini = await tryGemini();
+            if (gemini)
+                return gemini;
+        }
+        catch (error) {
+            console.warn('[invitationTemplateAi] Gemini image judge failed, trying OpenAI:', error?.message);
+        }
+        try {
+            const openAi = await tryOpenAi();
+            if (openAi)
+                return openAi;
+        }
+        catch (error) {
+            console.warn('[invitationTemplateAi] Image judge skipped (fail-open):', error?.message);
+        }
     }
+    return null;
 }
 async function generateInvitationImageWithJudge(key, imageUrls, imagePrompt, tenantId, imageOptions, judgeInput) {
     const created = await createNewInvitationImage(key, imageUrls, imagePrompt, tenantId, imageOptions);
@@ -1451,29 +1485,10 @@ async function writeInvitationOverlayCopy(input) {
         organizerContext: input.organizerContext,
         intent: input.intent,
     });
-    const tryGemini = async () => {
-        if (!(0, geminiJsonClient_ts_1.getGeminiApiKey)())
+    const preferOpenAi = (0, aiStudioModels_ts_1.isOpenAiStudioModel)(input.preferredModel);
+    const tryOpenAi = async () => {
+        if (!input.key)
             return null;
-        const parsed = await (0, geminiJsonClient_ts_1.requestGeminiJson)({
-            system: invitationPromptFidelity_ts_1.INVITATION_COPY_SYSTEM,
-            userText,
-            temperature: 0.35,
-            timeoutMs: 25_000,
-            failMessage: 'Invitation copy failed.',
-        });
-        return (0, invitationPromptFidelity_ts_1.parseInvitationCopyDraft)(parsed, language);
-    };
-    try {
-        const gemini = await tryGemini();
-        if (gemini)
-            return gemini;
-    }
-    catch (error) {
-        console.warn('[invitationTemplateAi] Gemini overlay copy failed, trying OpenAI:', error?.message);
-    }
-    if (!input.key)
-        return null;
-    try {
         const model = input.preferredModel &&
             (0, aiStudioModels_ts_1.isOpenAiStudioModel)(input.preferredModel) &&
             !input.preferredModel.includes('gpt-image')
@@ -1488,11 +1503,56 @@ async function writeInvitationOverlayCopy(input) {
             model,
         });
         return (0, invitationPromptFidelity_ts_1.parseInvitationCopyDraft)(parsed, language);
+    };
+    const tryGemini = async () => {
+        if (!(0, geminiJsonClient_ts_1.getGeminiApiKey)())
+            return null;
+        const parsed = await (0, geminiJsonClient_ts_1.requestGeminiJson)({
+            system: invitationPromptFidelity_ts_1.INVITATION_COPY_SYSTEM,
+            userText,
+            temperature: 0.35,
+            timeoutMs: 25_000,
+            failMessage: 'Invitation copy failed.',
+        });
+        return (0, invitationPromptFidelity_ts_1.parseInvitationCopyDraft)(parsed, language);
+    };
+    if (preferOpenAi) {
+        try {
+            const openAi = await tryOpenAi();
+            if (openAi)
+                return openAi;
+        }
+        catch (openAiErr) {
+            console.warn('[invitationTemplateAi] OpenAI overlay copy failed, trying Gemini fallback:', openAiErr?.message);
+        }
+        try {
+            const gemini = await tryGemini();
+            if (gemini)
+                return gemini;
+        }
+        catch (geminiErr) {
+            console.warn('[invitationTemplateAi] Gemini overlay copy fallback failed:', geminiErr?.message);
+        }
     }
-    catch (error) {
-        console.warn('[invitationTemplateAi] Overlay copy skipped (fail-open):', error?.message);
-        return null;
+    else {
+        try {
+            const gemini = await tryGemini();
+            if (gemini)
+                return gemini;
+        }
+        catch (error) {
+            console.warn('[invitationTemplateAi] Gemini overlay copy failed, trying OpenAI:', error?.message);
+        }
+        try {
+            const openAi = await tryOpenAi();
+            if (openAi)
+                return openAi;
+        }
+        catch (error) {
+            console.warn('[invitationTemplateAi] Overlay copy skipped (fail-open):', error?.message);
+        }
     }
+    return null;
 }
 function ensurePublicTemplateVariables(elements) {
     const result = elements.map((el) => ({ ...el }));
@@ -1747,6 +1807,7 @@ async function composeInvitationTemplateAi(input) {
                 speedMode,
                 preloadedRefImages,
                 preferredModel: input.preferredModel || undefined,
+                coupleFaceSwap,
             };
             const judgeInput = {
                 intent: resolvedIntent,
