@@ -1478,7 +1478,7 @@ export default function TemplatesPage() {
           cardIdentity.title ? `titre : ${cardIdentity.title}` : '',
           cardIdentity.description ? `lieu : ${cardIdentity.description}` : '',
         ].filter(Boolean).join(', ');
-        promptToSend = `Remplacer les visages du couple (respecter les genres : marié sur costume, mariée sur robe) et modifier les textes (${textParts}). Conserver la disposition, le style et les ornements.`;
+        promptToSend = `Remplacer les visages du couple (respecter les genres : marié sur costume, mariée sur robe) et modifier les textes (${textParts}). Conserver la disposition, le style, les ornements et les expressions des visages du carton. Les photos sources prennent ces expressions, pas les leurs.`;
       } else if (aiComposeCoupleFaceSwap) {
         promptToSend = COUPLE_FACE_SWAP_DEFAULT_PROMPT;
       } else if (isAlteration && hasTexts) {
@@ -1693,7 +1693,7 @@ export default function TemplatesPage() {
             </h2>
             <p className="text-sm sm:text-base text-muted mt-1.5 leading-relaxed max-w-4xl">
               {aiComposeCoupleFaceSwap
-                ? `Posez la carte, puis les photos du couple. Les visages changent ; le décor reste. ${composeTokenCost} jetons.`
+                ? `Posez la carte, puis les photos du couple. L’identité change ; décor et expressions du carton restent. ${composeTokenCost} jetons.`
                 : aiComposeIsAlteration
                 ? `Partez d’un modèle et remplacez les textes ou les visages. ${composeTokenCost} jetons.`
                 : `Fond généré, textes dynamiques posés ensuite. ${composeTokenCost} jetons.`}
@@ -1888,7 +1888,7 @@ export default function TemplatesPage() {
                  : 'Choisir une invitation'}
          </span>
          <span className="block text-xs text-muted mt-0.5">
-           Les visages de cette image seront remplacés. Pose et décor restent.
+           Les visages de cette image seront remplacés. Pose du corps, décor et expressions du carton restent ; vos photos fournissent seulement l’identité.
          </span>
        </span>
      </button>

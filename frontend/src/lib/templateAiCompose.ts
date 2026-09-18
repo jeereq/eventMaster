@@ -18,7 +18,7 @@ import type { InvitationStructuredBrief } from '@/config/invitationStructuredBri
 export const AI_TEMPLATE_DRAFT_KEY = 'em_ai_template_draft';
 
 export const COUPLE_FACE_SWAP_DEFAULT_PROMPT =
-  'Remplace uniquement les visages de cette invitation par les visages du couple. Conserve la pose, les tenues, le décor et la mise en page.';
+  'Remplace uniquement les visages de cette invitation par les visages du couple. Conserve la pose des corps, les tenues, le décor, la mise en page et les expressions des visages déjà présents sur le carton. Les photos sources adoptent ces expressions (sourire, regard, émotion).';
 
 export const INVITATION_VARIANT_LABELS = ['Fidèle', 'Ample'] as const;
 
