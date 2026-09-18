@@ -77,6 +77,7 @@ export async function composeTemplateWithAi(input: {
   variantsCount?: number;
   speedMode?: AiSpeedMode;
   coupleFaceSwap?: boolean;
+  genderMappingDirective?: string;
   structuredBrief?: InvitationStructuredBrief;
   sourceTemplateId?: string;
 }): Promise<TemplateAiComposeResult | StudioJobAccepted> {
@@ -99,6 +100,7 @@ export async function composeTemplateWithAi(input: {
     variantsCount: input.variantsCount,
     speedMode: input.speedMode || 'quality',
     coupleFaceSwap: Boolean(input.coupleFaceSwap),
+    genderMappingDirective: input.genderMappingDirective,
     structuredBrief: input.structuredBrief,
     sourceTemplateId: input.sourceTemplateId,
     background: true,
@@ -127,6 +129,7 @@ export async function composeTemplateWithAiPublic(input: {
   variantsCount?: number;
   speedMode?: AiSpeedMode;
   coupleFaceSwap?: boolean;
+  genderMappingDirective?: string;
   structuredBrief?: InvitationStructuredBrief;
   sourceTemplateId?: string;
 }): Promise<TemplateAiComposeResult | StudioJobAccepted> {
@@ -154,6 +157,7 @@ export async function composeTemplateWithAiPublic(input: {
     variantsCount: input.variantsCount,
     speedMode: input.speedMode || 'quality',
     coupleFaceSwap: Boolean(input.coupleFaceSwap),
+    genderMappingDirective: input.genderMappingDirective,
     structuredBrief: input.structuredBrief,
     sourceTemplateId: input.sourceTemplateId,
     background: true,

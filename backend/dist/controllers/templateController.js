@@ -509,6 +509,9 @@ async function composeTemplateWithAi(req, res) {
             speedMode,
             preferredModel: settings.aiStudioModels?.invitationModel,
             coupleFaceSwap,
+            genderMappingDirective: typeof body.genderMappingDirective === 'string' && body.genderMappingDirective.trim().length > 0
+                ? body.genderMappingDirective.trim().slice(0, 500)
+                : undefined,
             structuredBrief: (0, invitationStructuredBrief_1.parseInvitationStructuredBrief)(body.structuredBrief),
         };
         const runCompose = async () => {
@@ -665,6 +668,9 @@ async function publicComposeTemplateWithAi(req, res) {
                 speedMode,
                 preferredModel: settings.aiStudioModels?.invitationModel,
                 coupleFaceSwap,
+                genderMappingDirective: typeof body.genderMappingDirective === 'string' && body.genderMappingDirective.trim().length > 0
+                    ? body.genderMappingDirective.trim().slice(0, 500)
+                    : undefined,
                 structuredBrief: (0, invitationStructuredBrief_1.parseInvitationStructuredBrief)(body.structuredBrief),
             });
             const historyId = await persistTemplateCompose({

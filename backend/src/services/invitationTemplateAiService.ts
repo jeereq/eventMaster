@@ -413,11 +413,15 @@ function buildImagePrompt(
           briefMustKeep: analysis.briefMustKeep,
           briefMustChange: analysis.briefMustChange,
           colors: analysis.colors,
-          coupleFaceMapping: analysis.coupleFaceMapping
+          coupleFaceMapping: analysis.coupleFaceMapping?.strictMappingInstructions
             ? {
                 strictMappingInstructions: analysis.coupleFaceMapping.strictMappingInstructions,
               }
-            : undefined,
+            : options?.processed?.identityHeader?.includes('GENDER LOCK')
+              ? {
+                  strictMappingInstructions: options.processed.identityHeader,
+                }
+              : undefined,
         }
       : null,
     organizerContext: options?.organizerContext,
@@ -2094,6 +2098,7 @@ export async function composeInvitationTemplateAi(input: {
   speedMode?: string | null;
   preferredModel?: string | null;
   coupleFaceSwap?: boolean;
+  genderMappingDirective?: string | null;
   structuredBrief?: InvitationStructuredBrief | null;
 }): Promise<InvitationAiComposeResult> {
   rateLimit(input.userId);
@@ -2157,6 +2162,7 @@ export async function composeInvitationTemplateAi(input: {
     embedText,
     artStyleLine,
     coupleFaceSwap,
+    genderMappingDirective: input.genderMappingDirective || undefined,
   });
   const pipelineIntent = resolveInvitationPipelineIntent({
     coupleFaceSwap,

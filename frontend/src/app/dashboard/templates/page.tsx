@@ -451,6 +451,7 @@ export default function TemplatesPage() {
  const [aiComposeStructured, setAiComposeStructured] = useState<InvitationStructuredBrief>(() => emptyInvitationStructuredBrief());
  const [aiComposeModelPhoto, setAiComposeModelPhoto] = useState<InvitationModelPhoto | null>(null);
  const [aiComposeFiles, setAiComposeFiles] = useState<File[]>([]);
+ const [aiComposeFileRoles, setAiComposeFileRoles] = useState<Array<'groom' | 'bride' | 'auto'>>([]);
  const [aiComposePreviewUrls, setAiComposePreviewUrls] = useState<string[]>([]);
   const [aiComposeIsAlteration, setAiComposeIsAlteration] = useState(false);
   const [aiComposeCoupleFaceSwap, setAiComposeCoupleFaceSwap] = useState(false);
@@ -1178,6 +1179,7 @@ export default function TemplatesPage() {
     aiComposePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
     if (aiComposeIncomingPreview) URL.revokeObjectURL(aiComposeIncomingPreview);
     setAiComposeFiles([]);
+    setAiComposeFileRoles([]);
     setAiComposePreviewUrls([]);
     setAiComposePrompt('');
     setAiComposeStructured(emptyInvitationStructuredBrief());
@@ -1333,6 +1335,14 @@ export default function TemplatesPage() {
  aiComposePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
  const merged = [...aiComposeFiles, ...images].slice(0, maxPhotos);
  setAiComposeFiles(merged);
+ setAiComposeFileRoles((prev) => {
+   const next = [...prev];
+   while (next.length < merged.length) {
+     const idx = next.length;
+     next.push(idx === 0 ? 'groom' : idx === 1 ? 'bride' : 'auto');
+   }
+   return next.slice(0, merged.length);
+ });
  setAiComposePreviewUrls(merged.map((f) => URL.createObjectURL(f)));
  };
 
@@ -1360,6 +1370,7 @@ export default function TemplatesPage() {
 
  const removeAiComposeFile = (index: number) => {
  setAiComposeFiles((prev) => prev.filter((_, i) => i !== index));
+ setAiComposeFileRoles((prev) => prev.filter((_, i) => i !== index));
  setAiComposePreviewUrls((prev) => {
  URL.revokeObjectURL(prev[index]);
  return prev.filter((_, i) => i !== index);
@@ -1480,6 +1491,22 @@ export default function TemplatesPage() {
       ].join('. ');
     }
 
+    let genderDirective: string | undefined;
+    if (aiComposeCoupleFaceSwap && aiComposeFileRoles.length >= 2) {
+      const parts: string[] = [];
+      aiComposeFileRoles.forEach((role, idx) => {
+        const imgRef = `Image ${idx + 2}`;
+        if (role === 'groom') {
+          parts.push(`${imgRef} is the GROOM/MAN (must replace male body/suit).`);
+        } else if (role === 'bride') {
+          parts.push(`${imgRef} is the BRIDE/WOMAN (must replace female body/gown).`);
+        }
+      });
+      if (parts.length > 0) {
+        genderDirective = `EXPLICIT COUPLE ROLES: ${parts.join(' ')} STRICT ZERO GENDER INVERSION.`;
+      }
+    }
+
     const composeImageUrls = modelUrl && !aiComposeCoupleFaceSwap && !uploadedUrls.includes(modelUrl)
       ? [modelUrl, ...uploadedUrls]
       : uploadedUrls;
@@ -1498,6 +1525,7 @@ export default function TemplatesPage() {
       variantsCount: aiComposeVariantsCount,
       speedMode: aiComposeSpeedMode,
       coupleFaceSwap: aiComposeCoupleFaceSwap,
+      genderMappingDirective: genderDirective,
       structuredBrief: aiComposeStructured,
       sourceTemplateId: aiComposeModelPhoto?.id,
     });
@@ -1909,22 +1937,47 @@ export default function TemplatesPage() {
          : 'Elle / lui — photos nettes, visage visible'}
      </button>
      {aiComposePreviewUrls.length > 0 && (
-       <div className="mt-2 flex flex-wrap gap-2">
-         {aiComposePreviewUrls.map((url, i) => (
-           <div key={url} className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-[var(--radius-button)] overflow-hidden border border-border">
-             {/* eslint-disable-next-line @next/next/no-img-element */}
-             <img src={url} alt={i === 0 ? 'Premier visage du couple' : 'Second visage du couple'} className="w-full h-full object-cover" loading="lazy" />
-             <button
-               type="button"
-               disabled={aiComposeBusy}
-               onClick={() => removeAiComposeFile(i)}
-               className="absolute top-0.5 right-0.5 inline-flex min-h-11 min-w-11 items-center justify-center bg-foreground/80 text-background rounded-full"
-               aria-label={i === 0 ? 'Retirer le premier visage' : 'Retirer le second visage'}
-             >
-               <XCircle className="w-3.5 h-3.5" aria-hidden />
-             </button>
-           </div>
-         ))}
+       <div className="mt-2 flex flex-wrap gap-2.5">
+         {aiComposePreviewUrls.map((url, i) => {
+           const role = aiComposeFileRoles[i] || (i === 0 ? 'groom' : i === 1 ? 'bride' : 'auto');
+           return (
+             <div key={url} className="relative w-24 h-32 sm:w-28 sm:h-36 rounded-[var(--radius-button)] overflow-hidden border border-border flex flex-col bg-surface-muted">
+               {/* eslint-disable-next-line @next/next/no-img-element */}
+               <img src={url} alt={i === 0 ? 'Premier visage du couple' : 'Second visage du couple'} className="w-full h-full object-cover" loading="lazy" />
+               <button
+                 type="button"
+                 disabled={aiComposeBusy}
+                 onClick={() => removeAiComposeFile(i)}
+                 className="absolute top-0.5 right-0.5 inline-flex min-h-8 min-w-8 items-center justify-center bg-foreground/80 text-background rounded-full z-10"
+                 aria-label={i === 0 ? 'Retirer le premier visage' : 'Retirer le second visage'}
+               >
+                 <XCircle className="w-3.5 h-3.5" aria-hidden />
+               </button>
+               <button
+                 type="button"
+                 disabled={aiComposeBusy}
+                 onClick={(e) => {
+                   e.stopPropagation();
+                   setAiComposeFileRoles((prev) => {
+                     const next = [...prev];
+                     const current = next[i] || (i === 0 ? 'groom' : 'bride');
+                     next[i] = current === 'groom' ? 'bride' : 'groom';
+                     return next;
+                   });
+                 }}
+                 className={cn(
+                   'absolute bottom-0 inset-x-0 py-1 text-[11px] font-bold text-center tracking-tight transition z-10 cursor-pointer shadow-xs',
+                   role === 'groom'
+                     ? 'bg-indigo-600/90 hover:bg-indigo-600 text-white'
+                     : 'bg-rose-600/90 hover:bg-rose-600 text-white',
+                 )}
+                 title="Cliquez pour changer le rôle (Marié ou Mariée)"
+               >
+                 {role === 'groom' ? '🤵 Marié (Costume)' : '👰 Mariée (Robe)'}
+               </button>
+             </div>
+           );
+         })}
        </div>
      )}
    </div>

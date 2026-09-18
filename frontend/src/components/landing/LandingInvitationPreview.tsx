@@ -216,15 +216,22 @@ function renderElement(
   textColor?: string,
   variableOverrides?: Record<string, string>,
   showRawVariables = false,
+  hasBackgroundImage = false,
 ) {
   const typography = resolveTypography(el.fontSize, compact);
+  const resolvedColor = el.color || textColor || 'inherit';
+  const textShadowStyle = hasBackgroundImage
+    ? '0 1px 2px rgba(0,0,0,0.65), 0 2px 8px rgba(0,0,0,0.4)'
+    : undefined;
+
   const textStyle: React.CSSProperties = {
-    color: el.color || textColor || 'inherit',
+    color: resolvedColor,
     textAlign: el.align || 'center',
     fontFamily: el.fontFamily ? `"${el.fontFamily}", serif` : undefined,
     letterSpacing: el.letterSpacing && el.letterSpacing !== 'normal' ? el.letterSpacing : undefined,
     fontWeight: el.bold ? 'bold' : undefined,
     fontStyle: el.italic ? 'italic' : undefined,
+    textShadow: textShadowStyle,
     ...typography.style,
   };
 
@@ -294,9 +301,15 @@ function renderElement(
       return (
         <div
           className={`border border-dashed rounded-xl text-center w-full my-1 ${
+            hasBackgroundImage ? 'bg-black/35 backdrop-blur-[2px] shadow-sm' : ''
+          } ${
             compact ? 'px-2 py-2 text-xs' : 'px-4 py-3 text-xs'
           }`}
-          style={{ borderColor: accent, color: accent }}
+          style={{
+            borderColor: accent,
+            color: accent,
+            textShadow: hasBackgroundImage ? '0 1px 2px rgba(0,0,0,0.8)' : undefined,
+          }}
         >
           {interpolatePreviewVariables(el.text, variableOverrides, showRawVariables) || 'Confirmer votre présence'}
         </div>
@@ -516,7 +529,7 @@ export default function LandingInvitationPreview({
                             : undefined
                         }
                       >
-                        {renderElement(el, isCompact, paletteAccent, '#ffffff', variableOverrides, showRawVariables)}
+                        {renderElement(el, isCompact, paletteAccent, '#ffffff', variableOverrides, showRawVariables, true)}
                       </div>
                       );
                     })}
@@ -556,7 +569,7 @@ export default function LandingInvitationPreview({
                           : undefined
                       }
                     >
-                      {renderElement(el, isCompact, paletteAccent, undefined, variableOverrides, showRawVariables)}
+                      {renderElement(el, isCompact, paletteAccent, undefined, variableOverrides, showRawVariables, false)}
                     </div>
                     );
                   })}
