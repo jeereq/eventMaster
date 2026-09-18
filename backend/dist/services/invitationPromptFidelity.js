@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.INVITATION_COPY_SYSTEM = exports.INVITATION_COPY_RSVP = exports.COUPLE_FACE_SWAP_DEFAULT_PROMPT = exports.INVITATION_IMAGE_JUDGE_SYSTEM = exports.INVITATION_IMAGE_JUDGE_MIN_SCORE = exports.NANO_BANANA_COMPACT_FACE_LOCK = exports.COMPACT_IMAGE_PROMPT_MAX_CHARS = exports.INVITATION_PIPELINE_INTENTS = exports.BRIEF_REFORMULATION_SYSTEM = exports.NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE = exports.NANO_BANANA_OPTICAL_BOKEH = exports.NANO_BANANA_LIGHT_RIG_COHERENCE = exports.NANO_BANANA_CRITICAL_CONSTRAINT = exports.NANO_BANANA_STYLE_INSTRUCTION = void 0;
+exports.INVITATION_COPY_SYSTEM = exports.INVITATION_COPY_RSVP = exports.COUPLE_FACE_SWAP_DEFAULT_PROMPT = exports.INVITATION_IMAGE_JUDGE_SYSTEM = exports.INVITATION_IMAGE_JUDGE_MIN_SCORE = exports.NANO_BANANA_COMPACT_FACE_LOCK = exports.COMPACT_IMAGE_PROMPT_MAX_CHARS = exports.INVITATION_PIPELINE_INTENTS = exports.BRIEF_REFORMULATION_SYSTEM = exports.NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE = exports.NANO_BANANA_HARMONIZATION_DIRECTIVE = exports.NANO_BANANA_OPTICAL_BOKEH = exports.NANO_BANANA_LIGHT_RIG_COHERENCE = exports.NANO_BANANA_CRITICAL_CONSTRAINT = exports.NANO_BANANA_STYLE_INSTRUCTION = void 0;
 exports.buildNanoBananaRawDirectives = buildNanoBananaRawDirectives;
 exports.optimizeReferenceImageUrl = optimizeReferenceImageUrl;
 exports.isInvitationPipelineIntent = isInvitationPipelineIntent;
@@ -75,6 +75,7 @@ exports.NANO_BANANA_STYLE_INSTRUCTION = 'Style instruction: RAW candid photograp
 exports.NANO_BANANA_CRITICAL_CONSTRAINT = 'CRITICAL CONSTRAINT: Do NOT apply any beauty filters, do NOT smooth skin, do NOT create perfect symmetry, do NOT use airbrushing. The faces MUST retain the exact natural, unedited texture of the reference images.';
 exports.NANO_BANANA_LIGHT_RIG_COHERENCE = 'LIGHT RIG COHERENCE: The environment must cast realistic warm ambient rim light and golden specular highlights matching the natural highlights of the reference photographs, with true physical contact shadows on attire, flooring, and surrounding stationery.';
 exports.NANO_BANANA_OPTICAL_BOKEH = 'OPTICAL DEPTH OF FIELD: Shot on 85mm f/2.0 portrait lens feel; the subjects are in tack-sharp focus while the architectural decor and background elements recede into a soft, natural, cinematic optical bokeh. No harsh artificial cutout borders.';
+exports.NANO_BANANA_HARMONIZATION_DIRECTIVE = 'SEAMLESS ANATOMICAL & SKIN HARMONIZATION (LIFELIKE REALISM): Flawlessly harmonize replacement faces with the host bodies. Naturally blend jawline, chin contours, hairline, and neck transition onto the collar, shoulders, and posture with zero harsh cutout borders or sticker seams. Harmonize skin tones, melanin undertones, subsurface light diffusion, and ambient banquet lighting between face, neck, and hands so the people look physically real and authentic in the photograph.';
 exports.NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE = 'CLEAN ARTWORK MANDATE: Strictly NO readable text, NO letters, NO fake script, NO numbers, NO dates, NO painted watermarks inside the image pixels. Leave pristine, high-contrast negative space in the lower-third or central framing reserved for crisp vector typography.';
 function buildNanoBananaRawDirectives(hasPeople = true) {
     if (!hasPeople)
@@ -236,6 +237,7 @@ function buildInvitationLocks(input) {
         else {
             locks.push('MANDATORY GENDER LOCK: Male host face goes onto male body/suit; female host face goes onto female body/dress. Zero gender inversion.');
         }
+        locks.push('LIFELIKE HARMONY: Seamlessly blend skin tones, subsurface scattering, jawline, and neck connection onto the bodies. Zero cutout seams.');
     }
     else if (hasPeople) {
         locks.push('Attached photos are the only identity source. Same people — no lookalike, no beautify, no skin lightening.');
@@ -476,6 +478,7 @@ function buildHonestFaceIdentityHeader(referenceCount, options) {
             options?.genderMappingDirective ||
                 'GENDER & ATTIRE FIDELITY (MANDATORY): Match each person strictly by gender and ceremonial role. The male face goes on the male body (suit/tuxedo), the female face goes on the female body (gown/dress). NEVER invert bride and groom faces.',
             'Render each replacement face as honestly as photographed: bone structure, eyes, smile, cheek volume, skin tone, pores, moles/scars, age. Do not beautify, symmetrize, slim, lighten or airbrush.',
+            exports.NANO_BANANA_HARMONIZATION_DIRECTIVE,
             'Do not invent a new couple. Do not keep the original faces from Image 1.',
             exports.NANO_BANANA_CRITICAL_CONSTRAINT,
             exports.NANO_BANANA_STYLE_INSTRUCTION,
@@ -668,12 +671,13 @@ function processUserPromptForHonestFaces(prompt, options) {
             'USER BRIEF (English scene — replace faces on Image 1 with the couple in Images 2+):',
             englishSceneBrief,
             hasTextModifications
-                ? 'Replace the faces on Image 1 (strictly matching groom face to male body/suit, bride face to female body/gown). Do NOT keep old names, dates or text from Image 1. Leave clean card space for overlay typography.'
-                : 'Replace ONLY the faces on the incoming card (strictly matching groom face to male body/suit, bride face to female body/gown). Keep pose, bodies, wardrobe, décor and lighting. Do not paint old names on clean background.',
+                ? 'Replace the faces on Image 1 (strictly matching groom face to male body/suit, bride face to female body/gown). Harmonize jawline, neck, and skin tones with the lighting. Do NOT keep old names, dates or text from Image 1. Leave clean card space for overlay typography.'
+                : 'Replace ONLY the faces on the incoming card (strictly matching groom face to male body/suit, bride face to female body/gown). Harmonize jawline, neck, and skin tones with scene lighting. Keep pose, bodies, wardrobe, décor and lighting. Do not paint old names on clean background.',
             exports.NANO_BANANA_CRITICAL_CONSTRAINT,
             exports.NANO_BANANA_STYLE_INSTRUCTION,
             exports.NANO_BANANA_LIGHT_RIG_COHERENCE,
             exports.NANO_BANANA_OPTICAL_BOKEH,
+            exports.NANO_BANANA_HARMONIZATION_DIRECTIVE,
         ].join('\n')
         : referenceCount
             ? [

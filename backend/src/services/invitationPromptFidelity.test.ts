@@ -275,6 +275,7 @@ describe('buildHonestFaceIdentityHeader', () => {
     assert.match(header, /COUPLE FACE REPLACEMENT/);
     assert.match(header, /Do not keep the original faces from Image 1/);
     assert.match(header, /GENDER & ATTIRE FIDELITY/i);
+    assert.match(header, /SEAMLESS ANATOMICAL & SKIN HARMONIZATION/i);
 
     const rolesWithGender = buildReferenceRoles(3, {
       coupleFaceSwap: true,
@@ -289,6 +290,7 @@ describe('buildHonestFaceIdentityHeader', () => {
     assert.equal(processed.coupleFaceSwap, true);
     assert.match(processed.englishSceneBrief, /Replace/);
     assert.match(processed.imageBrief, /replace faces on Image 1/i);
+    assert.match(processed.imageBrief, /SEAMLESS ANATOMICAL & SKIN HARMONIZATION/i);
     assert.doesNotMatch(processed.identityHeader, /Forbidden: face swap|IDENTITY ANCHOR/);
 
     const processedWithTexts = processUserPromptForHonestFaces(

@@ -28,6 +28,7 @@ import {
   MapPin,
   User,
   Users,
+  PenTool,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -349,6 +350,7 @@ export default function LandingInvitationAiGenerator({
 
   const composeTokenCost = resolveInvitationComposeTokenCostClient(selectedModelPhoto);
   const isModifyMode = composeMode === 'modify';
+  const [formDetailsTab, setFormDetailsTab] = useState<'text' | 'style'>('text');
 
   useEffect(() => {
     return () => {
@@ -1346,7 +1348,7 @@ export default function LandingInvitationAiGenerator({
           </div>
 
           <div className="flex items-center justify-between text-xs font-mono text-muted pt-0.5">
-            <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+            <span className="flex items-center gap-1 font-semibold text-primary">
               <Coins className="w-3.5 h-3.5" />
               {allowance.unlimited
                 ? 'Jetons illimités'
@@ -1779,10 +1781,10 @@ export default function LandingInvitationAiGenerator({
                     return (
                       <div
                         key={url}
-                        className="relative w-20 h-24 sm:w-24 sm:h-28 rounded-[var(--radius-card)] overflow-hidden border border-border shadow-xs group bg-surface-muted flex flex-col"
+                        className="relative w-24 h-32 sm:w-28 sm:h-36 rounded-[var(--radius-card)] overflow-hidden border border-border shadow-xs group bg-surface-muted flex flex-col"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={url} alt={`Référence ${i + 1}`} className="w-full h-full object-cover" />
+                        <img src={url} alt={`Photo référence ${i + 1}`} className="w-full h-full object-cover" />
                         <button
                           type="button"
                           disabled={busy}
@@ -1790,15 +1792,16 @@ export default function LandingInvitationAiGenerator({
                             e.stopPropagation();
                             removeFile(i);
                           }}
-                          className="absolute top-0.5 right-0.5 min-w-8 min-h-8 inline-flex items-center justify-center bg-foreground/85 text-background rounded-full opacity-90 hover:opacity-100 disabled:opacity-40 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-xs z-10"
-                          aria-label={`Retirer l’image ${i + 1}`}
+                          className="absolute top-1 right-1 min-w-[36px] min-h-[36px] inline-flex items-center justify-center bg-foreground/85 text-background rounded-full opacity-90 hover:opacity-100 disabled:opacity-40 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-xs z-10"
+                          aria-label={`Retirer la photo référence ${i + 1}`}
                         >
-                          <XCircle className="w-3.5 h-3.5" aria-hidden />
+                          <XCircle className="w-4 h-4" aria-hidden />
                         </button>
                         {coupleFaceSwap && (
                           <button
                             type="button"
                             disabled={busy}
+                            aria-label={`Rôle pour la photo ${i + 1} : ${role === 'groom' ? 'Marié (costume)' : 'Mariée (robe)'}. Cliquez pour permuter.`}
                             onClick={(e) => {
                               e.stopPropagation();
                               setFileRoles((prev) => {
@@ -1809,14 +1812,14 @@ export default function LandingInvitationAiGenerator({
                               });
                             }}
                             className={cn(
-                              'absolute bottom-0 inset-x-0 py-1 text-[11px] font-bold text-center tracking-tight transition z-10 cursor-pointer shadow-xs',
+                              'absolute bottom-0 inset-x-0 min-h-[32px] py-1 text-xs font-bold text-center tracking-tight transition z-10 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                               role === 'groom'
-                                ? 'bg-indigo-600/90 hover:bg-indigo-600 text-white'
-                                : 'bg-rose-600/90 hover:bg-rose-600 text-white',
+                                ? 'bg-stage/95 hover:bg-stage text-stage-foreground border-t border-white/10'
+                                : 'bg-festive-accent/95 hover:bg-festive-accent text-white border-t border-white/10',
                             )}
                             title="Cliquez pour changer le rôle (Marié ou Mariée)"
                           >
-                            {role === 'groom' ? '🤵 Marié (Costume)' : '👰 Mariée (Robe)'}
+                            {role === 'groom' ? '🤵 Marié' : '👰 Mariée'}
                           </button>
                         )}
                       </div>
@@ -1825,59 +1828,150 @@ export default function LandingInvitationAiGenerator({
                 </div>
               )}
 
+              {coupleFaceSwap && (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 flex items-center gap-2 text-xs text-primary font-medium">
+                  <Sparkles className="w-3.5 h-3.5 shrink-0 text-primary" />
+                  <span>Harmonisation réaliste active : carnation, lumière et contours du cou fondus au décor.</span>
+                </div>
+              )}
+
               <div className="space-y-2.5">
-                {/* Inspirations prêtes à l'emploi en 1 clic */}
-                {composeMode === 'create' ? (
-                  <div className="space-y-1.5" role="group" aria-label="Inspirations festives instantanées">
-                    <span className="text-xs text-muted font-medium flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-primary" />
-                      Inspirations festives en 1 clic :
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {QUICK_INVITATION_INSPIRATIONS.map((item) => {
-                        const active = prompt === item.prompt;
-                        return (
-                          <button
-                            key={item.label}
-                            type="button"
-                            disabled={busy}
-                            onClick={() => {
-                              updatePromptWithHistory(item.prompt, `Inspiration : ${item.label}`);
-                              setArtStyle(item.artStyle);
-                              persistInvitationArtStyle(item.artStyle);
-                            }}
-                            className={cn(
-                              'text-xs font-semibold px-2.5 py-1 min-h-[44px] rounded-full border transition cursor-pointer inline-flex items-center gap-1.5 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                              active
-                                ? 'border-primary bg-primary-solid text-primary-foreground shadow-2xs'
-                                : 'border-border bg-surface hover:border-primary/50 hover:bg-surface-muted text-foreground',
-                            )}
-                          >
-                            <span>{item.emoji}</span>
-                            <span>{item.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : null}
+                {/* Sélecteur compact : Écrits vs Ambiance */}
+                <div
+                  className="flex items-center gap-1.5 p-1 bg-surface-muted rounded-lg border border-border"
+                  role="tablist"
+                  aria-label="Sections de configuration de la carte"
+                >
+                  <button
+                    id={`${id}-tab-text`}
+                    type="button"
+                    role="tab"
+                    aria-selected={formDetailsTab === 'text'}
+                    aria-controls={`${id}-panel-text`}
+                    tabIndex={formDetailsTab === 'text' ? 0 : -1}
+                    onClick={() => setFormDetailsTab('text')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                        e.preventDefault();
+                        setFormDetailsTab('style');
+                      }
+                    }}
+                    className={cn(
+                      'flex-1 min-h-[44px] px-3 py-2 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                      formDetailsTab === 'text'
+                        ? 'bg-surface text-foreground shadow-xs border border-border/80'
+                        : 'text-muted hover:text-foreground',
+                    )}
+                  >
+                    <PenTool className="w-3.5 h-3.5" aria-hidden />
+                    <span>Écrits de la carte</span>
+                    {hasInvitationIdentity({
+                      title: structuredBrief.title,
+                      honorees: structuredBrief.honorees,
+                      date: structuredBrief.date,
+                      description: structuredBrief.description,
+                    }) && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary" aria-label="Contient des textes saisis" />
+                    )}
+                  </button>
+                  <button
+                    id={`${id}-tab-style`}
+                    type="button"
+                    role="tab"
+                    aria-selected={formDetailsTab === 'style'}
+                    aria-controls={`${id}-panel-style`}
+                    tabIndex={formDetailsTab === 'style' ? 0 : -1}
+                    onClick={() => setFormDetailsTab('style')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                        e.preventDefault();
+                        setFormDetailsTab('text');
+                      }
+                    }}
+                    className={cn(
+                      'flex-1 min-h-[44px] px-3 py-2 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                      formDetailsTab === 'style'
+                        ? 'bg-surface text-foreground shadow-xs border border-border/80'
+                        : 'text-muted hover:text-foreground',
+                    )}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" aria-hidden />
+                    <span>Ambiance & Cérémonie</span>
+                  </button>
+                </div>
 
-                <InvitationStructuredBriefFields
-                  id={`${id}-structured`}
-                  value={structuredBrief}
-                  onChange={setStructuredBrief}
-                  disabled={busy}
-                  compact
-                />
+                <div
+                  id={`${id}-panel-text`}
+                  role="tabpanel"
+                  aria-labelledby={`${id}-tab-text`}
+                  hidden={formDetailsTab !== 'text'}
+                >
+                  {formDetailsTab === 'text' && (
+                    <InvitationCardInfoFields
+                      id={`${id}-card-info`}
+                      value={structuredBrief}
+                      onChange={setStructuredBrief}
+                      showReplaceToggles={isModifyMode}
+                      disabled={busy}
+                      compact
+                    />
+                  )}
+                </div>
 
-                <InvitationCardInfoFields
-                  id={`${id}-card-info`}
-                  value={structuredBrief}
-                  onChange={setStructuredBrief}
-                  showReplaceToggles={isModifyMode}
-                  disabled={busy}
-                  compact
-                />
+                <div
+                  id={`${id}-panel-style`}
+                  role="tabpanel"
+                  aria-labelledby={`${id}-tab-style`}
+                  hidden={formDetailsTab !== 'style'}
+                  className="space-y-2.5"
+                >
+                  {formDetailsTab === 'style' && (
+                    <>
+                      {composeMode === 'create' ? (
+                        <div className="space-y-1.5" role="group" aria-label="Inspirations festives instantanées">
+                          <span className="text-xs text-muted font-medium flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-primary" />
+                            Inspirations festives en 1 clic :
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {QUICK_INVITATION_INSPIRATIONS.map((item) => {
+                              const active = prompt === item.prompt;
+                              return (
+                                <button
+                                  key={item.label}
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => {
+                                    updatePromptWithHistory(item.prompt, `Inspiration : ${item.label}`);
+                                    setArtStyle(item.artStyle);
+                                    persistInvitationArtStyle(item.artStyle);
+                                  }}
+                                  className={cn(
+                                    'text-xs font-semibold px-2.5 py-1 min-h-[44px] rounded-full border transition cursor-pointer inline-flex items-center gap-1.5 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                                    active
+                                      ? 'border-primary bg-primary-solid text-primary-foreground shadow-2xs'
+                                      : 'border-border bg-surface hover:border-primary/50 hover:bg-surface-muted text-foreground',
+                                  )}
+                                >
+                                  <span>{item.emoji}</span>
+                                  <span>{item.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <InvitationStructuredBriefFields
+                        id={`${id}-structured`}
+                        value={structuredBrief}
+                        onChange={setStructuredBrief}
+                        disabled={busy}
+                        compact
+                      />
+                    </>
+                  )}
+                </div>
 
                 <div className="flex items-center justify-between gap-2">
                   <label htmlFor={`${id}-brief`} className="text-xs font-bold text-foreground">
@@ -1941,11 +2035,11 @@ export default function LandingInvitationAiGenerator({
                       💡 Cliquez sur une inspiration ci-dessus ou décrivez votre célébration.
                     </span>
                   ) : prompt.trim().length < 8 ? (
-                    <span className="text-amber-600 dark:text-amber-400 font-medium">
+                    <span className="text-festive-accent font-medium">
                       ✍️ Ajoutez encore quelques mots (minimum 8 caractères).
                     </span>
                   ) : (
-                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                    <span className="text-primary font-semibold flex items-center gap-1">
                       <Check className="w-3 h-3" />
                       Brief prêt pour la composition IA.
                     </span>

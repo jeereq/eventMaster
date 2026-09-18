@@ -55,13 +55,12 @@ import {
  Spline, Triangle, Trash, Layout, Palette, Square,
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins,
  Undo2, Redo2, History, Download, Tag, SlidersHorizontal, LayoutTemplate,
- Calendar, MapPin, User, Users, MessageSquare, Layers, Move, Crown, ArrowRight, Check, Clock,
+ Calendar, MapPin, User, Users, PenTool, MessageSquare, Layers, Move, Crown, ArrowRight, Check, Clock,
 } from 'lucide-react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
 import { PageHeader, Alert, Button, Input, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, usePaginateItems, usePageSize, Modal } from '@/components/ui';
 import InvitationDuplicateModal, { type InvitationDuplicateValues } from '@/components/InvitationDuplicateModal';
-import InvitationIdentityFields from '@/components/InvitationIdentityFields';
 import InvitationStructuredBriefFields from '@/components/InvitationStructuredBriefFields';
 import InvitationCardInfoFields from '@/components/InvitationCardInfoFields';
 import { emptyInvitationStructuredBrief, type InvitationStructuredBrief } from '@/config/invitationStructuredBrief';
@@ -460,6 +459,7 @@ export default function TemplatesPage() {
   const [aiComposeTitle, setAiComposeTitle] = useState('');
   const [aiComposeHonorees, setAiComposeHonorees] = useState('');
   const [aiComposeDate, setAiComposeDate] = useState('');
+  const [aiComposeDetailsSection, setAiComposeDetailsSection] = useState<'texts' | 'style'>('texts');
   const pendingCoupleIdentityRef = useRef<{ title?: string; honorees?: string; date?: string } | null>(null);
   const [aiComposeBusy, setAiComposeBusy] = useState(false);
   const showInvitationStudioLoader = !invitationLoaderHidden && (aiComposeBusy || Boolean(invitationStudioJob));
@@ -1324,6 +1324,13 @@ export default function TemplatesPage() {
    });
  };
 
+ const handleStudioStructuredChange = (next: InvitationStructuredBrief) => {
+   setAiComposeStructured(next);
+   if (next.title !== undefined) setAiComposeTitle(next.title);
+   if (next.honorees !== undefined) setAiComposeHonorees(next.honorees);
+   if (next.date !== undefined) setAiComposeDate(next.date);
+ };
+
  const addAiComposeFiles = (list: File[]) => {
  if (!list.length) return;
  const maxPhotos = aiComposeCoupleFaceSwap ? 2 : 4;
@@ -1948,14 +1955,15 @@ export default function TemplatesPage() {
                  type="button"
                  disabled={aiComposeBusy}
                  onClick={() => removeAiComposeFile(i)}
-                 className="absolute top-0.5 right-0.5 inline-flex min-h-8 min-w-8 items-center justify-center bg-foreground/80 text-background rounded-full z-10"
+                 className="absolute top-1 right-1 inline-flex min-h-[36px] min-w-[36px] items-center justify-center bg-foreground/85 hover:bg-foreground text-background rounded-full transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary shadow-xs z-10"
                  aria-label={i === 0 ? 'Retirer le premier visage' : 'Retirer le second visage'}
                >
-                 <XCircle className="w-3.5 h-3.5" aria-hidden />
+                 <XCircle className="w-4 h-4" aria-hidden />
                </button>
                <button
                  type="button"
                  disabled={aiComposeBusy}
+                 aria-label={`Rôle pour la photo ${i + 1} : ${role === 'groom' ? 'Marié (costume)' : 'Mariée (robe)'}. Cliquez pour permuter.`}
                  onClick={(e) => {
                    e.stopPropagation();
                    setAiComposeFileRoles((prev) => {
@@ -1966,31 +1974,25 @@ export default function TemplatesPage() {
                    });
                  }}
                  className={cn(
-                   'absolute bottom-0 inset-x-0 py-1 text-[11px] font-bold text-center tracking-tight transition z-10 cursor-pointer shadow-xs',
+                   'absolute bottom-0 inset-x-0 min-h-[32px] py-1 text-xs font-bold text-center tracking-tight transition z-10 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                    role === 'groom'
-                     ? 'bg-indigo-600/90 hover:bg-indigo-600 text-white'
-                     : 'bg-rose-600/90 hover:bg-rose-600 text-white',
+                     ? 'bg-stage/95 hover:bg-stage text-stage-foreground border-t border-white/10'
+                     : 'bg-festive-accent/95 hover:bg-festive-accent text-white border-t border-white/10',
                  )}
                  title="Cliquez pour changer le rôle (Marié ou Mariée)"
                >
-                 {role === 'groom' ? '🤵 Marié (Costume)' : '👰 Mariée (Robe)'}
+                 {role === 'groom' ? '🤵 Marié' : '👰 Mariée'}
                </button>
              </div>
            );
          })}
        </div>
      )}
+     <div className="mt-2.5 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 flex items-center gap-2 text-xs text-primary font-medium">
+       <Sparkles className="w-3.5 h-3.5 shrink-0 text-primary" />
+       <span>Harmonisation réaliste active : carnation, lumière et contours du cou fondus au décor.</span>
+     </div>
    </div>
-   <InvitationIdentityFields
-     disabled={aiComposeBusy}
-     description="Ces textes s’écrivent sur le carton après le remplacement des visages."
-     value={{ title: aiComposeTitle, honorees: aiComposeHonorees, date: aiComposeDate }}
-     onChange={(next) => {
-       setAiComposeTitle(next.title || '');
-       setAiComposeHonorees(next.honorees || '');
-       setAiComposeDate(next.date || '');
-     }}
-   />
  </div>
  ) : (
  <div className="space-y-3">
@@ -2069,45 +2071,112 @@ export default function TemplatesPage() {
  ))}
  </div>
  )}
- {!aiComposeIsAlteration && (
-   <InvitationIdentityFields
-     disabled={aiComposeBusy}
-     description="Ces textes s’écrivent sur le carton après la génération."
-     value={{ title: aiComposeTitle, honorees: aiComposeHonorees, date: aiComposeDate }}
-     onChange={(next) => {
-       setAiComposeTitle(next.title || '');
-       setAiComposeHonorees(next.honorees || '');
-       setAiComposeDate(next.date || '');
-     }}
-   />
- )}
  </div>
  )}
  </div>
 
- <div className="space-y-6">
+ <div className="space-y-4">
  <div>
  <p className="text-sm font-semibold text-foreground mb-2">
-   {aiComposeCoupleFaceSwap ? '3. Précision (optionnelle)' : '3. Décrivez la fête'}
+   {aiComposeCoupleFaceSwap ? '3. Écrits & Consignes' : '3. Écrits & Style de la fête'}
  </p>
- <InvitationStructuredBriefFields
-   id="ai-compose-structured"
-   value={aiComposeStructured}
-   onChange={setAiComposeStructured}
-   disabled={aiComposeBusy}
- />
- <div className="mt-4">
-   <InvitationCardInfoFields
-     id="ai-compose-card-info"
-     value={aiComposeStructured}
-     onChange={setAiComposeStructured}
-     showReplaceToggles={aiComposeIsAlteration || aiComposeCoupleFaceSwap}
-     disabled={aiComposeBusy}
-   />
+
+ <div
+   className="flex items-center gap-1.5 p-1 bg-surface-muted rounded-lg border border-border mb-3"
+   role="tablist"
+   aria-label="Sections du studio d'invitation"
+ >
+   <button
+     id="ai-compose-tab-texts"
+     type="button"
+     role="tab"
+     aria-selected={aiComposeDetailsSection === 'texts'}
+     aria-controls="ai-compose-panel-texts"
+     tabIndex={aiComposeDetailsSection === 'texts' ? 0 : -1}
+     onClick={() => setAiComposeDetailsSection('texts')}
+     onKeyDown={(e) => {
+       if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+         e.preventDefault();
+         setAiComposeDetailsSection('style');
+       }
+     }}
+     className={cn(
+       'flex-1 min-h-[44px] px-3 py-2 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+       aiComposeDetailsSection === 'texts'
+         ? 'bg-surface text-foreground shadow-xs border border-border/80'
+         : 'text-muted hover:text-foreground',
+     )}
+   >
+     <PenTool className="w-3.5 h-3.5" aria-hidden />
+     <span>Écrits de la carte</span>
+     {aiComposeHasTexts && (
+       <span className="w-1.5 h-1.5 rounded-full bg-primary" aria-label="Contient des textes saisis" />
+     )}
+   </button>
+   <button
+     id="ai-compose-tab-style"
+     type="button"
+     role="tab"
+     aria-selected={aiComposeDetailsSection === 'style'}
+     aria-controls="ai-compose-panel-style"
+     tabIndex={aiComposeDetailsSection === 'style' ? 0 : -1}
+     onClick={() => setAiComposeDetailsSection('style')}
+     onKeyDown={(e) => {
+       if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+         e.preventDefault();
+         setAiComposeDetailsSection('texts');
+       }
+     }}
+     className={cn(
+       'flex-1 min-h-[44px] px-3 py-2 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+       aiComposeDetailsSection === 'style'
+         ? 'bg-surface text-foreground shadow-xs border border-border/80'
+         : 'text-muted hover:text-foreground',
+     )}
+   >
+     <Sparkles className="w-3.5 h-3.5" aria-hidden />
+     <span>Ambiance & Cérémonie</span>
+   </button>
  </div>
- <div className="flex items-center justify-between mt-4">
- <label htmlFor="ai-compose-prompt" className="text-sm font-semibold text-muted">
-   {aiComposeCoupleFaceSwap ? 'Qui est à gauche, tenue à garder…' : 'Ambiance, couleurs, cérémonie'}
+
+ <div
+   id="ai-compose-panel-texts"
+   role="tabpanel"
+   aria-labelledby="ai-compose-tab-texts"
+   hidden={aiComposeDetailsSection !== 'texts'}
+ >
+   {aiComposeDetailsSection === 'texts' && (
+     <InvitationCardInfoFields
+       id="ai-compose-card-info"
+       value={aiComposeStructured}
+       onChange={handleStudioStructuredChange}
+       showReplaceToggles={aiComposeIsAlteration || aiComposeCoupleFaceSwap}
+       disabled={aiComposeBusy}
+       compact
+     />
+   )}
+ </div>
+
+ <div
+   id="ai-compose-panel-style"
+   role="tabpanel"
+   aria-labelledby="ai-compose-tab-style"
+   hidden={aiComposeDetailsSection !== 'style'}
+ >
+   {aiComposeDetailsSection === 'style' && (
+     <InvitationStructuredBriefFields
+       id="ai-compose-structured"
+       value={aiComposeStructured}
+       onChange={handleStudioStructuredChange}
+       disabled={aiComposeBusy}
+       compact
+     />
+   )}
+ </div>
+
+ <div className="flex items-center justify-between mt-3">
+ <label htmlFor="ai-compose-prompt" className="text-xs font-semibold text-muted">
+   {aiComposeCoupleFaceSwap ? 'Consigne libre (optionnelle)' : 'Consigne libre ou retouche'}
  </label>
  <span className="hidden sm:inline text-xs text-muted tabular-nums">
  {aiComposePrompt.length} car.
@@ -2115,14 +2184,14 @@ export default function TemplatesPage() {
  </div>
  <textarea
  id="ai-compose-prompt"
- rows={8}
+ rows={3}
  value={aiComposePrompt}
  disabled={aiComposeBusy}
  onChange={(e) => setAiComposePrompt(e.target.value)}
  placeholder={aiComposeCoupleFaceSwap
    ? 'Optionnel : préciser qui est à gauche / à droite, ou garder une tenue…'
    : 'Ex. Copier fidèlement cette invitation en or et ivoire, ou décrire l’ambiance : mariage princier, éclairage naturel chaleureux…'}
- className="mt-1.5 w-full rounded-[var(--radius-card)] border border-border bg-surface-muted px-4 py-4 text-sm sm:text-base text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[16rem]"
+ className="mt-1 w-full rounded-[var(--radius-card)] border border-border bg-surface-muted px-3.5 py-2.5 text-xs sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[4.5rem]"
  />
 
  <p className="mt-2 text-xs text-muted">
@@ -3773,13 +3842,15 @@ const studioModelPhotos = useMemo(
  />
  Afficher sur la page d&apos;accueil
  </label>
- <label className="inline-flex min-h-[44px] items-center gap-1.5 text-xs font-bold text-muted px-2">
+ <label htmlFor="template-ai-token-cost" className="inline-flex min-h-[44px] items-center gap-1.5 text-xs font-bold text-muted px-2">
  <span>Jetons IA</span>
  <input
+ id="template-ai-token-cost"
  type="number"
  min={1}
  max={50}
  value={aiTokenCost}
+ aria-label="Coût en jetons IA pour utiliser ce modèle comme base"
  onChange={(e) => {
    const next = Math.round(Number(e.target.value));
    setAiTokenCost(Number.isFinite(next) ? Math.min(50, Math.max(1, next)) : AI_INVITATION_COMPOSE_TOKEN_COST);
