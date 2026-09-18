@@ -1348,7 +1348,7 @@ export default function LandingInvitationAiGenerator({
           </div>
 
           <div className="flex items-center justify-between text-xs font-mono text-muted pt-0.5">
-            <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+            <span className="flex items-center gap-1 font-semibold text-primary">
               <Coins className="w-3.5 h-3.5" />
               {allowance.unlimited
                 ? 'Jetons illimités'
@@ -1837,20 +1837,33 @@ export default function LandingInvitationAiGenerator({
 
               <div className="space-y-2.5">
                 {/* Sélecteur compact : Écrits vs Ambiance */}
-                <div className="flex items-center gap-1.5 p-1 bg-surface-muted rounded-lg border border-border" role="tablist">
+                <div
+                  className="flex items-center gap-1.5 p-1 bg-surface-muted rounded-lg border border-border"
+                  role="tablist"
+                  aria-label="Sections de configuration de la carte"
+                >
                   <button
+                    id={`${id}-tab-text`}
                     type="button"
                     role="tab"
                     aria-selected={formDetailsTab === 'text'}
+                    aria-controls={`${id}-panel-text`}
+                    tabIndex={formDetailsTab === 'text' ? 0 : -1}
                     onClick={() => setFormDetailsTab('text')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                        e.preventDefault();
+                        setFormDetailsTab('style');
+                      }
+                    }}
                     className={cn(
-                      'flex-1 min-h-[36px] px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                      'flex-1 min-h-[44px] px-3 py-2 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                       formDetailsTab === 'text'
                         ? 'bg-surface text-foreground shadow-xs border border-border/80'
                         : 'text-muted hover:text-foreground',
                     )}
                   >
-                    <PenTool className="w-3.5 h-3.5" />
+                    <PenTool className="w-3.5 h-3.5" aria-hidden />
                     <span>Écrits de la carte</span>
                     {hasInvitationIdentity({
                       title: structuredBrief.title,
@@ -1858,81 +1871,107 @@ export default function LandingInvitationAiGenerator({
                       date: structuredBrief.date,
                       description: structuredBrief.description,
                     }) && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary" aria-label="Contient des textes saisis" />
                     )}
                   </button>
                   <button
+                    id={`${id}-tab-style`}
                     type="button"
                     role="tab"
                     aria-selected={formDetailsTab === 'style'}
+                    aria-controls={`${id}-panel-style`}
+                    tabIndex={formDetailsTab === 'style' ? 0 : -1}
                     onClick={() => setFormDetailsTab('style')}
+                    onKeyDown={(e) => {
+                      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                        e.preventDefault();
+                        setFormDetailsTab('text');
+                      }
+                    }}
                     className={cn(
-                      'flex-1 min-h-[36px] px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                      'flex-1 min-h-[44px] px-3 py-2 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                       formDetailsTab === 'style'
                         ? 'bg-surface text-foreground shadow-xs border border-border/80'
                         : 'text-muted hover:text-foreground',
                     )}
                   >
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <Sparkles className="w-3.5 h-3.5" aria-hidden />
                     <span>Ambiance & Cérémonie</span>
                   </button>
                 </div>
 
-                {formDetailsTab === 'text' ? (
-                  <InvitationCardInfoFields
-                    id={`${id}-card-info`}
-                    value={structuredBrief}
-                    onChange={setStructuredBrief}
-                    showReplaceToggles={isModifyMode}
-                    disabled={busy}
-                    compact
-                  />
-                ) : (
-                  <div className="space-y-2.5">
-                    {composeMode === 'create' ? (
-                      <div className="space-y-1.5" role="group" aria-label="Inspirations festives instantanées">
-                        <span className="text-xs text-muted font-medium flex items-center gap-1">
-                          <Sparkles className="w-3 h-3 text-primary" />
-                          Inspirations festives en 1 clic :
-                        </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {QUICK_INVITATION_INSPIRATIONS.map((item) => {
-                            const active = prompt === item.prompt;
-                            return (
-                              <button
-                                key={item.label}
-                                type="button"
-                                disabled={busy}
-                                onClick={() => {
-                                  updatePromptWithHistory(item.prompt, `Inspiration : ${item.label}`);
-                                  setArtStyle(item.artStyle);
-                                  persistInvitationArtStyle(item.artStyle);
-                                }}
-                                className={cn(
-                                  'text-xs font-semibold px-2.5 py-1 min-h-[44px] rounded-full border transition cursor-pointer inline-flex items-center gap-1.5 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                                  active
-                                    ? 'border-primary bg-primary-solid text-primary-foreground shadow-2xs'
-                                    : 'border-border bg-surface hover:border-primary/50 hover:bg-surface-muted text-foreground',
-                                )}
-                              >
-                                <span>{item.emoji}</span>
-                                <span>{item.label}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ) : null}
-
-                    <InvitationStructuredBriefFields
-                      id={`${id}-structured`}
+                <div
+                  id={`${id}-panel-text`}
+                  role="tabpanel"
+                  aria-labelledby={`${id}-tab-text`}
+                  hidden={formDetailsTab !== 'text'}
+                >
+                  {formDetailsTab === 'text' && (
+                    <InvitationCardInfoFields
+                      id={`${id}-card-info`}
                       value={structuredBrief}
                       onChange={setStructuredBrief}
+                      showReplaceToggles={isModifyMode}
                       disabled={busy}
                       compact
                     />
-                  </div>
-                )}
+                  )}
+                </div>
+
+                <div
+                  id={`${id}-panel-style`}
+                  role="tabpanel"
+                  aria-labelledby={`${id}-tab-style`}
+                  hidden={formDetailsTab !== 'style'}
+                  className="space-y-2.5"
+                >
+                  {formDetailsTab === 'style' && (
+                    <>
+                      {composeMode === 'create' ? (
+                        <div className="space-y-1.5" role="group" aria-label="Inspirations festives instantanées">
+                          <span className="text-xs text-muted font-medium flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-primary" />
+                            Inspirations festives en 1 clic :
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {QUICK_INVITATION_INSPIRATIONS.map((item) => {
+                              const active = prompt === item.prompt;
+                              return (
+                                <button
+                                  key={item.label}
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => {
+                                    updatePromptWithHistory(item.prompt, `Inspiration : ${item.label}`);
+                                    setArtStyle(item.artStyle);
+                                    persistInvitationArtStyle(item.artStyle);
+                                  }}
+                                  className={cn(
+                                    'text-xs font-semibold px-2.5 py-1 min-h-[44px] rounded-full border transition cursor-pointer inline-flex items-center gap-1.5 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                                    active
+                                      ? 'border-primary bg-primary-solid text-primary-foreground shadow-2xs'
+                                      : 'border-border bg-surface hover:border-primary/50 hover:bg-surface-muted text-foreground',
+                                  )}
+                                >
+                                  <span>{item.emoji}</span>
+                                  <span>{item.label}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
+
+                      <InvitationStructuredBriefFields
+                        id={`${id}-structured`}
+                        value={structuredBrief}
+                        onChange={setStructuredBrief}
+                        disabled={busy}
+                        compact
+                      />
+                    </>
+                  )}
+                </div>
 
                 <div className="flex items-center justify-between gap-2">
                   <label htmlFor={`${id}-brief`} className="text-xs font-bold text-foreground">
@@ -1996,11 +2035,11 @@ export default function LandingInvitationAiGenerator({
                       💡 Cliquez sur une inspiration ci-dessus ou décrivez votre célébration.
                     </span>
                   ) : prompt.trim().length < 8 ? (
-                    <span className="text-amber-600 dark:text-amber-400 font-medium">
+                    <span className="text-festive-accent font-medium">
                       ✍️ Ajoutez encore quelques mots (minimum 8 caractères).
                     </span>
                   ) : (
-                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                    <span className="text-primary font-semibold flex items-center gap-1">
                       <Check className="w-3 h-3" />
                       Brief prêt pour la composition IA.
                     </span>

@@ -2081,60 +2081,98 @@ export default function TemplatesPage() {
    {aiComposeCoupleFaceSwap ? '3. Écrits & Consignes' : '3. Écrits & Style de la fête'}
  </p>
 
- <div className="flex items-center gap-1.5 p-1 bg-surface-muted rounded-lg border border-border mb-3" role="tablist">
+ <div
+   className="flex items-center gap-1.5 p-1 bg-surface-muted rounded-lg border border-border mb-3"
+   role="tablist"
+   aria-label="Sections du studio d'invitation"
+ >
    <button
+     id="ai-compose-tab-texts"
      type="button"
      role="tab"
      aria-selected={aiComposeDetailsSection === 'texts'}
+     aria-controls="ai-compose-panel-texts"
+     tabIndex={aiComposeDetailsSection === 'texts' ? 0 : -1}
      onClick={() => setAiComposeDetailsSection('texts')}
+     onKeyDown={(e) => {
+       if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+         e.preventDefault();
+         setAiComposeDetailsSection('style');
+       }
+     }}
      className={cn(
-       'flex-1 min-h-[36px] px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+       'flex-1 min-h-[44px] px-3 py-2 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
        aiComposeDetailsSection === 'texts'
          ? 'bg-surface text-foreground shadow-xs border border-border/80'
          : 'text-muted hover:text-foreground',
      )}
    >
-     <PenTool className="w-3.5 h-3.5" />
+     <PenTool className="w-3.5 h-3.5" aria-hidden />
      <span>Écrits de la carte</span>
      {aiComposeHasTexts && (
-       <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+       <span className="w-1.5 h-1.5 rounded-full bg-primary" aria-label="Contient des textes saisis" />
      )}
    </button>
    <button
+     id="ai-compose-tab-style"
      type="button"
      role="tab"
      aria-selected={aiComposeDetailsSection === 'style'}
+     aria-controls="ai-compose-panel-style"
+     tabIndex={aiComposeDetailsSection === 'style' ? 0 : -1}
      onClick={() => setAiComposeDetailsSection('style')}
+     onKeyDown={(e) => {
+       if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+         e.preventDefault();
+         setAiComposeDetailsSection('texts');
+       }
+     }}
      className={cn(
-       'flex-1 min-h-[36px] px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+       'flex-1 min-h-[44px] px-3 py-2 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
        aiComposeDetailsSection === 'style'
          ? 'bg-surface text-foreground shadow-xs border border-border/80'
          : 'text-muted hover:text-foreground',
      )}
    >
-     <Sparkles className="w-3.5 h-3.5" />
+     <Sparkles className="w-3.5 h-3.5" aria-hidden />
      <span>Ambiance & Cérémonie</span>
    </button>
  </div>
 
- {aiComposeDetailsSection === 'texts' ? (
-   <InvitationCardInfoFields
-     id="ai-compose-card-info"
-     value={aiComposeStructured}
-     onChange={handleStudioStructuredChange}
-     showReplaceToggles={aiComposeIsAlteration || aiComposeCoupleFaceSwap}
-     disabled={aiComposeBusy}
-     compact
-   />
- ) : (
-   <InvitationStructuredBriefFields
-     id="ai-compose-structured"
-     value={aiComposeStructured}
-     onChange={handleStudioStructuredChange}
-     disabled={aiComposeBusy}
-     compact
-   />
- )}
+ <div
+   id="ai-compose-panel-texts"
+   role="tabpanel"
+   aria-labelledby="ai-compose-tab-texts"
+   hidden={aiComposeDetailsSection !== 'texts'}
+ >
+   {aiComposeDetailsSection === 'texts' && (
+     <InvitationCardInfoFields
+       id="ai-compose-card-info"
+       value={aiComposeStructured}
+       onChange={handleStudioStructuredChange}
+       showReplaceToggles={aiComposeIsAlteration || aiComposeCoupleFaceSwap}
+       disabled={aiComposeBusy}
+       compact
+     />
+   )}
+ </div>
+
+ <div
+   id="ai-compose-panel-style"
+   role="tabpanel"
+   aria-labelledby="ai-compose-tab-style"
+   hidden={aiComposeDetailsSection !== 'style'}
+ >
+   {aiComposeDetailsSection === 'style' && (
+     <InvitationStructuredBriefFields
+       id="ai-compose-structured"
+       value={aiComposeStructured}
+       onChange={handleStudioStructuredChange}
+       disabled={aiComposeBusy}
+       compact
+     />
+   )}
+ </div>
 
  <div className="flex items-center justify-between mt-3">
  <label htmlFor="ai-compose-prompt" className="text-xs font-semibold text-muted">
