@@ -19,7 +19,6 @@ import {
   parseInvitationStructuredBrief,
   type InvitationStructuredBrief,
 } from './invitationStructuredBrief.ts';
-import { loadEventMasterStyleRefUrls } from './invitationStyleRefs.ts';
 import {
   NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE,
   NANO_BANANA_COMPACT_FACE_LOCK,
@@ -44,9 +43,14 @@ import {
   resolveFinalInvitationPipelineIntent,
   resolveInvitationPipelineIntent,
   shouldRetryInvitationImage,
+  shouldSkipInvitationImageJudge,
+  shouldSkipInvitationOverlayCopy,
+  shouldSkipInvitationVisionCall,
+  shouldSkipNanoBananaInteractions,
   COUPLE_FACE_SWAP_DEFAULT_PROMPT,
   INVITATION_COPY_SYSTEM,
   INVITATION_IMAGE_JUDGE_SYSTEM,
+  type InvitationAiSpeedMode,
   type InvitationCopyDraft,
   type InvitationImageJudgeVerdict,
   type InvitationPipelineIntent,
@@ -611,6 +615,60 @@ function visionResultFromParsed(
     backgroundPrompt: decorParagraph,
     visualAnalysis,
     intent,
+    locks,
+    decorParagraph,
+  };
+}
+
+function buildLocalVisionResult(input: {
+  prompt: string;
+  processed: ProcessedInvitationPrompt;
+  coupleFaceSwap: boolean;
+  intent: InvitationPipelineIntent;
+  embedText?: boolean;
+  isPublic?: boolean;
+  referenceCount: number;
+}): VisionResult {
+  const hasPeople = input.coupleFaceSwap || input.referenceCount > 0;
+  const peopleCount = input.coupleFaceSwap
+    ? Math.max(1, input.referenceCount - 1)
+    : input.referenceCount;
+  const locks = buildInvitationLocks({
+    intent: input.intent,
+    analysis: { hasPeople, peopleCount },
+    embedText: input.embedText,
+    isPublic: input.isPublic,
+    referenceCount: input.referenceCount,
+    explicitAppearanceChange: input.processed.explicitAppearanceChange,
+  });
+  const decorParagraph = (
+    input.processed.englishSceneBrief ||
+    input.processed.decorBrief ||
+    input.prompt
+  ).slice(0, 1400);
+  return {
+    global: null,
+    elements: [],
+    backgroundPrompt: decorParagraph,
+    visualAnalysis: {
+      colors: [],
+      style: '',
+      motifs: '',
+      composition: '',
+      hasPeople,
+      peopleCount: hasPeople ? Math.max(1, peopleCount) : 0,
+      peopleFaces: hasPeople ? 'local-locks' : 'none',
+      faceLandmarks: hasPeople ? 'unclear' : 'none',
+      skinTones: hasPeople ? 'unclear' : 'none',
+      hairStyles: hasPeople ? 'unclear' : 'none',
+      clothingStyles: hasPeople ? 'unclear' : 'none',
+      isInvitationClone: input.intent === 'clone',
+      briefNeeds: [],
+      briefInterpretation: '',
+      briefMustKeep: [],
+      briefMustChange: [],
+    },
+    intent: input.intent,
     locks,
     decorParagraph,
   };
@@ -1261,6 +1319,7 @@ async function executeNanoBananaRawRequest(
   promptText: string,
   refImages: Array<{ mimeType: string; base64: string }>,
   model: string,
+  options?: { skipInteractions?: boolean },
 ): Promise<string> {
   const isFlash = model.toLowerCase().includes('flash');
   const TIMEOUT_MS = isFlash ? 35_000 : 55_000;
@@ -1272,7 +1331,8 @@ async function executeNanoBananaRawRequest(
     let safetyTriggered = false;
     let safetyDetail = '';
 
-    // Tentative 1 : Google Interactions API (format 9:16, 2K)
+    // Tentative 1 : Google Interactions API (format 9:16, 2K) — sautée en mode rapide
+    if (!options?.skipInteractions) {
     const interactionInput: Array<{ type: string; text?: string; data?: string; mime_type?: string }> = [];
     // Priorité absolue aux images de référence des hôtes pour ancrer l'identité
     for (const img of refImages) {
@@ -1350,6 +1410,7 @@ async function executeNanoBananaRawRequest(
         safetyDetail = (interactErr as Error)?.message;
       }
       console.warn('[invitationTemplateAi] Nano Banana interactions attempt error:', (interactErr as Error)?.message);
+    }
     }
 
     if (safetyTriggered && !b64) {
@@ -1482,6 +1543,7 @@ async function generateImageWithNanoBanana(
     embedText?: boolean;
     artStyle?: InvitationArtStyleId;
     preloadedRefImages?: PreloadedRefImage[];
+    speedMode?: InvitationAiSpeedMode;
   },
   model: string = getNanoBananaProModel(),
 ): Promise<{ url: string; mode: 'edit' | 'generate'; safetyFallbackTriggered?: boolean }> {
@@ -1512,7 +1574,9 @@ ${imagePrompt}`;
   }
 
   try {
-    const b64 = await executeNanoBananaRawRequest(apiKey, promptText, refImages, model);
+    const b64 = await executeNanoBananaRawRequest(apiKey, promptText, refImages, model, {
+      skipInteractions: shouldSkipNanoBananaInteractions(options?.speedMode),
+    });
     const url = await uploadGeneratedB64(b64, tenantId);
     return { url, mode: hasPeople || hasRefs ? 'edit' : 'generate', safetyFallbackTriggered: false };
   } catch (error) {
@@ -1528,6 +1592,7 @@ ${imagePrompt}`;
           fallbackPrompt,
           [], // Aucune photo de référence humaine pour contourner le filtre facial
           model,
+          { skipInteractions: shouldSkipNanoBananaInteractions(options?.speedMode) },
         );
         const url = await uploadGeneratedB64(fallbackB64, tenantId);
         return { url, mode: 'generate', safetyFallbackTriggered: true };
@@ -1703,6 +1768,7 @@ async function createNewInvitationImage(
         fallbackPrompt,
         [],
         getNanoBananaProModel(),
+        { skipInteractions: shouldSkipNanoBananaInteractions(options?.speedMode) },
       );
       const url = await uploadGeneratedB64(fallbackB64, tenantId);
       return { url, mode: 'generate', safetyFallbackTriggered: true };
@@ -1830,7 +1896,11 @@ async function generateInvitationImageWithJudge(
   },
 ): Promise<InvitationJudgedImage> {
   const created = await createNewInvitationImage(key, imageUrls, imagePrompt, tenantId, imageOptions);
-  if (created.safetyFallbackTriggered || !created.url) {
+  if (
+    created.safetyFallbackTriggered ||
+    !created.url ||
+    shouldSkipInvitationImageJudge(imageOptions.speedMode)
+  ) {
     return { ...created, judge: null, retried: false };
   }
 
@@ -2140,15 +2210,8 @@ export async function composeInvitationTemplateAi(input: {
     isAlteration,
     brief: prompt,
   });
-  let styleRefsOnly = false;
-  if (pipelineIntentEarly === 'create' && imageUrls.length === 0) {
-    const styleRefs = await loadEventMasterStyleRefUrls(2);
-    if (styleRefs.length) {
-      imageUrls = styleRefs;
-      styleRefsOnly = true;
-    }
-  }
   const styleFewshot = pipelineIntentEarly === 'create' ? EVENTMASTER_STYLE_FEWSHOT : '';
+  const speedMode: InvitationAiSpeedMode = input.speedMode === 'fast' ? 'fast' : 'quality';
 
   const existingElements = Array.isArray(input.existingElements) ? input.existingElements : [];
   const existingTextSummaries = existingElements
@@ -2160,7 +2223,7 @@ export async function composeInvitationTemplateAi(input: {
     : prompt;
 
   const processed = processUserPromptForHonestFaces(enrichedPrompt, {
-    referenceCount: styleRefsOnly ? 0 : imageUrls.length,
+    referenceCount: imageUrls.length,
     embedText,
     artStyleLine,
     coupleFaceSwap,
@@ -2183,7 +2246,22 @@ export async function composeInvitationTemplateAi(input: {
   const organizerContextCopy = formatContextForVision(composeContext, contextSource);
 
   const key = requireAiConfigured();
-      const structured = await visionStructure(key, processed.originalBrief, imageUrls, {
+  const skipVision = shouldSkipInvitationVisionCall({
+    speedMode,
+    coupleFaceSwap,
+    hasUserReferencePhotos: imageUrls.length > 0,
+  });
+  const structured = skipVision
+    ? buildLocalVisionResult({
+        prompt: processed.originalBrief,
+        processed,
+        coupleFaceSwap,
+        intent: pipelineIntent,
+        embedText,
+        isPublic,
+        referenceCount: imageUrls.length,
+      })
+    : await visionStructure(key, processed.originalBrief, imageUrls, {
     embedText,
     organizerContext: organizerContextEn,
     processed,
@@ -2194,10 +2272,9 @@ export async function composeInvitationTemplateAi(input: {
     coupleFaceSwap,
     preferredModel: input.preferredModel || undefined,
     intent: pipelineIntent,
-    styleRefsOnly,
     styleFewshot,
   });
-  if ((!imageUrls.length || styleRefsOnly) && structured.visualAnalysis) {
+  if (!imageUrls.length && structured.visualAnalysis) {
     structured.visualAnalysis.hasPeople = false;
     structured.visualAnalysis.peopleCount = 0;
   }
@@ -2244,7 +2321,6 @@ export async function composeInvitationTemplateAi(input: {
   const variantRoles: Array<'faithful' | 'ample'> = [];
   const wantBg = input.generateBackground !== false;
   const requestedVariantsCount = Math.min(2, Math.max(1, Number(input.variantsCount) || 1));
-  const speedMode: AiSpeedMode = input.speedMode === 'fast' ? 'fast' : 'quality';
 
   if (wantBg) {
     try {
@@ -2254,7 +2330,7 @@ export async function composeInvitationTemplateAi(input: {
         : [];
 
       const imageOptions = {
-        hasPeople: (coupleFaceSwap || Boolean(structured.visualAnalysis?.hasPeople)) && imageUrls.length > 0 && !styleRefsOnly,
+        hasPeople: (coupleFaceSwap || Boolean(structured.visualAnalysis?.hasPeople)) && imageUrls.length > 0,
         embedText,
         artStyle,
         speedMode,
@@ -2377,12 +2453,10 @@ export async function composeInvitationTemplateAi(input: {
     structured.decorParagraph || processed.englishSceneBrief;
   (global as Record<string, unknown>).aiOriginalBrief = processed.originalBrief;
   (global as Record<string, unknown>).aiPipelineIntent = resolvedIntent;
+  (global as Record<string, unknown>).aiVisionSkipped = skipVision;
   (global as Record<string, unknown>).aiLocks = imageLocks;
   if (hasInvitationStructuredBrief(structuredBrief)) {
     (global as Record<string, unknown>).aiStructuredBrief = structuredBrief;
-  }
-  if (styleRefsOnly) {
-    (global as Record<string, unknown>).aiStyleRefsUsed = imageUrls.length;
   }
   if (imageJudge) {
     (global as Record<string, unknown>).aiJudgeScore = imageJudge.score;
@@ -2399,7 +2473,17 @@ export async function composeInvitationTemplateAi(input: {
     preservedExistingCopy = true;
   }
   let copyWritten = false;
-  if (!embedText && !preservedExistingCopy) {
+  const skipOverlayCopy = shouldSkipInvitationOverlayCopy({
+    embedText,
+    preservedExistingCopy,
+    hasStructuredIdentity: hasInvitationIdentity({
+      title: structuredBrief.title,
+      honorees: structuredBrief.honorees,
+      date: structuredBrief.date,
+      description: structuredBrief.description,
+    }),
+  });
+  if (!skipOverlayCopy) {
     const copyDraft = await writeInvitationOverlayCopy({
       key,
       originalBrief: processed.originalBrief,

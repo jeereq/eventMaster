@@ -131,6 +131,40 @@ export const INVITATION_PIPELINE_INTENTS: readonly InvitationPipelineIntent[] = 
   'couple',
 ];
 
+export type InvitationAiSpeedMode = 'fast' | 'quality';
+
+/**
+ * Économie de jetons fournisseur : on n’appelle la vision que si elle
+ * inventorie vraiment des photos utilisateur (hors couple, déjà verrouillé localement).
+ */
+export function shouldSkipInvitationVisionCall(input: {
+  speedMode?: InvitationAiSpeedMode;
+  coupleFaceSwap?: boolean;
+  styleRefsOnly?: boolean;
+  hasUserReferencePhotos?: boolean;
+}): boolean {
+  if (input.styleRefsOnly || !input.hasUserReferencePhotos) return true;
+  if (input.coupleFaceSwap) return true;
+  return input.speedMode === 'fast';
+}
+
+export function shouldSkipInvitationImageJudge(speedMode?: InvitationAiSpeedMode): boolean {
+  return speedMode === 'fast';
+}
+
+export function shouldSkipInvitationOverlayCopy(input: {
+  embedText?: boolean;
+  preservedExistingCopy?: boolean;
+  hasStructuredIdentity?: boolean;
+}): boolean {
+  return Boolean(input.embedText || input.preservedExistingCopy || input.hasStructuredIdentity);
+}
+
+/** En mode rapide, un seul endpoint image (generateContent), sans Interactions. */
+export function shouldSkipNanoBananaInteractions(speedMode?: InvitationAiSpeedMode): boolean {
+  return speedMode === 'fast';
+}
+
 /** Prompt image cible : ~400–700 mots, jamais un monolithe de 6 000 caractères. */
 export const COMPACT_IMAGE_PROMPT_MAX_CHARS = 3800;
 
