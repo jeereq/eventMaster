@@ -272,11 +272,14 @@ export default function LandingInvitationAiGenerator({
   className,
   id = 'generateur-ia',
   defaultExpanded = false,
+  lockExpanded = false,
   preselectedModelPhoto = null,
 }: {
   className?: string;
   id?: string;
   defaultExpanded?: boolean;
+  /** Toujours ouvert (ex. dans une modale) — pas de bandeau compact ni de « Réduire » */
+  lockExpanded?: boolean;
   preselectedModelPhoto?: InvitationModelPhoto | null;
 }) {
   const { user, tenant, access } = useAuth();
@@ -336,7 +339,8 @@ export default function LandingInvitationAiGenerator({
   const copyColorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded || lockExpanded);
+  const showExpanded = lockExpanded || isExpanded;
   const [variantsCount, setVariantsCount] = useState<1 | 2>(1);
   const [speedMode, setSpeedMode] = useState<AiSpeedMode>('quality');
   const [artStyle, setArtStyle] = useState<InvitationArtStyleId>(DEFAULT_INVITATION_ART_STYLE);
@@ -1358,7 +1362,7 @@ export default function LandingInvitationAiGenerator({
         className,
       )}
     >
-      {!isExpanded ? (
+      {!showExpanded ? (
         /* ─── BANNIÈRE COMPACTE (STUDIO COMPRESSÉ) ─── */
         <button
           type="button"
@@ -1437,19 +1441,21 @@ export default function LandingInvitationAiGenerator({
                     Recharger
                   </Button>
                 ) : null}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() => setIsExpanded(false)}
-                  rightIcon={<ChevronUp className="w-4 h-4" />}
-                  aria-expanded={true}
-                  aria-controls={`${id}-body`}
-                  title="Réduire"
-                >
-                  Réduire
-                </Button>
+                {!lockExpanded ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={() => setIsExpanded(false)}
+                    rightIcon={<ChevronUp className="w-4 h-4" />}
+                    aria-expanded={true}
+                    aria-controls={`${id}-body`}
+                    title="Réduire"
+                  >
+                    Réduire
+                  </Button>
+                ) : null}
               </div>
             </div>
           </div>

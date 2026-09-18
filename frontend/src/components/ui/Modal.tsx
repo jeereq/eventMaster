@@ -15,6 +15,8 @@ export interface ModalProps {
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   className?: string;
   containerClassName?: string;
+  /** Classes du conteneur scrollable du contenu */
+  contentClassName?: string;
   dismissible?: boolean;
   /** Masquer le header (titre/fermer) pour un contenu custom */
   hideHeader?: boolean;
@@ -70,6 +72,7 @@ export default function Modal({
   size = 'md',
   className,
   containerClassName,
+  contentClassName,
   dismissible = true,
   hideHeader = false,
 }: ModalProps) {
@@ -246,7 +249,9 @@ export default function Modal({
               )}
             </div>
           )}
-          <div className="overflow-y-auto overscroll-contain flex-1 p-5 sm:p-6 touch-pan-y">{children}</div>
+          <div className={cn('overflow-y-auto overscroll-contain flex-1 p-5 sm:p-6 touch-pan-y', contentClassName)}>
+            {children}
+          </div>
           {footer && (
             <div className="border-t border-border p-4 sm:p-5 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-5 shrink-0 flex flex-wrap gap-2 justify-end bg-surface-muted/40">
               {footer}

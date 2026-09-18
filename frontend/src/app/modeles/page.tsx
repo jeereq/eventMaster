@@ -50,9 +50,38 @@ export default function ModelesPage() {
   const [search, setSearch] = useState('');
   const [modalTemplate, setModalTemplate] = useState<LandingTemplate | null>(null);
   const [studioModelPhoto, setStudioModelPhoto] = useState<InvitationModelPhoto | null>(null);
+  const [studioOpen, setStudioOpen] = useState(false);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('modeles-page', 12);
+
+  const openInvitationStudio = (photo: InvitationModelPhoto | null = null) => {
+    setStudioModelPhoto(photo);
+    setStudioOpen(true);
+    if (typeof window !== 'undefined') {
+      const nextHash = '#generateur-ia';
+      if (window.location.hash !== nextHash) {
+        window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${nextHash}`);
+      }
+    }
+  };
+
+  const closeInvitationStudio = () => {
+    setStudioOpen(false);
+    if (typeof window !== 'undefined' && window.location.hash === '#generateur-ia') {
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const syncFromHash = () => {
+      if (window.location.hash === '#generateur-ia') setStudioOpen(true);
+    };
+    syncFromHash();
+    window.addEventListener('hashchange', syncFromHash);
+    return () => window.removeEventListener('hashchange', syncFromHash);
+  }, []);
 
   useEffect(() => {
     async function loadTemplates() {
@@ -104,11 +133,7 @@ export default function ModelesPage() {
     const photo = modelPhotoFor(template);
     if (!photo) return;
     setModalTemplate(null);
-    setStudioModelPhoto(photo);
-    if (typeof window !== 'undefined') {
-      window.location.hash = 'generateur-ia';
-      document.getElementById('generateur-ia')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
+    openInvitationStudio(photo);
   };
 
   useEffect(() => {
@@ -138,13 +163,9 @@ export default function ModelesPage() {
         compact
       >
         <div className="pt-1 flex flex-wrap items-center gap-2.5">
-          <a
-            href="#generateur-ia"
-            onClick={() => {
-              if (typeof window !== 'undefined' && window.location.hash === '#generateur-ia') {
-                window.dispatchEvent(new HashChangeEvent('hashchange'));
-              }
-            }}
+          <button
+            type="button"
+            onClick={() => openInvitationStudio()}
             className={cn(
               'inline-flex min-h-[44px] items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold active:scale-95 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
               isInviteBlocked
@@ -154,7 +175,7 @@ export default function ModelesPage() {
           >
             {isInviteBlocked ? <Clock className="w-3.5 h-3.5" /> : <Wand2 className="w-3.5 h-3.5" />}
             <span>{isInviteBlocked ? 'Studio IA (À venir)' : 'Studio IA'}</span>
-          </a>
+          </button>
           <Link
             href={user ? '/dashboard/events' : '/register?kind=ORGANIZER&intent=personal&action=template'}
             className="inline-flex min-h-[44px] items-center gap-1.5 px-4 py-2 rounded-full bg-surface border border-border text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
@@ -173,10 +194,20 @@ export default function ModelesPage() {
       </PublicPageHero>
 
       <div className="page-container py-8 sm:py-12 space-y-8 max-w-7xl mx-auto">
-        <LandingInvitationAiGenerator
-          preselectedModelPhoto={studioModelPhoto}
-          defaultExpanded={Boolean(studioModelPhoto)}
-        />
+        <Modal
+          open={studioOpen}
+          onClose={closeInvitationStudio}
+          title="Studio IA — invitations"
+          description="Décrivez la fête ou déposez une carte à reproduire."
+          size="full"
+          contentClassName="p-0 sm:p-0"
+        >
+          <LandingInvitationAiGenerator
+            lockExpanded
+            preselectedModelPhoto={studioModelPhoto}
+            className="border-0 shadow-none rounded-none"
+          />
+        </Modal>
         {/* Filtres et recherche — barre fixe au scroll */}
         <div
           className={cn(

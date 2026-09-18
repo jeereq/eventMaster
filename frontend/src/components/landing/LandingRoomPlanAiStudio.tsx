@@ -65,11 +65,14 @@ const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview')
 export default function LandingRoomPlanAiStudio({
   id = 'studio-ia',
   defaultExpanded = false,
+  lockExpanded = false,
   onBlueprintChange,
   className,
 }: {
   id?: string;
   defaultExpanded?: boolean;
+  /** Toujours ouvert (ex. dans une modale) — pas de bandeau compact ni de « Réduire » */
+  lockExpanded?: boolean;
   onBlueprintChange?: (blueprint: RoomLayoutBlueprint | null) => void;
   className?: string;
 }) {
@@ -81,7 +84,8 @@ export default function LandingRoomPlanAiStudio({
   const protocolLocked = isProtocolUser(access);
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [expanded, setExpanded] = useState(defaultExpanded);
+  const [expanded, setExpanded] = useState(defaultExpanded || lockExpanded);
+  const showExpanded = lockExpanded || expanded;
   const [intent, setIntent] = useState<'brief' | 'photo'>('brief');
   const [prompt, setPrompt] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -311,7 +315,7 @@ export default function LandingRoomPlanAiStudio({
         className,
       )}
     >
-      {!expanded ? (
+      {!showExpanded ? (
         <div>
         <button
           type="button"
@@ -377,18 +381,20 @@ export default function LandingRoomPlanAiStudio({
                   <Coins className="w-3.5 h-3.5 text-primary-solid" aria-hidden />
                   {allowance.unlimited ? 'Illimité' : `${aiTokenBalanceLabel(allowance)} jeton${allowance.totalRemaining === 1 ? '' : 's'}`}
                 </span>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() => setExpanded(false)}
-                  rightIcon={<ChevronUp className="w-4 h-4" />}
-                  aria-expanded
-                  aria-controls={`${id}-body`}
-                >
-                  Réduire
-                </Button>
+                {!lockExpanded ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={() => setExpanded(false)}
+                    rightIcon={<ChevronUp className="w-4 h-4" />}
+                    aria-expanded
+                    aria-controls={`${id}-body`}
+                  >
+                    Réduire
+                  </Button>
+                ) : null}
               </div>
             </div>
           </div>
