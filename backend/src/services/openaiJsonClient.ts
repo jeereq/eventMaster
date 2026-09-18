@@ -75,6 +75,22 @@ function openAiChatBody(params: {
   return body;
 }
 
+function optimizeCloudinaryUrl(url: string): string {
+  if (!url || typeof url !== 'string') return url;
+  const trimmed = url.trim();
+  if (trimmed.includes('res.cloudinary.com') && trimmed.includes('/image/upload/')) {
+    if (
+      !trimmed.includes('/image/upload/f_') &&
+      !trimmed.includes('/image/upload/c_') &&
+      !trimmed.includes('/image/upload/w_') &&
+      !trimmed.includes('/image/upload/q_')
+    ) {
+      return trimmed.replace('/image/upload/', '/image/upload/f_auto,q_auto:good,w_1536,c_limit/');
+    }
+  }
+  return trimmed;
+}
+
 export async function requestOpenAiJson(input: {
   system: string;
   userText: string;
@@ -96,7 +112,7 @@ export async function requestOpenAiJson(input: {
     { type: 'text', text: input.userText },
     ...(input.imageUrls || []).slice(0, 4).map((url) => ({
       type: 'image_url',
-      image_url: { url, detail: 'high' as const },
+      image_url: { url: optimizeCloudinaryUrl(url), detail: 'high' as const },
     })),
   ];
 

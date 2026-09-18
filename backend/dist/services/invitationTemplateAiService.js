@@ -13,7 +13,6 @@ const openaiJsonClient_ts_1 = require("./openaiJsonClient.js");
 const aiStudioModels_ts_1 = require("./aiStudioModels.js");
 const invitationComposeContext_ts_1 = require("./invitationComposeContext.js");
 const invitationStructuredBrief_ts_1 = require("./invitationStructuredBrief.js");
-const invitationStyleRefs_ts_1 = require("./invitationStyleRefs.js");
 const invitationPromptFidelity_ts_1 = require("./invitationPromptFidelity.js");
 const invitationArtStyle_ts_1 = require("./invitationArtStyle.js");
 function fail(status, message) {
@@ -73,8 +72,8 @@ Exact schema:
     "composition": "observed layout / framing",
     "hasPeople": true | false,
     "peopleCount": 0,
-    "peopleFaces": "none | PERSON 1 / PERSON 2 left-to-right: observed eyes, smile, cheeks, marks only",
-    "faceLandmarks": "none | observed bone structure, eye spacing, smile, scars — unclear if unsure",
+    "peopleFaces": "none | PERSON 1 / PERSON 2 left-to-right: observed eyes, smile, expression (laugh/serious/neutral), cheeks, marks only",
+    "faceLandmarks": "none | observed bone structure, eye spacing, smile, expression muscles, scars — unclear if unsure",
     "skinTones": "none | observed skin — NEVER lighten",
     "hairStyles": "none | observed length, texture, hairline",
     "clothingStyles": "none | observed cuts, fabrics, colors",
@@ -125,6 +124,7 @@ Organizer context may fill event type, language, names/date/venue and décor tas
 People:
 - hasPeople=true: pixels are truth. peopleFaces / faceLandmarks are lock lists, not pretty-face briefs.
 - Forbidden: lookalike, celebrity, stock model, beautify, smooth, lighten, invented smile.
+- Expression lock: peopleFaces must record the SOURCE photo expression (open laugh, closed smile, serious, etc.). Later image gen must replay that expression, not a generic wedding pose.
 
 Layout:
 - Overlay copy is written later by a text model. elements may be a short skeleton (title/date placeholders only).
@@ -257,8 +257,8 @@ function parseVisualAnalysis(raw) {
     };
 }
 const FACE_POLICY_NO_PEOPLE = 'FACE POLICY: Prefer decorative artwork. If any person still appears, they MUST follow the RDC representation default: Black African men and/or women only — never Caucasian stock models.';
-const FACE_POLICY_KEEP_PEOPLE = 'IDENTITY LOCK — PIXELS WIN: The attached photo(s) are the only identity source. Keep EACH person as the SAME individual (not a sibling, celebrity, or beautified lookalike). Unchanged: bone structure, eyes and gaze, exact smile, cheek volume, skin tone (never lighten), age, hair, clothing, moles/scars. Forbidden: face swap, slim/contour, symmetry, doll eyes, invented grin, airbrush, CGI. If any text description conflicts with the photo, obey the photo.';
-const FACE_POLICY_COUPLE_SWAP = 'COUPLE FACE REPLACEMENT (ZERO GENDER INVERSION & LIFELIKE HARMONIZATION) — ORGANIZER REQUESTED: Image 1 is the incoming invitation/scene. Keep composition, pose, bodies, wardrobe, décor, lighting and ornaments. Images 2+ are the couple. Strictly match genders: place the groom/man face onto the male body (suit/tuxedo) and the bride/woman face onto the female body (bridal gown/dress). Replace ONLY the face(s) on Image 1 with these exact people. Harmonize facial shapes, jawline, neck blending, and skin undertones with the scene lighting and body anatomy so the couple looks completely real and seamless, with zero pasted-on artifacts. If new text/names are requested in the brief, do NOT keep old names from Image 1. Honest pixels: bone structure, eyes, smile, skin tone, moles. Forbidden: beautify, skin lightening, celebrity lookalike, inverting bride/groom genders, keeping the original Image 1 faces.';
+const FACE_POLICY_KEEP_PEOPLE = 'IDENTITY LOCK — PIXELS WIN: The attached photo(s) are the only identity source. Keep EACH person as the SAME individual (not a sibling, celebrity, or beautified lookalike). Unchanged: bone structure, eyes and gaze, exact smile, SOURCE facial expression (mouth, brows, emotion), cheek volume, skin tone (never lighten), age, hair, clothing, moles/scars. Forbidden: face swap, slim/contour, symmetry, doll eyes, invented grin, airbrush, CGI. If any text description conflicts with the photo, obey the photo.';
+const FACE_POLICY_COUPLE_SWAP = 'COUPLE FACE REPLACEMENT (ZERO GENDER INVERSION & LIFELIKE HARMONIZATION) — ORGANIZER REQUESTED: Image 1 is the incoming invitation/scene. Keep composition, body pose, bodies, wardrobe, décor, lighting, ornaments AND the facial expressions already on that card. Images 2+ are the couple identity only (who they are). Strictly match genders: place the groom/man face onto the male body (suit/tuxedo) and the bride/woman face onto the female body (bridal gown/dress). Replace ONLY the identity of the face(s) on Image 1 with these exact people. The source photos MUST adopt the card faces’ expressions (smile, gaze, emotion) — do not copy the source photo’s own mouth or eyes if the card differs. Harmonize facial shapes, jawline, neck blending, and skin undertones with the scene lighting and body anatomy so the couple looks completely real and seamless, with zero pasted-on artifacts. If new text/names are requested in the brief, do NOT keep old names from Image 1. Honest pixels: bone structure, eyes, skin tone, moles — expression from Image 1. Forbidden: beautify, skin lightening, celebrity lookalike, inverting bride/groom genders, keeping the original Image 1 identity.';
 function buildImagePrompt(userPrompt, backgroundPrompt, analysis, options) {
     const processed = options?.processed;
     const coupleFaceSwap = Boolean(options?.coupleFaceSwap || processed?.coupleFaceSwap);
@@ -346,7 +346,7 @@ function visionUserText(prompt, hasRefs, options) {
         ? `\nEXISTING TEXTS TO PRESERVE: ${existingTexts}\nDo not invent new names, dates or venues unless the brief says so.\n`
         : '';
     const honesty = coupleFaceSwap
-        ? `PHOTOS: Image 1 = incoming card (keep décor/pose, discard original faces). Images 2+ = couple identity. ${options?.processed?.beautifyStripped
+        ? `PHOTOS: Image 1 = incoming card (keep décor, body pose AND facial expressions; discard original identity only). Images 2+ = couple identity only. Source faces adopt the card expressions. ${options?.processed?.beautifyStripped
             ? 'Ignore beautify / smooth / lighten requests.'
             : 'Do not idealize the couple photos.'}`
         : options?.styleRefsOnly
@@ -414,7 +414,7 @@ function visionResultFromParsed(parsed, prompt, hasRefs, options) {
             ? FACE_POLICY_KEEP_PEOPLE
             : FACE_POLICY_NO_PEOPLE;
     const identityPrefix = coupleFaceSwap
-        ? 'COUPLE FACE REPLACEMENT: Keep Image 1 card; replace faces with Images 2+. '
+        ? 'COUPLE FACE REPLACEMENT: Keep Image 1 card and its facial expressions; replace identity with Images 2+. '
         : hasRefs
             ? 'IDENTITY LOCK: Match people in the references exactly. '
             : '';
@@ -428,6 +428,49 @@ function visionResultFromParsed(parsed, prompt, hasRefs, options) {
         backgroundPrompt: decorParagraph,
         visualAnalysis,
         intent,
+        locks,
+        decorParagraph,
+    };
+}
+function buildLocalVisionResult(input) {
+    const hasPeople = input.coupleFaceSwap || input.referenceCount > 0;
+    const peopleCount = input.coupleFaceSwap
+        ? Math.max(1, input.referenceCount - 1)
+        : input.referenceCount;
+    const locks = (0, invitationPromptFidelity_ts_1.buildInvitationLocks)({
+        intent: input.intent,
+        analysis: { hasPeople, peopleCount },
+        embedText: input.embedText,
+        isPublic: input.isPublic,
+        referenceCount: input.referenceCount,
+        explicitAppearanceChange: input.processed.explicitAppearanceChange,
+    });
+    const decorParagraph = (input.processed.englishSceneBrief ||
+        input.processed.decorBrief ||
+        input.prompt).slice(0, 1400);
+    return {
+        global: null,
+        elements: [],
+        backgroundPrompt: decorParagraph,
+        visualAnalysis: {
+            colors: [],
+            style: '',
+            motifs: '',
+            composition: '',
+            hasPeople,
+            peopleCount: hasPeople ? Math.max(1, peopleCount) : 0,
+            peopleFaces: hasPeople ? 'local-locks' : 'none',
+            faceLandmarks: hasPeople ? 'unclear' : 'none',
+            skinTones: hasPeople ? 'unclear' : 'none',
+            hairStyles: hasPeople ? 'unclear' : 'none',
+            clothingStyles: hasPeople ? 'unclear' : 'none',
+            isInvitationClone: input.intent === 'clone',
+            briefNeeds: [],
+            briefInterpretation: '',
+            briefMustKeep: [],
+            briefMustChange: [],
+        },
+        intent: input.intent,
         locks,
         decorParagraph,
     };
@@ -567,16 +610,12 @@ async function preloadReferenceImages(urls) {
             base64: buffer.toString('base64'),
         };
     }));
-    const preloaded = [];
-    for (const res of results) {
-        if (res.status === 'fulfilled') {
-            preloaded.push(res.value);
-        }
-        else {
-            console.warn('[invitationTemplateAi] Skip ref download in parallel preload:', res.reason?.message);
-        }
+    const rejected = results.find((r) => r.status === 'rejected');
+    if (rejected) {
+        console.error('[invitationTemplateAi] Skip ref download in parallel preload error:', rejected.reason?.message);
+        fail(502, `Impossible de télécharger l’une des photos de référence pour la génération (${rejected.reason?.message || 'erreur réseau'}).`);
     }
-    return preloaded;
+    return results.map((res) => res.value);
 }
 async function downloadImageAsPngBuffer(url) {
     const { buffer } = await downloadReferenceImage(url);
@@ -651,6 +690,7 @@ async function generateImageWithGpt56Luna(key, imagePrompt, referenceUrls, tenan
         ? 'Embed sharp invitation typography (names, date, venue from the brief) on the card without covering faces.'
         : invitationPromptFidelity_ts_1.NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE;
     const hasPeople = Boolean(options?.hasPeople);
+    const coupleFaceSwap = Boolean(options?.coupleFaceSwap);
     // Convertir en data URL pour éviter les échecs de téléchargement côté OpenAI.
     const refDataUrls = [];
     for (const ref of referenceUrls.slice(0, 4)) {
@@ -661,19 +701,25 @@ async function generateImageWithGpt56Luna(key, imagePrompt, referenceUrls, tenan
             console.warn('[invitationTemplateAi] skip ref download:', err?.message);
         }
     }
-    const faceBlock = hasPeople ? FACE_POLICY_KEEP_PEOPLE : FACE_POLICY_NO_PEOPLE;
+    const faceBlock = coupleFaceSwap
+        ? FACE_POLICY_COUPLE_SWAP
+        : hasPeople
+            ? FACE_POLICY_KEEP_PEOPLE
+            : FACE_POLICY_NO_PEOPLE;
     // Édition prioritaire si des personnes sont présentes (préserve mieux les visages).
     const imageAction = refDataUrls.length
-        ? hasPeople
+        ? hasPeople || coupleFaceSwap
             ? 'edit'
             : 'auto'
         : 'generate';
     const imageQuality = process.env.OPENAI_IMAGE_QUALITY ||
-        (hasPeople ? 'high' : 'medium');
+        (hasPeople || coupleFaceSwap ? 'high' : 'medium');
     // Refs d’abord quand il y a des personnes : ancre mieux l’identité faciale.
-    const identityPreamble = hasPeople
-        ? `EDIT the attached photo(s). Keep the SAME faces — pixels win over any text. Do not invent lookalikes.\n\n${imagePrompt}`
-        : imagePrompt;
+    const identityPreamble = coupleFaceSwap
+        ? `COUPLE FACE SWAP on the attached photo(s). Keep Image 1 composition, bodies, wardrobe, décor and expressions. Swap faces with the couple in Images 2+. Pixels win over any text.\n\n${imagePrompt}`
+        : hasPeople
+            ? `EDIT the attached photo(s). Keep the SAME faces — pixels win over any text. Do not invent lookalikes.\n\n${imagePrompt}`
+            : imagePrompt;
     const content = hasPeople
         ? [
             ...refDataUrls.map((image_url) => ({
@@ -967,7 +1013,7 @@ function getNanoBananaModelChain(speedMode, preferredModel) {
  * Injecte les images de référence en tête de payload (Image Reference Binding)
  * et configure nativement le ratio 9:16 (et haute résolution 2K pour le modèle Pro).
  */
-async function executeNanoBananaRawRequest(apiKey, promptText, refImages, model) {
+async function executeNanoBananaRawRequest(apiKey, promptText, refImages, model, options) {
     const isFlash = model.toLowerCase().includes('flash');
     const TIMEOUT_MS = isFlash ? 35_000 : 55_000;
     const controller = new AbortController();
@@ -976,75 +1022,77 @@ async function executeNanoBananaRawRequest(apiKey, promptText, refImages, model)
         let b64 = null;
         let safetyTriggered = false;
         let safetyDetail = '';
-        // Tentative 1 : Google Interactions API (format 9:16, 2K)
-        const interactionInput = [];
-        // Priorité absolue aux images de référence des hôtes pour ancrer l'identité
-        for (const img of refImages) {
-            interactionInput.push({
-                type: 'image',
-                data: img.base64,
-                mime_type: img.mimeType,
-            });
-        }
-        interactionInput.push({ type: 'text', text: promptText });
-        const interactionPayload = {
-            model,
-            input: interactionInput,
-            response_format: {
-                type: 'image',
-                aspect_ratio: '9:16',
-                image_size: '2K',
-            },
-        };
-        try {
-            const interactionsRes = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
-                method: 'POST',
-                signal: controller.signal,
-                headers: {
-                    'x-goog-api-key': apiKey,
-                    'Content-Type': 'application/json',
+        // Tentative 1 : Google Interactions API (format 9:16, 2K) — sautée en mode rapide
+        if (!options?.skipInteractions) {
+            const interactionInput = [];
+            // Priorité absolue aux images de référence des hôtes pour ancrer l'identité
+            for (const img of refImages) {
+                interactionInput.push({
+                    type: 'image',
+                    data: img.base64,
+                    mime_type: img.mimeType,
+                });
+            }
+            interactionInput.push({ type: 'text', text: promptText });
+            const interactionPayload = {
+                model,
+                input: interactionInput,
+                response_format: {
+                    type: 'image',
+                    aspect_ratio: '9:16',
+                    image_size: '2K',
                 },
-                body: JSON.stringify(interactionPayload),
-            });
-            if (interactionsRes.ok) {
-                const data = (await interactionsRes.json().catch(() => ({})));
-                // 1. Extraire l'image si elle a été générée avec succès
-                if (typeof data.output_image?.data === 'string' && data.output_image.data) {
-                    b64 = data.output_image.data;
-                }
-                else if (Array.isArray(data.steps)) {
-                    for (const step of data.steps) {
-                        const imgBlock = step.content?.find((c) => c.type === 'image' && typeof c.data === 'string' && c.data.length > 0);
-                        if (imgBlock?.data) {
-                            b64 = imgBlock.data;
-                            break;
+            };
+            try {
+                const interactionsRes = await fetch('https://generativelanguage.googleapis.com/v1beta/interactions', {
+                    method: 'POST',
+                    signal: controller.signal,
+                    headers: {
+                        'x-goog-api-key': apiKey,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(interactionPayload),
+                });
+                if (interactionsRes.ok) {
+                    const data = (await interactionsRes.json().catch(() => ({})));
+                    // 1. Extraire l'image si elle a été générée avec succès
+                    if (typeof data.output_image?.data === 'string' && data.output_image.data) {
+                        b64 = data.output_image.data;
+                    }
+                    else if (Array.isArray(data.steps)) {
+                        for (const step of data.steps) {
+                            const imgBlock = step.content?.find((c) => c.type === 'image' && typeof c.data === 'string' && c.data.length > 0);
+                            if (imgBlock?.data) {
+                                b64 = imgBlock.data;
+                                break;
+                            }
                         }
                     }
+                    // 2. Si aucune image n'a été produite, vérifier si un filtre de sécurité a bloqué la génération
+                    if (!b64 && (0, invitationPromptFidelity_ts_1.isSafetyFilterTriggered)(null, data)) {
+                        safetyTriggered = true;
+                        safetyDetail = 'Interactions API safety filter triggered';
+                    }
                 }
-                // 2. Si aucune image n'a été produite, vérifier si un filtre de sécurité a bloqué la génération
-                if (!b64 && (0, invitationPromptFidelity_ts_1.isSafetyFilterTriggered)(null, data)) {
+                else {
+                    const errText = await interactionsRes.text().catch(() => '');
+                    if ((0, invitationPromptFidelity_ts_1.isSafetyFilterTriggered)(errText)) {
+                        safetyTriggered = true;
+                        safetyDetail = errText;
+                    }
+                    console.warn('[invitationTemplateAi] Nano Banana interactions API non-200:', errText.slice(0, 300));
+                }
+            }
+            catch (interactErr) {
+                if (interactErr?.name === 'AbortError') {
+                    throw new Error(`Timeout: la requête Nano Banana interactions a dépassé ${TIMEOUT_MS / 1000}s.`);
+                }
+                if ((0, invitationPromptFidelity_ts_1.isSafetyFilterTriggered)(interactErr)) {
                     safetyTriggered = true;
-                    safetyDetail = 'Interactions API safety filter triggered';
+                    safetyDetail = interactErr?.message;
                 }
+                console.warn('[invitationTemplateAi] Nano Banana interactions attempt error:', interactErr?.message);
             }
-            else {
-                const errText = await interactionsRes.text().catch(() => '');
-                if ((0, invitationPromptFidelity_ts_1.isSafetyFilterTriggered)(errText)) {
-                    safetyTriggered = true;
-                    safetyDetail = errText;
-                }
-                console.warn('[invitationTemplateAi] Nano Banana interactions API non-200:', errText.slice(0, 300));
-            }
-        }
-        catch (interactErr) {
-            if (interactErr?.name === 'AbortError') {
-                throw new Error(`Timeout: la requête Nano Banana interactions a dépassé ${TIMEOUT_MS / 1000}s.`);
-            }
-            if ((0, invitationPromptFidelity_ts_1.isSafetyFilterTriggered)(interactErr)) {
-                safetyTriggered = true;
-                safetyDetail = interactErr?.message;
-            }
-            console.warn('[invitationTemplateAi] Nano Banana interactions attempt error:', interactErr?.message);
         }
         if (safetyTriggered && !b64) {
             const safetyErr = new Error(`SafetyFilterTriggered: ${safetyDetail}`);
@@ -1170,7 +1218,9 @@ ${options?.embedText ? 'Embed invitation typography from the brief.\n' : `${invi
 ${imagePrompt}`;
     }
     try {
-        const b64 = await executeNanoBananaRawRequest(apiKey, promptText, refImages, model);
+        const b64 = await executeNanoBananaRawRequest(apiKey, promptText, refImages, model, {
+            skipInteractions: (0, invitationPromptFidelity_ts_1.shouldSkipNanoBananaInteractions)(options?.speedMode),
+        });
         const url = await uploadGeneratedB64(b64, tenantId);
         return { url, mode: hasPeople || hasRefs ? 'edit' : 'generate', safetyFallbackTriggered: false };
     }
@@ -1181,7 +1231,7 @@ ${imagePrompt}`;
             try {
                 const fallbackPrompt = (0, invitationPromptFidelity_ts_1.buildGenericThematicBackgroundPrompt)(imagePrompt, options);
                 const fallbackB64 = await executeNanoBananaRawRequest(apiKey, fallbackPrompt, [], // Aucune photo de référence humaine pour contourner le filtre facial
-                model);
+                model, { skipInteractions: (0, invitationPromptFidelity_ts_1.shouldSkipNanoBananaInteractions)(options?.speedMode) });
                 const url = await uploadGeneratedB64(fallbackB64, tenantId);
                 return { url, mode: 'generate', safetyFallbackTriggered: true };
             }
@@ -1209,6 +1259,7 @@ async function generateInvitationImageWithOpenAi(key, imageUrls, imagePrompt, te
             hasPeople: options?.hasPeople,
             embedText: options?.embedText,
             preferredModel: options?.preferredModel,
+            coupleFaceSwap: options?.coupleFaceSwap,
         });
         return { ...lunaRes, safetyFallbackTriggered: false };
     };
@@ -1289,7 +1340,10 @@ async function createNewInvitationImage(key, imageUrls, imagePrompt, tenantId, o
         try {
             console.warn('[invitationTemplateAi] Filet de sécurité anti-blocage: tentative finale d\'arrière-plan décoratif sans humains via Nano Banana...');
             const fallbackPrompt = (0, invitationPromptFidelity_ts_1.buildGenericThematicBackgroundPrompt)(imagePrompt, options);
-            const fallbackB64 = await executeNanoBananaRawRequest(nanoKey, fallbackPrompt, [], getNanoBananaProModel());
+            const fallbackModel = options?.speedMode === 'fast'
+                ? getNanoBananaFlashModel()
+                : getNanoBananaProModel();
+            const fallbackB64 = await executeNanoBananaRawRequest(nanoKey, fallbackPrompt, [], fallbackModel, { skipInteractions: (0, invitationPromptFidelity_ts_1.shouldSkipNanoBananaInteractions)(options?.speedMode) });
             const url = await uploadGeneratedB64(fallbackB64, tenantId);
             return { url, mode: 'generate', safetyFallbackTriggered: true };
         }
@@ -1314,32 +1368,12 @@ async function judgeInvitationImage(input) {
     const refs = input.referenceUrls
         .filter((url) => typeof url === 'string' && /^https?:\/\//i.test(url))
         .slice(0, 3);
-    const geminiImages = [...refs, input.generatedUrl];
+    const geminiImages = [input.generatedUrl, ...refs];
     const openAiImages = [input.generatedUrl, ...refs];
-    const tryGemini = async () => {
-        if (!(0, geminiJsonClient_ts_1.getGeminiApiKey)())
+    const preferOpenAi = (0, aiStudioModels_ts_1.isOpenAiStudioModel)(input.preferredModel);
+    const tryOpenAi = async () => {
+        if (!input.key)
             return null;
-        const parsed = await (0, geminiJsonClient_ts_1.requestGeminiJson)({
-            system: invitationPromptFidelity_ts_1.INVITATION_IMAGE_JUDGE_SYSTEM,
-            userText,
-            imageUrls: geminiImages,
-            temperature: 0.1,
-            timeoutMs: 25_000,
-            failMessage: 'Invitation image judge failed.',
-        });
-        return (0, invitationPromptFidelity_ts_1.parseInvitationImageJudgeVerdict)(parsed);
-    };
-    try {
-        const gemini = await tryGemini();
-        if (gemini)
-            return gemini;
-    }
-    catch (error) {
-        console.warn('[invitationTemplateAi] Gemini image judge failed, trying OpenAI:', error?.message);
-    }
-    if (!input.key)
-        return null;
-    try {
         const visionModel = input.preferredModel &&
             (0, aiStudioModels_ts_1.isOpenAiStudioModel)(input.preferredModel) &&
             !input.preferredModel.includes('gpt-image')
@@ -1355,15 +1389,63 @@ async function judgeInvitationImage(input) {
             model: visionModel,
         });
         return (0, invitationPromptFidelity_ts_1.parseInvitationImageJudgeVerdict)(parsed);
+    };
+    const tryGemini = async () => {
+        if (!(0, geminiJsonClient_ts_1.getGeminiApiKey)())
+            return null;
+        const parsed = await (0, geminiJsonClient_ts_1.requestGeminiJson)({
+            system: invitationPromptFidelity_ts_1.INVITATION_IMAGE_JUDGE_SYSTEM,
+            userText,
+            imageUrls: geminiImages,
+            temperature: 0.1,
+            timeoutMs: 25_000,
+            failMessage: 'Invitation image judge failed.',
+        });
+        return (0, invitationPromptFidelity_ts_1.parseInvitationImageJudgeVerdict)(parsed);
+    };
+    if (preferOpenAi) {
+        try {
+            const openAi = await tryOpenAi();
+            if (openAi)
+                return openAi;
+        }
+        catch (openAiErr) {
+            console.warn('[invitationTemplateAi] OpenAI image judge failed, trying Gemini fallback:', openAiErr?.message);
+        }
+        try {
+            const gemini = await tryGemini();
+            if (gemini)
+                return gemini;
+        }
+        catch (geminiErr) {
+            console.warn('[invitationTemplateAi] Gemini image judge fallback failed:', geminiErr?.message);
+        }
     }
-    catch (error) {
-        console.warn('[invitationTemplateAi] Image judge skipped (fail-open):', error?.message);
-        return null;
+    else {
+        try {
+            const gemini = await tryGemini();
+            if (gemini)
+                return gemini;
+        }
+        catch (error) {
+            console.warn('[invitationTemplateAi] Gemini image judge failed, trying OpenAI:', error?.message);
+        }
+        try {
+            const openAi = await tryOpenAi();
+            if (openAi)
+                return openAi;
+        }
+        catch (error) {
+            console.warn('[invitationTemplateAi] Image judge skipped (fail-open):', error?.message);
+        }
     }
+    return null;
 }
 async function generateInvitationImageWithJudge(key, imageUrls, imagePrompt, tenantId, imageOptions, judgeInput) {
     const created = await createNewInvitationImage(key, imageUrls, imagePrompt, tenantId, imageOptions);
-    if (created.safetyFallbackTriggered || !created.url) {
+    if (created.safetyFallbackTriggered ||
+        !created.url ||
+        (0, invitationPromptFidelity_ts_1.shouldSkipInvitationImageJudge)(imageOptions.speedMode)) {
         return { ...created, judge: null, retried: false };
     }
     const judge = await judgeInvitationImage({
@@ -1403,29 +1485,10 @@ async function writeInvitationOverlayCopy(input) {
         organizerContext: input.organizerContext,
         intent: input.intent,
     });
-    const tryGemini = async () => {
-        if (!(0, geminiJsonClient_ts_1.getGeminiApiKey)())
+    const preferOpenAi = (0, aiStudioModels_ts_1.isOpenAiStudioModel)(input.preferredModel);
+    const tryOpenAi = async () => {
+        if (!input.key)
             return null;
-        const parsed = await (0, geminiJsonClient_ts_1.requestGeminiJson)({
-            system: invitationPromptFidelity_ts_1.INVITATION_COPY_SYSTEM,
-            userText,
-            temperature: 0.35,
-            timeoutMs: 25_000,
-            failMessage: 'Invitation copy failed.',
-        });
-        return (0, invitationPromptFidelity_ts_1.parseInvitationCopyDraft)(parsed, language);
-    };
-    try {
-        const gemini = await tryGemini();
-        if (gemini)
-            return gemini;
-    }
-    catch (error) {
-        console.warn('[invitationTemplateAi] Gemini overlay copy failed, trying OpenAI:', error?.message);
-    }
-    if (!input.key)
-        return null;
-    try {
         const model = input.preferredModel &&
             (0, aiStudioModels_ts_1.isOpenAiStudioModel)(input.preferredModel) &&
             !input.preferredModel.includes('gpt-image')
@@ -1440,11 +1503,56 @@ async function writeInvitationOverlayCopy(input) {
             model,
         });
         return (0, invitationPromptFidelity_ts_1.parseInvitationCopyDraft)(parsed, language);
+    };
+    const tryGemini = async () => {
+        if (!(0, geminiJsonClient_ts_1.getGeminiApiKey)())
+            return null;
+        const parsed = await (0, geminiJsonClient_ts_1.requestGeminiJson)({
+            system: invitationPromptFidelity_ts_1.INVITATION_COPY_SYSTEM,
+            userText,
+            temperature: 0.35,
+            timeoutMs: 25_000,
+            failMessage: 'Invitation copy failed.',
+        });
+        return (0, invitationPromptFidelity_ts_1.parseInvitationCopyDraft)(parsed, language);
+    };
+    if (preferOpenAi) {
+        try {
+            const openAi = await tryOpenAi();
+            if (openAi)
+                return openAi;
+        }
+        catch (openAiErr) {
+            console.warn('[invitationTemplateAi] OpenAI overlay copy failed, trying Gemini fallback:', openAiErr?.message);
+        }
+        try {
+            const gemini = await tryGemini();
+            if (gemini)
+                return gemini;
+        }
+        catch (geminiErr) {
+            console.warn('[invitationTemplateAi] Gemini overlay copy fallback failed:', geminiErr?.message);
+        }
     }
-    catch (error) {
-        console.warn('[invitationTemplateAi] Overlay copy skipped (fail-open):', error?.message);
-        return null;
+    else {
+        try {
+            const gemini = await tryGemini();
+            if (gemini)
+                return gemini;
+        }
+        catch (error) {
+            console.warn('[invitationTemplateAi] Gemini overlay copy failed, trying OpenAI:', error?.message);
+        }
+        try {
+            const openAi = await tryOpenAi();
+            if (openAi)
+                return openAi;
+        }
+        catch (error) {
+            console.warn('[invitationTemplateAi] Overlay copy skipped (fail-open):', error?.message);
+        }
     }
+    return null;
 }
 function ensurePublicTemplateVariables(elements) {
     const result = elements.map((el) => ({ ...el }));
@@ -1585,15 +1693,8 @@ async function composeInvitationTemplateAi(input) {
         isAlteration,
         brief: prompt,
     });
-    let styleRefsOnly = false;
-    if (pipelineIntentEarly === 'create' && imageUrls.length === 0) {
-        const styleRefs = await (0, invitationStyleRefs_ts_1.loadEventMasterStyleRefUrls)(2);
-        if (styleRefs.length) {
-            imageUrls = styleRefs;
-            styleRefsOnly = true;
-        }
-    }
     const styleFewshot = pipelineIntentEarly === 'create' ? invitationStructuredBrief_ts_1.EVENTMASTER_STYLE_FEWSHOT : '';
+    const speedMode = input.speedMode === 'fast' ? 'fast' : 'quality';
     const existingElements = Array.isArray(input.existingElements) ? input.existingElements : [];
     const existingTextSummaries = existingElements
         .filter((el) => el && typeof el.text === 'string' && el.text.trim().length > 0)
@@ -1602,7 +1703,7 @@ async function composeInvitationTemplateAi(input) {
         ? `${prompt}. PRESERVATION DU CONTEXTE : Le carton existant contient [${existingTextSummaries.join(', ')}]. Conserver impérativement ces informations clés (noms, date, lieu) et la disposition générale, en appliquant avec précision la retouche demandée.`
         : prompt;
     const processed = (0, invitationPromptFidelity_ts_1.processUserPromptForHonestFaces)(enrichedPrompt, {
-        referenceCount: styleRefsOnly ? 0 : imageUrls.length,
+        referenceCount: imageUrls.length,
         embedText,
         artStyleLine,
         coupleFaceSwap,
@@ -1624,21 +1725,35 @@ async function composeInvitationTemplateAi(input) {
     const organizerContextEn = (0, invitationComposeContext_ts_1.formatContextForImage)(composeContext, contextSource);
     const organizerContextCopy = (0, invitationComposeContext_ts_1.formatContextForVision)(composeContext, contextSource);
     const key = requireAiConfigured();
-    const structured = await visionStructure(key, processed.originalBrief, imageUrls, {
-        embedText,
-        organizerContext: organizerContextEn,
-        processed,
-        artStyle,
-        isAlteration,
-        existingElements,
-        isPublic,
+    const skipVision = (0, invitationPromptFidelity_ts_1.shouldSkipInvitationVisionCall)({
+        speedMode,
         coupleFaceSwap,
-        preferredModel: input.preferredModel || undefined,
-        intent: pipelineIntent,
-        styleRefsOnly,
-        styleFewshot,
+        hasUserReferencePhotos: imageUrls.length > 0,
     });
-    if ((!imageUrls.length || styleRefsOnly) && structured.visualAnalysis) {
+    const structured = skipVision
+        ? buildLocalVisionResult({
+            prompt: processed.originalBrief,
+            processed,
+            coupleFaceSwap,
+            intent: pipelineIntent,
+            embedText,
+            isPublic,
+            referenceCount: imageUrls.length,
+        })
+        : await visionStructure(key, processed.originalBrief, imageUrls, {
+            embedText,
+            organizerContext: organizerContextEn,
+            processed,
+            artStyle,
+            isAlteration,
+            existingElements,
+            isPublic,
+            coupleFaceSwap,
+            preferredModel: input.preferredModel || undefined,
+            intent: pipelineIntent,
+            styleFewshot,
+        });
+    if (!imageUrls.length && structured.visualAnalysis) {
         structured.visualAnalysis.hasPeople = false;
         structured.visualAnalysis.peopleCount = 0;
     }
@@ -1679,7 +1794,6 @@ async function composeInvitationTemplateAi(input) {
     const variantRoles = [];
     const wantBg = input.generateBackground !== false;
     const requestedVariantsCount = Math.min(2, Math.max(1, Number(input.variantsCount) || 1));
-    const speedMode = input.speedMode === 'fast' ? 'fast' : 'quality';
     if (wantBg) {
         try {
             // Levier B: Préchargement parallèle des photos de référence une seule fois en mémoire
@@ -1687,12 +1801,13 @@ async function composeInvitationTemplateAi(input) {
                 ? await preloadReferenceImages(imageUrls)
                 : [];
             const imageOptions = {
-                hasPeople: (coupleFaceSwap || Boolean(structured.visualAnalysis?.hasPeople)) && imageUrls.length > 0 && !styleRefsOnly,
+                hasPeople: (coupleFaceSwap || Boolean(structured.visualAnalysis?.hasPeople)) && imageUrls.length > 0,
                 embedText,
                 artStyle,
                 speedMode,
                 preloadedRefImages,
                 preferredModel: input.preferredModel || undefined,
+                coupleFaceSwap,
             };
             const judgeInput = {
                 intent: resolvedIntent,
@@ -1796,12 +1911,10 @@ async function composeInvitationTemplateAi(input) {
         structured.decorParagraph || processed.englishSceneBrief;
     global.aiOriginalBrief = processed.originalBrief;
     global.aiPipelineIntent = resolvedIntent;
+    global.aiVisionSkipped = skipVision;
     global.aiLocks = imageLocks;
     if ((0, invitationStructuredBrief_ts_1.hasInvitationStructuredBrief)(structuredBrief)) {
         global.aiStructuredBrief = structuredBrief;
-    }
-    if (styleRefsOnly) {
-        global.aiStyleRefsUsed = imageUrls.length;
     }
     if (imageJudge) {
         global.aiJudgeScore = imageJudge.score;
@@ -1818,7 +1931,17 @@ async function composeInvitationTemplateAi(input) {
         preservedExistingCopy = true;
     }
     let copyWritten = false;
-    if (!embedText && !preservedExistingCopy) {
+    const skipOverlayCopy = (0, invitationPromptFidelity_ts_1.shouldSkipInvitationOverlayCopy)({
+        embedText,
+        preservedExistingCopy,
+        hasStructuredIdentity: (0, invitationIdentity_1.hasInvitationIdentity)({
+            title: structuredBrief.title,
+            honorees: structuredBrief.honorees,
+            date: structuredBrief.date,
+            description: structuredBrief.description,
+        }),
+    });
+    if (!skipOverlayCopy) {
         const copyDraft = await writeInvitationOverlayCopy({
             key,
             originalBrief: processed.originalBrief,

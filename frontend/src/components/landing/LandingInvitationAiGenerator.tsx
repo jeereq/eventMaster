@@ -806,7 +806,7 @@ export default function LandingInvitationAiGenerator({
     if (coupleFaceSwap && fileRoles.length >= 2) {
       const parts: string[] = [];
       fileRoles.forEach((role, idx) => {
-        const imgRef = coupleFaceSwap && incomingFile ? `Image ${idx + 2}` : `Image ${idx + 1}`;
+        const imgRef = `Image ${idx + 2}`;
         if (role === 'groom') {
           parts.push(`${imgRef} is the GROOM/MAN (must replace male body/suit).`);
         } else if (role === 'bride') {

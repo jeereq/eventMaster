@@ -19,7 +19,6 @@ import {
   parseInvitationStructuredBrief,
   type InvitationStructuredBrief,
 } from './invitationStructuredBrief.ts';
-import { loadEventMasterStyleRefUrls } from './invitationStyleRefs.ts';
 import {
   NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE,
   NANO_BANANA_COMPACT_FACE_LOCK,
@@ -44,9 +43,14 @@ import {
   resolveFinalInvitationPipelineIntent,
   resolveInvitationPipelineIntent,
   shouldRetryInvitationImage,
+  shouldSkipInvitationImageJudge,
+  shouldSkipInvitationOverlayCopy,
+  shouldSkipInvitationVisionCall,
+  shouldSkipNanoBananaInteractions,
   COUPLE_FACE_SWAP_DEFAULT_PROMPT,
   INVITATION_COPY_SYSTEM,
   INVITATION_IMAGE_JUDGE_SYSTEM,
+  type InvitationAiSpeedMode,
   type InvitationCopyDraft,
   type InvitationImageJudgeVerdict,
   type InvitationPipelineIntent,
@@ -616,6 +620,60 @@ function visionResultFromParsed(
   };
 }
 
+function buildLocalVisionResult(input: {
+  prompt: string;
+  processed: ProcessedInvitationPrompt;
+  coupleFaceSwap: boolean;
+  intent: InvitationPipelineIntent;
+  embedText?: boolean;
+  isPublic?: boolean;
+  referenceCount: number;
+}): VisionResult {
+  const hasPeople = input.coupleFaceSwap || input.referenceCount > 0;
+  const peopleCount = input.coupleFaceSwap
+    ? Math.max(1, input.referenceCount - 1)
+    : input.referenceCount;
+  const locks = buildInvitationLocks({
+    intent: input.intent,
+    analysis: { hasPeople, peopleCount },
+    embedText: input.embedText,
+    isPublic: input.isPublic,
+    referenceCount: input.referenceCount,
+    explicitAppearanceChange: input.processed.explicitAppearanceChange,
+  });
+  const decorParagraph = (
+    input.processed.englishSceneBrief ||
+    input.processed.decorBrief ||
+    input.prompt
+  ).slice(0, 1400);
+  return {
+    global: null,
+    elements: [],
+    backgroundPrompt: decorParagraph,
+    visualAnalysis: {
+      colors: [],
+      style: '',
+      motifs: '',
+      composition: '',
+      hasPeople,
+      peopleCount: hasPeople ? Math.max(1, peopleCount) : 0,
+      peopleFaces: hasPeople ? 'local-locks' : 'none',
+      faceLandmarks: hasPeople ? 'unclear' : 'none',
+      skinTones: hasPeople ? 'unclear' : 'none',
+      hairStyles: hasPeople ? 'unclear' : 'none',
+      clothingStyles: hasPeople ? 'unclear' : 'none',
+      isInvitationClone: input.intent === 'clone',
+      briefNeeds: [],
+      briefInterpretation: '',
+      briefMustKeep: [],
+      briefMustChange: [],
+    },
+    intent: input.intent,
+    locks,
+    decorParagraph,
+  };
+}
+
 async function visionStructure(
   key: string,
   prompt: string,
@@ -795,15 +853,13 @@ export async function preloadReferenceImages(urls: string[]): Promise<PreloadedR
     }),
   );
 
-  const preloaded: PreloadedRefImage[] = [];
-  for (const res of results) {
-    if (res.status === 'fulfilled') {
-      preloaded.push(res.value);
-    } else {
-      console.warn('[invitationTemplateAi] Skip ref download in parallel preload:', res.reason?.message);
-    }
+  const rejected = results.find((r) => r.status === 'rejected') as PromiseRejectedResult | undefined;
+  if (rejected) {
+    console.error('[invitationTemplateAi] Skip ref download in parallel preload error:', rejected.reason?.message);
+    fail(502, `Impossible de télécharger l’une des photos de référence pour la génération (${rejected.reason?.message || 'erreur réseau'}).`);
   }
-  return preloaded;
+
+  return results.map((res) => (res as PromiseFulfilledResult<PreloadedRefImage>).value);
 }
 
 async function downloadImageAsPngBuffer(url: string): Promise<Buffer> {
@@ -896,7 +952,12 @@ async function generateImageWithGpt56Luna(
   imagePrompt: string,
   referenceUrls: string[],
   tenantId: string | null | undefined,
-  options?: { hasPeople?: boolean; embedText?: boolean; preferredModel?: string },
+  options?: {
+    hasPeople?: boolean;
+    embedText?: boolean;
+    preferredModel?: string;
+    coupleFaceSwap?: boolean;
+  },
 ): Promise<{ url: string; mode: 'edit' | 'generate' }> {
   const model = responsesModel(options?.preferredModel);
   const hasRefs = referenceUrls.length > 0;
@@ -904,6 +965,7 @@ async function generateImageWithGpt56Luna(
     ? 'Embed sharp invitation typography (names, date, venue from the brief) on the card without covering faces.'
     : NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE;
   const hasPeople = Boolean(options?.hasPeople);
+  const coupleFaceSwap = Boolean(options?.coupleFaceSwap);
 
   // Convertir en data URL pour éviter les échecs de téléchargement côté OpenAI.
   const refDataUrls: string[] = [];
@@ -915,22 +977,28 @@ async function generateImageWithGpt56Luna(
     }
   }
 
-  const faceBlock = hasPeople ? FACE_POLICY_KEEP_PEOPLE : FACE_POLICY_NO_PEOPLE;
+  const faceBlock = coupleFaceSwap
+    ? FACE_POLICY_COUPLE_SWAP
+    : hasPeople
+      ? FACE_POLICY_KEEP_PEOPLE
+      : FACE_POLICY_NO_PEOPLE;
   // Édition prioritaire si des personnes sont présentes (préserve mieux les visages).
   const imageAction = refDataUrls.length
-    ? hasPeople
+    ? hasPeople || coupleFaceSwap
       ? 'edit'
       : 'auto'
     : 'generate';
 
   const imageQuality =
     process.env.OPENAI_IMAGE_QUALITY ||
-    (hasPeople ? 'high' : 'medium');
+    (hasPeople || coupleFaceSwap ? 'high' : 'medium');
 
   // Refs d’abord quand il y a des personnes : ancre mieux l’identité faciale.
-  const identityPreamble = hasPeople
-    ? `EDIT the attached photo(s). Keep the SAME faces — pixels win over any text. Do not invent lookalikes.\n\n${imagePrompt}`
-    : imagePrompt;
+  const identityPreamble = coupleFaceSwap
+    ? `COUPLE FACE SWAP on the attached photo(s). Keep Image 1 composition, bodies, wardrobe, décor and expressions. Swap faces with the couple in Images 2+. Pixels win over any text.\n\n${imagePrompt}`
+    : hasPeople
+      ? `EDIT the attached photo(s). Keep the SAME faces — pixels win over any text. Do not invent lookalikes.\n\n${imagePrompt}`
+      : imagePrompt;
 
   const content: Array<Record<string, unknown>> = hasPeople
     ? [
@@ -1261,6 +1329,7 @@ async function executeNanoBananaRawRequest(
   promptText: string,
   refImages: Array<{ mimeType: string; base64: string }>,
   model: string,
+  options?: { skipInteractions?: boolean },
 ): Promise<string> {
   const isFlash = model.toLowerCase().includes('flash');
   const TIMEOUT_MS = isFlash ? 35_000 : 55_000;
@@ -1272,7 +1341,8 @@ async function executeNanoBananaRawRequest(
     let safetyTriggered = false;
     let safetyDetail = '';
 
-    // Tentative 1 : Google Interactions API (format 9:16, 2K)
+    // Tentative 1 : Google Interactions API (format 9:16, 2K) — sautée en mode rapide
+    if (!options?.skipInteractions) {
     const interactionInput: Array<{ type: string; text?: string; data?: string; mime_type?: string }> = [];
     // Priorité absolue aux images de référence des hôtes pour ancrer l'identité
     for (const img of refImages) {
@@ -1350,6 +1420,7 @@ async function executeNanoBananaRawRequest(
         safetyDetail = (interactErr as Error)?.message;
       }
       console.warn('[invitationTemplateAi] Nano Banana interactions attempt error:', (interactErr as Error)?.message);
+    }
     }
 
     if (safetyTriggered && !b64) {
@@ -1482,6 +1553,7 @@ async function generateImageWithNanoBanana(
     embedText?: boolean;
     artStyle?: InvitationArtStyleId;
     preloadedRefImages?: PreloadedRefImage[];
+    speedMode?: InvitationAiSpeedMode;
   },
   model: string = getNanoBananaProModel(),
 ): Promise<{ url: string; mode: 'edit' | 'generate'; safetyFallbackTriggered?: boolean }> {
@@ -1512,7 +1584,9 @@ ${imagePrompt}`;
   }
 
   try {
-    const b64 = await executeNanoBananaRawRequest(apiKey, promptText, refImages, model);
+    const b64 = await executeNanoBananaRawRequest(apiKey, promptText, refImages, model, {
+      skipInteractions: shouldSkipNanoBananaInteractions(options?.speedMode),
+    });
     const url = await uploadGeneratedB64(b64, tenantId);
     return { url, mode: hasPeople || hasRefs ? 'edit' : 'generate', safetyFallbackTriggered: false };
   } catch (error) {
@@ -1528,6 +1602,7 @@ ${imagePrompt}`;
           fallbackPrompt,
           [], // Aucune photo de référence humaine pour contourner le filtre facial
           model,
+          { skipInteractions: shouldSkipNanoBananaInteractions(options?.speedMode) },
         );
         const url = await uploadGeneratedB64(fallbackB64, tenantId);
         return { url, mode: 'generate', safetyFallbackTriggered: true };
@@ -1564,6 +1639,7 @@ async function generateInvitationImageWithOpenAi(
     speedMode?: AiSpeedMode;
     preloadedRefImages?: PreloadedRefImage[];
     preferredModel?: string;
+    coupleFaceSwap?: boolean;
   },
 ): Promise<{ url: string; mode: 'edit' | 'generate'; safetyFallbackTriggered?: boolean }> {
   const preferImageApi = (options?.preferredModel || '').includes('gpt-image');
@@ -1572,6 +1648,7 @@ async function generateInvitationImageWithOpenAi(
       hasPeople: options?.hasPeople,
       embedText: options?.embedText,
       preferredModel: options?.preferredModel,
+      coupleFaceSwap: options?.coupleFaceSwap,
     });
     return { ...lunaRes, safetyFallbackTriggered: false as const };
   };
@@ -1640,6 +1717,7 @@ async function createNewInvitationImage(
     speedMode?: AiSpeedMode;
     preloadedRefImages?: PreloadedRefImage[];
     preferredModel?: string;
+    coupleFaceSwap?: boolean;
   },
 ): Promise<{ url: string; mode: 'edit' | 'generate'; safetyFallbackTriggered?: boolean }> {
   const nanoKey = getNanoBananaApiKey();
@@ -1698,11 +1776,15 @@ async function createNewInvitationImage(
         '[invitationTemplateAi] Filet de sécurité anti-blocage: tentative finale d\'arrière-plan décoratif sans humains via Nano Banana...',
       );
       const fallbackPrompt = buildGenericThematicBackgroundPrompt(imagePrompt, options);
+      const fallbackModel = options?.speedMode === 'fast'
+        ? getNanoBananaFlashModel()
+        : getNanoBananaProModel();
       const fallbackB64 = await executeNanoBananaRawRequest(
         nanoKey,
         fallbackPrompt,
         [],
-        getNanoBananaProModel(),
+        fallbackModel,
+        { skipInteractions: shouldSkipNanoBananaInteractions(options?.speedMode) },
       );
       const url = await uploadGeneratedB64(fallbackB64, tenantId);
       return { url, mode: 'generate', safetyFallbackTriggered: true };
@@ -1754,35 +1836,13 @@ async function judgeInvitationImage(input: {
   const refs = input.referenceUrls
     .filter((url) => typeof url === 'string' && /^https?:\/\//i.test(url))
     .slice(0, 3);
-  const geminiImages = [...refs, input.generatedUrl];
+  const geminiImages = [input.generatedUrl, ...refs];
   const openAiImages = [input.generatedUrl, ...refs];
 
-  const tryGemini = async (): Promise<InvitationImageJudgeVerdict | null> => {
-    if (!getGeminiApiKey()) return null;
-    const parsed = await requestGeminiJson({
-      system: INVITATION_IMAGE_JUDGE_SYSTEM,
-      userText,
-      imageUrls: geminiImages,
-      temperature: 0.1,
-      timeoutMs: 25_000,
-      failMessage: 'Invitation image judge failed.',
-    });
-    return parseInvitationImageJudgeVerdict(parsed);
-  };
+  const preferOpenAi = isOpenAiStudioModel(input.preferredModel);
 
-  try {
-    const gemini = await tryGemini();
-    if (gemini) return gemini;
-  } catch (error) {
-    console.warn(
-      '[invitationTemplateAi] Gemini image judge failed, trying OpenAI:',
-      (error as Error)?.message,
-    );
-  }
-
-  if (!input.key) return null;
-
-  try {
+  const tryOpenAi = async (): Promise<InvitationImageJudgeVerdict | null> => {
+    if (!input.key) return null;
     const visionModel =
       input.preferredModel &&
       isOpenAiStudioModel(input.preferredModel) &&
@@ -1799,13 +1859,56 @@ async function judgeInvitationImage(input: {
       model: visionModel,
     });
     return parseInvitationImageJudgeVerdict(parsed);
-  } catch (error) {
-    console.warn(
-      '[invitationTemplateAi] Image judge skipped (fail-open):',
-      (error as Error)?.message,
-    );
-    return null;
+  };
+
+  const tryGemini = async (): Promise<InvitationImageJudgeVerdict | null> => {
+    if (!getGeminiApiKey()) return null;
+    const parsed = await requestGeminiJson({
+      system: INVITATION_IMAGE_JUDGE_SYSTEM,
+      userText,
+      imageUrls: geminiImages,
+      temperature: 0.1,
+      timeoutMs: 25_000,
+      failMessage: 'Invitation image judge failed.',
+    });
+    return parseInvitationImageJudgeVerdict(parsed);
+  };
+
+  if (preferOpenAi) {
+    try {
+      const openAi = await tryOpenAi();
+      if (openAi) return openAi;
+    } catch (openAiErr) {
+      console.warn('[invitationTemplateAi] OpenAI image judge failed, trying Gemini fallback:', (openAiErr as Error)?.message);
+    }
+    try {
+      const gemini = await tryGemini();
+      if (gemini) return gemini;
+    } catch (geminiErr) {
+      console.warn('[invitationTemplateAi] Gemini image judge fallback failed:', (geminiErr as Error)?.message);
+    }
+  } else {
+    try {
+      const gemini = await tryGemini();
+      if (gemini) return gemini;
+    } catch (error) {
+      console.warn(
+        '[invitationTemplateAi] Gemini image judge failed, trying OpenAI:',
+        (error as Error)?.message,
+      );
+    }
+    try {
+      const openAi = await tryOpenAi();
+      if (openAi) return openAi;
+    } catch (error) {
+      console.warn(
+        '[invitationTemplateAi] Image judge skipped (fail-open):',
+        (error as Error)?.message,
+      );
+    }
   }
+
+  return null;
 }
 
 async function generateInvitationImageWithJudge(
@@ -1820,6 +1923,7 @@ async function generateInvitationImageWithJudge(
     speedMode?: AiSpeedMode;
     preloadedRefImages?: PreloadedRefImage[];
     preferredModel?: string;
+    coupleFaceSwap?: boolean;
   },
   judgeInput: {
     intent: InvitationPipelineIntent;
@@ -1830,7 +1934,11 @@ async function generateInvitationImageWithJudge(
   },
 ): Promise<InvitationJudgedImage> {
   const created = await createNewInvitationImage(key, imageUrls, imagePrompt, tenantId, imageOptions);
-  if (created.safetyFallbackTriggered || !created.url) {
+  if (
+    created.safetyFallbackTriggered ||
+    !created.url ||
+    shouldSkipInvitationImageJudge(imageOptions.speedMode)
+  ) {
     return { ...created, judge: null, retried: false };
   }
 
@@ -1885,31 +1993,10 @@ async function writeInvitationOverlayCopy(input: {
     intent: input.intent,
   });
 
-  const tryGemini = async (): Promise<InvitationCopyDraft | null> => {
-    if (!getGeminiApiKey()) return null;
-    const parsed = await requestGeminiJson({
-      system: INVITATION_COPY_SYSTEM,
-      userText,
-      temperature: 0.35,
-      timeoutMs: 25_000,
-      failMessage: 'Invitation copy failed.',
-    });
-    return parseInvitationCopyDraft(parsed, language);
-  };
+  const preferOpenAi = isOpenAiStudioModel(input.preferredModel);
 
-  try {
-    const gemini = await tryGemini();
-    if (gemini) return gemini;
-  } catch (error) {
-    console.warn(
-      '[invitationTemplateAi] Gemini overlay copy failed, trying OpenAI:',
-      (error as Error)?.message,
-    );
-  }
-
-  if (!input.key) return null;
-
-  try {
+  const tryOpenAi = async (): Promise<InvitationCopyDraft | null> => {
+    if (!input.key) return null;
     const model =
       input.preferredModel &&
       isOpenAiStudioModel(input.preferredModel) &&
@@ -1925,13 +2012,55 @@ async function writeInvitationOverlayCopy(input: {
       model,
     });
     return parseInvitationCopyDraft(parsed, language);
-  } catch (error) {
-    console.warn(
-      '[invitationTemplateAi] Overlay copy skipped (fail-open):',
-      (error as Error)?.message,
-    );
-    return null;
+  };
+
+  const tryGemini = async (): Promise<InvitationCopyDraft | null> => {
+    if (!getGeminiApiKey()) return null;
+    const parsed = await requestGeminiJson({
+      system: INVITATION_COPY_SYSTEM,
+      userText,
+      temperature: 0.35,
+      timeoutMs: 25_000,
+      failMessage: 'Invitation copy failed.',
+    });
+    return parseInvitationCopyDraft(parsed, language);
+  };
+
+  if (preferOpenAi) {
+    try {
+      const openAi = await tryOpenAi();
+      if (openAi) return openAi;
+    } catch (openAiErr) {
+      console.warn('[invitationTemplateAi] OpenAI overlay copy failed, trying Gemini fallback:', (openAiErr as Error)?.message);
+    }
+    try {
+      const gemini = await tryGemini();
+      if (gemini) return gemini;
+    } catch (geminiErr) {
+      console.warn('[invitationTemplateAi] Gemini overlay copy fallback failed:', (geminiErr as Error)?.message);
+    }
+  } else {
+    try {
+      const gemini = await tryGemini();
+      if (gemini) return gemini;
+    } catch (error) {
+      console.warn(
+        '[invitationTemplateAi] Gemini overlay copy failed, trying OpenAI:',
+        (error as Error)?.message,
+      );
+    }
+    try {
+      const openAi = await tryOpenAi();
+      if (openAi) return openAi;
+    } catch (error) {
+      console.warn(
+        '[invitationTemplateAi] Overlay copy skipped (fail-open):',
+        (error as Error)?.message,
+      );
+    }
   }
+
+  return null;
 }
 
 export type InvitationAiComposeResult = {
@@ -2140,15 +2269,8 @@ export async function composeInvitationTemplateAi(input: {
     isAlteration,
     brief: prompt,
   });
-  let styleRefsOnly = false;
-  if (pipelineIntentEarly === 'create' && imageUrls.length === 0) {
-    const styleRefs = await loadEventMasterStyleRefUrls(2);
-    if (styleRefs.length) {
-      imageUrls = styleRefs;
-      styleRefsOnly = true;
-    }
-  }
   const styleFewshot = pipelineIntentEarly === 'create' ? EVENTMASTER_STYLE_FEWSHOT : '';
+  const speedMode: InvitationAiSpeedMode = input.speedMode === 'fast' ? 'fast' : 'quality';
 
   const existingElements = Array.isArray(input.existingElements) ? input.existingElements : [];
   const existingTextSummaries = existingElements
@@ -2160,7 +2282,7 @@ export async function composeInvitationTemplateAi(input: {
     : prompt;
 
   const processed = processUserPromptForHonestFaces(enrichedPrompt, {
-    referenceCount: styleRefsOnly ? 0 : imageUrls.length,
+    referenceCount: imageUrls.length,
     embedText,
     artStyleLine,
     coupleFaceSwap,
@@ -2183,7 +2305,22 @@ export async function composeInvitationTemplateAi(input: {
   const organizerContextCopy = formatContextForVision(composeContext, contextSource);
 
   const key = requireAiConfigured();
-      const structured = await visionStructure(key, processed.originalBrief, imageUrls, {
+  const skipVision = shouldSkipInvitationVisionCall({
+    speedMode,
+    coupleFaceSwap,
+    hasUserReferencePhotos: imageUrls.length > 0,
+  });
+  const structured = skipVision
+    ? buildLocalVisionResult({
+        prompt: processed.originalBrief,
+        processed,
+        coupleFaceSwap,
+        intent: pipelineIntent,
+        embedText,
+        isPublic,
+        referenceCount: imageUrls.length,
+      })
+    : await visionStructure(key, processed.originalBrief, imageUrls, {
     embedText,
     organizerContext: organizerContextEn,
     processed,
@@ -2194,10 +2331,9 @@ export async function composeInvitationTemplateAi(input: {
     coupleFaceSwap,
     preferredModel: input.preferredModel || undefined,
     intent: pipelineIntent,
-    styleRefsOnly,
     styleFewshot,
   });
-  if ((!imageUrls.length || styleRefsOnly) && structured.visualAnalysis) {
+  if (!imageUrls.length && structured.visualAnalysis) {
     structured.visualAnalysis.hasPeople = false;
     structured.visualAnalysis.peopleCount = 0;
   }
@@ -2244,7 +2380,6 @@ export async function composeInvitationTemplateAi(input: {
   const variantRoles: Array<'faithful' | 'ample'> = [];
   const wantBg = input.generateBackground !== false;
   const requestedVariantsCount = Math.min(2, Math.max(1, Number(input.variantsCount) || 1));
-  const speedMode: AiSpeedMode = input.speedMode === 'fast' ? 'fast' : 'quality';
 
   if (wantBg) {
     try {
@@ -2254,12 +2389,13 @@ export async function composeInvitationTemplateAi(input: {
         : [];
 
       const imageOptions = {
-        hasPeople: (coupleFaceSwap || Boolean(structured.visualAnalysis?.hasPeople)) && imageUrls.length > 0 && !styleRefsOnly,
+        hasPeople: (coupleFaceSwap || Boolean(structured.visualAnalysis?.hasPeople)) && imageUrls.length > 0,
         embedText,
         artStyle,
         speedMode,
         preloadedRefImages,
         preferredModel: input.preferredModel || undefined,
+        coupleFaceSwap,
       };
       const judgeInput = {
         intent: resolvedIntent,
@@ -2377,12 +2513,10 @@ export async function composeInvitationTemplateAi(input: {
     structured.decorParagraph || processed.englishSceneBrief;
   (global as Record<string, unknown>).aiOriginalBrief = processed.originalBrief;
   (global as Record<string, unknown>).aiPipelineIntent = resolvedIntent;
+  (global as Record<string, unknown>).aiVisionSkipped = skipVision;
   (global as Record<string, unknown>).aiLocks = imageLocks;
   if (hasInvitationStructuredBrief(structuredBrief)) {
     (global as Record<string, unknown>).aiStructuredBrief = structuredBrief;
-  }
-  if (styleRefsOnly) {
-    (global as Record<string, unknown>).aiStyleRefsUsed = imageUrls.length;
   }
   if (imageJudge) {
     (global as Record<string, unknown>).aiJudgeScore = imageJudge.score;
@@ -2399,7 +2533,17 @@ export async function composeInvitationTemplateAi(input: {
     preservedExistingCopy = true;
   }
   let copyWritten = false;
-  if (!embedText && !preservedExistingCopy) {
+  const skipOverlayCopy = shouldSkipInvitationOverlayCopy({
+    embedText,
+    preservedExistingCopy,
+    hasStructuredIdentity: hasInvitationIdentity({
+      title: structuredBrief.title,
+      honorees: structuredBrief.honorees,
+      date: structuredBrief.date,
+      description: structuredBrief.description,
+    }),
+  });
+  if (!skipOverlayCopy) {
     const copyDraft = await writeInvitationOverlayCopy({
       key,
       originalBrief: processed.originalBrief,

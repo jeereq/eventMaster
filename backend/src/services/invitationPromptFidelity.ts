@@ -131,6 +131,40 @@ export const INVITATION_PIPELINE_INTENTS: readonly InvitationPipelineIntent[] = 
   'couple',
 ];
 
+export type InvitationAiSpeedMode = 'fast' | 'quality';
+
+/**
+ * Économie de jetons fournisseur : on n’appelle la vision que si elle
+ * inventorie vraiment des photos utilisateur (hors couple, déjà verrouillé localement).
+ */
+export function shouldSkipInvitationVisionCall(input: {
+  speedMode?: InvitationAiSpeedMode;
+  coupleFaceSwap?: boolean;
+  styleRefsOnly?: boolean;
+  hasUserReferencePhotos?: boolean;
+}): boolean {
+  if (input.styleRefsOnly || !input.hasUserReferencePhotos) return true;
+  if (input.coupleFaceSwap) return true;
+  return input.speedMode === 'fast';
+}
+
+export function shouldSkipInvitationImageJudge(speedMode?: InvitationAiSpeedMode): boolean {
+  return speedMode === 'fast';
+}
+
+export function shouldSkipInvitationOverlayCopy(input: {
+  embedText?: boolean;
+  preservedExistingCopy?: boolean;
+  hasStructuredIdentity?: boolean;
+}): boolean {
+  return Boolean(input.embedText || input.preservedExistingCopy || input.hasStructuredIdentity);
+}
+
+/** En mode rapide, un seul endpoint image (generateContent), sans Interactions. */
+export function shouldSkipNanoBananaInteractions(speedMode?: InvitationAiSpeedMode): boolean {
+  return speedMode === 'fast';
+}
+
 /** Prompt image cible : ~400–700 mots, jamais un monolithe de 6 000 caractères. */
 export const COMPACT_IMAGE_PROMPT_MAX_CHARS = 3800;
 
@@ -396,7 +430,8 @@ Image 1 is the GENERATED card to score. Any other images are references (people 
 
 Be strict on:
 - Identity: same people as references, no lookalike, no beautify, no skin lightening.
-- Couple mode: Image 1 references after the generated card are the couple; generated faces must match them, not the incoming card faces.
+- Couple mode: Among the references after the generated card, Reference 1 is the incoming card (layout, bodies, and facial expressions). Subsequent references are the couple's identity photos.
+- Couple identity vs expression: Identity (bone structure, skin, age) MUST match the couple identity photos. HOWEVER, facial expressions (smile, laughter, mouth, gaze, emotion) MUST adopt the expressions of the incoming card faces! Do NOT flag "wrong_faces" or "kept_original_faces" merely because the expression comes from the incoming card. Only flag "kept_original_faces" if the person identity itself was not replaced with the couple.
 - Couple gender & face alignment: groom/man's face MUST be on male body/suit/tuxedo; bride/woman's face MUST be on female body/dress/gown. Flag "gender_mismatch" if bride and groom faces are inverted or swapped onto wrong bodies!
 - People count vs expectedPeople.
 - Painted letters / names / dates when textInPixels is "forbidden".
@@ -504,6 +539,10 @@ export function buildInvitationImageRetryPrompt(
   let defaultDirective = 'Restore honest faces, correct people count, and no painted letters unless requested. Do not redesign.';
   if (defect === 'gender_mismatch') {
     defaultDirective = 'GENDER FIX: Groom/male face goes strictly onto male body/suit and bride/female face strictly onto female body/gown. Do NOT invert genders.';
+  } else if (defect === 'kept_original_faces') {
+    defaultDirective = 'IDENTITY FIX: The faces from Image 1 were mistakenly kept. Replace faces with the real couple from reference photos, while keeping Image 1 facial expressions.';
+  } else if (defect === 'painted_text') {
+    defaultDirective = 'CLEAN ARTWORK FIX: Remove painted lettering and dates from image pixels. Leave negative space for overlay text.';
   } else if (defect) {
     defaultDirective = `Fix ${defect.replace(/_/g, ' ')} while keeping every lock.`;
   }
@@ -564,12 +603,18 @@ export function buildReferenceRoles(
       'REFERENCE ROLES (couple face replacement — organizer requested):',
       'Image 1: INCOMING INVITATION / SCENE — object fidelity. Keep composition, body pose, bodies, wardrobe, décor, lighting, ornaments AND the facial expressions already on this card.',
     ];
-    for (let i = 1; i < referenceCount; i += 1) {
-      const n = i + 1;
-      const side = i === 1 ? 'left / primary host' : i === 2 ? 'right / secondary host' : `host ${n - 1}`;
+    if (referenceCount === 2) {
       lines.push(
-        `Image ${n} (${side}): COUPLE IDENTITY lock. Replace a face on Image 1 with this exact person. This photo supplies who they are — they must adopt the card face’s expression (mouth, eyes, brows, emotion). Honest pixels only — no beautify, no lighten, no celebrity lookalike.`,
+        'Image 2 (COUPLE PHOTO): COUPLE IDENTITY lock. This photo contains the couple. Extract the groom/man and bride/woman from Image 2. The man from Image 2 replaces the man on Image 1, and the woman from Image 2 replaces the woman on Image 1. Both adopt the card face’s expression (mouth, eyes, brows, emotion). Honest pixels only — no beautify, no lighten, no celebrity lookalike.',
       );
+    } else {
+      for (let i = 1; i < referenceCount; i += 1) {
+        const n = i + 1;
+        const side = i === 1 ? 'left / primary host' : i === 2 ? 'right / secondary host' : `host ${n - 1}`;
+        lines.push(
+          `Image ${n} (${side}): COUPLE IDENTITY lock. Replace a face on Image 1 with this exact person. This photo supplies who they are — they must adopt the card face’s expression (mouth, eyes, brows, emotion). Honest pixels only — no beautify, no lighten, no celebrity lookalike.`,
+        );
+      }
     }
     if (options?.genderMappingDirective) {
       lines.push(options.genderMappingDirective);
@@ -608,10 +653,14 @@ export function buildHonestFaceIdentityHeader(
 ): string {
   if (referenceCount <= 0) return '';
   if (options?.coupleFaceSwap && referenceCount >= 2) {
+    const coupleRefText =
+      referenceCount === 2
+        ? 'Image 2 is the couple photo (showing the couple together). Extract the man and the woman from Image 2 to replace the respective man and woman on Image 1. Both adopt Image 1’s facial expressions.'
+        : `Images 2–${referenceCount} are the couple identity photos. Replace ONLY the identity of the face(s) on Image 1 with these exact people. The source faces adopt Image 1’s expressions.`;
     return [
       '=== 1. COUPLE FACE REPLACEMENT (organizer requested — FIRST) ===',
       'Image 1 is the incoming invitation or scene. Keep its layout, body pose, bodies, clothes, décor, lighting AND the facial expressions already on that card.',
-      `Images 2–${referenceCount} are the couple identity photos. Replace ONLY the identity of the face(s) on Image 1 with these exact people. The source faces adopt Image 1’s expressions.`,
+      coupleRefText,
       options?.genderMappingDirective ||
         'GENDER & ATTIRE FIDELITY (MANDATORY): Match each person strictly by gender and ceremonial role. The male face goes on the male body (suit/tuxedo), the female face goes on the female body (gown/dress). NEVER invert bride and groom faces.',
       NANO_BANANA_CARD_EXPRESSION_LOCK,
@@ -1059,15 +1108,19 @@ export function buildFaithfulImagePrompt(basePrompt: string): string {
 
 /** Variante B : même événement et mêmes visages, plus d’espace et de matière. */
 export function buildAmpleImagePrompt(basePrompt: string, hasReferences = false): string {
+  const isCouple = basePrompt.includes('MODE couple');
   const identity = hasReferences
     ? 'Same hosts as the references — faces, skin, hair and clothes stay locked.'
     : 'Same celebration, same palette, same locks.';
+  const atmosphere = isCouple
+    ? 'Alternative subtle lighting and refined face blending harmonization. Keep Image 1 card composition, bodies, wardrobe and facial expressions identical.'
+    : 'Give more breathing room: wider ceremonial space, richer florals and materials, more paper and foil atmosphere.';
   return collapseSpaces(
     [
       basePrompt,
       'VARIANT B — AMPLE: Same event and same people.',
       identity,
-      'Give more breathing room: wider ceremonial space, richer florals and materials, more paper and foil atmosphere.',
+      atmosphere,
       'Do not change faces, people count, or invent a new event.',
     ].join('\n'),
   ).slice(0, COMPACT_IMAGE_PROMPT_MAX_CHARS);

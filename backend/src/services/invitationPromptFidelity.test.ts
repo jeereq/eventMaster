@@ -43,6 +43,10 @@ import {
   resolveFinalInvitationPipelineIntent,
   resolveInvitationPipelineIntent,
   shouldRetryInvitationImage,
+  shouldSkipInvitationImageJudge,
+  shouldSkipInvitationOverlayCopy,
+  shouldSkipInvitationVisionCall,
+  shouldSkipNanoBananaInteractions,
   stripFaceBeautifyLanguage,
 } from './invitationPromptFidelity.ts';
 
@@ -601,6 +605,36 @@ describe('compact image prompt', () => {
     assert.ok(locks.some((lock) => /gold border/i.test(lock)));
     assert.deepEqual(parseInvitationLocks(['  Keep faces  ', 'Keep faces', '', 12]), ['Keep faces']);
     assert.match(invitationPipelineModeSentence('refine'), /MODE refine/);
+  });
+});
+
+describe('invitation token-saving skips', () => {
+  it('saute la vision sans photos utilisateur, en couple, et en mode rapide', () => {
+    assert.equal(shouldSkipInvitationVisionCall({ hasUserReferencePhotos: false }), true);
+    assert.equal(shouldSkipInvitationVisionCall({ styleRefsOnly: true, hasUserReferencePhotos: true }), true);
+    assert.equal(shouldSkipInvitationVisionCall({ coupleFaceSwap: true, hasUserReferencePhotos: true }), true);
+    assert.equal(
+      shouldSkipInvitationVisionCall({ speedMode: 'fast', hasUserReferencePhotos: true }),
+      true,
+    );
+    assert.equal(
+      shouldSkipInvitationVisionCall({ speedMode: 'quality', hasUserReferencePhotos: true }),
+      false,
+    );
+  });
+
+  it('saute le juge et Interactions seulement en mode rapide', () => {
+    assert.equal(shouldSkipInvitationImageJudge('fast'), true);
+    assert.equal(shouldSkipInvitationImageJudge('quality'), false);
+    assert.equal(shouldSkipNanoBananaInteractions('fast'), true);
+    assert.equal(shouldSkipNanoBananaInteractions('quality'), false);
+  });
+
+  it('saute la rédaction overlay si les textes structurés existent déjà', () => {
+    assert.equal(shouldSkipInvitationOverlayCopy({ embedText: true }), true);
+    assert.equal(shouldSkipInvitationOverlayCopy({ preservedExistingCopy: true }), true);
+    assert.equal(shouldSkipInvitationOverlayCopy({ hasStructuredIdentity: true }), true);
+    assert.equal(shouldSkipInvitationOverlayCopy({}), false);
   });
 });
 
