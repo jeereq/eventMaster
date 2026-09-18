@@ -62,6 +62,15 @@ import {
   retryFlexPayTicketOrder,
   cancelFlexPayTicketOrder,
 } from '../controllers/flexPayController';
+import {
+  listPublicInvitationTemplateFavorites,
+  addPublicInvitationTemplateFavorite,
+  removePublicInvitationTemplateFavorite,
+  listUserInvitationTemplateFavorites,
+  addUserInvitationTemplateFavorite,
+  removeUserInvitationTemplateFavorite,
+  claimInvitationTemplateFavorites,
+} from '../controllers/invitationTemplateFavoriteController';
 
 const router = Router();
 
@@ -161,6 +170,14 @@ router.post('/ai-simulations/claim', requireAuth, claimPublicAiSimulations);
 router.post('/ai-tokens/checkout', optionalAuth, checkoutAiTokens);
 router.get('/ai-tokens/orders/:orderId/verify', verifyAiTokensOrder);
 router.get('/ai-tokens/device/:deviceId/balance', optionalAuth, getAiTokensDeviceBalance);
+
+router.get('/invitation-favorites', listPublicInvitationTemplateFavorites);
+router.post('/invitation-favorites', addPublicInvitationTemplateFavorite);
+router.delete('/invitation-favorites/:templateId', removePublicInvitationTemplateFavorite);
+router.get('/invitation-favorites/mine', requireAuth, listUserInvitationTemplateFavorites);
+router.post('/invitation-favorites/mine', requireAuth, addUserInvitationTemplateFavorite);
+router.delete('/invitation-favorites/mine/:templateId', requireAuth, removeUserInvitationTemplateFavorite);
+router.post('/invitation-favorites/claim', requireAuth, claimInvitationTemplateFavorites);
 
 router.post('/payments/flexpay/callback', flexPayCardCallback);
 router.get('/payments/flexpay/callback', flexPayCardCallback);
