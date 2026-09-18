@@ -413,6 +413,101 @@ interface TenantSubscriptionHistoryEntry {
  } | null;
 }
 
+function filterAdminDashboardEvents<T extends {
+  title: string;
+  location: string;
+  tenantName: string;
+  date: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  isPublic?: boolean;
+  ticketingEnabled?: boolean;
+}>(
+  adminEvents: T[],
+  searchTerm: string,
+  filterEventWhen: string,
+  filterEventOrg: string,
+  filterEventGps: string,
+  filterEventVisibility: string,
+  filterEventTicketing: string,
+): T[] {
+  const needle = searchTerm.toLowerCase();
+  const now = Date.now();
+  return adminEvents.filter((event) => {
+    const matchesSearch =
+      event.title.toLowerCase().includes(needle) ||
+      event.location.toLowerCase().includes(needle) ||
+      event.tenantName.toLowerCase().includes(needle);
+    const when = new Date(event.date).getTime();
+    const matchesWhen =
+      filterEventWhen === 'ALL' ||
+      (filterEventWhen === 'upcoming' && when >= now) ||
+      (filterEventWhen === 'past' && when < now);
+    const matchesOrg = filterEventOrg === 'ALL' || event.tenantName === filterEventOrg;
+    const hasGps = Boolean(event.latitude && event.longitude);
+    const matchesGps =
+      filterEventGps === 'ALL' ||
+      (filterEventGps === 'yes' && hasGps) ||
+      (filterEventGps === 'no' && !hasGps);
+    const matchesVisibility =
+      filterEventVisibility === 'ALL' ||
+      (filterEventVisibility === 'public' && Boolean(event.isPublic)) ||
+      (filterEventVisibility === 'private' && !event.isPublic);
+    const matchesTicketing =
+      filterEventTicketing === 'ALL' ||
+      (filterEventTicketing === 'yes' && Boolean(event.ticketingEnabled)) ||
+      (filterEventTicketing === 'no' && !event.ticketingEnabled);
+    return matchesSearch && matchesWhen && matchesOrg && matchesGps && matchesVisibility && matchesTicketing;
+  });
+}
+
+function filterAdminDashboardGuests<T extends {
+  firstName: string;
+  lastName: string;
+  email: string;
+  category: string;
+  eventTitle: string;
+  tenantName: string;
+  rsvp: string;
+  checkedInAt?: string | null;
+  seatingInvitationPdfUrl?: string | null;
+}>(
+  adminGuests: T[],
+  searchTerm: string,
+  filterRsvp: string,
+  filterGuestOrg: string,
+  filterGuestEvent: string,
+  filterGuestCategory: string,
+  filterGuestCheckin: string,
+  filterGuestPdf: string,
+): T[] {
+  const needle = searchTerm.toLowerCase();
+  return adminGuests.filter((guest) => {
+    const matchesSearch =
+      guest.firstName.toLowerCase().includes(needle) ||
+      guest.lastName.toLowerCase().includes(needle) ||
+      guest.email.toLowerCase().includes(needle) ||
+      guest.category.toLowerCase().includes(needle) ||
+      guest.eventTitle.toLowerCase().includes(needle) ||
+      guest.tenantName.toLowerCase().includes(needle);
+    const matchesRsvp = filterRsvp === 'ALL' || guest.rsvp === filterRsvp;
+    const matchesOrg = filterGuestOrg === 'ALL' || guest.tenantName === filterGuestOrg;
+    const matchesEvent = filterGuestEvent === 'ALL' || guest.eventTitle === filterGuestEvent;
+    const matchesCategory = filterGuestCategory === 'ALL' || guest.category === filterGuestCategory;
+    const checkedIn = Boolean(guest.checkedInAt);
+    const matchesCheckin =
+      filterGuestCheckin === 'ALL' ||
+      (filterGuestCheckin === 'in' && checkedIn) ||
+      (filterGuestCheckin === 'out' && !checkedIn);
+    const hasPdf = Boolean(guest.seatingInvitationPdfUrl);
+    const matchesPdf =
+      filterGuestPdf === 'ALL' ||
+      (filterGuestPdf === 'delivered' && hasPdf) ||
+      (filterGuestPdf === 'missing' && guest.rsvp === 'ACCEPTED' && !hasPdf);
+    return matchesSearch && matchesRsvp && matchesOrg && matchesEvent && matchesCategory && matchesCheckin && matchesPdf;
+  });
+}
+
 function DashboardPageContent() {
  const { user, tenant, access, planQuota, enterSupportSession } = useAuth();
  const { site } = usePlatformSite();
@@ -491,20 +586,14 @@ function DashboardPageContent() {
  const searchParams = useSearchParams();
  const router = useRouter();
 
-  if (access?.level === 'client' || tenant?.accountKind === 'CLIENT') {
-    return <ClientDashboardHome />;
- }
-
  const tabParam = searchParams.get('tab');
  const sectionParam = searchParams.get('section');
  const activeAnalyticsSection: AnalyticsSection =
  sectionParam && ANALYTICS_SECTIONS.some((s) => s.id === sectionParam)
  ? (sectionParam as AnalyticsSection)
  : 'overview';
-
- if (access?.isProtocolOnly) {
-  return <ProtocolDashboardHome />;
- }
+ const isClientDashboard = access?.level === 'client' || tenant?.accountKind === 'CLIENT';
+ const isProtocolDashboard = Boolean(access?.isProtocolOnly);
 
  const setAnalyticsSection = (section: AnalyticsSection) => {
  router.replace(`/dashboard?tab=analytics&section=${section}`, { scroll: false });
@@ -663,6 +752,37 @@ function DashboardPageContent() {
  const [guestsPageSize, setGuestsPageSize] = usePageSize('admin-guests', 8);
  const [homeEventsPageSize, setHomeEventsPageSize] = usePageSize('home-events', 6);
  const [plansPageSize, setPlansPageSize] = usePageSize('admin-plans', 4);
+
+ const filteredEvents = useMemo(
+  () =>
+   filterAdminDashboardEvents(
+    adminEvents,
+    searchTerm,
+    filterEventWhen,
+    filterEventOrg,
+    filterEventGps,
+    filterEventVisibility,
+    filterEventTicketing,
+   ),
+  [adminEvents, searchTerm, filterEventWhen, filterEventOrg, filterEventGps, filterEventVisibility, filterEventTicketing],
+ );
+ const filteredGuests = useMemo(
+  () =>
+   filterAdminDashboardGuests(
+    adminGuests,
+    searchTerm,
+    filterRsvp,
+    filterGuestOrg,
+    filterGuestEvent,
+    filterGuestCategory,
+    filterGuestCheckin,
+    filterGuestPdf,
+   ),
+  [adminGuests, searchTerm, filterRsvp, filterGuestOrg, filterGuestEvent, filterGuestCategory, filterGuestCheckin, filterGuestPdf],
+ );
+ const paginatedEvents = usePaginateItems(filteredEvents, eventsPage, eventsPageSize);
+ const paginatedGuests = usePaginateItems(filteredGuests, guestsPage, guestsPageSize);
+ const paginatedPlanIds = usePaginateItems(PLAN_IDS, plansPage, plansPageSize);
 
  // Guest CRUD Modals states (Super Admin)
  const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
@@ -1920,6 +2040,14 @@ function DashboardPageContent() {
  return null;
  }, [billing, planQuota, user?.role]);
 
+ if (isClientDashboard) {
+  return <ClientDashboardHome />;
+ }
+
+ if (isProtocolDashboard) {
+  return <ProtocolDashboardHome />;
+ }
+
  if (loading) {
  return <SkeletonDashboardHome />;
  }
@@ -1946,59 +2074,9 @@ function DashboardPageContent() {
  // Filter templates
  const filteredTemplates = templates;
 
- // Filter events
- const filteredEvents = adminEvents.filter(e => {
- const matchesSearch = e.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
- e.location.toLowerCase().includes(searchTerm.toLowerCase()) || 
- e.tenantName.toLowerCase().includes(searchTerm.toLowerCase());
- const now = Date.now();
- const when = new Date(e.date).getTime();
- const matchesWhen = filterEventWhen === 'ALL'
-  || (filterEventWhen === 'upcoming' && when >= now)
-  || (filterEventWhen === 'past' && when < now);
- const matchesOrg = filterEventOrg === 'ALL' || e.tenantName === filterEventOrg;
- const hasGps = Boolean(e.latitude && e.longitude);
- const matchesGps = filterEventGps === 'ALL'
-  || (filterEventGps === 'yes' && hasGps)
-  || (filterEventGps === 'no' && !hasGps);
- const matchesVisibility = filterEventVisibility === 'ALL'
-  || (filterEventVisibility === 'public' && Boolean(e.isPublic))
-  || (filterEventVisibility === 'private' && !e.isPublic);
- const matchesTicketing = filterEventTicketing === 'ALL'
-  || (filterEventTicketing === 'yes' && Boolean(e.ticketingEnabled))
-  || (filterEventTicketing === 'no' && !e.ticketingEnabled);
- return matchesSearch && matchesWhen && matchesOrg && matchesGps && matchesVisibility && matchesTicketing;
- });
-
- // Filter guests
- const filteredGuests = adminGuests.filter(g => {
- const matchesSearch = g.firstName.toLowerCase().includes(searchTerm.toLowerCase()) || 
- g.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
- g.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
- g.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
- g.eventTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
- g.tenantName.toLowerCase().includes(searchTerm.toLowerCase());
- const matchesRsvp = filterRsvp === 'ALL' || g.rsvp === filterRsvp;
- const matchesOrg = filterGuestOrg === 'ALL' || g.tenantName === filterGuestOrg;
- const matchesEvent = filterGuestEvent === 'ALL' || g.eventTitle === filterGuestEvent;
- const matchesCategory = filterGuestCategory === 'ALL' || g.category === filterGuestCategory;
- const checkedIn = Boolean(g.checkedInAt);
- const matchesCheckin = filterGuestCheckin === 'ALL'
-  || (filterGuestCheckin === 'in' && checkedIn)
-  || (filterGuestCheckin === 'out' && !checkedIn);
- const hasPdf = Boolean(g.seatingInvitationPdfUrl);
- const matchesPdf = filterGuestPdf === 'ALL'
-  || (filterGuestPdf === 'delivered' && hasPdf)
-  || (filterGuestPdf === 'missing' && g.rsvp === 'ACCEPTED' && !hasPdf);
- return matchesSearch && matchesRsvp && matchesOrg && matchesEvent && matchesCategory && matchesCheckin && matchesPdf;
- });
-
  const paginatedTenants = filteredTenants;
  const paginatedUsers = filteredUsers;
  const paginatedTemplates = filteredTemplates;
- const paginatedEvents = usePaginateItems(filteredEvents, eventsPage, eventsPageSize);
- const paginatedGuests = usePaginateItems(filteredGuests, guestsPage, guestsPageSize);
- const paginatedPlanIds = usePaginateItems([...PLAN_IDS], plansPage, plansPageSize);
  const userOrgOptions = tenantOptions.map((t) => t.name).filter(Boolean).sort();
  const eventOrgOptions = [...new Set(adminEvents.map((e) => e.tenantName).filter(Boolean))].sort();
  const guestOrgOptions = [...new Set(adminGuests.map((g) => g.tenantName).filter(Boolean))].sort();
@@ -4869,7 +4947,6 @@ function DashboardPageContent() {
  }
 
  // Render Regular Tenant Dashboard
- const homeEvents = usePaginateItems(events, homeEventsPage, homeEventsPageSize);
  const usage = orgQuota?.usage;
  const limits = orgQuota?.limits;
  const formatQuota = (used?: number, max?: number) => {

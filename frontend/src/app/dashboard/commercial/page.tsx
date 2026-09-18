@@ -137,6 +137,9 @@ export default function CommercialDashboardPage() {
  }
  };
 
+ const paginatedOrgs = usePaginateItems(data?.organizations || [], orgsPage, orgsPageSize);
+ const paginatedComms = usePaginateItems(data?.commissions || [], commPage, commPageSize);
+
  if (user?.role !== 'COMMERCIAL') {
  return (
  <div className="text-center py-20 text-muted">
@@ -148,9 +151,6 @@ export default function CommercialDashboardPage() {
  if (loading || !data) {
  return <SkeletonCommercialView />;
  }
-
- const paginatedOrgs = usePaginateItems(data.organizations, orgsPage, orgsPageSize);
- const paginatedComms = usePaginateItems(data.commissions, commPage, commPageSize);
 
  return (
  <div className="space-y-6">
