@@ -326,12 +326,12 @@ describe('optimizeReferenceImageUrl', () => {
     const optimized = optimizeReferenceImageUrl(raw);
     assert.equal(
       optimized,
-      'https://res.cloudinary.com/eventmaster/image/upload/f_auto,q_auto:good,w_1536,c_limit/v12345/couple.jpg',
+      'https://res.cloudinary.com/eventmaster/image/upload/f_auto,q_auto:best,w_2048,c_limit/v12345/couple.jpg',
     );
   });
 
   it('ne ré-injecte pas de transformation si elle est déjà présente', () => {
-    const already = 'https://res.cloudinary.com/eventmaster/image/upload/f_auto,q_auto:good,w_1536,c_limit/v12345/couple.jpg';
+    const already = 'https://res.cloudinary.com/eventmaster/image/upload/f_auto,q_auto:best,w_2048,c_limit/v12345/couple.jpg';
     assert.equal(optimizeReferenceImageUrl(already), already);
   });
 
@@ -572,7 +572,7 @@ describe('compact image prompt', () => {
     assert.ok(couplePrompt.includes(NANO_BANANA_CARD_EXPRESSION_LOCK));
     assert.ok(couplePrompt.includes(NANO_BANANA_COMPACT_FACE_LOCK));
     assert.doesNotMatch(couplePrompt, /IDENTITY ANCHOR/);
-    assert.ok(couplePrompt.length < 2500);
+    assert.ok(couplePrompt.length <= COMPACT_IMAGE_PROMPT_MAX_CHARS);
   });
 
   it('interdit le texte peint sur un modèle public', () => {
