@@ -131,6 +131,7 @@ export default function CatalogueFilterBar({
   shareUrl,
   shareTitle,
   topSlot,
+  topSlotClassName,
 }: {
   search: string;
   onSearchChange: (value: string) => void;
@@ -160,6 +161,7 @@ export default function CatalogueFilterBar({
   shareUrl?: string;
   shareTitle?: string;
   topSlot?: React.ReactNode;
+  topSlotClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [applying, setApplying] = useState(false);
@@ -308,7 +310,7 @@ export default function CatalogueFilterBar({
     return (
       <div className="space-y-1.5">
         {topSlot ? (
-          <div className="pointer-events-auto overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className={cn('pointer-events-auto overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none]', topSlotClassName)}>
             {topSlot}
           </div>
         ) : null}
@@ -383,7 +385,7 @@ export default function CatalogueFilterBar({
   return (
     <div className="rounded-[var(--radius-card)] border border-border bg-surface p-1.5 sm:p-4 space-y-1.5 sm:space-y-3 shadow-[var(--shadow-soft)] overflow-hidden">
       {topSlot ? (
-        <div className="pb-1.5 sm:pb-2 border-b border-border/70">
+        <div className={cn('pb-1.5 sm:pb-2 border-b border-border/70', topSlotClassName)}>
           {topSlot}
         </div>
       ) : null}

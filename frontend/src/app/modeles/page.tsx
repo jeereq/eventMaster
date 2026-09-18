@@ -285,6 +285,7 @@ export default function ModelesPage() {
               setSelectedCategory(draftCategory);
               setSortMode(draftSortMode);
             }}
+            topSlotClassName="hidden sm:block"
             topSlot={
               <CatalogueChoicePills
                 options={CATEGORY_OPTIONS.map((c) => ({
