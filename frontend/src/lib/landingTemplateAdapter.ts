@@ -7,6 +7,7 @@ export interface PublicTemplateDto {
   tenantId?: string | null;
   isGlobal?: boolean;
   showOnLanding?: boolean;
+  aiTokenCost?: number;
   content?: {
     global?: {
       bgType?: 'color' | 'image' | 'pattern';
@@ -89,6 +90,10 @@ export function dbTemplateToLandingTemplate(t: PublicTemplateDto): LandingTempla
     name: t.name,
     category,
     group: category,
+    aiTokenCost:
+      typeof t.aiTokenCost === 'number' && Number.isFinite(t.aiTokenCost)
+        ? Math.min(50, Math.max(1, Math.round(t.aiTokenCost)))
+        : 2,
     description:
       t.description ||
       global.landingDescription ||

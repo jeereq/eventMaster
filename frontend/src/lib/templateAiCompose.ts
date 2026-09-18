@@ -78,6 +78,7 @@ export async function composeTemplateWithAi(input: {
   speedMode?: AiSpeedMode;
   coupleFaceSwap?: boolean;
   structuredBrief?: InvitationStructuredBrief;
+  sourceTemplateId?: string;
 }): Promise<TemplateAiComposeResult | StudioJobAccepted> {
   const deviceId = getOrCreateDeviceId();
   const imageUrls = [...(input.imageUrls || [])];
@@ -99,6 +100,7 @@ export async function composeTemplateWithAi(input: {
     speedMode: input.speedMode || 'quality',
     coupleFaceSwap: Boolean(input.coupleFaceSwap),
     structuredBrief: input.structuredBrief,
+    sourceTemplateId: input.sourceTemplateId,
     background: true,
   });
   if (isStudioJobAccepted(data)) return data;
@@ -126,6 +128,7 @@ export async function composeTemplateWithAiPublic(input: {
   speedMode?: AiSpeedMode;
   coupleFaceSwap?: boolean;
   structuredBrief?: InvitationStructuredBrief;
+  sourceTemplateId?: string;
 }): Promise<TemplateAiComposeResult | StudioJobAccepted> {
   const deviceId = getOrCreateDeviceId();
   const imageDataUrls: string[] = [];
@@ -152,6 +155,7 @@ export async function composeTemplateWithAiPublic(input: {
     speedMode: input.speedMode || 'quality',
     coupleFaceSwap: Boolean(input.coupleFaceSwap),
     structuredBrief: input.structuredBrief,
+    sourceTemplateId: input.sourceTemplateId,
     background: true,
   });
   if (isStudioJobAccepted(data)) return data;

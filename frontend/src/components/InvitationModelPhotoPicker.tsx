@@ -44,6 +44,7 @@ export default function InvitationModelPhotoPicker({
           id: template.id,
           name: template.name,
           previewContent: template.previewContent,
+          aiTokenCost: template.aiTokenCost,
         }))));
       })
       .finally(() => {

@@ -123,6 +123,7 @@ router.get('/templates', async (_req: Request, res: Response) => {
           tenantId: null,
           isGlobal: true,
           showOnLanding: t.showOnLanding,
+          aiTokenCost: t.aiTokenCost ?? 2,
           category: content?.global?.landingCategory || 'private',
           description: content?.global?.landingDescription || null,
           createdAt: t.createdAt,

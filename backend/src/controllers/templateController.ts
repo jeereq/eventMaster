@@ -11,8 +11,9 @@ import {
   consumeAiSimulationCredit,
   requireAiSimulationCredit,
   isUnlimitedAiTokenUser,
-  AI_INVITATION_COMPOSE_TOKEN_COST,
+  clampInvitationTokenCost,
 } from '../services/aiSimulationWalletService';
+import { resolveInvitationComposeTokenCost } from '../services/invitationComposeTokenCost';
 import {
   saveAiTemplateComposeRun,
   listAiTemplateComposeRuns,
@@ -150,7 +151,7 @@ export async function createTemplate(req: AuthenticatedRequest, res: Response) {
     const isSuperAdmin = canManagePlatformTemplates(req.user);
     const tenantId = req.user?.tenantId;
     
-    const { name, content, targetTenantId, showOnLanding } = req.body;
+    const { name, content, targetTenantId, showOnLanding, aiTokenCost } = req.body;
 
     if (!isSuperAdmin && !tenantId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
@@ -195,6 +196,9 @@ export async function createTemplate(req: AuthenticatedRequest, res: Response) {
         name,
         content: ensureMandatoryRsvpFieldsOnContent(content || {}) as object,
         showOnLanding: isSuperAdmin && !finalTenantId ? Boolean(showOnLanding) : false,
+        ...(isSuperAdmin && !finalTenantId
+          ? { aiTokenCost: clampInvitationTokenCost(aiTokenCost) }
+          : {}),
       },
     });
 
@@ -253,7 +257,7 @@ export async function updateTemplate(req: AuthenticatedRequest, res: Response) {
     const isSuperAdmin = canManagePlatformTemplates(req.user);
     const tenantId = req.user?.tenantId;
     const id = req.params.id as string;
-    const { name, content, targetTenantId, showOnLanding } = req.body;
+    const { name, content, targetTenantId, showOnLanding, aiTokenCost } = req.body;
 
     if (!isSuperAdmin && !tenantId) {
       return res.status(403).json({ error: 'Tenant non identifié' });
@@ -302,6 +306,9 @@ export async function updateTemplate(req: AuthenticatedRequest, res: Response) {
         updateData.showOnLanding = false;
       } else if (showOnLanding !== undefined) {
         updateData.showOnLanding = Boolean(showOnLanding);
+      }
+      if (!resolvedTenantId && aiTokenCost !== undefined) {
+        updateData.aiTokenCost = clampInvitationTokenCost(aiTokenCost);
       }
     }
 
@@ -524,9 +531,12 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
     const variantsCount = typeof body.variantsCount === 'number' ? body.variantsCount : undefined;
     const speedMode = body.speedMode === 'fast' ? 'fast' : 'quality';
     const imageUrls = await resolveComposeImageUrls(body, isSuperAdmin ? null : tenantId);
+    const tokenCost = await resolveInvitationComposeTokenCost({
+      sourceTemplateId: typeof body.sourceTemplateId === 'string' ? body.sourceTemplateId : null,
+    });
 
     const unlimited = isUnlimitedAiTokenUser(authUser);
-    await requireAiSimulationCredit(deviceId, authUser.id, AI_INVITATION_COMPOSE_TOKEN_COST, { unlimited });
+    await requireAiSimulationCredit(deviceId, authUser.id, tokenCost, { unlimited });
     const composeInput = {
       userId: authUser.id,
       tenantId: isSuperAdmin ? null : tenantId,
@@ -559,7 +569,7 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
         content: result.content,
         stage: result.stage,
       });
-      const allowance = await consumeAiSimulationCredit(deviceId, authUser.id, AI_INVITATION_COMPOSE_TOKEN_COST, {
+      const allowance = await consumeAiSimulationCredit(deviceId, authUser.id, tokenCost, {
         action: 'invitation_compose',
         source: unlimited && authUser.impersonatedBy ? 'support' : 'studio',
         relatedId: historyId,
@@ -573,7 +583,14 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
           metadata: { href: '/dashboard/templates', historyId, kind: 'invitation' },
         });
       }
-      return { content: result.content, stage: result.stage, historyId, remaining: allowance.totalRemaining, allowance };
+      return {
+        content: result.content,
+        stage: result.stage,
+        historyId,
+        remaining: allowance.totalRemaining,
+        allowance,
+        tokenCost,
+      };
     };
 
     if (body.background === true) {
@@ -651,9 +668,12 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
     const speedMode = body.speedMode === 'fast' ? 'fast' : 'quality';
     const imageUrls = await resolveComposeImageUrls(body, user?.tenantId || null);
     const rateKey = user?.id || req.ip || deviceId;
+    const tokenCost = await resolveInvitationComposeTokenCost({
+      sourceTemplateId: typeof body.sourceTemplateId === 'string' ? body.sourceTemplateId : null,
+    });
 
     const unlimited = isUnlimitedAiTokenUser(user);
-    await requireAiSimulationCredit(deviceId, user?.id || null, AI_INVITATION_COMPOSE_TOKEN_COST, { unlimited });
+    await requireAiSimulationCredit(deviceId, user?.id || null, tokenCost, { unlimited });
     const runCompose = async () => {
       const result = await composeInvitationTemplateAi({
         userId: rateKey,
@@ -685,7 +705,7 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
         content: result.content,
         stage: result.stage,
       });
-      const allowance = await consumeAiSimulationCredit(deviceId, user?.id || null, AI_INVITATION_COMPOSE_TOKEN_COST, {
+      const allowance = await consumeAiSimulationCredit(deviceId, user?.id || null, tokenCost, {
         action: 'invitation_compose',
         source: unlimited && user?.impersonatedBy ? 'support' : user?.id ? 'studio' : 'landing',
         relatedId: historyId,
@@ -699,7 +719,14 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
           metadata: { href: '/modeles', historyId, kind: 'invitation' },
         });
       }
-      return { content: result.content, stage: result.stage, historyId, remaining: allowance.totalRemaining, allowance };
+      return {
+        content: result.content,
+        stage: result.stage,
+        historyId,
+        remaining: allowance.totalRemaining,
+        allowance,
+        tokenCost,
+      };
     };
 
     if (body.background === true) {

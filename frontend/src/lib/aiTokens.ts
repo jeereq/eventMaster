@@ -10,10 +10,21 @@ export const AI_TOKEN_PACK_SIZE = 6;
 export const AI_TOKEN_PACK_PRICE_FC = DEFAULT_AI_TOKEN_MIN_AMOUNT_FC;
 /** 1 jeton = 1 simulation budget. */
 export const AI_SIMULATION_TOKEN_COST = 1;
-/** 2 jetons = 1 génération d’invitation (image). */
+/** 2 jetons = 1 génération d’invitation (image) — défaut si le modèle n’a pas de prix. */
 export const AI_INVITATION_COMPOSE_TOKEN_COST = 2;
 /** 3 jetons = 1 composition ou lecture de plan de salle. */
 export const AI_ROOM_PLAN_TOKEN_COST = 3;
+
+/** Coût invitation : prix du modèle source, sinon défaut plateforme. */
+export function resolveInvitationComposeTokenCostClient(
+  model?: { aiTokenCost?: number | null } | null,
+): number {
+  const raw = model?.aiTokenCost;
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    return Math.min(50, Math.max(1, Math.round(raw)));
+  }
+  return AI_INVITATION_COMPOSE_TOKEN_COST;
+}
 
 export type AiTokenPricing = {
   priceCdf: number;
@@ -39,7 +50,7 @@ export function resolveAiTokenPricing(site?: {
 }
 
 export function aiTokenCostLegend(): string {
-  return `${AI_SIMULATION_TOKEN_COST} jeton = budget · ${AI_INVITATION_COMPOSE_TOKEN_COST} = invitation · ${AI_ROOM_PLAN_TOKEN_COST} = plan de salle`;
+  return `${AI_SIMULATION_TOKEN_COST} jeton = budget · invitation dès ${AI_INVITATION_COMPOSE_TOKEN_COST} (selon modèle) · ${AI_ROOM_PLAN_TOKEN_COST} = plan de salle`;
 }
 
 export function canAffordAiAction(

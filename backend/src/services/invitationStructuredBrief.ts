@@ -13,6 +13,15 @@ export type InvitationStructuredBrief = {
   language: InvitationCopyLanguage | null;
   mood: string[];
   mustKeep: string;
+  title: string;
+  honorees: string;
+  date: string;
+  description: string;
+  /** En mode modification : quels champs remplacer sur le modèle. */
+  replaceTitle: boolean;
+  replaceHonorees: boolean;
+  replaceDate: boolean;
+  replaceDescription: boolean;
 };
 
 export const INVITATION_CEREMONIES: readonly InvitationCeremonyId[] = [
@@ -38,13 +47,30 @@ export const EVENTMASTER_STYLE_FEWSHOT = `EVENTMASTER STYLE (object fidelity —
 - Example 2: Afro-luxe Kuba / Kasai velvet border, burnished gold, warm Kinshasa light, no painted letters.`;
 
 export function emptyInvitationStructuredBrief(): InvitationStructuredBrief {
-  return { ceremony: null, language: null, mood: [], mustKeep: '' };
+  return {
+    ceremony: null,
+    language: null,
+    mood: [],
+    mustKeep: '',
+    title: '',
+    honorees: '',
+    date: '',
+    description: '',
+    replaceTitle: true,
+    replaceHonorees: true,
+    replaceDate: true,
+    replaceDescription: true,
+  };
 }
 
 export function parseInvitationCeremony(value: unknown): InvitationCeremonyId | null {
   return typeof value === 'string' && (INVITATION_CEREMONIES as readonly string[]).includes(value)
     ? (value as InvitationCeremonyId)
     : null;
+}
+
+function parseShortText(value: unknown, max: number): string {
+  return typeof value === 'string' ? value.trim().slice(0, max) : '';
 }
 
 export function parseInvitationStructuredBrief(raw: unknown): InvitationStructuredBrief {
@@ -71,12 +97,29 @@ export function parseInvitationStructuredBrief(raw: unknown): InvitationStructur
     ceremony: parseInvitationCeremony(value.ceremony),
     language,
     mood,
-    mustKeep: typeof value.mustKeep === 'string' ? value.mustKeep.trim().slice(0, 160) : '',
+    mustKeep: parseShortText(value.mustKeep, 160),
+    title: parseShortText(value.title, 120),
+    honorees: parseShortText(value.honorees, 160),
+    date: parseShortText(value.date, 80),
+    description: parseShortText(value.description, 280),
+    replaceTitle: value.replaceTitle !== false,
+    replaceHonorees: value.replaceHonorees !== false,
+    replaceDate: value.replaceDate !== false,
+    replaceDescription: value.replaceDescription !== false,
   };
 }
 
 export function hasInvitationStructuredBrief(brief: InvitationStructuredBrief): boolean {
-  return Boolean(brief.ceremony || brief.language || brief.mood.length || brief.mustKeep);
+  return Boolean(
+    brief.ceremony ||
+      brief.language ||
+      brief.mood.length ||
+      brief.mustKeep ||
+      brief.title ||
+      brief.honorees ||
+      brief.date ||
+      brief.description,
+  );
 }
 
 export function formatInvitationStructuredBrief(brief: InvitationStructuredBrief): string {
@@ -86,6 +129,21 @@ export function formatInvitationStructuredBrief(brief: InvitationStructuredBrief
   if (brief.language) lines.push(`- Language: ${brief.language}`);
   if (brief.mood.length) lines.push(`- Mood: ${brief.mood.join(', ')}`);
   if (brief.mustKeep) lines.push(`- Must keep: ${brief.mustKeep}`);
+  if (brief.title || brief.honorees || brief.date || brief.description) {
+    lines.push('CARD VARIABLES:');
+    if (brief.title) lines.push(`- Title: ${brief.title}`);
+    if (brief.honorees) lines.push(`- Honorees / couple / hosts: ${brief.honorees}`);
+    if (brief.date) lines.push(`- Date: ${brief.date}`);
+    if (brief.description) lines.push(`- Description: ${brief.description}`);
+    const replace: string[] = [];
+    if (brief.title && brief.replaceTitle) replace.push('title');
+    if (brief.honorees && brief.replaceHonorees) replace.push('honorees');
+    if (brief.date && brief.replaceDate) replace.push('date');
+    if (brief.description && brief.replaceDescription) replace.push('description');
+    if (replace.length) {
+      lines.push(`- Replace on model image (keep layout): ${replace.join(', ')}`);
+    }
+  }
   return lines.join('\n');
 }
 

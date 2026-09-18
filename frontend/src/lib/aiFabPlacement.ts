@@ -118,9 +118,9 @@ export function resolveAiFabPlacement(input: {
     return {
       mood: 'celebrate',
       label: 'Invitation IA',
-      subtitle: `${AI_INVITATION_COMPOSE_TOKEN_COST} jetons · carte éditable`,
+      subtitle: `Dès ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons · carte éditable`,
       ariaLabel: 'Aller au générateur d’invitation IA',
-      title: `Créer une carte à partir d’un brief et de photos · ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons`,
+      title: `Créer une carte à partir d’un brief et de photos · dès ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons`,
       click: 'scroll',
       scrollId: 'generateur-ia',
       href: '/modeles#generateur-ia',
@@ -156,9 +156,9 @@ export function resolveAiFabPlacement(input: {
     return {
       mood: 'work',
       label: 'Invitation IA',
-      subtitle: `${AI_INVITATION_COMPOSE_TOKEN_COST} jetons · studio`,
+      subtitle: `Dès ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons · studio`,
       ariaLabel: 'Jetons IA pour le studio d’invitations',
-      title: `Utilisez « Créer avec l’IA » dans le studio · ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons`,
+      title: `Utilisez « Créer avec l’IA » dans le studio · dès ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons`,
       click: 'open',
       modalTitle: 'Studio IA',
       modalDescription: `Vous êtes dans le studio. ${aiTokenCostLegend()}.`,

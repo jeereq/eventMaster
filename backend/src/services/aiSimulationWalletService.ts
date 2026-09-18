@@ -24,6 +24,14 @@ export const AI_FREE_TRIALS_MAX = 4;
 export const AI_SIMULATION_TOKEN_COST = 1;
 export const AI_INVITATION_COMPOSE_TOKEN_COST = 2;
 export const AI_ROOM_PLAN_TOKEN_COST = 3;
+/** Plafond admin pour le coût d’un modèle d’invitation. */
+export const AI_INVITATION_TOKEN_COST_MAX = 50;
+
+export function clampInvitationTokenCost(value: unknown, fallback = AI_INVITATION_COMPOSE_TOKEN_COST): number {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(AI_INVITATION_TOKEN_COST_MAX, Math.max(1, Math.round(n)));
+}
 
 export type { AiTokenAction };
 export type AiTokenLedgerSource = 'landing' | 'dashboard' | 'studio' | 'flexpay' | 'admin' | 'support' | 'signup' | 'unknown';

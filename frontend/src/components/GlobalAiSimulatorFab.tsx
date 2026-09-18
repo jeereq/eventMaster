@@ -197,7 +197,7 @@ export default function GlobalAiSimulatorFab() {
               href={placement.inviteHref}
               icon={Mail}
               title={isInviteBlocked ? 'Invitation (À venir)' : 'Invitation'}
-              detail={isInviteBlocked ? 'Fonctionnalité en préparation' : `${AI_INVITATION_COMPOSE_TOKEN_COST} jetons · carte éditable`}
+              detail={isInviteBlocked ? 'Fonctionnalité en préparation' : `Dès ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons · carte éditable`}
               active={placement.highlight === 'invite'}
               onNavigate={() => setOpen(false)}
             />

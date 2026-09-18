@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Template" ADD COLUMN IF NOT EXISTS "aiTokenCost" INTEGER NOT NULL DEFAULT 2;
