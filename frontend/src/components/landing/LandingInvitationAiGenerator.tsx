@@ -28,6 +28,7 @@ import {
   MapPin,
   User,
   Users,
+  PenTool,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -349,6 +350,7 @@ export default function LandingInvitationAiGenerator({
 
   const composeTokenCost = resolveInvitationComposeTokenCostClient(selectedModelPhoto);
   const isModifyMode = composeMode === 'modify';
+  const [formDetailsTab, setFormDetailsTab] = useState<'text' | 'style'>('text');
 
   useEffect(() => {
     return () => {
@@ -1826,59 +1828,111 @@ export default function LandingInvitationAiGenerator({
                 </div>
               )}
 
+              {coupleFaceSwap && (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 flex items-center gap-2 text-xs text-primary font-medium">
+                  <Sparkles className="w-3.5 h-3.5 shrink-0 text-primary" />
+                  <span>Harmonisation réaliste active : carnation, lumière et contours du cou fondus au décor.</span>
+                </div>
+              )}
+
               <div className="space-y-2.5">
-                {/* Inspirations prêtes à l'emploi en 1 clic */}
-                {composeMode === 'create' ? (
-                  <div className="space-y-1.5" role="group" aria-label="Inspirations festives instantanées">
-                    <span className="text-xs text-muted font-medium flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 text-primary" />
-                      Inspirations festives en 1 clic :
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {QUICK_INVITATION_INSPIRATIONS.map((item) => {
-                        const active = prompt === item.prompt;
-                        return (
-                          <button
-                            key={item.label}
-                            type="button"
-                            disabled={busy}
-                            onClick={() => {
-                              updatePromptWithHistory(item.prompt, `Inspiration : ${item.label}`);
-                              setArtStyle(item.artStyle);
-                              persistInvitationArtStyle(item.artStyle);
-                            }}
-                            className={cn(
-                              'text-xs font-semibold px-2.5 py-1 min-h-[44px] rounded-full border transition cursor-pointer inline-flex items-center gap-1.5 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                              active
-                                ? 'border-primary bg-primary-solid text-primary-foreground shadow-2xs'
-                                : 'border-border bg-surface hover:border-primary/50 hover:bg-surface-muted text-foreground',
-                            )}
-                          >
-                            <span>{item.emoji}</span>
-                            <span>{item.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                {/* Sélecteur compact : Écrits vs Ambiance */}
+                <div className="flex items-center gap-1.5 p-1 bg-surface-muted rounded-lg border border-border" role="tablist">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={formDetailsTab === 'text'}
+                    onClick={() => setFormDetailsTab('text')}
+                    className={cn(
+                      'flex-1 min-h-[36px] px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                      formDetailsTab === 'text'
+                        ? 'bg-surface text-foreground shadow-xs border border-border/80'
+                        : 'text-muted hover:text-foreground',
+                    )}
+                  >
+                    <PenTool className="w-3.5 h-3.5" />
+                    <span>Écrits de la carte</span>
+                    {hasInvitationIdentity({
+                      title: structuredBrief.title,
+                      honorees: structuredBrief.honorees,
+                      date: structuredBrief.date,
+                      description: structuredBrief.description,
+                    }) && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={formDetailsTab === 'style'}
+                    onClick={() => setFormDetailsTab('style')}
+                    className={cn(
+                      'flex-1 min-h-[36px] px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                      formDetailsTab === 'style'
+                        ? 'bg-surface text-foreground shadow-xs border border-border/80'
+                        : 'text-muted hover:text-foreground',
+                    )}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Ambiance & Cérémonie</span>
+                  </button>
+                </div>
+
+                {formDetailsTab === 'text' ? (
+                  <InvitationCardInfoFields
+                    id={`${id}-card-info`}
+                    value={structuredBrief}
+                    onChange={setStructuredBrief}
+                    showReplaceToggles={isModifyMode}
+                    disabled={busy}
+                    compact
+                  />
+                ) : (
+                  <div className="space-y-2.5">
+                    {composeMode === 'create' ? (
+                      <div className="space-y-1.5" role="group" aria-label="Inspirations festives instantanées">
+                        <span className="text-xs text-muted font-medium flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 text-primary" />
+                          Inspirations festives en 1 clic :
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {QUICK_INVITATION_INSPIRATIONS.map((item) => {
+                            const active = prompt === item.prompt;
+                            return (
+                              <button
+                                key={item.label}
+                                type="button"
+                                disabled={busy}
+                                onClick={() => {
+                                  updatePromptWithHistory(item.prompt, `Inspiration : ${item.label}`);
+                                  setArtStyle(item.artStyle);
+                                  persistInvitationArtStyle(item.artStyle);
+                                }}
+                                className={cn(
+                                  'text-xs font-semibold px-2.5 py-1 min-h-[44px] rounded-full border transition cursor-pointer inline-flex items-center gap-1.5 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                                  active
+                                    ? 'border-primary bg-primary-solid text-primary-foreground shadow-2xs'
+                                    : 'border-border bg-surface hover:border-primary/50 hover:bg-surface-muted text-foreground',
+                                )}
+                              >
+                                <span>{item.emoji}</span>
+                                <span>{item.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <InvitationStructuredBriefFields
+                      id={`${id}-structured`}
+                      value={structuredBrief}
+                      onChange={setStructuredBrief}
+                      disabled={busy}
+                      compact
+                    />
                   </div>
-                ) : null}
-
-                <InvitationStructuredBriefFields
-                  id={`${id}-structured`}
-                  value={structuredBrief}
-                  onChange={setStructuredBrief}
-                  disabled={busy}
-                  compact
-                />
-
-                <InvitationCardInfoFields
-                  id={`${id}-card-info`}
-                  value={structuredBrief}
-                  onChange={setStructuredBrief}
-                  showReplaceToggles={isModifyMode}
-                  disabled={busy}
-                  compact
-                />
+                )}
 
                 <div className="flex items-center justify-between gap-2">
                   <label htmlFor={`${id}-brief`} className="text-xs font-bold text-foreground">

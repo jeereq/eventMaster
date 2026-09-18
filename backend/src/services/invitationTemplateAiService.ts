@@ -363,7 +363,7 @@ const FACE_POLICY_KEEP_PEOPLE =
   'IDENTITY LOCK — PIXELS WIN: The attached photo(s) are the only identity source. Keep EACH person as the SAME individual (not a sibling, celebrity, or beautified lookalike). Unchanged: bone structure, eyes and gaze, exact smile, cheek volume, skin tone (never lighten), age, hair, clothing, moles/scars. Forbidden: face swap, slim/contour, symmetry, doll eyes, invented grin, airbrush, CGI. If any text description conflicts with the photo, obey the photo.';
 
 const FACE_POLICY_COUPLE_SWAP =
-  'COUPLE FACE REPLACEMENT (ZERO GENDER INVERSION) — ORGANIZER REQUESTED: Image 1 is the incoming invitation/scene. Keep composition, pose, bodies, wardrobe, décor, lighting and ornaments. Images 2+ are the couple. Strictly match genders: place the groom/man face onto the male body (suit/tuxedo) and the bride/woman face onto the female body (bridal gown/dress). Replace ONLY the face(s) on Image 1 with these exact people. If new text/names are requested in the brief, do NOT keep old names from Image 1. Honest pixels: bone structure, eyes, smile, skin tone, moles. Forbidden: beautify, skin lightening, celebrity lookalike, inverting bride/groom genders, keeping the original Image 1 faces.';
+  'COUPLE FACE REPLACEMENT (ZERO GENDER INVERSION & LIFELIKE HARMONIZATION) — ORGANIZER REQUESTED: Image 1 is the incoming invitation/scene. Keep composition, pose, bodies, wardrobe, décor, lighting and ornaments. Images 2+ are the couple. Strictly match genders: place the groom/man face onto the male body (suit/tuxedo) and the bride/woman face onto the female body (bridal gown/dress). Replace ONLY the face(s) on Image 1 with these exact people. Harmonize facial shapes, jawline, neck blending, and skin undertones with the scene lighting and body anatomy so the couple looks completely real and seamless, with zero pasted-on artifacts. If new text/names are requested in the brief, do NOT keep old names from Image 1. Honest pixels: bone structure, eyes, smile, skin tone, moles. Forbidden: beautify, skin lightening, celebrity lookalike, inverting bride/groom genders, keeping the original Image 1 faces.';
 
 function buildImagePrompt(
   userPrompt: string,
@@ -531,7 +531,8 @@ Image 1 is the incoming card / scene with hosts. Images 2+ are the couple identi
 1) Examine Image 1: locate the male host (suit/tuxedo) and female host (gown/dress). Note their left/right position.
 2) Examine Images 2+: identify the man (groom) and woman (bride).
 3) In visualAnalysis.coupleFaceMapping.strictMappingInstructions, explicitly mandate that the MAN from references replaces the MAN on Image 1 (suit), and the WOMAN from references replaces the WOMAN on Image 1 (gown).
-4) FORBIDDEN: never invert bride and groom faces (putting female face on suit or male face on gown).\n`
+4) FORBIDDEN: never invert bride and groom faces (putting female face on suit or male face on gown).
+5) LIFELIKE HARMONIZATION: Instruct seamless blending of jawline, neck, and skin tones with the card's ambient lighting and body anatomy.\n`
     : '';
 
   return `MODE: ${intent}
