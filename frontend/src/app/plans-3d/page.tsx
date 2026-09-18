@@ -27,7 +27,7 @@ import {
   SlidersHorizontal,
   Clock,
 } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import LandingRoomPlanAiStudio from '@/components/landing/LandingRoomPlanAiStudio';
 import PlanViewModeToggle from '@/components/PlanViewModeToggle';
@@ -129,11 +129,39 @@ export default function Plans3DPage() {
   const [force2d, setForce2d] = useState(true);
   const [studioBlueprint, setStudioBlueprint] = useState<RoomLayoutBlueprint | null>(null);
   const [previewReady, setPreviewReady] = useState(false);
+  const [studioOpen, setStudioOpen] = useState(false);
 
   // États des modales d'administration Super Admin / Commercial
   const [editorModalOpen, setEditorModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<ShowcasePlanData | null>(null);
   const [selectionModalOpen, setSelectionModalOpen] = useState(false);
+
+  const openRoomPlanStudio = () => {
+    setStudioOpen(true);
+    if (typeof window !== 'undefined') {
+      const nextHash = '#studio-ia';
+      if (window.location.hash !== nextHash) {
+        window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${nextHash}`);
+      }
+    }
+  };
+
+  const closeRoomPlanStudio = () => {
+    setStudioOpen(false);
+    if (typeof window !== 'undefined' && window.location.hash === '#studio-ia') {
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+    }
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const syncFromHash = () => {
+      if (window.location.hash === '#studio-ia') setStudioOpen(true);
+    };
+    syncFromHash();
+    window.addEventListener('hashchange', syncFromHash);
+    return () => window.removeEventListener('hashchange', syncFromHash);
+  }, []);
 
   useEffect(() => {
     setPreviewReady(true);
@@ -258,9 +286,10 @@ export default function Plans3DPage() {
             Voir le plan 2D / 3D
           </Button>
           <Button
-            href="#studio-ia"
+            type="button"
             size="sm"
             variant="secondary"
+            onClick={openRoomPlanStudio}
             leftIcon={isRoomBlocked ? <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" /> : <Sparkles className="w-3.5 h-3.5" />}
             className={isRoomBlocked ? 'border-amber-500/30 text-amber-800 dark:text-amber-300 bg-amber-500/10' : undefined}
           >
@@ -558,10 +587,20 @@ export default function Plans3DPage() {
           </div>
         </section>
 
-        <LandingRoomPlanAiStudio
-          defaultExpanded={false}
-          onBlueprintChange={setStudioBlueprint}
-        />
+        <Modal
+          open={studioOpen}
+          onClose={closeRoomPlanStudio}
+          title="Studio IA — plans de salle"
+          description="Brief ou photo → tables, rangées et décor posés sur le plan 2D / 3D."
+          size="full"
+          contentClassName="p-0 sm:p-0"
+        >
+          <LandingRoomPlanAiStudio
+            lockExpanded
+            onBlueprintChange={setStudioBlueprint}
+            className="border-0 shadow-none rounded-none"
+          />
+        </Modal>
 
         <section className="space-y-4">
           <div className="max-w-2xl space-y-1.5">
