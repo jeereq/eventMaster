@@ -1985,7 +1985,7 @@ export default function LandingInvitationAiGenerator({
               <div
                 className={cn(
                   'sticky bottom-0 z-30 mt-auto -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 border-t border-border',
-                  'bg-surface/95 backdrop-blur-md shadow-[0_-10px_28px_-16px_rgba(0,0,0,0.35)]',
+                  'bg-surface shadow-[0_-10px_28px_-16px_rgba(0,0,0,0.2)]',
                   'pb-[max(0.75rem,env(safe-area-inset-bottom))]',
                 )}
               >

@@ -120,6 +120,11 @@ components:
     rounded: "{rounded.full}"
     padding: "2px 8px"
     typography: "{typography.label}"
+  modal-panel:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.foreground}"
+    rounded: "{rounded.lg}"
+    padding: "20px"
   stage-panel:
     backgroundColor: "{colors.stage}"
     textColor: "{colors.stage-foreground}"
@@ -249,6 +254,12 @@ Rail `sidebar`, item actif en surface + filet. Mobile : barre basse sticky, mêm
 ### Stage panel (signature)
 Bandeau `.em-stage` : fond ardoise, halos émeraude + ambre, texte ivoire. Sert la preuve (salle 3D, CTA inversé), pas les formulaires.
 
+### Modal (atelier IA)
+Panneau plein écran (`size="full"`) pour les studios invitations / plans / budget. Titre court dans le header Modal ; pas de second bandeau titre dans le studio (`lockExpanded`). Barre d’étapes 1→2→3 en tête ; **CTA Générer sticky** en bas de colonne (toujours visible au scroll). Fond sticky `surface/95` + filet — pas de glass décoratif.
+
+### Filter bar (catalogue / modèles)
+Recherche + pastilles `CatalogueChoicePills` + bouton Filtres (modale d’application). Chips actifs avec retrait. Cibles ≥ 44px ; pas de `sm:min-h-0` sur les pastilles filtrantes publiques.
+
 ## Do's and Don'ts
 
 ### Do:
@@ -257,10 +268,13 @@ Bandeau `.em-stage` : fond ardoise, halos émeraude + ambre, texte ivoire. Sert 
 - **Do** garder Fraunces pour l’occasion et Inter pour l’outil.
 - **Do** viser 44px et `text-xs` (12px) minimum sur le texte utile.
 - **Do** tokeniser le chrome (`bg-foreground`, `bg-stage`) ; laisser les matériaux 3D en hex locaux.
+- **Do** ouvrir les ateliers IA publics en modale (`lockExpanded`) plutôt qu’en accordion inline.
+- **Do** distinguer invitations (`festive-accent`) et plans (`primary`) sans inventer pink/sky Tailwind.
 
 ### Don't:
 - **Don't** habiller le dashboard Work comme une landing Celebrate (ambre partout, scènes inversées en fond de page).
 - **Don't** poser des ombres théâtrales ou du `will-change` permanent sur les items de plan.
 - **Don't** descendre sous 12px pour un label d’éditeur, ni remplacer un `<button>` par un `div role="button"`.
-- **Don't** inventer une troisième palette (or marketing, slate Tailwind, hex de chrome).
+- **Don't** inventer une troisième palette (or marketing, slate Tailwind, hex de chrome, pink/sky ad hoc).
 - **Don't** réutiliser `--primary` clair comme fond de texte blanc en dark mode.
+- **Don't** dupliquer le sélecteur d’ateliers (onglets + bandeau bas) ni embarquer les studios complets sur la landing.

@@ -257,7 +257,7 @@ export default function ModelesPage() {
           className={cn(
             'sticky z-30 -mx-1 px-1 py-2.5',
             'top-[calc(3.5rem+env(safe-area-inset-top,0px))]',
-            'bg-background/95 backdrop-blur-md border-b border-border/70 shadow-[0_8px_20px_-16px_rgba(0,0,0,0.35)]',
+            'bg-background border-b border-border/70 shadow-[0_8px_20px_-16px_rgba(0,0,0,0.25)]',
           )}
         >
           <CatalogueFilterBar

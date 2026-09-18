@@ -663,6 +663,12 @@ export default function SimulateurPageClient() {
                 </div>
               )}
 
+              {!isBudgetBlocked && studioModalOpen ? (
+                <p className="text-sm text-muted text-center py-6" role="status">
+                  Le simulateur de budget est ouvert dans la fenêtre.
+                </p>
+              ) : null}
+
               {!isBudgetBlocked && !studioModalOpen ? (
                 <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
                   <div className="space-y-1 min-w-0">
