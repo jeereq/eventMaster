@@ -274,6 +274,13 @@ describe('buildHonestFaceIdentityHeader', () => {
     const header = buildHonestFaceIdentityHeader(3, { coupleFaceSwap: true });
     assert.match(header, /COUPLE FACE REPLACEMENT/);
     assert.match(header, /Do not keep the original faces from Image 1/);
+    assert.match(header, /GENDER & ATTIRE FIDELITY/i);
+
+    const rolesWithGender = buildReferenceRoles(3, {
+      coupleFaceSwap: true,
+      genderMappingDirective: 'GENDER LOCK: Groom to suit, bride to gown.',
+    });
+    assert.match(rolesWithGender, /GENDER LOCK: Groom to suit, bride to gown/);
 
     const processed = processUserPromptForHonestFaces(
       'Change les visages de cette carte par ceux du couple, sans lisser la peau',
@@ -283,6 +290,13 @@ describe('buildHonestFaceIdentityHeader', () => {
     assert.match(processed.englishSceneBrief, /Replace/);
     assert.match(processed.imageBrief, /replace faces on Image 1/i);
     assert.doesNotMatch(processed.identityHeader, /Forbidden: face swap|IDENTITY ANCHOR/);
+
+    const processedWithTexts = processUserPromptForHonestFaces(
+      'Remplacer les visages du couple et modifier les textes : mariés : Grace & Patrick, date : 12 Juillet 2026',
+      { referenceCount: 3, coupleFaceSwap: true },
+    );
+    assert.equal(processedWithTexts.coupleFaceSwap, true);
+    assert.match(processedWithTexts.imageBrief, /Do NOT keep old names, dates or text/i);
   });
 });
 

@@ -433,7 +433,7 @@ async function exportAdminAiTokenUsage(req, res) {
                 s.tenantName || '',
                 s.deviceId || '',
                 details ? details.speedModeLabel : '—',
-                details ? (details.variantsCount > 1 ? '2 propositions (Variations A/B)' : '1 proposition') : '—',
+                details ? (details.variantsCount > 1 ? '2 propositions (fidèle + ample)' : '1 proposition') : '—',
                 details ? (details.safetyFallbackTriggered ? 'Oui (Décor thématique)' : 'Non') : '—',
                 details ? details.estimatedCostUsd : '',
                 details ? details.estimatedCostFc : '',

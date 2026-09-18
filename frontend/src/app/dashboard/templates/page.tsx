@@ -1382,6 +1382,14 @@ export default function TemplatesPage() {
  if (aiComposeBusy) return;
  const currentCanvasBg =
    bgImageUrl && /^https?:\/\//i.test(bgImageUrl.trim()) ? bgImageUrl.trim() : '';
+ const cardIdentity = {
+   title: aiComposeTitle,
+   honorees: aiComposeHonorees,
+   date: aiComposeDate,
+   description: aiComposeStructured.description,
+ };
+ const hasTexts = hasInvitationIdentity(cardIdentity);
+
  if (aiComposeCoupleFaceSwap) {
    if (aiComposeFiles.length < 1) {
      setError('Ajoutez au moins une photo du couple.');
@@ -1391,9 +1399,9 @@ export default function TemplatesPage() {
      setError('Ajoutez l’image d’invitation dont les visages doivent être remplacés.');
      return;
    }
- } else if (aiComposePrompt.trim().length < 8) {
- setError('Décrivez la fête en quelques mots (au moins 8 caractères), puis générez.');
- return;
+ } else if (!hasTexts && aiComposePrompt.trim().length < 8) {
+   setError('Décrivez la fête en quelques mots (au moins 8 caractères), ou renseignez les informations de la carte.');
+   return;
  }
  if (!canAffordAiAction(aiAllowance, resolveInvitationComposeTokenCostClient(aiComposeModelPhoto))) {
  setError(
@@ -1443,18 +1451,34 @@ export default function TemplatesPage() {
       .map((el) => `${el.type}: "${String(el.text).trim()}"`)
       .join(', ');
 
-    const couplePrompt = aiComposePrompt.trim().length >= 8
-      ? aiComposePrompt.trim()
-      : COUPLE_FACE_SWAP_DEFAULT_PROMPT;
-    const promptToSend = aiComposeCoupleFaceSwap
-      ? couplePrompt
-      : isAlteration && existingTextSummaries
-        ? [
-            `Consigne de retouche ciblée : ${aiComposePrompt.trim()}`,
-            `Éléments clés actuels du carton à préserver impérativement : ${existingTextSummaries}`,
-            `Directive : Conserver la disposition, les textes existants et le style général du carton, en appliquant avec précision la retouche demandée.`,
-          ].join('. ')
-        : aiComposePrompt.trim();
+    let promptToSend = aiComposePrompt.trim();
+    if (!promptToSend || promptToSend === COUPLE_FACE_SWAP_DEFAULT_PROMPT) {
+      if (aiComposeCoupleFaceSwap && hasTexts) {
+        const textParts = [
+          cardIdentity.honorees ? `mariés/célébrés : ${cardIdentity.honorees}` : '',
+          cardIdentity.date ? `date : ${cardIdentity.date}` : '',
+          cardIdentity.title ? `titre : ${cardIdentity.title}` : '',
+          cardIdentity.description ? `lieu : ${cardIdentity.description}` : '',
+        ].filter(Boolean).join(', ');
+        promptToSend = `Remplacer les visages du couple (respecter les genres : marié sur costume, mariée sur robe) et modifier les textes (${textParts}). Conserver la disposition, le style et les ornements.`;
+      } else if (aiComposeCoupleFaceSwap) {
+        promptToSend = COUPLE_FACE_SWAP_DEFAULT_PROMPT;
+      } else if (isAlteration && hasTexts) {
+        const textParts = [
+          cardIdentity.honorees ? `mariés/célébrés : ${cardIdentity.honorees}` : '',
+          cardIdentity.date ? `date : ${cardIdentity.date}` : '',
+          cardIdentity.title ? `titre : ${cardIdentity.title}` : '',
+          cardIdentity.description ? `lieu : ${cardIdentity.description}` : '',
+        ].filter(Boolean).join(', ');
+        promptToSend = `Modifier le modèle en appliquant les nouveaux textes (${textParts}). Conserver le style graphique et les ornements.`;
+      }
+    } else if (!aiComposeCoupleFaceSwap && isAlteration && existingTextSummaries) {
+      promptToSend = [
+        `Consigne de retouche ciblée : ${aiComposePrompt.trim()}`,
+        `Éléments clés actuels du carton à préserver impérativement : ${existingTextSummaries}`,
+        `Directive : Conserver la disposition, les textes existants et le style général du carton, en appliquant avec précision la retouche demandée.`,
+      ].join('. ');
+    }
 
     const composeImageUrls = modelUrl && !aiComposeCoupleFaceSwap && !uploadedUrls.includes(modelUrl)
       ? [modelUrl, ...uploadedUrls]
@@ -1487,12 +1511,8 @@ export default function TemplatesPage() {
     } finally {
       window.clearTimeout(stageTimer);
     }
-    if (hasInvitationIdentity({ title: aiComposeTitle, honorees: aiComposeHonorees, date: aiComposeDate })) {
-      pendingCoupleIdentityRef.current = {
-        title: aiComposeTitle,
-        honorees: aiComposeHonorees,
-        date: aiComposeDate,
-      };
+    if (hasTexts) {
+      pendingCoupleIdentityRef.current = cardIdentity;
     }
     if (isStudioJobAccepted(result)) {
       trackJob(result.jobId, 'invitation', promptToSend);
@@ -1503,12 +1523,16 @@ export default function TemplatesPage() {
     }
     setAiComposeStage('Application du modèle…');
     const isTextChangeRequested =
-      /texte|nom|prénom|date|lieu|heure|écrit|adresse|titre|rsvp/i.test(aiComposePrompt);
+      hasTexts || /texte|nom|prénom|date|lieu|heure|écrit|adresse|titre|rsvp/i.test(aiComposePrompt);
     const preserveElements =
       isAlteration && !isTextChangeRequested && canvasElements.length > 0 && !aiComposeEmbedText;
 
+    const contentToApply = hasTexts
+      ? applyInvitationIdentityToContent(result.content, invitationIdentityForCard(cardIdentity))
+      : result.content;
+
     applyAiComposeToEditor(
-      result.content,
+      contentToApply,
       {
         setCanvasElements,
         setBgType,
@@ -1590,6 +1614,14 @@ export default function TemplatesPage() {
    (bgImageUrl && /^https?:\/\//i.test(bgImageUrl)),
  );
  const composeTokenCost = resolveInvitationComposeTokenCostClient(aiComposeModelPhoto);
+ const aiComposeCardIdentity = {
+   title: aiComposeTitle,
+   honorees: aiComposeHonorees,
+   date: aiComposeDate,
+   description: aiComposeStructured.description,
+ };
+ const aiComposeHasTexts = hasInvitationIdentity(aiComposeCardIdentity);
+
  const composeBlockedReason = aiComposeCoupleFaceSwap
    ? (aiComposeFiles.length < 1
      ? 'Ajoutez au moins une photo du couple.'
@@ -1598,7 +1630,7 @@ export default function TemplatesPage() {
        : null)
    : aiComposeIsAlteration && !hasIncomingCard
      ? 'Choisissez un modèle ou une photo de carte à modifier.'
-   : (aiComposePrompt.trim().length < 8 ? 'Décrivez la fête en quelques mots.' : null);
+   : (!aiComposeHasTexts && aiComposePrompt.trim().length < 8 ? 'Décrivez la fête en quelques mots ou renseignez les informations de la carte.' : null);
  if (typeof document === 'undefined') return null;
  return createPortal(
  <div
@@ -2260,8 +2292,14 @@ export default function TemplatesPage() {
             {aiComposeBusy
               ? 'Génération…'
               : aiComposeCoupleFaceSwap
-                ? `Remplacer les visages (${composeTokenCost} jetons)`
-                : `Générer (${composeTokenCost} jetons)`}
+                ? (aiComposeHasTexts
+                    ? `Modifier le modèle (visages & écrits · ${composeTokenCost} jetons)`
+                    : `Remplacer les visages (${composeTokenCost} jetons)`)
+                : aiComposeIsAlteration
+                  ? (aiComposeHasTexts
+                      ? `Modifier les écrits (${composeTokenCost} jetons)`
+                      : `Modifier le modèle (${composeTokenCost} jetons)`)
+                  : `Générer (${composeTokenCost} jetons)`}
  </button>
  </div>
  </div>

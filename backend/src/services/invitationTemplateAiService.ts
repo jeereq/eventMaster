@@ -1,4 +1,5 @@
 import { ensureMandatoryRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields';
+import { applyInvitationIdentityToContent, hasInvitationIdentity } from '../utils/invitationIdentity';
 import { uploadImageBuffer } from './cloudinaryService';
 import { getTemplateUploadFolder } from '../config/cloudinaryConfig';
 import { getGeminiApiKey, requestGeminiJson } from './geminiJsonClient.ts';
@@ -130,6 +131,9 @@ Exact schema:
     "clothingStyles": "none | observed cuts, fabrics, colors",
     "isInvitationClone": true | false,
     "clonedCardFeatures": "none | borders, frame, ornaments, textures to clone",
+    "coupleFaceMapping": {
+      "strictMappingInstructions": "none | e.g. Image 1 has the groom on the left in dark suit and bride on the right in white gown. Reference photos: Image 2 is the woman/bride and Image 3 is the man/groom. The MAN from reference photos MUST replace the groom on the left in suit. The WOMAN from reference photos MUST replace the bride on the right in gown. Zero gender inversion."
+    },
     "briefNeeds": ["explicit need 1"],
     "briefInterpretation": "how each brief need applies",
     "briefMustKeep": ["refs + brief facts"],
@@ -258,6 +262,9 @@ type VisualAnalysis = {
   clothingStyles: string;
   isInvitationClone?: boolean;
   clonedCardFeatures?: string;
+  coupleFaceMapping?: {
+    strictMappingInstructions?: string;
+  };
   briefNeeds: string[];
   briefInterpretation: string;
   briefMustKeep: string[];
@@ -320,6 +327,12 @@ function parseVisualAnalysis(raw: unknown): VisualAnalysis | null {
       ? v.clonedCardFeatures.slice(0, 600)
       : '';
 
+  const rawMapping = v.coupleFaceMapping as Record<string, unknown> | undefined;
+  const coupleFaceMapping =
+    rawMapping && typeof rawMapping === 'object' && typeof rawMapping.strictMappingInstructions === 'string'
+      ? { strictMappingInstructions: rawMapping.strictMappingInstructions.slice(0, 500) }
+      : undefined;
+
   return {
     colors,
     style: typeof v.style === 'string' ? v.style.slice(0, 300) : '',
@@ -334,6 +347,7 @@ function parseVisualAnalysis(raw: unknown): VisualAnalysis | null {
     clothingStyles: hasPeople ? clothingStyles || 'unclear' : 'none',
     isInvitationClone,
     clonedCardFeatures,
+    coupleFaceMapping,
     briefNeeds: parseStringList(v.briefNeeds, 12),
     briefInterpretation:
       typeof v.briefInterpretation === 'string' ? v.briefInterpretation.slice(0, 600) : '',
@@ -349,7 +363,7 @@ const FACE_POLICY_KEEP_PEOPLE =
   'IDENTITY LOCK — PIXELS WIN: The attached photo(s) are the only identity source. Keep EACH person as the SAME individual (not a sibling, celebrity, or beautified lookalike). Unchanged: bone structure, eyes and gaze, exact smile, cheek volume, skin tone (never lighten), age, hair, clothing, moles/scars. Forbidden: face swap, slim/contour, symmetry, doll eyes, invented grin, airbrush, CGI. If any text description conflicts with the photo, obey the photo.';
 
 const FACE_POLICY_COUPLE_SWAP =
-  'COUPLE FACE REPLACEMENT — ORGANIZER REQUESTED: Image 1 is the incoming invitation/scene. Keep composition, pose, bodies, wardrobe, décor, lighting, ornaments and typography. Images 2+ are the couple. Replace ONLY the face(s) on Image 1 with these exact people. Honest pixels: bone structure, eyes, smile, skin tone, moles. Forbidden: beautify, skin lightening, celebrity lookalike, inventing a new couple, keeping the original Image 1 faces.';
+  'COUPLE FACE REPLACEMENT (ZERO GENDER INVERSION) — ORGANIZER REQUESTED: Image 1 is the incoming invitation/scene. Keep composition, pose, bodies, wardrobe, décor, lighting and ornaments. Images 2+ are the couple. Strictly match genders: place the groom/man face onto the male body (suit/tuxedo) and the bride/woman face onto the female body (bridal gown/dress). Replace ONLY the face(s) on Image 1 with these exact people. If new text/names are requested in the brief, do NOT keep old names from Image 1. Honest pixels: bone structure, eyes, smile, skin tone, moles. Forbidden: beautify, skin lightening, celebrity lookalike, inverting bride/groom genders, keeping the original Image 1 faces.';
 
 function buildImagePrompt(
   userPrompt: string,
@@ -390,7 +404,22 @@ function buildImagePrompt(
     originalBrief: processed?.originalBrief || userPrompt,
     decorParagraph,
     locks: options?.locks,
-    analysis,
+    analysis: analysis
+      ? {
+          hasPeople: analysis.hasPeople,
+          peopleCount: analysis.peopleCount,
+          isInvitationClone: analysis.isInvitationClone,
+          clonedCardFeatures: analysis.clonedCardFeatures,
+          briefMustKeep: analysis.briefMustKeep,
+          briefMustChange: analysis.briefMustChange,
+          colors: analysis.colors,
+          coupleFaceMapping: analysis.coupleFaceMapping
+            ? {
+                strictMappingInstructions: analysis.coupleFaceMapping.strictMappingInstructions,
+              }
+            : undefined,
+        }
+      : null,
     organizerContext: options?.organizerContext,
     artStyle: options?.artStyle,
     embedText: options?.embedText,
@@ -492,6 +521,14 @@ function visionUserText(
   const contextBlock = options?.organizerContext ? `\n${options.organizerContext}\n` : '';
   const roles = options?.processed?.referenceRoles ? `\n${options.processed.referenceRoles}\n` : '';
   const fewshot = options?.styleFewshot ? `\n${options.styleFewshot}\n` : '';
+  const coupleGenderAlignment = coupleFaceSwap
+    ? `\n=== CRITICAL GENDER ALIGNMENT FOR COUPLE (NO INVERSION) ===
+Image 1 is the incoming card / scene with hosts. Images 2+ are the couple identity photos.
+1) Examine Image 1: locate the male host (suit/tuxedo) and female host (gown/dress). Note their left/right position.
+2) Examine Images 2+: identify the man (groom) and woman (bride).
+3) In visualAnalysis.coupleFaceMapping.strictMappingInstructions, explicitly mandate that the MAN from references replaces the MAN on Image 1 (suit), and the WOMAN from references replaces the WOMAN on Image 1 (gown).
+4) FORBIDDEN: never invert bride and groom faces (putting female face on suit or male face on gown).\n`
+    : '';
 
   return `MODE: ${intent}
 
@@ -504,7 +541,7 @@ LOCAL SCENE SCAFFOLD (refine it — do not copy blindly):
 """
 ${localScaffold.slice(0, 900)}
 """
-${contextBlock}${roles}${fewshot}${refineBlock}
+${contextBlock}${roles}${fewshot}${refineBlock}${coupleGenderAlignment}
 ${honesty}
 
 Tasks:
@@ -513,7 +550,7 @@ Tasks:
 3) Write locks (max 8 short sentences).
 4) Write decorParagraph (120–180 words). ${
     coupleFaceSwap
-      ? 'Keep Image 1 card; replace faces with Images 2+ only.'
+      ? 'Keep Image 1 card; strictly match genders and replace faces with Images 2+ only.'
       : hasRefs
         ? 'Décor / card / mood only — never rewrite faces.'
         : 'Full scene then décor. Complete names/date/venue from connected context only if the brief is incomplete.'
@@ -2349,12 +2386,9 @@ export async function composeInvitationTemplateAi(input: {
   let elements = sanitizeElements(structured.elements);
   let preservedExistingCopy = false;
   if (isAlteration && existingElements.length > 0 && !embedText) {
-    const textChangeExplicit =
-      /texte|nom|prénom|date|lieu|heure|écrit|adresse|titre|rsvp/i.test(prompt);
-    if (!textChangeExplicit) {
-      elements = existingElements.map((el) => ({ ...el }));
-      preservedExistingCopy = true;
-    }
+    // Si on modifie un modèle existant, on préserve sa disposition et on applique les écrits
+    elements = existingElements.map((el) => ({ ...el }));
+    preservedExistingCopy = true;
   }
   let copyWritten = false;
   if (!embedText && !preservedExistingCopy) {
@@ -2378,14 +2412,46 @@ export async function composeInvitationTemplateAi(input: {
   if (!copyWritten) {
     (global as Record<string, unknown>).aiCopyWritten = false;
   }
+
+  // Application de l'identité et des textes demandés par l'utilisateur (noms des mariés, date, lieu, titre)
+  const structuredIdentity = {
+    title: structuredBrief.title,
+    honorees: structuredBrief.honorees,
+    date: structuredBrief.date,
+    description: structuredBrief.description,
+    applyTitleToCard: Boolean(
+      structuredBrief.title && structuredBrief.honorees && structuredBrief.title !== structuredBrief.honorees,
+    ),
+  };
+  if (hasInvitationIdentity(structuredIdentity)) {
+    const applied = applyInvitationIdentityToContent({ global, elements }, structuredIdentity);
+    if (Array.isArray(applied.elements)) {
+      elements = applied.elements as Record<string, unknown>[];
+    }
+    if (applied.global && typeof applied.global === 'object') {
+      Object.assign(global, applied.global);
+    }
+  }
+
   if (embedText) {
     elements = elements.filter((el) => el.type === 'rsvp-block');
   }
+
+  const RSVP_TEXT_BY_LANGUAGE: Record<string, string> = {
+    ln: 'Kondima kozala wana',
+    sw: 'Thibitisha uwepo wako',
+    kg: 'Tula kimbangi ya kukwiza',
+    lua: 'Jadika dikalapu diebe',
+  };
+  const targetRsvpText =
+    (structuredBrief.language && RSVP_TEXT_BY_LANGUAGE[structuredBrief.language]) ||
+    'Confirmer votre présence';
+
   if (!elements.some((el) => el.type === 'rsvp-block')) {
     elements.push({
       id: `ai-rsvp-${Date.now()}`,
       type: 'rsvp-block',
-      text: 'Confirmer votre présence',
+      text: targetRsvpText,
       color: (global.palette as { accent: string }).accent,
       fontSize: '16px',
       align: 'center',
@@ -2393,6 +2459,11 @@ export async function composeInvitationTemplateAi(input: {
       rsvpPlacement: 'outside',
       positionMode: 'flow',
     });
+  } else if (structuredBrief.language && RSVP_TEXT_BY_LANGUAGE[structuredBrief.language]) {
+    const rsvpEl = elements.find((el) => el.type === 'rsvp-block');
+    if (rsvpEl && (!rsvpEl.text || rsvpEl.text === 'Confirmer votre présence')) {
+      rsvpEl.text = targetRsvpText;
+    }
   }
 
   // Règle stricte pour les modèles publics : intégration obligatoire des variables dynamiques pour la personnalisation

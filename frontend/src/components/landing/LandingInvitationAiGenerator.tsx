@@ -649,6 +649,14 @@ export default function LandingInvitationAiGenerator({
       setError(PROTOCOL_CREATIVE_DENIED);
       return;
     }
+    const cardIdentity = {
+      title: structuredBrief.title,
+      honorees: structuredBrief.honorees,
+      date: structuredBrief.date,
+      description: structuredBrief.description,
+    };
+    const hasTexts = hasInvitationIdentity(cardIdentity);
+
     if (coupleFaceSwap) {
       if (!incomingFile && !selectedModelPhoto) {
         setError('Ajoutez l’image d’invitation dont les visages doivent être remplacés.');
@@ -658,10 +666,10 @@ export default function LandingInvitationAiGenerator({
         setError('Ajoutez au moins une photo du couple.');
         return;
       }
-    } else if (prompt.trim().length < 8) {
+    } else if (!hasTexts && prompt.trim().length < 8) {
       setError(
         isModifyMode
-          ? 'Décrivez ce qu’il faut reprendre ou remplacer sur le modèle.'
+          ? 'Décrivez ce qu’il faut reprendre ou modifier sur le modèle, ou renseignez les informations ci-dessus.'
           : 'Décrivez la fête en quelques mots (ambiance, couleurs, lieu).',
       );
       return;
@@ -691,6 +699,14 @@ export default function LandingInvitationAiGenerator({
       setError(PROTOCOL_CREATIVE_DENIED);
       return;
     }
+    const cardIdentity = {
+      title: structuredBrief.title,
+      honorees: structuredBrief.honorees,
+      date: structuredBrief.date,
+      description: structuredBrief.description,
+    };
+    const hasTexts = hasInvitationIdentity(cardIdentity);
+
     if (coupleFaceSwap) {
       if (!incomingFile && !selectedModelPhoto) {
         setError('Ajoutez l’image d’invitation dont les visages doivent être remplacés.');
@@ -700,10 +716,10 @@ export default function LandingInvitationAiGenerator({
         setError('Ajoutez au moins une photo du couple.');
         return;
       }
-    } else if (prompt.trim().length < 8) {
+    } else if (!hasTexts && prompt.trim().length < 8) {
       setError(
         isModifyMode
-          ? 'Décrivez ce qu’il faut reprendre ou remplacer sur le modèle.'
+          ? 'Décrivez ce qu’il faut reprendre ou modifier sur le modèle, ou renseignez les informations ci-dessus.'
           : 'Décrivez la fête en quelques mots (ambiance, couleurs, lieu).',
       );
       return;
@@ -722,6 +738,29 @@ export default function LandingInvitationAiGenerator({
       );
       setTokenModalOpen(true);
       return;
+    }
+
+    let promptToSend = prompt.trim();
+    if (!promptToSend || promptToSend === COUPLE_FACE_SWAP_DEFAULT_PROMPT) {
+      if (coupleFaceSwap && hasTexts) {
+        const textParts = [
+          cardIdentity.honorees ? `mariés/célébrés : ${cardIdentity.honorees}` : '',
+          cardIdentity.date ? `date : ${cardIdentity.date}` : '',
+          cardIdentity.title ? `titre : ${cardIdentity.title}` : '',
+          cardIdentity.description ? `lieu : ${cardIdentity.description}` : '',
+        ].filter(Boolean).join(', ');
+        promptToSend = `Remplacer les visages du couple (respecter les genres : marié sur costume, mariée sur robe) et modifier les textes (${textParts}). Conserver la disposition, le style et les ornements.`;
+      } else if (coupleFaceSwap) {
+        promptToSend = COUPLE_FACE_SWAP_DEFAULT_PROMPT;
+      } else if (isModifyMode && hasTexts) {
+        const textParts = [
+          cardIdentity.honorees ? `mariés/célébrés : ${cardIdentity.honorees}` : '',
+          cardIdentity.date ? `date : ${cardIdentity.date}` : '',
+          cardIdentity.title ? `titre : ${cardIdentity.title}` : '',
+          cardIdentity.description ? `lieu : ${cardIdentity.description}` : '',
+        ].filter(Boolean).join(', ');
+        promptToSend = `Modifier le modèle en appliquant les nouveaux textes (${textParts}). Conserver le style graphique et les ornements.`;
+      }
     }
 
     const seq = ++generationSeq.current;
@@ -751,10 +790,7 @@ export default function LandingInvitationAiGenerator({
 
     try {
       const data = await composeTemplateWithAiPublic({
-        prompt:
-          coupleFaceSwap && prompt.trim().length < 8
-            ? COUPLE_FACE_SWAP_DEFAULT_PROMPT
-            : prompt.trim(),
+        prompt: promptToSend,
         files: coupleFaceSwap && incomingFile ? [incomingFile, ...files] : files,
         baseImageUrl: coupleFaceSwap && incomingFile ? undefined : selectedModelPhoto?.imageUrl,
         embedText: false,
@@ -768,30 +804,25 @@ export default function LandingInvitationAiGenerator({
         sourceTemplateId: selectedModelPhoto?.id,
       });
       if (seq !== generationSeq.current) return;
-      const coupleIdentity = {
-        title: structuredBrief.title,
-        honorees: structuredBrief.honorees,
-        date: structuredBrief.date,
-      };
-      if (coupleFaceSwap) {
-        pendingCoupleIdentityRef.current = coupleIdentity;
+      if (hasTexts) {
+        pendingCoupleIdentityRef.current = cardIdentity;
       }
       if (isStudioJobAccepted(data)) {
-        trackJob(data.jobId, 'invitation', prompt.trim());
+        trackJob(data.jobId, 'invitation', promptToSend);
         setStage(null);
         setActiveStep(0);
         return;
       }
-      const nextContent = coupleFaceSwap && hasInvitationIdentity(coupleIdentity)
-        ? applyInvitationIdentityToContent(data.content, invitationIdentityForCard(coupleIdentity))
+      const nextContent = hasTexts
+        ? applyInvitationIdentityToContent(data.content, invitationIdentityForCard(cardIdentity))
         : data.content;
       setResult(nextContent);
       setLastStageMeta(data.stage || null);
       setActiveHistoryId(typeof data.historyId === 'string' ? data.historyId : null);
       setAllowance(getAiSimulationAllowance());
-      saveAiTemplateDraft(nextContent, prompt.trim());
+      saveAiTemplateDraft(nextContent, promptToSend);
       void fetchAiTemplateComposeHistory().then(setHistory);
-      logAction('generate_success', 'Carte créée', `Invitation composée : « ${prompt.slice(0, 50)}… »`);
+      logAction('generate_success', 'Carte créée', `Invitation composée : « ${promptToSend.slice(0, 50)}… »`);
       playAiGenerationCompleteSound();
       setActiveStep(3);
       setStage(null);
@@ -2030,8 +2061,24 @@ export default function LandingInvitationAiGenerator({
                     {busy
                       ? 'Création…'
                       : coupleFaceSwap
-                        ? `Remplacer les visages (${composeTokenCost} jetons)`
-                        : `Créer la carte (${composeTokenCost} jetons)`}
+                        ? hasInvitationIdentity({
+                            title: structuredBrief.title,
+                            honorees: structuredBrief.honorees,
+                            date: structuredBrief.date,
+                            description: structuredBrief.description,
+                          })
+                          ? `Modifier le modèle (visages & écrits · ${composeTokenCost} jetons)`
+                          : `Remplacer les visages (${composeTokenCost} jetons)`
+                        : isModifyMode
+                          ? hasInvitationIdentity({
+                              title: structuredBrief.title,
+                              honorees: structuredBrief.honorees,
+                              date: structuredBrief.date,
+                              description: structuredBrief.description,
+                            })
+                            ? `Modifier les écrits (${composeTokenCost} jetons)`
+                            : `Modifier le modèle (${composeTokenCost} jetons)`
+                          : `Créer la carte (${composeTokenCost} jetons)`}
                   </Button>
                   {result ? (
                     <Button type="button" variant="secondary" className="min-h-11" onClick={resetResult} disabled={busy}>

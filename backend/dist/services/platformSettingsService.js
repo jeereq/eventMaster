@@ -3,9 +3,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.settingsFilePath = exports.DEFAULT_CONTACT_ADMIN_EMAILS = exports.PLATFORM_CITY_CATALOG = exports.DEFAULT_PLATFORM_SETTINGS = exports.DEFAULT_SHOWCASE_ROOM_PLANS = exports.AVAILABLE_ROOM_PLAN_MODELS = exports.AVAILABLE_INVITATION_MODELS = exports.DEFAULT_AI_STUDIO_MODELS = exports.DEFAULT_STUDIO_VISIBILITY = exports.DEFAULT_AUDIO_NOTIFICATIONS = exports.AUDIO_NOTIFICATION_FAMILIES = exports.AUDIO_NOTIFICATION_PRESETS = void 0;
+exports.settingsFilePath = exports.DEFAULT_CONTACT_ADMIN_EMAILS = exports.PLATFORM_CITY_CATALOG = exports.DEFAULT_PLATFORM_SETTINGS = exports.DEFAULT_SHOWCASE_ROOM_PLANS = exports.DEFAULT_STUDIO_VISIBILITY = exports.DEFAULT_AUDIO_NOTIFICATIONS = exports.AUDIO_NOTIFICATION_FAMILIES = exports.AUDIO_NOTIFICATION_PRESETS = exports.sanitizeAiStudioModels = exports.isOpenAiStudioModel = exports.DEFAULT_AI_STUDIO_MODELS = exports.AVAILABLE_ROOM_PLAN_MODELS = exports.AVAILABLE_INVITATION_MODELS = void 0;
 exports.sanitizeStudioVisibility = sanitizeStudioVisibility;
-exports.sanitizeAiStudioModels = sanitizeAiStudioModels;
 exports.sanitizeShowcaseRoomPlans = sanitizeShowcaseRoomPlans;
 exports.sanitizeCommercialPermissions = sanitizeCommercialPermissions;
 exports.sanitizeAudioNotifications = sanitizeAudioNotifications;
@@ -43,6 +42,13 @@ const aiTokenPricing_1 = require("./aiTokenPricing");
 const welcomeAiTokensPolicy_1 = require("./welcomeAiTokensPolicy");
 const subscriptionDiscountAccess_1 = require("./subscriptionDiscountAccess");
 const donationsAccess_1 = require("./donationsAccess");
+const aiStudioModels_1 = require("./aiStudioModels");
+var aiStudioModels_2 = require("./aiStudioModels");
+Object.defineProperty(exports, "AVAILABLE_INVITATION_MODELS", { enumerable: true, get: function () { return aiStudioModels_2.AVAILABLE_INVITATION_MODELS; } });
+Object.defineProperty(exports, "AVAILABLE_ROOM_PLAN_MODELS", { enumerable: true, get: function () { return aiStudioModels_2.AVAILABLE_ROOM_PLAN_MODELS; } });
+Object.defineProperty(exports, "DEFAULT_AI_STUDIO_MODELS", { enumerable: true, get: function () { return aiStudioModels_2.DEFAULT_AI_STUDIO_MODELS; } });
+Object.defineProperty(exports, "isOpenAiStudioModel", { enumerable: true, get: function () { return aiStudioModels_2.isOpenAiStudioModel; } });
+Object.defineProperty(exports, "sanitizeAiStudioModels", { enumerable: true, get: function () { return aiStudioModels_2.sanitizeAiStudioModels; } });
 const settingsFilePath = path_1.default.join(__dirname, '..', 'config', 'settings.json');
 exports.settingsFilePath = settingsFilePath;
 const PLATFORM_CONFIG_ID = 'default';
@@ -74,34 +80,6 @@ function sanitizeStudioVisibility(raw) {
         invite: src.invite !== false,
         room: src.room !== false,
     };
-}
-exports.DEFAULT_AI_STUDIO_MODELS = {
-    invitationModel: 'gemini-3-pro-image',
-    roomPlanModel: 'gemini-3.1-pro-preview',
-};
-exports.AVAILABLE_INVITATION_MODELS = [
-    { id: 'gemini-3-pro-image', label: 'Gemini 3 Pro Image (Nano Banana Pro · Haute Fidélité 2K)', badge: '2K Pro' },
-    { id: 'gemini-3.1-flash-image', label: 'Gemini 3.1 Flash Image (Nano Banana Flash · Rendu rapide)', badge: 'Ultra-rapide' },
-    { id: 'imagen-3.0-generate-002', label: 'Google Imagen 3.0 (Photoréaliste standard)', badge: 'Photoréaliste' },
-    { id: 'imagen-3.0-fast-generate-001', label: 'Google Imagen 3.0 Fast (Économique & rapide)', badge: 'Éco rapide' },
-];
-exports.AVAILABLE_ROOM_PLAN_MODELS = [
-    { id: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro (Raisonnement spatial & agencement coté)', badge: 'Spatial Pro' },
-    { id: 'gemini-3-flash', label: 'Gemini 3 Flash (Génération agile & rapide)', badge: 'Agile & Rapide' },
-    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Haute précision textuelle)', badge: 'Précision' },
-    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (Standard stable)', badge: 'Stable' },
-];
-function sanitizeAiStudioModels(raw) {
-    const src = raw && typeof raw === 'object' ? raw : {};
-    const validInv = exports.AVAILABLE_INVITATION_MODELS.map((m) => m.id);
-    const validRoom = exports.AVAILABLE_ROOM_PLAN_MODELS.map((m) => m.id);
-    const inv = typeof src.invitationModel === 'string' && validInv.includes(src.invitationModel)
-        ? src.invitationModel
-        : exports.DEFAULT_AI_STUDIO_MODELS.invitationModel;
-    const room = typeof src.roomPlanModel === 'string' && validRoom.includes(src.roomPlanModel)
-        ? src.roomPlanModel
-        : exports.DEFAULT_AI_STUDIO_MODELS.roomPlanModel;
-    return { invitationModel: inv, roomPlanModel: room };
 }
 exports.DEFAULT_SHOWCASE_ROOM_PLANS = [
     {
@@ -312,7 +290,7 @@ exports.DEFAULT_PLATFORM_SETTINGS = {
     welcomeAiGrants: welcomeAiTokensPolicy_1.DEFAULT_WELCOME_GRANT_RULES,
     audioNotifications: exports.DEFAULT_AUDIO_NOTIFICATIONS,
     studioVisibility: exports.DEFAULT_STUDIO_VISIBILITY,
-    aiStudioModels: exports.DEFAULT_AI_STUDIO_MODELS,
+    aiStudioModels: aiStudioModels_1.DEFAULT_AI_STUDIO_MODELS,
     commercialPermissions: {},
     subscriptionDiscountAccess: subscriptionDiscountAccess_1.DEFAULT_SUBSCRIPTION_DISCOUNT_ACCESS,
     donationsAccess: donationsAccess_1.DEFAULT_DONATIONS_ACCESS,
@@ -449,7 +427,7 @@ function normalizeStoredRates(settings) {
         welcomeAiGrants: (0, welcomeAiTokensPolicy_1.sanitizeWelcomeGrantRules)(settings.welcomeAiGrants),
         audioNotifications: sanitizeAudioNotifications(settings.audioNotifications),
         studioVisibility: sanitizeStudioVisibility(settings.studioVisibility),
-        aiStudioModels: sanitizeAiStudioModels(settings.aiStudioModels),
+        aiStudioModels: (0, aiStudioModels_1.sanitizeAiStudioModels)(settings.aiStudioModels),
         commercialPermissions: sanitizeCommercialPermissions(settings.commercialPermissions),
         subscriptionDiscountAccess: (0, subscriptionDiscountAccess_1.sanitizeSubscriptionDiscountAccess)(settings.subscriptionDiscountAccess),
         donationsAccess: (0, donationsAccess_1.sanitizeDonationsAccess)(settings.donationsAccess),
@@ -480,7 +458,7 @@ function buildNextSettings(partial) {
     next.welcomeAiGrants = (0, welcomeAiTokensPolicy_1.sanitizeWelcomeGrantRules)(next.welcomeAiGrants);
     next.audioNotifications = sanitizeAudioNotifications(next.audioNotifications);
     next.studioVisibility = sanitizeStudioVisibility(next.studioVisibility);
-    next.aiStudioModels = sanitizeAiStudioModels(next.aiStudioModels);
+    next.aiStudioModels = (0, aiStudioModels_1.sanitizeAiStudioModels)(next.aiStudioModels);
     next.commercialPermissions = sanitizeCommercialPermissions(next.commercialPermissions);
     next.subscriptionDiscountAccess = (0, subscriptionDiscountAccess_1.sanitizeSubscriptionDiscountAccess)(next.subscriptionDiscountAccess);
     next.donationsAccess = (0, donationsAccess_1.sanitizeDonationsAccess)(next.donationsAccess);
@@ -582,7 +560,7 @@ function getPublicSiteConfig(settings = loadPlatformSettings()) {
         welcomeAiGrants: (0, welcomeAiTokensPolicy_1.sanitizeWelcomeGrantRules)(settings.welcomeAiGrants),
         audioNotifications: sanitizeAudioNotifications(settings.audioNotifications),
         studioVisibility: sanitizeStudioVisibility(settings.studioVisibility),
-        aiStudioModels: sanitizeAiStudioModels(settings.aiStudioModels),
+        aiStudioModels: (0, aiStudioModels_1.sanitizeAiStudioModels)(settings.aiStudioModels),
         subscriptionDiscountAccess: (() => {
             const access = (0, subscriptionDiscountAccess_1.sanitizeSubscriptionDiscountAccess)(settings.subscriptionDiscountAccess);
             return {

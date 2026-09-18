@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AI_ROOM_PLAN_TOKEN_COST = exports.AI_INVITATION_COMPOSE_TOKEN_COST = exports.AI_SIMULATION_TOKEN_COST = exports.AI_FREE_TRIALS_MAX = exports.TENANT_GRANT_DEVICE_PREFIX = exports.USER_GRANT_DEVICE_PREFIX = void 0;
+exports.AI_INVITATION_TOKEN_COST_MAX = exports.AI_ROOM_PLAN_TOKEN_COST = exports.AI_INVITATION_COMPOSE_TOKEN_COST = exports.AI_SIMULATION_TOKEN_COST = exports.AI_FREE_TRIALS_MAX = exports.TENANT_GRANT_DEVICE_PREFIX = exports.USER_GRANT_DEVICE_PREFIX = void 0;
 exports.userGrantDeviceId = userGrantDeviceId;
 exports.tenantGrantDeviceId = tenantGrantDeviceId;
 exports.isUnlimitedAiTokenUser = isUnlimitedAiTokenUser;
+exports.clampInvitationTokenCost = clampInvitationTokenCost;
 exports.ensureAiSimulationWallet = ensureAiSimulationWallet;
 exports.grantAiTokensToUser = grantAiTokensToUser;
 exports.getAiSimulationWalletAllowance = getAiSimulationWalletAllowance;
@@ -13,8 +14,10 @@ exports.creditPaidAiTokenOrder = creditPaidAiTokenOrder;
 exports.claimAiSimulationWallet = claimAiSimulationWallet;
 const client_1 = require("@prisma/client");
 const db_1 = require("../db");
+const platformNotificationTypes_1 = require("../config/platformNotificationTypes");
 const aiTokenFlexPayService_1 = require("./aiTokenFlexPayService");
 const aiTokenUsageQuery_1 = require("./aiTokenUsageQuery");
+const platformNotificationService_1 = require("./platformNotificationService");
 exports.USER_GRANT_DEVICE_PREFIX = 'user-grant:';
 exports.TENANT_GRANT_DEVICE_PREFIX = 'tenant-grant:';
 function userGrantDeviceId(userId) {
@@ -30,6 +33,14 @@ exports.AI_FREE_TRIALS_MAX = 4;
 exports.AI_SIMULATION_TOKEN_COST = 1;
 exports.AI_INVITATION_COMPOSE_TOKEN_COST = 2;
 exports.AI_ROOM_PLAN_TOKEN_COST = 3;
+/** Plafond admin pour le coût d’un modèle d’invitation. */
+exports.AI_INVITATION_TOKEN_COST_MAX = 50;
+function clampInvitationTokenCost(value, fallback = exports.AI_INVITATION_COMPOSE_TOKEN_COST) {
+    const n = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(n))
+        return fallback;
+    return Math.min(exports.AI_INVITATION_TOKEN_COST_MAX, Math.max(1, Math.round(n)));
+}
 function isUniqueConstraint(err) {
     return err instanceof client_1.Prisma.PrismaClientKnownRequestError && err.code === 'P2002';
 }
@@ -329,6 +340,21 @@ function insufficientCreditMessage(need, remaining) {
     }
     return `Plus de jetons disponibles. ${hint}`;
 }
+function notifyInsufficientAiTokens(userId, message, need, remaining) {
+    if (!userId)
+        return;
+    void (0, platformNotificationService_1.notifyUsers)([userId], {
+        type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.AI_TOKENS_INSUFFICIENT,
+        title: 'Jetons IA insuffisants',
+        message,
+        metadata: {
+            href: '/dashboard',
+            kind: 'ai_tokens',
+            need,
+            remaining,
+        },
+    });
+}
 async function requireAiSimulationCredit(deviceId, userId, count = exports.AI_SIMULATION_TOKEN_COST, meta) {
     const need = Math.max(1, Math.round(count));
     const allowance = await getAiSimulationWalletAllowance(deviceId, userId);
@@ -336,7 +362,9 @@ async function requireAiSimulationCredit(deviceId, userId, count = exports.AI_SI
         return { ...allowance, unlimited: true, canSimulate: true };
     }
     if (allowance.totalRemaining < need) {
-        fail(402, insufficientCreditMessage(need, allowance.totalRemaining));
+        const message = insufficientCreditMessage(need, allowance.totalRemaining);
+        notifyInsufficientAiTokens(userId, message, need, allowance.totalRemaining);
+        fail(402, message);
     }
     return allowance;
 }
@@ -386,7 +414,9 @@ async function consumeAiSimulationCredit(deviceId, userId, count = exports.AI_SI
         const orgGranted = Math.max(0, orgWallet?.grantedTokens ?? 0);
         const remaining = freeRemaining + bonus + granted + orgGranted;
         if (remaining < need) {
-            fail(402, insufficientCreditMessage(need, remaining));
+            const message = insufficientCreditMessage(need, remaining);
+            notifyInsufficientAiTokens(userId, message, need, remaining);
+            fail(402, message);
         }
         let left = need;
         const fromOrg = Math.min(left, orgGranted);

@@ -8,6 +8,7 @@ const marketplaceDates_1 = require("../utils/marketplaceDates");
 const rdcCities_1 = require("../utils/rdcCities");
 const eventPlanBrief_1 = require("./eventPlanBrief");
 const geminiJsonClient_ts_1 = require("./geminiJsonClient.js");
+const openaiJsonClient_ts_1 = require("./openaiJsonClient.js");
 const HOLD_BOOKING_STATUSES = ['REQUESTED', 'ACCEPTED', 'CONFIRMED'];
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX = 8;
@@ -215,37 +216,17 @@ async function askPlannerJson(system, user) {
     return askOpenAi(system, user);
 }
 async function askOpenAi(system, user) {
-    const key = String(process.env.OPENAI_API_KEY || '').trim();
-    if (!key) {
+    if (!String(process.env.OPENAI_API_KEY || '').trim()) {
         return { packages: [] };
     }
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 45_000);
     try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            signal: controller.signal,
-            headers: {
-                Authorization: `Bearer ${key}`,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-                temperature: 0.55,
-                response_format: { type: 'json_object' },
-                messages: [
-                    { role: 'system', content: system },
-                    { role: 'user', content: user },
-                ],
-            }),
+        const parsed = await (0, openaiJsonClient_ts_1.requestOpenAiJson)({
+            system,
+            userText: user,
+            temperature: 0.55,
+            timeoutMs: 45_000,
+            failMessage: 'OpenAI n’a pas renvoyé de packs utilisables.',
         });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-            console.warn('OpenAI API warning:', payload.error?.message);
-            return { packages: [] };
-        }
-        const raw = payload.choices?.[0]?.message?.content || '{}';
-        const parsed = JSON.parse(raw);
         if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
             return { packages: [] };
         }
@@ -254,9 +235,6 @@ async function askOpenAi(system, user) {
     catch (error) {
         console.warn('Simulation IA fetch fallback to heuristic:', error?.message);
         return { packages: [] };
-    }
-    finally {
-        clearTimeout(timer);
     }
 }
 async function simulateEventPlanAi(userId, body) {

@@ -116,6 +116,7 @@ export type InvitationPromptOptions = {
   embedText?: boolean;
   artStyleLine?: string;
   coupleFaceSwap?: boolean;
+  genderMappingDirective?: string;
 };
 
 export type InvitationPipelineIntent = 'create' | 'clone' | 'refine' | 'couple';
@@ -144,6 +145,9 @@ export type InvitationImageAnalysisHint = {
   briefMustKeep?: string[];
   briefMustChange?: string[];
   colors?: string[];
+  coupleFaceMapping?: {
+    strictMappingInstructions?: string;
+  };
 };
 
 export function isInvitationPipelineIntent(value: unknown): value is InvitationPipelineIntent {
@@ -261,6 +265,11 @@ export function buildInvitationLocks(input: {
   if (input.intent === 'couple') {
     locks.push('Image 1 wins for card, pose, bodies, wardrobe, décor and lighting.');
     locks.push('Images 2+ are the only face source. Discard Image 1 faces. No beautify, no lighten.');
+    if (analysis.coupleFaceMapping?.strictMappingInstructions) {
+      locks.push(collapseSpaces(analysis.coupleFaceMapping.strictMappingInstructions).slice(0, 180));
+    } else {
+      locks.push('MANDATORY GENDER LOCK: Male host face goes onto male body/suit; female host face goes onto female body/dress. Zero gender inversion.');
+    }
   } else if (hasPeople) {
     locks.push('Attached photos are the only identity source. Same people — no lookalike, no beautify, no skin lightening.');
     locks.push(`People count ${peopleCount}, left-to-right order unchanged.`);
@@ -376,6 +385,7 @@ Image 1 is the GENERATED card to score. Any other images are references (people 
 Be strict on:
 - Identity: same people as references, no lookalike, no beautify, no skin lightening.
 - Couple mode: Image 1 references after the generated card are the couple; generated faces must match them, not the incoming card faces.
+- Couple gender & face alignment: groom/man's face MUST be on male body/suit/tuxedo; bride/woman's face MUST be on female body/dress/gown. Flag "gender_mismatch" if bride and groom faces are inverted or swapped onto wrong bodies!
 - People count vs expectedPeople.
 - Painted letters / names / dates when textInPixels is "forbidden".
 - Invented Caucasian / white luxury hosts when no people refs exist.
@@ -387,15 +397,16 @@ Exact schema:
 {
   "pass": true | false,
   "score": 0,
-  "defects": ["painted_text" | "wrong_faces" | "wrong_people_count" | "skin_lightened" | "beautified" | "wrong_mode" | "invented_white_hosts" | "kept_original_faces"],
+  "defects": ["painted_text" | "wrong_faces" | "gender_mismatch" | "wrong_people_count" | "skin_lightened" | "beautified" | "wrong_mode" | "invented_white_hosts" | "kept_original_faces"],
   "retryDirective": "one English sentence: the single fix to apply, positive framing, no redesign"
 }
 
-score is 0-10. pass=false if any hard identity / text / ethnicity defect. retryDirective empty only if pass=true.`;
+score is 0-10. pass=false if any hard identity / text / ethnicity / gender inversion defect. retryDirective empty only if pass=true.`;
 
 export type InvitationImageJudgeDefect =
   | 'painted_text'
   | 'wrong_faces'
+  | 'gender_mismatch'
   | 'wrong_people_count'
   | 'skin_lightened'
   | 'beautified'
@@ -413,6 +424,7 @@ export type InvitationImageJudgeVerdict = {
 const KNOWN_JUDGE_DEFECTS = new Set<string>([
   'painted_text',
   'wrong_faces',
+  'gender_mismatch',
   'wrong_people_count',
   'skin_lightened',
   'beautified',
@@ -476,11 +488,14 @@ export function buildInvitationImageRetryPrompt(
   basePrompt: string,
   verdict: InvitationImageJudgeVerdict,
 ): string {
-  const directive =
-    verdict.retryDirective ||
-    (verdict.defects[0]
-      ? `Fix ${verdict.defects[0].replace(/_/g, ' ')} while keeping every lock.`
-      : 'Restore honest faces, correct people count, and no painted letters unless requested. Do not redesign.');
+  const defect = verdict.defects[0];
+  let defaultDirective = 'Restore honest faces, correct people count, and no painted letters unless requested. Do not redesign.';
+  if (defect === 'gender_mismatch') {
+    defaultDirective = 'GENDER FIX: Groom/male face goes strictly onto male body/suit and bride/female face strictly onto female body/gown. Do NOT invert genders.';
+  } else if (defect) {
+    defaultDirective = `Fix ${defect.replace(/_/g, ' ')} while keeping every lock.`;
+  }
+  const directive = verdict.retryDirective || defaultDirective;
   return collapseSpaces(
     [
       basePrompt,
@@ -529,24 +544,26 @@ export function stripFaceBeautifyLanguage(prompt: string): { text: string; strip
 
 export function buildReferenceRoles(
   referenceCount: number,
-  options?: { coupleFaceSwap?: boolean },
+  options?: { coupleFaceSwap?: boolean; genderMappingDirective?: string },
 ): string {
   if (referenceCount <= 0) return '';
   if (options?.coupleFaceSwap) {
     const lines = [
       'REFERENCE ROLES (couple face replacement — organizer requested):',
-      'Image 1: INCOMING INVITATION / SCENE — object fidelity. Keep composition, pose, bodies, wardrobe, décor, lighting, ornaments and typography. Do NOT keep the original faces that appear on this card.',
+      'Image 1: INCOMING INVITATION / SCENE — object fidelity. Keep composition, pose, bodies, wardrobe, décor, lighting and ornaments. Do NOT keep the original faces that appear on this card.',
     ];
     for (let i = 1; i < referenceCount; i += 1) {
       const n = i + 1;
       const side = i === 1 ? 'left / primary host' : i === 2 ? 'right / secondary host' : `host ${n - 1}`;
       lines.push(
-        `Image ${n} (${side}): COUPLE IDENTITY lock. Replace a face on Image 1 with this exact person (or leftmost→rightmost people in that photo). Honest pixels only — no beautify, no lighten, no celebrity lookalike.`,
+        `Image ${n} (${side}): COUPLE IDENTITY lock. Replace a face on Image 1 with this exact person (honest pixels only — no beautify, no lighten, no celebrity lookalike).`,
       );
     }
-    if (referenceCount >= 3) {
+    if (options?.genderMappingDirective) {
+      lines.push(options.genderMappingDirective);
+    } else {
       lines.push(
-        'SPATIAL CHARACTER BINDING: Place Image 2’s person on the left/primary and Image 3’s person on the right/secondary. Zero cross-blending of facial anatomy.',
+        'GENDER & POSITION BINDING (STRICT - DO NOT INVERT): Match reference faces to bodies strictly by apparent gender and wedding attire first. The MAN/GROOM from reference photos MUST replace the MAN/GROOM body on Image 1 (suit/tuxedo). The WOMAN/BRIDE from reference photos MUST replace the WOMAN/BRIDE body on Image 1 (bridal gown/dress). NEVER swap or invert bride and groom faces.',
       );
     }
     return lines.join('\n');
@@ -575,14 +592,16 @@ export function buildReferenceRoles(
  */
 export function buildHonestFaceIdentityHeader(
   referenceCount: number,
-  options?: { coupleFaceSwap?: boolean },
+  options?: { coupleFaceSwap?: boolean; genderMappingDirective?: string },
 ): string {
   if (referenceCount <= 0) return '';
   if (options?.coupleFaceSwap && referenceCount >= 2) {
     return [
       '=== 1. COUPLE FACE REPLACEMENT (organizer requested — FIRST) ===',
-      'Image 1 is the incoming invitation or scene. Keep its layout, pose, bodies, clothes, décor, lighting and lettering.',
+      'Image 1 is the incoming invitation or scene. Keep its layout, pose, bodies, clothes, décor and lighting.',
       `Images 2–${referenceCount} are the couple identity photos. Replace ONLY the face(s) on Image 1 with these exact people.`,
+      options?.genderMappingDirective ||
+        'GENDER & ATTIRE FIDELITY (MANDATORY): Match each person strictly by gender and ceremonial role. The male face goes on the male body (suit/tuxedo), the female face goes on the female body (gown/dress). NEVER invert bride and groom faces.',
       'Render each replacement face as honestly as photographed: bone structure, eyes, smile, cheek volume, skin tone, pores, moles/scars, age. Do not beautify, symmetrize, slim, lighten or airbrush.',
       'Do not invent a new couple. Do not keep the original faces from Image 1.',
       NANO_BANANA_CRITICAL_CONSTRAINT,
@@ -638,8 +657,14 @@ export function buildEnglishSceneBriefScaffold(
       ? 'a vertical print-ready luxury invitation card featuring the exact people from the attached reference photos (faces unchanged)'
       : 'a vertical print-ready luxury invitation card for a real Central African / RDC celebration';
 
+  const hasTextModifications =
+    /(?:remplace|modifi|chang).{0,50}(?:texte|titre|date|nom|description|écrit)|CARD VARIABLES|Replace on model image|écrits?|nouveaux? noms?/i.test(
+      cleaned,
+    );
   const action = coupleFaceSwap
-    ? 'keeping Image 1’s composition, pose, bodies, wardrobe, décor, lighting and typography while replacing only the faces with the couple identity photos'
+    ? hasTextModifications
+      ? 'keeping Image 1’s composition, pose, bodies, wardrobe, décor, lighting and ornaments while replacing faces with the couple identity photos (matching groom to suit and bride to gown) and updating typography to match new brief details'
+      : 'keeping Image 1’s composition, pose, bodies, wardrobe, décor, lighting and ornaments while replacing only the faces with the couple identity photos (matching groom to suit and bride to gown)'
     : looksLikeRefine
     ? 'faithfully preserving the overall visual composition, layout, color palette, ornaments, framing, and existing typography/people of the reference card, applying precisely the requested targeted adjustment'
     : looksLikeClone
@@ -796,11 +821,17 @@ export function processUserPromptForHonestFaces(
 
   const visionBrief = collapseSpaces(`${englishSceneBrief}${honestyNote}`);
 
+  const hasTextModifications =
+    /(?:remplace|modifi|chang).{0,50}(?:texte|titre|date|nom|description|écrit)|CARD VARIABLES|Replace on model image|écrits?|nouveaux? noms?/i.test(
+      originalBrief,
+    );
   const imageBrief = coupleFaceSwap
     ? [
         'USER BRIEF (English scene — replace faces on Image 1 with the couple in Images 2+):',
         englishSceneBrief,
-        'Replace ONLY the faces on the incoming card. Keep pose, bodies, wardrobe, décor, lighting and typography.',
+        hasTextModifications
+          ? 'Replace the faces on Image 1 (strictly matching groom face to male body/suit, bride face to female body/gown). Do NOT keep old names, dates or text from Image 1. Leave clean card space for overlay typography.'
+          : 'Replace ONLY the faces on the incoming card (strictly matching groom face to male body/suit, bride face to female body/gown). Keep pose, bodies, wardrobe, décor and lighting. Do not paint old names on clean background.',
         NANO_BANANA_CRITICAL_CONSTRAINT,
         NANO_BANANA_STYLE_INSTRUCTION,
         NANO_BANANA_LIGHT_RIG_COHERENCE,
@@ -826,8 +857,14 @@ export function processUserPromptForHonestFaces(
     englishSceneBrief,
     visionBrief,
     imageBrief,
-    identityHeader: buildHonestFaceIdentityHeader(referenceCount, { coupleFaceSwap }),
-    referenceRoles: buildReferenceRoles(referenceCount, { coupleFaceSwap }),
+    identityHeader: buildHonestFaceIdentityHeader(referenceCount, {
+      coupleFaceSwap,
+      genderMappingDirective: options?.genderMappingDirective,
+    }),
+    referenceRoles: buildReferenceRoles(referenceCount, {
+      coupleFaceSwap,
+      genderMappingDirective: options?.genderMappingDirective,
+    }),
     beautifyStripped: stripped,
     explicitAppearanceChange,
     coupleFaceSwap,

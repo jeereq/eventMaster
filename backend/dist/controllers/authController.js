@@ -42,6 +42,7 @@ exports.resendOtp = resendOtp;
 exports.login = login;
 exports.verifyEmail = verifyEmail;
 exports.getProfile = getProfile;
+exports.refreshSession = refreshSession;
 exports.updateProfile = updateProfile;
 exports.forgotPassword = forgotPassword;
 exports.resetPassword = resetPassword;
@@ -440,7 +441,11 @@ async function getProfile(req, res) {
         const access = user.tenantId
             ? await (0, permissionsService_1.resolveOrgAccess)(user.id, user.tenantId)
             : null;
+        const token = buildAuthToken(user, {
+            impersonatedBy: req.user.impersonatedBy,
+        });
         return res.json({
+            token,
             user: {
                 ...publicUser(user),
                 impersonatedBy: req.user.impersonatedBy || null,
@@ -453,6 +458,9 @@ async function getProfile(req, res) {
         console.error('Erreur lors de la récupération du profil:', error);
         return res.status(500).json({ error: 'Erreur interne lors de la récupération du profil.' });
     }
+}
+async function refreshSession(req, res) {
+    return getProfile(req, res);
 }
 async function updateProfile(req, res) {
     try {
