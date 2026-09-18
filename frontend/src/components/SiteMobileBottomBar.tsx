@@ -65,11 +65,11 @@ export const SITE_MOBILE_NAV_ITEMS: MobileNavItem[] = [
     icon: Sparkles,
   },
   {
-    id: 'activity',
-    label: 'Réalisations',
-    shortLabel: 'Réalis.',
-    href: '/activite',
-    icon: Compass,
+    id: 'models',
+    label: 'Modèles',
+    shortLabel: 'Modèles',
+    href: '/modeles',
+    icon: FileText,
   },
   {
     id: 'more',
@@ -89,12 +89,12 @@ const MORE_LINKS = [
     iconBg: 'bg-primary/10',
   },
   {
-    href: '/modeles',
-    label: 'Modèles d’invitations',
-    description: 'Faire-part et templates interactifs',
-    icon: FileText,
-    iconColor: 'text-primary',
-    iconBg: 'bg-primary/10',
+    href: '/activite',
+    label: 'Réalisations & Événements',
+    description: 'Vitrine et retours d’expérience',
+    icon: Compass,
+    iconColor: 'text-festive-accent',
+    iconBg: 'bg-festive-accent-soft',
   },
   {
     href: '/tarifs',
@@ -131,7 +131,7 @@ function isItemActive(
     return (
       sheetOpen ||
       [
-        '/modeles',
+        '/activite',
         '/plans-3d',
         '/editeur',
         '/tarifs',
@@ -149,8 +149,8 @@ function isItemActive(
   if (itemHref === SIMULATOR_HREF) {
     return pathname === '/simulateur' || pathname.startsWith('/simulateur');
   }
-  if (itemHref === '/activite') {
-    return pathname === '/activite' || pathname.startsWith('/activite/');
+  if (itemHref === '/modeles') {
+    return pathname === '/modeles' || pathname.startsWith('/modeles/');
   }
   if (itemHref === '/marketplace') {
     return pathname.startsWith('/marketplace') || pathname.startsWith('/evenements');
