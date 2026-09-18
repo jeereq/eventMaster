@@ -2,6 +2,7 @@ export type InvitationModelPhoto = {
   id: string;
   name: string;
   imageUrl: string;
+  aiTokenCost?: number;
 };
 
 const HTTP_IMAGE = /^https?:\/\//i;
@@ -28,22 +29,27 @@ export function invitationModelPhotoFromContent(
   id: string,
   name: string,
   content: unknown,
+  aiTokenCost?: number,
 ): InvitationModelPhoto | null {
   const imageUrl = extractInvitationModelImageUrl(content);
   if (!imageUrl || !id) return null;
   const label = String(name || '').trim() || 'Modèle';
-  return { id, name: label, imageUrl };
+  const cost =
+    typeof aiTokenCost === 'number' && Number.isFinite(aiTokenCost)
+      ? Math.min(50, Math.max(1, Math.round(aiTokenCost)))
+      : undefined;
+  return { id, name: label, imageUrl, ...(cost ? { aiTokenCost: cost } : {}) };
 }
 
 export function invitationModelPhotosFromItems(
-  items: Array<{ id: string; name: string; content?: unknown; previewContent?: unknown }>,
+  items: Array<{ id: string; name: string; content?: unknown; previewContent?: unknown; aiTokenCost?: number }>,
 ): InvitationModelPhoto[] {
   const seen = new Set<string>();
   const photos: InvitationModelPhoto[] = [];
   for (const item of items) {
     const photo =
-      invitationModelPhotoFromContent(item.id, item.name, item.previewContent) ||
-      invitationModelPhotoFromContent(item.id, item.name, item.content);
+      invitationModelPhotoFromContent(item.id, item.name, item.previewContent, item.aiTokenCost) ||
+      invitationModelPhotoFromContent(item.id, item.name, item.content, item.aiTokenCost);
     if (!photo || seen.has(photo.imageUrl)) continue;
     seen.add(photo.imageUrl);
     photos.push(photo);

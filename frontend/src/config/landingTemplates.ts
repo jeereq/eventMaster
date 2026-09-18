@@ -4,6 +4,8 @@ export interface LandingTemplate {
   category: 'private' | 'corporate' | 'casual';
   group: 'private' | 'corporate' | 'casual';
   description: string;
+  /** Jetons IA pour utiliser ce modèle comme base (défaut 2). */
+  aiTokenCost?: number;
   style: {
     bg: string;
     border: string;

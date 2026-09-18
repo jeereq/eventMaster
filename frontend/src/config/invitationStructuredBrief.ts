@@ -13,6 +13,14 @@ export type InvitationStructuredBrief = {
   language: InvitationBriefLanguage | null;
   mood: string[];
   mustKeep: string;
+  title: string;
+  honorees: string;
+  date: string;
+  description: string;
+  replaceTitle: boolean;
+  replaceHonorees: boolean;
+  replaceDate: boolean;
+  replaceDescription: boolean;
 };
 
 export const INVITATION_CEREMONY_OPTIONS: Array<{ id: InvitationCeremonyId; label: string }> = [
@@ -44,7 +52,20 @@ export const INVITATION_MOOD_CHIPS = [
 ] as const;
 
 export function emptyInvitationStructuredBrief(): InvitationStructuredBrief {
-  return { ceremony: null, language: null, mood: [], mustKeep: '' };
+  return {
+    ceremony: null,
+    language: null,
+    mood: [],
+    mustKeep: '',
+    title: '',
+    honorees: '',
+    date: '',
+    description: '',
+    replaceTitle: true,
+    replaceHonorees: true,
+    replaceDate: true,
+    replaceDescription: true,
+  };
 }
 
 export function toggleInvitationMood(current: string[], chip: string): string[] {

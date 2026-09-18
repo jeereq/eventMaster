@@ -44,6 +44,7 @@ import {
  canAffordAiAction,
  aiTokenBalanceLabel,
  AI_INVITATION_COMPOSE_TOKEN_COST,
+ resolveInvitationComposeTokenCostClient,
  type AiAllowance,
 } from '@/lib/aiTokens';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
@@ -62,6 +63,7 @@ import { PageHeader, Alert, Button, Input, SkeletonTemplatesView, ViewModeToggle
 import InvitationDuplicateModal, { type InvitationDuplicateValues } from '@/components/InvitationDuplicateModal';
 import InvitationIdentityFields from '@/components/InvitationIdentityFields';
 import InvitationStructuredBriefFields from '@/components/InvitationStructuredBriefFields';
+import InvitationCardInfoFields from '@/components/InvitationCardInfoFields';
 import { emptyInvitationStructuredBrief, type InvitationStructuredBrief } from '@/config/invitationStructuredBrief';
 import InvitationModelPhotoPicker from '@/components/InvitationModelPhotoPicker';
 import {
@@ -112,6 +114,7 @@ interface TemplateItem {
  createdAt: string;
  tenantId?: string | null;
  showOnLanding?: boolean;
+ aiTokenCost?: number;
  isGlobal?: boolean;
  isOwned?: boolean;
  canEdit?: boolean;
@@ -375,6 +378,7 @@ export default function TemplatesPage() {
  const [landingCategory, setLandingCategory] = useState<'private' | 'corporate' | 'casual'>('private');
  const [landingDescription, setLandingDescription] = useState('');
  const [showOnLanding, setShowOnLanding] = useState(false);
+ const [aiTokenCost, setAiTokenCost] = useState(AI_INVITATION_COMPOSE_TOKEN_COST);
  const [canvasSizePreset, setCanvasSizePreset] = useState<CanvasSizePreset>('standard');
  const [canvasWidth, setCanvasWidth] = useState(CANVAS_SIZE_PRESETS.standard.width);
  const [canvasHeight, setCanvasHeight] = useState(CANVAS_SIZE_PRESETS.standard.height);
@@ -635,6 +639,7 @@ export default function TemplatesPage() {
  setLandingCategory('private');
  setLandingDescription('');
  setShowOnLanding(false);
+ setAiTokenCost(AI_INVITATION_COMPOSE_TOKEN_COST);
  setCanvasSizePreset('standard');
  setCanvasWidth(CANVAS_SIZE_PRESETS.standard.width);
  setCanvasHeight(CANVAS_SIZE_PRESETS.standard.height);
@@ -683,6 +688,11 @@ export default function TemplatesPage() {
  setLandingCategory(global.landingCategory || 'private');
  setLandingDescription(global.landingDescription || '');
  setShowOnLanding(Boolean(t.showOnLanding));
+ setAiTokenCost(
+   typeof t.aiTokenCost === 'number' && Number.isFinite(t.aiTokenCost)
+     ? Math.min(50, Math.max(1, Math.round(t.aiTokenCost)))
+     : AI_INVITATION_COMPOSE_TOKEN_COST,
+ );
  setCanvasSizePreset(global.canvasSizePreset || 'standard');
  const dims = global.canvasSizePreset && global.canvasSizePreset !== 'custom'
  ? CANVAS_SIZE_PRESETS[global.canvasSizePreset as Exclude<CanvasSizePreset, 'custom'>]
@@ -1385,9 +1395,9 @@ export default function TemplatesPage() {
  setError('Décrivez la fête en quelques mots (au moins 8 caractères), puis générez.');
  return;
  }
- if (!canAffordAiAction(aiAllowance, AI_INVITATION_COMPOSE_TOKEN_COST)) {
+ if (!canAffordAiAction(aiAllowance, resolveInvitationComposeTokenCostClient(aiComposeModelPhoto))) {
  setError(
- `La génération d’invitation consomme ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons. Solde actuel : ${aiAllowance.totalRemaining}.`,
+ `La génération d’invitation consomme ${resolveInvitationComposeTokenCostClient(aiComposeModelPhoto)} jetons. Solde actuel : ${aiAllowance.totalRemaining}.`,
  );
  setAiTokenModalOpen(true);
  return;
@@ -1465,6 +1475,7 @@ export default function TemplatesPage() {
       speedMode: aiComposeSpeedMode,
       coupleFaceSwap: aiComposeCoupleFaceSwap,
       structuredBrief: aiComposeStructured,
+      sourceTemplateId: aiComposeModelPhoto?.id,
     });
     // Affiche l’étape « création d’image » pendant l’appel API (analyse + génération côté serveur)
     const stageTimer = window.setTimeout(() => {
@@ -1578,12 +1589,15 @@ export default function TemplatesPage() {
    aiComposeModelPhoto ||
    (bgImageUrl && /^https?:\/\//i.test(bgImageUrl)),
  );
+ const composeTokenCost = resolveInvitationComposeTokenCostClient(aiComposeModelPhoto);
  const composeBlockedReason = aiComposeCoupleFaceSwap
    ? (aiComposeFiles.length < 1
      ? 'Ajoutez au moins une photo du couple.'
      : !hasIncomingCard
        ? 'Ajoutez la carte dont les visages doivent être remplacés.'
        : null)
+   : aiComposeIsAlteration && !hasIncomingCard
+     ? 'Choisissez un modèle ou une photo de carte à modifier.'
    : (aiComposePrompt.trim().length < 8 ? 'Décrivez la fête en quelques mots.' : null);
  if (typeof document === 'undefined') return null;
  return createPortal(
@@ -1608,14 +1622,14 @@ export default function TemplatesPage() {
  <div className="min-w-0">
             <h2 id="ai-compose-title" className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2.5">
               {aiComposeCoupleFaceSwap ? <Users className="w-6 h-6 text-primary" aria-hidden /> : <Wand2 className="w-6 h-6 text-primary" aria-hidden />}
-              {aiComposeCoupleFaceSwap ? 'Visages du couple' : aiComposeIsAlteration ? 'Retoucher avec l’IA' : 'Créer avec l’IA'}
+              {aiComposeCoupleFaceSwap ? 'Visages du couple' : aiComposeIsAlteration ? 'Modifier un modèle' : 'Fond pur + variables'}
             </h2>
             <p className="text-sm sm:text-base text-muted mt-1.5 leading-relaxed max-w-4xl">
               {aiComposeCoupleFaceSwap
-                ? `Posez la carte, puis les photos du couple. Les visages changent ; le décor reste. ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`
+                ? `Posez la carte, puis les photos du couple. Les visages changent ; le décor reste. ${composeTokenCost} jetons.`
                 : aiComposeIsAlteration
-                ? `Dites seulement ce qui change. Le reste de la carte est conservé. ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`
-                : `Trois gestes : choisir le mode, décrire la fête, générer. Les photos sont optionnelles. ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`}
+                ? `Partez d’un modèle et remplacez les textes ou les visages. ${composeTokenCost} jetons.`
+                : `Fond généré, textes dynamiques posés ensuite. ${composeTokenCost} jetons.`}
             </p>
  </div>
  <button
@@ -1638,14 +1652,14 @@ export default function TemplatesPage() {
  <Coins className="w-3.5 h-3.5" />
  {aiAllowance.unlimited ? 'Jetons illimités' : `${aiTokenBalanceLabel(aiAllowance)} jeton${aiAllowance.totalRemaining === 1 ? '' : 's'} restant${aiAllowance.totalRemaining === 1 ? '' : 's'}`}
  </span>
- {!canAffordAiAction(aiAllowance, AI_INVITATION_COMPOSE_TOKEN_COST) && (
+ {!canAffordAiAction(aiAllowance, composeTokenCost) && (
  <button
  type="button"
  onClick={() => setAiTokenModalOpen(true)}
  className="min-h-11 px-2 text-primary font-bold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-[var(--radius-button)]"
  >
  <span className="sm:hidden">Recharger</span>
- <span className="hidden sm:inline">Recharger ({AI_INVITATION_COMPOSE_TOKEN_COST} jetons / invitation)</span>
+ <span className="hidden sm:inline">Recharger ({composeTokenCost} jetons / invitation)</span>
  </button>
  )}
  </div>
@@ -1666,8 +1680,8 @@ export default function TemplatesPage() {
      aiComposeCoupleFaceSwap
        ? ['Ajoutez la carte à modifier', 'Ajoutez 1 ou 2 photos du couple', 'Générez']
        : aiComposeIsAlteration
-         ? ['Gardez cette carte', 'Dites uniquement ce qui change', 'Générez']
-         : ['Choisissez Nouveau carton', 'Décrivez la fête (photos optionnelles)', 'Générez']
+         ? ['Choisissez un modèle', 'Indiquez les textes à remplacer', 'Générez']
+         : ['Choisissez Fond pur', 'Renseignez les infos de la carte', 'Générez']
    }
  />
  <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-10 xl:gap-12 lg:items-start space-y-6 lg:space-y-0">
@@ -1677,19 +1691,16 @@ export default function TemplatesPage() {
  <div
    role="radiogroup"
    aria-label="Mode de l’assistant"
-   className="grid grid-cols-3 gap-3"
+   className="grid grid-cols-2 gap-3"
  >
    {([
-     { id: 'create', label: 'Nouveau carton', hint: 'À partir d’un brief' },
-     { id: 'alter', label: 'Retoucher', hint: 'Garder cette carte' },
-     { id: 'couple', label: 'Visages', hint: 'Mettre le couple' },
+     { id: 'create', label: 'Fond pur + variables', hint: 'Carte neuve, textes dynamiques' },
+     { id: 'modify', label: 'Modifier un modèle', hint: 'Textes / visages sur une base' },
    ] as const).map((mode) => {
      const active =
-       mode.id === 'couple'
-         ? aiComposeCoupleFaceSwap
-         : mode.id === 'alter'
-           ? aiComposeIsAlteration && !aiComposeCoupleFaceSwap
-           : !aiComposeIsAlteration && !aiComposeCoupleFaceSwap;
+       mode.id === 'modify'
+         ? aiComposeIsAlteration || aiComposeCoupleFaceSwap
+         : !aiComposeIsAlteration && !aiComposeCoupleFaceSwap;
      return (
        <button
          key={mode.id}
@@ -1698,27 +1709,15 @@ export default function TemplatesPage() {
          aria-checked={active}
          disabled={aiComposeBusy}
          onClick={() => {
-           if (mode.id === 'couple') {
-             setAiComposeCoupleFaceSwap(true);
+           if (mode.id === 'modify') {
              setAiComposeIsAlteration(true);
-             setAiComposeTitle(
-               templateName.trim() && !/^Nouveau Modèle|^Nouvelle invitation|^Invitation IA$/i.test(templateName)
-                 ? templateName
-                 : '',
-             );
-             setAiComposeHonorees(invitationHonorees === 'Hassan & Ayesha' ? '' : invitationHonorees);
-             setAiComposeDate(invitationDate === '2026-06-15' ? '' : invitationDate);
-             if (aiComposePrompt.trim().length < 8) {
-               setAiComposePrompt(COUPLE_FACE_SWAP_DEFAULT_PROMPT);
-             }
-             if (aiComposeFiles.length > 2) {
-               aiComposePreviewUrls.slice(2).forEach((url) => URL.revokeObjectURL(url));
-               setAiComposeFiles((prev) => prev.slice(0, 2));
-               setAiComposePreviewUrls((prev) => prev.slice(0, 2));
+             if (aiComposePrompt.trim() === COUPLE_FACE_SWAP_DEFAULT_PROMPT && !aiComposeCoupleFaceSwap) {
+               setAiComposePrompt('');
              }
            } else {
              setAiComposeCoupleFaceSwap(false);
-             setAiComposeIsAlteration(mode.id === 'alter');
+             setAiComposeIsAlteration(false);
+             setAiComposeModelPhoto(null);
              if (aiComposePrompt.trim() === COUPLE_FACE_SWAP_DEFAULT_PROMPT) {
                setAiComposePrompt('');
              }
@@ -1736,6 +1735,44 @@ export default function TemplatesPage() {
      );
    })}
  </div>
+ {(aiComposeIsAlteration || aiComposeCoupleFaceSwap) ? (
+   <label className="mt-3 flex min-h-11 items-center gap-2.5 rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2.5 cursor-pointer">
+     <input
+       type="checkbox"
+       checked={aiComposeCoupleFaceSwap}
+       disabled={aiComposeBusy}
+       onChange={(e) => {
+         const on = e.target.checked;
+         setAiComposeCoupleFaceSwap(on);
+         setAiComposeIsAlteration(true);
+         if (on) {
+           setAiComposeTitle(
+             templateName.trim() && !/^Nouveau Modèle|^Nouvelle invitation|^Invitation IA$/i.test(templateName)
+               ? templateName
+               : '',
+           );
+           setAiComposeHonorees(invitationHonorees === 'Hassan & Ayesha' ? '' : invitationHonorees);
+           setAiComposeDate(invitationDate === '2026-06-15' ? '' : invitationDate);
+           if (aiComposePrompt.trim().length < 8) {
+             setAiComposePrompt(COUPLE_FACE_SWAP_DEFAULT_PROMPT);
+           }
+           if (aiComposeFiles.length > 2) {
+             aiComposePreviewUrls.slice(2).forEach((url) => URL.revokeObjectURL(url));
+             setAiComposeFiles((prev) => prev.slice(0, 2));
+             setAiComposePreviewUrls((prev) => prev.slice(0, 2));
+           }
+         } else if (aiComposePrompt.trim() === COUPLE_FACE_SWAP_DEFAULT_PROMPT) {
+           setAiComposePrompt('');
+         }
+       }}
+       className="rounded border-border text-primary focus:ring-primary"
+     />
+     <span className="min-w-0">
+       <span className="block text-sm font-bold text-foreground">Remplacer les visages du couple</span>
+       <span className="block text-xs text-muted">Sous-option : carte modèle + 1 ou 2 photos</span>
+     </span>
+   </label>
+ ) : null}
  </div>
 
  {aiComposeCoupleFaceSwap ? (
@@ -1974,6 +2011,15 @@ export default function TemplatesPage() {
    onChange={setAiComposeStructured}
    disabled={aiComposeBusy}
  />
+ <div className="mt-4">
+   <InvitationCardInfoFields
+     id="ai-compose-card-info"
+     value={aiComposeStructured}
+     onChange={setAiComposeStructured}
+     showReplaceToggles={aiComposeIsAlteration || aiComposeCoupleFaceSwap}
+     disabled={aiComposeBusy}
+   />
+ </div>
  <div className="flex items-center justify-between mt-4">
  <label htmlFor="ai-compose-prompt" className="text-sm font-semibold text-muted">
    {aiComposeCoupleFaceSwap ? 'Qui est à gauche, tenue à garder…' : 'Ambiance, couleurs, cérémonie'}
@@ -2214,8 +2260,8 @@ export default function TemplatesPage() {
             {aiComposeBusy
               ? 'Génération…'
               : aiComposeCoupleFaceSwap
-                ? `Remplacer les visages (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`
-                : `Générer (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
+                ? `Remplacer les visages (${composeTokenCost} jetons)`
+                : `Générer (${composeTokenCost} jetons)`}
  </button>
  </div>
  </div>
@@ -2829,6 +2875,7 @@ export default function TemplatesPage() {
  };
  if (isGlobalTemplate) {
  payload.showOnLanding = showOnLanding;
+ payload.aiTokenCost = aiTokenCost;
  }
 
  if (editingTemplateId) {
@@ -3625,6 +3672,7 @@ const studioModelPhotos = useMemo(
  ))}
  </select>
  {!selectedTenantId && (
+ <>
  <label className="inline-flex min-h-[44px] items-center gap-1.5 text-xs font-bold text-primary cursor-pointer px-2 rounded-lg hover:bg-primary/5 focus-within:ring-2 focus-within:ring-primary/40">
  <input
  type="checkbox"
@@ -3634,6 +3682,22 @@ const studioModelPhotos = useMemo(
  />
  Afficher sur la page d&apos;accueil
  </label>
+ <label className="inline-flex min-h-[44px] items-center gap-1.5 text-xs font-bold text-muted px-2">
+ <span>Jetons IA</span>
+ <input
+ type="number"
+ min={1}
+ max={50}
+ value={aiTokenCost}
+ onChange={(e) => {
+   const next = Math.round(Number(e.target.value));
+   setAiTokenCost(Number.isFinite(next) ? Math.min(50, Math.max(1, next)) : AI_INVITATION_COMPOSE_TOKEN_COST);
+ }}
+ className="w-16 rounded-lg border border-border bg-surface-muted px-2 py-1.5 text-xs font-bold text-foreground focus:outline-none focus:border-primary"
+ title="Coût en jetons pour utiliser ce modèle comme base IA"
+ />
+ </label>
+ </>
  )}
  </div>
  )}
@@ -3747,7 +3811,7 @@ const studioModelPhotos = useMemo(
                   Créer le carton
                 </h3>
                 <p className="text-xs text-muted leading-relaxed mt-0.5">
-                  Décrivez la fête, ou déposez une carte et les photos du couple. {AI_INVITATION_COMPOSE_TOKEN_COST} jetons par création.
+                  Décrivez la fête, ou partez d’un modèle pour remplacer textes et visages. Coût selon le modèle (dès {AI_INVITATION_COMPOSE_TOKEN_COST} jetons).
                 </p>
               </div>
             </div>
@@ -5577,6 +5641,24 @@ const studioModelPhotos = useMemo(
  <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${showOnLanding ? 'translate-x-5' : 'translate-x-0'}`} />
  </button>
  </label>
+ <div className="space-y-1.5">
+ <label htmlFor="template-ai-token-cost" className="text-xs font-bold text-muted uppercase tracking-wider">
+ Coût IA (jetons)
+ </label>
+ <input
+ id="template-ai-token-cost"
+ type="number"
+ min={1}
+ max={50}
+ value={aiTokenCost}
+ onChange={(e) => {
+   const next = Math.round(Number(e.target.value));
+   setAiTokenCost(Number.isFinite(next) ? Math.min(50, Math.max(1, next)) : AI_INVITATION_COMPOSE_TOKEN_COST);
+ }}
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs font-semibold text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+ />
+ <p className="text-xs text-muted">Prix facturé quand ce modèle sert de base dans le studio (défaut {AI_INVITATION_COMPOSE_TOKEN_COST}).</p>
+ </div>
  <div className="space-y-1.5">
               <label className="text-xs font-bold text-muted uppercase tracking-wider">Catégorie sur la page d&apos;accueil</label>
  <select
