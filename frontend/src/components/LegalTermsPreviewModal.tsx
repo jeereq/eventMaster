@@ -19,6 +19,7 @@ import {
 import { Modal, Button } from '@/components/ui';
 import {
   collectionCommissionRangeLabel,
+  LEGAL_LAST_UPDATED,
   PRIVACY_VERSION,
   REFUND_VERSION,
   TERMS_VERSION,
@@ -297,7 +298,7 @@ export default function LegalTermsPreviewModal({
                   5. Studio IA, Rendu 3D photoréaliste &amp; Normes de sécurité
                 </h3>
                 <p className="text-muted">
-                  Modélisation 2D/3D WebGL (matériaux PBR, caméras cinéma, escaliers, estrades et scènes), contextualisation des invitations et respect des visages réels (Google Gemini). L&apos;utilisateur est informé que les modèles d&apos;IA peuvent occasionnellement présenter des imperfections ou altérations fortuites des visages, inhérentes à la technologie générative et ne constituant pas une faute d&apos;EventMaster. L&apos;assistance logicielle ne remplace pas les diagnostics d&apos;architecte et règlements ERP/PMR.
+                  Modélisation 2D/3D WebGL (matériaux PBR, caméras cinéma, escaliers, estrades et scènes) et composition d&apos;invitations (Google Gemini) : l&apos;identité vient des photos sources, les expressions restent celles du carton. L&apos;utilisateur doit disposer du consentement des personnes photographiées. Les modèles d&apos;IA peuvent présenter des imperfections ou altérations fortuites, inhérentes à la technologie générative et ne constituant pas une faute d&apos;EventMaster. L&apos;assistance logicielle ne remplace pas les diagnostics d&apos;architecte et règlements ERP/PMR.
                 </p>
               </div>
 
@@ -327,13 +328,13 @@ export default function LegalTermsPreviewModal({
             <div className="space-y-4">
               <div className="border-b border-border pb-3">
                 <h3 className="text-sm font-bold text-foreground">Conditions Générales d’Utilisation</h3>
-                <p className="text-xs text-muted">Version {TERMS_VERSION} · En vigueur au 14 septembre 2026</p>
+                <p className="text-xs text-muted">Version {TERMS_VERSION} · En vigueur au {LEGAL_LAST_UPDATED}</p>
               </div>
 
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">Article 1 — Objet, Éditeur &amp; Droit applicable</h4>
                 <p className="text-muted">
-                  La plateforme EventMaster est éditée par le Groupe Tekango conformément au Code du numérique congolais. En créant un compte, en souscrivant un abonnement, en utilisant le Studio IA, en effectuant un don ou en achetant un billet, vous acceptez l’ensemble des présentes conditions d’utilisation.
+                  La plateforme EventMaster est éditée par le Groupe Tekango conformément au Code du numérique congolais. En créant un compte, en souscrivant un abonnement, en utilisant le Studio IA ou le générateur d’invitations, en effectuant un don ou en achetant un billet, vous acceptez l’ensemble des présentes conditions d’utilisation.
                 </p>
               </section>
 
@@ -359,9 +360,9 @@ export default function LegalTermsPreviewModal({
               </section>
 
               <section className="space-y-1.5">
-                <h4 className="font-bold text-foreground">Article 5 — Studio IA, Plans 2D/3D &amp; Sécurité spatiale</h4>
+                <h4 className="font-bold text-foreground">Article 5 — Studio IA, Plans 2D/3D &amp; Invitations</h4>
                 <p className="text-muted">
-                  Plans 2D cotés et rendu 3D WebGL photoréaliste (matériaux PBR, caméras cinéma, escaliers droits/tournants/hélicoïdaux, estrades et scènes). L&apos;outil applique des normes physiques (1,40 m entre tables, allées PMR). L&apos;organisateur et l&apos;exploitant demeurent seuls juridiquement responsables de la conformité du plan réel exécuté le jour J au regard des règlements locaux ERP/PMR.
+                  Plans 2D cotés et rendu 3D WebGL photoréaliste (matériaux PBR, caméras cinéma, escaliers droits/tournants/hélicoïdaux, estrades et scènes). L&apos;outil applique des normes physiques (1,40 m entre tables, allées PMR). L&apos;organisateur et l&apos;exploitant demeurent seuls juridiquement responsables de la conformité du plan réel exécuté le jour J au regard des règlements locaux ERP/PMR. Pour les invitations : l&apos;identité vient des photos sources, les expressions restent celles du carton ; l&apos;utilisateur certifie le consentement et le droit à l&apos;image des personnes identifiables.
                 </p>
               </section>
 
@@ -385,7 +386,7 @@ export default function LegalTermsPreviewModal({
             <div className="space-y-4">
               <div className="border-b border-border pb-3">
                 <h3 className="text-sm font-bold text-foreground">Politique de Confidentialité &amp; Données</h3>
-                <p className="text-xs text-muted">Version {PRIVACY_VERSION} · En vigueur au 14 septembre 2026</p>
+                <p className="text-xs text-muted">Version {PRIVACY_VERSION} · En vigueur au {LEGAL_LAST_UPDATED}</p>
               </div>
 
               <section className="space-y-1.5">
@@ -398,14 +399,14 @@ export default function LegalTermsPreviewModal({
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">2. Studio IA, Médias importés &amp; Respect des visages</h4>
                 <p className="text-muted">
-                  Photographies de salle traitées pour extraire le plan 2D/3D sans reconnaissance faciale de surveillance. Pour les invitations, choix de la source de contexte et respect strict des visages de référence selon les directives Google Gemini (sans retouche artificielle déformante). Les éventuelles altérations ou approximations visuelles résultant des limites intrinsèques du modèle d&apos;IA ne sauraient engager la responsabilité d&apos;EventMaster.
+                  Photographies de salle traitées pour extraire le plan 2D/3D sans reconnaissance faciale de surveillance. Pour les invitations : le carton conserve les expressions ; les photos sources fournissent l&apos;identité uniquement. L&apos;utilisateur certifie le consentement des personnes identifiables. Pas de fichier biométrique. Les éventuelles altérations résultant des limites du modèle d&apos;IA ne sauraient engager la responsabilité d&apos;EventMaster.
                 </p>
               </section>
 
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">3. Finalités des traitements</h4>
                 <p className="text-muted">
-                  Émission des e-billets et pass donateurs, validation automatique de présence, simulation budgétaire en FC/USD, modélisation 2D/3D photoréaliste avec allées PMR, génération d&apos;invitations multilingues (Français, Lingala, Swahili, Kikongo, Tshiluba), contrôle d’accès anti-doublon et conformité LCB-FT.
+                  Émission des e-billets et pass donateurs, validation automatique de présence, simulation budgétaire en FC/USD, modélisation 2D/3D photoréaliste avec allées PMR, génération d&apos;invitations multilingues (Français, Lingala, Swahili, Kikongo, Tshiluba) y compris substitution d&apos;identité sur carton, contrôle d’accès anti-doublon et conformité LCB-FT.
                 </p>
               </section>
 

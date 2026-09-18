@@ -97,7 +97,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'ai-invitations-context',
     question: 'Comment fonctionnent le Studio d’invitation IA et le respect des visages ?',
     answer:
-      'Le Studio IA permet de choisir votre source de contexte (profil de votre organisation ou historique de recherche). Les textes sont enrichis en Français et dans les 4 langues nationales congolaises (Lingala, Swahili, Kikongo, Tshiluba). Pour les visages, notre technologie suit les préconisations éthiques de Google Gemini : elle restitue honnêtement les traits réels des photos de référence, sans embellissement artificiel ni déformation trompeuse.',
+      'Le Studio IA permet de choisir votre source de contexte (profil de votre organisation ou historique de recherche). Les textes sont enrichis en Français et dans les 4 langues nationales congolaises (Lingala, Swahili, Kikongo, Tshiluba). Pour les visages : les photos sources fournissent l’identité (qui sont les personnes) ; les expressions (sourire, regard, émotion) restent celles déjà présentes sur le carton. Pas d’embellissement artificiel trompeur. Vous devez disposer du consentement des personnes photographiées.',
   },
   {
     id: 'marketplace-venues',

@@ -1,6 +1,6 @@
 import { LegalPageShell, Section } from '@/components/LegalPageShell';
 import LegalSupportEmail from '@/components/LegalSupportEmail';
-import { collectionCommissionRangeLabel, PRIVACY_VERSION } from '@/config/legalConfig';
+import { collectionCommissionRangeLabel, LEGAL_LAST_UPDATED, PRIVACY_VERSION } from '@/config/legalConfig';
 
 export const metadata = {
   title: 'Politique de confidentialité — EventMaster',
@@ -13,7 +13,7 @@ export default function PrivacyPage() {
     <LegalPageShell
       title="Politique de confidentialité"
       subtitle="Comment EventMaster collecte, utilise, protège et traite vos données personnelles, incluant le Studio IA, la billetterie multi-zone, les dons solidaires, la présence auto-validée, la personnalisation invité et les paiements sécurisés."
-      lastUpdated="14 septembre 2026"
+      lastUpdated={LEGAL_LAST_UPDATED}
       version={PRIVACY_VERSION}
     >
       <Section title="1. Responsables de traitement, Groupe Tekango & Cadre Légal RDC">
@@ -74,7 +74,7 @@ export default function PrivacyPage() {
             <em className="text-muted text-xs">Garantie stricte : Les photos importées sont traitées exclusivement pour déduire la géométrie de la salle et la disposition du mobilier (tables, chaises, allées, portes, scènes). EventMaster n&apos;effectue aucune identification biométrique ni reconnaissance faciale sur les personnes pouvant figurer fortuitement sur ces clichés.</em>
           </li>
           <li>
-            <strong>Invitations multilingues, Contexte &amp; Respect des visages (Google Gemini) :</strong> Briefs textuels de célébration, choix de la source de contexte (profil organisationnel ou historique de requêtes récent), textes rédigés ou reformulés par l&apos;IA (en Français et dans les 4 langues nationales congolaises : Lingala, Swahili, Kikongo, Tshiluba), et photographies de référence destinées à la préservation fidèle des visages réels (ancrage d&apos;identité sans retouche déformante ni conservation biométrique permanente).
+            <strong>Invitations multilingues, carton, photos sources &amp; Respect des visages (Google Gemini) :</strong> Briefs textuels de célébration, choix de la source de contexte (profil organisationnel ou historique de requêtes récent), textes rédigés ou reformulés par l&apos;IA (en Français et dans les 4 langues nationales congolaises : Lingala, Swahili, Kikongo, Tshiluba), photographie du carton d&apos;invitation et photographies sources des hôtes destinées à composer le visuel. L&apos;identité (qui sont les personnes) est tirée des photos sources ; les expressions faciales (sourire, regard, émotion) sont celles déjà présentes sur le carton. Traitement sans retouche déformante trompeuse ni conservation biométrique permanente, et sans reconnaissance faciale de surveillance.
           </li>
           <li>
             <strong>Simulateur de budget IA (/simulateur) :</strong> Critères de simulation transmis volontairement par l&apos;utilisateur (type d&apos;événement, ville, commune, jauge d&apos;invités, fourchette budgétaire en Francs Congolais ou Dollars) pour le calcul de formules estimatives et l&apos;appariement transparent avec les prestataires certifiés du catalogue.
@@ -105,7 +105,7 @@ export default function PrivacyPage() {
         <ul className="list-disc pl-5 space-y-1">
           <li><strong>Création et gestion des comptes :</strong> authentification sécurisée par code OTP (e-mail ou WhatsApp), gestion des privilèges d&apos;équipe et administration multi-tenant ;</li>
           <li><strong>Modélisation spatiale assistée par IA :</strong> analyse visuelle des photos de salle et génération assistée de plans de salle 2D zénithaux et 3D WebGL via des modèles d&apos;intelligence artificielle (Google Gemini) ;</li>
-          <li><strong>Création d&apos;invitations multilingues :</strong> rédaction, reformulation et adaptation culturelle des messages d&apos;invitation en Français et dans les 4 langues nationales de la RDC (Lingala, Swahili, Kikongo, Tshiluba) avec prise en compte du contexte choisi et préservation éthique des visages ;</li>
+          <li><strong>Création d&apos;invitations multilingues :</strong> rédaction, reformulation et adaptation culturelle des messages d&apos;invitation en Français et dans les 4 langues nationales de la RDC (Lingala, Swahili, Kikongo, Tshiluba), composition graphique du carton et, le cas échéant, remplacement d&apos;identité des visages (expressions conservées depuis le carton) ;</li>
           <li><strong>Simulation de budget prévisionnel (/simulateur) :</strong> estimation de packs budgétaires (Éco, Équilibré, Confort) en FC et USD basés sur les capacités et les tarifs réels du catalogue d&apos;espaces et de prestataires ;</li>
           <li><strong>Gestion de la billetterie électronique multi-zones :</strong> répartition des tables et sièges par zone tarifaire, placement PMR adapté, confirmation automatique de présence (Répondez s’il vous plaît « accepté ») dès l&apos;achat, personnalisation nominative des billets partagés par leurs bénéficiaires, génération instantanée des e-billets avec QR Codes infalsifiables et téléchargement PDF ;</li>
           <li><strong>Gestion des dons solidaires et collectes de fonds :</strong> enregistrement et sécurisation des contributions libres, émission des pass invité donateur, gestion des dons anonymes et restitution des états financiers pour les organisateurs ;</li>
@@ -158,7 +158,7 @@ export default function PrivacyPage() {
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
           <li>
-            <strong>Google Cloud / Google Gemini API :</strong> Fournisseur d&apos;infrastructure d&apos;intelligence artificielle pour l&apos;analyse de vision des photos de salle et la reformulation d&apos;invitations en langues nationales congolaises. 
+            <strong>Google Cloud / Google Gemini API :</strong> Fournisseur d&apos;infrastructure d&apos;intelligence artificielle pour l&apos;analyse de vision des photos de salle, la composition d&apos;invitations (y compris la substitution d&apos;identité faciale à partir des photographies fournies) et la reformulation en langues nationales congolaises. 
             <br />
             <em className="text-muted text-xs">Engagement de confidentialité : Dans le cadre de nos accords d&apos;API professionnelle, les requêtes textuelles et les images téléversées par nos utilisateurs ne sont pas utilisées pour entraîner les modèles publics de Google.</em>
           </li>
@@ -166,7 +166,7 @@ export default function PrivacyPage() {
             <strong>FlexPay :</strong> Prestataire de services de paiement agréé (RDC) pour le traitement sécurisé des paiements par Cartes Bancaires (Visa, Mastercard) et Mobile Money (M-Pesa, Orange Money, Airtel Money, Afrimoney), l&apos;achat de jetons IA, la collecte de dons et l&apos;exécution des reversements aux organisateurs (payouts) ;
           </li>
           <li>
-            <strong>Cloudinary :</strong> Hébergement et distribution sécurisée des médias (images de modèles, visuels d&apos;événements, photographies de plans et photos de fiches marketplace) ;
+            <strong>Cloudinary :</strong> Hébergement et distribution sécurisée des médias (images de modèles, cartons et photos sources d&apos;invitation, visuels d&apos;événements, photographies de plans et photos de fiches marketplace) ;
           </li>
           <li>
             <strong>SendGrid :</strong> Acheminement sécurisé des e-mails transactionnels (codes de vérification OTP, confirmations de commande, reçus de billetterie et e-billets PDF) ;
@@ -186,6 +186,7 @@ export default function PrivacyPage() {
         </p>
         <ul className="list-disc pl-5 space-y-1">
           <li><strong>Photos de salle et images importées pour analyse IA :</strong> conservées dans l&apos;espace privé de l&apos;organisation pour l&apos;historique du plan jusqu&apos;à suppression volontaire par l&apos;organisateur ou clôture du compte ;</li>
+          <li><strong>Cartons et photographies sources d&apos;invitation :</strong> conservés dans l&apos;espace privé de l&apos;organisation (ou, pour le générateur public, le temps nécessaire à la composition) jusqu&apos;à suppression volontaire ou clôture du compte ; ils ne sont pas utilisés pour constituer un fichier biométrique ;</li>
           <li><strong>Données d&apos;événements passés et confirmations d&apos;invités :</strong> conservées dans l&apos;espace de l&apos;organisateur jusqu&apos;à suppression volontaire par ce dernier ou clôture de l&apos;espace ;</li>
           <li><strong>Billets, dons solidaires et historiques de transactions financières :</strong> conservés pendant les délais légaux et comptables obligatoires (de 5 à 10 ans selon la réglementation fiscale et commerciale en vigueur en RDC et sous l&apos;Acte uniforme OHADA) ;</li>
           <li><strong>Grand livre de consommation des jetons IA et journaux d&apos;actions (`RoomActionContext`) :</strong> conservés pour la durée d&apos;activité du compte organisationnel afin de garantir la traçabilité des soldes et des modifications ;</li>
@@ -220,7 +221,7 @@ export default function PrivacyPage() {
 
       <Section title="11. Mises à jour de la politique de confidentialité">
         <p>
-          Cette politique de confidentialité peut être mise à jour pour accompagner le déploiement de nouvelles fonctionnalités ou des évolutions réglementaires. La date de dernière mise à jour (14 septembre 2026) et le numéro de version ({PRIVACY_VERSION}) sont toujours clairement indiqués en tête de document.
+          Cette politique de confidentialité peut être mise à jour pour accompagner le déploiement de nouvelles fonctionnalités ou des évolutions réglementaires. La date de dernière mise à jour ({LEGAL_LAST_UPDATED}) et le numéro de version ({PRIVACY_VERSION}) sont toujours clairement indiqués en tête de document.
         </p>
       </Section>
     </LegalPageShell>
