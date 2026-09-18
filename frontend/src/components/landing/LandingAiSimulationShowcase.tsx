@@ -2,11 +2,9 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { api } from '@/lib/api';
 import {
-  Wand2,
   ArrowRight,
   ShieldCheck,
   Heart,
@@ -168,8 +166,6 @@ export default function LandingAiSimulationShowcase() {
       setStudio(visibleStudioTabs[0].id);
     }
   }, [visibleStudioTabs, studio]);
-
-  const fullPage = STUDIO_FULL_PAGE[studio] || STUDIO_FULL_PAGE[visibleStudioTabs[0]?.id || 'budget'] || STUDIO_FULL_PAGE.budget;
 
   const dynamicHeading = useMemo(() => {
     const hasB = visibility.budget;
@@ -339,7 +335,7 @@ export default function LandingAiSimulationShowcase() {
             className="space-y-4"
           >
             {studio === 'budget' ? (
-              <div className="bg-surface border border-border rounded-[var(--radius-card)] max-w-5xl mx-auto overflow-hidden animate-fade-in">
+              <div className="bg-surface border border-border rounded-[var(--radius-card)] max-w-5xl mx-auto overflow-hidden animate-fade-in motion-reduce:animate-none">
                 <div className="p-3 sm:p-4 border-b border-border space-y-2">
                   <p className="text-xs font-semibold text-foreground">
                     Choisissez un exemple, puis lancez la simulation.
@@ -463,8 +459,8 @@ export default function LandingAiSimulationShowcase() {
             hidden={studio !== 'invite'}
           >
             {studio === 'invite' ? (
-              <div className="max-w-2xl mx-auto rounded-[var(--radius-card)] border border-border bg-surface p-6 sm:p-8 text-center space-y-4 animate-fade-in shadow-xs">
-                <div className="w-12 h-12 rounded-2xl bg-pink-500/10 text-pink-600 dark:text-pink-400 mx-auto flex items-center justify-center">
+              <div className="max-w-2xl mx-auto rounded-[var(--radius-card)] border border-border bg-surface p-6 sm:p-8 text-center space-y-4 animate-fade-in motion-reduce:animate-none shadow-xs">
+                <div className="w-12 h-12 rounded-2xl bg-festive-accent/10 text-festive-accent dark:text-festive-accent mx-auto flex items-center justify-center">
                   <Mail className="w-6 h-6" aria-hidden />
                 </div>
                 <div className="space-y-1.5">
@@ -494,8 +490,8 @@ export default function LandingAiSimulationShowcase() {
             hidden={studio !== 'room'}
           >
             {studio === 'room' ? (
-              <div className="max-w-2xl mx-auto rounded-[var(--radius-card)] border border-border bg-surface p-6 sm:p-8 text-center space-y-4 animate-fade-in shadow-xs">
-                <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 mx-auto flex items-center justify-center">
+              <div className="max-w-2xl mx-auto rounded-[var(--radius-card)] border border-border bg-surface p-6 sm:p-8 text-center space-y-4 animate-fade-in motion-reduce:animate-none shadow-xs">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary dark:text-primary mx-auto flex items-center justify-center">
                   <LayoutGrid className="w-6 h-6" aria-hidden />
                 </div>
                 <div className="space-y-1.5">
@@ -516,16 +512,6 @@ export default function LandingAiSimulationShowcase() {
             ) : null}
           </div>
         ) : null}
-
-        <p className="text-center">
-          <Link
-            href={fullPage.href}
-            className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-primary-solid hover:underline rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-          >
-            <Wand2 className="w-3.5 h-3.5" aria-hidden />
-            Ouvrir {fullPage.label}
-          </Link>
-        </p>
       </div>
 
       {purchaseModalOpen ? (

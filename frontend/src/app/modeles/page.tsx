@@ -212,7 +212,7 @@ export default function ModelesPage() {
             type="button"
             onClick={() => openInvitationStudio()}
             className={cn(
-              'inline-flex min-h-[44px] items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold active:scale-95 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+              'inline-flex min-h-[44px] items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold active:scale-95 motion-reduce:active:scale-100 transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
               isInviteBlocked
                 ? 'bg-festive-accent/15 text-festive-accent border border-festive-accent/30 hover:bg-festive-accent/25'
                 : 'bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover',
@@ -412,7 +412,7 @@ export default function ModelesPage() {
                         <button
                           type="button"
                           onClick={() => useTemplateInStudio(template)}
-                          className="min-h-[44px] py-1 px-3 rounded-lg border border-border bg-surface text-xs font-semibold text-foreground hover:border-primary/40 hover:bg-primary/5 active:scale-95 transition inline-flex items-center gap-1 touch-manipulation"
+                          className="min-h-[44px] py-1 px-3 rounded-lg border border-border bg-surface text-xs font-semibold text-foreground hover:border-primary/40 hover:bg-primary/5 active:scale-95 motion-reduce:active:scale-100 transition inline-flex items-center gap-1 touch-manipulation"
                         >
                           <Wand2 className="w-3 h-3" aria-hidden />
                           <span>Studio</span>
@@ -424,7 +424,7 @@ export default function ModelesPage() {
                             ? `/dashboard/events`
                             : `/register?kind=ORGANIZER&intent=personal&action=template&templateId=${encodeURIComponent(template.id)}`
                         }
-                        className="min-h-[44px] py-1 px-3 rounded-lg bg-primary-solid text-primary-foreground text-xs font-semibold hover:bg-primary-solid-hover active:scale-95 transition inline-flex items-center gap-1 touch-manipulation shadow-2xs"
+                        className="min-h-[44px] py-1 px-3 rounded-lg bg-primary-solid text-primary-foreground text-xs font-semibold hover:bg-primary-solid-hover active:scale-95 motion-reduce:active:scale-100 transition inline-flex items-center gap-1 touch-manipulation shadow-2xs"
                       >
                         <span>Utiliser</span>
                         <ArrowRight className="w-3 h-3" aria-hidden />

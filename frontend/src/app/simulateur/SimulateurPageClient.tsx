@@ -65,7 +65,7 @@ const LandingInvitationAiGenerator = dynamic(
         aria-label="Chargement du studio d’invitations IA"
       >
         <div className="space-y-2 max-w-sm">
-          <Sparkles className="w-8 h-8 text-pink-500 mx-auto animate-pulse motion-reduce:animate-none" />
+          <Sparkles className="w-8 h-8 text-festive-accent mx-auto animate-pulse motion-reduce:animate-none" />
           <p className="text-sm font-semibold text-foreground">Chargement du studio d’invitations IA…</p>
           <p className="text-xs text-muted">Préparation du moteur graphique de composition 9:16 WhatsApp.</p>
         </div>
@@ -85,7 +85,7 @@ const LandingRoomPlanAiStudio = dynamic(
         aria-label="Chargement du studio de plans 3D IA"
       >
         <div className="space-y-2 max-w-sm">
-          <Sparkles className="w-8 h-8 text-sky-500 mx-auto animate-pulse motion-reduce:animate-none" />
+          <Sparkles className="w-8 h-8 text-primary mx-auto animate-pulse motion-reduce:animate-none" />
           <p className="text-sm font-semibold text-foreground">Chargement du studio de plans 3D IA…</p>
           <p className="text-xs text-muted">Initialisation de l’environnement spatial et de la visite 3D.</p>
         </div>
@@ -447,14 +447,14 @@ export default function SimulateurPageClient() {
               onClick={() => handleSwitchStudio('invite')}
               onKeyDown={(e) => handleTabKeyDown(e, 'invite')}
               className={cn(
-                'p-3.5 rounded-xl border text-left transition flex items-center justify-between gap-2 cursor-pointer min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500',
+                'p-3.5 rounded-xl border text-left transition flex items-center justify-between gap-2 cursor-pointer min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-festive-accent',
                 activeStudio === 'invite'
-                  ? 'border-2 border-pink-500 bg-pink-500/10 shadow-sm ring-1 ring-pink-500/30'
-                  : 'border-border bg-surface hover:bg-surface-muted hover:border-pink-500/40'
+                  ? 'border-2 border-festive-accent bg-festive-accent/10 shadow-sm ring-1 ring-festive-accent/30'
+                  : 'border-border bg-surface hover:bg-surface-muted hover:border-festive-accent/40'
               )}
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-festive-accent/10 text-festive-accent dark:text-festive-accent flex items-center justify-center shrink-0">
                   <Mail className="w-4 h-4" aria-hidden />
                 </div>
                 <div className="min-w-0">
@@ -496,14 +496,14 @@ export default function SimulateurPageClient() {
               onClick={() => handleSwitchStudio('room')}
               onKeyDown={(e) => handleTabKeyDown(e, 'room')}
               className={cn(
-                'p-3.5 rounded-xl border text-left transition flex items-center justify-between gap-2 cursor-pointer min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500',
+                'p-3.5 rounded-xl border text-left transition flex items-center justify-between gap-2 cursor-pointer min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                 activeStudio === 'room'
-                  ? 'border-2 border-sky-500 bg-sky-500/10 shadow-sm ring-1 ring-sky-500/30'
-                  : 'border-border bg-surface hover:bg-surface-muted hover:border-sky-500/40'
+                  ? 'border-2 border-primary bg-primary/10 shadow-sm ring-1 ring-primary/30'
+                  : 'border-border bg-surface hover:bg-surface-muted hover:border-primary/40'
               )}
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary dark:text-primary flex items-center justify-center shrink-0">
                   <Building2 className="w-4 h-4" aria-hidden />
                 </div>
                 <div className="min-w-0">
@@ -544,7 +544,7 @@ export default function SimulateurPageClient() {
             role="tabpanel"
             aria-labelledby="studio-tab-budget"
             tabIndex={0}
-            className="space-y-8 animate-in fade-in duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-2xl"
+            className="space-y-8 animate-in fade-in duration-200 motion-reduce:animate-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-2xl"
           >
             {/* Barre de sélection rapide de scénarios types */}
             <section aria-labelledby="scenarios-heading" className="space-y-3">
@@ -630,7 +630,7 @@ export default function SimulateurPageClient() {
               </div>
 
               {activeScenario && (
-                <div className="p-3 rounded-xl bg-surface-muted/70 border border-border text-xs text-muted flex items-start gap-2 animate-fade-in">
+                <div className="p-3 rounded-xl bg-surface-muted/70 border border-border text-xs text-muted flex items-start gap-2 animate-fade-in motion-reduce:animate-none">
                   <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                   <div>
                     <span className="font-semibold text-foreground">Scénario actif : </span>
@@ -687,7 +687,7 @@ export default function SimulateurPageClient() {
             role="tabpanel"
             aria-labelledby="studio-tab-invite"
             tabIndex={0}
-            className="space-y-6 animate-in fade-in duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-pink-500/40 rounded-2xl"
+            className="space-y-6 animate-in fade-in duration-200 motion-reduce:animate-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-festive-accent/40 rounded-2xl"
           >
             {isInviteBlocked ? (
               <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6 sm:p-8 text-center space-y-4">
@@ -711,11 +711,15 @@ export default function SimulateurPageClient() {
                   </Button>
                 </div>
               </div>
-            ) : !studioModalOpen ? (
+            ) : studioModalOpen ? (
+              <p className="text-sm text-muted text-center py-8" role="status">
+                Le studio invitations est ouvert dans la fenêtre.
+              </p>
+            ) : (
               <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
                 <div className="space-y-1 min-w-0">
                   <p className="text-sm font-bold text-foreground inline-flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-pink-500" aria-hidden />
+                    <Mail className="w-4 h-4 text-festive-accent" aria-hidden />
                     Studio Invitations
                   </p>
                   <p className="text-xs text-muted leading-relaxed">
@@ -726,7 +730,7 @@ export default function SimulateurPageClient() {
                   Réouvrir le studio
                 </Button>
               </div>
-            ) : null}
+            )}
           </section>
         )}
 
@@ -737,7 +741,7 @@ export default function SimulateurPageClient() {
             role="tabpanel"
             aria-labelledby="studio-tab-room"
             tabIndex={0}
-            className="space-y-6 animate-in fade-in duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-sky-500/40 rounded-2xl"
+            className="space-y-6 animate-in fade-in duration-200 motion-reduce:animate-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-2xl"
           >
             {isRoomBlocked ? (
               <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6 sm:p-8 text-center space-y-4">
@@ -761,11 +765,15 @@ export default function SimulateurPageClient() {
                   </Button>
                 </div>
               </div>
-            ) : !studioModalOpen ? (
+            ) : studioModalOpen ? (
+              <p className="text-sm text-muted text-center py-8" role="status">
+                Le studio plans est ouvert dans la fenêtre.
+              </p>
+            ) : (
               <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
                 <div className="space-y-1 min-w-0">
                   <p className="text-sm font-bold text-foreground inline-flex items-center gap-2">
-                    <LayoutGrid className="w-4 h-4 text-sky-500" aria-hidden />
+                    <LayoutGrid className="w-4 h-4 text-primary" aria-hidden />
                     Studio Plans 2D / 3D
                   </p>
                   <p className="text-xs text-muted leading-relaxed">
@@ -776,7 +784,7 @@ export default function SimulateurPageClient() {
                   Réouvrir le studio
                 </Button>
               </div>
-            ) : null}
+            )}
           </section>
         )}
 
