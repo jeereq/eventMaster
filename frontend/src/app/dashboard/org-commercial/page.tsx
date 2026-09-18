@@ -58,6 +58,9 @@ export default function OrgCommercialPage() {
  .finally(() => setLoading(false));
  }, [access]);
 
+ const paginatedOrgs = usePaginateItems(data?.organizations || [], orgsPage, orgsPageSize);
+ const paginatedComms = usePaginateItems(data?.commissions || [], commPage, commPageSize);
+
  if (user?.orgRole !== 'COMMERCIAL' && access?.level !== 'commercial') {
  return (
  <div className="text-center py-20 text-muted">
@@ -69,9 +72,6 @@ export default function OrgCommercialPage() {
  if (loading || !data) {
  return <SkeletonCommercialView />;
  }
-
- const paginatedOrgs = usePaginateItems(data.organizations, orgsPage, orgsPageSize);
- const paginatedComms = usePaginateItems(data.commissions, commPage, commPageSize);
 
  return (
  <div className="space-y-6">

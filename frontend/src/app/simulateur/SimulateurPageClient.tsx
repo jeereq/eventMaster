@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
-import { Alert, Button } from '@/components/ui';
+import { Alert, Button, Modal } from '@/components/ui';
 import { api } from '@/lib/api';
 import {
   claimAiTokenCheckoutReturn,
@@ -173,6 +173,7 @@ export default function SimulateurPageClient() {
   const marketplaceCities = enabledMarketplaceCities(site);
 
   const [activeStudio, setActiveStudio] = useState<SimulatorStudioTab>('budget');
+  const [studioModalOpen, setStudioModalOpen] = useState(false);
   const [checkoutNotice, setCheckoutNotice] = useState<'success' | 'canceled' | null>(null);
   const [allowance, setAllowance] = useState<AiAllowance>(createEmptyAiAllowance);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
@@ -184,12 +185,10 @@ export default function SimulateurPageClient() {
   const isInviteBlocked = site?.studioVisibility?.invite === false;
   const isRoomBlocked = site?.studioVisibility?.room === false;
 
-  const isCurrentStudioBlocked =
-    activeStudio === 'budget'
-      ? isBudgetBlocked
-      : activeStudio === 'invite'
-      ? isInviteBlocked
-      : isRoomBlocked;
+  const isStudioBlocked = (tab: SimulatorStudioTab) =>
+    tab === 'budget' ? isBudgetBlocked : tab === 'invite' ? isInviteBlocked : isRoomBlocked;
+
+  const isCurrentStudioBlocked = isStudioBlocked(activeStudio);
 
   const visibleScenarios = useMemo(() => {
     const filtered = SCENARIOS.filter((item) =>
@@ -213,18 +212,23 @@ export default function SimulateurPageClient() {
   }, []);
 
   // Détection du paramètre URL initial (?studio=... ou ?tab=... ou ?scenario=...)
+  const didInitFromUrl = useRef(false);
   useEffect(() => {
+    if (didInitFromUrl.current) return;
     if (typeof window === 'undefined') return;
+    didInitFromUrl.current = true;
     const params = new URLSearchParams(window.location.search);
 
+    let nextStudio: SimulatorStudioTab = 'budget';
     const studioParam = params.get('studio') || params.get('tab') || params.get('atelier');
     if (studioParam === 'invite' || studioParam === 'invitations' || studioParam === 'invitation') {
-      setActiveStudio('invite');
+      nextStudio = 'invite';
     } else if (studioParam === 'room' || studioParam === 'plans-3d' || studioParam === 'plan' || studioParam === 'salle') {
-      setActiveStudio('room');
+      nextStudio = 'room';
     } else if (studioParam === 'budget') {
-      setActiveStudio('budget');
+      nextStudio = 'budget';
     }
+    setActiveStudio(nextStudio);
 
     const paramScenario = params.get('scenario');
     if (paramScenario) {
@@ -235,16 +239,26 @@ export default function SimulateurPageClient() {
         setPreferDefaults(true);
       }
     }
+
+    if (studioParam || paramScenario) setStudioModalOpen(true);
   }, [exchangeRate]);
 
   const handleSwitchStudio = (tab: SimulatorStudioTab) => {
     setActiveStudio(tab);
+    if (!isStudioBlocked(tab)) setStudioModalOpen(true);
+    else setStudioModalOpen(false);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       url.searchParams.set('studio', tab);
       window.history.replaceState(null, '', url.pathname + url.search);
     }
   };
+
+  const openActiveStudioModal = () => {
+    if (!isCurrentStudioBlocked) setStudioModalOpen(true);
+  };
+
+  const closeStudioModal = () => setStudioModalOpen(false);
 
   const handleTabKeyDown = (e: React.KeyboardEvent, currentTab: SimulatorStudioTab) => {
     const tabs: SimulatorStudioTab[] = ['budget', 'invite', 'room'];
@@ -274,6 +288,7 @@ export default function SimulateurPageClient() {
     setSelectedScenarioId(scenario.id);
     setLiveDefaults(scenarioToDefaults(scenario, exchangeRate));
     setPreferDefaults(true);
+    if (!isBudgetBlocked) setStudioModalOpen(true);
   };
 
   const handleClearScenario = () => {
@@ -665,14 +680,22 @@ export default function SimulateurPageClient() {
                 </div>
               )}
 
-              <div className="border-t border-border pt-6">
-                <EventPrepAiSimulator
-                  embedded
-                  defaultOpen
-                  defaults={liveDefaults}
-                  preferDefaults={preferDefaults}
-                />
-              </div>
+              {!isBudgetBlocked ? (
+                <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+                  <div className="space-y-1 min-w-0">
+                    <p className="text-sm font-bold text-foreground inline-flex items-center gap-2">
+                      <Wand2 className="w-4 h-4 text-primary" aria-hidden />
+                      Simulateur de budget IA
+                    </p>
+                    <p className="text-xs text-muted leading-relaxed">
+                      Choisissez un projet type ci-dessus, puis ouvrez l’atelier pour obtenir 3 formules chiffrées.
+                    </p>
+                  </div>
+                  <Button type="button" size="sm" onClick={openActiveStudioModal} className="shrink-0 min-h-11">
+                    Ouvrir le simulateur
+                  </Button>
+                </div>
+              ) : null}
             </section>
           </div>
         )}
@@ -709,11 +732,19 @@ export default function SimulateurPageClient() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-4">
-                <LandingInvitationAiGenerator
-                  defaultExpanded={true}
-                  className="rounded-2xl border border-border shadow-xs"
-                />
+              <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+                <div className="space-y-1 min-w-0">
+                  <p className="text-sm font-bold text-foreground inline-flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-pink-500" aria-hidden />
+                    Studio Invitations IA
+                  </p>
+                  <p className="text-xs text-muted leading-relaxed">
+                    Composez une carte 9:16 WhatsApp à partir d’un brief ou d’une photo à cloner.
+                  </p>
+                </div>
+                <Button type="button" size="sm" onClick={openActiveStudioModal} className="shrink-0 min-h-11">
+                  Ouvrir le studio
+                </Button>
               </div>
             )}
           </section>
@@ -751,15 +782,67 @@ export default function SimulateurPageClient() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-4">
-                <LandingRoomPlanAiStudio
-                  defaultExpanded={true}
-                  className="rounded-2xl border border-border shadow-xs"
-                />
+              <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+                <div className="space-y-1 min-w-0">
+                  <p className="text-sm font-bold text-foreground inline-flex items-center gap-2">
+                    <LayoutGrid className="w-4 h-4 text-sky-500" aria-hidden />
+                    Studio Plans 2D / 3D IA
+                  </p>
+                  <p className="text-xs text-muted leading-relaxed">
+                    Brief ou photo de salle → tables, rangées et décor posés sur le plan interactif.
+                  </p>
+                </div>
+                <Button type="button" size="sm" onClick={openActiveStudioModal} className="shrink-0 min-h-11">
+                  Ouvrir le studio
+                </Button>
               </div>
             )}
           </section>
         )}
+
+        <Modal
+          open={studioModalOpen && !isCurrentStudioBlocked}
+          onClose={closeStudioModal}
+          title={
+            activeStudio === 'invite'
+              ? 'Studio IA — invitations'
+              : activeStudio === 'room'
+                ? 'Studio IA — plans de salle'
+                : 'Simulateur de budget IA'
+          }
+          description={
+            activeStudio === 'invite'
+              ? 'Décrivez la fête ou déposez une carte à reproduire.'
+              : activeStudio === 'room'
+                ? 'Brief ou photo → tables, rangées et décor sur le plan 2D / 3D.'
+                : 'Ville, date et budget — 3 formules chiffrées (éco, équilibré, confort).'
+          }
+          size="full"
+          contentClassName="p-0 sm:p-0"
+        >
+          {activeStudio === 'budget' ? (
+            <div className="p-4 sm:p-6">
+              <EventPrepAiSimulator
+                embedded
+                defaultOpen
+                defaults={liveDefaults}
+                preferDefaults={preferDefaults}
+              />
+            </div>
+          ) : null}
+          {activeStudio === 'invite' ? (
+            <LandingInvitationAiGenerator
+              lockExpanded
+              className="border-0 shadow-none rounded-none"
+            />
+          ) : null}
+          {activeStudio === 'room' ? (
+            <LandingRoomPlanAiStudio
+              lockExpanded
+              className="border-0 shadow-none rounded-none"
+            />
+          ) : null}
+        </Modal>
 
         {/* Bandeau de découverte et commutation directe */}
         <section className="p-5 sm:p-6 rounded-[var(--radius-card)] bg-surface border border-border shadow-xs space-y-4">

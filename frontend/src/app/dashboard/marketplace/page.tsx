@@ -317,14 +317,6 @@ export default function MarketplaceDeskPage() {
     }
   };
 
-  if (!canManage) {
-    return (
-      <div className="max-w-lg">
-        <PageHeader title="Marketplace" description="Réservé aux propriétaires et managers de l’organisation." />
-      </div>
-    );
-  }
-
   const newCount = inquiries.filter((i) => i.status === 'NEW').length;
 
   const listingTab = tab === 'services' || tab === 'rentals';
@@ -351,6 +343,14 @@ export default function MarketplaceDeskPage() {
   const pagedServices = usePaginateItems(filteredServices, servicesPage, servicesPageSize);
 
   const publishGaps = getOfferingPublishGaps(draft);
+
+  if (!canManage) {
+    return (
+      <div className="max-w-lg">
+        <PageHeader title="Marketplace" description="Réservé aux propriétaires et managers de l’organisation." />
+      </div>
+    );
+  }
 
   const serviceChips: CatalogueFilterChip[] = [
     ...(filterCategory ? [{ id: 'category', label: 'Catégorie', value: SERVICE_CATEGORY_LABELS[filterCategory as ServiceCategory] || filterCategory }] : []),

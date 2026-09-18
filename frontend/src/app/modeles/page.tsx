@@ -8,7 +8,7 @@ import type { LandingTemplate } from '@/config/landingTemplates';
 import { fetchPublicLandingTemplates } from '@/lib/landingTemplateAdapter';
 import { Button, Modal, Pagination, usePaginateItems, Skeleton, usePageSize } from '@/components/ui';
 import PublicCtaBand from '@/components/PublicCtaBand';
-import { Sparkles, Eye, ArrowRight, Search, X, CheckCircle2, Wand2, Mail, ScanLine, Clock, Heart } from 'lucide-react';
+import { Sparkles, Eye, ArrowRight, CheckCircle2, Wand2, Mail, ScanLine, Clock, Heart } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { cn } from '@/lib/cn';
@@ -18,6 +18,11 @@ import {
   type InvitationModelPhoto,
 } from '@/lib/invitationModelPhoto';
 import { useInvitationModelFavorites } from '@/lib/invitationModelFavorites';
+import CatalogueFilterBar, {
+  CatalogueChoicePills,
+  CatalogueFilterField,
+  type CatalogueFilterChip,
+} from '@/components/CatalogueFilterBar';
 
 function categoryLabel(category: string) {
   if (category === 'private') return 'Célébrations & Mariages';
@@ -28,13 +33,22 @@ function categoryLabel(category: string) {
 type CategoryFilter = 'all' | 'private' | 'corporate' | 'casual' | 'favorites';
 type SortMode = 'name' | 'category';
 
-const CATEGORIES: Array<{ id: CategoryFilter; label: string }> = [
+const CATEGORY_OPTIONS: Array<{ id: CategoryFilter; label: string }> = [
   { id: 'all', label: 'Tous' },
   { id: 'favorites', label: 'Mes favoris' },
   { id: 'private', label: 'Célébrations' },
   { id: 'corporate', label: 'Professionnel' },
   { id: 'casual', label: 'Soirées' },
 ];
+
+const SORT_OPTIONS: Array<{ id: SortMode; label: string }> = [
+  { id: 'name', label: 'Nom A → Z' },
+  { id: 'category', label: 'Par catégorie' },
+];
+
+function categoryChipLabel(id: CategoryFilter) {
+  return CATEGORY_OPTIONS.find((c) => c.id === id)?.label ?? id;
+}
 
 export default function ModelesPage() {
   const { user, access } = useAuth();
@@ -47,6 +61,8 @@ export default function ModelesPage() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>('all');
   const [sortMode, setSortMode] = useState<SortMode>('name');
+  const [draftCategory, setDraftCategory] = useState<CategoryFilter>('all');
+  const [draftSortMode, setDraftSortMode] = useState<SortMode>('name');
   const [search, setSearch] = useState('');
   const [modalTemplate, setModalTemplate] = useState<LandingTemplate | null>(null);
   const [studioModelPhoto, setStudioModelPhoto] = useState<InvitationModelPhoto | null>(null);
@@ -140,14 +156,43 @@ export default function ModelesPage() {
     setPage(1);
   }, [selectedCategory, search, pageSize, sortMode]);
 
-  const activeFilterCount =
-    (selectedCategory !== 'all' ? 1 : 0) + (search.trim() ? 1 : 0) + (sortMode !== 'name' ? 1 : 0);
-
   const resetFilters = () => {
     setSearch('');
     setSelectedCategory('all');
     setSortMode('name');
+    setDraftCategory('all');
+    setDraftSortMode('name');
   };
+
+  const filterChips = useMemo((): CatalogueFilterChip[] => {
+    const chips: CatalogueFilterChip[] = [];
+    if (selectedCategory !== 'all') {
+      chips.push({
+        id: 'category',
+        label: 'Catégorie',
+        value:
+          selectedCategory === 'favorites' && favoritesHydrated && favoritesCount > 0
+            ? `${categoryChipLabel(selectedCategory)} (${favoritesCount})`
+            : categoryChipLabel(selectedCategory),
+        tone: 'event',
+      });
+    }
+    if (sortMode !== 'name') {
+      chips.push({
+        id: 'sort',
+        label: 'Tri',
+        value: SORT_OPTIONS.find((s) => s.id === sortMode)?.label ?? sortMode,
+        tone: 'neutral',
+      });
+    }
+    return chips;
+  }, [selectedCategory, sortMode, favoritesCount, favoritesHydrated]);
+
+  const removeFilterChip = (id: string) => {
+    if (id === 'category') setSelectedCategory('all');
+    if (id === 'sort') setSortMode('name');
+  };
+
   return (
     <PublicPageShell
       faqHref="/faq"
@@ -211,88 +256,74 @@ export default function ModelesPage() {
         {/* Filtres et recherche — barre fixe au scroll */}
         <div
           className={cn(
-            'sticky z-30 -mx-1 px-1 py-2.5 space-y-3',
+            'sticky z-30 -mx-1 px-1 py-2.5',
             'top-[calc(3.5rem+env(safe-area-inset-top,0px))]',
             'bg-background/95 backdrop-blur-md border-b border-border/70 shadow-[0_8px_20px_-16px_rgba(0,0,0,0.35)]',
           )}
         >
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-            <div className="flex gap-1.5 overflow-x-auto pb-1 lg:pb-0 no-scrollbar">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat.id)}
-                  aria-pressed={selectedCategory === cat.id}
-                  className={cn(
-                    'px-3.5 min-h-[44px] inline-flex items-center justify-center gap-1.5 rounded-full text-xs font-semibold transition whitespace-nowrap shrink-0 border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer touch-manipulation',
-                    selectedCategory === cat.id
-                      ? 'bg-primary-solid text-primary-foreground border-primary shadow-xs'
-                      : 'bg-surface border-border text-muted hover:text-foreground hover:bg-surface-muted',
-                  )}
-                >
-                  {cat.id === 'favorites' ? <Heart className="w-3.5 h-3.5" aria-hidden /> : null}
-                  <span>{cat.label}</span>
-                  {cat.id === 'favorites' && favoritesHydrated && favoritesCount > 0 ? (
-                    <span className="tabular-nums opacity-80">({favoritesCount})</span>
-                  ) : null}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-              <label className="inline-flex items-center gap-2 text-xs text-muted shrink-0">
-                <span className="sr-only sm:not-sr-only font-medium">Trier</span>
-                <select
-                  value={sortMode}
-                  onChange={(e) => setSortMode(e.target.value as SortMode)}
-                  className="min-h-[44px] rounded-xl border border-border bg-surface px-3 text-sm font-semibold text-foreground"
-                  aria-label="Trier les modèles"
-                >
-                  <option value="name">Nom A → Z</option>
-                  <option value="category">Par catégorie</option>
-                </select>
-              </label>
-
-              <div className="relative min-w-[220px] sm:min-w-[280px] flex-1">
-                <Search className="w-4 h-4 text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Rechercher un modèle…"
-                  className="w-full pl-9 pr-10 py-2.5 min-h-[44px] rounded-xl border border-border bg-surface text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
-                  aria-label="Rechercher parmi les modèles"
-                />
-                {search && (
-                  <button
-                    type="button"
-                    onClick={() => setSearch('')}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 text-muted hover:text-foreground min-w-[44px] min-h-[44px] inline-flex items-center justify-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
-                    aria-label="Effacer la recherche"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
+          <CatalogueFilterBar
+            search={search}
+            onSearchChange={setSearch}
+            searchPlaceholder="Rechercher un modèle…"
+            hideViewToggle
+            hideMap
+            hideShare
+            resultLabel={
+              loading
+                ? undefined
+                : `${filtered.length} modèle${filtered.length > 1 ? 's' : ''}`
+            }
+            chips={filterChips}
+            onRemoveChip={removeFilterChip}
+            onClearChips={resetFilters}
+            modalTitle="Filtrer les modèles"
+            modalDescription="Choisissez une catégorie et un tri. Cliquez une seconde fois sur un choix pour le retirer."
+            onOpen={() => {
+              setDraftCategory(selectedCategory);
+              setDraftSortMode(sortMode);
+            }}
+            onApply={() => {
+              setSelectedCategory(draftCategory);
+              setSortMode(draftSortMode);
+            }}
+            topSlot={
+              <CatalogueChoicePills
+                options={CATEGORY_OPTIONS.map((c) => ({
+                  id: c.id,
+                  label:
+                    c.id === 'favorites' && favoritesHydrated && favoritesCount > 0
+                      ? `${c.label} (${favoritesCount})`
+                      : c.label,
+                }))}
+                value={selectedCategory}
+                onChange={(id) => setSelectedCategory((id || 'all') as CategoryFilter)}
+              />
+            }
+            filters={
+              <div className="space-y-5">
+                <CatalogueFilterField label="Catégorie">
+                  <CatalogueChoicePills
+                    options={CATEGORY_OPTIONS.map((c) => ({
+                      id: c.id,
+                      label:
+                        c.id === 'favorites' && favoritesHydrated && favoritesCount > 0
+                          ? `${c.label} (${favoritesCount})`
+                          : c.label,
+                    }))}
+                    value={draftCategory}
+                    onChange={(id) => setDraftCategory((id || 'all') as CategoryFilter)}
+                  />
+                </CatalogueFilterField>
+                <CatalogueFilterField label="Tri">
+                  <CatalogueChoicePills
+                    options={SORT_OPTIONS}
+                    value={draftSortMode}
+                    onChange={(id) => setDraftSortMode((id || 'name') as SortMode)}
+                  />
+                </CatalogueFilterField>
               </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
-            <p>
-              {filtered.length} modèle{filtered.length > 1 ? 's' : ''}
-              {activeFilterCount > 0 ? ` · ${activeFilterCount} filtre${activeFilterCount > 1 ? 's' : ''}` : ''}
-            </p>
-            {activeFilterCount > 0 ? (
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="min-h-9 px-2.5 rounded-lg font-semibold text-foreground hover:bg-surface-muted transition"
-              >
-                Réinitialiser
-              </button>
-            ) : null}
-          </div>
+            }
+          />
         </div>
 
         {/* Grille de modèles */}
