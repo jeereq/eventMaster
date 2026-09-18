@@ -71,7 +71,7 @@ export default function LandingModelsSection({
         {loading ? (
           <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto pb-2 sm:pb-0 no-scrollbar snap-x snap-mandatory">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="min-w-[16rem] sm:min-w-0 h-64 rounded-[var(--radius-card)] shrink-0 snap-start" />
+              <Skeleton key={i} className="min-w-[16rem] sm:min-w-0 min-h-[32rem] sm:min-h-[38rem] rounded-[var(--radius-card)] shrink-0 snap-start" />
             ))}
           </div>
         ) : templates.length === 0 ? (
@@ -84,52 +84,39 @@ export default function LandingModelsSection({
           <>
             <ul className="flex sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto pb-3 sm:pb-0 no-scrollbar snap-x snap-mandatory em-stagger">
               {shown.map((template) => (
-                <li key={template.id} className="min-w-[16.5rem] sm:min-w-0 shrink-0 snap-start flex-1">
-                  <article className="h-full rounded-[var(--radius-card)] em-hud-card p-3 sm:p-3.5 flex flex-col justify-between transition-all group">
-                    <div>
+                <li key={template.id} className="min-w-[18rem] sm:min-w-0 shrink-0 snap-start flex-1">
+                  <article className="h-full min-h-[32rem] sm:min-h-[38rem] rounded-[var(--radius-card)] em-hud-card p-2 flex flex-col transition-all group">
                       <Link
                         href={`/register?kind=ORGANIZER&intent=personal&action=template&templateId=${encodeURIComponent(template.id)}`}
-                        className="block w-full text-left rounded-[var(--radius-button)] overflow-hidden focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary relative group/preview cursor-pointer"
+                        className="relative flex-[9] min-h-0 w-full text-left rounded-[var(--radius-button)] overflow-hidden focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary group/preview cursor-pointer"
                         title={`Choisir le modèle ${template.name}`}
                       >
-                        <LandingInvitationPreview template={template} compact className="!max-h-[190px] sm:!max-h-[200px]" />
-                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5 backdrop-blur-[2px]">
-                          <ArrowRight className="w-4 h-4" />
+                        <LandingInvitationPreview
+                          template={template}
+                          compact
+                          fillParent
+                          className="absolute inset-0 !rounded-none !shadow-none"
+                        />
+                        <span className="absolute top-2 left-2 z-10 text-xs font-bold uppercase tracking-wider text-foreground px-2 py-0.5 rounded-full bg-surface/90 border border-border">
+                          {categoryLabel(template.category)}
+                        </span>
+                        <div className="absolute inset-0 bg-foreground/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center text-primary-foreground text-xs font-semibold gap-1.5">
+                          <ArrowRight className="w-4 h-4" aria-hidden />
                           <span>Choisir ce modèle</span>
                         </div>
                       </Link>
 
-                      <div className="mt-2.5 sm:mt-3 space-y-1">
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="text-xs font-bold uppercase tracking-wider text-muted px-2 py-0.5 rounded-full bg-surface-muted border border-border">
-                            {categoryLabel(template.category)}
-                          </span>
-                        </div>
-                        <h3 className="text-xs sm:text-sm font-bold text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors">
-                          {template.name}
-                        </h3>
-                        {template.description ? (
-                          <p className="text-xs sm:text-xs text-muted leading-relaxed line-clamp-2">
-                            {template.description}
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div className="mt-2.5 sm:mt-3 pt-2.5 sm:pt-3 border-t border-border/80 flex items-center justify-between gap-2">
+                    <div className="flex-[1] min-h-[3.5rem] flex items-center justify-between gap-2 px-1 pt-2">
+                      <h3 className="min-w-0 text-sm font-bold text-foreground leading-snug truncate group-hover:text-primary transition-colors">
+                        {template.name}
+                      </h3>
                       <button
                         type="button"
                         onClick={() => onPreview(template)}
-                        className="text-xs font-semibold text-muted hover:text-foreground transition inline-flex items-center gap-1.5 touch-manipulation cursor-pointer min-h-11 px-2.5 rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                        className="text-xs font-semibold text-muted hover:text-foreground transition inline-flex items-center gap-1.5 touch-manipulation cursor-pointer min-h-[44px] px-2.5 rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 shrink-0"
                       >
-                        <Eye className="w-3.5 h-3.5" /> Aperçu
+                        <Eye className="w-3.5 h-3.5" aria-hidden /> Aperçu
                       </button>
-                      <Link
-                        href={`/register?kind=ORGANIZER&intent=personal&action=template&templateId=${encodeURIComponent(template.id)}`}
-                        className="min-h-11 px-3 rounded-[var(--radius-button)] bg-primary/10 hover:bg-primary text-primary hover:text-white text-xs font-bold transition-all inline-flex items-center gap-1.5 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                      >
-                        Utiliser <ArrowRight className="w-3.5 h-3.5" />
-                      </Link>
                     </div>
                   </article>
                 </li>

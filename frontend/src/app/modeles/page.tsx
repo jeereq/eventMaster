@@ -194,7 +194,7 @@ export default function ModelesPage() {
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-80 rounded-xl" />
+              <Skeleton key={i} className="min-h-[32rem] sm:min-h-[38rem] lg:min-h-[42rem] rounded-xl" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
@@ -222,55 +222,41 @@ export default function ModelesPage() {
               {shown.map((template) => (
                 <article
                   key={template.id}
-                  className="group rounded-xl sm:rounded-2xl border border-border/80 bg-surface shadow-xs hover:shadow-lg hover:border-primary/40 transition-all duration-300 p-3 flex flex-col justify-between"
+                  className="group rounded-xl sm:rounded-2xl border border-border/80 bg-surface shadow-xs hover:shadow-lg hover:border-primary/40 transition-all duration-300 p-2 flex flex-col min-h-[32rem] sm:min-h-[38rem] lg:min-h-[42rem]"
                 >
-                  <div className="space-y-3">
                     <button
                       type="button"
                       onClick={() => setModalTemplate(template)}
-                      className="block w-full text-left rounded-lg overflow-hidden relative group/preview focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                      className="relative flex-[9] min-h-0 w-full text-left rounded-lg overflow-hidden group/preview focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                       aria-label={`Aperçu du modèle ${template.name}`}
                     >
-                      <LandingInvitationPreview template={template} compact className="!max-h-[200px]" />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold gap-1.5 backdrop-blur-2xs">
-                        <Eye className="w-4 h-4" />
+                      <LandingInvitationPreview
+                        template={template}
+                        compact
+                        fillParent
+                        className="absolute inset-0 !rounded-none !shadow-none"
+                      />
+                      <span className="absolute top-2 left-2 z-10 text-xs font-bold uppercase tracking-wider text-foreground px-2 py-0.5 rounded-full bg-surface/90 border border-border">
+                        {categoryLabel(template.category)}
+                      </span>
+                      <div className="absolute inset-0 bg-foreground/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center text-primary-foreground text-xs font-semibold gap-1.5">
+                        <Eye className="w-4 h-4" aria-hidden />
                         <span>Aperçu interactif</span>
                       </div>
                     </button>
 
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-xs font-bold uppercase tracking-wider text-muted px-2 py-0.5 rounded-full bg-surface-muted border border-border">
-                          {categoryLabel(template.category)}
-                        </span>
-                      </div>
-                      <h3 className="text-sm font-bold text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors">
-                        {template.name}
-                      </h3>
-                      {template.description ? (
-                        <p className="text-xs text-muted leading-relaxed line-clamp-2">
-                          {template.description}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="mt-3 pt-3 border-t border-border/70 flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setModalTemplate(template)}
-                      className="min-h-[44px] text-xs font-semibold text-muted hover:text-foreground transition flex items-center gap-1 touch-manipulation px-1"
-                    >
-                      <Eye className="w-3.5 h-3.5" /> Aperçu
-                    </button>
-                    <div className="flex items-center gap-1.5">
+                  <div className="flex-[1] min-h-[3.5rem] flex items-center justify-between gap-2 px-1 pt-2">
+                    <h3 className="min-w-0 text-sm font-bold text-foreground leading-snug truncate group-hover:text-primary transition-colors">
+                      {template.name}
+                    </h3>
+                    <div className="flex items-center gap-1.5 shrink-0">
                       {!isInviteBlocked && modelPhotoFor(template) ? (
                         <button
                           type="button"
                           onClick={() => useTemplateInStudio(template)}
                           className="min-h-[44px] py-1 px-3 rounded-lg border border-border bg-surface text-xs font-semibold text-foreground hover:border-primary/40 hover:bg-primary/5 active:scale-95 transition inline-flex items-center gap-1 touch-manipulation"
                         >
-                          <Wand2 className="w-3 h-3" />
+                          <Wand2 className="w-3 h-3" aria-hidden />
                           <span>Studio</span>
                         </button>
                       ) : null}
@@ -283,7 +269,7 @@ export default function ModelesPage() {
                         className="min-h-[44px] py-1 px-3 rounded-lg bg-primary-solid text-primary-foreground text-xs font-semibold hover:bg-primary-solid-hover active:scale-95 transition inline-flex items-center gap-1 touch-manipulation shadow-2xs"
                       >
                         <span>Utiliser</span>
-                        <ArrowRight className="w-3 h-3" />
+                        <ArrowRight className="w-3 h-3" aria-hidden />
                       </Link>
                     </div>
                   </div>

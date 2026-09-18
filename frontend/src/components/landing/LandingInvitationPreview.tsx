@@ -53,6 +53,8 @@ export interface LandingInvitationPreviewProps {
   variableOverrides?: Record<string, string>;
   /** Si vrai, affiche les accolades brutes {{...}} au lieu des valeurs d'exemple */
   showRawVariables?: boolean;
+  /** Remplit le parent (cartes catalogue) au lieu du cadre compact 240px. */
+  fillParent?: boolean;
 }
 
 export function interpolatePreviewVariables(
@@ -394,6 +396,7 @@ export default function LandingInvitationPreview({
   fitMode = 'cover',
   variableOverrides,
   showRawVariables = false,
+  fillParent = false,
 }: LandingInvitationPreviewProps) {
   useHeadStylesheet(LANDING_PREVIEW_FONTS, 'em-landing-preview-fonts');
 
@@ -450,6 +453,8 @@ export default function LandingInvitationPreview({
         'relative flex flex-col rounded-[var(--radius-card)] border shadow-md transition-all duration-300 overflow-hidden select-none',
         isHero
           ? 'h-full max-h-full p-4 sm:p-5 justify-center'
+          : fillParent
+            ? 'h-full w-full min-h-0 max-h-none p-3'
           : isCompact
             ? 'min-h-[180px] max-h-[240px] p-3'
             : is916

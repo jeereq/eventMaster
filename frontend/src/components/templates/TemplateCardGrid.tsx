@@ -78,7 +78,7 @@ function TemplatePreviewThumb({
   const preview = (
     <>
       <div className="absolute inset-0 bg-[radial-gradient(var(--border)_1px,transparent_1px)] [background-size:12px_16px] opacity-40 pointer-events-none" />
-      <div className={cn('relative z-10 w-full', compact ? 'max-w-[160px]' : 'max-w-[240px]', onViewDetails && 'pointer-events-none')}>
+      <div className={cn('relative z-10 w-full h-full', compact ? 'max-w-[160px]' : 'max-w-none', onViewDetails && 'pointer-events-none')}>
         <LandingInvitationPreview
           template={templateContentToLandingPreview({
             id: t.id,
@@ -86,7 +86,8 @@ function TemplatePreviewThumb({
             content: t.content,
           })}
           compact
-          className="w-full shadow-sm"
+          fillParent={!compact}
+          className={cn('w-full shadow-sm', !compact && 'absolute inset-0 !rounded-none')}
         />
       </div>
     </>
@@ -94,7 +95,7 @@ function TemplatePreviewThumb({
 
   const shellClass = cn(
     'relative bg-surface-muted overflow-hidden flex items-center justify-center',
-    compact ? 'min-h-[120px] w-28 shrink-0 rounded-md p-2' : 'w-full aspect-[4/3] rounded-none p-3',
+    compact ? 'min-h-[120px] w-28 shrink-0 rounded-md p-2' : 'w-full flex-[9] min-h-[28rem] sm:min-h-[32rem] rounded-none p-2',
   );
 
   if (onViewDetails) {
@@ -323,10 +324,10 @@ export default function TemplateCardGrid({
         return (
           <article
             key={t.id}
-            className="group flex flex-col bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden shadow-[var(--shadow-soft)] hover:border-primary/40 hover:shadow-[0_22px_44px_-24px_rgba(15,23,42,0.5)] hover:-translate-y-0.5 transition duration-200"
+            className="group flex flex-col min-h-[36rem] sm:min-h-[40rem] bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden shadow-[var(--shadow-soft)] hover:border-primary/40 hover:shadow-[0_22px_44px_-24px_rgba(15,23,42,0.5)] hover:-translate-y-0.5 transition duration-200"
           >
             <TemplatePreviewThumb t={t} onViewDetails={onViewDetails} />
-            <div className="p-3 space-y-2 flex-1 flex flex-col min-w-0">
+            <div className="p-2.5 space-y-1.5 flex-[1] flex flex-col min-w-0 min-h-0">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-muted">
                   {global ? 'Bibliothèque' : 'Organisation'}

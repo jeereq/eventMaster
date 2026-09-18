@@ -326,8 +326,8 @@ export function SkeletonCommercialView() {
 
 export function SkeletonLandingTemplateCard() {
   return (
-    <div className="bg-background border border-border rounded-[var(--radius-card)] p-3.5 flex flex-col" aria-hidden>
-      <Skeleton className="w-full h-[200px] rounded-[var(--radius-button)]" />
+    <div className="bg-background border border-border rounded-[var(--radius-card)] p-2 flex flex-col min-h-[32rem] sm:min-h-[38rem]" aria-hidden>
+      <Skeleton className="w-full flex-[9] min-h-[28rem] rounded-[var(--radius-button)]" />
       <div className="mt-3 space-y-2 flex-1">
         <div className="flex items-center justify-between gap-2">
           <Skeleton className="h-3 w-16" />
