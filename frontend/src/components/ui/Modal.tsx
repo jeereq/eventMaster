@@ -57,10 +57,10 @@ function focusableIn(panel: HTMLElement): HTMLElement[] {
 
 /** Classes partagées pour overlays ad-hoc (même look que Modal). */
 export const modalBackdropClass =
-  'absolute inset-0 bg-black/40 animate-fade-in';
+  'absolute inset-0 bg-black/40 animate-fade-in motion-reduce:animate-none';
 
 export const modalPanelClass =
-  'relative w-full bg-surface border border-border shadow-2xl rounded-t-2xl sm:rounded-2xl max-h-[92vh] flex flex-col animate-slide-up sm:animate-fade-in';
+  'relative w-full bg-surface border border-border shadow-2xl rounded-t-2xl sm:rounded-2xl max-h-[92vh] flex flex-col animate-slide-up sm:animate-fade-in motion-reduce:animate-none';
 
 export default function Modal({
   open,

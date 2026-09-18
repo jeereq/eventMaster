@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-05T13:30:00.000Z",
+  "generatedAt": "2026-09-18T11:45:33.000Z",
   "title": "Design System: EventMaster",
   "extensions": {
     "colorMeta": {
@@ -8,69 +8,174 @@
         "role": "primary",
         "displayName": "Émeraude de banquet",
         "canonical": "#059669",
-        "tonalRamp": ["#022c22", "#064e3b", "#065f46", "#047857", "#059669", "#10b981", "#6ee7b7", "#d1fae5"]
+        "tonalRamp": [
+          "#022c22",
+          "#064e3b",
+          "#065f46",
+          "#047857",
+          "#059669",
+          "#10b981",
+          "#6ee7b7",
+          "#d1fae5"
+        ]
       },
       "primary-solid": {
         "role": "primary",
         "displayName": "Émeraude solide (AA)",
         "canonical": "#047857",
-        "tonalRamp": ["#022c22", "#064e3b", "#065f46", "#047857", "#059669", "#10b981", "#34d399", "#a7f3d0"]
+        "tonalRamp": [
+          "#022c22",
+          "#064e3b",
+          "#065f46",
+          "#047857",
+          "#059669",
+          "#10b981",
+          "#34d399",
+          "#a7f3d0"
+        ]
       },
       "brand-accent": {
         "role": "primary",
         "displayName": "Émeraude vive",
         "canonical": "#10b981",
-        "tonalRamp": ["#064e3b", "#065f46", "#047857", "#059669", "#10b981", "#34d399", "#6ee7b7", "#d1fae5"]
+        "tonalRamp": [
+          "#064e3b",
+          "#065f46",
+          "#047857",
+          "#059669",
+          "#10b981",
+          "#34d399",
+          "#6ee7b7",
+          "#d1fae5"
+        ]
       },
       "festive-accent": {
         "role": "secondary",
         "displayName": "Ambre Kinshasa",
         "canonical": "#d97706",
-        "tonalRamp": ["#451a03", "#78350f", "#92400e", "#b45309", "#d97706", "#f59e0b", "#fbbf24", "#fde68a"]
+        "tonalRamp": [
+          "#451a03",
+          "#78350f",
+          "#92400e",
+          "#b45309",
+          "#d97706",
+          "#f59e0b",
+          "#fbbf24",
+          "#fde68a"
+        ]
       },
       "festive-on-stage": {
         "role": "secondary",
         "displayName": "Or de rampe",
         "canonical": "#fbbf24",
-        "tonalRamp": ["#78350f", "#92400e", "#b45309", "#d97706", "#f59e0b", "#fbbf24", "#fcd34d", "#fef3c7"]
+        "tonalRamp": [
+          "#78350f",
+          "#92400e",
+          "#b45309",
+          "#d97706",
+          "#f59e0b",
+          "#fbbf24",
+          "#fcd34d",
+          "#fef3c7"
+        ]
       },
       "stage": {
         "role": "tertiary",
         "displayName": "Ardoise de scène",
         "canonical": "#171614",
-        "tonalRamp": ["#0c0b0a", "#121110", "#171614", "#221f1c", "#3f3a34", "#6b645c", "#c4b8a8", "#f7f4ef"]
+        "tonalRamp": [
+          "#0c0b0a",
+          "#121110",
+          "#171614",
+          "#221f1c",
+          "#3f3a34",
+          "#6b645c",
+          "#c4b8a8",
+          "#f7f4ef"
+        ]
       },
       "background": {
         "role": "neutral",
         "displayName": "Papier de travail",
         "canonical": "#f6f7f8",
-        "tonalRamp": ["#1e1f21", "#2a2b2d", "#6d6e6f", "#a2a0a2", "#e8e8e9", "#ededee", "#f3f5f2", "#f6f7f8"]
+        "tonalRamp": [
+          "#1e1f21",
+          "#2a2b2d",
+          "#6d6e6f",
+          "#a2a0a2",
+          "#e8e8e9",
+          "#ededee",
+          "#f3f5f2",
+          "#f6f7f8"
+        ]
       },
       "foreground": {
         "role": "neutral",
         "displayName": "Encre graphite",
         "canonical": "#1e1f21",
-        "tonalRamp": ["#111213", "#1e1f21", "#2a2b2d", "#3e3f42", "#6d6e6f", "#a2a0a2", "#ededee", "#f5f5f5"]
+        "tonalRamp": [
+          "#111213",
+          "#1e1f21",
+          "#2a2b2d",
+          "#3e3f42",
+          "#6d6e6f",
+          "#a2a0a2",
+          "#ededee",
+          "#f5f5f5"
+        ]
       },
       "surface": {
         "role": "neutral",
         "displayName": "Porcelaine",
         "canonical": "#ffffff",
-        "tonalRamp": ["#2a2b2d", "#323437", "#ededee", "#f0f1f3", "#f3f5f2", "#f6f7f8", "#fafafa", "#ffffff"]
+        "tonalRamp": [
+          "#2a2b2d",
+          "#323437",
+          "#ededee",
+          "#f0f1f3",
+          "#f3f5f2",
+          "#f6f7f8",
+          "#fafafa",
+          "#ffffff"
+        ]
       },
       "muted": {
         "role": "neutral",
         "displayName": "Légende",
         "canonical": "#6d6e6f",
-        "tonalRamp": ["#1e1f21", "#3e3f42", "#6d6e6f", "#8a8b8c", "#a2a0a2", "#c8c8c9", "#e8e8e9", "#f6f7f8"]
+        "tonalRamp": [
+          "#1e1f21",
+          "#3e3f42",
+          "#6d6e6f",
+          "#8a8b8c",
+          "#a2a0a2",
+          "#c8c8c9",
+          "#e8e8e9",
+          "#f6f7f8"
+        ]
       }
     },
     "typographyMeta": {
-      "display": { "displayName": "Display", "purpose": "Hero et titres de célébration (Fraunces)." },
-      "headline": { "displayName": "Headline", "purpose": "Sections landing et en-têtes de page." },
-      "title": { "displayName": "Title", "purpose": "Titres de cartes et actions primaires (Inter)." },
-      "body": { "displayName": "Body", "purpose": "Lecture produit ; racine 15px, champs mobile 16px." },
-      "label": { "displayName": "Label", "purpose": "Labels, chips, meta — minimum 12px." }
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero et titres de célébration (Fraunces)."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Sections landing et en-têtes de page."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Titres de cartes et actions primaires (Inter)."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Lecture produit ; racine 15px, champs mobile 16px."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Labels, chips, meta — minimum 12px."
+      }
     },
     "shadows": [
       {
@@ -107,9 +212,18 @@
       }
     ],
     "breakpoints": [
-      { "name": "mobile", "value": "767px" },
-      { "name": "sm", "value": "640px" },
-      { "name": "lg", "value": "1024px" }
+      {
+        "name": "mobile",
+        "value": "767px"
+      },
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
     ]
   },
   "components": [
@@ -176,6 +290,14 @@
       "description": "Bandeau inversé : ardoise, halos émeraude/ambre, texte ivoire.",
       "html": "<section class=\"ds-stage\"><p class=\"ds-stage-kicker\">Vue 3D</p><h3 class=\"ds-stage-title\">Salle · 8 tables · 64 places</h3><button class=\"ds-stage-cta\" type=\"button\">Ouvrir l’éditeur</button></section>",
       "css": ".ds-stage { position: relative; overflow: hidden; padding: 24px; border-radius: var(--radius-card, 0.5rem); background: radial-gradient(ellipse at 82% -10%, color-mix(in srgb, var(--primary, #059669) 28%, transparent), transparent 52%), radial-gradient(ellipse at 12% 110%, color-mix(in srgb, var(--festive-accent, #d97706) 22%, transparent), transparent 48%), var(--stage, #171614); color: var(--stage-foreground, #f7f4ef); font-family: inherit; } .ds-stage-kicker { margin: 0 0 6px; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--festive-on-stage, #fbbf24); } .ds-stage-title { margin: 0 0 16px; font-family: Fraunces, Georgia, serif; font-size: 1.25rem; font-weight: 600; letter-spacing: -0.025em; } .ds-stage-cta { min-height: 44px; padding: 8px 14px; border: 0; border-radius: var(--radius-button, 0.5rem); background: var(--primary-solid, #047857); color: #fff; font-weight: 500; cursor: pointer; } .ds-stage-cta:hover { background: var(--primary-solid-hover, #065f46); } .ds-stage-cta:focus-visible { outline: 2px solid var(--festive-on-stage, #fbbf24); outline-offset: 2px; }"
+    },
+    {
+      "name": "AI Studio Modal",
+      "kind": "custom",
+      "refersTo": "modal-panel",
+      "description": "Panneau plein écran pour ateliers IA : titre court, étapes, CTA sticky.",
+      "html": "<div class=\"ds-modal\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"ds-modal-title\"><header class=\"ds-modal-head\"><h2 id=\"ds-modal-title\">Créer une invitation</h2><button class=\"ds-modal-close\" type=\"button\" aria-label=\"Fermer\">×</button></header><div class=\"ds-modal-body\"><p class=\"ds-modal-steps\"><strong>1.</strong> Brief → <strong>2.</strong> Générer → <strong>3.</strong> Éditer</p><div class=\"ds-modal-cta\"><button class=\"ds-btn-primary\" type=\"button\">Créer la carte (3 jetons)</button></div></div></div>",
+      "css": ".ds-modal { display:flex; flex-direction:column; max-height:92vh; background:var(--surface,#fff); color:var(--foreground,#1e1f21); border:1px solid var(--border,#e8e8e9); border-radius:1rem; font-family:inherit; overflow:hidden; } .ds-modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding:20px 24px; border-bottom:1px solid var(--border,#e8e8e9); } .ds-modal-head h2 { margin:0; font-size:1.125rem; font-weight:700; letter-spacing:-0.02em; } .ds-modal-close { min-height:44px; min-width:44px; border:0; border-radius:0.5rem; background:transparent; color:var(--muted,#6d6e6f); font-size:1.25rem; cursor:pointer; } .ds-modal-close:hover { background:var(--surface-muted,#ededee); color:var(--foreground,#1e1f21); } .ds-modal-body { overflow:auto; flex:1; } .ds-modal-steps { margin:0; padding:10px 24px; border-bottom:1px solid var(--border,#e8e8e9); font-size:0.75rem; color:var(--muted,#6d6e6f); background:var(--surface,#fff); position:sticky; top:0; } .ds-modal-cta { position:sticky; bottom:0; padding:12px 24px; border-top:1px solid var(--border,#e8e8e9); background:color-mix(in srgb, var(--surface,#fff) 95%, transparent); } .ds-btn-primary { display:inline-flex; align-items:center; justify-content:center; width:100%; min-height:44px; padding:8px 14px; background:var(--primary-solid,#047857); color:#fff; border:0; border-radius:0.5rem; font-weight:500; cursor:pointer; } .ds-btn-primary:hover { background:var(--primary-solid-hover,#065f46); } .ds-btn-primary:focus-visible { outline:2px solid var(--primary,#059669); outline-offset:2px; }"
     }
   ],
   "narrative": {
@@ -214,14 +336,17 @@
       "Do utiliser --primary-solid pour tout fond de bouton / pastille à texte blanc.",
       "Do garder Fraunces pour l’occasion et Inter pour l’outil.",
       "Do viser 44px et text-xs (12px) minimum sur le texte utile.",
-      "Do tokeniser le chrome (bg-foreground, bg-stage) ; laisser les matériaux 3D en hex locaux."
+      "Do tokeniser le chrome (bg-foreground, bg-stage) ; laisser les matériaux 3D en hex locaux.",
+      "Do ouvrir les ateliers IA publics en modale (lockExpanded) plutôt qu’en accordion inline.",
+      "Do distinguer invitations (festive-accent) et plans (primary) sans inventer pink/sky Tailwind."
     ],
     "donts": [
       "Don't habiller le dashboard Work comme une landing Celebrate (ambre partout, scènes inversées en fond de page).",
       "Don't poser des ombres théâtrales ou du will-change permanent sur les items de plan.",
       "Don't descendre sous 12px pour un label d’éditeur, ni remplacer un <button> par un div role=\"button\".",
-      "Don't inventer une troisième palette (or marketing, slate Tailwind, hex de chrome).",
-      "Don't réutiliser --primary clair comme fond de texte blanc en dark mode."
+      "Don't inventer une troisième palette (or marketing, slate Tailwind, hex de chrome, pink/sky ad hoc).",
+      "Don't réutiliser --primary clair comme fond de texte blanc en dark mode.",
+      "Don't dupliquer le sélecteur d’ateliers (onglets + bandeau bas) ni embarquer les studios complets sur la landing."
     ]
   }
 }

@@ -1260,7 +1260,7 @@ export default function LandingInvitationAiGenerator({
                     setRefinePrompt(sug.prompt);
                     void handleRefineProposition(sug.prompt);
                   }}
-                  className="text-xs px-2.5 py-1 rounded-full border border-border bg-surface hover:border-primary/50 hover:bg-primary/10 text-foreground transition cursor-pointer disabled:opacity-50"
+                  className="text-xs px-3 min-h-11 rounded-[var(--radius-button)] border border-border bg-surface hover:border-primary/50 hover:bg-primary/10 text-foreground transition cursor-pointer disabled:opacity-50 inline-flex items-center touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                 >
                   {sug.label}
                 </button>
@@ -1406,7 +1406,7 @@ export default function LandingInvitationAiGenerator({
         </button>
       ) : (
         /* ─── ATELIER COMPLET DÉROULÉ ─── */
-        <div className={cn('animate-fade-in', lockExpanded && 'flex flex-col min-h-0')}>
+        <div className={cn('animate-fade-in motion-reduce:animate-none', lockExpanded && 'flex flex-col min-h-0')}>
           {!lockExpanded ? (
           <div className="px-5 sm:px-7 pt-5 sm:pt-6 pb-4 border-b border-border/80 bg-[linear-gradient(135deg,color-mix(in_oklab,var(--primary)_12%,transparent),transparent_55%)]">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -1985,7 +1985,7 @@ export default function LandingInvitationAiGenerator({
               <div
                 className={cn(
                   'sticky bottom-0 z-30 mt-auto -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 border-t border-border',
-                  'bg-surface/95 backdrop-blur-md shadow-[0_-10px_28px_-16px_rgba(0,0,0,0.35)]',
+                  'bg-surface shadow-[0_-10px_28px_-16px_rgba(0,0,0,0.2)]',
                   'pb-[max(0.75rem,env(safe-area-inset-bottom))]',
                 )}
               >
@@ -2022,12 +2022,12 @@ export default function LandingInvitationAiGenerator({
                   ) : null}
                 </div>
                 {studioIntent === 'create' && prompt.trim().length > 0 && prompt.trim().length < 8 ? (
-                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300" role="status" aria-live="polite">
                     Ajoutez encore quelques mots au brief (8 caractères min.).
                   </p>
                 ) : null}
                 {studioIntent === 'clone' && files.length === 0 && !selectedModelPhoto ? (
-                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300" role="status" aria-live="polite">
                     Déposez une carte modèle ou choisissez-en une pour cloner.
                   </p>
                 ) : null}
@@ -2158,7 +2158,7 @@ export default function LandingInvitationAiGenerator({
           </div>
 
           {previewTemplate ? (
-            <div className="flex-1 flex flex-col gap-3 min-h-0 animate-fade-in">
+            <div className="flex-1 flex flex-col gap-3 min-h-0 animate-fade-in motion-reduce:animate-none">
               {/* Commutateur de vue à 5 modes */}
               <div
                 className="flex flex-wrap items-center gap-1 p-1 rounded-[var(--radius-card)] bg-surface border border-border shadow-2xs"
