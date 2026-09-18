@@ -20,7 +20,7 @@ import SubscriptionApprovalModal, { type SubscriptionApprovalRequest } from '@/c
 import SubscriptionRequestListPanel, { type AdminSubscriptionRequestItem } from '@/components/SubscriptionRequestListPanel';
 import { getBillingPricingFromFields } from '@/components/BillingDiscountFields';
 import type { QuotaSnapshot } from '@/lib/quotaDisplay';
-import { PageHeader, Alert, Button, ConfirmDialog, ProjectCard, ListRowAction, StatusPill, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode, listStackClass, Breadcrumbs, Pagination, paginateItems, usePageSize, Card, EmptyState } from '@/components/ui';
+import { PageHeader, Alert, Button, ConfirmDialog, ProjectCard, ListRowAction, StatusPill, SkeletonDashboardHome, SkeletonTabContent, ViewModeToggle, useViewMode, listStackClass, Breadcrumbs, Pagination, usePaginateItems, usePageSize, Card, EmptyState } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { parseStoredPhone } from '@/components/ui/PhoneInput';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
@@ -1996,9 +1996,9 @@ function DashboardPageContent() {
  const paginatedTenants = filteredTenants;
  const paginatedUsers = filteredUsers;
  const paginatedTemplates = filteredTemplates;
- const paginatedEvents = paginateItems(filteredEvents, eventsPage, eventsPageSize);
- const paginatedGuests = paginateItems(filteredGuests, guestsPage, guestsPageSize);
- const paginatedPlanIds = paginateItems([...PLAN_IDS], plansPage, plansPageSize);
+ const paginatedEvents = usePaginateItems(filteredEvents, eventsPage, eventsPageSize);
+ const paginatedGuests = usePaginateItems(filteredGuests, guestsPage, guestsPageSize);
+ const paginatedPlanIds = usePaginateItems([...PLAN_IDS], plansPage, plansPageSize);
  const userOrgOptions = tenantOptions.map((t) => t.name).filter(Boolean).sort();
  const eventOrgOptions = [...new Set(adminEvents.map((e) => e.tenantName).filter(Boolean))].sort();
  const guestOrgOptions = [...new Set(adminGuests.map((g) => g.tenantName).filter(Boolean))].sort();
@@ -4869,7 +4869,7 @@ function DashboardPageContent() {
  }
 
  // Render Regular Tenant Dashboard
- const homeEvents = paginateItems(events, homeEventsPage, homeEventsPageSize);
+ const homeEvents = usePaginateItems(events, homeEventsPage, homeEventsPageSize);
  const usage = orgQuota?.usage;
  const limits = orgQuota?.limits;
  const formatQuota = (used?: number, max?: number) => {

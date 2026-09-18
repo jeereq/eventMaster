@@ -12,7 +12,7 @@ import SubscriptionRequestDetailModal, {
 } from '@/components/SubscriptionRequestDetailModal';
 import {
   Pagination,
-  paginateItems,
+  usePaginateItems,
   ProjectCard,
   StatusPill,
   ListRowAction,
@@ -95,7 +95,7 @@ export default function SubscriptionRequestListPanel({
     setPage(1);
   }, [search, status, cycle, proof, plan, requests.length]);
 
-  const paginated = paginateItems(filtered, page, pageSize);
+  const paginated = usePaginateItems(filtered, page, pageSize);
 
   const chips: CatalogueFilterChip[] = [
     ...(status && status !== 'all'

@@ -15,6 +15,7 @@ import {
 import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
 import { unwrapAdminList, adminListParams } from '@/lib/adminList';
 import { formatFc } from '@/config/landingPricing';
+import useIsMobile from '@/hooks/useIsMobile';
 
 interface AdminEventRow {
   id: string;
@@ -62,6 +63,7 @@ export default function AdminEventsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('admin-events', 12);
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
   const [error, setError] = useState('');
   const [items, setItems] = useState<AdminEventRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -114,14 +116,14 @@ export default function AdminEventsPage() {
       });
       const data = await api.get(`/admin/events?${qs}`);
       const list = unwrapAdminList<AdminEventRow>(data);
-      setItems(list.items);
+      setItems((prev) => (isMobile && page > 1 ? [...prev, ...list.items] : list.items));
       setTotal(list.total);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de charger les événements.');
     } finally {
       setLoading(false);
     }
-  }, [user?.role, page, pageSize, q, visibility, ticketing, donations, gps, when]);
+  }, [user?.role, page, pageSize, q, visibility, ticketing, donations, gps, when, isMobile, canAccess]);
 
   useEffect(() => {
     void load();
@@ -441,6 +443,7 @@ export default function AdminEventsPage() {
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
         itemLabel="événements"
+        loading={loading}
       />
 
       <AdminDetailsModal

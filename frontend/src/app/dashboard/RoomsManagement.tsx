@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import {
   ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonRoomsView,
-  Button, Modal, EmptyState, Alert, Input, Pagination, paginateItems, usePageSize,
+  Button, Modal, EmptyState, Alert, Input, Pagination, usePaginateItems, usePageSize,
 } from '@/components/ui';
 import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
 import { ROOM_TYPE_FILTER_OPTIONS } from '@/lib/catalogueEntityFilters';
@@ -454,6 +454,7 @@ export default function RoomsManagement() {
       return matchesSearch && matchesType && matchesVisibility && matchesCity;
     });
   }, [rooms, roomQuery, filterRoomType, filterVisibility, filterCity]);
+  const pagedRooms = usePaginateItems(filteredRooms, roomsPage, roomsPageSize);
 
   useEffect(() => {
     setRoomsPage(1);
@@ -2193,7 +2194,7 @@ export default function RoomsManagement() {
               : listStackClass
           }
         >
-          {paginateItems(filteredRooms, roomsPage, roomsPageSize).map((room) => {
+          {pagedRooms.map((room) => {
             const metaLine = [room.floor, room.location, room.capacity ? `${room.capacity} places` : null]
               .filter(Boolean)
               .join(' · ') || 'Sans détails';

@@ -17,7 +17,7 @@ import {
   useViewMode,
   listStackClass,
   Pagination,
-  paginateItems,
+  usePaginateItems,
   usePageSize,
 } from '@/components/ui';
 import { SkeletonListRow } from '@/components/ui/Skeleton';
@@ -134,7 +134,7 @@ export default function TicketsPage() {
     setPage(1);
   }, [q, when, entry, location, pageSize]);
 
-  const visible = paginateItems(filtered, page, pageSize);
+  const visible = usePaginateItems(filtered, page, pageSize);
 
   const ticketActions = (ticket: MyTicket) => {
     const detailsHref = ticket.event.slug && ticket.event.isPublic

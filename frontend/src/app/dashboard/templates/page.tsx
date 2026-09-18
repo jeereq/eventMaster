@@ -58,7 +58,7 @@ import {
 } from 'lucide-react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
-import { PageHeader, Alert, Button, Input, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, paginateItems, usePageSize, Modal } from '@/components/ui';
+import { PageHeader, Alert, Button, Input, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, usePaginateItems, usePageSize, Modal } from '@/components/ui';
 import InvitationDuplicateModal, { type InvitationDuplicateValues } from '@/components/InvitationDuplicateModal';
 import InvitationIdentityFields from '@/components/InvitationIdentityFields';
 import InvitationStructuredBriefFields from '@/components/InvitationStructuredBriefFields';
@@ -3019,8 +3019,8 @@ const studioModelPhotos = useMemo(
 );
  const canDuplicateAny = isSuperAdmin || catalogTemplates.length > 0 || canUseCustomTemplates;
  const listTemplates = isSuperAdmin ? templates : ownTemplates;
- const paginatedCatalog = paginateItems(catalogTemplates, catalogPage, templatesPageSize);
- const paginatedOwn = paginateItems(listTemplates, ownTemplatesPage, templatesPageSize);
+ const paginatedCatalog = usePaginateItems(catalogTemplates, catalogPage, templatesPageSize);
+ const paginatedOwn = usePaginateItems(listTemplates, ownTemplatesPage, templatesPageSize);
 
  // Helper to get background style
  const getBackgroundStyle = (type: string, color: string, url: string, pattern: string) => {

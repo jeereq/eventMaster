@@ -1,13 +1,33 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import useIsMobile from '@/hooks/useIsMobile';
 
-export function paginateItems<T>(items: T[], page: number, pageSize: number): T[] {
+export function paginateItems<T>(
+  items: T[],
+  page: number,
+  pageSize: number,
+  /** Sur mobile (scroll infini) : cumule les pages 1…N au lieu d’afficher seulement N. */
+  accumulate = false,
+): T[] {
   const safePage = Math.max(1, page);
-  const start = (safePage - 1) * pageSize;
-  return items.slice(start, start + pageSize);
+  const size = Math.max(1, pageSize);
+  if (accumulate) {
+    return items.slice(0, safePage * size);
+  }
+  const start = (safePage - 1) * size;
+  return items.slice(start, start + size);
+}
+
+/** Découpe client : page classique sur desktop, cumul (infinite scroll) sur mobile. */
+export function usePaginateItems<T>(items: T[], page: number, pageSize: number): T[] {
+  const isMobile = useIsMobile();
+  return useMemo(
+    () => paginateItems(items, page, pageSize, isMobile),
+    [items, page, pageSize, isMobile],
+  );
 }
 
 export function totalPagesFor(total: number, pageSize: number): number {
@@ -54,8 +74,15 @@ export interface PaginationProps {
   /** Libellé du type d’éléments, ex. « organisations » */
   itemLabel?: string;
   className?: string;
-  /** Nombre max de boutons de page visibles (fenêtre centrée) */
+  /** Nombre max de boutons de page visibles (fenêtre centrée) — desktop uniquement */
   maxButtons?: number;
+  /**
+   * `auto` (défaut) : infinite loader sous md, pages au-delà.
+   * `infinite` / `pages` : force le mode.
+   */
+  mode?: 'auto' | 'infinite' | 'pages';
+  /** Affiché pendant un chargement serveur (infinite) */
+  loading?: boolean;
 }
 
 function pageWindow(current: number, totalPages: number, maxButtons: number): number[] {
@@ -82,18 +109,89 @@ export default function Pagination({
   itemLabel,
   className,
   maxButtons = 7,
+  mode = 'auto',
+  loading = false,
 }: PaginationProps) {
-  if (total <= 0) return null;
+  const isMobile = useIsMobile();
+  const infinite = mode === 'infinite' || (mode === 'auto' && isMobile);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const loadingMoreRef = useRef(false);
 
   const totalPages = totalPagesFor(total, pageSize);
   const safePage = Math.min(Math.max(1, page), totalPages);
-  const from = total === 0 ? 0 : (safePage - 1) * pageSize + 1;
-  const to = Math.min(safePage * pageSize, total);
+  const hasMore = total > 0 && safePage < totalPages;
+
+  useEffect(() => {
+    loadingMoreRef.current = false;
+  }, [page, total, pageSize]);
+
+  useEffect(() => {
+    if (!infinite || !hasMore || loading || total <= 0) return;
+    const node = sentinelRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const hit = entries.some((entry) => entry.isIntersecting);
+        if (!hit || loadingMoreRef.current) return;
+        loadingMoreRef.current = true;
+        onPageChange(safePage + 1);
+      },
+      { root: null, rootMargin: '240px 0px', threshold: 0 },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [infinite, hasMore, loading, onPageChange, safePage, total, pageSize]);
+
+  if (total <= 0) return null;
+
+  const shownCount = Math.min(safePage * pageSize, total);
+  const from = infinite ? 1 : (safePage - 1) * pageSize + 1;
+  const to = infinite ? shownCount : Math.min(safePage * pageSize, total);
   const pages = pageWindow(safePage, totalPages, maxButtons);
   const singlePage = totalPages <= 1;
   const sizeOptions = pageSizeOptions.includes(pageSize)
     ? pageSizeOptions
     : [...pageSizeOptions, pageSize].sort((a, b) => a - b);
+
+  if (infinite) {
+    return (
+      <nav
+        aria-label="Chargement de la liste"
+        className={cn('mt-4 flex flex-col items-center gap-3 px-1 py-2', className)}
+      >
+        <p className="text-xs font-medium text-foreground/80 text-center">
+          {from}–{to} sur {total}
+          {itemLabel ? ` ${itemLabel}` : ''}
+        </p>
+        {hasMore ? (
+          <>
+            <div
+              ref={sentinelRef}
+              className="flex min-h-12 w-full items-center justify-center"
+              aria-hidden
+            >
+              <Loader2 className="h-5 w-5 animate-spin text-primary opacity-80" />
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (loadingMoreRef.current || loading) return;
+                loadingMoreRef.current = true;
+                onPageChange(safePage + 1);
+              }}
+              disabled={loading}
+              className="min-h-11 px-4 rounded-[var(--radius-button)] border border-border bg-surface text-xs font-semibold text-foreground hover:bg-surface-muted disabled:opacity-50 transition"
+            >
+              Voir plus
+            </button>
+          </>
+        ) : (
+          <p className="text-xs text-muted">Fin de la liste</p>
+        )}
+      </nav>
+    );
+  }
 
   return (
     <nav

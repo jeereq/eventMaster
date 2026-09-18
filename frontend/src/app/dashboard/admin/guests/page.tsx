@@ -12,6 +12,7 @@ import {
 } from '@/components/ui';
 import AdminDetailsModal from '@/components/admin/AdminDetailsModal';
 import { unwrapAdminList, adminListParams } from '@/lib/adminList';
+import useIsMobile from '@/hooks/useIsMobile';
 
 interface AdminGuestRow {
   id: string;
@@ -75,6 +76,7 @@ export default function AdminGuestsPage() {
   const [org, setOrg] = useState('ALL');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('admin-guests', 12);
+  const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [items, setItems] = useState<AdminGuestRow[]>([]);
@@ -134,14 +136,14 @@ export default function AdminGuestsPage() {
       });
       const data = await api.get(`/admin/guests?${qs}`);
       const list = unwrapAdminList<AdminGuestRow>(data);
-      setItems(list.items);
+      setItems((prev) => (isMobile && page > 1 ? [...prev, ...list.items] : list.items));
       setTotal(list.total);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de charger les invités.');
     } finally {
       setLoading(false);
     }
-  }, [user?.role, page, pageSize, q, category, rsvp, checkin, pdf, org]);
+  }, [user?.role, page, pageSize, q, category, rsvp, checkin, pdf, org, isMobile, canAccess]);
 
   useEffect(() => {
     void load();
@@ -438,6 +440,7 @@ export default function AdminGuestsPage() {
         onPageChange={setPage}
         onPageSizeChange={setPageSize}
         itemLabel="invités"
+        loading={loading}
       />
 
       <AdminDetailsModal

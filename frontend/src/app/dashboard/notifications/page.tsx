@@ -19,6 +19,7 @@ import {
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useNotificationInbox } from '@/context/NotificationInboxContext';
+import useIsMobile from '@/hooks/useIsMobile';
 import {
   PageHeader,
   Breadcrumbs,
@@ -106,6 +107,7 @@ function NotificationsContent() {
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('notifications', 20);
+  const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [data, setData] = useState<NotificationsResponse | null>(null);
@@ -181,14 +183,22 @@ function NotificationsContent() {
       if (unreadOnly) params.set('unread', '1');
       if (family !== 'all') params.set('family', family);
       const result = await api.get(`/notifications?${params}`);
-      setData(result);
+      setData((prev) => {
+        if (isMobile && page > 1 && prev?.items?.length) {
+          return {
+            ...result,
+            items: [...prev.items, ...(result.items || [])],
+          };
+        }
+        return result;
+      });
       if (typeof result.unreadCount === 'number') setUnreadCount(result.unreadCount);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de charger les notifications.');
     } finally {
       setLoading(false);
     }
-  }, [family, unreadOnly, page, pageSize, setUnreadCount]);
+  }, [family, unreadOnly, page, pageSize, setUnreadCount, isMobile]);
 
   useEffect(() => {
     if (activeTab === 'inbox') {
@@ -396,6 +406,7 @@ function NotificationsContent() {
               onPageChange={setPage}
               onPageSizeChange={setPageSize}
               itemLabel="notifications"
+              loading={loading}
             />
           )}
         </section>

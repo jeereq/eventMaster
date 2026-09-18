@@ -10,7 +10,7 @@ import {
   Input,
   Modal,
   Pagination,
-  paginateItems,
+  usePaginateItems,
   StatusPill,
   listStackClass,
   usePageSize,
@@ -184,6 +184,7 @@ export default function MarketplaceInquiriesPanel({
       return hay.includes(q);
     });
   }, [inquiries, status, kind, query]);
+  const pagedVisible = usePaginateItems(visible, page, pageSize);
 
   useEffect(() => {
     setPage(1);
@@ -716,7 +717,7 @@ export default function MarketplaceInquiriesPanel({
       ) : (
         <>
           <div className={mode === 'grid' ? gridClassName : listStackClass}>
-            {paginateItems(visible, page, pageSize).map((item) => {
+            {pagedVisible.map((item) => {
               const next = inquiryNextStep({ ...item, viewerRole: organizerView ? 'organizer' : item.viewerRole || 'vendor' });
               const busy = busyId === item.id;
               const listingHref = item.listingSlug

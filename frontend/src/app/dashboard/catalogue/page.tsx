@@ -12,7 +12,7 @@ import {
   Modal,
   PageHeader,
   Pagination,
-  paginateItems,
+  usePaginateItems,
   usePageSize,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -349,6 +349,7 @@ function ClientMarketplaceInner() {
   );
 
   const visible = items;
+  const pagedVisible = usePaginateItems(visible, page, pageSize);
 
   const favoriteItems = useMemo(
     () => favoriteRows.map(favoriteToCatalogueItem),
@@ -743,7 +744,7 @@ function ClientMarketplaceInner() {
             ) : (
               <div className="space-y-3">
                 <CatalogueResults
-                  items={paginateItems(visible, page, pageSize)}
+                  items={pagedVisible}
                   mode={mode === 'list' ? 'list' : 'grid'}
                   gridCols={gridCols}
                   emptyTitle="Aucune fiche pour cette recherche"

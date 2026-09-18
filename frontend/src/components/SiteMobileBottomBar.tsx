@@ -65,11 +65,11 @@ export const SITE_MOBILE_NAV_ITEMS: MobileNavItem[] = [
     icon: Sparkles,
   },
   {
-    id: 'editor',
-    label: 'Plans 2D/3D',
-    shortLabel: 'Plans',
-    href: '/plans-3d',
-    icon: LayoutGrid,
+    id: 'activity',
+    label: 'Réalisations',
+    shortLabel: 'Réalis.',
+    href: '/activite',
+    icon: Compass,
   },
   {
     id: 'more',
@@ -81,20 +81,20 @@ export const SITE_MOBILE_NAV_ITEMS: MobileNavItem[] = [
 
 const MORE_LINKS = [
   {
+    href: '/plans-3d',
+    label: 'Plans 2D/3D',
+    description: 'Éditeur de salles et vitrine 3D',
+    icon: LayoutGrid,
+    iconColor: 'text-primary',
+    iconBg: 'bg-primary/10',
+  },
+  {
     href: '/modeles',
     label: 'Modèles d’invitations',
     description: 'Faire-part et templates interactifs',
     icon: FileText,
     iconColor: 'text-primary',
     iconBg: 'bg-primary/10',
-  },
-  {
-    href: '/activite',
-    label: 'Réalisations & Événements',
-    description: 'Vitrine et retours d’expérience',
-    icon: Compass,
-    iconColor: 'text-festive-accent',
-    iconBg: 'bg-festive-accent-soft',
   },
   {
     href: '/tarifs',
@@ -132,7 +132,8 @@ function isItemActive(
       sheetOpen ||
       [
         '/modeles',
-        '/activite',
+        '/plans-3d',
+        '/editeur',
         '/tarifs',
         '/contact',
         '/faq',
@@ -148,8 +149,8 @@ function isItemActive(
   if (itemHref === SIMULATOR_HREF) {
     return pathname === '/simulateur' || pathname.startsWith('/simulateur');
   }
-  if (itemHref === '/plans-3d') {
-    return pathname === '/plans-3d' || pathname === '/editeur' || pathname.startsWith('/plans-3d/');
+  if (itemHref === '/activite') {
+    return pathname === '/activite' || pathname.startsWith('/activite/');
   }
   if (itemHref === '/marketplace') {
     return pathname.startsWith('/marketplace') || pathname.startsWith('/evenements');

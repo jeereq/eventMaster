@@ -30,7 +30,7 @@ import {
   applyInvitationGuidelineVariables,
   formatGuestGuidelinesBlock,
 } from '@/lib/guestGuidelines';
-import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, SkeletonEventDetail, SkeletonEventDetailBody, Breadcrumbs, Modal, Input, Pagination, paginateItems, PhoneInput, usePageSize, coverFromPhotos, Card, CardHeader, EmptyState, Alert, ConfirmDialog } from '@/components/ui';
+import { PageHeader, Button, ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonEventsView, SkeletonEventDetail, SkeletonEventDetailBody, Breadcrumbs, Modal, Input, Pagination, usePaginateItems, PhoneInput, usePageSize, coverFromPhotos, Card, CardHeader, EmptyState, Alert, ConfirmDialog } from '@/components/ui';
 import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
 import { EVENT_ENTRY_OPTIONS } from '@/lib/catalogueEntityFilters';
 import { cn } from '@/lib/cn';
@@ -923,8 +923,8 @@ function EventsPageInner() {
       || (eventEntry === 'free' && !paid);
     return matchesSearch && matchesWhen && matchesVisibility && matchesEntry;
   });
-  const paginatedEventsList = paginateItems(filteredEventsList, eventsListPage, eventsPageSize);
-  const paginatedGuestsList = paginateItems(filteredGuests, guestsListPage, guestsPageSize);
+  const paginatedEventsList = usePaginateItems(filteredEventsList, eventsListPage, eventsPageSize);
+  const paginatedGuestsList = usePaginateItems(filteredGuests, guestsListPage, guestsPageSize);
 
   const isAllFilteredSelected = filteredGuests.length > 0 && filteredGuests.every(g => selectedGuestIds.includes(g.id));
 
