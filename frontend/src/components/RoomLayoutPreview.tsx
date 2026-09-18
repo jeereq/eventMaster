@@ -13,7 +13,7 @@ import {
   ensureBlueprintDefaults,
   resolveBlueprintWalls,
   isBlueprintWallsVisible,
-  applyPlanSceneVisibility,
+  applyPlanSceneVisibility
 } from '@/lib/roomLayoutUtils';
 import { PlanSceneControls, usePlanFullscreen } from '@/components/PlanViewChrome';
 import PlanViewModeToggle from '@/components/PlanViewModeToggle';

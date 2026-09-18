@@ -229,6 +229,7 @@ model User {
   notificationPreferences NotificationPreference[]
   pushDeviceTokens      PushDeviceToken[]
   listingFavorites      ListingFavorite[]
+  invitationTemplateFavorites InvitationTemplateFavorite[]
   savedEventPacks       SavedEventPack[]
   savedEventBriefs      SavedEventBrief[]
   savedRoomAmbiences    SavedRoomAmbience[]
@@ -914,6 +915,20 @@ model ListingFavorite {
 
   @@unique([userId, kind, slug])
   @@index([userId])
+}
+
+/** Favoris modèles d’invitation : compte connecté (userId) ou appareil anonyme (deviceId). */
+model InvitationTemplateFavorite {
+  id         String   @id @default(uuid())
+  templateId String
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId   String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, templateId])
+  @@index([deviceId, templateId])
+  @@index([templateId])
 }
 
 model SavedEventPack {
