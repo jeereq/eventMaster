@@ -15,6 +15,8 @@ import {
   DollarSign,
   Clock,
   Sparkles,
+  Mail,
+  LayoutGrid,
 } from 'lucide-react';
 import { Button, Alert } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -35,7 +37,6 @@ import {
 import { revealAndScrollToSection } from '@/lib/aiFabPlacement';
 import AiTokenBuyButton from '@/components/AiTokenBuyButton';
 import AiSimulationCounter, { isAiSimulationThresholdReached } from '@/components/AiSimulationCounter';
-import type { EventPrepAiDefaults } from '@/components/EventPrepAiSimulator';
 import AiStudioTabList, {
   AI_STUDIO_TABS,
   aiStudioPanelId,
@@ -44,48 +45,23 @@ import AiStudioTabList, {
 
 const LANDING_STUDIO_PREFIX = 'landing-ai-studio';
 
-const STUDIO_FULL_PAGE: Record<AiStudioId, { href: string; label: string }> = {
-  budget: { href: '/simulateur', label: 'Simulateur budget complet' },
-  invite: { href: '/modeles#generateur-ia', label: 'Studio invitation complet' },
-  room: { href: '/plans-3d#studio-ia', label: 'Studio plan de salle complet' },
+const STUDIO_FULL_PAGE: Record<AiStudioId, { href: string; label: string; action: string }> = {
+  budget: {
+    href: '/simulateur?studio=budget',
+    label: 'Simulateur de budget',
+    action: 'Simuler mon budget',
+  },
+  invite: {
+    href: '/modeles#generateur-ia',
+    label: 'Studio invitations',
+    action: 'Créer une invitation',
+  },
+  room: {
+    href: '/plans-3d#studio-ia',
+    label: 'Studio plans 3D',
+    action: 'Composer un plan',
+  },
 };
-
-function StudioPaneFallback({ label }: { label: string }) {
-  return (
-    <div
-      className="min-h-[16rem] rounded-[var(--radius-card)] bg-surface-muted/40 animate-pulse motion-reduce:animate-none"
-      role="status"
-      aria-live="polite"
-      aria-label={label}
-    >
-      <span className="sr-only">{label}</span>
-    </div>
-  );
-}
-
-const LandingInvitationAiGenerator = dynamic(
-  () => import('@/components/landing/LandingInvitationAiGenerator'),
-  {
-    ssr: false,
-    loading: () => <StudioPaneFallback label="Chargement du studio invitation…" />,
-  },
-);
-
-const LandingRoomPlanAiStudio = dynamic(
-  () => import('@/components/landing/LandingRoomPlanAiStudio'),
-  {
-    ssr: false,
-    loading: () => <StudioPaneFallback label="Chargement du studio plan de salle…" />,
-  },
-);
-
-const EventPrepAiSimulator = dynamic(
-  () => import('@/components/EventPrepAiSimulator'),
-  {
-    ssr: false,
-    loading: () => <StudioPaneFallback label="Chargement du simulateur budget…" />,
-  },
-);
 
 const AiTokenPurchaseModal = dynamic(
   () => import('@/components/AiTokenPurchaseModal'),
@@ -151,18 +127,6 @@ const SCENARIOS: ScenarioBrief[] = [
   },
 ];
 
-function scenarioToDefaults(scenario: ScenarioBrief, rate = 2800): EventPrepAiDefaults {
-  return {
-    eventType: scenario.eventType,
-    city: scenario.city,
-    commune: scenario.commune,
-    guestCount: scenario.guests,
-    budgetMaxUsd: rate > 0 ? Math.round(scenario.budgetTargetFc / rate) : undefined,
-    budgetMaxFc: scenario.budgetTargetFc,
-    prompt: scenario.prompt,
-  };
-}
-
 export default function LandingAiSimulationShowcase() {
   const revealRef = useLandingReveal<HTMLElement>();
 
@@ -170,13 +134,10 @@ export default function LandingAiSimulationShowcase() {
   const exchangeRate = resolveUsdExchangeRateCdf(site?.usdExchangeRateCdf);
   const marketplaceCities = enabledMarketplaceCities(site);
 
-  const [viewMode, setViewMode] = useState<'presets' | 'live'>('presets');
   const [studio, setStudio] = useState<AiStudioId>('budget');
   const [allowance, setAllowance] = useState<AiAllowance>(createEmptyAiAllowance);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
   const [selectedScenarioId, setSelectedScenarioId] = useState('mariage-kin');
-  const [liveDefaults, setLiveDefaults] = useState<EventPrepAiDefaults | undefined>();
-  const [preferDefaults, setPreferDefaults] = useState(false);
   const [checkoutNotice, setCheckoutNotice] = useState<'success' | 'canceled' | null>(null);
 
   const visibleScenarios = useMemo(() => {
@@ -275,12 +236,7 @@ export default function LandingAiSimulationShowcase() {
     return () => window.removeEventListener(AI_ALLOWANCE_CHANGED, onAllowance);
   }, []);
 
-  const openLiveWithScenario = (scenario: ScenarioBrief) => {
-    setStudio('budget');
-    setLiveDefaults(scenarioToDefaults(scenario, exchangeRate));
-    setPreferDefaults(true);
-    setViewMode('live');
-  };
+  const budgetHref = `/simulateur?studio=budget&scenario=${encodeURIComponent(activeScenario.id)}`;
 
   if (visibleStudioTabs.length === 0) {
     return (
@@ -302,7 +258,7 @@ export default function LandingAiSimulationShowcase() {
               Ateliers IA &amp; Simulateurs
             </h2>
             <p className="text-sm text-muted leading-relaxed max-w-xl mx-auto">
-              Les ateliers d’intelligence artificielle (chiffrage budgétaire, création d’invitations 9:16 et modélisation spatiale 3D) sont actuellement réservés ou temporairement masqués par l’administration de la plateforme. En attendant, explorez notre catalogue complet de prestataires et d’équipements vérifiés.
+              Les ateliers d’intelligence artificielle sont temporairement masqués. Explorez le catalogue de prestataires en attendant.
             </p>
           </div>
           <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
@@ -324,7 +280,7 @@ export default function LandingAiSimulationShowcase() {
       id="simulateur-ia"
       className="em-reveal em-landing-defer scroll-mt-24 py-8 sm:py-20 border-t border-border bg-gradient-to-b from-surface/90 via-surface-muted/40 to-surface/90 relative overflow-hidden em-landing-section-glow"
     >
-      <div className="page-container relative z-10 space-y-10 sm:space-y-12">
+      <div className="page-container relative z-10 space-y-8 sm:space-y-10">
         <div className="text-center max-w-3xl mx-auto space-y-2.5">
           {checkoutNotice === 'success' ? (
             <div className="text-left">
@@ -348,23 +304,12 @@ export default function LandingAiSimulationShowcase() {
           ) : null}
 
           <h2 className="em-landing-heading text-xl sm:text-4xl text-foreground">
-            <span className="sm:hidden">
-              {dynamicHeading.mobile}
-            </span>
-            <span className="hidden sm:inline">
-              {dynamicHeading.desktop}
-            </span>
+            <span className="sm:hidden">{dynamicHeading.mobile}</span>
+            <span className="hidden sm:inline">{dynamicHeading.desktop}</span>
           </h2>
 
-          {studio === 'budget' ? (
-            <p className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold text-foreground tabular-nums">
-              Taux actuel : 1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
-            </p>
-          ) : null}
-
           <p className="text-sm sm:text-base text-muted leading-relaxed">
-            Un même portefeuille de jetons. Packs catalogue, carte 9:16, ou plan 2D / 3D à partir d’un brief ou d’une photo.{' '}
-            {aiTokenCostLegend()}.
+            Choisissez un atelier, puis ouvrez l’outil complet. {aiTokenCostLegend()}
           </p>
 
           {!allowance.unlimited && !isAiSimulationThresholdReached(allowance) ? (
@@ -383,201 +328,132 @@ export default function LandingAiSimulationShowcase() {
             idPrefix={LANDING_STUDIO_PREFIX}
             className="text-left max-w-3xl mx-auto mt-2"
           />
-          <p className="pt-1">
-            <Link
-              href={fullPage.href}
-              className="inline-flex min-h-11 items-center text-xs font-semibold text-primary-solid hover:underline rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-            >
-              {fullPage.label}
-            </Link>
-          </p>
-
-          {studio === 'budget' ? (
-          <div className="flex flex-col sm:inline-flex sm:flex-row sm:items-center w-full sm:w-auto p-1 rounded-[var(--radius-card)] bg-surface border border-border shadow-xs mt-2" role="group" aria-label="Mode de vue simulateur budget">
-            <button
-              type="button"
-              aria-pressed={viewMode === 'presets'}
-              onClick={() => setViewMode('presets')}
-              className={cn(
-                'min-h-11 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] text-sm sm:text-xs font-bold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                viewMode === 'presets'
-                  ? 'bg-primary-solid text-primary-foreground shadow-xs'
-                  : 'text-muted hover:text-foreground',
-              )}
-            >
-              <span className="sm:hidden">Exemples</span>
-              <span className="hidden sm:inline">Exemples & projets types</span>
-            </button>
-            <button
-              type="button"
-              aria-pressed={viewMode === 'live'}
-              onClick={() => setViewMode('live')}
-              className={cn(
-                'min-h-11 w-full sm:w-auto px-4 py-2 rounded-[var(--radius-button)] text-sm sm:text-xs font-bold transition inline-flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                viewMode === 'live'
-                  ? 'bg-primary-solid text-primary-foreground shadow-xs'
-                  : 'text-muted hover:text-foreground',
-              )}
-            >
-              <Wand2 className="w-3.5 h-3.5 text-festive-accent" aria-hidden />
-              <span className="sm:hidden">En direct</span>
-              <span className="hidden sm:inline">Tester mon événement en direct</span>
-              {isAiSimulationThresholdReached(allowance) ? (
-                <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/15 text-primary-solid font-bold tabular-nums">
-                  {allowance.totalRemaining} simulation{allowance.totalRemaining > 1 ? 's' : ''} budget IA
-                </span>
-              ) : null}
-            </button>
-          </div>
-          ) : null}
         </div>
 
-        <div
-          role="tabpanel"
-          id={aiStudioPanelId(LANDING_STUDIO_PREFIX, 'budget')}
-          aria-labelledby={`${LANDING_STUDIO_PREFIX}-budget`}
-          hidden={studio !== 'budget'}
-          className="space-y-6"
-        >
-        {studio === 'budget' ? (
-          <>
-        {viewMode === 'presets' && (
-          <div className="bg-surface border border-border rounded-[var(--radius-card)] max-w-5xl mx-auto overflow-hidden animate-fade-in">
-            <div className="p-3 sm:p-4 border-b border-border space-y-2">
-              <p className="text-xs font-semibold text-foreground">
-                Choisissez un exemple, puis générez de vrais packs catalogue.
-              </p>
-              <div className="flex gap-2 overflow-x-auto pb-0.5 sm:flex-wrap" role="group" aria-label="Projets types">
-                {visibleScenarios.map((scenario) => {
-                  const isSelected = scenario.id === selectedScenarioId;
-                  return (
-                    <button
-                      key={scenario.id}
-                      type="button"
-                      aria-pressed={isSelected}
-                      onClick={() => setSelectedScenarioId(scenario.id)}
-                      className={cn(
-                        'min-h-11 px-3.5 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition-all touch-manipulation cursor-pointer whitespace-nowrap shrink-0 sm:shrink inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                        isSelected
-                          ? 'bg-primary-solid text-primary-foreground shadow-xs'
-                          : 'bg-surface-muted border border-border text-muted hover:text-foreground hover:bg-surface',
-                      )}
-                    >
-                      {scenario.name}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+        {visibility.budget ? (
+          <div
+            role="tabpanel"
+            id={aiStudioPanelId(LANDING_STUDIO_PREFIX, 'budget')}
+            aria-labelledby={`${LANDING_STUDIO_PREFIX}-budget`}
+            hidden={studio !== 'budget'}
+            className="space-y-4"
+          >
+            {studio === 'budget' ? (
+              <div className="bg-surface border border-border rounded-[var(--radius-card)] max-w-5xl mx-auto overflow-hidden animate-fade-in">
+                <div className="p-3 sm:p-4 border-b border-border space-y-2">
+                  <p className="text-xs font-semibold text-foreground">
+                    Choisissez un exemple, puis lancez la simulation.
+                  </p>
+                  <div className="flex gap-2 overflow-x-auto pb-0.5 sm:flex-wrap" role="group" aria-label="Projets types">
+                    {visibleScenarios.map((scenario) => {
+                      const isSelected = scenario.id === selectedScenarioId;
+                      return (
+                        <button
+                          key={scenario.id}
+                          type="button"
+                          aria-pressed={isSelected}
+                          onClick={() => setSelectedScenarioId(scenario.id)}
+                          className={cn(
+                            'min-h-11 px-3.5 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition-all touch-manipulation cursor-pointer whitespace-nowrap shrink-0 sm:shrink inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                            isSelected
+                              ? 'bg-primary-solid text-primary-foreground shadow-xs'
+                              : 'bg-surface-muted border border-border text-muted hover:text-foreground hover:bg-surface',
+                          )}
+                        >
+                          {scenario.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
-            <div className="relative h-28 sm:h-36 w-full overflow-hidden bg-stage">
-              <LandingMedia
-                src={activeScenario.imageUrl}
-                alt={activeScenario.name}
-                sizes="(max-width: 768px) 100vw, 64rem"
-                className="object-center"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-stage via-stage/40 to-transparent" />
-              <div className="absolute bottom-3 left-4 right-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2 text-stage-foreground">
-                <h3 className="text-base sm:text-lg font-bold">{activeScenario.name}</h3>
-                <span className="text-xs font-bold text-festive-on-stage bg-stage/70 px-2.5 py-1 rounded-[var(--radius-button)] border border-festive-accent/30 self-start sm:self-auto flex items-baseline gap-1.5">
-                  <span>Budget : {activeScenarioUsd.toLocaleString('fr-FR')} $</span>
-                  <span className="text-xs text-stage-foreground/80 font-normal">({formatFc(activeScenario.budgetTargetFc)})</span>
-                </span>
-              </div>
-            </div>
+                <div className="relative h-28 sm:h-36 w-full overflow-hidden bg-stage">
+                  <LandingMedia
+                    src={activeScenario.imageUrl}
+                    alt={activeScenario.name}
+                    sizes="(max-width: 768px) 100vw, 64rem"
+                    className="object-center"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-stage via-stage/40 to-transparent" />
+                  <div className="absolute bottom-3 left-4 right-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2 text-stage-foreground">
+                    <h3 className="text-base sm:text-lg font-bold">{activeScenario.name}</h3>
+                    <span className="text-xs font-bold text-festive-on-stage bg-stage/70 px-2.5 py-1 rounded-[var(--radius-button)] border border-festive-accent/30 self-start sm:self-auto flex items-baseline gap-1.5">
+                      <span>Budget : {activeScenarioUsd.toLocaleString('fr-FR')} $</span>
+                      <span className="text-xs text-stage-foreground/80 font-normal">({formatFc(activeScenario.budgetTargetFc)})</span>
+                    </span>
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 sm:p-4 text-xs border-t border-border">
-              <div className="space-y-0.5">
-                <span className="text-xs text-muted flex items-center gap-1 font-medium">
-                  <Heart className="w-3.5 h-3.5 text-primary" aria-hidden />
-                  <span className="sm:hidden">Type</span>
-                  <span className="hidden sm:inline">Type d’événement</span>
-                </span>
-                <p className="font-bold text-foreground truncate">{activeScenario.type}</p>
-              </div>
-              <div className="space-y-0.5">
-                <span className="text-xs text-muted flex items-center gap-1 font-medium">
-                  <MapPin className="w-3.5 h-3.5 text-primary" aria-hidden />
-                  <span className="sm:hidden">Ville</span>
-                  <span className="hidden sm:inline">Ville & Commune</span>
-                </span>
-                <p className="font-bold text-foreground truncate">
-                  {activeScenario.commune
-                    ? `${activeScenario.city} (${activeScenario.commune})`
-                    : activeScenario.city}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 sm:p-4 text-xs border-t border-border">
+                  <div className="space-y-0.5">
+                    <span className="text-xs text-muted flex items-center gap-1 font-medium">
+                      <Heart className="w-3.5 h-3.5 text-primary" aria-hidden />
+                      Type
+                    </span>
+                    <p className="font-bold text-foreground truncate">{activeScenario.type}</p>
+                  </div>
+                  <div className="space-y-0.5">
+                    <span className="text-xs text-muted flex items-center gap-1 font-medium">
+                      <MapPin className="w-3.5 h-3.5 text-primary" aria-hidden />
+                      Ville
+                    </span>
+                    <p className="font-bold text-foreground truncate">
+                      {activeScenario.commune
+                        ? `${activeScenario.city} (${activeScenario.commune})`
+                        : activeScenario.city}
+                    </p>
+                  </div>
+                  <div className="space-y-0.5">
+                    <span className="text-xs text-muted flex items-center gap-1 font-medium">
+                      <Users className="w-3.5 h-3.5 text-primary" aria-hidden />
+                      Invités
+                    </span>
+                    <p className="font-bold text-foreground">{activeScenario.guests}</p>
+                  </div>
+                  <div className="space-y-0.5">
+                    <span className="text-xs text-muted flex items-center gap-1 font-medium">
+                      <DollarSign className="w-3.5 h-3.5 text-primary" aria-hidden />
+                      Budget
+                    </span>
+                    <p className="font-bold text-primary-solid flex items-baseline gap-1">
+                      <span>{activeScenarioUsd.toLocaleString('fr-FR')} $</span>
+                      <span className="text-xs font-normal text-muted">({formatFc(activeScenario.budgetTargetFc)})</span>
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-muted leading-relaxed px-3.5 sm:px-4 pb-1">
+                  {activeScenario.prompt}
                 </p>
-              </div>
-              <div className="space-y-0.5">
-                <span className="text-xs text-muted flex items-center gap-1 font-medium">
-                  <Users className="w-3.5 h-3.5 text-primary" aria-hidden />
-                  <span className="sm:hidden">Invités</span>
-                  <span className="hidden sm:inline">Nombre d’invités</span>
-                </span>
-                <p className="font-bold text-foreground">{activeScenario.guests}</p>
-              </div>
-              <div className="space-y-0.5">
-                <span className="text-xs text-muted flex items-center gap-1 font-medium">
-                  <DollarSign className="w-3.5 h-3.5 text-primary" aria-hidden />
-                  <span className="sm:hidden">Budget</span>
-                  <span className="hidden sm:inline">Budget alloué ($ / FC)</span>
-                </span>
-                <p className="font-bold text-primary-solid flex items-baseline gap-1">
-                  <span>{activeScenarioUsd.toLocaleString('fr-FR')} $</span>
-                  <span className="text-xs font-normal text-muted">({formatFc(activeScenario.budgetTargetFc)})</span>
+                <p className="text-xs text-muted px-3.5 sm:px-4 pb-3 flex items-start gap-2">
+                  <ShieldCheck className="w-4 h-4 text-primary-solid shrink-0 mt-0.5" aria-hidden />
+                  <span>Aucun jeton n’est débité tant que vous n’avez pas cliqué sur Générer dans le simulateur.</span>
                 </p>
+
+                <div className="p-3.5 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 border-t border-border">
+                  <Button
+                    href={budgetHref}
+                    variant="primary"
+                    size="md"
+                    fullWidth
+                    className="sm:w-auto"
+                    rightIcon={<ArrowRight className="w-4 h-4" />}
+                  >
+                    Simuler ce projet
+                  </Button>
+                  <Button
+                    href="/simulateur?studio=budget"
+                    variant="secondary"
+                    size="md"
+                    className="flex-1 sm:flex-none"
+                  >
+                    Simulation libre
+                  </Button>
+                </div>
               </div>
-            </div>
-
-            <p className="text-xs text-muted leading-relaxed px-3.5 sm:px-4 pb-1">
-              {activeScenario.prompt}
-            </p>
-            <p className="text-xs text-muted px-3.5 sm:px-4 pb-3 flex items-start gap-2">
-              <ShieldCheck className="w-4 h-4 text-primary-solid shrink-0 mt-0.5" aria-hidden />
-              <span>Aucun jeton n’est débité tant que vous n’avez pas cliqué sur Générer.</span>
-            </p>
-
-            <div className="p-3.5 sm:p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2.5 border-t border-border">
-              <Button
-                variant="primary"
-                size="md"
-                fullWidth
-                className="sm:w-auto"
-                aria-label="Préremplir et simuler ce projet"
-                rightIcon={<ArrowRight className="w-4 h-4" />}
-                onClick={() => openLiveWithScenario(activeScenario)}
-              >
-                <span className="sm:hidden">Simuler</span>
-                <span className="hidden sm:inline">Préremplir et simuler ce projet</span>
-              </Button>
-              <Button
-                href={STUDIO_FULL_PAGE.budget.href}
-                variant="secondary"
-                size="md"
-                className="flex-1 sm:flex-none"
-                aria-label="Ouvrir le simulateur budget complet"
-              >
-                <span className="sm:hidden">Page budget</span>
-                <span className="hidden sm:inline">Ouvrir le simulateur complet</span>
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {viewMode === 'live' ? (
-          <div className="max-w-5xl mx-auto animate-fade-in">
-            <EventPrepAiSimulator
-              embedded
-              defaultOpen
-              preferDefaults={preferDefaults}
-              defaults={liveDefaults}
-              onAllowanceChange={setAllowance}
-            />
+            ) : null}
           </div>
         ) : null}
-          </>
-        ) : null}
-        </div>
 
         {visibility.invite ? (
           <div
@@ -585,10 +461,27 @@ export default function LandingAiSimulationShowcase() {
             id={aiStudioPanelId(LANDING_STUDIO_PREFIX, 'invite')}
             aria-labelledby={`${LANDING_STUDIO_PREFIX}-invite`}
             hidden={studio !== 'invite'}
-            className="max-w-5xl mx-auto"
           >
             {studio === 'invite' ? (
-              <LandingInvitationAiGenerator id="landing-studio-invite" defaultExpanded />
+              <div className="max-w-2xl mx-auto rounded-[var(--radius-card)] border border-border bg-surface p-6 sm:p-8 text-center space-y-4 animate-fade-in shadow-xs">
+                <div className="w-12 h-12 rounded-2xl bg-pink-500/10 text-pink-600 dark:text-pink-400 mx-auto flex items-center justify-center">
+                  <Mail className="w-6 h-6" aria-hidden />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="text-base sm:text-lg font-bold text-foreground">Studio Invitations</h3>
+                  <p className="text-sm text-muted leading-relaxed">
+                    Créez une carte 9:16 WhatsApp à partir d’un brief ou d’une photo à cloner, puis suivez les réponses.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 pt-1">
+                  <Button href={STUDIO_FULL_PAGE.invite.href} variant="primary" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                    {STUDIO_FULL_PAGE.invite.action}
+                  </Button>
+                  <Button href="/simulateur?studio=invite" variant="secondary">
+                    Dans le simulateur
+                  </Button>
+                </div>
+              </div>
             ) : null}
           </div>
         ) : null}
@@ -599,13 +492,40 @@ export default function LandingAiSimulationShowcase() {
             id={aiStudioPanelId(LANDING_STUDIO_PREFIX, 'room')}
             aria-labelledby={`${LANDING_STUDIO_PREFIX}-room`}
             hidden={studio !== 'room'}
-            className="max-w-5xl mx-auto"
           >
             {studio === 'room' ? (
-              <LandingRoomPlanAiStudio id="landing-studio-room" defaultExpanded />
+              <div className="max-w-2xl mx-auto rounded-[var(--radius-card)] border border-border bg-surface p-6 sm:p-8 text-center space-y-4 animate-fade-in shadow-xs">
+                <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 mx-auto flex items-center justify-center">
+                  <LayoutGrid className="w-6 h-6" aria-hidden />
+                </div>
+                <div className="space-y-1.5">
+                  <h3 className="text-base sm:text-lg font-bold text-foreground">Studio Plans 2D / 3D</h3>
+                  <p className="text-sm text-muted leading-relaxed">
+                    Décrivez la salle ou déposez une photo : l’IA pose tables, allées et décor sur un plan coté.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 pt-1">
+                  <Button href={STUDIO_FULL_PAGE.room.href} variant="primary" rightIcon={<ArrowRight className="w-4 h-4" />}>
+                    {STUDIO_FULL_PAGE.room.action}
+                  </Button>
+                  <Button href="/simulateur?studio=room" variant="secondary">
+                    Dans le simulateur
+                  </Button>
+                </div>
+              </div>
             ) : null}
           </div>
         ) : null}
+
+        <p className="text-center">
+          <Link
+            href={fullPage.href}
+            className="inline-flex min-h-11 items-center gap-1.5 text-xs font-semibold text-primary-solid hover:underline rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            <Wand2 className="w-3.5 h-3.5" aria-hidden />
+            Ouvrir {fullPage.label}
+          </Link>
+        </p>
       </div>
 
       {purchaseModalOpen ? (

@@ -27,13 +27,11 @@ import {
   Wand2,
   Users,
   MapPin,
-  FileText,
   LayoutGrid,
   CheckCircle2,
   Mail,
   Building2,
   Clock,
-  ArrowRight,
 } from 'lucide-react';
 import AiSimulationCounter, { isAiSimulationThresholdReached } from '@/components/AiSimulationCounter';
 import AiTokenBuyButton from '@/components/AiTokenBuyButton';
@@ -383,23 +381,8 @@ export default function SimulateurPageClient() {
           </div>
         ) : null}
 
-        {/* ─── SÉLECTEUR DES 3 ATELIERS CRÉATIFS SUR LA PAGE ─── */}
-        <section aria-label="Ateliers créatifs de simulation" className="rounded-2xl border border-primary/20 bg-surface p-4 sm:p-5 shadow-xs space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/50 pb-3">
-            <div className="space-y-0.5">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary text-primary-foreground">
-                <Sparkles className="w-3.5 h-3.5" />
-                Ateliers IA unifiés
-              </span>
-              <h2 className="text-sm font-bold text-foreground">
-                Les 3 ateliers de préparation événementielle
-              </h2>
-            </div>
-            <p className="text-xs text-muted max-w-sm sm:text-right">
-              Basculez entre le budget, les invitations WhatsApp et les plans 3D sans quitter cette page.
-            </p>
-          </div>
-
+        {/* ─── SÉLECTEUR DES 3 ATELIERS ─── */}
+        <section aria-label="Ateliers créatifs de simulation" className="space-y-3">
           <div
             role="tablist"
             aria-label="Choix de l'atelier de simulation"
@@ -680,15 +663,12 @@ export default function SimulateurPageClient() {
                 </div>
               )}
 
-              {!isBudgetBlocked ? (
+              {!isBudgetBlocked && !studioModalOpen ? (
                 <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
                   <div className="space-y-1 min-w-0">
-                    <p className="text-sm font-bold text-foreground inline-flex items-center gap-2">
-                      <Wand2 className="w-4 h-4 text-primary" aria-hidden />
-                      Simulateur de budget IA
-                    </p>
+                    <p className="text-sm font-bold text-foreground">Simulation libre</p>
                     <p className="text-xs text-muted leading-relaxed">
-                      Choisissez un projet type ci-dessus, puis ouvrez l’atelier pour obtenir 3 formules chiffrées.
+                      Ou ouvrez l’atelier sans projet type pour saisir votre brief.
                     </p>
                   </div>
                   <Button type="button" size="sm" onClick={openActiveStudioModal} className="shrink-0 min-h-11">
@@ -731,22 +711,22 @@ export default function SimulateurPageClient() {
                   </Button>
                 </div>
               </div>
-            ) : (
+            ) : !studioModalOpen ? (
               <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
                 <div className="space-y-1 min-w-0">
                   <p className="text-sm font-bold text-foreground inline-flex items-center gap-2">
                     <Mail className="w-4 h-4 text-pink-500" aria-hidden />
-                    Studio Invitations IA
+                    Studio Invitations
                   </p>
                   <p className="text-xs text-muted leading-relaxed">
-                    Composez une carte 9:16 WhatsApp à partir d’un brief ou d’une photo à cloner.
+                    Composez une carte 9:16 WhatsApp à partir d’un brief ou d’une photo.
                   </p>
                 </div>
                 <Button type="button" size="sm" onClick={openActiveStudioModal} className="shrink-0 min-h-11">
-                  Ouvrir le studio
+                  Réouvrir le studio
                 </Button>
               </div>
-            )}
+            ) : null}
           </section>
         )}
 
@@ -781,22 +761,22 @@ export default function SimulateurPageClient() {
                   </Button>
                 </div>
               </div>
-            ) : (
+            ) : !studioModalOpen ? (
               <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
                 <div className="space-y-1 min-w-0">
                   <p className="text-sm font-bold text-foreground inline-flex items-center gap-2">
                     <LayoutGrid className="w-4 h-4 text-sky-500" aria-hidden />
-                    Studio Plans 2D / 3D IA
+                    Studio Plans 2D / 3D
                   </p>
                   <p className="text-xs text-muted leading-relaxed">
-                    Brief ou photo de salle → tables, rangées et décor posés sur le plan interactif.
+                    Brief ou photo → tables et décor sur le plan interactif.
                   </p>
                 </div>
                 <Button type="button" size="sm" onClick={openActiveStudioModal} className="shrink-0 min-h-11">
-                  Ouvrir le studio
+                  Réouvrir le studio
                 </Button>
               </div>
-            )}
+            ) : null}
           </section>
         )}
 
@@ -805,17 +785,10 @@ export default function SimulateurPageClient() {
           onClose={closeStudioModal}
           title={
             activeStudio === 'invite'
-              ? 'Studio IA — invitations'
+              ? 'Créer une invitation'
               : activeStudio === 'room'
-                ? 'Studio IA — plans de salle'
-                : 'Simulateur de budget IA'
-          }
-          description={
-            activeStudio === 'invite'
-              ? 'Décrivez la fête ou déposez une carte à reproduire.'
-              : activeStudio === 'room'
-                ? 'Brief ou photo → tables, rangées et décor sur le plan 2D / 3D.'
-                : 'Ville, date et budget — 3 formules chiffrées (éco, équilibré, confort).'
+                ? 'Composer un plan de salle'
+                : 'Simuler mon budget'
           }
           size="full"
           contentClassName="p-0 sm:p-0"
@@ -843,102 +816,6 @@ export default function SimulateurPageClient() {
             />
           ) : null}
         </Modal>
-
-        {/* Bandeau de découverte et commutation directe */}
-        <section className="p-5 sm:p-6 rounded-[var(--radius-card)] bg-surface border border-border shadow-xs space-y-4">
-          <div className="space-y-1">
-            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span>Explorez les 3 ateliers directement sur cette page</span>
-            </h3>
-            <p className="text-xs text-muted">
-              Vos jetons IA sont automatiquement partagés entre le simulateur de budget, les invitations et les plans 3D.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-            <button
-              type="button"
-              aria-label="Basculer vers le simulateur de budget"
-              onClick={() => handleSwitchStudio('budget')}
-              className={cn(
-                'p-3.5 rounded-xl border text-left transition flex items-center gap-3 group min-h-11 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                activeStudio === 'budget'
-                  ? 'border-primary bg-primary/10 shadow-xs'
-                  : 'border-border bg-surface-muted/40 hover:bg-surface-muted hover:border-primary/50'
-              )}
-            >
-              <div className="w-9 h-9 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                <Wand2 className="w-4 h-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
-                    Simulateur Budget
-                  </p>
-                  {isBudgetBlocked && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-800 dark:text-amber-200">À venir</span>
-                  )}
-                </div>
-                <p className="text-xs text-muted truncate">3 formules chiffrées clés en main</p>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              aria-label="Basculer vers le studio d’invitations"
-              onClick={() => handleSwitchStudio('invite')}
-              className={cn(
-                'p-3.5 rounded-xl border text-left transition flex items-center gap-3 group min-h-11 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500',
-                activeStudio === 'invite'
-                  ? 'border-pink-500 bg-pink-500/10 shadow-xs'
-                  : 'border-border bg-surface-muted/40 hover:bg-surface-muted hover:border-pink-500/50'
-              )}
-            >
-              <div className="w-9 h-9 rounded-lg bg-pink-500/15 text-pink-600 dark:text-pink-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                <FileText className="w-4 h-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-xs font-bold text-foreground group-hover:text-pink-600 transition-colors">
-                    Studio Invitations
-                  </p>
-                  {isInviteBlocked && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-800 dark:text-amber-200">À venir</span>
-                  )}
-                </div>
-                <p className="text-xs text-muted truncate">Cartes 9:16 WhatsApp &amp; RSVP</p>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              aria-label="Basculer vers le studio de plans 3D"
-              onClick={() => handleSwitchStudio('room')}
-              className={cn(
-                'p-3.5 rounded-xl border text-left transition flex items-center gap-3 group min-h-11 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500',
-                activeStudio === 'room'
-                  ? 'border-sky-500 bg-sky-500/10 shadow-xs'
-                  : 'border-border bg-surface-muted/40 hover:bg-surface-muted hover:border-sky-500/50'
-              )}
-            >
-              <div className="w-9 h-9 rounded-lg bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                <LayoutGrid className="w-4 h-4" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-xs font-bold text-foreground group-hover:text-sky-600 transition-colors">
-                    Studio Plans 3D
-                  </p>
-                  {isRoomBlocked && (
-                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-800 dark:text-amber-200">À venir</span>
-                  )}
-                </div>
-                <p className="text-xs text-muted truncate">Visite 3D &amp; disposition des tables</p>
-              </div>
-            </button>
-          </div>
-        </section>
       </div>
 
       <PublicCtaBand

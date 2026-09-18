@@ -590,8 +590,7 @@ export default function Plans3DPage() {
         <Modal
           open={studioOpen}
           onClose={closeRoomPlanStudio}
-          title="Studio IA — plans de salle"
-          description="Brief ou photo → tables, rangées et décor posés sur le plan 2D / 3D."
+          title="Composer un plan de salle"
           size="full"
           contentClassName="p-0 sm:p-0"
         >
