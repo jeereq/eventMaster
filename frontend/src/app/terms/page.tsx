@@ -4,6 +4,7 @@ import LegalSupportEmail from '@/components/LegalSupportEmail';
 import TermsMarketplaceRates from '@/components/TermsMarketplaceRates';
 import {
   collectionCommissionRangeLabel,
+  LEGAL_LAST_UPDATED,
   TERMS_VERSION,
   TICKETING_RETENTION_PERCENT,
   DONATIONS_RETENTION_PERCENT,
@@ -20,7 +21,7 @@ export default function TermsPage() {
     <LegalPageShell
       title="Conditions d'utilisation"
       subtitle="Les présentes conditions régissent l'accès et l'utilisation de la plateforme EventMaster, incluant le Studio IA, la billetterie multi-zone avec présence auto-validée, les dons solidaires, le simulateur de budget, la modélisation de salle 2D/3D et les paiements sécurisés."
-      lastUpdated="16 septembre 2026"
+      lastUpdated={LEGAL_LAST_UPDATED}
       version={TERMS_VERSION}
     >
       <Section title="1. Objet & Présentation de la plateforme">
@@ -36,7 +37,7 @@ export default function TermsPage() {
         <p>
           La plateforme propose un ensemble d&apos;outils intégrés dédiés à l&apos;organisation et à la gestion
           d&apos;événements privés et professionnels :
-          création d&apos;invitations interactives multilingues avec respect de l&apos;identité et contextualisation IA
+          création d&apos;invitations interactives multilingues avec ancrage d&apos;identité des hôtes, substitution éventuelle de visages sur carton et contextualisation IA
           (Français et langues nationales de la RDC : Lingala, Swahili, Kikongo, Tshiluba), routage et confirmations
           Répondez s’il vous plaît instantanées sur WhatsApp, <strong>Simulateur de budget IA dédié</strong> en Francs Congolais (CDF) et
           Dollars ($), <strong>Studio d&apos;Aménagement IA</strong> avec modélisation 2D zénithale cotée et rendu 3D
@@ -57,7 +58,7 @@ export default function TermsPage() {
           Groupe Tekango.
         </p>
         <p>
-          En créant un compte, en réservant une prestation, en souscrivant un abonnement, en utilisant le Studio IA, en
+          En créant un compte, en réservant une prestation, en souscrivant un abonnement, en utilisant le Studio IA ou le générateur d&apos;invitations, en
           effectuant un don ou en achetant un billet sur EventMaster, vous acceptez sans réserve l&apos;intégralité des
           présentes conditions d&apos;utilisation (version {TERMS_VERSION} en vigueur).
         </p>
@@ -441,7 +442,7 @@ export default function TermsPage() {
             <strong>Simulateur de budget IA dédié (/simulateur) :</strong> Les utilisateurs ont accès à une interface spécialisée de simulation budgétaire proposant des scénarios clés en main (Mariage, Anniversaire, Gala d&apos;Entreprise) et des estimations chiffrées en Francs Congolais (CDF) et Dollars ($) au taux officiel du jour. Des simulations gratuites de bienvenue sont offertes, puis des recharges peuvent être acquises via Mobile Money ou Carte bancaire.
           </li>
           <li>
-            <strong>Utilisation des jetons d&apos;aménagement :</strong> L&apos;accès aux fonctionnalités d&apos;intelligence artificielle avancées (composition automatique de plan depuis un brief, analyse de photos ou croquis d&apos;aménagement via vision artificielle, reformulation d&apos;invitations en langues nationales) requiert des jetons d&apos;intelligence artificielle (ex. 10 jetons par génération de plan).
+            <strong>Utilisation des jetons d&apos;aménagement et d&apos;invitation :</strong> L&apos;accès aux fonctionnalités d&apos;intelligence artificielle avancées (composition automatique de plan depuis un brief, analyse de photos ou croquis d&apos;aménagement via vision artificielle, composition d&apos;invitations y compris le remplacement d&apos;identité des visages sur un carton, reformulation en langues nationales) requiert des jetons d&apos;intelligence artificielle (ex. 10 jetons par génération de plan).
           </li>
           <li>
             <strong>Attribution et recharges :</strong> Des jetons de bienvenue ou des quotas périodiques peuvent être alloués selon les forfaits souscrits. L&apos;organisateur peut acquérir des packs de recharge supplémentaires en Francs Congolais (CDF) par Mobile Money ou carte bancaire via FlexPay.
@@ -505,15 +506,18 @@ export default function TermsPage() {
 
       <Section title="7. Invitations Multilingues, Langues Nationales Congolaises & Canal WhatsApp">
         <p>
-          EventMaster met à disposition des modèles d&apos;invitation et un studio de génération assisté par IA prenant en charge le Français ainsi que les quatre langues nationales de la République Démocratique du Congo : <strong>Lingala, Swahili, Kikongo et Tshiluba</strong>.
+          EventMaster met à disposition des modèles d&apos;invitation, un studio authentifié et un générateur public assistés par IA, prenant en charge le Français ainsi que les quatre langues nationales de la République Démocratique du Congo : <strong>Lingala, Swahili, Kikongo et Tshiluba</strong>.
         </p>
         <p>
-          <strong>7.1 Utilisation éthique, source de contexte & respect des visages (Google Gemini).</strong>
+          <strong>7.1 Utilisation éthique, source de contexte, identité &amp; expressions (Google Gemini).</strong>
         </p>
         <ul className="list-disc pl-5 space-y-1">
           <li><strong>Choix de la source de contexte :</strong> L&apos;utilisateur peut choisir d&apos;appliquer le profil contextuel de son organisation ou son historique de recherche récent pour personnaliser les propositions graphiques et textuelles générées.</li>
-          <li><strong>Restitution honnête des visages :</strong> Conformément aux principes éthiques et aux directives techniques de Google Gemini, notre moteur applique un ancrage d&apos;identité strict assurant une représentation fidèle et honnête des personnes fournies en référence, sans embellissement artificiel trompeur, déformation ou retouche dégradante.</li>
-          <li><strong>Altération fortuite des visages &amp; Limitations intrinsèques des modèles d&apos;IA :</strong> L&apos;utilisateur reconnaît expressément et accepte que les modèles d&apos;intelligence artificielle générative tiers (tels que Google Gemini ou Google Imagen) peuvent occasionnellement présenter des imperfections, artefacts visuels ou une altération involontaire des traits du visage lors de la composition d&apos;images ou de simulations. Ces imperfections résultent des limites technologiques propres aux réseaux neuronaux génératifs actuels et ne constituent en aucun cas une faute, une négligence ou un défaut de conception imputable à EventMaster. La responsabilité d&apos;EventMaster ne saurait être recherchée ni engagée du fait de ces altérations inhérentes à la technologie.</li>
+          <li><strong>Ancrage d&apos;identité :</strong> Conformément aux principes éthiques et aux directives techniques de Google Gemini, notre moteur vise une représentation fidèle et honnête des personnes fournies en référence, sans embellissement artificiel trompeur, déformation ou retouche dégradante.</li>
+          <li><strong>Substitution de visages sur carton :</strong> Lorsque l&apos;utilisateur importe un carton d&apos;invitation (image 1) et une ou plusieurs photographies sources des hôtes (images 2 et suivantes), le moteur remplace uniquement l&apos;<strong>identité</strong> des visages présents sur le carton. Les photographies sources déterminent qui sont les personnes (structure osseuse, teint, cheveux, âge). Les <strong>expressions faciales déjà présentes sur le carton</strong> (sourire, regard, émotion) sont conservées : les visages sources doivent adopter ces expressions, et non celles de leurs propres clichés.</li>
+          <li><strong>Droit à l&apos;image et consentement :</strong> L&apos;utilisateur certifie avoir obtenu le consentement éclairé de toute personne identifiable dont la photographie est téléversée, et détenir les droits nécessaires pour composer et diffuser l&apos;invitation résultante. EventMaster ne vérifie pas ces consentements. L&apos;organisateur (ou le visiteur du générateur public) demeure seul responsable au regard du droit à l&apos;image et de la vie privée.</li>
+          <li><strong>Absence d&apos;identification biométrique :</strong> Les photographies sont traitées uniquement pour composer le visuel d&apos;invitation. EventMaster n&apos;opère ni reconnaissance faciale de surveillance, ni identification biométrique, ni constitution d&apos;une base de visages.</li>
+          <li><strong>Altération fortuite des visages &amp; Limitations intrinsèques des modèles d&apos;IA :</strong> L&apos;utilisateur reconnaît expressément et accepte que les modèles d&apos;intelligence artificielle générative tiers (tels que Google Gemini ou Google Imagen) peuvent occasionnellement présenter des imperfections, artefacts visuels ou une altération involontaire des traits, de l&apos;identité ou de l&apos;expression lors de la composition. Ces imperfections résultent des limites technologiques propres aux réseaux neuronaux génératifs actuels et ne constituent en aucun cas une faute, une négligence ou un défaut de conception imputable à EventMaster. La responsabilité d&apos;EventMaster ne saurait être recherchée ni engagée du fait de ces altérations inhérentes à la technologie.</li>
           <li>L&apos;organisateur est seul responsable de l&apos;exactitude des informations rédigées et de la bienséance des textes et images d&apos;invitation partagés.</li>
         </ul>
         <p>
@@ -570,7 +574,7 @@ export default function TermsPage() {
           <li>Organiser des événements frauduleux, fictifs, trompeurs ou contraires à l&apos;ordre public et aux lois en vigueur ;</li>
           <li>Lancer des collectes de dons fictives ou détourner des contributions solidaires de leur objet annoncé ;</li>
           <li>Commercialiser des billets sans disposer de l&apos;autorisation légale ou des droits sur l&apos;événement concerné ;</li>
-          <li>Importer des visuels, photos de salle ou plans en violation du droit d&apos;auteur ou du droit à l&apos;image ;</li>
+          <li>Importer des visuels, photos de salle, plans ou photographies de personnes en violation du droit d&apos;auteur, du droit à l&apos;image ou sans le consentement des personnes identifiables ;</li>
           <li>Tenter de porter atteinte à la sécurité, à la disponibilité ou à l&apos;infrastructure technique d&apos;EventMaster ;</li>
           <li>Contourner les limitations techniques ou quotas attachés au forfait souscrit.</li>
         </ul>
@@ -589,7 +593,7 @@ export default function TermsPage() {
           EventMaster fournit une infrastructure logicielle hautement disponible mais ne garantit pas une absence totale d&apos;interruptions indépendantes de sa volonté (pannes de réseau Internet, perturbations des opérateurs mobiles pour le Mobile Money, interruptions des API d&apos;intelligence artificielle tierces, cas de force majeure).
         </p>
         <p>
-          <strong>Limitation relative aux résultats de l&apos;intelligence artificielle générative :</strong> Les simulateurs, outils de chiffrage budgétaire, concepteurs de plans 2D/3D et générateurs graphiques d&apos;invitations s&apos;appuient sur des technologies d&apos;IA probabilistes tierces. EventMaster ne garantit pas l&apos;exactitude absolue, la fidélité photographique parfaite des visages ou l&apos;absence totale d&apos;artefacts visuels générés par les modèles d&apos;IA. L&apos;altération éventuelle des traits d&apos;un visage ou la non-conformité d&apos;un rendu visuel constitue un aléa technologique intrinsèque au modèle tiers ne pouvant constituer une faute d&apos;EventMaster ni engager sa responsabilité.
+          <strong>Limitation relative aux résultats de l&apos;intelligence artificielle générative :</strong> Les simulateurs, outils de chiffrage budgétaire, concepteurs de plans 2D/3D et générateurs graphiques d&apos;invitations s&apos;appuient sur des technologies d&apos;IA probabilistes tierces. EventMaster ne garantit pas l&apos;exactitude absolue, la fidélité photographique parfaite de l&apos;identité, le transfert parfait des expressions du carton vers les visages sources, ni l&apos;absence totale d&apos;artefacts visuels. L&apos;altération éventuelle des traits d&apos;un visage ou la non-conformité d&apos;un rendu visuel constitue un aléa technologique intrinsèque au modèle tiers ne pouvant constituer une faute d&apos;EventMaster ni engager sa responsabilité.
         </p>
         <p>
           EventMaster ne saurait être tenu responsable des litiges survenant entre un acheteur de billet / donateur et un organisateur (qualité de la prestation événementielle, retards, annulations, différends de placement, utilisation effective des dons), ni des transactions commerciales de location de matériel intervenant directement hors de la plateforme.

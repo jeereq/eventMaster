@@ -1,5 +1,5 @@
-export const TERMS_VERSION = '1.9';
-export const PRIVACY_VERSION = '1.8';
+export const TERMS_VERSION = '2.0';
+export const PRIVACY_VERSION = '1.9';
 export const REFUND_VERSION = '1.3';
 
 /** Commission plateforme sur le montant global collecté (billets + dons), en plus de l’abonnement. */
