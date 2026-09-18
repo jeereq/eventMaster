@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.INVITATION_COPY_SYSTEM = exports.INVITATION_COPY_RSVP = exports.COUPLE_FACE_SWAP_DEFAULT_PROMPT = exports.INVITATION_IMAGE_JUDGE_SYSTEM = exports.INVITATION_IMAGE_JUDGE_MIN_SCORE = exports.NANO_BANANA_CARD_EXPRESSION_LOCK = exports.NANO_BANANA_COMPACT_FACE_LOCK = exports.COMPACT_IMAGE_PROMPT_MAX_CHARS = exports.INVITATION_PIPELINE_INTENTS = exports.BRIEF_REFORMULATION_SYSTEM = exports.NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE = exports.NANO_BANANA_HARMONIZATION_DIRECTIVE = exports.NANO_BANANA_OPTICAL_BOKEH = exports.NANO_BANANA_LIGHT_RIG_COHERENCE = exports.NANO_BANANA_CRITICAL_CONSTRAINT = exports.NANO_BANANA_STYLE_INSTRUCTION = void 0;
+exports.INVITATION_COPY_SYSTEM = exports.INVITATION_COPY_RSVP = exports.COUPLE_FACE_SWAP_DEFAULT_PROMPT = exports.INVITATION_IMAGE_JUDGE_SYSTEM = exports.INVITATION_IMAGE_JUDGE_MIN_SCORE = exports.NANO_BANANA_CARD_EXPRESSION_LOCK = exports.NANO_BANANA_COMPACT_FACE_LOCK = exports.COMPACT_IMAGE_PROMPT_MAX_CHARS = exports.INVITATION_PIPELINE_INTENTS = exports.BRIEF_REFORMULATION_SYSTEM = exports.NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE = exports.NANO_BANANA_ANATOMICAL_INTEGRATION_LOCK = exports.NANO_BANANA_HARMONIZATION_DIRECTIVE = exports.NANO_BANANA_OPTICAL_BOKEH = exports.NANO_BANANA_LIGHT_RIG_COHERENCE = exports.NANO_BANANA_CRITICAL_CONSTRAINT = exports.NANO_BANANA_STYLE_INSTRUCTION = void 0;
 exports.buildNanoBananaRawDirectives = buildNanoBananaRawDirectives;
 exports.optimizeReferenceImageUrl = optimizeReferenceImageUrl;
 exports.shouldSkipInvitationVisionCall = shouldSkipInvitationVisionCall;
@@ -79,7 +79,8 @@ exports.NANO_BANANA_STYLE_INSTRUCTION = 'Style instruction: RAW candid photograp
 exports.NANO_BANANA_CRITICAL_CONSTRAINT = 'CRITICAL CONSTRAINT: Do NOT apply any beauty filters, do NOT smooth skin, do NOT create perfect symmetry, do NOT use airbrushing. The faces MUST retain the exact natural, unedited texture of the reference images.';
 exports.NANO_BANANA_LIGHT_RIG_COHERENCE = 'LIGHT RIG COHERENCE: The environment must cast realistic warm ambient rim light and golden specular highlights matching the natural highlights of the reference photographs, with true physical contact shadows on attire, flooring, and surrounding stationery.';
 exports.NANO_BANANA_OPTICAL_BOKEH = 'OPTICAL DEPTH OF FIELD: Shot on 85mm f/2.0 portrait lens feel; the subjects are in tack-sharp focus while the architectural decor and background elements recede into a soft, natural, cinematic optical bokeh. No harsh artificial cutout borders.';
-exports.NANO_BANANA_HARMONIZATION_DIRECTIVE = 'SEAMLESS ANATOMICAL & SKIN HARMONIZATION (LIFELIKE REALISM): Flawlessly harmonize replacement faces with the host bodies. Naturally blend jawline, chin contours, hairline, and neck transition onto the collar, shoulders, and posture with zero harsh cutout borders or sticker seams. Harmonize skin tones, melanin undertones, subsurface light diffusion, and ambient banquet lighting between face, neck, and hands so the people look physically real and authentic in the photograph.';
+exports.NANO_BANANA_HARMONIZATION_DIRECTIVE = 'SEAMLESS ANATOMICAL & SKIN HARMONIZATION (LIFELIKE REALISM): Flawlessly harmonize replacement faces with the host bodies. Match 3D head orientation, perspective angle, tilt, roll, and eye gaze direction with Image 1. Enforce realistic head-to-body scale and anatomical proportions (head size, neck width, jaw-to-collar distance, shoulder ratio — zero oversized or undersized heads). Naturally blend jawline, chin contours, hairline, and neck transition onto the collar, shoulders, and posture with zero harsh cutout borders or sticker seams. Harmonize skin tones, melanin undertones, subsurface light diffusion, and ambient banquet lighting between face, neck, and hands so the people look physically real and authentic in the photograph.';
+exports.NANO_BANANA_ANATOMICAL_INTEGRATION_LOCK = 'ANATOMICAL 3D POSE, PROPORTIONS & SKIN FIDELITY: Each replacement face MUST match the exact 3D head orientation, perspective angle, tilt, roll, and eye gaze direction of the body on Image 1. Enforce realistic head-to-body scale and proportions — head size must perfectly match the shoulders, collar, and neck width. Retain authentic melanin skin tones, natural undertones, and contact shadows matching the ambient banquet lighting. Flawless neck, hairline, and collar transition with zero cutout seams, zero blur halos, and zero pasted sticker effect.';
 exports.NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE = 'CLEAN ARTWORK MANDATE: Strictly NO readable text, NO letters, NO fake script, NO numbers, NO dates, NO painted watermarks inside the image pixels. Leave pristine, high-contrast negative space in the lower-third or central framing reserved for crisp vector typography.';
 function buildNanoBananaRawDirectives(hasPeople = true) {
     if (!hasPeople)
@@ -93,8 +94,8 @@ function buildNanoBananaRawDirectives(hasPeople = true) {
 }
 /**
  * Optimise les URL Cloudinary de référence en appliquant une transformation adaptative
- * (WebP/JPEG automatique, redimensionnement max 1536px, compression sans perte perceptible)
- * pour diviser le payload par 3 à 4 et accélérer considérablement le transfert.
+ * (WebP/JPEG automatique, redimensionnement max 2048px, qualité maximale sans perte perceptible)
+ * pour fournir au modèle IA des pixels ultra-nets tout en respectant les plafonds réseau.
  */
 function optimizeReferenceImageUrl(url) {
     if (!url || typeof url !== 'string')
@@ -105,7 +106,7 @@ function optimizeReferenceImageUrl(url) {
             !trimmed.includes('/image/upload/c_') &&
             !trimmed.includes('/image/upload/w_') &&
             !trimmed.includes('/image/upload/q_')) {
-            return trimmed.replace('/image/upload/', '/image/upload/f_auto,q_auto:good,w_1536,c_limit/');
+            return trimmed.replace('/image/upload/', '/image/upload/f_auto,q_auto:best,w_2048,c_limit/');
         }
     }
     return trimmed;
@@ -265,7 +266,8 @@ function buildInvitationLocks(input) {
         else {
             locks.push('MANDATORY GENDER LOCK: Male host face goes onto male body/suit; female host face goes onto female body/dress. Zero gender inversion.');
         }
-        locks.push('LIFELIKE HARMONY: Seamlessly blend skin tones, subsurface scattering, jawline, and neck connection onto the bodies. Zero cutout seams.');
+        locks.push('3D POSE & PROPORTIONS: Match Image 1 head orientation, tilt, angle and gaze. Head size strictly proportional to body, neck and shoulders.');
+        locks.push('SKIN HARMONY & DETAILS: Match source melanin skin tones and undertones. Seamless neck/décolleté transition with ambient lighting, contact shadows, zero cutout seam.');
     }
     else if (hasPeople) {
         locks.push('Attached photos are the only identity source. Same people — no lookalike, no beautify, no skin lightening.');
@@ -342,6 +344,7 @@ function buildCompactImagePrompt(input) {
     parts.push(compactTextRule(input.embedText, input.isPublic));
     if (intent === 'couple') {
         parts.push(exports.NANO_BANANA_CARD_EXPRESSION_LOCK);
+        parts.push(exports.NANO_BANANA_ANATOMICAL_INTEGRATION_LOCK);
     }
     if (hasPeople) {
         parts.push(exports.NANO_BANANA_COMPACT_FACE_LOCK);
@@ -359,6 +362,9 @@ Be strict on:
 - Couple mode: Among the references after the generated card, Reference 1 is the incoming card (layout, bodies, and facial expressions). Subsequent references are the couple's identity photos.
 - Couple identity vs expression: Identity (bone structure, skin, age) MUST match the couple identity photos. HOWEVER, facial expressions (smile, laughter, mouth, gaze, emotion) MUST adopt the expressions of the incoming card faces! Do NOT flag "wrong_faces" or "kept_original_faces" merely because the expression comes from the incoming card. Only flag "kept_original_faces" if the person identity itself was not replaced with the couple.
 - Couple gender & face alignment: groom/man's face MUST be on male body/suit/tuxedo; bride/woman's face MUST be on female body/dress/gown. Flag "gender_mismatch" if bride and groom faces are inverted or swapped onto wrong bodies!
+- Anatomical proportions & head scale: head must not be disproportionately oversized (bobblehead) or undersized compared to the shoulders and neck of the body. Flag "disproportionate_head" if head scale looks unnatural.
+- Face orientation & 3D pose: head angle, tilt, roll, and eye gaze must match the 3D head pose and posture of the body on the incoming card. Flag "wrong_face_orientation" if the face looks flat, front-facing when body is turned, or pasted at an unnatural angle.
+- Skin tone & harmonization: skin on face must blend seamlessly with neck, chest and ambient lighting without visible cutout borders, greyish tint, or color demarcation. Flag "skin_tone_mismatch" if there is an obvious pasted seam or harsh color boundary.
 - People count vs expectedPeople.
 - Painted letters / names / dates when textInPixels is "forbidden".
 - Invented Caucasian / white luxury hosts when no people refs exist.
@@ -370,15 +376,18 @@ Exact schema:
 {
   "pass": true | false,
   "score": 0,
-  "defects": ["painted_text" | "wrong_faces" | "gender_mismatch" | "wrong_people_count" | "skin_lightened" | "beautified" | "wrong_mode" | "invented_white_hosts" | "kept_original_faces"],
+  "defects": ["painted_text" | "wrong_faces" | "gender_mismatch" | "disproportionate_head" | "wrong_face_orientation" | "skin_tone_mismatch" | "wrong_people_count" | "skin_lightened" | "beautified" | "wrong_mode" | "invented_white_hosts" | "kept_original_faces"],
   "retryDirective": "one English sentence: the single fix to apply, positive framing, no redesign"
 }
 
-score is 0-10. pass=false if any hard identity / text / ethnicity / gender inversion defect. retryDirective empty only if pass=true.`;
+score is 0-10. pass=false if any hard identity / text / ethnicity / gender inversion / anatomical proportion defect. retryDirective empty only if pass=true.`;
 const KNOWN_JUDGE_DEFECTS = new Set([
     'painted_text',
     'wrong_faces',
     'gender_mismatch',
+    'disproportionate_head',
+    'wrong_face_orientation',
+    'skin_tone_mismatch',
     'wrong_people_count',
     'skin_lightened',
     'beautified',
@@ -432,6 +441,15 @@ function buildInvitationImageRetryPrompt(basePrompt, verdict) {
     if (defect === 'gender_mismatch') {
         defaultDirective = 'GENDER FIX: Groom/male face goes strictly onto male body/suit and bride/female face strictly onto female body/gown. Do NOT invert genders.';
     }
+    else if (defect === 'disproportionate_head') {
+        defaultDirective = 'SCALE FIX: Re-proportion head size to match body shoulders, neck width, and collar of Image 1 naturally.';
+    }
+    else if (defect === 'wrong_face_orientation') {
+        defaultDirective = 'ORIENTATION FIX: Re-align and rotate face in 3D to match head tilt, yaw, perspective angle, and eye gaze direction of Image 1.';
+    }
+    else if (defect === 'skin_tone_mismatch') {
+        defaultDirective = 'SKIN HARMONIZATION FIX: Seamlessly blend face skin tone and melanin undertones with neck and ambient lighting of Image 1 with zero boundary seam.';
+    }
     else if (defect === 'kept_original_faces') {
         defaultDirective = 'IDENTITY FIX: The faces from Image 1 were mistakenly kept. Replace faces with the real couple from reference photos, while keeping Image 1 facial expressions.';
     }
@@ -449,7 +467,7 @@ function buildInvitationImageRetryPrompt(basePrompt, verdict) {
         'Keep every LOCK. Same people. Same 9:16.',
     ].join('\n')).slice(0, exports.COMPACT_IMAGE_PROMPT_MAX_CHARS);
 }
-exports.COUPLE_FACE_SWAP_DEFAULT_PROMPT = 'Remplace uniquement les visages de cette invitation par les visages du couple. Conserve la pose des corps, les tenues, le décor, la mise en page et les expressions des visages déjà présents sur le carton. Les photos sources adoptent ces expressions (sourire, regard, émotion).';
+exports.COUPLE_FACE_SWAP_DEFAULT_PROMPT = 'Remplace uniquement les visages de cette invitation par les visages du couple. Conserve la pose des corps, les tenues, le décor, la mise en page et les expressions des visages déjà présents sur le carton. Les photos sources adoptent ces expressions (sourire, regard, émotion). Harmonisation anatomique parfaite : orientation 3D des têtes, proportions et tailles des visages par rapport aux corps, teintes réelles des peaux et jonction naturelle du cou sans démarcation.';
 function collapseSpaces(value) {
     return value.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
 }
@@ -476,13 +494,13 @@ function buildReferenceRoles(referenceCount, options) {
             'Image 1: INCOMING INVITATION / SCENE — object fidelity. Keep composition, body pose, bodies, wardrobe, décor, lighting, ornaments AND the facial expressions already on this card.',
         ];
         if (referenceCount === 2) {
-            lines.push('Image 2 (COUPLE PHOTO): COUPLE IDENTITY lock. This photo contains the couple. Extract the groom/man and bride/woman from Image 2. The man from Image 2 replaces the man on Image 1, and the woman from Image 2 replaces the woman on Image 1. Both adopt the card face’s expression (mouth, eyes, brows, emotion). Honest pixels only — no beautify, no lighten, no celebrity lookalike.');
+            lines.push('Image 2 (COUPLE PHOTO): COUPLE IDENTITY lock. This photo contains the couple. Extract the groom/man and bride/woman from Image 2. The man from Image 2 replaces the man on Image 1, and the woman from Image 2 replaces the woman on Image 1. Both adopt the card face’s expression (mouth, eyes, brows, emotion). 3D POSE & SCALE: rotate each head in 3D to match Image 1 tilt, yaw, and gaze direction; enforce head size strictly proportional to body shoulders and neck. SKIN FIDELITY: retain authentic melanin skin tones, seamlessly blending with neck and ambient lighting. Honest pixels only — no beautify, no lighten, no celebrity lookalike.');
         }
         else {
             for (let i = 1; i < referenceCount; i += 1) {
                 const n = i + 1;
                 const side = i === 1 ? 'left / primary host' : i === 2 ? 'right / secondary host' : `host ${n - 1}`;
-                lines.push(`Image ${n} (${side}): COUPLE IDENTITY lock. Replace a face on Image 1 with this exact person. This photo supplies who they are — they must adopt the card face’s expression (mouth, eyes, brows, emotion). Honest pixels only — no beautify, no lighten, no celebrity lookalike.`);
+                lines.push(`Image ${n} (${side}): COUPLE IDENTITY lock. Replace a face on Image 1 with this exact person. This photo supplies who they are — they must adopt the card face’s expression (mouth, eyes, brows, emotion). 3D POSE & SCALE: rotate head in 3D to match Image 1 tilt, yaw, and gaze; enforce head size strictly proportional to body shoulders and neck. SKIN FIDELITY: retain authentic melanin skin tones, seamlessly blending with neck and ambient lighting. Honest pixels only — no beautify, no lighten, no celebrity lookalike.`);
             }
         }
         if (options?.genderMappingDirective) {
@@ -525,6 +543,7 @@ function buildHonestFaceIdentityHeader(referenceCount, options) {
                 'GENDER & ATTIRE FIDELITY (MANDATORY): Match each person strictly by gender and ceremonial role. The male face goes on the male body (suit/tuxedo), the female face goes on the female body (gown/dress). NEVER invert bride and groom faces.',
             exports.NANO_BANANA_CARD_EXPRESSION_LOCK,
             'Render each replacement face as honestly as photographed for identity: bone structure, eyes, skin tone, pores, moles/scars, age — but wear the card’s expression (mouth, gaze, emotion). Do not beautify, symmetrize, slim, lighten or airbrush.',
+            exports.NANO_BANANA_ANATOMICAL_INTEGRATION_LOCK,
             exports.NANO_BANANA_HARMONIZATION_DIRECTIVE,
             'Do not invent a new couple. Do not keep the original identity from Image 1 — keep Image 1 expressions.',
             exports.NANO_BANANA_CRITICAL_CONSTRAINT,
@@ -719,12 +738,13 @@ function processUserPromptForHonestFaces(prompt, options) {
             'USER BRIEF (English scene — replace faces on Image 1 with the couple in Images 2+):',
             englishSceneBrief,
             hasTextModifications
-                ? 'Replace the identity of the faces on Image 1 (strictly matching groom face to male body/suit, bride face to female body/gown). Keep each card face’s expression (mouth, eyes, emotion). Harmonize jawline, neck, and skin tones with the lighting. Do NOT keep old names, dates or text from Image 1. Leave clean card space for overlay typography.'
-                : 'Replace ONLY the identity of the faces on the incoming card (strictly matching groom face to male body/suit, bride face to female body/gown). Keep Image 1’s expressions — source faces adopt the card smile/gaze. Harmonize jawline, neck, and skin tones with scene lighting. Keep body pose, bodies, wardrobe, décor and lighting. Do not paint old names on clean background.',
+                ? 'Replace the identity of the faces on Image 1 (strictly matching groom face to male body/suit, bride face to female body/gown). Keep each card face’s expression (mouth, eyes, emotion). Match 3D head orientation and realistic head-to-body scale. Harmonize jawline, neck, melanin undertones, and contact shadows with scene lighting. Do NOT keep old names, dates or text from Image 1. Leave clean card space for overlay typography.'
+                : 'Replace ONLY the identity of the faces on the incoming card (strictly matching groom face to male body/suit, bride face to female body/gown). Keep Image 1’s expressions — source faces adopt the card smile/gaze. Match 3D head orientation, perspective angle, and realistic head-to-body proportions. Harmonize jawline, neck, melanin undertones, and skin tones with scene lighting. Keep body pose, bodies, wardrobe, décor and lighting. Do not paint old names on clean background.',
             exports.NANO_BANANA_CRITICAL_CONSTRAINT,
             exports.NANO_BANANA_STYLE_INSTRUCTION,
             exports.NANO_BANANA_LIGHT_RIG_COHERENCE,
             exports.NANO_BANANA_OPTICAL_BOKEH,
+            exports.NANO_BANANA_ANATOMICAL_INTEGRATION_LOCK,
             exports.NANO_BANANA_HARMONIZATION_DIRECTIVE,
             exports.NANO_BANANA_CARD_EXPRESSION_LOCK,
         ].join('\n')

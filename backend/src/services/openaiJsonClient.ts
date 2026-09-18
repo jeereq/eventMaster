@@ -85,7 +85,7 @@ function optimizeCloudinaryUrl(url: string): string {
       !trimmed.includes('/image/upload/w_') &&
       !trimmed.includes('/image/upload/q_')
     ) {
-      return trimmed.replace('/image/upload/', '/image/upload/f_auto,q_auto:good,w_1536,c_limit/');
+      return trimmed.replace('/image/upload/', '/image/upload/f_auto,q_auto:best,w_2048,c_limit/');
     }
   }
   return trimmed;
