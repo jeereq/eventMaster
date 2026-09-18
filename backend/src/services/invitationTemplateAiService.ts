@@ -853,15 +853,13 @@ export async function preloadReferenceImages(urls: string[]): Promise<PreloadedR
     }),
   );
 
-  const preloaded: PreloadedRefImage[] = [];
-  for (const res of results) {
-    if (res.status === 'fulfilled') {
-      preloaded.push(res.value);
-    } else {
-      console.warn('[invitationTemplateAi] Skip ref download in parallel preload:', res.reason?.message);
-    }
+  const rejected = results.find((r) => r.status === 'rejected') as PromiseRejectedResult | undefined;
+  if (rejected) {
+    console.error('[invitationTemplateAi] Skip ref download in parallel preload error:', rejected.reason?.message);
+    fail(502, `Impossible de télécharger l’une des photos de référence pour la génération (${rejected.reason?.message || 'erreur réseau'}).`);
   }
-  return preloaded;
+
+  return results.map((res) => (res as PromiseFulfilledResult<PreloadedRefImage>).value);
 }
 
 async function downloadImageAsPngBuffer(url: string): Promise<Buffer> {
@@ -1763,11 +1761,14 @@ async function createNewInvitationImage(
         '[invitationTemplateAi] Filet de sécurité anti-blocage: tentative finale d\'arrière-plan décoratif sans humains via Nano Banana...',
       );
       const fallbackPrompt = buildGenericThematicBackgroundPrompt(imagePrompt, options);
+      const fallbackModel = options?.speedMode === 'fast'
+        ? getNanoBananaFlashModel()
+        : getNanoBananaProModel();
       const fallbackB64 = await executeNanoBananaRawRequest(
         nanoKey,
         fallbackPrompt,
         [],
-        getNanoBananaProModel(),
+        fallbackModel,
         { skipInteractions: shouldSkipNanoBananaInteractions(options?.speedMode) },
       );
       const url = await uploadGeneratedB64(fallbackB64, tenantId);
@@ -1820,7 +1821,7 @@ async function judgeInvitationImage(input: {
   const refs = input.referenceUrls
     .filter((url) => typeof url === 'string' && /^https?:\/\//i.test(url))
     .slice(0, 3);
-  const geminiImages = [...refs, input.generatedUrl];
+  const geminiImages = [input.generatedUrl, ...refs];
   const openAiImages = [input.generatedUrl, ...refs];
 
   const tryGemini = async (): Promise<InvitationImageJudgeVerdict | null> => {

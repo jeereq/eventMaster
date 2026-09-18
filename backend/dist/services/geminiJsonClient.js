@@ -62,15 +62,30 @@ function parseDataImage(url) {
         return null;
     return { mimeType, base64: cleanBase64 };
 }
+function optimizeCloudinaryUrl(url) {
+    if (!url || typeof url !== 'string')
+        return url;
+    const trimmed = url.trim();
+    if (trimmed.includes('res.cloudinary.com') && trimmed.includes('/image/upload/')) {
+        if (!trimmed.includes('/image/upload/f_') &&
+            !trimmed.includes('/image/upload/c_') &&
+            !trimmed.includes('/image/upload/w_') &&
+            !trimmed.includes('/image/upload/q_')) {
+            return trimmed.replace('/image/upload/', '/image/upload/f_auto,q_auto:good,w_1536,c_limit/');
+        }
+    }
+    return trimmed;
+}
 async function loadGeminiInlineImage(imageUrl, failMessage = 'Impossible de télécharger l’image pour l’analyse.') {
     const embedded = parseDataImage(imageUrl);
     if (embedded) {
         return { inline_data: { mime_type: embedded.mimeType, data: embedded.base64 } };
     }
+    const targetUrl = optimizeCloudinaryUrl(imageUrl);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 45_000);
     try {
-        const response = await fetch(imageUrl, { signal: controller.signal });
+        const response = await fetch(targetUrl, { signal: controller.signal });
         if (!response.ok)
             fail(502, failMessage);
         const buffer = Buffer.from(await response.arrayBuffer());

@@ -64,6 +64,20 @@ function openAiChatBody(params) {
     }
     return body;
 }
+function optimizeCloudinaryUrl(url) {
+    if (!url || typeof url !== 'string')
+        return url;
+    const trimmed = url.trim();
+    if (trimmed.includes('res.cloudinary.com') && trimmed.includes('/image/upload/')) {
+        if (!trimmed.includes('/image/upload/f_') &&
+            !trimmed.includes('/image/upload/c_') &&
+            !trimmed.includes('/image/upload/w_') &&
+            !trimmed.includes('/image/upload/q_')) {
+            return trimmed.replace('/image/upload/', '/image/upload/f_auto,q_auto:good,w_1536,c_limit/');
+        }
+    }
+    return trimmed;
+}
 async function requestOpenAiJson(input) {
     const key = getOpenAiApiKey();
     if (!key) {
@@ -76,7 +90,7 @@ async function requestOpenAiJson(input) {
         { type: 'text', text: input.userText },
         ...(input.imageUrls || []).slice(0, 4).map((url) => ({
             type: 'image_url',
-            image_url: { url, detail: 'high' },
+            image_url: { url: optimizeCloudinaryUrl(url), detail: 'high' },
         })),
     ];
     const controller = new AbortController();

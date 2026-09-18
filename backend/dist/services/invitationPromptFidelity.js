@@ -1,8 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.INVITATION_COPY_SYSTEM = exports.INVITATION_COPY_RSVP = exports.COUPLE_FACE_SWAP_DEFAULT_PROMPT = exports.INVITATION_IMAGE_JUDGE_SYSTEM = exports.INVITATION_IMAGE_JUDGE_MIN_SCORE = exports.NANO_BANANA_COMPACT_FACE_LOCK = exports.COMPACT_IMAGE_PROMPT_MAX_CHARS = exports.INVITATION_PIPELINE_INTENTS = exports.BRIEF_REFORMULATION_SYSTEM = exports.NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE = exports.NANO_BANANA_HARMONIZATION_DIRECTIVE = exports.NANO_BANANA_OPTICAL_BOKEH = exports.NANO_BANANA_LIGHT_RIG_COHERENCE = exports.NANO_BANANA_CRITICAL_CONSTRAINT = exports.NANO_BANANA_STYLE_INSTRUCTION = void 0;
+exports.INVITATION_COPY_SYSTEM = exports.INVITATION_COPY_RSVP = exports.COUPLE_FACE_SWAP_DEFAULT_PROMPT = exports.INVITATION_IMAGE_JUDGE_SYSTEM = exports.INVITATION_IMAGE_JUDGE_MIN_SCORE = exports.NANO_BANANA_CARD_EXPRESSION_LOCK = exports.NANO_BANANA_COMPACT_FACE_LOCK = exports.COMPACT_IMAGE_PROMPT_MAX_CHARS = exports.INVITATION_PIPELINE_INTENTS = exports.BRIEF_REFORMULATION_SYSTEM = exports.NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE = exports.NANO_BANANA_HARMONIZATION_DIRECTIVE = exports.NANO_BANANA_OPTICAL_BOKEH = exports.NANO_BANANA_LIGHT_RIG_COHERENCE = exports.NANO_BANANA_CRITICAL_CONSTRAINT = exports.NANO_BANANA_STYLE_INSTRUCTION = void 0;
 exports.buildNanoBananaRawDirectives = buildNanoBananaRawDirectives;
 exports.optimizeReferenceImageUrl = optimizeReferenceImageUrl;
+exports.shouldSkipInvitationVisionCall = shouldSkipInvitationVisionCall;
+exports.shouldSkipInvitationImageJudge = shouldSkipInvitationImageJudge;
+exports.shouldSkipInvitationOverlayCopy = shouldSkipInvitationOverlayCopy;
+exports.shouldSkipNanoBananaInteractions = shouldSkipNanoBananaInteractions;
 exports.isInvitationPipelineIntent = isInvitationPipelineIntent;
 exports.parseInvitationPipelineIntent = parseInvitationPipelineIntent;
 exports.resolveInvitationPipelineIntent = resolveInvitationPipelineIntent;
@@ -122,18 +126,41 @@ Rules (non-negotiable):
 10) Strip any request to beautify, smooth, lighten, airbrush, or swap faces.
 11) Keep englishSceneBrief under 450 words. No markdown.
 12) If the brief is an ALTERATION / REFINEMENT (retouche, réajustement, altération, modification ciblée, conserver le carton existant): set intent="refine". Explicitly instruct to PRESERVE the existing card layout, framing, background composition, color harmony, and character identity, applying ONLY the specific targeted adjustment.
-13) If context flag coupleFaceSwap=yes: this is an organizer-requested face replacement. Set intent="refine". Image 1 is the incoming card/scene — keep layout, pose, bodies, wardrobe, décor, lighting and typography. Images 2+ are the couple identity. Instruct to replace ONLY the faces on Image 1. Do not strip this swap. Still strip beautify / smooth / lighten.`;
+13) If context flag coupleFaceSwap=yes: this is an organizer-requested face replacement. Set intent="refine". Image 1 is the incoming card/scene — keep layout, body pose, bodies, wardrobe, décor, lighting, typography AND the facial expressions already on that card (mouth, gaze, emotion). Images 2+ are the couple identity only (who they are). Instruct to replace ONLY identity on Image 1 faces, while the source photos adopt the card faces’ expressions. Do not strip this swap. Still strip beautify / smooth / lighten.`;
 exports.INVITATION_PIPELINE_INTENTS = [
     'create',
     'clone',
     'refine',
     'couple',
 ];
+/**
+ * Économie de jetons fournisseur : on n’appelle la vision que si elle
+ * inventorie vraiment des photos utilisateur (hors couple, déjà verrouillé localement).
+ */
+function shouldSkipInvitationVisionCall(input) {
+    if (input.styleRefsOnly || !input.hasUserReferencePhotos)
+        return true;
+    if (input.coupleFaceSwap)
+        return true;
+    return input.speedMode === 'fast';
+}
+function shouldSkipInvitationImageJudge(speedMode) {
+    return speedMode === 'fast';
+}
+function shouldSkipInvitationOverlayCopy(input) {
+    return Boolean(input.embedText || input.preservedExistingCopy || input.hasStructuredIdentity);
+}
+/** En mode rapide, un seul endpoint image (generateContent), sans Interactions. */
+function shouldSkipNanoBananaInteractions(speedMode) {
+    return speedMode === 'fast';
+}
 /** Prompt image cible : ~400–700 mots, jamais un monolithe de 6 000 caractères. */
 exports.COMPACT_IMAGE_PROMPT_MAX_CHARS = 3800;
 const REFINE_BRIEF_RE = /retouch|ajust|refin|altér|réajust|modifier|swap|remplace.{0,24}visage/i;
 const CLONE_BRIEF_RE = /copi|clon|reprodu|duplicate/i;
 exports.NANO_BANANA_COMPACT_FACE_LOCK = 'RAW candid faces: exact reference texture, visible pores, slight asymmetry. No beauty filter, no smooth skin, no airbrush. One warm light, 85mm feel.';
+/** Identité = photos sources ; expression = visages déjà présents sur le carton. */
+exports.NANO_BANANA_CARD_EXPRESSION_LOCK = 'CARD EXPRESSION LOCK: Keep each host’s facial expression from the incoming card (Image 1) — mouth open or closed, laugh, smile or neutral lips, eye aperture, brow raise, cheek lift and micro-expression. The source photos supply identity only (bone structure, skin, hair, age). The source faces MUST adopt the card faces’ expressions. Do NOT copy a laugh or serious look from the source photos if the card face is different. Do NOT invent a new expression.';
 function isInvitationPipelineIntent(value) {
     return typeof value === 'string' && exports.INVITATION_PIPELINE_INTENTS.includes(value);
 }
@@ -165,7 +192,7 @@ function resolveFinalInvitationPipelineIntent(input) {
 function invitationPipelineModeSentence(intent) {
     switch (intent) {
         case 'couple':
-            return 'MODE couple: Keep Image 1 card, pose, bodies, wardrobe, décor and lighting. Replace ONLY faces with Images 2+. Honest pixels.';
+            return 'MODE couple: Keep Image 1 card, body pose, bodies, wardrobe, décor, lighting AND facial expressions. Replace ONLY identity with Images 2+ — source faces adopt the card expressions.';
         case 'clone':
             return 'MODE clone: Duplicate the reference card architecture (borders, foil, paper, ornaments). Place any attached people inside that frame, identity locked.';
         case 'refine':
@@ -178,14 +205,15 @@ function invitationPipelineVisionMandate(intent) {
     switch (intent) {
         case 'couple':
             return `PIPELINE couple (non-negotiable):
-- Image 1 = incoming card/scene. Keep composition, pose, bodies, clothes, décor, lighting, ornaments.
-- Images 2+ = couple identity. Inventory NEW faces only. Discard Image 1 faces.
+- Image 1 = incoming card/scene. Keep composition, body pose, bodies, clothes, décor, lighting, ornaments AND the expressions on those card faces.
+- Images 2+ = couple identity only (who they are). Inventory NEW identity. Keep Image 1 expressions.
+- Source photos adopt the card mouths, eyes, brows and emotion. Do not copy the source photo’s own smile if the card differs.
 - Forbidden: beautify, lighten, celebrity lookalike, inventing a new couple.`;
         case 'clone':
             return `PIPELINE clone (non-negotiable):
 - Card photo / Image 1 = layout truth: frame, borders, foil, paper, ornaments, palette.
 - Set isInvitationClone=true and fill clonedCardFeatures.
-- People photos (if any) sit inside that cloned frame, identity locked.
+- People photos (if any) sit inside that cloned frame, identity locked to those source photos.
 - Do not invent a new card architecture.`;
         case 'refine':
             return `PIPELINE refine (non-negotiable):
@@ -229,8 +257,8 @@ function buildInvitationLocks(input) {
     const peopleCount = Math.max(1, Number(analysis.peopleCount) || 1);
     const locks = [];
     if (input.intent === 'couple') {
-        locks.push('Image 1 wins for card, pose, bodies, wardrobe, décor and lighting.');
-        locks.push('Images 2+ are the only face source. Discard Image 1 faces. No beautify, no lighten.');
+        locks.push('Image 1 wins for card, body pose, bodies, wardrobe, décor, lighting and facial expression (mouth, eyes, emotion).');
+        locks.push('Images 2+ are identity only. Source faces adopt the card expressions. Discard Image 1 identity, keep Image 1 expressions. No beautify.');
         if (analysis.coupleFaceMapping?.strictMappingInstructions) {
             locks.push(collapseSpaces(analysis.coupleFaceMapping.strictMappingInstructions).slice(0, 180));
         }
@@ -312,6 +340,9 @@ function buildCompactImagePrompt(input) {
         parts.push(organizer);
     }
     parts.push(compactTextRule(input.embedText, input.isPublic));
+    if (intent === 'couple') {
+        parts.push(exports.NANO_BANANA_CARD_EXPRESSION_LOCK);
+    }
     if (hasPeople) {
         parts.push(exports.NANO_BANANA_COMPACT_FACE_LOCK);
     }
@@ -325,7 +356,8 @@ Image 1 is the GENERATED card to score. Any other images are references (people 
 
 Be strict on:
 - Identity: same people as references, no lookalike, no beautify, no skin lightening.
-- Couple mode: Image 1 references after the generated card are the couple; generated faces must match them, not the incoming card faces.
+- Couple mode: Among the references after the generated card, Reference 1 is the incoming card (layout, bodies, and facial expressions). Subsequent references are the couple's identity photos.
+- Couple identity vs expression: Identity (bone structure, skin, age) MUST match the couple identity photos. HOWEVER, facial expressions (smile, laughter, mouth, gaze, emotion) MUST adopt the expressions of the incoming card faces! Do NOT flag "wrong_faces" or "kept_original_faces" merely because the expression comes from the incoming card. Only flag "kept_original_faces" if the person identity itself was not replaced with the couple.
 - Couple gender & face alignment: groom/man's face MUST be on male body/suit/tuxedo; bride/woman's face MUST be on female body/dress/gown. Flag "gender_mismatch" if bride and groom faces are inverted or swapped onto wrong bodies!
 - People count vs expectedPeople.
 - Painted letters / names / dates when textInPixels is "forbidden".
@@ -400,6 +432,12 @@ function buildInvitationImageRetryPrompt(basePrompt, verdict) {
     if (defect === 'gender_mismatch') {
         defaultDirective = 'GENDER FIX: Groom/male face goes strictly onto male body/suit and bride/female face strictly onto female body/gown. Do NOT invert genders.';
     }
+    else if (defect === 'kept_original_faces') {
+        defaultDirective = 'IDENTITY FIX: The faces from Image 1 were mistakenly kept. Replace faces with the real couple from reference photos, while keeping Image 1 facial expressions.';
+    }
+    else if (defect === 'painted_text') {
+        defaultDirective = 'CLEAN ARTWORK FIX: Remove painted lettering and dates from image pixels. Leave negative space for overlay text.';
+    }
     else if (defect) {
         defaultDirective = `Fix ${defect.replace(/_/g, ' ')} while keeping every lock.`;
     }
@@ -411,7 +449,7 @@ function buildInvitationImageRetryPrompt(basePrompt, verdict) {
         'Keep every LOCK. Same people. Same 9:16.',
     ].join('\n')).slice(0, exports.COMPACT_IMAGE_PROMPT_MAX_CHARS);
 }
-exports.COUPLE_FACE_SWAP_DEFAULT_PROMPT = 'Remplace uniquement les visages de cette invitation par les visages du couple. Conserve la pose, les tenues, le décor et la mise en page.';
+exports.COUPLE_FACE_SWAP_DEFAULT_PROMPT = 'Remplace uniquement les visages de cette invitation par les visages du couple. Conserve la pose des corps, les tenues, le décor, la mise en page et les expressions des visages déjà présents sur le carton. Les photos sources adoptent ces expressions (sourire, regard, émotion).';
 function collapseSpaces(value) {
     return value.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
 }
@@ -435,12 +473,17 @@ function buildReferenceRoles(referenceCount, options) {
     if (options?.coupleFaceSwap) {
         const lines = [
             'REFERENCE ROLES (couple face replacement — organizer requested):',
-            'Image 1: INCOMING INVITATION / SCENE — object fidelity. Keep composition, pose, bodies, wardrobe, décor, lighting and ornaments. Do NOT keep the original faces that appear on this card.',
+            'Image 1: INCOMING INVITATION / SCENE — object fidelity. Keep composition, body pose, bodies, wardrobe, décor, lighting, ornaments AND the facial expressions already on this card.',
         ];
-        for (let i = 1; i < referenceCount; i += 1) {
-            const n = i + 1;
-            const side = i === 1 ? 'left / primary host' : i === 2 ? 'right / secondary host' : `host ${n - 1}`;
-            lines.push(`Image ${n} (${side}): COUPLE IDENTITY lock. Replace a face on Image 1 with this exact person (honest pixels only — no beautify, no lighten, no celebrity lookalike).`);
+        if (referenceCount === 2) {
+            lines.push('Image 2 (COUPLE PHOTO): COUPLE IDENTITY lock. This photo contains the couple. Extract the groom/man and bride/woman from Image 2. The man from Image 2 replaces the man on Image 1, and the woman from Image 2 replaces the woman on Image 1. Both adopt the card face’s expression (mouth, eyes, brows, emotion). Honest pixels only — no beautify, no lighten, no celebrity lookalike.');
+        }
+        else {
+            for (let i = 1; i < referenceCount; i += 1) {
+                const n = i + 1;
+                const side = i === 1 ? 'left / primary host' : i === 2 ? 'right / secondary host' : `host ${n - 1}`;
+                lines.push(`Image ${n} (${side}): COUPLE IDENTITY lock. Replace a face on Image 1 with this exact person. This photo supplies who they are — they must adopt the card face’s expression (mouth, eyes, brows, emotion). Honest pixels only — no beautify, no lighten, no celebrity lookalike.`);
+            }
         }
         if (options?.genderMappingDirective) {
             lines.push(options.genderMappingDirective);
@@ -471,15 +514,19 @@ function buildHonestFaceIdentityHeader(referenceCount, options) {
     if (referenceCount <= 0)
         return '';
     if (options?.coupleFaceSwap && referenceCount >= 2) {
+        const coupleRefText = referenceCount === 2
+            ? 'Image 2 is the couple photo (showing the couple together). Extract the man and the woman from Image 2 to replace the respective man and woman on Image 1. Both adopt Image 1’s facial expressions.'
+            : `Images 2–${referenceCount} are the couple identity photos. Replace ONLY the identity of the face(s) on Image 1 with these exact people. The source faces adopt Image 1’s expressions.`;
         return [
             '=== 1. COUPLE FACE REPLACEMENT (organizer requested — FIRST) ===',
-            'Image 1 is the incoming invitation or scene. Keep its layout, pose, bodies, clothes, décor and lighting.',
-            `Images 2–${referenceCount} are the couple identity photos. Replace ONLY the face(s) on Image 1 with these exact people.`,
+            'Image 1 is the incoming invitation or scene. Keep its layout, body pose, bodies, clothes, décor, lighting AND the facial expressions already on that card.',
+            coupleRefText,
             options?.genderMappingDirective ||
                 'GENDER & ATTIRE FIDELITY (MANDATORY): Match each person strictly by gender and ceremonial role. The male face goes on the male body (suit/tuxedo), the female face goes on the female body (gown/dress). NEVER invert bride and groom faces.',
-            'Render each replacement face as honestly as photographed: bone structure, eyes, smile, cheek volume, skin tone, pores, moles/scars, age. Do not beautify, symmetrize, slim, lighten or airbrush.',
+            exports.NANO_BANANA_CARD_EXPRESSION_LOCK,
+            'Render each replacement face as honestly as photographed for identity: bone structure, eyes, skin tone, pores, moles/scars, age — but wear the card’s expression (mouth, gaze, emotion). Do not beautify, symmetrize, slim, lighten or airbrush.',
             exports.NANO_BANANA_HARMONIZATION_DIRECTIVE,
-            'Do not invent a new couple. Do not keep the original faces from Image 1.',
+            'Do not invent a new couple. Do not keep the original identity from Image 1 — keep Image 1 expressions.',
             exports.NANO_BANANA_CRITICAL_CONSTRAINT,
             exports.NANO_BANANA_STYLE_INSTRUCTION,
             exports.NANO_BANANA_LIGHT_RIG_COHERENCE,
@@ -529,8 +576,8 @@ function buildEnglishSceneBriefScaffold(decorBrief, options) {
     const hasTextModifications = /(?:remplace|modifi|chang).{0,50}(?:texte|titre|date|nom|description|écrit)|CARD VARIABLES|Replace on model image|écrits?|nouveaux? noms?/i.test(cleaned);
     const action = coupleFaceSwap
         ? hasTextModifications
-            ? 'keeping Image 1’s composition, pose, bodies, wardrobe, décor, lighting and ornaments while replacing faces with the couple identity photos (matching groom to suit and bride to gown) and updating typography to match new brief details'
-            : 'keeping Image 1’s composition, pose, bodies, wardrobe, décor, lighting and ornaments while replacing only the faces with the couple identity photos (matching groom to suit and bride to gown)'
+            ? 'keeping Image 1’s composition, body pose, bodies, wardrobe, décor, lighting, ornaments and facial expressions while replacing identity with the couple photos — source faces adopt the card expressions (matching groom to suit and bride to gown) — and updating typography to match new brief details'
+            : 'keeping Image 1’s composition, body pose, bodies, wardrobe, décor, lighting, ornaments and facial expressions while replacing only identity with the couple photos — source faces adopt the card expressions (matching groom to suit and bride to gown)'
         : looksLikeRefine
             ? 'faithfully preserving the overall visual composition, layout, color palette, ornaments, framing, and existing typography/people of the reference card, applying precisely the requested targeted adjustment'
             : looksLikeClone
@@ -549,7 +596,7 @@ function buildEnglishSceneBriefScaffold(decorBrief, options) {
         styleParts.push('clean negative space reserved for later typography — no readable names or dates yet');
     }
     if (coupleFaceSwap) {
-        styleParts.push('card and décor locked to Image 1 — faces locked to the couple photos only');
+        styleParts.push('card, décor and facial expressions locked to Image 1 — identity locked to the couple photos only');
     }
     else if (referenceCount > 0) {
         styleParts.push('décor and card only in this narrative — identity locked to reference pixels');
@@ -607,7 +654,8 @@ function applyEnglishSceneBrief(processed, englishSceneBrief) {
         ? [
             'USER BRIEF (English scene — replace faces on Image 1 with the couple in Images 2+):',
             narrative,
-            'Replace ONLY the faces on the incoming card. Keep pose, bodies, wardrobe, décor, lighting and typography.',
+            'Replace ONLY the identity of the faces on the incoming card. Keep body pose, bodies, wardrobe, décor, lighting, typography AND Image 1’s facial expressions. Source photos adopt the card expressions.',
+            exports.NANO_BANANA_CARD_EXPRESSION_LOCK,
             exports.NANO_BANANA_CRITICAL_CONSTRAINT,
             exports.NANO_BANANA_STYLE_INSTRUCTION,
             exports.NANO_BANANA_LIGHT_RIG_COHERENCE,
@@ -671,13 +719,14 @@ function processUserPromptForHonestFaces(prompt, options) {
             'USER BRIEF (English scene — replace faces on Image 1 with the couple in Images 2+):',
             englishSceneBrief,
             hasTextModifications
-                ? 'Replace the faces on Image 1 (strictly matching groom face to male body/suit, bride face to female body/gown). Harmonize jawline, neck, and skin tones with the lighting. Do NOT keep old names, dates or text from Image 1. Leave clean card space for overlay typography.'
-                : 'Replace ONLY the faces on the incoming card (strictly matching groom face to male body/suit, bride face to female body/gown). Harmonize jawline, neck, and skin tones with scene lighting. Keep pose, bodies, wardrobe, décor and lighting. Do not paint old names on clean background.',
+                ? 'Replace the identity of the faces on Image 1 (strictly matching groom face to male body/suit, bride face to female body/gown). Keep each card face’s expression (mouth, eyes, emotion). Harmonize jawline, neck, and skin tones with the lighting. Do NOT keep old names, dates or text from Image 1. Leave clean card space for overlay typography.'
+                : 'Replace ONLY the identity of the faces on the incoming card (strictly matching groom face to male body/suit, bride face to female body/gown). Keep Image 1’s expressions — source faces adopt the card smile/gaze. Harmonize jawline, neck, and skin tones with scene lighting. Keep body pose, bodies, wardrobe, décor and lighting. Do not paint old names on clean background.',
             exports.NANO_BANANA_CRITICAL_CONSTRAINT,
             exports.NANO_BANANA_STYLE_INSTRUCTION,
             exports.NANO_BANANA_LIGHT_RIG_COHERENCE,
             exports.NANO_BANANA_OPTICAL_BOKEH,
             exports.NANO_BANANA_HARMONIZATION_DIRECTIVE,
+            exports.NANO_BANANA_CARD_EXPRESSION_LOCK,
         ].join('\n')
         : referenceCount
             ? [
@@ -715,7 +764,7 @@ function buildGeminiSceneSteps(embedText, options) {
     return [
         '=== SCENE STEPS (Gemini step-by-step) ===',
         options?.coupleFaceSwap
-            ? 'First, keep Image 1’s card, pose, bodies and décor. Then lock replacement faces from Images 2+ — honest pixels, no idealization.'
+            ? 'First, keep Image 1’s card, body pose, bodies, décor AND facial expressions. Then lock replacement identity from Images 2+ — honest pixels, no idealization. Source faces adopt the card expressions.'
             : 'First, lock every face from the character-consistency references — honest pixels, no idealization.',
         options?.coupleFaceSwap
             ? 'Then, compose one vertical 9:16 print-ready invitation that is the incoming card with only the couple faces replaced.'
@@ -860,14 +909,18 @@ function buildFaithfulImagePrompt(basePrompt) {
 }
 /** Variante B : même événement et mêmes visages, plus d’espace et de matière. */
 function buildAmpleImagePrompt(basePrompt, hasReferences = false) {
+    const isCouple = basePrompt.includes('MODE couple');
     const identity = hasReferences
         ? 'Same hosts as the references — faces, skin, hair and clothes stay locked.'
         : 'Same celebration, same palette, same locks.';
+    const atmosphere = isCouple
+        ? 'Alternative subtle lighting and refined face blending harmonization. Keep Image 1 card composition, bodies, wardrobe and facial expressions identical.'
+        : 'Give more breathing room: wider ceremonial space, richer florals and materials, more paper and foil atmosphere.';
     return collapseSpaces([
         basePrompt,
         'VARIANT B — AMPLE: Same event and same people.',
         identity,
-        'Give more breathing room: wider ceremonial space, richer florals and materials, more paper and foil atmosphere.',
+        atmosphere,
         'Do not change faces, people count, or invent a new event.',
     ].join('\n')).slice(0, exports.COMPACT_IMAGE_PROMPT_MAX_CHARS);
 }
