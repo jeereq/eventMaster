@@ -312,6 +312,7 @@ export default function LandingInvitationAiGenerator({
   const generationSeq = useRef(0);
 
   const [files, setFiles] = useState<File[]>([]);
+  const [fileRoles, setFileRoles] = useState<Array<'groom' | 'bride' | 'auto'>>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const previewsRef = useRef<string[]>([]);
   previewsRef.current = previews;
@@ -528,6 +529,15 @@ export default function LandingInvitationAiGenerator({
     previews.forEach((url) => URL.revokeObjectURL(url));
     const merged = [...files, ...validImages].slice(0, maxPhotos);
     setFiles(merged);
+    setFileRoles((prev) => {
+      const next = [...prev];
+      while (next.length < merged.length) {
+        // Défaut intelligent : si couple, 1er = marié, 2e = mariée
+        const idx = next.length;
+        next.push(idx === 0 ? 'groom' : idx === 1 ? 'bride' : 'auto');
+      }
+      return next.slice(0, merged.length);
+    });
     setPreviews(merged.map((f) => URL.createObjectURL(f)));
     setError('');
     logAction(
@@ -564,6 +574,7 @@ export default function LandingInvitationAiGenerator({
 
   const removeFile = (index: number) => {
     setFiles((prev) => prev.filter((_, i) => i !== index));
+    setFileRoles((prev) => prev.filter((_, i) => i !== index));
     setPreviews((prev) => {
       URL.revokeObjectURL(prev[index]);
       return prev.filter((_, i) => i !== index);
@@ -604,6 +615,7 @@ export default function LandingInvitationAiGenerator({
     previews.forEach((url) => URL.revokeObjectURL(url));
     if (incomingPreview) URL.revokeObjectURL(incomingPreview);
     setFiles([]);
+    setFileRoles([]);
     setPreviews([]);
     setIncomingFile(null);
     setIncomingPreview('');
@@ -788,6 +800,22 @@ export default function LandingInvitationAiGenerator({
       setStage('Création de la nouvelle image d’arrière-plan…');
     }, 2800);
 
+    let genderDirective: string | undefined;
+    if (coupleFaceSwap && fileRoles.length >= 2) {
+      const parts: string[] = [];
+      fileRoles.forEach((role, idx) => {
+        const imgRef = coupleFaceSwap && incomingFile ? `Image ${idx + 2}` : `Image ${idx + 1}`;
+        if (role === 'groom') {
+          parts.push(`${imgRef} is the GROOM/MAN (must replace male body/suit).`);
+        } else if (role === 'bride') {
+          parts.push(`${imgRef} is the BRIDE/WOMAN (must replace female body/gown).`);
+        }
+      });
+      if (parts.length > 0) {
+        genderDirective = `EXPLICIT COUPLE ROLES: ${parts.join(' ')} STRICT ZERO GENDER INVERSION.`;
+      }
+    }
+
     try {
       const data = await composeTemplateWithAiPublic({
         prompt: promptToSend,
@@ -799,6 +827,7 @@ export default function LandingInvitationAiGenerator({
         variantsCount,
         speedMode,
         coupleFaceSwap,
+        genderMappingDirective: genderDirective,
         isAlteration: isModifyMode || coupleFaceSwap,
         structuredBrief,
         sourceTemplateId: selectedModelPhoto?.id,
@@ -1744,28 +1773,55 @@ export default function LandingInvitationAiGenerator({
               />
 
               {previews.length > 0 && (
-                <div id={`${id}-refs`} className="flex flex-wrap gap-2">
-                  {previews.map((url, i) => (
-                    <div
-                      key={url}
-                      className="relative w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] rounded-[var(--radius-card)] overflow-hidden border border-border shadow-xs group"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={url} alt={`Référence ${i + 1}`} className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeFile(i);
-                        }}
-                        className="absolute top-0.5 right-0.5 min-w-11 min-h-11 inline-flex items-center justify-center bg-foreground/85 text-background rounded-full opacity-90 hover:opacity-100 disabled:opacity-40 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-xs"
-                        aria-label={`Retirer l’image ${i + 1}`}
+                <div id={`${id}-refs`} className="flex flex-wrap gap-2.5">
+                  {previews.map((url, i) => {
+                    const role = fileRoles[i] || (i === 0 ? 'groom' : i === 1 ? 'bride' : 'auto');
+                    return (
+                      <div
+                        key={url}
+                        className="relative w-20 h-24 sm:w-24 sm:h-28 rounded-[var(--radius-card)] overflow-hidden border border-border shadow-xs group bg-surface-muted flex flex-col"
                       >
-                        <XCircle className="w-3.5 h-3.5" aria-hidden />
-                      </button>
-                    </div>
-                  ))}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt={`Référence ${i + 1}`} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFile(i);
+                          }}
+                          className="absolute top-0.5 right-0.5 min-w-8 min-h-8 inline-flex items-center justify-center bg-foreground/85 text-background rounded-full opacity-90 hover:opacity-100 disabled:opacity-40 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-xs z-10"
+                          aria-label={`Retirer l’image ${i + 1}`}
+                        >
+                          <XCircle className="w-3.5 h-3.5" aria-hidden />
+                        </button>
+                        {coupleFaceSwap && (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFileRoles((prev) => {
+                                const next = [...prev];
+                                const current = next[i] || (i === 0 ? 'groom' : 'bride');
+                                next[i] = current === 'groom' ? 'bride' : 'groom';
+                                return next;
+                              });
+                            }}
+                            className={cn(
+                              'absolute bottom-0 inset-x-0 py-1 text-[11px] font-bold text-center tracking-tight transition z-10 cursor-pointer shadow-xs',
+                              role === 'groom'
+                                ? 'bg-indigo-600/90 hover:bg-indigo-600 text-white'
+                                : 'bg-rose-600/90 hover:bg-rose-600 text-white',
+                            )}
+                            title="Cliquez pour changer le rôle (Marié ou Mariée)"
+                          >
+                            {role === 'groom' ? '🤵 Marié (Costume)' : '👰 Mariée (Robe)'}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 

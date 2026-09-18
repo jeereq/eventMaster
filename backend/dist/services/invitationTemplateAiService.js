@@ -287,11 +287,15 @@ function buildImagePrompt(userPrompt, backgroundPrompt, analysis, options) {
                 briefMustKeep: analysis.briefMustKeep,
                 briefMustChange: analysis.briefMustChange,
                 colors: analysis.colors,
-                coupleFaceMapping: analysis.coupleFaceMapping
+                coupleFaceMapping: analysis.coupleFaceMapping?.strictMappingInstructions
                     ? {
                         strictMappingInstructions: analysis.coupleFaceMapping.strictMappingInstructions,
                     }
-                    : undefined,
+                    : options?.processed?.identityHeader?.includes('GENDER LOCK')
+                        ? {
+                            strictMappingInstructions: options.processed.identityHeader,
+                        }
+                        : undefined,
             }
             : null,
         organizerContext: options?.organizerContext,
@@ -1601,6 +1605,7 @@ async function composeInvitationTemplateAi(input) {
         embedText,
         artStyleLine,
         coupleFaceSwap,
+        genderMappingDirective: input.genderMappingDirective || undefined,
     });
     const pipelineIntent = (0, invitationPromptFidelity_ts_1.resolveInvitationPipelineIntent)({
         coupleFaceSwap,

@@ -523,7 +523,7 @@ function buildEnglishSceneBriefScaffold(decorBrief, options) {
         : referenceCount > 0
             ? 'a vertical print-ready luxury invitation card featuring the exact people from the attached reference photos (faces unchanged)'
             : 'a vertical print-ready luxury invitation card for a real Central African / RDC celebration';
-    const hasTextModifications = /remplace.{0,20}(?:texte|titre|date|nom|description)|CARD VARIABLES|Replace on model image|écrits?|nouveaux? noms?/i.test(cleaned);
+    const hasTextModifications = /(?:remplace|modifi|chang).{0,50}(?:texte|titre|date|nom|description|écrit)|CARD VARIABLES|Replace on model image|écrits?|nouveaux? noms?/i.test(cleaned);
     const action = coupleFaceSwap
         ? hasTextModifications
             ? 'keeping Image 1’s composition, pose, bodies, wardrobe, décor, lighting and ornaments while replacing faces with the couple identity photos (matching groom to suit and bride to gown) and updating typography to match new brief details'
@@ -662,7 +662,7 @@ function processUserPromptForHonestFaces(prompt, options) {
                 : ' (faces = reference photo pixels, no idealization)'
             : '';
     const visionBrief = collapseSpaces(`${englishSceneBrief}${honestyNote}`);
-    const hasTextModifications = /remplace.{0,20}(?:texte|titre|date|nom|description)|CARD VARIABLES|Replace on model image|écrits?|nouveaux? noms?/i.test(originalBrief);
+    const hasTextModifications = /(?:remplace|modifi|chang).{0,50}(?:texte|titre|date|nom|description|écrit)|CARD VARIABLES|Replace on model image|écrits?|nouveaux? noms?/i.test(originalBrief);
     const imageBrief = coupleFaceSwap
         ? [
             'USER BRIEF (English scene — replace faces on Image 1 with the couple in Images 2+):',
