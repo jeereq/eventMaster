@@ -36,6 +36,11 @@ function titleForEvent(event, tenantName) {
             return `Abonnement activé — ${tenantName}`;
     }
 }
+function asDeliveryProviderId(value) {
+    if (value == null || value === '')
+        return null;
+    return String(value);
+}
 async function logDelivery(params) {
     try {
         await db_1.prisma.notificationDelivery.create({
@@ -43,7 +48,7 @@ async function logDelivery(params) {
                 notificationId: params.notificationId,
                 channel: params.channel,
                 status: params.status,
-                providerId: params.providerId || null,
+                providerId: asDeliveryProviderId(params.providerId),
                 error: params.error ? params.error.slice(0, 500) : null,
             },
         });

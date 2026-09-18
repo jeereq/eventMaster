@@ -84,7 +84,7 @@ async function sendUltraMsgRequest(endpoint, formattedTo, params) {
         const data = await response.json();
         const isSent = data.sent === 'true' || data.sent === true || data.success || data.id;
         if (response.ok && isSent) {
-            const messageId = data.id || 'um-sent';
+            const messageId = data.id == null ? 'um-sent' : String(data.id);
             const isPendingAuth = typeof data.message === 'string' &&
                 data.message.toLowerCase().includes('not authenticated');
             if (isPendingAuth) {

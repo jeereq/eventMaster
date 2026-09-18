@@ -16,13 +16,19 @@ const db_1 = require("../db");
 const plansConfig_1 = require("../config/plansConfig");
 const planFeaturesService_1 = require("../services/planFeaturesService");
 const mandatoryRsvpFields_1 = require("../utils/mandatoryRsvpFields");
+const invitationIdentity_1 = require("../utils/invitationIdentity");
 const invitationTemplateAiService_1 = require("../services/invitationTemplateAiService");
+const invitationStructuredBrief_1 = require("../services/invitationStructuredBrief");
 const aiSimulationWalletService_1 = require("../services/aiSimulationWalletService");
+const invitationComposeTokenCost_1 = require("../services/invitationComposeTokenCost");
 const aiTemplateComposeHistoryService_1 = require("../services/aiTemplateComposeHistoryService");
 const cloudinaryService_1 = require("../services/cloudinaryService");
 const cloudinaryConfig_1 = require("../config/cloudinaryConfig");
 const permissionsService_1 = require("../services/permissionsService");
 const platformSettingsService_1 = require("../services/platformSettingsService");
+const studioJobService_1 = require("../services/studioJobService");
+const platformNotificationService_1 = require("../services/platformNotificationService");
+const platformNotificationTypes_1 = require("../config/platformNotificationTypes");
 function canManagePlatformTemplates(user) {
     if (!user)
         return false;
@@ -122,7 +128,7 @@ async function createTemplate(req, res) {
     try {
         const isSuperAdmin = canManagePlatformTemplates(req.user);
         const tenantId = req.user?.tenantId;
-        const { name, content, targetTenantId, showOnLanding } = req.body;
+        const { name, content, targetTenantId, showOnLanding, aiTokenCost } = req.body;
         if (!isSuperAdmin && !tenantId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
@@ -162,6 +168,9 @@ async function createTemplate(req, res) {
                 name,
                 content: (0, mandatoryRsvpFields_1.ensureMandatoryRsvpFieldsOnContent)(content || {}),
                 showOnLanding: isSuperAdmin && !finalTenantId ? Boolean(showOnLanding) : false,
+                ...(isSuperAdmin && !finalTenantId
+                    ? { aiTokenCost: (0, aiSimulationWalletService_1.clampInvitationTokenCost)(aiTokenCost) }
+                    : {}),
             },
         });
         return res.status(201).json(template);
@@ -214,7 +223,7 @@ async function updateTemplate(req, res) {
         const isSuperAdmin = canManagePlatformTemplates(req.user);
         const tenantId = req.user?.tenantId;
         const id = req.params.id;
-        const { name, content, targetTenantId, showOnLanding } = req.body;
+        const { name, content, targetTenantId, showOnLanding, aiTokenCost } = req.body;
         if (!isSuperAdmin && !tenantId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
@@ -257,6 +266,9 @@ async function updateTemplate(req, res) {
             else if (showOnLanding !== undefined) {
                 updateData.showOnLanding = Boolean(showOnLanding);
             }
+            if (!resolvedTenantId && aiTokenCost !== undefined) {
+                updateData.aiTokenCost = (0, aiSimulationWalletService_1.clampInvitationTokenCost)(aiTokenCost);
+            }
         }
         const updatedTemplate = await db_1.prisma.template.update({
             where: { id },
@@ -275,7 +287,7 @@ async function duplicateTemplate(req, res) {
         const isSuperAdmin = canManagePlatformTemplates(req.user);
         const tenantId = req.user?.tenantId;
         const id = req.params.id;
-        const { name, targetTenantId } = req.body ?? {};
+        const { name, targetTenantId, title, honorees, date } = req.body ?? {};
         if (!isSuperAdmin && !tenantId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
@@ -330,16 +342,26 @@ async function duplicateTemplate(req, res) {
                 return res.status(err.statusCode || 403).json({ error: err.message });
             }
         }
-        const copyName = typeof name === 'string' && name.trim()
-            ? name.trim()
-            : isCatalogSource
-                ? source.name
-                : `${source.name} (Copie)`;
+        const identityTitle = typeof title === 'string' ? title.trim() : '';
+        const identityHonorees = typeof honorees === 'string' ? honorees.trim() : '';
+        const identityDate = typeof date === 'string' ? date.trim() : '';
+        const copyName = identityTitle
+            || (typeof name === 'string' && name.trim()
+                ? name.trim()
+                : isCatalogSource
+                    ? source.name
+                    : `${source.name} (Copie)`);
+        const withIdentity = (0, invitationIdentity_1.applyInvitationIdentityToContent)((0, mandatoryRsvpFields_1.ensureMandatoryRsvpFieldsOnContent)(source.content), {
+            title: copyName,
+            honorees: identityHonorees || copyName,
+            date: identityDate,
+            applyTitleToCard: true,
+        });
         const template = await db_1.prisma.template.create({
             data: {
                 tenantId: finalTenantId,
                 name: copyName,
-                content: (0, mandatoryRsvpFields_1.ensureMandatoryRsvpFieldsOnContent)(source.content),
+                content: withIdentity,
                 showOnLanding: false,
             },
         });
@@ -403,13 +425,14 @@ async function composeTemplateWithAi(req, res) {
         }
         if (!req.user)
             return res.status(401).json({ error: 'Non authentifié.' });
-        const isSuperAdmin = canManagePlatformTemplates(req.user);
-        const tenantId = req.user.tenantId || null;
+        const authUser = req.user;
+        const isSuperAdmin = canManagePlatformTemplates(authUser);
+        const tenantId = authUser.tenantId || null;
         if (!isSuperAdmin && !tenantId) {
             return res.status(403).json({ error: 'Tenant non identifié' });
         }
-        if (!isSuperAdmin && req.user.id && tenantId) {
-            const denied = await (0, permissionsService_1.protocolCreativeDeniedMessage)(req.user.id, tenantId);
+        if (!isSuperAdmin && authUser.id && tenantId) {
+            const denied = await (0, permissionsService_1.protocolCreativeDeniedMessage)(authUser.id, tenantId);
             if (denied)
                 return res.status(403).json({ error: denied });
         }
@@ -422,13 +445,38 @@ async function composeTemplateWithAi(req, res) {
             return res.status(400).json({ error: 'Identifiant d’appareil manquant pour consommer les jetons IA.' });
         }
         const prompt = typeof body.prompt === 'string' ? body.prompt : '';
-        const baseImageUrl = typeof body.baseImageUrl === 'string' && /^https?:\/\//i.test(body.baseImageUrl.trim())
+        let baseImageUrl = typeof body.baseImageUrl === 'string' && /^https?:\/\//i.test(body.baseImageUrl.trim())
             ? body.baseImageUrl.trim()
             : null;
-        const isAlteration = body.isAlteration === true || /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
-        const existingElements = Array.isArray(body.existingElements)
+        const coupleFaceSwap = body.coupleFaceSwap === true;
+        const isAlteration = coupleFaceSwap ||
+            body.isAlteration === true ||
+            /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
+        let existingElements = Array.isArray(body.existingElements)
             ? body.existingElements
             : undefined;
+        if (body.sourceTemplateId && typeof body.sourceTemplateId === 'string') {
+            try {
+                const sourceTpl = await db_1.prisma.template.findUnique({
+                    where: { id: body.sourceTemplateId.trim() },
+                    select: { content: true },
+                });
+                if (sourceTpl?.content && typeof sourceTpl.content === 'object') {
+                    const tplContent = sourceTpl.content;
+                    if ((!existingElements || existingElements.length === 0) && Array.isArray(tplContent.elements)) {
+                        existingElements = tplContent.elements;
+                    }
+                    if (!baseImageUrl &&
+                        typeof tplContent.global?.bgImageUrl === 'string' &&
+                        /^https?:\/\//i.test(tplContent.global.bgImageUrl)) {
+                        baseImageUrl = tplContent.global.bgImageUrl;
+                    }
+                }
+            }
+            catch (e) {
+                console.warn('[templateController] Impossible de charger le sourceTemplate:', e);
+            }
+        }
         const generateBackground = body.generateBackground !== false;
         const isPublic = !tenantId || body.isPublic === true;
         const embedText = isPublic ? false : body.embedText === true;
@@ -437,10 +485,13 @@ async function composeTemplateWithAi(req, res) {
         const variantsCount = typeof body.variantsCount === 'number' ? body.variantsCount : undefined;
         const speedMode = body.speedMode === 'fast' ? 'fast' : 'quality';
         const imageUrls = await resolveComposeImageUrls(body, isSuperAdmin ? null : tenantId);
-        const unlimited = (0, aiSimulationWalletService_1.isUnlimitedAiTokenUser)(req.user);
-        await (0, aiSimulationWalletService_1.requireAiSimulationCredit)(deviceId, req.user.id, aiSimulationWalletService_1.AI_INVITATION_COMPOSE_TOKEN_COST, { unlimited });
-        const result = await (0, invitationTemplateAiService_1.composeInvitationTemplateAi)({
-            userId: req.user.id,
+        const tokenCost = await (0, invitationComposeTokenCost_1.resolveInvitationComposeTokenCost)({
+            sourceTemplateId: typeof body.sourceTemplateId === 'string' ? body.sourceTemplateId : null,
+        });
+        const unlimited = (0, aiSimulationWalletService_1.isUnlimitedAiTokenUser)(authUser);
+        await (0, aiSimulationWalletService_1.requireAiSimulationCredit)(deviceId, authUser.id, tokenCost, { unlimited });
+        const composeInput = {
+            userId: authUser.id,
             tenantId: isSuperAdmin ? null : tenantId,
             isPublic,
             prompt,
@@ -451,34 +502,64 @@ async function composeTemplateWithAi(req, res) {
             generateBackground,
             embedText,
             deviceId,
-            authUserId: req.user.id,
+            authUserId: authUser.id,
             contextSource,
             artStyle,
             variantsCount,
             speedMode,
-        });
-        const historyId = await persistTemplateCompose({
-            userId: req.user.id,
-            deviceId,
-            source: 'studio',
-            prompt,
-            referenceUrls: imageUrls,
-            content: result.content,
-            stage: result.stage,
-        });
-        const allowance = await (0, aiSimulationWalletService_1.consumeAiSimulationCredit)(deviceId, req.user.id, aiSimulationWalletService_1.AI_INVITATION_COMPOSE_TOKEN_COST, {
-            action: 'invitation_compose',
-            source: unlimited && req.user.impersonatedBy ? 'support' : 'studio',
-            relatedId: historyId,
-            unlimited,
-        });
-        return res.json({
-            content: result.content,
-            stage: result.stage,
-            historyId,
-            remaining: allowance.totalRemaining,
-            allowance,
-        });
+            preferredModel: settings.aiStudioModels?.invitationModel,
+            coupleFaceSwap,
+            structuredBrief: (0, invitationStructuredBrief_1.parseInvitationStructuredBrief)(body.structuredBrief),
+        };
+        const runCompose = async () => {
+            const result = await (0, invitationTemplateAiService_1.composeInvitationTemplateAi)(composeInput);
+            const historyId = await persistTemplateCompose({
+                userId: authUser.id,
+                deviceId,
+                source: 'studio',
+                prompt,
+                referenceUrls: imageUrls,
+                content: result.content,
+                stage: result.stage,
+            });
+            const allowance = await (0, aiSimulationWalletService_1.consumeAiSimulationCredit)(deviceId, authUser.id, tokenCost, {
+                action: 'invitation_compose',
+                source: unlimited && authUser.impersonatedBy ? 'support' : 'studio',
+                relatedId: historyId,
+                unlimited,
+            });
+            if (authUser.id) {
+                void (0, platformNotificationService_1.notifyUsers)([authUser.id], {
+                    type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.STUDIO_GENERATION_READY,
+                    title: 'Invitation prête',
+                    message: 'La génération IA est terminée. Ouvrez le studio pour l’appliquer.',
+                    metadata: { href: '/dashboard/templates', historyId, kind: 'invitation' },
+                });
+            }
+            return {
+                content: result.content,
+                stage: result.stage,
+                historyId,
+                remaining: allowance.totalRemaining,
+                allowance,
+                tokenCost,
+            };
+        };
+        if (body.background === true) {
+            const job = (0, studioJobService_1.createStudioJob)({ kind: 'invitation', userId: authUser.id, deviceId, prompt });
+            (0, studioJobService_1.runStudioJob)(job.id, async () => {
+                try {
+                    const payload = await runCompose();
+                    (0, studioJobService_1.completeStudioJob)(job.id, { result: payload, historyId: payload.historyId });
+                }
+                catch (error) {
+                    const message = error instanceof Error ? error.message : 'Impossible de générer le modèle avec l’IA.';
+                    (0, studioJobService_1.failStudioJob)(job.id, message);
+                }
+            });
+            return res.status(202).json({ jobId: job.id, status: 'queued', background: true });
+        }
+        return res.json(await runCompose());
     }
     catch (error) {
         if (error instanceof planFeaturesService_1.PlanFeatureError) {
@@ -516,13 +597,38 @@ async function publicComposeTemplateWithAi(req, res) {
             return res.status(400).json({ error: 'Identifiant d’appareil manquant pour consommer les jetons IA.' });
         }
         const prompt = typeof body.prompt === 'string' ? body.prompt : '';
-        const baseImageUrl = typeof body.baseImageUrl === 'string' && /^https?:\/\//i.test(body.baseImageUrl.trim())
+        let baseImageUrl = typeof body.baseImageUrl === 'string' && /^https?:\/\//i.test(body.baseImageUrl.trim())
             ? body.baseImageUrl.trim()
             : null;
-        const isAlteration = body.isAlteration === true || /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
-        const existingElements = Array.isArray(body.existingElements)
+        const coupleFaceSwap = body.coupleFaceSwap === true;
+        const isAlteration = coupleFaceSwap ||
+            body.isAlteration === true ||
+            /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
+        let existingElements = Array.isArray(body.existingElements)
             ? body.existingElements
             : undefined;
+        if (body.sourceTemplateId && typeof body.sourceTemplateId === 'string') {
+            try {
+                const sourceTpl = await db_1.prisma.template.findUnique({
+                    where: { id: body.sourceTemplateId.trim() },
+                    select: { content: true },
+                });
+                if (sourceTpl?.content && typeof sourceTpl.content === 'object') {
+                    const tplContent = sourceTpl.content;
+                    if ((!existingElements || existingElements.length === 0) && Array.isArray(tplContent.elements)) {
+                        existingElements = tplContent.elements;
+                    }
+                    if (!baseImageUrl &&
+                        typeof tplContent.global?.bgImageUrl === 'string' &&
+                        /^https?:\/\//i.test(tplContent.global.bgImageUrl)) {
+                        baseImageUrl = tplContent.global.bgImageUrl;
+                    }
+                }
+            }
+            catch (e) {
+                console.warn('[templateController] Impossible de charger le sourceTemplate public:', e);
+            }
+        }
         const generateBackground = body.generateBackground !== false;
         // Règle stricte pour la vitrine publique : JAMAIS de texte incrusté directement sur l'image
         // L'image sert de fond d'ambiance propre et réutilisable, avec calques éditables utilisant des variables dynamiques.
@@ -534,48 +640,80 @@ async function publicComposeTemplateWithAi(req, res) {
         const speedMode = body.speedMode === 'fast' ? 'fast' : 'quality';
         const imageUrls = await resolveComposeImageUrls(body, user?.tenantId || null);
         const rateKey = user?.id || req.ip || deviceId;
+        const tokenCost = await (0, invitationComposeTokenCost_1.resolveInvitationComposeTokenCost)({
+            sourceTemplateId: typeof body.sourceTemplateId === 'string' ? body.sourceTemplateId : null,
+        });
         const unlimited = (0, aiSimulationWalletService_1.isUnlimitedAiTokenUser)(user);
-        await (0, aiSimulationWalletService_1.requireAiSimulationCredit)(deviceId, user?.id || null, aiSimulationWalletService_1.AI_INVITATION_COMPOSE_TOKEN_COST, { unlimited });
-        const result = await (0, invitationTemplateAiService_1.composeInvitationTemplateAi)({
-            userId: rateKey,
-            tenantId: user?.tenantId || null,
-            isPublic: true,
-            prompt,
-            imageUrls,
-            baseImageUrl,
-            isAlteration,
-            existingElements,
-            generateBackground,
-            embedText: false,
-            deviceId,
-            authUserId: user?.id || null,
-            contextSource,
-            artStyle,
-            variantsCount,
-            speedMode,
-        });
-        const historyId = await persistTemplateCompose({
-            userId: user?.id || null,
-            deviceId,
-            source: user?.id ? 'studio' : 'landing',
-            prompt,
-            referenceUrls: imageUrls,
-            content: result.content,
-            stage: result.stage,
-        });
-        const allowance = await (0, aiSimulationWalletService_1.consumeAiSimulationCredit)(deviceId, user?.id || null, aiSimulationWalletService_1.AI_INVITATION_COMPOSE_TOKEN_COST, {
-            action: 'invitation_compose',
-            source: unlimited && user?.impersonatedBy ? 'support' : user?.id ? 'studio' : 'landing',
-            relatedId: historyId,
-            unlimited,
-        });
-        return res.json({
-            content: result.content,
-            stage: result.stage,
-            historyId,
-            remaining: allowance.totalRemaining,
-            allowance,
-        });
+        await (0, aiSimulationWalletService_1.requireAiSimulationCredit)(deviceId, user?.id || null, tokenCost, { unlimited });
+        const runCompose = async () => {
+            const result = await (0, invitationTemplateAiService_1.composeInvitationTemplateAi)({
+                userId: rateKey,
+                tenantId: user?.tenantId || null,
+                isPublic: true,
+                prompt,
+                imageUrls,
+                baseImageUrl,
+                isAlteration,
+                existingElements,
+                generateBackground,
+                embedText: false,
+                deviceId,
+                authUserId: user?.id || null,
+                contextSource,
+                artStyle,
+                variantsCount,
+                speedMode,
+                preferredModel: settings.aiStudioModels?.invitationModel,
+                coupleFaceSwap,
+                structuredBrief: (0, invitationStructuredBrief_1.parseInvitationStructuredBrief)(body.structuredBrief),
+            });
+            const historyId = await persistTemplateCompose({
+                userId: user?.id || null,
+                deviceId,
+                source: user?.id ? 'studio' : 'landing',
+                prompt,
+                referenceUrls: imageUrls,
+                content: result.content,
+                stage: result.stage,
+            });
+            const allowance = await (0, aiSimulationWalletService_1.consumeAiSimulationCredit)(deviceId, user?.id || null, tokenCost, {
+                action: 'invitation_compose',
+                source: unlimited && user?.impersonatedBy ? 'support' : user?.id ? 'studio' : 'landing',
+                relatedId: historyId,
+                unlimited,
+            });
+            if (user?.id) {
+                void (0, platformNotificationService_1.notifyUsers)([user.id], {
+                    type: platformNotificationTypes_1.PLATFORM_NOTIFICATION_TYPE.STUDIO_GENERATION_READY,
+                    title: 'Invitation prête',
+                    message: 'La génération IA est terminée. Ouvrez le studio pour l’appliquer.',
+                    metadata: { href: '/modeles', historyId, kind: 'invitation' },
+                });
+            }
+            return {
+                content: result.content,
+                stage: result.stage,
+                historyId,
+                remaining: allowance.totalRemaining,
+                allowance,
+                tokenCost,
+            };
+        };
+        if (body.background === true) {
+            const job = (0, studioJobService_1.createStudioJob)({ kind: 'invitation', userId: user?.id || null, deviceId, prompt });
+            (0, studioJobService_1.runStudioJob)(job.id, async () => {
+                try {
+                    const payload = await runCompose();
+                    (0, studioJobService_1.completeStudioJob)(job.id, { result: payload, historyId: payload.historyId });
+                }
+                catch (error) {
+                    const message = error instanceof Error ? error.message : 'Impossible de générer le modèle avec l’IA.';
+                    (0, studioJobService_1.failStudioJob)(job.id, message);
+                }
+            });
+            return res.status(202).json({ jobId: job.id, status: 'queued', background: true });
+        }
+        return res.json(await runCompose());
     }
     catch (error) {
         const err = error;

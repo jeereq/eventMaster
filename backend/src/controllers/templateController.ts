@@ -511,7 +511,7 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
       return res.status(400).json({ error: 'Identifiant d’appareil manquant pour consommer les jetons IA.' });
     }
     const prompt = typeof body.prompt === 'string' ? body.prompt : '';
-    const baseImageUrl =
+    let baseImageUrl =
       typeof body.baseImageUrl === 'string' && /^https?:\/\//i.test(body.baseImageUrl.trim())
         ? body.baseImageUrl.trim()
         : null;
@@ -520,9 +520,36 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
       coupleFaceSwap ||
       body.isAlteration === true ||
       /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
-    const existingElements = Array.isArray(body.existingElements)
+    let existingElements = Array.isArray(body.existingElements)
       ? (body.existingElements as Record<string, unknown>[])
       : undefined;
+
+    if (body.sourceTemplateId && typeof body.sourceTemplateId === 'string') {
+      try {
+        const sourceTpl = await prisma.template.findUnique({
+          where: { id: body.sourceTemplateId.trim() },
+          select: { content: true },
+        });
+        if (sourceTpl?.content && typeof sourceTpl.content === 'object') {
+          const tplContent = sourceTpl.content as {
+            elements?: unknown[];
+            global?: Record<string, unknown>;
+          };
+          if ((!existingElements || existingElements.length === 0) && Array.isArray(tplContent.elements)) {
+            existingElements = tplContent.elements as Record<string, unknown>[];
+          }
+          if (
+            !baseImageUrl &&
+            typeof tplContent.global?.bgImageUrl === 'string' &&
+            /^https?:\/\//i.test(tplContent.global.bgImageUrl)
+          ) {
+            baseImageUrl = tplContent.global.bgImageUrl;
+          }
+        }
+      } catch (e) {
+        console.warn('[templateController] Impossible de charger le sourceTemplate:', e);
+      }
+    }
     const generateBackground = body.generateBackground !== false;
     const isPublic = !tenantId || body.isPublic === true;
     const embedText = isPublic ? false : body.embedText === true;
@@ -645,7 +672,7 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
       return res.status(400).json({ error: 'Identifiant d’appareil manquant pour consommer les jetons IA.' });
     }
     const prompt = typeof body.prompt === 'string' ? body.prompt : '';
-    const baseImageUrl =
+    let baseImageUrl =
       typeof body.baseImageUrl === 'string' && /^https?:\/\//i.test(body.baseImageUrl.trim())
         ? body.baseImageUrl.trim()
         : null;
@@ -654,9 +681,36 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
       coupleFaceSwap ||
       body.isAlteration === true ||
       /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
-    const existingElements = Array.isArray(body.existingElements)
+    let existingElements = Array.isArray(body.existingElements)
       ? (body.existingElements as Record<string, unknown>[])
       : undefined;
+
+    if (body.sourceTemplateId && typeof body.sourceTemplateId === 'string') {
+      try {
+        const sourceTpl = await prisma.template.findUnique({
+          where: { id: body.sourceTemplateId.trim() },
+          select: { content: true },
+        });
+        if (sourceTpl?.content && typeof sourceTpl.content === 'object') {
+          const tplContent = sourceTpl.content as {
+            elements?: unknown[];
+            global?: Record<string, unknown>;
+          };
+          if ((!existingElements || existingElements.length === 0) && Array.isArray(tplContent.elements)) {
+            existingElements = tplContent.elements as Record<string, unknown>[];
+          }
+          if (
+            !baseImageUrl &&
+            typeof tplContent.global?.bgImageUrl === 'string' &&
+            /^https?:\/\//i.test(tplContent.global.bgImageUrl)
+          ) {
+            baseImageUrl = tplContent.global.bgImageUrl;
+          }
+        }
+      } catch (e) {
+        console.warn('[templateController] Impossible de charger le sourceTemplate public:', e);
+      }
+    }
     const generateBackground = body.generateBackground !== false;
     // Règle stricte pour la vitrine publique : JAMAIS de texte incrusté directement sur l'image
     // L'image sert de fond d'ambiance propre et réutilisable, avec calques éditables utilisant des variables dynamiques.

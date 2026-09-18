@@ -12,7 +12,8 @@ exports.analyzeRoomPlanPhoto = analyzeRoomPlanPhoto;
 exports.composeRoomPlanFromBrief = composeRoomPlanFromBrief;
 exports.composeRoomPlanAi = composeRoomPlanAi;
 const geminiJsonClient_ts_1 = require("./geminiJsonClient.js");
-const platformSettingsService_1 = require("./platformSettingsService");
+const openaiJsonClient_ts_1 = require("./openaiJsonClient.js");
+const aiStudioModels_ts_1 = require("./aiStudioModels.js");
 const roomPlanPromptFidelity_ts_1 = require("./roomPlanPromptFidelity.js");
 exports.ROOM_PLAN_AI_GROUP_ID = 'ai-import';
 exports.ROOM_PLAN_VISION_ITEM_MAX = 120;
@@ -1156,26 +1157,45 @@ async function reformulateRoomPlanBriefToEnglish(input) {
         widthM: input.widthM,
         heightM: input.heightM,
     });
-    if (!(0, geminiJsonClient_ts_1.getGeminiApiKey)() || processed.originalBrief.length < 8) {
+    if (processed.originalBrief.length < 8) {
+        return {
+            originalBrief: processed.originalBrief,
+            englishSceneBrief: processed.englishSceneBrief,
+        };
+    }
+    const preferOpenAi = (0, aiStudioModels_ts_1.isOpenAiStudioModel)(input.model);
+    if (!preferOpenAi && !(0, geminiJsonClient_ts_1.getGeminiApiKey)()) {
         return {
             originalBrief: processed.originalBrief,
             englishSceneBrief: processed.englishSceneBrief,
         };
     }
     try {
-        const settings = (0, platformSettingsService_1.loadPlatformSettings)();
-        const parsed = await (0, geminiJsonClient_ts_1.requestGeminiJson)({
-            system: roomPlanPromptFidelity_ts_1.ROOM_PLAN_BRIEF_REFORMULATION_SYSTEM,
-            userText: (0, roomPlanPromptFidelity_ts_1.buildRoomPlanBriefReformulationUserText)(processed.originalBrief, {
-                roomType: input.roomType,
-                widthM: input.widthM,
-                heightM: input.heightM,
-            }),
-            temperature: 0.25,
-            timeoutMs: 45_000,
-            failMessage: 'Room-plan brief reformulation failed.',
-            model: settings.aiStudioModels?.roomPlanModel,
-        });
+        const parsed = preferOpenAi && (0, openaiJsonClient_ts_1.getOpenAiApiKey)()
+            ? await (0, openaiJsonClient_ts_1.requestOpenAiJson)({
+                system: roomPlanPromptFidelity_ts_1.ROOM_PLAN_BRIEF_REFORMULATION_SYSTEM,
+                userText: (0, roomPlanPromptFidelity_ts_1.buildRoomPlanBriefReformulationUserText)(processed.originalBrief, {
+                    roomType: input.roomType,
+                    widthM: input.widthM,
+                    heightM: input.heightM,
+                }),
+                temperature: 0.25,
+                timeoutMs: 45_000,
+                failMessage: 'Room-plan brief reformulation failed.',
+                model: input.model,
+            })
+            : await (0, geminiJsonClient_ts_1.requestGeminiJson)({
+                system: roomPlanPromptFidelity_ts_1.ROOM_PLAN_BRIEF_REFORMULATION_SYSTEM,
+                userText: (0, roomPlanPromptFidelity_ts_1.buildRoomPlanBriefReformulationUserText)(processed.originalBrief, {
+                    roomType: input.roomType,
+                    widthM: input.widthM,
+                    heightM: input.heightM,
+                }),
+                temperature: 0.25,
+                timeoutMs: 45_000,
+                failMessage: 'Room-plan brief reformulation failed.',
+                model: (0, aiStudioModels_ts_1.isOpenAiStudioModel)(input.model) ? undefined : input.model,
+            });
         const english = (0, roomPlanPromptFidelity_ts_1.parseRoomPlanEnglishSceneBriefFromJson)(parsed);
         if (english.length >= 24) {
             const next = (0, roomPlanPromptFidelity_ts_1.applyRoomPlanEnglishSceneBrief)(processed, english);
@@ -1194,15 +1214,39 @@ async function reformulateRoomPlanBriefToEnglish(input) {
     };
 }
 async function requestRoomPlanJson(input) {
-    const settings = (0, platformSettingsService_1.loadPlatformSettings)();
-    const parsed = await (0, geminiJsonClient_ts_1.requestGeminiJson)({
+    const preferOpenAi = (0, aiStudioModels_ts_1.isOpenAiStudioModel)(input.model);
+    const imageUrls = input.imageUrl ? [input.imageUrl] : undefined;
+    const askGemini = () => (0, geminiJsonClient_ts_1.requestGeminiJson)({
         system: input.system,
         userText: input.userText,
-        imageUrls: input.imageUrl ? [input.imageUrl] : undefined,
+        imageUrls,
         temperature: input.temperature,
         failMessage: input.failMessage,
-        model: settings.aiStudioModels?.roomPlanModel,
+        model: preferOpenAi ? undefined : input.model,
     });
+    const askOpenAi = () => (0, openaiJsonClient_ts_1.requestOpenAiJson)({
+        system: input.system,
+        userText: input.userText,
+        imageUrls,
+        temperature: input.temperature,
+        failMessage: input.failMessage,
+        model: input.model,
+    });
+    let parsed;
+    if (preferOpenAi && (0, openaiJsonClient_ts_1.getOpenAiApiKey)()) {
+        try {
+            parsed = await askOpenAi();
+        }
+        catch (error) {
+            console.warn('[roomPlanAi] OpenAI principal failed, falling back to Gemini:', error?.message);
+            if (!(0, geminiJsonClient_ts_1.getGeminiApiKey)())
+                throw error;
+            parsed = await askGemini();
+        }
+    }
+    else {
+        parsed = await askGemini();
+    }
     return parseRoomPlanVisionDraft(parsed, { widthM: input.widthM, heightM: input.heightM });
 }
 async function analyzeRoomPlanPhoto(input) {
@@ -1215,6 +1259,7 @@ async function analyzeRoomPlanPhoto(input) {
             roomType,
             widthM: input.widthM,
             heightM: input.heightM,
+            model: input.model,
         });
         englishNote = reformed.englishSceneBrief;
     }
@@ -1240,6 +1285,7 @@ Analyze the image, infer every visible element, then produce the import JSON.`;
         widthM: input.widthM,
         heightM: input.heightM,
         failMessage: 'Impossible d’analyser la photo de la salle.',
+        model: input.model,
     });
 }
 async function composeRoomPlanFromBrief(input) {
@@ -1253,6 +1299,7 @@ async function composeRoomPlanFromBrief(input) {
         roomType,
         widthM: input.widthM,
         heightM: input.heightM,
+        model: input.model,
     });
     const userText = `ORIGINAL USER BRIEF (facts to preserve — any language):
 """
@@ -1275,6 +1322,7 @@ Produce the import JSON.`;
         widthM: input.widthM,
         heightM: input.heightM,
         failMessage: 'Impossible de composer le plan de salle.',
+        model: input.model,
     });
 }
 async function composeRoomPlanAi(input) {
@@ -1286,6 +1334,7 @@ async function composeRoomPlanAi(input) {
             widthM: input.widthM,
             heightM: input.heightM,
             brief,
+            model: input.model,
         });
     }
     return composeRoomPlanFromBrief({
@@ -1293,5 +1342,6 @@ async function composeRoomPlanAi(input) {
         roomType: input.roomType,
         widthM: input.widthM,
         heightM: input.heightM,
+        model: input.model,
     });
 }

@@ -2,6 +2,7 @@ export type InvitationIdentity = {
   title?: string;
   honorees?: string;
   date?: string;
+  description?: string;
   applyTitleToCard?: boolean;
 };
 
@@ -59,7 +60,8 @@ export function hasInvitationIdentity(identity: InvitationIdentity): boolean {
   return Boolean(
     String(identity.title || '').trim()
     || String(identity.honorees || '').trim()
-    || String(identity.date || '').trim(),
+    || String(identity.date || '').trim()
+    || String(identity.description || '').trim(),
   );
 }
 
@@ -89,25 +91,35 @@ export function applyInvitationIdentityToContent<T>(
 
   const explicitHonorees = String(identity.honorees || '').trim();
   const explicitTitle = String(identity.title || '').trim();
+  const explicitDescription = String(identity.description || '').trim();
 
   const nextElements = elements.map((el) => {
     if (!el || typeof el !== 'object') return el;
     const row = el as Record<string, unknown>;
     if (typeof row.text !== 'string') return row;
     let text = row.text;
-    if (explicitHonorees) text = text.replaceAll('{{title}}', explicitHonorees);
+    if (explicitHonorees) {
+      text = text.replaceAll('{{title}}', explicitHonorees).replaceAll('{{honorees}}', explicitHonorees);
+    }
     if (resolved.title) text = text.replaceAll('{{eventTitle}}', resolved.title);
     if (resolved.date) text = text.replaceAll('{{date}}', resolved.date);
+    if (explicitDescription) {
+      text = text.replaceAll('{{location}}', explicitDescription).replaceAll('{{description}}', explicitDescription);
+    }
     return { ...row, text };
   });
 
   const hasHonorees = Boolean(explicitHonorees) && nextElements.some((el) => {
     const txt = textOf(el);
-    return txt.includes('{{title}}') || txt.includes(explicitHonorees);
+    return txt.includes('{{title}}') || txt.includes('{{honorees}}') || txt.includes(explicitHonorees);
   });
   const hasDate = Boolean(resolved.date) && nextElements.some((el) => {
     const txt = textOf(el);
     return txt.includes('{{date}}') || txt.includes(resolved.date);
+  });
+  const hasDescription = Boolean(explicitDescription) && nextElements.some((el) => {
+    const txt = textOf(el);
+    return txt.includes('{{location}}') || txt.includes('{{description}}') || txt.includes(explicitDescription);
   });
 
   if (explicitHonorees && !hasHonorees) {
@@ -131,8 +143,24 @@ export function applyInvitationIdentityToContent<T>(
   }
 
   if (resolved.date && !hasDate) {
-    const dateEl = nextElements.find((el) => /\b(202\d|janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|date)\b/i.test(textOf(el))) as Record<string, unknown> | undefined;
-    if (dateEl) dateEl.text = resolved.date;
+    const dateEl = nextElements.find((el) => {
+      const txt = textOf(el);
+      return /\b(202\d|janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre|lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|date)\b/i.test(txt);
+    }) as Record<string, unknown> | undefined;
+    if (dateEl) {
+      dateEl.text = resolved.date;
+    }
+  }
+
+  if (explicitDescription && !hasDescription) {
+    const locEl = nextElements.find((el) => {
+      const txt = textOf(el);
+      if (txt === explicitHonorees || txt === resolved.date || txt === explicitTitle) return false;
+      return /\b(salle|hôtel|hotel|palais|domaine|espace|salon|centre|kinshasa|lubumbashi|goma|avenue|boulevard|paris|lieu|adresse|villa|terrasse|rooftop)\b/i.test(txt);
+    }) as Record<string, unknown> | undefined;
+    if (locEl) {
+      locEl.text = explicitDescription;
+    }
   }
 
   const global = source.global && typeof source.global === 'object'
@@ -147,6 +175,7 @@ export function applyInvitationIdentityToContent<T>(
         title: resolved.title,
         honorees: explicitHonorees,
         date: String(identity.date || '').trim(),
+        description: explicitDescription,
       },
     },
     elements: nextElements,

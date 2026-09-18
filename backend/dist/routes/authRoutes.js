@@ -15,5 +15,6 @@ router.post('/reset-password', authController_1.resetPassword);
 router.get('/legal-status', auth_1.requireAuth, legalController_1.getUserLegalStatusHandler);
 router.post('/legal-accept', auth_1.requireAuth, legalController_1.acceptUserLegalHandler);
 router.get('/profile', auth_1.requireAuth, authController_1.getProfile);
+router.post('/refresh', auth_1.requireAuth, authController_1.refreshSession);
 router.put('/profile', auth_1.requireAuth, authController_1.updateProfile);
 exports.default = router;

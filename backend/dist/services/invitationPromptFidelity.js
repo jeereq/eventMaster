@@ -1,8 +1,21 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.BRIEF_REFORMULATION_SYSTEM = exports.NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE = exports.NANO_BANANA_OPTICAL_BOKEH = exports.NANO_BANANA_LIGHT_RIG_COHERENCE = exports.NANO_BANANA_CRITICAL_CONSTRAINT = exports.NANO_BANANA_STYLE_INSTRUCTION = void 0;
+exports.INVITATION_COPY_SYSTEM = exports.INVITATION_COPY_RSVP = exports.COUPLE_FACE_SWAP_DEFAULT_PROMPT = exports.INVITATION_IMAGE_JUDGE_SYSTEM = exports.INVITATION_IMAGE_JUDGE_MIN_SCORE = exports.NANO_BANANA_COMPACT_FACE_LOCK = exports.COMPACT_IMAGE_PROMPT_MAX_CHARS = exports.INVITATION_PIPELINE_INTENTS = exports.BRIEF_REFORMULATION_SYSTEM = exports.NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE = exports.NANO_BANANA_OPTICAL_BOKEH = exports.NANO_BANANA_LIGHT_RIG_COHERENCE = exports.NANO_BANANA_CRITICAL_CONSTRAINT = exports.NANO_BANANA_STYLE_INSTRUCTION = void 0;
 exports.buildNanoBananaRawDirectives = buildNanoBananaRawDirectives;
 exports.optimizeReferenceImageUrl = optimizeReferenceImageUrl;
+exports.isInvitationPipelineIntent = isInvitationPipelineIntent;
+exports.parseInvitationPipelineIntent = parseInvitationPipelineIntent;
+exports.resolveInvitationPipelineIntent = resolveInvitationPipelineIntent;
+exports.resolveFinalInvitationPipelineIntent = resolveFinalInvitationPipelineIntent;
+exports.invitationPipelineModeSentence = invitationPipelineModeSentence;
+exports.invitationPipelineVisionMandate = invitationPipelineVisionMandate;
+exports.parseInvitationLocks = parseInvitationLocks;
+exports.buildInvitationLocks = buildInvitationLocks;
+exports.buildCompactImagePrompt = buildCompactImagePrompt;
+exports.parseInvitationImageJudgeVerdict = parseInvitationImageJudgeVerdict;
+exports.shouldRetryInvitationImage = shouldRetryInvitationImage;
+exports.buildInvitationImageJudgeUserText = buildInvitationImageJudgeUserText;
+exports.buildInvitationImageRetryPrompt = buildInvitationImageRetryPrompt;
 exports.stripFaceBeautifyLanguage = stripFaceBeautifyLanguage;
 exports.buildReferenceRoles = buildReferenceRoles;
 exports.buildHonestFaceIdentityHeader = buildHonestFaceIdentityHeader;
@@ -14,7 +27,14 @@ exports.processUserPromptForHonestFaces = processUserPromptForHonestFaces;
 exports.buildGeminiSceneSteps = buildGeminiSceneSteps;
 exports.isSafetyFilterTriggered = isSafetyFilterTriggered;
 exports.buildGenericThematicBackgroundPrompt = buildGenericThematicBackgroundPrompt;
+exports.buildFaithfulImagePrompt = buildFaithfulImagePrompt;
+exports.buildAmpleImagePrompt = buildAmpleImagePrompt;
 exports.buildVariantImagePrompt = buildVariantImagePrompt;
+exports.detectInvitationCopyLanguage = detectInvitationCopyLanguage;
+exports.parseInvitationCopyLanguage = parseInvitationCopyLanguage;
+exports.parseInvitationCopyDraft = parseInvitationCopyDraft;
+exports.buildInvitationCopyUserText = buildInvitationCopyUserText;
+exports.applyInvitationCopyToElements = applyInvitationCopyToElements;
 const invitationArtStyle_ts_1 = require("./invitationArtStyle.js");
 /**
  * Traitement des briefs utilisateur selon les recommandations Gemini Image
@@ -100,7 +120,296 @@ Rules (non-negotiable):
 9) If no people photos: for wedding/gala/birthday, Black African hosts from Central Africa / RDC when people are implied; never invent a Caucasian stock couple.
 10) Strip any request to beautify, smooth, lighten, airbrush, or swap faces.
 11) Keep englishSceneBrief under 450 words. No markdown.
-12) If the brief is an ALTERATION / REFINEMENT (retouche, réajustement, altération, modification ciblée, conserver le carton existant): set intent="refine". Explicitly instruct to PRESERVE the existing card layout, framing, background composition, color harmony, and character identity, applying ONLY the specific targeted adjustment.`;
+12) If the brief is an ALTERATION / REFINEMENT (retouche, réajustement, altération, modification ciblée, conserver le carton existant): set intent="refine". Explicitly instruct to PRESERVE the existing card layout, framing, background composition, color harmony, and character identity, applying ONLY the specific targeted adjustment.
+13) If context flag coupleFaceSwap=yes: this is an organizer-requested face replacement. Set intent="refine". Image 1 is the incoming card/scene — keep layout, pose, bodies, wardrobe, décor, lighting and typography. Images 2+ are the couple identity. Instruct to replace ONLY the faces on Image 1. Do not strip this swap. Still strip beautify / smooth / lighten.`;
+exports.INVITATION_PIPELINE_INTENTS = [
+    'create',
+    'clone',
+    'refine',
+    'couple',
+];
+/** Prompt image cible : ~400–700 mots, jamais un monolithe de 6 000 caractères. */
+exports.COMPACT_IMAGE_PROMPT_MAX_CHARS = 3800;
+const REFINE_BRIEF_RE = /retouch|ajust|refin|altér|réajust|modifier|swap|remplace.{0,24}visage/i;
+const CLONE_BRIEF_RE = /copi|clon|reprodu|duplicate/i;
+exports.NANO_BANANA_COMPACT_FACE_LOCK = 'RAW candid faces: exact reference texture, visible pores, slight asymmetry. No beauty filter, no smooth skin, no airbrush. One warm light, 85mm feel.';
+function isInvitationPipelineIntent(value) {
+    return typeof value === 'string' && exports.INVITATION_PIPELINE_INTENTS.includes(value);
+}
+function parseInvitationPipelineIntent(value, fallback = 'create') {
+    return isInvitationPipelineIntent(value) ? value : fallback;
+}
+function resolveInvitationPipelineIntent(input) {
+    if (input.coupleFaceSwap)
+        return 'couple';
+    const brief = String(input.brief || '');
+    if (input.isAlteration || REFINE_BRIEF_RE.test(brief))
+        return 'refine';
+    if (input.isInvitationClone || CLONE_BRIEF_RE.test(brief))
+        return 'clone';
+    return 'create';
+}
+function resolveFinalInvitationPipelineIntent(input) {
+    if (input.local === 'couple')
+        return 'couple';
+    const vision = parseInvitationPipelineIntent(input.vision, input.local);
+    if (vision === 'couple')
+        return input.local;
+    if (input.local === 'refine')
+        return 'refine';
+    if (vision === 'clone' || input.isInvitationClone)
+        return 'clone';
+    return vision;
+}
+function invitationPipelineModeSentence(intent) {
+    switch (intent) {
+        case 'couple':
+            return 'MODE couple: Keep Image 1 card, pose, bodies, wardrobe, décor and lighting. Replace ONLY faces with Images 2+. Honest pixels.';
+        case 'clone':
+            return 'MODE clone: Duplicate the reference card architecture (borders, foil, paper, ornaments). Place any attached people inside that frame, identity locked.';
+        case 'refine':
+            return 'MODE refine: Preserve the existing card. Apply ONLY the requested delta. Do not redesign.';
+        default:
+            return 'MODE create: Compose a new vertical luxury invitation for a real Central Africa / RDC celebration.';
+    }
+}
+function invitationPipelineVisionMandate(intent) {
+    switch (intent) {
+        case 'couple':
+            return `PIPELINE couple (non-negotiable):
+- Image 1 = incoming card/scene. Keep composition, pose, bodies, clothes, décor, lighting, ornaments.
+- Images 2+ = couple identity. Inventory NEW faces only. Discard Image 1 faces.
+- Forbidden: beautify, lighten, celebrity lookalike, inventing a new couple.`;
+        case 'clone':
+            return `PIPELINE clone (non-negotiable):
+- Card photo / Image 1 = layout truth: frame, borders, foil, paper, ornaments, palette.
+- Set isInvitationClone=true and fill clonedCardFeatures.
+- People photos (if any) sit inside that cloned frame, identity locked.
+- Do not invent a new card architecture.`;
+        case 'refine':
+            return `PIPELINE refine (non-negotiable):
+- Keep existing card composition, framing, palette, ornaments and identity.
+- Apply ONLY explicit brief changes (décor/mood/text if asked).
+- Do not replace the whole design.`;
+        default:
+            return `PIPELINE create (non-negotiable):
+- Invent a new luxury card from the brief.
+- Photos lock people only — do not clone a card unless a photo is clearly stationery.
+- Without people photos: décor-first; if hosts are implied, Black African RDC default.`;
+    }
+}
+function compactLockList(raw, max = 8) {
+    if (!Array.isArray(raw))
+        return [];
+    const seen = new Set();
+    const locks = [];
+    for (const item of raw) {
+        if (typeof item !== 'string')
+            continue;
+        const lock = collapseSpaces(item).slice(0, 140);
+        const key = lock.toLowerCase();
+        if (!lock || seen.has(key))
+            continue;
+        seen.add(key);
+        locks.push(lock);
+        if (locks.length >= max)
+            break;
+    }
+    return locks;
+}
+function parseInvitationLocks(raw, max = 8) {
+    return compactLockList(raw, max);
+}
+function buildInvitationLocks(input) {
+    const analysis = input.analysis || {};
+    const hasPeople = input.intent === 'couple' ||
+        Boolean(analysis.hasPeople) ||
+        (input.intent !== 'create' && (input.referenceCount || 0) > 0 && Boolean(analysis.hasPeople));
+    const peopleCount = Math.max(1, Number(analysis.peopleCount) || 1);
+    const locks = [];
+    if (input.intent === 'couple') {
+        locks.push('Image 1 wins for card, pose, bodies, wardrobe, décor and lighting.');
+        locks.push('Images 2+ are the only face source. Discard Image 1 faces. No beautify, no lighten.');
+        if (analysis.coupleFaceMapping?.strictMappingInstructions) {
+            locks.push(collapseSpaces(analysis.coupleFaceMapping.strictMappingInstructions).slice(0, 180));
+        }
+        else {
+            locks.push('MANDATORY GENDER LOCK: Male host face goes onto male body/suit; female host face goes onto female body/dress. Zero gender inversion.');
+        }
+    }
+    else if (hasPeople) {
+        locks.push('Attached photos are the only identity source. Same people — no lookalike, no beautify, no skin lightening.');
+        locks.push(`People count ${peopleCount}, left-to-right order unchanged.`);
+    }
+    else {
+        locks.push('No reference faces. If hosts appear, depict Black African men and/or women from Central Africa / RDC only.');
+    }
+    if (input.intent === 'clone' || analysis.isInvitationClone) {
+        locks.push(analysis.clonedCardFeatures
+            ? `Clone card architecture: ${collapseSpaces(analysis.clonedCardFeatures).slice(0, 120)}`
+            : 'Clone the reference card architecture, palette, foil and paper.');
+    }
+    else if (input.intent === 'refine') {
+        locks.push('Keep the existing card. Change only what the brief names.');
+    }
+    if (hasPeople && !input.explicitAppearanceChange && input.intent !== 'couple') {
+        locks.push('Keep hair, clothes and skin as photographed unless the brief names a wardrobe or hair change.');
+    }
+    if (input.isPublic || !input.embedText) {
+        locks.push('No painted letters, names, dates or logos in the pixels.');
+    }
+    else {
+        locks.push('Embed brief typography in the lower third without covering faces.');
+    }
+    if (analysis.briefMustKeep?.length) {
+        locks.push(`Keep: ${analysis.briefMustKeep.slice(0, 3).join('; ')}`.slice(0, 140));
+    }
+    if (analysis.briefMustChange?.length && input.intent !== 'couple') {
+        locks.push(`Change only: ${analysis.briefMustChange.slice(0, 3).join('; ')}`.slice(0, 140));
+    }
+    if (analysis.colors?.length) {
+        locks.push(`Stay near palette ${analysis.colors.slice(0, 4).join(', ')}.`);
+    }
+    return compactLockList(locks, 8);
+}
+function compactTextRule(embedText, isPublic) {
+    if (isPublic) {
+        return 'FORMAT: Vertical 9:16, 1024x1536. Clean reusable artwork — no painted text. Editor overlays {{title}}, {{date}}, {{location}}, {{firstName}}.';
+    }
+    if (embedText) {
+        return 'FORMAT: Vertical 9:16, 1024x1536. Embed sharp invitation lettering from the brief (names, date, venue) in the lower third or a cartouche. Do not cover faces.';
+    }
+    return `FORMAT: Vertical 9:16, 1024x1536. ${exports.NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE}`;
+}
+function buildCompactImagePrompt(input) {
+    const intent = input.coupleFaceSwap ? 'couple' : input.intent;
+    const hasPeople = intent === 'couple' || Boolean(input.analysis?.hasPeople);
+    const locks = (input.locks && input.locks.length
+        ? compactLockList(input.locks, 8)
+        : buildInvitationLocks({
+            intent,
+            analysis: input.analysis,
+            embedText: input.embedText,
+            isPublic: input.isPublic,
+            referenceCount: input.referenceCount,
+            explicitAppearanceChange: input.explicitAppearanceChange,
+        }));
+    const artStyle = (0, invitationArtStyle_ts_1.parseInvitationArtStyle)(input.artStyle);
+    const decor = collapseSpaces(input.decorParagraph || input.originalBrief).slice(0, 1100);
+    const organizer = collapseSpaces(input.organizerContext || '').slice(0, 360);
+    const parts = [
+        'Create ONE vertical print-ready invitation (9:16, 1024x1536) for a real event in Central Africa / RDC.',
+        invitationPipelineModeSentence(intent),
+        'LOCKS:',
+        ...locks.map((lock) => `- ${lock}`),
+        'DECOR:',
+        decor,
+        `STYLE: ${(0, invitationArtStyle_ts_1.invitationArtStyleScaffoldLine)(artStyle)} ${(0, invitationArtStyle_ts_1.invitationArtStyleLightNote)(artStyle)}`,
+    ];
+    if (organizer) {
+        parts.push(organizer);
+    }
+    parts.push(compactTextRule(input.embedText, input.isPublic));
+    if (hasPeople) {
+        parts.push(exports.NANO_BANANA_COMPACT_FACE_LOCK);
+    }
+    return collapseSpaces(parts.filter(Boolean).join('\n')).slice(0, exports.COMPACT_IMAGE_PROMPT_MAX_CHARS);
+}
+exports.INVITATION_IMAGE_JUDGE_MIN_SCORE = 7;
+exports.INVITATION_IMAGE_JUDGE_SYSTEM = `You score ONE generated EventMaster invitation image for Central Africa / RDC.
+Return ONLY valid JSON (json_object).
+
+Image 1 is the GENERATED card to score. Any other images are references (people and/or a card to clone).
+
+Be strict on:
+- Identity: same people as references, no lookalike, no beautify, no skin lightening.
+- Couple mode: Image 1 references after the generated card are the couple; generated faces must match them, not the incoming card faces.
+- Couple gender & face alignment: groom/man's face MUST be on male body/suit/tuxedo; bride/woman's face MUST be on female body/dress/gown. Flag "gender_mismatch" if bride and groom faces are inverted or swapped onto wrong bodies!
+- People count vs expectedPeople.
+- Painted letters / names / dates when textInPixels is "forbidden".
+- Invented Caucasian / white luxury hosts when no people refs exist.
+- Mode: create vs clone vs refine vs couple.
+
+Be lenient on minor floral density, foil shine, or taste.
+
+Exact schema:
+{
+  "pass": true | false,
+  "score": 0,
+  "defects": ["painted_text" | "wrong_faces" | "gender_mismatch" | "wrong_people_count" | "skin_lightened" | "beautified" | "wrong_mode" | "invented_white_hosts" | "kept_original_faces"],
+  "retryDirective": "one English sentence: the single fix to apply, positive framing, no redesign"
+}
+
+score is 0-10. pass=false if any hard identity / text / ethnicity / gender inversion defect. retryDirective empty only if pass=true.`;
+const KNOWN_JUDGE_DEFECTS = new Set([
+    'painted_text',
+    'wrong_faces',
+    'gender_mismatch',
+    'wrong_people_count',
+    'skin_lightened',
+    'beautified',
+    'wrong_mode',
+    'invented_white_hosts',
+    'kept_original_faces',
+]);
+function parseInvitationImageJudgeVerdict(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw))
+        return null;
+    const v = raw;
+    const scoreRaw = Number(v.score);
+    const score = Number.isFinite(scoreRaw) ? Math.min(10, Math.max(0, Math.round(scoreRaw))) : 5;
+    const defects = (Array.isArray(v.defects) ? v.defects : [])
+        .filter((item) => typeof item === 'string' && item.trim().length > 0)
+        .map((item) => {
+        const key = item.trim().toLowerCase().replace(/\s+/g, '_').slice(0, 40);
+        return KNOWN_JUDGE_DEFECTS.has(key) ? key : key;
+    })
+        .slice(0, 8);
+    const retryDirective = collapseSpaces(typeof v.retryDirective === 'string' ? v.retryDirective : '').slice(0, 240);
+    return {
+        pass: v.pass === true && defects.length === 0,
+        score,
+        defects,
+        retryDirective,
+    };
+}
+function shouldRetryInvitationImage(verdict, minScore = exports.INVITATION_IMAGE_JUDGE_MIN_SCORE) {
+    if (!verdict)
+        return false;
+    return !verdict.pass || verdict.score < minScore;
+}
+function buildInvitationImageJudgeUserText(input) {
+    const textRule = input.isPublic || !input.embedText
+        ? 'textInPixels: forbidden'
+        : 'textInPixels: allowed (names, date, venue from the brief)';
+    const locks = input.locks.slice(0, 8).map((lock) => `- ${lock}`).join('\n');
+    return [
+        `MODE: ${input.intent}`,
+        `BRIEF: ${collapseSpaces(input.originalBrief).slice(0, 500)}`,
+        `LOCKS:\n${locks || '- none'}`,
+        `expectedPeople: ${Math.max(0, Math.round(input.expectedPeople))}`,
+        textRule,
+        'Image 1 is the GENERATED invitation to score. Other images are references only.',
+    ].join('\n');
+}
+function buildInvitationImageRetryPrompt(basePrompt, verdict) {
+    const defect = verdict.defects[0];
+    let defaultDirective = 'Restore honest faces, correct people count, and no painted letters unless requested. Do not redesign.';
+    if (defect === 'gender_mismatch') {
+        defaultDirective = 'GENDER FIX: Groom/male face goes strictly onto male body/suit and bride/female face strictly onto female body/gown. Do NOT invert genders.';
+    }
+    else if (defect) {
+        defaultDirective = `Fix ${defect.replace(/_/g, ' ')} while keeping every lock.`;
+    }
+    const directive = verdict.retryDirective || defaultDirective;
+    return collapseSpaces([
+        basePrompt,
+        'RETRY (one pass only): Fix this defect without redesigning.',
+        directive,
+        'Keep every LOCK. Same people. Same 9:16.',
+    ].join('\n')).slice(0, exports.COMPACT_IMAGE_PROMPT_MAX_CHARS);
+}
+exports.COUPLE_FACE_SWAP_DEFAULT_PROMPT = 'Remplace uniquement les visages de cette invitation par les visages du couple. Conserve la pose, les tenues, le décor et la mise en page.';
 function collapseSpaces(value) {
     return value.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
 }
@@ -118,9 +427,27 @@ function stripFaceBeautifyLanguage(prompt) {
     text = collapseSpaces(text.replace(/\s+,/g, ',').replace(/,\s*,/g, ','));
     return { text, stripped };
 }
-function buildReferenceRoles(referenceCount) {
+function buildReferenceRoles(referenceCount, options) {
     if (referenceCount <= 0)
         return '';
+    if (options?.coupleFaceSwap) {
+        const lines = [
+            'REFERENCE ROLES (couple face replacement — organizer requested):',
+            'Image 1: INCOMING INVITATION / SCENE — object fidelity. Keep composition, pose, bodies, wardrobe, décor, lighting and ornaments. Do NOT keep the original faces that appear on this card.',
+        ];
+        for (let i = 1; i < referenceCount; i += 1) {
+            const n = i + 1;
+            const side = i === 1 ? 'left / primary host' : i === 2 ? 'right / secondary host' : `host ${n - 1}`;
+            lines.push(`Image ${n} (${side}): COUPLE IDENTITY lock. Replace a face on Image 1 with this exact person (honest pixels only — no beautify, no lighten, no celebrity lookalike).`);
+        }
+        if (options?.genderMappingDirective) {
+            lines.push(options.genderMappingDirective);
+        }
+        else {
+            lines.push('GENDER & POSITION BINDING (STRICT - DO NOT INVERT): Match reference faces to bodies strictly by apparent gender and wedding attire first. The MAN/GROOM from reference photos MUST replace the MAN/GROOM body on Image 1 (suit/tuxedo). The WOMAN/BRIDE from reference photos MUST replace the WOMAN/BRIDE body on Image 1 (bridal gown/dress). NEVER swap or invert bride and groom faces.');
+        }
+        return lines.join('\n');
+    }
     const lines = [
         'REFERENCE ROLES (Gemini character consistency + object fidelity):',
     ];
@@ -138,9 +465,25 @@ function buildReferenceRoles(referenceCount) {
  * En-tête d’identité placé EN PREMIER (Gemini : high-fidelity detail preservation).
  * Les pixels des photos = vérité ; le brief ne réécrit pas le visage.
  */
-function buildHonestFaceIdentityHeader(referenceCount) {
+function buildHonestFaceIdentityHeader(referenceCount, options) {
     if (referenceCount <= 0)
         return '';
+    if (options?.coupleFaceSwap && referenceCount >= 2) {
+        return [
+            '=== 1. COUPLE FACE REPLACEMENT (organizer requested — FIRST) ===',
+            'Image 1 is the incoming invitation or scene. Keep its layout, pose, bodies, clothes, décor and lighting.',
+            `Images 2–${referenceCount} are the couple identity photos. Replace ONLY the face(s) on Image 1 with these exact people.`,
+            options?.genderMappingDirective ||
+                'GENDER & ATTIRE FIDELITY (MANDATORY): Match each person strictly by gender and ceremonial role. The male face goes on the male body (suit/tuxedo), the female face goes on the female body (gown/dress). NEVER invert bride and groom faces.',
+            'Render each replacement face as honestly as photographed: bone structure, eyes, smile, cheek volume, skin tone, pores, moles/scars, age. Do not beautify, symmetrize, slim, lighten or airbrush.',
+            'Do not invent a new couple. Do not keep the original faces from Image 1.',
+            exports.NANO_BANANA_CRITICAL_CONSTRAINT,
+            exports.NANO_BANANA_STYLE_INSTRUCTION,
+            exports.NANO_BANANA_LIGHT_RIG_COHERENCE,
+            exports.NANO_BANANA_OPTICAL_BOKEH,
+            'If any text in the brief conflicts with the couple photos, obey the couple photos for faces and Image 1 for the card.',
+        ].join('\n');
+    }
     const who = referenceCount === 1
         ? 'the person in Image 1'
         : `the real people in Images 1–${referenceCount}`;
@@ -165,21 +508,31 @@ function buildEnglishSceneBriefScaffold(decorBrief, options) {
     if (!cleaned)
         return '';
     const referenceCount = Math.max(0, Math.min(options?.referenceCount ?? 0, 4));
+    const coupleFaceSwap = Boolean(options?.coupleFaceSwap) && referenceCount >= 2;
     const looksLikeRefine = /retouch|ajust|refin|altér|réajust|modifier/i.test(cleaned);
     const looksLikeClone = !looksLikeRefine && /copi|clon|reprodu|duplicate|faithful|moderni/i.test(cleaned);
-    const verb = looksLikeRefine
-        ? 'Refine and alter'
-        : looksLikeClone
-            ? 'Clone and redesign'
-            : 'Compose';
-    const subject = referenceCount > 0
-        ? 'a vertical print-ready luxury invitation card featuring the exact people from the attached reference photos (faces unchanged)'
-        : 'a vertical print-ready luxury invitation card for a real Central African / RDC celebration';
-    const action = looksLikeRefine
-        ? 'faithfully preserving the overall visual composition, layout, color palette, ornaments, framing, and existing typography/people of the reference card, applying precisely the requested targeted adjustment'
-        : looksLikeClone
-            ? 'faithfully echoing the reference card’s layout, ornamental borders, paper texture and visual hierarchy while refreshing the atmosphere to match the brief'
-            : 'presenting a refined ceremonial mood that matches the brief’s event type, palette and cultural details';
+    const verb = coupleFaceSwap
+        ? 'Replace'
+        : looksLikeRefine
+            ? 'Refine and alter'
+            : looksLikeClone
+                ? 'Clone and redesign'
+                : 'Compose';
+    const subject = coupleFaceSwap
+        ? 'a vertical print-ready luxury invitation card whose incoming layout comes from Image 1 and whose hosts are the exact couple from Images 2+'
+        : referenceCount > 0
+            ? 'a vertical print-ready luxury invitation card featuring the exact people from the attached reference photos (faces unchanged)'
+            : 'a vertical print-ready luxury invitation card for a real Central African / RDC celebration';
+    const hasTextModifications = /remplace.{0,20}(?:texte|titre|date|nom|description)|CARD VARIABLES|Replace on model image|écrits?|nouveaux? noms?/i.test(cleaned);
+    const action = coupleFaceSwap
+        ? hasTextModifications
+            ? 'keeping Image 1’s composition, pose, bodies, wardrobe, décor, lighting and ornaments while replacing faces with the couple identity photos (matching groom to suit and bride to gown) and updating typography to match new brief details'
+            : 'keeping Image 1’s composition, pose, bodies, wardrobe, décor, lighting and ornaments while replacing only the faces with the couple identity photos (matching groom to suit and bride to gown)'
+        : looksLikeRefine
+            ? 'faithfully preserving the overall visual composition, layout, color palette, ornaments, framing, and existing typography/people of the reference card, applying precisely the requested targeted adjustment'
+            : looksLikeClone
+                ? 'faithfully echoing the reference card’s layout, ornamental borders, paper texture and visual hierarchy while refreshing the atmosphere to match the brief'
+                : 'presenting a refined ceremonial mood that matches the brief’s event type, palette and cultural details';
     const location = 'as a prestige printed stationery piece for Kinshasa / Central Africa hospitality';
     const composition = 'tall 9:16 portrait frame, centered ceremonial focus, generous margins for lettering, soft depth of field on florals and paper grain';
     const styleParts = [
@@ -192,7 +545,10 @@ function buildEnglishSceneBriefScaffold(decorBrief, options) {
     else {
         styleParts.push('clean negative space reserved for later typography — no readable names or dates yet');
     }
-    if (referenceCount > 0) {
+    if (coupleFaceSwap) {
+        styleParts.push('card and décor locked to Image 1 — faces locked to the couple photos only');
+    }
+    else if (referenceCount > 0) {
         styleParts.push('décor and card only in this narrative — identity locked to reference pixels');
     }
     return collapseSpaces([
@@ -221,6 +577,7 @@ Context flags:
 - referencePhotoCount: ${refs}
 - embedInvitationTypography: ${options?.embedText ? 'yes' : 'no'}
 - artStyle: ${options?.artStyleLine || 'photoreal 35mm editorial print look'}
+- coupleFaceSwap: ${options?.coupleFaceSwap ? 'yes' : 'no'}
 
 The [Style] clause of englishSceneBrief MUST follow artStyle. Do not force photoreal if another style is requested.
 
@@ -242,24 +599,39 @@ function applyEnglishSceneBrief(processed, englishSceneBrief) {
     if (!narrative)
         return processed;
     const hasRefs = Boolean(processed.identityHeader);
-    const imageBrief = hasRefs
+    const coupleFaceSwap = Boolean(processed.coupleFaceSwap);
+    const imageBrief = coupleFaceSwap
         ? [
-            'USER BRIEF (English scene — décor / card / mood only — never rewrite faces):',
+            'USER BRIEF (English scene — replace faces on Image 1 with the couple in Images 2+):',
             narrative,
-            processed.explicitAppearanceChange
-                ? 'The user explicitly asked to change hair or clothing; apply ONLY that change. Keep the face identical.'
-                : 'Do not change hair, clothing, skin or face unless the brief explicitly requests a wardrobe or hair change.',
+            'Replace ONLY the faces on the incoming card. Keep pose, bodies, wardrobe, décor, lighting and typography.',
             exports.NANO_BANANA_CRITICAL_CONSTRAINT,
             exports.NANO_BANANA_STYLE_INSTRUCTION,
             exports.NANO_BANANA_LIGHT_RIG_COHERENCE,
             exports.NANO_BANANA_OPTICAL_BOKEH,
         ].join('\n')
-        : narrative;
-    const honestyNote = hasRefs
+        : hasRefs
+            ? [
+                'USER BRIEF (English scene — décor / card / mood only — never rewrite faces):',
+                narrative,
+                processed.explicitAppearanceChange
+                    ? 'The user explicitly asked to change hair or clothing; apply ONLY that change. Keep the face identical.'
+                    : 'Do not change hair, clothing, skin or face unless the brief explicitly requests a wardrobe or hair change.',
+                exports.NANO_BANANA_CRITICAL_CONSTRAINT,
+                exports.NANO_BANANA_STYLE_INSTRUCTION,
+                exports.NANO_BANANA_LIGHT_RIG_COHERENCE,
+                exports.NANO_BANANA_OPTICAL_BOKEH,
+            ].join('\n')
+            : narrative;
+    const honestyNote = coupleFaceSwap
         ? processed.beautifyStripped
-            ? ' (face beautify / smooth / lighten requests were ignored — photos remain truth)'
-            : ' (faces = reference photo pixels, no idealization)'
-        : '';
+            ? ' (couple face replacement — beautify/smooth/lighten ignored; couple photos remain truth)'
+            : ' (couple face replacement — Image 1 card kept, faces from Images 2+)'
+        : hasRefs
+            ? processed.beautifyStripped
+                ? ' (face beautify / smooth / lighten requests were ignored — photos remain truth)'
+                : ' (faces = reference photo pixels, no idealization)'
+            : '';
     return {
         ...processed,
         englishSceneBrief: narrative,
@@ -270,6 +642,7 @@ function applyEnglishSceneBrief(processed, englishSceneBrief) {
 function processUserPromptForHonestFaces(prompt, options) {
     const originalBrief = collapseSpaces(prompt).slice(0, 1500);
     const referenceCount = Math.max(0, Math.min(options?.referenceCount ?? 0, 4));
+    const coupleFaceSwap = Boolean(options?.coupleFaceSwap) && referenceCount >= 2;
     const { text: cleaned, stripped } = stripFaceBeautifyLanguage(originalBrief);
     const explicitAppearanceChange = EXPLICIT_FACE_CHANGE.test(originalBrief);
     const decorBrief = cleaned || originalBrief;
@@ -277,43 +650,72 @@ function processUserPromptForHonestFaces(prompt, options) {
         referenceCount,
         embedText: options?.embedText,
         artStyleLine: options?.artStyleLine,
+        coupleFaceSwap,
     });
-    const honestyNote = referenceCount
+    const honestyNote = coupleFaceSwap
         ? stripped
-            ? ' (face beautify / smooth / lighten requests were ignored — photos remain truth)'
-            : ' (faces = reference photo pixels, no idealization)'
-        : '';
+            ? ' (couple face replacement — beautify/smooth/lighten ignored; couple photos remain truth)'
+            : ' (couple face replacement — Image 1 card kept, faces from Images 2+)'
+        : referenceCount
+            ? stripped
+                ? ' (face beautify / smooth / lighten requests were ignored — photos remain truth)'
+                : ' (faces = reference photo pixels, no idealization)'
+            : '';
     const visionBrief = collapseSpaces(`${englishSceneBrief}${honestyNote}`);
-    const imageBrief = referenceCount
+    const hasTextModifications = /remplace.{0,20}(?:texte|titre|date|nom|description)|CARD VARIABLES|Replace on model image|écrits?|nouveaux? noms?/i.test(originalBrief);
+    const imageBrief = coupleFaceSwap
         ? [
-            'USER BRIEF (English scene — décor / card / mood only — never rewrite faces):',
+            'USER BRIEF (English scene — replace faces on Image 1 with the couple in Images 2+):',
             englishSceneBrief,
-            explicitAppearanceChange
-                ? 'The user explicitly asked to change hair or clothing; apply ONLY that change. Keep the face identical.'
-                : 'Do not change hair, clothing, skin or face unless the brief explicitly requests a wardrobe or hair change.',
+            hasTextModifications
+                ? 'Replace the faces on Image 1 (strictly matching groom face to male body/suit, bride face to female body/gown). Do NOT keep old names, dates or text from Image 1. Leave clean card space for overlay typography.'
+                : 'Replace ONLY the faces on the incoming card (strictly matching groom face to male body/suit, bride face to female body/gown). Keep pose, bodies, wardrobe, décor and lighting. Do not paint old names on clean background.',
             exports.NANO_BANANA_CRITICAL_CONSTRAINT,
             exports.NANO_BANANA_STYLE_INSTRUCTION,
             exports.NANO_BANANA_LIGHT_RIG_COHERENCE,
             exports.NANO_BANANA_OPTICAL_BOKEH,
         ].join('\n')
-        : englishSceneBrief;
+        : referenceCount
+            ? [
+                'USER BRIEF (English scene — décor / card / mood only — never rewrite faces):',
+                englishSceneBrief,
+                explicitAppearanceChange
+                    ? 'The user explicitly asked to change hair or clothing; apply ONLY that change. Keep the face identical.'
+                    : 'Do not change hair, clothing, skin or face unless the brief explicitly requests a wardrobe or hair change.',
+                exports.NANO_BANANA_CRITICAL_CONSTRAINT,
+                exports.NANO_BANANA_STYLE_INSTRUCTION,
+                exports.NANO_BANANA_LIGHT_RIG_COHERENCE,
+                exports.NANO_BANANA_OPTICAL_BOKEH,
+            ].join('\n')
+            : englishSceneBrief;
     return {
         originalBrief,
         decorBrief,
         englishSceneBrief,
         visionBrief,
         imageBrief,
-        identityHeader: buildHonestFaceIdentityHeader(referenceCount),
-        referenceRoles: buildReferenceRoles(referenceCount),
+        identityHeader: buildHonestFaceIdentityHeader(referenceCount, {
+            coupleFaceSwap,
+            genderMappingDirective: options?.genderMappingDirective,
+        }),
+        referenceRoles: buildReferenceRoles(referenceCount, {
+            coupleFaceSwap,
+            genderMappingDirective: options?.genderMappingDirective,
+        }),
         beautifyStripped: stripped,
         explicitAppearanceChange,
+        coupleFaceSwap,
     };
 }
-function buildGeminiSceneSteps(embedText) {
+function buildGeminiSceneSteps(embedText, options) {
     return [
         '=== SCENE STEPS (Gemini step-by-step) ===',
-        'First, lock every face from the character-consistency references — honest pixels, no idealization.',
-        'Then, compose one vertical 9:16 print-ready invitation (paper, florals, frame, lighting) from the English scene brief and organizer context.',
+        options?.coupleFaceSwap
+            ? 'First, keep Image 1’s card, pose, bodies and décor. Then lock replacement faces from Images 2+ — honest pixels, no idealization.'
+            : 'First, lock every face from the character-consistency references — honest pixels, no idealization.',
+        options?.coupleFaceSwap
+            ? 'Then, compose one vertical 9:16 print-ready invitation that is the incoming card with only the couple faces replaced.'
+            : 'Then, compose one vertical 9:16 print-ready invitation (paper, florals, frame, lighting) from the English scene brief and organizer context.',
         embedText
             ? 'Finally, embed sharp invitation lettering (names, date, venue from the brief) in the lower third or a cartouche that does not cover eyes, smile or cheeks.'
             : 'Finally, leave clean negative space for later typography — no readable names, dates, logos or watermarks.',
@@ -445,26 +847,191 @@ function buildGenericThematicBackgroundPrompt(imagePrompt, options) {
     }
     return lines.filter(Boolean).join('\n');
 }
-/**
- * Construit un prompt de variante A/B (Variante 2 / Proposition B) à partir du prompt initial :
- * 1. Ancrage strict et absolu sur les photos de référence passées (mêmes visages, mêmes personnes, morphologie, regard, carnation et tenues identiques).
- * 2. Altération légère et contrôlée du prompt (jamais totale) : préserve 90-95% du décor, de l'ambiance et de la palette, en modulant uniquement l'angle de vue, les drapés/fleurs ou les accents lumineux.
- */
-function buildVariantImagePrompt(basePrompt, hasReferences = false) {
-    const variantDirectives = [
-        'ALTERNATIVE COMPOSITION VARIANT (A/B VARIATION 2):',
-        '- STRICT REFERENCE IMAGE & HOST IDENTITY ANCHORING (MANDATORY):',
-        '  * The individuals depicted MUST BE THE EXACT SAME PEOPLE as provided in the reference images.',
-        '  * Retain 100% of their facial bone structure, natural skin texture, realistic gaze, genuine smile, undertone, age, hair, and clothing attire.',
-        '  * NEVER replace the reference hosts with stock models, different individuals, or generic AI faces. Do not alter their core physical traits.',
-        '- GENTLE, CONTROLLED PROMPT ALTERATION (NEVER A TOTAL REWRITE):',
-        '  * Preserve 90% to 95% of the base prompt instructions: keep the exact same event celebration theme, color palette, luxury stationery ambience, and vertical 9:16 aspect ratio.',
-        '  * DO NOT overhaul the scene or invent a completely unrelated environment.',
-        '- SUBTLE ARTISTIC VARIATIONS ONLY:',
-        '  * Nuanced camera angle or subtle variation in framing: adopt a slightly varied perspective (e.g., 10-15° angle modulation, subtly altered camera elevation, or refined depth-of-field).',
-        '  * Delicate decorative reorganization: elegantly vary the floral arch geometry, drapery folds, or candle/golden accent placements.',
-        '  * Refined lighting nuance: subtle shift in ambient warmth, soft rim highlights, or silky bokeh texture while preserving the overall color temperature.',
-        '- The second proposition must be immediately recognizable as a harmonious, premium alternative choice for the EXACT SAME event and the EXACT SAME hosts.',
-    ].join('\n');
-    return `${basePrompt}\n\n${variantDirectives}`;
+/** Variante A : coller au brief, cadrage serré, aucun extra. */
+function buildFaithfulImagePrompt(basePrompt) {
+    return collapseSpaces([
+        basePrompt,
+        'VARIANT A — FAITHFUL: Follow the brief and locks exactly. Tight ceremonial framing. Do not add extra crowds, extra ornaments, or a wider scene.',
+    ].join('\n')).slice(0, exports.COMPACT_IMAGE_PROMPT_MAX_CHARS);
+}
+/** Variante B : même événement et mêmes visages, plus d’espace et de matière. */
+function buildAmpleImagePrompt(basePrompt, hasReferences = false) {
+    const identity = hasReferences
+        ? 'Same hosts as the references — faces, skin, hair and clothes stay locked.'
+        : 'Same celebration, same palette, same locks.';
+    return collapseSpaces([
+        basePrompt,
+        'VARIANT B — AMPLE: Same event and same people.',
+        identity,
+        'Give more breathing room: wider ceremonial space, richer florals and materials, more paper and foil atmosphere.',
+        'Do not change faces, people count, or invent a new event.',
+    ].join('\n')).slice(0, exports.COMPACT_IMAGE_PROMPT_MAX_CHARS);
+}
+function buildVariantImagePrompt(basePrompt, hasReferences = false, role = 'ample') {
+    return role === 'faithful'
+        ? buildFaithfulImagePrompt(basePrompt)
+        : buildAmpleImagePrompt(basePrompt, hasReferences);
+}
+const COPY_LANGUAGES = ['fr', 'ln', 'sw', 'kg', 'lua'];
+const COPY_ROLES = [
+    'greeting',
+    'kicker',
+    'title',
+    'datetime',
+    'venue',
+    'body',
+    'rsvp',
+];
+exports.INVITATION_COPY_RSVP = {
+    fr: 'Confirmer votre présence',
+    ln: 'Kondima kozala wana',
+    sw: 'Thibitisha uwepo wako',
+    kg: 'Tula kimbangi ya kukwiza',
+    lua: 'Jadika dikalapu diebe',
+};
+exports.INVITATION_COPY_SYSTEM = `You write EventMaster invitation overlay copy for Central Africa / RDC.
+The artwork already exists. You ONLY write editor text layers. Do not describe the image.
+
+Rules:
+- Return ONLY valid JSON (json_object).
+- One language for every line. If the brief is Lingala, Swahili, Kikongo or Tshiluba, write ALL lines in that language. Do not fall back to French.
+- Public templates: never invent private names or fixed calendar dates. Use {{title}}, {{date}}, {{location}}, {{firstName}}.
+- Private templates: keep names, date and venue from the brief. Do not invent missing facts.
+- 5–7 short ceremonial lines. No hashtags, no emoji, no markdown.
+- Include exactly one rsvp line.
+
+Exact schema:
+{
+  "language": "fr" | "ln" | "sw" | "kg" | "lua",
+  "lines": [
+    { "role": "greeting" | "kicker" | "title" | "datetime" | "venue" | "body" | "rsvp", "text": "string" }
+  ]
+}`;
+function detectInvitationCopyLanguage(brief) {
+    const text = String(brief || '');
+    if (/\blingala\b|libyangi|boya tosepela|mokolo\s*:|esika\s*:|kondima kozala/i.test(text))
+        return 'ln';
+    if (/\bswahili\b|kiswahili|mwaliko wa|karibuni|tarehe\s*:|mahali\s*:|thibitisha uwepo/i.test(text))
+        return 'sw';
+    if (/\bkikongo\b|mbila ya nkinsi|kwizeno|kilumbu\s*:|kisika\s*:/i.test(text))
+        return 'kg';
+    if (/\btshiluba\b|ciluba|dibikila|luayi tusankidile|dituku\s*:|muaba\s*:/i.test(text))
+        return 'lua';
+    return 'fr';
+}
+function parseInvitationCopyLanguage(value, fallback = 'fr') {
+    return typeof value === 'string' && COPY_LANGUAGES.includes(value)
+        ? value
+        : fallback;
+}
+function parseInvitationCopyDraft(raw, fallbackLanguage = 'fr') {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw))
+        return null;
+    const parsed = raw;
+    const language = parseInvitationCopyLanguage(parsed.language, fallbackLanguage);
+    const source = Array.isArray(parsed.lines)
+        ? parsed.lines
+        : Array.isArray(parsed.elements)
+            ? parsed.elements
+            : [];
+    const seen = new Set();
+    const lines = [];
+    for (const item of source) {
+        if (!item || typeof item !== 'object' || Array.isArray(item))
+            continue;
+        const row = item;
+        const role = typeof row.role === 'string' ? row.role.trim() : '';
+        const text = collapseSpaces(typeof row.text === 'string' ? row.text : '').slice(0, 220);
+        if (!COPY_ROLES.includes(role) || !text)
+            continue;
+        const typedRole = role;
+        if (seen.has(typedRole))
+            continue;
+        seen.add(typedRole);
+        lines.push({ role: typedRole, text });
+        if (lines.length >= 7)
+            break;
+    }
+    if (!seen.has('rsvp')) {
+        lines.push({ role: 'rsvp', text: exports.INVITATION_COPY_RSVP[language] });
+    }
+    if (lines.length < 3)
+        return null;
+    return { language, lines };
+}
+function buildInvitationCopyUserText(input) {
+    return [
+        `MODE: ${input.intent || 'create'}`,
+        `LANGUAGE: ${input.language}`,
+        input.isPublic ? 'TEMPLATE: public — use {{title}}, {{date}}, {{location}}, {{firstName}} only.' : 'TEMPLATE: private — keep brief facts, do not invent missing names.',
+        `BRIEF:\n"""\n${collapseSpaces(input.originalBrief).slice(0, 900)}\n"""`,
+        input.organizerContext ? input.organizerContext.slice(0, 400) : '',
+        'Write the overlay lines now.',
+    ]
+        .filter(Boolean)
+        .join('\n');
+}
+const COPY_STACK = [
+    'greeting',
+    'kicker',
+    'title',
+    'datetime',
+    'venue',
+    'body',
+    'rsvp',
+];
+function applyInvitationCopyToElements(draft, palette) {
+    const byRole = new Map(draft.lines.map((line) => [line.role, line.text]));
+    const elements = [];
+    let index = 0;
+    for (const role of COPY_STACK) {
+        const text = byRole.get(role);
+        if (!text)
+            continue;
+        if (role === 'rsvp') {
+            elements.push({
+                id: `ai-copy-rsvp-${index}`,
+                type: 'rsvp-block',
+                text,
+                color: palette.accent,
+                fontSize: '16px',
+                align: 'center',
+                width: 'full',
+                rsvpPlacement: 'outside',
+                positionMode: 'flow',
+            });
+            index += 1;
+            continue;
+        }
+        const isTitle = role === 'title';
+        const isGreeting = role === 'greeting';
+        elements.push({
+            id: `ai-copy-${role}-${index}`,
+            type: 'text',
+            text,
+            color: isTitle ? palette.primary : palette.secondary,
+            fontSize: isTitle ? '32px' : isGreeting ? '13px' : '16px',
+            fontFamily: isTitle ? 'Playfair Display' : isGreeting ? 'Great Vibes' : 'Lora',
+            align: 'center',
+            width: 'full',
+            bold: isTitle,
+            italic: isGreeting,
+            positionMode: 'flow',
+        });
+        index += 1;
+        if (isTitle) {
+            elements.push({
+                id: `ai-copy-div-${index}`,
+                type: 'divider',
+                text: '',
+                color: palette.accent,
+                dividerStyle: 'ornament-diamond',
+                align: 'center',
+                width: 'full',
+                positionMode: 'flow',
+            });
+            index += 1;
+        }
+    }
+    return elements;
 }

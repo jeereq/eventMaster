@@ -14,9 +14,11 @@ const marketplaceFeedController_1 = require("../controllers/marketplaceFeedContr
 const publicEventController_1 = require("../controllers/publicEventController");
 const marketplaceClientController_1 = require("../controllers/marketplaceClientController");
 const templateController_1 = require("../controllers/templateController");
+const studioJobController_1 = require("../controllers/studioJobController");
 const roomController_1 = require("../controllers/roomController");
 const showcasePlanController_1 = require("../controllers/showcasePlanController");
 const flexPayController_1 = require("../controllers/flexPayController");
+const invitationTemplateFavoriteController_1 = require("../controllers/invitationTemplateFavoriteController");
 const router = (0, express_1.Router)();
 /** GET /api/public/site — identité & contact (sans secrets) */
 router.get('/site', (_req, res) => {
@@ -64,6 +66,7 @@ router.get('/templates', async (_req, res) => {
                 tenantId: null,
                 isGlobal: true,
                 showOnLanding: t.showOnLanding,
+                aiTokenCost: t.aiTokenCost ?? 2,
                 category: content?.global?.landingCategory || 'private',
                 description: content?.global?.landingDescription || null,
                 createdAt: t.createdAt,
@@ -96,6 +99,8 @@ router.get('/ticket-orders/session/:sessionId', publicEventController_1.getTicke
 router.post('/event-plan-ai', auth_1.optionalAuth, marketplaceClientController_1.publicPlanEventAi);
 router.post('/templates/ai/compose', auth_1.optionalAuth, templateController_1.publicComposeTemplateWithAi);
 router.post('/rooms/ai/compose', auth_1.optionalAuth, roomController_1.publicComposeRoomPlan);
+router.get('/studio/jobs', auth_1.optionalAuth, studioJobController_1.listPublicStudioJobs);
+router.get('/studio/jobs/:jobId', auth_1.optionalAuth, studioJobController_1.getPublicStudioJob);
 router.get('/rooms/ai/history', auth_1.optionalAuth, roomController_1.listPublicAiRoomPlanComposes);
 router.get('/rooms/ai/history/:id', auth_1.optionalAuth, roomController_1.getPublicAiRoomPlanCompose);
 router.post('/rooms/ai/history/claim', auth_1.requireAuth, roomController_1.claimPublicAiRoomPlanComposes);
@@ -107,6 +112,13 @@ router.post('/ai-simulations/claim', auth_1.requireAuth, marketplaceClientContro
 router.post('/ai-tokens/checkout', auth_1.optionalAuth, marketplaceClientController_1.checkoutAiTokens);
 router.get('/ai-tokens/orders/:orderId/verify', marketplaceClientController_1.verifyAiTokensOrder);
 router.get('/ai-tokens/device/:deviceId/balance', auth_1.optionalAuth, marketplaceClientController_1.getAiTokensDeviceBalance);
+router.get('/invitation-favorites', invitationTemplateFavoriteController_1.listPublicInvitationTemplateFavorites);
+router.post('/invitation-favorites', invitationTemplateFavoriteController_1.addPublicInvitationTemplateFavorite);
+router.delete('/invitation-favorites/:templateId', invitationTemplateFavoriteController_1.removePublicInvitationTemplateFavorite);
+router.get('/invitation-favorites/mine', auth_1.requireAuth, invitationTemplateFavoriteController_1.listUserInvitationTemplateFavorites);
+router.post('/invitation-favorites/mine', auth_1.requireAuth, invitationTemplateFavoriteController_1.addUserInvitationTemplateFavorite);
+router.delete('/invitation-favorites/mine/:templateId', auth_1.requireAuth, invitationTemplateFavoriteController_1.removeUserInvitationTemplateFavorite);
+router.post('/invitation-favorites/claim', auth_1.requireAuth, invitationTemplateFavoriteController_1.claimInvitationTemplateFavorites);
 router.post('/payments/flexpay/callback', flexPayController_1.flexPayCardCallback);
 router.get('/payments/flexpay/callback', flexPayController_1.flexPayCardCallback);
 router.get('/payments/flexpay/return', flexPayController_1.flexPayCardReturn);
