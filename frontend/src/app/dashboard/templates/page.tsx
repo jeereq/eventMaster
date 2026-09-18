@@ -1948,14 +1948,15 @@ export default function TemplatesPage() {
                  type="button"
                  disabled={aiComposeBusy}
                  onClick={() => removeAiComposeFile(i)}
-                 className="absolute top-0.5 right-0.5 inline-flex min-h-8 min-w-8 items-center justify-center bg-foreground/80 text-background rounded-full z-10"
+                 className="absolute top-1 right-1 inline-flex min-h-[36px] min-w-[36px] items-center justify-center bg-foreground/85 hover:bg-foreground text-background rounded-full transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary shadow-xs z-10"
                  aria-label={i === 0 ? 'Retirer le premier visage' : 'Retirer le second visage'}
                >
-                 <XCircle className="w-3.5 h-3.5" aria-hidden />
+                 <XCircle className="w-4 h-4" aria-hidden />
                </button>
                <button
                  type="button"
                  disabled={aiComposeBusy}
+                 aria-label={`Rôle pour la photo ${i + 1} : ${role === 'groom' ? 'Marié (costume)' : 'Mariée (robe)'}. Cliquez pour permuter.`}
                  onClick={(e) => {
                    e.stopPropagation();
                    setAiComposeFileRoles((prev) => {
@@ -1966,14 +1967,14 @@ export default function TemplatesPage() {
                    });
                  }}
                  className={cn(
-                   'absolute bottom-0 inset-x-0 py-1 text-[11px] font-bold text-center tracking-tight transition z-10 cursor-pointer shadow-xs',
+                   'absolute bottom-0 inset-x-0 min-h-[32px] py-1 text-xs font-bold text-center tracking-tight transition z-10 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                    role === 'groom'
-                     ? 'bg-indigo-600/90 hover:bg-indigo-600 text-white'
-                     : 'bg-rose-600/90 hover:bg-rose-600 text-white',
+                     ? 'bg-stage/95 hover:bg-stage text-stage-foreground border-t border-white/10'
+                     : 'bg-festive-accent/95 hover:bg-festive-accent text-white border-t border-white/10',
                  )}
                  title="Cliquez pour changer le rôle (Marié ou Mariée)"
                >
-                 {role === 'groom' ? '🤵 Marié (Costume)' : '👰 Mariée (Robe)'}
+                 {role === 'groom' ? '🤵 Marié' : '👰 Mariée'}
                </button>
              </div>
            );
@@ -3773,13 +3774,15 @@ const studioModelPhotos = useMemo(
  />
  Afficher sur la page d&apos;accueil
  </label>
- <label className="inline-flex min-h-[44px] items-center gap-1.5 text-xs font-bold text-muted px-2">
+ <label htmlFor="template-ai-token-cost" className="inline-flex min-h-[44px] items-center gap-1.5 text-xs font-bold text-muted px-2">
  <span>Jetons IA</span>
  <input
+ id="template-ai-token-cost"
  type="number"
  min={1}
  max={50}
  value={aiTokenCost}
+ aria-label="Coût en jetons IA pour utiliser ce modèle comme base"
  onChange={(e) => {
    const next = Math.round(Number(e.target.value));
    setAiTokenCost(Number.isFinite(next) ? Math.min(50, Math.max(1, next)) : AI_INVITATION_COMPOSE_TOKEN_COST);

@@ -301,13 +301,13 @@ function renderElement(
       return (
         <div
           className={`border border-dashed rounded-xl text-center w-full my-1 ${
-            hasBackgroundImage ? 'bg-black/35 backdrop-blur-[2px] shadow-sm' : ''
+            hasBackgroundImage ? 'bg-stage/60 text-stage-foreground shadow-sm' : ''
           } ${
             compact ? 'px-2 py-2 text-xs' : 'px-4 py-3 text-xs'
           }`}
           style={{
             borderColor: accent,
-            color: accent,
+            color: hasBackgroundImage ? '#ffffff' : accent,
             textShadow: hasBackgroundImage ? '0 1px 2px rgba(0,0,0,0.8)' : undefined,
           }}
         >

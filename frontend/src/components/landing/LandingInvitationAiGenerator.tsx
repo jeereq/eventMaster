@@ -1779,10 +1779,10 @@ export default function LandingInvitationAiGenerator({
                     return (
                       <div
                         key={url}
-                        className="relative w-20 h-24 sm:w-24 sm:h-28 rounded-[var(--radius-card)] overflow-hidden border border-border shadow-xs group bg-surface-muted flex flex-col"
+                        className="relative w-24 h-32 sm:w-28 sm:h-36 rounded-[var(--radius-card)] overflow-hidden border border-border shadow-xs group bg-surface-muted flex flex-col"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={url} alt={`Référence ${i + 1}`} className="w-full h-full object-cover" />
+                        <img src={url} alt={`Photo référence ${i + 1}`} className="w-full h-full object-cover" />
                         <button
                           type="button"
                           disabled={busy}
@@ -1790,15 +1790,16 @@ export default function LandingInvitationAiGenerator({
                             e.stopPropagation();
                             removeFile(i);
                           }}
-                          className="absolute top-0.5 right-0.5 min-w-8 min-h-8 inline-flex items-center justify-center bg-foreground/85 text-background rounded-full opacity-90 hover:opacity-100 disabled:opacity-40 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-xs z-10"
-                          aria-label={`Retirer l’image ${i + 1}`}
+                          className="absolute top-1 right-1 min-w-[36px] min-h-[36px] inline-flex items-center justify-center bg-foreground/85 text-background rounded-full opacity-90 hover:opacity-100 disabled:opacity-40 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-xs z-10"
+                          aria-label={`Retirer la photo référence ${i + 1}`}
                         >
-                          <XCircle className="w-3.5 h-3.5" aria-hidden />
+                          <XCircle className="w-4 h-4" aria-hidden />
                         </button>
                         {coupleFaceSwap && (
                           <button
                             type="button"
                             disabled={busy}
+                            aria-label={`Rôle pour la photo ${i + 1} : ${role === 'groom' ? 'Marié (costume)' : 'Mariée (robe)'}. Cliquez pour permuter.`}
                             onClick={(e) => {
                               e.stopPropagation();
                               setFileRoles((prev) => {
@@ -1809,14 +1810,14 @@ export default function LandingInvitationAiGenerator({
                               });
                             }}
                             className={cn(
-                              'absolute bottom-0 inset-x-0 py-1 text-[11px] font-bold text-center tracking-tight transition z-10 cursor-pointer shadow-xs',
+                              'absolute bottom-0 inset-x-0 min-h-[32px] py-1 text-xs font-bold text-center tracking-tight transition z-10 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                               role === 'groom'
-                                ? 'bg-indigo-600/90 hover:bg-indigo-600 text-white'
-                                : 'bg-rose-600/90 hover:bg-rose-600 text-white',
+                                ? 'bg-stage/95 hover:bg-stage text-stage-foreground border-t border-white/10'
+                                : 'bg-festive-accent/95 hover:bg-festive-accent text-white border-t border-white/10',
                             )}
                             title="Cliquez pour changer le rôle (Marié ou Mariée)"
                           >
-                            {role === 'groom' ? '🤵 Marié (Costume)' : '👰 Mariée (Robe)'}
+                            {role === 'groom' ? '🤵 Marié' : '👰 Mariée'}
                           </button>
                         )}
                       </div>
