@@ -763,7 +763,7 @@ export default function LandingInvitationAiGenerator({
           cardIdentity.title ? `titre : ${cardIdentity.title}` : '',
           cardIdentity.description ? `lieu : ${cardIdentity.description}` : '',
         ].filter(Boolean).join(', ');
-        promptToSend = `Remplacer les visages du couple (respecter les genres : marié sur costume, mariée sur robe) et modifier les textes (${textParts}). Conserver la disposition, le style et les ornements.`;
+        promptToSend = `Remplacer les visages du couple (respecter les genres : marié sur costume, mariée sur robe) et modifier les textes (${textParts}). Conserver la disposition, le style, les ornements et les expressions des visages du carton. Les photos sources prennent ces expressions, pas les leurs.`;
       } else if (coupleFaceSwap) {
         promptToSend = COUPLE_FACE_SWAP_DEFAULT_PROMPT;
       } else if (isModifyMode && hasTexts) {
@@ -1704,7 +1704,7 @@ export default function LandingInvitationAiGenerator({
                             : 'Image d’invitation à modifier'}
                       </span>
                       <span className="block text-xs text-muted mt-0.5">
-                        Les visages de cette carte seront remplacés. Pose et décor restent.
+                        Les visages de cette carte seront remplacés. Pose du corps, décor et expressions du carton restent ; vos photos donnent l’identité.
                       </span>
                     </span>
                   </button>
@@ -1761,8 +1761,8 @@ export default function LandingInvitationAiGenerator({
                   {isModifyMode && !coupleFaceSwap
                     ? 'Une photo nette de l’invitation à modifier. JPEG, PNG ou WebP, jusqu’à 4 vues.'
                     : coupleFaceSwap
-                      ? 'Visages nets, bien cadrés. Ils remplaceront uniquement les visages de la carte.'
-                    : 'Sans photo : carte depuis le brief. Avec photos : visages conservés (yeux, sourire, joues).'}
+                      ? 'Visages nets, bien cadrés. Ils fourniront l’identité ; l’expression (sourire, regard) vient des visages déjà sur la carte.'
+                    : 'Sans photo : carte depuis le brief. Avec photos : visages et expressions conservés (yeux, sourire, émotion).'}
                 </p>
               </button>
 
@@ -2836,7 +2836,7 @@ export default function LandingInvitationAiGenerator({
       >
         <p className="text-sm text-muted leading-relaxed">
           {coupleFaceSwap
-            ? 'Les visages du couple remplaceront ceux de l’image. Pose, tenues et décor restent. Vous pourrez encore ajuster les textes ensuite.'
+            ? 'Les visages du couple remplaceront ceux de l’image. Pose, tenues, décor et expressions du carton restent. Vous pourrez encore ajuster les textes ensuite.'
             : isModifyMode && !coupleFaceSwap
             ? 'La photo de votre carte guide le rendu. Vous pourrez encore ajuster textes et réponse à l’invitation ensuite.'
             : 'Le brief et les photos de visages, s’il y en a, composent l’invitation. Vous pourrez tout ajuster ensuite.'}

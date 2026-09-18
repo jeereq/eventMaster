@@ -13,6 +13,7 @@ import {
   COMPACT_IMAGE_PROMPT_MAX_CHARS,
   NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE,
   NANO_BANANA_COMPACT_FACE_LOCK,
+  NANO_BANANA_CARD_EXPRESSION_LOCK,
   NANO_BANANA_CRITICAL_CONSTRAINT,
   NANO_BANANA_LIGHT_RIG_COHERENCE,
   NANO_BANANA_OPTICAL_BOKEH,
@@ -267,15 +268,18 @@ describe('buildHonestFaceIdentityHeader', () => {
   it('sépare carton entrant et visages du couple', () => {
     const roles = buildReferenceRoles(3, { coupleFaceSwap: true });
     assert.match(roles, /Image 1: INCOMING INVITATION/);
+    assert.match(roles, /COUPLE IDENTITY lock/);
     assert.match(roles, /Image 2 \(left \/ primary host\)/);
     assert.match(roles, /Image 3 \(right \/ secondary host\)/);
     assert.doesNotMatch(roles, /do not invent a face from it/);
 
     const header = buildHonestFaceIdentityHeader(3, { coupleFaceSwap: true });
     assert.match(header, /COUPLE FACE REPLACEMENT/);
-    assert.match(header, /Do not keep the original faces from Image 1/);
+    assert.match(header, /Do not keep the original identity from Image 1/);
     assert.match(header, /GENDER & ATTIRE FIDELITY/i);
     assert.match(header, /SEAMLESS ANATOMICAL & SKIN HARMONIZATION/i);
+    assert.match(header, /CARD EXPRESSION LOCK/);
+    assert.ok(header.includes(NANO_BANANA_CARD_EXPRESSION_LOCK));
 
     const rolesWithGender = buildReferenceRoles(3, {
       coupleFaceSwap: true,
@@ -291,6 +295,8 @@ describe('buildHonestFaceIdentityHeader', () => {
     assert.match(processed.englishSceneBrief, /Replace/);
     assert.match(processed.imageBrief, /replace faces on Image 1/i);
     assert.match(processed.imageBrief, /SEAMLESS ANATOMICAL & SKIN HARMONIZATION/i);
+    assert.match(processed.imageBrief, /CARD EXPRESSION LOCK/);
+    assert.match(processed.imageBrief, /source faces adopt the card/i);
     assert.doesNotMatch(processed.identityHeader, /Forbidden: face swap|IDENTITY ANCHOR/);
 
     const processedWithTexts = processUserPromptForHonestFaces(
@@ -299,6 +305,14 @@ describe('buildHonestFaceIdentityHeader', () => {
     );
     assert.equal(processedWithTexts.coupleFaceSwap, true);
     assert.match(processedWithTexts.imageBrief, /Do NOT keep old names, dates or text/i);
+
+    const coupleLocks = buildInvitationLocks({
+      intent: 'couple',
+      analysis: { hasPeople: true, peopleCount: 2 },
+      referenceCount: 3,
+    });
+    assert.match(coupleLocks.join('\n'), /facial expression/i);
+    assert.match(coupleLocks.join('\n'), /adopt the card expressions/i);
   });
 });
 
@@ -551,6 +565,7 @@ describe('compact image prompt', () => {
     assert.match(couplePrompt, /MODE couple/);
     assert.match(couplePrompt, /Images 2\+/);
     assert.match(couplePrompt, /RAW candid faces/);
+    assert.ok(couplePrompt.includes(NANO_BANANA_CARD_EXPRESSION_LOCK));
     assert.ok(couplePrompt.includes(NANO_BANANA_COMPACT_FACE_LOCK));
     assert.doesNotMatch(couplePrompt, /IDENTITY ANCHOR/);
     assert.ok(couplePrompt.length < 2500);

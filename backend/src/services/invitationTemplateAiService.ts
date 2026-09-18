@@ -124,8 +124,8 @@ Exact schema:
     "composition": "observed layout / framing",
     "hasPeople": true | false,
     "peopleCount": 0,
-    "peopleFaces": "none | PERSON 1 / PERSON 2 left-to-right: observed eyes, smile, cheeks, marks only",
-    "faceLandmarks": "none | observed bone structure, eye spacing, smile, scars — unclear if unsure",
+    "peopleFaces": "none | PERSON 1 / PERSON 2 left-to-right: observed eyes, smile, expression (laugh/serious/neutral), cheeks, marks only",
+    "faceLandmarks": "none | observed bone structure, eye spacing, smile, expression muscles, scars — unclear if unsure",
     "skinTones": "none | observed skin — NEVER lighten",
     "hairStyles": "none | observed length, texture, hairline",
     "clothingStyles": "none | observed cuts, fabrics, colors",
@@ -176,6 +176,7 @@ Organizer context may fill event type, language, names/date/venue and décor tas
 People:
 - hasPeople=true: pixels are truth. peopleFaces / faceLandmarks are lock lists, not pretty-face briefs.
 - Forbidden: lookalike, celebrity, stock model, beautify, smooth, lighten, invented smile.
+- Expression lock: peopleFaces must record the SOURCE photo expression (open laugh, closed smile, serious, etc.). Later image gen must replay that expression, not a generic wedding pose.
 
 Layout:
 - Overlay copy is written later by a text model. elements may be a short skeleton (title/date placeholders only).
@@ -360,10 +361,10 @@ const FACE_POLICY_NO_PEOPLE =
   'FACE POLICY: Prefer decorative artwork. If any person still appears, they MUST follow the RDC representation default: Black African men and/or women only — never Caucasian stock models.';
 
 const FACE_POLICY_KEEP_PEOPLE =
-  'IDENTITY LOCK — PIXELS WIN: The attached photo(s) are the only identity source. Keep EACH person as the SAME individual (not a sibling, celebrity, or beautified lookalike). Unchanged: bone structure, eyes and gaze, exact smile, cheek volume, skin tone (never lighten), age, hair, clothing, moles/scars. Forbidden: face swap, slim/contour, symmetry, doll eyes, invented grin, airbrush, CGI. If any text description conflicts with the photo, obey the photo.';
+  'IDENTITY LOCK — PIXELS WIN: The attached photo(s) are the only identity source. Keep EACH person as the SAME individual (not a sibling, celebrity, or beautified lookalike). Unchanged: bone structure, eyes and gaze, exact smile, SOURCE facial expression (mouth, brows, emotion), cheek volume, skin tone (never lighten), age, hair, clothing, moles/scars. Forbidden: face swap, slim/contour, symmetry, doll eyes, invented grin, airbrush, CGI. If any text description conflicts with the photo, obey the photo.';
 
 const FACE_POLICY_COUPLE_SWAP =
-  'COUPLE FACE REPLACEMENT (ZERO GENDER INVERSION & LIFELIKE HARMONIZATION) — ORGANIZER REQUESTED: Image 1 is the incoming invitation/scene. Keep composition, pose, bodies, wardrobe, décor, lighting and ornaments. Images 2+ are the couple. Strictly match genders: place the groom/man face onto the male body (suit/tuxedo) and the bride/woman face onto the female body (bridal gown/dress). Replace ONLY the face(s) on Image 1 with these exact people. Harmonize facial shapes, jawline, neck blending, and skin undertones with the scene lighting and body anatomy so the couple looks completely real and seamless, with zero pasted-on artifacts. If new text/names are requested in the brief, do NOT keep old names from Image 1. Honest pixels: bone structure, eyes, smile, skin tone, moles. Forbidden: beautify, skin lightening, celebrity lookalike, inverting bride/groom genders, keeping the original Image 1 faces.';
+  'COUPLE FACE REPLACEMENT (ZERO GENDER INVERSION & LIFELIKE HARMONIZATION) — ORGANIZER REQUESTED: Image 1 is the incoming invitation/scene. Keep composition, body pose, bodies, wardrobe, décor, lighting, ornaments AND the facial expressions already on that card. Images 2+ are the couple identity only (who they are). Strictly match genders: place the groom/man face onto the male body (suit/tuxedo) and the bride/woman face onto the female body (bridal gown/dress). Replace ONLY the identity of the face(s) on Image 1 with these exact people. The source photos MUST adopt the card faces’ expressions (smile, gaze, emotion) — do not copy the source photo’s own mouth or eyes if the card differs. Harmonize facial shapes, jawline, neck blending, and skin undertones with the scene lighting and body anatomy so the couple looks completely real and seamless, with zero pasted-on artifacts. If new text/names are requested in the brief, do NOT keep old names from Image 1. Honest pixels: bone structure, eyes, skin tone, moles — expression from Image 1. Forbidden: beautify, skin lightening, celebrity lookalike, inverting bride/groom genders, keeping the original Image 1 identity.';
 
 function buildImagePrompt(
   userPrompt: string,
@@ -508,7 +509,7 @@ function visionUserText(
       : '';
 
   const honesty = coupleFaceSwap
-    ? `PHOTOS: Image 1 = incoming card (keep décor/pose, discard original faces). Images 2+ = couple identity. ${
+    ? `PHOTOS: Image 1 = incoming card (keep décor, body pose AND facial expressions; discard original identity only). Images 2+ = couple identity only. Source faces adopt the card expressions. ${
         options?.processed?.beautifyStripped
           ? 'Ignore beautify / smooth / lighten requests.'
           : 'Do not idealize the couple photos.'
@@ -594,7 +595,7 @@ function visionResultFromParsed(
       ? FACE_POLICY_KEEP_PEOPLE
       : FACE_POLICY_NO_PEOPLE;
   const identityPrefix = coupleFaceSwap
-    ? 'COUPLE FACE REPLACEMENT: Keep Image 1 card; replace faces with Images 2+. '
+    ? 'COUPLE FACE REPLACEMENT: Keep Image 1 card and its facial expressions; replace identity with Images 2+. '
     : hasRefs
       ? 'IDENTITY LOCK: Match people in the references exactly. '
       : '';
