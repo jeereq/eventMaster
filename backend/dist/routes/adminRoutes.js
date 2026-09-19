@@ -100,6 +100,7 @@ router.put('/tenants/:id', (0, auth_1.requireRole)(['SUPER_ADMIN']), adminContro
 router.delete('/tenants/:id', (0, auth_1.requireRole)(['SUPER_ADMIN']), adminController_1.deleteTenant);
 router.get('/users', (0, auth_1.requireRole)(['SUPER_ADMIN']), adminController_1.getAllUsers);
 router.post('/users', (0, auth_1.requireRole)(['SUPER_ADMIN']), adminController_1.createUser);
+router.post('/users/:id/resend-verification', (0, auth_1.requireRole)(['SUPER_ADMIN']), adminController_1.resendUserVerification);
 router.put('/users/:id', (0, auth_1.requireRole)(['SUPER_ADMIN']), adminController_1.updateUserRoleOrStatus);
 router.delete('/users/:id', (0, auth_1.requireRole)(['SUPER_ADMIN']), adminController_1.deleteUser);
 // Modèles d'invitations : Super Admin ou Commercial avec droit 'canManageTemplates'

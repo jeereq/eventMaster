@@ -803,6 +803,8 @@ export async function getAllUsers(req: AuthenticatedRequest, res: Response) {
             name: u.name,
             email: u.email,
             phone: u.phone,
+            phoneCountryCode: u.phoneCountryCode,
+            verificationMethod: u.verificationMethod,
             role: u.role,
             orgRole: u.orgRole,
             tenantId: u.tenantId,

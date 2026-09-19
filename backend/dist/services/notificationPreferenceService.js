@@ -8,6 +8,7 @@ exports.allowedChannels = allowedChannels;
 const db_1 = require("../db");
 const platformNotificationTypes_1 = require("../config/platformNotificationTypes");
 const notificationTemplates_1 = require("../utils/notificationTemplates");
+const platformSettingsService_1 = require("./platformSettingsService");
 function defaultChannelPreference(hasPhone) {
     return {
         email: true,
@@ -83,15 +84,17 @@ async function resolveChannelPreference(userId, type) {
     });
     return mergePreference(row ?? undefined, hasPhone);
 }
-function allowedChannels(pref, override) {
+function allowedChannels(pref, override, platformEnabled) {
+    const globalChannels = platformEnabled ?? (0, platformSettingsService_1.loadPlatformSettings)().notificationChannels;
+    const platformSet = globalChannels ? new Set(globalChannels) : null;
     const enabled = ['IN_APP'];
-    if (pref.email)
+    if (pref.email && (!platformSet || platformSet.has('EMAIL')))
         enabled.push('EMAIL');
-    if (pref.whatsapp)
+    if (pref.whatsapp && (!platformSet || platformSet.has('WHATSAPP')))
         enabled.push('WHATSAPP');
-    if (pref.push)
+    if (pref.push && (!platformSet || platformSet.has('PUSH')))
         enabled.push('PUSH');
-    if (pref.sms)
+    if (pref.sms && (!platformSet || platformSet.has('SMS')))
         enabled.push('SMS');
     const allowed = new Set(enabled);
     if (!override?.length)

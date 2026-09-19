@@ -194,6 +194,8 @@ interface AdminUserItem {
  name: string | null;
  email: string;
   phone?: string | null;
+  phoneCountryCode?: string | null;
+  verificationMethod?: string | null;
  role: 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER';
  orgRole?: 'MANAGER' | 'PROTOCOL' | 'COMMERCIAL' | null;
  isEmailVerified: boolean;
