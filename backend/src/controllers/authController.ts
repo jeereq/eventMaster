@@ -39,6 +39,8 @@ async function issueAndSendOtp(params: {
   method: VerificationMethod;
   invitedToTeam?: boolean;
   invitedByCommercial?: boolean;
+  invitedByAdmin?: boolean;
+  initialPassword?: string;
 }) {
   const code = generateOtpCode();
   const otpHash = await hashOtpCode(code);
@@ -63,6 +65,8 @@ async function issueAndSendOtp(params: {
     method: params.method,
     invitedToTeam: params.invitedToTeam,
     invitedByCommercial: params.invitedByCommercial,
+    invitedByAdmin: params.invitedByAdmin,
+    initialPassword: params.initialPassword,
   });
 
   return sentVia;
@@ -742,6 +746,8 @@ export async function setupUserOtpVerification(params: {
   method: VerificationMethod;
   invitedToTeam?: boolean;
   invitedByCommercial?: boolean;
+  invitedByAdmin?: boolean;
+  initialPassword?: string;
 }) {
   return issueAndSendOtp(params);
 }

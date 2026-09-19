@@ -148,6 +148,14 @@ html.em-splash-boot body {
   overflow: hidden;
 }
 
+@media (min-width: 768px) {
+  html.em-splash-boot,
+  html.em-splash-boot body {
+    overflow: auto !important;
+    background-color: var(--background) !important;
+  }
+}
+
 ::selection {
   background: color-mix(in srgb, var(--primary) 32%, transparent);
   color: var(--foreground);

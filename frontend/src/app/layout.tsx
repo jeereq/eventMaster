@@ -109,6 +109,7 @@ export default function RootLayout({
 @keyframes em-ns-spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){#em-native-splash .em-ns-spin{animation:none;border-top-color:rgba(5,150,105,.28)}#em-native-splash{transition:none}}
 html.em-splash-boot,html.em-splash-boot body{background:#f6f7f8!important;overflow:hidden}
+@media (min-width: 768px){#em-native-splash{display:none!important}html.em-splash-boot,html.em-splash-boot body{overflow:auto!important;background:inherit!important}}
 `.replace(/\n/g, ''),
           }}
         />
@@ -128,7 +129,7 @@ html.em-splash-boot,html.em-splash-boot body{background:#f6f7f8!important;overfl
         {/* Inline juste après le shell : le nœud existe déjà (évite getElementById null). */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme');var narrow=window.matchMedia('(max-width:767px)').matches;var standalone=window.matchMedia('(display-mode:standalone)').matches||!!(navigator&&navigator.standalone);var force=false;var seen=false;try{force=sessionStorage.getItem('em_force_splash')==='1';seen=sessionStorage.getItem('em_mobile_splash_seen_v1')==='1';}catch(e){}var need=(narrow||standalone)&&(force||!seen);var splash=document.getElementById('em-native-splash');if(need){document.documentElement.classList.add('em-splash-boot');window.__emPendingDark=(t==='dark');if(splash){splash.hidden=false;splash.classList.add('is-on');splash.setAttribute('aria-hidden','false');}}else if(t==='dark'){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}catch(e){try{document.documentElement.classList.remove('dark');}catch(x){}}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('theme');var isDesktop=window.innerWidth>=768||window.matchMedia('(min-width:768px)').matches;var narrow=window.matchMedia('(max-width:767px)').matches;var standalone=(window.matchMedia('(display-mode:standalone)').matches||!!(navigator&&navigator.standalone))&&!isDesktop;var force=false;var seen=false;try{force=sessionStorage.getItem('em_force_splash')==='1';seen=sessionStorage.getItem('em_mobile_splash_seen_v1')==='1';}catch(e){}var need=!isDesktop&&(narrow||standalone)&&(force||!seen);var splash=document.getElementById('em-native-splash');var skip=document.getElementById('em-native-splash-skip');function dismiss(){try{if(splash){splash.classList.remove('is-on');splash.hidden=true;}document.documentElement.classList.remove('em-splash-boot');sessionStorage.setItem('em_mobile_splash_seen_v1','1');sessionStorage.removeItem('em_force_splash');}catch(e){}}if(skip){skip.onclick=dismiss;}if(need){document.documentElement.classList.add('em-splash-boot');window.__emPendingDark=(t==='dark');if(splash){splash.hidden=false;splash.classList.add('is-on');splash.setAttribute('aria-hidden','false');}setTimeout(dismiss,2200);}else{dismiss();if(t==='dark'){document.documentElement.classList.add('dark');}else{document.documentElement.classList.remove('dark');}}}catch(e){try{document.documentElement.classList.remove('dark');}catch(x){}}})();`,
           }}
         />
         <a

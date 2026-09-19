@@ -85,6 +85,8 @@ async function issueAndSendOtp(params) {
         method: params.method,
         invitedToTeam: params.invitedToTeam,
         invitedByCommercial: params.invitedByCommercial,
+        invitedByAdmin: params.invitedByAdmin,
+        initialPassword: params.initialPassword,
     });
     return sentVia;
 }
@@ -373,11 +375,17 @@ async function login(req, res) {
             return res.status(401).json({ error: 'Identifiants incorrects' });
         }
         if (!user.isEmailVerified && user.role !== 'SUPER_ADMIN' && user.role !== 'COMMERCIAL') {
+            const pendingMethod = (0, platformSettingsService_1.resolveAuthOtpMethod)(user.verificationMethod || (0, platformSettingsService_1.defaultAuthOtpMethod)());
+            const methodLabel = pendingMethod === 'WHATSAPP'
+                ? 'WhatsApp'
+                : pendingMethod === 'SMS'
+                    ? 'SMS'
+                    : 'e-mail';
             return res.status(403).json({
-                error: 'Votre compte n\'est pas encore validé. Saisissez le code OTP reçu par e-mail ou WhatsApp.',
+                error: `Votre compte n'est pas encore validé. Saisissez le code OTP reçu par ${methodLabel}.`,
                 notVerified: true,
                 email: user.email,
-                verificationMethod: (0, platformSettingsService_1.resolveAuthOtpMethod)(user.verificationMethod || (0, platformSettingsService_1.defaultAuthOtpMethod)()),
+                verificationMethod: pendingMethod,
             });
         }
         const token = buildAuthToken(user);

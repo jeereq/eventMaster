@@ -12,6 +12,7 @@ import {
   deleteTenant, 
   getAllUsers, 
   createUser,
+  resendUserVerification,
   updateUserRoleOrStatus, 
   deleteUser, 
   getAllTemplates, 
@@ -203,6 +204,7 @@ router.delete('/tenants/:id', requireRole(['SUPER_ADMIN']), deleteTenant);
 
 router.get('/users', requireRole(['SUPER_ADMIN']), getAllUsers);
 router.post('/users', requireRole(['SUPER_ADMIN']), createUser);
+router.post('/users/:id/resend-verification', requireRole(['SUPER_ADMIN']), resendUserVerification);
 router.put('/users/:id', requireRole(['SUPER_ADMIN']), updateUserRoleOrStatus);
 router.delete('/users/:id', requireRole(['SUPER_ADMIN']), deleteUser);
 

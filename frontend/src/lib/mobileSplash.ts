@@ -7,6 +7,8 @@ const PENDING_DARK_KEY = '__emPendingDark';
 
 export function isMobileSplashViewport(): boolean {
   if (typeof window === 'undefined') return false;
+  // Les écrans desktop (>= 768px) ne doivent jamais afficher le splash mobile
+  if (window.innerWidth >= 768) return false;
   const narrow = window.matchMedia('(max-width: 767px)').matches;
   const standalone =
     window.matchMedia('(display-mode: standalone)').matches ||
@@ -30,6 +32,11 @@ export function releaseSplashScrollLock(): void {
 /** Affiche le shell HTML immédiatement (avant React) et reporte le mode sombre. */
 export function showNativeSplashShell(): void {
   if (typeof document === 'undefined') return;
+  // Ne jamais afficher sur desktop ou viewport non mobile
+  if (!isMobileSplashViewport()) {
+    hideNativeSplashShell();
+    return;
+  }
   const root = document.documentElement;
   root.classList.add('em-splash-boot');
 
@@ -55,10 +62,12 @@ export function hideNativeSplashShell(): void {
   const el = nativeSplashEl();
   if (el) {
     el.classList.remove('is-on');
+    el.classList.remove('is-leaving');
     el.setAttribute('aria-hidden', 'true');
     el.setAttribute('hidden', '');
   }
   document.documentElement.classList.remove('em-splash-boot');
+  document.body?.classList.remove('em-splash-boot');
   releaseSplashScrollLock();
 
   try {
@@ -74,6 +83,17 @@ export function hideNativeSplashShell(): void {
 
 export function requestMobileSplashAfterAuth(): void {
   if (typeof window === 'undefined') return;
+  // Sur les vues desktop, le splash mobile ne doit jamais s'afficher
+  if (!isMobileSplashViewport()) {
+    hideNativeSplashShell();
+    try {
+      sessionStorage.removeItem(MOBILE_SPLASH_FORCE_KEY);
+      sessionStorage.setItem(MOBILE_SPLASH_SEEN_KEY, '1');
+    } catch {
+      /* private mode */
+    }
+    return;
+  }
   try {
     sessionStorage.setItem(MOBILE_SPLASH_FORCE_KEY, '1');
     sessionStorage.removeItem(MOBILE_SPLASH_SEEN_KEY);

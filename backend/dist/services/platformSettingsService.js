@@ -3,14 +3,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.settingsFilePath = exports.DEFAULT_CONTACT_ADMIN_EMAILS = exports.PLATFORM_CITY_CATALOG = exports.DEFAULT_PLATFORM_SETTINGS = exports.DEFAULT_SHOWCASE_ROOM_PLANS = exports.DEFAULT_STUDIO_VISIBILITY = exports.DEFAULT_AUDIO_NOTIFICATIONS = exports.AUDIO_NOTIFICATION_FAMILIES = exports.AUDIO_NOTIFICATION_PRESETS = exports.sanitizeAiStudioModels = exports.isOpenAiStudioModel = exports.DEFAULT_AI_STUDIO_MODELS = exports.AVAILABLE_ROOM_PLAN_MODELS = exports.AVAILABLE_INVITATION_MODELS = void 0;
+exports.settingsFilePath = exports.DEFAULT_CONTACT_ADMIN_EMAILS = exports.PLATFORM_CITY_CATALOG = exports.DEFAULT_PLATFORM_SETTINGS = exports.DEFAULT_SHOWCASE_ROOM_PLANS = exports.DEFAULT_STUDIO_VISIBILITY = exports.DEFAULT_AUDIO_NOTIFICATIONS = exports.AUDIO_NOTIFICATION_FAMILIES = exports.AUDIO_NOTIFICATION_PRESETS = exports.ALL_NOTIFICATION_CHANNELS = exports.sanitizeAiStudioModels = exports.isOpenAiStudioModel = exports.DEFAULT_AI_STUDIO_MODELS = exports.AVAILABLE_ROOM_PLAN_MODELS = exports.AVAILABLE_INVITATION_MODELS = void 0;
 exports.sanitizeStudioVisibility = sanitizeStudioVisibility;
 exports.sanitizeShowcaseRoomPlans = sanitizeShowcaseRoomPlans;
 exports.sanitizeCommercialPermissions = sanitizeCommercialPermissions;
 exports.sanitizeAudioNotifications = sanitizeAudioNotifications;
 exports.sanitizeEnabledCities = sanitizeEnabledCities;
+exports.authOtpMethodOptions = authOtpMethodOptions;
+exports.methodsToAuthOtpChannels = methodsToAuthOtpChannels;
+exports.sanitizeNotificationChannels = sanitizeNotificationChannels;
 exports.sanitizeAuthOtpChannels = sanitizeAuthOtpChannels;
 exports.getAuthOtpChannels = getAuthOtpChannels;
+exports.phoneAuthOtpMethods = phoneAuthOtpMethods;
 exports.defaultAuthOtpMethod = defaultAuthOtpMethod;
 exports.resolveAuthOtpMethod = resolveAuthOtpMethod;
 exports.assertAuthOtpMethodAllowed = assertAuthOtpMethodAllowed;
@@ -55,6 +59,7 @@ exports.settingsFilePath = settingsFilePath;
 const PLATFORM_CONFIG_ID = 'default';
 /** Cache processus : source de vérité après hydratation BD (le fichier est un secours local). */
 let memoryCache = null;
+exports.ALL_NOTIFICATION_CHANNELS = ['EMAIL', 'WHATSAPP', 'SMS', 'PUSH'];
 exports.AUDIO_NOTIFICATION_PRESETS = ['off', 'chime', 'bell', 'soft', 'urgent', 'cosmic', 'fanfare'];
 exports.AUDIO_NOTIFICATION_FAMILIES = ['events', 'billing', 'commissions', 'catalog', 'tasks', 'studio'];
 exports.DEFAULT_AUDIO_NOTIFICATIONS = {
@@ -294,6 +299,7 @@ exports.DEFAULT_PLATFORM_SETTINGS = {
     usdExchangeRateCdf: 2800,
     enabledCities: ['Kinshasa', 'Lubumbashi', 'Goma'],
     authOtpChannels: 'BOTH',
+    notificationChannels: ['EMAIL', 'WHATSAPP', 'SMS', 'PUSH'],
     aiTokenPriceCdf: aiTokenPricing_1.DEFAULT_AI_TOKEN_PRICE_CDF,
     aiTokenMinPurchaseCdf: aiTokenPricing_1.DEFAULT_AI_TOKEN_MIN_PURCHASE_CDF,
     welcomeAiGrants: welcomeAiTokensPolicy_1.DEFAULT_WELCOME_GRANT_RULES,
@@ -324,22 +330,87 @@ function sanitizeEnabledCities(value) {
     }
     return ordered.length > 0 ? [...ordered] : ['Kinshasa'];
 }
+function authOtpMethodOptions(channels = 'BOTH') {
+    if (channels === 'EMAIL')
+        return ['EMAIL'];
+    if (channels === 'WHATSAPP')
+        return ['WHATSAPP'];
+    if (channels === 'SMS')
+        return ['SMS'];
+    if (channels === 'EMAIL_SMS')
+        return ['EMAIL', 'SMS'];
+    if (channels === 'WHATSAPP_SMS')
+        return ['WHATSAPP', 'SMS'];
+    if (channels === 'ALL')
+        return ['EMAIL', 'WHATSAPP', 'SMS'];
+    return ['EMAIL', 'WHATSAPP'];
+}
+function methodsToAuthOtpChannels(methods) {
+    const set = new Set(methods);
+    const hasEmail = set.has('EMAIL');
+    const hasWa = set.has('WHATSAPP');
+    const hasSms = set.has('SMS');
+    if (hasEmail && hasWa && hasSms)
+        return 'ALL';
+    if (hasEmail && hasWa)
+        return 'BOTH';
+    if (hasEmail && hasSms)
+        return 'EMAIL_SMS';
+    if (hasWa && hasSms)
+        return 'WHATSAPP_SMS';
+    if (hasEmail)
+        return 'EMAIL';
+    if (hasWa)
+        return 'WHATSAPP';
+    if (hasSms)
+        return 'SMS';
+    return 'BOTH';
+}
+function sanitizeNotificationChannels(value) {
+    if (!Array.isArray(value)) {
+        return [...exports.ALL_NOTIFICATION_CHANNELS];
+    }
+    const set = new Set(value.map((v) => String(v || '').trim().toUpperCase()));
+    const filtered = exports.ALL_NOTIFICATION_CHANNELS.filter((ch) => set.has(ch));
+    return filtered.length > 0 ? filtered : [...exports.ALL_NOTIFICATION_CHANNELS];
+}
 function sanitizeAuthOtpChannels(value) {
+    if (Array.isArray(value)) {
+        const methods = value
+            .map((item) => String(item || '').trim().toUpperCase())
+            .filter((item) => item === 'EMAIL' || item === 'WHATSAPP' || item === 'SMS');
+        return methodsToAuthOtpChannels(methods);
+    }
     const raw = String(value || '').trim().toUpperCase();
-    if (raw === 'EMAIL' || raw === 'WHATSAPP' || raw === 'SMS' || raw === 'BOTH' || raw === 'ALL')
+    if (raw === 'EMAIL' ||
+        raw === 'WHATSAPP' ||
+        raw === 'SMS' ||
+        raw === 'BOTH' ||
+        raw === 'EMAIL_WHATSAPP' ||
+        raw === 'EMAIL_SMS' ||
+        raw === 'WHATSAPP_SMS' ||
+        raw === 'ALL') {
+        if (raw === 'EMAIL_WHATSAPP')
+            return 'BOTH';
         return raw;
+    }
     return 'BOTH';
 }
 function getAuthOtpChannels(settings = loadPlatformSettings()) {
     return sanitizeAuthOtpChannels(settings.authOtpChannels);
 }
+function phoneAuthOtpMethods(settings = loadPlatformSettings()) {
+    const opts = authOtpMethodOptions(getAuthOtpChannels(settings));
+    return opts.filter((m) => m === 'WHATSAPP' || m === 'SMS');
+}
 function defaultAuthOtpMethod(settings = loadPlatformSettings()) {
     const ch = getAuthOtpChannels(settings);
-    if (ch === 'WHATSAPP')
+    const options = authOtpMethodOptions(ch);
+    if (options.includes('WHATSAPP'))
         return 'WHATSAPP';
-    if (ch === 'SMS')
+    if (options.includes('SMS'))
         return 'SMS';
-    return 'EMAIL';
+    return options[0] || 'EMAIL';
 }
 /**
  * Résout une méthode OTP demandée selon la config plateforme.
@@ -347,21 +418,18 @@ function defaultAuthOtpMethod(settings = loadPlatformSettings()) {
  */
 function resolveAuthOtpMethod(requested, settings = loadPlatformSettings()) {
     const channels = getAuthOtpChannels(settings);
-    if (channels === 'EMAIL')
-        return 'EMAIL';
-    if (channels === 'WHATSAPP')
-        return 'WHATSAPP';
-    if (channels === 'SMS')
-        return 'SMS';
+    const options = authOtpMethodOptions(channels);
+    if (options.length === 1)
+        return options[0];
     const req = String(requested || '').trim().toUpperCase();
-    if (req === 'WHATSAPP')
-        return 'WHATSAPP';
-    if (req === 'SMS')
-        return 'SMS';
-    return 'EMAIL';
+    if (options.includes(req)) {
+        return req;
+    }
+    return defaultAuthOtpMethod(settings);
 }
 function assertAuthOtpMethodAllowed(requested, settings = loadPlatformSettings()) {
     const channels = getAuthOtpChannels(settings);
+    const options = authOtpMethodOptions(channels);
     const raw = String(requested || '').trim().toUpperCase();
     if (!raw) {
         return { ok: true, method: defaultAuthOtpMethod(settings) };
@@ -369,20 +437,18 @@ function assertAuthOtpMethodAllowed(requested, settings = loadPlatformSettings()
     if (raw !== 'EMAIL' && raw !== 'WHATSAPP' && raw !== 'SMS') {
         return { ok: false, error: 'Méthode de validation invalide.' };
     }
-    if (channels === 'ALL' ||
-        (channels === 'BOTH' && (raw === 'EMAIL' || raw === 'WHATSAPP')) ||
-        channels === raw) {
+    if (options.includes(raw)) {
         return { ok: true, method: raw };
     }
+    const labels = {
+        EMAIL: 'e-mail',
+        WHATSAPP: 'WhatsApp',
+        SMS: 'SMS',
+    };
+    const allowedLabels = options.map((o) => labels[o]).join(', ');
     return {
         ok: false,
-        error: channels === 'EMAIL'
-            ? 'Seule la validation par e-mail est activée sur la plateforme.'
-            : channels === 'WHATSAPP'
-                ? 'Seule la validation par WhatsApp est activée sur la plateforme.'
-                : channels === 'SMS'
-                    ? 'Seule la validation par SMS est activée sur la plateforme.'
-                    : 'Seules les validations par e-mail et WhatsApp sont activées sur la plateforme.',
+        error: `Seul(s) le(s) canal/canaux suivant(s) sont autorisés pour la validation : ${allowedLabels}.`,
     };
 }
 function ensureSettingsDir() {
@@ -449,6 +515,7 @@ function normalizeStoredRates(settings) {
         usdExchangeRateCdf: Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? Math.round(parsedUsdRate) : 2800,
         enabledCities: sanitizeEnabledCities(settings.enabledCities),
         authOtpChannels: sanitizeAuthOtpChannels(settings.authOtpChannels),
+        notificationChannels: sanitizeNotificationChannels(settings.notificationChannels),
         aiTokenPriceCdf: (0, aiTokenPricing_1.sanitizeAiTokenPriceCdf)(settings.aiTokenPriceCdf),
         aiTokenMinPurchaseCdf: (0, aiTokenPricing_1.sanitizeAiTokenMinPurchaseCdf)(settings.aiTokenMinPurchaseCdf, (0, aiTokenPricing_1.sanitizeAiTokenPriceCdf)(settings.aiTokenPriceCdf)),
         welcomeAiGrants: (0, welcomeAiTokensPolicy_1.sanitizeWelcomeGrantRules)(settings.welcomeAiGrants),
@@ -480,6 +547,7 @@ function buildNextSettings(partial) {
     next.usdExchangeRateCdf = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? Math.round(parsedUsdRate) : 2800;
     next.enabledCities = sanitizeEnabledCities(next.enabledCities);
     next.authOtpChannels = sanitizeAuthOtpChannels(next.authOtpChannels);
+    next.notificationChannels = sanitizeNotificationChannels(next.notificationChannels);
     next.aiTokenPriceCdf = (0, aiTokenPricing_1.sanitizeAiTokenPriceCdf)(next.aiTokenPriceCdf);
     next.aiTokenMinPurchaseCdf = (0, aiTokenPricing_1.sanitizeAiTokenMinPurchaseCdf)(next.aiTokenMinPurchaseCdf, next.aiTokenPriceCdf);
     next.welcomeAiGrants = (0, welcomeAiTokensPolicy_1.sanitizeWelcomeGrantRules)(next.welcomeAiGrants);
@@ -506,6 +574,8 @@ async function persistPlatformConfigToDb(settings) {
 function applySettingsToCache(next) {
     memoryCache = next;
     writeSettingsFileBestEffort(next);
+    // Re-synchroniser immédiatement les credentials d'envoi SMS
+    getNotificationCredentials(next);
     return next;
 }
 function savePlatformSettings(partial) {
@@ -535,16 +605,19 @@ async function hydratePlatformSettingsFromDb() {
         if (row?.payload && typeof row.payload === 'object' && !Array.isArray(row.payload)) {
             memoryCache = mergeStoredSettings(row.payload);
             writeSettingsFileBestEffort(memoryCache);
+            getNotificationCredentials(memoryCache);
             console.log('[PlatformSettings] Réglages chargés depuis la base.');
             return;
         }
         const seed = loadPlatformSettings();
         await persistPlatformConfigToDb(seed);
+        getNotificationCredentials(seed);
         console.log('[PlatformSettings] Réglages initiaux enregistrés en base.');
     }
     catch (error) {
         console.warn('[PlatformSettings] Hydratation BD impossible — fichier ou défauts.', error);
-        loadPlatformSettings();
+        const fallback = loadPlatformSettings();
+        getNotificationCredentials(fallback);
     }
 }
 function getPublicSiteConfig(settings = loadPlatformSettings()) {
@@ -582,6 +655,7 @@ function getPublicSiteConfig(settings = loadPlatformSettings()) {
         usdExchangeRateCdf: Number(settings.usdExchangeRateCdf) > 0 ? Math.round(Number(settings.usdExchangeRateCdf)) : 2800,
         enabledCities: sanitizeEnabledCities(settings.enabledCities),
         authOtpChannels: sanitizeAuthOtpChannels(settings.authOtpChannels),
+        notificationChannels: sanitizeNotificationChannels(settings.notificationChannels),
         aiTokenPriceCdf: (0, aiTokenPricing_1.sanitizeAiTokenPriceCdf)(settings.aiTokenPriceCdf),
         aiTokenMinPurchaseCdf: (0, aiTokenPricing_1.sanitizeAiTokenMinPurchaseCdf)(settings.aiTokenMinPurchaseCdf, (0, aiTokenPricing_1.sanitizeAiTokenPriceCdf)(settings.aiTokenPriceCdf)),
         welcomeAiGrants: (0, welcomeAiTokensPolicy_1.sanitizeWelcomeGrantRules)(settings.welcomeAiGrants),
