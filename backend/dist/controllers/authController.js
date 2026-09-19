@@ -565,6 +565,16 @@ async function forgotPassword(req, res) {
             const whatsappBody = `Bonjour *${user.name || 'Utilisateur'}*,\n\nVous avez demandé la réinitialisation de votre mot de passe sur *EventMaster*.\n\nVeuillez cliquer sur le lien suivant pour définir un nouveau mot de passe (valable 1 heure) :\n👉 ${resetLink}\n\nSi vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer ce message.\n\nL'équipe EventMaster ✨`;
             await sendRealWhatsApp(user.phone, whatsappBody);
         }
+        else if (resolvedMethod === 'SMS') {
+            if (!user.phone) {
+                return res.status(400).json({
+                    error: 'Aucun numéro de téléphone associé à ce compte pour l’envoi par SMS. Utilisez l’e-mail ou mettez à jour votre profil.',
+                });
+            }
+            const { sendRealSms } = await Promise.resolve().then(() => __importStar(require('../services/notificationService')));
+            const smsBody = `EventMaster : réinitialisation de votre mot de passe (valable 1h) : ${resetLink}`;
+            await sendRealSms(user.phone, smsBody);
+        }
         else {
             const { sendRealEmail } = await Promise.resolve().then(() => __importStar(require('../services/notificationService')));
             const brand = (0, brandingUtils_1.getPlatformBrand)();

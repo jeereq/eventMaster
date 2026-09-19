@@ -5,6 +5,7 @@ exports.resolveNotificationHref = resolveNotificationHref;
 exports.renderOperatorNotificationEmail = renderOperatorNotificationEmail;
 exports.formatOperatorWhatsApp = formatOperatorWhatsApp;
 exports.renderOperatorWhatsApp = renderOperatorWhatsApp;
+exports.renderOperatorSms = renderOperatorSms;
 exports.userWhatsAppNumber = userWhatsAppNumber;
 const brandingUtils_1 = require("./brandingUtils");
 const brandedMessaging_1 = require("./brandedMessaging");
@@ -49,6 +50,13 @@ function renderOperatorWhatsApp(params) {
     if (params.href)
         parts.push('', params.href);
     return formatOperatorWhatsApp(parts.join('\n'));
+}
+function renderOperatorSms(params) {
+    const title = params.title.trim();
+    const message = params.message.trim();
+    const link = params.href ? ` — ${params.href}` : '';
+    const text = `EventMaster: ${title} — ${message}${link}`;
+    return text.slice(0, 320);
 }
 function userWhatsAppNumber(user) {
     const phone = user.phone?.trim();

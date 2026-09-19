@@ -5,7 +5,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
   Users, UserPlus, Trash2, Loader2, Crown, Mail, Phone,
-  Shield, Briefcase, MessageSquare, TrendingUp, Copy, RefreshCw, Bell,
+  Shield, Briefcase, MessageSquare, Smartphone, TrendingUp, Copy, RefreshCw, Bell,
 } from 'lucide-react';
 import {
   SkeletonGrid, ViewModeToggle, useViewMode, listStackClass,
@@ -20,6 +20,7 @@ import { usePlatformSite } from '@/context/PlatformSiteContext';
 import OrgNotificationSettingsModal from '@/components/OrgNotificationSettingsModal';
 import {
   allowsAuthOtpChoice,
+  authOtpMethodOptions,
   defaultAuthOtpMethod,
   type AuthOtpMethod,
 } from '@/lib/authOtpChannels';
@@ -171,8 +172,8 @@ export default function TeamManagement() {
     setError('');
     setSuccess('');
     setSubmitting(true);
-    if (verificationMethod === 'WHATSAPP' && !phoneNational.trim()) {
-      setError('Le téléphone est obligatoire pour envoyer le code OTP par WhatsApp.');
+    if ((verificationMethod === 'WHATSAPP' || verificationMethod === 'SMS') && !phoneNational.trim()) {
+      setError(`Le téléphone est obligatoire pour envoyer le code OTP par ${verificationMethod === 'WHATSAPP' ? 'WhatsApp' : 'SMS'}.`);
       setSubmitting(false);
       return;
     }
@@ -410,7 +411,7 @@ export default function TeamManagement() {
               national={phoneNational}
               onCountryCodeChange={setPhoneCountryCode}
               onNationalChange={setPhoneNational}
-              required={verificationMethod === 'WHATSAPP'}
+              required={verificationMethod === 'WHATSAPP' || verificationMethod === 'SMS'}
               hint="Indicatif pays + numéro national (sans le 0)."
             />
             <Input label="Mot de passe temporaire" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} hint="Minimum 6 caractères" />
@@ -419,35 +420,53 @@ export default function TeamManagement() {
           <div>
             <p className="text-xs font-medium text-muted mb-2">Validation du compte (OTP)</p>
             {canChooseOtpChannel ? (
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setVerificationMethod('EMAIL')}
-                  className={cn(
-                    'py-2.5 px-3 rounded-[var(--radius-button)] border text-xs font-medium flex items-center justify-center gap-2 transition-colors',
-                    verificationMethod === 'EMAIL'
-                      ? 'bg-primary/10 border-primary/30 text-primary'
-                      : 'border-border text-muted hover:bg-surface-muted',
-                  )}
-                >
-                  <Mail className="w-4 h-4" /> E-mail
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setVerificationMethod('WHATSAPP')}
-                  className={cn(
-                    'py-2.5 px-3 rounded-[var(--radius-button)] border text-xs font-medium flex items-center justify-center gap-2 transition-colors',
-                    verificationMethod === 'WHATSAPP'
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-300'
-                      : 'border-border text-muted hover:bg-surface-muted',
-                  )}
-                >
-                  <MessageSquare className="w-4 h-4" /> WhatsApp
-                </button>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {authOtpMethodOptions(authChannels).includes('EMAIL') && (
+                  <button
+                    type="button"
+                    onClick={() => setVerificationMethod('EMAIL')}
+                    className={cn(
+                      'py-2.5 px-3 rounded-[var(--radius-button)] border text-xs font-medium flex items-center justify-center gap-2 transition-colors',
+                      verificationMethod === 'EMAIL'
+                        ? 'bg-primary/10 border-primary/30 text-primary'
+                        : 'border-border text-muted hover:bg-surface-muted',
+                    )}
+                  >
+                    <Mail className="w-4 h-4" /> E-mail
+                  </button>
+                )}
+                {authOtpMethodOptions(authChannels).includes('WHATSAPP') && (
+                  <button
+                    type="button"
+                    onClick={() => setVerificationMethod('WHATSAPP')}
+                    className={cn(
+                      'py-2.5 px-3 rounded-[var(--radius-button)] border text-xs font-medium flex items-center justify-center gap-2 transition-colors',
+                      verificationMethod === 'WHATSAPP'
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-950/30 dark:border-emerald-800 dark:text-emerald-300'
+                        : 'border-border text-muted hover:bg-surface-muted',
+                    )}
+                  >
+                    <MessageSquare className="w-4 h-4" /> WhatsApp
+                  </button>
+                )}
+                {authOtpMethodOptions(authChannels).includes('SMS') && (
+                  <button
+                    type="button"
+                    onClick={() => setVerificationMethod('SMS')}
+                    className={cn(
+                      'py-2.5 px-3 rounded-[var(--radius-button)] border text-xs font-medium flex items-center justify-center gap-2 transition-colors',
+                      verificationMethod === 'SMS'
+                        ? 'bg-primary/10 border-primary/30 text-primary'
+                        : 'border-border text-muted hover:bg-surface-muted',
+                    )}
+                  >
+                    <Smartphone className="w-4 h-4" /> SMS
+                  </button>
+                )}
               </div>
             ) : (
               <p className="text-xs text-muted">
-                Code envoyé {verificationMethod === 'WHATSAPP' ? 'par WhatsApp' : 'par e-mail'} (réglage plateforme).
+                Code envoyé {verificationMethod === 'WHATSAPP' ? 'par WhatsApp' : verificationMethod === 'SMS' ? 'par SMS' : 'par e-mail'} (réglage plateforme).
               </p>
             )}
           </div>

@@ -1125,7 +1125,13 @@ export default function AdminPlatformSettings({
             </div>
 
             <div className={sectionCardClass}>
-              <SectionTitle icon={Smartphone}>Passerelle SMS (Dream Digital aSMSC & Fournisseurs extensibles)</SectionTitle>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <SectionTitle icon={Smartphone}>Passerelle SMS (Dream Digital aSMSC & Fournisseurs extensibles)</SectionTitle>
+                <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold shrink-0', value.smsConfigured ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400')}>
+                  <span className={cn('w-1.5 h-1.5 rounded-full', value.smsConfigured ? 'bg-emerald-500' : 'bg-amber-500')} />
+                  {value.smsConfigured ? 'Passerelle configurée' : 'Mode simulation active'}
+                </span>
+              </div>
               <p className="text-xs text-muted -mt-2">
                 Utilisé pour l’envoi de SMS transactionnels (OTP, invitations, rappels). L’architecture supporte Dream Digital par défaut et permet de brancher d’autres passerelles sans restriction.
               </p>

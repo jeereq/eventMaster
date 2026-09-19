@@ -55,6 +55,18 @@ export function renderOperatorWhatsApp(params: {
   return formatOperatorWhatsApp(parts.join('\n'));
 }
 
+export function renderOperatorSms(params: {
+  title: string;
+  message: string;
+  href?: string | null;
+}): string {
+  const title = params.title.trim();
+  const message = params.message.trim();
+  const link = params.href ? ` — ${params.href}` : '';
+  const text = `EventMaster: ${title} — ${message}${link}`;
+  return text.slice(0, 320);
+}
+
 export function userWhatsAppNumber(user: {
   phone?: string | null;
   phoneCountryCode?: string | null;

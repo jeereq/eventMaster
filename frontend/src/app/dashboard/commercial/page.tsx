@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
- Building2, Loader2, PlusCircle, TrendingUp, Users, Wallet, Mail, MessageSquare, RefreshCw, AlertCircle, CheckCircle2,
+ Building2, Loader2, PlusCircle, TrendingUp, Users, Wallet, Mail, MessageSquare, Smartphone, RefreshCw, AlertCircle, CheckCircle2,
 } from 'lucide-react';
 import { Button, PageHeader, SkeletonCommercialView, Pagination, usePaginateItems, PhoneInput, usePageSize } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
@@ -12,6 +12,7 @@ import ReferralShareButtons from '@/components/commercial/ReferralShareButtons';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   allowsAuthOtpChoice,
+  authOtpMethodOptions,
   defaultAuthOtpMethod,
   type AuthOtpMethod,
 } from '@/lib/authOtpChannels';
@@ -94,8 +95,8 @@ export default function CommercialDashboardPage() {
  setError('');
  setSuccess('');
  setSubmitting(true);
- if (verificationMethod === 'WHATSAPP' && !phoneNational.trim()) {
- setError('Le téléphone est obligatoire pour envoyer le code OTP par WhatsApp.');
+ if ((verificationMethod === 'WHATSAPP' || verificationMethod === 'SMS') && !phoneNational.trim()) {
+ setError(`Le téléphone est obligatoire pour envoyer le code OTP par ${verificationMethod === 'WHATSAPP' ? 'WhatsApp' : 'SMS'}.`);
  setSubmitting(false);
  return;
  }
@@ -238,29 +239,38 @@ export default function CommercialDashboardPage() {
  <div className="sm:col-span-2">
  <PhoneInput
  id="manager-phone"
- label={verificationMethod === 'WHATSAPP' ? 'Téléphone WhatsApp' : 'Téléphone (optionnel)'}
+ label={verificationMethod === 'WHATSAPP' ? 'Téléphone WhatsApp' : verificationMethod === 'SMS' ? 'Téléphone SMS' : 'Téléphone (optionnel)'}
  countryCode={phoneCountryCode}
  national={phoneNational}
  onCountryCodeChange={setPhoneCountryCode}
  onNationalChange={setPhoneNational}
- required={verificationMethod === 'WHATSAPP'}
+ required={verificationMethod === 'WHATSAPP' || verificationMethod === 'SMS'}
  />
  </div>
  </div>
  <div>
  <label className="block text-xs font-bold text-muted uppercase mb-2">Validation du compte manager (OTP)</label>
  {canChooseOtpChannel ? (
- <div className="grid grid-cols-2 gap-3 max-w-md">
+ <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-md">
+ {authOtpMethodOptions(authChannels).includes('EMAIL') && (
  <button type="button" onClick={() => setVerificationMethod('EMAIL')} className={`py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 ${verificationMethod === 'EMAIL' ? 'bg-primary/10 border-primary/40 text-primary' : 'border-border text-muted'}`}>
- <Mail className="w-4 h-4" /> OTP par e-mail
+ <Mail className="w-4 h-4" /> E-mail
  </button>
+ )}
+ {authOtpMethodOptions(authChannels).includes('WHATSAPP') && (
  <button type="button" onClick={() => setVerificationMethod('WHATSAPP')} className={`py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 ${verificationMethod === 'WHATSAPP' ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'border-border text-muted'}`}>
- <MessageSquare className="w-4 h-4" /> OTP WhatsApp
+ <MessageSquare className="w-4 h-4" /> WhatsApp
  </button>
+ )}
+ {authOtpMethodOptions(authChannels).includes('SMS') && (
+ <button type="button" onClick={() => setVerificationMethod('SMS')} className={`py-2.5 px-4 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 ${verificationMethod === 'SMS' ? 'bg-primary/10 border-primary/40 text-primary' : 'border-border text-muted'}`}>
+ <Smartphone className="w-4 h-4" /> SMS
+ </button>
+ )}
  </div>
  ) : (
  <p className="text-xs text-muted">
- Code envoyé {verificationMethod === 'WHATSAPP' ? 'par WhatsApp' : 'par e-mail'} (réglage plateforme).
+ Code envoyé {verificationMethod === 'WHATSAPP' ? 'par WhatsApp' : verificationMethod === 'SMS' ? 'par SMS' : 'par e-mail'} (réglage plateforme).
  </p>
  )}
  </div>

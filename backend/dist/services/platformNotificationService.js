@@ -152,6 +152,39 @@ async function fanOutChannels(notification, extras) {
             });
         }
     }
+    const smsTo = (0, notificationTemplates_1.userWhatsAppNumber)(user);
+    if (channels.has('SMS') && smsTo) {
+        const body = extras.sms?.trim()
+            ? extras.sms.trim()
+            : (0, notificationTemplates_1.renderOperatorSms)({
+                title: notification.title,
+                message: notification.message,
+                href,
+            });
+        const smsKey = (0, notificationDedup_1.outboundChannelFingerprint)({
+            channel: 'SMS',
+            to: smsTo,
+            body,
+        });
+        if ((0, notificationDedup_1.claimSimilarOutbound)(smsKey)) {
+            const result = await (0, notificationService_1.sendRealSms)(smsTo, body);
+            await logDelivery({
+                notificationId: notification.id,
+                channel: 'SMS',
+                status: result.simulated ? 'SIMULATED' : result.success ? 'SENT' : 'FAILED',
+                providerId: result.messageId,
+                error: result.error,
+            });
+        }
+        else {
+            await logDelivery({
+                notificationId: notification.id,
+                channel: 'SMS',
+                status: 'SIMULATED',
+                providerId: 'deduped-same-channel',
+            });
+        }
+    }
 }
 async function createCommercialBillingNotification(params) {
     const planName = (0, plansConfig_1.getPlanLimits)(params.plan).name;
@@ -241,6 +274,7 @@ async function persistPlatformNotification(params, contentKey) {
         channels: params.channels,
         email: params.email,
         whatsapp: params.whatsapp,
+        sms: params.sms,
     }).catch((err) => {
         console.error('[platformNotification] fan-out:', err);
     });

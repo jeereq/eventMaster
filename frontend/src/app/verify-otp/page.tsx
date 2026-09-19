@@ -4,12 +4,13 @@ import React, { useState, useRef, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, Mail, MessageSquare, RefreshCw } from 'lucide-react';
+import { Loader2, Mail, MessageSquare, RefreshCw, Smartphone } from 'lucide-react';
 import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
 import { Button, Alert, Card } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   allowsAuthOtpChoice,
+  authOtpMethodOptions,
   resolveAuthOtpMethodFromSite,
   type AuthOtpMethod,
 } from '@/lib/authOtpChannels';
@@ -145,11 +146,17 @@ function VerifyOtpForm() {
  <Card padding="lg" className="border-border shadow-sm">
  <div className="text-center space-y-2 mb-6">
  <div className="inline-flex p-3 rounded-2xl bg-primary/10 text-primary">
- {verificationMethod === 'WHATSAPP' ? <MessageSquare className="w-8 h-8" /> : <Mail className="w-8 h-8" />}
+ {verificationMethod === 'WHATSAPP' ? (
+   <MessageSquare className="w-8 h-8" />
+ ) : verificationMethod === 'SMS' ? (
+   <Smartphone className="w-8 h-8" />
+ ) : (
+   <Mail className="w-8 h-8" />
+ )}
  </div>
  <h1 className="text-xl font-bold text-foreground dark:text-foreground">Validez votre compte</h1>
  <p className="text-sm text-muted">
- Code envoyé {verificationMethod === 'WHATSAPP' ? 'sur WhatsApp' : 'par e-mail'} à{' '}
+ Code envoyé {verificationMethod === 'WHATSAPP' ? 'sur WhatsApp' : verificationMethod === 'SMS' ? 'par SMS' : 'par e-mail'} à{' '}
  <span className="font-semibold text-foreground dark:text-foreground">{email}</span>
  </p>
  </div>
@@ -193,13 +200,20 @@ function VerifyOtpForm() {
  value={verificationMethod}
  onChange={setVerificationMethod}
  options={[
- { value: 'EMAIL' as const, label: 'E-mail', icon: <Mail className="w-3.5 h-3.5" /> },
- { value: 'WHATSAPP' as const, label: 'WhatsApp', icon: <MessageSquare className="w-3.5 h-3.5" /> },
+   ...(authOtpMethodOptions(authChannels).includes('EMAIL')
+     ? [{ value: 'EMAIL' as const, label: 'E-mail', icon: <Mail className="w-3.5 h-3.5" /> }]
+     : []),
+   ...(authOtpMethodOptions(authChannels).includes('WHATSAPP')
+     ? [{ value: 'WHATSAPP' as const, label: 'WhatsApp', icon: <MessageSquare className="w-3.5 h-3.5" /> }]
+     : []),
+   ...(authOtpMethodOptions(authChannels).includes('SMS')
+     ? [{ value: 'SMS' as const, label: 'SMS', icon: <Smartphone className="w-3.5 h-3.5" /> }]
+     : []),
  ]}
  />
  ) : (
  <p className="text-xs text-muted text-center">
- Renvoi {verificationMethod === 'WHATSAPP' ? 'par WhatsApp' : 'par e-mail'}
+ Renvoi {verificationMethod === 'WHATSAPP' ? 'par WhatsApp' : verificationMethod === 'SMS' ? 'par SMS' : 'par e-mail'}
  {methodLocked ? ' (canal choisi à l’inscription).' : '.'}
  </p>
  )}

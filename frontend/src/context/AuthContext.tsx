@@ -14,6 +14,7 @@ import { claimAiRoomPlanComposeHistory } from '@/lib/aiRoomPlanComposeHistory';
 import { setAiTokenSessionUnlimited } from '@/lib/aiTokens';
 import { SESSION_EXPIRED_EVENT } from '@/lib/sessionEvents';
 import { requestMobileSplashAfterAuth } from '@/lib/mobileSplash';
+import type { AuthOtpMethod } from '@/lib/authOtpChannels';
 
 export interface OrgAccess {
   level: 'owner' | 'manager' | 'protocol' | 'commercial' | 'staff' | 'client' | 'none';
@@ -68,7 +69,7 @@ interface RegisterResult {
   message: string;
   requiresVerification?: boolean;
   email?: string;
-  verificationMethod?: 'EMAIL' | 'WHATSAPP';
+  verificationMethod?: AuthOtpMethod;
   welcomeTokens?: {
     granted: boolean;
     offer: string;
@@ -127,7 +128,7 @@ interface AuthContextType {
     name: string,
     tenantName: string,
     phone?: string,
-    verificationMethod?: 'EMAIL' | 'WHATSAPP',
+    verificationMethod?: AuthOtpMethod,
     acceptTerms?: boolean,
     acceptPrivacy?: boolean,
     referralCode?: string,
@@ -138,7 +139,7 @@ interface AuthContextType {
     plan?: string,
   ) => Promise<RegisterResult>;
   verifyOtp: (email: string, otp: string, options?: { next?: string | null }) => Promise<void>;
-  resendOtp: (email: string, verificationMethod?: 'EMAIL' | 'WHATSAPP') => Promise<string>;
+  resendOtp: (email: string, verificationMethod?: AuthOtpMethod) => Promise<string>;
   logout: () => void;
   sessionExpired: boolean;
   refreshBilling: () => Promise<void>;
@@ -368,7 +369,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     name: string,
     tenantName: string,
     phone?: string,
-    verificationMethod?: 'EMAIL' | 'WHATSAPP',
+    verificationMethod?: AuthOtpMethod,
     acceptTerms?: boolean,
     acceptPrivacy?: boolean,
     referralCode?: string,
@@ -442,7 +443,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const resendOtp = async (email: string, verificationMethod?: 'EMAIL' | 'WHATSAPP') => {
+  const resendOtp = async (email: string, verificationMethod?: AuthOtpMethod) => {
     const data = await api.post('/auth/resend-otp', { email, verificationMethod });
     return data.message as string;
   };
