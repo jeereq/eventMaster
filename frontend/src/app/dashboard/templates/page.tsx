@@ -1359,6 +1359,9 @@ export default function TemplatesPage() {
    return next.slice(0, merged.length);
  });
  setAiComposePreviewUrls(merged.map((f) => URL.createObjectURL(f)));
+ if (merged.length > 0 && !aiComposeCoupleFaceSwap) {
+   setAiComposeIsAlteration(true);
+ }
  };
 
  const setAiComposeIncomingFromFile = (file: File | null) => {
@@ -1371,6 +1374,7 @@ export default function TemplatesPage() {
  setAiComposeIncomingFile(file);
  setAiComposeIncomingPreview(URL.createObjectURL(file));
  setAiComposeModelPhoto(null);
+ setAiComposeIsAlteration(true);
  };
 
  const handleAiComposeFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1456,11 +1460,6 @@ export default function TemplatesPage() {
  ? 'Composition de la carte et de la typographie…'
  : 'Composition de la carte à partir du brief…',
  );
-    const isAlteration =
-      aiComposeCoupleFaceSwap ||
-      aiComposeIsAlteration ||
-      /retouch|ajust|refin|altér|réajust|modifier/i.test(aiComposePrompt);
-
     const currentBgUrl =
       bgImageUrl && /^https?:\/\//i.test(bgImageUrl.trim()) ? bgImageUrl.trim() : undefined;
     const modelUrl = aiComposeModelPhoto?.imageUrl;
@@ -1471,6 +1470,19 @@ export default function TemplatesPage() {
     } else if (aiComposeCoupleFaceSwap && modelUrl) {
       incomingUrl = modelUrl;
     }
+
+    const hasReplacementKeyword =
+      /remplac|substitu|chang|swap|retouch|ajust|refin|altér|réajust|modifier/i.test(aiComposePrompt);
+    const hasBaseTarget =
+      Boolean(incomingUrl) ||
+      Boolean(aiComposeModelPhoto) ||
+      Boolean(aiComposeIncomingFile) ||
+      Boolean(currentBgUrl);
+    const isAlteration =
+      aiComposeCoupleFaceSwap ||
+      aiComposeIsAlteration ||
+      hasReplacementKeyword ||
+      (hasBaseTarget && (hasTexts || aiComposeFiles.length > 0));
 
     const existingTextSummaries = canvasElements
       .filter((el) => typeof el.text === 'string' && el.text.trim().length > 0)
@@ -1486,7 +1498,7 @@ export default function TemplatesPage() {
           cardIdentity.title ? `titre : ${cardIdentity.title}` : '',
           cardIdentity.description ? `lieu : ${cardIdentity.description}` : '',
         ].filter(Boolean).join(', ');
-        promptToSend = `Remplacer les visages du couple (respecter les genres : marié sur costume, mariée sur robe) et modifier les textes (${textParts}). Conserver la disposition, le style, les ornements et les expressions des visages du carton. Les photos sources prennent ces expressions, pas les leurs.`;
+        promptToSend = `Détecter d’abord tous les visages sur le carton, puis remplacer les visages du couple (respecter les genres : marié sur costume, mariée sur robe) et modifier les textes (${textParts}). Conserver la disposition, le style, les ornements et les expressions des visages du carton. Les photos sources prennent ces expressions, pas les leurs.`;
       } else if (aiComposeCoupleFaceSwap) {
         promptToSend = COUPLE_FACE_SWAP_DEFAULT_PROMPT;
       } else if (isAlteration && hasTexts) {
@@ -1772,10 +1784,16 @@ export default function TemplatesPage() {
      { id: 'create', label: 'Fond pur + variables', hint: 'Carte neuve, textes dynamiques' },
      { id: 'modify', label: 'Modifier un modèle', hint: 'Textes / visages sur une base' },
    ] as const).map((mode) => {
+     const hasModificationActive =
+       aiComposeIsAlteration ||
+       aiComposeCoupleFaceSwap ||
+       Boolean(aiComposeModelPhoto) ||
+       Boolean(aiComposeIncomingFile) ||
+       /remplac|substitu|chang|swap|retouch|ajust|refin|altér|réajust|modifier/i.test(aiComposePrompt);
      const active =
        mode.id === 'modify'
-         ? aiComposeIsAlteration || aiComposeCoupleFaceSwap
-         : !aiComposeIsAlteration && !aiComposeCoupleFaceSwap;
+         ? hasModificationActive
+         : !hasModificationActive;
      return (
        <button
          key={mode.id}

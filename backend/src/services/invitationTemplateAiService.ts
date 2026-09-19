@@ -135,6 +135,7 @@ Exact schema:
     "clothingStyles": "none | observed cuts, fabrics, colors",
     "isInvitationClone": true | false,
     "clonedCardFeatures": "none | borders, frame, ornaments, textures to clone",
+    "detectedFacesOnBaseImage": "none | DETECT FIRST: inventory every face on Image 1 (Face 1 left: gender/role/suit or gown/tilt/expression; Face 2 right: gender/role/suit or gown/tilt/expression)",
     "coupleFaceMapping": {
       "strictMappingInstructions": "none | e.g. Image 1 has the groom on the left in dark suit and bride on the right in white gown. Reference photos: Image 2 is the woman/bride and Image 3 is the man/groom. The MAN from reference photos MUST replace the groom on the left in suit. The WOMAN from reference photos MUST replace the bride on the right in gown. Zero gender inversion."
     },
@@ -267,6 +268,7 @@ type VisualAnalysis = {
   clothingStyles: string;
   isInvitationClone?: boolean;
   clonedCardFeatures?: string;
+  detectedFacesOnBaseImage?: string;
   coupleFaceMapping?: {
     strictMappingInstructions?: string;
   };
@@ -338,6 +340,11 @@ function parseVisualAnalysis(raw: unknown): VisualAnalysis | null {
       ? { strictMappingInstructions: rawMapping.strictMappingInstructions.slice(0, 500) }
       : undefined;
 
+  const detectedFacesOnBaseImage =
+    typeof v.detectedFacesOnBaseImage === 'string'
+      ? v.detectedFacesOnBaseImage.slice(0, 1000)
+      : undefined;
+
   return {
     colors,
     style: typeof v.style === 'string' ? v.style.slice(0, 300) : '',
@@ -352,6 +359,7 @@ function parseVisualAnalysis(raw: unknown): VisualAnalysis | null {
     clothingStyles: hasPeople ? clothingStyles || 'unclear' : 'none',
     isInvitationClone,
     clonedCardFeatures,
+    detectedFacesOnBaseImage,
     coupleFaceMapping,
     briefNeeds: parseStringList(v.briefNeeds, 12),
     briefInterpretation:
@@ -368,7 +376,7 @@ const FACE_POLICY_KEEP_PEOPLE =
   'IDENTITY LOCK — PIXELS WIN: The attached photo(s) are the only identity source. Keep EACH person as the SAME individual (not a sibling, celebrity, or beautified lookalike). Unchanged: bone structure, eyes and gaze, exact smile, SOURCE facial expression (mouth, brows, emotion), cheek volume, skin tone (never lighten), age, hair, clothing, moles/scars. Forbidden: face swap, slim/contour, symmetry, doll eyes, invented grin, airbrush, CGI. If any text description conflicts with the photo, obey the photo.';
 
 const FACE_POLICY_COUPLE_SWAP =
-  'COUPLE FACE REPLACEMENT (ZERO GENDER INVERSION & LIFELIKE HARMONIZATION) — ORGANIZER REQUESTED: Image 1 is the incoming invitation/scene. Keep composition, body pose, bodies, wardrobe, décor, lighting, ornaments AND the facial expressions already on that card. Images 2+ are the couple identity only (who they are). Strictly match genders: place the groom/man face onto the male body (suit/tuxedo) and the bride/woman face onto the female body (bridal gown/dress). Replace ONLY the identity of the face(s) on Image 1 with these exact people. The source photos MUST adopt the card faces’ expressions (smile, gaze, emotion) — do not copy the source photo’s own mouth or eyes if the card differs. MANDATORY ANATOMICAL PARAMETERS: 1) Orientation: rotate and align each head in 3D to match Image 1 head tilt, pitch, yaw, and eye gaze direction. 2) Proportions: enforce natural head-to-body scale, neck thickness, and jaw-to-collar distance (never oversized or undersized). 3) Skin tones & undertones: faithfully retain the couple’s real melanin tone and natural undertones, blending seamlessly with the neck, décolleté, hands, and ambient scene lighting with zero visible boundary lines or color mismatches. 4) Details: realistic contact shadows under jaw and chin, natural hairline and collar overlap, authentic skin micro-pores, 8k UHD crisp focus with zero pasted sticker effect. If new text/names are requested in the brief, do NOT keep old names from Image 1. Honest pixels: bone structure, eyes, skin tone, moles — expression from Image 1. Forbidden: beautify, skin lightening, celebrity lookalike, inverting bride/groom genders, keeping the original Image 1 identity.';
+  'COUPLE FACE REPLACEMENT (TWO-STAGE: DETECT FIRST, THEN REPLACE — ZERO GENDER INVERSION & LIFELIKE HARMONIZATION) — ORGANIZER REQUESTED: Image 1 is the incoming invitation/scene. STAGE 1: Detect and inventory all faces present on Image 1 (locate male body in suit/tuxedo and female body in bridal gown, observe their exact 3D head poses, proportions, and facial expressions). STAGE 2: Replace ONLY the identity of each detected face using Images 2+ (source photos). The groom/man face MUST replace the male body/suit, and the bride/woman face MUST replace the female body/gown (strict zero gender inversion). The source photos MUST adopt the card faces’ expressions (smile, gaze, emotion) — do not copy the source photo’s own mouth or eyes if the card differs. MANDATORY ANATOMICAL PARAMETERS: 1) Orientation: rotate and align each head in 3D to match Image 1 head tilt, pitch, yaw, and eye gaze direction. 2) Proportions: enforce natural head-to-body scale, neck thickness, and jaw-to-collar distance (never oversized or undersized). 3) Skin tones & undertones: faithfully retain the couple’s real melanin tone and natural undertones, blending seamlessly with the neck, décolleté, hands, and ambient scene lighting with zero visible boundary lines or color mismatches. 4) Details: realistic contact shadows under jaw and chin, natural hairline and collar overlap, authentic skin micro-pores, 8k UHD crisp focus with zero pasted sticker effect. If new text/names are requested in the brief, do NOT keep old names from Image 1. Honest pixels: bone structure, eyes, skin tone, moles — expression from Image 1. Forbidden: beautify, skin lightening, celebrity lookalike, inverting bride/groom genders, keeping the original Image 1 identity.';
 
 function buildImagePrompt(
   userPrompt: string,
@@ -420,13 +428,20 @@ function buildImagePrompt(
           colors: analysis.colors,
           coupleFaceMapping: analysis.coupleFaceMapping?.strictMappingInstructions
             ? {
-                strictMappingInstructions: analysis.coupleFaceMapping.strictMappingInstructions,
+                strictMappingInstructions: [
+                  analysis.detectedFacesOnBaseImage ? `DETECTED FACES ON IMAGE 1: ${analysis.detectedFacesOnBaseImage}` : '',
+                  analysis.coupleFaceMapping.strictMappingInstructions,
+                ].filter(Boolean).join(' | '),
               }
-            : options?.processed?.identityHeader?.includes('GENDER LOCK')
+            : analysis.detectedFacesOnBaseImage
               ? {
-                  strictMappingInstructions: options.processed.identityHeader,
+                  strictMappingInstructions: `DETECTED FACES ON IMAGE 1: ${analysis.detectedFacesOnBaseImage}`,
                 }
-              : undefined,
+              : options?.processed?.identityHeader?.includes('GENDER LOCK')
+                ? {
+                    strictMappingInstructions: options.processed.identityHeader,
+                  }
+                : undefined,
         }
       : null,
     organizerContext: options?.organizerContext,
@@ -531,11 +546,11 @@ function visionUserText(
   const roles = options?.processed?.referenceRoles ? `\n${options.processed.referenceRoles}\n` : '';
   const fewshot = options?.styleFewshot ? `\n${options.styleFewshot}\n` : '';
   const coupleGenderAlignment = coupleFaceSwap
-    ? `\n=== CRITICAL GENDER ALIGNMENT FOR COUPLE (NO INVERSION) ===
+    ? `\n=== TWO-STAGE FACE DETECTION & REPLACEMENT (DETECT FIRST, THEN REPLACE) ===
 Image 1 is the incoming card / scene with hosts. Images 2+ are the couple identity photos.
-1) Examine Image 1: locate the male host (suit/tuxedo) and female host (gown/dress). Note their left/right position.
-2) Examine Images 2+: identify the man (groom) and woman (bride).
-3) In visualAnalysis.coupleFaceMapping.strictMappingInstructions, explicitly mandate that the MAN from references replaces the MAN on Image 1 (suit), and the WOMAN from references replaces the WOMAN on Image 1 (gown).
+1) STEP 1 — DETECT ALL FACES ON IMAGE 1: Locate every face visible on Image 1 (left to right). For each face, write in visualAnalysis.detectedFacesOnBaseImage: position (left/right/center), apparent gender & wedding role (groom in suit vs bride in gown), 3D head orientation (tilt/yaw/pitch), realistic scale relative to shoulders, and exact facial expressions (mouth curve, smile, eye gaze).
+2) STEP 2 — DETECT SOURCE IDENTITIES: Examine Images 2+ (source photos). Identify the man (groom) and woman (bride), their authentic bone structure and melanin skin tones.
+3) STEP 3 — MAP & REPLACE: In visualAnalysis.coupleFaceMapping.strictMappingInstructions, explicitly mandate that the MAN from references replaces the MAN on Image 1 (suit), and the WOMAN from references replaces the WOMAN on Image 1 (gown).
 4) FORBIDDEN: never invert bride and groom faces (putting female face on suit or male face on gown).
 5) LIFELIKE HARMONIZATION & 3D ORIENTATION: Mandate exact 3D head orientation (matching Image 1 tilt, yaw, gaze), realistic anatomical head-to-body scale, and seamless melanin skin tone blending with the neck, décolleté, and lighting of the card.\n`
     : '';
@@ -2231,6 +2246,7 @@ export async function composeInvitationTemplateAi(input: {
   coupleFaceSwap?: boolean;
   genderMappingDirective?: string | null;
   structuredBrief?: InvitationStructuredBrief | null;
+  sourceTemplateId?: string | null;
 }): Promise<InvitationAiComposeResult> {
   rateLimit(input.userId);
   const coupleFaceSwap = Boolean(input.coupleFaceSwap);
@@ -2249,10 +2265,14 @@ export async function composeInvitationTemplateAi(input: {
   const embedText = isPublic ? false : Boolean(input.embedText);
   const artStyle = parseInvitationArtStyle(input.artStyle);
   const artStyleLine = invitationArtStyleScaffoldLine(artStyle);
+  const existingElements = Array.isArray(input.existingElements) ? input.existingElements : [];
+  const hasBaseReference = Boolean(input.sourceTemplateId) || Boolean(input.baseImageUrl);
   const isAlteration =
     coupleFaceSwap ||
     Boolean(input.isAlteration) ||
-    /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
+    hasBaseReference ||
+    (existingElements.length > 0 && Boolean(input.baseImageUrl)) ||
+    /remplac|substitu|chang|swap|retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
 
   const rawImageUrls = (input.imageUrls || [])
     .filter((u): u is string => typeof u === 'string' && /^https?:\/\//i.test(u.trim()))
@@ -2272,7 +2292,6 @@ export async function composeInvitationTemplateAi(input: {
   const styleFewshot = pipelineIntentEarly === 'create' ? EVENTMASTER_STYLE_FEWSHOT : '';
   const speedMode: InvitationAiSpeedMode = input.speedMode === 'fast' ? 'fast' : 'quality';
 
-  const existingElements = Array.isArray(input.existingElements) ? input.existingElements : [];
   const existingTextSummaries = existingElements
     .filter((el) => el && typeof el.text === 'string' && (el.text as string).trim().length > 0)
     .map((el) => `${el.type || 'text'}: "${(el.text as string).trim()}"`);

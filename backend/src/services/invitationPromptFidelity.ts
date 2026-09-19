@@ -146,8 +146,10 @@ export function shouldSkipInvitationVisionCall(input: {
   styleRefsOnly?: boolean;
   hasUserReferencePhotos?: boolean;
 }): boolean {
+  // La détection et le remplacement des visages exigent impérativement l'analyse visuelle préalable
+  // pour localiser et inventorier tous les visages du carton avant la génération.
+  if (input.coupleFaceSwap) return false;
   if (input.styleRefsOnly || !input.hasUserReferencePhotos) return true;
-  if (input.coupleFaceSwap) return true;
   return input.speedMode === 'fast';
 }
 
@@ -171,7 +173,7 @@ export function shouldSkipNanoBananaInteractions(speedMode?: InvitationAiSpeedMo
 /** Prompt image cible : ~400–700 mots, jamais un monolithe de 6 000 caractères. */
 export const COMPACT_IMAGE_PROMPT_MAX_CHARS = 3800;
 
-const REFINE_BRIEF_RE = /retouch|ajust|refin|altér|réajust|modifier|swap|remplace.{0,24}visage/i;
+const REFINE_BRIEF_RE = /retouch|ajust|refin|altér|réajust|modifier|swap|remplac|substitu|chang/i;
 const CLONE_BRIEF_RE = /copi|clon|reprodu|duplicate/i;
 
 export const NANO_BANANA_COMPACT_FACE_LOCK =
@@ -180,6 +182,9 @@ export const NANO_BANANA_COMPACT_FACE_LOCK =
 /** Identité = photos sources ; expression = visages déjà présents sur le carton. */
 export const NANO_BANANA_CARD_EXPRESSION_LOCK =
   'CARD EXPRESSION LOCK: Keep each host’s facial expression from the incoming card (Image 1) — mouth open or closed, laugh, smile or neutral lips, eye aperture, brow raise, cheek lift and micro-expression. The source photos supply identity only (bone structure, skin, hair, age). The source faces MUST adopt the card faces’ expressions. Do NOT copy a laugh or serious look from the source photos if the card face is different. Do NOT invent a new expression.';
+
+export const NANO_BANANA_TWO_STAGE_FACE_SWAP_DIRECTIVE =
+  'TWO-STAGE FACE SWAP (DETECT FIRST, THEN REPLACE): 1) Detect all faces on Image 1 first: locate positions, gender, attire, 3D angle, and facial expressions. 2) Replace each detected face with the corresponding source photo from Images 2+, transferring detected expressions directly onto the new identity while preserving 100% of bodies, attire, and card décor.';
 
 export type InvitationImageAnalysisHint = {
   hasPeople?: boolean;
@@ -248,9 +253,10 @@ export function invitationPipelineVisionMandate(intent: InvitationPipelineIntent
   switch (intent) {
     case 'couple':
       return `PIPELINE couple (non-negotiable):
-- Image 1 = incoming card/scene. Keep composition, body pose, bodies, clothes, décor, lighting, ornaments AND the expressions on those card faces.
-- Images 2+ = couple identity only (who they are). Inventory NEW identity. Keep Image 1 expressions.
-- Source photos adopt the card mouths, eyes, brows and emotion. Do not copy the source photo’s own smile if the card differs.
+- STEP 1 — DETECT ALL FACES ON IMAGE 1: Locate and inventory every face visible on Image 1 (left/right positions, apparent gender, groom suit vs bride gown, body pose, 3D head tilt, and exact facial expressions: smile, gaze, emotion).
+- STEP 2 — DETECT SOURCE IDENTITIES IN IMAGES 2+: Inventory identity traits (bone structure, facial landmarks, natural melanin skin tone) from Images 2+.
+- STEP 3 — MAP & REPLACE: Match each face on Image 1 to its designated replacement from Images 2+ (groom on male body, bride on female body - strict zero gender inversion).
+- REPLACE IDENTITY ONLY: Source photos adopt the detected expressions, smile and gaze of Image 1 faces. Keep composition, body pose, bodies, clothes, décor, lighting, ornaments.
 - Forbidden: beautify, lighten, celebrity lookalike, inventing a new couple.`;
     case 'clone':
       return `PIPELINE clone (non-negotiable):
@@ -416,6 +422,7 @@ export function buildCompactImagePrompt(input: {
   parts.push(compactTextRule(input.embedText, input.isPublic));
 
   if (intent === 'couple') {
+    parts.push(NANO_BANANA_TWO_STAGE_FACE_SWAP_DIRECTIVE);
     parts.push(NANO_BANANA_CARD_EXPRESSION_LOCK);
     parts.push(NANO_BANANA_ANATOMICAL_INTEGRATION_LOCK);
   }
@@ -578,7 +585,7 @@ export function buildInvitationImageRetryPrompt(
 }
 
 export const COUPLE_FACE_SWAP_DEFAULT_PROMPT =
-  'Remplace uniquement les visages de cette invitation par les visages du couple. Conserve la pose des corps, les tenues, le décor, la mise en page et les expressions des visages déjà présents sur le carton. Les photos sources adoptent ces expressions (sourire, regard, émotion). Harmonisation anatomique parfaite : orientation 3D des têtes, proportions et tailles des visages par rapport aux corps, teintes réelles des peaux et jonction naturelle du cou sans démarcation.';
+  'Détecte d’abord tous les visages présents sur l’image du carton, puis remplace uniquement leurs visages par ceux du couple fournis. Conserve la pose des corps, les tenues, le décor, la mise en page et les expressions des visages déjà présents sur le carton. Les photos sources adoptent ces expressions (sourire, regard, émotion). Harmonisation anatomique parfaite : orientation 3D des têtes, proportions et tailles des visages par rapport aux corps, teintes réelles des peaux et jonction naturelle du cou sans démarcation.';
 
 export type ProcessedInvitationPrompt = {
   originalBrief: string;
@@ -620,19 +627,19 @@ export function buildReferenceRoles(
   if (referenceCount <= 0) return '';
   if (options?.coupleFaceSwap) {
     const lines = [
-      'REFERENCE ROLES (couple face replacement — organizer requested):',
-      'Image 1: INCOMING INVITATION / SCENE — object fidelity. Keep composition, body pose, bodies, wardrobe, décor, lighting, ornaments AND the facial expressions already on this card.',
+      'REFERENCE ROLES (two-stage couple face replacement — DETECT FIRST, THEN REPLACE):',
+      'Image 1: INCOMING INVITATION / SCENE — object & expression fidelity. First detect all faces on this card (positions, gender, attire, 3D pose, and facial expressions). Keep composition, body pose, bodies, wardrobe, décor, lighting, ornaments AND the facial expressions already on this card.',
     ];
     if (referenceCount === 2) {
       lines.push(
-        'Image 2 (COUPLE PHOTO): COUPLE IDENTITY lock. This photo contains the couple. Extract the groom/man and bride/woman from Image 2. The man from Image 2 replaces the man on Image 1, and the woman from Image 2 replaces the woman on Image 1. Both adopt the card face’s expression (mouth, eyes, brows, emotion). 3D POSE & SCALE: rotate each head in 3D to match Image 1 tilt, yaw, and gaze direction; enforce head size strictly proportional to body shoulders and neck. SKIN FIDELITY: retain authentic melanin skin tones, seamlessly blending with neck and ambient lighting. Honest pixels only — no beautify, no lighten, no celebrity lookalike.',
+        'Image 2 (COUPLE PHOTO): COUPLE IDENTITY lock. This photo contains the couple. Extract the groom/man and bride/woman from Image 2. The man from Image 2 replaces the detected man on Image 1, and the woman from Image 2 replaces the detected woman on Image 1. Both adopt the detected card face’s expression (mouth, eyes, brows, emotion). 3D POSE & SCALE: rotate each head in 3D to match Image 1 tilt, yaw, and gaze direction; enforce head size strictly proportional to body shoulders and neck. SKIN FIDELITY: retain authentic melanin skin tones, seamlessly blending with neck and ambient lighting. Honest pixels only — no beautify, no lighten, no celebrity lookalike.',
       );
     } else {
       for (let i = 1; i < referenceCount; i += 1) {
         const n = i + 1;
         const side = i === 1 ? 'left / primary host' : i === 2 ? 'right / secondary host' : `host ${n - 1}`;
         lines.push(
-          `Image ${n} (${side}): COUPLE IDENTITY lock. Replace a face on Image 1 with this exact person. This photo supplies who they are — they must adopt the card face’s expression (mouth, eyes, brows, emotion). 3D POSE & SCALE: rotate head in 3D to match Image 1 tilt, yaw, and gaze; enforce head size strictly proportional to body shoulders and neck. SKIN FIDELITY: retain authentic melanin skin tones, seamlessly blending with neck and ambient lighting. Honest pixels only — no beautify, no lighten, no celebrity lookalike.`,
+          `Image ${n} (${side}): COUPLE IDENTITY lock. Replace a detected face on Image 1 with this exact person. This photo supplies who they are — they must adopt the detected card face’s expression (mouth, eyes, brows, emotion). 3D POSE & SCALE: rotate head in 3D to match Image 1 tilt, yaw, and gaze; enforce head size strictly proportional to body shoulders and neck. SKIN FIDELITY: retain authentic melanin skin tones, seamlessly blending with neck and ambient lighting. Honest pixels only — no beautify, no lighten, no celebrity lookalike.`,
         );
       }
     }
@@ -678,8 +685,10 @@ export function buildHonestFaceIdentityHeader(
         ? 'Image 2 is the couple photo (showing the couple together). Extract the man and the woman from Image 2 to replace the respective man and woman on Image 1. Both adopt Image 1’s facial expressions.'
         : `Images 2–${referenceCount} are the couple identity photos. Replace ONLY the identity of the face(s) on Image 1 with these exact people. The source faces adopt Image 1’s expressions.`;
     return [
-      '=== 1. COUPLE FACE REPLACEMENT (organizer requested — FIRST) ===',
-      'Image 1 is the incoming invitation or scene. Keep its layout, body pose, bodies, clothes, décor, lighting AND the facial expressions already on that card.',
+      '=== 1. COUPLE FACE REPLACEMENT (TWO-STAGE: DETECT FIRST, THEN REPLACE) ===',
+      'STEP 1 — DETECT ALL FACES ON IMAGE 1: Locate every face visible on the incoming invitation/scene (Image 1) first. Identify their positions (left/right/center), apparent gender & ceremonial role (e.g. groom in suit/tuxedo vs bride in bridal gown), 3D head orientations, scale relative to shoulders, and their exact facial expressions (mouth curve, smile, gaze direction, emotional warmth).',
+      'STEP 2 — DETECT IDENTITIES IN SOURCE PHOTOS: Extract identity traits (bone structure, facial landmarks, natural melanin skin tone) from Images 2+.',
+      'STEP 3 — REPLACE EACH DETECTED FACE: Replace ONLY the identity of each detected face on Image 1 with the corresponding source individual. Keep Image 1’s body pose, bodies, clothes, décor, lighting AND the detected facial expressions from Image 1.',
       coupleRefText,
       options?.genderMappingDirective ||
         'GENDER & ATTIRE FIDELITY (MANDATORY): Match each person strictly by gender and ceremonial role. The male face goes on the male body (suit/tuxedo), the female face goes on the female body (gown/dress). NEVER invert bride and groom faces.',
@@ -963,7 +972,7 @@ export function buildGeminiSceneSteps(embedText: boolean, options?: { coupleFace
   return [
     '=== SCENE STEPS (Gemini step-by-step) ===',
     options?.coupleFaceSwap
-      ? 'First, keep Image 1’s card, body pose, bodies, décor AND facial expressions. Then lock replacement identity from Images 2+ — honest pixels, no idealization. Source faces adopt the card expressions.'
+      ? 'First, DETECT all faces on Image 1 (positions, genders, head angles, and facial expressions). Second, identify replacement identities from Images 2+. Third, REPLACE each detected face with the corresponding source identity while keeping Image 1’s card, bodies, wardrobe, décor and facial expressions.'
       : 'First, lock every face from the character-consistency references — honest pixels, no idealization.',
     options?.coupleFaceSwap
       ? 'Then, compose one vertical 9:16 print-ready invitation that is the incoming card with only the couple faces replaced.'

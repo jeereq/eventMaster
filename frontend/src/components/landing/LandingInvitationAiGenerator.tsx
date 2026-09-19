@@ -549,6 +549,9 @@ export default function LandingInvitationAiGenerator({
       return next.slice(0, merged.length);
     });
     setPreviews(merged.map((f) => URL.createObjectURL(f)));
+    if (merged.length > 0 && !coupleFaceSwap) {
+      setComposeMode('modify');
+    }
     setError('');
     logAction(
       'upload',
@@ -573,6 +576,7 @@ export default function LandingInvitationAiGenerator({
     setIncomingFile(file);
     setIncomingPreview(URL.createObjectURL(file));
     setSelectedModelPhoto(null);
+    setComposeMode('modify');
     setError('');
   };
 
@@ -762,6 +766,16 @@ export default function LandingInvitationAiGenerator({
       return;
     }
 
+    const hasReplacementKeyword =
+      /remplac|substitu|chang|swap|retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
+    const hasBaseTarget = Boolean(incomingFile) || Boolean(selectedModelPhoto) || Boolean(preselectedModelPhoto);
+    const effectiveIsAlteration =
+      coupleFaceSwap ||
+      isModifyMode ||
+      hasBaseTarget ||
+      hasReplacementKeyword ||
+      (files.length > 0 && hasTexts);
+
     let promptToSend = prompt.trim();
     if (!promptToSend || promptToSend === COUPLE_FACE_SWAP_DEFAULT_PROMPT) {
       if (coupleFaceSwap && hasTexts) {
@@ -771,10 +785,10 @@ export default function LandingInvitationAiGenerator({
           cardIdentity.title ? `titre : ${cardIdentity.title}` : '',
           cardIdentity.description ? `lieu : ${cardIdentity.description}` : '',
         ].filter(Boolean).join(', ');
-        promptToSend = `Remplacer les visages du couple (respecter les genres : marié sur costume, mariée sur robe) et modifier les textes (${textParts}). Conserver la disposition, le style, les ornements et les expressions des visages du carton. Les photos sources prennent ces expressions, pas les leurs.`;
+        promptToSend = `Détecter d’abord tous les visages sur le carton, puis remplacer les visages du couple (respecter les genres : marié sur costume, mariée sur robe) et modifier les textes (${textParts}). Conserver la disposition, le style, les ornements et les expressions des visages du carton. Les photos sources prennent ces expressions, pas les leurs.`;
       } else if (coupleFaceSwap) {
         promptToSend = COUPLE_FACE_SWAP_DEFAULT_PROMPT;
-      } else if (isModifyMode && hasTexts) {
+      } else if ((isModifyMode || effectiveIsAlteration || hasTexts) && hasTexts) {
         const textParts = [
           cardIdentity.honorees ? `mariés/célébrés : ${cardIdentity.honorees}` : '',
           cardIdentity.date ? `date : ${cardIdentity.date}` : '',
@@ -796,8 +810,8 @@ export default function LandingInvitationAiGenerator({
     setActiveStep(1);
     setStage(
       coupleFaceSwap
-        ? 'Remplacement des visages du couple…'
-        : isModifyMode
+        ? 'Détection des visages et remplacement du couple…'
+        : isModifyMode || effectiveIsAlteration
         ? 'Lecture du modèle à modifier…'
         : files.length
           ? 'Analyse des visages et du brief…'
@@ -838,7 +852,7 @@ export default function LandingInvitationAiGenerator({
         speedMode,
         coupleFaceSwap,
         genderMappingDirective: genderDirective,
-        isAlteration: isModifyMode || coupleFaceSwap,
+        isAlteration: effectiveIsAlteration,
         structuredBrief,
         sourceTemplateId: selectedModelPhoto?.id,
       });
@@ -1629,12 +1643,12 @@ export default function LandingInvitationAiGenerator({
             <button
               type="button"
               role="radio"
-              aria-checked={composeMode === 'create'}
+              aria-checked={composeMode === 'create' && !incomingFile && !selectedModelPhoto && !coupleFaceSwap}
               disabled={busy}
               onClick={() => switchComposeMode('create')}
               className={cn(
                 'min-h-11 px-3 py-2.5 rounded-[var(--radius-card)] border text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                composeMode === 'create'
+                composeMode === 'create' && !incomingFile && !selectedModelPhoto && !coupleFaceSwap
                   ? 'border-primary bg-primary/10 shadow-xs'
                   : 'border-border bg-surface hover:border-primary/40',
               )}
@@ -1645,12 +1659,12 @@ export default function LandingInvitationAiGenerator({
             <button
               type="button"
               role="radio"
-              aria-checked={isModifyMode}
+              aria-checked={isModifyMode || Boolean(incomingFile) || Boolean(selectedModelPhoto) || coupleFaceSwap}
               disabled={busy}
               onClick={() => switchComposeMode('modify')}
               className={cn(
                 'min-h-11 px-3 py-2.5 rounded-[var(--radius-card)] border text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                isModifyMode
+                isModifyMode || Boolean(incomingFile) || Boolean(selectedModelPhoto) || coupleFaceSwap
                   ? 'border-primary bg-primary/10 shadow-xs'
                   : 'border-border bg-surface hover:border-primary/40',
               )}
@@ -1659,7 +1673,7 @@ export default function LandingInvitationAiGenerator({
               <span className="block text-xs text-muted mt-0.5">Textes / visages</span>
             </button>
           </div>
-          {isModifyMode ? (
+          {isModifyMode || Boolean(incomingFile) || Boolean(selectedModelPhoto) || coupleFaceSwap ? (
             <label className="flex min-h-11 items-center gap-2.5 rounded-[var(--radius-card)] border border-border bg-surface px-3 py-2.5 cursor-pointer">
               <input
                 type="checkbox"

@@ -516,10 +516,14 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
         ? body.baseImageUrl.trim()
         : null;
     const coupleFaceSwap = body.coupleFaceSwap === true;
+    const hasReplacementKeyword =
+      /remplac|substitu|chang|swap|retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
     const isAlteration =
       coupleFaceSwap ||
       body.isAlteration === true ||
-      /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
+      Boolean(body.sourceTemplateId) ||
+      Boolean(baseImageUrl) ||
+      hasReplacementKeyword;
     let existingElements = Array.isArray(body.existingElements)
       ? (body.existingElements as Record<string, unknown>[])
       : undefined;
@@ -588,6 +592,7 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
           ? body.genderMappingDirective.trim().slice(0, 500)
           : undefined,
       structuredBrief: parseInvitationStructuredBrief(body.structuredBrief),
+      sourceTemplateId: typeof body.sourceTemplateId === 'string' ? body.sourceTemplateId : undefined,
     };
     const runCompose = async () => {
       const result = await composeInvitationTemplateAi(composeInput);
@@ -681,10 +686,14 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
         ? body.baseImageUrl.trim()
         : null;
     const coupleFaceSwap = body.coupleFaceSwap === true;
+    const hasReplacementKeyword =
+      /remplac|substitu|chang|swap|retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
     const isAlteration =
       coupleFaceSwap ||
       body.isAlteration === true ||
-      /retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
+      Boolean(body.sourceTemplateId) ||
+      Boolean(baseImageUrl) ||
+      hasReplacementKeyword;
     let existingElements = Array.isArray(body.existingElements)
       ? (body.existingElements as Record<string, unknown>[])
       : undefined;
@@ -757,6 +766,7 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
             ? body.genderMappingDirective.trim().slice(0, 500)
             : undefined,
         structuredBrief: parseInvitationStructuredBrief(body.structuredBrief),
+        sourceTemplateId: typeof body.sourceTemplateId === 'string' ? body.sourceTemplateId : undefined,
       });
       const historyId = await persistTemplateCompose({
         userId: user?.id || null,
