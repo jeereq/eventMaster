@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {
   autoDistributeTablesToZones,
   computeTicketingRevenueSummary,
+  getPricingTierMeta,
   isLightHexColor,
+  sortPricingZones,
   TICKETING_ZONE_PRESETS,
   type PricingZone,
 } from './ticketPricing.ts';
@@ -164,5 +166,39 @@ describe('ticketPricing zone distribution', () => {
     assert.equal(isLightHexColor(''), false);
     assert.equal(isLightHexColor(undefined), false);
     assert.equal(isLightHexColor('invalid'), false);
+  });
+
+  it('trie les zones tarifaires par prix croissant ou décroissant sans muter l’original', () => {
+    const zones: PricingZone[] = [
+      { id: 'z-vip', name: 'VIP', priceFc: 150000 },
+      { id: 'z-std', name: 'Standard', priceFc: 25000 },
+      { id: 'z-mid', name: 'Privilège', priceFc: 60000 },
+    ];
+
+    const sortedAsc = sortPricingZones(zones, 'asc');
+    assert.deepEqual(sortedAsc.map((z) => z.id), ['z-std', 'z-mid', 'z-vip']);
+    assert.deepEqual(zones.map((z) => z.id), ['z-vip', 'z-std', 'z-mid'], 'l’original ne doit pas être muté');
+
+    const sortedDesc = sortPricingZones(zones, 'desc');
+    assert.deepEqual(sortedDesc.map((z) => z.id), ['z-vip', 'z-mid', 'z-std']);
+  });
+
+  it('génère des métadonnées de badge adaptées selon la position tarifaire', () => {
+    const zones: PricingZone[] = [
+      { id: 'z-std', name: 'Standard', priceFc: 25000 },
+      { id: 'z-mid', name: 'Carré Argent', priceFc: 60000 },
+      { id: 'z-vip', name: 'VIP Prestige', priceFc: 150000 },
+    ];
+
+    const metaStd = getPricingTierMeta(zones[0], zones);
+    assert.equal(metaStd.badgeType, 'entry');
+    assert.equal(metaStd.isPopular, false);
+
+    const metaMid = getPricingTierMeta(zones[1], zones);
+    assert.equal(metaMid.badgeType, 'popular');
+    assert.equal(metaMid.isPopular, true);
+
+    const metaVip = getPricingTierMeta(zones[2], zones);
+    assert.equal(metaVip.badgeType, 'vip');
   });
 });

@@ -14,7 +14,8 @@ import { eventPublicHref } from '@/lib/safeAppPath';
 import type { PublicEventCard } from '@/lib/marketplace';
 import { resolveLightingFromProgram, normalizeEventProgram } from '@/lib/eventProgram';
 import { lightingPresetLabels } from '@/lib/roomRenderQuality';
-import { normalizeTicketPricingMode, type PricingZone } from '@/lib/ticketPricing';
+import { normalizeTicketPricingMode, sortPricingZones, type PricingZone } from '@/lib/ticketPricing';
+import TicketPricingGrid from '@/components/TicketPricingGrid';
 import { resolveBlueprintWalls } from '@/lib/roomLayoutUtils';
 import { formatCheckoutSeatLabel, isStandaloneChairPlan } from '@/lib/seatSelectionLayout';
 import SeatSelectionPlanCanvas, { type SeatSelectionPlanCanvasProps } from '@/components/SeatSelectionPlanCanvas';
@@ -157,6 +158,33 @@ export default function EventTicketCheckoutForm({
   useEffect(() => {
     onPaymentActivityChange?.(Boolean(pendingOrder) && !paidResult);
   }, [pendingOrder, paidResult, onPaymentActivityChange]);
+
+  // Synchronisation et présélection de la zone tarifaire (ordre de prix croissant par défaut)
+  useEffect(() => {
+    if (!zonePricing || seatMode || pricingZones.length === 0) return;
+    const zoneQuery = search.get('zone');
+    if (zoneQuery && pricingZones.some((z) => z.id === zoneQuery)) {
+      setSelectedZoneId(zoneQuery);
+      return;
+    }
+    if (!selectedZoneId) {
+      const sorted = sortPricingZones(pricingZones, 'asc');
+      if (sorted.length > 0) {
+        setSelectedZoneId(sorted[0].id);
+      }
+    }
+  }, [zonePricing, seatMode, pricingZones, search, selectedZoneId]);
+
+  useEffect(() => {
+    const handleSelectZoneEvent = (e: Event) => {
+      const detail = (e as CustomEvent<{ zoneId: string }>).detail;
+      if (detail?.zoneId && pricingZones.some((z) => z.id === detail.zoneId)) {
+        setSelectedZoneId(detail.zoneId);
+      }
+    };
+    window.addEventListener('em-select-ticket-zone', handleSelectZoneEvent);
+    return () => window.removeEventListener('em-select-ticket-zone', handleSelectZoneEvent);
+  }, [pricingZones]);
 
   const reloadSeats = React.useCallback(async () => {
     if (!seatMode || !slug) return;
@@ -863,34 +891,14 @@ export default function EventTicketCheckoutForm({
           <Input label="Téléphone" value={buyerPhone} onChange={(e) => setBuyerPhone(e.target.value)} />
 
           {zonePricing && !seatMode && (
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-foreground">Catégorie de place</p>
-              <div className="grid gap-2">
-                {pricingZones.map((zone) => {
-                  const active = selectedZoneId === zone.id;
-                  return (
-                    <button
-                      key={zone.id}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() => setSelectedZoneId(zone.id)}
-                      className={`flex items-center justify-between gap-2 p-2.5 min-h-11 rounded border text-left text-sm transition ${
-                        active ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
-                      }`}
-                    >
-                      <span className="inline-flex items-center gap-2 font-medium">
-                        <span
-                          className="w-3 h-3 rounded-full shrink-0 border border-border"
-                          style={{ backgroundColor: zone.color || ZONE_COLOR_FALLBACK }}
-                        />
-                        {zone.name}
-                      </span>
-                      <span className="text-xs font-bold text-primary">{formatFc(zone.priceFc)}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            <TicketPricingGrid
+              zones={pricingZones}
+              selectedZoneId={selectedZoneId}
+              onSelectZone={(zoneId) => setSelectedZoneId(zoneId)}
+              variant="compact"
+              sortOrder="asc"
+              showHeading
+            />
           )}
 
           {seatMode ? (
