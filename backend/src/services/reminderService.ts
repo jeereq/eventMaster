@@ -1,5 +1,5 @@
 import { prisma } from '../db';
-import { sendRealEmail, sendRealWhatsApp } from './notificationService';
+import { sendRealEmail, sendRealWhatsApp, sendRealSms } from './notificationService';
 import { resolveDeliveryChannels } from '../utils/notificationChannels';
 import { renderGuestMessage, applyTemplateVariables } from './messageTemplateService';
 import { applyInvitationGuidelineVariables, guestGuidelinesInvitationText } from '../utils/guestGuidelines';
@@ -225,6 +225,12 @@ export async function processReminders() {
             const phone = getGuestPhone(guest);
             if (phone) {
               await sendRealWhatsApp(phone, whatsappPayload);
+            }
+          } else if (chan === 'SMS') {
+            const phone = getGuestPhone(guest);
+            if (phone) {
+              const smsText = `Rappel : ${guest.firstName ? guest.firstName + ', ' : ''}votre réponse pour ${event.title} est attendue. Confirmez ici : ${rsvpLink}`;
+              await sendRealSms(phone, smsText);
             }
           }
         }

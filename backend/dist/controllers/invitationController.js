@@ -247,6 +247,22 @@ async function sendInvitation(req, res) {
                         };
                     }
                 }
+                else if (chan === 'SMS') {
+                    const phone = getGuestPhone(guest);
+                    if (phone) {
+                        const smsText = `Bonjour ${guest.firstName || ''}, vous êtes invité(e) à ${event.title}. Confirmez votre présence ici : ${rsvpLink}`;
+                        sendResult = await (0, notificationService_1.sendRealSms)(phone, smsText);
+                    }
+                    else {
+                        console.warn(`[Invitation Controller] Guest ${guest.firstName} ${guest.lastName} has no valid phone number for SMS sending.`);
+                        sendResult = {
+                            success: false,
+                            simulated: false,
+                            error: 'Numéro de téléphone manquant ou invalide pour envoi SMS',
+                            failureCode: 'noPhone',
+                        };
+                    }
+                }
                 channelResults.push({
                     channel: chan,
                     success: sendResult.success,

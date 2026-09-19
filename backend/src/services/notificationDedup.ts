@@ -21,9 +21,9 @@ function normalizeOutboundPart(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
-/** Empreinte d’un e-mail / WhatsApp : même destinataire, même sujet, même début de corps. */
+/** Empreinte d’un e-mail / WhatsApp / SMS : même destinataire, même sujet, même début de corps. */
 export function outboundChannelFingerprint(input: {
-  channel: 'EMAIL' | 'WHATSAPP';
+  channel: 'EMAIL' | 'WHATSAPP' | 'SMS';
   to: string;
   subject?: string;
   body?: string;

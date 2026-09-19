@@ -3,17 +3,28 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getNotificationCredentials = getNotificationCredentials;
 exports.isSendGridConfigured = isSendGridConfigured;
 exports.isUltraMsgConfigured = isUltraMsgConfigured;
+exports.isSmsConfigured = isSmsConfigured;
 exports.assertSendGridConfigured = assertSendGridConfigured;
 exports.logNotificationConfigStatus = logNotificationConfigStatus;
-const platformSettingsService_1 = require("../services/platformSettingsService");
+const platformSettingsService_ts_1 = require("../services/platformSettingsService.js");
 function getNotificationCredentials() {
-    return (0, platformSettingsService_1.getNotificationCredentials)();
+    return (0, platformSettingsService_ts_1.getNotificationCredentials)();
 }
 function isSendGridConfigured(credentials = getNotificationCredentials()) {
     return !!(credentials.sendgridApiKey?.trim() && credentials.sendgridFrom?.trim());
 }
 function isUltraMsgConfigured(credentials = getNotificationCredentials()) {
     return !!(credentials.ultramsgInstanceId && credentials.ultramsgToken);
+}
+function isSmsConfigured(credentials = getNotificationCredentials()) {
+    const provider = (credentials.smsProvider || 'dream-digital').toLowerCase();
+    if (provider === 'twilio') {
+        return Boolean(credentials.twilioSid && credentials.twilioAuthToken && credentials.twilioPhone);
+    }
+    if (provider === 'custom') {
+        return Boolean(credentials.customSmsUrl?.trim());
+    }
+    return Boolean(credentials.dreamDigitalApiId?.trim() && credentials.dreamDigitalApiPassword?.trim());
 }
 function assertSendGridConfigured() {
     if (!isSendGridConfigured()) {
@@ -34,5 +45,13 @@ function logNotificationConfigStatus() {
     }
     else {
         console.warn('[Notification Service] UltraMsg non configuré — envoi WhatsApp simulé.');
+    }
+    if (isSmsConfigured(creds)) {
+        const provider = creds.smsProvider || 'dream-digital';
+        const sender = provider === 'twilio' ? creds.twilioPhone : creds.dreamDigitalSenderId || 'EVENTMASTER';
+        console.log(`[Notification Service] Passerelle SMS configurée (fournisseur: ${provider}, expéditeur: ${sender}).`);
+    }
+    else {
+        console.warn('[Notification Service] Passerelle SMS non configurée — envoi SMS simulé.');
     }
 }

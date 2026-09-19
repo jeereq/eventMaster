@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.formatPhoneE164 = void 0;
+exports.listAvailableSmsProviders = exports.getSmsDeliveryStatus = exports.checkActiveSmsBalance = exports.sendRealSms = exports.formatPhoneE164 = void 0;
 exports.sendRealEmail = sendRealEmail;
 exports.sendRealWhatsApp = sendRealWhatsApp;
 exports.sendRealWhatsAppLocation = sendRealWhatsAppLocation;
@@ -170,3 +170,8 @@ async function sendRealWhatsAppDocument(to, documentUrl, filename, caption) {
         params.append('caption', caption.trim());
     return sendUltraMsgRequest('document', formattedTo, params);
 }
+var smsService_ts_1 = require("./sms/smsService.js");
+Object.defineProperty(exports, "sendRealSms", { enumerable: true, get: function () { return smsService_ts_1.sendRealSms; } });
+Object.defineProperty(exports, "checkActiveSmsBalance", { enumerable: true, get: function () { return smsService_ts_1.checkActiveSmsBalance; } });
+Object.defineProperty(exports, "getSmsDeliveryStatus", { enumerable: true, get: function () { return smsService_ts_1.getSmsDeliveryStatus; } });
+Object.defineProperty(exports, "listAvailableSmsProviders", { enumerable: true, get: function () { return smsService_ts_1.listAvailableSmsProviders; } });

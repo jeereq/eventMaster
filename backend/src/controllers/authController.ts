@@ -138,8 +138,10 @@ export async function register(req: Request, res: Response) {
     const method = methodCheck.method as VerificationMethod;
     const phoneFields = resolvePhoneFields({ phone, phoneCountryCode, nationalNumber });
 
-    if (method === 'WHATSAPP' && !phoneFields.phone) {
-      return res.status(400).json({ error: 'Le numéro de téléphone est obligatoire pour la validation par WhatsApp.' });
+    if ((method === 'WHATSAPP' || method === 'SMS') && !phoneFields.phone) {
+      return res.status(400).json({
+        error: `Le numéro de téléphone est obligatoire pour la validation par ${method === 'WHATSAPP' ? 'WhatsApp' : 'SMS'}.`,
+      });
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -358,8 +360,10 @@ export async function resendOtp(req: Request, res: Response) {
       verificationMethod || user.verificationMethod || defaultAuthOtpMethod(),
     ) as VerificationMethod;
 
-    if (method === 'WHATSAPP' && !user.phone) {
-      return res.status(400).json({ error: 'Aucun numéro WhatsApp associé à ce compte.' });
+    if ((method === 'WHATSAPP' || method === 'SMS') && !user.phone) {
+      return res.status(400).json({
+        error: `Aucun numéro de téléphone associé à ce compte pour validation par ${method === 'WHATSAPP' ? 'WhatsApp' : 'SMS'}.`,
+      });
     }
 
     const sentVia = await issueAndSendOtp({
@@ -371,13 +375,15 @@ export async function resendOtp(req: Request, res: Response) {
     });
 
     const destination =
-      sentVia === 'WHATSAPP' && user.phone ? maskPhone(user.phone) : maskEmail(user.email);
+      (sentVia === 'WHATSAPP' || sentVia === 'SMS') && user.phone ? maskPhone(user.phone) : maskEmail(user.email);
 
     return res.json({
       message:
         sentVia === 'WHATSAPP'
           ? `Un nouveau code OTP a été envoyé sur WhatsApp (${destination}).`
-          : `Un nouveau code OTP a été envoyé par e-mail (${destination}).`,
+          : sentVia === 'SMS'
+            ? `Un nouveau code OTP a été envoyé par SMS (${destination}).`
+            : `Un nouveau code OTP a été envoyé par e-mail (${destination}).`,
       verificationMethod: sentVia,
     });
   } catch (error: any) {

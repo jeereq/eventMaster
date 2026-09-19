@@ -259,12 +259,16 @@ function getChannelLabel(channel: string) {
       return 'E-mail';
     case 'WHATSAPP':
       return 'WhatsApp';
-    case 'EMAIL_AND_WHATSAPP':
-    case 'ALL_CHANNELS':
-    case 'EMAIL_AND_SMS':
-      return 'E-mail et WhatsApp';
     case 'SMS':
-      return 'WhatsApp';
+      return 'SMS';
+    case 'EMAIL_AND_WHATSAPP':
+      return 'E-mail et WhatsApp';
+    case 'EMAIL_AND_SMS':
+      return 'E-mail et SMS';
+    case 'WHATSAPP_AND_SMS':
+      return 'WhatsApp et SMS';
+    case 'ALL_CHANNELS':
+      return 'Tous les canaux (E-mail, WhatsApp, SMS)';
     default:
       return channel;
   }
@@ -289,12 +293,18 @@ function channelNeedsEmail(channel: string): boolean {
 }
 
 function channelNeedsWhatsApp(channel: string): boolean {
-  return channel === 'WHATSAPP' || channel === 'EMAIL_AND_WHATSAPP' || channel === 'EMAIL_AND_SMS' || channel === 'ALL_CHANNELS' || channel === 'SMS';
+  return channel === 'WHATSAPP' || channel === 'EMAIL_AND_WHATSAPP' || channel === 'WHATSAPP_AND_SMS' || channel === 'ALL_CHANNELS';
+}
+
+function channelNeedsSms(channel: string): boolean {
+  return channel === 'SMS' || channel === 'EMAIL_AND_SMS' || channel === 'WHATSAPP_AND_SMS' || channel === 'ALL_CHANNELS';
 }
 
 function summarizeSendAudience(guestList: GuestItem[], channel: string) {
   const needEmail = channelNeedsEmail(channel);
   const needWhatsApp = channelNeedsWhatsApp(channel);
+  const needSms = channelNeedsSms(channel);
+  const needPhone = needWhatsApp || needSms;
   let alreadySent = 0;
   let missingEmail = 0;
   let missingPhone = 0;
@@ -303,11 +313,11 @@ function summarizeSendAudience(guestList: GuestItem[], channel: string) {
   for (const guest of guestList) {
     if (guest.preferences?.invitationSentAt) alreadySent += 1;
     const okEmail = !needEmail || guestHasValidEmail(guest);
-    const okPhone = !needWhatsApp || guestHasPhone(guest);
+    const okPhone = !needPhone || guestHasPhone(guest);
     if (needEmail && !guestHasValidEmail(guest)) missingEmail += 1;
-    if (needWhatsApp && !guestHasPhone(guest)) missingPhone += 1;
+    if (needPhone && !guestHasPhone(guest)) missingPhone += 1;
     if (okEmail && okPhone) reachable += 1;
-    else if (needEmail && needWhatsApp && (guestHasValidEmail(guest) || guestHasPhone(guest))) {
+    else if (needEmail && needPhone && (guestHasValidEmail(guest) || guestHasPhone(guest))) {
       reachable += 1;
     }
   }
@@ -4079,7 +4089,10 @@ Merci de confirmer votre présence :
                 >
                   <option value="EMAIL">E-mail uniquement</option>
                   <option value="WHATSAPP">WhatsApp uniquement</option>
+                  <option value="SMS">SMS uniquement</option>
                   <option value="EMAIL_AND_WHATSAPP">E-mail et WhatsApp</option>
+                  <option value="EMAIL_AND_SMS">E-mail et SMS</option>
+                  <option value="ALL_CHANNELS">Tous les canaux (E-mail, WhatsApp, SMS)</option>
                 </select>
               </div>
 

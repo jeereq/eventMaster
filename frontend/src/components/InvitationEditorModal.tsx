@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Undo, Redo, LayoutTemplate, MessageSquare, Tag, Bold, Italic, Strikethrough,
   Eye, Edit3, Mail, Check, Sparkles, ArrowRight, RefreshCw, Shirt, AlertCircle,
-  Copy, CheckCircle2,
+  Copy, CheckCircle2, Smartphone,
 } from 'lucide-react';
 import { Button, Modal } from '@/components/ui';
 import InvitationMessagePreview from './InvitationMessagePreview';
@@ -375,8 +375,9 @@ export default function InvitationEditorModal({
     }
   };
 
-  const channelNeedsEmail = data.channel === 'EMAIL' || data.channel === 'EMAIL_AND_WHATSAPP' || data.channel === 'ALL_CHANNELS';
+  const channelNeedsEmail = data.channel === 'EMAIL' || data.channel === 'EMAIL_AND_WHATSAPP' || data.channel === 'EMAIL_AND_SMS' || data.channel === 'ALL_CHANNELS';
   const channelNeedsWhatsApp = data.channel === 'WHATSAPP' || data.channel === 'EMAIL_AND_WHATSAPP' || data.channel === 'ALL_CHANNELS';
+  const channelNeedsSms = data.channel === 'SMS' || data.channel === 'EMAIL_AND_SMS' || data.channel === 'ALL_CHANNELS';
   const hasGuidelines = Boolean(
     guestGuidelines && (
       guestGuidelines.dressCode?.enabled ||
@@ -518,7 +519,7 @@ export default function InvitationEditorModal({
             </div>
 
             {/* Sélecteur de canal visuel */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <button
                 type="button"
                 onClick={() => setChannel('EMAIL_AND_WHATSAPP')}
@@ -536,13 +537,13 @@ export default function InvitationEditorModal({
                     <span>+</span>
                     <MessageSquare className="w-4 h-4 text-primary" aria-hidden />
                   </div>
-                  <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">
-                    Recommandé
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary-solid text-primary-foreground">
+                    Mixte
                   </span>
                 </div>
                 <div>
                   <p className="text-xs font-bold text-foreground">E-mail & WhatsApp</p>
-                  <p className="text-xs text-muted mt-0.5">Couverture maximale des invités</p>
+                  <p className="text-[11px] text-muted mt-0.5 line-clamp-1">Couverture maximale</p>
                 </div>
               </button>
 
@@ -563,7 +564,28 @@ export default function InvitationEditorModal({
                 </div>
                 <div>
                   <p className="text-xs font-bold text-foreground">WhatsApp seul</p>
-                  <p className="text-xs text-muted mt-0.5">Direct sur smartphone & pass QR</p>
+                  <p className="text-[11px] text-muted mt-0.5 line-clamp-1">Direct smartphone & QR</p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setChannel('SMS')}
+                aria-pressed={data.channel === 'SMS'}
+                className={cn(
+                  'p-3.5 rounded-xl border text-left transition flex flex-col justify-between min-h-16 cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100',
+                  data.channel === 'SMS'
+                    ? 'border-primary bg-primary/10 ring-2 ring-primary/20 shadow-xs'
+                    : 'border-border bg-surface hover:bg-surface-muted/60',
+                )}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <Smartphone className="w-4 h-4 text-primary" aria-hidden />
+                  {data.channel === 'SMS' && <Check className="w-4 h-4 text-primary" aria-hidden />}
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-foreground">SMS seul</p>
+                  <p className="text-[11px] text-muted mt-0.5 line-clamp-1">Dream Digital / direct</p>
                 </div>
               </button>
 
@@ -584,7 +606,7 @@ export default function InvitationEditorModal({
                 </div>
                 <div>
                   <p className="text-xs font-bold text-foreground">E-mail seul</p>
-                  <p className="text-xs text-muted mt-0.5">Lettre d'invitation classique</p>
+                  <p className="text-[11px] text-muted mt-0.5 line-clamp-1">Lettre classique</p>
                 </div>
               </button>
             </div>

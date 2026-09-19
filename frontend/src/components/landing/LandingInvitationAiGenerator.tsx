@@ -360,6 +360,14 @@ export default function LandingInvitationAiGenerator({
     };
   }, []);
 
+  useEffect(() => {
+    if (!refineSuccess) return;
+    const timer = setTimeout(() => {
+      setRefineSuccess(null);
+    }, 7000);
+    return () => clearTimeout(timer);
+  }, [refineSuccess]);
+
   const logAction = (
     type: FormActionItem['type'],
     label: string,

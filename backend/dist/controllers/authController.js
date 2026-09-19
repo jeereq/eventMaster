@@ -136,8 +136,10 @@ async function register(req, res) {
         }
         const method = methodCheck.method;
         const phoneFields = (0, phone_1.resolvePhoneFields)({ phone, phoneCountryCode, nationalNumber });
-        if (method === 'WHATSAPP' && !phoneFields.phone) {
-            return res.status(400).json({ error: 'Le numéro de téléphone est obligatoire pour la validation par WhatsApp.' });
+        if ((method === 'WHATSAPP' || method === 'SMS') && !phoneFields.phone) {
+            return res.status(400).json({
+                error: `Le numéro de téléphone est obligatoire pour la validation par ${method === 'WHATSAPP' ? 'WhatsApp' : 'SMS'}.`,
+            });
         }
         const existingUser = await db_1.prisma.user.findUnique({ where: { email } });
         if (existingUser) {
@@ -315,8 +317,10 @@ async function resendOtp(req, res) {
             return res.status(429).json({ error: 'Veuillez patienter une minute avant de redemander un code.' });
         }
         const method = (0, platformSettingsService_1.resolveAuthOtpMethod)(verificationMethod || user.verificationMethod || (0, platformSettingsService_1.defaultAuthOtpMethod)());
-        if (method === 'WHATSAPP' && !user.phone) {
-            return res.status(400).json({ error: 'Aucun numéro WhatsApp associé à ce compte.' });
+        if ((method === 'WHATSAPP' || method === 'SMS') && !user.phone) {
+            return res.status(400).json({
+                error: `Aucun numéro de téléphone associé à ce compte pour validation par ${method === 'WHATSAPP' ? 'WhatsApp' : 'SMS'}.`,
+            });
         }
         const sentVia = await issueAndSendOtp({
             userId: user.id,
@@ -325,11 +329,13 @@ async function resendOtp(req, res) {
             phone: user.phone,
             method,
         });
-        const destination = sentVia === 'WHATSAPP' && user.phone ? (0, otpService_1.maskPhone)(user.phone) : (0, otpService_1.maskEmail)(user.email);
+        const destination = (sentVia === 'WHATSAPP' || sentVia === 'SMS') && user.phone ? (0, otpService_1.maskPhone)(user.phone) : (0, otpService_1.maskEmail)(user.email);
         return res.json({
             message: sentVia === 'WHATSAPP'
                 ? `Un nouveau code OTP a été envoyé sur WhatsApp (${destination}).`
-                : `Un nouveau code OTP a été envoyé par e-mail (${destination}).`,
+                : sentVia === 'SMS'
+                    ? `Un nouveau code OTP a été envoyé par SMS (${destination}).`
+                    : `Un nouveau code OTP a été envoyé par e-mail (${destination}).`,
             verificationMethod: sentVia,
         });
     }

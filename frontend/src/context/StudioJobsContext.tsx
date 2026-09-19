@@ -19,9 +19,14 @@ import {
 import { isAiTokenShortageMessage, notifyAiTokensInsufficient } from '@/lib/aiTokenEvents';
 
 const STORAGE_KEY = 'em_studio_jobs';
+const DISMISSED_STORAGE_KEY = 'em_studio_dismissed_jobs';
 const POLL_MS = 2500;
 
-type TrackedJob = StudioJobPayload & { label: string; href: string };
+export type TrackedJob = StudioJobPayload & {
+  label: string;
+  href: string;
+  completedAt?: number;
+};
 
 type StudioJobsContextValue = {
   jobs: TrackedJob[];
@@ -32,13 +37,44 @@ type StudioJobsContextValue = {
 
 const StudioJobsContext = createContext<StudioJobsContextValue | null>(null);
 
+function readStoredDismissed(): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = sessionStorage.getItem(DISMISSED_STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeStoredDismissed(ids: Set<string>) {
+  try {
+    sessionStorage.setItem(DISMISSED_STORAGE_KEY, JSON.stringify(Array.from(ids).slice(-50)));
+  } catch {
+    /* quota */
+  }
+}
+
 function readStoredJobs(): TrackedJob[] {
   if (typeof window === 'undefined') return [];
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as TrackedJob[];
-    return Array.isArray(parsed) ? parsed.filter((job) => job?.id) : [];
+    const dismissed = readStoredDismissed();
+    const now = Date.now();
+    return Array.isArray(parsed)
+      ? parsed.filter((job) => {
+          if (!job?.id || dismissed.has(job.id)) return false;
+          // Ne pas réafficher au rechargement de page les notifications terminées depuis plus de 8s
+          if (job.status === 'done' || job.status === 'error') {
+            if (!job.completedAt || now - job.completedAt > 8_000) return false;
+          }
+          return true;
+        })
+      : [];
   } catch {
     return [];
   }
@@ -57,8 +93,10 @@ export function StudioJobsProvider({ children }: { children: React.ReactNode }) 
   const jobsRef = useRef<TrackedJob[]>([]);
   jobsRef.current = jobs;
   const seenDone = useRef(new Set<string>());
+  const dismissedIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    dismissedIdsRef.current = readStoredDismissed();
     setJobs(readStoredJobs());
   }, []);
 
@@ -67,10 +105,14 @@ export function StudioJobsProvider({ children }: { children: React.ReactNode }) 
   }, [jobs]);
 
   const mergeJob = useCallback((incoming: StudioJobPayload, extras?: { label?: string; href?: string }) => {
+    if (dismissedIdsRef.current.has(incoming.id)) return;
     setJobs((prev) => {
       const existing = prev.find((job) => job.id === incoming.id);
+      const isFinished = incoming.status === 'done' || incoming.status === 'error';
+      const completedAt = isFinished ? (existing?.completedAt ?? Date.now()) : undefined;
       const next: TrackedJob = {
         ...incoming,
+        completedAt,
         label: extras?.label || existing?.label || studioJobLabel(incoming.kind, incoming.prompt),
         href: extras?.href || existing?.href || studioJobHref(incoming.kind),
       };
@@ -80,6 +122,8 @@ export function StudioJobsProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const trackJob = useCallback((jobId: string, kind: StudioJobKind, prompt?: string) => {
+    dismissedIdsRef.current.delete(jobId);
+    writeStoredDismissed(dismissedIdsRef.current);
     mergeJob({
       id: jobId,
       kind,
@@ -94,6 +138,8 @@ export function StudioJobsProvider({ children }: { children: React.ReactNode }) 
   }, [mergeJob]);
 
   const dismissJob = useCallback((jobId: string) => {
+    dismissedIdsRef.current.add(jobId);
+    writeStoredDismissed(dismissedIdsRef.current);
     setJobs((prev) => prev.filter((job) => job.id !== jobId));
   }, []);
 
@@ -151,7 +197,13 @@ export function StudioJobsProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     void fetchStudioJobs().then((items) => {
-      items.forEach((item) => mergeJob(item));
+      items.forEach((item) => {
+        // Au montage initial, ne reprendre que les tâches encore en cours (queued/running)
+        // pour ne pas réafficher d'anciennes notifications terminées de sessions passées.
+        if (item.status === 'queued' || item.status === 'running') {
+          mergeJob(item);
+        }
+      });
     }).catch(() => undefined);
   }, [mergeJob]);
 

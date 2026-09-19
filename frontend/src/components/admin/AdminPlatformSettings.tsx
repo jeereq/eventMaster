@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import {
-  Check, Globe, Loader2, Mail, MapPin, MessageSquare, Percent, ShieldAlert, Volume2, Wallet, X, Heart, Sparkles, Wand2, Building2, Eye, EyeOff,
+  Check, Globe, Loader2, Mail, MapPin, MessageSquare, Percent, ShieldAlert, Volume2, Wallet, X, Heart, Sparkles, Wand2, Building2, Eye, EyeOff, Smartphone,
 } from 'lucide-react';
 import { Button, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -61,7 +61,7 @@ export type AdminPlatformSettingsValues = Record<string, unknown> & {
   aiTokenMinPurchaseCdf?: number;
   welcomeAiGrants?: typeof DEFAULT_WELCOME_AI_GRANTS;
   enabledCities?: string[];
-  authOtpChannels?: 'EMAIL' | 'WHATSAPP' | 'BOTH';
+  authOtpChannels?: 'EMAIL' | 'WHATSAPP' | 'SMS' | 'BOTH' | 'ALL';
   supportEmail?: string;
   supportWhatsApp?: string;
   supportPhone?: string;
@@ -77,6 +77,15 @@ export type AdminPlatformSettingsValues = Record<string, unknown> & {
   twilioAccountSid?: string;
   twilioAuthToken?: string;
   twilioPhoneNumber?: string;
+  smsProvider?: string;
+  dreamDigitalBaseUrl?: string;
+  dreamDigitalApiId?: string;
+  dreamDigitalApiPassword?: string;
+  dreamDigitalSenderId?: string;
+  customSmsUrl?: string;
+  customSmsApiKey?: string;
+  customSmsSenderId?: string;
+  smsConfigured?: boolean;
   audioNotifications?: typeof DEFAULT_AUDIO_NOTIFICATIONS;
   studioVisibility?: {
     budget?: boolean;
@@ -324,12 +333,14 @@ export default function AdminPlatformSettings({
               <p className="text-[11px] text-muted">
                 Canal pour les codes d’inscription, validation de compte et réinitialisation de mot de passe.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                 {(
                   [
-                    { id: 'EMAIL' as const, label: 'E-mail', hint: 'SendGrid uniquement' },
-                    { id: 'WHATSAPP' as const, label: 'WhatsApp', hint: 'UltraMsg uniquement' },
-                    { id: 'BOTH' as const, label: 'Les deux', hint: 'L’utilisateur choisit' },
+                    { id: 'EMAIL' as const, label: 'E-mail', hint: 'SendGrid' },
+                    { id: 'WHATSAPP' as const, label: 'WhatsApp', hint: 'UltraMsg' },
+                    { id: 'SMS' as const, label: 'SMS', hint: 'Dream Digital / Passerelle' },
+                    { id: 'BOTH' as const, label: 'E-mail & WhatsApp', hint: 'Choix de l’utilisateur' },
+                    { id: 'ALL' as const, label: 'Tous les canaux', hint: 'E-mail, WhatsApp ou SMS' },
                   ] as const
                 ).map((opt) => {
                   const active = (value.authOtpChannels || 'BOTH') === opt.id;
@@ -1114,43 +1125,175 @@ export default function AdminPlatformSettings({
             </div>
 
             <div className={sectionCardClass}>
-              <SectionTitle icon={MessageSquare}>SMS (Twilio)</SectionTitle>
+              <SectionTitle icon={Smartphone}>Passerelle SMS (Dream Digital aSMSC & Fournisseurs extensibles)</SectionTitle>
               <p className="text-xs text-muted -mt-2">
-                Optionnel. Utilisé si un canal SMS est branché. Les secrets sont masqués à la relecture.
+                Utilisé pour l’envoi de SMS transactionnels (OTP, invitations, rappels). L’architecture supporte Dream Digital par défaut et permet de brancher d’autres passerelles sans restriction.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className={labelClass}>Account SID</label>
-                  <input
-                    type="text"
-                    value={value.twilioAccountSid || ''}
-                    onChange={(e) => patch({ twilioAccountSid: e.target.value })}
-                    className={cn(fieldClass, 'font-mono')}
-                    placeholder="ACxxxxxxxx"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className={labelClass}>Auth Token</label>
-                  <input
-                    type="password"
-                    autoComplete="off"
-                    value={value.twilioAuthToken || ''}
-                    onChange={(e) => patch({ twilioAuthToken: e.target.value })}
-                    className={cn(fieldClass, 'font-mono')}
-                    placeholder="••••••••••••••••"
-                  />
-                </div>
-                <div className="space-y-1.5 md:col-span-2">
-                  <label className={labelClass}>Numéro Twilio</label>
-                  <input
-                    type="text"
-                    value={value.twilioPhoneNumber || ''}
-                    onChange={(e) => patch({ twilioPhoneNumber: e.target.value })}
-                    className={cn(fieldClass, 'font-mono')}
-                    placeholder="+243…"
-                  />
+
+              {/* Sélecteur de fournisseur SMS */}
+              <div className="space-y-1.5">
+                <label className={labelClass}>Fournisseur SMS actif</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {[
+                    { id: 'dream-digital', label: 'Dream Digital', desc: 'API aSMSC v3.0 (recommandé)' },
+                    { id: 'twilio', label: 'Twilio SMS', desc: 'Passerelle internationale' },
+                    { id: 'custom', label: 'HTTP Personnalisé', desc: 'Webhook / API tierce' },
+                  ].map((p) => {
+                    const active = (value.smsProvider || 'dream-digital') === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => patch({ smsProvider: p.id })}
+                        className={cn(
+                          'p-3 rounded-xl border text-left transition',
+                          active
+                            ? 'bg-primary/10 border-primary/40 text-foreground ring-1 ring-primary/30'
+                            : 'bg-surface border-border text-muted hover:text-foreground',
+                        )}
+                      >
+                        <span className="block text-xs font-bold text-foreground">{p.label}</span>
+                        <span className="block text-[11px] text-muted mt-0.5">{p.desc}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
+
+              {/* Configuration Dream Digital (aSMSC v3.0) */}
+              {(!value.smsProvider || value.smsProvider === 'dream-digital') && (
+                <div className="pt-2 border-t border-border/70 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-foreground">Paramètres Dream Digital (aSMSC)</span>
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-primary/10 text-primary">POST /api/SendSMS</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5 md:col-span-2">
+                      <label className={labelClass}>URL API Dream Digital (aSMSC)</label>
+                      <input
+                        type="url"
+                        value={value.dreamDigitalBaseUrl || ''}
+                        onChange={(e) => patch({ dreamDigitalBaseUrl: e.target.value })}
+                        className={cn(fieldClass, 'font-mono')}
+                        placeholder="https://sms.dreamdigital.cd"
+                      />
+                      <p className="text-[11px] text-muted">URL du portail aSMSC (ex: https://sms.dreamdigital.cd ou http://my.asmsc.com).</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelClass}>API ID</label>
+                      <input
+                        type="text"
+                        value={value.dreamDigitalApiId || ''}
+                        onChange={(e) => patch({ dreamDigitalApiId: e.target.value })}
+                        className={cn(fieldClass, 'font-mono')}
+                        placeholder="ex: API43404236"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelClass}>API Password</label>
+                      <input
+                        type="password"
+                        autoComplete="off"
+                        value={value.dreamDigitalApiPassword || ''}
+                        onChange={(e) => patch({ dreamDigitalApiPassword: e.target.value })}
+                        className={cn(fieldClass, 'font-mono')}
+                        placeholder="••••••••••••••••"
+                      />
+                    </div>
+                    <div className="space-y-1.5 md:col-span-2">
+                      <label className={labelClass}>Sender ID (Expéditeur SMS)</label>
+                      <input
+                        type="text"
+                        value={value.dreamDigitalSenderId || ''}
+                        onChange={(e) => patch({ dreamDigitalSenderId: e.target.value })}
+                        className={cn(fieldClass, 'font-mono')}
+                        placeholder="EVENTMASTER"
+                      />
+                      <p className="text-[11px] text-muted">Nom d’expéditeur enregistré dans votre panneau Dream Digital aSMSC.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Configuration Twilio */}
+              {value.smsProvider === 'twilio' && (
+                <div className="pt-2 border-t border-border/70 space-y-4">
+                  <span className="text-xs font-semibold text-foreground">Paramètres Twilio SMS</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className={labelClass}>Account SID</label>
+                      <input
+                        type="text"
+                        value={value.twilioAccountSid || ''}
+                        onChange={(e) => patch({ twilioAccountSid: e.target.value })}
+                        className={cn(fieldClass, 'font-mono')}
+                        placeholder="ACxxxxxxxx"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelClass}>Auth Token</label>
+                      <input
+                        type="password"
+                        autoComplete="off"
+                        value={value.twilioAuthToken || ''}
+                        onChange={(e) => patch({ twilioAuthToken: e.target.value })}
+                        className={cn(fieldClass, 'font-mono')}
+                        placeholder="••••••••••••••••"
+                      />
+                    </div>
+                    <div className="space-y-1.5 md:col-span-2">
+                      <label className={labelClass}>Numéro Twilio</label>
+                      <input
+                        type="text"
+                        value={value.twilioPhoneNumber || ''}
+                        onChange={(e) => patch({ twilioPhoneNumber: e.target.value })}
+                        className={cn(fieldClass, 'font-mono')}
+                        placeholder="+243…"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Configuration Passerelle personnalisée */}
+              {value.smsProvider === 'custom' && (
+                <div className="pt-2 border-t border-border/70 space-y-4">
+                  <span className="text-xs font-semibold text-foreground">Paramètres API SMS Personnalisée (Webhook)</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5 md:col-span-2">
+                      <label className={labelClass}>URL de l’API / Webhook SMS</label>
+                      <input
+                        type="url"
+                        value={value.customSmsUrl || ''}
+                        onChange={(e) => patch({ customSmsUrl: e.target.value })}
+                        className={cn(fieldClass, 'font-mono')}
+                        placeholder="https://api.monsmsservice.com/v1/send"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelClass}>Clé d’API / Bearer Token</label>
+                      <input
+                        type="password"
+                        autoComplete="off"
+                        value={value.customSmsApiKey || ''}
+                        onChange={(e) => patch({ customSmsApiKey: e.target.value })}
+                        className={cn(fieldClass, 'font-mono')}
+                        placeholder="••••••••••••••••"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={labelClass}>Sender ID</label>
+                      <input
+                        type="text"
+                        value={value.customSmsSenderId || ''}
+                        onChange={(e) => patch({ customSmsSenderId: e.target.value })}
+                        className={cn(fieldClass, 'font-mono')}
+                        placeholder="EVENTMASTER"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
