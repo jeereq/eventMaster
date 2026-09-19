@@ -3,10 +3,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import {
-  Check, Globe, Loader2, Mail, MapPin, MessageSquare, Percent, ShieldAlert, Volume2, Wallet, X, Heart, Sparkles, Wand2, Building2, Eye, EyeOff, Smartphone,
+  Bell, Check, Globe, Loader2, Mail, MapPin, MessageCircle, MessageSquare, Percent, ShieldAlert, Volume2, Wallet, X, Heart, Sparkles, Wand2, Building2, Eye, EyeOff, Smartphone,
 } from 'lucide-react';
 import { Button, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import {
+  authOtpMethodOptions,
+  methodsToAuthOtpChannels,
+  authOtpChannelsLabel,
+  type AuthOtpChannels,
+  type AuthOtpMethod,
+} from '@/lib/authOtpChannels';
 import {
   DEFAULT_ENABLED_CITIES,
   MARKETPLACE_GPS_CITIES,
@@ -61,7 +68,8 @@ export type AdminPlatformSettingsValues = Record<string, unknown> & {
   aiTokenMinPurchaseCdf?: number;
   welcomeAiGrants?: typeof DEFAULT_WELCOME_AI_GRANTS;
   enabledCities?: string[];
-  authOtpChannels?: 'EMAIL' | 'WHATSAPP' | 'SMS' | 'BOTH' | 'ALL';
+  authOtpChannels?: AuthOtpChannels;
+  notificationChannels?: Array<'EMAIL' | 'WHATSAPP' | 'SMS' | 'PUSH'>;
   supportEmail?: string;
   supportWhatsApp?: string;
   supportPhone?: string;
@@ -328,41 +336,121 @@ export default function AdminPlatformSettings({
                 />
               </div>
             )}
-            <div className="space-y-2 pt-2 border-t border-border">
-              <label className={labelClass}>Authentification OTP</label>
-              <p className="text-[11px] text-muted">
-                Canal pour les codes d’inscription, validation de compte et réinitialisation de mot de passe.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-                {(
-                  [
-                    { id: 'EMAIL' as const, label: 'E-mail', hint: 'SendGrid' },
-                    { id: 'WHATSAPP' as const, label: 'WhatsApp', hint: 'UltraMsg' },
-                    { id: 'SMS' as const, label: 'SMS', hint: 'Dream Digital / Passerelle' },
-                    { id: 'BOTH' as const, label: 'E-mail & WhatsApp', hint: 'Choix de l’utilisateur' },
-                    { id: 'ALL' as const, label: 'Tous les canaux', hint: 'E-mail, WhatsApp ou SMS' },
-                  ] as const
-                ).map((opt) => {
-                  const active = (value.authOtpChannels || 'BOTH') === opt.id;
-                  return (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => patch({ authOtpChannels: opt.id })}
-                      className={cn(
-                        'min-h-11 px-3 py-2.5 rounded-xl border text-left transition',
-                        active
-                          ? 'bg-primary/10 border-primary/40 text-foreground'
-                          : 'bg-surface border-border text-muted hover:text-foreground',
-                      )}
-                    >
-                      <span className="block text-sm font-semibold">{opt.label}</span>
-                      <span className="block text-[11px] mt-0.5 opacity-80">{opt.hint}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
+            {(() => {
+              const currentOtpMethods = authOtpMethodOptions(value.authOtpChannels || 'BOTH');
+              const toggleOtpMethod = (m: AuthOtpMethod) => {
+                const isSelected = currentOtpMethods.includes(m);
+                let next: AuthOtpMethod[];
+                if (isSelected) {
+                  if (currentOtpMethods.length <= 1) return;
+                  next = currentOtpMethods.filter((item) => item !== m);
+                } else {
+                  next = [...currentOtpMethods, m];
+                }
+                patch({ authOtpChannels: methodsToAuthOtpChannels(next) });
+              };
+
+              const otpChannelsList: Array<{ id: AuthOtpMethod; label: string; desc: string; icon: React.ReactNode }> = [
+                { id: 'EMAIL', label: 'E-mail', desc: 'Codes par SendGrid', icon: <Mail className="w-4 h-4" /> },
+                { id: 'WHATSAPP', label: 'WhatsApp', desc: 'Codes par UltraMsg', icon: <MessageCircle className="w-4 h-4" /> },
+                { id: 'SMS', label: 'SMS', desc: 'Codes par Passerelle SMS', icon: <Smartphone className="w-4 h-4" /> },
+              ];
+
+              return (
+                <div className="space-y-3 pt-2 border-t border-border">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <label className={labelClass}>Authentification OTP autorisée</label>
+                      <p className="text-[11px] text-muted">
+                        Cochez/décochez les canaux disponibles : vous pouvez en choisir 1 seul, n’importe quel duo ou les 3 ensemble.
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/25">
+                      {authOtpChannelsLabel(value.authOtpChannels || 'BOTH')}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {otpChannelsList.map((ch) => {
+                      const active = currentOtpMethods.includes(ch.id);
+                      return (
+                        <button
+                          key={ch.id}
+                          type="button"
+                          onClick={() => toggleOtpMethod(ch.id)}
+                          className={cn(
+                            'p-3.5 rounded-xl border text-left transition flex items-start gap-3 relative',
+                            active
+                              ? 'bg-primary/10 border-primary/50 text-foreground ring-1 ring-primary/30 shadow-sm'
+                              : 'bg-surface border-border text-muted hover:text-foreground opacity-70',
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5',
+                              active ? 'bg-primary text-white' : 'bg-surface-muted text-muted',
+                            )}
+                          >
+                            {ch.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="text-xs font-bold text-foreground">{ch.label}</span>
+                              <span
+                                className={cn(
+                                  'w-2 h-2 rounded-full shrink-0',
+                                  active ? 'bg-emerald-500' : 'bg-muted-foreground/30',
+                                )}
+                              />
+                            </div>
+                            <span className="block text-[11px] text-muted mt-0.5">{ch.desc}</span>
+                            <span
+                              className={cn(
+                                'inline-block text-[10px] font-semibold mt-1 px-1.5 py-0.5 rounded',
+                                active ? 'bg-primary/20 text-primary' : 'bg-surface-muted text-muted',
+                              )}
+                            >
+                              {active ? 'Actif' : 'Désactivé'}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[11px] text-muted mr-1">Raccourcis :</span>
+                    {[
+                      { label: 'Tous (3 sur 3)', val: 'ALL' as const },
+                      { label: 'E-mail seul', val: 'EMAIL' as const },
+                      { label: 'WhatsApp seul', val: 'WHATSAPP' as const },
+                      { label: 'SMS seul', val: 'SMS' as const },
+                      { label: 'WhatsApp & SMS', val: 'WHATSAPP_SMS' as const },
+                      { label: 'E-mail & SMS', val: 'EMAIL_SMS' as const },
+                      { label: 'E-mail & WhatsApp', val: 'BOTH' as const },
+                    ].map((btn) => {
+                      const current = value.authOtpChannels || 'BOTH';
+                      const isCurrent = current === btn.val || (btn.val === 'BOTH' && current === 'EMAIL_WHATSAPP');
+                      return (
+                        <button
+                          key={btn.val}
+                          type="button"
+                          onClick={() => patch({ authOtpChannels: btn.val })}
+                          className={cn(
+                            'text-[10px] font-semibold px-2 py-1 rounded-md border transition',
+                            isCurrent
+                              ? 'bg-primary text-white border-primary'
+                              : 'bg-surface border-border text-muted hover:text-foreground',
+                          )}
+                        >
+                          {btn.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -1065,6 +1153,132 @@ export default function AdminPlatformSettings({
 
         {section === 'messaging' && (
           <div className="space-y-6">
+            {/* Canaux de notification globaux (E-mail, WhatsApp, SMS, Push) */}
+            {(() => {
+              const notifChannelsList: Array<{
+                id: 'EMAIL' | 'WHATSAPP' | 'SMS' | 'PUSH';
+                label: string;
+                desc: string;
+                icon: React.ReactNode;
+              }> = [
+                { id: 'EMAIL', label: 'E-mail', desc: 'SendGrid (invitations, reçus, notifications)', icon: <Mail className="w-4 h-4" /> },
+                { id: 'WHATSAPP', label: 'WhatsApp', desc: 'UltraMsg (alertes, billets, rappels)', icon: <MessageCircle className="w-4 h-4" /> },
+                { id: 'SMS', label: 'SMS', desc: 'Passerelle SMS (Dream Digital / Twilio / Custom)', icon: <Smartphone className="w-4 h-4" /> },
+                { id: 'PUSH', label: 'Push Mobile / Web', desc: 'Expo & PWA (notifications instantanées)', icon: <Bell className="w-4 h-4" /> },
+              ];
+
+              const currentNotifChannels: Array<'EMAIL' | 'WHATSAPP' | 'SMS' | 'PUSH'> =
+                Array.isArray(value.notificationChannels) && value.notificationChannels.length > 0
+                  ? (value.notificationChannels as Array<'EMAIL' | 'WHATSAPP' | 'SMS' | 'PUSH'>)
+                  : ['EMAIL', 'WHATSAPP', 'SMS', 'PUSH'];
+
+              const toggleNotifChannel = (ch: 'EMAIL' | 'WHATSAPP' | 'SMS' | 'PUSH') => {
+                const isSelected = currentNotifChannels.includes(ch);
+                let next: Array<'EMAIL' | 'WHATSAPP' | 'SMS' | 'PUSH'>;
+                if (isSelected) {
+                  if (currentNotifChannels.length <= 1) return;
+                  next = currentNotifChannels.filter((c) => c !== ch);
+                } else {
+                  next = [...currentNotifChannels, ch];
+                }
+                patch({ notificationChannels: next });
+              };
+
+              const channelLabels: Record<'EMAIL' | 'WHATSAPP' | 'SMS' | 'PUSH', string> = {
+                EMAIL: 'E-mail',
+                WHATSAPP: 'WhatsApp',
+                SMS: 'SMS',
+                PUSH: 'Push',
+              };
+
+              return (
+                <div className={sectionCardClass}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <SectionTitle icon={Bell}>Canaux de notification plateforme autorisés</SectionTitle>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/25">
+                      {currentNotifChannels.length === 4
+                        ? 'Tous les canaux actifs (4 sur 4)'
+                        : `${currentNotifChannels.length} canal/canaux actif(s) : ${currentNotifChannels.map((c) => channelLabels[c]).join(', ')}`}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted -mt-2 leading-relaxed">
+                    Contrôlez les canaux de transmission autorisés sur toute la plateforme (invitations, réponses, billetterie, dons, rappels, tâches, commissions et facturation). Vous pouvez choisir 1 seul canal, n’importe quelle paire (2 sur 4), n’importe quel trio (3 sur 4) ou les 4 ensemble avec le Push.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {notifChannelsList.map((ch) => {
+                      const active = currentNotifChannels.includes(ch.id);
+                      return (
+                        <button
+                          key={ch.id}
+                          type="button"
+                          onClick={() => toggleNotifChannel(ch.id)}
+                          className={cn(
+                            'p-3.5 rounded-xl border text-left transition flex items-start gap-3 relative',
+                            active
+                              ? 'bg-primary/10 border-primary/50 text-foreground ring-1 ring-primary/30 shadow-sm'
+                              : 'bg-surface border-border text-muted hover:text-foreground opacity-70',
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5',
+                              active ? 'bg-primary text-white' : 'bg-surface-muted text-muted',
+                            )}
+                          >
+                            {ch.icon}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="text-xs font-bold text-foreground">{ch.label}</span>
+                              <span
+                                className={cn(
+                                  'w-2 h-2 rounded-full shrink-0',
+                                  active ? 'bg-emerald-500' : 'bg-muted-foreground/30',
+                                )}
+                              />
+                            </div>
+                            <span className="block text-[11px] text-muted mt-0.5">{ch.desc}</span>
+                            <span
+                              className={cn(
+                                'inline-block text-[10px] font-semibold mt-1 px-1.5 py-0.5 rounded',
+                                active ? 'bg-primary/20 text-primary' : 'bg-surface-muted text-muted',
+                              )}
+                            >
+                              {active ? 'Activé' : 'Désactivé'}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="text-[11px] text-muted mr-1">Raccourcis :</span>
+                    {[
+                      { label: 'Tous (4 sur 4)', channels: ['EMAIL', 'WHATSAPP', 'SMS', 'PUSH'] as const },
+                      { label: 'E-mail + WhatsApp + SMS (3 sur 4)', channels: ['EMAIL', 'WHATSAPP', 'SMS'] as const },
+                      { label: 'WhatsApp + SMS + Push (3 sur 4)', channels: ['WHATSAPP', 'SMS', 'PUSH'] as const },
+                      { label: 'WhatsApp + SMS', channels: ['WHATSAPP', 'SMS'] as const },
+                      { label: 'E-mail + SMS', channels: ['EMAIL', 'SMS'] as const },
+                      { label: 'SMS seul', channels: ['SMS'] as const },
+                      { label: 'E-mail seul', channels: ['EMAIL'] as const },
+                      { label: 'Push seul', channels: ['PUSH'] as const },
+                    ].map((shortcut, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => patch({ notificationChannels: [...shortcut.channels] })}
+                        className="text-[10px] font-semibold px-2 py-1 rounded-md border border-border bg-surface text-muted hover:text-foreground transition"
+                      >
+                        {shortcut.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className={sectionCardClass}>
               <SectionTitle icon={MessageSquare}>WhatsApp (UltraMsg)</SectionTitle>
               <p className="text-xs text-muted -mt-2">

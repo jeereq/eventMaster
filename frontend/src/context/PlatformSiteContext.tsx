@@ -63,6 +63,7 @@ export interface PublicSiteConfig {
   usdExchangeRateCdf: number;
   enabledCities: string[];
   authOtpChannels: AuthOtpChannels;
+  notificationChannels: Array<'EMAIL' | 'WHATSAPP' | 'SMS' | 'PUSH'>;
   aiTokenPriceCdf: number;
   aiTokenMinPurchaseCdf: number;
   welcomeAiGrants: WelcomeGrantRules;
@@ -107,6 +108,7 @@ export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
   usdExchangeRateCdf: 2800,
   enabledCities: ['Kinshasa', 'Lubumbashi', 'Goma'],
   authOtpChannels: 'BOTH',
+  notificationChannels: ['EMAIL', 'WHATSAPP', 'SMS', 'PUSH'],
   aiTokenPriceCdf: 416,
   aiTokenMinPurchaseCdf: 2500,
   welcomeAiGrants: DEFAULT_WELCOME_AI_GRANTS,
@@ -151,6 +153,9 @@ export function PlatformSiteProvider({ children }: { children: React.ReactNode }
         usdExchangeRateCdf: resolveUsdExchangeRateCdf(data.usdExchangeRateCdf, DEFAULT_PUBLIC_SITE.usdExchangeRateCdf),
         enabledCities: sanitizeEnabledCities(data.enabledCities),
         authOtpChannels: sanitizeAuthOtpChannels(data.authOtpChannels),
+        notificationChannels: Array.isArray(data.notificationChannels) && data.notificationChannels.length > 0
+          ? (data.notificationChannels as Array<'EMAIL' | 'WHATSAPP' | 'SMS' | 'PUSH'>)
+          : DEFAULT_PUBLIC_SITE.notificationChannels,
         aiTokenPriceCdf: Number(data.aiTokenPriceCdf) > 0
           ? Math.round(Number(data.aiTokenPriceCdf))
           : DEFAULT_PUBLIC_SITE.aiTokenPriceCdf,

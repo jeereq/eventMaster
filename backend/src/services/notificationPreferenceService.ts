@@ -7,6 +7,7 @@ import {
   type NotificationPrefFamily,
 } from '../config/platformNotificationTypes';
 import { userWhatsAppNumber } from '../utils/notificationTemplates';
+import { loadPlatformSettings } from './platformSettingsService';
 
 export type ChannelPreference = {
   email: boolean;
@@ -108,12 +109,16 @@ export async function resolveChannelPreference(userId: string, type: string): Pr
 export function allowedChannels(
   pref: ChannelPreference,
   override?: NotificationChannel[],
+  platformEnabled?: Array<'EMAIL' | 'WHATSAPP' | 'SMS' | 'PUSH'>,
 ): Set<NotificationChannel> {
+  const globalChannels = platformEnabled ?? loadPlatformSettings().notificationChannels;
+  const platformSet = globalChannels ? new Set(globalChannels) : null;
+
   const enabled: NotificationChannel[] = ['IN_APP'];
-  if (pref.email) enabled.push('EMAIL');
-  if (pref.whatsapp) enabled.push('WHATSAPP');
-  if (pref.push) enabled.push('PUSH');
-  if (pref.sms) enabled.push('SMS');
+  if (pref.email && (!platformSet || platformSet.has('EMAIL'))) enabled.push('EMAIL');
+  if (pref.whatsapp && (!platformSet || platformSet.has('WHATSAPP'))) enabled.push('WHATSAPP');
+  if (pref.push && (!platformSet || platformSet.has('PUSH'))) enabled.push('PUSH');
+  if (pref.sms && (!platformSet || platformSet.has('SMS'))) enabled.push('SMS');
   const allowed = new Set<NotificationChannel>(enabled);
   if (!override?.length) return allowed;
   return new Set(override.filter((channel) => allowed.has(channel) || channel === 'IN_APP'));

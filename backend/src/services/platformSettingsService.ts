@@ -46,8 +46,19 @@ const PLATFORM_CONFIG_ID = 'default';
 /** Cache processus : source de vérité après hydratation BD (le fichier est un secours local). */
 let memoryCache: PlatformSettings | null = null;
 
-export type AuthOtpChannels = 'EMAIL' | 'WHATSAPP' | 'SMS' | 'BOTH' | 'ALL';
+export type AuthOtpChannels =
+  | 'EMAIL'
+  | 'WHATSAPP'
+  | 'SMS'
+  | 'BOTH'
+  | 'EMAIL_WHATSAPP'
+  | 'EMAIL_SMS'
+  | 'WHATSAPP_SMS'
+  | 'ALL';
 export type AuthOtpMethod = 'EMAIL' | 'WHATSAPP' | 'SMS';
+
+export const ALL_NOTIFICATION_CHANNELS = ['EMAIL', 'WHATSAPP', 'SMS', 'PUSH'] as const;
+export type PlatformNotificationChannel = (typeof ALL_NOTIFICATION_CHANNELS)[number];
 
 export const AUDIO_NOTIFICATION_PRESETS = ['off', 'chime', 'bell', 'soft', 'urgent', 'cosmic', 'fanfare'] as const;
 export type AudioNotificationPreset = (typeof AUDIO_NOTIFICATION_PRESETS)[number];
@@ -364,9 +375,15 @@ export interface PlatformSettings {
    * Canaux OTP d’authentification autorisés :
    * - EMAIL : e-mail uniquement
    * - WHATSAPP : WhatsApp uniquement
-   * - BOTH : l’utilisateur choisit
+   * - SMS : SMS uniquement
+   * - BOTH : E-mail & WhatsApp
+   * - EMAIL_SMS : E-mail & SMS
+   * - WHATSAPP_SMS : WhatsApp & SMS
+   * - ALL : E-mail, WhatsApp & SMS
    */
   authOtpChannels: AuthOtpChannels;
+  /** Canaux de notifications plateforme autorisés (E-mail, WhatsApp, SMS, Push). */
+  notificationChannels: PlatformNotificationChannel[];
   /** Prix d’un jeton IA en FC. */
   aiTokenPriceCdf: number;
   /** Montant minimum d’achat de jetons en FC. */
@@ -427,6 +444,8 @@ export interface PublicSiteConfig {
   enabledCities: string[];
   /** Canaux OTP autorisés pour inscription / validation / reset. */
   authOtpChannels: AuthOtpChannels;
+  /** Canaux de notifications actifs sur la plateforme. */
+  notificationChannels: PlatformNotificationChannel[];
   aiTokenPriceCdf: number;
   aiTokenMinPurchaseCdf: number;
   welcomeAiGrants: WelcomeGrantRules;
@@ -487,6 +506,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   usdExchangeRateCdf: 2800,
   enabledCities: ['Kinshasa', 'Lubumbashi', 'Goma'],
   authOtpChannels: 'BOTH',
+  notificationChannels: ['EMAIL', 'WHATSAPP', 'SMS', 'PUSH'],
   aiTokenPriceCdf: DEFAULT_AI_TOKEN_PRICE_CDF,
   aiTokenMinPurchaseCdf: DEFAULT_AI_TOKEN_MIN_PURCHASE_CDF,
   welcomeAiGrants: DEFAULT_WELCOME_GRANT_RULES,
@@ -520,9 +540,62 @@ export function sanitizeEnabledCities(value: unknown): string[] {
   return ordered.length > 0 ? [...ordered] : ['Kinshasa'];
 }
 
+export function authOtpMethodOptions(channels: AuthOtpChannels = 'BOTH'): AuthOtpMethod[] {
+  if (channels === 'EMAIL') return ['EMAIL'];
+  if (channels === 'WHATSAPP') return ['WHATSAPP'];
+  if (channels === 'SMS') return ['SMS'];
+  if (channels === 'EMAIL_SMS') return ['EMAIL', 'SMS'];
+  if (channels === 'WHATSAPP_SMS') return ['WHATSAPP', 'SMS'];
+  if (channels === 'ALL') return ['EMAIL', 'WHATSAPP', 'SMS'];
+  return ['EMAIL', 'WHATSAPP'];
+}
+
+export function methodsToAuthOtpChannels(methods: AuthOtpMethod[]): AuthOtpChannels {
+  const set = new Set(methods);
+  const hasEmail = set.has('EMAIL');
+  const hasWa = set.has('WHATSAPP');
+  const hasSms = set.has('SMS');
+
+  if (hasEmail && hasWa && hasSms) return 'ALL';
+  if (hasEmail && hasWa) return 'BOTH';
+  if (hasEmail && hasSms) return 'EMAIL_SMS';
+  if (hasWa && hasSms) return 'WHATSAPP_SMS';
+  if (hasEmail) return 'EMAIL';
+  if (hasWa) return 'WHATSAPP';
+  if (hasSms) return 'SMS';
+  return 'BOTH';
+}
+
+export function sanitizeNotificationChannels(value: unknown): PlatformNotificationChannel[] {
+  if (!Array.isArray(value)) {
+    return [...ALL_NOTIFICATION_CHANNELS];
+  }
+  const set = new Set(value.map((v) => String(v || '').trim().toUpperCase()));
+  const filtered = ALL_NOTIFICATION_CHANNELS.filter((ch) => set.has(ch));
+  return filtered.length > 0 ? filtered : [...ALL_NOTIFICATION_CHANNELS];
+}
+
 export function sanitizeAuthOtpChannels(value: unknown): AuthOtpChannels {
+  if (Array.isArray(value)) {
+    const methods = value
+      .map((item) => String(item || '').trim().toUpperCase())
+      .filter((item): item is AuthOtpMethod => item === 'EMAIL' || item === 'WHATSAPP' || item === 'SMS');
+    return methodsToAuthOtpChannels(methods);
+  }
   const raw = String(value || '').trim().toUpperCase();
-  if (raw === 'EMAIL' || raw === 'WHATSAPP' || raw === 'SMS' || raw === 'BOTH' || raw === 'ALL') return raw;
+  if (
+    raw === 'EMAIL' ||
+    raw === 'WHATSAPP' ||
+    raw === 'SMS' ||
+    raw === 'BOTH' ||
+    raw === 'EMAIL_WHATSAPP' ||
+    raw === 'EMAIL_SMS' ||
+    raw === 'WHATSAPP_SMS' ||
+    raw === 'ALL'
+  ) {
+    if (raw === 'EMAIL_WHATSAPP') return 'BOTH';
+    return raw as AuthOtpChannels;
+  }
   return 'BOTH';
 }
 
@@ -532,9 +605,10 @@ export function getAuthOtpChannels(settings = loadPlatformSettings()): AuthOtpCh
 
 export function defaultAuthOtpMethod(settings = loadPlatformSettings()): AuthOtpMethod {
   const ch = getAuthOtpChannels(settings);
-  if (ch === 'WHATSAPP') return 'WHATSAPP';
-  if (ch === 'SMS') return 'SMS';
-  return 'EMAIL';
+  const options = authOtpMethodOptions(ch);
+  if (options.includes('WHATSAPP')) return 'WHATSAPP';
+  if (options.includes('SMS')) return 'SMS';
+  return options[0] || 'EMAIL';
 }
 
 /**
@@ -546,13 +620,13 @@ export function resolveAuthOtpMethod(
   settings = loadPlatformSettings(),
 ): AuthOtpMethod {
   const channels = getAuthOtpChannels(settings);
-  if (channels === 'EMAIL') return 'EMAIL';
-  if (channels === 'WHATSAPP') return 'WHATSAPP';
-  if (channels === 'SMS') return 'SMS';
+  const options = authOtpMethodOptions(channels);
+  if (options.length === 1) return options[0];
   const req = String(requested || '').trim().toUpperCase();
-  if (req === 'WHATSAPP') return 'WHATSAPP';
-  if (req === 'SMS') return 'SMS';
-  return 'EMAIL';
+  if (options.includes(req as AuthOtpMethod)) {
+    return req as AuthOtpMethod;
+  }
+  return defaultAuthOtpMethod(settings);
 }
 
 export function assertAuthOtpMethodAllowed(
@@ -560,6 +634,7 @@ export function assertAuthOtpMethodAllowed(
   settings = loadPlatformSettings(),
 ): { ok: true; method: AuthOtpMethod } | { ok: false; error: string } {
   const channels = getAuthOtpChannels(settings);
+  const options = authOtpMethodOptions(channels);
   const raw = String(requested || '').trim().toUpperCase();
   if (!raw) {
     return { ok: true, method: defaultAuthOtpMethod(settings) };
@@ -567,23 +642,18 @@ export function assertAuthOtpMethodAllowed(
   if (raw !== 'EMAIL' && raw !== 'WHATSAPP' && raw !== 'SMS') {
     return { ok: false, error: 'Méthode de validation invalide.' };
   }
-  if (
-    channels === 'ALL' ||
-    (channels === 'BOTH' && (raw === 'EMAIL' || raw === 'WHATSAPP')) ||
-    channels === raw
-  ) {
-    return { ok: true, method: raw };
+  if (options.includes(raw as AuthOtpMethod)) {
+    return { ok: true, method: raw as AuthOtpMethod };
   }
+  const labels: Record<AuthOtpMethod, string> = {
+    EMAIL: 'e-mail',
+    WHATSAPP: 'WhatsApp',
+    SMS: 'SMS',
+  };
+  const allowedLabels = options.map((o) => labels[o]).join(', ');
   return {
     ok: false,
-    error:
-      channels === 'EMAIL'
-        ? 'Seule la validation par e-mail est activée sur la plateforme.'
-        : channels === 'WHATSAPP'
-          ? 'Seule la validation par WhatsApp est activée sur la plateforme.'
-          : channels === 'SMS'
-            ? 'Seule la validation par SMS est activée sur la plateforme.'
-            : 'Seules les validations par e-mail et WhatsApp sont activées sur la plateforme.',
+    error: `Seul(s) le(s) canal/canaux suivant(s) sont autorisés pour la validation : ${allowedLabels}.`,
   };
 }
 
@@ -663,6 +733,7 @@ function normalizeStoredRates(settings: PlatformSettings): PlatformSettings {
     usdExchangeRateCdf: Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? Math.round(parsedUsdRate) : 2800,
     enabledCities: sanitizeEnabledCities(settings.enabledCities),
     authOtpChannels: sanitizeAuthOtpChannels(settings.authOtpChannels),
+    notificationChannels: sanitizeNotificationChannels(settings.notificationChannels),
     aiTokenPriceCdf: sanitizeAiTokenPriceCdf(settings.aiTokenPriceCdf),
     aiTokenMinPurchaseCdf: sanitizeAiTokenMinPurchaseCdf(
       settings.aiTokenMinPurchaseCdf,
@@ -702,6 +773,7 @@ function buildNextSettings(
   next.usdExchangeRateCdf = Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? Math.round(parsedUsdRate) : 2800;
   next.enabledCities = sanitizeEnabledCities(next.enabledCities);
   next.authOtpChannels = sanitizeAuthOtpChannels(next.authOtpChannels);
+  next.notificationChannels = sanitizeNotificationChannels(next.notificationChannels);
   next.aiTokenPriceCdf = sanitizeAiTokenPriceCdf(next.aiTokenPriceCdf);
   next.aiTokenMinPurchaseCdf = sanitizeAiTokenMinPurchaseCdf(next.aiTokenMinPurchaseCdf, next.aiTokenPriceCdf);
   next.welcomeAiGrants = sanitizeWelcomeGrantRules(next.welcomeAiGrants);
@@ -730,6 +802,8 @@ async function persistPlatformConfigToDb(settings: PlatformSettings): Promise<vo
 function applySettingsToCache(next: PlatformSettings): PlatformSettings {
   memoryCache = next;
   writeSettingsFileBestEffort(next);
+  // Re-synchroniser immédiatement les credentials d'envoi SMS
+  getNotificationCredentials(next);
   return next;
 }
 
@@ -765,16 +839,19 @@ export async function hydratePlatformSettingsFromDb(): Promise<void> {
     if (row?.payload && typeof row.payload === 'object' && !Array.isArray(row.payload)) {
       memoryCache = mergeStoredSettings(row.payload as Partial<PlatformSettings>);
       writeSettingsFileBestEffort(memoryCache);
+      getNotificationCredentials(memoryCache);
       console.log('[PlatformSettings] Réglages chargés depuis la base.');
       return;
     }
 
     const seed = loadPlatformSettings();
     await persistPlatformConfigToDb(seed);
+    getNotificationCredentials(seed);
     console.log('[PlatformSettings] Réglages initiaux enregistrés en base.');
   } catch (error) {
     console.warn('[PlatformSettings] Hydratation BD impossible — fichier ou défauts.', error);
-    loadPlatformSettings();
+    const fallback = loadPlatformSettings();
+    getNotificationCredentials(fallback);
   }
 }
 
@@ -823,6 +900,7 @@ export function getPublicSiteConfig(settings = loadPlatformSettings()): PublicSi
     usdExchangeRateCdf: Number(settings.usdExchangeRateCdf) > 0 ? Math.round(Number(settings.usdExchangeRateCdf)) : 2800,
     enabledCities: sanitizeEnabledCities(settings.enabledCities),
     authOtpChannels: sanitizeAuthOtpChannels(settings.authOtpChannels),
+    notificationChannels: sanitizeNotificationChannels(settings.notificationChannels),
     aiTokenPriceCdf: sanitizeAiTokenPriceCdf(settings.aiTokenPriceCdf),
     aiTokenMinPurchaseCdf: sanitizeAiTokenMinPurchaseCdf(
       settings.aiTokenMinPurchaseCdf,
