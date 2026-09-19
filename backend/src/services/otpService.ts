@@ -1,11 +1,11 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { sendRealEmail, sendRealWhatsApp } from './notificationService';
+import { sendRealEmail, sendRealWhatsApp, sendRealSms } from './notificationService';
 import { wrapBrandedEmail } from '../utils/brandedMessaging';
 import { escapeHtml, getPlatformBrand, mixHexWithWhite } from '../utils/brandingUtils';
 import { getContactDestinations } from './platformSettingsService';
 
-export type VerificationMethod = 'EMAIL' | 'WHATSAPP';
+export type VerificationMethod = 'EMAIL' | 'WHATSAPP' | 'SMS';
 
 const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const RESEND_COOLDOWN_MS = 60 * 1000; // 1 minute
@@ -67,6 +67,12 @@ export async function sendRegistrationOtp(params: {
     const body = `Bonjour *${name}*,\n\n${inviteIntroWhatsapp}Votre code de validation *EventMaster* est :\n\n🔐 *${code}*\n\nCe code expire dans ${expiryMinutes} minutes.\n\nNe partagez ce code avec personne.${loginHint}\n\nL'équipe EventMaster ✨`;
     await sendRealWhatsApp(phone, body);
     return { sentVia: 'WHATSAPP' };
+  }
+
+  if (method === 'SMS' && phone) {
+    const body = `EventMaster : Bonjour ${name}, votre code de validation est ${code}. Valable ${expiryMinutes} min. Ne le partagez pas.${loginHint}`;
+    await sendRealSms(phone, body);
+    return { sentVia: 'SMS' };
   }
 
   const subject = invitedByCommercial

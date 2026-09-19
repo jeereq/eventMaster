@@ -43,6 +43,7 @@ const welcomeAiTokensPolicy_1 = require("./welcomeAiTokensPolicy");
 const subscriptionDiscountAccess_1 = require("./subscriptionDiscountAccess");
 const donationsAccess_1 = require("./donationsAccess");
 const aiStudioModels_1 = require("./aiStudioModels");
+const smsConfig_1 = require("./sms/smsConfig");
 var aiStudioModels_2 = require("./aiStudioModels");
 Object.defineProperty(exports, "AVAILABLE_INVITATION_MODELS", { enumerable: true, get: function () { return aiStudioModels_2.AVAILABLE_INVITATION_MODELS; } });
 Object.defineProperty(exports, "AVAILABLE_ROOM_PLAN_MODELS", { enumerable: true, get: function () { return aiStudioModels_2.AVAILABLE_ROOM_PLAN_MODELS; } });
@@ -276,6 +277,14 @@ exports.DEFAULT_PLATFORM_SETTINGS = {
     twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || '',
     twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || '',
     twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || '',
+    smsProvider: process.env.SMS_PROVIDER || 'dream-digital',
+    dreamDigitalBaseUrl: process.env.DREAM_DIGITAL_BASE_URL || process.env.SMS_API_URL || 'https://sms.dreamdigital.cd',
+    dreamDigitalApiId: process.env.DREAM_DIGITAL_API_ID || process.env.SMS_API_ID || '',
+    dreamDigitalApiPassword: process.env.DREAM_DIGITAL_API_PASSWORD || process.env.SMS_API_PASSWORD || '',
+    dreamDigitalSenderId: process.env.DREAM_DIGITAL_SENDER_ID || process.env.SMS_SENDER_ID || 'EVENTMASTER',
+    customSmsUrl: process.env.CUSTOM_SMS_URL || '',
+    customSmsApiKey: process.env.CUSTOM_SMS_API_KEY || '',
+    customSmsSenderId: process.env.CUSTOM_SMS_SENDER_ID || '',
     marketplaceCommissionRate: 0.08,
     marketplaceDepositRate: 0.3,
     eventTicketingRetentionRate: 0.05,
@@ -317,7 +326,7 @@ function sanitizeEnabledCities(value) {
 }
 function sanitizeAuthOtpChannels(value) {
     const raw = String(value || '').trim().toUpperCase();
-    if (raw === 'EMAIL' || raw === 'WHATSAPP' || raw === 'BOTH')
+    if (raw === 'EMAIL' || raw === 'WHATSAPP' || raw === 'SMS' || raw === 'BOTH' || raw === 'ALL')
         return raw;
     return 'BOTH';
 }
@@ -325,7 +334,12 @@ function getAuthOtpChannels(settings = loadPlatformSettings()) {
     return sanitizeAuthOtpChannels(settings.authOtpChannels);
 }
 function defaultAuthOtpMethod(settings = loadPlatformSettings()) {
-    return getAuthOtpChannels(settings) === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL';
+    const ch = getAuthOtpChannels(settings);
+    if (ch === 'WHATSAPP')
+        return 'WHATSAPP';
+    if (ch === 'SMS')
+        return 'SMS';
+    return 'EMAIL';
 }
 /**
  * Résout une méthode OTP demandée selon la config plateforme.
@@ -337,7 +351,14 @@ function resolveAuthOtpMethod(requested, settings = loadPlatformSettings()) {
         return 'EMAIL';
     if (channels === 'WHATSAPP')
         return 'WHATSAPP';
-    return String(requested || '').trim().toUpperCase() === 'WHATSAPP' ? 'WHATSAPP' : 'EMAIL';
+    if (channels === 'SMS')
+        return 'SMS';
+    const req = String(requested || '').trim().toUpperCase();
+    if (req === 'WHATSAPP')
+        return 'WHATSAPP';
+    if (req === 'SMS')
+        return 'SMS';
+    return 'EMAIL';
 }
 function assertAuthOtpMethodAllowed(requested, settings = loadPlatformSettings()) {
     const channels = getAuthOtpChannels(settings);
@@ -345,17 +366,19 @@ function assertAuthOtpMethodAllowed(requested, settings = loadPlatformSettings()
     if (!raw) {
         return { ok: true, method: defaultAuthOtpMethod(settings) };
     }
-    if (raw !== 'EMAIL' && raw !== 'WHATSAPP') {
+    if (raw !== 'EMAIL' && raw !== 'WHATSAPP' && raw !== 'SMS') {
         return { ok: false, error: 'Méthode de validation invalide.' };
     }
-    if (channels === 'BOTH' || channels === raw) {
+    if (channels === 'ALL' || channels === 'BOTH' || channels === raw) {
         return { ok: true, method: raw };
     }
     return {
         ok: false,
         error: channels === 'EMAIL'
             ? 'Seule la validation par e-mail est activée sur la plateforme.'
-            : 'Seule la validation par WhatsApp est activée sur la plateforme.',
+            : channels === 'WHATSAPP'
+                ? 'Seule la validation par WhatsApp est activée sur la plateforme.'
+                : 'Seule la validation par SMS est activée sur la plateforme.',
     };
 }
 function ensureSettingsDir() {
@@ -610,14 +633,23 @@ function getContactDestinations(settings = loadPlatformSettings()) {
 /** Masque les secrets pour l’API admin (affichage partiel). */
 function maskSecretsForAdmin(settings) {
     const mask = (v) => (v && v.length > 8 ? `${v.slice(0, 4)}…${v.slice(-4)}` : v ? '••••••••' : '');
+    const activeSmsProvider = (settings.smsProvider || 'dream-digital').toLowerCase();
+    const smsConfigured = activeSmsProvider === 'twilio'
+        ? Boolean(settings.twilioAccountSid?.trim() && settings.twilioAuthToken?.trim() && settings.twilioPhoneNumber?.trim())
+        : activeSmsProvider === 'custom'
+            ? Boolean(settings.customSmsUrl?.trim())
+            : Boolean(settings.dreamDigitalApiId?.trim() && settings.dreamDigitalApiPassword?.trim());
     return {
         ...settings,
         sendgridApiKey: settings.sendgridApiKey ? mask(settings.sendgridApiKey) : '',
         ultramsgToken: settings.ultramsgToken ? mask(settings.ultramsgToken) : '',
         twilioAuthToken: settings.twilioAuthToken ? mask(settings.twilioAuthToken) : '',
+        dreamDigitalApiPassword: settings.dreamDigitalApiPassword ? mask(settings.dreamDigitalApiPassword) : '',
+        customSmsApiKey: settings.customSmsApiKey ? mask(settings.customSmsApiKey) : '',
         flexPayCardToken: settings.flexPayCardToken ? mask(settings.flexPayCardToken) : '',
         sendgridConfigured: Boolean(settings.sendgridApiKey?.trim() && settings.sendgridFrom?.trim()),
         ultramsgConfigured: Boolean(settings.ultramsgInstanceId?.trim() && settings.ultramsgToken?.trim()),
+        smsConfigured,
     };
 }
 /**
@@ -629,6 +661,8 @@ function mergeSettingsUpdate(current, body) {
         'sendgridApiKey',
         'ultramsgToken',
         'twilioAuthToken',
+        'dreamDigitalApiPassword',
+        'customSmsApiKey',
         'flexPayCardToken',
     ];
     const next = { ...body };
@@ -650,7 +684,7 @@ function getNotificationCredentials(settings = loadPlatformSettings()) {
             return fromEnv.trim();
         return fallback;
     };
-    return {
+    const creds = {
         sendgridApiKey: pick(settings.sendgridApiKey, 'SENDGRID_API_KEY'),
         sendgridFrom: pick(settings.sendgridFrom, 'SENDGRID_FROM', 'no-reply@eventmaster.cd'),
         twilioSid: pick(settings.twilioAccountSid, 'TWILIO_ACCOUNT_SID'),
@@ -658,7 +692,29 @@ function getNotificationCredentials(settings = loadPlatformSettings()) {
         twilioPhone: pick(settings.twilioPhoneNumber, 'TWILIO_PHONE_NUMBER'),
         ultramsgInstanceId: pick(settings.ultramsgInstanceId, 'ULTRAMSG_INSTANCE_ID'),
         ultramsgToken: pick(settings.ultramsgToken, 'ULTRAMSG_TOKEN'),
+        smsProvider: pick(settings.smsProvider, 'SMS_PROVIDER', 'dream-digital'),
+        dreamDigitalBaseUrl: pick(settings.dreamDigitalBaseUrl, 'DREAM_DIGITAL_BASE_URL', pick(settings.dreamDigitalBaseUrl, 'SMS_API_URL', 'https://sms.dreamdigital.cd')),
+        dreamDigitalApiId: pick(settings.dreamDigitalApiId, 'DREAM_DIGITAL_API_ID', pick(settings.dreamDigitalApiId, 'SMS_API_ID')),
+        dreamDigitalApiPassword: pick(settings.dreamDigitalApiPassword, 'DREAM_DIGITAL_API_PASSWORD', pick(settings.dreamDigitalApiPassword, 'SMS_API_PASSWORD')),
+        dreamDigitalSenderId: pick(settings.dreamDigitalSenderId, 'DREAM_DIGITAL_SENDER_ID', pick(settings.dreamDigitalSenderId, 'SMS_SENDER_ID', 'EVENTMASTER')),
+        customSmsUrl: pick(settings.customSmsUrl, 'CUSTOM_SMS_URL'),
+        customSmsApiKey: pick(settings.customSmsApiKey, 'CUSTOM_SMS_API_KEY'),
+        customSmsSenderId: pick(settings.customSmsSenderId, 'CUSTOM_SMS_SENDER_ID'),
     };
+    (0, smsConfig_1.setSmsRuntimeCredentials)({
+        smsProvider: creds.smsProvider,
+        dreamDigitalBaseUrl: creds.dreamDigitalBaseUrl,
+        dreamDigitalApiId: creds.dreamDigitalApiId,
+        dreamDigitalApiPassword: creds.dreamDigitalApiPassword,
+        dreamDigitalSenderId: creds.dreamDigitalSenderId,
+        twilioSid: creds.twilioSid,
+        twilioAuthToken: creds.twilioAuthToken,
+        twilioPhone: creds.twilioPhone,
+        customSmsUrl: creds.customSmsUrl,
+        customSmsApiKey: creds.customSmsApiKey,
+        customSmsSenderId: creds.customSmsSenderId,
+    });
+    return creds;
 }
 function getCommercialPermissions(userId) {
     const settings = loadPlatformSettings();

@@ -263,6 +263,18 @@ async function notifyGuestTableAssignment(params) {
     else if (channelsToSend.includes('WHATSAPP') && !phone) {
         errors.push('WhatsApp: numéro de téléphone manquant');
     }
+    if (channelsToSend.includes('SMS') && phone) {
+        const smsText = `Bonjour ${guest.firstName || ''}, votre placement pour ${event.title}${event.location ? ' (' + event.location + ')' : ''} : Table ${assignedSeat.tableName}, Siège n°${seatNumber}. Détails : ${rsvpUrl}`;
+        tasks.push((0, notificationService_1.sendRealSms)(phone, smsText).then((r) => {
+            if (r.success)
+                channels.push(r.simulated ? 'SMS (simulation)' : 'SMS');
+            else if (r.error)
+                errors.push(`SMS: ${r.error}`);
+        }));
+    }
+    else if (channelsToSend.includes('SMS') && !phone) {
+        errors.push('SMS: numéro de téléphone manquant');
+    }
     if (tasks.length === 0) {
         if (errors.length === 0) {
             errors.push('Aucun canal de livraison disponible pour cet invité.');

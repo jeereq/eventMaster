@@ -1,6 +1,9 @@
-export type DeliveryChannel = 'EMAIL' | 'WHATSAPP';
+export type DeliveryChannel = 'EMAIL' | 'WHATSAPP' | 'SMS';
 
-/** Canaux actifs : e-mail et WhatsApp uniquement (SMS et alias legacy convertis). */
+/**
+ * Résout les canaux actifs de diffusion (e-mail, WhatsApp et/ou SMS).
+ * Supporte les sélections unitaires, combinées ou multi-canaux.
+ */
 export function resolveDeliveryChannels(channel: string | string[] | null | undefined): DeliveryChannel[] {
   let raw: string[] = [];
 
@@ -10,10 +13,14 @@ export function resolveDeliveryChannels(channel: string | string[] | null | unde
     const normalized = channel.trim().toUpperCase();
     if (normalized === 'EMAIL_AND_WHATSAPP') {
       raw = ['EMAIL', 'WHATSAPP'];
-    } else if (normalized === 'EMAIL_AND_SMS' || normalized === 'ALL_CHANNELS') {
-      raw = ['EMAIL', 'WHATSAPP'];
+    } else if (normalized === 'EMAIL_AND_SMS') {
+      raw = ['EMAIL', 'SMS'];
+    } else if (normalized === 'WHATSAPP_AND_SMS') {
+      raw = ['WHATSAPP', 'SMS'];
+    } else if (normalized === 'ALL_CHANNELS') {
+      raw = ['EMAIL', 'WHATSAPP', 'SMS'];
     } else if (normalized === 'SMS') {
-      raw = ['WHATSAPP'];
+      raw = ['SMS'];
     } else {
       raw = normalized.split(',').map((c) => c.trim().toUpperCase()).filter(Boolean);
     }
@@ -24,7 +31,8 @@ export function resolveDeliveryChannels(channel: string | string[] | null | unde
   const resolved = new Set<DeliveryChannel>();
   for (const entry of raw) {
     if (entry === 'EMAIL') resolved.add('EMAIL');
-    else if (entry === 'WHATSAPP' || entry === 'SMS') resolved.add('WHATSAPP');
+    else if (entry === 'WHATSAPP') resolved.add('WHATSAPP');
+    else if (entry === 'SMS') resolved.add('SMS');
   }
 
   if (resolved.size === 0) resolved.add('EMAIL');

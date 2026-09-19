@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
-import { sendRealEmail, sendRealWhatsApp } from '../services/notificationService';
+import { sendRealEmail, sendRealWhatsApp, sendRealSms } from '../services/notificationService';
 import { resolveDeliveryChannels } from '../utils/notificationChannels';
 import { applyInvitationGuidelineVariables, guestGuidelinesInvitationText } from '../utils/guestGuidelines';
 import { canManageEvent, canAccessEvent } from '../services/permissionsService';
@@ -301,6 +301,20 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
               success: false,
               simulated: false,
               error: 'Numéro WhatsApp manquant ou invalide',
+              failureCode: 'noPhone',
+            };
+          }
+        } else if (chan === 'SMS') {
+          const phone = getGuestPhone(guest);
+          if (phone) {
+            const smsText = `Bonjour ${guest.firstName || ''}, vous êtes invité(e) à ${event.title}. Confirmez votre présence ici : ${rsvpLink}`;
+            sendResult = await sendRealSms(phone, smsText);
+          } else {
+            console.warn(`[Invitation Controller] Guest ${guest.firstName} ${guest.lastName} has no valid phone number for SMS sending.`);
+            sendResult = {
+              success: false,
+              simulated: false,
+              error: 'Numéro de téléphone manquant ou invalide pour envoi SMS',
               failureCode: 'noPhone',
             };
           }

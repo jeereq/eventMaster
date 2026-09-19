@@ -1,7 +1,7 @@
 import {
   getNotificationCredentials as loadNotificationCredentials,
   type NotificationCredentials,
-} from '../services/platformSettingsService';
+} from '../services/platformSettingsService.ts';
 
 export type { NotificationCredentials };
 
@@ -15,6 +15,17 @@ export function isSendGridConfigured(credentials = getNotificationCredentials())
 
 export function isUltraMsgConfigured(credentials = getNotificationCredentials()): boolean {
   return !!(credentials.ultramsgInstanceId && credentials.ultramsgToken);
+}
+
+export function isSmsConfigured(credentials = getNotificationCredentials()): boolean {
+  const provider = (credentials.smsProvider || 'dream-digital').toLowerCase();
+  if (provider === 'twilio') {
+    return Boolean(credentials.twilioSid && credentials.twilioAuthToken && credentials.twilioPhone);
+  }
+  if (provider === 'custom') {
+    return Boolean(credentials.customSmsUrl?.trim());
+  }
+  return Boolean(credentials.dreamDigitalApiId?.trim() && credentials.dreamDigitalApiPassword?.trim());
 }
 
 export function assertSendGridConfigured(): void {
@@ -42,5 +53,13 @@ export function logNotificationConfigStatus(): void {
     console.log('[Notification Service] UltraMsg configuré pour WhatsApp.');
   } else {
     console.warn('[Notification Service] UltraMsg non configuré — envoi WhatsApp simulé.');
+  }
+
+  if (isSmsConfigured(creds)) {
+    const provider = creds.smsProvider || 'dream-digital';
+    const sender = provider === 'twilio' ? creds.twilioPhone : creds.dreamDigitalSenderId || 'EVENTMASTER';
+    console.log(`[Notification Service] Passerelle SMS configurée (fournisseur: ${provider}, expéditeur: ${sender}).`);
+  } else {
+    console.warn('[Notification Service] Passerelle SMS non configurée — envoi SMS simulé.');
   }
 }

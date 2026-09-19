@@ -222,3 +222,7 @@ export async function sendRealWhatsAppDocument(
   if (caption?.trim()) params.append('caption', caption.trim());
   return sendUltraMsgRequest('document', formattedTo, params);
 }
+
+export { sendRealSms, checkActiveSmsBalance, getSmsDeliveryStatus, listAvailableSmsProviders } from './sms/smsService.ts';
+export type { SmsSendResult, SmsSendOptions, SmsBalanceResult, SmsDeliveryStatusResult } from './sms/types.ts';
+

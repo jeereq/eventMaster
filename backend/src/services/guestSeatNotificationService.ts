@@ -3,6 +3,7 @@ import {
   sendRealWhatsApp,
   sendRealWhatsAppDocument,
   sendRealWhatsAppLocation,
+  sendRealSms,
 } from './notificationService';
 import { generateAndStoreSeatingInvitationPdf } from './seatingInvitationStorageService';
 import { extractGuestEmail, extractGuestPhone } from '../utils/guestIdentity';
@@ -362,6 +363,18 @@ export async function notifyGuestTableAssignment(params: {
     );
   } else if (channelsToSend.includes('WHATSAPP') && !phone) {
     errors.push('WhatsApp: numéro de téléphone manquant');
+  }
+
+  if (channelsToSend.includes('SMS') && phone) {
+    const smsText = `Bonjour ${guest.firstName || ''}, votre placement pour ${event.title}${event.location ? ' (' + event.location + ')' : ''} : Table ${assignedSeat.tableName}, Siège n°${seatNumber}. Détails : ${rsvpUrl}`;
+    tasks.push(
+      sendRealSms(phone, smsText).then((r) => {
+        if (r.success) channels.push(r.simulated ? 'SMS (simulation)' : 'SMS');
+        else if (r.error) errors.push(`SMS: ${r.error}`);
+      }),
+    );
+  } else if (channelsToSend.includes('SMS') && !phone) {
+    errors.push('SMS: numéro de téléphone manquant');
   }
 
   if (tasks.length === 0) {

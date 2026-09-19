@@ -23,7 +23,7 @@ function isWithinDedupWindow(createdAt, now = new Date(), windowMs = DEDUP_WINDO
 function normalizeOutboundPart(value) {
     return value.trim().toLowerCase().replace(/\s+/g, ' ');
 }
-/** Empreinte d’un e-mail / WhatsApp : même destinataire, même sujet, même début de corps. */
+/** Empreinte d’un e-mail / WhatsApp / SMS : même destinataire, même sujet, même début de corps. */
 function outboundChannelFingerprint(input) {
     const dest = normalizeOutboundPart(input.to);
     const subject = normalizeOutboundPart(input.subject || '');

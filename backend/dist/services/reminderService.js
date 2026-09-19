@@ -200,6 +200,13 @@ async function processReminders() {
                             await (0, notificationService_1.sendRealWhatsApp)(phone, whatsappPayload);
                         }
                     }
+                    else if (chan === 'SMS') {
+                        const phone = getGuestPhone(guest);
+                        if (phone) {
+                            const smsText = `Rappel : ${guest.firstName ? guest.firstName + ', ' : ''}votre réponse pour ${event.title} est attendue. Confirmez ici : ${rsvpLink}`;
+                            await (0, notificationService_1.sendRealSms)(phone, smsText);
+                        }
+                    }
                 }
             }
             // 5. Update last reminder date for this event

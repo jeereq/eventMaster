@@ -61,6 +61,11 @@ async function sendRegistrationOtp(params) {
         await (0, notificationService_1.sendRealWhatsApp)(phone, body);
         return { sentVia: 'WHATSAPP' };
     }
+    if (method === 'SMS' && phone) {
+        const body = `EventMaster : Bonjour ${name}, votre code de validation est ${code}. Valable ${expiryMinutes} min. Ne le partagez pas.${loginHint}`;
+        await (0, notificationService_1.sendRealSms)(phone, body);
+        return { sentVia: 'SMS' };
+    }
     const subject = invitedByCommercial
         ? 'Activez votre compte manager EventMaster'
         : invitedToTeam
