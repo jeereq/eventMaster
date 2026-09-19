@@ -120,6 +120,143 @@ export function formatPriceRangeFc(minFc: number, maxFc: number): string {
   return `${minFc.toLocaleString('fr-FR')} – ${maxFc.toLocaleString('fr-FR')} FC`;
 }
 
+/**
+ * Trie les zones tarifaires par prix de manière immuable.
+ * Par défaut en ordre croissant ('asc') : du billet le plus accessible au plus prestigieux.
+ */
+export function sortPricingZones(
+  zones: readonly PricingZone[] | PricingZone[],
+  direction: 'asc' | 'desc' = 'asc',
+): PricingZone[] {
+  return [...zones].sort((a, b) => {
+    const diff = (a.priceFc || 0) - (b.priceFc || 0);
+    return direction === 'desc' ? -diff : diff;
+  });
+}
+
+export type PricingTierBadgeType = 'entry' | 'popular' | 'vip' | 'standard';
+
+export type PricingTierMeta = {
+  badgeLabel: string;
+  badgeType: PricingTierBadgeType;
+  badgeClass: string;
+  isPopular: boolean;
+  perks: string[];
+};
+
+/**
+ * Calcule les métadonnées de présentation (badge, mise en avant, avantages)
+ * pour une catégorie de billet selon sa position dans la grille de prix.
+ */
+export function getPricingTierMeta(
+  zone: PricingZone,
+  sortedZonesAsc: readonly PricingZone[] | PricingZone[],
+): PricingTierMeta {
+  const total = sortedZonesAsc.length;
+  const index = sortedZonesAsc.findIndex((z) => z.id === zone.id);
+  const nameLower = (zone.name || '').toLowerCase();
+
+  const isExplicitVip =
+    nameLower.includes('vip') ||
+    nameLower.includes('vvip') ||
+    nameLower.includes('or') ||
+    nameLower.includes('gold') ||
+    nameLower.includes('prestige') ||
+    nameLower.includes('privilège');
+  const isExplicitStandard =
+    nameLower.includes('standard') ||
+    nameLower.includes('accès') ||
+    nameLower.includes('pass') ||
+    nameLower.includes('entrée');
+
+  if (total <= 1) {
+    return {
+      badgeLabel: isExplicitVip ? 'Expérience VIP' : 'Billet officiel',
+      badgeType: isExplicitVip ? 'vip' : 'standard',
+      badgeClass: isExplicitVip
+        ? 'text-amber-700 bg-amber-500/10 border-amber-500/25 dark:text-amber-300'
+        : 'text-primary bg-primary/10 border-primary/25',
+      isPopular: false,
+      perks: [
+        'Accès officiel à l’événement',
+        'Placement libre garanti',
+        'Billet nominatif avec QR Pass sécurisé',
+      ],
+    };
+  }
+
+  // Cas avec 2 zones
+  if (total === 2) {
+    if (index === 0) {
+      return {
+        badgeLabel: isExplicitStandard ? 'Accès Standard' : 'Tarif d’entrée',
+        badgeType: 'entry',
+        badgeClass: 'text-emerald-700 bg-emerald-500/10 border-emerald-500/25 dark:text-emerald-300',
+        isPopular: false,
+        perks: [
+          'Accès officiel à l’événement',
+          'Placement libre garanti',
+          'Billet nominatif avec QR Pass sécurisé',
+        ],
+      };
+    }
+    return {
+      badgeLabel: isExplicitVip ? 'Expérience VIP' : 'Billet Privilège',
+      badgeType: 'vip',
+      badgeClass: 'text-amber-700 bg-amber-500/10 border-amber-500/25 dark:text-amber-300',
+      isPopular: true,
+      perks: [
+        'Accès prioritaire à l’événement',
+        'Espace réservé grand confort',
+        'Billet certifié avec QR Pass prioritaire',
+      ],
+    };
+  }
+
+  // Cas avec 3 zones ou plus
+  if (index === 0) {
+    return {
+      badgeLabel: 'Tarif d’entrée',
+      badgeType: 'entry',
+      badgeClass: 'text-emerald-700 bg-emerald-500/10 border-emerald-500/25 dark:text-emerald-300',
+      isPopular: false,
+      perks: [
+        'Accès officiel à l’événement',
+        'Placement libre garanti',
+        'Billet nominatif avec QR Pass sécurisé',
+      ],
+    };
+  }
+
+  if (index === total - 1 || isExplicitVip) {
+    return {
+      badgeLabel: isExplicitVip ? 'Expérience VIP' : 'Prestige & VIP',
+      badgeType: 'vip',
+      badgeClass: 'text-amber-700 bg-amber-500/10 border-amber-500/25 dark:text-amber-300',
+      isPopular: false,
+      perks: [
+        'Accueil et accès prioritaire',
+        'Espace réservé grand confort',
+        'Billet certifié avec QR Pass prioritaire',
+      ],
+    };
+  }
+
+  // Paliers intermédiaires
+  const isMid = index === 1;
+  return {
+    badgeLabel: isMid ? 'Le plus choisi' : 'Formule Avantage',
+    badgeType: 'popular',
+    badgeClass: 'text-primary bg-primary/10 border-primary/25',
+    isPopular: isMid,
+    perks: [
+      'Accès privilégié à l’événement',
+      'Emplacement de choix',
+      'Billet nominatif avec QR Pass sécurisé',
+    ],
+  };
+}
+
 export type ZoneRevenueStat = {
   zone: PricingZone;
   tableCount: number;

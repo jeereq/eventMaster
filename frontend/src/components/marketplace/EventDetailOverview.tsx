@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Calendar,
   Clock,
@@ -21,11 +21,12 @@ import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import { sizedMediaUrl, type PublicEventCard, type PublicEventPost } from '@/lib/marketplace';
 import { normalizeEventProgram, type EventProgramSlot } from '@/lib/eventProgram';
+import TicketPricingGrid from '@/components/TicketPricingGrid';
 
 export interface EventDetailOverviewProps {
   event: PublicEventCard;
   onStartRoute?: () => void;
-  onGoToCheckout?: (tab?: 'ticket' | 'donation') => void;
+  onGoToCheckout?: (tab?: 'ticket' | 'donation', zoneId?: string) => void;
   posts?: PublicEventPost[];
 }
 
@@ -136,6 +137,15 @@ export default function EventDetailOverview({
     hasDonations && donations?.targetAmountFc && donations.targetAmountFc > 0
       ? Math.min(100, Math.round(((donations.collectedAmountFc || 0) / donations.targetAmountFc) * 100))
       : 0;
+
+  const displayZones = useMemo(() => {
+    return event.pricingZones && event.pricingZones.length > 0 ? event.pricingZones : [];
+  }, [event.pricingZones]);
+
+  const hasZonedTickets =
+    event.ticketPricingMode === 'by_zone' &&
+    !event.seatSelectionEnabled &&
+    displayZones.length > 0;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -396,7 +406,23 @@ export default function EventDetailOverview({
         </section>
       )}
 
-      {/* 3. PROGRAMME / DÉROULÉ DE L'ÉVÉNEMENT (SI PRÉSENT) */}
+      {/* 3. FORMULES & BILLETS DISPONIBLES (PAR PRIX CROISSANT, SANS PLAN DE TABLE) */}
+      {hasZonedTickets && (
+        <section className="rounded-2xl border border-border bg-surface p-5 sm:p-6 shadow-2xs">
+          <TicketPricingGrid
+            zones={displayZones}
+            onSelectZone={(zoneId) => {
+              onGoToCheckout?.('ticket', zoneId);
+            }}
+            variant="full"
+            sortOrder="asc"
+            showHeading
+            ctaLabel="Choisir ce billet"
+          />
+        </section>
+      )}
+
+      {/* 4. PROGRAMME / DÉROULÉ DE L'ÉVÉNEMENT (SI PRÉSENT) */}
       {hasProgram && (
         <section className="rounded-2xl border border-border bg-surface p-5 space-y-4 shadow-2xs">
           <div className="space-y-1">

@@ -112,7 +112,7 @@ function MarketplaceEventDetailInner() {
     window.setTimeout(() => mapRef.current?.startDirectionsFor(itemId), 80);
   };
 
-  const scrollToCheckout = (modeTab?: 'ticket' | 'donation') => {
+  const scrollToCheckout = (modeTab?: 'ticket' | 'donation', zoneId?: string) => {
     const el = document.getElementById('listing-contact');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
@@ -123,6 +123,9 @@ function MarketplaceEventDetailInner() {
     } else if (modeTab === 'ticket') {
       const ticketTabBtn = document.getElementById('checkout-tab-ticket');
       ticketTabBtn?.click();
+    }
+    if (zoneId && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('em-select-ticket-zone', { detail: { zoneId } }));
     }
   };
 
