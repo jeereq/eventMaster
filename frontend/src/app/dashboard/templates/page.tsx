@@ -51,7 +51,7 @@ import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import { 
  Mail, PlusCircle, Trash2, Edit3, ArrowLeft, Save, 
  Sparkles, CheckCircle2, AlertCircle, Type, Image, 
- Columns, Eye, CheckSquare, Loader2, XCircle,
+ Columns, Eye, CheckSquare, Loader2, XCircle, X,
  Spline, Triangle, Trash, Layout, Palette, Square,
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins,
  Undo2, Redo2, History, Download, Tag, SlidersHorizontal, LayoutTemplate,
@@ -498,6 +498,14 @@ export default function TemplatesPage() {
  setLoading(false);
  }
  };
+
+ useEffect(() => {
+   if (!success) return;
+   const timer = window.setTimeout(() => {
+     setSuccess('');
+   }, 7000);
+   return () => window.clearTimeout(timer);
+ }, [success]);
 
  useEffect(() => {
  try {
@@ -6495,17 +6503,27 @@ const studioModelPhotos = useMemo(
  {error && <Alert variant="error">{error}</Alert>}
 
  {success && (
- <div className="p-4 bg-primary/10 border border-primary/20 text-foreground rounded-xl flex flex-col sm:flex-row sm:items-center gap-3 text-sm">
- <div className="flex items-start gap-3 min-w-0">
- <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
+ <div className="p-4 bg-primary/10 border border-primary/20 text-foreground rounded-xl flex flex-col sm:flex-row sm:items-center gap-3 text-sm animate-fade-in">
+ <div className="flex items-start gap-3 min-w-0 flex-1">
+ <CheckCircle2 className="w-5 h-5 text-primary shrink-0 mt-0.5" />
  <span className="min-w-0 break-words">{success}</span>
  </div>
+ <div className="flex items-center gap-2 shrink-0">
  <Link
    href="/dashboard/events"
    className="min-h-11 inline-flex items-center justify-center px-3 rounded-[var(--radius-button)] text-sm font-semibold text-primary hover:bg-primary/10 shrink-0"
  >
    Lier à un événement
  </Link>
+ <button
+   type="button"
+   onClick={() => setSuccess('')}
+   className="p-2 rounded-lg text-muted hover:text-foreground hover:bg-primary/10 transition-colors"
+   aria-label="Fermer la notification"
+ >
+   <X className="w-4 h-4" />
+ </button>
+ </div>
  </div>
  )}
 
