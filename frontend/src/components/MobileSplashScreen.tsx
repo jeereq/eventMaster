@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   hideNativeSplashShell,
@@ -21,9 +22,11 @@ function prefersReducedMotion() {
 /**
  * Pilote le splash HTML natif (#em-native-splash) — pas de second overlay React.
  * Le shell est visible dès le boot script → plus de flash noir.
+ * Exclusivement réservé aux vues mobiles (< 768px) et PWA standalone mobile.
  */
 export default function MobileSplashScreen() {
   const { site } = usePlatformSite();
+  const pathname = usePathname();
   const leaveStartedRef = useRef(false);
   const cleanupRef = useRef<(() => void) | null>(null);
   const timersRef = useRef<{ wait?: number; leave?: number; max?: number }>({});
@@ -123,15 +126,66 @@ export default function MobileSplashScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Détection lors des changements de page (ex: login -> dashboard)
+  useEffect(() => {
+    if (!shouldShowMobileSplash()) {
+      hideNativeSplashShell();
+    }
+  }, [pathname]);
+
+  // Si l'utilisateur redimensionne la fenêtre sur desktop, masquer le splash immédiatement
+  useEffect(() => {
+    const onResize = () => {
+      if (!shouldShowMobileSplash()) {
+        hideNativeSplashShell();
+      }
+    };
+    window.addEventListener('resize', onResize, { passive: true });
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  // Listener permanent pour le bouton "Passer" et la touche Échap
+  useEffect(() => {
+    const onManualDismiss = () => {
+      markMobileSplashSeen();
+      hideNativeSplashShell();
+    };
+    const skipBtn = document.getElementById('em-native-splash-skip');
+    skipBtn?.addEventListener('click', onManualDismiss);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onManualDismiss();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      skipBtn?.removeEventListener('click', onManualDismiss);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, []);
+
   useEffect(() => {
     const onRequest = () => {
-      if (!shouldShowMobileSplash()) return;
+      if (!shouldShowMobileSplash()) {
+        hideNativeSplashShell();
+        return;
+      }
       runSplashCycle();
     };
     window.addEventListener('em-mobile-splash-request', onRequest);
     return () => window.removeEventListener('em-mobile-splash-request', onRequest);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Failsafe watchdog : un splash ne doit jamais rester bloqué plus de 2.5s
+  useEffect(() => {
+    const watchdog = window.setTimeout(() => {
+      if (!shouldShowMobileSplash()) {
+        hideNativeSplashShell();
+      }
+    }, 2500);
+    return () => window.clearTimeout(watchdog);
+  }, [pathname]);
 
   return null;
 }

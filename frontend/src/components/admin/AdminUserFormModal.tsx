@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useId, useState } from 'react';
-import { CreditCard, Shield, Users } from 'lucide-react';
-import { Alert, Button, Input, Modal, PasswordInput } from '@/components/ui';
+import { CreditCard, Mail, Shield, Users } from 'lucide-react';
+import { Alert, Button, Input, Modal, PasswordInput, PhoneInput } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import type { AuthOtpMethod } from '@/lib/authOtpChannels';
 
 export type AdminUserRole = 'USER' | 'COMMERCIAL' | 'SUPER_ADMIN';
 
@@ -47,6 +48,10 @@ export default function AdminUserFormModal({
   tenantId,
   tenantOptions,
   isEmailVerified,
+  phone,
+  phoneCountryCode,
+  verificationMethod,
+  sendNotification = true,
   commissionRate,
   renewalCommissionRate,
   commercialPermissions,
@@ -63,6 +68,10 @@ export default function AdminUserFormModal({
   setRole,
   setTenantId,
   setIsEmailVerified,
+  setPhone,
+  setPhoneCountryCode,
+  setVerificationMethod,
+  setSendNotification,
   setCommissionRate,
   setRenewalCommissionRate,
   setCommercialPermissions,
@@ -83,6 +92,10 @@ export default function AdminUserFormModal({
   tenantId: string;
   tenantOptions: Array<{ id: string; name: string }>;
   isEmailVerified: boolean;
+  phone?: string;
+  phoneCountryCode?: string;
+  verificationMethod?: AuthOtpMethod;
+  sendNotification?: boolean;
   commissionRate: string;
   renewalCommissionRate: string;
   commercialPermissions: AdminCommercialPermissions;
@@ -99,6 +112,10 @@ export default function AdminUserFormModal({
   setRole: (value: AdminUserRole) => void;
   setTenantId: (value: string) => void;
   setIsEmailVerified: (value: boolean) => void;
+  setPhone?: (value: string) => void;
+  setPhoneCountryCode?: (value: string) => void;
+  setVerificationMethod?: (value: AuthOtpMethod) => void;
+  setSendNotification?: (value: boolean) => void;
   setCommissionRate: (value: string) => void;
   setRenewalCommissionRate: (value: string) => void;
   setCommercialPermissions: React.Dispatch<React.SetStateAction<AdminCommercialPermissions>>;
@@ -179,6 +196,18 @@ export default function AdminUserFormModal({
             autoComplete="email"
           />
         </div>
+
+        {setPhone ? (
+          <PhoneInput
+            id={`${formId}-phone`}
+            label="Téléphone (WhatsApp / SMS - optionnel)"
+            countryCode={phoneCountryCode || '+243'}
+            national={phone || ''}
+            onCountryCodeChange={(code) => setPhoneCountryCode?.(code)}
+            onNationalChange={(nat) => setPhone?.(nat)}
+            hint="Permet d’envoyer le code ou les alertes sur WhatsApp ou SMS en plus de l’e-mail."
+          />
+        ) : null}
 
         <PasswordInput
           label={mode === 'create' ? 'Mot de passe' : 'Nouveau mot de passe'}
@@ -368,8 +397,12 @@ export default function AdminUserFormModal({
 
         <div className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface-muted/40 px-3.5 py-3">
           <div>
-            <p className="text-sm font-semibold text-foreground">E-mail confirmé</p>
-            <p className="text-xs text-muted">Marquer l’adresse comme vérifiée.</p>
+            <p className="text-sm font-semibold text-foreground">E-mail déjà confirmé</p>
+            <p className="text-xs text-muted">
+              {isEmailVerified
+                ? 'Le compte sera directement actif sans exiger de code de validation.'
+                : 'L’utilisateur devra valider son code OTP pour activer son compte.'}
+            </p>
           </div>
           <button
             type="button"
@@ -390,6 +423,40 @@ export default function AdminUserFormModal({
             />
           </button>
         </div>
+
+        {mode === 'create' && setSendNotification && (
+          <div className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-primary/25 bg-primary/5 px-3.5 py-3">
+            <div>
+              <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                <Mail className="w-4 h-4 text-primary" />
+                Envoyer un e-mail de confirmation
+              </p>
+              <p className="text-xs text-muted mt-0.5">
+                {isEmailVerified
+                  ? 'Un e-mail de bienvenue avec identifiants et lien de connexion sera envoyé.'
+                  : 'Un code de confirmation (OTP) sera immédiatement envoyé à l’adresse e-mail.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={sendNotification}
+              aria-label="Envoyer un e-mail de confirmation"
+              onClick={() => setSendNotification(!sendNotification)}
+              className={cn(
+                'relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                sendNotification ? 'bg-primary-solid' : 'bg-border',
+              )}
+            >
+              <span
+                className={cn(
+                  'pointer-events-none inline-block h-6 w-6 rounded-full bg-white shadow transition',
+                  sendNotification ? 'translate-x-5' : 'translate-x-0',
+                )}
+              />
+            </button>
+          </div>
+        )}
       </form>
     </Modal>
   );

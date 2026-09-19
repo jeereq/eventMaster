@@ -22,6 +22,16 @@ function applyThemeClass(next: Theme) {
   window.dispatchEvent(new CustomEvent('em-theme-changed'));
 }
 
+function isNativeSplashActive(): boolean {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return false;
+  // Ne s'applique jamais aux vues desktop (>= 768px)
+  if (window.innerWidth >= 768) return false;
+  return (
+    document.documentElement.classList.contains('em-splash-boot') ||
+    Boolean(document.getElementById('em-native-splash')?.classList.contains('is-on'))
+  );
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof document === 'undefined') return 'light';
@@ -39,12 +49,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const initialTheme = savedTheme === 'dark' ? 'dark' : 'light';
     setThemeState(initialTheme);
 
-    const splashOn =
-      document.documentElement.classList.contains('em-splash-boot') ||
-      document.getElementById('em-native-splash')?.classList.contains('is-on');
-
-    if (splashOn) {
-      // Ne pas peindre le dark sous le splash (flash noir)
+    if (isNativeSplashActive()) {
+      // Ne pas peindre le dark sous le splash mobile (flash noir)
       if (initialTheme === 'dark') {
         (window as unknown as { __emPendingDark?: boolean }).__emPendingDark = true;
       }
@@ -56,10 +62,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const splashOn =
-      document.documentElement.classList.contains('em-splash-boot') ||
-      document.getElementById('em-native-splash')?.classList.contains('is-on');
-    if (splashOn) {
+    if (isNativeSplashActive()) {
       if (theme === 'dark') {
         (window as unknown as { __emPendingDark?: boolean }).__emPendingDark = true;
       }
@@ -72,10 +75,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setTheme = (nextTheme: Theme) => {
     setThemeState(nextTheme);
     localStorage.setItem('theme', nextTheme);
-    const splashOn =
-      document.documentElement.classList.contains('em-splash-boot') ||
-      document.getElementById('em-native-splash')?.classList.contains('is-on');
-    if (splashOn) {
+    if (isNativeSplashActive()) {
       if (nextTheme === 'dark') {
         (window as unknown as { __emPendingDark?: boolean }).__emPendingDark = true;
       } else {

@@ -41,6 +41,8 @@ import { adminPager, adminQueryString, adminSearch, listPayload, prismaAnd } fro
 import { grantWelcomeAtPlanActivation } from '../services/welcomeAiTokens';
 import { extractEventDonationsConfig } from '../services/donationsAccess';
 import { countTenantGuestsForQuota } from '../services/tenantPeriodService';
+import { setupUserOtpVerification } from './authController';
+import { sendAdminUserWelcomeEmail, type VerificationMethod } from '../services/otpService';
 
 // Get global system statistics and list of all tenants (Super Admin only)
 export async function getSystemStats(req: AuthenticatedRequest, res: Response) {
@@ -840,31 +842,77 @@ export async function createUser(req: AuthenticatedRequest, res: Response) {
       return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
     }
 
-    const { name, email, password, role, isEmailVerified, tenantId, commissionRate, renewalCommissionRate } = req.body;
+    const {
+      name,
+      email,
+      password,
+      role,
+      isEmailVerified,
+      tenantId,
+      commissionRate,
+      renewalCommissionRate,
+      phone,
+      phoneCountryCode,
+      nationalNumber,
+      verificationMethod,
+      subscription,
+      sendNotification = true,
+    } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ error: 'L\'adresse email et le mot de passe sont requis.' });
     }
 
+    const cleanEmail = String(email).trim().toLowerCase();
     const existingUser = await prisma.user.findUnique({
-      where: { email },
+      where: { email: cleanEmail },
     });
 
     if (existingUser) {
       return res.status(400).json({ error: 'Un utilisateur avec cette adresse email existe déjà.' });
     }
 
+    const phoneFields = resolvePhoneFields({ phone, phoneCountryCode, nationalNumber });
+    const resolvedMethod: VerificationMethod =
+      (verificationMethod as VerificationMethod) || (phoneFields.phone ? 'WHATSAPP' : 'EMAIL');
+    const shouldVerify = isEmailVerified !== undefined ? Boolean(isEmailVerified) : false;
+
     const passwordHash = await bcrypt.hash(password, 10);
     const resolvedRole = (role as Role) || 'USER';
-    const resolvedTenantId = resolvedRole === 'COMMERCIAL' ? null : (tenantId || null);
+    let resolvedTenantId = resolvedRole === 'COMMERCIAL' ? null : (tenantId || null);
+
+    // Si un abonnement / tenant particulier est demandé et qu'aucun tenant n'est rattaché
+    if (!resolvedTenantId && subscription && typeof subscription === 'object' && resolvedRole === 'USER') {
+      const planKey = (subscription.plan as PlanType) || 'FREE';
+      if (planKey !== 'FREE') {
+        const orgName = (name || cleanEmail).trim();
+        const autoTenant = await prisma.tenant.create({
+          data: {
+            name: orgName,
+            plan: planKey,
+            accountKind: subscription.accountKind ? (subscription.accountKind as TenantAccountKind) : 'CLIENT',
+            licenseActive: subscription.licenseActive !== undefined ? Boolean(subscription.licenseActive) : true,
+            licenseExpiresAt: subscription.licenseExpiresAt
+              ? new Date(subscription.licenseExpiresAt)
+              : subscription.durationDays
+                ? new Date(Date.now() + Number(subscription.durationDays) * 24 * 3600 * 1000)
+                : null,
+          },
+        });
+        resolvedTenantId = autoTenant.id;
+      }
+    }
 
     const newUser = await prisma.user.create({
       data: {
-        name,
-        email,
+        name: name ? String(name).trim() : null,
+        email: cleanEmail,
         passwordHash,
+        phone: phoneFields.phone,
+        phoneCountryCode: phoneFields.phoneCountryCode,
         role: resolvedRole,
-        isEmailVerified: isEmailVerified !== undefined ? Boolean(isEmailVerified) : false,
+        isEmailVerified: shouldVerify,
+        verificationMethod: resolvedMethod,
         tenantId: resolvedTenantId,
         commissionRate: resolvedRole === 'COMMERCIAL'
           ? resolveCommissionRates({ first: commissionRate, renewal: renewalCommissionRate }).first
@@ -882,14 +930,59 @@ export async function createUser(req: AuthenticatedRequest, res: Response) {
       }
     }
 
-    // If this is the manager of the tenant and tenant managerId is not set, we can set it
+    // Gestion du manager si tenant rattaché
+    let tenantName: string | null = null;
     if (resolvedTenantId && resolvedRole === 'USER') {
-      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
-      if (tenant && !tenant.managerId) {
-        await prisma.tenant.update({
-          where: { id: tenantId },
-          data: { managerId: newUser.id },
-        });
+      const tenant = await prisma.tenant.findUnique({ where: { id: resolvedTenantId } });
+      if (tenant) {
+        tenantName = tenant.name;
+        if (!tenant.managerId) {
+          await prisma.tenant.update({
+            where: { id: resolvedTenantId },
+            data: { managerId: newUser.id },
+          });
+        }
+      }
+    }
+
+    // Gestion notification / e-mail de confirmation
+    let notificationSent = false;
+    let notificationError: string | null = null;
+    let notificationChannel: string | null = null;
+
+    if (sendNotification !== false) {
+      try {
+        if (!shouldVerify) {
+          // L'e-mail n'est pas encore vérifié : envoyer le code OTP d'activation
+          const sentVia = await setupUserOtpVerification({
+            userId: newUser.id,
+            name: newUser.name || newUser.email,
+            email: newUser.email,
+            phone: newUser.phone,
+            method: resolvedMethod,
+            invitedByAdmin: true,
+            initialPassword: password,
+          });
+          notificationSent = true;
+          notificationChannel = sentVia;
+        } else {
+          // L'e-mail est déjà vérifié : envoyer un e-mail de bienvenue avec identifiants
+          const result = await sendAdminUserWelcomeEmail({
+            name: newUser.name || newUser.email,
+            email: newUser.email,
+            password,
+            role: newUser.role,
+            tenantName,
+          });
+          notificationSent = result.success;
+          notificationChannel = 'EMAIL';
+          if (!result.success && result.error) {
+            notificationError = result.error;
+          }
+        }
+      } catch (notifErr: any) {
+        console.error('[createUser] Erreur lors de l’envoi de la notification:', notifErr);
+        notificationError = notifErr?.message || 'Erreur lors de l’envoi de l’e-mail';
       }
     }
 
@@ -898,14 +991,100 @@ export async function createUser(req: AuthenticatedRequest, res: Response) {
       targetType: 'user',
       targetId: newUser.id,
       tenantId: newUser.tenantId,
-      summary: `Utilisateur ${newUser.email} créé (${newUser.role})`,
-      metadata: { role: newUser.role, tenantId: newUser.tenantId },
+      summary: `Utilisateur ${newUser.email} créé (${newUser.role}) — notification ${notificationSent ? 'envoyée' : 'non envoyée'}`,
+      metadata: { role: newUser.role, tenantId: newUser.tenantId, notificationSent, notificationError },
     });
 
-    return res.status(201).json({ message: 'Utilisateur créé avec succès', user: newUser });
+    const successMsg = notificationSent
+      ? !shouldVerify
+        ? `Utilisateur créé. Un code de validation et de confirmation a été envoyé par ${notificationChannel === 'WHATSAPP' ? 'WhatsApp' : notificationChannel === 'SMS' ? 'SMS' : 'e-mail'} à ${newUser.email}.`
+        : `Utilisateur créé. Un e-mail de confirmation avec identifiants a été envoyé à ${newUser.email}.`
+      : notificationError
+        ? `Utilisateur créé avec succès, mais la notification n'a pas pu être envoyée (${notificationError}).`
+        : 'Utilisateur créé avec succès.';
+
+    return res.status(201).json({
+      message: successMsg,
+      user: newUser,
+      notificationSent,
+      notificationError,
+    });
   } catch (error: any) {
     console.error('Erreur lors de la création de l\'utilisateur:', error);
-    return res.status(500).json({ error: 'Erreur lors de la création de l\'utilisateur' });
+    return res.status(500).json({ error: error.message || 'Erreur lors de la création de l\'utilisateur' });
+  }
+}
+
+// Resend verification / welcome notification to a user (Super Admin only)
+export async function resendUserVerification(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (req.user?.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Accès refusé. Privilèges Super Admin requis.' });
+    }
+
+    const id = req.params.id as string;
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: { tenant: { select: { name: true } } },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Utilisateur introuvable.' });
+    }
+
+    const { method: reqMethod } = req.body || {};
+    const method: VerificationMethod =
+      (reqMethod as VerificationMethod) || (user.verificationMethod as VerificationMethod) || (user.phone ? 'WHATSAPP' : 'EMAIL');
+
+    if (!user.isEmailVerified) {
+      const sentVia = await setupUserOtpVerification({
+        userId: user.id,
+        name: user.name || user.email,
+        email: user.email,
+        phone: user.phone,
+        method,
+        invitedByAdmin: true,
+      });
+
+      await auditReq(req, {
+        action: 'USER_RESEND_OTP',
+        targetType: 'user',
+        targetId: user.id,
+        summary: `Code OTP renvoyé à ${user.email} (${sentVia})`,
+      });
+
+      return res.json({
+        message: `Code de validation et de confirmation renvoyé avec succès par ${sentVia === 'WHATSAPP' ? 'WhatsApp' : sentVia === 'SMS' ? 'SMS' : 'e-mail'} à ${user.email}.`,
+        sentVia,
+      });
+    }
+
+    // Le compte est déjà validé : renvoyer un e-mail de confirmation / bienvenue
+    const result = await sendAdminUserWelcomeEmail({
+      name: user.name || user.email,
+      email: user.email,
+      role: user.role,
+      tenantName: user.tenant?.name,
+    });
+
+    if (!result.success && result.error) {
+      return res.status(500).json({ error: `Impossible d'envoyer l'e-mail : ${result.error}` });
+    }
+
+    await auditReq(req, {
+      action: 'USER_RESEND_WELCOME',
+      targetType: 'user',
+      targetId: user.id,
+      summary: `E-mail de bienvenue renvoyé à ${user.email}`,
+    });
+
+    return res.json({
+      message: `E-mail de confirmation et de bienvenue renvoyé à ${user.email}.`,
+      sentVia: 'EMAIL',
+    });
+  } catch (error: any) {
+    console.error('Erreur resendUserVerification:', error);
+    return res.status(500).json({ error: error.message || 'Erreur lors du renvoi de la confirmation.' });
   }
 }
 

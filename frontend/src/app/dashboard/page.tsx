@@ -50,6 +50,7 @@ import {
 } from '@/lib/adminRoles';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { commercialPercent, renewalPercent } from '@/lib/platformRates';
+import type { AuthOtpMethod } from '@/lib/authOtpChannels';
 
 function isPlatformStaff(role?: string) {
  return role === 'SUPER_ADMIN' || role === 'COMMERCIAL';
@@ -870,6 +871,11 @@ function DashboardPageContent() {
  const [modalUserDurationDays, setModalUserDurationDays] = useState<number>(30);
  const [modalUserExpiresAt, setModalUserExpiresAt] = useState<string>('');
  const [modalUserComplimentary, setModalUserComplimentary] = useState<boolean>(false);
+ const [modalUserPhone, setModalUserPhone] = useState('');
+ const [modalUserPhoneCountryCode, setModalUserPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
+ const [modalUserVerificationMethod, setModalUserVerificationMethod] = useState<AuthOtpMethod>('EMAIL');
+ const [modalSendNotification, setModalSendNotification] = useState<boolean>(true);
+ const [resendingVerificationId, setResendingVerificationId] = useState<string | null>(null);
  const [updatingUser, setUpdatingUser] = useState(false);
 
  const loadSubscriptionReport = useCallback(async () => {
@@ -1625,6 +1631,10 @@ function DashboardPageContent() {
  setModalRole('USER');
  setModalIsEmailVerified(false);
  setUserTenantId('');
+ setModalUserPhone('');
+ setModalUserPhoneCountryCode(DEFAULT_PHONE_COUNTRY_CODE);
+ setModalUserVerificationMethod('EMAIL');
+ setModalSendNotification(true);
  setModalCommissionRate('30');
  setModalRenewalCommissionRate('20');
  setModalUserPlan('FREE');
@@ -1652,6 +1662,10 @@ function DashboardPageContent() {
  setModalRole(u.role);
  setModalIsEmailVerified(u.isEmailVerified);
  setUserTenantId(u.tenantId || '');
+ setModalUserPhone(u.phone || '');
+ setModalUserPhoneCountryCode(u.phoneCountryCode || DEFAULT_PHONE_COUNTRY_CODE);
+ setModalUserVerificationMethod((u.verificationMethod as AuthOtpMethod) || 'EMAIL');
+ setModalSendNotification(false);
  setModalCommissionRate(String(Math.round((u.commissionRate ?? 0.3) * 100)));
  setModalRenewalCommissionRate(String(Math.round((u.renewalCommissionRate ?? 0.2) * 100)));
  setModalUserPlan(u.tenantPlan || 'FREE');
@@ -1689,13 +1703,17 @@ function DashboardPageContent() {
  };
 
  if (userModalMode === 'create') {
- await api.post('/admin/users', {
+ const res = await api.post('/admin/users', {
  name: modalUserName || null,
  email: modalUserEmail,
  password: modalUserPassword,
  role: modalRole,
  isEmailVerified: modalIsEmailVerified,
  tenantId: modalUserTenantId || null,
+ phone: modalUserPhone || undefined,
+ phoneCountryCode: modalUserPhoneCountryCode || undefined,
+ verificationMethod: modalUserVerificationMethod,
+ sendNotification: modalSendNotification,
  subscription: subscriptionPayload,
  ...(modalRole === 'COMMERCIAL' ? {
  commissionRate: parseFloat(modalCommissionRate) / 100,
@@ -1703,6 +1721,9 @@ function DashboardPageContent() {
             commercialPermissions: modalCommercialPermissions,
  } : {}),
  });
+ if (res?.message) {
+   setNotice(res.message);
+ }
  } else if (selectedUser) {
  await api.put(`/admin/users/${selectedUser.id}`, {
  name: modalUserName || null,
@@ -1726,6 +1747,20 @@ function DashboardPageContent() {
  } finally {
  setUpdatingUser(false);
  }
+ };
+
+ const handleResendUserVerification = async (u: AdminUserItem) => {
+   setResendingVerificationId(u.id);
+   setError('');
+   setNotice('');
+   try {
+     const res = await api.post(`/admin/users/${u.id}/resend-verification`);
+     setNotice(res?.message || `E-mail de confirmation renvoyé à ${u.email}`);
+   } catch (err: unknown) {
+     setError(err instanceof Error ? err.message : 'Impossible de renvoyer l’e-mail de confirmation');
+   } finally {
+     setResendingVerificationId(null);
+   }
  };
 
  const handleDeleteUser = async (id: string) => {
@@ -2830,6 +2865,20 @@ function DashboardPageContent() {
                                   aria-label={`Modifier l'utilisateur ${u.name || u.email}`}
  >
  <Edit2 className="w-4 h-4" />
+ </button>
+ <button
+ type="button"
+ onClick={() => handleResendUserVerification(u)}
+ disabled={resendingVerificationId === u.id}
+ className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg transition disabled:opacity-40"
+ title={u.isEmailVerified ? "Renvoyer l’e-mail de bienvenue / identifiants" : "Renvoyer l’e-mail de confirmation OTP"}
+ aria-label={`Renvoyer l'e-mail de confirmation pour ${u.name || u.email}`}
+ >
+ {resendingVerificationId === u.id ? (
+ <Loader2 className="w-4 h-4 animate-spin text-primary" />
+ ) : (
+ <Mail className="w-4 h-4" />
+ )}
  </button>
  <button
  type="button"
@@ -4794,6 +4843,10 @@ function DashboardPageContent() {
           tenantId={modalUserTenantId}
           tenantOptions={tenantOptions}
           isEmailVerified={modalIsEmailVerified}
+          phone={modalUserPhone}
+          phoneCountryCode={modalUserPhoneCountryCode}
+          verificationMethod={modalUserVerificationMethod}
+          sendNotification={modalSendNotification}
           commissionRate={modalCommissionRate}
           renewalCommissionRate={modalRenewalCommissionRate}
           commercialPermissions={modalCommercialPermissions}
@@ -4810,6 +4863,10 @@ function DashboardPageContent() {
           setRole={setModalRole}
           setTenantId={setUserTenantId}
           setIsEmailVerified={setModalIsEmailVerified}
+          setPhone={setModalUserPhone}
+          setPhoneCountryCode={setModalUserPhoneCountryCode}
+          setVerificationMethod={setModalUserVerificationMethod}
+          setSendNotification={setModalSendNotification}
           setCommissionRate={setModalCommissionRate}
           setRenewalCommissionRate={setModalRenewalCommissionRate}
           setCommercialPermissions={setModalCommercialPermissions}
