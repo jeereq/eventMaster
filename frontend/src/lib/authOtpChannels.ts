@@ -70,6 +70,52 @@ export function allowsAuthOtpChoice(channels: AuthOtpChannels = 'BOTH'): boolean
   return authOtpMethodOptions(channels).length > 1;
 }
 
+export type PhoneAuthOtpMethod = 'WHATSAPP' | 'SMS';
+
+export function phoneAuthOtpMethods(channels: AuthOtpChannels = 'BOTH'): PhoneAuthOtpMethod[] {
+  const opts = authOtpMethodOptions(channels);
+  return opts.filter((m): m is PhoneAuthOtpMethod => m === 'WHATSAPP' || m === 'SMS');
+}
+
+export function defaultPhoneAuthOtpMethod(channels: AuthOtpChannels = 'BOTH'): PhoneAuthOtpMethod {
+  const methods = phoneAuthOtpMethods(channels);
+  if (methods.includes('WHATSAPP')) return 'WHATSAPP';
+  if (methods.includes('SMS')) return 'SMS';
+  return 'WHATSAPP';
+}
+
+export function phoneFieldLabel(channels: AuthOtpChannels = 'BOTH', method?: AuthOtpMethod): string {
+  if (method === 'WHATSAPP') return 'Téléphone WhatsApp';
+  if (method === 'SMS') return 'Téléphone SMS';
+  const phoneMethods = phoneAuthOtpMethods(channels);
+  if (phoneMethods.length === 1) {
+    return phoneMethods[0] === 'WHATSAPP' ? 'Téléphone WhatsApp' : 'Téléphone SMS';
+  }
+  if (phoneMethods.length > 1) {
+    return 'Téléphone (WhatsApp ou SMS)';
+  }
+  return 'Téléphone';
+}
+
+export function phoneFieldHint(channels: AuthOtpChannels = 'BOTH', method?: AuthOtpMethod): string {
+  if (method === 'WHATSAPP') {
+    return 'Indicatif pays + numéro national (sans le 0). Code / lien envoyé sur WhatsApp.';
+  }
+  if (method === 'SMS') {
+    return 'Indicatif pays + numéro national (sans le 0). Code / lien envoyé par SMS.';
+  }
+  const phoneMethods = phoneAuthOtpMethods(channels);
+  if (phoneMethods.length === 1) {
+    return phoneMethods[0] === 'WHATSAPP'
+      ? 'Indicatif pays + numéro national (sans le 0). Envoi sur WhatsApp.'
+      : 'Indicatif pays + numéro national (sans le 0). Envoi par SMS.';
+  }
+  if (phoneMethods.length > 1) {
+    return 'Indicatif pays + numéro national (sans le 0). Envoi via WhatsApp ou SMS selon votre choix.';
+  }
+  return 'Indicatif pays + numéro national (sans le 0).';
+}
+
 export function resolveAuthOtpMethodFromSite(
   requested: unknown,
   channels: AuthOtpChannels = 'BOTH',

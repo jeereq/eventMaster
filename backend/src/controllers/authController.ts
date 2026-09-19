@@ -427,11 +427,18 @@ export async function login(req: Request, res: Response) {
     }
 
     if (!user.isEmailVerified && user.role !== 'SUPER_ADMIN' && user.role !== 'COMMERCIAL') {
+      const pendingMethod = resolveAuthOtpMethod(user.verificationMethod || defaultAuthOtpMethod());
+      const methodLabel =
+        pendingMethod === 'WHATSAPP'
+          ? 'WhatsApp'
+          : pendingMethod === 'SMS'
+            ? 'SMS'
+            : 'e-mail';
       return res.status(403).json({
-        error: 'Votre compte n\'est pas encore validé. Saisissez le code OTP reçu par e-mail ou WhatsApp.',
+        error: `Votre compte n'est pas encore validé. Saisissez le code OTP reçu par ${methodLabel}.`,
         notVerified: true,
         email: user.email,
-        verificationMethod: resolveAuthOtpMethod(user.verificationMethod || defaultAuthOtpMethod()),
+        verificationMethod: pendingMethod,
       });
     }
 

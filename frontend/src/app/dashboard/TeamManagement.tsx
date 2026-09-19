@@ -22,6 +22,8 @@ import {
   allowsAuthOtpChoice,
   authOtpMethodOptions,
   defaultAuthOtpMethod,
+  phoneFieldLabel,
+  phoneFieldHint,
   type AuthOtpMethod,
 } from '@/lib/authOtpChannels';
 
@@ -406,13 +408,17 @@ export default function TeamManagement() {
             <Input label="Nom complet" required value={name} onChange={(e) => setName(e.target.value)} placeholder="Prénom Nom" />
             <Input label="E-mail" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} leftIcon={<Mail className="w-4 h-4" />} />
             <PhoneInput
-              label="Téléphone WhatsApp"
+              label={
+                verificationMethod === 'EMAIL'
+                  ? 'Téléphone (optionnel)'
+                  : phoneFieldLabel(authChannels, verificationMethod)
+              }
               countryCode={phoneCountryCode}
               national={phoneNational}
               onCountryCodeChange={setPhoneCountryCode}
               onNationalChange={setPhoneNational}
               required={verificationMethod === 'WHATSAPP' || verificationMethod === 'SMS'}
-              hint="Indicatif pays + numéro national (sans le 0)."
+              hint={phoneFieldHint(authChannels, verificationMethod)}
             />
             <Input label="Mot de passe temporaire" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} hint="Minimum 6 caractères" />
           </div>
