@@ -2396,6 +2396,25 @@ export default function LandingInvitationAiGenerator({
 
           {previewTemplate ? (
             <div className="flex-1 flex flex-col gap-3 min-h-0 animate-fade-in motion-reduce:animate-none">
+              <div className="p-3 sm:p-3.5 rounded-2xl border border-emerald-500/40 bg-emerald-50/90 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 flex items-center justify-between gap-3 text-xs shadow-xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="p-1 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 shrink-0">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold text-foreground truncate">Invitation composée avec succès par l’IA !</p>
+                    <p className="text-[11px] text-muted-foreground dark:text-muted truncate">
+                      {coupleFaceSwap
+                        ? 'Visages du couple intégrés · expressions, décor et mise en page conservés.'
+                        : 'Structure éditable prête · vous pouvez personnaliser chaque élément.'}
+                    </p>
+                  </div>
+                </div>
+                <span className="hidden sm:inline-flex px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 shrink-0">
+                  Studio IA
+                </span>
+              </div>
+
               {/* Commutateur de vue à 5 modes */}
               <div
                 className="flex flex-wrap items-center gap-1 p-1 rounded-[var(--radius-card)] bg-surface border border-border shadow-2xs"
