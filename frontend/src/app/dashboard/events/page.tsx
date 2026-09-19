@@ -4092,7 +4092,8 @@ Merci de confirmer votre présence :
                   <option value="SMS">SMS uniquement</option>
                   <option value="EMAIL_AND_WHATSAPP">E-mail et WhatsApp</option>
                   <option value="EMAIL_AND_SMS">E-mail et SMS</option>
-                  <option value="ALL_CHANNELS">Tous les canaux (E-mail, WhatsApp, SMS)</option>
+                  <option value="WHATSAPP_AND_SMS">WhatsApp et SMS</option>
+                  <option value="ALL_CHANNELS">Tous les trois (E-mail, WhatsApp, SMS)</option>
                 </select>
               </div>
 
