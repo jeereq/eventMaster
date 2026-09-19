@@ -111,8 +111,10 @@ async function createTeamMember(req, res) {
         }
         const method = methodCheck.method;
         const phoneFields = (0, phone_1.resolvePhoneFields)({ phone, phoneCountryCode, nationalNumber });
-        if (method === 'WHATSAPP' && !phoneFields.phone) {
-            return res.status(400).json({ error: 'Le téléphone est obligatoire pour la validation par WhatsApp.' });
+        if ((method === 'WHATSAPP' || method === 'SMS') && !phoneFields.phone) {
+            return res.status(400).json({
+                error: `Le téléphone est obligatoire pour la validation par ${method === 'WHATSAPP' ? 'WhatsApp' : 'SMS'}.`,
+            });
         }
         if (!(0, permissionsService_1.isValidOrgRole)(orgRole)) {
             return res.status(400).json({ error: 'orgRole doit être MANAGER ou PROTOCOL.' });

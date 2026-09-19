@@ -13,6 +13,7 @@ import {
   Building,
   Building2,
   MessageSquare,
+  Smartphone,
   ScanLine,
   LayoutGrid,
   Wallet,
@@ -30,6 +31,7 @@ import { parseReferralFromSearchParams } from '@/lib/referralLink';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   allowsAuthOtpChoice,
+  authOtpMethodOptions,
   defaultAuthOtpMethod,
   type AuthOtpMethod,
 } from '@/lib/authOtpChannels';
@@ -380,8 +382,8 @@ function RegisterPageContent() {
 
  setLoading(true);
 
- if (verificationMethod === 'WHATSAPP' && !phoneNational.trim()) {
-      const phoneMsg = 'Le numéro de téléphone est obligatoire pour la confirmation par WhatsApp.';
+ if ((verificationMethod === 'WHATSAPP' || verificationMethod === 'SMS') && !phoneNational.trim()) {
+      const phoneMsg = `Le numéro de téléphone est obligatoire pour la confirmation par ${verificationMethod === 'WHATSAPP' ? 'WhatsApp' : 'SMS'}.`;
       setPhoneError(phoneMsg);
       setLoading(false);
       window.setTimeout(() => document.getElementById('phone')?.focus(), 0);
@@ -517,13 +519,15 @@ function RegisterPageContent() {
             <div className="inline-flex items-center justify-center bg-primary/15 p-3.5 rounded-full text-primary">
               {verificationMethod === 'WHATSAPP' ? (
                 <MessageSquare className="w-8 h-8" aria-hidden />
+              ) : verificationMethod === 'SMS' ? (
+                <Smartphone className="w-8 h-8" aria-hidden />
               ) : (
                 <Mail className="w-8 h-8" aria-hidden />
               )}
  </div>
  <div>
               <h2 className="text-lg sm:text-xl font-bold text-foreground">
- {verificationMethod === 'WHATSAPP' ? 'Vérifiez votre WhatsApp' : 'Vérifiez votre boîte mail'}
+ {verificationMethod === 'WHATSAPP' ? 'Vérifiez votre WhatsApp' : verificationMethod === 'SMS' ? 'Vérifiez vos SMS' : 'Vérifiez votre boîte mail'}
  </h2>
               <p className="text-xs sm:text-sm text-muted mt-1.5 leading-relaxed">{successMessage}</p>
  </div>
@@ -668,7 +672,7 @@ function RegisterPageContent() {
 
  <PhoneInput
  id="phone"
- label="Téléphone WhatsApp"
+ label={verificationMethod === 'WHATSAPP' ? 'Téléphone WhatsApp' : verificationMethod === 'SMS' ? 'Téléphone SMS' : 'Téléphone (WhatsApp / SMS)'}
  countryCode={phoneCountryCode}
  national={phoneNational}
  onCountryCodeChange={setPhoneCountryCode}
@@ -676,7 +680,7 @@ function RegisterPageContent() {
    setPhoneNational(next);
    if (phoneError) setPhoneError('');
  }}
- required={verificationMethod === 'WHATSAPP'}
+ required={verificationMethod === 'WHATSAPP' || verificationMethod === 'SMS'}
                   placeholder="812345678"
                   error={phoneError || undefined}
                 />
@@ -719,14 +723,21 @@ function RegisterPageContent() {
  value={verificationMethod}
  onChange={setVerificationMethod}
  options={[
-                    { value: 'EMAIL' as const, label: 'Par e-mail', icon: <Mail className="w-3.5 h-3.5" aria-hidden /> },
-                    { value: 'WHATSAPP' as const, label: 'Par WhatsApp', icon: <MessageSquare className="w-3.5 h-3.5" aria-hidden /> },
+                    ...(authOtpMethodOptions(authChannels).includes('EMAIL')
+                      ? [{ value: 'EMAIL' as const, label: 'Par e-mail', icon: <Mail className="w-3.5 h-3.5" aria-hidden /> }]
+                      : []),
+                    ...(authOtpMethodOptions(authChannels).includes('WHATSAPP')
+                      ? [{ value: 'WHATSAPP' as const, label: 'Par WhatsApp', icon: <MessageSquare className="w-3.5 h-3.5" aria-hidden /> }]
+                      : []),
+                    ...(authOtpMethodOptions(authChannels).includes('SMS')
+                      ? [{ value: 'SMS' as const, label: 'Par SMS', icon: <Smartphone className="w-3.5 h-3.5" aria-hidden /> }]
+                      : []),
                   ]}
                 />
               ) : (
                 <p className="text-xs text-muted">
                   Code de confirmation envoyé{' '}
-                  {verificationMethod === 'WHATSAPP' ? 'par WhatsApp' : 'par e-mail'}
+                  {verificationMethod === 'WHATSAPP' ? 'par WhatsApp' : verificationMethod === 'SMS' ? 'par SMS' : 'par e-mail'}
                   {' '}(réglage plateforme).
                 </p>
               )}

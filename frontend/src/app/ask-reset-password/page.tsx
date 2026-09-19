@@ -71,7 +71,7 @@ export default function AskResetPasswordPage() {
   return (
     <AuthSplitLayout
       title="Récupérez l'accès à votre compte en toute sécurité."
-      description="Recevez un lien de réinitialisation sur le même canal que votre identifiant (e-mail ou WhatsApp)."
+      description="Recevez un lien de réinitialisation sur le même canal que votre identifiant (e-mail, WhatsApp ou SMS)."
       features={FEATURES}
       backHref="/login"
       backLabel="Retour à la connexion"
@@ -107,7 +107,7 @@ export default function AskResetPasswordPage() {
             />
 
             <p className="text-xs text-muted">
-              Lien envoyé {method === 'WHATSAPP' ? 'par WhatsApp' : 'par e-mail'}
+              Lien envoyé {method === 'WHATSAPP' ? 'par WhatsApp' : method === 'SMS' ? 'par SMS' : 'par e-mail'}
               {allowsAuthOtpChoice(authChannels)
                 ? mode === 'phone'
                   ? ' (numéro choisi).'

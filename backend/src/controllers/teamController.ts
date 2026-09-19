@@ -125,8 +125,10 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
     }
     const method = methodCheck.method as VerificationMethod;
     const phoneFields = resolvePhoneFields({ phone, phoneCountryCode, nationalNumber });
-    if (method === 'WHATSAPP' && !phoneFields.phone) {
-      return res.status(400).json({ error: 'Le téléphone est obligatoire pour la validation par WhatsApp.' });
+    if ((method === 'WHATSAPP' || method === 'SMS') && !phoneFields.phone) {
+      return res.status(400).json({
+        error: `Le téléphone est obligatoire pour la validation par ${method === 'WHATSAPP' ? 'WhatsApp' : 'SMS'}.`,
+      });
     }
 
     if (!isValidOrgRole(orgRole)) {

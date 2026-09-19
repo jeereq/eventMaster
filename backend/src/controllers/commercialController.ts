@@ -109,8 +109,10 @@ export async function createCommercialOrganization(req: AuthenticatedRequest, re
       return res.status(400).json({ error: methodCheck.error });
     }
     const method = methodCheck.method as VerificationMethod;
-    if (method === 'WHATSAPP' && !phoneFields.phone) {
-      return res.status(400).json({ error: 'Le téléphone est obligatoire pour la validation par WhatsApp.' });
+    if ((method === 'WHATSAPP' || method === 'SMS') && !phoneFields.phone) {
+      return res.status(400).json({
+        error: `Le téléphone est obligatoire pour la validation par ${method === 'WHATSAPP' ? 'WhatsApp' : 'SMS'}.`,
+      });
     }
 
     if (managerPassword.length < 6) {

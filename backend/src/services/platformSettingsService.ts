@@ -567,7 +567,11 @@ export function assertAuthOtpMethodAllowed(
   if (raw !== 'EMAIL' && raw !== 'WHATSAPP' && raw !== 'SMS') {
     return { ok: false, error: 'Méthode de validation invalide.' };
   }
-  if (channels === 'ALL' || channels === 'BOTH' || channels === raw) {
+  if (
+    channels === 'ALL' ||
+    (channels === 'BOTH' && (raw === 'EMAIL' || raw === 'WHATSAPP')) ||
+    channels === raw
+  ) {
     return { ok: true, method: raw };
   }
   return {
@@ -577,7 +581,9 @@ export function assertAuthOtpMethodAllowed(
         ? 'Seule la validation par e-mail est activée sur la plateforme.'
         : channels === 'WHATSAPP'
           ? 'Seule la validation par WhatsApp est activée sur la plateforme.'
-          : 'Seule la validation par SMS est activée sur la plateforme.',
+          : channels === 'SMS'
+            ? 'Seule la validation par SMS est activée sur la plateforme.'
+            : 'Seules les validations par e-mail et WhatsApp sont activées sur la plateforme.',
   };
 }
 
