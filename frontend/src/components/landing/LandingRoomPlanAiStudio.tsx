@@ -585,6 +585,25 @@ export default function LandingRoomPlanAiStudio({
             </div>
 
             <div className="p-4 sm:p-6 space-y-3 bg-stage/40 min-h-[320px]">
+              {preview ? (
+                <div className="p-3 sm:p-3.5 rounded-2xl border border-emerald-500/40 bg-emerald-50/90 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 flex items-center justify-between gap-3 text-xs shadow-xs animate-in fade-in">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="p-1 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 shrink-0">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-foreground truncate">Plan composé avec succès !</p>
+                      <p className="text-[11px] text-muted-foreground dark:text-muted truncate">
+                        {preview.blueprint.furniture.length + preview.blueprint.fixtures.length} éléments disposés · visualisez en 2D ou en 3D.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="hidden sm:inline-flex px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 shrink-0">
+                    Studio 2D / 3D
+                  </span>
+                </div>
+              ) : null}
+
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-foreground">
                   {preview ? 'Aperçu généré' : 'Aperçu 2D / 3D'}

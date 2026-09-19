@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, Loader2, XCircle, X } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Coins, Loader2, RefreshCw, Sparkles, X, XCircle } from 'lucide-react';
 import { useStudioJobs, type TrackedJob } from '@/context/StudioJobsContext';
 import { isAiTokenShortageMessage, notifyAiTokensInsufficient } from '@/lib/aiTokenEvents';
 import { cn } from '@/lib/cn';
 
-const AUTO_DISMISS_SUCCESS_MS = 7_000;
-const AUTO_DISMISS_ERROR_MS = 9_000;
-const HOVER_GRACE_MS = 3_500;
+const AUTO_DISMISS_SUCCESS_MS = 8_000;
+const AUTO_DISMISS_ERROR_MS = 10_000;
+const HOVER_GRACE_MS = 4_000;
 
 function StudioJobCard({
   job,
@@ -19,6 +19,8 @@ function StudioJobCard({
   onDismiss: (id: string) => void;
 }) {
   const running = job.status === 'queued' || job.status === 'running';
+  const isDone = job.status === 'done';
+  const isError = job.status === 'error';
   const [exiting, setExiting] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -26,7 +28,7 @@ function StudioJobCard({
   const exitTimerRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number>(Date.now());
   const remainingMsRef = useRef<number>(
-    job.status === 'error' ? AUTO_DISMISS_ERROR_MS : AUTO_DISMISS_SUCCESS_MS,
+    isError ? AUTO_DISMISS_ERROR_MS : AUTO_DISMISS_SUCCESS_MS,
   );
 
   const triggerDismiss = useCallback(() => {
@@ -52,8 +54,7 @@ function StudioJobCard({
       return;
     }
 
-    const totalDuration =
-      job.status === 'error' ? AUTO_DISMISS_ERROR_MS : AUTO_DISMISS_SUCCESS_MS;
+    const totalDuration = isError ? AUTO_DISMISS_ERROR_MS : AUTO_DISMISS_SUCCESS_MS;
     const elapsed = job.completedAt ? Date.now() - job.completedAt : 0;
     const initialRemaining = Math.max(1_000, totalDuration - elapsed);
 
@@ -63,7 +64,7 @@ function StudioJobCard({
       if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
       if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
     };
-  }, [running, job.status, job.completedAt, scheduleDismiss]);
+  }, [running, isError, job.completedAt, scheduleDismiss]);
 
   const handleMouseEnter = () => {
     if (running) return;
@@ -87,74 +88,123 @@ function StudioJobCard({
     triggerDismiss();
   };
 
-  const durationSec =
-    (job.status === 'error' ? AUTO_DISMISS_ERROR_MS : AUTO_DISMISS_SUCCESS_MS) / 1000;
+  const durationSec = (isError ? AUTO_DISMISS_ERROR_MS : AUTO_DISMISS_SUCCESS_MS) / 1000;
+  const isTokenShortage = isError && isAiTokenShortageMessage(job.error);
 
   return (
     <div
+      role={isError ? 'alert' : 'status'}
+      aria-live={isError ? 'assertive' : 'polite'}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className={cn(
-        'relative overflow-hidden rounded-2xl border border-border bg-surface/95 shadow-xl backdrop-blur-sm px-3.5 py-3 transition-all duration-250 ease-out',
+        'relative overflow-hidden rounded-2xl border backdrop-blur-md px-4 py-3.5 transition-all duration-300 ease-out shadow-2xl',
+        running && 'border-primary/40 bg-surface/95 dark:bg-surface/90 ring-1 ring-primary/20',
+        isDone && 'border-emerald-500/50 bg-emerald-50/95 dark:bg-emerald-950/80 text-foreground ring-2 ring-emerald-500/20 shadow-emerald-500/10',
+        isError && 'border-rose-500/60 bg-rose-50/95 dark:bg-rose-950/85 text-foreground ring-2 ring-rose-500/25 shadow-rose-500/10',
         exiting
-          ? 'opacity-0 translate-y-2 scale-95 pointer-events-none'
-          : 'opacity-100 translate-y-0 scale-100',
+          ? 'opacity-0 translate-y-3 scale-95 pointer-events-none'
+          : 'opacity-100 translate-y-0 scale-100 animate-in fade-in slide-in-from-bottom-2',
       )}
     >
-      <div className="flex items-start gap-2.5">
+      <div className="flex items-start gap-3">
         {running ? (
-          <Loader2 className="w-4 h-4 mt-0.5 animate-spin text-primary shrink-0" />
-        ) : job.status === 'done' ? (
-          <CheckCircle2 className="w-4 h-4 mt-0.5 text-primary shrink-0" />
+          <div className="relative mt-0.5 shrink-0">
+            <span className="absolute inset-0 rounded-full animate-ping bg-primary/20" />
+            <Loader2 className="w-5 h-5 animate-spin text-primary relative" />
+          </div>
+        ) : isDone ? (
+          <div className="mt-0.5 p-1 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0">
+            <CheckCircle2 className="w-5 h-5" />
+          </div>
         ) : (
-          <XCircle className="w-4 h-4 mt-0.5 text-red-500 shrink-0" />
+          <div className="mt-0.5 p-1 rounded-full bg-rose-500/15 text-rose-600 dark:text-rose-400 shrink-0">
+            <XCircle className="w-5 h-5" />
+          </div>
         )}
+
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold text-foreground truncate">{job.label}</p>
-          <p className="text-[11px] text-muted mt-0.5 leading-snug">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {running ? (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-extrabold bg-primary/15 text-primary uppercase tracking-wide">
+                En cours
+              </span>
+            ) : isDone ? (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 uppercase tracking-wide">
+                <Sparkles className="w-2.5 h-2.5" /> Succès Studio
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-extrabold bg-rose-500/20 text-rose-700 dark:text-rose-300 uppercase tracking-wide">
+                Échec Studio
+              </span>
+            )}
+            <p className="text-xs font-bold text-foreground truncate">{job.label}</p>
+          </div>
+
+          <p className="text-xs text-muted-foreground dark:text-muted mt-1 leading-relaxed">
             {running
-              ? 'Génération en cours — vous pouvez quitter cette page.'
-              : job.status === 'done'
-                ? 'Prête. Ouvrez le studio pour l’appliquer.'
-                : job.error || 'La génération a échoué.'}
+              ? 'Génération IA en cours — vous pouvez continuer à travailler ou quitter cette page.'
+              : isDone
+                ? 'Création terminée avec succès ! Le résultat est prêt à être appliqué.'
+                : job.error || 'La génération du studio n’a pas pu aboutir.'}
           </p>
-          {job.status === 'done' ? (
+
+          {isDone ? (
             <Link
               href={job.href}
               onClick={handleManualDismiss}
-              className="inline-block mt-1.5 text-[11px] font-bold text-primary hover:underline"
+              className="inline-flex items-center justify-center gap-1.5 mt-2.5 w-full py-2 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all active:scale-[0.98]"
             >
-              Ouvrir le résultat
+              <span>Ouvrir et appliquer le résultat</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           ) : null}
-          {job.status === 'error' && isAiTokenShortageMessage(job.error) ? (
-            <button
-              type="button"
-              onClick={() => notifyAiTokensInsufficient(job.error || undefined)}
-              className="inline-block mt-1.5 text-[11px] font-bold text-amber-700 dark:text-amber-300 hover:underline"
-            >
-              Recharger des jetons
-            </button>
+
+          {isError ? (
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {isTokenShortage ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleManualDismiss();
+                    notifyAiTokensInsufficient(job.error || undefined);
+                  }}
+                  className="inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-sm transition active:scale-[0.98]"
+                >
+                  <Coins className="w-3.5 h-3.5" />
+                  <span>Recharger mes jetons</span>
+                </button>
+              ) : null}
+              <Link
+                href={job.href}
+                onClick={handleManualDismiss}
+                className="inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-surface border border-border hover:bg-surface-muted text-foreground font-semibold text-xs transition"
+              >
+                <RefreshCw className="w-3 h-3 text-muted" />
+                <span>Réessayer dans le Studio</span>
+              </Link>
+            </div>
           ) : null}
         </div>
+
         {!running ? (
           <button
             type="button"
             onClick={handleManualDismiss}
-            className="p-1 rounded-lg text-muted hover:bg-surface-muted transition-colors"
-            aria-label="Fermer"
+            className="p-1 rounded-lg text-muted hover:text-foreground hover:bg-surface-muted/80 transition-colors"
+            aria-label="Fermer la notification"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4" />
           </button>
         ) : null}
       </div>
 
       {!running ? (
-        <div className="absolute bottom-0 inset-x-0 h-0.5 bg-border/40 overflow-hidden">
+        <div className="absolute bottom-0 inset-x-0 h-1 bg-border/30 overflow-hidden">
           <div
             className={cn(
               'h-full w-full origin-left',
-              job.status === 'done' ? 'bg-primary' : 'bg-red-500',
+              isDone ? 'bg-emerald-500' : 'bg-rose-500',
             )}
             style={{
               animation: `em-shrink-progress ${durationSec}s linear forwards`,

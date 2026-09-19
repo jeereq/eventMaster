@@ -321,10 +321,10 @@ function buildImagePrompt(userPrompt, backgroundPrompt, analysis, options) {
 }
 function structureSystemPrompt(embedText, artStyle, isPublic = false, intent = 'create') {
     const style = (0, invitationArtStyle_ts_1.parseInvitationArtStyle)(artStyle);
-    let basePrompt = STRUCTURE_SYSTEM.replace('{{PIPELINE_MANDATE}}', (0, invitationPromptFidelity_ts_1.invitationPipelineVisionMandate)(intent)).replace('{{ART_STYLE_RULES}}', (0, invitationArtStyle_ts_1.invitationArtStyleStructureRules)(style)).replace('- Vertical print-ready image, NO readable text, names, dates, logos, watermarks (the editor adds text).', embedText && !isPublic
+    let basePrompt = STRUCTURE_SYSTEM.replace('{{PIPELINE_MANDATE}}', (0, invitationPromptFidelity_ts_1.invitationPipelineVisionMandate)(intent)).replace('{{ART_STYLE_RULES}}', (0, invitationArtStyle_ts_1.invitationArtStyleStructureRules)(style)).replace('- Vertical print-ready image, NO readable text, names, dates, logos, watermarks (the editor adds text).', embedText
         ? '- Vertical print-ready image WITH sharp embedded invitation typography (names, date, venue from the brief), correctly spelled, never covering faces.'
         : '- Vertical print-ready image, NO readable text, names, dates, logos, watermarks (the editor adds text).');
-    if (isPublic) {
+    if (isPublic && !embedText) {
         basePrompt += `\n\n=== MANDATORY RULES FOR PUBLIC / SHOWCASE TEMPLATES (VARIABLES-FIRST) ===
 1) CLEAN ARTWORK ONLY: The generated background image must NEVER contain any baked-in text, letters, words, names, or dates.
 2) DYNAMIC CUSTOMIZATION VARIABLES:
@@ -1682,18 +1682,17 @@ async function composeInvitationTemplateAi(input) {
     if (prompt.length < 8) {
         fail(400, 'Décrivez le style d’invitation souhaité (au moins quelques mots).');
     }
-    const isPublic = Boolean(input.isPublic || !input.tenantId);
-    // Règle stricte : pour tout modèle public, interdiction d'écrire sur l'image directement
-    const embedText = isPublic ? false : Boolean(input.embedText);
+    const embedText = Boolean(input.embedText);
+    const isPublic = Boolean((input.isPublic || !input.tenantId) && !embedText);
     const artStyle = (0, invitationArtStyle_ts_1.parseInvitationArtStyle)(input.artStyle);
     const artStyleLine = (0, invitationArtStyle_ts_1.invitationArtStyleScaffoldLine)(artStyle);
     const existingElements = Array.isArray(input.existingElements) ? input.existingElements : [];
-    const hasBaseReference = Boolean(input.sourceTemplateId) || Boolean(input.baseImageUrl);
-    const isAlteration = coupleFaceSwap ||
+    const hasExplicitAlterationSignal = coupleFaceSwap ||
         Boolean(input.isAlteration) ||
-        hasBaseReference ||
-        (existingElements.length > 0 && Boolean(input.baseImageUrl)) ||
         /remplac|substitu|chang|swap|retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
+    const isAlteration = hasExplicitAlterationSignal ||
+        ((Boolean(input.sourceTemplateId) || Boolean(input.baseImageUrl)) &&
+            (existingElements.length > 0 || (input.imageUrls && input.imageUrls.length > 0)));
     const rawImageUrls = (input.imageUrls || [])
         .filter((u) => typeof u === 'string' && /^https?:\/\//i.test(u.trim()))
         .map((u) => u.trim());
@@ -1808,7 +1807,6 @@ async function composeInvitationTemplateAi(input) {
     const variants = [];
     const variantRoles = [];
     const wantBg = input.generateBackground !== false;
-    const requestedVariantsCount = Math.min(2, Math.max(1, Number(input.variantsCount) || 1));
     if (wantBg) {
         try {
             // Levier B: Préchargement parallèle des photos de référence une seule fois en mémoire
@@ -1833,57 +1831,15 @@ async function composeInvitationTemplateAi(input) {
                     : structured.visualAnalysis?.peopleCount || 0,
                 isPublic,
             };
-            if (requestedVariantsCount >= 2) {
-                const promptA = (0, invitationPromptFidelity_ts_1.buildFaithfulImagePrompt)(imagePrompt);
-                const promptB = (0, invitationPromptFidelity_ts_1.buildAmpleImagePrompt)(imagePrompt, imageUrls.length > 0);
-                const [resA, resB] = await Promise.allSettled([
-                    generateInvitationImageWithJudge(key, imageUrls, promptA, input.tenantId, imageOptions, judgeInput),
-                    createNewInvitationImage(key, imageUrls, promptB, input.tenantId, imageOptions),
-                ]);
-                if (resA.status === 'fulfilled') {
-                    bgImageUrl = resA.value.url;
-                    imageMode = resA.value.mode;
-                    safetyFallbackTriggered = Boolean(resA.value.safetyFallbackTriggered);
-                    imageJudge = resA.value.judge;
-                    imageJudgeRetried = resA.value.retried;
-                    variants.push(bgImageUrl);
-                    variantRoles.push('faithful');
-                }
-                if (resB.status === 'fulfilled') {
-                    const urlB = resB.value.url;
-                    if (urlB && urlB !== bgImageUrl) {
-                        variants.push(urlB);
-                        variantRoles.push('ample');
-                    }
-                    if (!bgImageUrl && urlB) {
-                        bgImageUrl = urlB;
-                        imageMode = resB.value.mode;
-                        safetyFallbackTriggered = Boolean(resB.value.safetyFallbackTriggered);
-                        if (!variantRoles.includes('ample'))
-                            variantRoles.push('ample');
-                    }
-                }
-                else {
-                    console.warn('[invitationTemplateAi] Échec de la variante B (non-bloquant):', resB.reason?.message);
-                }
-                if (!bgImageUrl) {
-                    const errA = resA.status === 'rejected' ? resA.reason : new Error('Échec de la génération des variantes');
-                    if (errA?.status)
-                        throw errA;
-                    fail(502, errA?.message || 'La création de la nouvelle image a échoué.');
-                }
-            }
-            else {
-                const created = await generateInvitationImageWithJudge(key, imageUrls, imagePrompt, input.tenantId, imageOptions, judgeInput);
-                bgImageUrl = created.url;
-                imageMode = created.mode;
-                safetyFallbackTriggered = Boolean(created.safetyFallbackTriggered);
-                imageJudge = created.judge;
-                imageJudgeRetried = created.retried;
-                if (bgImageUrl) {
-                    variants.push(bgImageUrl);
-                    variantRoles.push('faithful');
-                }
+            const created = await generateInvitationImageWithJudge(key, imageUrls, imagePrompt, input.tenantId, imageOptions, judgeInput);
+            bgImageUrl = created.url;
+            imageMode = created.mode;
+            safetyFallbackTriggered = Boolean(created.safetyFallbackTriggered);
+            imageJudge = created.judge;
+            imageJudgeRetried = created.retried;
+            if (bgImageUrl) {
+                variants.push(bgImageUrl);
+                variantRoles.push('faithful');
             }
         }
         catch (err) {
@@ -1893,7 +1849,8 @@ async function composeInvitationTemplateAi(input) {
             fail(502, err?.message || 'La création de la nouvelle image a échoué.');
         }
     }
-    const global = sanitizeGlobal(structured.global, bgImageUrl);
+    const resolvedBgUrl = bgImageUrl || (input.baseImageUrl ? String(input.baseImageUrl).trim() : '');
+    const global = sanitizeGlobal(structured.global, resolvedBgUrl);
     if (variants.length > 0) {
         global.aiVariants = variants;
         global.variants = variants;

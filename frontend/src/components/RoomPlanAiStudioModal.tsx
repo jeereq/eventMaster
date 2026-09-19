@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Loader2, Upload, Wand2, XCircle, Coins, Users, Clock, Sparkles } from 'lucide-react';
+import { AlertCircle, Clock, Coins, Loader2, Sparkles, Upload, Users, Wand2, X, XCircle } from 'lucide-react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   AI_ROOM_PLAN_TOKEN_COST,
@@ -492,7 +492,44 @@ export default function RoomPlanAiStudioModal({
             </div>
           ) : null}
 
-          {error && studioTab === 'create' ? <Alert variant="error">{error}</Alert> : null}
+          {error && studioTab === 'create' ? (
+            <div
+              role="alert"
+              aria-live="assertive"
+              className="p-4 rounded-xl border border-rose-500/50 bg-rose-50 dark:bg-rose-950/40 text-rose-950 dark:text-rose-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm ring-1 ring-rose-500/20 animate-in fade-in"
+            >
+              <div className="flex items-start gap-2.5 min-w-0">
+                <div className="p-1 rounded-full bg-rose-500/20 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-extrabold uppercase tracking-wide text-rose-700 dark:text-rose-300">
+                    Composition interrompue
+                  </p>
+                  <p className="text-xs text-rose-800 dark:text-rose-200 mt-0.5 leading-relaxed break-words">{error}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                {error.toLowerCase().includes('jeton') ? (
+                  <Button size="sm" type="button" onClick={() => setTokenModalOpen(true)}>
+                    Recharger
+                  </Button>
+                ) : (
+                  <Button size="sm" type="button" disabled={busy} onClick={() => void generate()}>
+                    Réessayer
+                  </Button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setError('')}
+                  className="p-1 text-muted hover:text-foreground rounded"
+                  aria-label="Fermer l'erreur"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           <div className="flex flex-wrap justify-end gap-2 pt-2 border-t border-border">
             <Button type="button" variant="secondary" disabled={busy} onClick={onClose} className="min-h-11">

@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, SlidersHorizontal, X, Compass,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -768,6 +768,7 @@ export default function RoomLayoutEditor({
   const [cropTarget, setCropTarget] = useState<CropTarget>(null);
   const [aiPlanReading, setAiPlanReading] = useState(false);
   const [aiPlanError, setAiPlanError] = useState('');
+  const [aiPlanSuccess, setAiPlanSuccess] = useState('');
   const [aiPlanWarnings, setAiPlanWarnings] = useState<string[]>([]);
   const [retryPlanPhoto, setRetryPlanPhoto] = useState<File | null>(null);
   const [aiPlanBrief, setAiPlanBrief] = useState('');
@@ -1078,6 +1079,12 @@ export default function RoomLayoutEditor({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [readOnly, undo, redo, optimizeClearances]);
+
+  useEffect(() => {
+    if (!aiPlanSuccess) return;
+    const timer = setTimeout(() => setAiPlanSuccess(''), 8000);
+    return () => clearTimeout(timer);
+  }, [aiPlanSuccess]);
 
   const primary = selection.length === 1 ? selection[0] : null;
   const selected = primary; // compat panneaux propriété (sélection unique)
@@ -9014,6 +9021,9 @@ export default function RoomLayoutEditor({
           setSelection(nextSelection);
           setAiPlanWarnings(warnings);
           setAiPlanError('');
+          setAiPlanSuccess(
+            `Plan 2D/3D composé avec succès par l’IA ! ${next.furniture.length + next.fixtures.length} éléments disposés (capacité estimée : ${next.metadata.totalSeats} places).`,
+          );
           log(
             warnings.length
               ? 'Plan composé — vérifiez les positions avant d’enregistrer.'
@@ -9209,6 +9219,45 @@ export default function RoomLayoutEditor({
             {toolbar}
           </div>
         </div>
+        {aiPlanSuccess ? (
+          <div
+            role="status"
+            aria-live="polite"
+            className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/40 text-emerald-900 dark:text-emerald-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-sm shadow-md ring-1 ring-emerald-500/20 animate-in fade-in"
+          >
+            <div className="flex items-start gap-3 min-w-0 flex-1">
+              <div className="p-1 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 uppercase tracking-wide flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" /> Succès Studio 2D / 3D
+                  </span>
+                  <span className="font-bold text-foreground">Plan généré par l’IA</span>
+                </div>
+                <p className="text-xs text-muted-foreground dark:text-muted mt-1 leading-relaxed break-words">{aiPlanSuccess}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+              <button
+                type="button"
+                onClick={() => setDepthAmount(60)}
+                className="min-h-9 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition"
+              >
+                Explorer en 3D
+              </button>
+              <button
+                type="button"
+                onClick={() => setAiPlanSuccess('')}
+                className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-emerald-500/10 transition-colors"
+                aria-label="Fermer la notification de succès"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ) : null}
         {mobilePane === 'tools' ? (
           <div className="lg:hidden space-y-2">
             {templateBar}
