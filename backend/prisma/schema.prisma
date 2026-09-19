@@ -1094,6 +1094,7 @@ model NotificationPreference {
   email     Boolean  @default(true)
   whatsapp  Boolean  @default(false)
   push      Boolean  @default(true)
+  sms       Boolean  @default(false)
   updatedAt DateTime @updatedAt
 
   @@unique([userId, family])

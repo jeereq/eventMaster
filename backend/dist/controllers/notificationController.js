@@ -118,6 +118,7 @@ async function updatePreferences(req, res) {
                 ...(typeof row.email === 'boolean' ? { email: row.email } : {}),
                 ...(typeof row.whatsapp === 'boolean' ? { whatsapp: row.whatsapp } : {}),
                 ...(typeof row.push === 'boolean' ? { push: row.push } : {}),
+                ...(typeof row.sms === 'boolean' ? { sms: row.sms } : {}),
             };
         }
         const prefs = await (0, notificationPreferenceService_1.saveNotificationPreferences)(req.user.id, input);

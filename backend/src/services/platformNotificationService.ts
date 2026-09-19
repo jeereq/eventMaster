@@ -3,13 +3,14 @@ import { prisma } from '../db';
 import { getPlanLimits } from '../config/plansConfig';
 import { familyForType, typesForFamily, type NotificationChannel } from '../config/platformNotificationTypes';
 import { sendExpoPushToUser } from './expoPushService';
-import { sendRealEmail, sendRealWhatsApp } from './notificationService';
+import { sendRealEmail, sendRealWhatsApp, sendRealSms } from './notificationService';
 import { allowedChannels, resolveChannelPreference } from './notificationPreferenceService';
 import {
   FAMILY_LABEL_FR,
   formatOperatorWhatsApp,
   renderOperatorNotificationEmail,
   renderOperatorWhatsApp,
+  renderOperatorSms,
   resolveNotificationHref,
   userWhatsAppNumber,
 } from '../utils/notificationTemplates';
@@ -50,6 +51,7 @@ export type PlatformNotifyParams = {
   channels?: NotificationChannel[];
   email?: NotifyEmailOverride;
   whatsapp?: string;
+  sms?: string;
 };
 
 function titleForEvent(event: CommercialBillingEvent, tenantName: string): string {
@@ -73,7 +75,7 @@ function asDeliveryProviderId(value: unknown): string | null {
 
 async function logDelivery(params: {
   notificationId: string;
-  channel: 'EMAIL' | 'WHATSAPP' | 'PUSH';
+  channel: 'EMAIL' | 'WHATSAPP' | 'PUSH' | 'SMS';
   status: 'SENT' | 'FAILED' | 'SIMULATED';
   providerId?: unknown;
   error?: string;
@@ -95,7 +97,7 @@ async function logDelivery(params: {
 
 async function fanOutChannels(
   notification: { id: string; userId: string; type: string; title: string; message: string; metadata: Prisma.JsonValue },
-  extras: Pick<PlatformNotifyParams, 'channels' | 'email' | 'whatsapp'>,
+  extras: Pick<PlatformNotifyParams, 'channels' | 'email' | 'whatsapp' | 'sms'>,
 ) {
   const user = await prisma.user.findUnique({
     where: { id: notification.userId },
@@ -187,6 +189,39 @@ async function fanOutChannels(
       await logDelivery({
         notificationId: notification.id,
         channel: 'WHATSAPP',
+        status: 'SIMULATED',
+        providerId: 'deduped-same-channel',
+      });
+    }
+  }
+
+  const smsTo = userWhatsAppNumber(user);
+  if (channels.has('SMS') && smsTo) {
+    const body = extras.sms?.trim()
+      ? extras.sms.trim()
+      : renderOperatorSms({
+          title: notification.title,
+          message: notification.message,
+          href,
+        });
+    const smsKey = outboundChannelFingerprint({
+      channel: 'SMS',
+      to: smsTo,
+      body,
+    });
+    if (claimSimilarOutbound(smsKey)) {
+      const result = await sendRealSms(smsTo, body);
+      await logDelivery({
+        notificationId: notification.id,
+        channel: 'SMS',
+        status: result.simulated ? 'SIMULATED' : result.success ? 'SENT' : 'FAILED',
+        providerId: result.messageId,
+        error: result.error,
+      });
+    } else {
+      await logDelivery({
+        notificationId: notification.id,
+        channel: 'SMS',
         status: 'SIMULATED',
         providerId: 'deduped-same-channel',
       });
@@ -305,6 +340,7 @@ async function persistPlatformNotification(
     channels: params.channels,
     email: params.email,
     whatsapp: params.whatsapp,
+    sms: params.sms,
   }).catch((err) => {
     console.error('[platformNotification] fan-out:', err);
   });

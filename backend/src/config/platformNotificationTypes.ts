@@ -69,7 +69,7 @@ export type NotificationFamily = keyof typeof NOTIFICATION_FAMILIES;
 export const NOTIFICATION_PREF_FAMILIES = ['events', 'billing', 'commissions', 'catalog', 'tasks'] as const;
 export type NotificationPrefFamily = (typeof NOTIFICATION_PREF_FAMILIES)[number];
 
-export type NotificationChannel = 'IN_APP' | 'EMAIL' | 'WHATSAPP' | 'PUSH';
+export type NotificationChannel = 'IN_APP' | 'EMAIL' | 'WHATSAPP' | 'PUSH' | 'SMS';
 
 export function typesForFamily(family?: string | null): string[] | undefined {
   if (!family) return undefined;

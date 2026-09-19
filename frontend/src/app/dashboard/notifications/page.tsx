@@ -533,7 +533,7 @@ function NotificationsContent() {
             </div>
           )}
 
-          {/* Section 3 : Canaux d'alerte personnels (E-mail, WhatsApp, Push) */}
+          {/* Section 3 : Canaux d'alerte personnels (E-mail, WhatsApp, SMS, Push) */}
           <NotificationPreferencesCard />
         </section>
       )}

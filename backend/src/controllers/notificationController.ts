@@ -130,6 +130,7 @@ export async function updatePreferences(req: AuthenticatedRequest, res: Response
         ...(typeof row.email === 'boolean' ? { email: row.email } : {}),
         ...(typeof row.whatsapp === 'boolean' ? { whatsapp: row.whatsapp } : {}),
         ...(typeof row.push === 'boolean' ? { push: row.push } : {}),
+        ...(typeof row.sms === 'boolean' ? { sms: row.sms } : {}),
       };
     }
 

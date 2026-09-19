@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Bell, Loader2, Mail, MessageCircle, Save, Smartphone } from 'lucide-react';
+import { Bell, Loader2, Mail, MessageCircle, MessageSquare, Save, Smartphone } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Alert, Button, Card, CardHeader } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -17,6 +17,7 @@ type ChannelPreference = {
   email: boolean;
   whatsapp: boolean;
   push: boolean;
+  sms: boolean;
 };
 
 type PreferencesResponse = {
@@ -27,11 +28,12 @@ type PreferencesResponse = {
 const CHANNELS: Array<{ key: keyof ChannelPreference; label: string; icon: React.ReactNode }> = [
   { key: 'email', label: 'E-mail', icon: <Mail className="w-3.5 h-3.5" aria-hidden /> },
   { key: 'whatsapp', label: 'WhatsApp', icon: <MessageCircle className="w-3.5 h-3.5" aria-hidden /> },
+  { key: 'sms', label: 'SMS', icon: <MessageSquare className="w-3.5 h-3.5" aria-hidden /> },
   { key: 'push', label: 'Push', icon: <Smartphone className="w-3.5 h-3.5" aria-hidden /> },
 ];
 
 function defaultChannels(hasPhone: boolean): ChannelPreference {
-  return { email: true, whatsapp: hasPhone, push: true };
+  return { email: true, whatsapp: hasPhone, push: true, sms: false };
 }
 
 function familyChannels(data: PreferencesResponse, family: NotificationPrefFamily): ChannelPreference {
@@ -65,7 +67,7 @@ export default function NotificationPreferencesCard() {
   const toggle = (family: NotificationPrefFamily, channel: keyof ChannelPreference) => {
     setData((prev) => {
       if (!prev) return prev;
-      if (channel === 'whatsapp' && !prev.hasPhone) return prev;
+      if ((channel === 'whatsapp' || channel === 'sms') && !prev.hasPhone) return prev;
       setSuccess('');
       const current = familyChannels(prev, family);
       return {
@@ -106,7 +108,7 @@ export default function NotificationPreferencesCard() {
             Canaux d’alerte
           </span>
         }
-        description="L’inbox du tableau de bord reste toujours active. Choisissez, pour chaque famille, si e-mail, WhatsApp et push vous suivent."
+        description="L’inbox du tableau de bord reste toujours active. Choisissez, pour chaque famille, si e-mail, WhatsApp, SMS et push vous suivent."
         action={
           <Button
             size="sm"
@@ -133,11 +135,11 @@ export default function NotificationPreferencesCard() {
         <div className="space-y-4">
           {!data.hasPhone && (
             <p className="text-sm text-muted leading-relaxed">
-              Ajoutez un numéro WhatsApp dans{' '}
+              Ajoutez un numéro de téléphone dans{' '}
               <Link href="/dashboard/profile" className="text-primary font-medium hover:underline">
                 Mon profil
               </Link>{' '}
-              pour recevoir les alertes WhatsApp.
+              pour recevoir les alertes WhatsApp et SMS.
             </p>
           )}
 
@@ -157,7 +159,7 @@ export default function NotificationPreferencesCard() {
                   </div>
                   <div className="flex flex-wrap gap-2" role="group" aria-label={`Canaux ${NOTIFICATION_FAMILY_LABELS[family]}`}>
                     {CHANNELS.map((channel) => {
-                      const disabled = channel.key === 'whatsapp' && !data.hasPhone;
+                      const disabled = (channel.key === 'whatsapp' || channel.key === 'sms') && !data.hasPhone;
                       const checked = channels[channel.key];
                       return (
                         <button
