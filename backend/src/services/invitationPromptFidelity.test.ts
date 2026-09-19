@@ -505,6 +505,14 @@ describe('invitation pipeline intent', () => {
       'refine',
     );
     assert.equal(
+      resolveInvitationPipelineIntent({ brief: 'Remplacer les informations sur la carte et les visages' }),
+      'refine',
+    );
+    assert.equal(
+      resolveInvitationPipelineIntent({ brief: 'Changer les noms et la date du modèle' }),
+      'refine',
+    );
+    assert.equal(
       resolveInvitationPipelineIntent({ brief: 'Copier cette invitation Kuba' }),
       'clone',
     );
@@ -609,10 +617,10 @@ describe('compact image prompt', () => {
 });
 
 describe('invitation token-saving skips', () => {
-  it('saute la vision sans photos utilisateur, en couple, et en mode rapide', () => {
+  it('ne saute PAS la vision en couple (détection préalable), mais la saute sans photos ou en mode rapide standard', () => {
     assert.equal(shouldSkipInvitationVisionCall({ hasUserReferencePhotos: false }), true);
     assert.equal(shouldSkipInvitationVisionCall({ styleRefsOnly: true, hasUserReferencePhotos: true }), true);
-    assert.equal(shouldSkipInvitationVisionCall({ coupleFaceSwap: true, hasUserReferencePhotos: true }), true);
+    assert.equal(shouldSkipInvitationVisionCall({ coupleFaceSwap: true, hasUserReferencePhotos: true }), false);
     assert.equal(
       shouldSkipInvitationVisionCall({ speedMode: 'fast', hasUserReferencePhotos: true }),
       true,

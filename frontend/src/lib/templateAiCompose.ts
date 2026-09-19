@@ -18,7 +18,7 @@ import type { InvitationStructuredBrief } from '@/config/invitationStructuredBri
 export const AI_TEMPLATE_DRAFT_KEY = 'em_ai_template_draft';
 
 export const COUPLE_FACE_SWAP_DEFAULT_PROMPT =
-  'Remplace uniquement les visages de cette invitation par les visages du couple. Conserve la pose des corps, les tenues, le décor, la mise en page et les expressions des visages déjà présents sur le carton. Les photos sources adoptent ces expressions (sourire, regard, émotion). Harmonisation anatomique parfaite : orientation 3D des têtes, proportions et tailles des visages par rapport aux corps, teintes réelles des peaux et jonction naturelle du cou sans démarcation.';
+  'Détecte d’abord tous les visages présents sur l’image du carton, puis remplace uniquement leurs visages par ceux du couple fournis. Conserve la pose des corps, les tenues, le décor, la mise en page et les expressions des visages déjà présents sur le carton. Les photos sources adoptent ces expressions (sourire, regard, émotion). Harmonisation anatomique parfaite : orientation 3D des têtes, proportions et tailles des visages par rapport aux corps, teintes réelles des peaux et jonction naturelle du cou sans démarcation.';
 
 export const INVITATION_VARIANT_LABELS = ['Fidèle', 'Ample'] as const;
 
