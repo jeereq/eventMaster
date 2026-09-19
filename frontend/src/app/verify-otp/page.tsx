@@ -219,7 +219,11 @@ function VerifyOtpForm() {
  )}
  <div className="text-center">
  <Button variant="ghost" size="sm" onClick={handleResend} loading={resending} leftIcon={!resending ? <RefreshCw className="w-3.5 h-3.5" /> : undefined}>
- Renvoyer le code
+ {verificationMethod === 'WHATSAPP'
+   ? 'Renvoyer le code par WhatsApp'
+   : verificationMethod === 'SMS'
+     ? 'Renvoyer le code par SMS'
+     : 'Renvoyer le code par e-mail'}
  </Button>
  </div>
  </div>

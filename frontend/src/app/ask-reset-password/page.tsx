@@ -13,9 +13,12 @@ import { DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   allowsAuthOtpChoice,
+  authOtpMethodOptions,
   defaultAuthOtpMethod,
-  otpMethodFromIdentifierMode,
+  defaultPhoneAuthOtpMethod,
+  phoneAuthOtpMethods,
   type AuthOtpMethod,
+  type PhoneAuthOtpMethod,
 } from '@/lib/authOtpChannels';
 
 const FEATURES = [
@@ -28,22 +31,42 @@ const FEATURES = [
 export default function AskResetPasswordPage() {
   const { site } = usePlatformSite();
   const authChannels = site.authOtpChannels;
-  const [mode, setMode] = useState<IdentifierMode>('email');
+  const allowsEmail = authOtpMethodOptions(authChannels).includes('EMAIL');
+  const allowedPhoneMethods = phoneAuthOtpMethods(authChannels);
+
+  const initialMode: IdentifierMode = !allowsEmail && allowedPhoneMethods.length > 0 ? 'phone' : 'email';
+  const [mode, setMode] = useState<IdentifierMode>(initialMode);
   const [email, setEmail] = useState('');
   const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
   const [phoneNational, setPhoneNational] = useState('');
-  const [method, setMethod] = useState<AuthOtpMethod>(defaultAuthOtpMethod(authChannels));
+  const [method, setMethod] = useState<AuthOtpMethod>(() => {
+    if (initialMode === 'phone') {
+      return defaultPhoneAuthOtpMethod(authChannels);
+    }
+    return defaultAuthOtpMethod(authChannels);
+  });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setMethod(otpMethodFromIdentifierMode(mode, authChannels));
+    if (mode === 'phone') {
+      const pMethods = phoneAuthOtpMethods(authChannels);
+      if (!pMethods.includes(method as PhoneAuthOtpMethod)) {
+        setMethod(defaultPhoneAuthOtpMethod(authChannels));
+      }
+    } else {
+      setMethod('EMAIL');
+    }
   }, [authChannels, mode]);
 
   const handleModeChange = (next: IdentifierMode) => {
     setMode(next);
-    setMethod(otpMethodFromIdentifierMode(next, authChannels));
+    if (next === 'phone') {
+      setMethod(defaultPhoneAuthOtpMethod(authChannels));
+    } else {
+      setMethod('EMAIL');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,7 +81,7 @@ export default function AskResetPasswordPage() {
     setLoading(true);
 
     try {
-      const deliveryMethod = otpMethodFromIdentifierMode(mode, authChannels);
+      const deliveryMethod = mode === 'phone' ? method : 'EMAIL';
       const response = await api.post('/auth/forgot-password', { email: identifier, method: deliveryMethod });
       setSuccess(response.message || 'Si le compte existe, un lien de réinitialisation a été envoyé.');
     } catch (err: unknown) {
@@ -104,19 +127,27 @@ export default function AskResetPasswordPage() {
               national={phoneNational}
               onCountryCodeChange={setPhoneCountryCode}
               onNationalChange={setPhoneNational}
+              authChannels={authChannels}
+              selectedPhoneMethod={method === 'SMS' ? 'SMS' : 'WHATSAPP'}
+              onPhoneMethodChange={(next) => setMethod(next)}
+              showPhoneMethodSelector={true}
             />
 
             <p className="text-xs text-muted">
-              Lien envoyé {method === 'WHATSAPP' ? 'par WhatsApp' : method === 'SMS' ? 'par SMS' : 'par e-mail'}
+              Lien envoyé {method === 'WHATSAPP' ? 'sur WhatsApp' : method === 'SMS' ? 'par SMS' : 'par e-mail'}
               {allowsAuthOtpChoice(authChannels)
                 ? mode === 'phone'
-                  ? ' (numéro choisi).'
+                  ? ` (numéro choisi via ${method === 'SMS' ? 'SMS' : 'WhatsApp'}).`
                   : ' (adresse e-mail choisie).'
                 : ' (réglage plateforme).'}
             </p>
 
             <Button type="submit" fullWidth size="lg" loading={loading}>
-              Envoyer le lien de réinitialisation
+              {method === 'WHATSAPP'
+                ? 'Envoyer le lien par WhatsApp'
+                : method === 'SMS'
+                  ? 'Envoyer le lien par SMS'
+                  : 'Envoyer le lien par e-mail'}
             </Button>
           </form>
         )}

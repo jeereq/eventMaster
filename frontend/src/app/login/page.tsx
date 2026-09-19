@@ -13,6 +13,8 @@ import { Button, Alert, PasswordInput, Card, IdentifierInput, identifierValue } 
 import type { IdentifierMode } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
 import { safeAppPath, isClientReturnPath } from '@/lib/safeAppPath';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { authOtpMethodOptions } from '@/lib/authOtpChannels';
 
 const FEATURES = [
   { icon: Calendar, title: "Gestion d'événements et réponses à l’invitation", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
@@ -46,13 +48,18 @@ export default function LoginPage() {
 
 function LoginPageContent() {
   const { login } = useAuth();
+  const { site } = usePlatformSite();
+  const authChannels = site.authOtpChannels;
   const searchParams = useSearchParams();
   const nextPath = safeAppPath(searchParams.get('next'));
   const isClientFlow = isClientReturnPath(nextPath);
   const registerHref = nextPath
     ? `/register?kind=CLIENT&next=${encodeURIComponent(nextPath)}`
     : '/register';
-  const [mode, setMode] = useState<IdentifierMode>('email');
+
+  const defaultMode: IdentifierMode =
+    !authOtpMethodOptions(authChannels).includes('EMAIL') ? 'phone' : 'email';
+  const [mode, setMode] = useState<IdentifierMode>(defaultMode);
   const [email, setEmail] = useState('');
   const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
   const [phoneNational, setPhoneNational] = useState('');
@@ -116,6 +123,7 @@ function LoginPageContent() {
             national={phoneNational}
             onCountryCodeChange={setPhoneCountryCode}
             onNationalChange={setPhoneNational}
+            authChannels={authChannels}
           />
 
           <PasswordInput

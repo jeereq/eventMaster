@@ -603,6 +603,13 @@ export function getAuthOtpChannels(settings = loadPlatformSettings()): AuthOtpCh
   return sanitizeAuthOtpChannels(settings.authOtpChannels);
 }
 
+export type PhoneAuthOtpMethod = 'WHATSAPP' | 'SMS';
+
+export function phoneAuthOtpMethods(settings = loadPlatformSettings()): PhoneAuthOtpMethod[] {
+  const opts = authOtpMethodOptions(getAuthOtpChannels(settings));
+  return opts.filter((m): m is PhoneAuthOtpMethod => m === 'WHATSAPP' || m === 'SMS');
+}
+
 export function defaultAuthOtpMethod(settings = loadPlatformSettings()): AuthOtpMethod {
   const ch = getAuthOtpChannels(settings);
   const options = authOtpMethodOptions(ch);

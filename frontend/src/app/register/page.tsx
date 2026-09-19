@@ -33,6 +33,8 @@ import {
   allowsAuthOtpChoice,
   authOtpMethodOptions,
   defaultAuthOtpMethod,
+  phoneFieldLabel,
+  phoneFieldHint,
   type AuthOtpMethod,
 } from '@/lib/authOtpChannels';
 import { interpolateRates } from '@/lib/platformRates';
@@ -670,19 +672,24 @@ function RegisterPageContent() {
                   error={emailError || undefined}
                 />
 
- <PhoneInput
- id="phone"
- label={verificationMethod === 'WHATSAPP' ? 'Téléphone WhatsApp' : verificationMethod === 'SMS' ? 'Téléphone SMS' : 'Téléphone (WhatsApp / SMS)'}
- countryCode={phoneCountryCode}
- national={phoneNational}
- onCountryCodeChange={setPhoneCountryCode}
- onNationalChange={(next) => {
-   setPhoneNational(next);
-   if (phoneError) setPhoneError('');
- }}
- required={verificationMethod === 'WHATSAPP' || verificationMethod === 'SMS'}
+                <PhoneInput
+                  id="phone"
+                  label={
+                    verificationMethod === 'EMAIL'
+                      ? 'Téléphone (optionnel)'
+                      : phoneFieldLabel(authChannels, verificationMethod)
+                  }
+                  countryCode={phoneCountryCode}
+                  national={phoneNational}
+                  onCountryCodeChange={setPhoneCountryCode}
+                  onNationalChange={(next) => {
+                    setPhoneNational(next);
+                    if (phoneError) setPhoneError('');
+                  }}
+                  required={verificationMethod === 'WHATSAPP' || verificationMethod === 'SMS'}
                   placeholder="812345678"
                   error={phoneError || undefined}
+                  hint={phoneFieldHint(authChannels, verificationMethod)}
                 />
               </div>
 

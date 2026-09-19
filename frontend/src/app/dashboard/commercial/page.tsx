@@ -14,6 +14,8 @@ import {
   allowsAuthOtpChoice,
   authOtpMethodOptions,
   defaultAuthOtpMethod,
+  phoneFieldLabel,
+  phoneFieldHint,
   type AuthOtpMethod,
 } from '@/lib/authOtpChannels';
 
@@ -239,12 +241,17 @@ export default function CommercialDashboardPage() {
  <div className="sm:col-span-2">
  <PhoneInput
  id="manager-phone"
- label={verificationMethod === 'WHATSAPP' ? 'Téléphone WhatsApp' : verificationMethod === 'SMS' ? 'Téléphone SMS' : 'Téléphone (optionnel)'}
+ label={
+ verificationMethod === 'EMAIL'
+ ? 'Téléphone (optionnel)'
+ : phoneFieldLabel(authChannels, verificationMethod)
+ }
  countryCode={phoneCountryCode}
  national={phoneNational}
  onCountryCodeChange={setPhoneCountryCode}
  onNationalChange={setPhoneNational}
  required={verificationMethod === 'WHATSAPP' || verificationMethod === 'SMS'}
+ hint={phoneFieldHint(authChannels, verificationMethod)}
  />
  </div>
  </div>
