@@ -5,7 +5,7 @@ import { Copy, Check } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { wrapBrandedWhatsApp } from '@/lib/whatsappTone';
 
-type PreviewTab = 'email' | 'whatsapp';
+type PreviewTab = 'email' | 'whatsapp' | 'sms';
 
 type WhatsAppToken =
   | { type: 'text'; value: string }
@@ -98,15 +98,39 @@ export default function InvitationMessagePreview({
   accent?: string;
   guidelinesBlock?: string | null;
 }) {
-  const showEmail = channel !== 'WHATSAPP';
-  const showWhatsApp = channel !== 'EMAIL';
-  const [tab, setTab] = useState<PreviewTab>(showEmail ? 'email' : 'whatsapp');
+  const showEmail =
+    channel === 'EMAIL' ||
+    channel === 'EMAIL_AND_WHATSAPP' ||
+    channel === 'WHATSAPP_AND_EMAIL' ||
+    channel === 'EMAIL_AND_SMS' ||
+    channel === 'SMS_AND_EMAIL' ||
+    channel === 'ALL_CHANNELS';
+
+  const showWhatsApp =
+    channel === 'WHATSAPP' ||
+    channel === 'EMAIL_AND_WHATSAPP' ||
+    channel === 'WHATSAPP_AND_EMAIL' ||
+    channel === 'WHATSAPP_AND_SMS' ||
+    channel === 'SMS_AND_WHATSAPP' ||
+    channel === 'ALL_CHANNELS';
+
+  const showSms =
+    channel === 'SMS' ||
+    channel === 'EMAIL_AND_SMS' ||
+    channel === 'SMS_AND_EMAIL' ||
+    channel === 'WHATSAPP_AND_SMS' ||
+    channel === 'SMS_AND_WHATSAPP' ||
+    channel === 'ALL_CHANNELS';
+
+  const initialTab: PreviewTab = showEmail ? 'email' : showWhatsApp ? 'whatsapp' : 'sms';
+  const [tab, setTab] = useState<PreviewTab>(initialTab);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (tab === 'email' && !showEmail) setTab('whatsapp');
-    if (tab === 'whatsapp' && !showWhatsApp) setTab('email');
-  }, [channel, showEmail, showWhatsApp, tab]);
+    if (tab === 'email' && !showEmail) setTab(showWhatsApp ? 'whatsapp' : 'sms');
+    if (tab === 'whatsapp' && !showWhatsApp) setTab(showEmail ? 'email' : 'sms');
+    if (tab === 'sms' && !showSms) setTab(showEmail ? 'email' : 'whatsapp');
+  }, [channel, showEmail, showWhatsApp, showSms, tab]);
 
   const whatsappText = useMemo(
     () =>
@@ -115,10 +139,19 @@ export default function InvitationMessagePreview({
       }),
     [body, whatsappBody, orgName, guidelinesBlock],
   );
+
+  const smsText = useMemo(() => {
+    const raw = (whatsappBody || body || '').replace(/<[^>]*>?/gm, '').trim();
+    const cleanLines = raw.split('\n').filter(Boolean);
+    const firstFew = cleanLines.slice(0, 2).join(' ');
+    const preview = firstFew.length > 90 ? `${firstFew.slice(0, 87)}...` : firstFew;
+    return `Bonjour Marie, ${preview || 'vous êtes invité(e) à l’événement.'}\nConfirmez votre présence : https://eventmaster.cd/rsvp/demo`;
+  }, [body, whatsappBody]);
+
   const alreadyGreets = /^(bonjour|cher|chère|salut)\b/i.test(body.trim());
 
   const handleCopy = async () => {
-    const textToCopy = tab === 'whatsapp' ? whatsappText : (body || '');
+    const textToCopy = tab === 'whatsapp' ? whatsappText : tab === 'sms' ? smsText : (body || '');
     if (!textToCopy) return;
     try {
       await navigator.clipboard.writeText(textToCopy);
@@ -128,6 +161,8 @@ export default function InvitationMessagePreview({
       /* ignore */
     }
   };
+
+  const activeChannelsCount = [showEmail, showWhatsApp, showSms].filter(Boolean).length;
 
   return (
     <div className="space-y-3">
@@ -153,40 +188,60 @@ export default function InvitationMessagePreview({
               </>
             )}
           </button>
-          {showEmail && showWhatsApp ? (
+          {activeChannelsCount > 1 ? (
             <div className="inline-flex p-0.5 rounded-xl bg-surface-muted border border-border" role="tablist" aria-label="Canal d'aperçu">
-              <button
-                id="preview-tab-email"
-                type="button"
-                role="tab"
-                aria-selected={tab === 'email'}
-                aria-controls="preview-panel-email"
-                onClick={() => setTab('email')}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-xs font-semibold transition min-h-9 touch-manipulation cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                  tab === 'email' ? 'bg-surface text-foreground shadow-2xs font-bold' : 'text-muted hover:text-foreground',
-                )}
-              >
-                E-mail
-              </button>
-              <button
-                id="preview-tab-whatsapp"
-                type="button"
-                role="tab"
-                aria-selected={tab === 'whatsapp'}
-                aria-controls="preview-panel-whatsapp"
-                onClick={() => setTab('whatsapp')}
-                className={cn(
-                  'px-3 py-1.5 rounded-lg text-xs font-semibold transition min-h-9 touch-manipulation cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                  tab === 'whatsapp' ? 'bg-surface text-foreground shadow-2xs font-bold' : 'text-muted hover:text-foreground',
-                )}
-              >
-                WhatsApp
-              </button>
+              {showEmail && (
+                <button
+                  id="preview-tab-email"
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === 'email'}
+                  aria-controls="preview-panel-email"
+                  onClick={() => setTab('email')}
+                  className={cn(
+                    'px-2.5 py-1.5 rounded-lg text-xs font-semibold transition min-h-9 touch-manipulation cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                    tab === 'email' ? 'bg-surface text-foreground shadow-2xs font-bold' : 'text-muted hover:text-foreground',
+                  )}
+                >
+                  E-mail
+                </button>
+              )}
+              {showWhatsApp && (
+                <button
+                  id="preview-tab-whatsapp"
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === 'whatsapp'}
+                  aria-controls="preview-panel-whatsapp"
+                  onClick={() => setTab('whatsapp')}
+                  className={cn(
+                    'px-2.5 py-1.5 rounded-lg text-xs font-semibold transition min-h-9 touch-manipulation cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                    tab === 'whatsapp' ? 'bg-surface text-foreground shadow-2xs font-bold' : 'text-muted hover:text-foreground',
+                  )}
+                >
+                  WhatsApp
+                </button>
+              )}
+              {showSms && (
+                <button
+                  id="preview-tab-sms"
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === 'sms'}
+                  aria-controls="preview-panel-sms"
+                  onClick={() => setTab('sms')}
+                  className={cn(
+                    'px-2.5 py-1.5 rounded-lg text-xs font-semibold transition min-h-9 touch-manipulation cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                    tab === 'sms' ? 'bg-surface text-foreground shadow-2xs font-bold' : 'text-muted hover:text-foreground',
+                  )}
+                >
+                  SMS
+                </button>
+              )}
             </div>
           ) : (
             <span className="text-xs font-semibold text-muted">
-              {showEmail ? 'E-mail' : 'WhatsApp'}
+              {showEmail ? 'E-mail' : showWhatsApp ? 'WhatsApp' : 'SMS'}
             </span>
           )}
         </div>
@@ -221,7 +276,7 @@ export default function InvitationMessagePreview({
             </div>
           </div>
         </div>
-      ) : (
+      ) : tab === 'whatsapp' && showWhatsApp ? (
         <div
           id="preview-panel-whatsapp"
           role="tabpanel"
@@ -249,6 +304,28 @@ export default function InvitationMessagePreview({
               )}
             </div>
             <p className="text-xs text-muted mt-2">Aperçu en direct tel que reçu par l’invité.</p>
+          </div>
+        </div>
+      ) : (
+        <div
+          id="preview-panel-sms"
+          role="tabpanel"
+          aria-labelledby="preview-tab-sms"
+          className="rounded-2xl border border-border overflow-hidden bg-surface-muted/40"
+        >
+          <div className="bg-stage px-4 py-3 text-stage-foreground flex items-center justify-between">
+            <div>
+              <p className="text-[10px] uppercase font-bold tracking-wider opacity-70">SMS Transactionnel</p>
+              <p className="text-sm font-semibold truncate">EXP : {orgName ? orgName.toUpperCase().slice(0, 11) : 'EVENTMASTER'}</p>
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-surface/20 text-stage-foreground font-mono">Dream Digital / GSM</span>
+          </div>
+          <div className="p-3.5 min-h-[140px] bg-surface flex flex-col justify-between">
+            <div className="max-w-[88%] rounded-2xl rounded-bl-xs bg-surface-muted border border-border/80 px-3.5 py-2.5 text-xs text-foreground leading-relaxed">
+              <p className="whitespace-pre-line font-sans">{smsText}</p>
+              <span className="block text-[10px] text-muted text-right mt-1">Maintenant · SMS</span>
+            </div>
+            <p className="text-[11px] text-muted mt-3">Rendu SMS direct sur mobile avec lien de réponse instantané.</p>
           </div>
         </div>
       )}

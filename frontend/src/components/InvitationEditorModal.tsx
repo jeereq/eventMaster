@@ -50,6 +50,30 @@ export type InvitationFormData = {
   whatsappBody: string;
 };
 
+export function getInvitationChannelLabel(channel: string): string {
+  switch (channel) {
+    case 'EMAIL':
+      return 'E-mail seul';
+    case 'WHATSAPP':
+      return 'WhatsApp seul';
+    case 'SMS':
+      return 'SMS seul';
+    case 'EMAIL_AND_WHATSAPP':
+    case 'WHATSAPP_AND_EMAIL':
+      return 'E-mail & WhatsApp';
+    case 'EMAIL_AND_SMS':
+    case 'SMS_AND_EMAIL':
+      return 'E-mail & SMS';
+    case 'WHATSAPP_AND_SMS':
+    case 'SMS_AND_WHATSAPP':
+      return 'WhatsApp & SMS';
+    case 'ALL_CHANNELS':
+      return 'Les trois (E-mail, WhatsApp & SMS)';
+    default:
+      return channel;
+  }
+}
+
 interface InvitationEditorModalProps {
   open: boolean;
   onClose: () => void;
@@ -375,9 +399,59 @@ export default function InvitationEditorModal({
     }
   };
 
-  const channelNeedsEmail = data.channel === 'EMAIL' || data.channel === 'EMAIL_AND_WHATSAPP' || data.channel === 'EMAIL_AND_SMS' || data.channel === 'ALL_CHANNELS';
-  const channelNeedsWhatsApp = data.channel === 'WHATSAPP' || data.channel === 'EMAIL_AND_WHATSAPP' || data.channel === 'ALL_CHANNELS';
-  const channelNeedsSms = data.channel === 'SMS' || data.channel === 'EMAIL_AND_SMS' || data.channel === 'ALL_CHANNELS';
+  const channelNeedsEmail =
+    data.channel === 'EMAIL' ||
+    data.channel === 'EMAIL_AND_WHATSAPP' ||
+    data.channel === 'WHATSAPP_AND_EMAIL' ||
+    data.channel === 'EMAIL_AND_SMS' ||
+    data.channel === 'SMS_AND_EMAIL' ||
+    data.channel === 'ALL_CHANNELS';
+
+  const channelNeedsWhatsApp =
+    data.channel === 'WHATSAPP' ||
+    data.channel === 'EMAIL_AND_WHATSAPP' ||
+    data.channel === 'WHATSAPP_AND_EMAIL' ||
+    data.channel === 'WHATSAPP_AND_SMS' ||
+    data.channel === 'SMS_AND_WHATSAPP' ||
+    data.channel === 'ALL_CHANNELS';
+
+  const channelNeedsSms =
+    data.channel === 'SMS' ||
+    data.channel === 'EMAIL_AND_SMS' ||
+    data.channel === 'SMS_AND_EMAIL' ||
+    data.channel === 'WHATSAPP_AND_SMS' ||
+    data.channel === 'SMS_AND_WHATSAPP' ||
+    data.channel === 'ALL_CHANNELS';
+
+  const toggleChannel = (target: 'EMAIL' | 'WHATSAPP' | 'SMS') => {
+    let nextEmail = channelNeedsEmail;
+    let nextWhatsApp = channelNeedsWhatsApp;
+    let nextSms = channelNeedsSms;
+
+    if (target === 'EMAIL') nextEmail = !nextEmail;
+    if (target === 'WHATSAPP') nextWhatsApp = !nextWhatsApp;
+    if (target === 'SMS') nextSms = !nextSms;
+
+    if (!nextEmail && !nextWhatsApp && !nextSms) {
+      return;
+    }
+
+    if (nextEmail && nextWhatsApp && nextSms) {
+      setChannel('ALL_CHANNELS');
+    } else if (nextEmail && nextWhatsApp) {
+      setChannel('EMAIL_AND_WHATSAPP');
+    } else if (nextEmail && nextSms) {
+      setChannel('EMAIL_AND_SMS');
+    } else if (nextWhatsApp && nextSms) {
+      setChannel('WHATSAPP_AND_SMS');
+    } else if (nextEmail) {
+      setChannel('EMAIL');
+    } else if (nextWhatsApp) {
+      setChannel('WHATSAPP');
+    } else if (nextSms) {
+      setChannel('SMS');
+    }
+  };
   const hasGuidelines = Boolean(
     guestGuidelines && (
       guestGuidelines.dressCode?.enabled ||
@@ -518,97 +592,120 @@ export default function InvitationEditorModal({
               </span>
             </div>
 
-            {/* Sélecteur de canal visuel */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              <button
-                type="button"
-                onClick={() => setChannel('EMAIL_AND_WHATSAPP')}
-                aria-pressed={data.channel === 'EMAIL_AND_WHATSAPP'}
-                className={cn(
-                  'p-3.5 rounded-xl border text-left transition flex flex-col justify-between min-h-16 cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100',
-                  data.channel === 'EMAIL_AND_WHATSAPP'
-                    ? 'border-primary bg-primary/10 ring-2 ring-primary/20 shadow-xs'
-                    : 'border-border bg-surface hover:bg-surface-muted/60',
-                )}
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-1.5 text-foreground font-bold text-xs sm:text-sm">
-                    <Mail className="w-4 h-4 text-primary" aria-hidden />
-                    <span>+</span>
-                    <MessageSquare className="w-4 h-4 text-primary" aria-hidden />
+            {/* Sélecteur de canaux interactif & combinaisons */}
+            <div className="space-y-3">
+              {/* Toggles des 3 canaux fondamentaux */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => toggleChannel('EMAIL')}
+                  aria-pressed={channelNeedsEmail}
+                  className={cn(
+                    'p-3.5 rounded-xl border text-left transition flex items-center justify-between min-h-14 cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100',
+                    channelNeedsEmail
+                      ? 'border-primary bg-primary/10 ring-2 ring-primary/20 shadow-xs'
+                      : 'border-border bg-surface hover:bg-surface-muted/60 opacity-75',
+                  )}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={cn('p-2 rounded-lg', channelNeedsEmail ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted')}>
+                      <Mail className="w-4 h-4" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-foreground">Canal E-mail</p>
+                      <p className="text-[11px] text-muted truncate">Lettre officielle SendGrid</p>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary-solid text-primary-foreground">
-                    Mixte
+                  <span className={cn('w-5 h-5 rounded-full flex items-center justify-center shrink-0 border', channelNeedsEmail ? 'bg-primary border-primary text-primary-foreground' : 'border-border bg-surface')}>
+                    {channelNeedsEmail && <Check className="w-3 h-3" />}
                   </span>
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-foreground">E-mail & WhatsApp</p>
-                  <p className="text-[11px] text-muted mt-0.5 line-clamp-1">Couverture maximale</p>
-                </div>
-              </button>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setChannel('WHATSAPP')}
-                aria-pressed={data.channel === 'WHATSAPP'}
-                className={cn(
-                  'p-3.5 rounded-xl border text-left transition flex flex-col justify-between min-h-16 cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100',
-                  data.channel === 'WHATSAPP'
-                    ? 'border-primary bg-primary/10 ring-2 ring-primary/20 shadow-xs'
-                    : 'border-border bg-surface hover:bg-surface-muted/60',
-                )}
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <MessageSquare className="w-4 h-4 text-primary" aria-hidden />
-                  {data.channel === 'WHATSAPP' && <Check className="w-4 h-4 text-primary" aria-hidden />}
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-foreground">WhatsApp seul</p>
-                  <p className="text-[11px] text-muted mt-0.5 line-clamp-1">Direct smartphone & QR</p>
-                </div>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => toggleChannel('WHATSAPP')}
+                  aria-pressed={channelNeedsWhatsApp}
+                  className={cn(
+                    'p-3.5 rounded-xl border text-left transition flex items-center justify-between min-h-14 cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100',
+                    channelNeedsWhatsApp
+                      ? 'border-primary bg-primary/10 ring-2 ring-primary/20 shadow-xs'
+                      : 'border-border bg-surface hover:bg-surface-muted/60 opacity-75',
+                  )}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={cn('p-2 rounded-lg', channelNeedsWhatsApp ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted')}>
+                      <MessageSquare className="w-4 h-4" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-foreground">Canal WhatsApp</p>
+                      <p className="text-[11px] text-muted truncate">Mobile direct & pass QR</p>
+                    </div>
+                  </div>
+                  <span className={cn('w-5 h-5 rounded-full flex items-center justify-center shrink-0 border', channelNeedsWhatsApp ? 'bg-primary border-primary text-primary-foreground' : 'border-border bg-surface')}>
+                    {channelNeedsWhatsApp && <Check className="w-3 h-3" />}
+                  </span>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setChannel('SMS')}
-                aria-pressed={data.channel === 'SMS'}
-                className={cn(
-                  'p-3.5 rounded-xl border text-left transition flex flex-col justify-between min-h-16 cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100',
-                  data.channel === 'SMS'
-                    ? 'border-primary bg-primary/10 ring-2 ring-primary/20 shadow-xs'
-                    : 'border-border bg-surface hover:bg-surface-muted/60',
-                )}
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <Smartphone className="w-4 h-4 text-primary" aria-hidden />
-                  {data.channel === 'SMS' && <Check className="w-4 h-4 text-primary" aria-hidden />}
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-foreground">SMS seul</p>
-                  <p className="text-[11px] text-muted mt-0.5 line-clamp-1">Dream Digital / direct</p>
-                </div>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => toggleChannel('SMS')}
+                  aria-pressed={channelNeedsSms}
+                  className={cn(
+                    'p-3.5 rounded-xl border text-left transition flex items-center justify-between min-h-14 cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100',
+                    channelNeedsSms
+                      ? 'border-primary bg-primary/10 ring-2 ring-primary/20 shadow-xs'
+                      : 'border-border bg-surface hover:bg-surface-muted/60 opacity-75',
+                  )}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={cn('p-2 rounded-lg', channelNeedsSms ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted')}>
+                      <Smartphone className="w-4 h-4" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-foreground">Canal SMS</p>
+                      <p className="text-[11px] text-muted truncate">Dream Digital (aSMSC)</p>
+                    </div>
+                  </div>
+                  <span className={cn('w-5 h-5 rounded-full flex items-center justify-center shrink-0 border', channelNeedsSms ? 'bg-primary border-primary text-primary-foreground' : 'border-border bg-surface')}>
+                    {channelNeedsSms && <Check className="w-3 h-3" />}
+                  </span>
+                </button>
+              </div>
 
-              <button
-                type="button"
-                onClick={() => setChannel('EMAIL')}
-                aria-pressed={data.channel === 'EMAIL'}
-                className={cn(
-                  'p-3.5 rounded-xl border text-left transition flex flex-col justify-between min-h-16 cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100',
-                  data.channel === 'EMAIL'
-                    ? 'border-primary bg-primary/10 ring-2 ring-primary/20 shadow-xs'
-                    : 'border-border bg-surface hover:bg-surface-muted/60',
-                )}
-              >
-                <div className="flex items-center justify-between mb-1.5">
-                  <Mail className="w-4 h-4 text-primary" aria-hidden />
-                  {data.channel === 'EMAIL' && <Check className="w-4 h-4 text-primary" aria-hidden />}
+              {/* Raccourcis de combinaisons rapides */}
+              <div className="space-y-1.5 pt-1">
+                <span className="text-[11px] font-semibold text-muted uppercase tracking-wider block">
+                  Combinaisons directes à 1 clic :
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { id: 'ALL_CHANNELS', label: '⭐ Les trois (E-mail, WhatsApp & SMS)', desc: 'Portée maximale absolue' },
+                    { id: 'EMAIL_AND_WHATSAPP', label: 'E-mail & WhatsApp', desc: 'Classique & Mobile' },
+                    { id: 'EMAIL_AND_SMS', label: 'E-mail & SMS', desc: 'Direct & Lettre' },
+                    { id: 'WHATSAPP_AND_SMS', label: 'WhatsApp & SMS', desc: '100% Smartphone' },
+                    { id: 'EMAIL', label: 'E-mail seul', desc: 'Courriel' },
+                    { id: 'WHATSAPP', label: 'WhatsApp seul', desc: 'Messagerie instantanée' },
+                    { id: 'SMS', label: 'SMS seul', desc: 'Message texte direct' },
+                  ].map((preset) => {
+                    const active = data.channel === preset.id;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => setChannel(preset.id)}
+                        className={cn(
+                          'text-xs font-semibold px-3 py-1.5 rounded-full border transition cursor-pointer touch-manipulation min-h-[36px] inline-flex items-center gap-1.5',
+                          active
+                            ? 'border-primary bg-primary text-primary-foreground shadow-2xs font-bold'
+                            : 'border-border bg-surface hover:border-primary/50 hover:bg-surface-muted text-foreground',
+                        )}
+                      >
+                        <span>{preset.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-foreground">E-mail seul</p>
-                  <p className="text-[11px] text-muted mt-0.5 line-clamp-1">Lettre classique</p>
-                </div>
-              </button>
+              </div>
             </div>
 
             {/* Faire-part graphique & Page de réponse à l’invitation */}
@@ -905,8 +1002,8 @@ export default function InvitationEditorModal({
               </div>
             )}
 
-            {/* ── SOUS-SECTION WHATSAPP ── */}
-            {((channelNeedsWhatsApp && activeChannelTab === 'whatsapp') || (!channelNeedsEmail && channelNeedsWhatsApp)) && (
+            {/* ── SOUS-SECTION WHATSAPP / SMS ── */}
+            {((channelNeedsWhatsApp && activeChannelTab === 'whatsapp') || (!channelNeedsEmail && channelNeedsWhatsApp) || (!channelNeedsEmail && !channelNeedsWhatsApp && channelNeedsSms)) && (
               <div
                 id="channel-panel-whatsapp"
                 role="tabpanel"
@@ -998,6 +1095,18 @@ export default function InvitationEditorModal({
                   />
                 </div>
 
+                {channelNeedsSms && (
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 flex items-start gap-2.5 text-xs text-foreground">
+                    <Smartphone className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                    <div className="space-y-0.5">
+                      <p className="font-bold text-foreground">Canal SMS actif (Dream Digital aSMSC)</p>
+                      <p className="text-muted leading-relaxed">
+                        Chaque invité avec un numéro de téléphone recevra également un SMS GSM concis avec son lien individuel pour confirmer sa présence.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {channelNeedsEmail && (
                   <div className="pt-2 flex justify-end">
                     <button
@@ -1038,7 +1147,7 @@ export default function InvitationEditorModal({
               <span>Aperçu en direct</span>
             </h4>
             <span className="text-xs font-semibold text-muted">
-              {data.channel === 'EMAIL_AND_WHATSAPP' ? 'Multi-canal' : data.channel === 'WHATSAPP' ? 'WhatsApp' : 'E-mail'}
+              {getInvitationChannelLabel(data.channel)}
             </span>
           </div>
 
