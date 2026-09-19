@@ -342,7 +342,7 @@ export default function LandingInvitationAiGenerator({
   const stageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isExpanded, setIsExpanded] = useState(defaultExpanded || lockExpanded);
   const showExpanded = lockExpanded || isExpanded;
-  const [variantsCount, setVariantsCount] = useState<1 | 2>(1);
+  const [pureBackground, setPureBackground] = useState<boolean>(true);
   const [speedMode, setSpeedMode] = useState<AiSpeedMode>('quality');
   const [artStyle, setArtStyle] = useState<InvitationArtStyleId>(DEFAULT_INVITATION_ART_STYLE);
   const [contextSource, setContextSource] = useState<InvitationContextSource>('none');
@@ -625,7 +625,6 @@ export default function LandingInvitationAiGenerator({
   }, [preselectedModelPhoto?.id, preselectedModelPhoto?.imageUrl]);
 
   const switchComposeMode = (next: 'create' | 'modify') => {
-    if (next === composeMode && !coupleFaceSwap) return;
     previews.forEach((url) => URL.revokeObjectURL(url));
     if (incomingPreview) URL.revokeObjectURL(incomingPreview);
     setFiles([]);
@@ -637,7 +636,9 @@ export default function LandingInvitationAiGenerator({
     setCoupleFaceSwap(false);
     setComposeMode(next);
     setError('');
-    if (prompt.trim() === COUPLE_FACE_SWAP_DEFAULT_PROMPT) setPrompt('');
+    if (prompt.trim() === COUPLE_FACE_SWAP_DEFAULT_PROMPT || /remplac|substitu|chang|swap|retouch|ajust|refin|altér|réajust|modifier/i.test(prompt)) {
+      setPrompt('');
+    }
   };
 
   const toggleCoupleFaceSwap = (on: boolean) => {
@@ -768,13 +769,11 @@ export default function LandingInvitationAiGenerator({
 
     const hasReplacementKeyword =
       /remplac|substitu|chang|swap|retouch|ajust|refin|altér|réajust|modifier/i.test(prompt);
-    const hasBaseTarget = Boolean(incomingFile) || Boolean(selectedModelPhoto) || Boolean(preselectedModelPhoto);
+    const hasBaseTarget = Boolean(incomingFile) || Boolean(selectedModelPhoto);
     const effectiveIsAlteration =
       coupleFaceSwap ||
       isModifyMode ||
-      hasBaseTarget ||
-      hasReplacementKeyword ||
-      (files.length > 0 && hasTexts);
+      (hasBaseTarget && (hasReplacementKeyword || files.length > 0 || hasTexts));
 
     let promptToSend = prompt.trim();
     if (!promptToSend || promptToSend === COUPLE_FACE_SWAP_DEFAULT_PROMPT) {
@@ -845,10 +844,10 @@ export default function LandingInvitationAiGenerator({
         prompt: promptToSend,
         files: coupleFaceSwap && incomingFile ? [incomingFile, ...files] : files,
         baseImageUrl: coupleFaceSwap && incomingFile ? undefined : selectedModelPhoto?.imageUrl,
-        embedText: false,
+        embedText: !pureBackground,
         contextSource,
         artStyle,
-        variantsCount,
+        variantsCount: 1,
         speedMode,
         coupleFaceSwap,
         genderMappingDirective: genderDirective,
@@ -1053,10 +1052,10 @@ export default function LandingInvitationAiGenerator({
         baseImageUrl: currentBgUrl,
         existingElements,
         isAlteration: true,
-        embedText: false,
+        embedText: !pureBackground,
         contextSource,
         artStyle,
-        variantsCount,
+        variantsCount: 1,
         speedMode,
         structuredBrief,
       });
@@ -2135,33 +2134,37 @@ export default function LandingInvitationAiGenerator({
 
                 <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-3">
                   <div>
-                    <span className="block text-xs font-bold text-foreground">Deux fonds</span>
-                    <span className="block text-xs text-muted">Fidèle au brief, ou fidèle + ample</span>
+                    <span className="block text-xs font-bold text-foreground">Mode arrière-plan pur</span>
+                    <span className="block text-xs text-muted">
+                      {pureBackground
+                        ? 'Image pure sans texte incrusté (variables dynamiques par-dessus)'
+                        : 'Arrière-plan avec les textes dessinés et intégrés à l’image'}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-lg border border-border">
+                  <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-lg border border-border shrink-0">
                     <button
                       type="button"
                       disabled={busy}
-                      onClick={() => setVariantsCount(1)}
-                      aria-pressed={variantsCount === 1}
+                      onClick={() => setPureBackground(true)}
+                      aria-pressed={pureBackground}
                       className={cn(
                         'min-h-[44px] px-2.5 py-1 text-xs font-bold rounded-md transition',
-                        variantsCount === 1 ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
+                        pureBackground ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
                       )}
                     >
-                      1
+                      Fond pur
                     </button>
                     <button
                       type="button"
                       disabled={busy}
-                      onClick={() => setVariantsCount(2)}
-                      aria-pressed={variantsCount === 2}
+                      onClick={() => setPureBackground(false)}
+                      aria-pressed={!pureBackground}
                       className={cn(
                         'min-h-[44px] px-2.5 py-1 text-xs font-bold rounded-md transition',
-                        variantsCount === 2 ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
+                        !pureBackground ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
                       )}
                     >
-                      2 (fidèle + ample)
+                      Avec textes
                     </button>
                   </div>
                 </div>
@@ -2949,7 +2952,7 @@ export default function LandingInvitationAiGenerator({
 
       <AiComposeFullscreenLoader
         active={!invitationLoaderHidden && (busy || refineBusy || Boolean(invitationStudioJob))}
-        embedText={false}
+        embedText={!pureBackground}
         hasReferences={files.length > 0}
         title={refineBusy ? 'Retouche de l’invitation IA…' : undefined}
         stageHint={

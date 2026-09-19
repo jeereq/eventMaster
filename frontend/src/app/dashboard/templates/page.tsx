@@ -465,7 +465,6 @@ export default function TemplatesPage() {
   const showInvitationStudioLoader = !invitationLoaderHidden && (aiComposeBusy || Boolean(invitationStudioJob));
  const [aiComposeStage, setAiComposeStage] = useState<string | null>(null);
  const [aiComposeEmbedText, setAiComposeEmbedText] = useState(false);
- const [aiComposeVariantsCount, setAiComposeVariantsCount] = useState<1 | 2>(1);
  const [aiComposeSpeedMode, setAiComposeSpeedMode] = useState<AiSpeedMode>('quality');
  const [aiVariants, setAiVariants] = useState<string[]>([]);
  const [aiSafetyFallbackNotice, setAiSafetyFallbackNotice] = useState(false);
@@ -1489,8 +1488,7 @@ export default function TemplatesPage() {
     const isAlteration =
       aiComposeCoupleFaceSwap ||
       aiComposeIsAlteration ||
-      hasReplacementKeyword ||
-      (hasBaseTarget && (hasTexts || aiComposeFiles.length > 0));
+      (hasBaseTarget && (hasReplacementKeyword || hasTexts || aiComposeFiles.length > 0));
 
     const existingTextSummaries = canvasElements
       .filter((el) => typeof el.text === 'string' && el.text.trim().length > 0)
@@ -1557,7 +1555,7 @@ export default function TemplatesPage() {
       embedText: aiComposeEmbedText,
       contextSource: aiComposeContextSource,
       artStyle: aiComposeArtStyle,
-      variantsCount: aiComposeVariantsCount,
+      variantsCount: 1,
       speedMode: aiComposeSpeedMode,
       coupleFaceSwap: aiComposeCoupleFaceSwap,
       genderMappingDirective: genderDirective,
@@ -1842,8 +1840,7 @@ export default function TemplatesPage() {
        aiComposeIsAlteration ||
        aiComposeCoupleFaceSwap ||
        Boolean(aiComposeModelPhoto) ||
-       Boolean(aiComposeIncomingFile) ||
-       /remplac|substitu|chang|swap|retouch|ajust|refin|altér|réajust|modifier/i.test(aiComposePrompt);
+       Boolean(aiComposeIncomingFile);
      const active =
        mode.id === 'modify'
          ? hasModificationActive
@@ -1865,7 +1862,12 @@ export default function TemplatesPage() {
              setAiComposeCoupleFaceSwap(false);
              setAiComposeIsAlteration(false);
              setAiComposeModelPhoto(null);
-             if (aiComposePrompt.trim() === COUPLE_FACE_SWAP_DEFAULT_PROMPT) {
+             setAiComposeIncomingFile(null);
+             if (aiComposeIncomingPreview) {
+               URL.revokeObjectURL(aiComposeIncomingPreview);
+               setAiComposeIncomingPreview('');
+             }
+             if (aiComposePrompt.trim() === COUPLE_FACE_SWAP_DEFAULT_PROMPT || /remplac|substitu|chang|swap|retouch|ajust|refin|altér|réajust|modifier/i.test(aiComposePrompt)) {
                setAiComposePrompt('');
              }
            }
@@ -2274,6 +2276,31 @@ export default function TemplatesPage() {
  className="mt-1 w-full rounded-[var(--radius-card)] border border-border bg-surface-muted px-3.5 py-2.5 text-xs sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[4.5rem]"
  />
 
+ <div className="mt-3 flex items-center justify-between gap-3 p-3 rounded-xl border border-border bg-surface">
+   <div>
+     <span className="block text-xs font-bold text-foreground">Mode arrière-plan pur</span>
+     <span className="block text-[11px] text-muted">
+       {aiComposeEmbedText
+         ? 'Désactivé : les textes sont dessinés et intégrés directement sur l’image.'
+         : 'Activé : image nette sans texte incrusté (textes gérés par calques éditables).'}
+     </span>
+   </div>
+   <button
+     type="button"
+     role="switch"
+     aria-checked={!aiComposeEmbedText}
+     disabled={aiComposeBusy}
+     onClick={() => setAiComposeEmbedText((v) => !v)}
+     className={`min-h-9 px-3 rounded-lg text-xs font-bold transition border ${
+       !aiComposeEmbedText
+         ? 'bg-primary-solid text-primary-foreground border-primary shadow-xs'
+         : 'bg-surface-muted text-muted hover:text-foreground border-border'
+     }`}
+   >
+     {!aiComposeEmbedText ? 'Fond pur actif' : 'Fond avec textes'}
+   </button>
+ </div>
+
  <p className="mt-2 text-xs text-muted">
  Besoin d’un exemple ? Ouvrez <button type="button" className="font-bold text-primary hover:underline" onClick={() => setAiComposeStudioTab('prompts')}>Exemples</button> — quatre mariages coutumiers prêts à lancer.
  </p>
@@ -2335,38 +2362,6 @@ export default function TemplatesPage() {
  canUseOrg={Boolean(tenant?.id) || isSuperAdmin}
  />
 
- <button
- type="button"
- role="switch"
- aria-checked={aiComposeEmbedText}
- disabled={aiComposeBusy}
- onClick={() => setAiComposeEmbedText((v) => !v)}
- className={`min-h-11 w-full flex items-start gap-3 rounded-[var(--radius-button)] border px-3 py-2.5 text-left transition disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
- aiComposeEmbedText
- ? 'border-primary/40 bg-primary/10'
- : 'border-border bg-surface hover:border-primary/30'
- }`}
- >
- <span
- className={`mt-0.5 w-9 h-5 rounded-full relative shrink-0 ${
- aiComposeEmbedText ? 'bg-primary' : 'bg-border'
- }`}
- aria-hidden
- >
- <span
- className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-surface shadow-xs transition-transform ${
- aiComposeEmbedText ? 'translate-x-4' : ''
- }`}
- />
- </span>
- <span className="min-w-0">
- <span className="block text-sm font-bold text-foreground">Écrire les noms sur l’image</span>
- <span className="block text-xs text-muted mt-0.5 leading-relaxed">
- Titre, date et lieu du brief sont dessinés sur la carte.
- </span>
- </span>
- </button>
-
  <div className="pt-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
    <div>
      <span className="block text-sm font-bold text-foreground">Vitesse</span>
@@ -2394,30 +2389,6 @@ export default function TemplatesPage() {
    </div>
  </div>
 
- <div className="pt-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-   <div>
-     <span className="block text-sm font-bold text-foreground">Comparer deux fonds</span>
-     <span className="block text-xs text-muted">Fidèle au brief, ou fidèle + ample</span>
-   </div>
-   <div className="flex items-center gap-1 bg-surface p-1 rounded-lg border border-border">
-     <button
-       type="button"
-       disabled={aiComposeBusy}
-       onClick={() => setAiComposeVariantsCount(1)}
-       className={`min-h-11 px-3 text-xs font-bold rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${aiComposeVariantsCount === 1 ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground'}`}
-     >
-       1 carte
-     </button>
-     <button
-       type="button"
-       disabled={aiComposeBusy}
-       onClick={() => setAiComposeVariantsCount(2)}
-       className={`min-h-11 px-3 text-xs font-bold rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${aiComposeVariantsCount === 2 ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground'}`}
-     >
-       2 cartes (fidèle + ample)
-     </button>
-   </div>
- </div>
  </div>
  ) : null}
  </div>

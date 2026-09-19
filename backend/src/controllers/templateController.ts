@@ -555,11 +555,11 @@ export async function composeTemplateWithAi(req: AuthenticatedRequest, res: Resp
       }
     }
     const generateBackground = body.generateBackground !== false;
-    const isPublic = !tenantId || body.isPublic === true;
-    const embedText = isPublic ? false : body.embedText === true;
+    const embedText = body.embedText === true || body.pureBackground === false;
+    const isPublic = (!tenantId || body.isPublic === true) && !embedText;
     const contextSource = typeof body.contextSource === 'string' ? body.contextSource : 'none';
     const artStyle = typeof body.artStyle === 'string' ? body.artStyle : undefined;
-    const variantsCount = typeof body.variantsCount === 'number' ? body.variantsCount : undefined;
+    const variantsCount = 1;
     const speedMode = body.speedMode === 'fast' ? 'fast' : 'quality';
     const imageUrls = await resolveComposeImageUrls(body, isSuperAdmin ? null : tenantId);
     const tokenCost = await resolveInvitationComposeTokenCost({
@@ -725,13 +725,11 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
       }
     }
     const generateBackground = body.generateBackground !== false;
-    // Règle stricte pour la vitrine publique : JAMAIS de texte incrusté directement sur l'image
-    // L'image sert de fond d'ambiance propre et réutilisable, avec calques éditables utilisant des variables dynamiques.
-    const isPublic = true;
-    const embedText = false;
+    const embedText = body.embedText === true || body.pureBackground === false;
+    const isPublic = !embedText;
     const contextSource = typeof body.contextSource === 'string' ? body.contextSource : 'none';
     const artStyle = typeof body.artStyle === 'string' ? body.artStyle : undefined;
-    const variantsCount = typeof body.variantsCount === 'number' ? body.variantsCount : undefined;
+    const variantsCount = 1;
     const speedMode = body.speedMode === 'fast' ? 'fast' : 'quality';
     const imageUrls = await resolveComposeImageUrls(body, user?.tenantId || null);
     const rateKey = user?.id || req.ip || deviceId;
@@ -745,14 +743,14 @@ export async function publicComposeTemplateWithAi(req: Request, res: Response) {
       const result = await composeInvitationTemplateAi({
         userId: rateKey,
         tenantId: user?.tenantId || null,
-        isPublic: true,
+        isPublic,
         prompt,
         imageUrls,
         baseImageUrl,
         isAlteration,
         existingElements,
         generateBackground,
-        embedText: false,
+        embedText,
         deviceId,
         authUserId: user?.id || null,
         contextSource,

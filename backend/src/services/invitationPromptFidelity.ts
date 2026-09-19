@@ -344,7 +344,7 @@ export function buildInvitationLocks(input: {
     locks.push('Keep hair, clothes and skin as photographed unless the brief names a wardrobe or hair change.');
   }
 
-  if (input.isPublic || !input.embedText) {
+  if (!input.embedText) {
     locks.push('No painted letters, names, dates or logos in the pixels.');
   } else {
     locks.push('Embed brief typography in the lower third without covering faces.');
@@ -365,11 +365,11 @@ export function buildInvitationLocks(input: {
 }
 
 function compactTextRule(embedText?: boolean, isPublic?: boolean): string {
-  if (isPublic) {
-    return 'FORMAT: Vertical 9:16, 1024x1536. Clean reusable artwork — no painted text. Editor overlays {{title}}, {{date}}, {{location}}, {{firstName}}.';
-  }
   if (embedText) {
     return 'FORMAT: Vertical 9:16, 1024x1536. Embed sharp invitation lettering from the brief (names, date, venue) in the lower third or a cartouche. Do not cover faces.';
+  }
+  if (isPublic) {
+    return 'FORMAT: Vertical 9:16, 1024x1536. Clean reusable artwork — no painted text. Editor overlays {{title}}, {{date}}, {{location}}, {{firstName}}.';
   }
   return `FORMAT: Vertical 9:16, 1024x1536. ${NANO_BANANA_CLEAN_ARTWORK_DIRECTIVE}`;
 }
@@ -538,7 +538,7 @@ export function buildInvitationImageJudgeUserText(input: {
   embedText?: boolean;
   isPublic?: boolean;
 }): string {
-  const textRule = input.isPublic || !input.embedText
+  const textRule = !input.embedText
     ? 'textInPixels: forbidden'
     : 'textInPixels: allowed (names, date, venue from the brief)';
   const locks = input.locks.slice(0, 8).map((lock) => `- ${lock}`).join('\n');
