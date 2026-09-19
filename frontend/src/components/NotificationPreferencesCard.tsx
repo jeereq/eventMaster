@@ -6,6 +6,7 @@ import { Bell, Loader2, Mail, MessageCircle, MessageSquare, Save, Smartphone } f
 import { api } from '@/lib/api';
 import { Alert, Button, Card, CardHeader } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   NOTIFICATION_FAMILY_DESCRIPTIONS,
   NOTIFICATION_FAMILY_LABELS,
@@ -41,6 +42,8 @@ function familyChannels(data: PreferencesResponse, family: NotificationPrefFamil
 }
 
 export default function NotificationPreferencesCard() {
+  const { site } = usePlatformSite();
+  const platformNotifChannels = site.notificationChannels || ['EMAIL', 'WHATSAPP', 'SMS', 'PUSH'];
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -65,6 +68,8 @@ export default function NotificationPreferencesCard() {
   }, [load]);
 
   const toggle = (family: NotificationPrefFamily, channel: keyof ChannelPreference) => {
+    const isPlatformDisabled = !platformNotifChannels.includes(channel.toUpperCase() as any);
+    if (isPlatformDisabled) return;
     setData((prev) => {
       if (!prev) return prev;
       if ((channel === 'whatsapp' || channel === 'sms') && !prev.hasPhone) return prev;
@@ -159,8 +164,9 @@ export default function NotificationPreferencesCard() {
                   </div>
                   <div className="flex flex-wrap gap-2" role="group" aria-label={`Canaux ${NOTIFICATION_FAMILY_LABELS[family]}`}>
                     {CHANNELS.map((channel) => {
-                      const disabled = (channel.key === 'whatsapp' || channel.key === 'sms') && !data.hasPhone;
-                      const checked = channels[channel.key];
+                      const isPlatformDisabled = !platformNotifChannels.includes(channel.key.toUpperCase() as any);
+                      const disabled = isPlatformDisabled || ((channel.key === 'whatsapp' || channel.key === 'sms') && !data.hasPhone);
+                      const checked = channels[channel.key] && !isPlatformDisabled;
                       return (
                         <button
                           key={channel.key}
@@ -168,11 +174,18 @@ export default function NotificationPreferencesCard() {
                           role="switch"
                           aria-checked={checked}
                           disabled={disabled}
+                          title={
+                            isPlatformDisabled
+                              ? 'Canal désactivé sur la plateforme par l’administrateur'
+                              : (channel.key === 'whatsapp' || channel.key === 'sms') && !data.hasPhone
+                                ? 'Numéro de téléphone requis dans Mon profil'
+                                : undefined
+                          }
                           onClick={() => toggle(family, channel.key)}
                           className={cn(
                             'inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-button)] border px-3 text-xs font-semibold transition',
                             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                            'disabled:opacity-50 disabled:cursor-not-allowed',
+                            'disabled:opacity-40 disabled:cursor-not-allowed',
                             checked
                               ? 'bg-primary text-primary-foreground border-primary'
                               : 'bg-surface text-foreground border-border hover:bg-card-hover',
@@ -180,6 +193,9 @@ export default function NotificationPreferencesCard() {
                         >
                           {channel.icon}
                           {channel.label}
+                          {isPlatformDisabled && (
+                            <span className="text-[10px] text-muted font-normal">(Off)</span>
+                          )}
                           <span className="sr-only">{checked ? 'activé' : 'désactivé'}</span>
                         </button>
                       );

@@ -1969,7 +1969,10 @@ function DashboardPageContent() {
  e.preventDefault();
  setSavingSettings(true);
  try {
- await api.put('/admin/settings', adminSettings);
+ const res = await api.put('/admin/settings', adminSettings);
+ if (res?.settings) {
+   setAdminSettings(res.settings);
+ }
  if (typeof window !== 'undefined') {
  window.dispatchEvent(new CustomEvent('em-platform-settings-updated'));
  }
