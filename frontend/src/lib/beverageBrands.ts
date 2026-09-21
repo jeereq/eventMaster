@@ -13,6 +13,28 @@ export const BEVERAGE_SALE_UNITS = ['BOTTLE', 'CRATE', 'PACK', 'OTHER'] as const
 
 export type BeverageSaleUnit = (typeof BEVERAGE_SALE_UNITS)[number];
 
+export type DrinkOrderLine = {
+  brandId: string;
+  unitKind: BeverageSaleUnit;
+  packs: number;
+};
+
+export function parseDrinkOrderLines(value: unknown): DrinkOrderLine[] {
+  if (!Array.isArray(value)) return [];
+  const lines: DrinkOrderLine[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    const brandId = typeof row.brandId === 'string' ? row.brandId.trim() : '';
+    const unitKind = BEVERAGE_SALE_UNITS.find((unit) => unit === row.unitKind);
+    const packs = Math.round(Number(row.packs));
+    if (!brandId || !unitKind || !Number.isFinite(packs) || packs < 1) continue;
+    lines.push({ brandId, unitKind, packs: Math.min(500, packs) });
+    if (lines.length >= 20) break;
+  }
+  return lines;
+}
+
 export const BEVERAGE_SALE_UNIT_LABELS: Record<BeverageSaleUnit, string> = {
   BOTTLE: 'Bouteille',
   CRATE: 'Casier',
@@ -54,6 +76,28 @@ export type BeverageBrandRow = {
   invitationOption: string;
   vendorCount?: number;
   priceFromFc?: number | null;
+};
+
+export type PublicBeverageOffer = {
+  id: string;
+  brandId: string;
+  brandName: string;
+  kind: BeverageKind;
+  kindLabel: string;
+  imageUrl: string | null;
+  producer: string | null;
+  country: string | null;
+  volumeLabel: string | null;
+  description: string | null;
+  vendorName: string;
+  vendorSlug: string | null;
+  unitKind: BeverageSaleUnit;
+  quantity: number;
+  unitLabel: string;
+  priceFc: number;
+  payableFc: number;
+  promoPriceFc: number | null;
+  notes: string | null;
 };
 
 export type VendorBeveragePriceRow = {

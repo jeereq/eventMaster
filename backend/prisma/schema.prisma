@@ -813,11 +813,15 @@ model MarketplaceInquiry {
   closedByRole  String?
   fromTenantId String?
   fromTenant   Tenant?                  @relation("InquiryFromTenant", fields: [fromTenantId], references: [id], onDelete: SetNull)
+  beveragePriceId String?
+  beveragePrice   VendorBeveragePrice? @relation(fields: [beveragePriceId], references: [id], onDelete: SetNull)
+  beveragePackCount Int?
   createdAt   DateTime                  @default(now())
   messages    MarketplaceInquiryMessage[]
 
   @@index([listingId, createdAt])
   @@index([offeringId, createdAt])
+  @@index([beveragePriceId])
   @@index([fromEmail])
 }
 
@@ -861,12 +865,16 @@ model MarketplaceBooking {
   notes              String?
   declineReason      String?
   declinedAt         DateTime?
+  beveragePriceId    String?
+  beveragePrice      VendorBeveragePrice?      @relation(fields: [beveragePriceId], references: [id], onDelete: SetNull)
+  beveragePackCount  Int?
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
 
   @@index([vendorTenantId, status])
   @@index([organizerTenantId, status])
   @@index([eventDate])
+  @@index([beveragePriceId])
 }
 
 model ServiceOffering {
@@ -1412,6 +1420,8 @@ model VendorBeveragePrice {
   notes       String?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+  inquiries   MarketplaceInquiry[]
+  bookings    MarketplaceBooking[]
 
   @@unique([tenantId, brandId, unitKind, unitLabel])
   @@index([brandId])

@@ -1217,6 +1217,69 @@ export async function createServiceInquiry(req: AuthenticatedRequest, res: Respo
   }
 }
 
+export async function createBeverageInquiry(req: AuthenticatedRequest, res: Response) {
+  try {
+    const account = await resolveInquirer(req);
+    if (!account?.email) {
+      return res.status(401).json({ error: 'Connectez-vous pour envoyer un devis.' });
+    }
+    const id = String(req.params.id || '').trim();
+    const packs = Math.round(Number(req.body?.packCount));
+    if (!Number.isFinite(packs) || packs < 1 || packs > 500) {
+      return res.status(400).json({ error: 'Indiquez une quantité entre 1 et 500.' });
+    }
+    const offer = await prisma.vendorBeveragePrice.findFirst({
+      where: { id, isAvailable: true, brand: { isActive: true } },
+      include: {
+        brand: { select: { name: true } },
+        tenant: { select: { id: true, name: true } },
+      },
+    });
+    if (!offer) return res.status(404).json({ error: 'Cette proposition n’est plus disponible.' });
+    if (offer.tenantId === req.user?.tenantId) {
+      return res.status(400).json({ error: 'Vous ne pouvez pas demander un devis sur votre propre tarif.' });
+    }
+    const identity = inquiryIdentity(account, req.body || {});
+    const parsedDate = req.body?.eventDate ? new Date(String(req.body.eventDate)) : null;
+    const note = req.body?.message ? String(req.body.message).trim().slice(0, 2000) : '';
+    const message = [`${packs} × ${offer.unitLabel} de ${offer.brand.name}.`, note].filter(Boolean).join(' ');
+    const inquiry = await prisma.marketplaceInquiry.create({
+      data: {
+        beveragePriceId: offer.id,
+        beveragePackCount: packs,
+        fromName: identity.fromName,
+        fromEmail: identity.fromEmail,
+        fromPhone: identity.fromPhone,
+        eventDate: parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : null,
+        message: message.slice(0, 4000),
+        fromTenantId: req.user?.tenantId || null,
+      },
+    });
+    const vendorHref = `${FRONTEND_URL}/dashboard/bookings?tab=quotes&role=vendor&inquiryId=${inquiry.id}`;
+    const clientHref = `${FRONTEND_URL}/dashboard/bookings?tab=quotes&inquiryId=${inquiry.id}`;
+    await notifyInquiry({
+      ownerOrgName: offer.tenant.name,
+      subjectTitle: `${offer.brand.name} · ${packs} × ${offer.unitLabel}`,
+      publicUrl: `${FRONTEND_URL}/marketplace/boissons`,
+      dashboardHref: vendorHref,
+      vendorTenantId: offer.tenant.id,
+      inquiry,
+    });
+    if (req.user?.id) {
+      void notifyUsers([req.user.id], {
+        type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
+        title: `Devis envoyé — ${offer.brand.name}`,
+        message: `Votre demande de ${packs} × ${offer.unitLabel} a été transmise.`,
+        metadata: { inquiryId: inquiry.id, href: clientHref },
+      });
+    }
+    return res.status(201).json({ success: true, message: 'Votre demande a été transmise au prestataire.' });
+  } catch (error) {
+    console.error('createBeverageInquiry:', error);
+    return res.status(500).json({ error: 'Impossible d’envoyer la demande.' });
+  }
+}
+
 export async function listMyServices(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
@@ -1447,6 +1510,7 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
             OR: [
               { listing: { tenantId } },
               { offering: { tenantId } },
+              { beveragePrice: { tenantId } },
             ],
           },
       include: {
@@ -1465,6 +1529,19 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
             category: true,
             tenant: { select: { name: true, manager: { select: { phone: true } } } },
             vendorProfile: { select: { slug: true, displayName: true } },
+          },
+        },
+        beveragePrice: {
+          select: {
+            unitLabel: true,
+            brand: { select: { name: true } },
+            tenant: {
+              select: {
+                name: true,
+                manager: { select: { phone: true } },
+                vendorProfile: { select: { slug: true, displayName: true } },
+              },
+            },
           },
         },
         event: { select: { id: true, title: true, date: true } },
@@ -1494,10 +1571,14 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
         const booking = bookingByInquiry.get(item.id);
         return {
           id: item.id,
-          kind: item.offeringId
-            ? (isServiceRentalCategory(item.offering?.category) ? 'rental' : 'service')
-            : 'venue',
-          title: item.offering?.title || item.listing?.headline || item.listing?.room?.name || 'Demande',
+          kind: item.beveragePriceId
+            ? 'beverage'
+            : item.offeringId
+              ? (isServiceRentalCategory(item.offering?.category) ? 'rental' : 'service')
+              : 'venue',
+          title: item.beveragePrice
+            ? `${item.beveragePackCount && item.beveragePackCount > 0 ? `${item.beveragePackCount} × ${item.beveragePrice.unitLabel} · ` : ''}${item.beveragePrice.brand.name}`
+            : item.offering?.title || item.listing?.headline || item.listing?.room?.name || 'Demande',
           fromName: item.fromName,
           fromEmail: item.fromEmail,
           fromPhone: item.fromPhone,
@@ -1519,8 +1600,10 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
             || item.offering?.tenant.name
             || item.listing?.tenant.vendorProfile?.displayName
             || item.listing?.tenant.name
+            || item.beveragePrice?.tenant.vendorProfile?.displayName
+            || item.beveragePrice?.tenant.name
             || null,
-          vendorSlug: item.offering?.vendorProfile?.slug || item.listing?.tenant.vendorProfile?.slug || null,
+          vendorSlug: item.offering?.vendorProfile?.slug || item.listing?.tenant.vendorProfile?.slug || item.beveragePrice?.tenant.vendorProfile?.slug || null,
           vendorPhone: item.offering?.tenant.manager?.phone || item.listing?.tenant.manager?.phone || null,
           listingSlug: item.listing?.slug || null,
           offeringSlug: item.offering?.slug || null,
@@ -1560,16 +1643,19 @@ export async function updateInquiryStatus(req: AuthenticatedRequest, res: Respon
     const existing = await prisma.marketplaceInquiry.findFirst({
       where: {
         id,
-        OR: [{ listing: { tenantId } }, { offering: { tenantId } }],
+        OR: [{ listing: { tenantId } }, { offering: { tenantId } }, { beveragePrice: { tenantId } }],
       },
       include: {
         listing: { select: { headline: true, room: { select: { name: true } } } },
         offering: { select: { title: true } },
+        beveragePrice: { select: { unitLabel: true, brand: { select: { name: true } } } },
       },
     });
     if (!existing) return res.status(404).json({ error: 'Demande introuvable.' });
 
-    const inquiryTitle = existing.offering?.title || existing.listing?.headline || existing.listing?.room.name || 'Demande';
+    const inquiryTitle = existing.beveragePrice
+      ? `${existing.beveragePackCount && existing.beveragePackCount > 0 ? `${existing.beveragePackCount} × ${existing.beveragePrice.unitLabel} · ` : ''}${existing.beveragePrice.brand.name}`
+      : existing.offering?.title || existing.listing?.headline || existing.listing?.room.name || 'Demande';
 
     let updateData: Prisma.MarketplaceInquiryUpdateInput = {};
 

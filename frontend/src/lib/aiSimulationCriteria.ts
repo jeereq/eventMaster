@@ -35,6 +35,7 @@ export type AiSimulationCriteria = {
   wantedCategories?: ServiceCategory[];
   wantedBrandIds?: string[];
   wantedSaleUnits?: Array<'BOTTLE' | 'CRATE' | 'PACK' | 'OTHER'>;
+  wantedDrinkLines?: Array<{ brandId: string; unitKind: 'BOTTLE' | 'CRATE' | 'PACK' | 'OTHER'; packs: number }>;
   venueAmenities?: ListingAmenityId[];
 };
 
@@ -47,6 +48,7 @@ export const EMPTY_AI_CRITERIA: AiSimulationCriteria = {
   wantedCategories: [],
   wantedBrandIds: [],
   wantedSaleUnits: [],
+  wantedDrinkLines: [],
   venueAmenities: [],
 };
 

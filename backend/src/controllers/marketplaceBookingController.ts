@@ -24,6 +24,7 @@ const HOLD_STATUSES: MarketplaceBookingStatus[] = ['REQUESTED', 'ACCEPTED', 'CON
 const bookingInclude = {
   listing: { select: { slug: true, headline: true, roomId: true, address: true, latitude: true, longitude: true, blockedDates: true, room: { select: { name: true, location: true } } } },
   offering: { select: { slug: true, title: true, category: true, blockedDates: true } },
+  beveragePrice: { select: { unitLabel: true, brand: { select: { name: true } } } },
   event: { select: { id: true, title: true, date: true } },
   vendorTenant: { select: { id: true, name: true, managerId: true, manager: { select: { phone: true, phoneCountryCode: true } }, vendorProfile: { select: { slug: true, displayName: true } } } },
   organizerTenant: { select: { id: true, name: true } },
@@ -59,6 +60,9 @@ function serializeBooking(row: {
   declineReason?: string | null;
   declinedAt?: Date | null;
   notes: string | null;
+  beveragePriceId?: string | null;
+  beveragePackCount?: number | null;
+  beveragePrice?: { unitLabel: string; brand: { name: string } } | null;
   createdAt: Date;
   listing?: { slug: string; headline: string | null; blockedDates?: unknown; room?: { name: string } | null } | null;
   offering?: { slug: string; title: string; category: string; blockedDates?: unknown } | null;
@@ -66,8 +70,10 @@ function serializeBooking(row: {
   vendorTenant?: { name: string; manager?: { phone?: string | null; phoneCountryCode?: string | null } | null; vendorProfile?: { slug: string; displayName: string } | null } | null;
   organizerTenant?: { name: string } | null;
 }) {
-  const kind = row.offeringId ? 'service' : 'venue';
-  const title = row.offering?.title || row.listing?.headline || row.listing?.room?.name || 'Réservation';
+  const kind = row.beveragePriceId ? 'beverage' : row.offeringId ? 'service' : 'venue';
+  const title = row.beveragePrice
+    ? `${row.beveragePackCount && row.beveragePackCount > 0 ? `${row.beveragePackCount} × ${row.beveragePrice.unitLabel} · ` : ''}${row.beveragePrice.brand.name}`
+    : row.offering?.title || row.listing?.headline || row.listing?.room?.name || 'Réservation';
   return {
     id: row.id,
     kind,
@@ -694,6 +700,7 @@ export async function acceptInquiryQuote(req: AuthenticatedRequest, res: Respons
       include: {
         listing: true,
         offering: true,
+        beveragePrice: { select: { tenantId: true, unitLabel: true, brand: { select: { name: true } } } },
       },
     });
     if (!inquiry) return res.status(404).json({ error: 'Demande introuvable.' });
@@ -708,7 +715,8 @@ export async function acceptInquiryQuote(req: AuthenticatedRequest, res: Respons
       });
     }
 
-    const vendorTenantId = inquiry.listing?.tenantId || inquiry.offering?.tenantId;
+    const vendorTenantId = inquiry.listing?.tenantId || inquiry.offering?.tenantId || inquiry.beveragePrice?.tenantId;
+    const drinkOrder = Boolean(inquiry.beveragePriceId) && !inquiry.listingId && !inquiry.offeringId;
     if (!vendorTenantId) {
       return res.status(400).json({ error: 'Offre introuvable pour cette demande.' });
     }
@@ -722,9 +730,11 @@ export async function acceptInquiryQuote(req: AuthenticatedRequest, res: Respons
     const dateKey = toDateKey(inquiry.eventDate);
     const blocked = parseBlockedDates(inquiry.listing?.blockedDates ?? inquiry.offering?.blockedDates);
     if (
-      !dateKey
-      || !isRangeAvailable(blocked, dateKey, dateKey)
-      || await isRangeTaken({ listingId: inquiry.listingId, offeringId: inquiry.offeringId, from: dateKey, to: dateKey })
+      !drinkOrder && (
+        !dateKey
+        || !isRangeAvailable(blocked, dateKey, dateKey)
+        || await isRangeTaken({ listingId: inquiry.listingId, offeringId: inquiry.offeringId, from: dateKey, to: dateKey })
+      )
     ) {
       return res.status(409).json({ error: 'Cette date n’est plus disponible. Écrivez au professionnel pour en convenir une autre.' });
     }
@@ -734,6 +744,8 @@ export async function acceptInquiryQuote(req: AuthenticatedRequest, res: Respons
       data: {
         listingId: inquiry.listingId,
         offeringId: inquiry.offeringId,
+        beveragePriceId: inquiry.beveragePriceId,
+        beveragePackCount: inquiry.beveragePackCount,
         inquiryId: inquiry.id,
         vendorTenantId,
         organizerTenantId: inquiry.fromTenantId || tenantId,
@@ -792,11 +804,12 @@ export async function convertInquiryToBooking(req: AuthenticatedRequest, res: Re
     const inquiry = await prisma.marketplaceInquiry.findFirst({
       where: {
         id: inquiryId,
-        OR: [{ listing: { tenantId } }, { offering: { tenantId } }],
+        OR: [{ listing: { tenantId } }, { offering: { tenantId } }, { beveragePrice: { tenantId } }],
       },
       include: {
         listing: true,
         offering: true,
+        beveragePrice: { select: { unitLabel: true, brand: { select: { name: true } } } },
       },
     });
     if (!inquiry) return res.status(404).json({ error: 'Demande introuvable.' });
@@ -813,12 +826,15 @@ export async function convertInquiryToBooking(req: AuthenticatedRequest, res: Re
       : (inquiry.quotedAmountFc ?? inquiry.listing?.priceFromFc ?? inquiry.offering?.priceFromFc);
     if (price == null) return res.status(400).json({ error: 'Ajoutez un tarif sur l’offre ou fournissez un montant pour convertir.' });
 
+    const drinkOrder = Boolean(inquiry.beveragePriceId) && !inquiry.listingId && !inquiry.offeringId;
     const dateKey = toDateKey(inquiry.eventDate);
     const blocked = parseBlockedDates(inquiry.listing?.blockedDates ?? inquiry.offering?.blockedDates);
     if (
-      !dateKey
-      || !isRangeAvailable(blocked, dateKey, dateKey)
-      || await isRangeTaken({ listingId: inquiry.listingId, offeringId: inquiry.offeringId, from: dateKey, to: dateKey })
+      !drinkOrder && (
+        !dateKey
+        || !isRangeAvailable(blocked, dateKey, dateKey)
+        || await isRangeTaken({ listingId: inquiry.listingId, offeringId: inquiry.offeringId, from: dateKey, to: dateKey })
+      )
     ) {
       return res.status(409).json({ error: 'Cette date n’est plus disponible.' });
     }
@@ -834,6 +850,8 @@ export async function convertInquiryToBooking(req: AuthenticatedRequest, res: Re
       data: {
         listingId: inquiry.listingId,
         offeringId: inquiry.offeringId,
+        beveragePriceId: inquiry.beveragePriceId,
+        beveragePackCount: inquiry.beveragePackCount,
         inquiryId: inquiry.id,
         vendorTenantId: tenantId,
         organizerTenantId: inquiry.fromTenantId,
@@ -878,5 +896,66 @@ export async function convertInquiryToBooking(req: AuthenticatedRequest, res: Re
   } catch (error) {
     console.error('convertInquiryToBooking:', error);
     return res.status(500).json({ error: 'Impossible de convertir la demande.' });
+  }
+}
+
+export async function createBeverageBooking(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+    if (!tenantId || !userId) return res.status(401).json({ error: 'Connectez-vous pour réserver.' });
+    const id = String(req.params.id || '').trim();
+    const packs = Math.round(Number(req.body?.packCount));
+    if (!Number.isFinite(packs) || packs < 1 || packs > 500) {
+      return res.status(400).json({ error: 'Indiquez une quantité entre 1 et 500.' });
+    }
+    const range = parseBookingRange(req.body?.eventDate, req.body?.eventDate);
+    if (!range) return res.status(400).json({ error: 'Indiquez la date de l’événement.' });
+    const offer = await prisma.vendorBeveragePrice.findFirst({
+      where: { id, isAvailable: true, brand: { isActive: true } },
+      include: { brand: { select: { name: true } }, tenant: { select: { id: true, name: true } } },
+    });
+    if (!offer) return res.status(404).json({ error: 'Cette proposition n’est plus disponible.' });
+    if (offer.tenantId === tenantId) {
+      return res.status(400).json({ error: 'Vous ne pouvez pas réserver votre propre tarif.' });
+    }
+    const unit = activePromoPrice({
+      priceFc: offer.priceFc,
+      promoPriceFc: offer.promoPriceFc,
+      promoEndsAt: offer.promoEndsAt,
+    }) ?? offer.priceFc;
+    const amounts = computeMarketplaceAmounts(unit * packs);
+    const note = req.body?.notes ? String(req.body.notes).trim().slice(0, 2000) : '';
+    const booking = await prisma.marketplaceBooking.create({
+      data: {
+        beveragePriceId: offer.id,
+        beveragePackCount: packs,
+        vendorTenantId: offer.tenantId,
+        organizerTenantId: tenantId,
+        organizerUserId: userId,
+        eventDate: range.parsedStart,
+        amountFc: amounts.amountFc,
+        depositFc: amounts.depositFc,
+        commissionRate: amounts.commissionRate,
+        commissionFc: amounts.commissionFc,
+        notes: [`${packs} × ${offer.unitLabel} de ${offer.brand.name}.`, note].filter(Boolean).join(' ').slice(0, 2000),
+      },
+      include: bookingInclude,
+    });
+    const title = `${packs} × ${offer.unitLabel} · ${offer.brand.name}`;
+    const vendorHref = `${FRONTEND_URL}/dashboard/bookings?tab=bookings&role=vendor&bookingId=${booking.id}`;
+    void notifyTenantOperators(offer.tenantId, {
+      type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING,
+      title: `Réservation — ${title}`,
+      message: `Demande de ${title}. Montant ${amounts.amountFc.toLocaleString('fr-FR')} FC.`,
+      metadata: { bookingId: booking.id, href: vendorHref },
+    });
+    return res.status(201).json({
+      booking: serializeBooking(booking),
+      message: 'Demande de réservation envoyée. Le professionnel doit l’accepter.',
+    });
+  } catch (error) {
+    console.error('createBeverageBooking:', error);
+    return res.status(500).json({ error: 'Impossible de créer la réservation.' });
   }
 }
