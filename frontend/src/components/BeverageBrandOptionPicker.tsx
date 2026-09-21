@@ -60,14 +60,14 @@ export default function BeverageBrandOptionPicker({
     return (
       <p className="text-xs text-muted inline-flex items-center gap-2">
         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-        Chargement des marques…
+        Chargement des boissons…
       </p>
     );
   }
 
   if (error) return <p className="text-xs text-rose-700">{error}</p>;
   if (!brands.length) {
-    return <p className="text-xs text-muted">Aucune marque active. Le catalogue se gère depuis le catalogue administrateur.</p>;
+    return <p className="text-xs text-muted">Aucune boisson active. Le catalogue se gère depuis le catalogue administrateur.</p>;
   }
 
   return (
@@ -100,7 +100,7 @@ export default function BeverageBrandOptionPicker({
         })}
       </div>
       <p className="text-xs text-muted">
-        {selected.size} marque{selected.size > 1 ? 's' : ''} proposée{selected.size > 1 ? 's' : ''} à l’invité
+        {selected.size} boisson{selected.size > 1 ? 's' : ''} proposée{selected.size > 1 ? 's' : ''} à l’invité
         {selected.size >= MAX_INVITATION_BRANDS ? ` (maximum ${MAX_INVITATION_BRANDS})` : ''}.
       </p>
     </div>

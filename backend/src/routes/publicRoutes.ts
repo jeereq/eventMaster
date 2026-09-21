@@ -55,6 +55,7 @@ import {
   claimPublicAiRoomPlanComposes,
 } from '../controllers/roomController';
 import { getPublicShowcasePlans } from '../controllers/showcasePlanController';
+import { listBeverageBrands } from '../services/beverageBrandService';
 import {
   flexPayCardCallback,
   flexPayCardReturn,
@@ -81,6 +82,16 @@ router.get('/site', (_req: Request, res: Response) => {
   } catch (error: any) {
     console.error('[Public] Erreur site config:', error);
     return res.status(500).json({ error: 'Impossible de charger la configuration du site' });
+  }
+});
+
+router.get('/beverage-brands', async (_req: Request, res: Response) => {
+  try {
+    const brands = await listBeverageBrands();
+    return res.json({ brands });
+  } catch (error) {
+    console.error('[Public] Erreur catalogue boissons:', error);
+    return res.status(500).json({ error: 'Impossible de charger les boissons.' });
   }
 });
 

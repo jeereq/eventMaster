@@ -95,11 +95,22 @@ const GALLERY_ITEMS: GalleryItem[] = [
     title: 'Matériel & Équipements de Réception',
     category: 'Logistique & Équipements',
     location: 'Disponibilité immédiate',
-    description: 'Location de tentes étanches, groupes électrogènes insonorisés, estrades, climatiseurs mobiles et mobilier.',
+    description: 'Chaises, tentes, groupes électrogènes, estrades et mobilier. Retrait sur place, livraison comprise dans le tarif, ou livraison en supplément.',
     imageUrl: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=900&q=80',
     icon: KeyRound,
     href: '/marketplace/locations',
     badge: 'Livraison & Installation',
+  },
+  {
+    id: 'boissons-prix',
+    title: 'Boissons et prix',
+    category: 'Boissons',
+    location: 'Catalogue EventMaster',
+    description: 'Bières, vins, champagnes et autres boissons, avec le prix le plus bas publié par un prestataire.',
+    imageUrl: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=900&q=80',
+    icon: Utensils,
+    href: '/marketplace/boissons',
+    badge: 'Prix prestataires',
   },
 ];
 

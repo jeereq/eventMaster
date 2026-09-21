@@ -21,7 +21,7 @@ interface FaqSectionProps {
 export default function FaqSection({
   id = 'faq',
   title = 'Questions fréquentes',
-  subtitle = 'Forfaits, invitations, accueil le jour J, marketplace et support.',
+  subtitle = 'Forfaits, invitations, marketplace, boissons, livraison et support.',
   showContactLink = true,
   className = '',
   itemIds,

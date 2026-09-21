@@ -129,8 +129,8 @@ function MarketplaceRentalsPageInner() {
   return (
     <CatalogueSearchLayout
       activeNav="rentals"
-      heroTitle="Matériel, équipements & véhicules pour vos événements"
-      heroDescription="Mobilier, sonorisation, tentes, véhicules, tenues de cérémonie… Trouvez et réservez les équipements adaptés à votre réception."
+      heroTitle="Matériel, chaises, équipements et véhicules"
+      heroDescription="Chaises, mobilier, sonorisation, tentes, véhicules, tenues de cérémonie. Chaque fiche indique le retrait sur place, la livraison déjà comprise dans le tarif, ou la livraison en supplément."
       mode={mode}
       onViewChange={setView}
       gridCols={gridCols}

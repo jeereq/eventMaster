@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { api } from '@/lib/api';
 import { Button, Pagination, usePaginateItems, usePageSize } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -303,7 +304,11 @@ export default function LandingVitrineSection() {
               Salles, métiers, matériel et billetteries
             </h2>
             <p className="hidden sm:block text-sm text-muted leading-relaxed">
-              Explorez salles 3D, métiers et Matériel & Équipements — contactez les pros en direct.
+              Explorez salles 3D, métiers, Matériel & Équipements et les{' '}
+              <Link href="/marketplace/boissons" className="font-semibold text-primary hover:underline underline-offset-2">
+                boissons et prix
+              </Link>
+              {' '}— contactez les pros en direct.
             </p>
           </div>
           <Button href="/marketplace" className="w-full sm:w-auto" rightIcon={<ArrowRight className="w-4 h-4" />}>
