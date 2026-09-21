@@ -52,6 +52,24 @@ test('une tente reste un lot par jour, sans multiplier par les invités', () => 
   assert.match(tent?.note || '', /retrait sur place/);
 });
 
+test('une prestation forfaitaire indique une quantité, un lot aussi', () => {
+  const catering = rentalBudgetAmount({
+    category: 'CATERING',
+    priceUnit: 'EVENT',
+    priceFromFc: 150000,
+    guestCount: 80,
+  });
+  assert.equal(catering?.amountFc, 150000);
+  assert.match(catering?.note || '', /1 prestation/);
+  const decor = rentalBudgetAmount({
+    category: 'RENTAL_DECOR',
+    priceUnit: 'EVENT',
+    priceFromFc: 40000,
+    guestCount: 80,
+  });
+  assert.match(decor?.note || '', /1 lot/);
+});
+
 test('les boissons prennent le conditionnement le moins cher et ignorent l’alcool pour un office religieux', () => {
   const offers = [
     { kind: 'BEER', brandName: 'Primus', quantity: 1, unitLabel: 'bouteille', priceFc: 2500 },
@@ -61,6 +79,14 @@ test('les boissons prennent le conditionnement le moins cher et ignorent l’alc
   const wedding = beverageBudgetAmount(offers, 10, 'wedding', 'cheap');
   assert.equal(wedding?.amountFc, 24000 + 10 * 1500);
   assert.match(wedding?.note || '', /casier/);
+  const beer = wedding?.lines.find((line) => line.kind === 'BEER');
+  const soft = wedding?.lines.find((line) => line.kind === 'DRINK');
+  assert.equal(beer?.brandName, 'Primus');
+  assert.equal(beer?.quantityLabel, '1 × casier');
+  assert.equal(beer?.unitPriceFc, 24000);
+  assert.equal(soft?.brandName, 'Coca');
+  assert.equal(soft?.quantityLabel, '10 × bouteille');
+  assert.equal(soft?.unitPriceFc, 1500);
   const office = beverageBudgetAmount(offers, 10, 'religious', 'comfort');
   assert.equal(office?.amountFc, 20 * 1500);
   assert.doesNotMatch(office?.note || '', /Bière/);

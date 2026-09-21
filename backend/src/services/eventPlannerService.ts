@@ -269,6 +269,7 @@ type VenueItem = {
   priceUnitLabel: string;
   estimatedFc: number;
   capacity: number | null;
+  detail?: string;
   href: string;
   favorite: boolean;
   match: 'exact' | 'unknown';
@@ -324,6 +325,12 @@ function serializeVenue(listing: Scored<{
     priceUnitLabel: priceUnitLabel(listing.priceUnit),
     estimatedFc: cost,
     capacity: listing.room.capacity,
+    detail: [
+      listing.room.capacity ? `${listing.room.capacity} places` : '',
+      listing.priceFromFc && listing.priceFromFc > 0
+        ? `${formatFc(listing.priceFromFc)} ${priceUnitLabel(listing.priceUnit)}`
+        : '',
+    ].filter(Boolean).join(' · ') || undefined,
     href: `/dashboard/catalogue/salles/${listing.slug}`,
     favorite: listing.favorite,
     match: listing.match,
@@ -836,28 +843,30 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
       ? beverageBudgetAmount(drinkOffers, guests, input.eventType, style.style)
       : null;
     if (drinks) {
-      items.push({
-        kind: 'service',
-        slug: 'budget:boissons',
-        title: 'Boissons',
-        category: 'OTHER',
-        categoryLabel: 'Boissons',
-        orgName: 'Catalogue EventMaster',
-        city: null,
-        location: '',
-        coverUrl: drinks.imageUrl,
-        priceFromFc: null,
-        priceUnitLabel: 'Estimation',
-        estimatedFc: drinks.amountFc,
-        href: '/marketplace/boissons',
-        detail: drinks.note,
-        favorite: false,
-        match: 'unknown',
-        reused: false,
-        alternatives: [],
-      });
-      total += drinks.amountFc;
-      notes.push('Boissons : tarif le plus bas du catalogue, sans filtre de ville.');
+      for (const line of drinks.lines) {
+        items.push({
+          kind: 'service',
+          slug: line.slug,
+          title: line.title,
+          category: 'OTHER',
+          categoryLabel: line.categoryLabel,
+          orgName: 'Catalogue EventMaster',
+          city: null,
+          location: '',
+          coverUrl: line.imageUrl,
+          priceFromFc: line.unitPriceFc,
+          priceUnitLabel: line.quantityLabel || 'Estimation',
+          estimatedFc: line.amountFc,
+          href: '/marketplace/boissons',
+          detail: line.detail,
+          favorite: false,
+          match: 'unknown',
+          reused: false,
+          alternatives: [],
+        });
+        total += line.amountFc;
+      }
+      notes.push('Boissons : quantité, marque et tarif le plus bas du catalogue, sans filtre de ville.');
     } else if (budgetScope === 'drinks') {
       missing.push({
         slot: 'beverages',

@@ -56,7 +56,7 @@ export function rentalBudgetAmount(input: RentalBudgetInput): BudgetAmount | nul
   const perPiece = PER_PIECE.has(input.category);
   const pieceCount = guests > 0 ? guests : 1;
   let amount = unit;
-  let note = money(unit);
+  let note = `1 prestation · ${money(unit)}`;
 
   if (perPiece) {
     if (input.priceUnit === 'DAY') {
@@ -72,10 +72,12 @@ export function rentalBudgetAmount(input: RentalBudgetInput): BudgetAmount | nul
     }
   } else if (input.priceUnit === 'DAY') {
     amount = unit * days;
-    note = `${money(unit)} × ${days} jour${days > 1 ? 's' : ''}`;
+    note = `1 lot × ${money(unit)} × ${days} jour${days > 1 ? 's' : ''}`;
   } else if ((input.priceUnit === 'PERSON' || input.priceUnit === 'QUOTA') && guests > 0) {
     amount = unit * guests;
     note = `${guests} × ${money(unit)}`;
+  } else if (input.category.startsWith('RENTAL_')) {
+    note = `1 lot · ${money(unit)}`;
   }
 
   const delivery = input.deliveryPriceFc && input.deliveryPriceFc > 0 ? Math.round(input.deliveryPriceFc) : 0;
@@ -146,21 +148,35 @@ export type BeverageBudgetOffer = {
   promoEndsAt?: Date | string | null;
 };
 
+export type BeverageBudgetLine = {
+  kind: DrinkKind;
+  slug: string;
+  title: string;
+  categoryLabel: string;
+  brandName: string | null;
+  quantityLabel: string;
+  unitPriceFc: number | null;
+  amountFc: number;
+  imageUrl: string | null;
+  detail: string;
+};
+
 export function beverageBudgetAmount(
   offers: BeverageBudgetOffer[],
   guestCount: number,
   eventType: EventPlanType,
   style: BudgetStyle,
-): (BudgetAmount & { imageUrl: string | null }) | null {
+): (BudgetAmount & { imageUrl: string | null; lines: BeverageBudgetLine[] }) | null {
   const guests = Math.max(0, Math.floor(guestCount));
   if (guests < 1 || !offers.length) return null;
-  const parts: string[] = [];
+  const lines: BeverageBudgetLine[] = [];
   let total = 0;
   let imageUrl: string | null = null;
 
   for (const need of needsFor(eventType, style)) {
     const servings = Math.ceil(guests * need.servingsPerGuest);
     if (servings < 1) continue;
+    const family = DRINK_LABEL[need.kind];
     const choices = offers.flatMap((offer) => {
       if (offer.kind !== need.kind) return [];
       const unitPrice = payableUnitPrice({
@@ -171,26 +187,55 @@ export function beverageBudgetAmount(
       if (unitPrice == null) return [];
       const pack = Math.max(1, Math.floor(offer.quantity) || 1);
       const packs = Math.ceil(servings / pack);
+      const quantityLabel = `${packs} × ${offer.unitLabel}`;
       return [{
         cost: packs * unitPrice,
         imageUrl: offer.imageUrl || null,
-        label: `${DRINK_LABEL[need.kind]} : ${packs} × ${offer.unitLabel} (${offer.brandName}, ${need.rule})`,
+        brandName: offer.brandName,
+        quantityLabel,
+        unitPrice,
+        unitLabel: offer.unitLabel,
+        pack,
       }];
     });
     if (!choices.length) {
-      parts.push(`${DRINK_LABEL[need.kind]} : aucun tarif publié`);
+      lines.push({
+        kind: need.kind,
+        slug: `budget:boissons:${need.kind}`,
+        title: family,
+        categoryLabel: family,
+        brandName: null,
+        quantityLabel: '',
+        unitPriceFc: null,
+        amountFc: 0,
+        imageUrl: null,
+        detail: `${family} : aucun tarif publié · ${need.rule}`,
+      });
       continue;
     }
     const best = choices.reduce((cheapest, item) => (item.cost < cheapest.cost ? item : cheapest));
     total += best.cost;
     if (!imageUrl && best.imageUrl) imageUrl = best.imageUrl;
-    parts.push(best.label);
+    const contained = best.pack > 1 ? ` (${best.pack} par ${best.unitLabel})` : '';
+    lines.push({
+      kind: need.kind,
+      slug: `budget:boissons:${need.kind}`,
+      title: best.brandName,
+      categoryLabel: family,
+      brandName: best.brandName,
+      quantityLabel: best.quantityLabel,
+      unitPriceFc: best.unitPrice,
+      amountFc: best.cost,
+      imageUrl: best.imageUrl,
+      detail: `${best.quantityLabel}${contained} · ${money(best.unitPrice)} / ${best.unitLabel} · ${servings} pour ${guests} invités (${need.rule})`,
+    });
   }
 
   if (total <= 0) return null;
   return {
     amountFc: Math.round(total),
-    note: parts.join(' · '),
+    note: lines.map((line) => line.detail).join(' · '),
     imageUrl,
+    lines,
   };
 }

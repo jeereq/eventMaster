@@ -226,7 +226,7 @@ export default function AiSimulationPackModal({
                   <li key={item.slug}>
                     <ElementRow
                       item={item}
-                      kind={estimate ? 'Estimation' : rental ? 'Matériel' : 'Prestataire'}
+                      kind={estimate ? (item.categoryLabel || 'Boissons') : rental ? 'Matériel' : 'Prestataire'}
                       icon={rental ? <KeyRound className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
                       rate={exchangeRate}
                       href={estimate ? item.href : undefined}
@@ -305,7 +305,7 @@ function ElementRow({
           </span>
         </div>
       ) : (
-        <span className="text-xs text-muted shrink-0">Sur devis</span>
+        <span className="text-xs text-muted shrink-0">{item.detail ? 'Sans tarif' : 'Sur devis'}</span>
       )}
     </>
   );

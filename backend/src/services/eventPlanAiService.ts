@@ -1,7 +1,7 @@
-import { MarketplaceBookingStatus, ServiceCategory } from '@prisma/client';
+import { MarketplaceBookingStatus, ServiceCategory, VenuePriceUnit } from '@prisma/client';
 import { prisma } from '../db';
 import { parseListingDetails } from '../utils/listingDetails';
-import { coverFromMedia, isServiceRentalCategory, parsePhotoUrls, serviceCategoryLabel } from '../utils/publicVenue';
+import { coverFromMedia, isServiceRentalCategory, parsePhotoUrls, priceUnitLabel, serviceCategoryLabel } from '../utils/publicVenue';
 import { collectUnavailableDates, isRangeAvailable, toDateKey } from '../utils/marketplaceDates';
 import { allowedCityPrismaFilter, normalizeAllowedCity, normalizeAllowedCommune } from '../utils/rdcCities';
 import { EVENT_PLAN_TYPES, type EventPlanType } from './eventPlanBrief';
@@ -263,6 +263,12 @@ async function loadCatalog(opts: {
         categoryLabel: 'Salle',
         href: `/dashboard/catalogue/salles/${row.slug}`,
         capacity: row.room.capacity,
+        detail: [
+          row.room.capacity ? `${row.room.capacity} places` : '',
+          row.priceFromFc && row.priceFromFc > 0
+            ? `${Math.round(row.priceFromFc).toLocaleString('fr-FR')} FC ${priceUnitLabel(row.priceUnit as VenuePriceUnit)}`
+            : '',
+        ].filter(Boolean).join(' · ') || undefined,
       };
       const catalog: CatalogRow = {
         slug: row.slug,
@@ -445,23 +451,25 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
           : style.id === 'comfort'
             ? 'Quantités plus généreuses, au tarif le plus bas de chaque famille.'
             : 'Quantités courantes, au tarif le plus bas de chaque famille.',
-        summary: drinks?.note || 'Simulation des boissons uniquement.',
+        summary: drinks
+          ? 'Chaque famille indique la marque, la quantité et le prix unitaire.'
+          : 'Simulation des boissons uniquement.',
         rationale: '',
         warnings,
         estimatedTotalFc: drinks?.amountFc || 0,
         venue: null,
-        services: drinks ? [{
+        services: drinks ? drinks.lines.map((line) => ({
           kind: 'service' as const,
-          slug: 'budget:boissons',
-          title: 'Boissons',
+          slug: line.slug,
+          title: line.title,
           orgName: 'Catalogue EventMaster',
           location: '',
-          coverUrl: drinks.imageUrl,
-          estimatedFc: drinks.amountFc,
-          categoryLabel: 'Boissons',
+          coverUrl: line.imageUrl,
+          estimatedFc: line.amountFc,
+          categoryLabel: line.categoryLabel,
           href: '/marketplace/boissons',
-          detail: drinks.note,
-        }] : [],
+          detail: line.detail,
+        })) : [],
       };
     });
     return {
@@ -609,20 +617,22 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
       ? beverageBudgetAmount(drinkOffers, guests, eventType, budgetStyleOf(style.id))
       : null;
     if (drinks) {
-      uniqueServices.push({
-        kind: 'service',
-        slug: 'budget:boissons',
-        title: 'Boissons',
-        orgName: 'Catalogue EventMaster',
-        location: '',
-        coverUrl: drinks.imageUrl,
-        estimatedFc: drinks.amountFc,
-        categoryLabel: 'Boissons',
-        href: '/marketplace/boissons',
-        detail: drinks.note,
-      });
+      for (const line of drinks.lines) {
+        uniqueServices.push({
+          kind: 'service',
+          slug: line.slug,
+          title: line.title,
+          orgName: 'Catalogue EventMaster',
+          location: '',
+          coverUrl: line.imageUrl,
+          estimatedFc: line.amountFc,
+          categoryLabel: line.categoryLabel,
+          href: '/marketplace/boissons',
+          detail: line.detail,
+        });
+      }
       if (!warnings.some((warning) => warning.startsWith('Boissons'))) {
-        warnings.push('Boissons : tarif le plus bas du catalogue, sans filtre de ville.');
+        warnings.push('Boissons : quantité, marque et tarif le plus bas du catalogue, sans filtre de ville.');
       }
     }
     const estimatedTotalFc = [venue, ...uniqueServices].reduce((sum, item) => sum + (item?.estimatedFc || 0), 0);
