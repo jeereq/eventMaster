@@ -128,7 +128,7 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
       ctaLabel: 'Trouver un prestataire',
     },
     {
-      title: 'Boissons et prix',
+      title: 'Boissons',
       badge: 'Catalogue',
       description: 'Bières, vins, champagnes et le prix le plus bas d’un prestataire.',
       icon: Wine,

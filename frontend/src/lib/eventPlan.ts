@@ -1,4 +1,5 @@
 import type { ListingAmenityId, ListingEventTypeId } from '@/lib/listingDetails';
+import { parseBudgetSimulationScope, type BudgetSimulationScope } from '@/lib/budgetSimulation';
 import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS, type ServiceCategory } from '@/lib/marketplace';
 
 export const EVENT_PLAN_SLOTS: Record<ListingEventTypeId, { required: ServiceCategory[]; optional: ServiceCategory[] }> = {
@@ -80,6 +81,7 @@ export type EventPlanBrief = {
   venueAmenities: ListingAmenityId[];
   amenityMode: AmenityMode;
   planVersion: number;
+  budgetScope: BudgetSimulationScope;
 };
 
 export type EventPlanRequest = EventPlanBrief & {
@@ -134,6 +136,7 @@ export function createDefaultBrief(eventType: ListingEventTypeId = 'wedding'): E
     venueAmenities: [],
     amenityMode: 'preferred',
     planVersion: PLAN_BRIEF_VERSION,
+    budgetScope: 'complete',
   };
 }
 
@@ -172,6 +175,7 @@ export function hydrateBrief(raw: unknown): EventPlanBrief {
     marginPct: value.marginPct === 0 || value.marginPct === 5 || value.marginPct === 10 ? value.marginPct : 5,
     guestCount: Number(value.guestCount) || 0,
     venueAmenities: Array.isArray(value.venueAmenities) ? value.venueAmenities : [],
+    budgetScope: parseBudgetSimulationScope(value.budgetScope),
   };
 }
 
@@ -297,7 +301,7 @@ export type PlanItem = {
 };
 
 export type PlanMissingSlot = {
-  slot: 'venue' | ServiceCategory;
+  slot: 'venue' | 'beverages' | ServiceCategory;
   label: string;
   reason: string;
 };

@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { beverageBudgetAmount, rentalBudgetAmount } from './eventBudgetCost.ts';
+import { beverageBudgetAmount, parseBudgetSimulationScope, rentalBudgetAmount } from './eventBudgetCost.ts';
+
+test('le périmètre de simulation inconnu reste la simulation complète', () => {
+  assert.equal(parseBudgetSimulationScope('drinks'), 'drinks');
+  assert.equal(parseBudgetSimulationScope('rentals'), 'rentals');
+  assert.equal(parseBudgetSimulationScope('services'), 'services');
+  assert.equal(parseBudgetSimulationScope('autre'), 'complete');
+});
 
 test('les chaises se comptent à la pièce, et la livraison en supplément une seule fois', () => {
   const chairs = rentalBudgetAmount({

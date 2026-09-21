@@ -1019,7 +1019,7 @@ function ClientMarketplaceInner() {
                     const nextBrief: EventPlanBrief = { ...brief, matchMode: 'widen', missingStrategy: 'widen_city' };
                     if (slot.slot === 'venue') {
                       nextBrief.includeVenue = 'yes';
-                    } else {
+                    } else if (slot.slot !== 'beverages') {
                       nextBrief.slots = { ...brief.slots, [slot.slot]: 'required' };
                       const nextFlex = flexSlots.includes(slot.slot) ? flexSlots : [...flexSlots, slot.slot];
                       setFlexSlots(nextFlex);

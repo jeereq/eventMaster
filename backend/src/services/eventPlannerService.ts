@@ -1,7 +1,7 @@
 import { MarketplaceBookingStatus, ServiceCategory, VenuePriceUnit } from '@prisma/client';
 import { prisma } from '../db';
 import { parseListingDetails } from '../utils/listingDetails';
-import { parsePhotoUrls, coverFromMedia, isServiceRentalCategory, priceUnitLabel, serviceCategoryLabel } from '../utils/publicVenue';
+import { parsePhotoUrls, coverFromMedia, isServiceRentalCategory, priceUnitLabel, RENTAL_CATEGORIES, serviceCategoryLabel } from '../utils/publicVenue';
 import { normalizeAllowedCity, normalizeAllowedCommune } from '../utils/rdcCities';
 import { collectUnavailableDates, isRangeAvailable } from '../utils/marketplaceDates';
 import {
@@ -12,7 +12,7 @@ import {
   type ParsedEventPlanInput,
   type SlotPriority,
 } from './eventPlanBrief';
-import { beverageBudgetAmount, rentalBudgetAmount } from './eventBudgetCost';
+import { beverageBudgetAmount, parseBudgetSimulationScope, rentalBudgetAmount, type BudgetSimulationScope } from './eventBudgetCost';
 
 export { EVENT_PLAN_TYPES, type EventPlanType };
 
@@ -135,7 +135,7 @@ type Scored<T> = T & {
 };
 
 type MissingSlot = {
-  slot: 'venue' | ServiceCategory;
+  slot: 'venue' | 'beverages' | ServiceCategory;
   label: string;
   reason: string;
 };
@@ -399,6 +399,55 @@ function templateShare(eventType: EventPlanType, key: string): number {
   return (slot?.share || 0.08) * 100;
 }
 
+const SEATED_RENTAL_SHARE = 0.12;
+const OTHER_RENTAL_SHARE = 0.08;
+
+function slotsForScope(scope: BudgetSimulationScope, slots: PackSlot[], eventType: EventPlanType): PackSlot[] {
+  if (scope === 'drinks') return [];
+  if (scope === 'rentals') {
+    const rentals = slots.filter((slot) => isServiceRentalCategory(slot.category));
+    if (rentals.length) return rentals;
+    return RENTAL_CATEGORIES.map((category) => ({
+      category,
+      share: category === 'RENTAL_CHAIRS' || category === 'RENTAL_TABLEWARE' ? SEATED_RENTAL_SHARE : OTHER_RENTAL_SHARE,
+      required: false,
+      flex: category === 'RENTAL_CHAIRS' || category === 'RENTAL_TABLEWARE',
+    }));
+  }
+  if (scope === 'services') {
+    const trades = slots.filter((slot) => !isServiceRentalCategory(slot.category));
+    if (trades.length) return trades;
+    return EVENT_PACKS[eventType].required
+      .filter((slot) => !isServiceRentalCategory(slot.category))
+      .map((slot) => ({
+        category: slot.category,
+        share: slot.share,
+        required: true,
+        flex: false,
+      }));
+  }
+  return slots;
+}
+
+function scopeBlurb(scope: BudgetSimulationScope, style: PackStyle, fallback: string): string {
+  if (scope === 'drinks') {
+    if (style === 'cheap') return 'Quantités les plus sobres, au conditionnement le moins cher.';
+    if (style === 'comfort') return 'Quantités plus généreuses, au tarif le plus bas de chaque famille.';
+    return 'Quantités courantes, au tarif le plus bas de chaque famille.';
+  }
+  if (scope === 'rentals') {
+    if (style === 'cheap') return 'Les locations les moins chères. Chaises et vaisselle restent chiffrées par invité.';
+    if (style === 'comfort') return 'Plus de matériels, dans l’enveloppe.';
+    return 'Locations utiles au nombre d’invités, si le budget le permet.';
+  }
+  if (scope === 'services') {
+    if (style === 'cheap') return 'Les métiers les moins chers qui tiennent dans l’enveloppe.';
+    if (style === 'comfort') return 'Plus de métiers, dans l’enveloppe.';
+    return 'Métiers proches de votre brief, options si le budget le permet.';
+  }
+  return fallback;
+}
+
 function resolveSlots(input: ParsedEventPlanInput): PackSlot[] {
   const template = EVENT_PACKS[input.eventType];
   const hasCustomSlots = Object.keys(input.slots).length > 0;
@@ -471,7 +520,9 @@ const offeringInclude = {
 export async function buildEventPlanProposals(body: Record<string, unknown> & {
   favoriteSlugs?: Array<{ kind: string; slug: string }>;
 }) {
-  const input = parseEventPlanInput(body);
+  const parsed = parseEventPlanInput(body);
+  const budgetScope = parseBudgetSimulationScope(body.budgetScope);
+  const input = budgetScope === 'complete' ? parsed : { ...parsed, includeVenue: 'no' as const };
   const city = normalizeAllowedCity(input.city) || '';
   const commune = city ? (normalizeAllowedCommune(city, input.commune) || '') : '';
   const guests = input.guestCount;
@@ -483,7 +534,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
   );
 
   const relaxed: { commune?: boolean; city?: boolean; eventType?: boolean; availability?: boolean } = {};
-  const serviceSlotsRaw = resolveSlots(input);
+  const serviceSlotsRaw = slotsForScope(budgetScope, resolveSlots(input), input.eventType);
   const { venueShare, slots: serviceSlots } = renormalizeShares(
     resolveVenueShare(input, serviceSlotsRaw),
     serviceSlotsRaw,
@@ -602,7 +653,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     relaxed.eventType = true;
   }
 
-  const drinkRows = guests > 0
+  const drinkRows = (budgetScope === 'complete' || budgetScope === 'drinks') && guests > 0
     ? await prisma.vendorBeveragePrice.findMany({
       where: { isAvailable: true, brand: { isActive: true } },
       select: {
@@ -780,7 +831,10 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     const laterSlots = optionalSlots.filter((slot) => slot.category !== 'RENTAL_CHAIRS' && slot.category !== 'RENTAL_TABLEWARE');
     seatedSlots.forEach((slot) => addSlot(slot, false, true));
 
-    const drinks = beverageBudgetAmount(drinkOffers, guests, input.eventType, style.style);
+    const includeDrinks = budgetScope === 'complete' || budgetScope === 'drinks';
+    const drinks = includeDrinks
+      ? beverageBudgetAmount(drinkOffers, guests, input.eventType, style.style)
+      : null;
     if (drinks) {
       items.push({
         kind: 'service',
@@ -804,12 +858,22 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
       });
       total += drinks.amountFc;
       notes.push('Boissons : tarif le plus bas du catalogue, sans filtre de ville.');
+    } else if (budgetScope === 'drinks') {
+      missing.push({
+        slot: 'beverages',
+        label: 'Boissons',
+        reason: guests < 1
+          ? 'Indiquez le nombre d’invités pour chiffrer les boissons.'
+          : 'Aucun tarif publié pour ce type d’événement.',
+      });
     }
 
-    if (style.style !== 'cheap') {
+    if (style.style !== 'cheap' || budgetScope !== 'complete') {
       laterSlots.forEach((slot) => {
         const remaining = envelope - total;
-        const minKeep = style.style === 'comfort' ? 0 : Math.round(envelope * 0.04);
+        const minKeep = style.style === 'balanced' && budgetScope === 'complete'
+          ? Math.round(envelope * 0.04)
+          : 0;
         if (remaining <= minKeep) return;
         addSlot(slot, false);
       });
@@ -855,7 +919,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     return {
       id: style.id,
       label: style.label,
-      blurb: style.blurb,
+      blurb: scopeBlurb(budgetScope, style.style, style.blurb),
       style: style.style,
       totalFc: total,
       leftoverFc,

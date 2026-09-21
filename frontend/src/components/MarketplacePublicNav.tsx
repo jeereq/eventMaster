@@ -21,7 +21,7 @@ export default function MarketplacePublicNav({
     { id: 'venues' as const, href: '/marketplace/salles', label: 'Salles', short: 'Salles', icon: Building2 },
     { id: 'services' as const, href: '/marketplace/prestataires', label: 'Prestataires', short: 'Prestataires', icon: Sparkles },
     { id: 'rentals' as const, href: '/marketplace/locations', label: 'Matériel & Équipements', short: 'Matériel', icon: KeyRound },
-    { id: 'drinks' as const, href: '/marketplace/boissons', label: 'Boissons et prix', short: 'Boissons', icon: Wine },
+    { id: 'drinks' as const, href: '/marketplace/boissons', label: 'Boissons', short: 'Boissons', icon: Wine },
     { id: 'events' as const, href: '/marketplace/evenements', label: 'Événements', short: 'Agenda', icon: Calendar },
   ];
   return (

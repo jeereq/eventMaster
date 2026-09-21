@@ -5,7 +5,7 @@ import { coverFromMedia, isServiceRentalCategory, parsePhotoUrls, serviceCategor
 import { collectUnavailableDates, isRangeAvailable, toDateKey } from '../utils/marketplaceDates';
 import { allowedCityPrismaFilter, normalizeAllowedCity, normalizeAllowedCommune } from '../utils/rdcCities';
 import { EVENT_PLAN_TYPES, type EventPlanType } from './eventPlanBrief';
-import { beverageBudgetAmount, rentalBudgetAmount, type BudgetStyle } from './eventBudgetCost';
+import { beverageBudgetAmount, parseBudgetSimulationScope, rentalBudgetAmount, type BudgetSimulationScope, type BudgetStyle } from './eventBudgetCost';
 import { getGeminiApiKey, requestGeminiJson } from './geminiJsonClient.ts';
 import { requestOpenAiJson } from './openaiJsonClient.ts';
 
@@ -111,11 +111,53 @@ export type EventPlanAiResult = {
   };
 };
 
+const DEDICATED_TRADE_CAP = 6;
+const DEDICATED_RENTAL_CAP = 8;
+
 const AI_STYLES: Array<{ id: EventPlanAiStyleId; label: string; blurb: string; maxTrades: number; maxRentals: number }> = [
   { id: 'eco', label: 'Économique', blurb: 'Le moins cher qui tient dans l’enveloppe. Chaises et boissons restent chiffrées.', maxTrades: 2, maxRentals: 2 },
   { id: 'balanced', label: 'Équilibré', blurb: 'Répartition proche de votre projet, options si le budget le permet.', maxTrades: 3, maxRentals: 2 },
   { id: 'comfort', label: 'Confort', blurb: 'Le plus complet dans l’enveloppe, options incluses.', maxTrades: 4, maxRentals: 3 },
 ];
+
+function scopeBlurb(scope: BudgetSimulationScope, style: { id: EventPlanAiStyleId; blurb: string }): string {
+  if (scope === 'rentals') {
+    if (style.id === 'eco') return 'Les locations les moins chères. Chaises et vaisselle restent chiffrées par invité.';
+    if (style.id === 'comfort') return 'Plus de matériels, dans l’enveloppe.';
+    return 'Locations utiles au nombre d’invités, si le budget le permet.';
+  }
+  if (scope === 'services') {
+    if (style.id === 'eco') return 'Les métiers les moins chers qui tiennent dans l’enveloppe.';
+    if (style.id === 'comfort') return 'Plus de métiers, dans l’enveloppe.';
+    return 'Métiers proches de votre projet, options si le budget le permet.';
+  }
+  return style.blurb;
+}
+
+async function loadDrinkOffers(guests: number) {
+  if (guests < 1) return [];
+  const rows = await prisma.vendorBeveragePrice.findMany({
+    where: { isAvailable: true, brand: { isActive: true } },
+    select: {
+      quantity: true,
+      unitLabel: true,
+      priceFc: true,
+      promoPriceFc: true,
+      promoEndsAt: true,
+      brand: { select: { name: true, kind: true, imageUrl: true } },
+    },
+  });
+  return rows.map((row) => ({
+    kind: row.brand.kind,
+    brandName: row.brand.name,
+    imageUrl: row.brand.imageUrl,
+    quantity: row.quantity,
+    unitLabel: row.unitLabel,
+    priceFc: row.priceFc,
+    promoPriceFc: row.promoPriceFc,
+    promoEndsAt: row.promoEndsAt,
+  }));
+}
 
 function budgetStyleOf(id: EventPlanAiStyleId): BudgetStyle {
   if (id === 'eco') return 'cheap';
@@ -356,9 +398,10 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
   const budget = Number.isFinite(budgetMaxFc) && budgetMaxFc > 0 ? Math.round(budgetMaxFc) : 0;
   const dateKey = toDateKey(String(body.eventDate || '')) || '';
   const prompt = typeof body.prompt === 'string' ? body.prompt.trim().slice(0, 1200) : '';
-  const includeVenue = body.includeVenue !== false;
-  const includeTrades = body.includeTrades !== false;
-  const includeRentals = body.includeRentals !== false;
+  const budgetScope = parseBudgetSimulationScope(body.budgetScope);
+  const includeVenue = budgetScope === 'complete' && body.includeVenue !== false;
+  const includeTrades = budgetScope === 'services' || (budgetScope === 'complete' && body.includeTrades !== false);
+  const includeRentals = budgetScope === 'rentals' || (budgetScope === 'complete' && body.includeRentals !== false);
   const keepVenueSlug = typeof body.keepVenueSlug === 'string' ? body.keepVenueSlug.trim() : '';
   const keepServiceSlugs = Array.isArray(body.keepServiceSlugs)
     ? body.keepServiceSlugs.filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
@@ -384,6 +427,50 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     wantedCategories,
     venueAmenities,
   };
+
+  if (budgetScope === 'drinks') {
+    const drinkOffers = await loadDrinkOffers(guests);
+    const packages = AI_STYLES.map((style) => {
+      const drinks = beverageBudgetAmount(drinkOffers, guests, eventType, budgetStyleOf(style.id));
+      const warnings = drinks
+        ? ['Boissons : tarif le plus bas du catalogue, sans filtre de ville.']
+        : [guests < 1
+          ? 'Indiquez le nombre d’invités pour chiffrer les boissons.'
+          : 'Aucun tarif publié pour ce type d’événement.'];
+      return {
+        id: style.id,
+        label: style.label,
+        blurb: style.id === 'eco'
+          ? 'Quantités les plus sobres, au conditionnement le moins cher.'
+          : style.id === 'comfort'
+            ? 'Quantités plus généreuses, au tarif le plus bas de chaque famille.'
+            : 'Quantités courantes, au tarif le plus bas de chaque famille.',
+        summary: drinks?.note || 'Simulation des boissons uniquement.',
+        rationale: '',
+        warnings,
+        estimatedTotalFc: drinks?.amountFc || 0,
+        venue: null,
+        services: drinks ? [{
+          kind: 'service' as const,
+          slug: 'budget:boissons',
+          title: 'Boissons',
+          orgName: 'Catalogue EventMaster',
+          location: '',
+          coverUrl: drinks.imageUrl,
+          estimatedFc: drinks.amountFc,
+          categoryLabel: 'Boissons',
+          href: '/marketplace/boissons',
+          detail: drinks.note,
+        }] : [],
+      };
+    });
+    return {
+      catalog: { venues: 0, trades: 0, rentals: 0 },
+      packages,
+      criteria,
+    };
+  }
+
   const catalogOpts = {
     city,
     commune,
@@ -480,29 +567,7 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
   const ai = await askPlannerJson(system, user);
   const rawPackages = Array.isArray(ai.packages) ? ai.packages : [];
 
-  const drinkRows = guests > 0
-    ? await prisma.vendorBeveragePrice.findMany({
-      where: { isAvailable: true, brand: { isActive: true } },
-      select: {
-        quantity: true,
-        unitLabel: true,
-        priceFc: true,
-        promoPriceFc: true,
-        promoEndsAt: true,
-        brand: { select: { name: true, kind: true, imageUrl: true } },
-      },
-    })
-    : [];
-  const drinkOffers = drinkRows.map((row) => ({
-    kind: row.brand.kind,
-    brandName: row.brand.name,
-    imageUrl: row.brand.imageUrl,
-    quantity: row.quantity,
-    unitLabel: row.unitLabel,
-    priceFc: row.priceFc,
-    promoPriceFc: row.promoPriceFc,
-    promoEndsAt: row.promoEndsAt,
-  }));
+  const drinkOffers = budgetScope === 'complete' ? await loadDrinkOffers(guests) : [];
 
   const hydrate = (
     style: typeof AI_STYLES[number],
@@ -533,10 +598,16 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
 
     const warnings = extraWarnings.slice(0, 6);
     if (includeVenue && !venue) warnings.unshift('Aucune salle retenue dans le catalogue disponible.');
-    if (!uniqueServices.length && (includeTrades || includeRentals)) {
+    if (!uniqueServices.length && includeTrades && includeRentals) {
       warnings.push('Aucun métier ni location retenu dans le catalogue disponible.');
+    } else if (!uniqueServices.length && includeTrades) {
+      warnings.push('Aucun métier retenu dans le catalogue disponible.');
+    } else if (!uniqueServices.length && includeRentals) {
+      warnings.push('Aucune location retenue dans le catalogue disponible.');
     }
-    const drinks = beverageBudgetAmount(drinkOffers, guests, eventType, budgetStyleOf(style.id));
+    const drinks = budgetScope === 'complete'
+      ? beverageBudgetAmount(drinkOffers, guests, eventType, budgetStyleOf(style.id))
+      : null;
     if (drinks) {
       uniqueServices.push({
         kind: 'service',
@@ -562,7 +633,7 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     return {
       id: style.id,
       label: style.label,
-      blurb: style.blurb,
+      blurb: scopeBlurb(budgetScope, style),
       summary: summary.trim().slice(0, 400) || `Proposition ${style.label.toLowerCase()} basée sur le catalogue EventMaster.`,
       rationale: rationale.trim().slice(0, 1200),
       warnings,
@@ -617,8 +688,10 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     });
     for (const [, group] of groups) {
       const rental = Boolean(group[0]?.category && isServiceRentalCategory(group[0].category));
-      if (rental && rentals >= style.maxRentals) continue;
-      if (!rental && trades >= style.maxTrades) continue;
+      const rentalLimit = budgetScope === 'rentals' ? DEDICATED_RENTAL_CAP : style.maxRentals;
+      const tradeLimit = budgetScope === 'services' ? DEDICATED_TRADE_CAP : style.maxTrades;
+      if (rental && rentals >= rentalLimit) continue;
+      if (!rental && trades >= tradeLimit) continue;
       const pick = pickByStyle(group, style.id, usedServices);
       if (!pick) continue;
       const cost = pick.estimatedFc || 0;

@@ -130,7 +130,7 @@ function MarketplaceHubPageInner() {
                 : 'hub'
       }
       heroTitle="Salles, prestataires, matériel, boissons et événements"
-      heroDescription="Explorez le marketplace EventMaster : salles, prestataires, matériel (chaises, habits, véhicules, sono) avec retrait ou livraison, boissons et prix, et événements publics. Affinez par ville, commune, prix ou autour de vous."
+      heroDescription="Explorez le marketplace EventMaster : salles, prestataires, matériel (chaises, habits, véhicules, sono) avec retrait ou livraison, boissons, et événements publics. Affinez par ville, commune, prix ou autour de vous."
       mode={mode}
       onViewChange={setView}
       gridCols={gridCols}

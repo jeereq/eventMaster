@@ -228,7 +228,7 @@ export default function EventPlanPacks({
                     <li key={`${pack.id}-${slot.slot}`} className="text-xs leading-relaxed">
                       <span className="font-semibold">{slot.label} · </span>
                       {slot.reason}
-                      {onWidenSlot ? (
+                      {onWidenSlot && slot.slot !== 'beverages' ? (
                         <button
                           type="button"
                           className="ml-1 font-semibold underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm"

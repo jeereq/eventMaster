@@ -3,6 +3,13 @@ import type { EventPlanType } from './eventPlanBrief';
 
 export type BudgetStyle = 'cheap' | 'balanced' | 'comfort';
 
+export type BudgetSimulationScope = 'complete' | 'drinks' | 'rentals' | 'services';
+
+export function parseBudgetSimulationScope(value: unknown): BudgetSimulationScope {
+  if (value === 'drinks' || value === 'rentals' || value === 'services') return value;
+  return 'complete';
+}
+
 const PER_PIECE = new Set(['RENTAL_CHAIRS', 'RENTAL_TABLEWARE']);
 
 export type RentalBudgetInput = {

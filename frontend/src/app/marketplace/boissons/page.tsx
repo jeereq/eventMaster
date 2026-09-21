@@ -146,7 +146,7 @@ function MarketplaceDrinksPageInner() {
     <PublicPageShell faqHref="/faq">
       <PublicPageHero
         compact
-        title="Boissons et prix"
+        title="Boissons"
         description="Bières, boissons, vins et champagnes du catalogue EventMaster. Le prix affiché est le plus bas publié par un prestataire. Une promotion en cours remplace le tarif normal jusqu’à sa date de fin."
       >
         <MarketplacePublicNav active="drinks" />
@@ -171,7 +171,7 @@ function MarketplaceDrinksPageInner() {
             onOpen={() => setDraft(applied)}
             onApply={() => applyFilters(draft)}
             modalTitle="Filtrer les boissons"
-            shareTitle="Boissons et prix"
+            shareTitle="Boissons"
             filters={(
               <>
                 <CatalogueFilterField

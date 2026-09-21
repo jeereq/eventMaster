@@ -7,7 +7,9 @@ import { Alert, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
 import { LISTING_EVENT_TYPES, VENUE_AMENITIES, type ListingAmenityId, type ListingEventTypeId } from '@/lib/listingDetails';
-import { SERVICE_CATEGORY_LABELS, type ServiceCategory } from '@/lib/marketplace';
+import { SERVICE_CATEGORY_LABELS, SERVICE_RENTAL_CATEGORIES, SERVICE_TRADE_CATEGORIES, type ServiceCategory } from '@/lib/marketplace';
+import BudgetSimulationScopePicker from '@/components/BudgetSimulationScopePicker';
+import type { BudgetSimulationScope } from '@/lib/budgetSimulation';
 import { communesForCity } from '@/lib/rdcCities';
 import { enabledMarketplaceCities, resolveUsdExchangeRateCdf } from '@/lib/platformCities';
 import type { EventPlanAiPackage, EventPlanAiResult } from '@/lib/eventPlan';
@@ -153,6 +155,9 @@ export default function EventPrepAiSimulator({
   const [includeVenue, setIncludeVenue] = useState(true);
   const [includeTrades, setIncludeTrades] = useState(true);
   const [includeRentals, setIncludeRentals] = useState(true);
+  const [budgetScope, setBudgetScope] = useState<BudgetSimulationScope>('complete');
+  const [guestError, setGuestError] = useState('');
+  const completeFlags = useRef({ venue: true, trades: true, rentals: true });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [cityError, setCityError] = useState('');
@@ -165,7 +170,12 @@ export default function EventPrepAiSimulator({
   const [saveBusy, setSaveBusy] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const communes = useMemo(() => communesForCity(city), [city]);
-  const categoryChoices = useMemo(() => suggestedCategoriesForEvent(eventType), [eventType]);
+  const categoryChoices = useMemo(() => {
+    if (budgetScope === 'rentals') return SERVICE_RENTAL_CATEGORIES;
+    if (budgetScope === 'services') return SERVICE_TRADE_CATEGORIES;
+    if (budgetScope === 'drinks') return [];
+    return suggestedCategoriesForEvent(eventType);
+  }, [budgetScope, eventType]);
   const selected = result?.packages.find((pack) => pack.id === selectedId) || result?.packages[0] || null;
 
   const { budgetMaxUsdCalculated, budgetMaxFcCalculated } = useMemo(() => {
@@ -378,16 +388,57 @@ export default function EventPrepAiSimulator({
     exchangeRate,
   ]);
 
+  const applyBudgetScope = (next: BudgetSimulationScope) => {
+    if (next === budgetScope) return;
+    if (budgetScope === 'complete' && next !== 'complete') {
+      completeFlags.current = { venue: includeVenue, trades: includeTrades, rentals: includeRentals };
+    }
+    setBudgetScope(next);
+    setGuestError('');
+    setCityError('');
+    if (next === 'drinks') {
+      setIncludeVenue(false);
+      setIncludeTrades(false);
+      setIncludeRentals(false);
+      return;
+    }
+    if (next === 'rentals') {
+      setIncludeVenue(false);
+      setIncludeTrades(false);
+      setIncludeRentals(true);
+      return;
+    }
+    if (next === 'services') {
+      setIncludeVenue(false);
+      setIncludeTrades(true);
+      setIncludeRentals(false);
+      return;
+    }
+    setIncludeVenue(completeFlags.current.venue);
+    setIncludeTrades(completeFlags.current.trades);
+    setIncludeRentals(completeFlags.current.rentals);
+  };
+
   const run = async () => {
     if (loading) return;
-    if (!city.trim()) {
+    if (budgetScope === 'drinks') {
+      if (!(Number(guestCount) > 0)) {
+        setGuestError('Indiquez le nombre d’invités pour chiffrer les boissons.');
+        setCityError('');
+        setError('');
+        setActiveTab('create');
+        return;
+      }
+    } else if (!city.trim()) {
       setCityError('Choisissez une ville pour composer les packs du catalogue local.');
+      setGuestError('');
       setError('');
       setActiveTab('create');
       citySelectRef.current?.focus();
       return;
     }
     setCityError('');
+    setGuestError('');
     const current = getAiSimulationAllowance();
     if (!current.canSimulate) {
       setPurchaseModalOpen(true);
@@ -417,6 +468,7 @@ export default function EventPrepAiSimulator({
         includeVenue,
         includeTrades,
         includeRentals,
+        budgetScope,
         keepVenueSlug: keepVenue ? defaults?.keepVenueSlug : undefined,
         keepServiceSlugs: defaults?.keepServiceSlugs || [],
         ...criteria,
@@ -732,14 +784,20 @@ export default function EventPrepAiSimulator({
           className="space-y-3"
         >
           <StudioHowTo
-            steps={[
-              'Indiquez ville, date et budget',
-              'Générez 3 packs (éco, équilibré, confort)',
-              'Retenez un pack avant de réserver',
-            ]}
+            steps={
+              budgetScope === 'drinks'
+                ? ['Choisissez Boissons', 'Indiquez les invités', 'Comparez éco, équilibré et confort']
+                : budgetScope === 'rentals'
+                  ? ['Choisissez Locations', 'Indiquez ville et invités', 'Comparez les 3 formules']
+                  : budgetScope === 'services'
+                    ? ['Choisissez Services', 'Indiquez ville et budget', 'Comparez les 3 formules']
+                    : ['Indiquez ville, date et budget', 'Générez 3 packs (éco, équilibré, confort)', 'Retenez un pack avant de réserver']
+            }
           />
           {open ? (
         <div className="space-y-3">
+          <BudgetSimulationScopePicker value={budgetScope} onChange={applyBudgetScope} />
+          {budgetScope !== 'drinks' ? (
           <label className="space-y-1 block">
             <span className={FIELD_LABEL}>Décrivez votre événement</span>
             <textarea
@@ -757,6 +815,7 @@ export default function EventPrepAiSimulator({
               .
             </p>
           </label>
+          ) : null}
 
           <div
             className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap no-scrollbar -mx-1 px-1"
@@ -780,6 +839,8 @@ export default function EventPrepAiSimulator({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            {budgetScope !== 'drinks' ? (
+            <>
             <label className="space-y-1">
               <span className={FIELD_LABEL}>Ville</span>
               <select
@@ -818,15 +879,29 @@ export default function EventPrepAiSimulator({
                 ))}
               </select>
             </label>
+            </>
+            ) : null}
             <div className="space-y-1.5">
               <Input
                 label="Invités"
                 type="number"
                 min={1}
                 value={guestCount}
-                onChange={(e) => setGuestCount(e.target.value)}
+                onChange={(e) => {
+                  setGuestCount(e.target.value);
+                  setGuestError('');
+                }}
                 placeholder="120"
+                aria-invalid={guestError ? true : undefined}
+                aria-describedby={guestError ? `${tabsId}-guest-error` : undefined}
               />
+              {guestError ? (
+                <p id={`${tabsId}-guest-error`} className="text-xs text-danger font-medium" role="alert">
+                  {guestError}
+                </p>
+              ) : budgetScope === 'drinks' ? (
+                <p className="text-xs text-muted">Obligatoire pour calculer les quantités.</p>
+              ) : null}
               <div className="flex flex-wrap gap-1 items-center" role="group" aria-label="Raccourcis nombre d'invités">
                 <span className="text-[11px] text-muted mr-0.5 font-medium">Rapide :</span>
                 {GUEST_PRESETS.map((count) => {
@@ -985,6 +1060,7 @@ export default function EventPrepAiSimulator({
             </span>
           </div>
 
+          {budgetScope === 'complete' ? (
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-foreground">
             <label className="inline-flex items-center gap-2 min-h-11">
               <input type="checkbox" className="size-4 accent-primary" checked={includeVenue} onChange={(e) => setIncludeVenue(e.target.checked)} />
@@ -1005,7 +1081,9 @@ export default function EventPrepAiSimulator({
               </label>
             ) : null}
           </div>
+          ) : null}
 
+          {budgetScope !== 'drinks' ? (
           <div className="rounded-[var(--radius-card)] border border-border">
             <button
               type="button"
@@ -1091,7 +1169,11 @@ export default function EventPrepAiSimulator({
                 <div className="space-y-1.5">
                   <p className={FIELD_LABEL}>Prestations souhaitées</p>
                   <p className="text-xs text-muted leading-relaxed">
-                    Chaises et vaisselle : une pièce par invité, livraison en supplément comptée une fois. Les autres locations restent un lot. Les boissons s’ajoutent toutes seules, au conditionnement le moins cher.
+                    {budgetScope === 'rentals'
+                      ? 'Chaises et vaisselle : une pièce par invité, livraison en supplément comptée une fois. Les autres locations restent un lot.'
+                      : budgetScope === 'services'
+                        ? 'Ces métiers orientent les trois formules. La salle, les locations et les boissons restent de côté.'
+                        : 'Chaises et vaisselle : une pièce par invité, livraison en supplément comptée une fois. Les autres locations restent un lot. Les boissons s’ajoutent toutes seules, au conditionnement le moins cher.'}
                   </p>
                   <div className="flex flex-wrap gap-1.5" role="group" aria-label="Prestations souhaitées">
                     {categoryChoices.map((id) => {
@@ -1138,6 +1220,7 @@ export default function EventPrepAiSimulator({
               </div>
             ) : null}
           </div>
+          ) : null}
 
           <div className="flex flex-col sm:flex-row gap-2">
             <Button
