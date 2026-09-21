@@ -18,6 +18,7 @@ import { useCatalogueQueryState } from '@/lib/catalogueQuery';
 import { EMPTY_CATALOGUE_EXTRAS, ROOM_TYPE_FILTER_OPTIONS, clearCatalogueExtraChip } from '@/lib/catalogueEntityFilters';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
+import MarketplaceCatalogueSkeleton from '@/components/MarketplaceCatalogueSkeleton';
 import { usePageSize } from '@/components/ui';
 import CatalogueFilterBar, {
   CatalogueEntityFilterFields,
@@ -175,7 +176,14 @@ function MarketplaceVenuesPageInner() {
 
 export default function MarketplaceVenuesPage() {
   return (
-    <Suspense fallback={<div className="page-container py-16 text-sm text-muted">Chargement des salles…</div>}>
+    <Suspense fallback={(
+      <MarketplaceCatalogueSkeleton
+        active="venues"
+        title="Trouvez une salle pour votre événement"
+        description="Parcourez les lieux publiés. Filtrez par ville, commune, quartier, prix ou autour de vous."
+        label="Chargement des salles"
+      />
+    )}>
       <MarketplaceVenuesPageInner />
     </Suspense>
   );

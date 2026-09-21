@@ -262,8 +262,8 @@ function DrinkOrderEditor({
 
   return (
     <CriteriaGroup label="Commande précise" hint="Exemple : 10 casiers de Tembo et 5 casiers de Coca. Cette commande remplace l’estimation par invité.">
-      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_5.5rem_auto] gap-2 items-end">
-        <label className="space-y-1 block">
+      <div className="grid grid-cols-2 gap-2 items-end xl:grid-cols-[minmax(0,1fr)_auto_5.5rem_auto]">
+        <label className="space-y-1 block col-span-2 xl:col-span-1">
           <span className="text-xs font-semibold text-muted">Marque</span>
           <select className={field} value={brandId} disabled={disabled} onChange={(event) => setBrandId(event.target.value)} aria-label="Marque de la commande">
             <option value="">Choisir</option>
@@ -288,7 +288,7 @@ function DrinkOrderEditor({
           <span className="text-xs font-semibold text-muted">Nombre</span>
           <input className={field} inputMode="numeric" min={1} max={500} value={packs} onChange={(event) => setPacks(event.target.value)} aria-label="Nombre de conditionnements" />
         </label>
-        <button type="button" onClick={add} disabled={disabled || !brandId} className="min-h-11 px-3 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground text-xs font-semibold disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+        <button type="button" onClick={add} disabled={disabled || !brandId} className="col-span-2 xl:col-span-1 min-h-11 px-3 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground text-xs font-semibold disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
           Ajouter
         </button>
       </div>

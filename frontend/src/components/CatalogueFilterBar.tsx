@@ -328,7 +328,7 @@ export default function CatalogueFilterBar({
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={searchPlaceholder}
               aria-label={searchLabel || searchPlaceholder}
-              className="w-full h-9 sm:h-10 min-h-9 sm:min-h-10 pl-9 pr-3 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25"
+              className="w-full min-h-11 pl-9 pr-3 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
           {hasFilters && (
@@ -336,7 +336,7 @@ export default function CatalogueFilterBar({
               type="button"
               onClick={openModal}
               className={cn(
-                'relative min-h-9 sm:min-h-10 sm:h-10 shrink-0 px-3 rounded-[var(--radius-button)] border shadow-lg backdrop-blur-xl inline-flex items-center justify-center gap-1.5 text-xs font-bold transition touch-manipulation',
+                'relative min-h-11 shrink-0 px-3 rounded-[var(--radius-button)] border shadow-lg backdrop-blur-xl inline-flex items-center justify-center gap-1.5 text-xs font-bold transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                 count
                   ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                   : 'bg-surface/95 text-foreground border-white/25 dark:border-white/10',
@@ -415,7 +415,7 @@ export default function CatalogueFilterBar({
               size="sm"
               onClick={openModal}
               leftIcon={<SlidersHorizontal className="w-3.5 h-3.5" />}
-              className="shrink-0 !min-h-9 sm:!min-h-11 px-2.5 sm:px-3"
+              className="shrink-0 !min-h-11 px-2.5 sm:px-3"
             >
               <span className="hidden min-[380px]:inline">Filtres</span>
               {count > 0 ? (
@@ -627,7 +627,7 @@ export function CatalogueGeoFields({
               Choisissez uniquement une commune, puis un quartier, dans la liste. Le rayon part du centre de la commune.
             </p>
             {!normalizeRdcCity(value.city) ? (
-              <p className="text-xs text-rose-600 font-medium">Choisissez d’abord {cityList} en haut.</p>
+              <p className="text-xs text-danger font-medium" role="status">Choisissez d’abord {cityList} en haut.</p>
             ) : (
               <>
                 <div>
@@ -672,7 +672,7 @@ export function CatalogueGeoFields({
             />
           </div>
         ) : null}
-        {error ? <p className="text-xs text-rose-600 font-medium">{error}</p> : null}
+        {error ? <p className="text-xs text-danger font-medium" role="alert">{error}</p> : null}
       </CatalogueFilterField>
       ) : null}
     </>

@@ -43,8 +43,8 @@ export default function BudgetSimulationScopePicker({
             {complete.hint}
           </span>
         </button>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          {specialized.map((option) => {
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
+          {specialized.map((option, index) => {
             const selected = value === option.id;
             return (
               <button
@@ -54,6 +54,7 @@ export default function BudgetSimulationScopePicker({
                 onClick={() => onChange(option.id)}
                 className={cn(
                   'text-left rounded-xl border px-3 py-2.5 min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                  index === specialized.length - 1 && 'col-span-2 lg:col-span-1',
                   selected
                     ? 'border-primary-solid bg-primary-solid text-primary-foreground'
                     : 'border-border bg-surface text-foreground hover:border-primary/40',
@@ -61,7 +62,7 @@ export default function BudgetSimulationScopePicker({
               >
                 <span className="block text-sm font-semibold">{option.label}</span>
                 <span className={cn(
-                  'block text-xs mt-0.5 leading-relaxed',
+                  'block text-xs mt-0.5 leading-relaxed line-clamp-3',
                   selected ? 'text-primary-foreground' : 'text-muted',
                 )}
                 >

@@ -121,6 +121,7 @@ export default function EventPrepAiSimulator({
   const [open, setOpen] = useState(defaultOpen || embedded);
   const [activeTab, setActiveTab] = useState<StudioAiTabId>('create');
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [refineOpen, setRefineOpen] = useState(false);
   const [packModalOpen, setPackModalOpen] = useState(false);
   const { site } = usePlatformSite();
   const exchangeRate = resolveUsdExchangeRateCdf(site?.usdExchangeRateCdf);
@@ -406,6 +407,7 @@ export default function EventPrepAiSimulator({
       setIncludeVenue(false);
       setIncludeTrades(false);
       setIncludeRentals(false);
+      setRefineOpen(true);
       return;
     }
     if (next === 'rentals') {
@@ -573,16 +575,16 @@ export default function EventPrepAiSimulator({
       <section
         aria-label="Simulateur budget IA - Fonctionnalité à venir"
         className={cn(
-          'rounded-[var(--radius-card)] border border-amber-500/30 bg-surface p-6 sm:p-8 space-y-5 text-center shadow-xs',
+          'rounded-[var(--radius-card)] border border-festive-accent/30 bg-surface p-6 sm:p-8 space-y-5 text-center shadow-xs',
           className,
         )}
       >
-        <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center border border-amber-500/20">
+        <div className="w-14 h-14 rounded-2xl bg-festive-accent-soft text-festive-accent mx-auto flex items-center justify-center border border-festive-accent/30">
           <Clock className="w-7 h-7" />
         </div>
 
         <div className="space-y-2 max-w-lg mx-auto">
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-festive-accent-soft text-foreground border border-festive-accent/40">
             <Sparkles className="w-3.5 h-3.5" />
             Fonctionnalité à venir
           </span>
@@ -596,7 +598,7 @@ export default function EventPrepAiSimulator({
 
         <div className="p-4 rounded-xl bg-surface-muted/60 border border-border max-w-md mx-auto text-left space-y-2">
           <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-            <Wand2 className="w-3.5 h-3.5 text-primary" />
+            <Wand2 className="w-3.5 h-3.5 text-primary-solid" />
             Ce que proposera cette fonctionnalité prochainement :
           </p>
           <ul className="text-xs text-muted space-y-1.5 list-disc list-inside">
@@ -730,12 +732,12 @@ export default function EventPrepAiSimulator({
                 >
                   <span className="flex items-center justify-between gap-2">
                     <span className="text-xs font-bold text-foreground">{model.title}</span>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20 shrink-0">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary-solid border border-primary/20 shrink-0">
                       {model.badge}
                     </span>
                   </span>
                   <span className="block text-xs text-muted mt-1 leading-snug">{model.summary}</span>
-                  <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary">
+                  <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary-solid">
                     {selected ? <Check className="w-3.5 h-3.5" /> : null}
                     {selected ? 'Prérempli' : 'Préremplir'}
                   </span>
@@ -762,7 +764,7 @@ export default function EventPrepAiSimulator({
             />
           ) : (
             <div className="py-10 px-4 text-center rounded-[var(--radius-card)] border border-dashed border-border bg-surface-muted/30 space-y-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
+              <div className="w-10 h-10 rounded-full bg-primary/10 text-primary-solid flex items-center justify-center mx-auto">
                 <Clock className="w-5 h-5" />
               </div>
               <div className="space-y-1">
@@ -792,70 +794,55 @@ export default function EventPrepAiSimulator({
           <StudioHowTo
             steps={
               budgetScope === 'drinks'
-                ? ['Choisissez Boissons', 'Indiquez les invités', 'Comparez éco, équilibré et confort']
+                ? ['Choisissez Boissons', 'Indiquez les invités ou une commande précise', 'Lancez et comparez les 3 formules']
                 : budgetScope === 'rentals'
-                  ? ['Choisissez Locations', 'Indiquez ville et invités', 'Comparez les 3 formules']
+                  ? ['Choisissez Locations', 'Indiquez la ville, les invités et le budget', 'Affinez le matériel, puis lancez']
                   : budgetScope === 'services'
-                    ? ['Choisissez Services', 'Indiquez ville et budget', 'Comparez les 3 formules']
-                    : ['Indiquez ville, date et budget', 'Générez 3 packs (éco, équilibré, confort)', 'Retenez un pack avant de réserver']
+                    ? ['Choisissez Services', 'Indiquez la ville et le budget', 'Affinez les métiers, puis lancez']
+                    : ['Choisissez la simulation', 'Indiquez le lieu, les invités et le budget', 'Affinez si besoin, puis lancez']
             }
           />
           {open ? (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(18rem,0.95fr)] lg:gap-x-6 lg:items-start">
+        <div className="order-1 lg:col-start-1 lg:row-start-1 space-y-3 min-w-0">
+          <p className="text-xs text-foreground leading-relaxed rounded-[var(--radius-card)] border border-border bg-surface-muted/50 px-3 py-2" aria-live="polite">
+            {budgetScope === 'drinks'
+              ? (wantedDrinkLines.length > 0
+                ? 'La commande précise remplace le calcul par invité. Vous pouvez lancer.'
+                : Number(guestCount) > 0
+                  ? 'Les quantités suivront les invités. Une commande précise, si vous en ajoutez une, prend le dessus.'
+                  : 'Indiquez les invités, ou ouvrez Affiner pour saisir une commande (10 casiers de Tembo, 5 de Coca).')
+              : !city.trim()
+                ? 'Commencez par la ville : le catalogue local en dépend.'
+                : budgetMaxFcCalculated <= 0
+                  ? 'Indiquez un budget maximum pour situer les trois formules.'
+                  : Number(guestCount) > 0
+                    ? 'Le brief est prêt. Affiner les marques ou les métiers reste facultatif.'
+                    : 'Ajoutez le nombre d’invités pour dimensionner la salle, les chaises et les boissons.'}
+          </p>
           <BudgetSimulationScopePicker value={budgetScope} onChange={applyBudgetScope} />
-          <BudgetSimulationCriteria
-            scope={budgetScope}
-            selectedBrandIds={wantedBrandIds}
-            onToggleBrand={(id) => setWantedBrandIds((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])}
-            selectedSaleUnits={wantedSaleUnits}
-            onToggleSaleUnit={(unit) => setWantedSaleUnits((prev) => prev.includes(unit) ? prev.filter((item) => item !== unit) : [...prev, unit])}
-            orderLines={wantedDrinkLines}
-            onChangeOrderLines={setWantedDrinkLines}
-            selectedCategories={wantedCategories}
-            onToggleCategory={(id) => setWantedCategories((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])}
-          />
-          {budgetScope !== 'drinks' ? (
-          <label className="space-y-1 block">
-            <span className={FIELD_LABEL}>Décrivez votre événement</span>
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={3}
-              placeholder="Ex. mariage 120 personnes à Gombe, ambiance chic, besoin traiteur + DJ + habits…"
-              className={cn(NATIVE_FIELD, 'resize-y min-h-[4.5rem] py-2.5')}
-            />
-            <p className="text-xs text-muted">
-              Mariages coutumiers Kongo, Luba, Mongo, Lunda :{' '}
-              <button type="button" className="font-bold text-primary hover:underline" onClick={() => setActiveTab('prompts')}>
-                onglet Prompts
-              </button>
-              .
-            </p>
-          </label>
-          ) : null}
-
-          <div
-            className="flex flex-wrap gap-1.5"
-            role="group"
-            aria-label="Type d’événement"
-          >
-            {LISTING_EVENT_TYPES.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                aria-pressed={eventType === item.id}
-                onClick={() => setEventType(item.id)}
-                className={cn(
-                  CHIP,
-                  chipTone(eventType === item.id),
-                )}
-              >
-                {item.label}
-              </button>
-            ))}
+          <div className="space-y-1.5">
+            <p className={FIELD_LABEL}>Type d’événement</p>
+            <div
+              className="flex flex-wrap gap-1.5"
+              role="group"
+              aria-label="Type d’événement"
+            >
+              {LISTING_EVENT_TYPES.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-pressed={eventType === item.id}
+                  onClick={() => setEventType(item.id)}
+                  className={cn(CHIP, chipTone(eventType === item.id))}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {budgetScope !== 'drinks' ? (
             <>
             <label className="space-y-1">
@@ -1047,7 +1034,7 @@ export default function EventPrepAiSimulator({
 
           {/* Ratio par invité en direct */}
           {guestRatio ? (
-            <div className="rounded-[var(--radius-card)] border border-primary/25 bg-primary/5 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all">
+            <div className="rounded-[var(--radius-card)] border border-primary/25 bg-primary/5 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-colors">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-foreground">Ratio par convive :</span>
@@ -1080,26 +1067,73 @@ export default function EventPrepAiSimulator({
           {budgetScope === 'complete' ? (
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-foreground">
             <label className="inline-flex items-center gap-2 min-h-11">
-              <input type="checkbox" className="size-4 accent-primary" checked={includeVenue} onChange={(e) => setIncludeVenue(e.target.checked)} />
+              <input type="checkbox" className="size-5 accent-primary shrink-0" checked={includeVenue} onChange={(e) => setIncludeVenue(e.target.checked)} />
               Salle
             </label>
             <label className="inline-flex items-center gap-2 min-h-11">
-              <input type="checkbox" className="size-4 accent-primary" checked={includeTrades} onChange={(e) => setIncludeTrades(e.target.checked)} />
+              <input type="checkbox" className="size-5 accent-primary shrink-0" checked={includeTrades} onChange={(e) => setIncludeTrades(e.target.checked)} />
               Prestataires
             </label>
             <label className="inline-flex items-center gap-2 min-h-11">
-              <input type="checkbox" className="size-4 accent-primary" checked={includeRentals} onChange={(e) => setIncludeRentals(e.target.checked)} />
+              <input type="checkbox" className="size-5 accent-primary shrink-0" checked={includeRentals} onChange={(e) => setIncludeRentals(e.target.checked)} />
               Matériel & Équipements
             </label>
             {defaults?.keepVenueSlug ? (
               <label className="inline-flex items-center gap-2 min-h-11">
-                <input type="checkbox" className="size-4 accent-primary" checked={keepVenue} onChange={(e) => setKeepVenue(e.target.checked)} />
+                <input type="checkbox" className="size-5 accent-primary shrink-0" checked={keepVenue} onChange={(e) => setKeepVenue(e.target.checked)} />
                 Garder la salle déjà retenue
               </label>
             ) : null}
           </div>
           ) : null}
 
+          {budgetScope !== 'drinks' ? (
+          <label className="space-y-1 block">
+            <span className={FIELD_LABEL}>Décrivez votre événement</span>
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              rows={3}
+              placeholder="Ex. mariage 120 personnes à Gombe, ambiance chic, besoin traiteur + DJ + habits…"
+              className={cn(NATIVE_FIELD, 'resize-y min-h-[4.5rem] py-2.5')}
+            />
+            <p className="text-xs text-muted">
+              Mariages coutumiers Kongo, Luba, Mongo, Lunda :{' '}
+              <button type="button" className="font-bold text-primary-solid hover:underline min-h-11 inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-sm" onClick={() => setActiveTab('prompts')}>
+                onglet Prompts
+              </button>
+              .
+            </p>
+          </label>
+          ) : null}
+        </div>
+
+        <aside className="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 mt-3 lg:mt-0 min-w-0 lg:sticky lg:top-0 lg:max-h-[calc(100dvh-9rem)] lg:overflow-y-auto lg:pr-1">
+          <button
+            type="button"
+            className="lg:hidden w-full min-h-11 px-3 py-2 mb-3 rounded-[var(--radius-card)] border border-border bg-surface text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            aria-expanded={refineOpen}
+            onClick={() => setRefineOpen((value) => !value)}
+          >
+            <span className="flex items-center justify-between gap-2 text-sm font-semibold text-foreground">
+              {refineOpen ? 'Masquer les précisions' : 'Affiner le calcul'}
+              <ChevronDown className={cn('w-4 h-4 text-muted transition', refineOpen && 'rotate-180')} />
+            </span>
+            <span className="block text-xs text-muted mt-0.5">Marques, quantités, métiers ou matériel. Facultatif.</span>
+          </button>
+          <div className={cn('space-y-3', !refineOpen && 'max-lg:hidden')}>
+          <p className="hidden lg:block text-xs font-semibold text-muted">Précisions facultatives</p>
+          <BudgetSimulationCriteria
+            scope={budgetScope}
+            selectedBrandIds={wantedBrandIds}
+            onToggleBrand={(id) => setWantedBrandIds((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])}
+            selectedSaleUnits={wantedSaleUnits}
+            onToggleSaleUnit={(unit) => setWantedSaleUnits((prev) => prev.includes(unit) ? prev.filter((item) => item !== unit) : [...prev, unit])}
+            orderLines={wantedDrinkLines}
+            onChangeOrderLines={setWantedDrinkLines}
+            selectedCategories={wantedCategories}
+            onToggleCategory={(id) => setWantedCategories((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])}
+          />
           {budgetScope !== 'drinks' ? (
           <div className="rounded-[var(--radius-card)] border border-border">
             <button
@@ -1210,13 +1244,16 @@ export default function EventPrepAiSimulator({
             ) : null}
           </div>
           ) : null}
+          </div>
+        </aside>
 
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="order-3 lg:col-start-1 lg:row-start-2 mt-3 flex flex-col sm:flex-row gap-2">
             <Button
               onClick={() => void run()}
               loading={loading}
               leftIcon={<Sparkles className="w-4 h-4" />}
               disabled={!allowance.canSimulate && !loading}
+              className="w-full sm:w-auto"
             >
               {allowance.canSimulate
                 ? `Lancer la simulation (${allowance.unlimited ? 'illimité' : `${aiTokenBalanceLabel(allowance)} restante${allowance.totalRemaining > 1 ? 's' : ''}`})`
@@ -1266,7 +1303,7 @@ export default function EventPrepAiSimulator({
         <div className="space-y-4 pt-2 border-t border-border">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
             <span className="font-bold text-foreground flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
+              <Sparkles className="w-3.5 h-3.5 text-primary-solid" />
               3 formules — touchez-en une pour voir les éléments
             </span>
             <span className="text-xs text-muted">

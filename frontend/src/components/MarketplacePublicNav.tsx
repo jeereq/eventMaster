@@ -39,8 +39,8 @@ export default function MarketplacePublicNav({
             key={item.id}
             href={item.href}
             className={cn(
-              'inline-flex items-center rounded-[var(--radius-button)] text-xs font-semibold transition shrink-0',
-              dense ? 'gap-1 px-2.5 py-1' : 'gap-1.5 px-3.5 py-1.5',
+              'inline-flex items-center rounded-[var(--radius-button)] text-xs font-semibold transition shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+              dense ? 'min-h-11 gap-1 px-2.5' : 'min-h-11 gap-1.5 px-3.5',
               active === item.id
                 ? 'bg-surface text-foreground shadow-sm'
                 : 'text-muted hover:text-foreground',

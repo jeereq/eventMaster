@@ -73,7 +73,7 @@ export function CatalogueFocusStage({
               onClick={() => setFiltersVisible((open) => !open)}
               aria-pressed={filtersVisible}
               aria-controls="catalogue-focus-filters"
-              className="h-9 sm:h-10 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground hover:bg-surface transition"
+              className="min-h-11 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground hover:bg-surface transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               {filtersVisible ? 'Masquer' : 'Filtres'}
@@ -86,12 +86,12 @@ export function CatalogueFocusStage({
           </div>
         ) : null}
         {error ? (
-          <p className="pointer-events-auto text-sm text-rose-600 bg-surface/95 rounded-lg px-3 py-2 shadow-lg">
+          <p className="pointer-events-auto text-sm text-danger bg-surface/95 rounded-lg px-3 py-2 shadow-lg" role="alert">
             {error}
           </p>
         ) : null}
         {loading ? (
-          <p className="pointer-events-none text-[11px] font-medium text-muted bg-surface/95 rounded-full px-3 py-1.5 w-fit shadow-lg">
+          <p className="pointer-events-none text-xs font-medium text-muted bg-surface/95 rounded-full px-3 py-1.5 w-fit shadow-lg" role="status">
             Mise à jour de la carte…
           </p>
         ) : null}
@@ -261,7 +261,7 @@ export default function CatalogueSearchLayout({
               <button
                 type="button"
                 onClick={exitMap}
-                className="h-9 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground hover:bg-surface transition hover:scale-[1.02] active:scale-[0.98]"
+                className="min-h-11 shrink-0 inline-flex items-center gap-1.5 px-3 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-xs font-semibold text-foreground hover:bg-surface transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
               >
                 <Minimize2 className="w-3.5 h-3.5" />
                 Quitter
@@ -286,7 +286,7 @@ export default function CatalogueSearchLayout({
         <div className="sticky top-[var(--em-site-header)] z-20 -mx-1 px-1 py-0 md:py-1 bg-background/90 backdrop-blur-md">
           {renderFilters('card')}
         </div>
-        {error ? <p className="text-sm text-rose-600">{error}</p> : null}
+        {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
 
         {mapMode ? (
           <div className="relative isolate space-y-3">
@@ -299,18 +299,18 @@ export default function CatalogueSearchLayout({
                 <span className="inline-flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-[color:var(--festive-accent)]" />
                   Prestataires
-                  <span className="hidden sm:inline text-[11px]">(services)</span>
+                  <span className="hidden sm:inline text-xs">(services)</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="w-2 h-2 rotate-45 rounded-[1px] bg-cyan-700" />
                   Matériel & Équipements
-                  <span className="hidden sm:inline text-[11px]">(mobilier, sono, véhicules)</span>
+                  <span className="hidden sm:inline text-xs">(mobilier, sono, véhicules)</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-sm bg-emerald-600" />
                   Événements
                 </span>
-                <span className="w-full sm:w-auto text-[11px] leading-relaxed">
+                <span className="w-full sm:w-auto text-xs leading-relaxed">
                   Cercle orange = prestataire (DJ, photo, traiteur). Losange cyan = matériel & équipements (habits, véhicule, sono, mobilier).
                 </span>
               </div>

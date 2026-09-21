@@ -96,13 +96,13 @@ export function StudioAiTabs({
               disabled && 'opacity-60',
             )}
           >
-            <Icon className={cn('w-3.5 h-3.5', selected ? 'text-primary' : '')} aria-hidden />
+            <Icon className={cn('w-3.5 h-3.5', selected ? 'text-primary-solid' : '')} aria-hidden />
             <span>{tab.label}</span>
             {badge != null ? (
               <span
                 className={cn(
                   'px-1.5 py-0.5 rounded-full text-xs font-bold tabular-nums',
-                  selected ? 'bg-primary/15 text-primary' : 'bg-surface border border-border text-muted',
+                  selected ? 'bg-primary/15 text-primary-solid' : 'bg-surface border border-border text-muted',
                 )}
               >
                 {badge}
