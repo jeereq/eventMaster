@@ -5,7 +5,7 @@ import { coverFromMedia, isServiceRentalCategory, parsePhotoUrls, priceUnitLabel
 import { collectUnavailableDates, isRangeAvailable, toDateKey } from '../utils/marketplaceDates';
 import { allowedCityPrismaFilter, normalizeAllowedCity, normalizeAllowedCommune } from '../utils/rdcCities';
 import { EVENT_PLAN_TYPES, type EventPlanType } from './eventPlanBrief';
-import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, parseWantedSaleUnits, rentalBudgetAmount, type BudgetSimulationScope, type BudgetStyle, type WantedSaleUnit } from './eventBudgetCost';
+import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, parseWantedSaleUnits, rentalBudgetAmount, type BeverageFocusBrand, type BudgetSimulationScope, type BudgetStyle, type WantedSaleUnit } from './eventBudgetCost';
 import { getGeminiApiKey, requestGeminiJson } from './geminiJsonClient.ts';
 import { requestOpenAiJson } from './openaiJsonClient.ts';
 
@@ -137,12 +137,23 @@ function scopeBlurb(scope: BudgetSimulationScope, style: { id: EventPlanAiStyleI
 }
 
 function drinkCriteriaNote(brandIds: string[], saleUnits: WantedSaleUnit[]): string {
-  const parts = [
-    brandIds.length ? 'marques choisies' : '',
-    saleUnits.length ? 'conditionnements choisis' : '',
-  ].filter(Boolean);
-  if (!parts.length) return 'Boissons : quantité, marque et tarif le plus bas du catalogue, sans filtre de ville.';
-  return `Boissons : ${parts.join(', ')}, au tarif le moins cher, sans filtre de ville.`;
+  if (brandIds.length) {
+    return saleUnits.length
+      ? 'Boissons : une ligne par marque choisie, quantité adaptée aux invités et aux conditionnements choisis.'
+      : 'Boissons : une ligne par marque choisie, quantité adaptée aux invités, au conditionnement le moins cher.';
+  }
+  return saleUnits.length
+    ? 'Boissons : tarif le plus bas de chaque famille, dans les conditionnements choisis, sans filtre de ville.'
+    : 'Boissons : quantité, marque et tarif le plus bas du catalogue, sans filtre de ville.';
+}
+
+async function loadFocusBrands(brandIds: string[]): Promise<BeverageFocusBrand[]> {
+  if (!brandIds.length) return [];
+  const rows = await prisma.beverageBrand.findMany({
+    where: { id: { in: brandIds }, isActive: true },
+    select: { id: true, name: true, kind: true },
+  });
+  return rows;
 }
 
 async function loadDrinkOffers(guests: number, brandIds: string[], saleUnits: WantedSaleUnit[]) {
@@ -159,11 +170,12 @@ async function loadDrinkOffers(guests: number, brandIds: string[], saleUnits: Wa
       priceFc: true,
       promoPriceFc: true,
       promoEndsAt: true,
-      brand: { select: { name: true, kind: true, imageUrl: true } },
+      brand: { select: { id: true, name: true, kind: true, imageUrl: true } },
     },
   });
   return rows.map((row) => ({
     kind: row.brand.kind,
+    brandId: row.brand.id,
     brandName: row.brand.name,
     imageUrl: row.brand.imageUrl,
     quantity: row.quantity,
@@ -462,8 +474,9 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
 
   if (budgetScope === 'drinks') {
     const drinkOffers = await loadDrinkOffers(guests, wantedBrandIds, wantedSaleUnits);
+    const focusBrands = await loadFocusBrands(wantedBrandIds);
     const packages = AI_STYLES.map((style) => {
-      const drinks = beverageBudgetAmount(drinkOffers, guests, eventType, budgetStyleOf(style.id));
+      const drinks = beverageBudgetAmount(drinkOffers, guests, eventType, budgetStyleOf(style.id), focusBrands);
       const warnings = drinks
         ? [drinkCriteriaNote(wantedBrandIds, wantedSaleUnits)]
         : [guests < 1
@@ -474,13 +487,21 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
       return {
         id: style.id,
         label: style.label,
-        blurb: style.id === 'eco'
-          ? 'Quantités les plus sobres, au conditionnement le moins cher.'
-          : style.id === 'comfort'
-            ? 'Quantités plus généreuses, au tarif le plus bas de chaque famille.'
-            : 'Quantités courantes, au tarif le plus bas de chaque famille.',
+        blurb: wantedBrandIds.length
+          ? (style.id === 'eco'
+            ? 'Quantités sobres pour chaque marque choisie.'
+            : style.id === 'comfort'
+              ? 'Quantités plus généreuses pour chaque marque choisie.'
+              : 'Quantités courantes pour chaque marque choisie.')
+          : (style.id === 'eco'
+            ? 'Quantités les plus sobres, au conditionnement le moins cher.'
+            : style.id === 'comfort'
+              ? 'Quantités plus généreuses, au tarif le plus bas de chaque famille.'
+              : 'Quantités courantes, au tarif le plus bas de chaque famille.'),
         summary: drinks
-          ? 'Chaque famille indique la marque, la quantité et le prix unitaire.'
+          ? (wantedBrandIds.length
+            ? 'Chaque marque choisie indique la quantité adaptée et le prix.'
+            : 'Chaque famille indique la marque, la quantité et le prix unitaire.')
           : 'Simulation des boissons uniquement.',
         rationale: '',
         warnings,
@@ -604,6 +625,7 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
   const rawPackages = Array.isArray(ai.packages) ? ai.packages : [];
 
   const drinkOffers = budgetScope === 'complete' ? await loadDrinkOffers(guests, wantedBrandIds, wantedSaleUnits) : [];
+  const focusBrands = budgetScope === 'complete' ? await loadFocusBrands(wantedBrandIds) : [];
 
   const hydrate = (
     style: typeof AI_STYLES[number],
@@ -643,7 +665,7 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
       warnings.push('Aucune location retenue dans le catalogue disponible.');
     }
     const drinks = budgetScope === 'complete'
-      ? beverageBudgetAmount(drinkOffers, guests, eventType, budgetStyleOf(style.id))
+      ? beverageBudgetAmount(drinkOffers, guests, eventType, budgetStyleOf(style.id), focusBrands)
       : null;
     if (drinks) {
       for (const line of drinks.lines) {

@@ -125,19 +125,37 @@ const DRINK_LABEL: Record<DrinkKind, string> = {
   CHAMPAGNE: 'Champagne',
 };
 
-function needsFor(eventType: EventPlanType, style: BudgetStyle): DrinkNeed[] {
-  const soft = (rate: number): DrinkNeed => ({ kind: 'DRINK', servingsPerGuest: rate, rule: `${rate} verre ou bouteille par invité` });
-  const beer = (rate: number): DrinkNeed => ({ kind: 'BEER', servingsPerGuest: rate, rule: `${rate} bouteille par invité` });
-  const wine = (guestsPerBottle: number): DrinkNeed => ({
+const KIND_ORDER: DrinkKind[] = ['DRINK', 'BEER', 'WINE', 'CHAMPAGNE'];
+
+function softNeed(rate: number): DrinkNeed {
+  return { kind: 'DRINK', servingsPerGuest: rate, rule: `${rate} verre ou bouteille par invité` };
+}
+
+function beerNeed(rate: number): DrinkNeed {
+  return { kind: 'BEER', servingsPerGuest: rate, rule: `${rate} bouteille par invité` };
+}
+
+function wineNeed(guestsPerBottle: number): DrinkNeed {
+  return {
     kind: 'WINE',
     servingsPerGuest: 1 / guestsPerBottle,
     rule: `1 bouteille pour ${guestsPerBottle} invités`,
-  });
-  const champagne = (guestsPerBottle: number): DrinkNeed => ({
+  };
+}
+
+function champagneNeed(guestsPerBottle: number): DrinkNeed {
+  return {
     kind: 'CHAMPAGNE',
     servingsPerGuest: 1 / guestsPerBottle,
     rule: `1 bouteille pour ${guestsPerBottle} invités`,
-  });
+  };
+}
+
+function needsFor(eventType: EventPlanType, style: BudgetStyle): DrinkNeed[] {
+  const soft = softNeed;
+  const beer = beerNeed;
+  const wine = wineNeed;
+  const champagne = champagneNeed;
 
   if (eventType === 'religious') return [soft(style === 'comfort' ? 2 : 1)];
   if (eventType === 'shooting') return [soft(1)];
@@ -156,6 +174,7 @@ function needsFor(eventType: EventPlanType, style: BudgetStyle): DrinkNeed[] {
 
 export type BeverageBudgetOffer = {
   kind: string;
+  brandId?: string | null;
   brandName: string;
   imageUrl?: string | null;
   quantity: number;
@@ -163,6 +182,12 @@ export type BeverageBudgetOffer = {
   priceFc: number;
   promoPriceFc?: number | null;
   promoEndsAt?: Date | string | null;
+};
+
+export type BeverageFocusBrand = {
+  id: string;
+  name: string;
+  kind: string;
 };
 
 export type BeverageBudgetLine = {
@@ -178,74 +203,177 @@ export type BeverageBudgetLine = {
   detail: string;
 };
 
+type PricedDrink = {
+  cost: number;
+  imageUrl: string | null;
+  brandName: string;
+  quantityLabel: string;
+  unitPrice: number;
+  unitLabel: string;
+  pack: number;
+};
+
+function isDrinkKind(value: string): value is DrinkKind {
+  return KIND_ORDER.includes(value as DrinkKind);
+}
+
+function needForKind(kind: DrinkKind, eventType: EventPlanType, style: BudgetStyle): DrinkNeed {
+  return needsFor(eventType, style).find((need) => need.kind === kind)
+    || (kind === 'DRINK' ? softNeed(style === 'comfort' ? 1.5 : 1)
+      : kind === 'BEER' ? beerNeed(style === 'comfort' ? 1.5 : 1)
+        : kind === 'WINE' ? wineNeed(4)
+          : champagneNeed(6));
+}
+
+function brandSlug(name: string): string {
+  const slug = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+  return slug || 'marque';
+}
+
+function pricedDrinks(offers: BeverageBudgetOffer[], kind: DrinkKind, servings: number): PricedDrink[] {
+  return offers.flatMap((offer) => {
+    if (offer.kind !== kind) return [];
+    const unitPrice = payableUnitPrice({
+      priceFromFc: offer.priceFc,
+      promoPriceFc: offer.promoPriceFc,
+      promoEndsAt: offer.promoEndsAt,
+    });
+    if (unitPrice == null) return [];
+    const pack = Math.max(1, Math.floor(offer.quantity) || 1);
+    const packs = Math.ceil(servings / pack);
+    return [{
+      cost: packs * unitPrice,
+      imageUrl: offer.imageUrl || null,
+      brandName: offer.brandName,
+      quantityLabel: `${packs} × ${offer.unitLabel}`,
+      unitPrice,
+      unitLabel: offer.unitLabel,
+      pack,
+    }];
+  });
+}
+
+function cheapestDrink(choices: PricedDrink[]): PricedDrink {
+  return choices.reduce((cheapest, item) => (item.cost < cheapest.cost ? item : cheapest));
+}
+
+function drinkLine(
+  kind: DrinkKind,
+  slug: string,
+  title: string,
+  brandName: string | null,
+  detail: string,
+  choice?: PricedDrink,
+): BeverageBudgetLine {
+  const family = DRINK_LABEL[kind];
+  return {
+    kind,
+    slug,
+    title,
+    categoryLabel: family,
+    brandName,
+    quantityLabel: choice?.quantityLabel || '',
+    unitPriceFc: choice?.unitPrice ?? null,
+    amountFc: choice?.cost || 0,
+    imageUrl: choice?.imageUrl || null,
+    detail,
+  };
+}
+
+function pricedDetail(choice: PricedDrink, servings: number, guests: number, rule: string): string {
+  const contained = choice.pack > 1 ? ` (${choice.pack} par ${choice.unitLabel})` : '';
+  return `${choice.quantityLabel}${contained} · ${money(choice.unitPrice)} / ${choice.unitLabel} · ${servings} pour ${guests} invités (${rule})`;
+}
+
 export function beverageBudgetAmount(
   offers: BeverageBudgetOffer[],
   guestCount: number,
   eventType: EventPlanType,
   style: BudgetStyle,
+  focusBrands: BeverageFocusBrand[] = [],
 ): (BudgetAmount & { imageUrl: string | null; lines: BeverageBudgetLine[] }) | null {
   const guests = Math.max(0, Math.floor(guestCount));
-  if (guests < 1 || !offers.length) return null;
+  if (guests < 1) return null;
+  if (!offers.length && !focusBrands.length) return null;
   const lines: BeverageBudgetLine[] = [];
   let total = 0;
   let imageUrl: string | null = null;
 
+  const pushChoice = (kind: DrinkKind, slug: string, choice: PricedDrink, servings: number, rule: string) => {
+    total += choice.cost;
+    if (!imageUrl && choice.imageUrl) imageUrl = choice.imageUrl;
+    lines.push(drinkLine(kind, slug, choice.brandName, choice.brandName, pricedDetail(choice, servings, guests, rule), choice));
+  };
+
+  if (focusBrands.length) {
+    const brands = [...focusBrands].sort((left, right) => {
+      const leftKind = KIND_ORDER.indexOf(left.kind as DrinkKind);
+      const rightKind = KIND_ORDER.indexOf(right.kind as DrinkKind);
+      const byKind = (leftKind < 0 ? KIND_ORDER.length : leftKind) - (rightKind < 0 ? KIND_ORDER.length : rightKind);
+      return byKind || left.name.localeCompare(right.name, 'fr');
+    });
+    for (const brand of brands) {
+      if (!isDrinkKind(brand.kind)) continue;
+      const family = DRINK_LABEL[brand.kind];
+      const slug = `budget:boissons:${brand.kind}:${brandSlug(brand.name)}`;
+      if (eventType === 'religious' && brand.kind !== 'DRINK') {
+        lines.push(drinkLine(
+          brand.kind,
+          slug,
+          brand.name,
+          brand.name,
+          `${brand.name} : alcool non inclus pour une cérémonie`,
+        ));
+        continue;
+      }
+      const need = needForKind(brand.kind, eventType, style);
+      const servings = Math.ceil(guests * need.servingsPerGuest);
+      const ownOffers = offers.filter((offer) => offer.brandId === brand.id || (!offer.brandId && offer.brandName === brand.name && offer.kind === brand.kind));
+      const choices = pricedDrinks(ownOffers, brand.kind, servings);
+      if (!choices.length) {
+        lines.push(drinkLine(
+          brand.kind,
+          slug,
+          brand.name,
+          brand.name,
+          `${brand.name} (${family}) : aucun tarif publié pour ce conditionnement · ${need.rule}`,
+        ));
+        continue;
+      }
+      pushChoice(brand.kind, slug, cheapestDrink(choices), servings, need.rule);
+    }
+    if (!lines.length) return null;
+    return {
+      amountFc: Math.round(total),
+      note: lines.map((line) => line.detail).join(' · '),
+      imageUrl,
+      lines,
+    };
+  }
+
+  if (!offers.length) return null;
   for (const need of needsFor(eventType, style)) {
     const servings = Math.ceil(guests * need.servingsPerGuest);
     if (servings < 1) continue;
     const family = DRINK_LABEL[need.kind];
-    const choices = offers.flatMap((offer) => {
-      if (offer.kind !== need.kind) return [];
-      const unitPrice = payableUnitPrice({
-        priceFromFc: offer.priceFc,
-        promoPriceFc: offer.promoPriceFc,
-        promoEndsAt: offer.promoEndsAt,
-      });
-      if (unitPrice == null) return [];
-      const pack = Math.max(1, Math.floor(offer.quantity) || 1);
-      const packs = Math.ceil(servings / pack);
-      const quantityLabel = `${packs} × ${offer.unitLabel}`;
-      return [{
-        cost: packs * unitPrice,
-        imageUrl: offer.imageUrl || null,
-        brandName: offer.brandName,
-        quantityLabel,
-        unitPrice,
-        unitLabel: offer.unitLabel,
-        pack,
-      }];
-    });
+    const choices = pricedDrinks(offers, need.kind, servings);
     if (!choices.length) {
-      lines.push({
-        kind: need.kind,
-        slug: `budget:boissons:${need.kind}`,
-        title: family,
-        categoryLabel: family,
-        brandName: null,
-        quantityLabel: '',
-        unitPriceFc: null,
-        amountFc: 0,
-        imageUrl: null,
-        detail: `${family} : aucun tarif publié · ${need.rule}`,
-      });
+      lines.push(drinkLine(
+        need.kind,
+        `budget:boissons:${need.kind}`,
+        family,
+        null,
+        `${family} : aucun tarif publié · ${need.rule}`,
+      ));
       continue;
     }
-    const best = choices.reduce((cheapest, item) => (item.cost < cheapest.cost ? item : cheapest));
-    total += best.cost;
-    if (!imageUrl && best.imageUrl) imageUrl = best.imageUrl;
-    const contained = best.pack > 1 ? ` (${best.pack} par ${best.unitLabel})` : '';
-    lines.push({
-      kind: need.kind,
-      slug: `budget:boissons:${need.kind}`,
-      title: best.brandName,
-      categoryLabel: family,
-      brandName: best.brandName,
-      quantityLabel: best.quantityLabel,
-      unitPriceFc: best.unitPrice,
-      amountFc: best.cost,
-      imageUrl: best.imageUrl,
-      detail: `${best.quantityLabel}${contained} · ${money(best.unitPrice)} / ${best.unitLabel} · ${servings} pour ${guests} invités (${need.rule})`,
-    });
+    pushChoice(need.kind, `budget:boissons:${need.kind}`, cheapestDrink(choices), servings, need.rule);
   }
 
   if (total <= 0) return null;
