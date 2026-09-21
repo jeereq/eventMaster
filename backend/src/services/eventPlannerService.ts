@@ -12,7 +12,7 @@ import {
   type ParsedEventPlanInput,
   type SlotPriority,
 } from './eventPlanBrief';
-import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, parseWantedSaleUnits, rentalBudgetAmount, type BudgetSimulationScope, type WantedSaleUnit } from './eventBudgetCost';
+import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, parseWantedSaleUnits, rentalBudgetAmount, type BeverageFocusBrand, type BudgetSimulationScope, type WantedSaleUnit } from './eventBudgetCost';
 
 export { EVENT_PLAN_TYPES, type EventPlanType };
 
@@ -525,12 +525,14 @@ const offeringInclude = {
 } as const;
 
 function drinkCriteriaNote(brandIds: string[], saleUnits: WantedSaleUnit[]): string {
-  const parts = [
-    brandIds.length ? 'marques choisies' : '',
-    saleUnits.length ? 'conditionnements choisis' : '',
-  ].filter(Boolean);
-  if (!parts.length) return 'Boissons : quantité, marque et tarif le plus bas du catalogue, sans filtre de ville.';
-  return `Boissons : ${parts.join(', ')}, au tarif le moins cher, sans filtre de ville.`;
+  if (brandIds.length) {
+    return saleUnits.length
+      ? 'Boissons : une ligne par marque choisie, quantité adaptée aux invités et aux conditionnements choisis.'
+      : 'Boissons : une ligne par marque choisie, quantité adaptée aux invités, au conditionnement le moins cher.';
+  }
+  return saleUnits.length
+    ? 'Boissons : tarif le plus bas de chaque famille, dans les conditionnements choisis, sans filtre de ville.'
+    : 'Boissons : quantité, marque et tarif le plus bas du catalogue, sans filtre de ville.';
 }
 
 export async function buildEventPlanProposals(body: Record<string, unknown> & {
@@ -685,12 +687,19 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
         priceFc: true,
         promoPriceFc: true,
         promoEndsAt: true,
-        brand: { select: { name: true, kind: true, imageUrl: true } },
+        brand: { select: { id: true, name: true, kind: true, imageUrl: true } },
       },
+    })
+    : [];
+  const focusBrands: BeverageFocusBrand[] = wantedBrandIds.length
+    ? await prisma.beverageBrand.findMany({
+      where: { id: { in: wantedBrandIds }, isActive: true },
+      select: { id: true, name: true, kind: true },
     })
     : [];
   const drinkOffers = drinkRows.map((row) => ({
     kind: row.brand.kind,
+    brandId: row.brand.id,
     brandName: row.brand.name,
     imageUrl: row.brand.imageUrl,
     quantity: row.quantity,
@@ -856,7 +865,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
 
     const includeDrinks = budgetScope === 'complete' || budgetScope === 'drinks';
     const drinks = includeDrinks
-      ? beverageBudgetAmount(drinkOffers, guests, input.eventType, style.style)
+      ? beverageBudgetAmount(drinkOffers, guests, input.eventType, style.style, focusBrands)
       : null;
     if (drinks) {
       for (const line of drinks.lines) {

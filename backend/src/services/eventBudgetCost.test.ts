@@ -93,3 +93,45 @@ test('les boissons prennent le conditionnement le moins cher et ignorent l’alc
   assert.equal(office?.amountFc, 20 * 1500);
   assert.doesNotMatch(office?.note || '', /Bière/);
 });
+
+test('chaque marque choisie a sa quantité, même hors du menu par défaut', () => {
+  const offers = [
+    { kind: 'BEER', brandId: 'primus', brandName: 'Primus', quantity: 12, unitLabel: 'casier', priceFc: 24000 },
+    { kind: 'BEER', brandId: 'turbo', brandName: 'Turbo', quantity: 1, unitLabel: 'bouteille', priceFc: 2000 },
+    { kind: 'DRINK', brandId: 'coca', brandName: 'Coca', quantity: 1, unitLabel: 'bouteille', priceFc: 1500 },
+    { kind: 'CHAMPAGNE', brandId: 'dom', brandName: 'Dom', quantity: 1, unitLabel: 'bouteille', priceFc: 80000 },
+  ];
+  const focused = beverageBudgetAmount(offers, 10, 'wedding', 'cheap', [
+    { id: 'turbo', name: 'Turbo', kind: 'BEER' },
+    { id: 'dom', name: 'Dom', kind: 'CHAMPAGNE' },
+  ]);
+  assert.equal(focused?.lines.length, 2);
+  assert.equal(focused?.lines.some((line) => line.brandName === 'Coca'), false);
+  const turbo = focused?.lines.find((line) => line.brandName === 'Turbo');
+  const champagne = focused?.lines.find((line) => line.brandName === 'Dom');
+  assert.equal(turbo?.quantityLabel, '10 × bouteille');
+  assert.equal(turbo?.amountFc, 20000);
+  assert.equal(champagne?.quantityLabel, '2 × bouteille');
+  assert.equal(champagne?.amountFc, 160000);
+  assert.equal(focused?.amountFc, 180000);
+
+  const crates = beverageBudgetAmount(
+    [{ kind: 'BEER', brandId: 'primus', brandName: 'Primus', quantity: 12, unitLabel: 'casier', priceFc: 24000 }],
+    10,
+    'wedding',
+    'cheap',
+    [{ id: 'primus', name: 'Primus', kind: 'BEER' }],
+  );
+  assert.equal(crates?.lines[0]?.quantityLabel, '1 × casier');
+  assert.equal(crates?.amountFc, 24000);
+
+  const ceremony = beverageBudgetAmount(
+    [{ kind: 'BEER', brandId: 'primus', brandName: 'Primus', quantity: 1, unitLabel: 'bouteille', priceFc: 2500 }],
+    10,
+    'religious',
+    'comfort',
+    [{ id: 'primus', name: 'Primus', kind: 'BEER' }],
+  );
+  assert.equal(ceremony?.amountFc, 0);
+  assert.match(ceremony?.lines[0]?.detail || '', /alcool non inclus/);
+});

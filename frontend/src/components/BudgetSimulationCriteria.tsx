@@ -80,7 +80,7 @@ export default function BudgetSimulationCriteria({
       </div>
 
       {showBrands ? (
-        <CriteriaGroup label="Marques" hint="La simulation ne chiffre que les marques cochées.">
+        <CriteriaGroup label="Marques" hint="Chaque marque cochée a sa ligne, avec une quantité adaptée aux invités.">
           {brandState === 'error' ? <p className="text-xs text-rose-700 dark:text-rose-300" role="alert">Les marques ne sont pas joignables pour le moment.</p> : null}
           {brandState === 'loading' ? <p className="text-xs text-muted">Chargement des marques…</p> : null}
           {brandState === 'ready' && brands.length === 0 ? <p className="text-xs text-muted">Aucune marque publiée.</p> : null}
@@ -101,7 +101,7 @@ export default function BudgetSimulationCriteria({
       ) : null}
 
       {showBrands ? (
-        <CriteriaGroup label="Quantités" hint="Bouteille, casier, pack ou autre. Sans choix, le conditionnement le moins cher est retenu.">
+        <CriteriaGroup label="Quantités" hint="Le conditionnement choisi fixe l’unité. La quantité suit le nombre d’invités. Sans choix, le moins cher est retenu.">
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quantités">
             {BEVERAGE_SALE_UNITS.map((unit) => {
               const active = selectedSaleUnits.includes(unit);
