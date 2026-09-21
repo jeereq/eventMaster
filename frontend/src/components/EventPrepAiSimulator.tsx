@@ -830,7 +830,7 @@ export default function EventPrepAiSimulator({
           ) : null}
 
           <div
-            className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 sm:flex-wrap no-scrollbar -mx-1 px-1"
+            className="flex flex-wrap gap-1.5"
             role="group"
             aria-label="Type d’événement"
           >
@@ -914,8 +914,8 @@ export default function EventPrepAiSimulator({
               ) : budgetScope === 'drinks' ? (
                 <p className="text-xs text-muted">Obligatoire pour calculer les quantités.</p>
               ) : null}
-              <div className="flex flex-wrap gap-1 items-center" role="group" aria-label="Raccourcis nombre d'invités">
-                <span className="text-[11px] text-muted mr-0.5 font-medium">Rapide :</span>
+              <div className="flex flex-wrap gap-1.5 items-center" role="group" aria-label="Raccourcis nombre d'invités">
+                <span className="text-xs text-muted mr-0.5 font-medium">Rapide :</span>
                 {GUEST_PRESETS.map((count) => {
                   const active = guestCount === String(count);
                   return (
@@ -925,9 +925,9 @@ export default function EventPrepAiSimulator({
                       aria-pressed={active}
                       onClick={() => setGuestCount(String(count))}
                       className={cn(
-                        'text-xs font-semibold px-2.5 py-1 min-h-[36px] min-w-[36px] rounded-full border transition cursor-pointer touch-manipulation inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                        'text-xs font-semibold px-3 min-h-11 min-w-11 rounded-full border transition cursor-pointer touch-manipulation inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                         active
-                          ? 'border-primary bg-primary text-white shadow-2xs'
+                          ? 'border-primary-solid bg-primary-solid text-primary-foreground'
                           : 'border-border bg-surface-muted/50 text-foreground hover:border-primary/50 hover:bg-surface',
                       )}
                     >
@@ -952,7 +952,7 @@ export default function EventPrepAiSimulator({
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="space-y-0.5">
                 <span className={FIELD_LABEL}>Budget maximum</span>
-                <p className="text-[11px] text-muted">
+                <p className="text-xs text-muted">
                   Saisissez directement en dollars ou en francs congolais
                 </p>
               </div>
@@ -965,11 +965,12 @@ export default function EventPrepAiSimulator({
               >
                 <button
                   type="button"
+                  aria-pressed={budgetCurrency === 'USD'}
                   onClick={() => handleCurrencySwitch('USD')}
                   className={cn(
-                    'px-2.5 py-1 font-bold rounded-md text-xs transition cursor-pointer',
+                    'px-3 min-h-11 font-bold rounded-md text-xs transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                     budgetCurrency === 'USD'
-                      ? 'bg-primary text-white shadow-2xs'
+                      ? 'bg-primary-solid text-primary-foreground'
                       : 'text-muted hover:text-foreground',
                   )}
                 >
@@ -977,11 +978,12 @@ export default function EventPrepAiSimulator({
                 </button>
                 <button
                   type="button"
+                  aria-pressed={budgetCurrency === 'CDF'}
                   onClick={() => handleCurrencySwitch('CDF')}
                   className={cn(
-                    'px-2.5 py-1 font-bold rounded-md text-xs transition cursor-pointer',
+                    'px-3 min-h-11 font-bold rounded-md text-xs transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                     budgetCurrency === 'CDF'
-                      ? 'bg-primary text-white shadow-2xs'
+                      ? 'bg-primary-solid text-primary-foreground'
                       : 'text-muted hover:text-foreground',
                   )}
                 >
@@ -1012,7 +1014,7 @@ export default function EventPrepAiSimulator({
 
             {/* Presets rapides de budget */}
             <div className="flex flex-wrap gap-1.5 items-center pt-0.5" role="group" aria-label="Paliers de budget">
-              <span className="text-[11px] text-muted mr-0.5 font-medium">Paliers suggérés :</span>
+              <span className="text-xs text-muted mr-0.5 font-medium">Paliers suggérés :</span>
               {(budgetCurrency === 'USD' ? BUDGET_PRESETS_USD : BUDGET_PRESETS_CDF).map((preset) => {
                 const active = budgetInputVal === String(preset);
                 const label = budgetCurrency === 'USD'
@@ -1025,9 +1027,9 @@ export default function EventPrepAiSimulator({
                     aria-pressed={active}
                     onClick={() => setBudgetInputVal(String(preset))}
                     className={cn(
-                      'text-xs font-semibold px-2.5 py-1 min-h-[36px] rounded-full border transition cursor-pointer touch-manipulation inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                      'text-xs font-semibold px-3 min-h-11 rounded-full border transition cursor-pointer touch-manipulation inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                       active
-                        ? 'border-primary bg-primary text-white shadow-2xs'
+                        ? 'border-primary-solid bg-primary-solid text-primary-foreground'
                         : 'border-border bg-surface-muted text-foreground hover:border-primary/50 hover:bg-surface',
                     )}
                   >
@@ -1053,14 +1055,12 @@ export default function EventPrepAiSimulator({
                 </p>
               </div>
               <span className={cn(
-                'inline-flex items-center text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 self-start sm:self-center',
-                guestRatio.tone === 'emerald'
-                  ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30'
-                  : guestRatio.tone === 'amber'
-                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30'
-                    : 'bg-primary/15 text-primary border border-primary/30',
+                'inline-flex items-center text-xs font-bold px-2.5 min-h-11 rounded-full shrink-0 self-start sm:self-center',
+                guestRatio.tone === 'amber'
+                  ? 'bg-festive-accent-soft text-foreground border border-festive-accent/40'
+                  : 'bg-primary/15 text-primary-solid border border-primary/30',
               )}>
-                {guestRatio.tone === 'emerald' ? '✨ Grand confort' : guestRatio.tone === 'amber' ? '⚡ Budget serré' : '👍 Équilibré'}
+                {guestRatio.tone === 'emerald' ? 'Grand confort' : guestRatio.tone === 'amber' ? 'Budget serré' : 'Équilibré'}
               </span>
             </div>
           ) : null}
@@ -1302,7 +1302,7 @@ export default function EventPrepAiSimulator({
                           {pack.label}
                         </span>
                         {pack.id.includes('equilibre') ? (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/25">
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary-solid border border-primary/25">
                             Recommandé
                           </span>
                         ) : null}

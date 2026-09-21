@@ -56,6 +56,26 @@ export default function BudgetSimulationCriteria({
     };
   }, []);
 
+  const selectionSummary = () => {
+    const parts: string[] = [];
+    if (showBrands && selectedBrandIds.length) {
+      parts.push(`${selectedBrandIds.length} marque${selectedBrandIds.length > 1 ? 's' : ''}`);
+    }
+    if (showBrands && selectedSaleUnits.length) {
+      parts.push(selectedSaleUnits.map((unit) => BEVERAGE_SALE_UNIT_LABELS[unit]).join(', '));
+    }
+    if (showServices && selectedCategories) {
+      const count = selectedCategories.filter((id) => SERVICE_TRADE_CATEGORIES.includes(id)).length;
+      if (count) parts.push(`${count} service${count > 1 ? 's' : ''}`);
+    }
+    if (showRentals && selectedCategories) {
+      const count = selectedCategories.filter((id) => SERVICE_RENTAL_CATEGORIES.includes(id)).length;
+      if (count) parts.push(`${count} location${count > 1 ? 's' : ''}`);
+    }
+    if (!parts.length) return 'Aucun filtre : la simulation suit le type d’événement.';
+    return `Sélection : ${parts.join(' · ')}.`;
+  };
+
   if (!showBrands && !showServices && !showRentals) return null;
 
   const groups = [
@@ -77,13 +97,22 @@ export default function BudgetSimulationCriteria({
             ? `Sans choix, la simulation suit le type d’événement. Un choix limite le pack à ces ${groupList}.`
             : 'Sans choix, chaque famille prend la marque et le conditionnement les moins chers. Un choix ne chiffre que ces marques et ces quantités.'}
         </p>
+        <p className="text-xs text-foreground leading-relaxed" aria-live="polite">{selectionSummary()}</p>
       </div>
 
       {showBrands ? (
         <CriteriaGroup label="Marques" hint="Chaque marque cochée a sa ligne, avec une quantité adaptée aux invités.">
-          {brandState === 'error' ? <p className="text-xs text-rose-700 dark:text-rose-300" role="alert">Les marques ne sont pas joignables pour le moment.</p> : null}
-          {brandState === 'loading' ? <p className="text-xs text-muted">Chargement des marques…</p> : null}
-          {brandState === 'ready' && brands.length === 0 ? <p className="text-xs text-muted">Aucune marque publiée.</p> : null}
+          <div aria-live="polite">
+            {brandState === 'error' ? (
+              <p className="text-xs text-danger" role="alert">
+                Les marques ne sont pas joignables pour le moment. Sans marque, chaque famille prend la moins chère.
+              </p>
+            ) : null}
+            {brandState === 'loading' ? <p className="text-xs text-muted">Chargement des marques…</p> : null}
+            {brandState === 'ready' && brands.length === 0 ? (
+              <p className="text-xs text-muted">Aucune marque publiée. Chaque famille prendra la moins chère.</p>
+            ) : null}
+          </div>
           {BEVERAGE_KINDS.map((kind) => {
             const rows = brands.filter((brand) => brand.kind === kind);
             if (!rows.length) return null;
@@ -101,7 +130,7 @@ export default function BudgetSimulationCriteria({
       ) : null}
 
       {showBrands ? (
-        <CriteriaGroup label="Quantités" hint="Le conditionnement choisi fixe l’unité. La quantité suit le nombre d’invités. Sans choix, le moins cher est retenu.">
+        <CriteriaGroup label="Quantités" hint="Un ou plusieurs conditionnements. La quantité suit les invités. S’il y en a plusieurs, le moins cher de ceux-là est retenu.">
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quantités">
             {BEVERAGE_SALE_UNITS.map((unit) => {
               const active = selectedSaleUnits.includes(unit);

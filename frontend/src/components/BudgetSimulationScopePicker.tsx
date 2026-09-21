@@ -37,7 +37,7 @@ export default function BudgetSimulationScopePicker({
           <span className="block text-sm font-semibold">{complete.label}</span>
           <span className={cn(
             'block text-xs mt-0.5 leading-relaxed',
-            value === complete.id ? 'text-primary-foreground/90' : 'text-muted',
+            value === complete.id ? 'text-primary-foreground' : 'text-muted',
           )}
           >
             {complete.hint}
@@ -62,7 +62,7 @@ export default function BudgetSimulationScopePicker({
                 <span className="block text-sm font-semibold">{option.label}</span>
                 <span className={cn(
                   'block text-xs mt-0.5 leading-relaxed',
-                  selected ? 'text-primary-foreground/90' : 'text-muted',
+                  selected ? 'text-primary-foreground' : 'text-muted',
                 )}
                 >
                   {option.hint}
