@@ -10,6 +10,7 @@ import {
   Building2,
   Store,
   Wallet,
+  Wine,
   ArrowRight,
   Heart,
   ShieldCheck,
@@ -127,6 +128,14 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
       ctaLabel: 'Trouver un prestataire',
     },
     {
+      title: 'Boissons et prix',
+      badge: 'Catalogue',
+      description: 'Bières, vins, champagnes et le prix le plus bas d’un prestataire.',
+      icon: Wine,
+      href: () => '/marketplace/boissons',
+      ctaLabel: 'Voir les boissons',
+    },
+    {
       title: 'Événements Publics',
       badge: 'Pass direct',
       description: 'Achetez vos places pour concerts et conférences.',
@@ -156,7 +165,7 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
     {
       title: 'Matériel & Équipements',
       badge: 'Locations',
-      description: 'Habits, voitures, sono, tentes — même compte métier.',
+      description: 'Chaises, habits, voitures, sono. Livraison comprise ou en supplément.',
       icon: LayoutGrid,
       href: (isLoggedIn) => (isLoggedIn ? '/dashboard/catalogue' : '/register?kind=VENDOR&intent=vendor&action=rentals'),
       ctaLabel: 'Proposer du matériel',

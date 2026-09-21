@@ -129,8 +129,8 @@ function MarketplaceHubPageInner() {
               : applied.kind === 'venue' ? 'venues'
                 : 'hub'
       }
-      heroTitle="Salles, prestataires, matériel & événements près de chez vous"
-      heroDescription="Explorez le marketplace EventMaster : salles, prestataires certifiés, matériel & équipements (habits, véhicules, mobilier, sono) et événements publics. Affinez par ville, commune, prix ou autour de vous."
+      heroTitle="Salles, prestataires, matériel, boissons et événements"
+      heroDescription="Explorez le marketplace EventMaster : salles, prestataires, matériel (chaises, habits, véhicules, sono) avec retrait ou livraison, boissons et prix, et événements publics. Affinez par ville, commune, prix ou autour de vous."
       mode={mode}
       onViewChange={setView}
       gridCols={gridCols}

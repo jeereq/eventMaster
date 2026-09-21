@@ -17,7 +17,7 @@ export const FOOTER_FEATURES = [
   'Billetterie Mobile Money & pass QR',
   'Plans de salle 2D cotés & visite 3D',
   'Simulateur de budget CDF & USD',
-  'Marketplace de salles et prestataires',
+  'Marketplace : salles, métiers, matériel et boissons',
   '100% web, sans application à installer',
 ] as const;
 
@@ -42,7 +42,7 @@ export const FOOTER_RESOURCES = [
 ] as const;
 
 export const FOOTER_BRAND_DESCRIPTION =
-  'Plateforme événementielle en RDC : invitations WhatsApp, plans 2D/3D, billetterie Mobile Money et marketplace (salles, métiers, Matériel & Équipements).';
+  'Plateforme événementielle en RDC : invitations WhatsApp, plans 2D/3D, billetterie Mobile Money et marketplace (salles, métiers, matériel, boissons et prix).';
 
 export interface FaqItem {
   id: string;
@@ -55,7 +55,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'what-is-eventmaster',
     question: 'Qu\'est-ce qu\'EventMaster ?',
     answer:
-      'Une plateforme tout-en-un pour préparer un événement en toute sérénité : invitations interactives avec IA, billetterie en ligne avec validation automatique de présence, personnalisation des pass pour billets partagés, plans de salle 2D et 3D photoréalistes, accueil QR le jour J, simulateur de budget IA et marketplace (salles, métiers et Matériel & Équipements) en RDC. Trois types de compte : organisateur, client, ou pro (salle / métier). Dès Business, la vitrine catalogue est incluse pour un organisateur. Tout fonctionne dans le navigateur.',
+      'Une plateforme tout-en-un pour préparer un événement en toute sérénité : invitations interactives avec IA, billetterie en ligne avec validation automatique de présence, personnalisation des pass pour billets partagés, plans de salle 2D et 3D photoréalistes, accueil QR le jour J, simulateur de budget IA et marketplace (salles, métiers, Matériel & Équipements, boissons et prix) en RDC. Trois types de compte : organisateur, client, ou pro (salle / métier). Dès Business, la vitrine catalogue est incluse pour un organisateur. Tout fonctionne dans le navigateur.',
   },
   {
     id: 'mobile-app',
@@ -103,13 +103,25 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'marketplace-venues',
     question: 'Puis-je trouver une salle ou un prestataire sur EventMaster ?',
     answer:
-      'Oui. Parcourez salles, métiers (traiteur, photo…) et Matériel & Équipements (habits, véhicules, sono…) sans compte. Pour un devis ou une réservation, créez un compte client gratuit. L’acompte ({depositPercent} %) se verse directement au professionnel, pas via EventMaster.',
+      'Oui. Parcourez salles, métiers (traiteur, photo…), Matériel & Équipements (chaises, habits, véhicules, sono…) et le catalogue Boissons et prix sans compte. Une location précise le retrait sur place, la livraison déjà comprise dans le tarif, ou la livraison en supplément. Pour un devis ou une réservation, créez un compte client gratuit. L’acompte ({depositPercent} %) se verse directement au professionnel, pas via EventMaster.',
   },
   {
     id: 'marketplace-booking',
     question: 'Comment fonctionne la réservation et la commission marketplace ?',
     answer:
-      'Le professionnel accepte, vous versez l’acompte hors plateforme, il confirme : la date est bloquée. EventMaster n’encaisse pas l’acompte. Une commission de {commissionPercent} % (due par le vendeur) s’applique aux réservations confirmées.',
+      'Le professionnel accepte, vous versez l’acompte hors plateforme, il confirme : la date est bloquée. EventMaster n’encaisse pas l’acompte. Une commission de {commissionPercent} % (due par le vendeur) s’applique aux réservations confirmées. Si la location prévoit une livraison en supplément, ce montant est ajouté une seule fois au total, pas multiplié par les jours. Un prix promotionnel encore en cours remplace le tarif normal dans ce total.',
+  },
+  {
+    id: 'marketplace-drinks',
+    question: 'Où voir les boissons et leurs prix ?',
+    answer:
+      'La page Marketplace → Boissons et prix liste les bières, boissons, vins et champagnes du catalogue. Quand un prestataire a publié un tarif, vous voyez le prix le plus bas, promotion comprise tant qu’elle est en cours. Le prestataire choisit la quantité vendue : bouteille, casier, pack ou un autre conditionnement. Dans une invitation, l’organisateur peut proposer ces boissons dans le champ Boissons : l’invité choisit un nom, sans voir le prix.',
+  },
+  {
+    id: 'rental-delivery',
+    question: 'Comment fonctionne la livraison d’une location ?',
+    answer:
+      'Chaque fiche de matériel indique un retrait sur place, une livraison dont le prix est déjà compris dans le tarif, ou une livraison facturée en supplément. Le supplément s’ajoute une fois à la réservation. Les filtres du catalogue matériel permettent de ne garder que l’un de ces trois cas. Le rayon de livraison reste obligatoire dès que le prestataire se déplace.',
   },
   {
     id: 'client-account',
@@ -127,7 +139,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'service-subscription',
     question: 'Comment publier une prestation ou du Matériel & Équipements ?',
     answer:
-      'Compte pro → « Un métier de service » : traiteur, photo, DJ… ou locations (habits, voiture, sono, tente…). Le forfait Prestataire couvre prestations et Matériel & Équipements ; Salle & presta ajoute les salles. Un organisateur Business+ publie aussi ces fiches via le catalogue inclus.',
+      'Compte pro → « Un métier de service » : traiteur, photo, DJ… ou locations (chaises, habits, voiture, sono, tente…). Pour une location livrée, indiquez si le prix de livraison est déjà dans le tarif ou ajouté une fois en supplément. Le forfait Prestataire couvre aussi l’onglet Boissons et prix : vous y fixez bouteille, casier, pack ou un autre conditionnement, et une promotion inférieure au tarif normal. Salle & presta ajoute les salles. Un organisateur Business+ publie aussi ces fiches via le catalogue inclus.',
   },
   {
     id: 'event-packs',

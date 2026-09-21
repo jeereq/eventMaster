@@ -312,7 +312,7 @@ function FieldDetail({
                   optionMode === 'brands' ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground',
                 )}
               >
-                Marques
+                Boissons
               </button>
             ) : null}
           </div>

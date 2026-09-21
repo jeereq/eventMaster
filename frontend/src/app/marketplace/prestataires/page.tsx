@@ -129,7 +129,7 @@ function MarketplaceServicesPageInner() {
     <CatalogueSearchLayout
       activeNav="services"
       heroTitle="Trouvez un prestataire pour votre événement"
-      heroDescription="Traiteur, photo, DJ, déco… Le matériel et les équipements (mobilier, véhicules, sono) ont leur propre onglet."
+      heroDescription="Traiteur, photo, DJ, déco… Le matériel (chaises, sono, véhicules) et les boissons et prix ont chacun leur onglet."
       mode={mode}
       onViewChange={setView}
       gridCols={gridCols}

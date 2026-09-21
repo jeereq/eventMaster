@@ -217,7 +217,7 @@ export default function VendorBeveragePrices() {
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <h2 className="text-base font-bold text-foreground">Marques et prix</h2>
+        <h2 className="text-base font-bold text-foreground">Boissons et prix</h2>
         <p className="text-sm text-muted leading-relaxed">
           Cochez les marques que vous vendez. Pour chacune, définissez la quantité : bouteille, casier, pack, ou un autre conditionnement, avec son prix.
         </p>
