@@ -1239,15 +1239,24 @@ export function mixCatalogueByDisplayKind<T extends Pick<CatalogueItem, 'kind' |
   return mixed;
 }
 
+export function catalogueHasPromo(item: Pick<CatalogueItem, 'priceFromFc' | 'promoPriceFc'>): boolean {
+  return item.promoPriceFc != null && item.priceFromFc != null && item.promoPriceFc < item.priceFromFc;
+}
+
+/** Montant que le visiteur paie : la promo active, sinon le tarif catalogue. */
+export function cataloguePayablePriceFc(item: Pick<CatalogueItem, 'priceFromFc' | 'promoPriceFc'>): number | null {
+  if (catalogueHasPromo(item)) return item.promoPriceFc ?? null;
+  return item.priceFromFc ?? null;
+}
+
 export function cataloguePriceCaption(item: Pick<CatalogueItem, 'kind' | 'priceFromFc' | 'promoPriceFc' | 'priceUnitLabel'>): string {
   if (item.kind === 'event') {
     if (item.priceFromFc != null && item.priceFromFc > 0) return formatFc(item.priceFromFc);
     return 'Entrée libre';
   }
-  if (item.promoPriceFc != null && item.priceFromFc != null && item.promoPriceFc < item.priceFromFc) {
-    return `Promo ${formatFc(item.promoPriceFc)}`;
-  }
-  return item.priceFromFc != null ? `Dès ${formatFc(item.priceFromFc)}` : 'Sur devis';
+  const payable = cataloguePayablePriceFc(item);
+  if (payable == null) return 'Sur devis';
+  return catalogueHasPromo(item) ? formatFc(payable) : `Dès ${formatFc(payable)}`;
 }
 
 export function isCatalogueMapView(mode: CatalogueViewMode): mode is 'map' | 'focus' {
@@ -1456,8 +1465,9 @@ export function catalogueItemMatchesGeo(item: CatalogueItem, filters: CatalogueG
   if (street && !loc.includes(street)) return false;
   const minP = Number(filters.minPrice);
   const maxP = Number(filters.maxPrice);
-  if (filters.minPrice.trim() && Number.isFinite(minP) && (item.priceFromFc == null || item.priceFromFc < minP)) return false;
-  if (filters.maxPrice.trim() && Number.isFinite(maxP) && (item.priceFromFc == null || item.priceFromFc > maxP)) return false;
+  const asking = cataloguePayablePriceFc(item);
+  if (filters.minPrice.trim() && Number.isFinite(minP) && (asking == null || asking < minP)) return false;
+  if (filters.maxPrice.trim() && Number.isFinite(maxP) && (asking == null || asking > maxP)) return false;
   const minC = Number(filters.minCapacity);
   const maxC = Number(filters.maxCapacity);
   if (item.kind === 'venue' || item.kind === 'event') {

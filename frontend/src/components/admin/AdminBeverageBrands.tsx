@@ -132,13 +132,13 @@ export default function AdminBeverageBrands() {
           <Input label="Nom" value={draft.name} onChange={(e) => setDraft((prev) => ({ ...prev, name: e.target.value }))} required placeholder="Primus" />
           <div className="space-y-1">
             <span className="text-xs font-semibold text-foreground">Image</span>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
               {draft.imageUrl ? (
                 <img src={draft.imageUrl} alt="" className="w-14 h-14 rounded-lg object-cover border border-border" />
               ) : (
                 <span className="w-14 h-14 rounded-lg border border-dashed border-border bg-surface-muted" />
               )}
-              <label className="text-xs font-semibold text-primary cursor-pointer">
+              <label className="inline-flex items-center min-h-11 px-3 rounded-[var(--radius-button)] border border-border text-xs font-semibold text-foreground cursor-pointer">
                 {uploadingImage ? 'Envoi…' : draft.imageUrl ? 'Changer l’image' : 'Ajouter une image'}
                 <input
                   type="file"
@@ -163,7 +163,7 @@ export default function AdminBeverageBrands() {
                 />
               </label>
               {draft.imageUrl ? (
-                <button type="button" className="text-xs text-muted underline" onClick={() => setDraft((prev) => ({ ...prev, imageUrl: '' }))}>
+                <button type="button" className="inline-flex items-center min-h-11 px-3 text-xs font-semibold text-muted underline" onClick={() => setDraft((prev) => ({ ...prev, imageUrl: '' }))}>
                   Retirer
                 </button>
               ) : null}
@@ -213,7 +213,7 @@ export default function AdminBeverageBrands() {
         </div>
       </form>
 
-      <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]" role="tablist" aria-label="Familles de marques">
+      <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]" role="group" aria-label="Familles de marques">
         <FilterPill active={kindFilter === 'ALL'} onClick={() => setKindFilter('ALL')} label="Toutes" />
         {BEVERAGE_KINDS.map((kind) => (
           <FilterPill
@@ -226,8 +226,9 @@ export default function AdminBeverageBrands() {
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-10">
+        <div className="flex justify-center py-10" role="status">
           <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <span className="sr-only">Chargement des marques</span>
         </div>
       ) : visible.length === 0 ? (
         <EmptyState
@@ -299,6 +300,7 @@ function FilterPill({ active, label, onClick }: { active: boolean; label: string
   return (
     <button
       type="button"
+      aria-pressed={active}
       onClick={onClick}
       className={cn(
         'min-h-11 px-3 rounded-full text-xs font-semibold border shrink-0',

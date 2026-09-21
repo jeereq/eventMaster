@@ -137,6 +137,7 @@ export type VendorPriceDraft = {
   priceFc: number;
   promoPriceFc: number | null;
   promoLabel: string | null;
+  promoEndsAt: Date | null;
   isAvailable: boolean;
   notes: string | null;
 };
@@ -179,6 +180,7 @@ export function parseVendorPriceOffers(body: unknown): { offers: VendorPriceDraf
       priceFc,
       promoPriceFc: item.promoPriceFc,
       promoLabel: item.promoLabel,
+      promoEndsAt: item.promoEndsAt,
     });
     if ('error' in promo) return promo;
     offers.push({
@@ -189,6 +191,7 @@ export function parseVendorPriceOffers(body: unknown): { offers: VendorPriceDraf
       priceFc,
       promoPriceFc: promo.promo.promoPriceFc,
       promoLabel: promo.promo.promoLabel,
+      promoEndsAt: promo.promo.promoEndsAt,
       isAvailable: item.isAvailable !== false,
       notes: optionalText(item.notes, MAX_DESCRIPTION_LENGTH),
     });

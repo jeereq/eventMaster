@@ -61,6 +61,7 @@ export type VendorBeveragePriceRow = {
   priceFc: number;
   promoPriceFc?: number | null;
   promoLabel?: string | null;
+  promoEndsAt?: string | null;
   unitKind: BeverageSaleUnit;
   quantity: number;
   unitLabel: string;

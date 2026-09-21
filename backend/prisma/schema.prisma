@@ -1399,6 +1399,7 @@ model VendorBeveragePrice {
   priceFc     Int
   promoPriceFc Int?
   promoLabel  String?
+  promoEndsAt  DateTime?
   unitKind    BeverageSaleUnit @default(BOTTLE)
   /** Nombre d’unités dans le conditionnement (1 bouteille, 12 pour un casier, 6 pour un pack…). */
   quantity    Int              @default(1)

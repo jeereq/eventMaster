@@ -94,6 +94,8 @@ export default function ListingDetailLayout({
   activityPreview,
   activityCount,
   priceFromFc,
+  compareAtFc = null,
+  priceNote,
   priceUnitLabel,
   quotaLabel,
   inquiry,
@@ -140,6 +142,10 @@ export default function ListingDetailLayout({
   relatedServices?: PublicService[];
   relatedVenues?: PublicVenue[];
   priceFromFc: number | null;
+  /** Tarif catalogue barré quand une promotion est le prix affiché. */
+  compareAtFc?: number | null;
+  /** Libellé court de la promotion, à côté de l’ancien prix. */
+  priceNote?: string | null;
   priceUnitLabel?: string | null;
   quotaLabel?: string | null;
   inquiry?: React.ReactNode;
@@ -170,6 +176,7 @@ export default function ListingDetailLayout({
   const commerceTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const shareHref = shareUrl || (shareSlug ? listingPublicUrl(shareKind, shareSlug) : undefined);
   const priceLabel = priceCaption ?? (priceFromFc != null ? formatFc(priceFromFc) : 'Sur devis');
+  const showCompare = compareAtFc != null && priceFromFc != null && compareAtFc > priceFromFc;
   const showCommerce = !preview && Boolean(inquiry || booking);
   const showBooking = Boolean(booking) && !hideBooking;
   const returnScope = backHref.startsWith('/dashboard') ? '/dashboard' : '/marketplace';
@@ -317,6 +324,12 @@ export default function ListingDetailLayout({
   const priceBlock = (
     <div className="space-y-1">
       <p className="text-2xl font-semibold text-foreground tracking-tight tabular-nums">{priceLabel}</p>
+      {showCompare ? (
+        <p className="text-sm text-muted">
+          <span className="line-through tabular-nums">{formatFc(compareAtFc!)}</span>
+          {priceNote ? <span> · {priceNote}</span> : null}
+        </p>
+      ) : null}
       {priceUnitLabel ? <p className="text-xs text-muted">{priceUnitLabel}</p> : null}
       {quotaLabel ? <p className="text-xs text-muted">{quotaLabel}</p> : null}
     </div>
@@ -731,7 +744,14 @@ export default function ListingDetailLayout({
               <>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold truncate tabular-nums">{priceLabel}</p>
-                  {priceUnitLabel ? <p className="text-[11px] text-muted truncate">{priceUnitLabel}</p> : null}
+                  {showCompare ? (
+                    <p className="text-xs text-muted truncate">
+                      <span className="line-through tabular-nums">{formatFc(compareAtFc!)}</span>
+                      {priceNote ? <span> · {priceNote}</span> : null}
+                    </p>
+                  ) : priceUnitLabel ? (
+                    <p className="text-xs text-muted truncate">{priceUnitLabel}</p>
+                  ) : null}
                 </div>
                 <Button
                   size="md"

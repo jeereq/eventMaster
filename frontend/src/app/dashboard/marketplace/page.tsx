@@ -40,6 +40,8 @@ import { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import ServiceOfferingForm, {
   focusOfferingField,
   getOfferingPublishGaps,
+  OFFERING_PROMO_FIELD_ID,
+  offeringPromoMessage,
   type ServiceOfferingDraft,
 } from '@/components/ServiceOfferingForm';
 import MarketplaceBookingsPanel from '@/components/MarketplaceBookingsPanel';
@@ -75,6 +77,15 @@ interface ServiceItem {
 }
 
 type DeskTab = 'services' | 'rentals' | 'inquiries' | 'bookings' | 'beverages';
+
+function deskAskingPrice(item: ServiceItem): string | null {
+  if (item.priceFromFc == null) return null;
+  const ended = item.promoEndsAt ? new Date(item.promoEndsAt).getTime() < Date.now() : false;
+  if (item.promoPriceFc != null && item.promoPriceFc < item.priceFromFc && !ended) {
+    return `promo ${formatFc(item.promoPriceFc)}`;
+  }
+  return `dès ${formatFc(item.priceFromFc)}`;
+}
 
 export default function MarketplaceDeskPage() {
   useRememberListReturn();
@@ -251,6 +262,13 @@ export default function MarketplaceDeskPage() {
   };
 
   const handleSave = async (publish: boolean) => {
+    const promoMessage = offeringPromoMessage(draft);
+    if (promoMessage) {
+      setEditorTab('details');
+      setError(promoMessage);
+      focusOfferingField(OFFERING_PROMO_FIELD_ID);
+      return;
+    }
     if (publish) {
       const gaps = getOfferingPublishGaps(draft);
       if (gaps.length) {
@@ -606,7 +624,7 @@ export default function MarketplaceDeskPage() {
                   : item.coverageRadiusKm
                     ? `Se déplace · ${item.coverageRadiusKm} km`
                     : 'Se déplace',
-                item.priceFromFc != null ? `dès ${formatFc(item.priceFromFc)}` : null,
+                deskAskingPrice(item),
               ].filter(Boolean).join(' · ');
               const actions = (
                 <div className={cn('flex gap-2', servicesViewMode === 'list' && 'flex-wrap justify-end')}>

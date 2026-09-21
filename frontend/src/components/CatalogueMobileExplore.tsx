@@ -9,8 +9,7 @@ import MarketplaceLocationsMap, {
 } from '@/components/MarketplaceLocationsMap';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { formatFc } from '@/config/landingPricing';
-import { catalogueItemDisplayKind, catalogueKindAccent, catalogueKindLabel, formatDistanceKm, listingSrcSet, sizedMediaUrl, type CatalogueItem } from '@/lib/marketplace';
+import { catalogueItemDisplayKind, catalogueKindAccent, catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, listingSrcSet, sizedMediaUrl, type CatalogueItem } from '@/lib/marketplace';
 
 type SheetSnap = 'peek' | 'mid' | 'full';
 
@@ -98,7 +97,7 @@ function StoryCard({
         <div className="px-2.5 pt-2 min-w-0">
           <p className="font-semibold text-sm leading-snug text-foreground truncate">{item.title}</p>
           <p className="text-[11px] text-muted truncate mt-0.5">
-            {item.priceFromFc != null ? `Dès ${formatFc(item.priceFromFc)}` : 'Sur devis'}
+            {cataloguePriceCaption(item)}
             {item.location ? ` · ${item.location}` : ''}
           </p>
         </div>
@@ -184,7 +183,7 @@ function SheetRow({
         </p>
       </div>
       <p className="text-xs font-semibold text-foreground shrink-0 text-right">
-        {item.priceFromFc != null ? formatFc(item.priceFromFc) : 'Devis'}
+        {cataloguePriceCaption(item)}
       </p>
     </button>
   );

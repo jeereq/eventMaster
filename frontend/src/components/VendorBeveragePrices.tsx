@@ -25,6 +25,7 @@ type DraftLine = {
   priceFc: string;
   promoPriceFc: string;
   promoLabel: string;
+  promoEndsAt: string;
   isAvailable: boolean;
 };
 
@@ -42,8 +43,28 @@ function newLine(unitKind: BeverageSaleUnit = 'BOTTLE'): DraftLine {
     priceFc: '',
     promoPriceFc: '',
     promoLabel: '',
+    promoEndsAt: '',
     isAvailable: true,
   };
+}
+
+function promoFieldError(line: DraftLine): string {
+  if (!line.promoPriceFc.trim()) return '';
+  const price = Number(line.priceFc);
+  const promo = Number(line.promoPriceFc);
+  if (!line.priceFc.trim() || !Number.isFinite(price) || price <= 0) {
+    return 'Indiquez le tarif normal avant la promotion.';
+  }
+  if (!Number.isFinite(promo) || promo < 0) return 'Le prix promotionnel doit être un montant en FC.';
+  if (promo >= price) return 'Le prix promotionnel doit rester inférieur au tarif.';
+  return '';
+}
+
+function promoIsActive(line: DraftLine): boolean {
+  if (promoFieldError(line) || !line.promoPriceFc.trim()) return false;
+  if (!line.promoEndsAt) return true;
+  const end = new Date(line.promoEndsAt);
+  return !Number.isNaN(end.getTime()) && end.getTime() >= Date.now();
 }
 
 function nextUnit(lines: DraftLine[]): BeverageSaleUnit {
@@ -60,6 +81,7 @@ function draftFromBrand(brand: VendorBeverageBrandRow): DraftPrice {
     priceFc: String(price.priceFc),
     promoPriceFc: price.promoPriceFc != null ? String(price.promoPriceFc) : '',
     promoLabel: price.promoLabel || '',
+    promoEndsAt: price.promoEndsAt ? String(price.promoEndsAt).slice(0, 10) : '',
     isAvailable: price.isAvailable,
   }));
   return {
@@ -128,6 +150,19 @@ export default function VendorBeveragePrices() {
     setError('');
     setSuccess('');
     try {
+      const promoIssue = brands.flatMap((brand) => {
+        const draft = drafts[brand.id];
+        if (!draft?.selling) return [];
+        return draft.lines.flatMap((line) => {
+          const message = promoFieldError(line);
+          return message ? [`${brand.name} : ${message}`] : [];
+        });
+      })[0];
+      if (promoIssue) {
+        setError(promoIssue);
+        setSaving(false);
+        return;
+      }
       const offers = brands.flatMap((brand) => {
         const draft = drafts[brand.id];
         if (!draft?.selling) return [];
@@ -151,6 +186,7 @@ export default function VendorBeveragePrices() {
             unitLabel: line.unitLabel.trim(),
             promoPriceFc: line.promoPriceFc.trim() ? Number(line.promoPriceFc) : null,
             promoLabel: line.promoLabel.trim(),
+            promoEndsAt: line.promoEndsAt || null,
             isAvailable: line.isAvailable,
           };
         });
@@ -171,8 +207,9 @@ export default function VendorBeveragePrices() {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-16">
+      <div className="flex justify-center py-16" role="status">
         <Loader2 className="w-7 h-7 animate-spin text-primary" />
+        <span className="sr-only">Chargement des marques</span>
       </div>
     );
   }
@@ -240,7 +277,7 @@ export default function VendorBeveragePrices() {
                     {draft.lines.map((line) => (
                       <div key={line.key} className="grid grid-cols-1 sm:grid-cols-[minmax(0,1.1fr)_5.5rem_minmax(0,1fr)_auto] gap-2 items-end">
                         <label className="space-y-1 block">
-                          <span className="text-[11px] font-semibold text-muted">Conditionnement</span>
+                          <span className="text-xs font-semibold text-muted">Conditionnement</span>
                           <select
                             value={line.unitKind}
                             onChange={(e) => patchLine(brand.id, line.key, { unitKind: e.target.value as BeverageSaleUnit })}
@@ -252,7 +289,7 @@ export default function VendorBeveragePrices() {
                           </select>
                         </label>
                         <label className="space-y-1 block">
-                          <span className="text-[11px] font-semibold text-muted">Quantité</span>
+                          <span className="text-xs font-semibold text-muted">Quantité</span>
                           <input
                             type="number"
                             min={1}
@@ -263,7 +300,7 @@ export default function VendorBeveragePrices() {
                           />
                         </label>
                         <label className="space-y-1 block">
-                          <span className="text-[11px] font-semibold text-muted">
+                          <span className="text-xs font-semibold text-muted">
                             Prix (FC) · {formatBeverageSale({
                               unitKind: line.unitKind,
                               quantity: Number(line.quantity) || 1,
@@ -280,18 +317,22 @@ export default function VendorBeveragePrices() {
                           />
                         </label>
                         <label className="space-y-1 block sm:col-span-2">
-                          <span className="text-[11px] font-semibold text-muted">Prix promo (FC, optionnel)</span>
+                          <span className="text-xs font-semibold text-muted">Prix promo (FC, optionnel)</span>
                           <input
                             type="number"
                             min={0}
                             value={line.promoPriceFc}
                             onChange={(e) => patchLine(brand.id, line.key, { promoPriceFc: e.target.value })}
-                            className="w-full min-h-11 px-3 rounded-lg border border-border bg-surface text-sm"
+                            className={`w-full min-h-11 px-3 rounded-lg border bg-surface text-sm ${promoFieldError(line) ? 'border-danger' : 'border-border'}`}
                             placeholder="Inférieur au tarif"
+                            aria-invalid={promoFieldError(line) ? true : undefined}
                           />
+                          {promoFieldError(line) ? (
+                            <span className="text-xs text-danger" role="alert">{promoFieldError(line)}</span>
+                          ) : null}
                         </label>
                         <label className="space-y-1 block sm:col-span-2">
-                          <span className="text-[11px] font-semibold text-muted">Libellé promo</span>
+                          <span className="text-xs font-semibold text-muted">Libellé promo</span>
                           <input
                             type="text"
                             value={line.promoLabel}
@@ -300,6 +341,22 @@ export default function VendorBeveragePrices() {
                             placeholder="Offre du mois"
                           />
                         </label>
+                        <label className="space-y-1 block sm:col-span-2">
+                          <span className="text-xs font-semibold text-muted">Fin de promotion</span>
+                          <input
+                            type="date"
+                            value={line.promoEndsAt}
+                            onChange={(e) => patchLine(brand.id, line.key, { promoEndsAt: e.target.value })}
+                            className="w-full min-h-11 px-3 rounded-lg border border-border bg-surface text-sm"
+                          />
+                        </label>
+                        {line.promoPriceFc.trim() && !promoFieldError(line) ? (
+                          <p className="sm:col-span-4 text-xs text-muted">
+                            {promoIsActive(line)
+                              ? `Tarif affiché : ${formatFc(Math.round(Number(line.promoPriceFc)))} au lieu de ${formatFc(Math.round(Number(line.priceFc)))}${line.promoEndsAt ? ` jusqu’au ${line.promoEndsAt.split('-').reverse().join('/')}` : ''}.`
+                              : 'Date passée : le tarif normal est affiché.'}
+                          </p>
+                        ) : null}
                         <button
                           type="button"
                           className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg border border-border text-muted hover:text-rose-700"
@@ -316,7 +373,7 @@ export default function VendorBeveragePrices() {
                         </button>
                         {line.unitKind === 'OTHER' ? (
                           <label className="space-y-1 block sm:col-span-3">
-                            <span className="text-[11px] font-semibold text-muted">Précisez (fût, magnum, cubi…)</span>
+                            <span className="text-xs font-semibold text-muted">Précisez (fût, magnum, cubi…)</span>
                             <input
                               type="text"
                               value={line.unitLabel}
@@ -359,6 +416,7 @@ function KindButton({ active, label, onClick }: { active: boolean; label: string
   return (
     <button
       type="button"
+      aria-pressed={active}
       onClick={onClick}
       className={`min-h-11 px-3 rounded-full text-xs font-semibold border ${
         active ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted'

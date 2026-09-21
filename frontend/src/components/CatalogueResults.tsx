@@ -7,7 +7,8 @@ import { cn } from '@/lib/cn';
 import { listStackClass, StatusPill } from '@/components/ui';
 import { Skeleton } from '@/components/ui/Skeleton';
 import FavoriteHeart from '@/components/FavoriteHeart';
-import { catalogueItemDisplayKind, catalogueKindAccent, catalogueKindFilterLabel, catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, formatQuotaLabel, groupCatalogueItemsByDisplayKind, listingSrcSet, serviceMobilityLabel, sizedMediaUrl, type CatalogueDisplayKind, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
+import { catalogueHasPromo, catalogueItemDisplayKind, catalogueKindAccent, catalogueKindFilterLabel, catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, formatQuotaLabel, groupCatalogueItemsByDisplayKind, listingSrcSet, serviceMobilityLabel, sizedMediaUrl, type CatalogueDisplayKind, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
+import { formatFc } from '@/config/landingPricing';
 import { rememberCurrentCatalogueList } from '@/lib/catalogueQuery';
 import useIsMobile from '@/hooks/useIsMobile';
 
@@ -189,10 +190,13 @@ function GridCard({
 
           <div className="pt-2 border-t border-border/50 flex items-baseline justify-between text-xs">
             <div>
-              <span className="font-bold text-sm sm:text-[15px] text-foreground">
+              <span className="font-bold text-sm sm:text-[15px] text-foreground tabular-nums">
                 {cataloguePriceCaption(item)}
               </span>
-              <span className="text-muted text-[11px] ml-1">
+              {catalogueHasPromo(item) && item.priceFromFc != null ? (
+                <span className="text-xs text-muted line-through ml-1.5 tabular-nums">{formatFc(item.priceFromFc)}</span>
+              ) : null}
+              <span className="text-muted text-xs ml-1">
                 · {item.priceUnitLabel}
               </span>
             </div>
@@ -275,10 +279,13 @@ function ListRow({
             ) : null}
           </div>
           <div className="shrink-0 text-right">
-            <span className="text-sm font-semibold text-foreground">
+            <span className="text-sm font-semibold text-foreground tabular-nums">
               {cataloguePriceCaption(item)}
             </span>
-            <span className="block text-[11px] text-muted">{item.priceUnitLabel}</span>
+            {catalogueHasPromo(item) && item.priceFromFc != null ? (
+              <span className="block text-xs text-muted line-through tabular-nums">{formatFc(item.priceFromFc)}</span>
+            ) : null}
+            <span className="block text-xs text-muted">{item.priceUnitLabel}</span>
           </div>
         </Link>
         {onToggleFavorite && item.kind !== 'event' ? (
