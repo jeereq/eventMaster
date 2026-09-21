@@ -33,6 +33,7 @@ export type AiSimulationCriteria = {
   neighborhood?: string;
   budgetMinFc?: number | null;
   wantedCategories?: ServiceCategory[];
+  wantedBrandIds?: string[];
   venueAmenities?: ListingAmenityId[];
 };
 
@@ -43,6 +44,7 @@ export const EMPTY_AI_CRITERIA: AiSimulationCriteria = {
   neighborhood: '',
   budgetMinFc: null,
   wantedCategories: [],
+  wantedBrandIds: [],
   venueAmenities: [],
 };
 

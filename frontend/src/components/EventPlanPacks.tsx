@@ -30,10 +30,11 @@ function PackItemRow({
   const [open, setOpen] = useState(false);
   const room = leftoverFc + item.estimatedFc;
   const alternatives = (item.alternatives || []).filter((alt) => alt.estimatedFc <= room);
+  const estimate = item.slug.startsWith('budget:');
   const kindLabel = item.kind === 'venue' ? 'Salle' : item.categoryLabel || (isServiceRentalCategory(item.category) ? 'Matériel & Équipements' : 'Prestataire');
 
   const titleClass = 'text-sm font-semibold text-foreground hover:text-primary truncate block text-left';
-  const titleNode = onOpenListing ? (
+  const titleNode = onOpenListing && !estimate ? (
     <button type="button" onClick={() => onOpenListing(item)} className={`${titleClass} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm`}>
       {item.title}
     </button>
@@ -46,7 +47,7 @@ function PackItemRow({
   return (
     <li>
       <div className="flex items-center gap-3">
-        {onOpenListing ? (
+        {onOpenListing && !estimate ? (
           <button
             type="button"
             onClick={() => onOpenListing(item)}
@@ -88,21 +89,26 @@ function PackItemRow({
         )}
         <div className="min-w-0 flex-1">
           {titleNode}
-          <p className="text-[11px] text-muted truncate">
+          <p className="text-xs text-muted truncate">
             {kindLabel}
             {item.match === 'exact' ? ' · adapté' : ''}
             {item.orgName ? ` · ${item.orgName}` : ''}
           </p>
+          {item.detail ? (
+            <p className="text-xs text-muted">{item.detail}</p>
+          ) : null}
         </div>
         <div className="shrink-0 flex flex-col items-end gap-1">
-          <FavoriteHeart
-            active={isFavorite(item.kind, item.slug)}
-            onToggle={() => onToggleFavorite(item.kind, item.slug)}
-          />
-          <span className="text-[11px] font-semibold tabular-nums">{formatFc(item.estimatedFc)}</span>
+          {estimate ? null : (
+            <FavoriteHeart
+              active={isFavorite(item.kind, item.slug)}
+              onToggle={() => onToggleFavorite(item.kind, item.slug)}
+            />
+          )}
+          <span className="text-xs font-semibold tabular-nums">{formatFc(item.estimatedFc)}</span>
         </div>
       </div>
-      {alternatives.length > 0 || onKeep ? (
+      {!estimate && (alternatives.length > 0 || onKeep) ? (
         <div className="flex flex-wrap items-center gap-x-3 pl-14 sm:pl-[3.75rem]">
           {onKeep ? (
             <button
@@ -222,7 +228,7 @@ export default function EventPlanPacks({
                     <li key={`${pack.id}-${slot.slot}`} className="text-xs leading-relaxed">
                       <span className="font-semibold">{slot.label} · </span>
                       {slot.reason}
-                      {onWidenSlot ? (
+                      {onWidenSlot && slot.slot !== 'beverages' ? (
                         <button
                           type="button"
                           className="ml-1 font-semibold underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm"

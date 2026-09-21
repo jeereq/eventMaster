@@ -1,30 +1,31 @@
 import type { ListingAmenityId, ListingEventTypeId } from '@/lib/listingDetails';
+import { parseBudgetSimulationScope, type BudgetSimulationScope } from '@/lib/budgetSimulation';
 import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS, type ServiceCategory } from '@/lib/marketplace';
 
 export const EVENT_PLAN_SLOTS: Record<ListingEventTypeId, { required: ServiceCategory[]; optional: ServiceCategory[] }> = {
   wedding: {
     required: ['CATERING', 'PHOTOGRAPHY', 'DJ', 'DECORATION'],
-    optional: ['VIDEO', 'FLORIST', 'MC', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CAR'],
+    optional: ['VIDEO', 'FLORIST', 'MC', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CAR', 'RENTAL_CHAIRS', 'RENTAL_TENT'],
   },
   birthday: {
     required: ['CATERING', 'DJ', 'DECORATION'],
-    optional: ['PHOTOGRAPHY', 'RENTAL_CLOTHING_CHILD'],
+    optional: ['PHOTOGRAPHY', 'RENTAL_CLOTHING_CHILD', 'RENTAL_CHAIRS'],
   },
   corporate: {
     required: ['CATERING', 'MC'],
-    optional: ['PHOTOGRAPHY', 'VIDEO', 'TRANSPORT', 'RENTAL_CAR'],
+    optional: ['PHOTOGRAPHY', 'VIDEO', 'TRANSPORT', 'RENTAL_CAR', 'RENTAL_CHAIRS', 'RENTAL_AV'],
   },
   gala: {
     required: ['CATERING', 'DJ', 'DECORATION', 'MC'],
-    optional: ['PHOTOGRAPHY', 'VIDEO', 'RENTAL_CLOTHING_MEN', 'RENTAL_CLOTHING_WOMEN'],
+    optional: ['PHOTOGRAPHY', 'VIDEO', 'RENTAL_CLOTHING_MEN', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CHAIRS'],
   },
   religious: {
     required: ['CATERING', 'DECORATION'],
-    optional: ['TRANSPORT', 'PHOTOGRAPHY', 'MC', 'RENTAL_EQUIPMENT'],
+    optional: ['TRANSPORT', 'PHOTOGRAPHY', 'MC', 'RENTAL_EQUIPMENT', 'RENTAL_CHAIRS'],
   },
   private: {
     required: ['CATERING', 'DJ'],
-    optional: ['DECORATION', 'PHOTOGRAPHY', 'RENTAL_EQUIPMENT'],
+    optional: ['DECORATION', 'PHOTOGRAPHY', 'RENTAL_EQUIPMENT', 'RENTAL_CHAIRS'],
   },
   shooting: {
     required: ['PHOTOGRAPHY', 'VIDEO'],
@@ -34,12 +35,12 @@ export const EVENT_PLAN_SLOTS: Record<ListingEventTypeId, { required: ServiceCat
 
 /** Parts par défaut (pourcentages). Les options peuvent dépasser 100 — elles sont renormalisées. */
 export const EVENT_PACK_SHARES: Record<ListingEventTypeId, Record<string, number>> = {
-  wedding: { venue: 38, CATERING: 28, PHOTOGRAPHY: 10, DJ: 8, DECORATION: 10, VIDEO: 6, FLORIST: 5, MC: 4 },
-  birthday: { venue: 40, CATERING: 28, DJ: 14, DECORATION: 10, PHOTOGRAPHY: 8 },
-  corporate: { venue: 42, CATERING: 28, MC: 8, PHOTOGRAPHY: 8, VIDEO: 7, TRANSPORT: 6 },
-  gala: { venue: 40, CATERING: 26, DJ: 8, DECORATION: 10, MC: 6, PHOTOGRAPHY: 8, VIDEO: 6 },
-  religious: { venue: 40, CATERING: 26, DECORATION: 12, TRANSPORT: 8, PHOTOGRAPHY: 8, MC: 5 },
-  private: { venue: 40, CATERING: 28, DJ: 12, DECORATION: 10, PHOTOGRAPHY: 8 },
+  wedding: { venue: 38, CATERING: 28, PHOTOGRAPHY: 10, DJ: 8, DECORATION: 10, VIDEO: 6, FLORIST: 5, MC: 4, RENTAL_CHAIRS: 8, RENTAL_TENT: 4 },
+  birthday: { venue: 40, CATERING: 28, DJ: 14, DECORATION: 10, PHOTOGRAPHY: 8, RENTAL_CHAIRS: 8 },
+  corporate: { venue: 42, CATERING: 28, MC: 8, PHOTOGRAPHY: 8, VIDEO: 7, TRANSPORT: 6, RENTAL_CHAIRS: 6, RENTAL_AV: 5 },
+  gala: { venue: 40, CATERING: 26, DJ: 8, DECORATION: 10, MC: 6, PHOTOGRAPHY: 8, VIDEO: 6, RENTAL_CHAIRS: 8 },
+  religious: { venue: 40, CATERING: 26, DECORATION: 12, TRANSPORT: 8, PHOTOGRAPHY: 8, MC: 5, RENTAL_CHAIRS: 6 },
+  private: { venue: 40, CATERING: 28, DJ: 12, DECORATION: 10, PHOTOGRAPHY: 8, RENTAL_CHAIRS: 6 },
   shooting: { venue: 35, PHOTOGRAPHY: 28, VIDEO: 18, DECORATION: 10, OTHER: 8 },
 };
 
@@ -56,6 +57,10 @@ export type EventPlanLock = {
   slug: string;
   category?: ServiceCategory;
 };
+
+const PLAN_BRIEF_VERSION = 2;
+
+const RENTAL_BUDGET_SLOTS: ServiceCategory[] = ['RENTAL_CHAIRS', 'RENTAL_TABLEWARE', 'RENTAL_TENT', 'RENTAL_AV'];
 
 export type EventPlanBrief = {
   eventType: ListingEventTypeId;
@@ -75,6 +80,9 @@ export type EventPlanBrief = {
   distinctVenues: boolean;
   venueAmenities: ListingAmenityId[];
   amenityMode: AmenityMode;
+  planVersion: number;
+  budgetScope: BudgetSimulationScope;
+  wantedBrandIds: string[];
 };
 
 export type EventPlanRequest = EventPlanBrief & {
@@ -128,6 +136,9 @@ export function createDefaultBrief(eventType: ListingEventTypeId = 'wedding'): E
     distinctVenues: true,
     venueAmenities: [],
     amenityMode: 'preferred',
+    planVersion: PLAN_BRIEF_VERSION,
+    budgetScope: 'complete',
+    wantedBrandIds: [],
   };
 }
 
@@ -140,18 +151,36 @@ export function hydrateBrief(raw: unknown): EventPlanBrief {
   const includeVenue = value.includeVenue === 'no' || value.includeVenue === 'if_fits' || value.includeVenue === 'yes'
     ? value.includeVenue
     : 'yes';
+  const storedVersion = typeof value.planVersion === 'number' ? value.planVersion : 1;
+  const shares = value.shares && Object.keys(value.shares).length
+    ? { ...value.shares }
+    : defaultShares(eventType, includeVenue, slots);
+  if (storedVersion < PLAN_BRIEF_VERSION) {
+    const freshSlots = defaultSlotPriorities(eventType);
+    const freshShares = defaultShares(eventType, includeVenue, freshSlots);
+    for (const category of RENTAL_BUDGET_SLOTS) {
+      if (freshSlots[category] === 'excluded') continue;
+      slots[category] = freshSlots[category];
+      if (!shares[category]) shares[category] = freshShares[category] || 6;
+    }
+  }
   return {
     ...base,
     ...value,
     eventType,
     includeVenue,
     slots,
-    shares: value.shares && Object.keys(value.shares).length ? value.shares : defaultShares(eventType, includeVenue, slots),
+    shares,
+    planVersion: PLAN_BRIEF_VERSION,
     budgetMinFc: Number(value.budgetMinFc) || 0,
     budgetMaxFc: Number(value.budgetMaxFc) || Number((value as { budgetFc?: number }).budgetFc) || base.budgetMaxFc,
     marginPct: value.marginPct === 0 || value.marginPct === 5 || value.marginPct === 10 ? value.marginPct : 5,
     guestCount: Number(value.guestCount) || 0,
     venueAmenities: Array.isArray(value.venueAmenities) ? value.venueAmenities : [],
+    budgetScope: parseBudgetSimulationScope(value.budgetScope),
+    wantedBrandIds: Array.isArray(value.wantedBrandIds)
+      ? value.wantedBrandIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0).slice(0, 40)
+      : [],
   };
 }
 
@@ -265,6 +294,7 @@ export type PlanItem = {
   location: string;
   coverUrl: string | null;
   estimatedFc: number;
+  detail?: string;
   categoryLabel?: string;
   category?: ServiceCategory;
   href: string;
@@ -276,7 +306,7 @@ export type PlanItem = {
 };
 
 export type PlanMissingSlot = {
-  slot: 'venue' | ServiceCategory;
+  slot: 'venue' | 'beverages' | ServiceCategory;
   label: string;
   reason: string;
 };
@@ -399,6 +429,7 @@ export type EventPlanAiResult = {
     neighborhood?: string;
     budgetMinFc?: number | null;
     wantedCategories?: string[];
+    wantedBrandIds?: string[];
     venueAmenities?: string[];
   };
 };

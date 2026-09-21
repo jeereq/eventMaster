@@ -103,7 +103,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
   },
   {
     id: 'boissons-prix',
-    title: 'Boissons et prix',
+    title: 'Boissons',
     category: 'Boissons',
     location: 'Catalogue EventMaster',
     description: 'Bières, vins, champagnes et autres boissons, avec le prix le plus bas publié par un prestataire.',

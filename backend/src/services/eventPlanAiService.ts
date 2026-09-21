@@ -1,10 +1,11 @@
-import { MarketplaceBookingStatus, ServiceCategory } from '@prisma/client';
+import { MarketplaceBookingStatus, ServiceCategory, VenuePriceUnit } from '@prisma/client';
 import { prisma } from '../db';
 import { parseListingDetails } from '../utils/listingDetails';
-import { coverFromMedia, isServiceRentalCategory, parsePhotoUrls, serviceCategoryLabel } from '../utils/publicVenue';
+import { coverFromMedia, isServiceRentalCategory, parsePhotoUrls, priceUnitLabel, serviceCategoryLabel } from '../utils/publicVenue';
 import { collectUnavailableDates, isRangeAvailable, toDateKey } from '../utils/marketplaceDates';
 import { allowedCityPrismaFilter, normalizeAllowedCity, normalizeAllowedCommune } from '../utils/rdcCities';
 import { EVENT_PLAN_TYPES, type EventPlanType } from './eventPlanBrief';
+import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, rentalBudgetAmount, type BudgetSimulationScope, type BudgetStyle } from './eventBudgetCost';
 import { getGeminiApiKey, requestGeminiJson } from './geminiJsonClient.ts';
 import { requestOpenAiJson } from './openaiJsonClient.ts';
 
@@ -74,6 +75,7 @@ export type EventPlanAiItem = {
   location: string;
   coverUrl: string | null;
   estimatedFc: number;
+  detail?: string;
   categoryLabel?: string;
   category?: ServiceCategory;
   href: string;
@@ -105,15 +107,67 @@ export type EventPlanAiResult = {
     neighborhood?: string;
     budgetMinFc?: number | null;
     wantedCategories?: string[];
+    wantedBrandIds?: string[];
     venueAmenities?: string[];
   };
 };
 
+const DEDICATED_TRADE_CAP = 6;
+const DEDICATED_RENTAL_CAP = 8;
+
 const AI_STYLES: Array<{ id: EventPlanAiStyleId; label: string; blurb: string; maxTrades: number; maxRentals: number }> = [
-  { id: 'eco', label: 'Économique', blurb: 'Le moins cher qui tient dans l’enveloppe, sans options.', maxTrades: 2, maxRentals: 1 },
-  { id: 'balanced', label: 'Équilibré', blurb: 'Répartition proche de votre projet, options si le budget le permet.', maxTrades: 3, maxRentals: 1 },
-  { id: 'comfort', label: 'Confort', blurb: 'Le plus complet dans l’enveloppe, options incluses.', maxTrades: 4, maxRentals: 2 },
+  { id: 'eco', label: 'Économique', blurb: 'Le moins cher qui tient dans l’enveloppe. Chaises et boissons restent chiffrées.', maxTrades: 2, maxRentals: 2 },
+  { id: 'balanced', label: 'Équilibré', blurb: 'Répartition proche de votre projet, options si le budget le permet.', maxTrades: 3, maxRentals: 2 },
+  { id: 'comfort', label: 'Confort', blurb: 'Le plus complet dans l’enveloppe, options incluses.', maxTrades: 4, maxRentals: 3 },
 ];
+
+function scopeBlurb(scope: BudgetSimulationScope, style: { id: EventPlanAiStyleId; blurb: string }): string {
+  if (scope === 'rentals') {
+    if (style.id === 'eco') return 'Les locations les moins chères. Chaises et vaisselle restent chiffrées par invité.';
+    if (style.id === 'comfort') return 'Plus de matériels, dans l’enveloppe.';
+    return 'Locations utiles au nombre d’invités, si le budget le permet.';
+  }
+  if (scope === 'services') {
+    if (style.id === 'eco') return 'Les métiers les moins chers qui tiennent dans l’enveloppe.';
+    if (style.id === 'comfort') return 'Plus de métiers, dans l’enveloppe.';
+    return 'Métiers proches de votre projet, options si le budget le permet.';
+  }
+  return style.blurb;
+}
+
+async function loadDrinkOffers(guests: number, brandIds: string[]) {
+  if (guests < 1) return [];
+  const rows = await prisma.vendorBeveragePrice.findMany({
+    where: {
+      isAvailable: true,
+      brand: { isActive: true, ...(brandIds.length ? { id: { in: brandIds } } : {}) },
+    },
+    select: {
+      quantity: true,
+      unitLabel: true,
+      priceFc: true,
+      promoPriceFc: true,
+      promoEndsAt: true,
+      brand: { select: { name: true, kind: true, imageUrl: true } },
+    },
+  });
+  return rows.map((row) => ({
+    kind: row.brand.kind,
+    brandName: row.brand.name,
+    imageUrl: row.brand.imageUrl,
+    quantity: row.quantity,
+    unitLabel: row.unitLabel,
+    priceFc: row.priceFc,
+    promoPriceFc: row.promoPriceFc,
+    promoEndsAt: row.promoEndsAt,
+  }));
+}
+
+function budgetStyleOf(id: EventPlanAiStyleId): BudgetStyle {
+  if (id === 'eco') return 'cheap';
+  if (id === 'comfort') return 'comfort';
+  return 'balanced';
+}
 
 function parseEventType(value: unknown): EventPlanType {
   return typeof value === 'string' && EVENT_PLAN_TYPES.includes(value as EventPlanType)
@@ -213,6 +267,12 @@ async function loadCatalog(opts: {
         categoryLabel: 'Salle',
         href: `/dashboard/catalogue/salles/${row.slug}`,
         capacity: row.room.capacity,
+        detail: [
+          row.room.capacity ? `${row.room.capacity} places` : '',
+          row.priceFromFc && row.priceFromFc > 0
+            ? `${Math.round(row.priceFromFc).toLocaleString('fr-FR')} FC ${priceUnitLabel(row.priceUnit as VenuePriceUnit)}`
+            : '',
+        ].filter(Boolean).join(' · ') || undefined,
       };
       const catalog: CatalogRow = {
         slug: row.slug,
@@ -238,7 +298,17 @@ async function loadCatalog(opts: {
     const extra = parseListingDetails(row.details);
     const photos = parsePhotoUrls(row.photos);
     const rental = isServiceRentalCategory(row.category);
-    const estimatedFc = estimateCost(row.priceFromFc, row.priceUnit, opts.guestCount);
+    const priced = rentalBudgetAmount({
+      category: row.category,
+      priceUnit: row.priceUnit,
+      priceFromFc: row.priceFromFc,
+      promoPriceFc: row.promoPriceFc,
+      promoEndsAt: row.promoEndsAt,
+      guestCount: opts.guestCount,
+      deliveryMode: row.deliveryMode,
+      deliveryPriceFc: row.deliveryPriceFc,
+    });
+    const estimatedFc = priced?.amountFc ?? 0;
     const item: EventPlanAiItem = {
       kind: 'service',
       slug: row.slug,
@@ -247,6 +317,7 @@ async function loadCatalog(opts: {
       location: [row.neighborhood, row.commune, row.city].filter(Boolean).join(', '),
       coverUrl: coverFromMedia(photos),
       estimatedFc,
+      detail: priced?.note,
       category: row.category,
       categoryLabel: serviceCategoryLabel(row.category),
       href: rental
@@ -337,9 +408,10 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
   const budget = Number.isFinite(budgetMaxFc) && budgetMaxFc > 0 ? Math.round(budgetMaxFc) : 0;
   const dateKey = toDateKey(String(body.eventDate || '')) || '';
   const prompt = typeof body.prompt === 'string' ? body.prompt.trim().slice(0, 1200) : '';
-  const includeVenue = body.includeVenue !== false;
-  const includeTrades = body.includeTrades !== false;
-  const includeRentals = body.includeRentals !== false;
+  const budgetScope = parseBudgetSimulationScope(body.budgetScope);
+  const includeVenue = budgetScope === 'complete' && body.includeVenue !== false;
+  const includeTrades = budgetScope === 'services' || (budgetScope === 'complete' && body.includeTrades !== false);
+  const includeRentals = budgetScope === 'rentals' || (budgetScope === 'complete' && body.includeRentals !== false);
   const keepVenueSlug = typeof body.keepVenueSlug === 'string' ? body.keepVenueSlug.trim() : '';
   const keepServiceSlugs = Array.isArray(body.keepServiceSlugs)
     ? body.keepServiceSlugs.filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
@@ -351,8 +423,17 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
   const budgetMinRaw = Number(body.budgetMinFc);
   const budgetMinFc = Number.isFinite(budgetMinRaw) && budgetMinRaw > 0 ? Math.round(budgetMinRaw) : 0;
   const wantedCategories = Array.isArray(body.wantedCategories)
-    ? body.wantedCategories.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).slice(0, 12)
+    ? body.wantedCategories.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).slice(0, 40)
     : [];
+  const wantedBrandIds = budgetScope === 'complete' || budgetScope === 'drinks'
+    ? parseWantedBrandIds(body.wantedBrandIds)
+    : [];
+  const selectedCategories = wantedCategories.filter((id) => {
+    if (budgetScope === 'drinks') return false;
+    if (budgetScope === 'services') return !isServiceRentalCategory(id);
+    if (budgetScope === 'rentals') return isServiceRentalCategory(id);
+    return true;
+  });
   const venueAmenities = Array.isArray(body.venueAmenities)
     ? body.venueAmenities.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).slice(0, 10)
     : [];
@@ -363,8 +444,57 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     neighborhood: neighborhood || undefined,
     budgetMinFc: budgetMinFc || null,
     wantedCategories,
+    wantedBrandIds,
     venueAmenities,
   };
+
+  if (budgetScope === 'drinks') {
+    const drinkOffers = await loadDrinkOffers(guests, wantedBrandIds);
+    const packages = AI_STYLES.map((style) => {
+      const drinks = beverageBudgetAmount(drinkOffers, guests, eventType, budgetStyleOf(style.id));
+      const warnings = drinks
+        ? [wantedBrandIds.length
+          ? 'Boissons : marques choisies, au conditionnement le moins cher, sans filtre de ville.'
+          : 'Boissons : tarif le plus bas du catalogue, sans filtre de ville.']
+        : [guests < 1
+          ? 'Indiquez le nombre d’invités pour chiffrer les boissons.'
+          : 'Aucun tarif publié pour ce type d’événement.'];
+      return {
+        id: style.id,
+        label: style.label,
+        blurb: style.id === 'eco'
+          ? 'Quantités les plus sobres, au conditionnement le moins cher.'
+          : style.id === 'comfort'
+            ? 'Quantités plus généreuses, au tarif le plus bas de chaque famille.'
+            : 'Quantités courantes, au tarif le plus bas de chaque famille.',
+        summary: drinks
+          ? 'Chaque famille indique la marque, la quantité et le prix unitaire.'
+          : 'Simulation des boissons uniquement.',
+        rationale: '',
+        warnings,
+        estimatedTotalFc: drinks?.amountFc || 0,
+        venue: null,
+        services: drinks ? drinks.lines.map((line) => ({
+          kind: 'service' as const,
+          slug: line.slug,
+          title: line.title,
+          orgName: 'Catalogue EventMaster',
+          location: '',
+          coverUrl: line.imageUrl,
+          estimatedFc: line.amountFc,
+          categoryLabel: line.categoryLabel,
+          href: '/marketplace/boissons',
+          detail: line.detail,
+        })) : [],
+      };
+    });
+    return {
+      catalog: { venues: 0, trades: 0, rentals: 0 },
+      packages,
+      criteria,
+    };
+  }
+
   const catalogOpts = {
     city,
     commune,
@@ -461,6 +591,8 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
   const ai = await askPlannerJson(system, user);
   const rawPackages = Array.isArray(ai.packages) ? ai.packages : [];
 
+  const drinkOffers = budgetScope === 'complete' ? await loadDrinkOffers(guests, wantedBrandIds) : [];
+
   const hydrate = (
     style: typeof AI_STYLES[number],
     venueSlug: string | null,
@@ -483,6 +615,7 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
       if (!item) continue;
       if (item.category && isServiceRentalCategory(item.category) && !includeRentals) continue;
       if (item.category && !isServiceRentalCategory(item.category) && !includeTrades) continue;
+      if (selectedCategories.length && item.category && !selectedCategories.includes(item.category)) continue;
       seen.add(slug);
       uniqueServices.push(item);
       if (uniqueServices.length >= 8) break;
@@ -490,8 +623,36 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
 
     const warnings = extraWarnings.slice(0, 6);
     if (includeVenue && !venue) warnings.unshift('Aucune salle retenue dans le catalogue disponible.');
-    if (!uniqueServices.length && (includeTrades || includeRentals)) {
+    if (!uniqueServices.length && includeTrades && includeRentals) {
       warnings.push('Aucun métier ni location retenu dans le catalogue disponible.');
+    } else if (!uniqueServices.length && includeTrades) {
+      warnings.push('Aucun métier retenu dans le catalogue disponible.');
+    } else if (!uniqueServices.length && includeRentals) {
+      warnings.push('Aucune location retenue dans le catalogue disponible.');
+    }
+    const drinks = budgetScope === 'complete'
+      ? beverageBudgetAmount(drinkOffers, guests, eventType, budgetStyleOf(style.id))
+      : null;
+    if (drinks) {
+      for (const line of drinks.lines) {
+        uniqueServices.push({
+          kind: 'service',
+          slug: line.slug,
+          title: line.title,
+          orgName: 'Catalogue EventMaster',
+          location: '',
+          coverUrl: line.imageUrl,
+          estimatedFc: line.amountFc,
+          categoryLabel: line.categoryLabel,
+          href: '/marketplace/boissons',
+          detail: line.detail,
+        });
+      }
+      if (!warnings.some((warning) => warning.startsWith('Boissons'))) {
+        warnings.push(wantedBrandIds.length
+          ? 'Boissons : marques choisies, quantité et tarif le moins cher, sans filtre de ville.'
+          : 'Boissons : quantité, marque et tarif le plus bas du catalogue, sans filtre de ville.');
+      }
     }
     const estimatedTotalFc = [venue, ...uniqueServices].reduce((sum, item) => sum + (item?.estimatedFc || 0), 0);
     if (budget && estimatedTotalFc > budget) {
@@ -501,7 +662,7 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     return {
       id: style.id,
       label: style.label,
-      blurb: style.blurb,
+      blurb: scopeBlurb(budgetScope, style),
       summary: summary.trim().slice(0, 400) || `Proposition ${style.label.toLowerCase()} basée sur le catalogue EventMaster.`,
       rationale: rationale.trim().slice(0, 1200),
       warnings,
@@ -547,14 +708,21 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     let trades = 0;
     let rentals = 0;
     const groups = [...byCategory.entries()].sort(([a], [b]) => {
-      const aw = wantedCategories.includes(a) ? 0 : 1;
-      const bw = wantedCategories.includes(b) ? 0 : 1;
-      return aw - bw;
+      const rank = (key: string) => {
+        if (wantedCategories.includes(key)) return 0;
+        if (key === 'RENTAL_CHAIRS' || key === 'RENTAL_TABLEWARE') return 1;
+        return 2;
+      };
+      return rank(a) - rank(b);
     });
     for (const [, group] of groups) {
-      const rental = Boolean(group[0]?.category && isServiceRentalCategory(group[0].category));
-      if (rental && rentals >= style.maxRentals) continue;
-      if (!rental && trades >= style.maxTrades) continue;
+      const category = group[0]?.category;
+      if (selectedCategories.length && category && !selectedCategories.includes(category)) continue;
+      const rental = Boolean(category && isServiceRentalCategory(category));
+      const rentalLimit = budgetScope === 'rentals' ? DEDICATED_RENTAL_CAP : style.maxRentals;
+      const tradeLimit = budgetScope === 'services' ? DEDICATED_TRADE_CAP : style.maxTrades;
+      if (rental && rentals >= rentalLimit) continue;
+      if (!rental && trades >= tradeLimit) continue;
       const pick = pickByStyle(group, style.id, usedServices);
       if (!pick) continue;
       const cost = pick.estimatedFc || 0;

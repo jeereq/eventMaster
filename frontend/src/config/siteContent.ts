@@ -42,7 +42,7 @@ export const FOOTER_RESOURCES = [
 ] as const;
 
 export const FOOTER_BRAND_DESCRIPTION =
-  'Plateforme événementielle en RDC : invitations WhatsApp, plans 2D/3D, billetterie Mobile Money et marketplace (salles, métiers, matériel, boissons et prix).';
+  'Plateforme événementielle en RDC : invitations WhatsApp, plans 2D/3D, billetterie Mobile Money et marketplace (salles, métiers, matériel, boissons).';
 
 export interface FaqItem {
   id: string;
@@ -55,7 +55,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'what-is-eventmaster',
     question: 'Qu\'est-ce qu\'EventMaster ?',
     answer:
-      'Une plateforme tout-en-un pour préparer un événement en toute sérénité : invitations interactives avec IA, billetterie en ligne avec validation automatique de présence, personnalisation des pass pour billets partagés, plans de salle 2D et 3D photoréalistes, accueil QR le jour J, simulateur de budget IA et marketplace (salles, métiers, Matériel & Équipements, boissons et prix) en RDC. Trois types de compte : organisateur, client, ou pro (salle / métier). Dès Business, la vitrine catalogue est incluse pour un organisateur. Tout fonctionne dans le navigateur.',
+      'Une plateforme tout-en-un pour préparer un événement en toute sérénité : invitations interactives avec IA, billetterie en ligne avec validation automatique de présence, personnalisation des pass pour billets partagés, plans de salle 2D et 3D photoréalistes, accueil QR le jour J, simulateur de budget IA et marketplace (salles, métiers, Matériel & Équipements, boissons) en RDC. Trois types de compte : organisateur, client, ou pro (salle / métier). Dès Business, la vitrine catalogue est incluse pour un organisateur. Tout fonctionne dans le navigateur.',
   },
   {
     id: 'mobile-app',
@@ -103,7 +103,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'marketplace-venues',
     question: 'Puis-je trouver une salle ou un prestataire sur EventMaster ?',
     answer:
-      'Oui. Parcourez salles, métiers (traiteur, photo…), Matériel & Équipements (chaises, habits, véhicules, sono…) et le catalogue Boissons et prix sans compte. Une location précise le retrait sur place, la livraison déjà comprise dans le tarif, ou la livraison en supplément. Pour un devis ou une réservation, créez un compte client gratuit. L’acompte ({depositPercent} %) se verse directement au professionnel, pas via EventMaster.',
+      'Oui. Parcourez salles, métiers (traiteur, photo…), Matériel & Équipements (chaises, habits, véhicules, sono…) et le catalogue Boissons sans compte. Une location précise le retrait sur place, la livraison déjà comprise dans le tarif, ou la livraison en supplément. Pour un devis ou une réservation, créez un compte client gratuit. L’acompte ({depositPercent} %) se verse directement au professionnel, pas via EventMaster.',
   },
   {
     id: 'marketplace-booking',
@@ -115,7 +115,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'marketplace-drinks',
     question: 'Où voir les boissons et leurs prix ?',
     answer:
-      'La page Marketplace → Boissons et prix liste les bières, boissons, vins et champagnes du catalogue. Quand un prestataire a publié un tarif, vous voyez le prix le plus bas, promotion comprise tant qu’elle est en cours. Le prestataire choisit la quantité vendue : bouteille, casier, pack ou un autre conditionnement. Dans une invitation, l’organisateur peut proposer ces boissons dans le champ Boissons : l’invité choisit un nom, sans voir le prix.',
+      'La page Marketplace → Boissons liste les bières, boissons, vins et champagnes du catalogue. Quand un prestataire a publié un tarif, vous voyez le prix le plus bas, promotion comprise tant qu’elle est en cours. Le prestataire choisit la quantité vendue : bouteille, casier, pack ou un autre conditionnement. Dans une invitation, l’organisateur peut proposer ces boissons dans le champ Boissons : l’invité choisit un nom, sans voir le prix.',
   },
   {
     id: 'rental-delivery',
@@ -139,13 +139,13 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'service-subscription',
     question: 'Comment publier une prestation ou du Matériel & Équipements ?',
     answer:
-      'Compte pro → « Un métier de service » : traiteur, photo, DJ… ou locations (chaises, habits, voiture, sono, tente…). Pour une location livrée, indiquez si le prix de livraison est déjà dans le tarif ou ajouté une fois en supplément. Le forfait Prestataire couvre aussi l’onglet Boissons et prix : vous y fixez bouteille, casier, pack ou un autre conditionnement, et une promotion inférieure au tarif normal. Salle & presta ajoute les salles. Un organisateur Business+ publie aussi ces fiches via le catalogue inclus.',
+      'Compte pro → « Un métier de service » : traiteur, photo, DJ… ou locations (chaises, habits, voiture, sono, tente…). Pour une location livrée, indiquez si le prix de livraison est déjà dans le tarif ou ajouté une fois en supplément. Le forfait Prestataire couvre aussi l’onglet Boissons : vous y fixez bouteille, casier, pack ou un autre conditionnement, et une promotion inférieure au tarif normal. Salle & presta ajoute les salles. Un organisateur Business+ publie aussi ces fiches via le catalogue inclus.',
   },
   {
     id: 'event-packs',
     question: 'Comment fonctionne la simulation d’événement et de packs budget par IA ?',
     answer:
-      'Rendez-vous sur la page dédiée /simulateur : sélectionnez un scénario type prêt à l’emploi (Mariage Élégance, Anniversaire, Gala d’Entreprise) ou personnalisez votre ville, nombre d’invités et budget en Francs Congolais ou Dollars au taux officiel du jour. Vous disposez de 4 simulations complètes gratuites sans compte préalable. L’IA EventMaster analyse les prestataires et salles certifiés en RDC et compose instantanément 3 formules réelles (Éco, Équilibré, Confort). Les recharges s’effectuent en Francs Congolais par Mobile Money ou Carte.',
+      'Rendez-vous sur la page dédiée /simulateur : sélectionnez un scénario type prêt à l’emploi (Mariage Élégance, Anniversaire, Gala d’Entreprise) ou personnalisez votre ville, nombre d’invités et budget en Francs Congolais ou Dollars au taux officiel du jour. La simulation complète se règle selon le besoin (salle, métiers, locations, boissons). Vous pouvez aussi ne simuler que les boissons, les locations, ou les services. Vous disposez de 4 simulations gratuites sans compte préalable. L’IA EventMaster compose 3 formules (Éco, Équilibré, Confort). Les boissons, elles, suivent les invités et le catalogue, sans filtre de ville. Les recharges s’effectuent en Francs Congolais par Mobile Money ou Carte.',
   },
   {
     id: 'free-trial',

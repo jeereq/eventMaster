@@ -112,6 +112,7 @@ export function isCatalogueListPath(pathname: string): boolean {
     ||     pathname === '/marketplace/prestataires'
     || pathname === '/marketplace/locations'
     || pathname === '/marketplace/evenements'
+    || pathname === '/marketplace/boissons'
     || pathname === '/dashboard/admin/catalogue'
     || pathname === '/dashboard/rooms'
     || pathname === '/dashboard/marketplace'

@@ -306,7 +306,7 @@ export default function LandingVitrineSection() {
             <p className="hidden sm:block text-sm text-muted leading-relaxed">
               Explorez salles 3D, métiers, Matériel & Équipements et les{' '}
               <Link href="/marketplace/boissons" className="font-semibold text-primary hover:underline underline-offset-2">
-                boissons et prix
+                boissons
               </Link>
               {' '}— contactez les pros en direct.
             </p>

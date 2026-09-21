@@ -3,6 +3,8 @@
 import React, { useMemo, useState } from 'react';
 import { ChevronDown, Loader2, Save, Sparkles } from 'lucide-react';
 import { Alert, Button, Input } from '@/components/ui';
+import BudgetSimulationScopePicker from '@/components/BudgetSimulationScopePicker';
+import BudgetSimulationCriteria from '@/components/BudgetSimulationCriteria';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
 import { communesForCity, normalizeRdcCity } from '@/lib/rdcCities';
@@ -97,6 +99,7 @@ export default function EventPlanBriefForm({
   const [showAllTrades, setShowAllTrades] = useState(false);
   const [showAllRentals, setShowAllRentals] = useState(false);
   const [briefName, setBriefName] = useState('');
+  const [scopeError, setScopeError] = useState('');
   const [saving, setSaving] = useState(false);
   const communes = communesForCity(brief.city);
   const rows = useMemo(() => shareRows(brief), [brief]);
@@ -125,6 +128,17 @@ export default function EventPlanBriefForm({
     onChange({ ...brief, slots, shares });
   };
 
+  const scope = brief.budgetScope || 'complete';
+
+  const launch = () => {
+    if (scope === 'drinks' && !(brief.guestCount > 0)) {
+      setScopeError('Indiquez le nombre d’invités pour chiffrer les boissons.');
+      return;
+    }
+    setScopeError('');
+    onSubmit();
+  };
+
   const saveBrief = async () => {
     setSaving(true);
     try {
@@ -145,10 +159,35 @@ export default function EventPlanBriefForm({
       <div className="space-y-1">
         <h2 className="text-sm font-semibold text-foreground">Brief budget</h2>
         <p className="text-xs text-muted leading-relaxed">
-          Définissez votre enveloppe : 3 packs complets (Éco, Équilibré, Confort) sont calculés automatiquement.
+          {scope === 'drinks'
+            ? 'Trois formules de boissons (Éco, Équilibré, Confort), selon les invités et le type d’événement.'
+            : scope === 'rentals'
+              ? 'Trois formules de locations, selon la ville, les invités et le matériel choisi.'
+              : scope === 'services'
+                ? 'Trois formules de métiers, selon la ville et les prestataires choisis.'
+                : 'Simulation complète : salle, métiers, locations et boissons. Trois packs (Éco, Équilibré, Confort).'}
         </p>
       </div>
 
+      <BudgetSimulationScopePicker
+        value={scope}
+        onChange={(budgetScope) => {
+          setScopeError('');
+          patch({ budgetScope });
+        }}
+      />
+      <BudgetSimulationCriteria
+        scope={scope}
+        selectedBrandIds={brief.wantedBrandIds || []}
+        onToggleBrand={(id) => {
+          const current = brief.wantedBrandIds || [];
+          patch({
+            wantedBrandIds: current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+          });
+        }}
+      />
+
+      {scope === 'complete' ? (
       <div className="rounded-xl border border-primary/20 bg-primary/5">
         <button
           type="button"
@@ -179,6 +218,7 @@ export default function EventPlanBriefForm({
           </div>
         ) : null}
       </div>
+      ) : null}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <FieldSelect
@@ -215,35 +255,55 @@ export default function EventPlanBriefForm({
           <option value="5">5 % — recommandé · {formatFc(Math.round(brief.budgetMaxFc * 0.05))} de réserve</option>
           <option value="10">10 % — confort · {formatFc(Math.round(brief.budgetMaxFc * 0.10))} de réserve</option>
         </FieldSelect>
-        <FieldSelect
-          label="Ville"
-          hint="Limite la recherche aux salles, prestataires et matériel & équipements de cette ville."
-          value={brief.city}
-          onChange={(value) => patch({ city: normalizeRdcCity(value) || '', commune: '' })}
-        >
-          <option value="">Toutes les villes actives</option>
-          {marketplaceCities.map((name) => (
-            <option key={name} value={name}>{name}</option>
-          ))}
-        </FieldSelect>
-        <FieldSelect
-          label="Commune"
-          hint="Optionnel. Affinez par commune ; vide = toute la ville."
-          value={brief.commune}
-          onChange={(value) => patch({ commune: value })}
-        >
-          <option value="">Toutes les communes</option>
-          {communes.map((item) => (
-            <option key={item.name} value={item.name}>{item.name}</option>
-          ))}
-        </FieldSelect>
+        {scope !== 'drinks' ? (
+          <>
+            <FieldSelect
+              label="Ville"
+              hint={
+                scope === 'rentals'
+                  ? 'Limite la recherche au matériel de cette ville.'
+                  : scope === 'services'
+                    ? 'Limite la recherche aux métiers de cette ville.'
+                    : 'Limite la recherche aux salles, prestataires et matériel de cette ville.'
+              }
+              value={brief.city}
+              onChange={(value) => patch({ city: normalizeRdcCity(value) || '', commune: '' })}
+            >
+              <option value="">Toutes les villes actives</option>
+              {marketplaceCities.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </FieldSelect>
+            <FieldSelect
+              label="Commune"
+              hint="Optionnel. Affinez par commune ; vide = toute la ville."
+              value={brief.commune}
+              onChange={(value) => patch({ commune: value })}
+            >
+              <option value="">Toutes les communes</option>
+              {communes.map((item) => (
+                <option key={item.name} value={item.name}>{item.name}</option>
+              ))}
+            </FieldSelect>
+          </>
+        ) : null}
         <Input
           label="Nombre d’invités"
           type="number"
           min={1}
+          required={scope === 'drinks'}
           value={brief.guestCount || ''}
-          onChange={(e) => patch({ guestCount: Number(e.target.value) || 0 })}
-          hint="Sert à choisir une salle assez grande et à estimer le traiteur au plat."
+          onChange={(e) => {
+            setScopeError('');
+            patch({ guestCount: Number(e.target.value) || 0 });
+          }}
+          hint={
+            scope === 'drinks'
+              ? 'Obligatoire. Les quantités sont calculées à partir des invités.'
+              : scope === 'rentals'
+                ? 'Chaises et vaisselle : une pièce par invité.'
+                : 'Sert à la salle, au traiteur au plat, aux chaises (une pièce par invité) et aux boissons.'
+          }
         />
         <Input
           label="Date"
@@ -264,8 +324,13 @@ export default function EventPlanBriefForm({
           {brief.marginPct > 0
             ? ` (${brief.marginPct} % = ${formatFc(reserved)} restent de côté pour les imprévus).`
             : ' (toute l’enveloppe).'}
+          {scope === 'drinks'
+            ? ' Le plafond signale un dépassement. Les quantités suivent les invités, au conditionnement le moins cher.'
+            : scope === 'complete'
+              ? ' Les boissons s’ajoutent ensuite, au conditionnement le moins cher du catalogue.'
+              : ''}
         </p>
-        {rows.length > 0 ? (
+        {scope === 'complete' && rows.length > 0 ? (
           <p className="text-xs text-muted leading-relaxed">
             Répartition actuelle : {rows.map((row) => `${row.label} ${row.pct} % → ${formatFc(row.amountFc)}`).join(' · ')}
             {shareSum !== 100 ? ` · total ${shareSum} % (${formatFc(allocated)}) — rééquilibré à 100 % au lancement.` : ''}
@@ -273,6 +338,7 @@ export default function EventPlanBriefForm({
         ) : null}
       </div>
 
+      {scope === 'complete' ? (
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted">Salle</p>
         <p className="text-xs text-muted leading-relaxed">
@@ -299,7 +365,9 @@ export default function EventPlanBriefForm({
           ))}
         </div>
       </div>
+      ) : null}
 
+      {scope === 'complete' || scope === 'services' ? (
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted">Prestataires</p>
         <p className="text-xs text-muted leading-relaxed">
@@ -336,12 +404,21 @@ export default function EventPlanBriefForm({
             {showAllTrades ? 'Masquer les autres prestataires' : 'Afficher tous les prestataires'}
           </button>
         ) : null}
+        {scope === 'services' && suggestedTrades.length === 0 ? (
+          <p className="text-xs text-muted leading-relaxed">
+            Aucun métier n’est coché : la simulation reprend les métiers obligatoires du type d’événement.
+          </p>
+        ) : null}
       </div>
+      ) : null}
 
+      {scope === 'complete' || scope === 'rentals' ? (
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted">Matériel & Équipements</p>
         <p className="text-xs text-muted leading-relaxed">
-          Mobilier, sonorisation, véhicules, tentes, habits. Même logique, séparée des prestataires de service.
+          {scope === 'rentals'
+            ? 'Chaises et vaisselle : une pièce par invité, plus la livraison si elle est en supplément. Tente, sono, véhicule et habits restent un lot.'
+            : 'Chaises et vaisselle : une pièce par invité, plus la livraison si elle est en supplément. Tente, sono, véhicule et habits restent un lot. Les boissons sont calculées à part.'}
         </p>
         <div className="flex flex-wrap gap-1.5">
           {visibleRentals.map((category) => {
@@ -374,8 +451,15 @@ export default function EventPlanBriefForm({
             {showAllRentals ? 'Masquer les autres équipements' : 'Afficher tout le matériel & équipements'}
           </button>
         ) : null}
+        {scope === 'rentals' && suggestedRentals.length === 0 ? (
+          <p className="text-xs text-muted leading-relaxed">
+            Aucune location n’est cochée : la simulation reprend tout le matériel.
+          </p>
+        ) : null}
       </div>
+      ) : null}
 
+      {scope === 'complete' ? (
       <div className="rounded-xl border border-border">
         <button
           type="button"
@@ -521,11 +605,12 @@ export default function EventPlanBriefForm({
           </div>
         ) : null}
       </div>
+      ) : null}
 
-      {error ? <Alert variant="error">{error}</Alert> : null}
+      {scopeError || error ? <Alert variant="error">{scopeError || error}</Alert> : null}
 
       <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
-        <Button onClick={onSubmit} disabled={planning} leftIcon={planning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}>
+        <Button onClick={launch} disabled={planning} leftIcon={planning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}>
           {planning ? 'Recherche…' : 'Lancer la recherche'}
         </Button>
         <div className="flex flex-1 min-w-[12rem] gap-2">

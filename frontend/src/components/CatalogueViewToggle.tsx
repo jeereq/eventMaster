@@ -44,6 +44,7 @@ export function useCatalogueGridCols(defaultCols: CatalogueGridCols = 4) {
 export function useCatalogueView(
   defaultMode: CatalogueViewMode = 'grid',
   storageKey: string = STORAGE_KEY,
+  opts?: { respectMobileList?: boolean },
 ) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -90,7 +91,10 @@ export function useCatalogueView(
     router.replace(href, { scroll: false });
   };
 
-  return { mode: isMobile ? 'grid' : mode, setView, gridCols, setGridCols };
+  const mobileMode = mode === 'map' || mode === 'focus' || (opts?.respectMobileList && mode === 'list')
+    ? mode
+    : 'grid';
+  return { mode: isMobile ? mobileMode : mode, setView, gridCols, setGridCols };
 }
 
 export function CatalogueGridColsToggle({
@@ -140,12 +144,14 @@ export default function CatalogueViewToggle({
   className,
   compact = false,
   hideMap = false,
+  alwaysShow = false,
 }: {
   value: CatalogueViewMode;
   onChange: (mode: CatalogueViewMode) => void;
   className?: string;
   compact?: boolean;
   hideMap?: boolean;
+  alwaysShow?: boolean;
 }) {
   const options: Array<{ id: CatalogueViewMode; label: string; icon: typeof LayoutGrid }> = hideMap
     ? [
@@ -162,7 +168,8 @@ export default function CatalogueViewToggle({
   return (
     <div
       className={cn(
-        'hidden md:flex items-center rounded-[var(--radius-button)] border border-border bg-surface-muted p-0.5',
+        alwaysShow ? 'inline-flex' : 'hidden md:flex',
+        'items-center rounded-[var(--radius-button)] border border-border bg-surface-muted p-0.5',
         className,
       )}
       role="group"
