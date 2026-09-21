@@ -6,6 +6,7 @@ import { Button, Input, Modal } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
   PRICE_UNIT_OPTIONS,
+  RENTAL_DELIVERY_OPTIONS,
   RADIUS_KM_OPTIONS,
   SERVICE_CATEGORY_LABELS,
   SERVICE_CATEGORY_META,
@@ -720,7 +721,8 @@ export function CatalogueEntityFilterFields({
                 kind: nextKind,
                 roomType: nextKind === 'venue' ? extras.roomType : '',
                 category: keepTrade || keepRental ? extras.category : '',
-                mobility: nextKind === 'service' || nextKind === 'rental' ? extras.mobility : '',
+                mobility: nextKind === 'service' ? extras.mobility : '',
+                delivery: nextKind === 'rental' ? extras.delivery : '',
                 priceUnit: nextKind === 'service' || nextKind === 'rental' ? extras.priceUnit : '',
                 entry: nextKind === 'event' ? extras.entry : '',
               });
@@ -791,6 +793,7 @@ export function CatalogueEntityFilterFields({
                 />
           </CatalogueFilterField>
           ) : null}
+          {showTrade ? (
           <CatalogueFilterField label="Intervention">
             <CatalogueChoicePills
               options={SERVICE_MOBILITY_OPTIONS.filter((opt) => opt.id)}
@@ -798,6 +801,16 @@ export function CatalogueEntityFilterFields({
               onChange={(id) => setExtras({ mobility: (id as import('@/lib/marketplace').ServiceMobility) || '' })}
             />
           </CatalogueFilterField>
+          ) : null}
+          {showRental ? (
+          <CatalogueFilterField label="Livraison" hint="Le prix inclus est déjà compris dans le tarif de location.">
+            <CatalogueChoicePills
+              options={RENTAL_DELIVERY_OPTIONS}
+              value={extras.delivery}
+              onChange={(id) => setExtras({ delivery: (id as import('@/lib/marketplace').RentalDeliveryFilter) || '' })}
+            />
+          </CatalogueFilterField>
+          ) : null}
           <CatalogueFilterField
             label="Unité tarifaire"
             hint={

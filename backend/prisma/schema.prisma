@@ -884,6 +884,9 @@ model ServiceOffering {
   neighborhood      String?
   coverageRadiusKm  Int?
   travels           Boolean          @default(true)
+  /** pickup | included | extra_fee. Le prix inclus est déjà dans le tarif. */
+  deliveryMode      String?
+  deliveryPriceFc   Int?
   latitude          Float?
   longitude         Float?
   priceFromFc       Int?

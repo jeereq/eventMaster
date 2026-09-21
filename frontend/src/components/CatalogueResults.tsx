@@ -198,6 +198,8 @@ function GridCard({
               ) : null}
               <span className="text-muted text-xs ml-1">
                 · {item.priceUnitLabel}
+                {item.deliveryMode === 'included' ? ' · livraison incluse' : ''}
+                {item.deliveryMode === 'extra_fee' && item.deliveryPriceFc ? ` · livraison ${formatFc(item.deliveryPriceFc)}` : ''}
               </span>
             </div>
           </div>
@@ -285,7 +287,11 @@ function ListRow({
             {catalogueHasPromo(item) && item.priceFromFc != null ? (
               <span className="block text-xs text-muted line-through tabular-nums">{formatFc(item.priceFromFc)}</span>
             ) : null}
-            <span className="block text-xs text-muted">{item.priceUnitLabel}</span>
+            <span className="block text-xs text-muted">
+              {item.priceUnitLabel}
+              {item.deliveryMode === 'included' ? ' · incluse' : ''}
+              {item.deliveryMode === 'extra_fee' && item.deliveryPriceFc ? ` · +${formatFc(item.deliveryPriceFc)}` : ''}
+            </span>
           </div>
         </Link>
         {onToggleFavorite && item.kind !== 'event' ? (

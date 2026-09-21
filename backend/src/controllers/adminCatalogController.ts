@@ -3,7 +3,7 @@ import { MarketplaceBookingStatus, MarketplaceInquiryStatus, RoomType, VenuePric
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { auditReq } from '../services/adminAuditService';
-import { parseServiceCategory, parsePriceUnit, priceUnitLabel, serviceCategoryLabel, parsePhotoUrls, coverFromMedia, parseServiceGroup, serviceGroupPrismaFilter, isServiceRentalCategory } from '../utils/publicVenue';
+import { parseServiceCategory, parsePriceUnit, priceUnitLabel, serviceCategoryLabel, parsePhotoUrls, coverFromMedia, parseServiceGroup, serviceGroupPrismaFilter, isServiceRentalCategory, parseDeliveryMode } from '../utils/publicVenue';
 
 function pager(req: AuthenticatedRequest) {
   const page = Math.max(parseInt(String(req.query.page || '1'), 10) || 1, 1);
@@ -333,6 +333,7 @@ export async function listAdminOfferings(req: AuthenticatedRequest, res: Respons
     const price = priceRange(req);
     const unit = priceUnitFilter(req);
     const travels = travelsFilter(req);
+    const delivery = parseDeliveryMode(req.query.delivery);
 
     const where = {
       isPublic,
@@ -352,6 +353,11 @@ export async function listAdminOfferings(req: AuthenticatedRequest, res: Respons
       ...(price ? { priceFromFc: price } : {}),
       ...(unit ? { priceUnit: unit } : {}),
       ...(travels == null ? {} : { travels }),
+      ...(delivery === 'included' || delivery === 'extra_fee'
+        ? { AND: [{ OR: [{ deliveryMode: delivery }, { AND: [{ deliveryMode: null }, { details: { path: ['deliveryMode'], equals: delivery } }] }] }] }
+        : delivery === 'pickup'
+          ? { AND: [{ OR: [{ deliveryMode: 'pickup' }, { AND: [{ deliveryMode: null }, { travels: false }] }, { AND: [{ deliveryMode: null }, { details: { path: ['deliveryMode'], equals: 'pickup' } }] }] }] }
+          : {}),
       ...(q
         ? {
             OR: [

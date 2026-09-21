@@ -48,6 +48,13 @@ export function parseServiceCategory(value: unknown): ServiceCategory | undefine
   return undefined;
 }
 
+export type RentalDeliveryMode = 'pickup' | 'included' | 'extra_fee';
+
+export function parseDeliveryMode(value: unknown): RentalDeliveryMode | null {
+  if (value === 'pickup' || value === 'included' || value === 'extra_fee') return value;
+  return null;
+}
+
 export function isServiceRentalCategory(category?: string | null): boolean {
   return Boolean(category && (RENTAL_CATEGORIES as string[]).includes(category.trim().toUpperCase() as ServiceCategory));
 }

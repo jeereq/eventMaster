@@ -37,6 +37,7 @@ import CityLocationFields from '@/components/CityLocationFields';
 export const OFFERING_TITLE_FIELD_ID = 'offering-title';
 export const OFFERING_PRICE_FIELD_ID = 'offering-price';
 export const OFFERING_PROMO_FIELD_ID = 'offering-promo-price';
+export const OFFERING_DELIVERY_FIELD_ID = 'offering-delivery-price';
 export const OFFERING_RADIUS_FIELD_ID = 'offering-radius';
 export const OFFERING_CITY_SECTION_ID = 'offering-city';
 
@@ -54,6 +55,8 @@ export type ServiceOfferingDraft = {
   neighborhood: string;
   coverageRadiusKm: string;
   travels: boolean;
+  deliveryMode: '' | 'included' | 'extra_fee';
+  deliveryPriceFc: string;
   latitude: string;
   longitude: string;
   priceFromFc: string;
@@ -90,6 +93,21 @@ export function getOfferingPublishGaps(draft: ServiceOfferingDraft): OfferingPub
     gaps.push({ tab: 'map', message: 'Choisissez le quartier.', fieldId: OFFERING_CITY_SECTION_ID });
   } else if (missing === 'map') {
     gaps.push({ tab: 'map', message: 'Placez le point GPS sur la carte.' });
+  }
+  if (isServiceRentalCategory(draft.category) && draft.travels) {
+    if (draft.deliveryMode !== 'included' && draft.deliveryMode !== 'extra_fee') {
+      gaps.push({
+        tab: 'map',
+        message: 'Précisez si le prix de la livraison est inclus dans le tarif ou facturé en plus.',
+        fieldId: OFFERING_DELIVERY_FIELD_ID,
+      });
+    } else if (!(Number(draft.deliveryPriceFc) > 0)) {
+      gaps.push({
+        tab: 'map',
+        message: 'Indiquez le prix de la livraison en FC.',
+        fieldId: OFFERING_DELIVERY_FIELD_ID,
+      });
+    }
   }
   if (draft.travels && !(Number(draft.coverageRadiusKm) > 0)) {
     gaps.push({
@@ -519,6 +537,8 @@ export default function ServiceOfferingForm({
                     ...current,
                     travels: opt.id,
                     coverageRadiusKm: opt.id ? current.coverageRadiusKm : '',
+                    deliveryMode: opt.id ? current.deliveryMode : '',
+                    deliveryPriceFc: opt.id ? current.deliveryPriceFc : '',
                   }))}
                   className={cn(
                     'min-h-11 px-3 py-2 rounded-full text-xs font-semibold border transition',
@@ -532,15 +552,54 @@ export default function ServiceOfferingForm({
               ))}
             </div>
             {draft.travels ? (
-              <Input
-                id={OFFERING_RADIUS_FIELD_ID}
-                label={rental ? 'Rayon de livraison (km)' : 'Rayon d’intervention (km)'}
-                type="number"
-                min={1}
-                required
-                value={draft.coverageRadiusKm}
-                onChange={(e) => onChange((current) => ({ ...current, coverageRadiusKm: e.target.value }))}
-              />
+              <>
+                <Input
+                  id={OFFERING_RADIUS_FIELD_ID}
+                  label={rental ? 'Rayon de livraison (km)' : 'Rayon d’intervention (km)'}
+                  type="number"
+                  min={1}
+                  required
+                  value={draft.coverageRadiusKm}
+                  onChange={(e) => onChange((current) => ({ ...current, coverageRadiusKm: e.target.value }))}
+                />
+                {rental ? (
+                  <>
+                    <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Prix de la livraison">
+                      {([
+                        { id: 'included' as const, label: 'Prix inclus dans le tarif' },
+                        { id: 'extra_fee' as const, label: 'Prix en supplément' },
+                      ]).map((opt) => (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={draft.deliveryMode === opt.id}
+                          onClick={() => onChange((current) => ({ ...current, deliveryMode: opt.id }))}
+                          className={cn(
+                            'min-h-11 px-3 py-2 rounded-full text-xs font-semibold border transition',
+                            draft.deliveryMode === opt.id
+                              ? 'bg-primary-solid text-primary-foreground border-primary-solid'
+                              : 'bg-surface text-muted border-border hover:text-foreground',
+                          )}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    <Input
+                      id={OFFERING_DELIVERY_FIELD_ID}
+                      label={draft.deliveryMode === 'extra_fee' ? 'Supplément de livraison (FC)' : 'Prix de livraison inclus (FC)'}
+                      type="number"
+                      min={1}
+                      value={draft.deliveryPriceFc}
+                      onChange={(e) => onChange((current) => ({ ...current, deliveryPriceFc: e.target.value }))}
+                      hint={draft.deliveryMode === 'extra_fee'
+                        ? 'Ajouté une fois à la réservation, en plus du tarif de location.'
+                        : 'Déjà compris dans le tarif. Le client le voit, il n’est pas ajouté une seconde fois.'}
+                    />
+                  </>
+                ) : null}
+              </>
             ) : (
               <p className="text-xs text-muted">
                 {rental

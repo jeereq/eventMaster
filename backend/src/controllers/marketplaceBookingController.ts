@@ -295,7 +295,13 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
       }
     }
 
-    const amounts = billedMarketplaceAmount(price, listing?.priceUnit ?? offering?.priceUnit, range.dayCount);
+    const rentalBase = billedMarketplaceAmount(price, listing?.priceUnit ?? offering?.priceUnit, range.dayCount);
+    const deliveryFee = offering?.deliveryMode === 'extra_fee' && offering.deliveryPriceFc && offering.deliveryPriceFc > 0
+      ? offering.deliveryPriceFc
+      : 0;
+    const amounts = deliveryFee
+      ? computeMarketplaceAmounts(rentalBase.amountFc + deliveryFee)
+      : rentalBase;
     const parsedGuests = Number.parseInt(String(guestCount || ''), 10);
 
     const inquiryCandidates = await prisma.marketplaceInquiry.findMany({
@@ -345,7 +351,12 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
     const organizerHref = `${FRONTEND_URL}/dashboard/bookings?tab=bookings&bookingId=${booking.id}`;
     const amountFormatted = `${amounts.amountFc.toLocaleString('fr-FR')} FC`;
     const depositFormatted = `${amounts.depositFc.toLocaleString('fr-FR')} FC`;
-    const vendorMessage = `Demande ${period}. Montant ${amountFormatted}, acompte ${depositFormatted}.`;
+    const deliveryNote = deliveryFee
+      ? ` Dont livraison ${deliveryFee.toLocaleString('fr-FR')} FC.`
+      : offering?.deliveryMode === 'included' && offering.deliveryPriceFc
+        ? ` Livraison incluse (${offering.deliveryPriceFc.toLocaleString('fr-FR')} FC).`
+        : '';
+    const vendorMessage = `Demande ${period}. Montant ${amountFormatted}, acompte ${depositFormatted}.${deliveryNote}`;
 
     void notifyTenantOperators(vendorTenantId, {
       type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING,
