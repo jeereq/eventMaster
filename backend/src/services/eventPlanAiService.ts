@@ -5,7 +5,7 @@ import { coverFromMedia, isServiceRentalCategory, parsePhotoUrls, priceUnitLabel
 import { collectUnavailableDates, isRangeAvailable, toDateKey } from '../utils/marketplaceDates';
 import { allowedCityPrismaFilter, normalizeAllowedCity, normalizeAllowedCommune } from '../utils/rdcCities';
 import { EVENT_PLAN_TYPES, type EventPlanType } from './eventPlanBrief';
-import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, rentalBudgetAmount, type BudgetSimulationScope, type BudgetStyle } from './eventBudgetCost';
+import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, parseWantedSaleUnits, rentalBudgetAmount, type BudgetSimulationScope, type BudgetStyle, type WantedSaleUnit } from './eventBudgetCost';
 import { getGeminiApiKey, requestGeminiJson } from './geminiJsonClient.ts';
 import { requestOpenAiJson } from './openaiJsonClient.ts';
 
@@ -108,6 +108,7 @@ export type EventPlanAiResult = {
     budgetMinFc?: number | null;
     wantedCategories?: string[];
     wantedBrandIds?: string[];
+    wantedSaleUnits?: string[];
     venueAmenities?: string[];
   };
 };
@@ -135,11 +136,21 @@ function scopeBlurb(scope: BudgetSimulationScope, style: { id: EventPlanAiStyleI
   return style.blurb;
 }
 
-async function loadDrinkOffers(guests: number, brandIds: string[]) {
+function drinkCriteriaNote(brandIds: string[], saleUnits: WantedSaleUnit[]): string {
+  const parts = [
+    brandIds.length ? 'marques choisies' : '',
+    saleUnits.length ? 'conditionnements choisis' : '',
+  ].filter(Boolean);
+  if (!parts.length) return 'Boissons : quantité, marque et tarif le plus bas du catalogue, sans filtre de ville.';
+  return `Boissons : ${parts.join(', ')}, au tarif le moins cher, sans filtre de ville.`;
+}
+
+async function loadDrinkOffers(guests: number, brandIds: string[], saleUnits: WantedSaleUnit[]) {
   if (guests < 1) return [];
   const rows = await prisma.vendorBeveragePrice.findMany({
     where: {
       isAvailable: true,
+      ...(saleUnits.length ? { unitKind: { in: saleUnits } } : {}),
       brand: { isActive: true, ...(brandIds.length ? { id: { in: brandIds } } : {}) },
     },
     select: {
@@ -425,9 +436,9 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
   const wantedCategories = Array.isArray(body.wantedCategories)
     ? body.wantedCategories.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).slice(0, 40)
     : [];
-  const wantedBrandIds = budgetScope === 'complete' || budgetScope === 'drinks'
-    ? parseWantedBrandIds(body.wantedBrandIds)
-    : [];
+  const drinksInScope = budgetScope === 'complete' || budgetScope === 'drinks';
+  const wantedBrandIds = drinksInScope ? parseWantedBrandIds(body.wantedBrandIds) : [];
+  const wantedSaleUnits = drinksInScope ? parseWantedSaleUnits(body.wantedSaleUnits) : [];
   const selectedCategories = wantedCategories.filter((id) => {
     if (budgetScope === 'drinks') return false;
     if (budgetScope === 'services') return !isServiceRentalCategory(id);
@@ -445,20 +456,21 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     budgetMinFc: budgetMinFc || null,
     wantedCategories,
     wantedBrandIds,
+    wantedSaleUnits,
     venueAmenities,
   };
 
   if (budgetScope === 'drinks') {
-    const drinkOffers = await loadDrinkOffers(guests, wantedBrandIds);
+    const drinkOffers = await loadDrinkOffers(guests, wantedBrandIds, wantedSaleUnits);
     const packages = AI_STYLES.map((style) => {
       const drinks = beverageBudgetAmount(drinkOffers, guests, eventType, budgetStyleOf(style.id));
       const warnings = drinks
-        ? [wantedBrandIds.length
-          ? 'Boissons : marques choisies, au conditionnement le moins cher, sans filtre de ville.'
-          : 'Boissons : tarif le plus bas du catalogue, sans filtre de ville.']
+        ? [drinkCriteriaNote(wantedBrandIds, wantedSaleUnits)]
         : [guests < 1
           ? 'Indiquez le nombre d’invités pour chiffrer les boissons.'
-          : 'Aucun tarif publié pour ce type d’événement.'];
+          : wantedSaleUnits.length
+            ? 'Aucun tarif publié pour ces conditionnements.'
+            : 'Aucun tarif publié pour ce type d’événement.'];
       return {
         id: style.id,
         label: style.label,
@@ -591,7 +603,7 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
   const ai = await askPlannerJson(system, user);
   const rawPackages = Array.isArray(ai.packages) ? ai.packages : [];
 
-  const drinkOffers = budgetScope === 'complete' ? await loadDrinkOffers(guests, wantedBrandIds) : [];
+  const drinkOffers = budgetScope === 'complete' ? await loadDrinkOffers(guests, wantedBrandIds, wantedSaleUnits) : [];
 
   const hydrate = (
     style: typeof AI_STYLES[number],
@@ -649,9 +661,7 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
         });
       }
       if (!warnings.some((warning) => warning.startsWith('Boissons'))) {
-        warnings.push(wantedBrandIds.length
-          ? 'Boissons : marques choisies, quantité et tarif le moins cher, sans filtre de ville.'
-          : 'Boissons : quantité, marque et tarif le plus bas du catalogue, sans filtre de ville.');
+        warnings.push(drinkCriteriaNote(wantedBrandIds, wantedSaleUnits));
       }
     }
     const estimatedTotalFc = [venue, ...uniqueServices].reduce((sum, item) => sum + (item?.estimatedFc || 0), 0);

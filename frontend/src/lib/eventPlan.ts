@@ -83,6 +83,7 @@ export type EventPlanBrief = {
   planVersion: number;
   budgetScope: BudgetSimulationScope;
   wantedBrandIds: string[];
+  wantedSaleUnits: Array<'BOTTLE' | 'CRATE' | 'PACK' | 'OTHER'>;
 };
 
 export type EventPlanRequest = EventPlanBrief & {
@@ -139,6 +140,7 @@ export function createDefaultBrief(eventType: ListingEventTypeId = 'wedding'): E
     planVersion: PLAN_BRIEF_VERSION,
     budgetScope: 'complete',
     wantedBrandIds: [],
+    wantedSaleUnits: [],
   };
 }
 
@@ -180,6 +182,9 @@ export function hydrateBrief(raw: unknown): EventPlanBrief {
     budgetScope: parseBudgetSimulationScope(value.budgetScope),
     wantedBrandIds: Array.isArray(value.wantedBrandIds)
       ? value.wantedBrandIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0).slice(0, 40)
+      : [],
+    wantedSaleUnits: Array.isArray(value.wantedSaleUnits)
+      ? value.wantedSaleUnits.filter((unit): unit is 'BOTTLE' | 'CRATE' | 'PACK' | 'OTHER' => unit === 'BOTTLE' || unit === 'CRATE' || unit === 'PACK' || unit === 'OTHER')
       : [],
   };
 }
@@ -430,6 +435,7 @@ export type EventPlanAiResult = {
     budgetMinFc?: number | null;
     wantedCategories?: string[];
     wantedBrandIds?: string[];
+    wantedSaleUnits?: string[];
     venueAmenities?: string[];
   };
 };

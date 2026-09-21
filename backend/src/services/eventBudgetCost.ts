@@ -11,6 +11,8 @@ export function parseBudgetSimulationScope(value: unknown): BudgetSimulationScop
 }
 
 const BRAND_ID_LIMIT = 40;
+const SALE_UNITS = ['BOTTLE', 'CRATE', 'PACK', 'OTHER'] as const;
+export type WantedSaleUnit = (typeof SALE_UNITS)[number];
 
 export function parseWantedBrandIds(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -18,6 +20,11 @@ export function parseWantedBrandIds(value: unknown): string[] {
     .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
     .map((item) => item.trim());
   return [...new Set(ids)].slice(0, BRAND_ID_LIMIT);
+}
+
+export function parseWantedSaleUnits(value: unknown): WantedSaleUnit[] {
+  if (!Array.isArray(value)) return [];
+  return SALE_UNITS.filter((unit) => value.includes(unit));
 }
 
 const PER_PIECE = new Set(['RENTAL_CHAIRS', 'RENTAL_TABLEWARE']);
