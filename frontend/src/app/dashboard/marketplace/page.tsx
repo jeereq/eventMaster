@@ -14,7 +14,9 @@ import {
 import CatalogueFilterBar, { CatalogueChoicePills, CatalogueFilterField, type CatalogueFilterChip } from '@/components/CatalogueFilterBar';
 import {
   SERVICE_CATEGORY_LABELS,
+  RENTAL_DELIVERY_OPTIONS,
   SERVICE_MOBILITY_OPTIONS,
+  rentalDeliveryFilterLabel,
   SERVICE_RENTAL_CATEGORIES,
   SERVICE_TRADE_CATEGORIES,
   isServiceRentalCategory,
@@ -25,6 +27,7 @@ import {
   type MarketplaceBookingItem,
   type MarketplaceInquiryItem,
   type ServiceCategory,
+  type RentalDeliveryFilter,
   type ServiceMobility,
   type VenuePriceUnit,
 } from '@/lib/marketplace';
@@ -60,6 +63,8 @@ interface ServiceItem {
   neighborhood?: string | null;
   coverageRadiusKm: number | null;
   travels?: boolean;
+  deliveryMode?: string | null;
+  deliveryPriceFc?: number | null;
   latitude?: number | null;
   longitude?: number | null;
   priceFromFc: number | null;
@@ -109,6 +114,7 @@ export default function MarketplaceDeskPage() {
   const [filterCity, setFilterCity] = useState('');
   const [filterVisibility, setFilterVisibility] = useState<'all' | 'public' | 'hidden'>('all');
   const [filterMobility, setFilterMobility] = useState<ServiceMobility>('');
+  const [filterDelivery, setFilterDelivery] = useState<RentalDeliveryFilter>('');
   const {
     mode: servicesViewMode,
     setViewMode: setServicesViewMode,
@@ -129,6 +135,8 @@ export default function MarketplaceDeskPage() {
     neighborhood: '',
     coverageRadiusKm: '',
     travels: true,
+    deliveryMode: '',
+    deliveryPriceFc: '',
     latitude: '',
     longitude: '',
     priceFromFc: '',
@@ -181,7 +189,7 @@ export default function MarketplaceDeskPage() {
 
   useEffect(() => {
     setServicesPage(1);
-  }, [servicesPageSize, svcQuery, filterCategory, filterCity, filterVisibility, filterMobility, tab]);
+  }, [servicesPageSize, svcQuery, filterCategory, filterCity, filterVisibility, filterMobility, filterDelivery, tab]);
 
   useEffect(() => {
     if (tab === 'services' && isServiceRentalCategory(filterCategory)) setFilterCategory('');
@@ -210,6 +218,8 @@ export default function MarketplaceDeskPage() {
       neighborhood: '',
       coverageRadiusKm: '',
       travels: mode !== 'rental',
+      deliveryMode: '',
+      deliveryPriceFc: '',
       latitude: '',
       longitude: '',
       priceFromFc: '',
@@ -232,6 +242,12 @@ export default function MarketplaceDeskPage() {
 
   const openEdit = (item: ServiceItem) => {
     setEditing(item);
+    const details = parseListingDetails(item.details);
+    const deliveryMode = item.deliveryMode === 'included' || item.deliveryMode === 'extra_fee'
+      ? item.deliveryMode
+      : details.deliveryMode === 'included' || details.deliveryMode === 'extra_fee'
+        ? details.deliveryMode
+        : '';
     setDraft({
       title: item.title,
       description: item.description || '',
@@ -241,6 +257,8 @@ export default function MarketplaceDeskPage() {
       neighborhood: item.neighborhood || '',
       coverageRadiusKm: item.coverageRadiusKm != null ? String(item.coverageRadiusKm) : '',
       travels: item.travels ?? Boolean(item.coverageRadiusKm && item.coverageRadiusKm > 0),
+      deliveryMode,
+      deliveryPriceFc: item.deliveryPriceFc != null ? String(item.deliveryPriceFc) : details.deliveryPriceFc,
       latitude: item.latitude != null ? String(item.latitude) : '',
       longitude: item.longitude != null ? String(item.longitude) : '',
       priceFromFc: item.priceFromFc != null ? String(item.priceFromFc) : '',
@@ -254,7 +272,7 @@ export default function MarketplaceDeskPage() {
       blockedDates: parseBlockedDates(item.blockedDates),
       bookedDates: parseBlockedDates(item.bookedDates),
       isPublic: item.isPublic,
-      details: parseListingDetails(item.details),
+      details,
     });
     setEditorTab('details');
     setError('');
@@ -291,6 +309,12 @@ export default function MarketplaceDeskPage() {
         neighborhood: draft.neighborhood,
         coverageRadiusKm: draft.travels && draft.coverageRadiusKm ? Number(draft.coverageRadiusKm) : null,
         travels: draft.travels,
+        deliveryMode: isServiceRentalCategory(draft.category)
+          ? (draft.travels ? draft.deliveryMode : 'pickup')
+          : null,
+        deliveryPriceFc: isServiceRentalCategory(draft.category) && draft.travels && draft.deliveryPriceFc
+          ? Number(draft.deliveryPriceFc)
+          : null,
         latitude: draft.latitude ? Number(draft.latitude) : null,
         longitude: draft.longitude ? Number(draft.longitude) : null,
         priceFromFc: draft.priceFromFc ? Number(draft.priceFromFc) : null,
@@ -369,10 +393,13 @@ export default function MarketplaceDeskPage() {
       || (filterVisibility === 'public' && item.isPublic)
       || (filterVisibility === 'hidden' && !item.isPublic);
     const travels = item.travels ?? Boolean(item.coverageRadiusKm && item.coverageRadiusKm > 0);
-    const matchesMobility = !filterMobility
+    const matchesMobility = listingIsRental || !filterMobility
       || (filterMobility === 'on_site' && travels === false)
       || (filterMobility === 'travels' && travels !== false);
-    return matchesSearch && matchesCategory && matchesCity && matchesVisibility && matchesMobility;
+    const matchesDelivery = !listingIsRental || !filterDelivery
+      || (filterDelivery === 'pickup' && (item.deliveryMode === 'pickup' || travels === false))
+      || item.deliveryMode === filterDelivery;
+    return matchesSearch && matchesCategory && matchesCity && matchesVisibility && matchesMobility && matchesDelivery;
   });
   const pagedServices = usePaginateItems(filteredServices, servicesPage, servicesPageSize);
 
@@ -390,7 +417,8 @@ export default function MarketplaceDeskPage() {
     ...(filterCategory ? [{ id: 'category', label: 'Catégorie', value: SERVICE_CATEGORY_LABELS[filterCategory as ServiceCategory] || filterCategory }] : []),
     ...(filterCity ? [{ id: 'city', label: 'Ville', value: filterCity }] : []),
     ...(filterVisibility !== 'all' ? [{ id: 'visibility', label: 'Visibilité', value: filterVisibility === 'public' ? 'Publiées' : 'Brouillons' }] : []),
-    ...(filterMobility ? [{ id: 'mobility', label: 'Intervention', value: filterMobility === 'on_site' ? 'Sur place' : 'Se déplace' }] : []),
+    ...(listingIsRental && filterDelivery ? [{ id: 'delivery', label: 'Livraison', value: rentalDeliveryFilterLabel(filterDelivery) }] : []),
+    ...(!listingIsRental && filterMobility ? [{ id: 'mobility', label: 'Intervention', value: filterMobility === 'on_site' ? 'Sur place' : 'Se déplace' }] : []),
   ];
 
   return (
@@ -508,6 +536,7 @@ export default function MarketplaceDeskPage() {
             if (id === 'city') setFilterCity('');
             if (id === 'visibility') setFilterVisibility('all');
             if (id === 'mobility') setFilterMobility('');
+            if (id === 'delivery') setFilterDelivery('');
           }}
           onClearChips={() => {
             setSvcQuery('');
@@ -515,6 +544,7 @@ export default function MarketplaceDeskPage() {
             setFilterCity('');
             setFilterVisibility('all');
             setFilterMobility('');
+            setFilterDelivery('');
           }}
           resultLabel={`${filteredServices.length} ${listingIsRental
             ? `matériel${filteredServices.length > 1 ? 's' : ''}`
@@ -553,13 +583,23 @@ export default function MarketplaceDeskPage() {
                   onChange={(id) => setFilterVisibility((id as 'all' | 'public' | 'hidden') || 'all')}
                 />
               </CatalogueFilterField>
-              <CatalogueFilterField label="Intervention">
-                <CatalogueChoicePills
-                  options={SERVICE_MOBILITY_OPTIONS.filter((opt) => opt.id)}
-                  value={filterMobility}
-                  onChange={(id) => setFilterMobility((id as ServiceMobility) || '')}
-                />
-              </CatalogueFilterField>
+              {listingIsRental ? (
+                <CatalogueFilterField label="Livraison" hint="Le prix inclus est déjà compris dans le tarif.">
+                  <CatalogueChoicePills
+                    options={RENTAL_DELIVERY_OPTIONS}
+                    value={filterDelivery}
+                    onChange={(id) => setFilterDelivery((id as RentalDeliveryFilter) || '')}
+                  />
+                </CatalogueFilterField>
+              ) : (
+                <CatalogueFilterField label="Intervention">
+                  <CatalogueChoicePills
+                    options={SERVICE_MOBILITY_OPTIONS.filter((opt) => opt.id)}
+                    value={filterMobility}
+                    onChange={(id) => setFilterMobility((id as ServiceMobility) || '')}
+                  />
+                </CatalogueFilterField>
+              )}
             </>
           }
         />

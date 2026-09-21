@@ -317,8 +317,10 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
           unavailableDates={service.unavailableDates}
           bookedDates={service.bookedDates}
           blockedDates={service.blockedDates}
-          priceFromFc={service.priceFromFc}
+          priceFromFc={service.promoActive && service.promoPriceFc != null ? service.promoPriceFc : service.priceFromFc}
           priceUnit={service.priceUnit}
+          deliveryMode={service.deliveryMode}
+          deliveryPriceFc={service.deliveryPriceFc}
           eventDate={pickedDate}
           eventEndDate={pickedEndDate}
           onEventDateChange={setPickedDate}

@@ -279,8 +279,10 @@ export default function EventPrepListingModal({
           unavailableDates={listing.unavailableDates}
           bookedDates={listing.bookedDates}
           blockedDates={listing.blockedDates}
-          priceFromFc={listing.priceFromFc}
+          priceFromFc={service?.promoActive && service.promoPriceFc != null ? service.promoPriceFc : listing.priceFromFc}
           priceUnit={listing.priceUnit}
+          deliveryMode={service?.deliveryMode}
+          deliveryPriceFc={service?.deliveryPriceFc}
           eventDate={dateKey || undefined}
           eventId={eventId}
           flush

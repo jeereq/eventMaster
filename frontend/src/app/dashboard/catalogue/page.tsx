@@ -532,7 +532,8 @@ function ClientMarketplaceInner() {
                     : kind === 'rental' && applied.category && !isServiceRentalCategory(applied.category)
                       ? ''
                       : applied.category,
-                mobility: kind === 'venue' || kind === 'event' ? '' : applied.mobility,
+                mobility: kind === 'service' ? applied.mobility : '',
+                delivery: kind === 'rental' ? applied.delivery : '',
                 priceUnit: kind === 'venue' || kind === 'event' ? '' : applied.priceUnit,
                 entry: kind === 'venue' || kind === 'service' || kind === 'rental' ? '' : applied.entry,
               });

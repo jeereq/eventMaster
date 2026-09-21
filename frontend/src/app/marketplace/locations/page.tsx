@@ -14,6 +14,7 @@ import {
   EMPTY_CATALOGUE_GEO,
   PRICE_UNIT_OPTIONS,
   SERVICE_CATEGORY_LABELS,
+  rentalDeliveryFilterLabel,
   appendCatalogueGeoParams,
   catalogueGeoChips,
   catalogueItemToMapMarker,
@@ -23,32 +24,32 @@ import {
   serviceToCatalogueItem,
   type CatalogueGeoState,
   type PublicService,
-  type ServiceMobility,
+  type RentalDeliveryFilter,
 } from '@/lib/marketplace';
 import { EMPTY_CATALOGUE_EXTRAS, clearCatalogueExtraChip } from '@/lib/catalogueEntityFilters';
 
-type ServiceFilters = CatalogueGeoState & { category: string; priceUnit: string; mobility: ServiceMobility };
+type ServiceFilters = CatalogueGeoState & { category: string; priceUnit: string; delivery: RentalDeliveryFilter };
 
 const emptyFilters: ServiceFilters = {
   ...EMPTY_CATALOGUE_GEO,
   category: '',
   priceUnit: '',
-  mobility: '',
+  delivery: '',
 };
 
 const QUERY_OPTS = {
-  extraKeys: ['category', 'priceUnit', 'mobility'],
-  emptyExtra: { category: '', priceUnit: '', mobility: '' },
+  extraKeys: ['category', 'priceUnit', 'delivery'],
+  emptyExtra: { category: '', priceUnit: '', delivery: '' },
   merge: (geo: CatalogueGeoState, extra: Record<string, string>): ServiceFilters => ({
     ...geo,
     category: extra.category || '',
     priceUnit: extra.priceUnit || '',
-    mobility: (extra.mobility as ServiceMobility) || '',
+    delivery: extra.delivery === 'included' || extra.delivery === 'extra_fee' || extra.delivery === 'pickup' ? extra.delivery : '',
   }),
   split: (filters: ServiceFilters) => ({
     category: filters.category,
     priceUnit: filters.priceUnit,
-    mobility: filters.mobility,
+    delivery: filters.delivery,
   }),
 };
 
@@ -70,7 +71,7 @@ function MarketplaceRentalsPageInner() {
       appendCatalogueGeoParams(params, filters);
       if (filters.category) params.set('category', filters.category);
       if (filters.priceUnit) params.set('priceUnit', filters.priceUnit);
-      if (filters.mobility) params.set('mobility', filters.mobility);
+      if (filters.delivery) params.set('delivery', filters.delivery);
       params.set('group', 'rental');
       const data = await api.get(`/public/services${params.toString() ? `?${params}` : ''}`);
       setServices(data.services || []);
@@ -107,11 +108,11 @@ function MarketplaceRentalsPageInner() {
         value: PRICE_UNIT_OPTIONS.find((opt) => opt.id === applied.priceUnit)?.label || applied.priceUnit,
       });
     }
-    if (applied.mobility) {
+    if (applied.delivery) {
       extra.push({
-        id: 'mobility',
-        label: 'Remise',
-        value: applied.mobility === 'on_site' ? 'Sur place' : 'Livraison / déplacement',
+        id: 'delivery',
+        label: 'Livraison',
+        value: rentalDeliveryFilterLabel(applied.delivery),
       });
     }
     return catalogueGeoChips(applied, extra);
@@ -179,7 +180,7 @@ function MarketplaceRentalsPageInner() {
           onApply={async () => {
             try {
               const geo = await resolveCatalogueGeo(draft);
-              applyFilters({ ...geo, category: draft.category, priceUnit: draft.priceUnit, mobility: draft.mobility });
+              applyFilters({ ...geo, category: draft.category, priceUnit: draft.priceUnit, delivery: draft.delivery });
             } catch (err: unknown) {
               setFilterError(err instanceof Error ? err.message : 'Filtre de proximité impossible.');
               throw err;
@@ -195,14 +196,14 @@ function MarketplaceRentalsPageInner() {
                 kind: 'rental',
                 category: draft.category,
                 priceUnit: draft.priceUnit,
-                mobility: draft.mobility,
+                delivery: draft.delivery,
               }}
               error={filterError}
               onChange={(geo, extras) => setDraft({
                 ...geo,
                 category: extras.category,
                 priceUnit: extras.priceUnit,
-                mobility: extras.mobility,
+                delivery: extras.delivery,
               })}
             />
           }

@@ -1,3 +1,5 @@
+import { formatFc } from '@/config/landingPricing';
+
 export type ListingAmenityId =
   | 'wifi'
   | 'parking'
@@ -68,6 +70,7 @@ export type ListingDetails = {
   capacity: string;
   securityDepositFc: string;
   deliveryMode: string;
+  deliveryPriceFc: string;
   accessories: string;
   returnRules: string;
 };
@@ -102,6 +105,7 @@ export const EMPTY_LISTING_DETAILS: ListingDetails = {
   capacity: '',
   securityDepositFc: '',
   deliveryMode: '',
+  deliveryPriceFc: '',
   accessories: '',
   returnRules: '',
 };
@@ -201,6 +205,7 @@ export function parseListingDetails(input: unknown): ListingDetails {
     capacity: text('capacity'),
     securityDepositFc: text('securityDepositFc'),
     deliveryMode: text('deliveryMode'),
+    deliveryPriceFc: text('deliveryPriceFc'),
     accessories: text('accessories'),
     returnRules: text('returnRules'),
   };
@@ -222,10 +227,12 @@ export function listingConditionLabel(value?: string | null) {
   return '';
 }
 
-export function listingDeliveryLabel(value?: string | null) {
+export function listingDeliveryLabel(value?: string | null, priceFc?: string | number | null) {
+  const amount = typeof priceFc === 'number' ? priceFc : Number(String(priceFc ?? '').replace(/\s/g, ''));
+  const money = Number.isFinite(amount) && amount > 0 ? formatFc(amount) : '';
   if (value === 'pickup') return 'Retrait sur place';
-  if (value === 'included') return 'Livraison incluse';
-  if (value === 'extra_fee') return 'Livraison en supplément';
+  if (value === 'included') return money ? `Incluse dans le tarif · ${money}` : 'Incluse dans le tarif';
+  if (value === 'extra_fee') return money ? `En supplément · ${money}` : 'En supplément';
   return '';
 }
 

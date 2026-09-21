@@ -272,19 +272,9 @@ export default function ListingDetailsFields({
               onChange={(e) => onChange({ ...value, securityDepositFc: e.target.value })}
               placeholder="Montant de la garantie"
             />
-            <label className="block space-y-1.5">
-              <span className="text-xs font-medium text-muted">Mode de livraison</span>
-              <select
-                value={value.deliveryMode}
-                onChange={(e) => onChange({ ...value, deliveryMode: e.target.value })}
-                className="w-full min-h-11 px-3.5 py-2.5 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm"
-              >
-                <option value="">Sélectionner...</option>
-                <option value="pickup">Retrait sur place uniquement</option>
-                <option value="included">Livraison incluse</option>
-                <option value="extra_fee">Livraison en supplément</option>
-              </select>
-            </label>
+            <p className="text-xs text-muted sm:col-span-2">
+              Le prix de la livraison se règle dans « Livraison ou retrait » : inclus dans le tarif, ou ajouté une fois à la réservation.
+            </p>
           </div>
           <div className="space-y-4 mt-3">
             <label className="block space-y-1.5">

@@ -372,12 +372,23 @@ export function isServiceRentalCategory(category?: string | null): boolean {
 }
 
 export type ServiceMobility = '' | 'on_site' | 'travels';
+export type RentalDeliveryFilter = '' | 'included' | 'extra_fee' | 'pickup';
 
 export const SERVICE_MOBILITY_OPTIONS: Array<{ id: ServiceMobility; label: string }> = [
   { id: '', label: 'Tous' },
   { id: 'on_site', label: 'Sur place' },
   { id: 'travels', label: 'Se déplace' },
 ];
+
+export const RENTAL_DELIVERY_OPTIONS: Array<{ id: RentalDeliveryFilter; label: string }> = [
+  { id: 'included', label: 'Livraison incluse' },
+  { id: 'extra_fee', label: 'Livraison en supplément' },
+  { id: 'pickup', label: 'Retrait sur place' },
+];
+
+export function rentalDeliveryFilterLabel(id: string): string {
+  return RENTAL_DELIVERY_OPTIONS.find((opt) => opt.id === id)?.label || id;
+}
 
 export function serviceMobilityLabel(travels: boolean, radiusKm?: number | null): string {
   if (!travels) return 'Sur place uniquement';
@@ -395,6 +406,8 @@ export interface PublicService {
   neighborhood?: string | null;
   coverageRadiusKm: number | null;
   travels?: boolean;
+  deliveryMode?: string | null;
+  deliveryPriceFc?: number | null;
   latitude?: number | null;
   longitude?: number | null;
   priceFromFc: number | null;
@@ -855,9 +868,11 @@ export function previewMarketplaceAmounts(
   dayCount = 1,
   priceUnit?: string | null,
   rates?: { commissionRate?: number; depositRate?: number },
+  extraFc = 0,
 ) {
   const days = Math.max(1, dayCount);
-  const amount = Math.max(0, Math.round(priceUnit === 'DAY' ? amountFc * days : amountFc));
+  const extra = Math.max(0, Math.round(extraFc));
+  const amount = Math.max(0, Math.round(priceUnit === 'DAY' ? amountFc * days : amountFc) + extra);
   const depositRate = rates?.depositRate ?? MARKETPLACE_DEPOSIT_RATE;
   const commissionRate = rates?.commissionRate ?? MARKETPLACE_COMMISSION_RATE;
   return {
@@ -1321,6 +1336,8 @@ export interface CatalogueItem {
   longitude: number | null;
   coverageRadiusKm?: number | null;
   travels?: boolean;
+  deliveryMode?: string | null;
+  deliveryPriceFc?: number | null;
   capacity?: number | null;
   quotaMin?: number | null;
   quotaMax?: number | null;
@@ -1505,6 +1522,8 @@ export function serviceToCatalogueItem(service: PublicService): CatalogueItem {
     longitude: service.longitude ?? null,
     coverageRadiusKm: service.travels === false ? null : service.coverageRadiusKm,
     travels: service.travels ?? Boolean(service.coverageRadiusKm && service.coverageRadiusKm > 0),
+    deliveryMode: service.deliveryMode ?? null,
+    deliveryPriceFc: service.deliveryPriceFc ?? null,
     quotaMin: service.quotaMin ?? null,
     quotaMax: service.quotaMax ?? null,
     distanceKm: service.distanceKm ?? null,

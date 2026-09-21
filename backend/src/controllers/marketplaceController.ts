@@ -16,6 +16,7 @@ import {
   parseServiceGroup,
   serviceGroupPrismaFilter,
   isServiceRentalCategory,
+  parseDeliveryMode,
   priceUnitLabel,
   sanitizeLayoutBlueprint,
   serviceCategoryLabel,
@@ -814,6 +815,8 @@ function toPublicService(offering: {
   neighborhood?: string | null;
   coverageRadiusKm: number | null;
   travels: boolean;
+  deliveryMode?: string | null;
+  deliveryPriceFc?: number | null;
   latitude?: number | null;
   longitude?: number | null;
   priceFromFc: number | null;
@@ -833,6 +836,9 @@ function toPublicService(offering: {
 }) {
   const photos = parsePhotoUrls(offering.photos);
   const extra = parseListingDetails(offering.details);
+  const deliveryMode = parseDeliveryMode(offering.deliveryMode) || parseDeliveryMode(extra.deliveryMode);
+  const parsedDetailPrice = Number.parseInt(String(extra.deliveryPriceFc || ''), 10);
+  const deliveryPriceFc = offering.deliveryPriceFc ?? (Number.isFinite(parsedDetailPrice) ? parsedDetailPrice : null);
   return {
     slug: offering.slug,
     title: offering.title,
@@ -844,6 +850,8 @@ function toPublicService(offering: {
     neighborhood: offering.neighborhood || null,
     coverageRadiusKm: offering.travels ? offering.coverageRadiusKm : null,
     travels: Boolean(offering.travels),
+    deliveryMode,
+    deliveryPriceFc,
     latitude: offering.latitude ?? null,
     longitude: offering.longitude ?? null,
     priceFromFc: offering.priceFromFc,
@@ -867,7 +875,11 @@ function toPublicService(offering: {
     blockedDates: parseBlockedDates(offering.blockedDates),
     bookedDates: collectUnavailableDates([], offering.bookings),
     unavailableDates: collectUnavailableDates(offering.blockedDates, offering.bookings),
-    details: extra,
+    details: {
+      ...extra,
+      deliveryMode: deliveryMode || '',
+      deliveryPriceFc: deliveryPriceFc != null ? String(deliveryPriceFc) : '',
+    },
   };
 }
 
@@ -894,6 +906,7 @@ export async function listPublicServices(req: Request, res: Response) {
     const availability = readAvailabilityRange(req);
     const mobility = typeof req.query.mobility === 'string' ? req.query.mobility.trim() : '';
     const travelsFilter = mobility === 'travels' ? true : mobility === 'on_site' ? false : null;
+    const delivery = parseDeliveryMode(req.query.delivery);
 
     const where: Prisma.ServiceOfferingWhereInput = {
       isPublic: true,
@@ -908,6 +921,22 @@ export async function listPublicServices(req: Request, res: Response) {
       ...(priceUnit ? { priceUnit } : {}),
       ...(priceRange ? { priceFromFc: priceRange } : {}),
       ...(travelsFilter == null ? {} : { travels: travelsFilter }),
+      ...(delivery === 'included' || delivery === 'extra_fee'
+        ? {
+            OR: [
+              { deliveryMode: delivery },
+              { AND: [{ deliveryMode: null }, { details: { path: ['deliveryMode'], equals: delivery } }] },
+            ],
+          }
+        : delivery === 'pickup'
+          ? {
+              OR: [
+                { deliveryMode: 'pickup' },
+                { AND: [{ deliveryMode: null }, { travels: false }] },
+                { AND: [{ deliveryMode: null }, { details: { path: ['deliveryMode'], equals: 'pickup' } }] },
+              ],
+            }
+          : {}),
       ...((street || q)
         ? {
             AND: [
@@ -1234,6 +1263,7 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
     const {
       title, description, city, commune, neighborhood, coverageRadiusKm, travels, latitude, longitude,
       priceFromFc, priceUnit, promoPriceFc, promoLabel, promoEndsAt, quotaMin, quotaMax, photos, isPublic, category, blockedDates, details,
+      deliveryMode: rawDeliveryMode, deliveryPriceFc: rawDeliveryPrice,
     } = req.body || {};
     if (!title?.trim()) return res.status(400).json({ error: 'Le titre est requis.' });
     const parsedCategory = parseServiceCategory(category) || 'OTHER';
@@ -1261,6 +1291,30 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
       if (doesTravel && !(Number.isFinite(parsedRadius) && parsedRadius > 0)) {
         return res.status(400).json({ error: 'Indiquez le rayon d’intervention (km) si vous vous déplacez.' });
       }
+    }
+
+    const rental = isServiceRentalCategory(parsedCategory);
+    let deliveryMode: ReturnType<typeof parseDeliveryMode> = null;
+    let deliveryPriceFc: number | null = null;
+    if (rental) {
+      if (!doesTravel) {
+        deliveryMode = 'pickup';
+      } else {
+        deliveryMode = parseDeliveryMode(rawDeliveryMode);
+        const parsedDelivery = Number.parseInt(String(rawDeliveryPrice ?? ''), 10);
+        if (wantPublic && deliveryMode !== 'included' && deliveryMode !== 'extra_fee') {
+          return res.status(400).json({ error: 'Précisez si le prix de la livraison est inclus dans le tarif ou facturé en plus.' });
+        }
+        if (deliveryMode === 'included' || deliveryMode === 'extra_fee') {
+          if (!Number.isFinite(parsedDelivery) || parsedDelivery <= 0) {
+            if (wantPublic) return res.status(400).json({ error: 'Indiquez le prix de la livraison en FC.' });
+          } else {
+            deliveryPriceFc = parsedDelivery;
+          }
+        }
+      }
+      detailsSafe.deliveryMode = deliveryMode || '';
+      detailsSafe.deliveryPriceFc = deliveryPriceFc != null ? String(deliveryPriceFc) : '';
     }
 
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, accountKind: true } });
@@ -1305,6 +1359,8 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
       neighborhood: place.neighborhood,
       coverageRadiusKm: doesTravel && Number.isFinite(parsedRadius) && parsedRadius > 0 ? parsedRadius : null,
       travels: doesTravel,
+      deliveryMode,
+      deliveryPriceFc,
       latitude: latitude != null && latitude !== '' && Number.isFinite(Number(latitude)) ? Number(latitude) : null,
       longitude: longitude != null && longitude !== '' && Number.isFinite(Number(longitude)) ? Number(longitude) : null,
       priceFromFc: Number.isFinite(parsedPrice) ? parsedPrice : null,

@@ -1,9 +1,11 @@
 import { roomTypeLabels, type RoomType } from '@/lib/roomLayoutUtils';
 import {
   PRICE_UNIT_OPTIONS,
+  RENTAL_DELIVERY_OPTIONS,
   SERVICE_CATEGORIES,
   SERVICE_CATEGORY_LABELS,
   SERVICE_MOBILITY_OPTIONS,
+  rentalDeliveryFilterLabel,
   catalogueItemMatchesGeo,
   eventToCatalogueItem,
   isServiceRentalCategory,
@@ -16,6 +18,7 @@ import {
   type PublicEventCard,
   type PublicService,
   type PublicVenue,
+  type RentalDeliveryFilter,
   type ServiceMobility,
 } from '@/lib/marketplace';
 
@@ -27,6 +30,7 @@ export type CatalogueEntityExtras = {
   roomType: string;
   category: string;
   mobility: ServiceMobility;
+  delivery: RentalDeliveryFilter;
   priceUnit: string;
   entry: EventEntryFilter;
 };
@@ -36,11 +40,12 @@ export const EMPTY_CATALOGUE_EXTRAS: CatalogueEntityExtras = {
   roomType: '',
   category: '',
   mobility: '',
+  delivery: '',
   priceUnit: '',
   entry: '',
 };
 
-export const HUB_FILTER_EXTRA_KEYS = ['kind', 'roomType', 'category', 'mobility', 'priceUnit', 'entry'] as const;
+export const HUB_FILTER_EXTRA_KEYS = ['kind', 'roomType', 'category', 'mobility', 'delivery', 'priceUnit', 'entry'] as const;
 
 export const ROOM_TYPE_FILTER_OPTIONS: Array<{ id: RoomType; label: string }> = (
   Object.entries(roomTypeLabels) as Array<[RoomType, string]>
@@ -81,6 +86,7 @@ export function mergeCatalogueExtras(extra: Record<string, string>): CatalogueEn
     roomType: extra.roomType || '',
     category: extra.category || '',
     mobility: (extra.mobility as ServiceMobility) || '',
+    delivery: extra.delivery === 'included' || extra.delivery === 'extra_fee' || extra.delivery === 'pickup' ? extra.delivery : '',
     priceUnit: extra.priceUnit || '',
     entry: parseEventEntry(extra.entry),
   };
@@ -92,6 +98,7 @@ export function splitCatalogueExtras(extras: CatalogueEntityExtras): Record<stri
     roomType: extras.roomType,
     category: extras.category,
     mobility: extras.mobility,
+    delivery: extras.delivery,
     priceUnit: extras.priceUnit,
     entry: extras.entry,
   };
@@ -129,6 +136,14 @@ export function catalogueEntityExtraChips(extras: CatalogueEntityExtras): Array<
       tone: 'service',
     });
   }
+  if (extras.delivery) {
+    chips.push({
+      id: 'delivery',
+      label: 'Livraison',
+      value: rentalDeliveryFilterLabel(extras.delivery),
+      tone: 'service',
+    });
+  }
   if (extras.mobility) {
     chips.push({
       id: 'mobility',
@@ -159,6 +174,7 @@ export function pickCatalogueExtras(
     roomType: typeof value.roomType === 'string' ? value.roomType : '',
     category: typeof value.category === 'string' ? value.category : '',
     mobility: mobility === 'on_site' || mobility === 'travels' ? mobility : '',
+    delivery: value.delivery === 'included' || value.delivery === 'extra_fee' || value.delivery === 'pickup' ? value.delivery : '',
     priceUnit: typeof value.priceUnit === 'string' ? value.priceUnit : '',
     entry: parseEventEntry(typeof value.entry === 'string' ? value.entry : ''),
   };
@@ -177,6 +193,7 @@ export function clearCatalogueExtraChip<T extends object>(filters: T, id: string
   if (id === 'roomType') return { ...filters, roomType: '' };
   if (id === 'category') return { ...filters, category: '' };
   if (id === 'mobility') return { ...filters, mobility: '' };
+  if (id === 'delivery') return { ...filters, delivery: '' };
   if (id === 'priceUnit') return { ...filters, priceUnit: '' };
   if (id === 'entry') return { ...filters, entry: '' };
   return filters;
@@ -195,7 +212,8 @@ export function appendCatalogueEntityParams(
     }
     if (extras.category) params.set('category', extras.category);
     if (extras.priceUnit) params.set('priceUnit', extras.priceUnit);
-    if (extras.mobility) params.set('mobility', extras.mobility);
+    if (extras.kind === 'rental' && extras.delivery) params.set('delivery', extras.delivery);
+    if (extras.kind !== 'rental' && extras.mobility) params.set('mobility', extras.mobility);
   }
   if (target === 'event' && extras.entry) params.set('entry', extras.entry);
 }
@@ -247,6 +265,10 @@ export function catalogueItemMatchesExtras(item: CatalogueItem, extras: Catalogu
     if (extras.priceUnit && item.priceUnit !== extras.priceUnit) return false;
     if (extras.mobility === 'on_site' && item.travels !== false) return false;
     if (extras.mobility === 'travels' && item.travels === false) return false;
+    if (extras.delivery === 'included' || extras.delivery === 'extra_fee') {
+      if (item.deliveryMode !== extras.delivery) return false;
+    }
+    if (extras.delivery === 'pickup' && item.deliveryMode !== 'pickup' && item.travels !== false) return false;
   }
   if (item.kind === 'event') {
     if (extras.entry === 'paid' && item.priceFromFc == null) return false;
@@ -255,4 +277,4 @@ export function catalogueItemMatchesExtras(item: CatalogueItem, extras: Catalogu
   return true;
 }
 
-export { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS, SERVICE_MOBILITY_OPTIONS, PRICE_UNIT_OPTIONS };
+export { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS, SERVICE_MOBILITY_OPTIONS, RENTAL_DELIVERY_OPTIONS, PRICE_UNIT_OPTIONS };

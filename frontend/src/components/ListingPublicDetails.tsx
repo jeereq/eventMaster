@@ -101,8 +101,8 @@ export default function ListingPublicDetails({
     details.securityDepositFc
       ? { label: 'Caution', value: formatFc(details.securityDepositFc) }
       : null,
-    listingDeliveryLabel(details.deliveryMode)
-      ? { label: 'Livraison', value: listingDeliveryLabel(details.deliveryMode) }
+    listingDeliveryLabel(details.deliveryMode, details.deliveryPriceFc)
+      ? { label: 'Livraison', value: listingDeliveryLabel(details.deliveryMode, details.deliveryPriceFc) }
       : null,
     details.minNoticeHours ? { label: 'Préavis', value: `${details.minNoticeHours} h` } : null,
     details.languages ? { label: 'Langues', value: details.languages } : null,

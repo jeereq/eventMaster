@@ -38,6 +38,7 @@ export type ListingDetails = {
   capacity: string;
   securityDepositFc: string;
   deliveryMode: string;
+  deliveryPriceFc: string;
   accessories: string;
   returnRules: string;
 };
@@ -90,6 +91,7 @@ export function parseListingDetails(input: unknown): ListingDetails {
     capacity: clipNum(raw.capacity, 50),
     securityDepositFc: clipNum(raw.securityDepositFc, 20),
     deliveryMode: clip(raw.deliveryMode, 50),
+    deliveryPriceFc: clipNum(raw.deliveryPriceFc, 12),
     accessories: clip(raw.accessories, 1000),
     returnRules: clip(raw.returnRules, 1000),
   };

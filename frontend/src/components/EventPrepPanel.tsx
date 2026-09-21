@@ -25,6 +25,7 @@ import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import {
   SERVICE_CATEGORY_LABELS,
+  RENTAL_DELIVERY_OPTIONS,
   SERVICE_MOBILITY_OPTIONS,
   SERVICE_RENTAL_CATEGORIES,
   SERVICE_TRADE_CATEGORIES,
@@ -36,6 +37,7 @@ import {
   type PrepListingPipeline,
   type PublicService,
   type PublicVenue,
+  type RentalDeliveryFilter,
   type ServiceMobility,
 } from '@/lib/marketplace';
 import { ROOM_TYPE_FILTER_OPTIONS } from '@/lib/catalogueEntityFilters';
@@ -200,9 +202,10 @@ function FilterPills({
           <button
             key={option.id || 'all'}
             type="button"
+            aria-pressed={value === option.id}
             onClick={() => onChange(option.id)}
             className={cn(
-              'px-2.5 py-1 rounded-[var(--radius-button)] text-xs font-semibold border transition',
+              'min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold border transition',
               value === option.id
                 ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                 : 'border-border text-muted hover:text-foreground hover:border-primary/40',
@@ -246,6 +249,7 @@ function PrepLane({
   const [category, setCategory] = useState('');
   const [roomType, setRoomType] = useState('');
   const [mobility, setMobility] = useState<ServiceMobility>('');
+  const [delivery, setDelivery] = useState<RentalDeliveryFilter>('');
   const [minCapacity, setMinCapacity] = useState(guestCount > 0 ? String(guestCount) : '');
   const [venues, setVenues] = useState<PublicVenue[]>([]);
   const [services, setServices] = useState<PublicService[]>([]);
@@ -258,7 +262,7 @@ function PrepLane({
 
   const communes = useMemo(() => communesForCity(city), [city]);
   const filterActive = Boolean(
-    query.trim() || city || commune || category || roomType || mobility || minCapacity.trim(),
+    query.trim() || city || commune || category || roomType || mobility || delivery || minCapacity.trim(),
   );
 
   useEffect(() => {
@@ -283,7 +287,9 @@ function PrepLane({
         } else {
           params.set('group', group);
           if (category) params.set('category', category);
-          if (mobility) params.set('mobility', mobility);
+          if (lane === 'rental') {
+            if (delivery) params.set('delivery', delivery);
+          } else if (mobility) params.set('mobility', mobility);
           const data = (await api.get(`/public/services?${params.toString()}`)) as { services?: PublicService[] };
           setServices(Array.isArray(data.services) ? data.services.slice(0, 12) : []);
           setVenues([]);
@@ -296,7 +302,7 @@ function PrepLane({
       }
     }, query.trim() ? 280 : 60);
     return () => window.clearTimeout(handle);
-  }, [query, city, commune, category, roomType, mobility, minCapacity, dateKey, group, isVenue]);
+  }, [query, city, commune, category, roomType, mobility, delivery, minCapacity, dateKey, group, isVenue, lane]);
 
   const clearFilters = () => {
     setQuery('');
@@ -305,6 +311,7 @@ function PrepLane({
     setCategory('');
     setRoomType('');
     setMobility('');
+    setDelivery('');
     setMinCapacity('');
   };
 
@@ -397,21 +404,21 @@ function PrepLane({
                 <option key={item} value={item}>{SERVICE_CATEGORY_LABELS[item]}</option>
               ))}
             </FilterSelect>
-            <FilterPills
-              label={lane === 'rental' ? 'Livraison' : 'Intervention'}
-              value={mobility}
-              onChange={(next) => setMobility(next as ServiceMobility)}
-              options={SERVICE_MOBILITY_OPTIONS.map((item) => ({
-                id: item.id,
-                label: lane === 'rental'
-                  ? item.id === 'travels'
-                    ? 'Livraison'
-                    : item.id === 'on_site'
-                      ? 'À récupérer'
-                      : 'Tous'
-                  : item.label,
-              }))}
-            />
+            {lane === 'rental' ? (
+              <FilterPills
+                label="Livraison"
+                value={delivery}
+                onChange={(next) => setDelivery((next as RentalDeliveryFilter) || '')}
+                options={[{ id: '', label: 'Toutes' }, ...RENTAL_DELIVERY_OPTIONS]}
+              />
+            ) : (
+              <FilterPills
+                label="Intervention"
+                value={mobility}
+                onChange={(next) => setMobility(next as ServiceMobility)}
+                options={SERVICE_MOBILITY_OPTIONS.map((item) => ({ id: item.id, label: item.label }))}
+              />
+            )}
           </>
         )}
       </div>
