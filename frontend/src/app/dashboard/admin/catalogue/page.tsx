@@ -43,8 +43,9 @@ import CatalogueResults, { CatalogueResultsSkeleton } from '@/components/Catalog
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { useRememberListReturn } from '@/lib/catalogueQuery';
+import AdminBeverageBrands from '@/components/admin/AdminBeverageBrands';
 
-type CatalogTab = 'venues' | 'offerings' | 'rentals' | 'inquiries' | 'bookings' | 'commissions';
+type CatalogTab = 'venues' | 'offerings' | 'rentals' | 'inquiries' | 'bookings' | 'commissions' | 'brands';
 
 interface Overview {
   venues: { total: number; publicCount: number };
@@ -356,6 +357,10 @@ export default function AdminCataloguePage() {
 
   const load = useCallback(async () => {
     if (!canAccess) return;
+    if (tab === 'brands') {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -510,6 +515,7 @@ export default function AdminCataloguePage() {
     { id: 'inquiries', label: 'Demandes', count: overview?.inquiries.total },
     { id: 'bookings', label: 'Réservations', count: overview?.bookings.total },
     { id: 'commissions', label: `Commissions ${commissionPct} %`, count: overview?.commissions?.dueCount },
+    { id: 'brands', label: 'Marques' },
   ];
 
   const currentTotal =
@@ -705,6 +711,7 @@ export default function AdminCataloguePage() {
         aria-labelledby={`catalog-tab-${tab}`}
         className="space-y-6"
       >
+      {tab === 'brands' ? <AdminBeverageBrands /> : <>
       <CatalogueFilterBar
         search={qInput}
         onSearchChange={setQInput}
@@ -1000,6 +1007,7 @@ export default function AdminCataloguePage() {
           itemLabel="éléments"
         />
       )}
+      </>}
       </div>
 
       <Modal

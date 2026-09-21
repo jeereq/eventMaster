@@ -48,12 +48,18 @@ import {
   createLinkedFeedPost,
   listMyFeedPosts,
 } from '../controllers/marketplaceFeedController';
+import {
+  getMyBeverageCatalog,
+  putMyBeveragePrices,
+} from '../controllers/beverageBrandController';
 
 const router = Router();
 
 router.use(requireAuth);
 router.use(requireActiveLicense);
 
+router.get('/beverage-catalog', getMyBeverageCatalog);
+router.put('/beverage-prices', putMyBeveragePrices);
 router.get('/services', listMyServices);
 router.post('/services', upsertService);
 router.post('/onboarding', saveVendorOnboarding);
