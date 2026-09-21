@@ -46,6 +46,7 @@ import {
   KeyRound,
   MessageCircle,
   Sparkles,
+  Wine,
   XCircle,
   DoorClosed,
 } from 'lucide-react';
@@ -71,12 +72,14 @@ const DECLINE_REASONS = [
 function kindLabel(kind: MarketplaceInquiryItem['kind']) {
   if (kind === 'venue') return 'Salle';
   if (kind === 'rental') return 'Matériel & Équipements';
+  if (kind === 'beverage') return 'Boissons';
   return 'Prestataire';
 }
 
 function kindIcon(kind: MarketplaceInquiryItem['kind']) {
   if (kind === 'venue') return <Building2 className="w-4 h-4" />;
   if (kind === 'rental') return <KeyRound className="w-4 h-4" />;
+  if (kind === 'beverage') return <Wine className="w-4 h-4" />;
   return <Sparkles className="w-4 h-4" />;
 }
 

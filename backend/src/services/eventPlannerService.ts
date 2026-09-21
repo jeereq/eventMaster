@@ -12,7 +12,7 @@ import {
   type ParsedEventPlanInput,
   type SlotPriority,
 } from './eventPlanBrief';
-import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, parseWantedSaleUnits, rentalBudgetAmount, type BeverageFocusBrand, type BudgetSimulationScope, type WantedSaleUnit } from './eventBudgetCost';
+import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, parseWantedDrinkLines, parseWantedSaleUnits, rentalBudgetAmount, type BeverageFocusBrand, type BudgetSimulationScope, type WantedSaleUnit } from './eventBudgetCost';
 
 export { EVENT_PLAN_TYPES, type EventPlanType };
 
@@ -541,8 +541,15 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
   const parsed = parseEventPlanInput(body);
   const budgetScope = parseBudgetSimulationScope(body.budgetScope);
   const drinksInScope = budgetScope === 'complete' || budgetScope === 'drinks';
-  const wantedBrandIds = drinksInScope ? parseWantedBrandIds(body.wantedBrandIds) : [];
-  const wantedSaleUnits = drinksInScope ? parseWantedSaleUnits(body.wantedSaleUnits) : [];
+  const wantedDrinkLines = drinksInScope ? parseWantedDrinkLines(body.wantedDrinkLines) : [];
+  const wantedBrandIds = drinksInScope
+    ? parseWantedBrandIds([...(Array.isArray(body.wantedBrandIds) ? body.wantedBrandIds : []), ...wantedDrinkLines.map((line) => line.brandId)])
+    : [];
+  const wantedSaleUnits = drinksInScope
+    ? (wantedDrinkLines.length
+      ? parseWantedSaleUnits(wantedDrinkLines.map((line) => line.unitKind))
+      : parseWantedSaleUnits(body.wantedSaleUnits))
+    : [];
   const input = budgetScope === 'complete' ? parsed : { ...parsed, includeVenue: 'no' as const };
   const city = normalizeAllowedCity(input.city) || '';
   const commune = city ? (normalizeAllowedCommune(city, input.commune) || '') : '';
@@ -674,7 +681,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     relaxed.eventType = true;
   }
 
-  const drinkRows = (budgetScope === 'complete' || budgetScope === 'drinks') && guests > 0
+  const drinkRows = (budgetScope === 'complete' || budgetScope === 'drinks') && (guests > 0 || wantedDrinkLines.length > 0)
     ? await prisma.vendorBeveragePrice.findMany({
       where: {
         isAvailable: true,
@@ -687,6 +694,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
         priceFc: true,
         promoPriceFc: true,
         promoEndsAt: true,
+        unitKind: true,
         brand: { select: { id: true, name: true, kind: true, imageUrl: true } },
       },
     })
@@ -701,6 +709,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     kind: row.brand.kind,
     brandId: row.brand.id,
     brandName: row.brand.name,
+    unitKind: row.unitKind,
     imageUrl: row.brand.imageUrl,
     quantity: row.quantity,
     unitLabel: row.unitLabel,
@@ -865,7 +874,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
 
     const includeDrinks = budgetScope === 'complete' || budgetScope === 'drinks';
     const drinks = includeDrinks
-      ? beverageBudgetAmount(drinkOffers, guests, input.eventType, style.style, focusBrands)
+      ? beverageBudgetAmount(drinkOffers, guests, input.eventType, style.style, focusBrands, wantedDrinkLines)
       : null;
     if (drinks) {
       for (const line of drinks.lines) {

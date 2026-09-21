@@ -1,5 +1,6 @@
 import type { ListingAmenityId, ListingEventTypeId } from '@/lib/listingDetails';
 import { parseBudgetSimulationScope, type BudgetSimulationScope } from '@/lib/budgetSimulation';
+import { parseDrinkOrderLines, type DrinkOrderLine } from '@/lib/beverageBrands';
 import { SERVICE_CATEGORIES, SERVICE_CATEGORY_LABELS, type ServiceCategory } from '@/lib/marketplace';
 
 export const EVENT_PLAN_SLOTS: Record<ListingEventTypeId, { required: ServiceCategory[]; optional: ServiceCategory[] }> = {
@@ -84,6 +85,7 @@ export type EventPlanBrief = {
   budgetScope: BudgetSimulationScope;
   wantedBrandIds: string[];
   wantedSaleUnits: Array<'BOTTLE' | 'CRATE' | 'PACK' | 'OTHER'>;
+  wantedDrinkLines: DrinkOrderLine[];
 };
 
 export type EventPlanRequest = EventPlanBrief & {
@@ -141,6 +143,7 @@ export function createDefaultBrief(eventType: ListingEventTypeId = 'wedding'): E
     budgetScope: 'complete',
     wantedBrandIds: [],
     wantedSaleUnits: [],
+    wantedDrinkLines: [],
   };
 }
 
@@ -186,6 +189,7 @@ export function hydrateBrief(raw: unknown): EventPlanBrief {
     wantedSaleUnits: Array.isArray(value.wantedSaleUnits)
       ? value.wantedSaleUnits.filter((unit): unit is 'BOTTLE' | 'CRATE' | 'PACK' | 'OTHER' => unit === 'BOTTLE' || unit === 'CRATE' || unit === 'PACK' || unit === 'OTHER')
       : [],
+    wantedDrinkLines: parseDrinkOrderLines(value.wantedDrinkLines),
   };
 }
 
@@ -436,6 +440,7 @@ export type EventPlanAiResult = {
     wantedCategories?: string[];
     wantedBrandIds?: string[];
     wantedSaleUnits?: string[];
+    wantedDrinkLines?: DrinkOrderLine[];
     venueAmenities?: string[];
   };
 };

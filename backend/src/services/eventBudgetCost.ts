@@ -27,6 +27,30 @@ export function parseWantedSaleUnits(value: unknown): WantedSaleUnit[] {
   return SALE_UNITS.filter((unit) => value.includes(unit));
 }
 
+export type BeverageOrderLine = {
+  brandId: string;
+  unitKind: WantedSaleUnit;
+  packs: number;
+};
+
+const DRINK_LINE_LIMIT = 20;
+
+export function parseWantedDrinkLines(value: unknown): BeverageOrderLine[] {
+  if (!Array.isArray(value)) return [];
+  const lines: BeverageOrderLine[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as Record<string, unknown>;
+    const brandId = typeof row.brandId === 'string' ? row.brandId.trim() : '';
+    const unitKind = SALE_UNITS.find((unit) => unit === row.unitKind);
+    const packs = Math.round(Number(row.packs));
+    if (!brandId || !unitKind || !Number.isFinite(packs) || packs < 1) continue;
+    lines.push({ brandId, unitKind, packs: Math.min(500, packs) });
+    if (lines.length >= DRINK_LINE_LIMIT) break;
+  }
+  return lines;
+}
+
 const PER_PIECE = new Set(['RENTAL_CHAIRS', 'RENTAL_TABLEWARE']);
 
 export type RentalBudgetInput = {
@@ -177,6 +201,7 @@ export type BeverageBudgetOffer = {
   brandId?: string | null;
   brandName: string;
   imageUrl?: string | null;
+  unitKind?: string | null;
   quantity: number;
   unitLabel: string;
   priceFc: number;
@@ -291,13 +316,72 @@ function pricedDetail(choice: PricedDrink, servings: number, guests: number, rul
   return `${choice.quantityLabel}${contained} · ${money(choice.unitPrice)} / ${choice.unitLabel} · ${servings} pour ${guests} invités (${rule})`;
 }
 
+function pricedOrderLine(
+  offers: BeverageBudgetOffer[],
+  line: BeverageOrderLine,
+  brand: BeverageFocusBrand | undefined,
+): BeverageBudgetLine {
+  const sample = offers.find((offer) => offer.brandId === line.brandId);
+  const kind = isDrinkKind(brand?.kind || sample?.kind || '') ? (brand?.kind || sample?.kind) as DrinkKind : 'DRINK';
+  const family = DRINK_LABEL[kind];
+  const name = brand?.name || sample?.brandName || family;
+  const slug = `budget:boissons:${kind}:${brandSlug(name)}:${line.unitKind}`;
+  const matches = offers.filter((offer) => offer.brandId === line.brandId && offer.unitKind === line.unitKind);
+  const choices = matches.flatMap((offer) => {
+    const unitPrice = payableUnitPrice({
+      priceFromFc: offer.priceFc,
+      promoPriceFc: offer.promoPriceFc,
+      promoEndsAt: offer.promoEndsAt,
+    });
+    if (unitPrice == null) return [];
+    return [{
+      cost: line.packs * unitPrice,
+      imageUrl: offer.imageUrl || null,
+      brandName: offer.brandName,
+      quantityLabel: `${line.packs} × ${offer.unitLabel}`,
+      unitPrice,
+      unitLabel: offer.unitLabel,
+      pack: Math.max(1, Math.floor(offer.quantity) || 1),
+    }];
+  });
+  if (!choices.length) {
+    return drinkLine(kind, slug, name, name, `${name} : aucun tarif publié pour ${line.packs} × ce conditionnement`);
+  }
+  const best = cheapestDrink(choices);
+  const contained = best.pack > 1 ? ` (${best.pack} par ${best.unitLabel})` : '';
+  return drinkLine(
+    kind,
+    slug,
+    best.brandName,
+    best.brandName,
+    `${best.quantityLabel}${contained} · ${money(best.unitPrice)} / ${best.unitLabel} · commande précise`,
+    best,
+  );
+}
+
 export function beverageBudgetAmount(
   offers: BeverageBudgetOffer[],
   guestCount: number,
   eventType: EventPlanType,
   style: BudgetStyle,
   focusBrands: BeverageFocusBrand[] = [],
+  orderLines: BeverageOrderLine[] = [],
 ): (BudgetAmount & { imageUrl: string | null; lines: BeverageBudgetLine[] }) | null {
+  if (orderLines.length) {
+    const lines = orderLines.map((line) => pricedOrderLine(
+      offers,
+      line,
+      focusBrands.find((brand) => brand.id === line.brandId),
+    ));
+    const total = lines.reduce((sum, line) => sum + line.amountFc, 0);
+    return {
+      amountFc: Math.round(total),
+      note: lines.map((line) => line.detail).join(' · '),
+      imageUrl: lines.find((line) => line.imageUrl)?.imageUrl || null,
+      lines,
+    };
+  }
+
   const guests = Math.max(0, Math.floor(guestCount));
   if (guests < 1) return null;
   if (!offers.length && !focusBrands.length) return null;

@@ -23,6 +23,7 @@ export type AiSimulationBrief = {
   wantedCategories?: string[];
   wantedBrandIds?: string[];
   wantedSaleUnits?: string[];
+  wantedDrinkLines?: Array<{ brandId: string; unitKind: string; packs: number }>;
   venueAmenities?: string[];
 };
 

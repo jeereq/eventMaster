@@ -22,35 +22,44 @@ import {
   type CatalogueGeoState,
 } from '@/lib/marketplace';
 import { cn } from '@/lib/cn';
+import DrinkProposals from '@/components/DrinkProposals';
 import {
   BEVERAGE_KINDS,
   BEVERAGE_KIND_LABELS,
+  BEVERAGE_SALE_UNITS,
+  BEVERAGE_SALE_UNIT_LABELS,
   type BeverageBrandRow,
   type BeverageKind,
+  type BeverageSaleUnit,
+  type PublicBeverageOffer,
 } from '@/lib/beverageBrands';
 
 type DrinkFilters = CatalogueGeoState & {
   kind: string;
   priced: string;
+  unit: string;
 };
 
 const emptyFilters: DrinkFilters = {
   ...EMPTY_CATALOGUE_GEO,
   kind: '',
   priced: '',
+  unit: '',
 };
 
 const QUERY_OPTS = {
-  extraKeys: ['kind', 'priced'],
-  emptyExtra: { kind: '', priced: '' },
+  extraKeys: ['kind', 'priced', 'unit'],
+  emptyExtra: { kind: '', priced: '', unit: '' },
   merge: (geo: CatalogueGeoState, extra: Record<string, string>): DrinkFilters => ({
     ...geo,
     kind: BEVERAGE_KINDS.includes(extra.kind as BeverageKind) ? extra.kind : '',
     priced: extra.priced === 'yes' || extra.priced === 'no' ? extra.priced : '',
+    unit: BEVERAGE_SALE_UNITS.includes(extra.unit as BeverageSaleUnit) ? extra.unit : '',
   }),
   split: (filters: DrinkFilters) => ({
     kind: filters.kind,
     priced: filters.priced,
+    unit: filters.unit,
   }),
 };
 
@@ -65,6 +74,21 @@ function boundPrice(value: string): number | null {
   const amount = Number(value);
   if (!value.trim() || !Number.isFinite(amount) || amount < 0) return null;
   return amount;
+}
+
+function matchesOffer(offer: PublicBeverageOffer, filters: DrinkFilters, search: string): boolean {
+  if (filters.kind && offer.kind !== filters.kind) return false;
+  if (filters.unit && offer.unitKind !== filters.unit) return false;
+  if (filters.priced === 'no') return false;
+  const min = boundPrice(filters.minPrice);
+  const max = boundPrice(filters.maxPrice);
+  if (min != null && offer.payableFc < min) return false;
+  if (max != null && offer.payableFc > max) return false;
+  const q = search.trim().toLowerCase();
+  if (!q) return true;
+  return [offer.brandName, offer.kindLabel, offer.vendorName, offer.producer, offer.country, offer.unitLabel]
+    .filter(Boolean)
+    .some((part) => String(part).toLowerCase().includes(q));
 }
 
 function matchesDrinks(brand: BeverageBrandRow, filters: DrinkFilters, search: string): boolean {
@@ -90,15 +114,21 @@ function MarketplaceDrinksPageInner() {
   const browse = mode === 'list' ? 'list' : 'grid';
   const { q, setQ, searchQ, applied, draft, setDraft, page, applyFilters, setPage } = useCatalogueQueryState(QUERY_OPTS);
   const [brands, setBrands] = useState<BeverageBrandRow[]>([]);
+  const [offers, setOffers] = useState<PublicBeverageOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [pageSize, setPageSize] = usePageSize('marketplace-drinks', 8);
 
   useEffect(() => {
     let cancelled = false;
-    api.get('/public/beverage-brands')
-      .then((data) => {
-        if (!cancelled) setBrands(Array.isArray(data.brands) ? data.brands : []);
+    Promise.all([
+      api.get('/public/beverage-brands'),
+      api.get('/public/beverage-offers'),
+    ])
+      .then(([brandData, offerData]) => {
+        if (cancelled) return;
+        setBrands(Array.isArray(brandData.brands) ? brandData.brands : []);
+        setOffers(Array.isArray(offerData.offers) ? offerData.offers : []);
       })
       .catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Impossible de charger les boissons.');
@@ -109,9 +139,14 @@ function MarketplaceDrinksPageInner() {
     return () => { cancelled = true; };
   }, []);
 
+  const visibleOffers = useMemo(
+    () => offers.filter((offer) => matchesOffer(offer, applied, searchQ)),
+    [offers, applied, searchQ],
+  );
+  const showBrandsWithoutPrice = applied.priced !== 'yes' && !applied.unit;
   const visible = useMemo(
-    () => brands.filter((brand) => matchesDrinks(brand, applied, searchQ)),
-    [brands, applied, searchQ],
+    () => brands.filter((brand) => showBrandsWithoutPrice && (brand.vendorCount || 0) === 0 && matchesDrinks(brand, applied, searchQ)),
+    [brands, applied, searchQ, showBrandsWithoutPrice],
   );
   const pageItems = usePaginateItems(visible, page, pageSize);
 
@@ -122,6 +157,13 @@ function MarketplaceDrinksPageInner() {
         id: 'kind',
         label: 'Famille',
         value: BEVERAGE_KIND_LABELS[applied.kind as BeverageKind],
+      });
+    }
+    if (applied.unit && BEVERAGE_SALE_UNITS.includes(applied.unit as BeverageSaleUnit)) {
+      extra.push({
+        id: 'unit',
+        label: 'Quantité',
+        value: BEVERAGE_SALE_UNIT_LABELS[applied.unit as BeverageSaleUnit],
       });
     }
     if (applied.priced === 'yes' || applied.priced === 'no') {
@@ -135,7 +177,7 @@ function MarketplaceDrinksPageInner() {
   }, [applied]);
 
   const removeChip = (id: string) => {
-    if (id === 'kind' || id === 'priced') {
+    if (id === 'kind' || id === 'priced' || id === 'unit') {
       applyFilters({ ...applied, [id]: '' });
       return;
     }
@@ -165,7 +207,7 @@ function MarketplaceDrinksPageInner() {
             gridCols={gridCols}
             onGridColsChange={setGridCols}
             chips={chips}
-            resultLabel={!loading ? `${visible.length} boisson${visible.length > 1 ? 's' : ''}` : undefined}
+            resultLabel={!loading ? `${visibleOffers.length} proposition${visibleOffers.length > 1 ? 's' : ''}` : undefined}
             onRemoveChip={removeChip}
             onClearChips={() => applyFilters(emptyFilters)}
             onOpen={() => setDraft(applied)}
@@ -183,6 +225,17 @@ function MarketplaceDrinksPageInner() {
                     options={BEVERAGE_KINDS.map((id) => ({ id, label: BEVERAGE_KIND_LABELS[id] }))}
                     value={draft.kind}
                     onChange={(id) => setDraft({ ...draft, kind: id })}
+                  />
+                </CatalogueFilterField>
+                <CatalogueFilterField
+                  label="Quantité"
+                  hint="Bouteille, casier, pack ou autre. Un second clic retire le choix."
+                >
+                  <CatalogueChoicePills
+                    ariaLabel="Type de quantité"
+                    options={BEVERAGE_SALE_UNITS.map((id) => ({ id, label: BEVERAGE_SALE_UNIT_LABELS[id] }))}
+                    value={draft.unit}
+                    onChange={(id) => setDraft({ ...draft, unit: BEVERAGE_SALE_UNITS.includes(id as BeverageSaleUnit) ? id : '' })}
                   />
                 </CatalogueFilterField>
                 <CatalogueFilterField
@@ -227,12 +280,12 @@ function MarketplaceDrinksPageInner() {
         </div>
 
         {error ? (
-          <p className="text-sm text-rose-700 dark:text-rose-300" role="alert">{error}</p>
+          <p className="text-sm text-danger" role="alert">{error}</p>
         ) : null}
 
         {loading ? (
           <p className="text-sm text-muted" role="status">Chargement des boissons…</p>
-        ) : error && visible.length === 0 ? null : visible.length === 0 ? (
+        ) : error && visibleOffers.length === 0 && visible.length === 0 ? null : visibleOffers.length === 0 && visible.length === 0 ? (
           <div className="text-center py-16 px-6 border border-dashed border-border rounded-[var(--radius-card)] bg-surface">
             <Wine className="w-10 h-10 text-muted mx-auto mb-3" aria-hidden="true" />
             <h2 className="font-semibold text-foreground">
@@ -244,25 +297,32 @@ function MarketplaceDrinksPageInner() {
                 : 'Élargissez la famille, le prix ou le nom recherché.'}
             </p>
           </div>
-        ) : browse === 'list' ? (
-          <ul className="space-y-2">
-            {pageItems.map((brand) => (
-              <li key={brand.id}>
-                <DrinkRow brand={brand} />
-              </li>
-            ))}
-          </ul>
         ) : (
-          <ul className={GRID_CLASS[gridCols]}>
-            {pageItems.map((brand) => (
-              <li key={brand.id}>
-                <DrinkCard brand={brand} />
-              </li>
-            ))}
-          </ul>
+          <div className="space-y-6">
+            {visibleOffers.length ? <DrinkProposals offers={visibleOffers} /> : null}
+            {visible.length ? (
+              browse === 'list' ? (
+                <ul className="space-y-2">
+                  {pageItems.map((brand) => (
+                    <li key={brand.id}>
+                      <DrinkRow brand={brand} />
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <ul className={GRID_CLASS[gridCols]}>
+                  {pageItems.map((brand) => (
+                    <li key={brand.id}>
+                      <DrinkCard brand={brand} />
+                    </li>
+                  ))}
+                </ul>
+              )
+            ) : null}
+          </div>
         )}
 
-        {!loading && !(error && visible.length === 0) && visible.length > 0 ? (
+        {!loading && !(error && visibleOffers.length === 0 && visible.length === 0) && visible.length > 0 ? (
           <Pagination
             page={page}
             pageSize={pageSize}

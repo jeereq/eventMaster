@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
-import { BEVERAGE_KINDS, BEVERAGE_KIND_LABELS, BEVERAGE_SALE_UNITS, BEVERAGE_SALE_UNIT_LABELS, type BeverageBrandRow, type BeverageKind, type BeverageSaleUnit } from '@/lib/beverageBrands';
+import { BEVERAGE_KINDS, BEVERAGE_KIND_LABELS, BEVERAGE_SALE_UNITS, BEVERAGE_SALE_UNIT_LABELS, type BeverageBrandRow, type BeverageKind, type BeverageSaleUnit, type DrinkOrderLine } from '@/lib/beverageBrands';
 import type { BudgetSimulationScope } from '@/lib/budgetSimulation';
 import { SERVICE_CATEGORY_LABELS, SERVICE_RENTAL_CATEGORIES, SERVICE_TRADE_CATEGORIES, type ServiceCategory } from '@/lib/marketplace';
 
@@ -22,6 +22,8 @@ export default function BudgetSimulationCriteria({
   onToggleBrand,
   selectedSaleUnits,
   onToggleSaleUnit,
+  orderLines,
+  onChangeOrderLines,
   selectedCategories,
   onToggleCategory,
 }: {
@@ -30,6 +32,8 @@ export default function BudgetSimulationCriteria({
   onToggleBrand: (id: string) => void;
   selectedSaleUnits: BeverageSaleUnit[];
   onToggleSaleUnit: (unit: BeverageSaleUnit) => void;
+  orderLines: DrinkOrderLine[];
+  onChangeOrderLines: (lines: DrinkOrderLine[]) => void;
   selectedCategories?: ServiceCategory[];
   onToggleCategory?: (id: ServiceCategory) => void;
 }) {
@@ -61,7 +65,9 @@ export default function BudgetSimulationCriteria({
     if (showBrands && selectedBrandIds.length) {
       parts.push(`${selectedBrandIds.length} marque${selectedBrandIds.length > 1 ? 's' : ''}`);
     }
-    if (showBrands && selectedSaleUnits.length) {
+    if (showBrands && orderLines.length) {
+      parts.push(`${orderLines.length} commande${orderLines.length > 1 ? 's' : ''}`);
+    } else if (showBrands && selectedSaleUnits.length) {
       parts.push(selectedSaleUnits.map((unit) => BEVERAGE_SALE_UNIT_LABELS[unit]).join(', '));
     }
     if (showServices && selectedCategories) {
@@ -150,6 +156,10 @@ export default function BudgetSimulationCriteria({
         </CriteriaGroup>
       ) : null}
 
+      {showBrands ? (
+        <DrinkOrderEditor brands={brands} lines={orderLines} onChange={onChangeOrderLines} disabled={brandState !== 'ready' || brands.length === 0} />
+      ) : null}
+
       {showServices && onToggleCategory && selectedCategories ? (
         <CriteriaGroup label="Services" hint="Traiteur, photo, DJ et les autres métiers.">
           <ChoiceRow
@@ -224,6 +234,84 @@ function BrandFamily({
         })}
       </div>
     </div>
+  );
+}
+
+function DrinkOrderEditor({
+  brands,
+  lines,
+  onChange,
+  disabled,
+}: {
+  brands: BeverageBrandRow[];
+  lines: DrinkOrderLine[];
+  onChange: (lines: DrinkOrderLine[]) => void;
+  disabled: boolean;
+}) {
+  const [brandId, setBrandId] = React.useState('');
+  const [unitKind, setUnitKind] = React.useState<BeverageSaleUnit>('CRATE');
+  const [packs, setPacks] = React.useState('10');
+  const field = 'w-full min-h-11 rounded-[var(--radius-button)] border border-border bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+
+  const add = () => {
+    const count = Math.round(Number(packs));
+    if (!brandId || !Number.isFinite(count) || count < 1) return;
+    const next = lines.filter((line) => !(line.brandId === brandId && line.unitKind === unitKind));
+    onChange([...next, { brandId, unitKind, packs: Math.min(500, count) }].slice(0, 20));
+  };
+
+  return (
+    <CriteriaGroup label="Commande précise" hint="Exemple : 10 casiers de Tembo et 5 casiers de Coca. Cette commande remplace l’estimation par invité.">
+      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_5.5rem_auto] gap-2 items-end">
+        <label className="space-y-1 block">
+          <span className="text-xs font-semibold text-muted">Marque</span>
+          <select className={field} value={brandId} disabled={disabled} onChange={(event) => setBrandId(event.target.value)} aria-label="Marque de la commande">
+            <option value="">Choisir</option>
+            {BEVERAGE_KINDS.map((kind) => {
+              const rows = brands.filter((brand) => brand.kind === kind);
+              if (!rows.length) return null;
+              return (
+                <optgroup key={kind} label={BEVERAGE_KIND_LABELS[kind]}>
+                  {rows.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
+                </optgroup>
+              );
+            })}
+          </select>
+        </label>
+        <label className="space-y-1 block">
+          <span className="text-xs font-semibold text-muted">Conditionnement</span>
+          <select className={field} value={unitKind} onChange={(event) => setUnitKind(event.target.value as BeverageSaleUnit)} aria-label="Conditionnement">
+            {BEVERAGE_SALE_UNITS.map((unit) => <option key={unit} value={unit}>{BEVERAGE_SALE_UNIT_LABELS[unit]}</option>)}
+          </select>
+        </label>
+        <label className="space-y-1 block">
+          <span className="text-xs font-semibold text-muted">Nombre</span>
+          <input className={field} inputMode="numeric" min={1} max={500} value={packs} onChange={(event) => setPacks(event.target.value)} aria-label="Nombre de conditionnements" />
+        </label>
+        <button type="button" onClick={add} disabled={disabled || !brandId} className="min-h-11 px-3 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground text-xs font-semibold disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+          Ajouter
+        </button>
+      </div>
+      {lines.length ? (
+        <ul className="space-y-1.5">
+          {lines.map((line) => {
+            const brand = brands.find((item) => item.id === line.brandId);
+            return (
+              <li key={`${line.brandId}-${line.unitKind}`} className="flex items-center justify-between gap-2 min-h-11">
+                <span className="text-sm text-foreground">{brand?.name || 'Marque'} · {line.packs} × {BEVERAGE_SALE_UNIT_LABELS[line.unitKind].toLowerCase()}</span>
+                <button
+                  type="button"
+                  className="min-h-11 px-2 text-xs font-semibold text-danger focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-sm"
+                  onClick={() => onChange(lines.filter((item) => !(item.brandId === line.brandId && item.unitKind === line.unitKind)))}
+                >
+                  Retirer
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
+    </CriteriaGroup>
   );
 }
 

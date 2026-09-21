@@ -453,7 +453,7 @@ export interface PublicService {
 
 export interface MarketplaceInquiryItem {
   id: string;
-  kind: 'venue' | 'service' | 'rental';
+  kind: 'venue' | 'service' | 'rental' | 'beverage';
   title: string;
   fromName: string;
   fromEmail: string;
@@ -588,7 +588,7 @@ export const BOOKING_PIPELINE_STEPS = [
 
 export interface MarketplaceBookingItem {
   id: string;
-  kind: 'venue' | 'service';
+  kind: 'venue' | 'service' | 'beverage';
   title: string;
   listingSlug: string | null;
   offeringSlug: string | null;

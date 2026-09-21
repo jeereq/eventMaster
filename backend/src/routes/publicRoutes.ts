@@ -19,7 +19,9 @@ import {
   getPublicService,
   getPublicVendor,
   createServiceInquiry,
+  createBeverageInquiry,
 } from '../controllers/marketplaceController';
+import { createBeverageBooking } from '../controllers/marketplaceBookingController';
 import {
   getPublicVenueFeed,
   getPublicVendorFeed,
@@ -55,7 +57,7 @@ import {
   claimPublicAiRoomPlanComposes,
 } from '../controllers/roomController';
 import { getPublicShowcasePlans } from '../controllers/showcasePlanController';
-import { listBeverageBrands } from '../services/beverageBrandService';
+import { listBeverageBrands, listPublicBeverageOffers } from '../services/beverageBrandService';
 import {
   flexPayCardCallback,
   flexPayCardReturn,
@@ -94,6 +96,19 @@ router.get('/beverage-brands', async (_req: Request, res: Response) => {
     return res.status(500).json({ error: 'Impossible de charger les boissons.' });
   }
 });
+
+router.get('/beverage-offers', async (_req: Request, res: Response) => {
+  try {
+    const offers = await listPublicBeverageOffers();
+    return res.json({ offers });
+  } catch (error) {
+    console.error('[Public] Erreur offres boissons:', error);
+    return res.status(500).json({ error: 'Impossible de charger les propositions.' });
+  }
+});
+
+router.post('/beverage-offers/:id/inquire', requireAuth, createBeverageInquiry);
+router.post('/beverage-offers/:id/book', requireAuth, createBeverageBooking);
 
 // GET /api/public/plans — cache (hydraté au démarrage, mis à jour à la sauvegarde admin)
 router.get('/plans', async (_req: Request, res: Response) => {

@@ -57,6 +57,69 @@ export async function listBeverageBrands(options?: { includeInactive?: boolean }
   });
 }
 
+export async function listPublicBeverageOffers() {
+  const rows = await prisma.vendorBeveragePrice.findMany({
+    where: { isAvailable: true, brand: { isActive: true } },
+    orderBy: [{ brand: { kind: 'asc' } }, { brand: { name: 'asc' } }, { priceFc: 'asc' }],
+    select: {
+      id: true,
+      unitKind: true,
+      quantity: true,
+      unitLabel: true,
+      priceFc: true,
+      promoPriceFc: true,
+      promoEndsAt: true,
+      notes: true,
+      brand: {
+        select: {
+          id: true,
+          name: true,
+          kind: true,
+          producer: true,
+          country: true,
+          volumeLabel: true,
+          description: true,
+          imageUrl: true,
+        },
+      },
+      tenant: {
+        select: {
+          name: true,
+          vendorProfile: { select: { displayName: true, slug: true } },
+        },
+      },
+    },
+  });
+  return rows.map((row) => {
+    const payable = activePromoPrice({
+      priceFc: row.priceFc,
+      promoPriceFc: row.promoPriceFc,
+      promoEndsAt: row.promoEndsAt,
+    }) ?? row.priceFc;
+    return {
+      id: row.id,
+      brandId: row.brand.id,
+      brandName: row.brand.name,
+      kind: row.brand.kind,
+      kindLabel: BEVERAGE_KIND_LABELS[row.brand.kind],
+      imageUrl: row.brand.imageUrl,
+      producer: row.brand.producer,
+      country: row.brand.country,
+      volumeLabel: row.brand.volumeLabel,
+      description: row.brand.description,
+      vendorName: row.tenant.vendorProfile?.displayName || row.tenant.name,
+      vendorSlug: row.tenant.vendorProfile?.slug || null,
+      unitKind: row.unitKind,
+      quantity: row.quantity,
+      unitLabel: row.unitLabel,
+      priceFc: row.priceFc,
+      payableFc: payable,
+      promoPriceFc: payable < row.priceFc ? payable : null,
+      notes: row.notes,
+    };
+  });
+}
+
 export async function createBeverageBrand(body: unknown) {
   const parsed = parseBrandDraft(body);
   if ('error' in parsed) throw new Error(parsed.error);

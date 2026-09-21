@@ -135,3 +135,24 @@ test('chaque marque choisie a sa quantité, même hors du menu par défaut', () 
   assert.equal(ceremony?.amountFc, 0);
   assert.match(ceremony?.lines[0]?.detail || '', /alcool non inclus/);
 });
+
+test('une commande précise compte les casiers demandés, pas une estimation par invité', () => {
+  const offers = [
+    { kind: 'BEER', brandId: 'tembo', brandName: 'Tembo', unitKind: 'CRATE', quantity: 12, unitLabel: 'casier', priceFc: 24000 },
+    { kind: 'DRINK', brandId: 'coca', brandName: 'Coca', unitKind: 'CRATE', quantity: 24, unitLabel: 'casier', priceFc: 18000 },
+    { kind: 'DRINK', brandId: 'coca', brandName: 'Coca', unitKind: 'BOTTLE', quantity: 1, unitLabel: 'bouteille', priceFc: 1500 },
+  ];
+  const order = beverageBudgetAmount(offers, 0, 'wedding', 'cheap', [
+    { id: 'tembo', name: 'Tembo', kind: 'BEER' },
+    { id: 'coca', name: 'Coca', kind: 'DRINK' },
+  ], [
+    { brandId: 'tembo', unitKind: 'CRATE', packs: 10 },
+    { brandId: 'coca', unitKind: 'CRATE', packs: 5 },
+  ]);
+  assert.equal(order?.lines.length, 2);
+  assert.equal(order?.lines[0]?.quantityLabel, '10 × casier');
+  assert.equal(order?.lines[0]?.amountFc, 240000);
+  assert.equal(order?.lines[1]?.quantityLabel, '5 × casier');
+  assert.equal(order?.lines[1]?.amountFc, 90000);
+  assert.equal(order?.amountFc, 330000);
+});

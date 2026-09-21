@@ -131,7 +131,7 @@ export default function EventPlanBriefForm({
   const scope = brief.budgetScope || 'complete';
 
   const launch = () => {
-    if (scope === 'drinks' && !(brief.guestCount > 0)) {
+    if (scope === 'drinks' && !(brief.guestCount > 0) && !(brief.wantedDrinkLines || []).length) {
       setScopeError('Indiquez le nombre d’invités pour chiffrer les boissons.');
       return;
     }
@@ -192,6 +192,8 @@ export default function EventPlanBriefForm({
             wantedSaleUnits: current.includes(unit) ? current.filter((item) => item !== unit) : [...current, unit],
           });
         }}
+        orderLines={brief.wantedDrinkLines || []}
+        onChangeOrderLines={(wantedDrinkLines) => patch({ wantedDrinkLines })}
       />
 
       {scope === 'complete' ? (

@@ -5,7 +5,7 @@ import { coverFromMedia, isServiceRentalCategory, parsePhotoUrls, priceUnitLabel
 import { collectUnavailableDates, isRangeAvailable, toDateKey } from '../utils/marketplaceDates';
 import { allowedCityPrismaFilter, normalizeAllowedCity, normalizeAllowedCommune } from '../utils/rdcCities';
 import { EVENT_PLAN_TYPES, type EventPlanType } from './eventPlanBrief';
-import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, parseWantedSaleUnits, rentalBudgetAmount, type BeverageFocusBrand, type BudgetSimulationScope, type BudgetStyle, type WantedSaleUnit } from './eventBudgetCost';
+import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, parseWantedDrinkLines, parseWantedSaleUnits, rentalBudgetAmount, type BeverageFocusBrand, type BeverageOrderLine, type BudgetSimulationScope, type BudgetStyle, type WantedSaleUnit } from './eventBudgetCost';
 import { getGeminiApiKey, requestGeminiJson } from './geminiJsonClient.ts';
 import { requestOpenAiJson } from './openaiJsonClient.ts';
 
@@ -109,6 +109,7 @@ export type EventPlanAiResult = {
     wantedCategories?: string[];
     wantedBrandIds?: string[];
     wantedSaleUnits?: string[];
+    wantedDrinkLines?: BeverageOrderLine[];
     venueAmenities?: string[];
   };
 };
@@ -156,8 +157,8 @@ async function loadFocusBrands(brandIds: string[]): Promise<BeverageFocusBrand[]
   return rows;
 }
 
-async function loadDrinkOffers(guests: number, brandIds: string[], saleUnits: WantedSaleUnit[]) {
-  if (guests < 1) return [];
+async function loadDrinkOffers(guests: number, brandIds: string[], saleUnits: WantedSaleUnit[], allowWithoutGuests = false) {
+  if (guests < 1 && !allowWithoutGuests) return [];
   const rows = await prisma.vendorBeveragePrice.findMany({
     where: {
       isAvailable: true,
@@ -165,6 +166,7 @@ async function loadDrinkOffers(guests: number, brandIds: string[], saleUnits: Wa
       brand: { isActive: true, ...(brandIds.length ? { id: { in: brandIds } } : {}) },
     },
     select: {
+      unitKind: true,
       quantity: true,
       unitLabel: true,
       priceFc: true,
@@ -177,6 +179,7 @@ async function loadDrinkOffers(guests: number, brandIds: string[], saleUnits: Wa
     kind: row.brand.kind,
     brandId: row.brand.id,
     brandName: row.brand.name,
+    unitKind: row.unitKind,
     imageUrl: row.brand.imageUrl,
     quantity: row.quantity,
     unitLabel: row.unitLabel,
@@ -449,8 +452,15 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     ? body.wantedCategories.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).slice(0, 40)
     : [];
   const drinksInScope = budgetScope === 'complete' || budgetScope === 'drinks';
-  const wantedBrandIds = drinksInScope ? parseWantedBrandIds(body.wantedBrandIds) : [];
-  const wantedSaleUnits = drinksInScope ? parseWantedSaleUnits(body.wantedSaleUnits) : [];
+  const wantedDrinkLines = drinksInScope ? parseWantedDrinkLines(body.wantedDrinkLines) : [];
+  const wantedBrandIds = drinksInScope
+    ? parseWantedBrandIds([...(Array.isArray(body.wantedBrandIds) ? body.wantedBrandIds : []), ...wantedDrinkLines.map((line) => line.brandId)])
+    : [];
+  const wantedSaleUnits = drinksInScope
+    ? (wantedDrinkLines.length
+      ? parseWantedSaleUnits(wantedDrinkLines.map((line) => line.unitKind))
+      : parseWantedSaleUnits(body.wantedSaleUnits))
+    : [];
   const selectedCategories = wantedCategories.filter((id) => {
     if (budgetScope === 'drinks') return false;
     if (budgetScope === 'services') return !isServiceRentalCategory(id);
@@ -469,14 +479,15 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     wantedCategories,
     wantedBrandIds,
     wantedSaleUnits,
+    wantedDrinkLines,
     venueAmenities,
   };
 
   if (budgetScope === 'drinks') {
-    const drinkOffers = await loadDrinkOffers(guests, wantedBrandIds, wantedSaleUnits);
+    const drinkOffers = await loadDrinkOffers(guests, wantedBrandIds, wantedSaleUnits, wantedDrinkLines.length > 0);
     const focusBrands = await loadFocusBrands(wantedBrandIds);
     const packages = AI_STYLES.map((style) => {
-      const drinks = beverageBudgetAmount(drinkOffers, guests, eventType, budgetStyleOf(style.id), focusBrands);
+      const drinks = beverageBudgetAmount(drinkOffers, guests, eventType, budgetStyleOf(style.id), focusBrands, wantedDrinkLines);
       const warnings = drinks
         ? [drinkCriteriaNote(wantedBrandIds, wantedSaleUnits)]
         : [guests < 1
@@ -624,7 +635,7 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
   const ai = await askPlannerJson(system, user);
   const rawPackages = Array.isArray(ai.packages) ? ai.packages : [];
 
-  const drinkOffers = budgetScope === 'complete' ? await loadDrinkOffers(guests, wantedBrandIds, wantedSaleUnits) : [];
+  const drinkOffers = budgetScope === 'complete' ? await loadDrinkOffers(guests, wantedBrandIds, wantedSaleUnits, wantedDrinkLines.length > 0) : [];
   const focusBrands = budgetScope === 'complete' ? await loadFocusBrands(wantedBrandIds) : [];
 
   const hydrate = (
@@ -665,7 +676,7 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
       warnings.push('Aucune location retenue dans le catalogue disponible.');
     }
     const drinks = budgetScope === 'complete'
-      ? beverageBudgetAmount(drinkOffers, guests, eventType, budgetStyleOf(style.id), focusBrands)
+      ? beverageBudgetAmount(drinkOffers, guests, eventType, budgetStyleOf(style.id), focusBrands, wantedDrinkLines)
       : null;
     if (drinks) {
       for (const line of drinks.lines) {
