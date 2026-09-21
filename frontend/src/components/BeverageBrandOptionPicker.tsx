@@ -89,6 +89,9 @@ export default function BeverageBrandOptionPicker({
                 onChange={() => toggle(brand)}
                 className="rounded text-primary focus:ring-primary"
               />
+              {brand.imageUrl ? (
+                <img src={brand.imageUrl} alt="" className="w-8 h-8 rounded object-cover border border-border" />
+              ) : null}
               <span className="font-medium text-foreground">{brand.name}</span>
               <span className="text-muted">{brand.kindLabel}</span>
               {brand.volumeLabel ? <span className="text-muted">{brand.volumeLabel}</span> : null}

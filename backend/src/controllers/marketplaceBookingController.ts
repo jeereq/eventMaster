@@ -7,6 +7,7 @@ import { notifyTenantOperators, notifyUsers } from '../services/platformNotifica
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
 import { computeMarketplaceAmounts, billedMarketplaceAmount } from '../config/marketplaceBilling';
+import { activePromoPrice } from '../services/offerPromotion';
 import {
   eachDateKey,
   isRangeAvailable,
@@ -256,7 +257,14 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
       return res.status(400).json({ error: 'Vous ne pouvez pas réserver votre propre offre.' });
     }
 
-    const price = listing?.priceFromFc ?? offering?.priceFromFc;
+    const catalogPrice = listing?.priceFromFc ?? offering?.priceFromFc ?? null;
+    const price = listing
+      ? catalogPrice
+      : (activePromoPrice({
+          priceFc: offering?.priceFromFc,
+          promoPriceFc: offering?.promoPriceFc,
+          promoEndsAt: offering?.promoEndsAt,
+        }) ?? catalogPrice);
     if (price == null || price < 0) {
       return res.status(400).json({ error: 'Cette offre n’a pas de tarif. Envoyez d’abord un devis.' });
     }

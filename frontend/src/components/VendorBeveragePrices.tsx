@@ -23,6 +23,8 @@ type DraftLine = {
   quantity: string;
   unitLabel: string;
   priceFc: string;
+  promoPriceFc: string;
+  promoLabel: string;
   isAvailable: boolean;
 };
 
@@ -38,6 +40,8 @@ function newLine(unitKind: BeverageSaleUnit = 'BOTTLE'): DraftLine {
     quantity: String(DEFAULT_SALE_QUANTITY[unitKind]),
     unitLabel: unitKind === 'OTHER' ? '' : '',
     priceFc: '',
+    promoPriceFc: '',
+    promoLabel: '',
     isAvailable: true,
   };
 }
@@ -54,6 +58,8 @@ function draftFromBrand(brand: VendorBeverageBrandRow): DraftPrice {
     quantity: String(price.quantity),
     unitLabel: price.unitKind === 'OTHER' ? price.unitLabel : '',
     priceFc: String(price.priceFc),
+    promoPriceFc: price.promoPriceFc != null ? String(price.promoPriceFc) : '',
+    promoLabel: price.promoLabel || '',
     isAvailable: price.isAvailable,
   }));
   return {
@@ -143,6 +149,8 @@ export default function VendorBeveragePrices() {
             unitKind: line.unitKind,
             quantity,
             unitLabel: line.unitLabel.trim(),
+            promoPriceFc: line.promoPriceFc.trim() ? Number(line.promoPriceFc) : null,
+            promoLabel: line.promoLabel.trim(),
             isAvailable: line.isAvailable,
           };
         });
@@ -202,7 +210,10 @@ export default function VendorBeveragePrices() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-semibold text-foreground">{brand.name}</p>
+                      {brand.imageUrl ? (
+                      <img src={brand.imageUrl} alt="" className="w-10 h-10 rounded-lg object-cover border border-border" />
+                    ) : null}
+                    <p className="font-semibold text-foreground">{brand.name}</p>
                       <Badge variant="default">{brand.kindLabel}</Badge>
                       {!brand.isActive ? <Badge variant="warning">Retirée du catalogue</Badge> : null}
                     </div>
@@ -266,6 +277,27 @@ export default function VendorBeveragePrices() {
                             onChange={(e) => patchLine(brand.id, line.key, { priceFc: e.target.value })}
                             className="w-full min-h-11 px-3 rounded-lg border border-border bg-surface text-sm"
                             placeholder="2500"
+                          />
+                        </label>
+                        <label className="space-y-1 block sm:col-span-2">
+                          <span className="text-[11px] font-semibold text-muted">Prix promo (FC, optionnel)</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={line.promoPriceFc}
+                            onChange={(e) => patchLine(brand.id, line.key, { promoPriceFc: e.target.value })}
+                            className="w-full min-h-11 px-3 rounded-lg border border-border bg-surface text-sm"
+                            placeholder="Inférieur au tarif"
+                          />
+                        </label>
+                        <label className="space-y-1 block sm:col-span-2">
+                          <span className="text-[11px] font-semibold text-muted">Libellé promo</span>
+                          <input
+                            type="text"
+                            value={line.promoLabel}
+                            onChange={(e) => patchLine(brand.id, line.key, { promoLabel: e.target.value })}
+                            className="w-full min-h-11 px-3 rounded-lg border border-border bg-surface text-sm"
+                            placeholder="Offre du mois"
                           />
                         </label>
                         <button

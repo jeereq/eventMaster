@@ -67,5 +67,9 @@ describe('catalogue de marques de boissons', () => {
       offers: [{ brandId: 'bb-1', priceFc: 1000, unitKind: 'OTHER', quantity: 1, unitLabel: '' }],
     });
     assert.equal('error' in missingOther, true);
+    const promo = parseVendorPriceOffers({
+      offers: [{ brandId: 'bb-1', priceFc: 2500, unitKind: 'BOTTLE', quantity: 1, promoPriceFc: 2600 }],
+    });
+    assert.equal('error' in promo, true);
   });
 });

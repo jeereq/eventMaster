@@ -109,6 +109,8 @@ export async function listVendorBeverageCatalog(tenantId: string) {
     myPrices: brand.prices.map((mine) => ({
       id: mine.id,
       priceFc: mine.priceFc,
+      promoPriceFc: mine.promoPriceFc,
+      promoLabel: mine.promoLabel,
       unitKind: mine.unitKind,
       quantity: mine.quantity,
       unitLabel: mine.unitLabel,
@@ -143,6 +145,8 @@ export async function replaceVendorBeveragePrices(tenantId: string, body: unknow
           quantity: offer.quantity,
           unitLabel: offer.unitLabel,
           priceFc: offer.priceFc,
+          promoPriceFc: offer.promoPriceFc,
+          promoLabel: offer.promoLabel,
           isAvailable: offer.isAvailable,
           notes: offer.notes,
         })),

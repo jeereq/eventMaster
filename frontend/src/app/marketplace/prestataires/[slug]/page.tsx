@@ -23,6 +23,7 @@ import {
   type PublicService,
 } from '@/lib/marketplace';
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
+import { formatFc } from '@/config/landingPricing';
 import { Sparkles, KeyRound } from 'lucide-react';
 import MarketplaceActivityFeed from '@/components/marketplace/MarketplaceActivityFeed';
 
@@ -97,7 +98,10 @@ export default function MarketplaceServiceDetailPage() {
         onPhotoIndex={setPhotoIndex}
         tab={tab}
         onTab={setTab}
-        priceFromFc={service?.priceFromFc ?? null}
+        priceFromFc={service?.promoActive && service.promoPriceFc != null ? service.promoPriceFc : service?.priceFromFc ?? null}
+        priceCaption={service?.promoActive && service.promoPriceFc != null && service.priceFromFc != null
+          ? `${service.promoLabel || 'Promotion'} · au lieu de ${formatFc(service.priceFromFc)}`
+          : undefined}
         priceUnitLabel={service?.priceUnitLabel}
         quotaLabel={quotaLabel}
         activityPreview={service?.activityPreview}

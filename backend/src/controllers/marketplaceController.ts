@@ -30,6 +30,7 @@ import {
 import { parseListingDetails } from '../utils/listingDetails';
 import { fetchActivityPreview } from './marketplaceFeedController';
 import { Prisma, RoomType, ServiceCategory, MarketplaceBookingStatus, VenuePriceUnit } from '@prisma/client';
+import { parseOfferPromotion, activePromoPrice } from '../services/offerPromotion';
 import { PlanFeatureError, assertServiceQuota, assertVenueCatalogPublish } from '../services/planFeaturesService';
 import { listTenantOperatorIds, notifyTenantOperators, notifyUsers } from '../services/platformNotificationService';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
@@ -817,6 +818,9 @@ function toPublicService(offering: {
   longitude?: number | null;
   priceFromFc: number | null;
   priceUnit: VenuePriceUnit;
+  promoPriceFc?: number | null;
+  promoLabel?: string | null;
+  promoEndsAt?: Date | null;
   quotaMin?: number | null;
   quotaMax?: number | null;
   photos: unknown;
@@ -843,6 +847,14 @@ function toPublicService(offering: {
     latitude: offering.latitude ?? null,
     longitude: offering.longitude ?? null,
     priceFromFc: offering.priceFromFc,
+    promoPriceFc: offering.promoPriceFc ?? null,
+    promoLabel: offering.promoLabel ?? null,
+    promoEndsAt: offering.promoEndsAt ?? null,
+    promoActive: activePromoPrice({
+      priceFc: offering.priceFromFc,
+      promoPriceFc: offering.promoPriceFc,
+      promoEndsAt: offering.promoEndsAt,
+    }) != null,
     priceUnit: offering.priceUnit,
     priceUnitLabel: priceUnitLabel(offering.priceUnit),
     quotaMin: offering.quotaMin ?? null,
@@ -1221,7 +1233,7 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
 
     const {
       title, description, city, commune, neighborhood, coverageRadiusKm, travels, latitude, longitude,
-      priceFromFc, priceUnit, quotaMin, quotaMax, photos, isPublic, category, blockedDates, details,
+      priceFromFc, priceUnit, promoPriceFc, promoLabel, promoEndsAt, quotaMin, quotaMax, photos, isPublic, category, blockedDates, details,
     } = req.body || {};
     if (!title?.trim()) return res.status(400).json({ error: 'Le titre est requis.' });
     const parsedCategory = parseServiceCategory(category) || 'OTHER';
@@ -1277,6 +1289,14 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
         return Boolean(hit);
       });
 
+    const promo = parseOfferPromotion({
+      priceFc: Number.isFinite(parsedPrice) ? parsedPrice : 0,
+      promoPriceFc,
+      promoLabel,
+      promoEndsAt,
+    });
+    if ('error' in promo) return res.status(400).json({ error: promo.error });
+
     const data = {
       title: String(title).trim(),
       description: description?.trim() || null,
@@ -1289,6 +1309,9 @@ export async function upsertService(req: AuthenticatedRequest, res: Response) {
       longitude: longitude != null && longitude !== '' && Number.isFinite(Number(longitude)) ? Number(longitude) : null,
       priceFromFc: Number.isFinite(parsedPrice) ? parsedPrice : null,
       priceUnit: parsePriceUnit(priceUnit),
+      promoPriceFc: promo.promo.promoPriceFc,
+      promoLabel: promo.promo.promoLabel,
+      promoEndsAt: promo.promo.promoEndsAt,
       quotaMin: parseOptionalInt(quotaMin),
       quotaMax: parseOptionalInt(quotaMax),
       photos: photosSafe,

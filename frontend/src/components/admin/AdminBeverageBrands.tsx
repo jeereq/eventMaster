@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Beer, Loader2, Plus, Trash2 } from 'lucide-react';
+import { uploadImageFile } from '@/lib/cloudinaryUpload';
 import { api } from '@/lib/api';
 import { Alert, Badge, Button, EmptyState, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -20,6 +21,7 @@ const EMPTY_DRAFT = {
   country: '',
   volumeLabel: '',
   description: '',
+  imageUrl: '',
   isActive: true,
 };
 
@@ -32,6 +34,7 @@ export default function AdminBeverageBrands() {
   const [kindFilter, setKindFilter] = useState<BeverageKind | 'ALL'>('ALL');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState(EMPTY_DRAFT);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -73,6 +76,7 @@ export default function AdminBeverageBrands() {
         country: draft.country,
         volumeLabel: draft.volumeLabel,
         description: draft.description,
+        imageUrl: draft.imageUrl,
         isActive: draft.isActive,
       };
       if (editingId) {
@@ -126,6 +130,45 @@ export default function AdminBeverageBrands() {
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input label="Nom" value={draft.name} onChange={(e) => setDraft((prev) => ({ ...prev, name: e.target.value }))} required placeholder="Primus" />
+          <div className="space-y-1">
+            <span className="text-xs font-semibold text-foreground">Image</span>
+            <div className="flex items-center gap-3">
+              {draft.imageUrl ? (
+                <img src={draft.imageUrl} alt="" className="w-14 h-14 rounded-lg object-cover border border-border" />
+              ) : (
+                <span className="w-14 h-14 rounded-lg border border-dashed border-border bg-surface-muted" />
+              )}
+              <label className="text-xs font-semibold text-primary cursor-pointer">
+                {uploadingImage ? 'Envoi…' : draft.imageUrl ? 'Changer l’image' : 'Ajouter une image'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  disabled={uploadingImage}
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    event.target.value = '';
+                    if (!file) return;
+                    setUploadingImage(true);
+                    setError('');
+                    try {
+                      const uploaded = await uploadImageFile(file);
+                      setDraft((prev) => ({ ...prev, imageUrl: uploaded.url }));
+                    } catch (err: unknown) {
+                      setError(err instanceof Error ? err.message : 'Image impossible à envoyer.');
+                    } finally {
+                      setUploadingImage(false);
+                    }
+                  }}
+                />
+              </label>
+              {draft.imageUrl ? (
+                <button type="button" className="text-xs text-muted underline" onClick={() => setDraft((prev) => ({ ...prev, imageUrl: '' }))}>
+                  Retirer
+                </button>
+              ) : null}
+            </div>
+          </div>
           <label className="space-y-1 block">
             <span className="text-xs font-semibold text-foreground">Famille</span>
             <select
@@ -196,7 +239,11 @@ export default function AdminBeverageBrands() {
         <ul className="divide-y divide-border rounded-2xl border border-border bg-surface">
           {visible.map((brand) => (
             <li key={brand.id} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3.5">
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 flex items-start gap-3">
+                {brand.imageUrl ? (
+                  <img src={brand.imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover border border-border shrink-0" />
+                ) : null}
+                <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-semibold text-foreground">{brand.name}</p>
                   <Badge variant="default">{brand.kindLabel}</Badge>
@@ -207,6 +254,7 @@ export default function AdminBeverageBrands() {
                   {typeof brand.vendorCount === 'number' ? ` · ${brand.vendorCount} prestataire${brand.vendorCount > 1 ? 's' : ''}` : ''}
                   {brand.priceFromFc != null ? ` · à partir de ${formatFc(brand.priceFromFc)}` : ''}
                 </p>
+                </div>
               </div>
               <div className="flex gap-2 shrink-0">
                 <Button
@@ -222,6 +270,7 @@ export default function AdminBeverageBrands() {
                       country: brand.country || '',
                       volumeLabel: brand.volumeLabel || '',
                       description: brand.description || '',
+                      imageUrl: brand.imageUrl || '',
                       isActive: brand.isActive,
                     });
                   }}
