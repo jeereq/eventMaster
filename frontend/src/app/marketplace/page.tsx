@@ -3,6 +3,7 @@
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '@/lib/api';
 import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
+import MarketplaceCatalogueSkeleton from '@/components/MarketplaceCatalogueSkeleton';
 import { usePageSize } from '@/components/ui';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueFilterBar, {
@@ -206,7 +207,13 @@ function MarketplaceHubPageInner() {
 
 export default function MarketplaceHubPage() {
   return (
-    <Suspense fallback={<div className="page-container py-16 text-sm text-muted">Chargement du marketplace…</div>}>
+    <Suspense fallback={(
+      <MarketplaceCatalogueSkeleton
+        active="hub"
+        title="Salles, prestataires, matériel, boissons et événements"
+        description="Explorez le marketplace EventMaster : salles, prestataires, matériel (chaises, habits, véhicules, sono) avec retrait ou livraison, boissons, et événements publics. Affinez par ville, commune, prix ou autour de vous."
+      />
+    )}>
       <MarketplaceHubPageInner />
     </Suspense>
   );

@@ -13,6 +13,8 @@ import CatalogueFilterBar, {
   type CatalogueFilterChip,
 } from '@/components/CatalogueFilterBar';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
+import { CatalogueResultsSkeleton } from '@/components/CatalogueResults';
+import MarketplaceCatalogueSkeleton from '@/components/MarketplaceCatalogueSkeleton';
 import { Input, Pagination, usePageSize, usePaginateItems } from '@/components/ui';
 import { useCatalogueQueryState } from '@/lib/catalogueQuery';
 import {
@@ -284,7 +286,12 @@ function MarketplaceDrinksPageInner() {
         ) : null}
 
         {loading ? (
-          <p className="text-sm text-muted" role="status">Chargement des boissons…</p>
+          <CatalogueResultsSkeleton
+            mode={browse === 'list' ? 'list' : 'grid'}
+            count={pageSize}
+            gridCols={gridCols}
+            label="Chargement des boissons"
+          />
         ) : error && visibleOffers.length === 0 && visible.length === 0 ? null : visibleOffers.length === 0 && visible.length === 0 ? (
           <div className="text-center py-16 px-6 border border-dashed border-border rounded-[var(--radius-card)] bg-surface">
             <Wine className="w-10 h-10 text-muted mx-auto mb-3" aria-hidden="true" />
@@ -416,7 +423,14 @@ function DrinkRow({ brand }: { brand: BeverageBrandRow }) {
 
 export default function MarketplaceDrinksPage() {
   return (
-    <Suspense fallback={<div className="page-container py-16 text-sm text-muted">Chargement des boissons…</div>}>
+    <Suspense fallback={(
+      <MarketplaceCatalogueSkeleton
+        active="drinks"
+        title="Boissons"
+        description="Bières, boissons, vins et champagnes du catalogue EventMaster. Le prix affiché est le plus bas publié par un prestataire. Une promotion en cours remplace le tarif normal jusqu’à sa date de fin."
+        label="Chargement des boissons"
+      />
+    )}>
       <MarketplaceDrinksPageInner />
     </Suspense>
   );

@@ -4,6 +4,7 @@ import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'reac
 import { api } from '@/lib/api';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
+import MarketplaceCatalogueSkeleton from '@/components/MarketplaceCatalogueSkeleton';
 import { usePageSize } from '@/components/ui';
 import CatalogueFilterBar, {
   CatalogueEntityFilterFields,
@@ -214,7 +215,14 @@ function MarketplaceServicesPageInner() {
 
 export default function MarketplaceServicesPage() {
   return (
-    <Suspense fallback={<div className="page-container py-16 text-sm text-muted">Chargement des prestataires…</div>}>
+    <Suspense fallback={(
+      <MarketplaceCatalogueSkeleton
+        active="services"
+        title="Trouvez un prestataire pour votre événement"
+        description="Traiteur, photo, DJ, déco… Le matériel (chaises, sono, véhicules) et les boissons ont chacun leur onglet."
+        label="Chargement des prestataires"
+      />
+    )}>
       <MarketplaceServicesPageInner />
     </Suspense>
   );

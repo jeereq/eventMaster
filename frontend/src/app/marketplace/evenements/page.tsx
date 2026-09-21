@@ -20,6 +20,7 @@ import { useCatalogueQueryState } from '@/lib/catalogueQuery';
 import { EMPTY_CATALOGUE_EXTRAS, appendCatalogueEntityParams, clearCatalogueExtraChip } from '@/lib/catalogueEntityFilters';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
+import MarketplaceCatalogueSkeleton from '@/components/MarketplaceCatalogueSkeleton';
 import { usePageSize } from '@/components/ui';
 import CatalogueFilterBar, {
   CatalogueEntityFilterFields,
@@ -188,7 +189,14 @@ function MarketplaceEventsPageInner() {
 
 export default function MarketplaceEventsPage() {
   return (
-    <Suspense fallback={<div className="page-container py-16 text-sm text-muted">Chargement des événements…</div>}>
+    <Suspense fallback={(
+      <MarketplaceCatalogueSkeleton
+        active="events"
+        title="Événements ouverts au public"
+        description="Concerts, galas, conférences… Inscrivez-vous ou achetez un billet. Vue grille, liste ou carte — comme les salles et prestataires."
+        label="Chargement des événements"
+      />
+    )}>
       <MarketplaceEventsPageInner />
     </Suspense>
   );

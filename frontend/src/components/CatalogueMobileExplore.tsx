@@ -8,6 +8,7 @@ import MarketplaceLocationsMap, {
   type MarketplaceMapMarker,
 } from '@/components/MarketplaceLocationsMap';
 import { Button } from '@/components/ui';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/cn';
 import { catalogueDeliveryCaption, catalogueItemDisplayKind, catalogueKindAccent, catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, listingSrcSet, sizedMediaUrl, type CatalogueItem } from '@/lib/marketplace';
 
@@ -84,12 +85,12 @@ function StoryCard({
             <span className={cn('inline-flex h-6 w-6 items-center justify-center rounded-[var(--radius-button)] shadow-sm', accent.iconBox)}>
               <Icon className="w-3 h-3" strokeWidth={2.4} />
             </span>
-            <span className={cn('rounded-[var(--radius-button)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider shadow-sm', accent.badge)}>
+            <span className={cn('rounded-[var(--radius-button)] px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wider shadow-sm', accent.badge)}>
               {catalogueKindLabel(displayKind)}
             </span>
           </span>
           {distance ? (
-            <span className="absolute top-1.5 right-1.5 rounded-[var(--radius-button)] bg-black/55 text-white text-[10px] font-semibold px-1.5 py-0.5">
+            <span className="absolute top-1.5 right-1.5 rounded-[var(--radius-button)] bg-black/55 text-white text-xs font-semibold px-1.5 py-0.5">
               {distance}
             </span>
           ) : null}
@@ -173,7 +174,7 @@ function SheetRow({
         </span>
       </div>
       <div className="min-w-0 flex-1">
-        <p className={cn('text-[10px] font-semibold uppercase tracking-wider', displayKind === 'service' ? 'text-[color:var(--festive-accent)]' : displayKind === 'rental' ? 'text-cyan-800' : displayKind === 'event' ? 'text-emerald-700' : 'text-primary')}>
+        <p className={cn('text-xs font-semibold uppercase tracking-wider', displayKind === 'service' ? 'text-[color:var(--festive-accent)]' : displayKind === 'rental' ? 'text-cyan-800' : displayKind === 'event' ? 'text-emerald-700' : 'text-primary')}>
           {catalogueKindLabel(displayKind)}
         </p>
         <p className="text-sm font-semibold text-foreground truncate">{item.title}</p>
@@ -364,7 +365,7 @@ export default function CatalogueMobileExplore({
             <button
               type="button"
               onClick={onExit}
-              className="h-9 px-2.5 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center gap-1 text-xs font-semibold text-foreground shrink-0"
+              className="min-h-11 px-2.5 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center gap-1 text-xs font-semibold text-foreground shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               <X className="w-3.5 h-3.5" />
               Quitter
@@ -377,7 +378,7 @@ export default function CatalogueMobileExplore({
               onClick={() => setFiltersVisible((open) => !open)}
               aria-pressed={filtersVisible}
               aria-controls="catalogue-explore-filters"
-              className="h-9 px-2.5 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center gap-1 text-xs font-semibold text-foreground shrink-0"
+              className="min-h-11 px-2.5 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg inline-flex items-center gap-1 text-xs font-semibold text-foreground shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               {filtersVisible ? 'Masquer' : 'Filtres'}
@@ -468,7 +469,7 @@ export default function CatalogueMobileExplore({
               </button>
             </div>
           </div>
-          {error ? <p className="text-xs text-rose-600 mt-1">{error}</p> : null}
+          {error ? <p className="text-xs text-danger mt-1" role="alert">{error}</p> : null}
         </div>
 
         {snap === 'full' ? (
@@ -505,10 +506,13 @@ export default function CatalogueMobileExplore({
             ref={railRef}
             className="em-snap-rail flex-1"
             onScroll={onRailScroll}
+            role={loading && items.length === 0 ? 'status' : undefined}
+            aria-live={loading && items.length === 0 ? 'polite' : undefined}
+            aria-label={loading && items.length === 0 ? 'Chargement du marketplace' : undefined}
           >
             {loading && items.length === 0 ? (
               Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="em-snap-card h-[9.5rem] rounded-[var(--radius-card)] bg-surface-muted animate-pulse" />
+                <Skeleton key={i} className="em-snap-card h-[9.5rem] rounded-[var(--radius-card)]" />
               ))
             ) : items.length === 0 ? (
               <div className="px-2 py-6 text-center w-full">

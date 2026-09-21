@@ -4,6 +4,7 @@ import React, { Suspense, useCallback, useEffect, useMemo, useState } from 'reac
 import { api } from '@/lib/api';
 import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
+import MarketplaceCatalogueSkeleton from '@/components/MarketplaceCatalogueSkeleton';
 import { usePageSize } from '@/components/ui';
 import CatalogueFilterBar, {
   CatalogueEntityFilterFields,
@@ -215,7 +216,14 @@ function MarketplaceRentalsPageInner() {
 
 export default function MarketplaceRentalsPage() {
   return (
-    <Suspense fallback={<div className="page-container py-16 text-sm text-muted">Chargement du matériel & équipements…</div>}>
+    <Suspense fallback={(
+      <MarketplaceCatalogueSkeleton
+        active="rentals"
+        title="Matériel, chaises, équipements et véhicules"
+        description="Chaises, mobilier, sonorisation, tentes, véhicules, tenues de cérémonie. Chaque fiche indique le retrait sur place, la livraison déjà comprise dans le tarif, ou la livraison en supplément."
+        label="Chargement du matériel et des équipements"
+      />
+    )}>
       <MarketplaceRentalsPageInner />
     </Suspense>
   );

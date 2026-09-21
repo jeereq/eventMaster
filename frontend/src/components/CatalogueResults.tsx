@@ -468,20 +468,23 @@ export function CatalogueResultsSkeleton({
   mode = 'grid',
   count = 9,
   gridCols = 4,
+  label = 'Chargement du marketplace',
 }: {
   mode?: CatalogueViewMode;
   count?: number;
   gridCols?: CatalogueGridCols;
+  label?: string;
 }) {
   const isMobile = useIsMobile();
   const resolvedMode = isMobile ? 'grid' : mode;
+  const statusLabel = resolvedMode === 'map' || resolvedMode === 'focus' ? 'Chargement de la carte' : label;
   if (resolvedMode === 'map' || resolvedMode === 'focus') {
     return (
       <div
         className="space-y-2"
         role="status"
         aria-live="polite"
-        aria-label="Chargement de la carte"
+        aria-label={statusLabel}
       >
         <Skeleton
           className={cn(
@@ -489,18 +492,18 @@ export function CatalogueResultsSkeleton({
             resolvedMode === 'focus' ? 'min-h-[420px] h-[calc(100dvh-10.5rem)]' : 'h-[480px]',
           )}
         />
-        <span className="sr-only">Chargement du marketplace…</span>
+        <span className="sr-only">{statusLabel}…</span>
       </div>
     );
   }
 
   if (resolvedMode === 'list') {
     return (
-      <div className={listStackClass} role="status" aria-live="polite" aria-label="Chargement du marketplace">
+      <div className={listStackClass} role="status" aria-live="polite" aria-label={statusLabel}>
         {Array.from({ length: count }).map((_, i) => (
           <CatalogueListRowSkeleton key={i} />
         ))}
-        <span className="sr-only">Chargement du marketplace…</span>
+        <span className="sr-only">{statusLabel}…</span>
       </div>
     );
   }
@@ -512,12 +515,12 @@ export function CatalogueResultsSkeleton({
       className={GRID_CLASS[cols]}
       role="status"
       aria-live="polite"
-      aria-label="Chargement du marketplace"
+      aria-label={statusLabel}
     >
       {Array.from({ length: count }).map((_, i) => (
         <CatalogueGridCardSkeleton key={i} />
       ))}
-      <span className="sr-only">Chargement du marketplace…</span>
+      <span className="sr-only">{statusLabel}…</span>
     </div>
   );
 }
