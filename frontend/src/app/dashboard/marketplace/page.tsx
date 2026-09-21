@@ -513,7 +513,7 @@ export default function MarketplaceDeskPage() {
             tab === 'beverages' ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted',
           )}
         >
-          Marques & prix
+          Boissons et prix
         </button>
       </div>
 
