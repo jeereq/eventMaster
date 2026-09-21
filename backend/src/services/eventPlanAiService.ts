@@ -5,7 +5,7 @@ import { coverFromMedia, isServiceRentalCategory, parsePhotoUrls, priceUnitLabel
 import { collectUnavailableDates, isRangeAvailable, toDateKey } from '../utils/marketplaceDates';
 import { allowedCityPrismaFilter, normalizeAllowedCity, normalizeAllowedCommune } from '../utils/rdcCities';
 import { EVENT_PLAN_TYPES, type EventPlanType } from './eventPlanBrief';
-import { beverageBudgetAmount, parseBudgetSimulationScope, rentalBudgetAmount, type BudgetSimulationScope, type BudgetStyle } from './eventBudgetCost';
+import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, rentalBudgetAmount, type BudgetSimulationScope, type BudgetStyle } from './eventBudgetCost';
 import { getGeminiApiKey, requestGeminiJson } from './geminiJsonClient.ts';
 import { requestOpenAiJson } from './openaiJsonClient.ts';
 
@@ -107,6 +107,7 @@ export type EventPlanAiResult = {
     neighborhood?: string;
     budgetMinFc?: number | null;
     wantedCategories?: string[];
+    wantedBrandIds?: string[];
     venueAmenities?: string[];
   };
 };
@@ -134,10 +135,13 @@ function scopeBlurb(scope: BudgetSimulationScope, style: { id: EventPlanAiStyleI
   return style.blurb;
 }
 
-async function loadDrinkOffers(guests: number) {
+async function loadDrinkOffers(guests: number, brandIds: string[]) {
   if (guests < 1) return [];
   const rows = await prisma.vendorBeveragePrice.findMany({
-    where: { isAvailable: true, brand: { isActive: true } },
+    where: {
+      isAvailable: true,
+      brand: { isActive: true, ...(brandIds.length ? { id: { in: brandIds } } : {}) },
+    },
     select: {
       quantity: true,
       unitLabel: true,
@@ -419,8 +423,17 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
   const budgetMinRaw = Number(body.budgetMinFc);
   const budgetMinFc = Number.isFinite(budgetMinRaw) && budgetMinRaw > 0 ? Math.round(budgetMinRaw) : 0;
   const wantedCategories = Array.isArray(body.wantedCategories)
-    ? body.wantedCategories.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).slice(0, 12)
+    ? body.wantedCategories.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).slice(0, 40)
     : [];
+  const wantedBrandIds = budgetScope === 'complete' || budgetScope === 'drinks'
+    ? parseWantedBrandIds(body.wantedBrandIds)
+    : [];
+  const selectedCategories = wantedCategories.filter((id) => {
+    if (budgetScope === 'drinks') return false;
+    if (budgetScope === 'services') return !isServiceRentalCategory(id);
+    if (budgetScope === 'rentals') return isServiceRentalCategory(id);
+    return true;
+  });
   const venueAmenities = Array.isArray(body.venueAmenities)
     ? body.venueAmenities.filter((value): value is string => typeof value === 'string' && value.trim().length > 0).slice(0, 10)
     : [];
@@ -431,15 +444,18 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     neighborhood: neighborhood || undefined,
     budgetMinFc: budgetMinFc || null,
     wantedCategories,
+    wantedBrandIds,
     venueAmenities,
   };
 
   if (budgetScope === 'drinks') {
-    const drinkOffers = await loadDrinkOffers(guests);
+    const drinkOffers = await loadDrinkOffers(guests, wantedBrandIds);
     const packages = AI_STYLES.map((style) => {
       const drinks = beverageBudgetAmount(drinkOffers, guests, eventType, budgetStyleOf(style.id));
       const warnings = drinks
-        ? ['Boissons : tarif le plus bas du catalogue, sans filtre de ville.']
+        ? [wantedBrandIds.length
+          ? 'Boissons : marques choisies, au conditionnement le moins cher, sans filtre de ville.'
+          : 'Boissons : tarif le plus bas du catalogue, sans filtre de ville.']
         : [guests < 1
           ? 'Indiquez le nombre d’invités pour chiffrer les boissons.'
           : 'Aucun tarif publié pour ce type d’événement.'];
@@ -575,7 +591,7 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
   const ai = await askPlannerJson(system, user);
   const rawPackages = Array.isArray(ai.packages) ? ai.packages : [];
 
-  const drinkOffers = budgetScope === 'complete' ? await loadDrinkOffers(guests) : [];
+  const drinkOffers = budgetScope === 'complete' ? await loadDrinkOffers(guests, wantedBrandIds) : [];
 
   const hydrate = (
     style: typeof AI_STYLES[number],
@@ -599,6 +615,7 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
       if (!item) continue;
       if (item.category && isServiceRentalCategory(item.category) && !includeRentals) continue;
       if (item.category && !isServiceRentalCategory(item.category) && !includeTrades) continue;
+      if (selectedCategories.length && item.category && !selectedCategories.includes(item.category)) continue;
       seen.add(slug);
       uniqueServices.push(item);
       if (uniqueServices.length >= 8) break;
@@ -632,7 +649,9 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
         });
       }
       if (!warnings.some((warning) => warning.startsWith('Boissons'))) {
-        warnings.push('Boissons : quantité, marque et tarif le plus bas du catalogue, sans filtre de ville.');
+        warnings.push(wantedBrandIds.length
+          ? 'Boissons : marques choisies, quantité et tarif le moins cher, sans filtre de ville.'
+          : 'Boissons : quantité, marque et tarif le plus bas du catalogue, sans filtre de ville.');
       }
     }
     const estimatedTotalFc = [venue, ...uniqueServices].reduce((sum, item) => sum + (item?.estimatedFc || 0), 0);
@@ -697,7 +716,9 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
       return rank(a) - rank(b);
     });
     for (const [, group] of groups) {
-      const rental = Boolean(group[0]?.category && isServiceRentalCategory(group[0].category));
+      const category = group[0]?.category;
+      if (selectedCategories.length && category && !selectedCategories.includes(category)) continue;
+      const rental = Boolean(category && isServiceRentalCategory(category));
       const rentalLimit = budgetScope === 'rentals' ? DEDICATED_RENTAL_CAP : style.maxRentals;
       const tradeLimit = budgetScope === 'services' ? DEDICATED_TRADE_CAP : style.maxTrades;
       if (rental && rentals >= rentalLimit) continue;

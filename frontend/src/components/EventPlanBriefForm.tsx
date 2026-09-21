@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 import { ChevronDown, Loader2, Save, Sparkles } from 'lucide-react';
 import { Alert, Button, Input } from '@/components/ui';
 import BudgetSimulationScopePicker from '@/components/BudgetSimulationScopePicker';
+import BudgetSimulationCriteria from '@/components/BudgetSimulationCriteria';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
 import { communesForCity, normalizeRdcCity } from '@/lib/rdcCities';
@@ -173,6 +174,16 @@ export default function EventPlanBriefForm({
         onChange={(budgetScope) => {
           setScopeError('');
           patch({ budgetScope });
+        }}
+      />
+      <BudgetSimulationCriteria
+        scope={scope}
+        selectedBrandIds={brief.wantedBrandIds || []}
+        onToggleBrand={(id) => {
+          const current = brief.wantedBrandIds || [];
+          patch({
+            wantedBrandIds: current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+          });
         }}
       />
 

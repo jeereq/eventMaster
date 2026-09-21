@@ -12,7 +12,7 @@ import {
   type ParsedEventPlanInput,
   type SlotPriority,
 } from './eventPlanBrief';
-import { beverageBudgetAmount, parseBudgetSimulationScope, rentalBudgetAmount, type BudgetSimulationScope } from './eventBudgetCost';
+import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, rentalBudgetAmount, type BudgetSimulationScope } from './eventBudgetCost';
 
 export { EVENT_PLAN_TYPES, type EventPlanType };
 
@@ -529,6 +529,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
 }) {
   const parsed = parseEventPlanInput(body);
   const budgetScope = parseBudgetSimulationScope(body.budgetScope);
+  const wantedBrandIds = parseWantedBrandIds(body.wantedBrandIds);
   const input = budgetScope === 'complete' ? parsed : { ...parsed, includeVenue: 'no' as const };
   const city = normalizeAllowedCity(input.city) || '';
   const commune = city ? (normalizeAllowedCommune(city, input.commune) || '') : '';
@@ -662,7 +663,10 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
 
   const drinkRows = (budgetScope === 'complete' || budgetScope === 'drinks') && guests > 0
     ? await prisma.vendorBeveragePrice.findMany({
-      where: { isAvailable: true, brand: { isActive: true } },
+      where: {
+        isAvailable: true,
+        brand: { isActive: true, ...(wantedBrandIds.length ? { id: { in: wantedBrandIds } } : {}) },
+      },
       select: {
         quantity: true,
         unitLabel: true,
@@ -866,7 +870,9 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
         });
         total += line.amountFc;
       }
-      notes.push('Boissons : quantité, marque et tarif le plus bas du catalogue, sans filtre de ville.');
+      notes.push(wantedBrandIds.length
+        ? 'Boissons : marques choisies, quantité et tarif le moins cher, sans filtre de ville.'
+        : 'Boissons : quantité, marque et tarif le plus bas du catalogue, sans filtre de ville.');
     } else if (budgetScope === 'drinks') {
       missing.push({
         slot: 'beverages',

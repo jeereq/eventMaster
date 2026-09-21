@@ -7,8 +7,9 @@ import { Alert, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatFc } from '@/config/landingPricing';
 import { LISTING_EVENT_TYPES, VENUE_AMENITIES, type ListingAmenityId, type ListingEventTypeId } from '@/lib/listingDetails';
-import { SERVICE_CATEGORY_LABELS, SERVICE_RENTAL_CATEGORIES, SERVICE_TRADE_CATEGORIES, type ServiceCategory } from '@/lib/marketplace';
+import { type ServiceCategory } from '@/lib/marketplace';
 import BudgetSimulationScopePicker from '@/components/BudgetSimulationScopePicker';
+import BudgetSimulationCriteria from '@/components/BudgetSimulationCriteria';
 import type { BudgetSimulationScope } from '@/lib/budgetSimulation';
 import { communesForCity } from '@/lib/rdcCities';
 import { enabledMarketplaceCities, resolveUsdExchangeRateCdf } from '@/lib/platformCities';
@@ -44,7 +45,6 @@ import {
   AI_AMBIANCES,
   AI_MOMENTS,
   AI_SETTINGS,
-  suggestedCategoriesForEvent,
   type AiAmbianceId,
   type AiMomentId,
   type AiSettingId,
@@ -156,6 +156,7 @@ export default function EventPrepAiSimulator({
   const [includeTrades, setIncludeTrades] = useState(true);
   const [includeRentals, setIncludeRentals] = useState(true);
   const [budgetScope, setBudgetScope] = useState<BudgetSimulationScope>('complete');
+  const [wantedBrandIds, setWantedBrandIds] = useState<string[]>([]);
   const [guestError, setGuestError] = useState('');
   const completeFlags = useRef({ venue: true, trades: true, rentals: true });
   const [loading, setLoading] = useState(false);
@@ -170,12 +171,6 @@ export default function EventPrepAiSimulator({
   const [saveBusy, setSaveBusy] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const communes = useMemo(() => communesForCity(city), [city]);
-  const categoryChoices = useMemo(() => {
-    if (budgetScope === 'rentals') return SERVICE_RENTAL_CATEGORIES;
-    if (budgetScope === 'services') return SERVICE_TRADE_CATEGORIES;
-    if (budgetScope === 'drinks') return [];
-    return suggestedCategoriesForEvent(eventType);
-  }, [budgetScope, eventType]);
   const selected = result?.packages.find((pack) => pack.id === selectedId) || result?.packages[0] || null;
 
   const { budgetMaxUsdCalculated, budgetMaxFcCalculated } = useMemo(() => {
@@ -269,6 +264,8 @@ export default function EventPrepAiSimulator({
     }
     const cats = fromBrief.wantedCategories || fromResult.wantedCategories || [];
     setWantedCategories(cats.filter((id): id is ServiceCategory => Boolean(id)));
+    const brandIds = fromBrief.wantedBrandIds || fromResult.wantedBrandIds || [];
+    setWantedBrandIds(brandIds.filter((id): id is string => typeof id === 'string' && id.length > 0));
     const amenities = fromBrief.venueAmenities || fromResult.venueAmenities || [];
     setVenueAmenities(amenities.filter((id): id is ListingAmenityId => Boolean(id)));
     if (cats.length || amenities.length) {
@@ -341,6 +338,7 @@ export default function EventPrepAiSimulator({
     budgetMinFc: budgetMinFcCalculated > 0 ? budgetMinFcCalculated : null,
     budgetMinUsd: budgetMinUsdCalculated > 0 ? budgetMinUsdCalculated : undefined,
     wantedCategories,
+    wantedBrandIds,
     venueAmenities,
   });
 
@@ -797,6 +795,13 @@ export default function EventPrepAiSimulator({
           {open ? (
         <div className="space-y-3">
           <BudgetSimulationScopePicker value={budgetScope} onChange={applyBudgetScope} />
+          <BudgetSimulationCriteria
+            scope={budgetScope}
+            selectedBrandIds={wantedBrandIds}
+            onToggleBrand={(id) => setWantedBrandIds((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])}
+            selectedCategories={wantedCategories}
+            onToggleCategory={(id) => setWantedCategories((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])}
+          />
           {budgetScope !== 'drinks' ? (
           <label className="space-y-1 block">
             <span className={FIELD_LABEL}>Décrivez votre événement</span>
@@ -1165,34 +1170,6 @@ export default function EventPrepAiSimulator({
                       )}
                     </p>
                   ) : null}
-                </div>
-                <div className="space-y-1.5">
-                  <p className={FIELD_LABEL}>Prestations souhaitées</p>
-                  <p className="text-xs text-muted leading-relaxed">
-                    {budgetScope === 'rentals'
-                      ? 'Chaises et vaisselle : une pièce par invité, livraison en supplément comptée une fois. Les autres locations restent un lot.'
-                      : budgetScope === 'services'
-                        ? 'Ces métiers orientent les trois formules. La salle, les locations et les boissons restent de côté.'
-                        : 'Chaises et vaisselle : une pièce par invité, livraison en supplément comptée une fois. Les autres locations restent un lot. Les boissons s’ajoutent toutes seules, au conditionnement le moins cher.'}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5" role="group" aria-label="Prestations souhaitées">
-                    {categoryChoices.map((id) => {
-                      const active = wantedCategories.includes(id);
-                      return (
-                        <button
-                          key={id}
-                          type="button"
-                          aria-pressed={active}
-                          onClick={() => setWantedCategories((prev) =>
-                            prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
-                          )}
-                          className={cn(CHIP, chipTone(active))}
-                        >
-                          {SERVICE_CATEGORY_LABELS[id]}
-                        </button>
-                      );
-                    })}
-                  </div>
                 </div>
                 {includeVenue ? (
                   <div className="space-y-1.5">

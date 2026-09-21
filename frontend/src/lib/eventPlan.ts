@@ -82,6 +82,7 @@ export type EventPlanBrief = {
   amenityMode: AmenityMode;
   planVersion: number;
   budgetScope: BudgetSimulationScope;
+  wantedBrandIds: string[];
 };
 
 export type EventPlanRequest = EventPlanBrief & {
@@ -137,6 +138,7 @@ export function createDefaultBrief(eventType: ListingEventTypeId = 'wedding'): E
     amenityMode: 'preferred',
     planVersion: PLAN_BRIEF_VERSION,
     budgetScope: 'complete',
+    wantedBrandIds: [],
   };
 }
 
@@ -176,6 +178,9 @@ export function hydrateBrief(raw: unknown): EventPlanBrief {
     guestCount: Number(value.guestCount) || 0,
     venueAmenities: Array.isArray(value.venueAmenities) ? value.venueAmenities : [],
     budgetScope: parseBudgetSimulationScope(value.budgetScope),
+    wantedBrandIds: Array.isArray(value.wantedBrandIds)
+      ? value.wantedBrandIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0).slice(0, 40)
+      : [],
   };
 }
 
@@ -424,6 +429,7 @@ export type EventPlanAiResult = {
     neighborhood?: string;
     budgetMinFc?: number | null;
     wantedCategories?: string[];
+    wantedBrandIds?: string[];
     venueAmenities?: string[];
   };
 };

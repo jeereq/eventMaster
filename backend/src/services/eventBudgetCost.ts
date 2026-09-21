@@ -10,6 +10,16 @@ export function parseBudgetSimulationScope(value: unknown): BudgetSimulationScop
   return 'complete';
 }
 
+const BRAND_ID_LIMIT = 40;
+
+export function parseWantedBrandIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const ids = value
+    .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+    .map((item) => item.trim());
+  return [...new Set(ids)].slice(0, BRAND_ID_LIMIT);
+}
+
 const PER_PIECE = new Set(['RENTAL_CHAIRS', 'RENTAL_TABLEWARE']);
 
 export type RentalBudgetInput = {

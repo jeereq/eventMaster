@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { beverageBudgetAmount, parseBudgetSimulationScope, rentalBudgetAmount } from './eventBudgetCost.ts';
+import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, rentalBudgetAmount } from './eventBudgetCost.ts';
 
 test('le périmètre de simulation inconnu reste la simulation complète', () => {
+  assert.deepEqual(parseWantedBrandIds([' a ', 'a', '', 3, 'b']), ['a', 'b']);
   assert.equal(parseBudgetSimulationScope('drinks'), 'drinks');
   assert.equal(parseBudgetSimulationScope('rentals'), 'rentals');
   assert.equal(parseBudgetSimulationScope('services'), 'services');
