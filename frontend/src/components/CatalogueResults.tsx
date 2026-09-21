@@ -198,8 +198,8 @@ function GridCard({
               ) : null}
               <span className="text-muted text-xs ml-1">
                 · {item.priceUnitLabel}
-                {item.deliveryMode === 'included' ? ' · livraison incluse' : ''}
-                {item.deliveryMode === 'extra_fee' && item.deliveryPriceFc ? ` · livraison ${formatFc(item.deliveryPriceFc)}` : ''}
+            {item.deliveryMode === 'included' && item.deliveryPriceFc ? ` · livraison incluse ${formatFc(item.deliveryPriceFc)}` : ''}
+            {item.deliveryMode === 'extra_fee' && item.deliveryPriceFc ? ` · livraison ${formatFc(item.deliveryPriceFc)}` : ''}
               </span>
             </div>
           </div>
@@ -289,8 +289,8 @@ function ListRow({
             ) : null}
             <span className="block text-xs text-muted">
               {item.priceUnitLabel}
-              {item.deliveryMode === 'included' ? ' · incluse' : ''}
-              {item.deliveryMode === 'extra_fee' && item.deliveryPriceFc ? ` · +${formatFc(item.deliveryPriceFc)}` : ''}
+                    {item.deliveryMode === 'included' && item.deliveryPriceFc ? ` · livraison incluse ${formatFc(item.deliveryPriceFc)}` : ''}
+                    {item.deliveryMode === 'extra_fee' && item.deliveryPriceFc ? ` · livraison ${formatFc(item.deliveryPriceFc)}` : ''}
             </span>
           </div>
         </Link>

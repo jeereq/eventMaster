@@ -31,6 +31,8 @@ export default function MarketplaceBookingForm({
   blockedDates = [],
   priceFromFc,
   priceUnit,
+  deliveryMode,
+  deliveryPriceFc,
   eventDate,
   eventEndDate,
   onEventDateChange,
@@ -47,6 +49,8 @@ export default function MarketplaceBookingForm({
   blockedDates?: string[];
   priceFromFc: number | null;
   priceUnit?: VenuePriceUnit | string | null;
+  deliveryMode?: string | null;
+  deliveryPriceFc?: number | null;
   eventDate?: string;
   eventEndDate?: string;
   onEventDateChange?: (value: string) => void;
@@ -80,11 +84,13 @@ export default function MarketplaceBookingForm({
   const blocked = useMemo(() => new Set(unavailableDates), [unavailableDates]);
   const rangeKeys = selectedDate ? eachDateKey(selectedDate, selectedEnd || selectedDate) : [];
   const dateTaken = rangeKeys.some((key) => blocked.has(key));
+  const deliveryFee = deliveryMode === 'extra_fee' && deliveryPriceFc && deliveryPriceFc > 0 ? deliveryPriceFc : 0;
+  const includedDelivery = deliveryMode === 'included' && deliveryPriceFc && deliveryPriceFc > 0 ? deliveryPriceFc : 0;
   const amounts = priceFromFc != null
     ? previewMarketplaceAmounts(priceFromFc, Math.max(1, rangeKeys.length), priceUnit, {
         commissionRate: site.marketplaceCommissionRate,
         depositRate: site.marketplaceDepositRate,
-      })
+      }, deliveryFee)
     : null;
   const loggedIn = Boolean(token);
   const bookingsHref = eventId
@@ -214,6 +220,12 @@ export default function MarketplaceBookingForm({
             <p>Montant indicatif : <strong>{formatFc(amounts.amountFc)}</strong></p>
             {priceUnit === 'DAY' && rangeKeys.length > 1 ? (
               <p className="text-muted">{formatFc(priceFromFc || 0)} / jour × {rangeKeys.length} jours</p>
+            ) : null}
+            {deliveryFee ? (
+              <p className="text-muted">Livraison en supplément, une fois : {formatFc(deliveryFee)}</p>
+            ) : null}
+            {includedDelivery ? (
+              <p className="text-muted">Livraison incluse dans le tarif : {formatFc(includedDelivery)}</p>
             ) : null}
             <p>Acompte {depositPct} % à verser au professionnel : <strong>{formatFc(amounts.depositFc)}</strong></p>
             <p className="text-muted inline-flex items-center gap-1">

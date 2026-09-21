@@ -125,6 +125,16 @@ export function getOfferingPublishGaps(draft: ServiceOfferingDraft): OfferingPub
   return gaps;
 }
 
+export function offeringDeliveryMessage(
+  draft: Pick<ServiceOfferingDraft, 'category' | 'travels' | 'deliveryMode' | 'deliveryPriceFc'>,
+): string {
+  if (!isServiceRentalCategory(draft.category) || !draft.travels) return '';
+  const modeChosen = draft.deliveryMode === 'included' || draft.deliveryMode === 'extra_fee';
+  if (!modeChosen) return '';
+  if (!(Number(draft.deliveryPriceFc) > 0)) return 'Indiquez le prix de la livraison en francs.';
+  return '';
+}
+
 export function offeringPromoMessage(draft: Pick<ServiceOfferingDraft, 'priceFromFc' | 'promoPriceFc'>): string {
   if (!draft.promoPriceFc.trim()) return '';
   const price = Number(draft.priceFromFc);
@@ -564,7 +574,7 @@ export default function ServiceOfferingForm({
                 />
                 {rental ? (
                   <>
-                    <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Prix de la livraison">
+                    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Prix de la livraison">
                       {([
                         { id: 'included' as const, label: 'Prix inclus dans le tarif' },
                         { id: 'extra_fee' as const, label: 'Prix en supplément' },
@@ -572,9 +582,11 @@ export default function ServiceOfferingForm({
                         <button
                           key={opt.id}
                           type="button"
-                          role="radio"
-                          aria-checked={draft.deliveryMode === opt.id}
-                          onClick={() => onChange((current) => ({ ...current, deliveryMode: opt.id }))}
+                          aria-pressed={draft.deliveryMode === opt.id}
+                          onClick={() => onChange((current) => ({
+                            ...current,
+                            deliveryMode: current.deliveryMode === opt.id ? '' : opt.id,
+                          }))}
                           className={cn(
                             'min-h-11 px-3 py-2 rounded-full text-xs font-semibold border transition',
                             draft.deliveryMode === opt.id
@@ -586,17 +598,24 @@ export default function ServiceOfferingForm({
                         </button>
                       ))}
                     </div>
-                    <Input
-                      id={OFFERING_DELIVERY_FIELD_ID}
-                      label={draft.deliveryMode === 'extra_fee' ? 'Supplément de livraison (FC)' : 'Prix de livraison inclus (FC)'}
-                      type="number"
-                      min={1}
-                      value={draft.deliveryPriceFc}
-                      onChange={(e) => onChange((current) => ({ ...current, deliveryPriceFc: e.target.value }))}
-                      hint={draft.deliveryMode === 'extra_fee'
-                        ? 'Ajouté une fois à la réservation, en plus du tarif de location.'
-                        : 'Déjà compris dans le tarif. Le client le voit, il n’est pas ajouté une seconde fois.'}
-                    />
+                    {draft.deliveryMode === 'included' || draft.deliveryMode === 'extra_fee' ? (
+                      <Input
+                        id={OFFERING_DELIVERY_FIELD_ID}
+                        label={draft.deliveryMode === 'extra_fee' ? 'Supplément de livraison (FC)' : 'Prix de la livraison, déjà compris dans le tarif (FC)'}
+                        type="number"
+                        min={1}
+                        value={draft.deliveryPriceFc}
+                        onChange={(e) => onChange((current) => ({ ...current, deliveryPriceFc: e.target.value }))}
+                        error={offeringDeliveryMessage(draft)}
+                        hint={draft.deliveryMode === 'extra_fee'
+                          ? 'Ajouté une fois à la réservation, en plus du tarif de location.'
+                          : 'Le client le voit sur la fiche. Il n’est pas ajouté une seconde fois à la réservation.'}
+                      />
+                    ) : (
+                      <p id={OFFERING_DELIVERY_FIELD_ID} className="text-xs text-muted">
+                        Choisissez d’abord si ce prix est inclus dans le tarif ou ajouté en supplément.
+                      </p>
+                    )}
                   </>
                 ) : null}
               </>

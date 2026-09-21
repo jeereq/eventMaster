@@ -868,9 +868,11 @@ export function previewMarketplaceAmounts(
   dayCount = 1,
   priceUnit?: string | null,
   rates?: { commissionRate?: number; depositRate?: number },
+  extraFc = 0,
 ) {
   const days = Math.max(1, dayCount);
-  const amount = Math.max(0, Math.round(priceUnit === 'DAY' ? amountFc * days : amountFc));
+  const extra = Math.max(0, Math.round(extraFc));
+  const amount = Math.max(0, Math.round(priceUnit === 'DAY' ? amountFc * days : amountFc) + extra);
   const depositRate = rates?.depositRate ?? MARKETPLACE_DEPOSIT_RATE;
   const commissionRate = rates?.commissionRate ?? MARKETPLACE_COMMISSION_RATE;
   return {

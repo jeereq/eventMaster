@@ -70,7 +70,7 @@ export function CatalogueChoicePills({
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap gap-1.5" role="group">
       {options.map((opt) => {
         const isSentinel = !opt.id || opt.id === 'all';
         const active = value === opt.id || (isSentinel && (!value || value === 'all'));
@@ -78,6 +78,7 @@ export function CatalogueChoicePills({
           <button
             key={opt.id || 'all'}
             type="button"
+            aria-pressed={active}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();

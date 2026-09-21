@@ -202,9 +202,10 @@ function FilterPills({
           <button
             key={option.id || 'all'}
             type="button"
+            aria-pressed={value === option.id}
             onClick={() => onChange(option.id)}
             className={cn(
-              'px-2.5 py-1 rounded-[var(--radius-button)] text-xs font-semibold border transition',
+              'min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold border transition',
               value === option.id
                 ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                 : 'border-border text-muted hover:text-foreground hover:border-primary/40',
