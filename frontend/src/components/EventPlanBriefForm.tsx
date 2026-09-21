@@ -194,6 +194,7 @@ export default function EventPlanBriefForm({
         }}
         orderLines={brief.wantedDrinkLines || []}
         onChangeOrderLines={(wantedDrinkLines) => patch({ wantedDrinkLines })}
+        onClearCatalog={() => patch({ wantedBrandIds: [], wantedSaleUnits: [] })}
       />
 
       {scope === 'complete' ? (

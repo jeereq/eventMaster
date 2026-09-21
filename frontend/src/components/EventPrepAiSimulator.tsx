@@ -810,8 +810,8 @@ export default function EventPrepAiSimulator({
               ? (wantedDrinkLines.length > 0
                 ? 'La commande précise remplace le calcul par invité. Vous pouvez lancer.'
                 : Number(guestCount) > 0
-                  ? 'Les quantités suivront les invités. Une commande précise, si vous en ajoutez une, prend le dessus.'
-                  : 'Indiquez les invités, ou ouvrez Affiner pour saisir une commande (10 casiers de Tembo, 5 de Coca).')
+                  ? 'Les quantités suivront les invités. Passez en commande précise seulement si vous voulez un nombre exact.'
+                  : 'Indiquez les invités, ou ouvrez Affiner et choisissez Commande précise.')
               : !city.trim()
                 ? 'Commencez par la ville : le catalogue local en dépend.'
                 : budgetMaxFcCalculated <= 0
@@ -1131,6 +1131,10 @@ export default function EventPrepAiSimulator({
             onToggleSaleUnit={(unit) => setWantedSaleUnits((prev) => prev.includes(unit) ? prev.filter((item) => item !== unit) : [...prev, unit])}
             orderLines={wantedDrinkLines}
             onChangeOrderLines={setWantedDrinkLines}
+            onClearCatalog={() => {
+              setWantedBrandIds([]);
+              setWantedSaleUnits([]);
+            }}
             selectedCategories={wantedCategories}
             onToggleCategory={(id) => setWantedCategories((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])}
           />
