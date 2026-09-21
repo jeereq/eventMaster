@@ -236,7 +236,7 @@ export default function MarketplaceBookingForm({
         <Button type="submit" loading={sending} fullWidth disabled={dateTaken} className="min-h-11">
           Envoyer la demande de réservation
         </Button>
-        <p className="text-[11px] text-muted">
+        <p className="text-xs text-muted">
           Suivi dans{' '}
           <Link href={bookingsHref} className="font-semibold text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm">
             Devis & réservations

@@ -258,17 +258,17 @@ export default function LegalTermsPreviewModal({
                 <p className="text-muted">
                   <strong>EventMaster</strong> est une plateforme SaaS complète éditée par le{' '}
                   <strong>Groupe Tekango</strong>, exploitée conformément au Code du numérique de la RDC. Elle réunit la gestion d’événements, les invitations interactives WhatsApp/e-mail,
-                  les plans 2D/3D photoréalistes, le <strong>Simulateur de budget IA (/simulateur)</strong>, la <strong>billetterie en ligne avec présence auto-validée</strong>, les <strong>dons solidaires</strong> et les <strong>paiements sécurisés FlexPay</strong> (Cartes bancaires &amp; Mobile Money).
+                  les plans 2D/3D photoréalistes, le <strong>Simulateur unifié multi-ateliers (/simulateur)</strong>, la <strong>billetterie en ligne multi-zones et paliers tarifaires avec présence auto-validée</strong>, les <strong>dons solidaires</strong> et les <strong>paiements sécurisés FlexPay</strong> (Cartes bancaires &amp; Mobile Money).
                 </p>
               </div>
 
               <div className="p-3.5 rounded-lg bg-surface border border-border space-y-2">
                 <h3 className="font-bold text-foreground text-xs flex items-center gap-1.5">
                   <Ticket className="w-4 h-4 text-primary" />
-                  2. Billetterie multi-zones, Présence auto-validée &amp; Reversement Net ({TICKETING_RETENTION_PERCENT} %)
+                  2. Billetterie multi-zones, Paliers (Tiers), Présence auto-validée &amp; Reversement Net ({TICKETING_RETENTION_PERCENT} %)
                 </h3>
                 <p className="text-muted">
-                  Tarification par zone avec choix de place sur le plan et placement PMR. Tout achat de billet valide immédiatement la présence de l&apos;invité (Répondez s’il vous plaît « accepté »). Pour les billets partagés entre proches ou collègues, chaque bénéficiaire peut personnaliser ses nom, prénom, numéro WhatsApp et régimes alimentaires sur son portail. Le jour J, le contrôle d’accès applique la règle du <strong>scan unique</strong>. Les recettes nettes sont reversées sous 48-72h ouvrées après déduction de la retenue contractuelle de <strong>{TICKETING_RETENTION_PERCENT} %</strong>.
+                  Tarification par zone et par paliers de prix (early-bird, standard, VIP) avec choix de place sur le plan et placement PMR. Tout achat de billet valide immédiatement la présence de l&apos;invité (Répondez s’il vous plaît « accepté »). Pour les billets partagés, chaque bénéficiaire peut personnaliser ses coordonnées sur son portail. Contrôle d’accès par <strong>scan unique</strong>. Reversement des recettes nettes sous 48-72h ouvrées après retenue contractuelle de <strong>{TICKETING_RETENTION_PERCENT} %</strong>.
                 </p>
               </div>
 
@@ -278,7 +278,7 @@ export default function LegalTermsPreviewModal({
                   3. Dons Solidaires &amp; Collectes de Fonds ({DONATIONS_RETENTION_PERCENT} %)
                 </h3>
                 <p className="text-muted">
-                  Collectes à montant libre en Francs Congolais (CDF) pour causes déclarées. EventMaster intervient en qualité d&apos;intermédiaire technique d&apos;encaissement. L&apos;organisateur est seul garant de la sincérité de la cause et de l&apos;affectation des fonds. Les dons confirmés sont des libéralités volontaires irrévocables. Une retenue solidaire de <strong>{DONATIONS_RETENTION_PERCENT} %</strong> (dans la fourchette de {collectionCommissionRangeLabel()}) est appliquée sur les montants bruts collectés avant reversement net à l&apos;organisation.
+                  Collectes à montant libre en Francs Congolais (CDF) pour causes déclarées. EventMaster intervient en qualité d&apos;intermédiaire technique d&apos;encaissement. L&apos;organisateur est seul garant de la sincérité de la cause et de l&apos;affectation des fonds. Les dons confirmés sont des libéralités volontaires irrévocables. Une retenue solidaire de <strong>{DONATIONS_RETENTION_PERCENT} %</strong> (dans la fourchette de {collectionCommissionRangeLabel()}) est appliquée sur les montants bruts collectés avant reversement net sous 48-72h ouvrées.
                 </p>
               </div>
 
@@ -295,10 +295,10 @@ export default function LegalTermsPreviewModal({
               <div className="p-3.5 rounded-lg bg-surface border border-border space-y-2">
                 <h3 className="font-bold text-foreground text-xs flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-primary" />
-                  5. Studio IA, Rendu 3D photoréaliste &amp; Normes de sécurité
+                  5. Studio IA, Modèles Sélectionnés, Rendu 3D &amp; Modèles Publics
                 </h3>
                 <p className="text-muted">
-                  Modélisation 2D/3D WebGL (matériaux PBR, caméras cinéma, escaliers, estrades et scènes) et composition d&apos;invitations (Google Gemini) : l&apos;identité vient des photos sources, les expressions restent celles du carton. L&apos;utilisateur doit disposer du consentement des personnes photographiées. Les modèles d&apos;IA peuvent présenter des imperfections ou altérations fortuites, inhérentes à la technologie générative et ne constituant pas une faute d&apos;EventMaster. L&apos;assistance logicielle ne remplace pas les diagnostics d&apos;architecte et règlements ERP/PMR.
+                  Modélisation 2D/3D WebGL (matériaux PBR, caméras cinéma, escaliers, estrades et scènes) et composition d&apos;invitations (Google Gemini &amp; Imagen). Modèles d&apos;invitations publics composés sous forme d&apos;illustrations d&apos;arrière-plan pur sans texte incrusté en dur, avec variables dynamiques. Les modèles d&apos;IA peuvent présenter des imperfections ou altérations fortuites inhérentes à la technologie générative, ne constituant pas une faute d&apos;EventMaster. L&apos;outil d&apos;aménagement ne remplace pas les diagnostics d&apos;architecte et règlements ERP/PMR.
                 </p>
               </div>
 
@@ -339,37 +339,37 @@ export default function LegalTermsPreviewModal({
               </section>
 
               <section className="space-y-1.5">
-                <h4 className="font-bold text-foreground">Article 2 — Billetterie en ligne, Présence auto-validée &amp; Billets partagés</h4>
+                <h4 className="font-bold text-foreground">Article 2 — Billetterie en ligne, Paliers (Tiers), Présence auto-validée &amp; Billets partagés</h4>
                 <p className="text-muted">
-                  L’organisateur définit ses quotas et ses tarifs (globaux ou par zone/siège avec accessibilité PMR). Tout achat validé émet un e-billet muni d’un QR Code unique et valide automatiquement la présence de l&apos;invité (Répondez s’il vous plaît « accepté »). Les bénéficiaires de billets partagés peuvent personnaliser leurs coordonnées sur leur espace dédié. Le scan à l’entrée est unique et bloque toute réutilisation frauduleuse.
+                  L’organisateur définit ses quotas, ses paliers tarifaires échelonnés (early-bird, standard, VIP) et ses zones avec accessibilité PMR. Tout achat validé émet un e-billet muni d’un QR Code unique et valide automatiquement la présence de l&apos;invité (Répondez s’il vous plaît « accepté »). Les bénéficiaires de billets partagés peuvent personnaliser leurs coordonnées sur leur espace dédié. Le scan à l’entrée est unique et bloque toute réutilisation frauduleuse.
                 </p>
               </section>
 
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">Article 3 — Dons Solidaires &amp; Collectes de Fonds</h4>
                 <p className="text-muted">
-                  EventMaster fournit l&apos;infrastructure technique d&apos;encaissement des dons libres pour le compte de l&apos;organisation. L&apos;organisation est seule garante de la sincérité de la cause. Tout don confirmé est une libéralité volontaire définitive et irrévocable. En plus de l’abonnement, EventMaster se réserve le droit de prélever {collectionCommissionRangeLabel()} du montant collecté avant payout. L’activation exige l’acceptation des conditions en vigueur.
+                  EventMaster fournit l&apos;infrastructure technique d&apos;encaissement des dons libres pour le compte de l&apos;organisation. L&apos;organisation est seule garante de la sincérité de la cause. Tout don confirmé est une libéralité volontaire définitive et irrévocable. En plus de l’abonnement, EventMaster applique la retenue solidaire contractuelle de {DONATIONS_RETENTION_PERCENT}&nbsp;% avant payout sous 48-72h ouvrées. L’activation exige l&apos;acceptation des conditions en vigueur.
                 </p>
               </section>
 
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">Article 4 — Paiements sécurisés, Abonnements, Jetons IA &amp; Marketplace</h4>
                 <p className="text-muted">
-                  Les transactions sont traitées via le processeur agréé FlexPay (Cartes Visa/Mastercard et Mobile Money M-Pesa, Orange Money, Airtel Money, Afrimoney). Le simulateur de budget propose des estimations chiffrées en FC et USD au taux officiel. Le marketplace encadre les salles, prestataires et locations de matériel (tentes, mobilier, sonorisation).
+                  Les transactions sont traitées via le processeur agréé FlexPay (Cartes Visa/Mastercard et Mobile Money M-Pesa, Orange Money, Airtel Money, Afrimoney). Le simulateur unifié multi-ateliers propose des estimations chiffrées en FC et USD au taux officiel. Le marketplace encadre les salles, prestataires et locations de matériel (tentes, mobilier, sonorisation).
                 </p>
               </section>
 
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">Article 5 — Studio IA, Plans 2D/3D &amp; Invitations</h4>
                 <p className="text-muted">
-                  Plans 2D cotés et rendu 3D WebGL photoréaliste (matériaux PBR, caméras cinéma, escaliers droits/tournants/hélicoïdaux, estrades et scènes). L&apos;outil applique des normes physiques (1,40 m entre tables, allées PMR). L&apos;organisateur et l&apos;exploitant demeurent seuls juridiquement responsables de la conformité du plan réel exécuté le jour J au regard des règlements locaux ERP/PMR. Pour les invitations : l&apos;identité vient des photos sources, les expressions restent celles du carton ; l&apos;utilisateur certifie le consentement et le droit à l&apos;image des personnes identifiables.
+                  Plans 2D cotés et rendu 3D WebGL photoréaliste (matériaux PBR, caméras cinéma, escaliers droits/tournants/hélicoïdaux, estrades et scènes). L&apos;outil applique des normes physiques (1,40 m entre tables, allées PMR). L&apos;organisateur et l&apos;exploitant demeurent seuls juridiquement responsables de la conformité du plan réel exécuté le jour J au regard des règlements locaux ERP/PMR. Pour les invitations : les modèles publics sont générés en arrière-plan pur sans texte incrusté en dur, et la substitution préserve les expressions du carton. Les aléas et imperfections intrinsèques aux modèles d&apos;IA ne sauraient engager la responsabilité d&apos;EventMaster.
                 </p>
               </section>
 
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">Article 6 — Reversement des recettes (Payouts)</h4>
                 <p className="text-muted">
-                  EventMaster collecte les règlements pour le compte de l’organisateur et lui reverse les recettes nettes de billetterie et de dons, après déduction des frais FlexPay et d’une commission plateforme de {collectionCommissionRangeLabel()} du montant global collecté, en plus de l’abonnement SaaS. L’activation de la billetterie ou des dons sur un événement exige l’acceptation des conditions en vigueur. Les forfaits Business et au-delà incluent déjà la vitrine salles et prestations.
+                  EventMaster collecte les règlements pour le compte de l’organisateur et lui reverse les recettes nettes de billetterie (retenue de {TICKETING_RETENTION_PERCENT}&nbsp;%) et de dons (retenue de {DONATIONS_RETENTION_PERCENT}&nbsp;%), déduction faite des frais FlexPay, sous 48-72h ouvrées après justification comptable.
                 </p>
               </section>
 
@@ -392,28 +392,28 @@ export default function LegalTermsPreviewModal({
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">1. Cadre légal RDC &amp; Données traitées</h4>
                 <p className="text-muted">
-                  Traitements conformes au Code du numérique de la RDC (Loi n° 23/010). Coordonnées des acheteurs, donateurs (option de don anonyme ou nominatif), statut de présence auto-confirmé, personnalisation des billets partagés, identifiants FlexPay et horodatages de scan QR. Les données bancaires sensibles sont traitées directement par FlexPay.
+                  Traitements conformes au Code du numérique de la RDC (Loi n° 23/010). Coordonnées des acheteurs, paliers tarifaires, vérification renforcée OTP (e-mail ou WhatsApp), donateurs (option de don anonyme ou nominatif), statut de présence auto-confirmé, personnalisation des billets partagés, identifiants FlexPay et horodatages de scan QR. Les données bancaires sensibles sont traitées directement par FlexPay.
                 </p>
               </section>
 
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">2. Studio IA, Médias importés &amp; Respect des visages</h4>
                 <p className="text-muted">
-                  Photographies de salle traitées pour extraire le plan 2D/3D sans reconnaissance faciale de surveillance. Pour les invitations : le carton conserve les expressions ; les photos sources fournissent l&apos;identité uniquement. L&apos;utilisateur certifie le consentement des personnes identifiables. Pas de fichier biométrique. Les éventuelles altérations résultant des limites du modèle d&apos;IA ne sauraient engager la responsabilité d&apos;EventMaster.
+                  Photographies de salle traitées pour extraire le plan 2D/3D sans reconnaissance faciale de surveillance. Pour les invitations : modèles d&apos;art sans texte incrusté en dur, le carton conserve les expressions et les photos sources fournissent l&apos;identité uniquement. L&apos;utilisateur certifie le consentement des personnes identifiables. Pas de fichier biométrique. Les éventuelles altérations résultant des limites du modèle d&apos;IA ne sauraient engager la responsabilité d&apos;EventMaster.
                 </p>
               </section>
 
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">3. Finalités des traitements</h4>
                 <p className="text-muted">
-                  Émission des e-billets et pass donateurs, validation automatique de présence, simulation budgétaire en FC/USD, modélisation 2D/3D photoréaliste avec allées PMR, génération d&apos;invitations multilingues (Français, Lingala, Swahili, Kikongo, Tshiluba) y compris substitution d&apos;identité sur carton, contrôle d’accès anti-doublon et conformité LCB-FT.
+                  Émission des e-billets et pass donateurs, validation automatique de présence, simulateur unifié multi-ateliers en FC/USD, modélisation 2D/3D photoréaliste avec allées PMR, génération d&apos;invitations multilingues (Français, Lingala, Swahili, Kikongo, Tshiluba), contrôle d’accès anti-doublon et conformité LCB-FT.
                 </p>
               </section>
 
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">4. Sous-traitants agréés</h4>
                 <p className="text-muted">
-                  Google Cloud / Google Gemini API (intelligence artificielle sans réentraînement public), FlexPay (paiement et Mobile Money), SendGrid (e-mails transactionnels), UltraMsg (WhatsApp OTP) et Cloudinary (médias), soumis à des engagements stricts de sécurité.
+                  Google Cloud / Google Gemini API &amp; Google Imagen (intelligence artificielle sans réentraînement public), FlexPay (paiement et Mobile Money), SendGrid (e-mails transactionnels et OTP), UltraMsg (WhatsApp OTP) et Cloudinary (médias), soumis à des engagements stricts de sécurité.
                 </p>
               </section>
 
@@ -430,13 +430,13 @@ export default function LegalTermsPreviewModal({
             <div className="space-y-4">
               <div className="border-b border-border pb-3">
                 <h3 className="text-sm font-bold text-foreground">Politique de remboursement</h3>
-                <p className="text-xs text-muted">Version {REFUND_VERSION} · En vigueur au 14 septembre 2026</p>
+                <p className="text-xs text-muted">Version {REFUND_VERSION} · En vigueur au {LEGAL_LAST_UPDATED}</p>
               </div>
 
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">1. Billets d’événements</h4>
                 <p className="text-muted">
-                  L’organisateur est le seul garant de la tenue de l’événement. Les billets achetés confèrent une présence automatiquement confirmée mais demeurent soumis aux conditions de remboursement de l&apos;organisateur. Un billet déjà scanné, falsifié ou revendu hors canal officiel n’est pas remboursable.
+                  L’organisateur est le seul garant de la tenue de l’événement. Les billets achetés confèrent une présence automatiquement confirmée mais demeurent soumis aux conditions de remboursement de l&apos;organisateur (y compris pour les ventes par paliers). Un billet déjà scanné, falsifié ou revendu hors canal officiel n’est pas remboursable.
                 </p>
               </section>
 
@@ -450,7 +450,7 @@ export default function LegalTermsPreviewModal({
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">3. Abonnements SaaS &amp; Jetons IA</h4>
                 <p className="text-muted">
-                  Vous pouvez arrêter le renouvellement à tout moment. L’accès reste actif jusqu’à la fin de la période payée sans remboursement au prorata. Les simulations budgétaires et requêtes IA exécutées ne sont pas remboursables.
+                  Vous pouvez arrêter le renouvellement à tout moment. L’accès reste actif jusqu’à la fin de la période payée sans remboursement au prorata. Les simulations sur le simulateur unifié et les requêtes IA exécutées ne sont pas remboursables. Les licences gracieuses n&apos;ont aucune valeur rachetable.
                 </p>
               </section>
 

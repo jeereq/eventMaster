@@ -185,15 +185,14 @@ function CategoryPills({
 }) {
   const options = rental ? SERVICE_RENTAL_CATEGORIES : SERVICE_TRADE_CATEGORIES;
   return (
-    <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Catégorie">
+    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Catégorie">
       {options.map((id) => {
         const selected = category === id;
         return (
           <button
             key={id}
             type="button"
-            role="radio"
-            aria-checked={selected}
+            aria-pressed={selected}
             onClick={() => onChange(id)}
             className={cn(
               'min-h-11 px-3 py-2 rounded-[var(--radius-button)] text-xs font-semibold border transition',
@@ -533,7 +532,7 @@ export default function ServiceOfferingForm({
               ? 'Indiquez si le client vient chercher le matériel, ou si vous livrez.'
               : 'Les clients filtrent les pros qui se déplacent dans leur commune.'}
           >
-            <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={rental ? 'Livraison' : 'Intervention'}>
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label={rental ? 'Livraison' : 'Intervention'}>
               {[
                 { id: false, label: rental ? 'Retrait sur place' : 'Sur place uniquement' },
                 { id: true, label: rental ? 'Je livre / je dépose' : 'Je me déplace' },
@@ -541,8 +540,7 @@ export default function ServiceOfferingForm({
                 <button
                   key={String(opt.id)}
                   type="button"
-                  role="radio"
-                  aria-checked={draft.travels === opt.id}
+                  aria-pressed={draft.travels === opt.id}
                   onClick={() => onChange((current) => ({
                     ...current,
                     travels: opt.id,

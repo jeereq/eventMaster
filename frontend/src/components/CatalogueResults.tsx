@@ -7,7 +7,7 @@ import { cn } from '@/lib/cn';
 import { listStackClass, StatusPill } from '@/components/ui';
 import { Skeleton } from '@/components/ui/Skeleton';
 import FavoriteHeart from '@/components/FavoriteHeart';
-import { catalogueHasPromo, catalogueItemDisplayKind, catalogueKindAccent, catalogueKindFilterLabel, catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, formatQuotaLabel, groupCatalogueItemsByDisplayKind, listingSrcSet, serviceMobilityLabel, sizedMediaUrl, type CatalogueDisplayKind, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
+import { catalogueDeliveryCaption, catalogueHasPromo, catalogueItemDisplayKind, catalogueKindAccent, catalogueKindFilterLabel, catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, formatQuotaLabel, groupCatalogueItemsByDisplayKind, listingSrcSet, serviceMobilityLabel, sizedMediaUrl, type CatalogueDisplayKind, type CatalogueItem, type CatalogueViewMode } from '@/lib/marketplace';
 import { formatFc } from '@/config/landingPricing';
 import { rememberCurrentCatalogueList } from '@/lib/catalogueQuery';
 import useIsMobile from '@/hooks/useIsMobile';
@@ -177,7 +177,7 @@ function GridCard({
               </p>
             )}
 
-            <div className="text-[11px] text-muted pt-0.5 flex items-center gap-1.5">
+            <div className="text-xs text-muted pt-0.5 flex items-center gap-1.5">
               {item.capacity ? (
                 <span className="inline-flex items-center gap-1 font-medium text-foreground/80">
                   <Users className="w-3 h-3 text-muted" /> Jusqu&apos;à {item.capacity} pers.
@@ -198,8 +198,7 @@ function GridCard({
               ) : null}
               <span className="text-muted text-xs ml-1">
                 · {item.priceUnitLabel}
-            {item.deliveryMode === 'included' && item.deliveryPriceFc ? ` · livraison incluse ${formatFc(item.deliveryPriceFc)}` : ''}
-            {item.deliveryMode === 'extra_fee' && item.deliveryPriceFc ? ` · livraison ${formatFc(item.deliveryPriceFc)}` : ''}
+                {catalogueDeliveryCaption(item) ? ` · ${catalogueDeliveryCaption(item)}` : ''}
               </span>
             </div>
           </div>
@@ -277,7 +276,7 @@ function ListRow({
               ].filter(Boolean).join(' · ')}
             </p>
             {formatDistanceKm(item.distanceKm) ? (
-              <p className="text-[11px] font-semibold text-primary">{formatDistanceKm(item.distanceKm)}</p>
+              <p className="text-xs font-semibold text-primary">{formatDistanceKm(item.distanceKm)}</p>
             ) : null}
           </div>
           <div className="shrink-0 text-right">
@@ -289,8 +288,7 @@ function ListRow({
             ) : null}
             <span className="block text-xs text-muted">
               {item.priceUnitLabel}
-                    {item.deliveryMode === 'included' && item.deliveryPriceFc ? ` · livraison incluse ${formatFc(item.deliveryPriceFc)}` : ''}
-                    {item.deliveryMode === 'extra_fee' && item.deliveryPriceFc ? ` · livraison ${formatFc(item.deliveryPriceFc)}` : ''}
+              {catalogueDeliveryCaption(item) ? ` · ${catalogueDeliveryCaption(item)}` : ''}
             </span>
           </div>
         </Link>

@@ -332,7 +332,7 @@ export default function CatalogueSearchLayout({
           </div>
         ) : loading ? (
           <CatalogueResultsSkeleton mode={mode} count={pageSize} gridCols={gridCols} />
-        ) : (
+        ) : error && items.length === 0 ? null : (
           <>
             <CatalogueResults
               items={visibleItems}

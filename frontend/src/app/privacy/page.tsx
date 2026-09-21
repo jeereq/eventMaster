@@ -1,6 +1,12 @@
 import { LegalPageShell, Section } from '@/components/LegalPageShell';
 import LegalSupportEmail from '@/components/LegalSupportEmail';
-import { collectionCommissionRangeLabel, LEGAL_LAST_UPDATED, PRIVACY_VERSION } from '@/config/legalConfig';
+import {
+  collectionCommissionRangeLabel,
+  LEGAL_LAST_UPDATED,
+  PRIVACY_VERSION,
+  TICKETING_RETENTION_PERCENT,
+  DONATIONS_RETENTION_PERCENT,
+} from '@/config/legalConfig';
 
 export const metadata = {
   title: 'Politique de confidentialité — EventMaster',
@@ -12,7 +18,7 @@ export default function PrivacyPage() {
   return (
     <LegalPageShell
       title="Politique de confidentialité"
-      subtitle="Comment EventMaster collecte, utilise, protège et traite vos données personnelles, incluant le Studio IA, la billetterie multi-zone, les dons solidaires, la présence auto-validée, la personnalisation invité et les paiements sécurisés."
+      subtitle="Comment EventMaster collecte, utilise, protège et traite vos données personnelles, incluant le Studio IA, le simulateur unifié multi-ateliers, la billetterie multi-zone avec paliers tarifaires, les dons solidaires, la présence auto-validée, la personnalisation invité et les paiements sécurisés."
       lastUpdated={LEGAL_LAST_UPDATED}
       version={PRIVACY_VERSION}
     >
@@ -55,10 +61,10 @@ export default function PrivacyPage() {
         <p>Selon votre utilisation d&apos;EventMaster, nous sommes amenés à collecter et traiter les catégories de données suivantes :</p>
         <ul className="list-disc pl-5 space-y-1.5">
           <li>
-            <strong>Comptes utilisateurs &amp; Profils :</strong> Nom, prénom, adresse e-mail, numéro de téléphone WhatsApp (indicatif international + numéro), mot de passe chiffré (hachage bcrypt avec sel), rôle d&apos;accès (propriétaire, manager, protocole, commercial), nom d&apos;organisation ou raison sociale, adresse professionnelle.
+            <strong>Comptes utilisateurs, Profils &amp; Vérification OTP :</strong> Nom, prénom, adresse e-mail, numéro de téléphone WhatsApp (indicatif international au format normalisé E.164), mot de passe chiffré (hachage robuste bcrypt avec sel), rôle d&apos;accès (propriétaire, manager, protocole, commercial), nom d&apos;organisation ou raison sociale, adresse professionnelle, et traces d&apos;émission/validation des codes de vérification OTP (e-mail ou WhatsApp).
           </li>
           <li>
-            <strong>Billetterie &amp; Commandes de billets multi-zones :</strong> Nom et prénom de l&apos;acheteur, adresse e-mail de délivrance du billet, numéro de téléphone, intitulé de l&apos;événement, quantité de billets, zone tarifaire choisie (VIP, Carré d&apos;Or, Standard, etc.), tarif payé en Francs Congolais (CDF) ou USD, siège ou table attribué le cas échéant, référence unique de commande, statut de présence automatiquement confirmé (Répondez s’il vous plaît « accepté ») et QR Code d&apos;accès cryptographique unique.
+            <strong>Billetterie, Paliers Tarifaires &amp; Commandes de billets :</strong> Nom et prénom de l&apos;acheteur, adresse e-mail de délivrance du billet, numéro de téléphone, intitulé de l&apos;événement, quantité de billets, palier tarifaire sélectionné (prévente, standard, tardif), zone tarifaire choisie (VIP, Carré d&apos;Or, Standard, etc.), tarif payé en Francs Congolais (CDF) ou USD, siège ou table attribué le cas échéant, référence unique de commande, statut de présence automatiquement confirmé (Répondez s’il vous plaît « accepté ») et QR Code d&apos;accès cryptographique unique.
           </li>
           <li>
             <strong>Dons Solidaires &amp; Contributions (Donations) :</strong> Nom, prénom et coordonnées du donateur (e-mail, numéro de téléphone de paiement), montant du don en Francs Congolais (FC / CDF), référence de transaction FlexPay, motif ou note d&apos;encouragement facultative, option de don confidentiel (nom masqué vis-à-vis des visiteurs publics sur la page de l&apos;événement, mais conservé dans l&apos;espace d&apos;administration de l&apos;organisateur et les journaux de conformité comptable), et émission éventuelle d&apos;un pass invité lié au don.
@@ -74,10 +80,10 @@ export default function PrivacyPage() {
             <em className="text-muted text-xs">Garantie stricte : Les photos importées sont traitées exclusivement pour déduire la géométrie de la salle et la disposition du mobilier (tables, chaises, allées, portes, scènes). EventMaster n&apos;effectue aucune identification biométrique ni reconnaissance faciale sur les personnes pouvant figurer fortuitement sur ces clichés.</em>
           </li>
           <li>
-            <strong>Invitations multilingues, carton, photos sources &amp; Respect des visages (Google Gemini) :</strong> Briefs textuels de célébration, choix de la source de contexte (profil organisationnel ou historique de requêtes récent), textes rédigés ou reformulés par l&apos;IA (en Français et dans les 4 langues nationales congolaises : Lingala, Swahili, Kikongo, Tshiluba), photographie du carton d&apos;invitation et photographies sources des hôtes destinées à composer le visuel. L&apos;identité (qui sont les personnes) est tirée des photos sources ; les expressions faciales (sourire, regard, émotion) sont celles déjà présentes sur le carton. Traitement sans retouche déformante trompeuse ni conservation biométrique permanente, et sans reconnaissance faciale de surveillance.
+            <strong>Invitations multilingues, Modèles Publics &amp; Respect des visages (Google Gemini &amp; Imagen) :</strong> Briefs textuels de célébration, choix de la source de contexte (profil organisationnel ou historique de requêtes récent), textes rédigés ou reformulés par l&apos;IA (en Français et dans les 4 langues nationales congolaises : Lingala, Swahili, Kikongo, Tshiluba), photographie du carton d&apos;invitation et photographies sources des hôtes destinées à composer le visuel. Pour les modèles publics, la génération IA produit des arrière-plans d&apos;art sans texte incrusté en dur, garantissant une protection accrue de la confidentialité. L&apos;identité (qui sont les personnes) est tirée des photos sources ; les expressions faciales (sourire, regard, émotion) sont celles déjà présentes sur le carton. Traitement sans retouche déformante trompeuse ni conservation biométrique permanente, et sans reconnaissance faciale de surveillance.
           </li>
           <li>
-            <strong>Simulateur de budget IA (/simulateur) :</strong> Critères de simulation transmis volontairement par l&apos;utilisateur (type d&apos;événement, ville, commune, jauge d&apos;invités, fourchette budgétaire en Francs Congolais ou Dollars) pour le calcul de formules estimatives et l&apos;appariement transparent avec les prestataires certifiés du catalogue.
+            <strong>Simulateur unifié multi-ateliers (/simulateur) :</strong> Critères de simulation transmis volontairement par l&apos;utilisateur (type d&apos;événement, ville, commune, jauge d&apos;invités, fourchette budgétaire en Francs Congolais ou Dollars, choix du thème d&apos;invitation ou d&apos;aménagement de salle) pour le calcul de formules estimatives et l&apos;appariement transparent avec les prestataires certifiés du catalogue.
           </li>
           <li>
             <strong>Grand livre de consommation des jetons IA :</strong> Historique horodaté des requêtes de génération et de simulation, nombre de crédits ou jetons débités ou rechargés, solde restant attaché à l&apos;utilisateur ou à l&apos;organisation.
@@ -103,16 +109,16 @@ export default function PrivacyPage() {
       <Section title="3. Finalités du traitement des données">
         <p>Les données collectées sont utilisées pour les finalités explicites suivantes :</p>
         <ul className="list-disc pl-5 space-y-1">
-          <li><strong>Création et gestion des comptes :</strong> authentification sécurisée par code OTP (e-mail ou WhatsApp), gestion des privilèges d&apos;équipe et administration multi-tenant ;</li>
-          <li><strong>Modélisation spatiale assistée par IA :</strong> analyse visuelle des photos de salle et génération assistée de plans de salle 2D zénithaux et 3D WebGL via des modèles d&apos;intelligence artificielle (Google Gemini) ;</li>
-          <li><strong>Création d&apos;invitations multilingues :</strong> rédaction, reformulation et adaptation culturelle des messages d&apos;invitation en Français et dans les 4 langues nationales de la RDC (Lingala, Swahili, Kikongo, Tshiluba), composition graphique du carton et, le cas échéant, remplacement d&apos;identité des visages (expressions conservées depuis le carton) ;</li>
-          <li><strong>Simulation de budget prévisionnel (/simulateur) :</strong> estimation de packs budgétaires (Éco, Équilibré, Confort) en FC et USD basés sur les capacités et les tarifs réels du catalogue d&apos;espaces et de prestataires ;</li>
-          <li><strong>Gestion de la billetterie électronique multi-zones :</strong> répartition des tables et sièges par zone tarifaire, placement PMR adapté, confirmation automatique de présence (Répondez s’il vous plaît « accepté ») dès l&apos;achat, personnalisation nominative des billets partagés par leurs bénéficiaires, génération instantanée des e-billets avec QR Codes infalsifiables et téléchargement PDF ;</li>
+          <li><strong>Création et gestion des comptes :</strong> authentification sécurisée, vérification d&apos;identité renforcée par code OTP (e-mail ou WhatsApp), gestion des privilèges d&apos;équipe et administration multi-tenant ;</li>
+          <li><strong>Modélisation spatiale assistée par IA :</strong> analyse visuelle des photos de salle et génération assistée de plans de salle 2D zénithaux et 3D WebGL via des modèles d&apos;intelligence artificielle (Google Gemini) sélectionnés par la plateforme ;</li>
+          <li><strong>Création d&apos;invitations multilingues &amp; modèles publics :</strong> rédaction, reformulation et adaptation culturelle des messages d&apos;invitation en Français et dans les 4 langues nationales de la RDC (Lingala, Swahili, Kikongo, Tshiluba), composition graphique du carton d&apos;arrière-plan, application des variables dynamiques et, le cas échéant, remplacement d&apos;identité des visages (expressions conservées depuis le carton) ;</li>
+          <li><strong>Simulation unifiée multi-ateliers (/simulateur) :</strong> estimation de packs budgétaires (Éco, Équilibré, Confort) en FC et USD, exploration guidée des modèles de faire-part et simulation d&apos;aménagement 2D/3D basés sur les capacités et les tarifs réels du catalogue ;</li>
+          <li><strong>Gestion de la billetterie électronique, paliers tarifaires (tiers) &amp; zones :</strong> mise en place de contingents échelonnés dans le temps (early-bird, prévente), répartition des tables et sièges par zone tarifaire, placement PMR adapté, confirmation automatique de présence (Répondez s’il vous plaît « accepté ») dès l&apos;achat, personnalisation nominative des billets partagés par leurs bénéficiaires, génération instantanée des e-billets avec QR Codes infalsifiables et téléchargement PDF ;</li>
           <li><strong>Gestion des dons solidaires et collectes de fonds :</strong> enregistrement et sécurisation des contributions libres, émission des pass invité donateur, gestion des dons anonymes et restitution des états financiers pour les organisateurs ;</li>
-          <li><strong>Traitement des paiements et reversements :</strong> validation des règlements via FlexPay (Cartes &amp; Mobile Money en CDF/USD), recharges de jetons IA, émission des reçus/factures, calcul de la commission plateforme de {collectionCommissionRangeLabel()} sur le montant global collecté (billets et dons, en plus de l&apos;abonnement) et reversement des recettes nettes aux organisateurs (payouts) ;</li>
+          <li><strong>Traitement des paiements et reversements :</strong> validation des règlements via FlexPay (Cartes &amp; Mobile Money en CDF/USD), recharges de jetons IA, émission des reçus/factures, application des retenues contractuelles de {TICKETING_RETENTION_PERCENT}&nbsp;% sur la billetterie et {DONATIONS_RETENTION_PERCENT}&nbsp;% sur les dons solidaires (dans la fourchette de {collectionCommissionRangeLabel()}) et reversement des recettes nettes aux organisateurs (payouts) sous 48-72h ouvrées ;</li>
           <li><strong>Sécurité du contrôle d&apos;accès le jour J :</strong> vérification instantanée de la validité du billet ou pass donateur, traçabilité des accès, placement des invités et blocage des tentatives de double scan frauduleux ;</li>
           <li><strong>Acheminement des communications d&apos;événements :</strong> envoi d&apos;invitations interactives, relances de confirmation Répondez s’il vous plaît et notifications de service (sur instruction expresse de l&apos;organisateur) ;</li>
-          <li><strong>Traçabilité collaborative d&apos;équipe :</strong> journalisation contextuelle des actions sur les plans pour prévenir les conflits de versioning et garantir l&apos;intégrité des agencements ;</li>
+          <li><strong>Traçabilité collaborative d&apos;équipe &amp; Journal d&apos;audit :</strong> journalisation contextuelle des actions sur les plans pour prévenir les conflits de versioning, pilotage du reporting d&apos;abonnements et sécurisation des accès administratifs ;</li>
           <li><strong>Synergies du Groupe Tekango :</strong> fluidité d&apos;accès et interopérabilité entre les différents services de l&apos;écosystème Tekango ;</li>
           <li><strong>Respect des obligations réglementaires :</strong> conservation des justificatifs comptables, facturation légale et lutte contre la fraude financière et le blanchiment de capitaux (LCB-FT).</li>
         </ul>
@@ -158,7 +164,7 @@ export default function PrivacyPage() {
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
           <li>
-            <strong>Google Cloud / Google Gemini API :</strong> Fournisseur d&apos;infrastructure d&apos;intelligence artificielle pour l&apos;analyse de vision des photos de salle, la composition d&apos;invitations (y compris la substitution d&apos;identité faciale à partir des photographies fournies) et la reformulation en langues nationales congolaises. 
+            <strong>Google Cloud / Google Gemini API &amp; Google Imagen :</strong> Fournisseurs d&apos;infrastructure d&apos;intelligence artificielle pour l&apos;analyse de vision des photos de salle, le raisonnement géométrique 2D/3D, la composition graphique d&apos;invitations (familles Gemini 3 et Imagen 3 sans incrustation destructive de texte pour les modèles publics) et la reformulation en langues nationales congolaises. 
             <br />
             <em className="text-muted text-xs">Engagement de confidentialité : Dans le cadre de nos accords d&apos;API professionnelle, les requêtes textuelles et les images téléversées par nos utilisateurs ne sont pas utilisées pour entraîner les modèles publics de Google.</em>
           </li>

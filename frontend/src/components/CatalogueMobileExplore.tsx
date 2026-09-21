@@ -9,7 +9,7 @@ import MarketplaceLocationsMap, {
 } from '@/components/MarketplaceLocationsMap';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { catalogueItemDisplayKind, catalogueKindAccent, catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, listingSrcSet, sizedMediaUrl, type CatalogueItem } from '@/lib/marketplace';
+import { catalogueDeliveryCaption, catalogueItemDisplayKind, catalogueKindAccent, catalogueKindLabel, cataloguePriceCaption, formatDistanceKm, listingSrcSet, sizedMediaUrl, type CatalogueItem } from '@/lib/marketplace';
 
 type SheetSnap = 'peek' | 'mid' | 'full';
 
@@ -96,8 +96,9 @@ function StoryCard({
         </div>
         <div className="px-2.5 pt-2 min-w-0">
           <p className="font-semibold text-sm leading-snug text-foreground truncate">{item.title}</p>
-          <p className="text-[11px] text-muted truncate mt-0.5">
+          <p className="text-xs text-muted truncate mt-0.5">
             {cataloguePriceCaption(item)}
+            {catalogueDeliveryCaption(item) ? ` · ${catalogueDeliveryCaption(item)}` : ''}
             {item.location ? ` · ${item.location}` : ''}
           </p>
         </div>
@@ -106,14 +107,14 @@ function StoryCard({
         <button
           type="button"
           onClick={onDirections}
-          className="flex-1 h-8 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground text-[11px] font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-primary-solid-hover transition"
+          className="flex-1 min-h-11 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground text-xs font-semibold inline-flex items-center justify-center gap-1.5 hover:bg-primary-solid-hover transition"
         >
           <Navigation className="w-3.5 h-3.5" />
           Y aller
         </button>
         <Link
           href={item.href}
-          className="flex-1 h-8 rounded-[var(--radius-button)] border border-border bg-surface-muted text-foreground text-[11px] font-semibold inline-flex items-center justify-center"
+          className="flex-1 min-h-11 rounded-[var(--radius-button)] border border-border bg-surface-muted text-foreground text-xs font-semibold inline-flex items-center justify-center"
         >
           Voir
         </Link>
@@ -176,8 +177,8 @@ function SheetRow({
           {catalogueKindLabel(displayKind)}
         </p>
         <p className="text-sm font-semibold text-foreground truncate">{item.title}</p>
-        <p className="text-[11px] text-muted truncate">
-          {[formatDistanceKm(item.distanceKm), item.location, item.capacity ? `${item.capacity} places` : null]
+        <p className="text-xs text-muted truncate">
+          {[formatDistanceKm(item.distanceKm), item.location, item.capacity ? `${item.capacity} places` : null, catalogueDeliveryCaption(item) || null]
             .filter(Boolean)
             .join(' · ')}
         </p>
@@ -433,7 +434,7 @@ export default function CatalogueMobileExplore({
                 {loading ? 'Recherche…' : `${items.length} résultat${items.length > 1 ? 's' : ''}`}
               </p>
               {selected ? (
-                <p className="text-[11px] text-muted truncate">{selected.title}</p>
+                <p className="text-xs text-muted truncate">{selected.title}</p>
               ) : null}
             </div>
             <div className="flex items-center gap-1.5 shrink-0">
@@ -441,7 +442,7 @@ export default function CatalogueMobileExplore({
                 <button
                   type="button"
                   onClick={() => setFiltersVisible(true)}
-                  className="inline-flex items-center gap-1 rounded-[var(--radius-button)] border border-border px-2.5 py-1 text-[11px] font-semibold text-foreground"
+                  className="inline-flex items-center gap-1 min-h-11 rounded-[var(--radius-button)] border border-border px-3 text-xs font-semibold text-foreground"
                 >
                   <SlidersHorizontal className="w-3.5 h-3.5" />
                   Filtres
@@ -451,7 +452,7 @@ export default function CatalogueMobileExplore({
                 <button
                   type="button"
                   onClick={onExit}
-                  className="inline-flex items-center gap-1 rounded-[var(--radius-button)] border border-border px-2.5 py-1 text-[11px] font-semibold text-foreground"
+                  className="inline-flex items-center gap-1 min-h-11 rounded-[var(--radius-button)] border border-border px-3 text-xs font-semibold text-foreground"
                 >
                   <LayoutGrid className="w-3.5 h-3.5" />
                   Grille
@@ -460,7 +461,7 @@ export default function CatalogueMobileExplore({
               <button
                 type="button"
                 onClick={() => setSnap(snap === 'full' ? 'peek' : 'full')}
-                className="inline-flex items-center gap-1 rounded-[var(--radius-button)] border border-border px-2.5 py-1 text-[11px] font-semibold text-foreground"
+                className="inline-flex items-center gap-1 min-h-11 rounded-[var(--radius-button)] border border-border px-3 text-xs font-semibold text-foreground"
               >
                 <ChevronUp className={cn('w-3.5 h-3.5 transition', snap === 'full' && 'rotate-180')} />
                 {snap === 'full' ? 'Réduire' : 'Plus'}
@@ -472,7 +473,7 @@ export default function CatalogueMobileExplore({
 
         {snap === 'full' ? (
           <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-2 overscroll-contain">
-            {items.length === 0 && !loading ? (
+            {items.length === 0 && !loading && !error ? (
               <div className="text-center py-10 px-4">
                 <p className="font-semibold text-foreground">{emptyTitle}</p>
                 <p className="text-sm text-muted mt-1">{emptyDescription}</p>

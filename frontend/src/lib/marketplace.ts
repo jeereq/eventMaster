@@ -390,6 +390,21 @@ export function rentalDeliveryFilterLabel(id: string): string {
   return RENTAL_DELIVERY_OPTIONS.find((opt) => opt.id === id)?.label || id;
 }
 
+export function catalogueDeliveryCaption(item: {
+  category?: string | null;
+  travels?: boolean | null;
+  deliveryMode?: string | null;
+  deliveryPriceFc?: number | null;
+}): string {
+  const money = item.deliveryPriceFc && item.deliveryPriceFc > 0 ? formatFc(item.deliveryPriceFc) : '';
+  if (item.deliveryMode === 'included') return money ? `livraison incluse ${money}` : '';
+  if (item.deliveryMode === 'extra_fee') return money ? `livraison en supplément ${money}` : '';
+  if (item.deliveryMode === 'pickup' || (isServiceRentalCategory(item.category) && item.travels === false)) {
+    return 'retrait sur place';
+  }
+  return '';
+}
+
 export function serviceMobilityLabel(travels: boolean, radiusKm?: number | null): string {
   if (!travels) return 'Sur place uniquement';
   return radiusKm && radiusKm > 0 ? `Se déplace · ${radiusKm} km` : 'Se déplace';
