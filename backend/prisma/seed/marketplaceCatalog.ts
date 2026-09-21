@@ -87,7 +87,7 @@ const TRADE_CATEGORIES: ServiceCategory[] = [
 ];
 const RENTAL_CATEGORIES: ServiceCategory[] = [
   'RENTAL_CLOTHING_MEN', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CLOTHING_CHILD',
-  'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT', 'RENTAL_FURNITURE', 'RENTAL_AV', 'RENTAL_TABLEWARE', 'RENTAL_DECOR', 'RENTAL_TENT'
+  'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT', 'RENTAL_FURNITURE', 'RENTAL_CHAIRS', 'RENTAL_AV', 'RENTAL_TABLEWARE', 'RENTAL_DECOR', 'RENTAL_TENT'
 ];
 
 const VENUE_PREFIXES = [
@@ -147,7 +147,8 @@ const RENTAL_TITLES: Record<string, string[]> = {
   RENTAL_CAR: ['Location berline sans chauffeur', 'Location 4x4 à conduire soi-même', 'Location limousine sans chauffeur', 'Location monospace familial'],
   RENTAL_MOTO: ['Location moto (casques inclus, sans pilote)', 'Location scooter staff', 'Location moto cortège à conduire', 'Location deux-roues événement'],
   RENTAL_EQUIPMENT: ['Location groupe électrogène', 'Location podium', 'Location machine à fumée'],
-  RENTAL_FURNITURE: ['Location chaises Chiavari', 'Location tables rondes banquet', 'Location mange-debout', 'Location canapés VIP'],
+  RENTAL_FURNITURE: ['Location tables rondes banquet', 'Location mange-debout', 'Location canapés VIP', 'Location buffets'],
+  RENTAL_CHAIRS: ['Location chaises Chiavari', 'Location chaises Napoléon', 'Location chaises plastiques', 'Location chaises pliantes'],
   RENTAL_AV: ['Location sono complète', 'Location écran LED géant', 'Location micros sans fil', 'Location projecteurs'],
   RENTAL_TABLEWARE: ['Location assiettes et couverts', 'Location verres cristal', 'Location nappes et serviettes', 'Location centres de table'],
   RENTAL_DECOR: ['Location arches fleuries', 'Location tapis rouge', 'Location trônes mariés', 'Location chandeliers'],

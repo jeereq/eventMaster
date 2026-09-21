@@ -36,6 +36,7 @@ import CityLocationFields from '@/components/CityLocationFields';
 
 export const OFFERING_TITLE_FIELD_ID = 'offering-title';
 export const OFFERING_PRICE_FIELD_ID = 'offering-price';
+export const OFFERING_PROMO_FIELD_ID = 'offering-promo-price';
 export const OFFERING_RADIUS_FIELD_ID = 'offering-radius';
 export const OFFERING_CITY_SECTION_ID = 'offering-city';
 
@@ -57,6 +58,9 @@ export type ServiceOfferingDraft = {
   longitude: string;
   priceFromFc: string;
   priceUnit: VenuePriceUnit;
+  promoPriceFc: string;
+  promoLabel: string;
+  promoEndsAt: string;
   quotaMin: string;
   quotaMax: string;
   photos: string[];
@@ -96,7 +100,23 @@ export function getOfferingPublishGaps(draft: ServiceOfferingDraft): OfferingPub
       fieldId: OFFERING_RADIUS_FIELD_ID,
     });
   }
+  const promo = offeringPromoMessage(draft);
+  if (promo) {
+    gaps.push({ tab: 'details', message: promo, fieldId: OFFERING_PROMO_FIELD_ID });
+  }
   return gaps;
+}
+
+export function offeringPromoMessage(draft: Pick<ServiceOfferingDraft, 'priceFromFc' | 'promoPriceFc'>): string {
+  if (!draft.promoPriceFc.trim()) return '';
+  const price = Number(draft.priceFromFc);
+  const promo = Number(draft.promoPriceFc);
+  if (!draft.priceFromFc.trim() || !Number.isFinite(price) || price <= 0) {
+    return 'Indiquez le tarif normal avant la promotion.';
+  }
+  if (!Number.isFinite(promo) || promo < 0) return 'Le prix promotionnel doit être un montant en FC.';
+  if (promo >= price) return 'Le prix promotionnel doit rester inférieur au tarif normal.';
+  return '';
 }
 
 export function focusOfferingField(fieldId?: string) {
@@ -349,7 +369,9 @@ export default function ServiceOfferingForm({
                 value={draft.description}
                 onChange={(e) => onChange((current) => ({ ...current, description: e.target.value }))}
                 className={FIELD_CONTROL_CLASS}
-                placeholder={rental
+                placeholder={draft.category === 'RENTAL_CHAIRS'
+                  ? 'Modèles (Chiavari, Napoléon, plastique, pliante), coloris, housses, livraison et caution…'
+                  : rental
                   ? 'Parc, modèles, conditions de caution, livraison, ce qui est inclus…'
                   : 'Style, équipe, déroulement type, ce qui est inclus dans le tarif de départ…'}
               />
@@ -391,6 +413,29 @@ export default function ServiceOfferingForm({
                   {PRICE_UNIT_OPTIONS.find((opt) => opt.id === draft.priceUnit)?.hint || 'Unité affichée aux clients.'}
                 </p>
               </label>
+              <Input
+                id={OFFERING_PROMO_FIELD_ID}
+                label="Prix promotionnel (FC)"
+                type="number"
+                min={0}
+                value={draft.promoPriceFc}
+                onChange={(e) => onChange((current) => ({ ...current, promoPriceFc: e.target.value }))}
+                hint="Laissez vide s’il n’y a pas de promotion. Doit rester inférieur au tarif."
+                error={offeringPromoMessage(draft)}
+              />
+              <Input
+                label="Libellé de la promotion"
+                value={draft.promoLabel}
+                onChange={(e) => onChange((current) => ({ ...current, promoLabel: e.target.value }))}
+                placeholder="Offre saison, -10 %, semaine du mariage…"
+              />
+              <Input
+                label="Fin de promotion"
+                type="date"
+                value={draft.promoEndsAt}
+                onChange={(e) => onChange((current) => ({ ...current, promoEndsAt: e.target.value }))}
+                hint="Optionnel. Après cette date, le tarif normal reprend."
+              />
               <Input
                 label={rental ? 'Quantité min. (parc)' : 'Quota min. invités'}
                 type="number"

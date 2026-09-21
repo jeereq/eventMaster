@@ -72,7 +72,7 @@ export default function BeverageBrandOptionPicker({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Familles de marques">
         <KindChip active={kind === 'ALL'} label="Toutes" onClick={() => setKind('ALL')} />
         {BEVERAGE_KINDS.map((item) => (
           <KindChip key={item} active={kind === item} label={BEVERAGE_KIND_LABELS[item]} onClick={() => setKind(item)} />
@@ -89,6 +89,9 @@ export default function BeverageBrandOptionPicker({
                 onChange={() => toggle(brand)}
                 className="rounded text-primary focus:ring-primary"
               />
+              {brand.imageUrl ? (
+                <img src={brand.imageUrl} alt="" className="w-8 h-8 rounded object-cover border border-border" />
+              ) : null}
               <span className="font-medium text-foreground">{brand.name}</span>
               <span className="text-muted">{brand.kindLabel}</span>
               {brand.volumeLabel ? <span className="text-muted">{brand.volumeLabel}</span> : null}
@@ -96,7 +99,7 @@ export default function BeverageBrandOptionPicker({
           );
         })}
       </div>
-      <p className="text-[11px] text-muted">
+      <p className="text-xs text-muted">
         {selected.size} marque{selected.size > 1 ? 's' : ''} proposée{selected.size > 1 ? 's' : ''} à l’invité
         {selected.size >= MAX_INVITATION_BRANDS ? ` (maximum ${MAX_INVITATION_BRANDS})` : ''}.
       </p>
@@ -108,10 +111,11 @@ function KindChip({ active, label, onClick }: { active: boolean; label: string; 
   return (
     <button
       type="button"
+      aria-pressed={active}
       onClick={onClick}
       className={cn(
-        'px-2 py-1 rounded-full text-[11px] font-semibold border',
-        active ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted',
+        'min-h-11 px-3 rounded-full text-xs font-semibold border',
+        active ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted',
       )}
     >
       {label}

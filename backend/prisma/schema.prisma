@@ -124,6 +124,7 @@ enum ServiceCategory {
   RENTAL_MOTO
   RENTAL_EQUIPMENT
   RENTAL_FURNITURE
+  RENTAL_CHAIRS
   RENTAL_AV
   RENTAL_TABLEWARE
   RENTAL_DECOR
@@ -887,6 +888,9 @@ model ServiceOffering {
   longitude         Float?
   priceFromFc       Int?
   priceUnit         VenuePriceUnit   @default(EVENT)
+  promoPriceFc      Int?
+  promoLabel        String?
+  promoEndsAt       DateTime?
   quotaMin          Int?
   quotaMax          Int?
   photos            Json?
@@ -1374,6 +1378,7 @@ model BeverageBrand {
   country     String?
   volumeLabel String?
   description String?
+  imageUrl    String?
   isActive    Boolean      @default(true)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -1392,6 +1397,9 @@ model VendorBeveragePrice {
   brandId     String
   brand       BeverageBrand @relation(fields: [brandId], references: [id], onDelete: Cascade)
   priceFc     Int
+  promoPriceFc Int?
+  promoLabel  String?
+  promoEndsAt  DateTime?
   unitKind    BeverageSaleUnit @default(BOTTLE)
   /** Nombre d’unités dans le conditionnement (1 bouteille, 12 pour un casier, 6 pour un pack…). */
   quantity    Int              @default(1)

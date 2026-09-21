@@ -97,7 +97,9 @@ export default function MarketplaceServiceDetailPage() {
         onPhotoIndex={setPhotoIndex}
         tab={tab}
         onTab={setTab}
-        priceFromFc={service?.priceFromFc ?? null}
+        priceFromFc={service?.promoActive && service.promoPriceFc != null ? service.promoPriceFc : service?.priceFromFc ?? null}
+        compareAtFc={service?.promoActive && service.promoPriceFc != null ? service.priceFromFc : null}
+        priceNote={service?.promoActive && service.promoPriceFc != null ? (service.promoLabel || 'Promotion') : null}
         priceUnitLabel={service?.priceUnitLabel}
         quotaLabel={quotaLabel}
         activityPreview={service?.activityPreview}

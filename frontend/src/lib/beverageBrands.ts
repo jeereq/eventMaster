@@ -49,6 +49,7 @@ export type BeverageBrandRow = {
   country: string | null;
   volumeLabel: string | null;
   description: string | null;
+  imageUrl?: string | null;
   isActive: boolean;
   invitationOption: string;
   vendorCount?: number;
@@ -58,6 +59,9 @@ export type BeverageBrandRow = {
 export type VendorBeveragePriceRow = {
   id: string;
   priceFc: number;
+  promoPriceFc?: number | null;
+  promoLabel?: string | null;
+  promoEndsAt?: string | null;
   unitKind: BeverageSaleUnit;
   quantity: number;
   unitLabel: string;

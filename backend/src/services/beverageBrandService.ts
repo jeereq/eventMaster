@@ -1,12 +1,13 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
+import { activePromoPrice } from './offerPromotion';
 import {
   BEVERAGE_KIND_LABELS,
   beverageInvitationOption,
   parseBrandDraft,
   parseVendorPriceOffers,
   type BeverageKind,
-} from './beverageBrandCatalog';
+} from './beverageBrandCatalog.ts';
 
 function brandPublic(brand: {
   id: string;
@@ -30,19 +31,28 @@ export async function listBeverageBrands(options?: { includeInactive?: boolean }
     where: options?.includeInactive ? undefined : { isActive: true },
     orderBy: [{ kind: 'asc' }, { name: 'asc' }],
   });
-  const stats = await prisma.vendorBeveragePrice.groupBy({
-    by: ['brandId'],
+  const prices = await prisma.vendorBeveragePrice.findMany({
     where: { isAvailable: true },
-    _min: { priceFc: true },
-    _count: { _all: true },
+    select: { brandId: true, priceFc: true, promoPriceFc: true, promoEndsAt: true },
   });
-  const statByBrand = new Map(stats.map((row) => [row.brandId, row]));
+  const floorByBrand = new Map<string, { count: number; priceFromFc: number | null }>();
+  for (const row of prices) {
+    const current = floorByBrand.get(row.brandId) ?? { count: 0, priceFromFc: null };
+    const payable = activePromoPrice({
+      priceFc: row.priceFc,
+      promoPriceFc: row.promoPriceFc,
+      promoEndsAt: row.promoEndsAt,
+    }) ?? row.priceFc;
+    current.count += 1;
+    current.priceFromFc = current.priceFromFc == null ? payable : Math.min(current.priceFromFc, payable);
+    floorByBrand.set(row.brandId, current);
+  }
   return brands.map((brand) => {
-    const stat = statByBrand.get(brand.id);
+    const stat = floorByBrand.get(brand.id);
     return {
       ...brandPublic(brand),
-      vendorCount: stat?._count._all ?? 0,
-      priceFromFc: stat?._min.priceFc ?? null,
+      vendorCount: stat?.count ?? 0,
+      priceFromFc: stat?.priceFromFc ?? null,
     };
   });
 }
@@ -109,6 +119,9 @@ export async function listVendorBeverageCatalog(tenantId: string) {
     myPrices: brand.prices.map((mine) => ({
       id: mine.id,
       priceFc: mine.priceFc,
+      promoPriceFc: mine.promoPriceFc,
+      promoLabel: mine.promoLabel,
+      promoEndsAt: mine.promoEndsAt,
       unitKind: mine.unitKind,
       quantity: mine.quantity,
       unitLabel: mine.unitLabel,
@@ -143,6 +156,9 @@ export async function replaceVendorBeveragePrices(tenantId: string, body: unknow
           quantity: offer.quantity,
           unitLabel: offer.unitLabel,
           priceFc: offer.priceFc,
+          promoPriceFc: offer.promoPriceFc,
+          promoLabel: offer.promoLabel,
+          promoEndsAt: offer.promoEndsAt,
           isAvailable: offer.isAvailable,
           notes: offer.notes,
         })),

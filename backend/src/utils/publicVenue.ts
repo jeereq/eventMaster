@@ -28,13 +28,13 @@ const SERVICE_CATEGORIES = [
   'EVENT_PLANNER', 'ENTERTAINMENT', 'OFFICIANT', 'CHILDCARE',
   'AV_TECHNICIAN', 'STATIONERY', 'OTHER',
   'RENTAL_CLOTHING_MEN', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CLOTHING_CHILD',
-  'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT', 'RENTAL_FURNITURE',
+  'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT', 'RENTAL_FURNITURE', 'RENTAL_CHAIRS',
   'RENTAL_AV', 'RENTAL_TABLEWARE', 'RENTAL_DECOR', 'RENTAL_TENT',
 ] as ServiceCategory[];
 
 const RENTAL_CATEGORIES = [
   'RENTAL_CLOTHING_MEN', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CLOTHING_CHILD',
-  'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT', 'RENTAL_FURNITURE',
+  'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT', 'RENTAL_FURNITURE', 'RENTAL_CHAIRS',
   'RENTAL_AV', 'RENTAL_TABLEWARE', 'RENTAL_DECOR', 'RENTAL_TENT',
 ] as ServiceCategory[];
 
@@ -91,7 +91,8 @@ export function serviceCategoryLabel(category: ServiceCategory): string {
     RENTAL_CAR: 'Location voiture',
     RENTAL_MOTO: 'Location moto',
     RENTAL_EQUIPMENT: 'Location matériel divers',
-    RENTAL_FURNITURE: 'Location mobilier & chaises',
+    RENTAL_FURNITURE: 'Location mobilier',
+    RENTAL_CHAIRS: 'Location chaises',
     RENTAL_AV: 'Location sonorisation & éclairage',
     RENTAL_TABLEWARE: 'Location vaisselle & linge',
     RENTAL_DECOR: 'Location matériel de décoration',

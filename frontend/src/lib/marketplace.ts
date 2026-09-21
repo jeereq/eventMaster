@@ -32,6 +32,7 @@ export type ServiceCategory =
   | 'RENTAL_MOTO'
   | 'RENTAL_EQUIPMENT'
   | 'RENTAL_FURNITURE'
+  | 'RENTAL_CHAIRS'
   | 'RENTAL_AV'
   | 'RENTAL_TABLEWARE'
   | 'RENTAL_DECOR'
@@ -145,7 +146,8 @@ export const SERVICE_CATEGORY_LABELS: Record<ServiceCategory, string> = {
   RENTAL_CAR: 'Location voiture',
   RENTAL_MOTO: 'Location moto',
   RENTAL_EQUIPMENT: 'Location matériel divers',
-  RENTAL_FURNITURE: 'Location mobilier & chaises',
+  RENTAL_FURNITURE: 'Location mobilier',
+  RENTAL_CHAIRS: 'Location chaises',
   RENTAL_AV: 'Location matériel audiovisuel',
   RENTAL_TABLEWARE: 'Location vaisselle & linge de table',
   RENTAL_DECOR: 'Location matériel de décoration',
@@ -161,7 +163,7 @@ export const SERVICE_TRADE_CATEGORIES: ServiceCategory[] = [
 
 export const SERVICE_RENTAL_CATEGORIES: ServiceCategory[] = [
   'RENTAL_CLOTHING_MEN', 'RENTAL_CLOTHING_WOMEN', 'RENTAL_CLOTHING_CHILD',
-  'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT', 'RENTAL_FURNITURE',
+  'RENTAL_CAR', 'RENTAL_MOTO', 'RENTAL_EQUIPMENT', 'RENTAL_FURNITURE', 'RENTAL_CHAIRS',
   'RENTAL_AV', 'RENTAL_TABLEWARE', 'RENTAL_DECOR', 'RENTAL_TENT',
 ];
 
@@ -315,9 +317,15 @@ export const SERVICE_CATEGORY_META: Record<ServiceCategory, ServiceCategoryMeta>
   },
   RENTAL_FURNITURE: {
     group: 'rental',
-    hint: 'Chaises, tables, mange-debout, canapés.',
+    hint: 'Tables, mange-debout, canapés et mobilier de réception.',
     defaultUnit: 'DAY',
     units: ['DAY', 'EVENT'],
+  },
+  RENTAL_CHAIRS: {
+    group: 'rental',
+    hint: 'Chaises Chiavari, Napoléon, plastiques, pliantes ou fantaisie, à la pièce ou à la journée.',
+    defaultUnit: 'DAY',
+    units: ['DAY', 'EVENT', 'PERSON'],
   },
   RENTAL_AV: {
     group: 'rental',
@@ -390,6 +398,10 @@ export interface PublicService {
   latitude?: number | null;
   longitude?: number | null;
   priceFromFc: number | null;
+  promoPriceFc?: number | null;
+  promoLabel?: string | null;
+  promoEndsAt?: string | null;
+  promoActive?: boolean;
   priceUnit: VenuePriceUnit;
   priceUnitLabel: string;
   quotaMin?: number | null;
@@ -1227,12 +1239,24 @@ export function mixCatalogueByDisplayKind<T extends Pick<CatalogueItem, 'kind' |
   return mixed;
 }
 
-export function cataloguePriceCaption(item: Pick<CatalogueItem, 'kind' | 'priceFromFc' | 'priceUnitLabel'>): string {
+export function catalogueHasPromo(item: Pick<CatalogueItem, 'priceFromFc' | 'promoPriceFc'>): boolean {
+  return item.promoPriceFc != null && item.priceFromFc != null && item.promoPriceFc < item.priceFromFc;
+}
+
+/** Montant que le visiteur paie : la promo active, sinon le tarif catalogue. */
+export function cataloguePayablePriceFc(item: Pick<CatalogueItem, 'priceFromFc' | 'promoPriceFc'>): number | null {
+  if (catalogueHasPromo(item)) return item.promoPriceFc ?? null;
+  return item.priceFromFc ?? null;
+}
+
+export function cataloguePriceCaption(item: Pick<CatalogueItem, 'kind' | 'priceFromFc' | 'promoPriceFc' | 'priceUnitLabel'>): string {
   if (item.kind === 'event') {
     if (item.priceFromFc != null && item.priceFromFc > 0) return formatFc(item.priceFromFc);
     return 'Entrée libre';
   }
-  return item.priceFromFc != null ? `Dès ${formatFc(item.priceFromFc)}` : 'Sur devis';
+  const payable = cataloguePayablePriceFc(item);
+  if (payable == null) return 'Sur devis';
+  return catalogueHasPromo(item) ? formatFc(payable) : `Dès ${formatFc(payable)}`;
 }
 
 export function isCatalogueMapView(mode: CatalogueViewMode): mode is 'map' | 'focus' {
@@ -1290,6 +1314,8 @@ export interface CatalogueItem {
   coverUrl: string | null;
   photos?: string[];
   priceFromFc: number | null;
+  promoPriceFc?: number | null;
+  promoLabel?: string | null;
   priceUnitLabel: string;
   latitude: number | null;
   longitude: number | null;
@@ -1439,8 +1465,9 @@ export function catalogueItemMatchesGeo(item: CatalogueItem, filters: CatalogueG
   if (street && !loc.includes(street)) return false;
   const minP = Number(filters.minPrice);
   const maxP = Number(filters.maxPrice);
-  if (filters.minPrice.trim() && Number.isFinite(minP) && (item.priceFromFc == null || item.priceFromFc < minP)) return false;
-  if (filters.maxPrice.trim() && Number.isFinite(maxP) && (item.priceFromFc == null || item.priceFromFc > maxP)) return false;
+  const asking = cataloguePayablePriceFc(item);
+  if (filters.minPrice.trim() && Number.isFinite(minP) && (asking == null || asking < minP)) return false;
+  if (filters.maxPrice.trim() && Number.isFinite(maxP) && (asking == null || asking > maxP)) return false;
   const minC = Number(filters.minCapacity);
   const maxC = Number(filters.maxCapacity);
   if (item.kind === 'venue' || item.kind === 'event') {
@@ -1471,6 +1498,8 @@ export function serviceToCatalogueItem(service: PublicService): CatalogueItem {
     coverUrl: service.coverUrl,
     photos: service.photos || [],
     priceFromFc: service.priceFromFc,
+    promoPriceFc: service.promoActive ? service.promoPriceFc : null,
+    promoLabel: service.promoActive ? service.promoLabel : null,
     priceUnitLabel: service.priceUnitLabel,
     latitude: service.latitude ?? null,
     longitude: service.longitude ?? null,

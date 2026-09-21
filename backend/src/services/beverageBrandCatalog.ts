@@ -1,3 +1,5 @@
+import { parseOfferPromotion } from './offerPromotion.ts';
+
 export const BEVERAGE_KINDS = ['BEER', 'DRINK', 'WINE', 'CHAMPAGNE'] as const;
 
 export type BeverageKind = (typeof BEVERAGE_KINDS)[number];
@@ -67,8 +69,18 @@ export type BrandDraft = {
   country: string | null;
   volumeLabel: string | null;
   description: string | null;
+  imageUrl: string | null;
   isActive: boolean;
 };
+
+function optionalImageUrl(value: unknown): { url: string | null } | { error: string } {
+  const text = String(value ?? '').trim();
+  if (!text) return { url: null };
+  if (text.length > 500 || !/^https:\/\//i.test(text)) {
+    return { error: 'L’image doit être une adresse https valide.' };
+  }
+  return { url: text };
+}
 
 function optionalText(value: unknown, max: number): string | null {
   const text = String(value ?? '').trim().replace(/\s+/g, ' ');
@@ -82,6 +94,8 @@ export function parseBrandDraft(body: unknown): { draft: BrandDraft } | { error:
   if (name.length < 2) return { error: 'Indiquez le nom de la marque (2 caractères minimum).' };
   if (name.length > MAX_NAME_LENGTH) return { error: 'Le nom de la marque est trop long.' };
   if (!isBeverageKind(source.kind)) return { error: 'Choisissez une famille : bière, boisson, vin ou champagne.' };
+  const image = optionalImageUrl(source.imageUrl);
+  if ('error' in image) return image;
   return {
     draft: {
       name,
@@ -90,6 +104,7 @@ export function parseBrandDraft(body: unknown): { draft: BrandDraft } | { error:
       country: optionalText(source.country, MAX_TEXT_LENGTH),
       volumeLabel: optionalText(source.volumeLabel, 40),
       description: optionalText(source.description, MAX_DESCRIPTION_LENGTH),
+      imageUrl: image.url,
       isActive: source.isActive !== false,
     },
   };
@@ -120,6 +135,9 @@ export type VendorPriceDraft = {
   quantity: number;
   unitLabel: string;
   priceFc: number;
+  promoPriceFc: number | null;
+  promoLabel: string | null;
+  promoEndsAt: Date | null;
   isAvailable: boolean;
   notes: string | null;
 };
@@ -158,12 +176,22 @@ export function parseVendorPriceOffers(body: unknown): { offers: VendorPriceDraf
     if (!Number.isFinite(priceFc) || priceFc < 0 || priceFc > MAX_PRICE_FC) {
       return { error: 'Chaque prix doit être un montant en FC, positif ou nul.' };
     }
+    const promo = parseOfferPromotion({
+      priceFc,
+      promoPriceFc: item.promoPriceFc,
+      promoLabel: item.promoLabel,
+      promoEndsAt: item.promoEndsAt,
+    });
+    if ('error' in promo) return promo;
     offers.push({
       brandId,
       unitKind: item.unitKind,
       quantity,
       unitLabel,
       priceFc,
+      promoPriceFc: promo.promo.promoPriceFc,
+      promoLabel: promo.promo.promoLabel,
+      promoEndsAt: promo.promo.promoEndsAt,
       isAvailable: item.isAvailable !== false,
       notes: optionalText(item.notes, MAX_DESCRIPTION_LENGTH),
     });
