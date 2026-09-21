@@ -3,6 +3,7 @@ import { LegalPageShell, Section } from '@/components/LegalPageShell';
 import LegalSupportEmail from '@/components/LegalSupportEmail';
 import {
   collectionCommissionRangeLabel,
+  LEGAL_LAST_UPDATED,
   REFUND_VERSION,
   TICKETING_RETENTION_PERCENT,
   DONATIONS_RETENTION_PERCENT,
@@ -19,7 +20,7 @@ export default function RefundPage() {
     <LegalPageShell
       title="Politique de remboursement"
       subtitle="Règles applicables aux billets, dons solidaires, abonnements, jetons d’intelligence artificielle, acomptes et cautions marketplace, et erreurs de paiement."
-      lastUpdated="16 septembre 2026"
+      lastUpdated={LEGAL_LAST_UPDATED}
       version={REFUND_VERSION}
     >
       <Section title="1. Objet">
@@ -59,7 +60,7 @@ export default function RefundPage() {
             avérée.
           </li>
           <li>
-            Tout billet acheté valide automatiquement la présence de son porteur. La personnalisation d&apos;un billet
+            Tout billet acheté valide automatiquement la présence de son porteur. La commercialisation par paliers tarifaires échelonnés (early-bird, standard, VIP) ou la personnalisation d&apos;un billet
             partagé (modification du nom, prénom ou coordonnées par le bénéficiaire) n&apos;altère pas les conditions de
             vente initiales ni le droit au remboursement, qui demeure placé sous l&apos;autorité exclusive de l&apos;organisateur.
           </li>
@@ -123,14 +124,14 @@ export default function RefundPage() {
         </ul>
       </Section>
 
-      <Section title="5. Jetons d’intelligence artificielle & Simulations de budget">
+      <Section title="5. Jetons d’intelligence artificielle, Simulateur Unifié &amp; Traitements Graphiques">
         <p>
-          Les simulations du simulateur de budget IA (/simulateur) et les requêtes du Studio d’aménagement (plans 2D/3D,
-          vision artificielle sur photos de salle, composition d’invitations) sont décomptées au fur et à mesure de leur
+          Les simulations du simulateur unifié (/simulateur) et les requêtes des Studios d’aménagement (plans 2D/3D,
+          vision artificielle sur photos de salle, sélection des modèles IA) et de faire-part (composition graphique sans texte incrusté en dur) sont décomptées au fur et à mesure de leur
           exécution.
         </p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>Les crédits et jetons consommés par un traitement d&apos;intelligence artificielle exécuté ne sont pas remboursables.</li>
+          <li>Les crédits et jetons consommés par un traitement d&apos;intelligence artificielle exécuté ne sont pas remboursables, y compris en cas d&apos;imperfections ou d&apos;altérations fortuites inhérentes à la technologie probabiliste des modèles tiers.</li>
           <li>
             Un pack de recharge débité deux fois, ou un paiement confirmé sans crédit de jetons ou de simulations, est
             corrigé après vérification du reçu FlexPay.

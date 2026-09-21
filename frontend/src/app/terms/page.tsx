@@ -20,7 +20,7 @@ export default function TermsPage() {
   return (
     <LegalPageShell
       title="Conditions d'utilisation"
-      subtitle="Les présentes conditions régissent l'accès et l'utilisation de la plateforme EventMaster, incluant le Studio IA, la billetterie multi-zone avec présence auto-validée, les dons solidaires, le simulateur de budget, la modélisation de salle 2D/3D et les paiements sécurisés."
+      subtitle="Les présentes conditions régissent l'accès et l'utilisation de la plateforme EventMaster, incluant le Studio IA, le simulateur unifié multi-ateliers, la billetterie multi-zone avec paliers tarifaires et présence auto-validée, les dons solidaires, la modélisation de salle 2D/3D et les paiements sécurisés."
       lastUpdated={LEGAL_LAST_UPDATED}
       version={TERMS_VERSION}
     >
@@ -37,17 +37,17 @@ export default function TermsPage() {
         <p>
           La plateforme propose un ensemble d&apos;outils intégrés dédiés à l&apos;organisation et à la gestion
           d&apos;événements privés et professionnels :
-          création d&apos;invitations interactives multilingues avec ancrage d&apos;identité des hôtes, substitution éventuelle de visages sur carton et contextualisation IA
+          création d&apos;invitations interactives multilingues avec ancrage d&apos;identité des hôtes, substitution éventuelle de visages sur carton, sélection des modèles d&apos;intelligence artificielle (Google Gemini et Imagen) et contextualisation IA
           (Français et langues nationales de la RDC : Lingala, Swahili, Kikongo, Tshiluba), routage et confirmations
-          Répondez s’il vous plaît instantanées sur WhatsApp, <strong>Simulateur de budget IA dédié</strong> en Francs Congolais (CDF) et
-          Dollars ($), <strong>Studio d&apos;Aménagement IA</strong> avec modélisation 2D zénithale cotée et rendu 3D
+          Répondez s’il vous plaît instantanées sur WhatsApp, <strong>Simulateur unifié multi-ateliers (/simulateur)</strong> intégrant le chiffrage budgétaire en Francs Congolais (CDF) et
+          Dollars ($), l&apos;atelier de faire-part IA et la prévisualisation de salle 2D/3D (avec affichage dynamique des statuts actif ou à venir), <strong>Studio d&apos;Aménagement IA</strong> avec modélisation 2D zénithale cotée et rendu 3D
           WebGL photoréaliste de salles (matériaux PBR, caméras cinématiques), moteur d&apos;espacement et de
           dégagement physique réel, plans de table avec sélection interactive de place et accessibilité PMR, protocole
           d&apos;accueil et contrôle d&apos;accès le jour J (scan QR ultra-rapide anti-doublon), fil d&apos;actualité
           média, livre d&apos;or en ligne, gestion collaborative d&apos;équipes avec journal d&apos;actions contextuel,
           marketplace de salles, de métiers (services et Matériel &amp; Équipements) certifiés, module de{' '}
           <strong>dons solidaires et collectes de fonds à montant libre</strong>, ainsi qu&apos;un module complet de{' '}
-          <strong>billetterie en ligne sécurisée (Ticketing multi-zones avec présence auto-validée et personnalisation des billets partagés)</strong>{' '}
+          <strong>billetterie en ligne sécurisée (Ticketing multi-zones et paliers tarifaires avec présence auto-validée et personnalisation des billets partagés)</strong>{' '}
           et de <strong>paiements multicanaux sécurisés (cartes bancaires et Mobile Money en Francs Congolais — CDF et devises acceptées via FlexPay)</strong>.
         </p>
         <p>
@@ -83,16 +83,19 @@ export default function TermsPage() {
           privilèges d&apos;accès, ainsi que de la confidentialité des identifiants associés.
         </p>
         <p className="mt-2">
-          <strong>Gestion administrative centralisée des abonnements :</strong> L&apos;administration de la plateforme (Super Admin)
+          <strong>Vérification d&apos;identité, canaux OTP et sécurité des comptes :</strong> Toute création de compte ou modification sensible de coordonnées requiert la validation d&apos;un code à usage unique (OTP) acheminé par e-mail ou WhatsApp vers le numéro de téléphone international vérifié de l&apos;utilisateur. Une fonction de renvoi sécurisé est mise à disposition, protégée par des délais d&apos;attente techniques afin d&apos;éviter les sollicitations abusives et de prévenir l&apos;usurpation d&apos;identité.
+        </p>
+        <p className="mt-2">
+          <strong>Gestion administrative centralisée des abonnements &amp; Reporting :</strong> L&apos;administration de la plateforme (Super Admin)
           dispose des prérogatives techniques et contractuelles pour attribuer, activer, reconduire, suspendre ou ajuster les
           licences et forfaits d&apos;abonnements, que ce soit à l&apos;échelle individuelle d&apos;un utilisateur autonome ou au niveau
           de l&apos;espace d&apos;une organisation. Elle peut notamment allouer des périodes de gratuité gracieuse (« complimentary »),
-          des extensions de durée personnalisées ou des régularisations d&apos;échéances, dûment tracées dans le registre d&apos;audit
+          des extensions de durée personnalisées, piloter le reporting consolidé des abonnements et régulariser les échéances, le tout consigné dans le registre d&apos;audit
           sécurisé d&apos;EventMaster.
         </p>
       </Section>
 
-      <Section title="3. Billetterie en ligne, Tarification Multi-Zones & Contrôle d'Accès (Ticketing)">
+      <Section title="3. Billetterie en ligne, Paliers Tarifaires (Tiers), Tarification Multi-Zones & Contrôle d'Accès (Ticketing)">
         <p>
           EventMaster met à disposition des organisateurs une infrastructure technique de billetterie électronique
           permettant la commercialisation, la délivrance et le contrôle sécurisé de billets d&apos;événements payants et
@@ -100,11 +103,14 @@ export default function TermsPage() {
         </p>
 
         <p>
-          <strong>3.1 Configuration des tarifs, zones et quotas.</strong> L&apos;organisateur fixe librement sous sa
+          <strong>3.1 Configuration des tarifs, paliers (tiers), zones et quotas.</strong> L&apos;organisateur fixe librement sous sa
           seule responsabilité :
         </p>
         <ul className="list-disc pl-5 space-y-1">
           <li>Le prix unitaire des billets (exprimé en Francs Congolais — FC / CDF ou devise applicable) ;</li>
+          <li>
+            La structuration éventuelle en <strong>paliers tarifaires progressifs (Pricing Tiers / Early-Bird / Prévente)</strong> permettant de définir des tarifs échelonnés dans le temps ou par contingent de places au sein d&apos;une même zone ou sur l&apos;ensemble de l&apos;événement ;
+          </li>
           <li>
             La méthode de tarification : tarif global unique par événement ou{' '}
             <strong>tarification différenciée par zone tarifaire</strong> (ex. VIP Prestige, Carré d&apos;Or,
@@ -117,7 +123,7 @@ export default function TermsPage() {
             de capacité) ;
           </li>
           <li>
-            Le quota maximal de places disponibles par zone et par événement (jauge globale d&apos;accueil). Une fois
+            Le quota maximal de places disponibles par palier, par zone et par événement (jauge globale d&apos;accueil). Une fois
             le quota atteint, la vente est automatiquement suspendue par le système.
           </li>
         </ul>
@@ -435,11 +441,11 @@ export default function TermsPage() {
         <TermsMarketplaceRates />
 
         <p className="mt-4">
-          <strong>5.4 Système de Jetons IA (AI Tokens), Simulateur de Budget & Grand Livre de Consommation.</strong>
+          <strong>5.4 Système de Jetons IA (AI Tokens), Simulateur Unifié & Grand Livre de Consommation.</strong>
         </p>
         <ul className="list-disc pl-5 space-y-1.5">
           <li>
-            <strong>Simulateur de budget IA dédié (/simulateur) :</strong> Les utilisateurs ont accès à une interface spécialisée de simulation budgétaire proposant des scénarios clés en main (Mariage, Anniversaire, Gala d&apos;Entreprise) et des estimations chiffrées en Francs Congolais (CDF) et Dollars ($) au taux officiel du jour. Des simulations gratuites de bienvenue sont offertes, puis des recharges peuvent être acquises via Mobile Money ou Carte bancaire.
+            <strong>Simulateur unifié multi-ateliers (/simulateur) :</strong> Les utilisateurs ont accès à une interface interactive centralisée regroupant le simulateur de budget prévisionnel (scénarios Mariage, Anniversaire, Gala d&apos;Entreprise en Francs Congolais — CDF et Dollars au taux officiel du jour), l&apos;atelier de faire-part &amp; cartons d&apos;invitation IA, et le studio d&apos;aménagement de salle 2D/3D. Lorsqu&apos;un atelier fait l&apos;objet d&apos;une maintenance ou d&apos;une restriction administrative temporaire, un badge distinctif « Fonctionnalité à venir » signale son état sans bloquer l&apos;accès aux autres ateliers disponibles. Des simulations gratuites de bienvenue sont offertes, puis des recharges peuvent être acquises via Mobile Money ou Carte bancaire via FlexPay.
           </li>
           <li>
             <strong>Utilisation des jetons d&apos;aménagement et d&apos;invitation :</strong> L&apos;accès aux fonctionnalités d&apos;intelligence artificielle avancées (composition automatique de plan depuis un brief, analyse de photos ou croquis d&apos;aménagement via vision artificielle, composition d&apos;invitations y compris le remplacement d&apos;identité des visages sur un carton, reformulation en langues nationales) requiert des jetons d&apos;intelligence artificielle (ex. 10 jetons par génération de plan).
@@ -502,6 +508,13 @@ export default function TermsPage() {
         <p>
           Pour garantir la fiabilité du travail en équipe et prévenir les litiges internes, la plateforme conserve un journal contextuel des modifications apportées aux plans de salle (identifiant et rôle de l&apos;auteur, horodatage, action effectuée, variation du nombre de sièges, source manuelle ou IA).
         </p>
+
+        <p>
+          <strong>6.5 Sélection des modèles IA & Vitrine interactive de plans (Showcase).</strong>
+        </p>
+        <p>
+          Afin d&apos;assurer une fidélité scénographique et un raisonnement géométrique optimal, EventMaster orchestre et sélectionne des modèles d&apos;intelligence artificielle spécialisés (notamment issus des gammes Google Gemini et Imagen). Par ailleurs, les plans d&apos;exposition interactifs présentés sur la vitrine publique peuvent être sélectionnés, personnalisés et mis à jour par l&apos;administration de la plateforme pour illustrer les agencements types (banquets, conférences, mariages, cocktails) et les standards d&apos;accessibilité PMR.
+        </p>
       </Section>
 
       <Section title="7. Invitations Multilingues, Langues Nationales Congolaises & Canal WhatsApp">
@@ -509,10 +522,12 @@ export default function TermsPage() {
           EventMaster met à disposition des modèles d&apos;invitation, un studio authentifié et un générateur public assistés par IA, prenant en charge le Français ainsi que les quatre langues nationales de la République Démocratique du Congo : <strong>Lingala, Swahili, Kikongo et Tshiluba</strong>.
         </p>
         <p>
-          <strong>7.1 Utilisation éthique, source de contexte, identité &amp; expressions (Google Gemini).</strong>
+          <strong>7.1 Utilisation éthique, source de contexte, modèles publics sans texte incrusté &amp; respect des visages (Google Gemini).</strong>
         </p>
         <ul className="list-disc pl-5 space-y-1">
           <li><strong>Choix de la source de contexte :</strong> L&apos;utilisateur peut choisir d&apos;appliquer le profil contextuel de son organisation ou son historique de recherche récent pour personnaliser les propositions graphiques et textuelles générées.</li>
+          <li><strong>Sélection des modèles d&apos;IA graphiques :</strong> La plateforme configure et applique des modèles génératifs d&apos;images de premier plan (tels que Google Gemini 3 Pro Image ou la famille Imagen 3) pour composer les cartons et visuels selon les plus hauts standards esthétiques.</li>
+          <li><strong>Modèles d&apos;invitations publics &amp; Composition d&apos;arrière-plan pur :</strong> Afin de garantir une adaptabilité universelle, un chargement ultra-rapide et une lisibilité graphique irréprochable, les modèles d&apos;invitations publics générés par l&apos;IA sont composés sous forme d&apos;illustrations d&apos;arrière-plan pur, sans texte typographique incrusté de manière destructive dans l&apos;image. Les mentions événementielles (titre, date, lieu, nom des invités) et le bloc d&apos;interaction Répondez s&apos;il vous plaît sont dynamiquement générés et surimposés par le moteur de rendu vectoriel au moyen de variables dynamiques (<code>&#123;&#123;title&#125;&#125;</code>, <code>&#123;&#123;date&#125;&#125;</code>, <code>&#123;&#123;location&#125;&#125;</code>, <code>&#123;&#123;firstName&#125;&#125;</code>).</li>
           <li><strong>Ancrage d&apos;identité :</strong> Conformément aux principes éthiques et aux directives techniques de Google Gemini, notre moteur vise une représentation fidèle et honnête des personnes fournies en référence, sans embellissement artificiel trompeur, déformation ou retouche dégradante.</li>
           <li><strong>Substitution de visages sur carton :</strong> Lorsque l&apos;utilisateur importe un carton d&apos;invitation (image 1) et une ou plusieurs photographies sources des hôtes (images 2 et suivantes), le moteur remplace uniquement l&apos;<strong>identité</strong> des visages présents sur le carton. Les photographies sources déterminent qui sont les personnes (structure osseuse, teint, cheveux, âge). Les <strong>expressions faciales déjà présentes sur le carton</strong> (sourire, regard, émotion) sont conservées : les visages sources doivent adopter ces expressions, et non celles de leurs propres clichés.</li>
           <li><strong>Droit à l&apos;image et consentement :</strong> L&apos;utilisateur certifie avoir obtenu le consentement éclairé de toute personne identifiable dont la photographie est téléversée, et détenir les droits nécessaires pour composer et diffuser l&apos;invitation résultante. EventMaster ne vérifie pas ces consentements. L&apos;organisateur (ou le visiteur du générateur public) demeure seul responsable au regard du droit à l&apos;image et de la vie privée.</li>
