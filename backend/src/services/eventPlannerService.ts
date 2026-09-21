@@ -1,7 +1,7 @@
 import { MarketplaceBookingStatus, ServiceCategory, VenuePriceUnit } from '@prisma/client';
 import { prisma } from '../db';
 import { parseListingDetails } from '../utils/listingDetails';
-import { parsePhotoUrls, coverFromMedia, priceUnitLabel, serviceCategoryLabel } from '../utils/publicVenue';
+import { parsePhotoUrls, coverFromMedia, isServiceRentalCategory, priceUnitLabel, serviceCategoryLabel } from '../utils/publicVenue';
 import { normalizeAllowedCity, normalizeAllowedCommune } from '../utils/rdcCities';
 import { collectUnavailableDates, isRangeAvailable } from '../utils/marketplaceDates';
 import {
@@ -12,6 +12,7 @@ import {
   type ParsedEventPlanInput,
   type SlotPriority,
 } from './eventPlanBrief';
+import { beverageBudgetAmount, rentalBudgetAmount } from './eventBudgetCost';
 
 export { EVENT_PLAN_TYPES, type EventPlanType };
 
@@ -33,6 +34,8 @@ const EVENT_PACKS: Record<EventPlanType, { venueShare: number; required: Array<{
       { category: 'MC', share: 0.04 },
       { category: 'RENTAL_CLOTHING_WOMEN', share: 0.05 },
       { category: 'RENTAL_CAR', share: 0.05 },
+      { category: 'RENTAL_CHAIRS', share: 0.08 },
+      { category: 'RENTAL_TENT', share: 0.04 },
     ],
   },
   birthday: {
@@ -42,7 +45,11 @@ const EVENT_PACKS: Record<EventPlanType, { venueShare: number; required: Array<{
       { category: 'DJ', share: 0.14 },
       { category: 'DECORATION', share: 0.1 },
     ],
-    optional: [{ category: 'PHOTOGRAPHY', share: 0.08 }, { category: 'RENTAL_CLOTHING_CHILD', share: 0.06 }],
+    optional: [
+      { category: 'PHOTOGRAPHY', share: 0.08 },
+      { category: 'RENTAL_CLOTHING_CHILD', share: 0.06 },
+      { category: 'RENTAL_CHAIRS', share: 0.08 },
+    ],
   },
   corporate: {
     venueShare: 0.42,
@@ -54,6 +61,8 @@ const EVENT_PACKS: Record<EventPlanType, { venueShare: number; required: Array<{
       { category: 'PHOTOGRAPHY', share: 0.08 },
       { category: 'VIDEO', share: 0.07 },
       { category: 'TRANSPORT', share: 0.06 },
+      { category: 'RENTAL_CHAIRS', share: 0.06 },
+      { category: 'RENTAL_AV', share: 0.05 },
     ],
   },
   gala: {
@@ -69,6 +78,7 @@ const EVENT_PACKS: Record<EventPlanType, { venueShare: number; required: Array<{
       { category: 'VIDEO', share: 0.06 },
       { category: 'RENTAL_CLOTHING_MEN', share: 0.05 },
       { category: 'RENTAL_CLOTHING_WOMEN', share: 0.05 },
+      { category: 'RENTAL_CHAIRS', share: 0.08 },
     ],
   },
   religious: {
@@ -81,6 +91,7 @@ const EVENT_PACKS: Record<EventPlanType, { venueShare: number; required: Array<{
       { category: 'TRANSPORT', share: 0.08 },
       { category: 'PHOTOGRAPHY', share: 0.08 },
       { category: 'MC', share: 0.05 },
+      { category: 'RENTAL_CHAIRS', share: 0.06 },
     ],
   },
   private: {
@@ -92,6 +103,7 @@ const EVENT_PACKS: Record<EventPlanType, { venueShare: number; required: Array<{
     optional: [
       { category: 'DECORATION', share: 0.1 },
       { category: 'PHOTOGRAPHY', share: 0.08 },
+      { category: 'RENTAL_CHAIRS', share: 0.06 },
     ],
   },
   shooting: {
@@ -132,12 +144,35 @@ function formatFc(amount: number): string {
   return `${Math.round(amount).toLocaleString('fr-FR')} FC`;
 }
 
-function estimateCost(priceFromFc: number | null, priceUnit: string, guestCount: number): number | null {
+function estimateCost(
+  priceFromFc: number | null,
+  priceUnit: string,
+  guestCount: number,
+  extra?: {
+    category?: string;
+    promoPriceFc?: number | null;
+    promoEndsAt?: Date | string | null;
+    deliveryMode?: string | null;
+    deliveryPriceFc?: number | null;
+  },
+): { amountFc: number; note: string } | null {
+  if (extra?.category) {
+    return rentalBudgetAmount({
+      category: extra.category,
+      priceUnit,
+      priceFromFc,
+      promoPriceFc: extra.promoPriceFc,
+      promoEndsAt: extra.promoEndsAt,
+      guestCount,
+      deliveryMode: extra.deliveryMode,
+      deliveryPriceFc: extra.deliveryPriceFc,
+    });
+  }
   if (priceFromFc == null || priceFromFc <= 0) return null;
   if ((priceUnit === 'PERSON' || priceUnit === 'QUOTA') && guestCount > 0) {
-    return priceFromFc * guestCount;
+    return { amountFc: priceFromFc * guestCount, note: `${guestCount} × ${formatFc(priceFromFc)}` };
   }
-  return priceFromFc;
+  return { amountFc: priceFromFc, note: formatFc(priceFromFc) };
 }
 
 function eventMatch(details: unknown, eventType: string): 'exact' | 'unknown' | 'no' {
@@ -255,6 +290,7 @@ type ServiceItem = {
   priceUnitLabel: string;
   estimatedFc: number;
   href: string;
+  detail?: string;
   favorite: boolean;
   match: 'exact' | 'unknown';
   reused: boolean;
@@ -308,6 +344,7 @@ function serializeService(offering: Scored<{
   photos: unknown;
   vendorProfile: { displayName: string };
   tenant: { name: string };
+  budgetNote?: string;
 }>, cost: number, extras?: { reused?: boolean }): ServiceItem {
   const photos = parsePhotoUrls(offering.photos);
   return {
@@ -323,7 +360,10 @@ function serializeService(offering: Scored<{
     priceFromFc: offering.priceFromFc,
     priceUnitLabel: priceUnitLabel(offering.priceUnit),
     estimatedFc: cost,
-    href: `/dashboard/catalogue/prestataires/${offering.slug}`,
+    detail: offering.budgetNote,
+    href: isServiceRentalCategory(offering.category)
+      ? `/dashboard/catalogue/locations/${offering.slug}`
+      : `/dashboard/catalogue/prestataires/${offering.slug}`,
     favorite: offering.favorite,
     match: offering.match,
     reused: Boolean(extras?.reused),
@@ -369,15 +409,18 @@ function resolveSlots(input: ParsedEventPlanInput): PackSlot[] {
         || template.optional.find((slot) => slot.category === category)?.share
         || 0.08),
       required: true,
-      flex: input.flexSlots.includes(category),
+      flex: input.flexSlots.includes(category) || category === 'RENTAL_CHAIRS' || category === 'RENTAL_TABLEWARE',
     }));
   }
   if (!hasCustomSlots) {
-    return template.required.map((slot) => ({
+    return [
+      ...template.required.map((slot) => ({ ...slot, required: true })),
+      ...template.optional.map((slot) => ({ ...slot, required: false })),
+    ].map((slot) => ({
       category: slot.category,
       share: slot.share,
-      required: true,
-      flex: input.flexSlots.includes(slot.category),
+      required: slot.required,
+      flex: input.flexSlots.includes(slot.category) || slot.category === 'RENTAL_CHAIRS' || slot.category === 'RENTAL_TABLEWARE',
     }));
   }
   return (Object.entries(input.slots) as Array<[ServiceCategory, SlotPriority]>)
@@ -386,7 +429,7 @@ function resolveSlots(input: ParsedEventPlanInput): PackSlot[] {
       category,
       share: (input.shares[category] || templateShare(input.eventType, category)) / 100,
       required: priority === 'required',
-      flex: input.flexSlots.includes(category),
+      flex: input.flexSlots.includes(category) || category === 'RENTAL_CHAIRS' || category === 'RENTAL_TABLEWARE',
     }));
 }
 
@@ -489,11 +532,11 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
       if (opts.type === 'strict' && match !== 'exact') return [];
       if (opts.type === 'unknown' && match === 'no') return [];
       if (opts.amenities && input.amenityMode === 'blocking' && !hasAllAmenities(listing.details, input.venueAmenities)) return [];
-      const cost = estimateCost(listing.priceFromFc, listing.priceUnit, guests);
-      if (cost == null) return [];
+      const priced = estimateCost(listing.priceFromFc, listing.priceUnit, guests);
+      if (priced == null) return [];
       return [{
         ...listing,
-        cost,
+        cost: priced.amountFc,
         match: match === 'no' ? 'unknown' as const : match,
         favorite: input.favoriteMode === 'ignore' ? false : favoriteVenues.has(listing.slug),
         amenityScore: input.venueAmenities.length ? amenityScore(listing.details, input.venueAmenities) : 0,
@@ -511,11 +554,18 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
       const match = eventMatch(offering.details, input.eventType);
       if (opts.type === 'strict' && match !== 'exact') return [];
       if (opts.type === 'unknown' && match === 'no') return [];
-      const cost = estimateCost(offering.priceFromFc, offering.priceUnit, guests);
-      if (cost == null) return [];
+      const priced = estimateCost(offering.priceFromFc, offering.priceUnit, guests, {
+        category: offering.category,
+        promoPriceFc: offering.promoPriceFc,
+        promoEndsAt: offering.promoEndsAt,
+        deliveryMode: offering.deliveryMode,
+        deliveryPriceFc: offering.deliveryPriceFc,
+      });
+      if (priced == null) return [];
       return [{
         ...offering,
-        cost,
+        cost: priced.amountFc,
+        budgetNote: priced.note,
         match: match === 'no' ? 'unknown' as const : match,
         favorite: input.favoriteMode === 'ignore' ? false : favoriteServices.has(offering.slug),
         amenityScore: 0,
@@ -552,8 +602,32 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     relaxed.eventType = true;
   }
 
+  const drinkRows = guests > 0
+    ? await prisma.vendorBeveragePrice.findMany({
+      where: { isAvailable: true, brand: { isActive: true } },
+      select: {
+        quantity: true,
+        unitLabel: true,
+        priceFc: true,
+        promoPriceFc: true,
+        promoEndsAt: true,
+        brand: { select: { name: true, kind: true, imageUrl: true } },
+      },
+    })
+    : [];
+  const drinkOffers = drinkRows.map((row) => ({
+    kind: row.brand.kind,
+    brandName: row.brand.name,
+    imageUrl: row.brand.imageUrl,
+    quantity: row.quantity,
+    unitLabel: row.unitLabel,
+    priceFc: row.priceFc,
+    promoPriceFc: row.promoPriceFc,
+    promoEndsAt: row.promoEndsAt,
+  }));
+
   const styles: Array<{ id: string; label: string; style: PackStyle; blurb: string }> = [
-    { id: 'eco', label: 'Économique', style: 'cheap', blurb: 'Le moins cher qui tient dans l’enveloppe, sans options.' },
+    { id: 'eco', label: 'Économique', style: 'cheap', blurb: 'Le moins cher qui tient dans l’enveloppe. Chaises et boissons restent chiffrées, les autres options sont laissées de côté.' },
     { id: 'balanced', label: 'Équilibré', style: 'balanced', blurb: 'Répartition proche de votre brief, options si le budget le permet.' },
     { id: 'comfort', label: 'Confort', style: 'comfort', blurb: 'Le plus complet dans l’enveloppe, options incluses.' },
   ];
@@ -626,10 +700,10 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     if (input.includeVenue === 'yes') addVenue(true);
     else if (input.includeVenue === 'if_fits') addVenue(false);
 
-    const addSlot = (slot: PackSlot, requiredSlot: boolean) => {
+    const addSlot = (slot: PackSlot, requiredSlot: boolean, mustPrice = false) => {
       if (input.lock?.kind === 'service' && (input.lock.category === slot.category || (!input.lock.category && items.every((item) => item.kind !== 'service' || item.category !== slot.category)))) {
         const locked = rankedServices.find((item) => item.slug === input.lock?.slug && item.category === slot.category);
-        if (locked && locked.cost <= envelope - total) {
+        if (locked && (mustPrice || locked.cost <= envelope - total)) {
           usedServiceSlugs.add(locked.slug);
           items.push(attachAlternatives(
             serializeService(locked, locked.cost),
@@ -646,7 +720,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
         }
       }
       const remaining = Math.max(0, envelope - total);
-      if (remaining <= 0) {
+      if (remaining <= 0 && !mustPrice) {
         if (requiredSlot) {
           missing.push({
             slot: slot.category,
@@ -657,12 +731,15 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
         }
         return;
       }
-      const cap = slot.flex
-        ? remaining
-        : Math.min(Math.round(envelope * slot.share * STYLE_VENUE_FACTOR[style.style]), remaining);
+      const cap = mustPrice
+        ? Number.POSITIVE_INFINITY
+        : slot.flex
+          ? remaining
+          : Math.min(Math.round(envelope * slot.share * STYLE_VENUE_FACTOR[style.style]), remaining);
       const pool = rankedServices.filter((service) => service.category === slot.category);
       const picked = pickForBudget(pool, cap > 0 ? cap : remaining, style.style, usedServiceSlugs, favoriteMode);
       if (!picked) {
+        if (mustPrice) notes.push(`Aucune offre « ${serviceCategoryLabel(slot.category)} » à chiffrer.`);
         if (requiredSlot) {
           missing.push({
             slot: slot.category,
@@ -699,8 +776,38 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
       notes.push('Part des métiers introuvables réallouée au reste du pack.');
     }
 
+    const seatedSlots = optionalSlots.filter((slot) => slot.category === 'RENTAL_CHAIRS' || slot.category === 'RENTAL_TABLEWARE');
+    const laterSlots = optionalSlots.filter((slot) => slot.category !== 'RENTAL_CHAIRS' && slot.category !== 'RENTAL_TABLEWARE');
+    seatedSlots.forEach((slot) => addSlot(slot, false, true));
+
+    const drinks = beverageBudgetAmount(drinkOffers, guests, input.eventType, style.style);
+    if (drinks) {
+      items.push({
+        kind: 'service',
+        slug: 'budget:boissons',
+        title: 'Boissons',
+        category: 'OTHER',
+        categoryLabel: 'Boissons',
+        orgName: 'Catalogue EventMaster',
+        city: null,
+        location: '',
+        coverUrl: drinks.imageUrl,
+        priceFromFc: null,
+        priceUnitLabel: 'Estimation',
+        estimatedFc: drinks.amountFc,
+        href: '/marketplace/boissons',
+        detail: drinks.note,
+        favorite: false,
+        match: 'unknown',
+        reused: false,
+        alternatives: [],
+      });
+      total += drinks.amountFc;
+      notes.push('Boissons : tarif le plus bas du catalogue, sans filtre de ville.');
+    }
+
     if (style.style !== 'cheap') {
-      optionalSlots.forEach((slot) => {
+      laterSlots.forEach((slot) => {
         const remaining = envelope - total;
         const minKeep = style.style === 'comfort' ? 0 : Math.round(envelope * 0.04);
         if (remaining <= minKeep) return;
@@ -738,7 +845,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     const allocation = [
       ...(venueItem ? [{ key: 'venue', label: 'Salle', amountFc: venueItem.estimatedFc }] : []),
       ...serviceItems.map((item) => ({
-        key: item.category,
+        key: item.slug.startsWith('budget:') ? 'beverages' : item.category,
         label: item.categoryLabel,
         amountFc: item.estimatedFc,
       })),

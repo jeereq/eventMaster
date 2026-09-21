@@ -243,7 +243,7 @@ export default function EventPlanBriefForm({
           min={1}
           value={brief.guestCount || ''}
           onChange={(e) => patch({ guestCount: Number(e.target.value) || 0 })}
-          hint="Sert à choisir une salle assez grande et à estimer le traiteur au plat."
+          hint="Sert à la salle, au traiteur au plat, aux chaises (une pièce par invité) et aux boissons."
         />
         <Input
           label="Date"
@@ -264,6 +264,7 @@ export default function EventPlanBriefForm({
           {brief.marginPct > 0
             ? ` (${brief.marginPct} % = ${formatFc(reserved)} restent de côté pour les imprévus).`
             : ' (toute l’enveloppe).'}
+          {' '}Les boissons s’ajoutent ensuite, au conditionnement le moins cher du catalogue.
         </p>
         {rows.length > 0 ? (
           <p className="text-xs text-muted leading-relaxed">
@@ -341,7 +342,7 @@ export default function EventPlanBriefForm({
       <div className="space-y-2">
         <p className="text-xs font-semibold text-muted">Matériel & Équipements</p>
         <p className="text-xs text-muted leading-relaxed">
-          Mobilier, sonorisation, véhicules, tentes, habits. Même logique, séparée des prestataires de service.
+          Chaises et vaisselle : une pièce par invité, plus la livraison si elle est en supplément. Tente, sono, véhicule et habits restent un lot. Les boissons ne sont pas une ligne ici : elles sont calculées à part.
         </p>
         <div className="flex flex-wrap gap-1.5">
           {visibleRentals.map((category) => {

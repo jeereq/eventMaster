@@ -1090,6 +1090,9 @@ export default function EventPrepAiSimulator({
                 </div>
                 <div className="space-y-1.5">
                   <p className={FIELD_LABEL}>Prestations souhaitées</p>
+                  <p className="text-xs text-muted leading-relaxed">
+                    Chaises et vaisselle : une pièce par invité, livraison en supplément comptée une fois. Les autres locations restent un lot. Les boissons s’ajoutent toutes seules, au conditionnement le moins cher.
+                  </p>
                   <div className="flex flex-wrap gap-1.5" role="group" aria-label="Prestations souhaitées">
                     {categoryChoices.map((id) => {
                       const active = wantedCategories.includes(id);

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { BookmarkPlus, Building2, CalendarPlus, KeyRound, Sparkles, UserPlus } from 'lucide-react';
 import { Button, Modal } from '@/components/ui';
 import AiTokenBuyButton from '@/components/AiTokenBuyButton';
@@ -220,13 +221,15 @@ export default function AiSimulationPackModal({
               ) : null}
               {selected.services.map((item) => {
                 const rental = isServiceRentalCategory(item.category);
+                const estimate = item.slug.startsWith('budget:');
                 return (
                   <li key={item.slug}>
                     <ElementRow
                       item={item}
-                      kind={rental ? 'Matériel' : 'Prestataire'}
+                      kind={estimate ? 'Estimation' : rental ? 'Matériel' : 'Prestataire'}
                       icon={rental ? <KeyRound className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
                       rate={exchangeRate}
+                      href={estimate ? item.href : undefined}
                       onOpen={() => openElement({ kind: 'service', slug: item.slug })}
                     />
                   </li>
@@ -256,22 +259,20 @@ function ElementRow({
   kind,
   icon,
   rate = 2800,
+  href,
   onOpen,
 }: {
   item: EventPlanAiItem;
   kind: string;
   icon: React.ReactNode;
   rate?: number;
+  href?: string;
   onOpen: () => void;
 }) {
   const itemUsd = item.estimatedFc > 0 ? Math.round(item.estimatedFc / rate) : 0;
-
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="w-full flex items-center gap-3 rounded-[var(--radius-button)] border border-border px-2.5 py-2 min-h-11 text-left hover:border-primary/40 hover:bg-surface-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-    >
+  const className = 'w-full flex items-center gap-3 rounded-[var(--radius-button)] border border-border px-2.5 py-2 min-h-11 text-left hover:border-primary/40 hover:bg-surface-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50';
+  const body = (
+    <>
       <div className="w-11 h-11 rounded-lg overflow-hidden bg-surface-muted shrink-0">
         {item.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -292,6 +293,7 @@ function ElementRow({
         <p className="text-xs text-muted truncate">
           {[item.categoryLabel, item.orgName, item.location].filter(Boolean).join(' · ')}
         </p>
+        {item.detail ? <p className="text-xs text-muted">{item.detail}</p> : null}
       </div>
       {item.estimatedFc > 0 ? (
         <div className="text-right shrink-0">
@@ -305,6 +307,20 @@ function ElementRow({
       ) : (
         <span className="text-xs text-muted shrink-0">Sur devis</span>
       )}
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {body}
+      </Link>
+    );
+  }
+
+  return (
+    <button type="button" onClick={onOpen} className={className}>
+      {body}
     </button>
   );
 }

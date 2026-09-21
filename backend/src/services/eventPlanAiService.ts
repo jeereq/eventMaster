@@ -5,6 +5,7 @@ import { coverFromMedia, isServiceRentalCategory, parsePhotoUrls, serviceCategor
 import { collectUnavailableDates, isRangeAvailable, toDateKey } from '../utils/marketplaceDates';
 import { allowedCityPrismaFilter, normalizeAllowedCity, normalizeAllowedCommune } from '../utils/rdcCities';
 import { EVENT_PLAN_TYPES, type EventPlanType } from './eventPlanBrief';
+import { beverageBudgetAmount, rentalBudgetAmount, type BudgetStyle } from './eventBudgetCost';
 import { getGeminiApiKey, requestGeminiJson } from './geminiJsonClient.ts';
 import { requestOpenAiJson } from './openaiJsonClient.ts';
 
@@ -74,6 +75,7 @@ export type EventPlanAiItem = {
   location: string;
   coverUrl: string | null;
   estimatedFc: number;
+  detail?: string;
   categoryLabel?: string;
   category?: ServiceCategory;
   href: string;
@@ -110,10 +112,16 @@ export type EventPlanAiResult = {
 };
 
 const AI_STYLES: Array<{ id: EventPlanAiStyleId; label: string; blurb: string; maxTrades: number; maxRentals: number }> = [
-  { id: 'eco', label: 'Économique', blurb: 'Le moins cher qui tient dans l’enveloppe, sans options.', maxTrades: 2, maxRentals: 1 },
-  { id: 'balanced', label: 'Équilibré', blurb: 'Répartition proche de votre projet, options si le budget le permet.', maxTrades: 3, maxRentals: 1 },
-  { id: 'comfort', label: 'Confort', blurb: 'Le plus complet dans l’enveloppe, options incluses.', maxTrades: 4, maxRentals: 2 },
+  { id: 'eco', label: 'Économique', blurb: 'Le moins cher qui tient dans l’enveloppe. Chaises et boissons restent chiffrées.', maxTrades: 2, maxRentals: 2 },
+  { id: 'balanced', label: 'Équilibré', blurb: 'Répartition proche de votre projet, options si le budget le permet.', maxTrades: 3, maxRentals: 2 },
+  { id: 'comfort', label: 'Confort', blurb: 'Le plus complet dans l’enveloppe, options incluses.', maxTrades: 4, maxRentals: 3 },
 ];
+
+function budgetStyleOf(id: EventPlanAiStyleId): BudgetStyle {
+  if (id === 'eco') return 'cheap';
+  if (id === 'comfort') return 'comfort';
+  return 'balanced';
+}
 
 function parseEventType(value: unknown): EventPlanType {
   return typeof value === 'string' && EVENT_PLAN_TYPES.includes(value as EventPlanType)
@@ -238,7 +246,17 @@ async function loadCatalog(opts: {
     const extra = parseListingDetails(row.details);
     const photos = parsePhotoUrls(row.photos);
     const rental = isServiceRentalCategory(row.category);
-    const estimatedFc = estimateCost(row.priceFromFc, row.priceUnit, opts.guestCount);
+    const priced = rentalBudgetAmount({
+      category: row.category,
+      priceUnit: row.priceUnit,
+      priceFromFc: row.priceFromFc,
+      promoPriceFc: row.promoPriceFc,
+      promoEndsAt: row.promoEndsAt,
+      guestCount: opts.guestCount,
+      deliveryMode: row.deliveryMode,
+      deliveryPriceFc: row.deliveryPriceFc,
+    });
+    const estimatedFc = priced?.amountFc ?? 0;
     const item: EventPlanAiItem = {
       kind: 'service',
       slug: row.slug,
@@ -247,6 +265,7 @@ async function loadCatalog(opts: {
       location: [row.neighborhood, row.commune, row.city].filter(Boolean).join(', '),
       coverUrl: coverFromMedia(photos),
       estimatedFc,
+      detail: priced?.note,
       category: row.category,
       categoryLabel: serviceCategoryLabel(row.category),
       href: rental
@@ -461,6 +480,30 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
   const ai = await askPlannerJson(system, user);
   const rawPackages = Array.isArray(ai.packages) ? ai.packages : [];
 
+  const drinkRows = guests > 0
+    ? await prisma.vendorBeveragePrice.findMany({
+      where: { isAvailable: true, brand: { isActive: true } },
+      select: {
+        quantity: true,
+        unitLabel: true,
+        priceFc: true,
+        promoPriceFc: true,
+        promoEndsAt: true,
+        brand: { select: { name: true, kind: true, imageUrl: true } },
+      },
+    })
+    : [];
+  const drinkOffers = drinkRows.map((row) => ({
+    kind: row.brand.kind,
+    brandName: row.brand.name,
+    imageUrl: row.brand.imageUrl,
+    quantity: row.quantity,
+    unitLabel: row.unitLabel,
+    priceFc: row.priceFc,
+    promoPriceFc: row.promoPriceFc,
+    promoEndsAt: row.promoEndsAt,
+  }));
+
   const hydrate = (
     style: typeof AI_STYLES[number],
     venueSlug: string | null,
@@ -492,6 +535,24 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     if (includeVenue && !venue) warnings.unshift('Aucune salle retenue dans le catalogue disponible.');
     if (!uniqueServices.length && (includeTrades || includeRentals)) {
       warnings.push('Aucun métier ni location retenu dans le catalogue disponible.');
+    }
+    const drinks = beverageBudgetAmount(drinkOffers, guests, eventType, budgetStyleOf(style.id));
+    if (drinks) {
+      uniqueServices.push({
+        kind: 'service',
+        slug: 'budget:boissons',
+        title: 'Boissons',
+        orgName: 'Catalogue EventMaster',
+        location: '',
+        coverUrl: drinks.imageUrl,
+        estimatedFc: drinks.amountFc,
+        categoryLabel: 'Boissons',
+        href: '/marketplace/boissons',
+        detail: drinks.note,
+      });
+      if (!warnings.some((warning) => warning.startsWith('Boissons'))) {
+        warnings.push('Boissons : tarif le plus bas du catalogue, sans filtre de ville.');
+      }
     }
     const estimatedTotalFc = [venue, ...uniqueServices].reduce((sum, item) => sum + (item?.estimatedFc || 0), 0);
     if (budget && estimatedTotalFc > budget) {
@@ -547,9 +608,12 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     let trades = 0;
     let rentals = 0;
     const groups = [...byCategory.entries()].sort(([a], [b]) => {
-      const aw = wantedCategories.includes(a) ? 0 : 1;
-      const bw = wantedCategories.includes(b) ? 0 : 1;
-      return aw - bw;
+      const rank = (key: string) => {
+        if (wantedCategories.includes(key)) return 0;
+        if (key === 'RENTAL_CHAIRS' || key === 'RENTAL_TABLEWARE') return 1;
+        return 2;
+      };
+      return rank(a) - rank(b);
     });
     for (const [, group] of groups) {
       const rental = Boolean(group[0]?.category && isServiceRentalCategory(group[0].category));
