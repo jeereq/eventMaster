@@ -24,6 +24,7 @@ export default function BudgetSimulationCriteria({
   onToggleSaleUnit,
   orderLines,
   onChangeOrderLines,
+  onClearCatalog,
   selectedCategories,
   onToggleCategory,
 }: {
@@ -34,6 +35,7 @@ export default function BudgetSimulationCriteria({
   onToggleSaleUnit: (unit: BeverageSaleUnit) => void;
   orderLines: DrinkOrderLine[];
   onChangeOrderLines: (lines: DrinkOrderLine[]) => void;
+  onClearCatalog?: () => void;
   selectedCategories?: ServiceCategory[];
   onToggleCategory?: (id: ServiceCategory) => void;
 }) {
@@ -42,6 +44,25 @@ export default function BudgetSimulationCriteria({
   const showRentals = Boolean(onToggleCategory) && (scope === 'complete' || scope === 'rentals');
   const [brands, setBrands] = useState<BeverageBrandRow[]>([]);
   const [brandState, setBrandState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [drinkMode, setDrinkMode] = useState<'catalog' | 'order'>(orderLines.length ? 'order' : 'catalog');
+
+  useEffect(() => {
+    if (orderLines.length > 0) setDrinkMode('order');
+  }, [orderLines.length]);
+
+  const chooseDrinkMode = (next: 'catalog' | 'order') => {
+    if (next === drinkMode) return;
+    if (next === 'order') {
+      if (onClearCatalog) onClearCatalog();
+      else {
+        selectedBrandIds.forEach(onToggleBrand);
+        selectedSaleUnits.forEach(onToggleSaleUnit);
+      }
+    } else {
+      onChangeOrderLines([]);
+    }
+    setDrinkMode(next);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -62,13 +83,13 @@ export default function BudgetSimulationCriteria({
 
   const selectionSummary = () => {
     const parts: string[] = [];
-    if (showBrands && selectedBrandIds.length) {
-      parts.push(`${selectedBrandIds.length} marque${selectedBrandIds.length > 1 ? 's' : ''}`);
-    }
-    if (showBrands && orderLines.length) {
-      parts.push(`${orderLines.length} commande${orderLines.length > 1 ? 's' : ''}`);
-    } else if (showBrands && selectedSaleUnits.length) {
-      parts.push(selectedSaleUnits.map((unit) => BEVERAGE_SALE_UNIT_LABELS[unit]).join(', '));
+    if (showBrands && drinkMode === 'order') {
+      parts.push(orderLines.length
+        ? `${orderLines.length} ligne${orderLines.length > 1 ? 's' : ''} de commande`
+        : 'commande précise');
+    } else if (showBrands) {
+      if (selectedBrandIds.length) parts.push(`${selectedBrandIds.length} marque${selectedBrandIds.length > 1 ? 's' : ''}`);
+      if (selectedSaleUnits.length) parts.push(selectedSaleUnits.map((unit) => BEVERAGE_SALE_UNIT_LABELS[unit]).join(', '));
     }
     if (showServices && selectedCategories) {
       const count = selectedCategories.filter((id) => SERVICE_TRADE_CATEGORIES.includes(id)).length;
@@ -99,14 +120,59 @@ export default function BudgetSimulationCriteria({
       <div className="space-y-1">
         <p className="text-xs font-semibold text-muted">Critères</p>
         <p className="text-xs text-muted leading-relaxed">
-          {onToggleCategory
-            ? `Sans choix, la simulation suit le type d’événement. Un choix limite le pack à ces ${groupList}.`
-            : 'Sans choix, chaque famille prend la marque et le conditionnement les moins chers. Un choix ne chiffre que ces marques et ces quantités.'}
+          {showBrands && drinkMode === 'order'
+            ? 'Indiquez le nombre exact de casiers, bouteilles ou packs.'
+            : onToggleCategory
+              ? `Sans choix, la simulation suit le type d’événement. Un choix limite le pack à ces ${groupList}.`
+              : 'Sans choix, chaque famille prend la marque et le conditionnement les moins chers. Un choix ne chiffre que ces marques et ces quantités.'}
         </p>
         <p className="text-xs text-foreground leading-relaxed" aria-live="polite">{selectionSummary()}</p>
       </div>
 
       {showBrands ? (
+        <div className="space-y-1.5">
+          <p className="text-xs font-semibold text-foreground">Boissons</p>
+          <div role="group" aria-label="Façon de chiffrer les boissons" className="grid grid-cols-1 xl:grid-cols-2 gap-2">
+            <button
+              type="button"
+              aria-pressed={drinkMode === 'catalog'}
+              onClick={() => chooseDrinkMode('catalog')}
+              className={cn(
+                'text-left rounded-xl border px-3 py-2.5 min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                drinkMode === 'catalog'
+                  ? 'border-primary-solid bg-primary-solid text-primary-foreground'
+                  : 'border-border bg-surface text-foreground hover:border-primary/40',
+              )}
+            >
+              <span className="block text-sm font-semibold">Marques et quantités</span>
+              <span className={cn('block text-xs mt-0.5 leading-relaxed', drinkMode === 'catalog' ? 'text-primary-foreground' : 'text-muted')}>
+                {showServices || showRentals
+                  ? 'Selon les invités, plus les services et les locations.'
+                  : 'Selon les invités, au conditionnement choisi.'}
+              </span>
+            </button>
+            <button
+              type="button"
+              aria-pressed={drinkMode === 'order'}
+              onClick={() => chooseDrinkMode('order')}
+              className={cn(
+                'text-left rounded-xl border px-3 py-2.5 min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                drinkMode === 'order'
+                  ? 'border-primary-solid bg-primary-solid text-primary-foreground'
+                  : 'border-border bg-surface text-foreground hover:border-primary/40',
+              )}
+            >
+              <span className="block text-sm font-semibold">Commande précise</span>
+              <span className={cn('block text-xs mt-0.5 leading-relaxed', drinkMode === 'order' ? 'text-primary-foreground' : 'text-muted')}>
+                Un nombre exact, par exemple 10 casiers de Tembo.
+              </span>
+            </button>
+          </div>
+          <p className="text-xs text-muted leading-relaxed">Un seul mode est utilisé. Changer retire l’autre sélection.</p>
+        </div>
+      ) : null}
+
+      {showBrands && drinkMode === 'catalog' ? (
         <CriteriaGroup label="Marques" hint="Chaque marque cochée a sa ligne, avec une quantité adaptée aux invités.">
           <div aria-live="polite">
             {brandState === 'error' ? (
@@ -135,7 +201,7 @@ export default function BudgetSimulationCriteria({
         </CriteriaGroup>
       ) : null}
 
-      {showBrands ? (
+      {showBrands && drinkMode === 'catalog' ? (
         <CriteriaGroup label="Quantités" hint="Un ou plusieurs conditionnements. La quantité suit les invités. S’il y en a plusieurs, le moins cher de ceux-là est retenu.">
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quantités">
             {BEVERAGE_SALE_UNITS.map((unit) => {
@@ -156,11 +222,11 @@ export default function BudgetSimulationCriteria({
         </CriteriaGroup>
       ) : null}
 
-      {showBrands ? (
+      {showBrands && drinkMode === 'order' ? (
         <DrinkOrderEditor brands={brands} lines={orderLines} onChange={onChangeOrderLines} disabled={brandState !== 'ready' || brands.length === 0} />
       ) : null}
 
-      {showServices && onToggleCategory && selectedCategories ? (
+      {drinkMode !== 'order' && showServices && onToggleCategory && selectedCategories ? (
         <CriteriaGroup label="Services" hint="Traiteur, photo, DJ et les autres métiers.">
           <ChoiceRow
             label="Services"
@@ -171,7 +237,7 @@ export default function BudgetSimulationCriteria({
         </CriteriaGroup>
       ) : null}
 
-      {showRentals && onToggleCategory && selectedCategories ? (
+      {drinkMode !== 'order' && showRentals && onToggleCategory && selectedCategories ? (
         <CriteriaGroup label="Locations" hint="Chaises, tentes, sono, véhicules et le reste du matériel.">
           <ChoiceRow
             label="Locations"
@@ -261,7 +327,7 @@ function DrinkOrderEditor({
   };
 
   return (
-    <CriteriaGroup label="Commande précise" hint="Exemple : 10 casiers de Tembo et 5 casiers de Coca. Cette commande remplace l’estimation par invité.">
+    <CriteriaGroup label="Lignes" hint="Exemple : 10 casiers de Tembo, puis 5 casiers de Coca. Chaque ligne remplace le calcul par invité pour cette marque.">
       <div className="grid grid-cols-2 gap-2 items-end xl:grid-cols-[minmax(0,1fr)_auto_5.5rem_auto]">
         <label className="space-y-1 block col-span-2 xl:col-span-1">
           <span className="text-xs font-semibold text-muted">Marque</span>
