@@ -43,8 +43,8 @@ export default function BudgetSimulationScopePicker({
             {complete.hint}
           </span>
         </button>
-        <div className="flex gap-2 overflow-x-auto pb-0.5 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:grid lg:grid-cols-3 lg:overflow-visible lg:pb-0">
-          {specialized.map((option) => {
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
+          {specialized.map((option, index) => {
             const selected = value === option.id;
             return (
               <button
@@ -53,7 +53,8 @@ export default function BudgetSimulationScopePicker({
                 aria-pressed={selected}
                 onClick={() => onChange(option.id)}
                 className={cn(
-                  'text-left rounded-xl border px-3 py-2.5 min-h-11 min-w-[11.5rem] flex-1 snap-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 lg:min-w-0',
+                  'text-left rounded-xl border px-3 py-2.5 min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                  index === specialized.length - 1 && 'col-span-2 lg:col-span-1',
                   selected
                     ? 'border-primary-solid bg-primary-solid text-primary-foreground'
                     : 'border-border bg-surface text-foreground hover:border-primary/40',

@@ -575,16 +575,16 @@ export default function EventPrepAiSimulator({
       <section
         aria-label="Simulateur budget IA - Fonctionnalité à venir"
         className={cn(
-          'rounded-[var(--radius-card)] border border-amber-500/30 bg-surface p-6 sm:p-8 space-y-5 text-center shadow-xs',
+          'rounded-[var(--radius-card)] border border-festive-accent/30 bg-surface p-6 sm:p-8 space-y-5 text-center shadow-xs',
           className,
         )}
       >
-        <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center border border-amber-500/20">
+        <div className="w-14 h-14 rounded-2xl bg-festive-accent-soft text-festive-accent mx-auto flex items-center justify-center border border-festive-accent/30">
           <Clock className="w-7 h-7" />
         </div>
 
         <div className="space-y-2 max-w-lg mx-auto">
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-500/30">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-festive-accent-soft text-foreground border border-festive-accent/40">
             <Sparkles className="w-3.5 h-3.5" />
             Fonctionnalité à venir
           </span>
@@ -598,7 +598,7 @@ export default function EventPrepAiSimulator({
 
         <div className="p-4 rounded-xl bg-surface-muted/60 border border-border max-w-md mx-auto text-left space-y-2">
           <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-            <Wand2 className="w-3.5 h-3.5 text-primary" />
+            <Wand2 className="w-3.5 h-3.5 text-primary-solid" />
             Ce que proposera cette fonctionnalité prochainement :
           </p>
           <ul className="text-xs text-muted space-y-1.5 list-disc list-inside">
@@ -732,12 +732,12 @@ export default function EventPrepAiSimulator({
                 >
                   <span className="flex items-center justify-between gap-2">
                     <span className="text-xs font-bold text-foreground">{model.title}</span>
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20 shrink-0">
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary-solid border border-primary/20 shrink-0">
                       {model.badge}
                     </span>
                   </span>
                   <span className="block text-xs text-muted mt-1 leading-snug">{model.summary}</span>
-                  <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary">
+                  <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary-solid">
                     {selected ? <Check className="w-3.5 h-3.5" /> : null}
                     {selected ? 'Prérempli' : 'Préremplir'}
                   </span>
@@ -764,7 +764,7 @@ export default function EventPrepAiSimulator({
             />
           ) : (
             <div className="py-10 px-4 text-center rounded-[var(--radius-card)] border border-dashed border-border bg-surface-muted/30 space-y-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
+              <div className="w-10 h-10 rounded-full bg-primary/10 text-primary-solid flex items-center justify-center mx-auto">
                 <Clock className="w-5 h-5" />
               </div>
               <div className="space-y-1">
@@ -1034,7 +1034,7 @@ export default function EventPrepAiSimulator({
 
           {/* Ratio par invité en direct */}
           {guestRatio ? (
-            <div className="rounded-[var(--radius-card)] border border-primary/25 bg-primary/5 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all">
+            <div className="rounded-[var(--radius-card)] border border-primary/25 bg-primary/5 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-colors">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-foreground">Ratio par convive :</span>
@@ -1067,20 +1067,20 @@ export default function EventPrepAiSimulator({
           {budgetScope === 'complete' ? (
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-foreground">
             <label className="inline-flex items-center gap-2 min-h-11">
-              <input type="checkbox" className="size-4 accent-primary" checked={includeVenue} onChange={(e) => setIncludeVenue(e.target.checked)} />
+              <input type="checkbox" className="size-5 accent-primary shrink-0" checked={includeVenue} onChange={(e) => setIncludeVenue(e.target.checked)} />
               Salle
             </label>
             <label className="inline-flex items-center gap-2 min-h-11">
-              <input type="checkbox" className="size-4 accent-primary" checked={includeTrades} onChange={(e) => setIncludeTrades(e.target.checked)} />
+              <input type="checkbox" className="size-5 accent-primary shrink-0" checked={includeTrades} onChange={(e) => setIncludeTrades(e.target.checked)} />
               Prestataires
             </label>
             <label className="inline-flex items-center gap-2 min-h-11">
-              <input type="checkbox" className="size-4 accent-primary" checked={includeRentals} onChange={(e) => setIncludeRentals(e.target.checked)} />
+              <input type="checkbox" className="size-5 accent-primary shrink-0" checked={includeRentals} onChange={(e) => setIncludeRentals(e.target.checked)} />
               Matériel & Équipements
             </label>
             {defaults?.keepVenueSlug ? (
               <label className="inline-flex items-center gap-2 min-h-11">
-                <input type="checkbox" className="size-4 accent-primary" checked={keepVenue} onChange={(e) => setKeepVenue(e.target.checked)} />
+                <input type="checkbox" className="size-5 accent-primary shrink-0" checked={keepVenue} onChange={(e) => setKeepVenue(e.target.checked)} />
                 Garder la salle déjà retenue
               </label>
             ) : null}
@@ -1099,7 +1099,7 @@ export default function EventPrepAiSimulator({
             />
             <p className="text-xs text-muted">
               Mariages coutumiers Kongo, Luba, Mongo, Lunda :{' '}
-              <button type="button" className="font-bold text-primary hover:underline min-h-11 inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-sm" onClick={() => setActiveTab('prompts')}>
+              <button type="button" className="font-bold text-primary-solid hover:underline min-h-11 inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-sm" onClick={() => setActiveTab('prompts')}>
                 onglet Prompts
               </button>
               .
@@ -1303,7 +1303,7 @@ export default function EventPrepAiSimulator({
         <div className="space-y-4 pt-2 border-t border-border">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
             <span className="font-bold text-foreground flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
+              <Sparkles className="w-3.5 h-3.5 text-primary-solid" />
               3 formules — touchez-en une pour voir les éléments
             </span>
             <span className="text-xs text-muted">
