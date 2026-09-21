@@ -121,6 +121,7 @@ export default function EventPrepAiSimulator({
   const [open, setOpen] = useState(defaultOpen || embedded);
   const [activeTab, setActiveTab] = useState<StudioAiTabId>('create');
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [refineOpen, setRefineOpen] = useState(false);
   const [packModalOpen, setPackModalOpen] = useState(false);
   const { site } = usePlatformSite();
   const exchangeRate = resolveUsdExchangeRateCdf(site?.usdExchangeRateCdf);
@@ -406,6 +407,7 @@ export default function EventPrepAiSimulator({
       setIncludeVenue(false);
       setIncludeTrades(false);
       setIncludeRentals(false);
+      setRefineOpen(true);
       return;
     }
     if (next === 'rentals') {
@@ -792,70 +794,55 @@ export default function EventPrepAiSimulator({
           <StudioHowTo
             steps={
               budgetScope === 'drinks'
-                ? ['Choisissez Boissons', 'Indiquez les invités', 'Comparez éco, équilibré et confort']
+                ? ['Choisissez Boissons', 'Indiquez les invités ou une commande précise', 'Lancez et comparez les 3 formules']
                 : budgetScope === 'rentals'
-                  ? ['Choisissez Locations', 'Indiquez ville et invités', 'Comparez les 3 formules']
+                  ? ['Choisissez Locations', 'Indiquez la ville, les invités et le budget', 'Affinez le matériel, puis lancez']
                   : budgetScope === 'services'
-                    ? ['Choisissez Services', 'Indiquez ville et budget', 'Comparez les 3 formules']
-                    : ['Indiquez ville, date et budget', 'Générez 3 packs (éco, équilibré, confort)', 'Retenez un pack avant de réserver']
+                    ? ['Choisissez Services', 'Indiquez la ville et le budget', 'Affinez les métiers, puis lancez']
+                    : ['Choisissez la simulation', 'Indiquez le lieu, les invités et le budget', 'Affinez si besoin, puis lancez']
             }
           />
           {open ? (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(18rem,0.95fr)] lg:gap-x-6 lg:items-start">
+        <div className="order-1 lg:col-start-1 lg:row-start-1 space-y-3 min-w-0">
+          <p className="text-xs text-foreground leading-relaxed rounded-[var(--radius-card)] border border-border bg-surface-muted/50 px-3 py-2" aria-live="polite">
+            {budgetScope === 'drinks'
+              ? (wantedDrinkLines.length > 0
+                ? 'La commande précise remplace le calcul par invité. Vous pouvez lancer.'
+                : Number(guestCount) > 0
+                  ? 'Les quantités suivront les invités. Une commande précise, si vous en ajoutez une, prend le dessus.'
+                  : 'Indiquez les invités, ou ouvrez Affiner pour saisir une commande (10 casiers de Tembo, 5 de Coca).')
+              : !city.trim()
+                ? 'Commencez par la ville : le catalogue local en dépend.'
+                : budgetMaxFcCalculated <= 0
+                  ? 'Indiquez un budget maximum pour situer les trois formules.'
+                  : Number(guestCount) > 0
+                    ? 'Le brief est prêt. Affiner les marques ou les métiers reste facultatif.'
+                    : 'Ajoutez le nombre d’invités pour dimensionner la salle, les chaises et les boissons.'}
+          </p>
           <BudgetSimulationScopePicker value={budgetScope} onChange={applyBudgetScope} />
-          <BudgetSimulationCriteria
-            scope={budgetScope}
-            selectedBrandIds={wantedBrandIds}
-            onToggleBrand={(id) => setWantedBrandIds((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])}
-            selectedSaleUnits={wantedSaleUnits}
-            onToggleSaleUnit={(unit) => setWantedSaleUnits((prev) => prev.includes(unit) ? prev.filter((item) => item !== unit) : [...prev, unit])}
-            orderLines={wantedDrinkLines}
-            onChangeOrderLines={setWantedDrinkLines}
-            selectedCategories={wantedCategories}
-            onToggleCategory={(id) => setWantedCategories((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])}
-          />
-          {budgetScope !== 'drinks' ? (
-          <label className="space-y-1 block">
-            <span className={FIELD_LABEL}>Décrivez votre événement</span>
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={3}
-              placeholder="Ex. mariage 120 personnes à Gombe, ambiance chic, besoin traiteur + DJ + habits…"
-              className={cn(NATIVE_FIELD, 'resize-y min-h-[4.5rem] py-2.5')}
-            />
-            <p className="text-xs text-muted">
-              Mariages coutumiers Kongo, Luba, Mongo, Lunda :{' '}
-              <button type="button" className="font-bold text-primary hover:underline" onClick={() => setActiveTab('prompts')}>
-                onglet Prompts
-              </button>
-              .
-            </p>
-          </label>
-          ) : null}
-
-          <div
-            className="flex flex-wrap gap-1.5"
-            role="group"
-            aria-label="Type d’événement"
-          >
-            {LISTING_EVENT_TYPES.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                aria-pressed={eventType === item.id}
-                onClick={() => setEventType(item.id)}
-                className={cn(
-                  CHIP,
-                  chipTone(eventType === item.id),
-                )}
-              >
-                {item.label}
-              </button>
-            ))}
+          <div className="space-y-1.5">
+            <p className={FIELD_LABEL}>Type d’événement</p>
+            <div
+              className="flex flex-wrap gap-1.5"
+              role="group"
+              aria-label="Type d’événement"
+            >
+              {LISTING_EVENT_TYPES.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-pressed={eventType === item.id}
+                  onClick={() => setEventType(item.id)}
+                  className={cn(CHIP, chipTone(eventType === item.id))}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {budgetScope !== 'drinks' ? (
             <>
             <label className="space-y-1">
@@ -1101,6 +1088,53 @@ export default function EventPrepAiSimulator({
           ) : null}
 
           {budgetScope !== 'drinks' ? (
+          <label className="space-y-1 block">
+            <span className={FIELD_LABEL}>Décrivez votre événement</span>
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              rows={3}
+              placeholder="Ex. mariage 120 personnes à Gombe, ambiance chic, besoin traiteur + DJ + habits…"
+              className={cn(NATIVE_FIELD, 'resize-y min-h-[4.5rem] py-2.5')}
+            />
+            <p className="text-xs text-muted">
+              Mariages coutumiers Kongo, Luba, Mongo, Lunda :{' '}
+              <button type="button" className="font-bold text-primary hover:underline min-h-11 inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-sm" onClick={() => setActiveTab('prompts')}>
+                onglet Prompts
+              </button>
+              .
+            </p>
+          </label>
+          ) : null}
+        </div>
+
+        <aside className="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 mt-3 lg:mt-0 min-w-0 lg:sticky lg:top-0 lg:max-h-[calc(100dvh-9rem)] lg:overflow-y-auto lg:pr-1">
+          <button
+            type="button"
+            className="lg:hidden w-full min-h-11 px-3 py-2 mb-3 rounded-[var(--radius-card)] border border-border bg-surface text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            aria-expanded={refineOpen}
+            onClick={() => setRefineOpen((value) => !value)}
+          >
+            <span className="flex items-center justify-between gap-2 text-sm font-semibold text-foreground">
+              {refineOpen ? 'Masquer les précisions' : 'Affiner le calcul'}
+              <ChevronDown className={cn('w-4 h-4 text-muted transition', refineOpen && 'rotate-180')} />
+            </span>
+            <span className="block text-xs text-muted mt-0.5">Marques, quantités, métiers ou matériel. Facultatif.</span>
+          </button>
+          <div className={cn('space-y-3', !refineOpen && 'max-lg:hidden')}>
+          <p className="hidden lg:block text-xs font-semibold text-muted">Précisions facultatives</p>
+          <BudgetSimulationCriteria
+            scope={budgetScope}
+            selectedBrandIds={wantedBrandIds}
+            onToggleBrand={(id) => setWantedBrandIds((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])}
+            selectedSaleUnits={wantedSaleUnits}
+            onToggleSaleUnit={(unit) => setWantedSaleUnits((prev) => prev.includes(unit) ? prev.filter((item) => item !== unit) : [...prev, unit])}
+            orderLines={wantedDrinkLines}
+            onChangeOrderLines={setWantedDrinkLines}
+            selectedCategories={wantedCategories}
+            onToggleCategory={(id) => setWantedCategories((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])}
+          />
+          {budgetScope !== 'drinks' ? (
           <div className="rounded-[var(--radius-card)] border border-border">
             <button
               type="button"
@@ -1210,13 +1244,16 @@ export default function EventPrepAiSimulator({
             ) : null}
           </div>
           ) : null}
+          </div>
+        </aside>
 
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="order-3 lg:col-start-1 lg:row-start-2 mt-3 flex flex-col sm:flex-row gap-2">
             <Button
               onClick={() => void run()}
               loading={loading}
               leftIcon={<Sparkles className="w-4 h-4" />}
               disabled={!allowance.canSimulate && !loading}
+              className="w-full sm:w-auto"
             >
               {allowance.canSimulate
                 ? `Lancer la simulation (${allowance.unlimited ? 'illimité' : `${aiTokenBalanceLabel(allowance)} restante${allowance.totalRemaining > 1 ? 's' : ''}`})`
