@@ -95,6 +95,12 @@ import {
   toggleOfferingBlock,
 } from '../controllers/adminCatalogController';
 import {
+  deleteAdminBeverageBrand,
+  getAdminBeverageBrands,
+  postAdminBeverageBrand,
+  putAdminBeverageBrand,
+} from '../controllers/beverageBrandController';
+import {
   getAdminPaymentsOverview,
   listAdminPaymentAttempts,
 } from '../controllers/adminPaymentsController';
@@ -190,6 +196,11 @@ router.patch('/catalog/venues/:id/visibility', requireAdminOrCommercialPerm('can
 router.patch('/catalog/offerings/:id/visibility', requireAdminOrCommercialPerm('canManageCatalog'), setServiceOfferingVisibility);
 router.patch('/catalog/venues/:id/unpublish', requireAdminOrCommercialPerm('canManageCatalog'), unpublishVenueListing);
 router.patch('/catalog/offerings/:id/unpublish', requireAdminOrCommercialPerm('canManageCatalog'), unpublishServiceOffering);
+
+router.get('/beverage-brands', requireAdminOrCommercialPerm('canManageCatalog'), getAdminBeverageBrands);
+router.post('/beverage-brands', requireAdminOrCommercialPerm('canManageCatalog'), postAdminBeverageBrand);
+router.put('/beverage-brands/:id', requireAdminOrCommercialPerm('canManageCatalog'), putAdminBeverageBrand);
+router.delete('/beverage-brands/:id', requireAdminOrCommercialPerm('canManageCatalog'), deleteAdminBeverageBrand);
 
 // Paiements et jetons : Super Admin uniquement
 router.get('/payments/overview', requireRole(['SUPER_ADMIN']), getAdminPaymentsOverview);

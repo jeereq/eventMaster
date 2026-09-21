@@ -45,6 +45,7 @@ import ServiceOfferingForm, {
 import MarketplaceBookingsPanel from '@/components/MarketplaceBookingsPanel';
 import MarketplaceInquiriesPanel from '@/components/MarketplaceInquiriesPanel';
 import { useRememberListReturn } from '@/lib/catalogueQuery';
+import VendorBeveragePrices from '@/components/VendorBeveragePrices';
 
 interface ServiceItem {
   id: string;
@@ -70,7 +71,7 @@ interface ServiceItem {
   details?: unknown;
 }
 
-type DeskTab = 'services' | 'rentals' | 'inquiries' | 'bookings';
+type DeskTab = 'services' | 'rentals' | 'inquiries' | 'bookings' | 'beverages';
 
 export default function MarketplaceDeskPage() {
   useRememberListReturn();
@@ -443,6 +444,16 @@ export default function MarketplaceDeskPage() {
         >
           Réservations{bookings.length > 0 ? ` (${bookings.length})` : ''}
         </button>
+        <button
+          type="button"
+          onClick={() => setTab('beverages')}
+          className={cn(
+            'min-h-11 px-3 py-2 rounded-full text-xs font-semibold border',
+            tab === 'beverages' ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted',
+          )}
+        >
+          Marques & prix
+        </button>
       </div>
 
       {error && !editorOpen ? <Alert variant="error">{error}</Alert> : null}
@@ -532,6 +543,8 @@ export default function MarketplaceDeskPage() {
           onChanged={load}
           vendorBlockedDates={vendorBlockedDates}
         />
+      ) : tab === 'beverages' ? (
+        <VendorBeveragePrices />
       ) : tab === 'inquiries' ? (
         <MarketplaceInquiriesPanel
           inquiries={inquiries}

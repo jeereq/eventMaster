@@ -15,6 +15,8 @@ import {
   usesPredefinedRsvpOptions,
   validateRsvpFieldsForReporting,
 } from '@/lib/rsvpFormFields';
+import { looksLikeBeverageBrandOptions } from '@/lib/beverageBrands';
+import BeverageBrandOptionPicker from '@/components/BeverageBrandOptionPicker';
 
 export default function RsvpFieldTypeEditor({
   fields,
@@ -173,14 +175,23 @@ function FieldDetail({
   const mandatory = Boolean(kind);
   const allowedTypes = kind?.allowedTypes || (Object.keys(RSVP_FIELD_TYPE_LABELS) as RsvpFieldType[]);
   const needsOptions = field.type === 'select' || field.type === 'radio';
-  const [optionMode, setOptionMode] = useState<'predefined' | 'custom'>(
-    usesPredefinedRsvpOptions(field) ? 'predefined' : 'custom',
-  );
+  const initialOptionMode = (): 'predefined' | 'custom' | 'brands' => {
+    if (usesPredefinedRsvpOptions(field)) return 'predefined';
+    if (looksLikeBeverageBrandOptions(field.options)) return 'brands';
+    return 'custom';
+  };
+  const [optionMode, setOptionMode] = useState<'predefined' | 'custom' | 'brands'>(initialOptionMode);
   const [customDraft, setCustomDraft] = useState(field.options || kind?.predefinedOptions || '');
   const [keyTouched, setKeyTouched] = useState(Boolean(field.analyticsKey));
 
   useEffect(() => {
-    setOptionMode(usesPredefinedRsvpOptions(field) ? 'predefined' : 'custom');
+    setOptionMode(
+      usesPredefinedRsvpOptions(field)
+        ? 'predefined'
+        : looksLikeBeverageBrandOptions(field.options)
+          ? 'brands'
+          : 'custom',
+    );
     setCustomDraft(field.options || kind?.predefinedOptions || '');
     setKeyTouched(Boolean(field.analyticsKey));
   }, [field.id]); // eslint-disable-line react-hooks/exhaustive-deps -- reset drafts when switching field
@@ -292,8 +303,25 @@ function FieldDetail({
             >
               Personnalisées
             </button>
+            {kind.kind === 'boissons' ? (
+              <button
+                type="button"
+                onClick={() => setOptionMode('brands')}
+                className={cn(
+                  'px-2.5 py-1 rounded-md text-[11px] font-semibold transition',
+                  optionMode === 'brands' ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground',
+                )}
+              >
+                Marques
+              </button>
+            ) : null}
           </div>
-          {optionMode === 'predefined' ? (
+          {optionMode === 'brands' && kind.kind === 'boissons' ? (
+            <BeverageBrandOptionPicker
+              options={field.options}
+              onChange={(next) => onChange({ options: next })}
+            />
+          ) : optionMode === 'predefined' ? (
             <p className="text-xs text-muted leading-relaxed">{kind.predefinedOptions}</p>
           ) : (
             <textarea

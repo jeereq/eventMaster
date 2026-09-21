@@ -1,0 +1,158 @@
+import { Prisma } from '@prisma/client';
+import { prisma } from '../db';
+import {
+  BEVERAGE_KIND_LABELS,
+  beverageInvitationOption,
+  parseBrandDraft,
+  parseVendorPriceOffers,
+  type BeverageKind,
+} from './beverageBrandCatalog';
+
+function brandPublic(brand: {
+  id: string;
+  name: string;
+  kind: BeverageKind;
+  producer: string | null;
+  country: string | null;
+  volumeLabel: string | null;
+  description: string | null;
+  isActive: boolean;
+}) {
+  return {
+    ...brand,
+    kindLabel: BEVERAGE_KIND_LABELS[brand.kind],
+    invitationOption: beverageInvitationOption(brand),
+  };
+}
+
+export async function listBeverageBrands(options?: { includeInactive?: boolean }) {
+  const brands = await prisma.beverageBrand.findMany({
+    where: options?.includeInactive ? undefined : { isActive: true },
+    orderBy: [{ kind: 'asc' }, { name: 'asc' }],
+  });
+  const stats = await prisma.vendorBeveragePrice.groupBy({
+    by: ['brandId'],
+    where: { isAvailable: true },
+    _min: { priceFc: true },
+    _count: { _all: true },
+  });
+  const statByBrand = new Map(stats.map((row) => [row.brandId, row]));
+  return brands.map((brand) => {
+    const stat = statByBrand.get(brand.id);
+    return {
+      ...brandPublic(brand),
+      vendorCount: stat?._count._all ?? 0,
+      priceFromFc: stat?._min.priceFc ?? null,
+    };
+  });
+}
+
+export async function createBeverageBrand(body: unknown) {
+  const parsed = parseBrandDraft(body);
+  if ('error' in parsed) throw new Error(parsed.error);
+  const duplicate = await prisma.beverageBrand.findFirst({
+    where: { kind: parsed.draft.kind, name: { equals: parsed.draft.name, mode: 'insensitive' } },
+    select: { id: true },
+  });
+  if (duplicate) throw new Error('Cette marque existe déjà dans cette famille.');
+  const created = await prisma.beverageBrand.create({ data: parsed.draft });
+  return brandPublic(created);
+}
+
+export async function updateBeverageBrand(id: string, body: unknown) {
+  const parsed = parseBrandDraft(body);
+  if ('error' in parsed) throw new Error(parsed.error);
+  const current = await prisma.beverageBrand.findUnique({ where: { id }, select: { id: true } });
+  if (!current) throw new Error('Marque introuvable.');
+  const duplicate = await prisma.beverageBrand.findFirst({
+    where: {
+      id: { not: id },
+      kind: parsed.draft.kind,
+      name: { equals: parsed.draft.name, mode: 'insensitive' },
+    },
+    select: { id: true },
+  });
+  if (duplicate) throw new Error('Cette marque existe déjà dans cette famille.');
+  const updated = await prisma.beverageBrand.update({ where: { id }, data: parsed.draft });
+  return brandPublic(updated);
+}
+
+export async function archiveBeverageBrand(id: string) {
+  const current = await prisma.beverageBrand.findUnique({
+    where: { id },
+    include: { _count: { select: { prices: true } } },
+  });
+  if (!current) throw new Error('Marque introuvable.');
+  if (current._count.prices > 0) {
+    const updated = await prisma.beverageBrand.update({
+      where: { id },
+      data: { isActive: false },
+    });
+    return { brand: brandPublic(updated), archived: true as const };
+  }
+  await prisma.beverageBrand.delete({ where: { id } });
+  return { brand: brandPublic(current), archived: false as const };
+}
+
+export async function listVendorBeverageCatalog(tenantId: string) {
+  const brands = await prisma.beverageBrand.findMany({
+    where: {
+      OR: [{ isActive: true }, { prices: { some: { tenantId } } }],
+    },
+    include: {
+      prices: { where: { tenantId }, orderBy: [{ unitKind: 'asc' }, { unitLabel: 'asc' }] },
+    },
+    orderBy: [{ kind: 'asc' }, { name: 'asc' }],
+  });
+  return brands.map((brand) => ({
+    ...brandPublic(brand),
+    myPrices: brand.prices.map((mine) => ({
+      id: mine.id,
+      priceFc: mine.priceFc,
+      unitKind: mine.unitKind,
+      quantity: mine.quantity,
+      unitLabel: mine.unitLabel,
+      isAvailable: mine.isAvailable,
+      notes: mine.notes,
+    })),
+  }));
+}
+
+export async function replaceVendorBeveragePrices(tenantId: string, body: unknown) {
+  const parsed = parseVendorPriceOffers(body);
+  if ('error' in parsed) throw new Error(parsed.error);
+  const brandIds = [...new Set(parsed.offers.map((offer) => offer.brandId))];
+  if (brandIds.length) {
+    const found = await prisma.beverageBrand.findMany({
+      where: { id: { in: brandIds }, isActive: true },
+      select: { id: true },
+    });
+    if (found.length !== brandIds.length) {
+      throw new Error('Une ou plusieurs marques ne sont plus disponibles au catalogue.');
+    }
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.vendorBeveragePrice.deleteMany({ where: { tenantId } });
+    if (parsed.offers.length) {
+      await tx.vendorBeveragePrice.createMany({
+        data: parsed.offers.map((offer) => ({
+          tenantId,
+          brandId: offer.brandId,
+          unitKind: offer.unitKind,
+          quantity: offer.quantity,
+          unitLabel: offer.unitLabel,
+          priceFc: offer.priceFc,
+          isAvailable: offer.isAvailable,
+          notes: offer.notes,
+        })),
+      });
+    }
+  });
+
+  return listVendorBeverageCatalog(tenantId);
+}
+
+export function isUnknownBrandConstraint(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+}

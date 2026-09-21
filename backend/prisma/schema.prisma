@@ -175,6 +175,7 @@ model Tenant {
   organizerBookings MarketplaceBooking[] @relation("BookingOrganizer")
   orgRoomAmbiences OrgRoomAmbience[]
   marketplacePosts MarketplacePost[]
+  beveragePrices VendorBeveragePrice[]
   
   managerId     String?
   manager       User?      @relation("TenantManager", fields: [managerId], references: [id])
@@ -1347,6 +1348,63 @@ model AiTokenOrder {
   @@index([flexPayReference])
   @@index([userId])
   @@index([deviceId])
+}
+
+enum BeverageKind {
+  BEER
+  DRINK
+  WINE
+  CHAMPAGNE
+}
+
+/** Conditionnement vendu par le prestataire. */
+enum BeverageSaleUnit {
+  BOTTLE
+  CRATE
+  PACK
+  OTHER
+}
+
+/** Marques de bières, boissons, vins et champagnes proposées sur la plateforme. */
+model BeverageBrand {
+  id          String       @id @default(uuid())
+  name        String
+  kind        BeverageKind
+  producer    String?
+  country     String?
+  volumeLabel String?
+  description String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  prices VendorBeveragePrice[]
+
+  @@unique([kind, name])
+  @@index([kind, isActive])
+}
+
+/** Tarif d’un prestataire pour une marque du catalogue. */
+model VendorBeveragePrice {
+  id          String        @id @default(uuid())
+  tenantId    String
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  brandId     String
+  brand       BeverageBrand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  priceFc     Int
+  unitKind    BeverageSaleUnit @default(BOTTLE)
+  /** Nombre d’unités dans le conditionnement (1 bouteille, 12 pour un casier, 6 pour un pack…). */
+  quantity    Int              @default(1)
+  /** Libellé affiché. Imposé pour bouteille, casier et pack ; libre pour « autre ». */
+  unitLabel   String           @default("bouteille")
+  isAvailable Boolean          @default(true)
+  notes       String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([tenantId, brandId, unitKind, unitLabel])
+  @@index([brandId])
+  @@index([tenantId, isAvailable])
 }
 
 /** Réglages Super Admin (FlexPay, marque, e-mails, commissions…) — persistés hors FS éphémère. */
