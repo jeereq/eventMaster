@@ -64,13 +64,15 @@ export function CatalogueChoicePills({
   options,
   value,
   onChange,
+  ariaLabel,
 }: {
   options: Array<{ id: string; label: string }>;
   value: string;
   onChange: (id: string) => void;
+  ariaLabel?: string;
 }) {
   return (
-    <div className="flex flex-wrap gap-1.5" role="group">
+    <div className="flex flex-wrap gap-1.5" role="group" aria-label={ariaLabel}>
       {options.map((opt) => {
         const isSentinel = !opt.id || opt.id === 'all';
         const active = value === opt.id || (isSentinel && (!value || value === 'all'));
@@ -91,7 +93,7 @@ export function CatalogueChoicePills({
             }}
             onPointerDown={(e) => e.stopPropagation()}
             className={cn(
-              'min-h-11 px-3 py-1.5 rounded-[var(--radius-button)] text-sm sm:text-xs font-medium border transition touch-manipulation',
+              'min-h-11 px-3 py-1.5 rounded-[var(--radius-button)] text-sm sm:text-xs font-medium border transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
               active
                 ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                 : 'bg-surface-muted text-muted border-border hover:text-foreground hover:border-primary/30',
@@ -109,6 +111,7 @@ export default function CatalogueFilterBar({
   search,
   onSearchChange,
   searchPlaceholder,
+  searchLabel,
   view = 'grid',
   onViewChange = () => undefined,
   chips = [],
@@ -138,6 +141,7 @@ export default function CatalogueFilterBar({
   search: string;
   onSearchChange: (value: string) => void;
   searchPlaceholder: string;
+  searchLabel?: string;
   view?: CatalogueViewMode;
   onViewChange?: (mode: CatalogueViewMode) => void;
   chips?: CatalogueFilterChip[];
@@ -270,7 +274,7 @@ export default function CatalogueFilterBar({
         <button
           type="button"
           onClick={onClearChips}
-          className="text-xs font-semibold text-muted hover:text-foreground px-1 shrink-0"
+          className="inline-flex items-center min-h-11 px-2 text-xs font-semibold text-muted hover:text-foreground shrink-0 rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           Tout effacer
         </button>
@@ -323,6 +327,7 @@ export default function CatalogueFilterBar({
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder={searchPlaceholder}
+              aria-label={searchLabel || searchPlaceholder}
               className="w-full h-9 sm:h-10 min-h-9 sm:min-h-10 pl-9 pr-3 rounded-[var(--radius-button)] bg-surface/95 backdrop-blur-xl border border-white/25 dark:border-white/10 shadow-lg text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25"
             />
           </div>
@@ -397,6 +402,7 @@ export default function CatalogueFilterBar({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
+            aria-label={searchLabel || searchPlaceholder}
             leftIcon={<Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
             className="!py-1.5 sm:!py-2.5 text-sm h-9 sm:h-auto"
           />
@@ -436,6 +442,7 @@ export default function CatalogueFilterBar({
               onChange={onViewChange}
               compact
               hideMap={hideMap}
+              alwaysShow={hideMap}
               className="shrink-0"
             />
           ) : null}
