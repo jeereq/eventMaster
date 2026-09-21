@@ -185,6 +185,13 @@ export default function EventPlanBriefForm({
             wantedBrandIds: current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
           });
         }}
+        selectedSaleUnits={brief.wantedSaleUnits || []}
+        onToggleSaleUnit={(unit) => {
+          const current = brief.wantedSaleUnits || [];
+          patch({
+            wantedSaleUnits: current.includes(unit) ? current.filter((item) => item !== unit) : [...current, unit],
+          });
+        }}
       />
 
       {scope === 'complete' ? (

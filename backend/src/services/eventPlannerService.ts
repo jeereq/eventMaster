@@ -12,7 +12,7 @@ import {
   type ParsedEventPlanInput,
   type SlotPriority,
 } from './eventPlanBrief';
-import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, rentalBudgetAmount, type BudgetSimulationScope } from './eventBudgetCost';
+import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, parseWantedSaleUnits, rentalBudgetAmount, type BudgetSimulationScope, type WantedSaleUnit } from './eventBudgetCost';
 
 export { EVENT_PLAN_TYPES, type EventPlanType };
 
@@ -524,12 +524,23 @@ const offeringInclude = {
   },
 } as const;
 
+function drinkCriteriaNote(brandIds: string[], saleUnits: WantedSaleUnit[]): string {
+  const parts = [
+    brandIds.length ? 'marques choisies' : '',
+    saleUnits.length ? 'conditionnements choisis' : '',
+  ].filter(Boolean);
+  if (!parts.length) return 'Boissons : quantité, marque et tarif le plus bas du catalogue, sans filtre de ville.';
+  return `Boissons : ${parts.join(', ')}, au tarif le moins cher, sans filtre de ville.`;
+}
+
 export async function buildEventPlanProposals(body: Record<string, unknown> & {
   favoriteSlugs?: Array<{ kind: string; slug: string }>;
 }) {
   const parsed = parseEventPlanInput(body);
   const budgetScope = parseBudgetSimulationScope(body.budgetScope);
-  const wantedBrandIds = parseWantedBrandIds(body.wantedBrandIds);
+  const drinksInScope = budgetScope === 'complete' || budgetScope === 'drinks';
+  const wantedBrandIds = drinksInScope ? parseWantedBrandIds(body.wantedBrandIds) : [];
+  const wantedSaleUnits = drinksInScope ? parseWantedSaleUnits(body.wantedSaleUnits) : [];
   const input = budgetScope === 'complete' ? parsed : { ...parsed, includeVenue: 'no' as const };
   const city = normalizeAllowedCity(input.city) || '';
   const commune = city ? (normalizeAllowedCommune(city, input.commune) || '') : '';
@@ -665,6 +676,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
     ? await prisma.vendorBeveragePrice.findMany({
       where: {
         isAvailable: true,
+        ...(wantedSaleUnits.length ? { unitKind: { in: wantedSaleUnits } } : {}),
         brand: { isActive: true, ...(wantedBrandIds.length ? { id: { in: wantedBrandIds } } : {}) },
       },
       select: {
@@ -870,16 +882,16 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
         });
         total += line.amountFc;
       }
-      notes.push(wantedBrandIds.length
-        ? 'Boissons : marques choisies, quantité et tarif le moins cher, sans filtre de ville.'
-        : 'Boissons : quantité, marque et tarif le plus bas du catalogue, sans filtre de ville.');
+      notes.push(drinkCriteriaNote(wantedBrandIds, wantedSaleUnits));
     } else if (budgetScope === 'drinks') {
       missing.push({
         slot: 'beverages',
         label: 'Boissons',
         reason: guests < 1
           ? 'Indiquez le nombre d’invités pour chiffrer les boissons.'
-          : 'Aucun tarif publié pour ce type d’événement.',
+          : wantedSaleUnits.length
+            ? 'Aucun tarif publié pour ces conditionnements.'
+            : 'Aucun tarif publié pour ce type d’événement.',
       });
     }
 

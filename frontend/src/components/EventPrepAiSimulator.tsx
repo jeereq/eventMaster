@@ -11,6 +11,7 @@ import { type ServiceCategory } from '@/lib/marketplace';
 import BudgetSimulationScopePicker from '@/components/BudgetSimulationScopePicker';
 import BudgetSimulationCriteria from '@/components/BudgetSimulationCriteria';
 import type { BudgetSimulationScope } from '@/lib/budgetSimulation';
+import type { BeverageSaleUnit } from '@/lib/beverageBrands';
 import { communesForCity } from '@/lib/rdcCities';
 import { enabledMarketplaceCities, resolveUsdExchangeRateCdf } from '@/lib/platformCities';
 import type { EventPlanAiPackage, EventPlanAiResult } from '@/lib/eventPlan';
@@ -157,6 +158,7 @@ export default function EventPrepAiSimulator({
   const [includeRentals, setIncludeRentals] = useState(true);
   const [budgetScope, setBudgetScope] = useState<BudgetSimulationScope>('complete');
   const [wantedBrandIds, setWantedBrandIds] = useState<string[]>([]);
+  const [wantedSaleUnits, setWantedSaleUnits] = useState<BeverageSaleUnit[]>([]);
   const [guestError, setGuestError] = useState('');
   const completeFlags = useRef({ venue: true, trades: true, rentals: true });
   const [loading, setLoading] = useState(false);
@@ -266,6 +268,8 @@ export default function EventPrepAiSimulator({
     setWantedCategories(cats.filter((id): id is ServiceCategory => Boolean(id)));
     const brandIds = fromBrief.wantedBrandIds || fromResult.wantedBrandIds || [];
     setWantedBrandIds(brandIds.filter((id): id is string => typeof id === 'string' && id.length > 0));
+    const saleUnits = fromBrief.wantedSaleUnits || fromResult.wantedSaleUnits || [];
+    setWantedSaleUnits(saleUnits.filter((unit): unit is BeverageSaleUnit => unit === 'BOTTLE' || unit === 'CRATE' || unit === 'PACK' || unit === 'OTHER'));
     const amenities = fromBrief.venueAmenities || fromResult.venueAmenities || [];
     setVenueAmenities(amenities.filter((id): id is ListingAmenityId => Boolean(id)));
     if (cats.length || amenities.length) {
@@ -339,6 +343,7 @@ export default function EventPrepAiSimulator({
     budgetMinUsd: budgetMinUsdCalculated > 0 ? budgetMinUsdCalculated : undefined,
     wantedCategories,
     wantedBrandIds,
+    wantedSaleUnits,
     venueAmenities,
   });
 
@@ -799,6 +804,8 @@ export default function EventPrepAiSimulator({
             scope={budgetScope}
             selectedBrandIds={wantedBrandIds}
             onToggleBrand={(id) => setWantedBrandIds((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])}
+            selectedSaleUnits={wantedSaleUnits}
+            onToggleSaleUnit={(unit) => setWantedSaleUnits((prev) => prev.includes(unit) ? prev.filter((item) => item !== unit) : [...prev, unit])}
             selectedCategories={wantedCategories}
             onToggleCategory={(id) => setWantedCategories((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])}
           />

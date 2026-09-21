@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
-import { BEVERAGE_KINDS, BEVERAGE_KIND_LABELS, type BeverageBrandRow, type BeverageKind } from '@/lib/beverageBrands';
+import { BEVERAGE_KINDS, BEVERAGE_KIND_LABELS, BEVERAGE_SALE_UNITS, BEVERAGE_SALE_UNIT_LABELS, type BeverageBrandRow, type BeverageKind, type BeverageSaleUnit } from '@/lib/beverageBrands';
 import type { BudgetSimulationScope } from '@/lib/budgetSimulation';
 import { SERVICE_CATEGORY_LABELS, SERVICE_RENTAL_CATEGORIES, SERVICE_TRADE_CATEGORIES, type ServiceCategory } from '@/lib/marketplace';
 
@@ -20,12 +20,16 @@ export default function BudgetSimulationCriteria({
   scope,
   selectedBrandIds,
   onToggleBrand,
+  selectedSaleUnits,
+  onToggleSaleUnit,
   selectedCategories,
   onToggleCategory,
 }: {
   scope: BudgetSimulationScope;
   selectedBrandIds: string[];
   onToggleBrand: (id: string) => void;
+  selectedSaleUnits: BeverageSaleUnit[];
+  onToggleSaleUnit: (unit: BeverageSaleUnit) => void;
   selectedCategories?: ServiceCategory[];
   onToggleCategory?: (id: ServiceCategory) => void;
 }) {
@@ -56,6 +60,7 @@ export default function BudgetSimulationCriteria({
 
   const groups = [
     showBrands ? 'marques' : '',
+    showBrands ? 'quantités' : '',
     showServices ? 'services' : '',
     showRentals ? 'locations' : '',
   ].filter(Boolean);
@@ -70,12 +75,12 @@ export default function BudgetSimulationCriteria({
         <p className="text-xs text-muted leading-relaxed">
           {onToggleCategory
             ? `Sans choix, la simulation suit le type d’événement. Un choix limite le pack à ces ${groupList}.`
-            : 'Sans choix, chaque famille prend la marque la moins chère. Un choix ne chiffre que ces marques.'}
+            : 'Sans choix, chaque famille prend la marque et le conditionnement les moins chers. Un choix ne chiffre que ces marques et ces quantités.'}
         </p>
       </div>
 
       {showBrands ? (
-        <CriteriaGroup label="Marques" hint="La simulation ne chiffre que les marques cochées, au conditionnement le moins cher.">
+        <CriteriaGroup label="Marques" hint="La simulation ne chiffre que les marques cochées.">
           {brandState === 'error' ? <p className="text-xs text-rose-700 dark:text-rose-300" role="alert">Les marques ne sont pas joignables pour le moment.</p> : null}
           {brandState === 'loading' ? <p className="text-xs text-muted">Chargement des marques…</p> : null}
           {brandState === 'ready' && brands.length === 0 ? <p className="text-xs text-muted">Aucune marque publiée.</p> : null}
@@ -92,6 +97,27 @@ export default function BudgetSimulationCriteria({
               />
             );
           })}
+        </CriteriaGroup>
+      ) : null}
+
+      {showBrands ? (
+        <CriteriaGroup label="Quantités" hint="Bouteille, casier, pack ou autre. Sans choix, le conditionnement le moins cher est retenu.">
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Quantités">
+            {BEVERAGE_SALE_UNITS.map((unit) => {
+              const active = selectedSaleUnits.includes(unit);
+              return (
+                <button
+                  key={unit}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => onToggleSaleUnit(unit)}
+                  className={cn(CHIP, chipTone(active))}
+                >
+                  {BEVERAGE_SALE_UNIT_LABELS[unit]}
+                </button>
+              );
+            })}
+          </div>
         </CriteriaGroup>
       ) : null}
 

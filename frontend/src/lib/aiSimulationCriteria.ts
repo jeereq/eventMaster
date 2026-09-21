@@ -34,6 +34,7 @@ export type AiSimulationCriteria = {
   budgetMinFc?: number | null;
   wantedCategories?: ServiceCategory[];
   wantedBrandIds?: string[];
+  wantedSaleUnits?: Array<'BOTTLE' | 'CRATE' | 'PACK' | 'OTHER'>;
   venueAmenities?: ListingAmenityId[];
 };
 
@@ -45,6 +46,7 @@ export const EMPTY_AI_CRITERIA: AiSimulationCriteria = {
   budgetMinFc: null,
   wantedCategories: [],
   wantedBrandIds: [],
+  wantedSaleUnits: [],
   venueAmenities: [],
 };
 

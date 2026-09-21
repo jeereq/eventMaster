@@ -22,6 +22,7 @@ export type AiSimulationBrief = {
   budgetMinFc?: number | null;
   wantedCategories?: string[];
   wantedBrandIds?: string[];
+  wantedSaleUnits?: string[];
   venueAmenities?: string[];
 };
 
