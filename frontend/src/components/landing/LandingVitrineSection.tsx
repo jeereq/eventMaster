@@ -34,7 +34,7 @@ import {
   type CatalogueEntityExtras,
 } from '@/lib/catalogueEntityFilters';
 import { fetchPublicServicesForCatalogue } from '@/lib/catalogueFetch';
-import { ArrowRight, Building2, Calendar, KeyRound, RefreshCw, Sparkles, Clock } from 'lucide-react';
+import { ArrowRight, Building2, Calendar, KeyRound, RefreshCw, Sparkles, Clock, Wine } from 'lucide-react';
 import { useCatalogueGridCols, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
 import { marketplaceSectionUrl } from '@/lib/share';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
@@ -297,18 +297,14 @@ export default function LandingVitrineSection() {
       <div id="prestataires" className="scroll-mt-16" />
       <div id="locations" className="scroll-mt-16" />
       <div id="evenements" className="scroll-mt-16" />
-      <div className="page-container relative z-10 space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+      <div className="page-container relative z-10 space-y-5 sm:space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-6">
           <div className="max-w-xl space-y-2.5">
             <h2 className="em-landing-heading text-xl sm:text-3xl text-foreground">
               Salles, métiers, matériel et billetteries
             </h2>
-            <p className="hidden sm:block text-sm text-muted leading-relaxed">
-              Explorez salles 3D, métiers, Matériel & Équipements et les{' '}
-              <Link href="/marketplace/boissons" className="font-semibold text-primary hover:underline underline-offset-2">
-                boissons
-              </Link>
-              {' '}— contactez les pros en direct.
+            <p className="text-sm text-muted leading-relaxed">
+              Salles, prestataires, matériel, boissons et événements.
             </p>
           </div>
           <Button href="/marketplace" className="w-full sm:w-auto" rightIcon={<ArrowRight className="w-4 h-4" />}>
@@ -316,15 +312,50 @@ export default function LandingVitrineSection() {
           </Button>
         </div>
 
-        {/* Bannière d'appel au simulateur de pack IA */}
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-start" role="group" aria-label="Catégories du catalogue">
+          {tabs.map(({ id, label, icon: Icon, hash }) => (
+            <button
+              key={id}
+              id={`vitrine-tab-${id}`}
+              type="button"
+              aria-pressed={tab === id}
+              aria-controls={`vitrine-panel-${id}`}
+              onClick={() => selectTab(id, hash)}
+              className={cn(
+                'min-h-[44px] w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-2 sm:px-4 py-2 rounded-[var(--radius-button)] sm:rounded-full text-sm font-semibold leading-tight text-center transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                tab === id
+                  ? 'bg-primary-solid text-primary-foreground border border-primary/30 shadow-xs'
+                  : 'bg-surface text-muted hover:text-foreground border border-border hover:bg-surface-muted/60',
+              )}
+            >
+              <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden />
+              {id === 'rentals' ? (
+                <>
+                  <span className="sm:hidden">Matériel</span>
+                  <span className="hidden sm:inline">{label}</span>
+                </>
+              ) : (
+                label
+              )}
+            </button>
+          ))}
+          <Link
+            href="/marketplace/boissons"
+            className="col-span-2 sm:col-auto min-h-[44px] inline-flex items-center justify-center gap-1.5 px-2 sm:px-4 py-2 rounded-[var(--radius-button)] sm:rounded-full text-sm font-semibold leading-tight bg-surface text-muted hover:text-foreground border border-border hover:bg-surface-muted/60 transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            <Wine className="w-3.5 h-3.5 shrink-0" aria-hidden />
+            Boissons
+          </Link>
+        </div>
+
         <div
-          className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 rounded-[var(--radius-card)] border shadow-xs ${
+          className={`flex items-center justify-between gap-3 p-3 sm:p-4 rounded-[var(--radius-card)] border shadow-xs ${
             isBudgetBlocked
               ? 'bg-amber-500/10 border-amber-500/25'
               : 'bg-gradient-to-r from-primary/10 via-surface to-primary/5 border-primary/25'
           }`}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div
               className={`w-9 h-9 rounded-[var(--radius-button)] flex items-center justify-center shrink-0 ${
                 isBudgetBlocked
@@ -335,9 +366,9 @@ export default function LandingVitrineSection() {
               {isBudgetBlocked ? <Clock className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
             </div>
             <div>
-              <p className="text-xs font-bold text-foreground flex items-center gap-2">
+              <p className="text-sm font-bold text-foreground flex items-center gap-2">
                 <span className="sm:hidden">
-                  {isBudgetBlocked ? 'Pack budget IA' : 'Pack selon votre budget'}
+                  {isBudgetBlocked ? 'Pack budget IA' : 'Pack budget'}
                 </span>
                 <span className="hidden sm:inline">
                   {isBudgetBlocked
@@ -361,11 +392,11 @@ export default function LandingVitrineSection() {
             href="/simulateur"
             size="sm"
             variant={isBudgetBlocked ? 'secondary' : 'primary'}
-            className="shrink-0 w-full sm:w-auto"
+            className="shrink-0"
             aria-label={isBudgetBlocked ? 'En savoir plus sur la fonctionnalité à venir' : 'Tester la simulation IA'}
             rightIcon={isBudgetBlocked ? <Clock className="w-3.5 h-3.5" /> : <ArrowRight className="w-3.5 h-3.5" />}
           >
-            <span className="sm:hidden">{isBudgetBlocked ? 'À venir' : 'Simulation IA'}</span>
+            <span className="sm:hidden">{isBudgetBlocked ? 'À venir' : 'Simuler'}</span>
             <span className="hidden sm:inline">
               {isBudgetBlocked ? 'Fonctionnalité à venir' : 'Tester la simulation IA'}
             </span>
@@ -390,28 +421,6 @@ export default function LandingVitrineSection() {
             </Button>
           </div>
         ) : null}
-
-        <div className="em-chip-row -mx-4 px-4 md:mx-0 md:px-0 md:justify-start" role="group" aria-label="Catégories du catalogue">
-          {tabs.map(({ id, label, icon: Icon, hash }) => (
-            <button
-              key={id}
-              id={`vitrine-tab-${id}`}
-              type="button"
-              aria-pressed={tab === id}
-              aria-controls={`vitrine-panel-${id}`}
-              onClick={() => selectTab(id, hash)}
-              className={cn(
-                'min-h-11 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm md:text-xs font-semibold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background shrink-0',
-                tab === id
-                  ? 'bg-primary-solid text-primary-foreground border border-primary/30 shadow-xs'
-                  : 'bg-surface text-muted hover:text-foreground border border-border hover:bg-surface-muted/60',
-              )}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {label}
-            </button>
-          ))}
-        </div>
 
         {tab === 'venues' && (
           <div

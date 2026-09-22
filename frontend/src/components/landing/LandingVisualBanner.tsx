@@ -32,6 +32,7 @@ interface GalleryItem {
   icon: React.ComponentType<{ className?: string }>;
   href: string;
   badge: string;
+  chip: string;
 }
 
 const GALLERY_ITEMS: GalleryItem[] = [
@@ -45,6 +46,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     icon: Building2,
     href: '/marketplace/salles',
     badge: 'Visite 3D & Réservation',
+    chip: 'Salles',
   },
   {
     id: 'scenographie-deco',
@@ -56,6 +58,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     icon: Palette,
     href: '/marketplace/prestataires',
     badge: 'Artisans certifiés',
+    chip: 'Déco',
   },
   {
     id: 'traiteur-gastronomie',
@@ -67,6 +70,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     icon: Utensils,
     href: '/marketplace/prestataires',
     badge: 'Menus sur-mesure',
+    chip: 'Traiteur',
   },
   {
     id: 'photo-video',
@@ -78,6 +82,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     icon: Camera,
     href: '/marketplace/prestataires',
     badge: 'Galerie HD Web',
+    chip: 'Photo',
   },
   {
     id: 'sono-dj',
@@ -89,6 +94,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     icon: Music,
     href: '/marketplace/prestataires',
     badge: 'Régie complète',
+    chip: 'Sono',
   },
   {
     id: 'materiel-equipements',
@@ -100,6 +106,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     icon: KeyRound,
     href: '/marketplace/locations',
     badge: 'Livraison & Installation',
+    chip: 'Matériel',
   },
   {
     id: 'boissons-prix',
@@ -111,6 +118,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     icon: Utensils,
     href: '/marketplace/boissons',
     badge: 'Prix prestataires',
+    chip: 'Boissons',
   },
 ];
 
@@ -146,14 +154,17 @@ export default function LandingVisualBanner() {
             Inspirations visuelles pour vos réceptions en RDC — le catalogue réel est juste en dessous.
           </p>
 
-          {/* Filtres de catégories rapides */}
-          <div className="em-chip-row -mx-4 px-4 md:mx-0 md:px-0 pt-2" role="group" aria-label="Filtrer par catégorie">
+          <div
+            className="grid grid-cols-4 gap-1.5 w-full pt-2 sm:flex sm:flex-wrap sm:justify-center sm:gap-2"
+            role="group"
+            aria-label="Filtrer par catégorie"
+          >
             <button
               type="button"
               aria-pressed={activeCategory === 'all'}
               onClick={() => setActiveCategory('all')}
               className={cn(
-                'min-h-11 px-3.5 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background shrink-0 inline-flex items-center justify-center',
+                'min-h-[44px] w-full sm:w-auto px-1 sm:px-3.5 py-2 rounded-[var(--radius-button)] text-sm font-semibold leading-tight text-center transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background inline-flex items-center justify-center',
                 activeCategory === 'all'
                   ? 'bg-primary-solid text-primary-foreground shadow-xs'
                   : 'bg-surface-muted border border-border text-muted hover:text-foreground',
@@ -169,13 +180,14 @@ export default function LandingVisualBanner() {
                 aria-pressed={activeCategory === item.id}
                 onClick={() => setActiveCategory(item.id)}
                 className={cn(
-                  'min-h-11 px-3.5 py-2 rounded-[var(--radius-button)] text-xs font-semibold transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background shrink-0 inline-flex items-center justify-center',
+                  'min-h-[44px] w-full sm:w-auto px-1 sm:px-3.5 py-2 rounded-[var(--radius-button)] text-sm font-semibold leading-tight text-center transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background inline-flex items-center justify-center',
                   activeCategory === item.id
                     ? 'bg-primary-solid text-primary-foreground shadow-xs'
                     : 'bg-surface-muted border border-border text-muted hover:text-foreground',
                 )}
               >
-                {item.title.split('&')[0].trim()}
+                <span className="sm:hidden">{item.chip}</span>
+                <span className="hidden sm:inline">{item.title.split('&')[0].trim()}</span>
               </button>
             ))}
           </div>
@@ -231,7 +243,7 @@ export default function LandingVisualBanner() {
                     </p>
                   </div>
 
-                  <div className="pt-2.5 border-t border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="pt-2.5 border-t border-border flex items-center justify-between gap-2">
                     <Link
                       href={item.href}
                       className="min-h-11 inline-flex items-center justify-center sm:justify-start gap-1.5 text-xs font-bold text-primary hover:text-primary-hover group/link transition touch-manipulation active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-[var(--radius-button)]"
