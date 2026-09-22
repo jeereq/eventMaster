@@ -32,6 +32,12 @@ import { parseListingDetails } from '../utils/listingDetails';
 import { fetchActivityPreview } from './marketplaceFeedController';
 import { Prisma, RoomType, ServiceCategory, MarketplaceBookingStatus, VenuePriceUnit } from '@prisma/client';
 import { parseOfferPromotion, activePromoPrice } from '../services/offerPromotion';
+import {
+  beverageInquiryTitle,
+  beverageLineRecords,
+  beverageOrderMessage,
+  resolveVendorDrinkLines,
+} from '../services/beverageOrderService';
 import { PlanFeatureError, assertServiceQuota, assertVenueCatalogPublish } from '../services/planFeaturesService';
 import { listTenantOperatorIds, notifyTenantOperators, notifyUsers } from '../services/platformNotificationService';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
@@ -72,8 +78,15 @@ function inquiryVendorHref(inquiryId: string) {
 function inquiryTitleOf(item: {
   offering?: { title: string } | null;
   listing?: { headline: string | null; room?: { name: string } | null } | null;
+  beveragePackCount?: number | null;
+  beveragePrice?: { unitLabel: string; brand: { name: string } } | null;
+  beverageLines?: { packCount: number; unitLabel: string; brandName: string }[];
 }) {
-  return item.offering?.title || item.listing?.headline || item.listing?.room?.name || 'Demande';
+  return beverageInquiryTitle(item)
+    || item.offering?.title
+    || item.listing?.headline
+    || item.listing?.room?.name
+    || 'Demande';
 }
 
 async function notifyInquiryClient(opts: {
@@ -144,16 +157,19 @@ async function resolveInquiryAccess(opts: {
         { fromTenantId: opts.tenantId },
         { listing: { tenantId: opts.tenantId } },
         { offering: { tenantId: opts.tenantId } },
+        { beveragePrice: { tenantId: opts.tenantId } },
         ...(email ? [{ fromEmail: { equals: email, mode: 'insensitive' as const } }] : []),
       ],
     },
     include: {
       listing: { select: { tenantId: true, headline: true, room: { select: { name: true } } } },
       offering: { select: { tenantId: true, title: true } },
+      beveragePrice: { select: { tenantId: true, unitLabel: true, brand: { select: { name: true } } } },
+      beverageLines: { select: { packCount: true, unitLabel: true, brandName: true } },
     },
   });
   if (!inquiry) return null;
-  const vendorTenantId = inquiry.listing?.tenantId || inquiry.offering?.tenantId || null;
+  const vendorTenantId = inquiry.listing?.tenantId || inquiry.offering?.tenantId || inquiry.beveragePrice?.tenantId || null;
   const isVendor = vendorTenantId === opts.tenantId;
   const isClient =
     inquiry.fromTenantId === opts.tenantId
@@ -1280,6 +1296,68 @@ export async function createBeverageInquiry(req: AuthenticatedRequest, res: Resp
   }
 }
 
+export async function createVendorBeverageInquiry(req: AuthenticatedRequest, res: Response) {
+  try {
+    const account = await resolveInquirer(req);
+    if (!account?.email) {
+      return res.status(401).json({ error: 'Connectez-vous pour envoyer un devis.' });
+    }
+    const slug = String(req.params.slug || '');
+    const resolved = await resolveVendorDrinkLines(slug, req.body?.lines);
+    if (!resolved.ok) return res.status(resolved.status).json({ error: resolved.error });
+    if (resolved.profile.tenantId === req.user?.tenantId) {
+      return res.status(400).json({ error: 'Vous ne pouvez pas demander un devis sur vos propres tarifs.' });
+    }
+    const identity = inquiryIdentity(account, req.body || {});
+    const parsedDate = req.body?.eventDate ? new Date(String(req.body.eventDate)) : null;
+    const eventDate = parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : null;
+    const note = req.body?.message ? String(req.body.message).trim().slice(0, 2000) : '';
+    const dateLabel = eventDate ? eventDate.toISOString().slice(0, 10) : null;
+    const message = beverageOrderMessage(resolved.lines, note, dateLabel);
+    const first = resolved.lines[0];
+    const inquiry = await prisma.marketplaceInquiry.create({
+      data: {
+        beveragePriceId: first.id,
+        beveragePackCount: first.packCount,
+        fromName: identity.fromName,
+        fromEmail: identity.fromEmail,
+        fromPhone: identity.fromPhone,
+        eventDate,
+        message,
+        fromTenantId: req.user?.tenantId || null,
+        beverageLines: { create: beverageLineRecords(resolved.lines) },
+      },
+    });
+    const title = beverageInquiryTitle({ beverageLines: resolved.lines }) || 'Boissons';
+    const vendorHref = `${FRONTEND_URL}/dashboard/bookings?tab=quotes&role=vendor&inquiryId=${inquiry.id}`;
+    const clientHref = `${FRONTEND_URL}/dashboard/bookings?tab=quotes&inquiryId=${inquiry.id}`;
+    await notifyInquiry({
+      ownerOrgName: resolved.vendorName,
+      subjectTitle: title,
+      publicUrl: `${FRONTEND_URL}/marketplace/boissons/${resolved.profile.slug}`,
+      dashboardHref: vendorHref,
+      vendorTenantId: resolved.profile.tenantId,
+      inquiry,
+    });
+    if (req.user?.id) {
+      void notifyUsers([req.user.id], {
+        type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_INQUIRY,
+        title: `Devis envoyé — ${title}`,
+        message: `Votre demande a été transmise à ${resolved.vendorName}. Vous pouvez poursuivre l’échange dans la conversation du devis.`,
+        metadata: { inquiryId: inquiry.id, href: clientHref },
+      });
+    }
+    return res.status(201).json({
+      success: true,
+      inquiryId: inquiry.id,
+      message: 'Votre demande a été transmise. Le prestataire peut répondre dans la conversation du devis.',
+    });
+  } catch (error) {
+    console.error('createVendorBeverageInquiry:', error);
+    return res.status(500).json({ error: 'Impossible d’envoyer la demande.' });
+  }
+}
+
 export async function listMyServices(req: AuthenticatedRequest, res: Response) {
   try {
     const tenantId = req.user?.tenantId;
@@ -1544,6 +1622,7 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
             },
           },
         },
+        beverageLines: { select: { packCount: true, unitLabel: true, brandName: true } },
         event: { select: { id: true, title: true, date: true } },
         messages: {
           orderBy: { createdAt: 'desc' },
@@ -1576,9 +1655,11 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
             : item.offeringId
               ? (isServiceRentalCategory(item.offering?.category) ? 'rental' : 'service')
               : 'venue',
-          title: item.beveragePrice
-            ? `${item.beveragePackCount && item.beveragePackCount > 0 ? `${item.beveragePackCount} × ${item.beveragePrice.unitLabel} · ` : ''}${item.beveragePrice.brand.name}`
-            : item.offering?.title || item.listing?.headline || item.listing?.room?.name || 'Demande',
+          title: beverageInquiryTitle(item)
+            || item.offering?.title
+            || item.listing?.headline
+            || item.listing?.room?.name
+            || 'Demande',
           fromName: item.fromName,
           fromEmail: item.fromEmail,
           fromPhone: item.fromPhone,
@@ -1604,7 +1685,7 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
             || item.beveragePrice?.tenant.name
             || null,
           vendorSlug: item.offering?.vendorProfile?.slug || item.listing?.tenant.vendorProfile?.slug || item.beveragePrice?.tenant.vendorProfile?.slug || null,
-          vendorPhone: item.offering?.tenant.manager?.phone || item.listing?.tenant.manager?.phone || null,
+          vendorPhone: item.offering?.tenant.manager?.phone || item.listing?.tenant.manager?.phone || item.beveragePrice?.tenant.manager?.phone || null,
           listingSlug: item.listing?.slug || null,
           offeringSlug: item.offering?.slug || null,
           offeringCategory: item.offering?.category || null,
@@ -1649,13 +1730,16 @@ export async function updateInquiryStatus(req: AuthenticatedRequest, res: Respon
         listing: { select: { headline: true, room: { select: { name: true } } } },
         offering: { select: { title: true } },
         beveragePrice: { select: { unitLabel: true, brand: { select: { name: true } } } },
+        beverageLines: { select: { packCount: true, unitLabel: true, brandName: true } },
       },
     });
     if (!existing) return res.status(404).json({ error: 'Demande introuvable.' });
 
-    const inquiryTitle = existing.beveragePrice
-      ? `${existing.beveragePackCount && existing.beveragePackCount > 0 ? `${existing.beveragePackCount} × ${existing.beveragePrice.unitLabel} · ` : ''}${existing.beveragePrice.brand.name}`
-      : existing.offering?.title || existing.listing?.headline || existing.listing?.room.name || 'Demande';
+    const inquiryTitle = beverageInquiryTitle(existing)
+      || existing.offering?.title
+      || existing.listing?.headline
+      || existing.listing?.room.name
+      || 'Demande';
 
     let updateData: Prisma.MarketplaceInquiryUpdateInput = {};
 

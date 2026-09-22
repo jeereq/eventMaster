@@ -20,8 +20,9 @@ import {
   getPublicVendor,
   createServiceInquiry,
   createBeverageInquiry,
+  createVendorBeverageInquiry,
 } from '../controllers/marketplaceController';
-import { createBeverageBooking } from '../controllers/marketplaceBookingController';
+import { createBeverageBooking, createVendorBeverageBooking } from '../controllers/marketplaceBookingController';
 import {
   getPublicVenueFeed,
   getPublicVendorFeed,
@@ -57,7 +58,7 @@ import {
   claimPublicAiRoomPlanComposes,
 } from '../controllers/roomController';
 import { getPublicShowcasePlans } from '../controllers/showcasePlanController';
-import { listBeverageBrands, listPublicBeverageOffers } from '../services/beverageBrandService';
+import { listBeverageBrands, listPublicBeverageOffers, listVendorDrinkPage } from '../services/beverageBrandService';
 import {
   flexPayCardCallback,
   flexPayCardReturn,
@@ -109,6 +110,19 @@ router.get('/beverage-offers', async (_req: Request, res: Response) => {
 
 router.post('/beverage-offers/:id/inquire', requireAuth, createBeverageInquiry);
 router.post('/beverage-offers/:id/book', requireAuth, createBeverageBooking);
+
+router.get('/beverage-vendors/:slug', async (req: Request, res: Response) => {
+  try {
+    const page = await listVendorDrinkPage(String(req.params.slug || ''));
+    if (!page) return res.status(404).json({ error: 'Prestataire introuvable.' });
+    return res.json(page);
+  } catch (error) {
+    console.error('[Public] Erreur page boissons prestataire:', error);
+    return res.status(500).json({ error: 'Impossible de charger les marques de ce prestataire.' });
+  }
+});
+router.post('/beverage-vendors/:slug/inquire', requireAuth, createVendorBeverageInquiry);
+router.post('/beverage-vendors/:slug/book', requireAuth, createVendorBeverageBooking);
 
 // GET /api/public/plans — cache (hydraté au démarrage, mis à jour à la sauvegarde admin)
 router.get('/plans', async (_req: Request, res: Response) => {

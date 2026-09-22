@@ -818,6 +818,7 @@ model MarketplaceInquiry {
   beveragePackCount Int?
   createdAt   DateTime                  @default(now())
   messages    MarketplaceInquiryMessage[]
+  beverageLines MarketplaceInquiryBeverageLine[]
 
   @@index([listingId, createdAt])
   @@index([offeringId, createdAt])
@@ -870,6 +871,7 @@ model MarketplaceBooking {
   beveragePackCount  Int?
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
+  beverageLines      MarketplaceBookingBeverageLine[]
 
   @@index([vendorTenantId, status])
   @@index([organizerTenantId, status])
@@ -1422,10 +1424,44 @@ model VendorBeveragePrice {
   updatedAt   DateTime         @updatedAt
   inquiries   MarketplaceInquiry[]
   bookings    MarketplaceBooking[]
+  inquiryLines MarketplaceInquiryBeverageLine[]
+  bookingLines MarketplaceBookingBeverageLine[]
 
   @@unique([tenantId, brandId, unitKind, unitLabel])
   @@index([brandId])
   @@index([tenantId, isAvailable])
+}
+
+/** Ligne d’un devis boissons : plusieurs marques et quantités pour un même prestataire. */
+model MarketplaceInquiryBeverageLine {
+  id              String               @id @default(uuid())
+  inquiryId       String
+  inquiry         MarketplaceInquiry   @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  beveragePriceId String?
+  beveragePrice   VendorBeveragePrice? @relation(fields: [beveragePriceId], references: [id], onDelete: SetNull)
+  brandName       String
+  unitLabel       String
+  packCount       Int
+  unitPriceFc     Int
+
+  @@index([inquiryId])
+  @@index([beveragePriceId])
+}
+
+/** Ligne d’une réservation boissons, copiée depuis le devis accepté. */
+model MarketplaceBookingBeverageLine {
+  id              String               @id @default(uuid())
+  bookingId       String
+  booking         MarketplaceBooking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  beveragePriceId String?
+  beveragePrice   VendorBeveragePrice? @relation(fields: [beveragePriceId], references: [id], onDelete: SetNull)
+  brandName       String
+  unitLabel       String
+  packCount       Int
+  unitPriceFc     Int
+
+  @@index([bookingId])
+  @@index([beveragePriceId])
 }
 
 /** Réglages Super Admin (FlexPay, marque, e-mails, commissions…) — persistés hors FS éphémère. */
