@@ -59,15 +59,13 @@ export default function DeliveryCommuneField({
       <p id={hintId} className="text-sm text-muted leading-relaxed">
         {commune
           ? published.source === 'commune'
-            ? `Tarif publié pour ${published.commune} : ${formatFc(published.amountFc)}, une seule fois.`
+            ? `Tarif publié, ${published.commune} : ${formatFc(published.amountFc)}.`
             : published.source === 'default'
-              ? `Pas de prix propre pour ${commune}. Tarif par défaut : ${formatFc(published.amountFc)}, une seule fois.`
-              : `Pas encore de tarif publié pour ${commune}.`
+              ? `Tarif par défaut pour ${commune} : ${formatFc(published.amountFc)}.`
+              : `Pas de tarif publié pour ${commune}.`
           : 'Le prix dépend de la commune.'}
         {' '}
-        {onProposedChange
-          ? 'Ce tarif est indicatif : proposez un autre montant ci-dessous. Le prestataire confirme dans le devis.'
-          : 'Ce tarif est indicatif. Pour en convenir un autre, envoyez un devis.'}
+        Indicatif : le devis peut le changer.
       </p>
       {error ? (
         <p id={errorId} className="text-sm text-danger" role="alert">{error}</p>

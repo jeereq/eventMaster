@@ -40,7 +40,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     title: 'Salles de Réception & Espaces VIP',
     category: 'Espaces événementiels',
     location: 'Kinshasa · Gombe, Ngaliema, Limete',
-    description: 'Salles climatisées, jardins privés et chapiteaux de prestige avec plan 2D/3D et visite virtuelle.',
+    description: 'Photos, capacités et visites virtuelles.',
     imageUrl: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=900&q=80',
     icon: Building2,
     href: '/marketplace/salles',
@@ -51,7 +51,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     title: 'Scénographie, Décoration & Fleurs',
     category: 'Décoration & Mobilier',
     location: 'Kinshasa & Lubumbashi',
-    description: 'Arches florales, drapés royaux, chaises Napoléon et mises en lumière pour mariages et galas.',
+    description: 'Fleurs, drapés et lumières.',
     imageUrl: 'https://images.unsplash.com/photo-1661332306744-70f9ed1a7f40?auto=format&fit=crop&w=900&q=80',
     icon: Palette,
     href: '/marketplace/prestataires',
@@ -62,7 +62,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     title: 'Traiteurs d’Exception & Cocktails',
     category: 'Gastronomie & Buffets',
     location: 'Partout en RDC',
-    description: 'Buffets chauds/froids, spécialités congolaises raffinées, cocktails signatures et service en gants blancs.',
+    description: 'Buffets, spécialités congolaises et cocktails.',
     imageUrl: 'https://images.unsplash.com/photo-1555244162-803834f70033?auto=format&fit=crop&w=900&q=80',
     icon: Utensils,
     href: '/marketplace/prestataires',
@@ -73,7 +73,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     title: 'Photographie & Cinématographie 4K',
     category: 'Média & Souvenirs',
     location: 'Kinshasa · Lubumbashi · Goma',
-    description: 'Reportages HD, drones aériens, galeries privées en ligne et retransmission en direct pour les proches.',
+    description: 'Reportage, drone et galerie en ligne.',
     imageUrl: 'https://i.pinimg.com/1200x/e6/51/ee/e651eef16b155057c02035c4039ca34b.jpg',
     icon: Camera,
     href: '/marketplace/prestataires',
@@ -84,7 +84,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     title: 'Sonorisation, Lumières & DJ Pro',
     category: 'Son & Ambiance',
     location: 'Kinshasa & Lubumbashi',
-    description: 'Régies acoustiques haut de gamme, jeux de lumières d’ambiance, écrans LED et DJ professionnels.',
+    description: 'Son, lumières et DJ.',
     imageUrl: 'https://i.pinimg.com/1200x/e0/c9/24/e0c924207a415942c4a0cffd4c1b12db.jpg',
     icon: Music,
     href: '/marketplace/prestataires',
@@ -95,7 +95,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     title: 'Matériel & Équipements de Réception',
     category: 'Logistique & Équipements',
     location: 'Disponibilité immédiate',
-    description: 'Chaises, tentes, groupes électrogènes, estrades et mobilier. Retrait sur place, livraison comprise dans le tarif, ou livraison en supplément.',
+    description: 'Chaises, habits, voitures, sono. Livraison comprise ou en supplément.',
     imageUrl: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=900&q=80',
     icon: KeyRound,
     href: '/marketplace/locations',
@@ -106,7 +106,7 @@ const GALLERY_ITEMS: GalleryItem[] = [
     title: 'Boissons',
     category: 'Boissons',
     location: 'Catalogue EventMaster',
-    description: 'Bières, vins, champagnes et autres boissons, avec le prix le plus bas publié par un prestataire.',
+    description: 'Bières, vins, champagnes. Le prix le plus bas d’un prestataire.',
     imageUrl: 'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?auto=format&fit=crop&w=900&q=80',
     icon: Utensils,
     href: '/marketplace/boissons',
@@ -284,13 +284,7 @@ export default function LandingVisualBanner() {
             </div>
             <div>
               <p className="text-sm font-bold text-foreground">
-                <span className="sm:hidden">Salles et prestataires certifiés</span>
-                <span className="hidden sm:inline">
-                  Des prestataires et salles certifiés sur toute la République Démocratique du Congo
-                </span>
-              </p>
-              <p className="hidden sm:block text-xs text-muted">
-                Inspirations visuelles, tarifs transparents en CDF et devis direct sans frais d’intermédiaire.
+                Salles et prestataires en RDC
               </p>
             </div>
           </div>

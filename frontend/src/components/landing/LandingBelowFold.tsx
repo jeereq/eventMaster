@@ -50,9 +50,7 @@ export default function LandingBelowFold() {
       <LandingLazyMount label="Chargement du simulateur IA…" eagerHash="simulateur-ia">
         <LandingSimulatorTeaser />
       </LandingLazyMount>
-      <FaqSection
-        subtitle="Tout ce que vous devez savoir pour organiser votre événement en toute sérénité."
-      />
+      <FaqSection />
       <PublicCtaBand
         title="Prêt à lancer votre événement ?"
         description="Créez votre compte gratuit en 1 minute. Sans carte bancaire."

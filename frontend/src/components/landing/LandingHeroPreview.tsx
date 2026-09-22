@@ -114,7 +114,7 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
     {
       title: 'Salles de Fête',
       badge: 'Visite 3D',
-      description: 'Photos, capacités et visites virtuelles en ligne.',
+      description: 'Photos, capacités et visites virtuelles.',
       icon: Building2,
       href: (isLoggedIn) => (isLoggedIn ? '/marketplace/salles' : '/register?kind=CLIENT&intent=seeker&action=venues'),
       ctaLabel: 'Trouver une salle',
@@ -130,7 +130,7 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
     {
       title: 'Boissons',
       badge: 'Catalogue',
-      description: 'Bières, vins, champagnes et le prix le plus bas d’un prestataire.',
+      description: 'Bières, vins, champagnes. Le prix le plus bas d’un prestataire.',
       icon: Wine,
       href: () => '/marketplace/boissons',
       ctaLabel: 'Voir les boissons',

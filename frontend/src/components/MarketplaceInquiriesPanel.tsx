@@ -1008,8 +1008,8 @@ export default function MarketplaceInquiriesPanel({
                   />
                   <span>
                     {quoteTarget.destinationCommune
-                      ? `Intégrer la livraison vers ${quoteTarget.destinationCommune}, une seule fois. Tarif publié : ${formatFc(quoteTarget.deliveryExtraFc)}.`
-                      : `Intégrer la livraison, une seule fois. Tarif publié : ${formatFc(quoteTarget.deliveryExtraFc)}.`}
+                      ? `Ajouter la livraison vers ${quoteTarget.destinationCommune} (${formatFc(quoteTarget.deliveryExtraFc)}).`
+                      : `Ajouter la livraison (${formatFc(quoteTarget.deliveryExtraFc)}).`}
                   </span>
                 </label>
                 {includeDelivery ? (
@@ -1019,11 +1019,11 @@ export default function MarketplaceInquiriesPanel({
                     label="Montant de livraison convenu (FC)"
                     value={deliveryQuoteFc}
                     onChange={(event) => setDeliveryQuoteFc(event.target.value)}
-                    hint="Le tarif publié est indicatif. Mettez ici le montant dont vous avez convenu dans la conversation."
+                    hint="Montant convenu dans la conversation."
                   />
                 ) : (
                   <p className="text-sm text-muted leading-relaxed">
-                    Le client peut proposer un autre montant dans les messages. Cochez pour ajouter le prix dont vous convenez.
+                    Cochez pour ajouter le prix convenu.
                   </p>
                 )}
               </div>

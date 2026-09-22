@@ -114,8 +114,8 @@ function MarketplaceEventsPageInner() {
   return (
     <CatalogueSearchLayout
       activeNav="events"
-      heroTitle="Événements ouverts au public"
-      heroDescription="Concerts, galas, conférences… Inscrivez-vous ou achetez un billet. Vue grille, liste ou carte — comme les salles et prestataires."
+      heroTitle="Événements publics"
+      heroDescription="Places pour concerts et conférences."
       mode={mode}
       onViewChange={setView}
       gridCols={gridCols}
@@ -123,8 +123,8 @@ function MarketplaceEventsPageInner() {
       markers={markers}
       loading={loading}
       error={error}
-      emptyTitle="Nous cherchons encore la perle rare..."
-      emptyDescription="Aucun événement public ne correspond exactement à vos critères. Élargissez vos filtres pour découvrir de nouvelles expériences."
+      emptyTitle="Aucun événement"
+      emptyDescription="Élargissez la ville ou la date."
       page={page}
       pageSize={pageSize}
       onPageChange={setPage}
@@ -136,7 +136,7 @@ function MarketplaceEventsPageInner() {
       searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
       cta={{
         title: 'Vous organisez un événement public ?',
-        description: 'Publiez la fiche avec galerie, GPS et billets : elle apparaît ici, sur le hub et sur la carte.',
+        description: 'Publiez la fiche et les billets.',
         primaryHref: '/register?kind=ORGANIZER&intent=pro',
         primaryLabel: 'Créer un compte organisateur',
         secondaryHref: '/contact',

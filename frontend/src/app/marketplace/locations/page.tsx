@@ -130,8 +130,8 @@ function MarketplaceRentalsPageInner() {
   return (
     <CatalogueSearchLayout
       activeNav="rentals"
-      heroTitle="Matériel, chaises, équipements et véhicules"
-      heroDescription="Chaises, mobilier, sonorisation, tentes, véhicules, tenues de cérémonie. Chaque fiche indique le retrait sur place, la livraison déjà comprise dans le tarif, ou la livraison en supplément."
+      heroTitle="Matériel & Équipements"
+      heroDescription="Chaises, habits, voitures, sono. Livraison comprise ou en supplément."
       mode={mode}
       onViewChange={setView}
       gridCols={gridCols}
@@ -139,8 +139,8 @@ function MarketplaceRentalsPageInner() {
       markers={markers}
       loading={loading}
       error={error}
-      emptyTitle="Nous cherchons encore la perle rare..."
-      emptyDescription="Aucun équipement ou matériel ne correspond exactement à vos critères. Élargissez votre recherche pour découvrir d'autres options."
+      emptyTitle="Aucun matériel"
+      emptyDescription="Élargissez la ville ou le type."
       page={page}
       pageSize={pageSize}
       onPageChange={setPage}
@@ -151,8 +151,8 @@ function MarketplaceRentalsPageInner() {
       city={applied.city}
       searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
       cta={{
-        title: 'Vous proposez du Matériel & Équipements ?',
-        description: 'Compte pro → métier de service : habits, véhicules, sono, tentes… photos, caution et calendrier.',
+        title: 'Vous proposez du matériel ?',
+        description: 'Chaises, sono, véhicules. Publiez votre fiche.',
         primaryHref: '/register?kind=VENDOR&intent=vendor&action=rentals',
         primaryLabel: 'Proposer du matériel',
         secondaryHref: '/contact',
