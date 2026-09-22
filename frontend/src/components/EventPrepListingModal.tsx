@@ -266,6 +266,10 @@ export default function EventPrepListingModal({
           defaultMessage={eventTitle ? `Demande pour l’événement « ${eventTitle} ».` : undefined}
           eventId={eventId}
           flush
+          deliveryMode={service?.deliveryMode}
+          deliveryPriceFc={service?.deliveryPriceFc}
+          deliveryByCommune={service?.details?.deliveryByCommune}
+          deliveryCity={service?.city}
           onSent={() => {
             if (!selected && canRetain) retainListing();
             onPipelineChange?.();
@@ -283,6 +287,8 @@ export default function EventPrepListingModal({
           priceUnit={listing.priceUnit}
           deliveryMode={service?.deliveryMode}
           deliveryPriceFc={service?.deliveryPriceFc}
+          deliveryByCommune={service?.details?.deliveryByCommune}
+          deliveryCity={service?.city}
           eventDate={dateKey || undefined}
           eventId={eventId}
           flush

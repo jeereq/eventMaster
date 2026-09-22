@@ -54,6 +54,24 @@ test('une voiture à la journée intègre la livraison en supplément une seule 
   assert.match(car?.note || '', /livraison/);
 });
 
+test('la livraison en supplément suit la commune de Kinshasa, sinon le prix par défaut', () => {
+  const base = {
+    category: 'RENTAL_CAR',
+    priceUnit: 'DAY' as const,
+    priceFromFc: 50000,
+    guestCount: 2,
+    dayCount: 1,
+    deliveryMode: 'extra_fee',
+    deliveryPriceFc: 10000,
+    details: { deliveryByCommune: { Gombe: '25000', Ngaliema: '18000' } },
+  };
+  const gombe = rentalBudgetAmount({ ...base, destinationCommune: 'gombe' });
+  assert.equal(gombe?.amountFc, 75000);
+  assert.match(gombe?.note || '', /Gombe/);
+  const lemba = rentalBudgetAmount({ ...base, destinationCommune: 'Lemba' });
+  assert.equal(lemba?.amountFc, 60000);
+});
+
 test('une tente reste un lot par jour, sans multiplier par les invités', () => {
   const tent = rentalBudgetAmount({
     category: 'RENTAL_TENT',

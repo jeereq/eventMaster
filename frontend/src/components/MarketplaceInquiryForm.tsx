@@ -5,8 +5,10 @@ import { usePathname } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, Button, Input } from '@/components/ui';
-import { LISTING_EVENT_TYPES } from '@/lib/listingDetails';
+import { indicativeDeliveryFc, LISTING_EVENT_TYPES } from '@/lib/listingDetails';
 import ClientAuthChoice from '@/components/ClientAuthChoice';
+import DeliveryCommuneField from '@/components/DeliveryCommuneField';
+import { formatFc } from '@/config/landingPricing';
 import { Calendar, Send } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -25,6 +27,10 @@ export default function MarketplaceInquiryForm({
   eventId,
   onSent,
   flush = false,
+  deliveryMode,
+  deliveryPriceFc,
+  deliveryByCommune,
+  deliveryCity,
 }: {
   endpoint: string;
   successCopy?: string;
@@ -37,6 +43,10 @@ export default function MarketplaceInquiryForm({
   eventId?: string;
   onSent?: () => void;
   flush?: boolean;
+  deliveryMode?: string | null;
+  deliveryPriceFc?: number | null;
+  deliveryByCommune?: Record<string, string> | null;
+  deliveryCity?: string | null;
 }) {
   const pathname = usePathname();
   const { user, token, loading: authLoading } = useAuth();
@@ -53,6 +63,8 @@ export default function MarketplaceInquiryForm({
     defaultGuestCount != null && String(defaultGuestCount) ? String(defaultGuestCount) : '',
   );
   const [message, setMessage] = useState(defaultMessage || '');
+  const [destinationCommune, setDestinationCommune] = useState('');
+  const [proposedDeliveryFc, setProposedDeliveryFc] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState('');
   const [formError, setFormError] = useState('');
@@ -61,6 +73,14 @@ export default function MarketplaceInquiryForm({
   const eventEndDate = onEventEndDateChange ? (eventEndDateProp ?? internalEndDate) : internalEndDate;
   const setEventEndDate = onEventEndDateChange ?? setInternalEndDate;
   const showAuthChoice = !authLoading && !token;
+  const kinshasaDelivery = deliveryMode === 'extra_fee'
+    && String(deliveryCity || '').toLowerCase() === 'kinshasa';
+  const publishedDelivery = indicativeDeliveryFc({
+    deliveryMode,
+    deliveryPriceFc,
+    byCommune: deliveryByCommune,
+    commune: destinationCommune,
+  });
 
   useEffect(() => {
     if (!user) return;
@@ -87,6 +107,9 @@ export default function MarketplaceInquiryForm({
       eventTime ? `Heure : ${eventTime}` : '',
       budget ? `Budget indicatif : ${budget} FC` : '',
       guestCount ? `Invités estimés : ${guestCount}` : '',
+      destinationCommune ? `Livraison souhaitée : ${destinationCommune} (Kinshasa)` : '',
+      publishedDelivery.amountFc > 0 ? `Tarif de livraison publié : ${formatFc(publishedDelivery.amountFc)}` : '',
+      proposedDeliveryFc ? `Montant de livraison proposé : ${proposedDeliveryFc} FC` : '',
     ].filter(Boolean);
     return extras.length ? `${message.trim()}\n\n—\n${extras.join('\n')}` : message.trim();
   };
@@ -95,6 +118,10 @@ export default function MarketplaceInquiryForm({
     e.preventDefault();
     setFormError('');
     setSent('');
+    if (kinshasaDelivery && !destinationCommune) {
+      setFormError('Choisissez la commune de livraison à Kinshasa.');
+      return;
+    }
     setSending(true);
     try {
       const data = await api.post(endpoint, {
@@ -104,6 +131,7 @@ export default function MarketplaceInquiryForm({
         eventDate: selectedDate || undefined,
         guestCount: guestCount || undefined,
         message: composedMessage(),
+        destinationCommune: destinationCommune || undefined,
         eventId: eventId || undefined,
       });
       setSent(data.message || successCopy);
@@ -190,8 +218,18 @@ export default function MarketplaceInquiryForm({
             value={guestCount}
             onChange={(e) => setGuestCount(e.target.value)}
           />
+          {kinshasaDelivery ? (
+            <DeliveryCommuneField
+              commune={destinationCommune}
+              onCommuneChange={setDestinationCommune}
+              deliveryPriceFc={deliveryPriceFc}
+              deliveryByCommune={deliveryByCommune}
+              proposedFc={proposedDeliveryFc}
+              onProposedChange={setProposedDeliveryFc}
+            />
+          ) : null}
           <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted">Message</span>
+            <span className="text-sm font-medium text-foreground">Message</span>
             <textarea
               required
               rows={4}

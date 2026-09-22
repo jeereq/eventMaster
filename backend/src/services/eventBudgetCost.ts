@@ -1,5 +1,5 @@
 import { activePromoPrice } from './offerPromotion.ts';
-import { parseListingDetails } from '../utils/listingDetails.ts';
+import { deliveryPriceForDestination, parseListingDetails } from '../utils/listingDetails.ts';
 import type { EventPlanType } from './eventPlanBrief';
 
 export type BudgetStyle = 'cheap' | 'balanced' | 'comfort';
@@ -65,20 +65,25 @@ export type RentalBudgetInput = {
   deliveryMode?: string | null;
   deliveryPriceFc?: number | null;
   details?: unknown;
+  destinationCommune?: string | null;
 };
 
-/** Supplément de livraison, une seule fois. Le prix inclus dans le tarif n’est pas ajouté. */
+/** Supplément de livraison, une seule fois. Le prix d’une commune de Kinshasa prime sur le prix par défaut. Le prix inclus dans le tarif n’est pas ajouté. */
 export function rentalDeliverySurcharge(input: {
   deliveryMode?: string | null;
   deliveryPriceFc?: number | null;
   details?: unknown;
+  destinationCommune?: string | null;
 }): number {
   const details = input.details != null ? parseListingDetails(input.details) : null;
   const mode = String(input.deliveryMode || details?.deliveryMode || '');
+  if (mode !== 'extra_fee') return 0;
+  const communePrice = details ? deliveryPriceForDestination(details, input.destinationCommune) : null;
+  if (communePrice) return communePrice.amountFc;
   const columnPrice = input.deliveryPriceFc != null ? Math.round(Number(input.deliveryPriceFc)) : 0;
   const detailPrice = Number.parseInt(String(details?.deliveryPriceFc || ''), 10);
   const price = columnPrice > 0 ? columnPrice : (Number.isFinite(detailPrice) ? detailPrice : 0);
-  if (mode !== 'extra_fee' || price <= 0) return 0;
+  if (price <= 0) return 0;
   return price;
 }
 
@@ -145,12 +150,14 @@ export function rentalBudgetAmount(input: RentalBudgetInput): BudgetAmount | nul
     : 0;
   const detailPrice = Number.parseInt(String(details?.deliveryPriceFc || ''), 10);
   const delivery = rentalDeliverySurcharge(input);
+  const communePrice = details ? deliveryPriceForDestination(details, input.destinationCommune) : null;
   const listedDelivery = delivery > 0
     ? delivery
     : (columnPrice > 0 ? columnPrice : (Number.isFinite(detailPrice) && detailPrice > 0 ? detailPrice : 0));
   if (delivery > 0) {
     amount += delivery;
-    note = `${note} + livraison ${money(delivery)}`;
+    const place = communePrice ? ` vers ${communePrice.commune}` : '';
+    note = `${note} + livraison${place} ${money(delivery)}`;
   } else if (deliveryMode === 'included' && listedDelivery > 0) {
     note = `${note} · livraison incluse ${money(listedDelivery)}`;
   } else if (deliveryMode === 'pickup') {

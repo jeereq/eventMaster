@@ -33,6 +33,7 @@ import MarketplaceMediaField from '@/components/MarketplaceMediaField';
 import MarketplaceFormTabs, { listingTabPanelId, type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import LocationPickerMap from '@/components/LocationPickerMap';
 import CityLocationFields from '@/components/CityLocationFields';
+import { communesForCity } from '@/lib/rdcCities';
 
 export const OFFERING_TITLE_FIELD_ID = 'offering-title';
 export const OFFERING_PRICE_FIELD_ID = 'offering-price';
@@ -597,18 +598,53 @@ export default function ServiceOfferingForm({
                       ))}
                     </div>
                     {draft.deliveryMode === 'included' || draft.deliveryMode === 'extra_fee' ? (
-                      <Input
-                        id={OFFERING_DELIVERY_FIELD_ID}
-                        label={draft.deliveryMode === 'extra_fee' ? 'Supplément de livraison (FC)' : 'Prix de la livraison, déjà compris dans le tarif (FC)'}
-                        type="number"
-                        min={1}
-                        value={draft.deliveryPriceFc}
-                        onChange={(e) => onChange((current) => ({ ...current, deliveryPriceFc: e.target.value }))}
-                        error={offeringDeliveryMessage(draft)}
-                        hint={draft.deliveryMode === 'extra_fee'
-                          ? 'Ajouté une fois à la réservation, en plus du tarif de location.'
-                          : 'Le client le voit sur la fiche. Il n’est pas ajouté une seconde fois à la réservation.'}
-                      />
+                      <>
+                        <Input
+                          id={OFFERING_DELIVERY_FIELD_ID}
+                          label={draft.deliveryMode === 'extra_fee' ? 'Supplément par défaut (FC)' : 'Prix de la livraison, déjà compris dans le tarif (FC)'}
+                          type="number"
+                          min={1}
+                          value={draft.deliveryPriceFc}
+                          onChange={(e) => onChange((current) => ({ ...current, deliveryPriceFc: e.target.value }))}
+                          error={offeringDeliveryMessage(draft)}
+                          hint={draft.deliveryMode === 'extra_fee'
+                            ? 'Utilisé quand la commune n’a pas de prix propre. Ajouté une seule fois, en plus du tarif de location.'
+                            : 'Le client le voit sur la fiche. Il n’est pas ajouté une seconde fois à la réservation.'}
+                        />
+                        {draft.deliveryMode === 'extra_fee' && (!draft.city || draft.city.toLowerCase() === 'kinshasa') ? (
+                          <fieldset className="space-y-2">
+                            <legend className="text-sm font-medium text-foreground">Prix selon la commune de Kinshasa</legend>
+                            <p className="text-sm text-muted leading-relaxed">
+                              Chaque montant est indicatif. Le client et vous pouvez en convenir un autre dans le devis.
+                            </p>
+                            <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+                              {communesForCity('Kinshasa').map((commune) => (
+                                <label key={commune.name} className="grid grid-cols-[minmax(0,1fr)_8.5rem] items-center gap-2">
+                                  <span className="text-sm text-foreground">{commune.name}</span>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    inputMode="numeric"
+                                    aria-label={`Livraison vers ${commune.name}, en FC`}
+                                    value={draft.details.deliveryByCommune?.[commune.name] || ''}
+                                    onChange={(e) => onChange((current) => ({
+                                      ...current,
+                                      details: {
+                                        ...current.details,
+                                        deliveryByCommune: {
+                                          ...(current.details.deliveryByCommune || {}),
+                                          [commune.name]: e.target.value,
+                                        },
+                                      },
+                                    }))}
+                                    className="min-h-[44px] w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 text-sm text-foreground"
+                                  />
+                                </label>
+                              ))}
+                            </div>
+                          </fieldset>
+                        ) : null}
+                      </>
                     ) : (
                       <p id={OFFERING_DELIVERY_FIELD_ID} className="text-xs text-muted">
                         Choisissez d’abord si ce prix est inclus dans le tarif ou ajouté en supplément.

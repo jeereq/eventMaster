@@ -804,6 +804,7 @@ model MarketplaceInquiry {
   eventDate   DateTime?
   guestCount  Int?
   message     String
+  destinationCommune String?
   status      MarketplaceInquiryStatus  @default(NEW)
   quotedAmountFc Int?
   responseNotes String?

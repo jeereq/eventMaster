@@ -6,6 +6,7 @@ import { goToListingInquire } from '@/lib/listingInquire';
 import {
   amenityLabel,
   eventTypeLabel,
+  kinshasaDeliveryPrices,
   listingConditionLabel,
   listingDeliveryLabel,
   type ListingDetails,
@@ -88,6 +89,8 @@ export default function ListingPublicDetails({
     details.depositPercent ? { label: 'Acompte', value: `${details.depositPercent} %` } : null,
   ].filter(Boolean) as Array<{ label: string; value: string }>;
 
+  const communePrices = kinshasaDeliveryPrices(details.deliveryByCommune);
+  const deliveryByPlace = details.deliveryMode === 'extra_fee' && communePrices.length > 0;
   const rentalFacts = [
     details.brand ? { label: 'Marque', value: details.brand } : null,
     details.modelName ? { label: 'Modèle', value: details.modelName } : null,
@@ -101,9 +104,11 @@ export default function ListingPublicDetails({
     details.securityDepositFc
       ? { label: 'Caution', value: formatFc(details.securityDepositFc) }
       : null,
-    listingDeliveryLabel(details.deliveryMode, details.deliveryPriceFc)
-      ? { label: 'Livraison', value: listingDeliveryLabel(details.deliveryMode, details.deliveryPriceFc) }
-      : null,
+    deliveryByPlace
+      ? { label: 'Livraison', value: 'En supplément, selon la commune' }
+      : listingDeliveryLabel(details.deliveryMode, details.deliveryPriceFc)
+        ? { label: 'Livraison', value: listingDeliveryLabel(details.deliveryMode, details.deliveryPriceFc) }
+        : null,
     details.minNoticeHours ? { label: 'Préavis', value: `${details.minNoticeHours} h` } : null,
     details.languages ? { label: 'Langues', value: details.languages } : null,
     details.depositPercent ? { label: 'Acompte', value: `${details.depositPercent} %` } : null,
@@ -123,7 +128,8 @@ export default function ListingPublicDetails({
     || details.houseRules
     || details.cancellation
     || details.accessories
-    || details.returnRules,
+    || details.returnRules
+    || deliveryByPlace,
   );
   if (!hasBody) return null;
 
@@ -148,6 +154,25 @@ export default function ListingPublicDetails({
       {facts.length > 0 ? (
         <Block title={kind === 'rental' ? 'Caractéristiques' : 'À retenir'}>
           <Facts items={facts} />
+        </Block>
+      ) : null}
+
+      {deliveryByPlace ? (
+        <Block title="Livraison selon la commune de Kinshasa">
+          <p className="text-sm text-muted leading-relaxed">
+            Tarifs publiés, indicatifs. Le devis permet d’en convenir un autre avec le prestataire.
+          </p>
+          <ul className="divide-y divide-border">
+            {communePrices.map((row) => (
+              <li key={row.commune} className="flex min-h-[44px] items-center justify-between gap-3 text-sm">
+                <span>{row.commune}</span>
+                <span className="tabular-nums font-medium">{formatFc(row.priceFc)}</span>
+              </li>
+            ))}
+          </ul>
+          {details.deliveryPriceFc ? (
+            <p className="text-sm text-muted">Autres communes : {formatFc(details.deliveryPriceFc)}, une seule fois.</p>
+          ) : null}
         </Block>
       ) : null}
 

@@ -6,6 +6,8 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Alert, Button, Input } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
+import { indicativeDeliveryFc } from '@/lib/listingDetails';
+import DeliveryCommuneField from '@/components/DeliveryCommuneField';
 import {
   eachDateKey,
   formatBookingPeriod,
@@ -33,6 +35,8 @@ export default function MarketplaceBookingForm({
   priceUnit,
   deliveryMode,
   deliveryPriceFc,
+  deliveryByCommune,
+  deliveryCity,
   eventDate,
   eventEndDate,
   onEventDateChange,
@@ -51,6 +55,8 @@ export default function MarketplaceBookingForm({
   priceUnit?: VenuePriceUnit | string | null;
   deliveryMode?: string | null;
   deliveryPriceFc?: number | null;
+  deliveryByCommune?: Record<string, string> | null;
+  deliveryCity?: string | null;
   eventDate?: string;
   eventEndDate?: string;
   onEventDateChange?: (value: string) => void;
@@ -69,6 +75,7 @@ export default function MarketplaceBookingForm({
   const [internalEndDate, setInternalEndDate] = useState('');
   const [guestCount, setGuestCount] = useState('');
   const [notes, setNotes] = useState('');
+  const [destinationCommune, setDestinationCommune] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState('');
   const [formError, setFormError] = useState('');
@@ -84,7 +91,15 @@ export default function MarketplaceBookingForm({
   const blocked = useMemo(() => new Set(unavailableDates), [unavailableDates]);
   const rangeKeys = selectedDate ? eachDateKey(selectedDate, selectedEnd || selectedDate) : [];
   const dateTaken = rangeKeys.some((key) => blocked.has(key));
-  const deliveryFee = deliveryMode === 'extra_fee' && deliveryPriceFc && deliveryPriceFc > 0 ? deliveryPriceFc : 0;
+  const kinshasaDelivery = deliveryMode === 'extra_fee'
+    && String(deliveryCity || '').toLowerCase() === 'kinshasa';
+  const publishedDelivery = indicativeDeliveryFc({
+    deliveryMode,
+    deliveryPriceFc,
+    byCommune: deliveryByCommune,
+    commune: destinationCommune,
+  });
+  const deliveryFee = publishedDelivery.amountFc;
   const includedDelivery = deliveryMode === 'included' && deliveryPriceFc && deliveryPriceFc > 0 ? deliveryPriceFc : 0;
   const amounts = priceFromFc != null
     ? previewMarketplaceAmounts(priceFromFc, Math.max(1, rangeKeys.length), priceUnit, {
@@ -114,6 +129,10 @@ export default function MarketplaceBookingForm({
       setFormError('Une ou plusieurs dates de cette période ne sont plus disponibles.');
       return;
     }
+    if (kinshasaDelivery && !destinationCommune) {
+      setFormError('Choisissez la commune de livraison à Kinshasa.');
+      return;
+    }
     setSending(true);
     try {
       const data = await api.post('/marketplace/bookings', {
@@ -123,6 +142,7 @@ export default function MarketplaceBookingForm({
         eventEndDate: selectedEnd && selectedEnd !== selectedDate ? selectedEnd : undefined,
         guestCount: guestCount || undefined,
         notes: notes || undefined,
+        destinationCommune: destinationCommune || undefined,
         eventId: eventId || undefined,
       });
       setSent(data.message || 'Demande de réservation envoyée.');
@@ -205,6 +225,14 @@ export default function MarketplaceBookingForm({
           value={guestCount}
           onChange={(e) => setGuestCount(e.target.value)}
         />
+        {kinshasaDelivery ? (
+          <DeliveryCommuneField
+            commune={destinationCommune}
+            onCommuneChange={setDestinationCommune}
+            deliveryPriceFc={deliveryPriceFc}
+            deliveryByCommune={deliveryByCommune}
+          />
+        ) : null}
         <label className="block space-y-1.5">
           <span className="text-xs font-medium text-muted">Note (optionnel)</span>
           <textarea
@@ -222,7 +250,11 @@ export default function MarketplaceBookingForm({
               <p className="text-muted">{formatFc(priceFromFc || 0)} / jour × {rangeKeys.length} jours</p>
             ) : null}
             {deliveryFee ? (
-              <p className="text-muted">Livraison en supplément, une fois : {formatFc(deliveryFee)}</p>
+              <p className="text-sm text-muted">
+                Livraison en supplément, une fois : {formatFc(deliveryFee)}
+                {publishedDelivery.source === 'commune' ? ` (${publishedDelivery.commune})` : ''}
+                . Pour un autre montant, envoyez un devis.
+              </p>
             ) : null}
             {includedDelivery ? (
               <p className="text-muted">Livraison incluse dans le tarif : {formatFc(includedDelivery)}</p>

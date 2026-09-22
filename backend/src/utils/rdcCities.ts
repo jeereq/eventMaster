@@ -1,4 +1,5 @@
 import { loadPlatformSettings, sanitizeEnabledCities } from '../services/platformSettingsService';
+import { KINSHASA_COMMUNES } from './kinshasaCommunes.ts';
 
 export type AllowedRdcCity = 'Kinshasa' | 'Lubumbashi';
 
@@ -9,13 +10,8 @@ export type RdcBounds = {
   east: number;
 };
 
-const COMMUNES: Record<AllowedRdcCity, string[]> = {
-  Kinshasa: [
-    'Bandalungwa', 'Barumbu', 'Bumbu', 'Gombe', 'Kalamu', 'Kasa-Vubu', 'Kimbanseke',
-    'Kinshasa', 'Kintambo', 'Kisenso', 'Lemba', 'Limete', 'Lingwala', 'Makala',
-    'Maluku', 'Masina', 'Matete', 'Mont-Ngafula', 'Ndjili', 'Ngaba', 'Ngaliema',
-    'Ngiri-Ngiri', 'Nsele', 'Selembao',
-  ],
+const COMMUNES: Record<AllowedRdcCity, readonly string[]> = {
+  Kinshasa: KINSHASA_COMMUNES,
   Lubumbashi: [
     'Lubumbashi', 'Kenya', 'Kamalondo', 'Katuba', 'Kampemba', 'Annexe', 'Rwashi',
   ],

@@ -1162,7 +1162,7 @@ export async function createServiceInquiry(req: AuthenticatedRequest, res: Respo
     }
 
     const slug = String(req.params.slug || '').trim();
-    const { name, phone, eventDate, guestCount, message, eventId } = req.body || {};
+    const { name, phone, eventDate, guestCount, message, eventId, destinationCommune: rawDestinationCommune } = req.body || {};
     if (!message?.trim()) {
       return res.status(400).json({ error: 'Le message est requis.' });
     }
@@ -1172,6 +1172,19 @@ export async function createServiceInquiry(req: AuthenticatedRequest, res: Respo
       include: { tenant: { select: { id: true, name: true, managerId: true } } },
     });
     if (!offering) return res.status(404).json({ error: 'Prestation introuvable ou non publiée.' });
+
+    const destinationCommune = normalizeAllowedCommune('Kinshasa', rawDestinationCommune);
+    if (rawDestinationCommune && destinationCommune == null) {
+      return res.status(400).json({ error: 'Choisissez une commune de Kinshasa.' });
+    }
+    const offeringDetails = parseListingDetails(offering.details);
+    const deliveryMode = parseDeliveryMode(offering.deliveryMode) || parseDeliveryMode(offeringDetails.deliveryMode);
+    const kinshasaDelivery = isServiceRentalCategory(offering.category)
+      && deliveryMode === 'extra_fee'
+      && normalizeAllowedCity(offering.city) === 'Kinshasa';
+    if (kinshasaDelivery && !destinationCommune) {
+      return res.status(400).json({ error: 'Indiquez la commune de livraison à Kinshasa.' });
+    }
 
     const identity = inquiryIdentity(account, { name, phone });
     const parsedDate = eventDate ? new Date(eventDate) : null;
@@ -1187,6 +1200,7 @@ export async function createServiceInquiry(req: AuthenticatedRequest, res: Respo
         eventDate: parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : null,
         guestCount: Number.isFinite(parsedGuests) && parsedGuests > 0 ? parsedGuests : null,
         message: String(message).trim().slice(0, 4000),
+        destinationCommune: destinationCommune || null,
         fromTenantId: req.user?.tenantId || null,
         eventId: linkedEventId,
       },
@@ -1670,6 +1684,7 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
           eventDate: item.eventDate,
           guestCount: item.guestCount,
           message: item.message,
+          destinationCommune: item.destinationCommune || null,
           status: item.status,
           quotedAmountFc: item.quotedAmountFc ?? null,
           responseNotes: item.responseNotes ?? null,
@@ -1698,6 +1713,7 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
                 deliveryMode: item.offering.deliveryMode,
                 deliveryPriceFc: item.offering.deliveryPriceFc,
                 details: item.offering.details,
+                destinationCommune: item.destinationCommune,
               })
             : 0,
           viewerRole: role,

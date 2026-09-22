@@ -8,6 +8,9 @@ import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes'
 import { getPlanLimitsForTenant } from '../config/plansConfig';
 import { computeMarketplaceAmounts, billedMarketplaceAmount } from '../config/marketplaceBilling';
 import { rentalDeliverySurcharge } from '../services/eventBudgetCost';
+import { isServiceRentalCategory } from '../utils/publicVenue';
+import { parseListingDetails } from '../utils/listingDetails';
+import { normalizeAllowedCity, normalizeAllowedCommune } from '../utils/rdcCities';
 import { activePromoPrice } from '../services/offerPromotion';
 import {
   beverageInquiryTitle,
@@ -248,7 +251,7 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
       return res.status(401).json({ error: 'Connectez-vous pour réserver.' });
     }
 
-    const { listingSlug, offeringSlug, eventDate, eventEndDate, guestCount, eventId, notes } = req.body || {};
+    const { listingSlug, offeringSlug, eventDate, eventEndDate, guestCount, eventId, notes, destinationCommune: rawDestinationCommune } = req.body || {};
     const range = parseBookingRange(eventDate, eventEndDate);
     if (!range) {
       return res.status(400).json({ error: 'Indiquez une date, ou une plage de 31 jours maximum.' });
@@ -314,12 +317,29 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
       }
     }
 
+    const destinationCommune = normalizeAllowedCommune('Kinshasa', rawDestinationCommune);
+    if (rawDestinationCommune && destinationCommune == null) {
+      return res.status(400).json({ error: 'Choisissez une commune de Kinshasa.' });
+    }
+    const offeringDetails = offering ? parseListingDetails(offering.details) : null;
+    const deliveryMode = String(offering?.deliveryMode || offeringDetails?.deliveryMode || '');
+    const kinshasaDelivery = Boolean(
+      offering
+      && isServiceRentalCategory(offering.category)
+      && deliveryMode === 'extra_fee'
+      && normalizeAllowedCity(offering.city) === 'Kinshasa',
+    );
+    if (kinshasaDelivery && !destinationCommune) {
+      return res.status(400).json({ error: 'Indiquez la commune de livraison à Kinshasa.' });
+    }
+
     const rentalBase = billedMarketplaceAmount(price, listing?.priceUnit ?? offering?.priceUnit, range.dayCount);
     const deliveryFee = offering
       ? rentalDeliverySurcharge({
           deliveryMode: offering.deliveryMode,
           deliveryPriceFc: offering.deliveryPriceFc,
           details: offering.details,
+          destinationCommune,
         })
       : 0;
     const amounts = deliveryFee
@@ -363,7 +383,10 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
         eventEndDate: range.parsedEnd,
         guestCount: Number.isFinite(parsedGuests) && parsedGuests > 0 ? parsedGuests : null,
         ...amounts,
-        notes: notes ? String(notes).trim().slice(0, 2000) : null,
+        notes: [destinationCommune ? `Livraison vers ${destinationCommune} (Kinshasa).` : '', notes ? String(notes).trim() : '']
+          .filter(Boolean)
+          .join('\n')
+          .slice(0, 2000) || null,
       },
       include: bookingInclude,
     });
@@ -374,8 +397,9 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
     const organizerHref = `${FRONTEND_URL}/dashboard/bookings?tab=bookings&bookingId=${booking.id}`;
     const amountFormatted = `${amounts.amountFc.toLocaleString('fr-FR')} FC`;
     const depositFormatted = `${amounts.depositFc.toLocaleString('fr-FR')} FC`;
+    const deliveryPlace = destinationCommune ? ` vers ${destinationCommune}` : '';
     const deliveryNote = deliveryFee
-      ? ` Dont livraison ${deliveryFee.toLocaleString('fr-FR')} FC.`
+      ? ` Dont livraison${deliveryPlace} ${deliveryFee.toLocaleString('fr-FR')} FC (tarif publié, discutable par devis).`
       : offering?.deliveryMode === 'included' && offering.deliveryPriceFc
         ? ` Livraison incluse (${offering.deliveryPriceFc.toLocaleString('fr-FR')} FC).`
         : '';
