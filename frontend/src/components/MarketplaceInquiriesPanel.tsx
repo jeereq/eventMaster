@@ -132,6 +132,8 @@ export default function MarketplaceInquiriesPanel({
   const [quoteTarget, setQuoteTarget] = useState<MarketplaceInquiryItem | null>(null);
   const [quoteAmount, setQuoteAmount] = useState('');
   const [quoteNotes, setQuoteNotes] = useState('');
+  const [includeDelivery, setIncludeDelivery] = useState(false);
+  const [deliveryQuoteFc, setDeliveryQuoteFc] = useState('');
   const [quoteSubmitting, setQuoteSubmitting] = useState(false);
 
   // Modale Refus Devis
@@ -236,6 +238,8 @@ export default function MarketplaceInquiriesPanel({
     setQuoteTarget(item);
     setQuoteAmount(item.quotedAmountFc != null ? String(item.quotedAmountFc) : '');
     setQuoteNotes(item.responseNotes || '');
+    setIncludeDelivery(false);
+    setDeliveryQuoteFc(item.deliveryExtraFc && item.deliveryExtraFc > 0 ? String(item.deliveryExtraFc) : '');
     setPanelError('');
   };
 
@@ -247,16 +251,32 @@ export default function MarketplaceInquiriesPanel({
       setPanelError('Veuillez indiquer un montant valide en Francs Congolais (FC).');
       return;
     }
+    let deliveryExtra = 0;
+    if (includeDelivery) {
+      deliveryExtra = Number.parseInt(deliveryQuoteFc, 10);
+      if (!Number.isFinite(deliveryExtra) || deliveryExtra <= 0) {
+        setPanelError('Indiquez le montant de livraison convenu, en FC.');
+        return;
+      }
+    }
+    const totalAmount = parsedAmount + deliveryExtra;
+    const deliveryPlace = quoteTarget.destinationCommune ? ` vers ${quoteTarget.destinationCommune}` : '';
+    const notes = [
+      quoteNotes.trim(),
+      deliveryExtra
+        ? `Livraison${deliveryPlace} : ${deliveryExtra.toLocaleString('fr-FR')} FC. Montant convenu dans cet échange.`
+        : '',
+    ].filter(Boolean).join('\n');
     setQuoteSubmitting(true);
     setPanelError('');
     try {
       if (onQuote) {
-        await onQuote(quoteTarget.id, parsedAmount, quoteNotes.trim() || undefined);
+        await onQuote(quoteTarget.id, totalAmount, notes || undefined);
       } else {
         await api.patch(`/marketplace/inquiries/${quoteTarget.id}`, {
           action: 'quote',
-          quotedAmountFc: parsedAmount,
-          responseNotes: quoteNotes.trim() || undefined,
+          quotedAmountFc: totalAmount,
+          responseNotes: notes || undefined,
         });
       }
       const quoted = {
@@ -570,8 +590,13 @@ export default function MarketplaceInquiriesPanel({
   }
 
   const parsedQuoteNumber = Number.parseInt(quoteAmount, 10);
+  const parsedDeliveryQuote = Number.parseInt(deliveryQuoteFc, 10);
+  const quoteDelivery = includeDelivery && Number.isFinite(parsedDeliveryQuote) && parsedDeliveryQuote > 0
+    ? parsedDeliveryQuote
+    : 0;
+  const quotedTotal = Number.isFinite(parsedQuoteNumber) ? parsedQuoteNumber + quoteDelivery : 0;
   const validQuoteAmount = Number.isFinite(parsedQuoteNumber) && parsedQuoteNumber > 0;
-  const computedQuoteDeposit = validQuoteAmount ? Math.round(parsedQuoteNumber * 0.3) : 0;
+  const computedQuoteDeposit = validQuoteAmount ? Math.round(quotedTotal * 0.3) : 0;
 
   return (
     <div className="space-y-4">
@@ -891,8 +916,14 @@ export default function MarketplaceInquiriesPanel({
                       notes={item.responseNotes}
                     />
                   ) : null}
+                  {item.destinationCommune ? (
+                    <p className="text-sm text-foreground">
+                      Livraison vers {item.destinationCommune}
+                      {item.deliveryExtraFc ? ` · tarif publié ${formatFc(item.deliveryExtraFc)}, discutable ici` : ''}
+                    </p>
+                  ) : null}
                   {item.message ? (
-                    <p className="text-xs text-muted line-clamp-3 whitespace-pre-line">{item.message}</p>
+                    <p className="text-sm text-muted line-clamp-3 whitespace-pre-line">{item.message}</p>
                   ) : null}
                   {item.lastMessage ? (
                     <p className="text-[11px] text-muted line-clamp-2">
@@ -966,17 +997,48 @@ export default function MarketplaceInquiriesPanel({
               required
               autoFocus
             />
+            {quoteTarget?.deliveryExtraFc && quoteTarget.deliveryExtraFc > 0 ? (
+              <div className="space-y-2">
+                <label className="flex items-start gap-2 min-h-[44px] text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 size-6 shrink-0"
+                    checked={includeDelivery}
+                    onChange={(event) => setIncludeDelivery(event.target.checked)}
+                  />
+                  <span>
+                    {quoteTarget.destinationCommune
+                      ? `Intégrer la livraison vers ${quoteTarget.destinationCommune}, une seule fois. Tarif publié : ${formatFc(quoteTarget.deliveryExtraFc)}.`
+                      : `Intégrer la livraison, une seule fois. Tarif publié : ${formatFc(quoteTarget.deliveryExtraFc)}.`}
+                  </span>
+                </label>
+                {includeDelivery ? (
+                  <Input
+                    type="number"
+                    min={1}
+                    label="Montant de livraison convenu (FC)"
+                    value={deliveryQuoteFc}
+                    onChange={(event) => setDeliveryQuoteFc(event.target.value)}
+                    hint="Le tarif publié est indicatif. Mettez ici le montant dont vous avez convenu dans la conversation."
+                  />
+                ) : (
+                  <p className="text-sm text-muted leading-relaxed">
+                    Le client peut proposer un autre montant dans les messages. Cochez pour ajouter le prix dont vous convenez.
+                  </p>
+                )}
+              </div>
+            ) : null}
             {validQuoteAmount ? (
-              <div className="flex items-center justify-between p-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 text-xs">
-                <span className="font-medium text-emerald-900 dark:text-emerald-200">
-                  Total : {formatFc(parsedQuoteNumber)}
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 p-2.5 rounded-[var(--radius-button)] border border-primary/25 bg-primary/10 text-sm">
+                <span className="font-medium text-foreground">
+                  Total : {formatFc(quotedTotal)}
                 </span>
-                <span className="font-semibold text-emerald-800 dark:text-emerald-300">
-                  Acompte à la réservation (30%) : {formatFc(computedQuoteDeposit)}
+                <span className="font-semibold text-foreground">
+                  Acompte à la réservation (30 %) : {formatFc(computedQuoteDeposit)}
                 </span>
               </div>
             ) : (
-              <p className="text-[11px] text-muted">
+              <p className="text-sm text-muted">
                 L’acompte de 30 % sera automatiquement calculé pour le client.
               </p>
             )}

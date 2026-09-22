@@ -1,3 +1,7 @@
+import { canonicalKinshasaCommune } from './kinshasaCommunes.ts';
+
+const MAX_DELIVERY_PRICE_FC = 999_999_999;
+
 const AMENITY_IDS = new Set([
   'wifi', 'parking', 'ac', 'generator', 'sound', 'kitchen', 'stage', 'cloakroom',
   'accessible', 'garden', 'security', 'projector', 'toilets', 'lighting', 'bar',
@@ -39,9 +43,32 @@ export type ListingDetails = {
   securityDepositFc: string;
   deliveryMode: string;
   deliveryPriceFc: string;
+  deliveryByCommune: Record<string, string>;
   accessories: string;
   returnRules: string;
 };
+
+function parseDeliveryByCommune(value: unknown): Record<string, string> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const prices: Record<string, string> = {};
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    const commune = canonicalKinshasaCommune(key);
+    if (!commune) continue;
+    const amount = Math.round(Number(String(raw).replace(/\s/g, '')));
+    if (!Number.isFinite(amount) || amount <= 0 || amount > MAX_DELIVERY_PRICE_FC) continue;
+    prices[commune] = String(amount);
+  }
+  return prices;
+}
+
+/** Prix publié pour une commune de Kinshasa. Vide si cette commune n’a pas de tarif propre. */
+export function deliveryPriceForDestination(details: ListingDetails, commune?: string | null): { commune: string; amountFc: number } | null {
+  const canonical = canonicalKinshasaCommune(commune);
+  if (!canonical) return null;
+  const amountFc = Number.parseInt(String(details.deliveryByCommune[canonical] || ''), 10);
+  if (!Number.isFinite(amountFc) || amountFc <= 0) return null;
+  return { commune: canonical, amountFc };
+}
 
 function clip(value: unknown, max: number) {
   return typeof value === 'string' ? value.trim().slice(0, max) : '';
@@ -92,6 +119,7 @@ export function parseListingDetails(input: unknown): ListingDetails {
     securityDepositFc: clipNum(raw.securityDepositFc, 20),
     deliveryMode: clip(raw.deliveryMode, 50),
     deliveryPriceFc: clipNum(raw.deliveryPriceFc, 12),
+    deliveryByCommune: parseDeliveryByCommune(raw.deliveryByCommune),
     accessories: clip(raw.accessories, 1000),
     returnRules: clip(raw.returnRules, 1000),
   };

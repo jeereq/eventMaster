@@ -294,6 +294,10 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
           eventEndDate={pickedEndDate}
           onEventEndDateChange={setPickedEndDate}
           eventId={linkedEventId}
+          deliveryMode={service.deliveryMode}
+          deliveryPriceFc={service.deliveryPriceFc}
+          deliveryByCommune={service.details?.deliveryByCommune}
+          deliveryCity={service.city}
         />
       ) : null}
       booking={canTransact && venue ? (
@@ -321,6 +325,8 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
           priceUnit={service.priceUnit}
           deliveryMode={service.deliveryMode}
           deliveryPriceFc={service.deliveryPriceFc}
+          deliveryByCommune={service.details?.deliveryByCommune}
+          deliveryCity={service.city}
           eventDate={pickedDate}
           eventEndDate={pickedEndDate}
           onEventDateChange={setPickedDate}

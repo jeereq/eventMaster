@@ -166,6 +166,10 @@ export default function MarketplaceServiceDetailPage() {
             onEventDateChange={setPickedDate}
             eventEndDate={pickedEndDate}
             onEventEndDateChange={setPickedEndDate}
+            deliveryMode={service.deliveryMode}
+            deliveryPriceFc={service.deliveryPriceFc}
+            deliveryByCommune={service.details?.deliveryByCommune}
+            deliveryCity={service.city}
           />
         ) : null}
         booking={service ? (
@@ -178,6 +182,8 @@ export default function MarketplaceServiceDetailPage() {
             priceUnit={service.priceUnit}
             deliveryMode={service.deliveryMode}
             deliveryPriceFc={service.deliveryPriceFc}
+            deliveryByCommune={service.details?.deliveryByCommune}
+            deliveryCity={service.city}
             eventDate={pickedDate}
             eventEndDate={pickedEndDate}
             onEventDateChange={setPickedDate}

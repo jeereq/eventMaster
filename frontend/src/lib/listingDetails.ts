@@ -1,4 +1,5 @@
 import { formatFc } from '@/config/landingPricing';
+import { communesForCity } from '@/lib/rdcCities';
 
 export type ListingAmenityId =
   | 'wifi'
@@ -71,9 +72,58 @@ export type ListingDetails = {
   securityDepositFc: string;
   deliveryMode: string;
   deliveryPriceFc: string;
+  deliveryByCommune: Record<string, string>;
   accessories: string;
   returnRules: string;
 };
+
+const MAX_DELIVERY_PRICE_FC = 999_999_999;
+
+function parseDeliveryByCommune(value: unknown): Record<string, string> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const allowed = new Map(communesForCity('Kinshasa').map((commune) => [commune.name.toLowerCase(), commune.name]));
+  const prices: Record<string, string> = {};
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    const commune = allowed.get(key.trim().toLowerCase());
+    if (!commune) continue;
+    const amount = Math.round(Number(String(raw).replace(/\s/g, '')));
+    if (!Number.isFinite(amount) || amount <= 0 || amount > MAX_DELIVERY_PRICE_FC) continue;
+    prices[commune] = String(amount);
+  }
+  return prices;
+}
+
+export function kinshasaDeliveryPrices(map?: Record<string, string> | null): Array<{ commune: string; priceFc: number }> {
+  return communesForCity('Kinshasa').flatMap((commune) => {
+    const priceFc = Number.parseInt(String(map?.[commune.name] || ''), 10);
+    if (!Number.isFinite(priceFc) || priceFc <= 0) return [];
+    return [{ commune: commune.name, priceFc }];
+  });
+}
+
+/** Tarif publié pour une livraison en supplément. La commune prime sur le prix par défaut. */
+export function indicativeDeliveryFc(input: {
+  deliveryMode?: string | null;
+  deliveryPriceFc?: number | null;
+  byCommune?: Record<string, string> | null;
+  commune?: string | null;
+}): { amountFc: number; commune: string; source: 'commune' | 'default' | 'none' } {
+  if (input.deliveryMode !== 'extra_fee') return { amountFc: 0, commune: '', source: 'none' };
+  const canonical = communesForCity('Kinshasa')
+    .find((commune) => commune.name.toLowerCase() === String(input.commune || '').trim().toLowerCase())
+    ?.name || '';
+  if (canonical) {
+    const amountFc = Number.parseInt(String(input.byCommune?.[canonical] || ''), 10);
+    if (Number.isFinite(amountFc) && amountFc > 0) {
+      return { amountFc, commune: canonical, source: 'commune' };
+    }
+  }
+  const fallback = Number(input.deliveryPriceFc);
+  if (Number.isFinite(fallback) && fallback > 0) {
+    return { amountFc: fallback, commune: canonical, source: 'default' };
+  }
+  return { amountFc: 0, commune: canonical, source: 'none' };
+}
 
 export const EMPTY_LISTING_DETAILS: ListingDetails = {
   description: '',
@@ -106,6 +156,7 @@ export const EMPTY_LISTING_DETAILS: ListingDetails = {
   securityDepositFc: '',
   deliveryMode: '',
   deliveryPriceFc: '',
+  deliveryByCommune: {},
   accessories: '',
   returnRules: '',
 };
@@ -206,6 +257,7 @@ export function parseListingDetails(input: unknown): ListingDetails {
     securityDepositFc: text('securityDepositFc'),
     deliveryMode: text('deliveryMode'),
     deliveryPriceFc: text('deliveryPriceFc'),
+    deliveryByCommune: parseDeliveryByCommune(raw.deliveryByCommune),
     accessories: text('accessories'),
     returnRules: text('returnRules'),
   };

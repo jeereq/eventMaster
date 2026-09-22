@@ -6,6 +6,7 @@ import { goToListingInquire } from '@/lib/listingInquire';
 import {
   amenityLabel,
   eventTypeLabel,
+  kinshasaDeliveryPrices,
   listingConditionLabel,
   listingDeliveryLabel,
   type ListingDetails,
@@ -23,6 +24,53 @@ function Facts({ items }: { items: Array<{ label: string; value: string }> }) {
         </div>
       ))}
     </dl>
+  );
+}
+
+function KinshasaDeliveryPrices({
+  prices,
+  fallbackLabel,
+}: {
+  prices: Array<{ commune: string; priceFc: number }>;
+  fallbackLabel: string;
+}) {
+  const [query, setQuery] = React.useState('');
+  const needle = query.trim().toLowerCase();
+  const visible = needle ? prices.filter((row) => row.commune.toLowerCase().includes(needle)) : prices;
+
+  return (
+    <Block title="Livraison selon la commune de Kinshasa">
+      <p className="text-sm text-muted leading-relaxed">
+        Tarifs publiés, indicatifs. Le devis permet d’en convenir un autre avec le prestataire.
+      </p>
+      {prices.length > 6 ? (
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-foreground">Chercher une commune</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Gombe, Lemba…"
+            className="min-h-[44px] w-full rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 text-base text-foreground placeholder:text-muted focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 sm:text-sm"
+          />
+        </label>
+      ) : null}
+      {visible.length === 0 ? (
+        <p className="text-sm text-muted" role="status">Aucune commune pour « {query.trim()} ».</p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {visible.map((row) => (
+            <li key={row.commune} className="flex min-h-[44px] items-center justify-between gap-3 text-sm">
+              <span>{row.commune}</span>
+              <span className="tabular-nums font-medium">{formatFc(row.priceFc)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {fallbackLabel ? (
+        <p className="text-sm text-muted">{fallbackLabel}</p>
+      ) : null}
+    </Block>
   );
 }
 
@@ -88,6 +136,8 @@ export default function ListingPublicDetails({
     details.depositPercent ? { label: 'Acompte', value: `${details.depositPercent} %` } : null,
   ].filter(Boolean) as Array<{ label: string; value: string }>;
 
+  const communePrices = kinshasaDeliveryPrices(details.deliveryByCommune);
+  const deliveryByPlace = details.deliveryMode === 'extra_fee' && communePrices.length > 0;
   const rentalFacts = [
     details.brand ? { label: 'Marque', value: details.brand } : null,
     details.modelName ? { label: 'Modèle', value: details.modelName } : null,
@@ -101,9 +151,11 @@ export default function ListingPublicDetails({
     details.securityDepositFc
       ? { label: 'Caution', value: formatFc(details.securityDepositFc) }
       : null,
-    listingDeliveryLabel(details.deliveryMode, details.deliveryPriceFc)
-      ? { label: 'Livraison', value: listingDeliveryLabel(details.deliveryMode, details.deliveryPriceFc) }
-      : null,
+    deliveryByPlace
+      ? { label: 'Livraison', value: 'En supplément, selon la commune' }
+      : listingDeliveryLabel(details.deliveryMode, details.deliveryPriceFc)
+        ? { label: 'Livraison', value: listingDeliveryLabel(details.deliveryMode, details.deliveryPriceFc) }
+        : null,
     details.minNoticeHours ? { label: 'Préavis', value: `${details.minNoticeHours} h` } : null,
     details.languages ? { label: 'Langues', value: details.languages } : null,
     details.depositPercent ? { label: 'Acompte', value: `${details.depositPercent} %` } : null,
@@ -123,7 +175,8 @@ export default function ListingPublicDetails({
     || details.houseRules
     || details.cancellation
     || details.accessories
-    || details.returnRules,
+    || details.returnRules
+    || deliveryByPlace,
   );
   if (!hasBody) return null;
 
@@ -149,6 +202,13 @@ export default function ListingPublicDetails({
         <Block title={kind === 'rental' ? 'Caractéristiques' : 'À retenir'}>
           <Facts items={facts} />
         </Block>
+      ) : null}
+
+      {deliveryByPlace ? (
+        <KinshasaDeliveryPrices
+          prices={communePrices}
+          fallbackLabel={details.deliveryPriceFc ? `Autres communes : ${formatFc(details.deliveryPriceFc)}, une seule fois.` : ''}
+        />
       ) : null}
 
       {amenityLabels.length > 0 ? (

@@ -248,6 +248,7 @@ function placeRank(
 async function loadCatalog(opts: {
   city: string;
   commune: string;
+  destinationCommune: string;
   dateKey: string;
   guestCount: number;
   wantedCategories: string[];
@@ -373,6 +374,8 @@ async function loadCatalog(opts: {
       guestCount: opts.guestCount,
       deliveryMode: row.deliveryMode,
       deliveryPriceFc: row.deliveryPriceFc,
+      details: row.details,
+      destinationCommune: opts.destinationCommune,
     });
     const estimatedFc = priced?.amountFc ?? 0;
     const distanceKm = distanceFromOrigin(opts.origin, row.latitude, row.longitude);
@@ -598,6 +601,7 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
   const catalogOpts = {
     city,
     commune,
+    destinationCommune: commune,
     dateKey,
     guestCount: guests,
     wantedCategories,

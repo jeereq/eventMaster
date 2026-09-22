@@ -7,7 +7,18 @@ import { notifyTenantOperators, notifyUsers } from '../services/platformNotifica
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
 import { computeMarketplaceAmounts, billedMarketplaceAmount } from '../config/marketplaceBilling';
+import { rentalDeliverySurcharge } from '../services/eventBudgetCost';
+import { isServiceRentalCategory } from '../utils/publicVenue';
+import { parseListingDetails } from '../utils/listingDetails';
+import { normalizeAllowedCity, normalizeAllowedCommune } from '../utils/rdcCities';
 import { activePromoPrice } from '../services/offerPromotion';
+import {
+  beverageInquiryTitle,
+  beverageLineRecords,
+  beverageOrderMessage,
+  resolveVendorDrinkLines,
+  storedBeverageLineCreates,
+} from '../services/beverageOrderService';
 import {
   eachDateKey,
   isRangeAvailable,
@@ -25,6 +36,7 @@ const bookingInclude = {
   listing: { select: { slug: true, headline: true, roomId: true, address: true, latitude: true, longitude: true, blockedDates: true, room: { select: { name: true, location: true } } } },
   offering: { select: { slug: true, title: true, category: true, blockedDates: true } },
   beveragePrice: { select: { unitLabel: true, brand: { select: { name: true } } } },
+  beverageLines: { select: { packCount: true, brandName: true, unitLabel: true } },
   event: { select: { id: true, title: true, date: true } },
   vendorTenant: { select: { id: true, name: true, managerId: true, manager: { select: { phone: true, phoneCountryCode: true } }, vendorProfile: { select: { slug: true, displayName: true } } } },
   organizerTenant: { select: { id: true, name: true } },
@@ -63,6 +75,7 @@ function serializeBooking(row: {
   beveragePriceId?: string | null;
   beveragePackCount?: number | null;
   beveragePrice?: { unitLabel: string; brand: { name: string } } | null;
+  beverageLines?: { packCount: number; brandName: string; unitLabel: string }[];
   createdAt: Date;
   listing?: { slug: string; headline: string | null; blockedDates?: unknown; room?: { name: string } | null } | null;
   offering?: { slug: string; title: string; category: string; blockedDates?: unknown } | null;
@@ -71,9 +84,12 @@ function serializeBooking(row: {
   organizerTenant?: { name: string } | null;
 }) {
   const kind = row.beveragePriceId ? 'beverage' : row.offeringId ? 'service' : 'venue';
-  const title = row.beveragePrice
-    ? `${row.beveragePackCount && row.beveragePackCount > 0 ? `${row.beveragePackCount} × ${row.beveragePrice.unitLabel} · ` : ''}${row.beveragePrice.brand.name}`
-    : row.offering?.title || row.listing?.headline || row.listing?.room?.name || 'Réservation';
+  const drinkTitle = beverageInquiryTitle({
+    beveragePackCount: row.beveragePackCount,
+    beveragePrice: row.beveragePrice,
+    beverageLines: row.beverageLines,
+  });
+  const title = drinkTitle || row.offering?.title || row.listing?.headline || row.listing?.room?.name || 'Réservation';
   return {
     id: row.id,
     kind,
@@ -235,7 +251,7 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
       return res.status(401).json({ error: 'Connectez-vous pour réserver.' });
     }
 
-    const { listingSlug, offeringSlug, eventDate, eventEndDate, guestCount, eventId, notes } = req.body || {};
+    const { listingSlug, offeringSlug, eventDate, eventEndDate, guestCount, eventId, notes, destinationCommune: rawDestinationCommune } = req.body || {};
     const range = parseBookingRange(eventDate, eventEndDate);
     if (!range) {
       return res.status(400).json({ error: 'Indiquez une date, ou une plage de 31 jours maximum.' });
@@ -301,9 +317,30 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
       }
     }
 
+    const destinationCommune = normalizeAllowedCommune('Kinshasa', rawDestinationCommune);
+    if (rawDestinationCommune && destinationCommune == null) {
+      return res.status(400).json({ error: 'Choisissez une commune de Kinshasa.' });
+    }
+    const offeringDetails = offering ? parseListingDetails(offering.details) : null;
+    const deliveryMode = String(offering?.deliveryMode || offeringDetails?.deliveryMode || '');
+    const kinshasaDelivery = Boolean(
+      offering
+      && isServiceRentalCategory(offering.category)
+      && deliveryMode === 'extra_fee'
+      && normalizeAllowedCity(offering.city) === 'Kinshasa',
+    );
+    if (kinshasaDelivery && !destinationCommune) {
+      return res.status(400).json({ error: 'Indiquez la commune de livraison à Kinshasa.' });
+    }
+
     const rentalBase = billedMarketplaceAmount(price, listing?.priceUnit ?? offering?.priceUnit, range.dayCount);
-    const deliveryFee = offering?.deliveryMode === 'extra_fee' && offering.deliveryPriceFc && offering.deliveryPriceFc > 0
-      ? offering.deliveryPriceFc
+    const deliveryFee = offering
+      ? rentalDeliverySurcharge({
+          deliveryMode: offering.deliveryMode,
+          deliveryPriceFc: offering.deliveryPriceFc,
+          details: offering.details,
+          destinationCommune,
+        })
       : 0;
     const amounts = deliveryFee
       ? computeMarketplaceAmounts(rentalBase.amountFc + deliveryFee)
@@ -346,7 +383,10 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
         eventEndDate: range.parsedEnd,
         guestCount: Number.isFinite(parsedGuests) && parsedGuests > 0 ? parsedGuests : null,
         ...amounts,
-        notes: notes ? String(notes).trim().slice(0, 2000) : null,
+        notes: [destinationCommune ? `Livraison vers ${destinationCommune} (Kinshasa).` : '', notes ? String(notes).trim() : '']
+          .filter(Boolean)
+          .join('\n')
+          .slice(0, 2000) || null,
       },
       include: bookingInclude,
     });
@@ -357,8 +397,9 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
     const organizerHref = `${FRONTEND_URL}/dashboard/bookings?tab=bookings&bookingId=${booking.id}`;
     const amountFormatted = `${amounts.amountFc.toLocaleString('fr-FR')} FC`;
     const depositFormatted = `${amounts.depositFc.toLocaleString('fr-FR')} FC`;
+    const deliveryPlace = destinationCommune ? ` vers ${destinationCommune}` : '';
     const deliveryNote = deliveryFee
-      ? ` Dont livraison ${deliveryFee.toLocaleString('fr-FR')} FC.`
+      ? ` Dont livraison${deliveryPlace} ${deliveryFee.toLocaleString('fr-FR')} FC (tarif publié, discutable par devis).`
       : offering?.deliveryMode === 'included' && offering.deliveryPriceFc
         ? ` Livraison incluse (${offering.deliveryPriceFc.toLocaleString('fr-FR')} FC).`
         : '';
@@ -701,6 +742,7 @@ export async function acceptInquiryQuote(req: AuthenticatedRequest, res: Respons
         listing: true,
         offering: true,
         beveragePrice: { select: { tenantId: true, unitLabel: true, brand: { select: { name: true } } } },
+        beverageLines: true,
       },
     });
     if (!inquiry) return res.status(404).json({ error: 'Demande introuvable.' });
@@ -746,6 +788,7 @@ export async function acceptInquiryQuote(req: AuthenticatedRequest, res: Respons
         offeringId: inquiry.offeringId,
         beveragePriceId: inquiry.beveragePriceId,
         beveragePackCount: inquiry.beveragePackCount,
+        beverageLines: storedBeverageLineCreates(inquiry.beverageLines),
         inquiryId: inquiry.id,
         vendorTenantId,
         organizerTenantId: inquiry.fromTenantId || tenantId,
@@ -760,7 +803,11 @@ export async function acceptInquiryQuote(req: AuthenticatedRequest, res: Respons
       include: bookingInclude,
     });
 
-    const bookingTitle = booking.offering?.title || booking.listing?.headline || booking.listing?.room.name || 'Réservation';
+    const bookingTitle = beverageInquiryTitle(booking)
+      || booking.offering?.title
+      || booking.listing?.headline
+      || booking.listing?.room.name
+      || 'Réservation';
     const amountFormatted = `${amounts.amountFc.toLocaleString('fr-FR')} FC`;
     const depositFormatted = `${amounts.depositFc.toLocaleString('fr-FR')} FC`;
     const vendorHref = `${FRONTEND_URL}/dashboard/bookings?tab=bookings&role=vendor&bookingId=${booking.id}`;
@@ -810,6 +857,7 @@ export async function convertInquiryToBooking(req: AuthenticatedRequest, res: Re
         listing: true,
         offering: true,
         beveragePrice: { select: { unitLabel: true, brand: { select: { name: true } } } },
+        beverageLines: true,
       },
     });
     if (!inquiry) return res.status(404).json({ error: 'Demande introuvable.' });
@@ -852,6 +900,7 @@ export async function convertInquiryToBooking(req: AuthenticatedRequest, res: Re
         offeringId: inquiry.offeringId,
         beveragePriceId: inquiry.beveragePriceId,
         beveragePackCount: inquiry.beveragePackCount,
+        beverageLines: storedBeverageLineCreates(inquiry.beverageLines),
         inquiryId: inquiry.id,
         vendorTenantId: tenantId,
         organizerTenantId: inquiry.fromTenantId,
@@ -871,7 +920,11 @@ export async function convertInquiryToBooking(req: AuthenticatedRequest, res: Re
       data: { status: 'CONTACTED' },
     });
 
-    const bookingTitle = booking.offering?.title || booking.listing?.headline || booking.listing?.room.name || 'Réservation';
+    const bookingTitle = beverageInquiryTitle(booking)
+      || booking.offering?.title
+      || booking.listing?.headline
+      || booking.listing?.room.name
+      || 'Réservation';
     const depositFormatted = `${amounts.depositFc.toLocaleString('fr-FR')} FC`;
     const amountFormatted = `${amounts.amountFc.toLocaleString('fr-FR')} FC`;
     const clientBookingHref = `${FRONTEND_URL}/dashboard/bookings?tab=bookings&bookingId=${booking.id}`;
@@ -956,6 +1009,58 @@ export async function createBeverageBooking(req: AuthenticatedRequest, res: Resp
     });
   } catch (error) {
     console.error('createBeverageBooking:', error);
+    return res.status(500).json({ error: 'Impossible de créer la réservation.' });
+  }
+}
+
+export async function createVendorBeverageBooking(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+    if (!tenantId || !userId) return res.status(401).json({ error: 'Connectez-vous pour réserver.' });
+    const range = parseBookingRange(req.body?.eventDate, req.body?.eventDate);
+    if (!range) return res.status(400).json({ error: 'Indiquez la date de l’événement.' });
+    const resolved = await resolveVendorDrinkLines(String(req.params.slug || ''), req.body?.lines);
+    if (!resolved.ok) return res.status(resolved.status).json({ error: resolved.error });
+    if (resolved.profile.tenantId === tenantId) {
+      return res.status(400).json({ error: 'Vous ne pouvez pas réserver vos propres tarifs.' });
+    }
+    const total = resolved.lines.reduce((sum, line) => sum + line.payableFc * line.packCount, 0);
+    const amounts = computeMarketplaceAmounts(total);
+    const note = req.body?.notes ? String(req.body.notes).trim().slice(0, 2000) : '';
+    const dateLabel = range.parsedStart.toISOString().slice(0, 10);
+    const first = resolved.lines[0];
+    const booking = await prisma.marketplaceBooking.create({
+      data: {
+        beveragePriceId: first.id,
+        beveragePackCount: first.packCount,
+        beverageLines: { create: beverageLineRecords(resolved.lines) },
+        vendorTenantId: resolved.profile.tenantId,
+        organizerTenantId: tenantId,
+        organizerUserId: userId,
+        eventDate: range.parsedStart,
+        amountFc: amounts.amountFc,
+        depositFc: amounts.depositFc,
+        commissionRate: amounts.commissionRate,
+        commissionFc: amounts.commissionFc,
+        notes: beverageOrderMessage(resolved.lines, note, dateLabel).slice(0, 2000),
+      },
+      include: bookingInclude,
+    });
+    const title = beverageInquiryTitle({ beverageLines: resolved.lines }) || 'Boissons';
+    const vendorHref = `${FRONTEND_URL}/dashboard/bookings?tab=bookings&role=vendor&bookingId=${booking.id}`;
+    void notifyTenantOperators(resolved.profile.tenantId, {
+      type: PLATFORM_NOTIFICATION_TYPE.MARKETPLACE_BOOKING,
+      title: `Réservation — ${title}`,
+      message: `Demande de ${title}. Montant ${amounts.amountFc.toLocaleString('fr-FR')} FC.`,
+      metadata: { bookingId: booking.id, href: vendorHref },
+    });
+    return res.status(201).json({
+      booking: serializeBooking(booking),
+      message: 'Demande de réservation envoyée. Le professionnel doit l’accepter.',
+    });
+  } catch (error) {
+    console.error('createVendorBeverageBooking:', error);
     return res.status(500).json({ error: 'Impossible de créer la réservation.' });
   }
 }

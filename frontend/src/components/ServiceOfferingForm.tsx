@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useId, useMemo } from 'react';
+import React, { useId, useMemo, useState } from 'react';
 import {
   AlertCircle,
   CalendarDays,
@@ -33,6 +33,7 @@ import MarketplaceMediaField from '@/components/MarketplaceMediaField';
 import MarketplaceFormTabs, { listingTabPanelId, type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import LocationPickerMap from '@/components/LocationPickerMap';
 import CityLocationFields from '@/components/CityLocationFields';
+import { communesForCity } from '@/lib/rdcCities';
 
 export const OFFERING_TITLE_FIELD_ID = 'offering-title';
 export const OFFERING_PRICE_FIELD_ID = 'offering-price';
@@ -222,6 +223,7 @@ export default function ServiceOfferingForm({
   onTabChange: (tab: MarketplaceFormTab) => void;
   error?: string;
 }) {
+  const [communePriceQuery, setCommunePriceQuery] = useState('');
   const descriptionId = useId();
   const unitId = useId();
   const rental = isServiceRentalCategory(draft.category);
@@ -237,6 +239,15 @@ export default function ServiceOfferingForm({
   const requiredCount = 3;
   const completedRequiredCount = [hasTitle, hasPlace, hasGps].filter(Boolean).length;
   const ready = gaps.length === 0;
+  const kinshasaCommunes = communesForCity('Kinshasa');
+  const communeNeedle = communePriceQuery.trim().toLowerCase();
+  const visibleDeliveryCommunes = communeNeedle
+    ? kinshasaCommunes.filter((item) => item.name.toLowerCase().includes(communeNeedle))
+    : kinshasaCommunes;
+  const pricedDeliveryCount = kinshasaCommunes.filter((item) => {
+    const amount = Number(String(draft.details.deliveryByCommune?.[item.name] || '').replace(/\s/g, ''));
+    return Number.isFinite(amount) && amount > 0;
+  }).length;
 
   const goTo = (next: MarketplaceFormTab, fieldId?: string) => {
     onTabChange(next);
@@ -549,7 +560,7 @@ export default function ServiceOfferingForm({
                     deliveryPriceFc: opt.id ? current.deliveryPriceFc : '',
                   }))}
                   className={cn(
-                    'min-h-11 px-3 py-2 rounded-full text-xs font-semibold border transition',
+                    'min-h-[44px] px-3 py-2 rounded-full text-sm font-semibold border transition',
                     draft.travels === opt.id
                       ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                       : 'bg-surface text-muted border-border hover:text-foreground',
@@ -586,7 +597,7 @@ export default function ServiceOfferingForm({
                             deliveryMode: current.deliveryMode === opt.id ? '' : opt.id,
                           }))}
                           className={cn(
-                            'min-h-11 px-3 py-2 rounded-full text-xs font-semibold border transition',
+                            'min-h-[44px] px-3 py-2 rounded-full text-sm font-semibold border transition',
                             draft.deliveryMode === opt.id
                               ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                               : 'bg-surface text-muted border-border hover:text-foreground',
@@ -597,20 +608,73 @@ export default function ServiceOfferingForm({
                       ))}
                     </div>
                     {draft.deliveryMode === 'included' || draft.deliveryMode === 'extra_fee' ? (
-                      <Input
-                        id={OFFERING_DELIVERY_FIELD_ID}
-                        label={draft.deliveryMode === 'extra_fee' ? 'Supplément de livraison (FC)' : 'Prix de la livraison, déjà compris dans le tarif (FC)'}
-                        type="number"
-                        min={1}
-                        value={draft.deliveryPriceFc}
-                        onChange={(e) => onChange((current) => ({ ...current, deliveryPriceFc: e.target.value }))}
-                        error={offeringDeliveryMessage(draft)}
-                        hint={draft.deliveryMode === 'extra_fee'
-                          ? 'Ajouté une fois à la réservation, en plus du tarif de location.'
-                          : 'Le client le voit sur la fiche. Il n’est pas ajouté une seconde fois à la réservation.'}
-                      />
+                      <>
+                        <Input
+                          id={OFFERING_DELIVERY_FIELD_ID}
+                          label={draft.deliveryMode === 'extra_fee' ? 'Supplément par défaut (FC)' : 'Prix de la livraison, déjà compris dans le tarif (FC)'}
+                          type="number"
+                          min={1}
+                          value={draft.deliveryPriceFc}
+                          onChange={(e) => onChange((current) => ({ ...current, deliveryPriceFc: e.target.value }))}
+                          error={offeringDeliveryMessage(draft)}
+                          hint={draft.deliveryMode === 'extra_fee'
+                            ? 'Utilisé quand la commune n’a pas de prix propre. Ajouté une seule fois, en plus du tarif de location.'
+                            : 'Le client le voit sur la fiche. Il n’est pas ajouté une seconde fois à la réservation.'}
+                        />
+                        {draft.deliveryMode === 'extra_fee' && (!draft.city || draft.city.toLowerCase() === 'kinshasa') ? (
+                          <fieldset className="space-y-2">
+                            <legend className="text-sm font-medium text-foreground">Prix selon la commune de Kinshasa</legend>
+                            <p className="text-sm text-muted leading-relaxed">
+                              Chaque montant est indicatif. Le client et vous pouvez en convenir un autre dans le devis.
+                              {' '}
+                              {pricedDeliveryCount === 0
+                                ? 'Aucune commune n’a encore de prix propre : le supplément par défaut s’applique partout.'
+                                : `${pricedDeliveryCount} commune${pricedDeliveryCount > 1 ? 's' : ''} avec un prix propre. Les autres utilisent le supplément par défaut.`}
+                            </p>
+                            <label className="block space-y-1.5">
+                              <span className="text-sm font-medium text-foreground">Chercher une commune</span>
+                              <input
+                                type="search"
+                                value={communePriceQuery}
+                                onChange={(event) => setCommunePriceQuery(event.target.value)}
+                                placeholder="Gombe, Lemba…"
+                                className="min-h-[44px] w-full rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 text-base text-foreground placeholder:text-muted focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 sm:text-sm"
+                              />
+                            </label>
+                            {visibleDeliveryCommunes.length === 0 ? (
+                              <p className="text-sm text-muted" role="status">Aucune commune pour « {communePriceQuery.trim()} ».</p>
+                            ) : (
+                            <div className="max-h-80 space-y-2 overflow-y-auto overscroll-y-contain pr-1">
+                              {visibleDeliveryCommunes.map((commune) => (
+                                <label key={commune.name} className="grid grid-cols-[minmax(0,1fr)_8.5rem] items-center gap-2">
+                                  <span className="text-sm text-foreground">{commune.name}</span>
+                                  <input
+                                    type="number"
+                                    min={1}
+                                    inputMode="numeric"
+                                    aria-label={`Livraison vers ${commune.name}, en FC`}
+                                    value={draft.details.deliveryByCommune?.[commune.name] || ''}
+                                    onChange={(e) => onChange((current) => ({
+                                      ...current,
+                                      details: {
+                                        ...current.details,
+                                        deliveryByCommune: {
+                                          ...(current.details.deliveryByCommune || {}),
+                                          [commune.name]: e.target.value,
+                                        },
+                                      },
+                                    }))}
+                                    className="min-h-[44px] w-full rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 text-base text-foreground tabular-nums focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 sm:text-sm"
+                                  />
+                                </label>
+                              ))}
+                            </div>
+                            )}
+                          </fieldset>
+                        ) : null}
+                      </>
                     ) : (
-                      <p id={OFFERING_DELIVERY_FIELD_ID} className="text-xs text-muted">
+                      <p id={OFFERING_DELIVERY_FIELD_ID} className="text-sm text-muted">
                         Choisissez d’abord si ce prix est inclus dans le tarif ou ajouté en supplément.
                       </p>
                     )}
@@ -618,7 +682,7 @@ export default function ServiceOfferingForm({
                 ) : null}
               </>
             ) : (
-              <p className="text-xs text-muted">
+              <p className="text-sm text-muted">
                 {rental
                   ? 'Les clients viennent retirer le matériel à l’adresse pointée sur la carte.'
                   : 'Les clients viennent à votre adresse. Aucun rayon n’est affiché.'}

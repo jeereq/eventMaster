@@ -57,9 +57,13 @@ export async function listBeverageBrands(options?: { includeInactive?: boolean }
   });
 }
 
-export async function listPublicBeverageOffers() {
+export async function listPublicBeverageOffers(tenantId?: string) {
   const rows = await prisma.vendorBeveragePrice.findMany({
-    where: { isAvailable: true, brand: { isActive: true } },
+    where: {
+      isAvailable: true,
+      brand: { isActive: true },
+      ...(tenantId ? { tenantId } : {}),
+    },
     orderBy: [{ brand: { kind: 'asc' } }, { brand: { name: 'asc' } }, { priceFc: 'asc' }],
     select: {
       id: true,
@@ -118,6 +122,26 @@ export async function listPublicBeverageOffers() {
       notes: row.notes,
     };
   });
+}
+
+export async function listVendorDrinkPage(slug: string) {
+  const cleanSlug = slug.trim();
+  if (!cleanSlug) return null;
+  const profile = await prisma.vendorProfile.findFirst({
+    where: { slug: cleanSlug, isBlockedByAdmin: false },
+    select: { slug: true, displayName: true, city: true, bio: true, tenantId: true },
+  });
+  if (!profile) return null;
+  const offers = await listPublicBeverageOffers(profile.tenantId);
+  return {
+    vendor: {
+      slug: profile.slug,
+      displayName: profile.displayName,
+      city: profile.city,
+      bio: profile.bio,
+    },
+    offers,
+  };
 }
 
 export async function createBeverageBrand(body: unknown) {
