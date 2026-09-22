@@ -113,7 +113,7 @@ function MarketplaceDrinksPageInner() {
         setOffers(Array.isArray(offerData.offers) ? offerData.offers : []);
       })
       .catch((err: unknown) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Impossible de charger les boissons.');
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Impossible de charger les propositions.');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -241,7 +241,7 @@ function MarketplaceDrinksPageInner() {
                       onChange={(id) => setDraft({ ...draft, brand: id })}
                     />
                   ) : (
-                    <p className="text-xs text-muted">
+                    <p className="text-sm text-muted">
                       {draft.kind ? 'Aucune marque pour cette famille.' : 'Aucune marque au catalogue.'}
                     </p>
                   )}
@@ -303,7 +303,7 @@ function MarketplaceDrinksPageInner() {
             </h2>
             <p className="text-sm text-muted mt-2 max-w-md mx-auto leading-relaxed">
               {offers.length === 0
-                ? 'Les prix publiés par les prestataires apparaîtront ici, marque par marque.'
+                ? 'Les propositions publiées par les prestataires apparaîtront ici, avec la marque, le conditionnement et le prix.'
                 : 'Élargissez la marque, la famille ou le prix recherché.'}
             </p>
           </div>

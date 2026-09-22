@@ -93,7 +93,7 @@ export function CatalogueChoicePills({
             }}
             onPointerDown={(e) => e.stopPropagation()}
             className={cn(
-              'min-h-11 px-3 py-1.5 rounded-[var(--radius-button)] text-sm sm:text-xs font-medium border transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+              'min-h-[44px] px-3 py-1.5 rounded-[var(--radius-button)] text-sm font-medium border transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
               active
                 ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                 : 'bg-surface-muted text-muted border-border hover:text-foreground hover:border-primary/30',
