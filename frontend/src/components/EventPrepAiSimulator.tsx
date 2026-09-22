@@ -900,6 +900,7 @@ export default function EventPrepAiSimulator({
               <select
                 value={neighborhood}
                 disabled={!commune}
+                aria-describedby={`${tabsId}-place-hint`}
                 onChange={(e) => setNeighborhood(e.target.value)}
                 className={NATIVE_FIELD}
               >
@@ -913,6 +914,9 @@ export default function EventPrepAiSimulator({
               <button
                 type="button"
                 disabled={geoBusy}
+                aria-pressed={Boolean(origin)}
+                aria-busy={geoBusy || undefined}
+                aria-describedby={`${tabsId}-place-hint`}
                 onClick={() => {
                   setGeoError('');
                   if (!navigator.geolocation) {
@@ -933,32 +937,33 @@ export default function EventPrepAiSimulator({
                     { enableHighAccuracy: true, timeout: 8000 },
                   );
                 }}
-                className={cn(CHIP, chipTone(Boolean(origin)))}
+                className={cn(CHIP, 'w-full sm:w-auto whitespace-normal', chipTone(Boolean(origin)))}
               >
-                <MapPin className="w-3.5 h-3.5 mr-1" aria-hidden />
+                <MapPin className="w-3.5 h-3.5 mr-1 shrink-0" aria-hidden />
                 {geoBusy ? 'Localisation…' : origin ? 'Position GPS utilisée' : 'Utiliser ma position GPS'}
               </button>
               {origin ? (
                 <button
                   type="button"
                   onClick={() => setOrigin(null)}
-                  className="min-h-11 px-2 text-xs font-semibold text-muted hover:text-foreground"
+                  className="min-h-11 px-2 text-xs font-semibold text-muted hover:text-foreground rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 >
                   Retirer le GPS
                 </button>
               ) : null}
             </div>
-            {geoError ? (
-              <p className="sm:col-span-2 text-xs text-danger" role="alert">{geoError}</p>
-            ) : origin ? (
-              <p className="sm:col-span-2 text-xs text-muted">
-                Les services et locations les plus proches de ce point passent devant.
-              </p>
-            ) : (
-              <p className="sm:col-span-2 text-xs text-muted">
-                Le quartier et le GPS servent à classer les prestataires et le matériel. Chaque fiche garde sa ville, sa commune et son point GPS.
-              </p>
-            )}
+            <p
+              id={`${tabsId}-place-hint`}
+              className={cn('sm:col-span-2 text-xs', geoError ? 'text-danger font-medium' : 'text-muted')}
+              role={geoError ? 'alert' : undefined}
+            >
+              {geoError
+                || (origin
+                  ? 'Les services et locations les plus proches passent devant.'
+                  : commune
+                    ? 'Le quartier et le GPS classent les prestataires et le matériel.'
+                    : 'Choisissez une commune pour afficher les quartiers. Le GPS classe aussi sans quartier.')}
+            </p>
             </>
             ) : null}
             <div className="space-y-1.5">
