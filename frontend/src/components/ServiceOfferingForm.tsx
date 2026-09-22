@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useId, useMemo } from 'react';
+import React, { useId, useMemo, useState } from 'react';
 import {
   AlertCircle,
   CalendarDays,
@@ -223,6 +223,7 @@ export default function ServiceOfferingForm({
   onTabChange: (tab: MarketplaceFormTab) => void;
   error?: string;
 }) {
+  const [communePriceQuery, setCommunePriceQuery] = useState('');
   const descriptionId = useId();
   const unitId = useId();
   const rental = isServiceRentalCategory(draft.category);
@@ -238,6 +239,15 @@ export default function ServiceOfferingForm({
   const requiredCount = 3;
   const completedRequiredCount = [hasTitle, hasPlace, hasGps].filter(Boolean).length;
   const ready = gaps.length === 0;
+  const kinshasaCommunes = communesForCity('Kinshasa');
+  const communeNeedle = communePriceQuery.trim().toLowerCase();
+  const visibleDeliveryCommunes = communeNeedle
+    ? kinshasaCommunes.filter((item) => item.name.toLowerCase().includes(communeNeedle))
+    : kinshasaCommunes;
+  const pricedDeliveryCount = kinshasaCommunes.filter((item) => {
+    const amount = Number(String(draft.details.deliveryByCommune?.[item.name] || '').replace(/\s/g, ''));
+    return Number.isFinite(amount) && amount > 0;
+  }).length;
 
   const goTo = (next: MarketplaceFormTab, fieldId?: string) => {
     onTabChange(next);
@@ -550,7 +560,7 @@ export default function ServiceOfferingForm({
                     deliveryPriceFc: opt.id ? current.deliveryPriceFc : '',
                   }))}
                   className={cn(
-                    'min-h-11 px-3 py-2 rounded-full text-xs font-semibold border transition',
+                    'min-h-[44px] px-3 py-2 rounded-full text-sm font-semibold border transition',
                     draft.travels === opt.id
                       ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                       : 'bg-surface text-muted border-border hover:text-foreground',
@@ -587,7 +597,7 @@ export default function ServiceOfferingForm({
                             deliveryMode: current.deliveryMode === opt.id ? '' : opt.id,
                           }))}
                           className={cn(
-                            'min-h-11 px-3 py-2 rounded-full text-xs font-semibold border transition',
+                            'min-h-[44px] px-3 py-2 rounded-full text-sm font-semibold border transition',
                             draft.deliveryMode === opt.id
                               ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                               : 'bg-surface text-muted border-border hover:text-foreground',
@@ -616,9 +626,26 @@ export default function ServiceOfferingForm({
                             <legend className="text-sm font-medium text-foreground">Prix selon la commune de Kinshasa</legend>
                             <p className="text-sm text-muted leading-relaxed">
                               Chaque montant est indicatif. Le client et vous pouvez en convenir un autre dans le devis.
+                              {' '}
+                              {pricedDeliveryCount === 0
+                                ? 'Aucune commune n’a encore de prix propre : le supplément par défaut s’applique partout.'
+                                : `${pricedDeliveryCount} commune${pricedDeliveryCount > 1 ? 's' : ''} avec un prix propre. Les autres utilisent le supplément par défaut.`}
                             </p>
-                            <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
-                              {communesForCity('Kinshasa').map((commune) => (
+                            <label className="block space-y-1.5">
+                              <span className="text-sm font-medium text-foreground">Chercher une commune</span>
+                              <input
+                                type="search"
+                                value={communePriceQuery}
+                                onChange={(event) => setCommunePriceQuery(event.target.value)}
+                                placeholder="Gombe, Lemba…"
+                                className="min-h-[44px] w-full rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 text-base text-foreground placeholder:text-muted focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 sm:text-sm"
+                              />
+                            </label>
+                            {visibleDeliveryCommunes.length === 0 ? (
+                              <p className="text-sm text-muted" role="status">Aucune commune pour « {communePriceQuery.trim()} ».</p>
+                            ) : (
+                            <div className="max-h-80 space-y-2 overflow-y-auto overscroll-y-contain pr-1">
+                              {visibleDeliveryCommunes.map((commune) => (
                                 <label key={commune.name} className="grid grid-cols-[minmax(0,1fr)_8.5rem] items-center gap-2">
                                   <span className="text-sm text-foreground">{commune.name}</span>
                                   <input
@@ -637,16 +664,17 @@ export default function ServiceOfferingForm({
                                         },
                                       },
                                     }))}
-                                    className="min-h-[44px] w-full rounded-[var(--radius-button)] border border-border bg-surface px-3 text-sm text-foreground"
+                                    className="min-h-[44px] w-full rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 text-base text-foreground tabular-nums focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 sm:text-sm"
                                   />
                                 </label>
                               ))}
                             </div>
+                            )}
                           </fieldset>
                         ) : null}
                       </>
                     ) : (
-                      <p id={OFFERING_DELIVERY_FIELD_ID} className="text-xs text-muted">
+                      <p id={OFFERING_DELIVERY_FIELD_ID} className="text-sm text-muted">
                         Choisissez d’abord si ce prix est inclus dans le tarif ou ajouté en supplément.
                       </p>
                     )}
@@ -654,7 +682,7 @@ export default function ServiceOfferingForm({
                 ) : null}
               </>
             ) : (
-              <p className="text-xs text-muted">
+              <p className="text-sm text-muted">
                 {rental
                   ? 'Les clients viennent retirer le matériel à l’adresse pointée sur la carte.'
                   : 'Les clients viennent à votre adresse. Aucun rayon n’est affiché.'}

@@ -1002,14 +1002,14 @@ export default function MarketplaceInquiriesPanel({
                 <label className="flex items-start gap-2 min-h-[44px] text-sm text-foreground">
                   <input
                     type="checkbox"
-                    className="mt-1 h-4 w-4"
+                    className="mt-0.5 size-6 shrink-0"
                     checked={includeDelivery}
                     onChange={(event) => setIncludeDelivery(event.target.checked)}
                   />
                   <span>
-                    Intégrer la livraison
-                    {quoteTarget.destinationCommune ? ` vers ${quoteTarget.destinationCommune}` : ''}
-                    , une seule fois. Tarif publié : {formatFc(quoteTarget.deliveryExtraFc)}.
+                    {quoteTarget.destinationCommune
+                      ? `Intégrer la livraison vers ${quoteTarget.destinationCommune}, une seule fois. Tarif publié : ${formatFc(quoteTarget.deliveryExtraFc)}.`
+                      : `Intégrer la livraison, une seule fois. Tarif publié : ${formatFc(quoteTarget.deliveryExtraFc)}.`}
                   </span>
                 </label>
                 {includeDelivery ? (
@@ -1029,16 +1029,16 @@ export default function MarketplaceInquiriesPanel({
               </div>
             ) : null}
             {validQuoteAmount ? (
-              <div className="flex items-center justify-between p-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 text-xs">
-                <span className="font-medium text-emerald-900 dark:text-emerald-200">
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 p-2.5 rounded-[var(--radius-button)] border border-primary/25 bg-primary/10 text-sm">
+                <span className="font-medium text-foreground">
                   Total : {formatFc(quotedTotal)}
                 </span>
-                <span className="font-semibold text-emerald-800 dark:text-emerald-300">
-                  Acompte à la réservation (30%) : {formatFc(computedQuoteDeposit)}
+                <span className="font-semibold text-foreground">
+                  Acompte à la réservation (30 %) : {formatFc(computedQuoteDeposit)}
                 </span>
               </div>
             ) : (
-              <p className="text-[11px] text-muted">
+              <p className="text-sm text-muted">
                 L’acompte de 30 % sera automatiquement calculé pour le client.
               </p>
             )}

@@ -156,7 +156,9 @@ export default function MarketplaceInquiryForm({
           <p className="text-xs text-muted leading-relaxed">
             Message au professionnel. Pour bloquer une date, utilisez Réserver.
           </p>
-          {formError && <Alert variant="error">{formError}</Alert>}
+          {formError && !(kinshasaDelivery && !destinationCommune && formError.includes('commune')) ? (
+            <Alert variant="error">{formError}</Alert>
+          ) : null}
           {sent && <Alert variant="success">{sent}</Alert>}
           <Input label="Téléphone" value={phone} onChange={(e) => setPhone(e.target.value)} />
           <label className="block space-y-1.5">
@@ -226,6 +228,7 @@ export default function MarketplaceInquiryForm({
               deliveryByCommune={deliveryByCommune}
               proposedFc={proposedDeliveryFc}
               onProposedChange={setProposedDeliveryFc}
+              error={!destinationCommune && formError.includes('commune') ? formError : undefined}
             />
           ) : null}
           <label className="block space-y-1.5">

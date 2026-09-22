@@ -27,6 +27,53 @@ function Facts({ items }: { items: Array<{ label: string; value: string }> }) {
   );
 }
 
+function KinshasaDeliveryPrices({
+  prices,
+  fallbackLabel,
+}: {
+  prices: Array<{ commune: string; priceFc: number }>;
+  fallbackLabel: string;
+}) {
+  const [query, setQuery] = React.useState('');
+  const needle = query.trim().toLowerCase();
+  const visible = needle ? prices.filter((row) => row.commune.toLowerCase().includes(needle)) : prices;
+
+  return (
+    <Block title="Livraison selon la commune de Kinshasa">
+      <p className="text-sm text-muted leading-relaxed">
+        Tarifs publiés, indicatifs. Le devis permet d’en convenir un autre avec le prestataire.
+      </p>
+      {prices.length > 6 ? (
+        <label className="block space-y-1.5">
+          <span className="text-sm font-medium text-foreground">Chercher une commune</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Gombe, Lemba…"
+            className="min-h-[44px] w-full rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 text-base text-foreground placeholder:text-muted focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 sm:text-sm"
+          />
+        </label>
+      ) : null}
+      {visible.length === 0 ? (
+        <p className="text-sm text-muted" role="status">Aucune commune pour « {query.trim()} ».</p>
+      ) : (
+        <ul className="divide-y divide-border">
+          {visible.map((row) => (
+            <li key={row.commune} className="flex min-h-[44px] items-center justify-between gap-3 text-sm">
+              <span>{row.commune}</span>
+              <span className="tabular-nums font-medium">{formatFc(row.priceFc)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {fallbackLabel ? (
+        <p className="text-sm text-muted">{fallbackLabel}</p>
+      ) : null}
+    </Block>
+  );
+}
+
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-2">
@@ -158,22 +205,10 @@ export default function ListingPublicDetails({
       ) : null}
 
       {deliveryByPlace ? (
-        <Block title="Livraison selon la commune de Kinshasa">
-          <p className="text-sm text-muted leading-relaxed">
-            Tarifs publiés, indicatifs. Le devis permet d’en convenir un autre avec le prestataire.
-          </p>
-          <ul className="divide-y divide-border">
-            {communePrices.map((row) => (
-              <li key={row.commune} className="flex min-h-[44px] items-center justify-between gap-3 text-sm">
-                <span>{row.commune}</span>
-                <span className="tabular-nums font-medium">{formatFc(row.priceFc)}</span>
-              </li>
-            ))}
-          </ul>
-          {details.deliveryPriceFc ? (
-            <p className="text-sm text-muted">Autres communes : {formatFc(details.deliveryPriceFc)}, une seule fois.</p>
-          ) : null}
-        </Block>
+        <KinshasaDeliveryPrices
+          prices={communePrices}
+          fallbackLabel={details.deliveryPriceFc ? `Autres communes : ${formatFc(details.deliveryPriceFc)}, une seule fois.` : ''}
+        />
       ) : null}
 
       {amenityLabels.length > 0 ? (

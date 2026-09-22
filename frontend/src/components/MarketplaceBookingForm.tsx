@@ -99,7 +99,7 @@ export default function MarketplaceBookingForm({
     byCommune: deliveryByCommune,
     commune: destinationCommune,
   });
-  const deliveryFee = publishedDelivery.amountFc;
+  const deliveryFee = kinshasaDelivery && !destinationCommune ? 0 : publishedDelivery.amountFc;
   const includedDelivery = deliveryMode === 'included' && deliveryPriceFc && deliveryPriceFc > 0 ? deliveryPriceFc : 0;
   const amounts = priceFromFc != null
     ? previewMarketplaceAmounts(priceFromFc, Math.max(1, rangeKeys.length), priceUnit, {
@@ -205,7 +205,9 @@ export default function MarketplaceBookingForm({
         <p className="text-xs text-muted leading-relaxed">
           Un jour libre, puis éventuellement le dernier. Acompte {depositPct} % hors plateforme, après acceptation.
         </p>
-        {formError && <Alert variant="error">{formError}</Alert>}
+        {formError && !(kinshasaDelivery && !destinationCommune && formError.includes('commune')) ? (
+          <Alert variant="error">{formError}</Alert>
+        ) : null}
         {sent && <Alert variant="success">{sent}</Alert>}
         {selectedDate ? (
           <p className="text-sm">
@@ -231,6 +233,7 @@ export default function MarketplaceBookingForm({
             onCommuneChange={setDestinationCommune}
             deliveryPriceFc={deliveryPriceFc}
             deliveryByCommune={deliveryByCommune}
+            error={!destinationCommune && formError.includes('commune') ? formError : undefined}
           />
         ) : null}
         <label className="block space-y-1.5">
@@ -244,16 +247,18 @@ export default function MarketplaceBookingForm({
           />
         </label>
         {amounts && (
-          <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2 text-xs space-y-1 tabular-nums">
+          <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 py-2 text-sm space-y-1 tabular-nums">
             <p>Montant indicatif : <strong>{formatFc(amounts.amountFc)}</strong></p>
             {priceUnit === 'DAY' && rangeKeys.length > 1 ? (
               <p className="text-muted">{formatFc(priceFromFc || 0)} / jour × {rangeKeys.length} jours</p>
             ) : null}
-            {deliveryFee ? (
+            {kinshasaDelivery && !destinationCommune ? (
+              <p className="text-sm text-muted">Le supplément s’affiche après le choix de la commune.</p>
+            ) : deliveryFee ? (
               <p className="text-sm text-muted">
-                Livraison en supplément, une fois : {formatFc(deliveryFee)}
-                {publishedDelivery.source === 'commune' ? ` (${publishedDelivery.commune})` : ''}
-                . Pour un autre montant, envoyez un devis.
+                {publishedDelivery.source === 'commune'
+                  ? `Livraison vers ${publishedDelivery.commune}, une fois : ${formatFc(deliveryFee)}. Pour un autre montant, envoyez un devis.`
+                  : `Livraison en supplément, une fois : ${formatFc(deliveryFee)}. Pour un autre montant, envoyez un devis.`}
               </p>
             ) : null}
             {includedDelivery ? (
