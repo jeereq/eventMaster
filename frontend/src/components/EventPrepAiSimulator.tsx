@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Sparkles, Wand2, Clock, PlusCircle, Check, ArrowRight, DollarSign } from 'lucide-react';
+import { ChevronDown, Sparkles, Wand2, Clock, PlusCircle, Check, ArrowRight, DollarSign, MapPin } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Alert, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -12,7 +12,7 @@ import BudgetSimulationScopePicker from '@/components/BudgetSimulationScopePicke
 import BudgetSimulationCriteria from '@/components/BudgetSimulationCriteria';
 import type { BudgetSimulationScope } from '@/lib/budgetSimulation';
 import { parseDrinkOrderLines, type BeverageSaleUnit, type DrinkOrderLine } from '@/lib/beverageBrands';
-import { communesForCity } from '@/lib/rdcCities';
+import { communesForCity, neighborhoodsFor } from '@/lib/rdcCities';
 import { enabledMarketplaceCities, resolveUsdExchangeRateCdf } from '@/lib/platformCities';
 import type { EventPlanAiPackage, EventPlanAiResult } from '@/lib/eventPlan';
 import { snapshotPlanItems } from '@/lib/eventPlan';
@@ -130,6 +130,10 @@ export default function EventPrepAiSimulator({
   const [eventType, setEventType] = useState<ListingEventTypeId>(defaults?.eventType || 'private');
   const [city, setCity] = useState(defaults?.city || '');
   const [commune, setCommune] = useState(defaults?.commune || '');
+  const [neighborhood, setNeighborhood] = useState('');
+  const [origin, setOrigin] = useState<{ lat: number; lng: number } | null>(null);
+  const [geoBusy, setGeoBusy] = useState(false);
+  const [geoError, setGeoError] = useState('');
   const [guestCount, setGuestCount] = useState(defaults?.guestCount && defaults.guestCount > 0 ? String(defaults.guestCount) : '');
   const [budgetCurrency, setBudgetCurrency] = useState<'USD' | 'CDF'>('USD');
   const [budgetInputVal, setBudgetInputVal] = useState(() => {
@@ -175,6 +179,7 @@ export default function EventPrepAiSimulator({
   const [saveBusy, setSaveBusy] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const communes = useMemo(() => communesForCity(city), [city]);
+  const neighborhoods = useMemo(() => neighborhoodsFor(city, commune), [city, commune]);
   const selected = result?.packages.find((pack) => pack.id === selectedId) || result?.packages[0] || null;
 
   const { budgetMaxUsdCalculated, budgetMaxFcCalculated } = useMemo(() => {
@@ -288,6 +293,7 @@ export default function EventPrepAiSimulator({
     if (cached.brief.eventType) setEventType(cached.brief.eventType as ListingEventTypeId);
     if (cached.brief.city != null) setCity(cached.brief.city);
     if (cached.brief.commune != null) setCommune(cached.brief.commune);
+    if (cached.brief.neighborhood != null) setNeighborhood(cached.brief.neighborhood);
     if (cached.brief.guestCount) setGuestCount(String(cached.brief.guestCount));
     if (cached.brief.budgetMaxFc) {
       if (budgetCurrency === 'USD') {
@@ -341,7 +347,7 @@ export default function EventPrepAiSimulator({
     ambiance: ambiance || undefined,
     moment: moment || undefined,
     setting: setting || undefined,
-    neighborhood: undefined,
+    neighborhood: neighborhood || undefined,
     budgetMinFc: budgetMinFcCalculated > 0 ? budgetMinFcCalculated : null,
     budgetMinUsd: budgetMinUsdCalculated > 0 ? budgetMinUsdCalculated : undefined,
     wantedCategories,
@@ -468,6 +474,8 @@ export default function EventPrepAiSimulator({
         eventType,
         city,
         commune,
+        latitude: origin?.lat,
+        longitude: origin?.lng,
         guestCount: guestCount ? Number(guestCount) : undefined,
         budgetMaxFc: budgetMaxFcCalculated > 0 ? budgetMaxFcCalculated : undefined,
         budgetMaxUsd: budgetMaxUsdCalculated > 0 ? budgetMaxUsdCalculated : undefined,
@@ -855,6 +863,7 @@ export default function EventPrepAiSimulator({
                 onChange={(e) => {
                   setCity(e.target.value);
                   setCommune('');
+                  setNeighborhood('');
                   setCityError('');
                 }}
                 className={cn(NATIVE_FIELD, cityError && 'border-danger/40 focus-visible:border-danger')}
@@ -874,7 +883,10 @@ export default function EventPrepAiSimulator({
               <span className={FIELD_LABEL}>Commune</span>
               <select
                 value={commune}
-                onChange={(e) => setCommune(e.target.value)}
+                onChange={(e) => {
+                  setCommune(e.target.value);
+                  setNeighborhood('');
+                }}
                 className={NATIVE_FIELD}
               >
                 <option value="">Toutes</option>
@@ -883,6 +895,75 @@ export default function EventPrepAiSimulator({
                 ))}
               </select>
             </label>
+            <label className="space-y-1 sm:col-span-2">
+              <span className={FIELD_LABEL}>Quartier</span>
+              <select
+                value={neighborhood}
+                disabled={!commune}
+                aria-describedby={`${tabsId}-place-hint`}
+                onChange={(e) => setNeighborhood(e.target.value)}
+                className={NATIVE_FIELD}
+              >
+                <option value="">{commune ? 'Tous les quartiers' : 'D’abord la commune'}</option>
+                {neighborhoods.map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            </label>
+            <div className="sm:col-span-2 flex flex-col sm:flex-row sm:items-center gap-2">
+              <button
+                type="button"
+                disabled={geoBusy}
+                aria-pressed={Boolean(origin)}
+                aria-busy={geoBusy || undefined}
+                aria-describedby={`${tabsId}-place-hint`}
+                onClick={() => {
+                  setGeoError('');
+                  if (!navigator.geolocation) {
+                    setGeoError('Cet appareil ne partage pas sa position.');
+                    return;
+                  }
+                  setGeoBusy(true);
+                  navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                      setOrigin({ lat: position.coords.latitude, lng: position.coords.longitude });
+                      setGeoBusy(false);
+                    },
+                    () => {
+                      setOrigin(null);
+                      setGeoError('Position refusée. Les prestataires restent classés par ville et commune.');
+                      setGeoBusy(false);
+                    },
+                    { enableHighAccuracy: true, timeout: 8000 },
+                  );
+                }}
+                className={cn(CHIP, 'w-full sm:w-auto whitespace-normal', chipTone(Boolean(origin)))}
+              >
+                <MapPin className="w-3.5 h-3.5 mr-1 shrink-0" aria-hidden />
+                {geoBusy ? 'Localisation…' : origin ? 'Position GPS utilisée' : 'Utiliser ma position GPS'}
+              </button>
+              {origin ? (
+                <button
+                  type="button"
+                  onClick={() => setOrigin(null)}
+                  className="min-h-11 px-2 text-xs font-semibold text-muted hover:text-foreground rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                >
+                  Retirer le GPS
+                </button>
+              ) : null}
+            </div>
+            <p
+              id={`${tabsId}-place-hint`}
+              className={cn('sm:col-span-2 text-xs', geoError ? 'text-danger font-medium' : 'text-muted')}
+              role={geoError ? 'alert' : undefined}
+            >
+              {geoError
+                || (origin
+                  ? 'Les services et locations les plus proches passent devant.'
+                  : commune
+                    ? 'Le quartier et le GPS classent les prestataires et le matériel.'
+                    : 'Choisissez une commune pour afficher les quartiers. Le GPS classe aussi sans quartier.')}
+            </p>
             </>
             ) : null}
             <div className="space-y-1.5">

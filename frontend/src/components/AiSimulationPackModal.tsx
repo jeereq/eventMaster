@@ -291,7 +291,13 @@ function ElementRow({
         <p className="text-xs text-muted">{kind}</p>
         <span className="text-sm font-semibold truncate block">{item.title}</span>
         <p className="text-xs text-muted truncate">
-          {[item.categoryLabel, item.orgName, item.location].filter(Boolean).join(' · ')}
+          {[
+            item.categoryLabel,
+            item.orgName,
+            item.location,
+            item.distanceKm != null ? `à ${item.distanceKm.toLocaleString('fr-FR')} km` : '',
+            item.latitude != null && item.longitude != null ? 'GPS' : '',
+          ].filter(Boolean).join(' · ')}
         </p>
         {item.detail ? <p className="text-xs text-muted">{item.detail}</p> : null}
       </div>

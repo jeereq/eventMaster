@@ -657,8 +657,10 @@ export default function MarketplaceDeskPage() {
             {pagedServices.map((item) => {
               const photos = photosOf(item);
               const cover = photos[0] ? mediaPosterUrl(photos[0]) : null;
+              const place = [item.neighborhood, item.commune, item.city].filter(Boolean).join(', ');
               const meta = [
-                item.city,
+                place || 'Lieu non renseigné',
+                item.latitude != null && item.longitude != null ? 'GPS' : 'Sans GPS',
                 item.travels === false
                   ? 'Sur place'
                   : item.coverageRadiusKm

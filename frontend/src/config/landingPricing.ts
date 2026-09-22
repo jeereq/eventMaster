@@ -1153,12 +1153,12 @@ export const PLATFORM_PILLARS = [
   {
     title: 'Marketplace',
     description: 'Salles, prestataires, matériel & équipements. Acompte {depositPercent} % hors plateforme · commission vendeur {commissionPercent} %.',
-    icon: 'calendar',
+    icon: 'calendar'
   },
   {
     title: 'Rôles clairs',
     description: 'Chacun voit seulement ce qu’il gère : organisation, accueil, salle ou prestation.',
-    icon: 'users',
+    icon: 'users'
   },
   {
     title: 'Espaces séparés',
@@ -1168,8 +1168,8 @@ export const PLATFORM_PILLARS = [
   {
     title: 'Commerciaux plateforme',
     description: 'Les commerciaux EventMaster parrainent des organisations ({commercialPercent} % sur la période facturée).',
-    icon: 'trending',
-  },
+    icon: 'trending'
+  }
 ];
 
 export function parsePriceFc(price: string): number {

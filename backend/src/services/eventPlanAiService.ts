@@ -2,7 +2,7 @@ import { MarketplaceBookingStatus, ServiceCategory, VenuePriceUnit } from '@pris
 import { prisma } from '../db';
 import { parseListingDetails } from '../utils/listingDetails';
 import { coverFromMedia, isServiceRentalCategory, parsePhotoUrls, priceUnitLabel, serviceCategoryLabel } from '../utils/publicVenue';
-import { collectUnavailableDates, isRangeAvailable, toDateKey } from '../utils/marketplaceDates';
+import { collectUnavailableDates, haversineKm, isRangeAvailable, toDateKey } from '../utils/marketplaceDates';
 import { allowedCityPrismaFilter, normalizeAllowedCity, normalizeAllowedCommune } from '../utils/rdcCities';
 import { EVENT_PLAN_TYPES, type EventPlanType } from './eventPlanBrief';
 import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, parseWantedDrinkLines, parseWantedSaleUnits, rentalBudgetAmount, type BeverageFocusBrand, type BeverageOrderLine, type BudgetSimulationScope, type BudgetStyle, type WantedSaleUnit } from './eventBudgetCost';
@@ -59,6 +59,9 @@ type CatalogRow = {
   city: string | null;
   commune: string | null;
   neighborhood: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  distanceKm: number | null;
   priceFromFc: number | null;
   estimatedFc: number;
   capacity: number | null;
@@ -73,6 +76,9 @@ export type EventPlanAiItem = {
   title: string;
   orgName: string;
   location: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  distanceKm?: number | null;
   coverUrl: string | null;
   estimatedFc: number;
   detail?: string;
@@ -217,6 +223,28 @@ function scoreVenue(
   return score;
 }
 
+function distanceFromOrigin(
+  origin: { lat: number; lng: number } | null,
+  latitude: number | null | undefined,
+  longitude: number | null | undefined,
+): number | null {
+  if (!origin || latitude == null || longitude == null) return null;
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  return Math.round(haversineKm(origin.lat, origin.lng, latitude, longitude) * 10) / 10;
+}
+
+function placeRank(
+  neighborhood: string | null | undefined,
+  wantedNeighborhood: string,
+  distanceKm: number | null,
+): number {
+  let rank = 0;
+  const needle = wantedNeighborhood.trim().toLowerCase();
+  if (needle && neighborhood && neighborhood.toLowerCase().includes(needle)) rank += 40;
+  if (distanceKm != null) rank += Math.max(0, 30 - distanceKm);
+  return rank;
+}
+
 async function loadCatalog(opts: {
   city: string;
   commune: string;
@@ -226,6 +254,7 @@ async function loadCatalog(opts: {
   venueAmenities: string[];
   setting: string;
   neighborhood: string;
+  origin: { lat: number; lng: number } | null;
 }): Promise<{
   venues: Array<CatalogRow & { item: EventPlanAiItem }>;
   services: Array<CatalogRow & { item: EventPlanAiItem }>;
@@ -276,18 +305,21 @@ async function loadCatalog(opts: {
 
   const venues = available(venueRows)
     .filter((row) => !opts.guestCount || !row.room.capacity || row.room.capacity >= opts.guestCount)
-    .slice(0, 28)
     .map((row) => {
       const extra = parseListingDetails(row.details);
       const photos = parsePhotoUrls(row.photos);
       const orgName = row.tenant.vendorProfile?.displayName || row.tenant.name;
       const estimatedFc = estimateCost(row.priceFromFc, row.priceUnit, opts.guestCount);
+      const distanceKm = distanceFromOrigin(opts.origin, row.latitude, row.longitude);
       const item: EventPlanAiItem = {
         kind: 'venue',
         slug: row.slug,
         title: row.headline || row.room.name,
         orgName,
         location: [row.neighborhood, row.commune, row.city].filter(Boolean).join(', '),
+        latitude: row.latitude,
+        longitude: row.longitude,
+        distanceKm,
         coverUrl: coverFromMedia(photos),
         estimatedFc,
         categoryLabel: 'Salle',
@@ -308,6 +340,9 @@ async function loadCatalog(opts: {
         city: row.city,
         commune: row.commune,
         neighborhood: row.neighborhood,
+        latitude: row.latitude,
+        longitude: row.longitude,
+        distanceKm,
         priceFromFc: row.priceFromFc,
         estimatedFc,
         capacity: row.room.capacity,
@@ -315,9 +350,14 @@ async function loadCatalog(opts: {
         summary: snippet(extra.description || row.room.description),
         amenities: extra.amenities.slice(0, 10),
       };
-      return { ...catalog, item, score: scoreVenue(extra.amenities, opts, row.neighborhood) };
+      return {
+        ...catalog,
+        item,
+        score: scoreVenue(extra.amenities, opts, row.neighborhood) + placeRank(row.neighborhood, opts.neighborhood, distanceKm),
+      };
     })
     .sort((a, b) => b.score - a.score)
+    .slice(0, 28)
     .map(({ score: _score, ...row }) => row);
 
   const services = available(serviceRows).slice(0, 72).map((row) => {
@@ -335,12 +375,16 @@ async function loadCatalog(opts: {
       deliveryPriceFc: row.deliveryPriceFc,
     });
     const estimatedFc = priced?.amountFc ?? 0;
+    const distanceKm = distanceFromOrigin(opts.origin, row.latitude, row.longitude);
     const item: EventPlanAiItem = {
       kind: 'service',
       slug: row.slug,
       title: row.title,
       orgName: row.vendorProfile.displayName || row.tenant.name,
       location: [row.neighborhood, row.commune, row.city].filter(Boolean).join(', '),
+      latitude: row.latitude,
+      longitude: row.longitude,
+      distanceKm,
       coverUrl: coverFromMedia(photos),
       estimatedFc,
       detail: priced?.note,
@@ -358,6 +402,9 @@ async function loadCatalog(opts: {
       city: row.city,
       commune: row.commune,
       neighborhood: row.neighborhood,
+      latitude: row.latitude,
+      longitude: row.longitude,
+      distanceKm,
       priceFromFc: row.priceFromFc,
       estimatedFc,
       capacity: null,
@@ -365,15 +412,17 @@ async function loadCatalog(opts: {
       summary: snippet(extra.description || row.description),
       amenities: extra.amenities.slice(0, 8),
     };
-    return { ...catalog, item };
+    return { ...catalog, item, place: placeRank(row.neighborhood, opts.neighborhood, distanceKm) };
   });
 
+  const byPlace = (left: { place: number }, right: { place: number }) => right.place - left.place;
   const preferred = opts.wantedCategories.length
-    ? services.filter((row) => opts.wantedCategories.includes(row.category))
+    ? services.filter((row) => opts.wantedCategories.includes(row.category)).sort(byPlace)
     : [];
-  const rest = opts.wantedCategories.length
+  const rest = (opts.wantedCategories.length
     ? services.filter((row) => !opts.wantedCategories.includes(row.category))
-    : services;
+    : services
+  ).sort(byPlace);
   const rankedServices = preferred.length ? [...preferred, ...rest] : rest;
 
   const trades = rankedServices.filter((row) => row.kind === 'trade').slice(0, 36);
@@ -443,6 +492,13 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     ? body.keepServiceSlugs.filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
     : [];
   const neighborhood = typeof body.neighborhood === 'string' ? body.neighborhood.trim().slice(0, 80) : '';
+  const originLat = Number(body.latitude);
+  const originLng = Number(body.longitude);
+  const origin = Number.isFinite(originLat) && Number.isFinite(originLng)
+    && originLat >= -90 && originLat <= 90 && originLng >= -180 && originLng <= 180
+    && !(Math.abs(originLat) < 0.01 && Math.abs(originLng) < 0.01)
+    ? { lat: originLat, lng: originLng }
+    : null;
   const ambiance = typeof body.ambiance === 'string' ? body.ambiance.trim().slice(0, 32) : '';
   const moment = typeof body.moment === 'string' ? body.moment.trim().slice(0, 32) : '';
   const setting = typeof body.setting === 'string' ? body.setting.trim().slice(0, 32) : '';
@@ -548,6 +604,7 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     venueAmenities,
     setting,
     neighborhood,
+    origin,
   };
 
   const catalogWarnings: string[] = [];
@@ -559,6 +616,16 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
       widenedCommune = true;
       catalogWarnings.push(
         `La commune « ${commune} » n’avait pas assez de fiches publiques : recherche élargie à ${city || 'toute la ville'}.`,
+      );
+    }
+  }
+  if (neighborhood) {
+    const inQuarter = catalog.services.filter((row) => row.kind !== 'venue'
+      && row.neighborhood
+      && row.neighborhood.toLowerCase().includes(neighborhood.toLowerCase()));
+    if (!inQuarter.length) {
+      catalogWarnings.push(
+        `Aucun prestataire publié dans le quartier « ${neighborhood} ». Les fiches de la commune restent proposées.`,
       );
     }
   }
@@ -583,6 +650,9 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     city: row.city,
     commune: row.commune,
     neighborhood: row.neighborhood,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    distanceKm: row.distanceKm,
     estimatedFc: row.estimatedFc,
     capacity: row.capacity,
     travels: row.travels,
@@ -608,7 +678,7 @@ export async function simulateEventPlanAi(userId: string, body: Record<string, u
     'Propose EXACTEMENT 3 packs distincts : eco (sobre, moins cher), balanced (compromis), comfort (plus complet).',
     'Chaque pack : au plus 1 salle, métiers et locations cohérents. Varie les slugs entre packs quand le catalogue le permet.',
     'Si un budget est donné, chaque pack vise un total estimé inférieur ou égal. Sinon, explique-le dans warnings.',
-    'Préfère le même quartier / commune. Si keepVenueSlug est fourni, utilise-le pour les 3 packs.',
+    'Préfère le même quartier et la commune. Si distanceKm est présent, préfère les fiches les plus proches. Si keepVenueSlug est fourni, utilise-le pour les 3 packs.',
     'Si ambiance, moment, intérieur/extérieur, quartier ou prestations souhaitées sont fournis, oriente les packs dessus sans inventer de fiches.',
     'Si un budget min est donné, évite les packs trop en dessous sauf le pack économique.',
   ].join(' ');

@@ -94,6 +94,15 @@ function PackItemRow({
             {item.match === 'exact' ? ' · adapté' : ''}
             {item.orgName ? ` · ${item.orgName}` : ''}
           </p>
+          {item.location || item.distanceKm != null || (item.latitude != null && item.longitude != null) ? (
+            <p className="text-xs text-muted truncate">
+              {[
+                item.location,
+                item.distanceKm != null ? `à ${item.distanceKm.toLocaleString('fr-FR')} km` : '',
+                item.latitude != null && item.longitude != null ? 'GPS' : '',
+              ].filter(Boolean).join(' · ')}
+            </p>
+          ) : null}
           {item.detail ? (
             <p className="text-xs text-muted">{item.detail}</p>
           ) : null}

@@ -301,6 +301,9 @@ export type PlanItem = {
   title: string;
   orgName: string;
   location: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  distanceKm?: number | null;
   coverUrl: string | null;
   estimatedFc: number;
   detail?: string;
@@ -361,6 +364,9 @@ export function snapshotPlanItems(items: PlanItem[]): SavedPackItem[] {
     title: item.title,
     orgName: item.orgName,
     location: item.location,
+    latitude: item.latitude ?? null,
+    longitude: item.longitude ?? null,
+    distanceKm: item.distanceKm ?? null,
     coverUrl: item.coverUrl,
     estimatedFc: item.estimatedFc,
     categoryLabel: item.categoryLabel,
