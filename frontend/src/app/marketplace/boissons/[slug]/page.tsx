@@ -1,16 +1,16 @@
 'use client';
 
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
-import Link from 'next/link';
+import Link, { useLinkStatus } from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Wine } from 'lucide-react';
+import { ArrowLeft, Loader2, Wine } from 'lucide-react';
 import { api } from '@/lib/api';
 import { formatFc } from '@/config/landingPricing';
 import { useAuth } from '@/context/AuthContext';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import MarketplacePublicNav from '@/components/MarketplacePublicNav';
 import ClientAuthChoice from '@/components/ClientAuthChoice';
-import { Button } from '@/components/ui';
+import { Button, Skeleton } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
   BEVERAGE_KIND_LABELS,
@@ -27,6 +27,62 @@ type VendorDrinkPage = {
 };
 
 const fieldClass = 'w-full min-h-[44px] rounded-[var(--radius-button)] border border-border bg-surface px-3 text-base sm:text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+
+function BackLinkIcon() {
+  const { pending } = useLinkStatus();
+  if (pending) {
+    return <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" aria-hidden />;
+  }
+  return <ArrowLeft className="w-4 h-4" aria-hidden />;
+}
+
+function BackToOffers() {
+  return (
+    <Link
+      href="/marketplace/boissons"
+      className="inline-flex items-center gap-1.5 min-h-[44px] -ml-1 px-1.5 text-sm font-semibold text-muted hover:text-foreground rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+    >
+      <BackLinkIcon />
+      Retour aux propositions
+    </Link>
+  );
+}
+
+function DrinkDetailSkeleton() {
+  return (
+    <div
+      className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start"
+      role="status"
+      aria-live="polite"
+      aria-label="Chargement des marques"
+    >
+      <div className="space-y-3">
+        {[0, 1, 2].map((row) => (
+          <div key={row} className="flex items-center gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-3">
+            <Skeleton className="w-16 h-16 rounded-md shrink-0" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3.5 w-44" />
+              <Skeleton className="h-4 w-20" />
+            </div>
+            <Skeleton className="h-11 w-24 rounded-[var(--radius-button)] shrink-0" />
+          </div>
+        ))}
+      </div>
+      <div className="rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3">
+        <Skeleton className="h-5 w-36" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-11 w-full rounded-[var(--radius-button)]" />
+        <Skeleton className="h-24 w-full rounded-[var(--radius-button)]" />
+        <div className="flex gap-2">
+          <Skeleton className="h-11 flex-1 rounded-[var(--radius-button)]" />
+          <Skeleton className="h-11 flex-1 rounded-[var(--radius-button)]" />
+        </div>
+      </div>
+      <span className="sr-only">Chargement des marques…</span>
+    </div>
+  );
+}
 
 function packCountOf(value: string): number {
   const amount = Math.round(Number(value));
@@ -138,12 +194,10 @@ function VendorDrinksPage() {
       </PublicPageHero>
 
       <div className="page-container py-6 md:py-10 space-y-6">
-        <Link href="/marketplace/boissons" className="inline-flex items-center min-h-[44px] text-sm font-semibold text-primary-solid underline">
-          Retour aux propositions
-        </Link>
+        <BackToOffers />
 
         {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
-        {loading ? <p className="text-sm text-muted">Chargement des marques…</p> : null}
+        {loading ? <DrinkDetailSkeleton /> : null}
 
         {!loading && page && offers.length === 0 ? (
           <div className="text-center py-16 px-6 border border-dashed border-border rounded-[var(--radius-card)] bg-surface">
@@ -289,7 +343,10 @@ export default function VendorDrinksRoute() {
         <PublicPageHero compact title="Boissons" description="Chargement des marques du prestataire.">
           <MarketplacePublicNav active="drinks" />
         </PublicPageHero>
-        <p className="page-container py-6 text-sm text-muted">Chargement des marques…</p>
+        <div className="page-container py-6 md:py-10 space-y-6">
+          <BackToOffers />
+          <DrinkDetailSkeleton />
+        </div>
       </PublicPageShell>
     )}>
       <VendorDrinksPage />
