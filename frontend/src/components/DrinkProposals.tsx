@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Wine } from 'lucide-react';
@@ -12,7 +12,15 @@ import { BEVERAGE_SALE_UNIT_LABELS, formatBeverageSale, type PublicBeverageOffer
 
 const fieldClass = 'w-full min-h-11 rounded-[var(--radius-button)] border border-border bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
 
-export default function DrinkProposals({ offers }: { offers: PublicBeverageOffer[] }) {
+export default function DrinkProposals({
+  offers,
+  layout,
+  gridClass,
+}: {
+  offers: PublicBeverageOffer[];
+  layout: 'grid' | 'list';
+  gridClass: string;
+}) {
   const pathname = usePathname() || '/marketplace/boissons';
   const [selected, setSelected] = useState<PublicBeverageOffer | null>(null);
   const [packs, setPacks] = useState('1');
@@ -27,23 +35,6 @@ export default function DrinkProposals({ offers }: { offers: PublicBeverageOffer
   React.useEffect(() => {
     setLoggedIn(Boolean(localStorage.getItem('token')));
   }, []);
-
-  const groups = useMemo(() => {
-    const map = new Map<string, PublicBeverageOffer[]>();
-    for (const offer of offers) {
-      const rows = map.get(offer.brandId) || [];
-      rows.push(offer);
-      map.set(offer.brandId, rows);
-    }
-    return [...map.entries()].map(([brandId, rows]) => ({
-      brandId,
-      brandName: rows[0].brandName,
-      kindLabel: rows[0].kindLabel,
-      imageUrl: rows[0].imageUrl,
-      meta: [rows[0].volumeLabel, rows[0].producer, rows[0].country].filter(Boolean).join(' · '),
-      rows,
-    }));
-  }, [offers]);
 
   const open = (offer: PublicBeverageOffer) => {
     setSelected(offer);
@@ -84,50 +75,61 @@ export default function DrinkProposals({ offers }: { offers: PublicBeverageOffer
 
   return (
     <>
-      <div className="space-y-4">
-        {groups.map((group) => (
-          <section key={group.brandId} className="rounded-[var(--radius-card)] border border-border bg-surface overflow-hidden">
-            <header className="flex items-center gap-3 p-3 border-b border-border">
-              <div className="w-16 h-16 rounded-md overflow-hidden bg-surface-muted shrink-0">
-                {group.imageUrl ? (
-                  <img src={group.imageUrl} alt={`Visuel de ${group.brandName}`} className="w-full h-full object-cover" />
+      <ul className={layout === 'list' ? 'space-y-2' : gridClass}>
+        {offers.map((offer) => (
+          <li key={offer.id}>
+            <article className={cn(
+              'h-full rounded-[var(--radius-card)] border border-border bg-surface',
+              layout === 'list' ? 'flex items-center gap-3 p-2.5 sm:p-3' : 'overflow-hidden flex flex-col',
+            )}>
+              <div className={cn(
+                'bg-surface-muted shrink-0 overflow-hidden',
+                layout === 'list' ? 'w-20 h-16 sm:w-28 sm:h-20 rounded-md' : 'aspect-[4/3]',
+              )}>
+                {offer.imageUrl ? (
+                  <img src={offer.imageUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-muted"><Wine className="w-6 h-6" aria-hidden="true" /></div>
+                  <div className="w-full h-full flex items-center justify-center text-muted">
+                    <Wine className="w-6 h-6" aria-hidden="true" />
+                  </div>
                 )}
               </div>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-muted">{group.kindLabel}</p>
-                <h2 className="text-base font-semibold text-foreground">{group.brandName}</h2>
-                <p className="text-xs text-muted">{group.meta || `${group.rows.length} proposition${group.rows.length > 1 ? 's' : ''}`}</p>
+              <div className={cn('min-w-0', layout === 'list' ? 'flex-1' : 'p-3 space-y-1 flex-1')}>
+                <p className="text-xs font-semibold text-muted">{offer.brandName} · {offer.kindLabel}</p>
+                <h2 className="text-sm font-semibold text-foreground truncate">{offer.vendorName}</h2>
+                <p className="text-xs text-muted truncate">
+                  {formatBeverageSale(offer)} · {BEVERAGE_SALE_UNIT_LABELS[offer.unitKind]}
+                </p>
               </div>
-            </header>
-            <ul>
-              {group.rows.map((offer) => (
-                <li key={offer.id} className="flex flex-col sm:flex-row sm:items-center gap-2 px-3 py-3 border-b border-border last:border-b-0">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-foreground">{offer.vendorName}</p>
-                    <p className="text-xs text-muted">{formatBeverageSale(offer)} · {BEVERAGE_SALE_UNIT_LABELS[offer.unitKind]}</p>
-                  </div>
-                  <p className="text-sm font-semibold tabular-nums text-foreground">
-                    {formatFc(offer.payableFc)}
-                    {offer.promoPriceFc != null ? <span className="ml-2 text-xs text-muted line-through">{formatFc(offer.priceFc)}</span> : null}
-                  </p>
-                  <button type="button" onClick={() => open(offer)} className="min-h-11 px-3 rounded-[var(--radius-button)] border border-border text-xs font-semibold text-foreground hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
-                    Détail
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
+              <div className={cn(
+                'flex items-center gap-2',
+                layout === 'list' ? 'shrink-0' : 'px-3 pb-3 justify-between',
+              )}>
+                <p className="text-sm font-semibold tabular-nums text-foreground">
+                  {formatFc(offer.payableFc)}
+                  {offer.promoPriceFc != null ? (
+                    <span className="ml-2 text-xs text-muted line-through">{formatFc(offer.priceFc)}</span>
+                  ) : null}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => open(offer)}
+                  className="min-h-11 px-3 rounded-[var(--radius-button)] border border-border text-xs font-semibold text-foreground hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                >
+                  Détail
+                </button>
+              </div>
+            </article>
+          </li>
         ))}
-      </div>
+      </ul>
 
       <Modal
         open={Boolean(selected)}
         onClose={() => setSelected(null)}
         size="md"
-        title={selected ? selected.brandName : 'Proposition'}
-        description={selected ? `${selected.vendorName} · ${formatBeverageSale(selected)}` : undefined}
+        title={selected ? selected.vendorName : 'Proposition'}
+        description={selected ? `${selected.brandName} · ${formatBeverageSale(selected)}` : undefined}
       >
         {selected ? (
           <div className="space-y-3">
