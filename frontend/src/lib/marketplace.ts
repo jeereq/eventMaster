@@ -477,6 +477,7 @@ export interface MarketplaceInquiryItem {
   listingSlug?: string | null;
   offeringSlug?: string | null;
   offeringCategory?: string | null;
+  deliveryExtraFc?: number | null;
   viewerRole?: 'vendor' | 'organizer';
   closedAt?: string | null;
   closedByRole?: 'CLIENT' | 'VENDOR' | string | null;

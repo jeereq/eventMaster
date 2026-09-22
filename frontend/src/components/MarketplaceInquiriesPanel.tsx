@@ -132,6 +132,7 @@ export default function MarketplaceInquiriesPanel({
   const [quoteTarget, setQuoteTarget] = useState<MarketplaceInquiryItem | null>(null);
   const [quoteAmount, setQuoteAmount] = useState('');
   const [quoteNotes, setQuoteNotes] = useState('');
+  const [includeDelivery, setIncludeDelivery] = useState(false);
   const [quoteSubmitting, setQuoteSubmitting] = useState(false);
 
   // Modale Refus Devis
@@ -236,6 +237,7 @@ export default function MarketplaceInquiriesPanel({
     setQuoteTarget(item);
     setQuoteAmount(item.quotedAmountFc != null ? String(item.quotedAmountFc) : '');
     setQuoteNotes(item.responseNotes || '');
+    setIncludeDelivery(false);
     setPanelError('');
   };
 
@@ -247,16 +249,24 @@ export default function MarketplaceInquiriesPanel({
       setPanelError('Veuillez indiquer un montant valide en Francs Congolais (FC).');
       return;
     }
+    const deliveryExtra = includeDelivery && quoteTarget.deliveryExtraFc && quoteTarget.deliveryExtraFc > 0
+      ? quoteTarget.deliveryExtraFc
+      : 0;
+    const totalAmount = parsedAmount + deliveryExtra;
+    const notes = [
+      quoteNotes.trim(),
+      deliveryExtra ? `Livraison en supplément intégrée : ${deliveryExtra.toLocaleString('fr-FR')} FC.` : '',
+    ].filter(Boolean).join('\n');
     setQuoteSubmitting(true);
     setPanelError('');
     try {
       if (onQuote) {
-        await onQuote(quoteTarget.id, parsedAmount, quoteNotes.trim() || undefined);
+        await onQuote(quoteTarget.id, totalAmount, notes || undefined);
       } else {
         await api.patch(`/marketplace/inquiries/${quoteTarget.id}`, {
           action: 'quote',
-          quotedAmountFc: parsedAmount,
-          responseNotes: quoteNotes.trim() || undefined,
+          quotedAmountFc: totalAmount,
+          responseNotes: notes || undefined,
         });
       }
       const quoted = {
@@ -570,8 +580,12 @@ export default function MarketplaceInquiriesPanel({
   }
 
   const parsedQuoteNumber = Number.parseInt(quoteAmount, 10);
+  const quoteDelivery = includeDelivery && quoteTarget?.deliveryExtraFc && quoteTarget.deliveryExtraFc > 0
+    ? quoteTarget.deliveryExtraFc
+    : 0;
+  const quotedTotal = Number.isFinite(parsedQuoteNumber) ? parsedQuoteNumber + quoteDelivery : 0;
   const validQuoteAmount = Number.isFinite(parsedQuoteNumber) && parsedQuoteNumber > 0;
-  const computedQuoteDeposit = validQuoteAmount ? Math.round(parsedQuoteNumber * 0.3) : 0;
+  const computedQuoteDeposit = validQuoteAmount ? Math.round(quotedTotal * 0.3) : 0;
 
   return (
     <div className="space-y-4">
@@ -966,10 +980,21 @@ export default function MarketplaceInquiriesPanel({
               required
               autoFocus
             />
+            {quoteTarget?.deliveryExtraFc && quoteTarget.deliveryExtraFc > 0 ? (
+              <label className="flex items-start gap-2 min-h-[44px] text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4"
+                  checked={includeDelivery}
+                  onChange={(event) => setIncludeDelivery(event.target.checked)}
+                />
+                <span>Intégrer la livraison ({formatFc(quoteTarget.deliveryExtraFc)}), une seule fois, à ce montant.</span>
+              </label>
+            ) : null}
             {validQuoteAmount ? (
               <div className="flex items-center justify-between p-2.5 rounded-xl border border-emerald-500/25 bg-emerald-500/10 text-xs">
                 <span className="font-medium text-emerald-900 dark:text-emerald-200">
-                  Total : {formatFc(parsedQuoteNumber)}
+                  Total : {formatFc(quotedTotal)}
                 </span>
                 <span className="font-semibold text-emerald-800 dark:text-emerald-300">
                   Acompte à la réservation (30%) : {formatFc(computedQuoteDeposit)}

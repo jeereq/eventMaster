@@ -41,6 +41,19 @@ test('une chaise à la journée multiplie les invités et les jours, pas la livr
   assert.match(chairs?.note || '', /livraison incluse/);
 });
 
+test('une voiture à la journée intègre la livraison en supplément une seule fois, même depuis la fiche', () => {
+  const car = rentalBudgetAmount({
+    category: 'RENTAL_CAR',
+    priceUnit: 'DAY',
+    priceFromFc: 50000,
+    guestCount: 4,
+    dayCount: 2,
+    details: { deliveryMode: 'extra_fee', deliveryPriceFc: '20000' },
+  });
+  assert.equal(car?.amountFc, 50000 * 2 + 20000);
+  assert.match(car?.note || '', /livraison/);
+});
+
 test('une tente reste un lot par jour, sans multiplier par les invités', () => {
   const tent = rentalBudgetAmount({
     category: 'RENTAL_TENT',

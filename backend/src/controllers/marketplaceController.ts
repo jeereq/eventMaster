@@ -38,6 +38,7 @@ import {
   beverageOrderMessage,
   resolveVendorDrinkLines,
 } from '../services/beverageOrderService';
+import { rentalDeliverySurcharge } from '../services/eventBudgetCost';
 import { PlanFeatureError, assertServiceQuota, assertVenueCatalogPublish } from '../services/planFeaturesService';
 import { listTenantOperatorIds, notifyTenantOperators, notifyUsers } from '../services/platformNotificationService';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
@@ -1605,6 +1606,9 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
             slug: true,
             title: true,
             category: true,
+            deliveryMode: true,
+            deliveryPriceFc: true,
+            details: true,
             tenant: { select: { name: true, manager: { select: { phone: true } } } },
             vendorProfile: { select: { slug: true, displayName: true } },
           },
@@ -1689,6 +1693,13 @@ export async function listMyInquiries(req: AuthenticatedRequest, res: Response) 
           listingSlug: item.listing?.slug || null,
           offeringSlug: item.offering?.slug || null,
           offeringCategory: item.offering?.category || null,
+          deliveryExtraFc: item.offering
+            ? rentalDeliverySurcharge({
+                deliveryMode: item.offering.deliveryMode,
+                deliveryPriceFc: item.offering.deliveryPriceFc,
+                details: item.offering.details,
+              })
+            : 0,
           viewerRole: role,
           closedAt: item.closedAt,
           closedByRole: item.closedByRole,

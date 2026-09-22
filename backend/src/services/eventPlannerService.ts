@@ -154,6 +154,7 @@ function estimateCost(
     promoEndsAt?: Date | string | null;
     deliveryMode?: string | null;
     deliveryPriceFc?: number | null;
+    details?: unknown;
   },
 ): { amountFc: number; note: string } | null {
   if (extra?.category) {
@@ -166,6 +167,7 @@ function estimateCost(
       guestCount,
       deliveryMode: extra.deliveryMode,
       deliveryPriceFc: extra.deliveryPriceFc,
+      details: extra.details,
     });
   }
   if (priceFromFc == null || priceFromFc <= 0) return null;
@@ -639,6 +641,7 @@ export async function buildEventPlanProposals(body: Record<string, unknown> & {
         promoEndsAt: offering.promoEndsAt,
         deliveryMode: offering.deliveryMode,
         deliveryPriceFc: offering.deliveryPriceFc,
+        details: offering.details,
       });
       if (priced == null) return [];
       return [{

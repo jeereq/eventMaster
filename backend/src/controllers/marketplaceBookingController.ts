@@ -7,6 +7,7 @@ import { notifyTenantOperators, notifyUsers } from '../services/platformNotifica
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
 import { computeMarketplaceAmounts, billedMarketplaceAmount } from '../config/marketplaceBilling';
+import { rentalDeliverySurcharge } from '../services/eventBudgetCost';
 import { activePromoPrice } from '../services/offerPromotion';
 import {
   beverageInquiryTitle,
@@ -314,8 +315,12 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
     }
 
     const rentalBase = billedMarketplaceAmount(price, listing?.priceUnit ?? offering?.priceUnit, range.dayCount);
-    const deliveryFee = offering?.deliveryMode === 'extra_fee' && offering.deliveryPriceFc && offering.deliveryPriceFc > 0
-      ? offering.deliveryPriceFc
+    const deliveryFee = offering
+      ? rentalDeliverySurcharge({
+          deliveryMode: offering.deliveryMode,
+          deliveryPriceFc: offering.deliveryPriceFc,
+          details: offering.details,
+        })
       : 0;
     const amounts = deliveryFee
       ? computeMarketplaceAmounts(rentalBase.amountFc + deliveryFee)

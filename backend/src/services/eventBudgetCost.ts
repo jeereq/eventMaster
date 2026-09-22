@@ -1,4 +1,5 @@
 import { activePromoPrice } from './offerPromotion.ts';
+import { parseListingDetails } from '../utils/listingDetails.ts';
 import type { EventPlanType } from './eventPlanBrief';
 
 export type BudgetStyle = 'cheap' | 'balanced' | 'comfort';
@@ -63,7 +64,23 @@ export type RentalBudgetInput = {
   dayCount?: number;
   deliveryMode?: string | null;
   deliveryPriceFc?: number | null;
+  details?: unknown;
 };
+
+/** Supplément de livraison, une seule fois. Le prix inclus dans le tarif n’est pas ajouté. */
+export function rentalDeliverySurcharge(input: {
+  deliveryMode?: string | null;
+  deliveryPriceFc?: number | null;
+  details?: unknown;
+}): number {
+  const details = input.details != null ? parseListingDetails(input.details) : null;
+  const mode = String(input.deliveryMode || details?.deliveryMode || '');
+  const columnPrice = input.deliveryPriceFc != null ? Math.round(Number(input.deliveryPriceFc)) : 0;
+  const detailPrice = Number.parseInt(String(details?.deliveryPriceFc || ''), 10);
+  const price = columnPrice > 0 ? columnPrice : (Number.isFinite(detailPrice) ? detailPrice : 0);
+  if (mode !== 'extra_fee' || price <= 0) return 0;
+  return price;
+}
 
 export type BudgetAmount = {
   amountFc: number;
@@ -121,13 +138,22 @@ export function rentalBudgetAmount(input: RentalBudgetInput): BudgetAmount | nul
     note = `1 lot · ${money(unit)}`;
   }
 
-  const delivery = input.deliveryPriceFc && input.deliveryPriceFc > 0 ? Math.round(input.deliveryPriceFc) : 0;
-  if (input.deliveryMode === 'extra_fee' && delivery > 0) {
+  const details = input.details != null ? parseListingDetails(input.details) : null;
+  const deliveryMode = String(input.deliveryMode || details?.deliveryMode || '');
+  const columnPrice = input.deliveryPriceFc != null && Number(input.deliveryPriceFc) > 0
+    ? Math.round(Number(input.deliveryPriceFc))
+    : 0;
+  const detailPrice = Number.parseInt(String(details?.deliveryPriceFc || ''), 10);
+  const delivery = rentalDeliverySurcharge(input);
+  const listedDelivery = delivery > 0
+    ? delivery
+    : (columnPrice > 0 ? columnPrice : (Number.isFinite(detailPrice) && detailPrice > 0 ? detailPrice : 0));
+  if (delivery > 0) {
     amount += delivery;
     note = `${note} + livraison ${money(delivery)}`;
-  } else if (input.deliveryMode === 'included' && delivery > 0) {
-    note = `${note} · livraison incluse ${money(delivery)}`;
-  } else if (input.deliveryMode === 'pickup') {
+  } else if (deliveryMode === 'included' && listedDelivery > 0) {
+    note = `${note} · livraison incluse ${money(listedDelivery)}`;
+  } else if (deliveryMode === 'pickup') {
     note = `${note} · retrait sur place`;
   }
 

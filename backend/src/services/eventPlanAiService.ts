@@ -373,6 +373,7 @@ async function loadCatalog(opts: {
       guestCount: opts.guestCount,
       deliveryMode: row.deliveryMode,
       deliveryPriceFc: row.deliveryPriceFc,
+      details: row.details,
     });
     const estimatedFc = priced?.amountFc ?? 0;
     const distanceKm = distanceFromOrigin(opts.origin, row.latitude, row.longitude);
