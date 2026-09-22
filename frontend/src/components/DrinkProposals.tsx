@@ -7,7 +7,7 @@ import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import { BEVERAGE_SALE_UNIT_LABELS, formatBeverageSale, type PublicBeverageOffer } from '@/lib/beverageBrands';
 
-const GRID_BUTTON = 'inline-flex items-center justify-center min-h-[44px] shrink-0 px-3 rounded-[var(--radius-button)] border border-border text-sm font-semibold text-foreground hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+const GRID_BUTTON = 'inline-flex items-center justify-center min-h-[44px] shrink-0 px-3 rounded-[var(--radius-button)] border border-border text-sm font-semibold text-foreground';
 
 export default function DrinkProposals({
   offers,
@@ -80,7 +80,6 @@ export default function DrinkProposals({
             {href ? (
               <Link
                 href={href}
-                aria-label={`Voir les marques de ${offer.vendorName}, à partir de ${offer.brandName}`}
                 className="block h-full rounded-[var(--radius-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 {card}
