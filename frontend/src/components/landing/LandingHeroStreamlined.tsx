@@ -39,6 +39,36 @@ function getProfilePill(id: LandingProfileId): string {
   }
 }
 
+function getProfileRoleBadge(id: LandingProfileId): { mobile: string; desktop: string } {
+  switch (id) {
+    case 'personal':
+      return { mobile: 'Particulier', desktop: 'Particulier' };
+    case 'pro':
+      return { mobile: 'Pro & Billetterie', desktop: 'Concerts, Conférences & Galas' };
+    case 'seeker':
+      return { mobile: 'Recherche & Devis', desktop: 'Recherche & Réservation' };
+    case 'vendor':
+      return { mobile: 'Prestataire & Salle', desktop: 'Salle, Métiers & Loueurs' };
+    default:
+      return { mobile: 'Profil', desktop: 'Profil' };
+  }
+}
+
+function getProfileDisplayTitle(id: LandingProfileId): { mobile: string; desktop: string } {
+  switch (id) {
+    case 'personal':
+      return { mobile: 'Fête & Mariage', desktop: 'Fête & Mariage' };
+    case 'pro':
+      return { mobile: 'Billetterie Pro', desktop: 'Billetterie & Événements Pro' };
+    case 'seeker':
+      return { mobile: 'Trouver un lieu / pro', desktop: 'Trouver un lieu / talent' };
+    case 'vendor':
+      return { mobile: 'Référencer mon offre', desktop: 'Référencer mon activité' };
+    default:
+      return { mobile: 'Mon projet', desktop: 'Mon projet' };
+  }
+}
+
 export default function LandingHeroStreamlined() {
   const { user } = useAuth();
   const { site } = usePlatformSite();
@@ -201,6 +231,8 @@ export default function LandingHeroStreamlined() {
             {LANDING_PROFILES.map((item, index) => {
               const Icon = item.icon;
               const selected = selectedId === item.id;
+              const roleBadge = getProfileRoleBadge(item.id);
+              const displayTitle = getProfileDisplayTitle(item.id);
 
               return (
                 <div key={item.id} className="relative">
@@ -235,9 +267,10 @@ export default function LandingHeroStreamlined() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 to-black/35 pointer-events-none" />
 
                     <div className="relative z-10 flex items-start justify-between gap-1.5">
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-[11px] sm:text-xs font-semibold tracking-wide">
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-black/65 backdrop-blur-md border border-white/20 text-white text-[11px] sm:text-xs font-semibold tracking-wide shrink-0">
                         <Icon className="w-3.5 h-3.5 text-primary shrink-0" />
-                        <span className="truncate max-w-[5.5rem] sm:max-w-[9rem]">{item.eyebrow}</span>
+                        <span className="sm:hidden">{roleBadge.mobile}</span>
+                        <span className="hidden sm:inline">{roleBadge.desktop}</span>
                       </span>
                       <span
                         aria-hidden
@@ -266,8 +299,8 @@ export default function LandingHeroStreamlined() {
                           selected ? 'text-festive-on-stage' : 'text-white',
                         )}
                       >
-                        <span className="sm:hidden">{item.shortLabel}</span>
-                        <span className="hidden sm:inline">{item.label}</span>
+                        <span className="sm:hidden">{displayTitle.mobile}</span>
+                        <span className="hidden sm:inline">{displayTitle.desktop}</span>
                       </span>
                       <p className="text-[11px] sm:text-xs text-white/85 line-clamp-2 leading-relaxed">
                         {item.targetAudience}

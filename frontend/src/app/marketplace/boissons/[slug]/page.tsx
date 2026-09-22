@@ -26,7 +26,7 @@ type VendorDrinkPage = {
   offers: PublicBeverageOffer[];
 };
 
-const fieldClass = 'w-full min-h-[44px] rounded-[var(--radius-button)] border border-border bg-surface px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+const fieldClass = 'w-full min-h-[44px] rounded-[var(--radius-button)] border border-border bg-surface px-3 text-base sm:text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
 
 function packCountOf(value: string): number {
   const amount = Math.round(Number(value));
@@ -173,7 +173,7 @@ function VendorDrinksPage() {
                           )}>
                             <div className="w-16 h-16 shrink-0 overflow-hidden rounded-md bg-surface-muted">
                               {offer.imageUrl ? (
-                                <img src={offer.imageUrl} alt="" width={128} height={128} className="w-full h-full object-cover" />
+                                <img src={offer.imageUrl} alt="" width={128} height={128} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center text-muted">
                                   <Wine className="w-5 h-5" aria-hidden="true" />

@@ -351,7 +351,7 @@ export default function LandingVitrineSection() {
         <div
           className={`flex items-center justify-between gap-3 p-3 sm:p-4 rounded-[var(--radius-card)] border shadow-xs ${
             isBudgetBlocked
-              ? 'bg-amber-500/10 border-amber-500/25'
+              ? 'bg-festive-accent/10 border-festive-accent/30'
               : 'bg-gradient-to-r from-primary/10 via-surface to-primary/5 border-primary/25'
           }`}
         >
@@ -359,7 +359,7 @@ export default function LandingVitrineSection() {
             <div
               className={`w-9 h-9 rounded-[var(--radius-button)] flex items-center justify-center shrink-0 ${
                 isBudgetBlocked
-                  ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                  ? 'bg-festive-accent/15 text-foreground'
                   : 'bg-primary/15 text-primary'
               }`}
             >
@@ -376,15 +376,15 @@ export default function LandingVitrineSection() {
                     : 'Besoin d’un pack complet selon votre budget ?'}
                 </span>
                 {isBudgetBlocked && (
-                  <span className="px-1.5 py-0.5 text-xs font-bold rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                  <span className="px-1.5 py-0.5 text-sm font-bold rounded-full bg-festive-accent/15 text-foreground border border-festive-accent/30">
                     À venir
                   </span>
                 )}
               </p>
-              <p className="text-xs text-muted hidden sm:block">
+              <p className="text-sm text-foreground hidden sm:block">
                 {isBudgetBlocked
-                  ? 'L’estimation et composition automatique par IA sera disponible prochainement. Vous pouvez directement composer votre panier depuis les fiches prestataires.'
-                  : 'Laissez notre simulateur IA composer instantanément 3 formules (salle + traiteur + déco + DJ) adaptées à votre enveloppe.'}
+                  ? 'Bientôt. En attendant, composez le panier depuis les fiches.'
+                  : '3 formules : salle, traiteur, déco et DJ.'}
               </p>
             </div>
           </div>
@@ -408,7 +408,7 @@ export default function LandingVitrineSection() {
             role="alert"
             className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-[var(--radius-card)] border border-danger/30 bg-danger/10"
           >
-            <p className="text-xs sm:text-sm text-foreground leading-relaxed">{catalogError}</p>
+            <p className="text-sm text-foreground leading-relaxed">{catalogError}</p>
             <Button
               type="button"
               size="sm"
