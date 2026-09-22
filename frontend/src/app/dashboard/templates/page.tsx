@@ -6533,8 +6533,8 @@ const studioModelPhotos = useMemo(
  }
  description={
  isSuperAdmin
- ? 'Atelier de création visuelle. Pour le catalogue plateforme, les filtres et la vitrine landing, utilisez la console Super Admin.'
- : 'Nommez la cérémonie, créez le carton, puis envoyez-le. La bibliothèque est là si vous préférez partir d’un modèle.'
+ ? 'Création des modèles. La vitrine se règle dans la console.'
+ : 'Créez le carton, ou partez d’un modèle.'
  }
  breadcrumbs={
  <Breadcrumbs

@@ -2839,7 +2839,7 @@ export default function RoomsManagement() {
         open={Boolean(listingRoom)}
         onClose={() => setListingRoom(null)}
         title={listingRoom ? `Publication Marketplace — ${listingRoom.name}` : 'Publication Marketplace'}
-        description="Configurez la visibilité, les tarifs publics et la vitrine pour les organisateurs d’événements."
+        description="Visibilité, tarifs, vitrine."
         size="xl"
         footer={
           <div className="flex w-full justify-between gap-2">

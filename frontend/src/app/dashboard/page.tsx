@@ -2150,8 +2150,8 @@ function DashboardPageContent() {
             title={isCommercialPlatform ? 'Espace commercial' : 'Console Super Admin'}
             description={
               isCommercialPlatform
-                ? 'Parrainage, validation des abonnements et suivi des commissions.'
-                : 'Pilotage global de la plateforme EventMaster : organisations, contenu, facturation.'
+                ? 'Parrainage et commissions.'
+                : 'Organisations, contenu, facturation.'
             }
             breadcrumbs={
               <Breadcrumbs
@@ -2623,7 +2623,7 @@ function DashboardPageContent() {
                       <EmptyState
                         icon={<Building2 className="w-5 h-5" />}
                         title="Aucune organisation active"
-                        description="Votre réseau est actuellement vide. Créez une première organisation pour structurer vos événements."
+                        description="Aucune organisation."
                       />
                     ) : (
                       <div
@@ -2807,7 +2807,7 @@ function DashboardPageContent() {
                       <EmptyState
                         icon={<Users className="w-5 h-5" />}
                         title="Aucun utilisateur"
-                        description="L'équipe est pour le moment restreinte. Ajoutez des collaborateurs pour déléguer l'organisation."
+                        description="Ajoutez un collaborateur."
                       />
                     ) : (
                       <>
@@ -3101,7 +3101,7 @@ function DashboardPageContent() {
                       <EmptyState
                         icon={<Calendar className="w-5 h-5" />}
                         title="Votre calendrier est libre"
-                        description="Vous n'avez pas encore d'événements. Créez votre première célébration pour commencer."
+                        description="Aucun événement."
                       />
                     ) : (
                       <>
@@ -3247,7 +3247,7 @@ function DashboardPageContent() {
                       <EmptyState
                         icon={<Users className="w-5 h-5" />}
                         title="Liste d'invités vide"
-                        description="Commencez par ajouter vos invités pour leur envoyer des faire-part et organiser leur placement."
+                        description="Ajoutez vos invités."
                       />
                     ) : (
                       <>

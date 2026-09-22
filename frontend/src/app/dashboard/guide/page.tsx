@@ -76,7 +76,7 @@ function DashboardGuidePageContent() {
     <div className="space-y-6 w-full">
       <PageHeader
         title="Guide utilisateur"
-        description={`Documentation et visite guidée pour le profil « ${resolved.label} ».`}
+        description={`Visite guidée · ${resolved.label}.`}
         breadcrumbs={
           <Breadcrumbs
             items={[

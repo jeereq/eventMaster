@@ -657,14 +657,14 @@ function ClientMarketplaceInner() {
         title={searchParams.get('kind') === 'event' && tab === 'explore' ? 'Événements' : 'Marketplace'}
         description={
           tab === 'plan'
-            ? 'Simulez vos coûts, créez vos invitations et agencez vos salles 3D.'
+            ? 'Budget, invitations, salles.'
             : tab === 'favorites'
-              ? 'Vos salles, prestataires et équipements enregistrés.'
+              ? 'Vos fiches enregistrées.'
               : tab === 'packs'
-                ? 'Vos sélections et briefs sauvegardés pour devis.'
+                ? 'Sélections prêtes pour un devis.'
                 : searchParams.get('kind') === 'event'
-                  ? 'Événements publics et billetterie en direct.'
-                  : 'Trouvez vos salles, prestataires et équipements à Kinshasa.'
+                  ? 'Événements publics.'
+                  : 'Salles, prestataires, matériel.'
         }
         breadcrumbs={
           <Breadcrumbs

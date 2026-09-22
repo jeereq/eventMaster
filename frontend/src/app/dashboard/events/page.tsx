@@ -2144,8 +2144,8 @@ Merci de confirmer votre présence :
             title={protocolDesk ? 'Accueil jour J' : 'Vos événements'}
             description={
               protocolDesk
-                ? 'Liste des événements à accueillir, ou tâches protocole dans le même onglet.'
-                : "Créez des réceptions privées (liste d’invités) ou publiques (inscription / billets en ligne). Les tâches d’équipe sont dans l’onglet Tâches."
+                ? 'Événements à accueillir, et leurs tâches.'
+                : 'Réceptions privées ou publiques.'
             }
             breadcrumbs={
               <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: protocolDesk ? 'Protocole' : 'Événements' }]} />
@@ -3288,7 +3288,7 @@ Merci de confirmer votre présence :
                           Formulaire Répondez s’il vous plaît
                         </span>
                       }
-                      description="Types toujours présents : genre, allergies, boissons, menu. Valeurs prédéfinies ou personnalisées pour cet événement."
+                      description="Genre, allergies, boissons, menu."
                       action={
                         <Button size="sm" onClick={handleSaveEventRsvpForm} loading={savingRsvpForm} disabled={savingRsvpForm}>
                           Enregistrer le formulaire
@@ -3302,7 +3302,7 @@ Merci de confirmer votre présence :
                     <EmptyState
                       icon={<Mail className="w-5 h-5" />}
                       title="Invitations à configurer"
-                      description="Personnalisez vos faire-part numériques et commencez à récolter les confirmations de présence (Répondez s’il vous plaît) de vos invités."
+                      description="Faire-part et confirmations de présence."
                       action={
                         <Button onClick={openNewInvitationModal} leftIcon={<PlusCircle className="w-4 h-4" />}>
                           Configurer une invitation

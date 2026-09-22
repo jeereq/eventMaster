@@ -129,7 +129,7 @@ export default function AdminDonationsPage() {
 
       <PageHeader
         title="Reporting des dons solidaires"
-        description="Suivi consolidé de l’ensemble des collectes de fonds, dons libres et contributions sur la plateforme."
+        description="Dons et collectes."
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Button

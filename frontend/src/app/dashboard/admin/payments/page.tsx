@@ -339,7 +339,7 @@ export default function AdminPaymentsPage() {
     <div className="space-y-6 w-full">
       <PageHeader
         title="Paiements"
-        description="Toutes les tentatives FlexPay / manuelles (billets, abonnements, jetons IA), abouties ou non."
+        description="Tentatives FlexPay et manuelles."
         breadcrumbs={
           <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard?tab=overview' }, { label: 'Paiements' }]} />
         }

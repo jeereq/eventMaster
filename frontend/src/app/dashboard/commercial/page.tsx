@@ -159,7 +159,7 @@ export default function CommercialDashboardPage() {
  <div className="space-y-6">
  <PageHeader
  title="Parrainage & commissions"
- description="Compte commercial plateforme — sans organisation. Gérez vos parrainages et suivez vos commissions."
+ description="Parrainages et commissions."
  />
 
  <div className="grid sm:grid-cols-3 gap-4">

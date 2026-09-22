@@ -425,7 +425,7 @@ export default function MarketplaceDeskPage() {
     <div className="space-y-6">
       <PageHeader
         title="Marketplace"
-        description={`Prestations, matériel & équipements, devis, réservations de dates. Acompte hors plateforme · commission vendeur ${commissionPercent(site)} % (≠ abo SaaS).`}
+        description={`Prestations, devis, dates. Commission ${commissionPercent(site)} %.`}
         breadcrumbs={
           <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Marketplace' }]} />
         }

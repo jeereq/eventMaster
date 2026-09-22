@@ -533,7 +533,7 @@ export default function TeamManagement() {
         <EmptyState
           icon={<Users className="w-5 h-5" />}
           title="Aucun membre pour l’instant"
-          description="Ajoutez un manager ou un agent protocole pour déléguer la gestion des événements."
+          description="Ajoutez un manager ou un agent protocole."
           action={
             canManageTeam ? (
               <Button type="button" size="sm" onClick={openForm} leftIcon={<UserPlus className="w-4 h-4" />}>

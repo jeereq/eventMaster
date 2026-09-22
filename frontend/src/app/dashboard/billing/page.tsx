@@ -574,22 +574,22 @@ function BillingPageInner() {
     overview: {
       title: isClientAccount ? 'Votre compte client' : `Forfait de ${tenant?.name || 'votre organisation'}`,
       description: isClientAccount
-        ? 'Compte gratuit : catalogue, devis, billets. Passez organisateur ou catalogue en payant un abonnement (Particulier, Entreprise, Salle, Prestataire ou Salle & presta).'
-        : `Plan actuel, quotas et capacités · tarifs en ${CURRENCY_NAME} (FC).`,
+        ? 'Catalogue, devis, billets. Un forfait change le type de compte.'
+        : 'Forfait, quotas, tarifs en FC.',
     },
     plans: {
       title: 'Choisir un forfait',
-      description: `Forfaits adaptés à votre type de compte · annuel −${ANNUAL_DISCOUNT_PERCENT} % (y compris Particulier).`,
+      description: `Annuel −${ANNUAL_DISCOUNT_PERCENT} %.`,
     },
     invoices: {
       title: 'Factures',
-      description: 'Reçus d’abonnement après validation ou paiement. L’historique complet est aussi dans Factures.',
+      description: 'Reçus d’abonnement.',
     },
     requests: {
       title: 'Demandes d’abonnement',
       description: saasPaymentMode === 'flexpay'
-        ? 'Suivi des demandes, rabais et paiements FlexPay à relancer.'
-        : 'Suivi des demandes manuelles et des rabais en examen.',
+        ? 'Demandes, rabais, paiements à relancer.'
+        : 'Demandes et rabais en examen.',
     },
   };
 
@@ -1084,7 +1084,7 @@ function BillingPageInner() {
             <EmptyState
               icon={<FileText className="w-5 h-5" />}
               title="Aucune facture pour l’instant"
-              description="Les factures apparaissent ici après approbation ou paiement d’une demande d’abonnement."
+              description="Après approbation ou paiement."
               action={
                 <Button size="md" variant="secondary" onClick={() => setBillingTab('plans')}>
                   Voir les forfaits

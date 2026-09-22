@@ -187,7 +187,7 @@ function ProfilePageContent() {
     <div className="space-y-5 w-full">
       <PageHeader
         title="Mon compte"
-        description="Informations personnelles, contact et sécurité du compte."
+        description="Compte, contact, sécurité."
         breadcrumbs={
           <Breadcrumbs
             items={[
@@ -282,7 +282,7 @@ function ProfilePageContent() {
                     value={email}
                     disabled
                     readOnly
-                    hint="L’adresse e-mail est l’identifiant unique sécurisé de votre compte et ne peut pas être modifiée."
+                    hint="Identifiant du compte. Non modifiable."
                   />
                   <PhoneInput
                     id="profile-phone"
@@ -291,7 +291,7 @@ function ProfilePageContent() {
                     national={phoneNational}
                     onCountryCodeChange={setPhoneCountryCode}
                     onNationalChange={setPhoneNational}
-                    hint="Indicatif pays + numéro national (sans le 0). Requis pour les alertes WhatsApp."
+                    hint="Indicatif + numéro, pour WhatsApp."
                   />
                   <p className="text-xs text-muted">
                     Canaux e-mail / WhatsApp / push :{' '}
