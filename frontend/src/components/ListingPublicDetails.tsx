@@ -41,7 +41,7 @@ function KinshasaDeliveryPrices({
   return (
     <Block title="Livraison selon la commune de Kinshasa">
       <p className="text-sm text-muted leading-relaxed">
-        Tarifs publiés, indicatifs. Le devis permet d’en convenir un autre avec le prestataire.
+        Tarifs indicatifs. Le devis peut les changer.
       </p>
       {prices.length > 6 ? (
         <label className="block space-y-1.5">

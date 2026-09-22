@@ -625,11 +625,9 @@ export default function ServiceOfferingForm({
                           <fieldset className="space-y-2">
                             <legend className="text-sm font-medium text-foreground">Prix selon la commune de Kinshasa</legend>
                             <p className="text-sm text-muted leading-relaxed">
-                              Chaque montant est indicatif. Le client et vous pouvez en convenir un autre dans le devis.
-                              {' '}
                               {pricedDeliveryCount === 0
-                                ? 'Aucune commune n’a encore de prix propre : le supplément par défaut s’applique partout.'
-                                : `${pricedDeliveryCount} commune${pricedDeliveryCount > 1 ? 's' : ''} avec un prix propre. Les autres utilisent le supplément par défaut.`}
+                                ? 'Indicatif. Sans prix propre, le supplément par défaut s’applique.'
+                                : `${pricedDeliveryCount} commune${pricedDeliveryCount > 1 ? 's' : ''} avec un prix. Le devis peut le changer.`}
                             </p>
                             <label className="block space-y-1.5">
                               <span className="text-sm font-medium text-foreground">Chercher une commune</span>

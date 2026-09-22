@@ -130,16 +130,16 @@ function MarketplaceHubPageInner() {
               : applied.kind === 'venue' ? 'venues'
                 : 'hub'
       }
-      heroTitle="Salles, prestataires, matériel, boissons et événements"
-      heroDescription="Explorez le marketplace EventMaster : salles, prestataires, matériel (chaises, habits, véhicules, sono) avec retrait ou livraison, boissons, et événements publics. Affinez par ville, commune, prix ou autour de vous."
+      heroTitle="Marketplace"
+      heroDescription="Salles, prestataires, matériel, boissons et événements."
       mode={mode}
       onViewChange={setView}
       gridCols={gridCols}
       items={visible}
       markers={markers}
       loading={loading}
-      emptyTitle="Nous cherchons encore la perle rare..."
-      emptyDescription="Aucune fiche ne correspond exactement à vos critères. Élargissez votre recherche pour explorer plus de possibilités."
+      emptyTitle="Aucun résultat"
+      emptyDescription="Élargissez la ville, le prix ou les mots-clés."
       page={page}
       pageSize={pageSize}
       onPageChange={setPage}
@@ -151,8 +151,8 @@ function MarketplaceHubPageInner() {
       searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
       showKindLegend
       cta={{
-        title: 'Vous proposez une salle, un métier ou du Matériel & Équipements ?',
-        description: 'Compte pro : publiez votre fiche (photos, vidéos, carte, calendrier). Les organisateurs Business+ publient aussi via leur forfait.',
+        title: 'Vous proposez une salle ou un métier ?',
+        description: 'Publiez votre fiche.',
         primaryHref: '/register?kind=VENDOR&intent=vendor',
         primaryLabel: 'Créer un compte pro',
         secondaryHref: '/contact',

@@ -434,8 +434,8 @@ export default function LandingVitrineSection() {
                   emptyTitle={hasFilterOrSearch ? 'Aucune salle trouvée' : 'Aucune salle publiée'}
                   emptyDescription={
                     hasFilterOrSearch
-                      ? 'Aucune salle ne correspond à vos filtres ou termes de recherche. Essayez d’élargir vos critères ou de réinitialiser la recherche.'
-                      : 'Les salles enregistrées sur EventMaster apparaîtront ici.'
+                      ? 'Élargissez la ville ou le prix.'
+                      : 'Les salles publiées apparaîtront ici.'
                   }
                 />
                 <Pagination
@@ -472,8 +472,8 @@ export default function LandingVitrineSection() {
                   emptyTitle={hasFilterOrSearch ? 'Aucun prestataire trouvé' : 'Aucun prestataire publié'}
                   emptyDescription={
                     hasFilterOrSearch
-                      ? 'Aucun prestataire ne correspond à vos filtres ou termes de recherche. Essayez d’élargir vos critères ou de réinitialiser la recherche.'
-                      : 'Les prestataires enregistrés apparaîtront ici.'
+                      ? 'Élargissez la ville ou le métier.'
+                      : 'Les prestataires publiés apparaîtront ici.'
                   }
                 />
                 <Pagination
@@ -510,8 +510,8 @@ export default function LandingVitrineSection() {
                   emptyTitle={hasFilterOrSearch ? 'Aucun matériel trouvé' : 'Aucune offre de matériel ou équipement'}
                   emptyDescription={
                     hasFilterOrSearch
-                      ? 'Aucune offre de matériel ne correspond à vos filtres ou termes de recherche.'
-                      : 'Les matériels et équipements disponibles apparaîtront ici.'
+                      ? 'Élargissez la ville ou le type.'
+                      : 'Le matériel publié apparaîtra ici.'
                   }
                 />
                 <Pagination
@@ -548,8 +548,8 @@ export default function LandingVitrineSection() {
                   emptyTitle={hasFilterOrSearch ? 'Aucun événement trouvé' : 'Aucun événement public'}
                   emptyDescription={
                     hasFilterOrSearch
-                      ? 'Aucun événement ne correspond à vos filtres ou termes de recherche.'
-                      : 'Les événements publiés sur EventMaster apparaîtront ici.'
+                      ? 'Élargissez la ville ou la date.'
+                      : 'Les événements publiés apparaîtront ici.'
                   }
                 />
                 <Pagination

@@ -186,7 +186,7 @@ function MarketplaceDrinksPageInner() {
       <PublicPageHero
         compact
         title="Boissons"
-        description="Propositions des prestataires : marque, conditionnement et prix, promotion en cours comprise."
+        description="Bières, vins, champagnes. Le prix le plus bas d’un prestataire."
       >
         <MarketplacePublicNav active="drinks" />
       </PublicPageHero>
@@ -213,10 +213,7 @@ function MarketplaceDrinksPageInner() {
             shareTitle="Boissons"
             filters={(
               <>
-                <CatalogueFilterField
-                  label="Famille"
-                  hint="Bière, boisson, vin ou champagne. Un second clic retire le choix."
-                >
+                <CatalogueFilterField label="Famille">
                   <CatalogueChoicePills
                     ariaLabel="Famille de boissons"
                     options={BEVERAGE_KINDS.map((id) => ({ id, label: BEVERAGE_KIND_LABELS[id] }))}
@@ -231,7 +228,6 @@ function MarketplaceDrinksPageInner() {
                 </CatalogueFilterField>
                 <CatalogueFilterField
                   label="Marque"
-                  hint={draft.kind ? 'Marques de cette famille. Un second clic retire le choix.' : 'Toutes les marques du catalogue. Un second clic retire le choix.'}
                 >
                   {brandOptions.length ? (
                     <CatalogueChoicePills
@@ -248,7 +244,6 @@ function MarketplaceDrinksPageInner() {
                 </CatalogueFilterField>
                 <CatalogueFilterField
                   label="Quantité"
-                  hint="Bouteille, casier, pack ou autre. Un second clic retire le choix."
                 >
                   <CatalogueChoicePills
                     ariaLabel="Type de quantité"
@@ -257,7 +252,7 @@ function MarketplaceDrinksPageInner() {
                     onChange={(id) => setDraft({ ...draft, unit: BEVERAGE_SALE_UNITS.includes(id as BeverageSaleUnit) ? id : '' })}
                   />
                 </CatalogueFilterField>
-                <CatalogueFilterField label="Prix (FC)" hint="Compare le prix de la proposition, promotion comprise.">
+                <CatalogueFilterField label="Prix (FC)">
                   <div className="grid grid-cols-2 gap-2">
                     <Input
                       type="number"
@@ -303,8 +298,8 @@ function MarketplaceDrinksPageInner() {
             </h2>
             <p className="text-sm text-muted mt-2 max-w-md mx-auto leading-relaxed">
               {offers.length === 0
-                ? 'Les propositions publiées par les prestataires apparaîtront ici, avec la marque, le conditionnement et le prix.'
-                : 'Élargissez la marque, la famille ou le prix recherché.'}
+                ? 'Les offres des prestataires apparaîtront ici.'
+                : 'Élargissez la marque ou le prix.'}
             </p>
           </div>
         ) : (
@@ -329,7 +324,7 @@ function MarketplaceDrinksPageInner() {
 
       <PublicCtaBand
         title="Vous vendez ces boissons ?"
-        description="Indiquez vos marques, le conditionnement (bouteille, casier, pack) et le prix, promotion comprise."
+        description="Publiez vos marques et vos prix."
         primaryHref="/register?kind=VENDOR&intent=vendor"
         primaryLabel="Devenir prestataire"
         secondaryHref="/contact"
@@ -345,7 +340,7 @@ export default function MarketplaceDrinksPage() {
       <MarketplaceCatalogueSkeleton
         active="drinks"
         title="Boissons"
-        description="Propositions des prestataires : marque, conditionnement et prix, promotion en cours comprise."
+        description="Bières, vins, champagnes. Le prix le plus bas d’un prestataire."
         label="Chargement des propositions"
       />
     )}>

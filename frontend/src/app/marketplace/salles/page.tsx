@@ -101,8 +101,8 @@ function MarketplaceVenuesPageInner() {
   return (
     <CatalogueSearchLayout
       activeNav="venues"
-      heroTitle="Trouvez une salle pour votre événement"
-      heroDescription="Parcourez les lieux publiés. Filtrez par ville, commune, quartier, prix ou autour de vous."
+      heroTitle="Salles de fête"
+      heroDescription="Photos, capacités et visites virtuelles."
       mode={mode}
       onViewChange={setView}
       gridCols={gridCols}
@@ -110,8 +110,8 @@ function MarketplaceVenuesPageInner() {
       markers={markers}
       loading={loading}
       error={error}
-      emptyTitle="Nous cherchons encore la perle rare..."
-      emptyDescription="Aucun lieu ne correspond exactement à vos critères. Élargissez votre recherche pour trouver le cadre idéal."
+      emptyTitle="Aucune salle"
+      emptyDescription="Élargissez la ville ou le prix."
       page={page}
       pageSize={pageSize}
       onPageChange={setPage}
@@ -122,8 +122,8 @@ function MarketplaceVenuesPageInner() {
       city={applied.city}
       searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
       cta={{
-        title: 'Vous avez une salle à proposer ?',
-        description: 'Publiez votre fiche avec photos, vidéos, tarifs et calendrier.',
+        title: 'Vous avez une salle ?',
+        description: 'Publiez photos, tarif et calendrier.',
         primaryHref: '/register?kind=VENDOR&intent=vendor&action=venue',
         primaryLabel: 'Publier une salle',
         secondaryHref: '/contact',

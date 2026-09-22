@@ -257,8 +257,8 @@ export default function MarketplaceBookingForm({
             ) : deliveryFee ? (
               <p className="text-sm text-muted">
                 {publishedDelivery.source === 'commune'
-                  ? `Livraison vers ${publishedDelivery.commune}, une fois : ${formatFc(deliveryFee)}. Pour un autre montant, envoyez un devis.`
-                  : `Livraison en supplément, une fois : ${formatFc(deliveryFee)}. Pour un autre montant, envoyez un devis.`}
+                  ? `Livraison vers ${publishedDelivery.commune} : ${formatFc(deliveryFee)}. Un devis peut la changer.`
+                  : `Livraison : ${formatFc(deliveryFee)}. Un devis peut la changer.`}
               </p>
             ) : null}
             {includedDelivery ? (

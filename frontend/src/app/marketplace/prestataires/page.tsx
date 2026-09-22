@@ -129,8 +129,8 @@ function MarketplaceServicesPageInner() {
   return (
     <CatalogueSearchLayout
       activeNav="services"
-      heroTitle="Trouvez un prestataire pour votre événement"
-      heroDescription="Traiteur, photo, DJ, déco… Le matériel (chaises, sono, véhicules) et les boissons ont chacun leur onglet."
+      heroTitle="Prestataires"
+      heroDescription="Traiteurs, décorateurs, DJ et photographes."
       mode={mode}
       onViewChange={setView}
       gridCols={gridCols}
@@ -138,8 +138,8 @@ function MarketplaceServicesPageInner() {
       markers={markers}
       loading={loading}
       error={error}
-      emptyTitle="Nous cherchons encore la perle rare..."
-      emptyDescription="Aucun prestataire ne correspond exactement à vos critères. Élargissez votre recherche pour découvrir de nouveaux talents."
+      emptyTitle="Aucun prestataire"
+      emptyDescription="Élargissez la ville ou le métier."
       page={page}
       pageSize={pageSize}
       onPageChange={setPage}
@@ -150,8 +150,8 @@ function MarketplaceServicesPageInner() {
       city={applied.city}
       searchOriginLabel={applied.proximity === 'around' ? 'Vous êtes ici' : 'Lieu de recherche'}
       cta={{
-        title: 'Vous proposez un métier ou du Matériel & Équipements ?',
-        description: 'Publiez prestations ou locations (habits, véhicules, sono…) avec zone, médias et calendrier.',
+        title: 'Vous proposez un métier ?',
+        description: 'Publiez votre fiche.',
         primaryHref: '/register?kind=VENDOR&intent=vendor&action=services',
         primaryLabel: 'Proposer mes services',
         secondaryHref: '/contact',
