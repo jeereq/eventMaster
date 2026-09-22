@@ -77,7 +77,7 @@ export default function OrgCommercialPage() {
  <div className="space-y-6">
  <PageHeader
  title="Réseau commercial"
- description={`Parrainez de nouvelles organisations pour ${data.organizationName || 'votre organisation'} et suivez vos commissions.`}
+ description="Parrainages et commissions."
  />
 
  <div className="grid sm:grid-cols-3 gap-4">

@@ -225,21 +225,21 @@ function OrganizerDemandesPage() {
   const pageDescription =
     role === 'vendor'
       ? tab === 'bookings'
-        ? 'Réservations reçues pour vos salles ou prestations.'
-        : 'Demandes de devis transmises par les organisateurs.'
+        ? 'Dates demandées pour vos fiches.'
+        : 'Demandes reçues.'
       : isProtocol
         ? tab === 'bookings'
-          ? 'Réservations liées aux événements accompagnés.'
-          : 'Devis envoyés pour le protocole.'
+          ? 'Dates des événements accompagnés.'
+          : 'Devis du protocole.'
         : tab === 'bookings'
-          ? 'Vos dates confirmées et acomptes.'
+          ? 'Dates et acomptes.'
           : tab === 'quotes'
-            ? 'Vos demandes et devis en attente ou chiffrés.'
+            ? 'Demandes et devis.'
             : tab === 'packs'
-              ? 'Vos sélections et briefs sauvegardés.'
+              ? 'Sélections enregistrées.'
               : tab === 'favorites'
-                ? 'Vos fiches et prestataires enregistrés.'
-                : 'Suivez vos devis et réservations en temps réel.';
+                ? 'Fiches enregistrées.'
+                : 'Devis et réservations.';
 
   return (
     <div className="space-y-5 w-full">
@@ -412,7 +412,7 @@ function OrganizerDemandesPage() {
           <EmptyState
             icon={<Bookmark className="w-5 h-5" />}
             title="Aucun pack enregistré"
-            description="Explorez le catalogue, imaginez votre composition idéale et enregistrez votre projet ici."
+            description="Enregistrez une sélection depuis le catalogue."
             action={
               <Link href="/dashboard/catalogue?hub=plan">
                 <Button size="sm">Préparer un pack</Button>
@@ -448,7 +448,7 @@ function OrganizerDemandesPage() {
         <EmptyState
           icon={<Heart className="w-5 h-5" />}
           title="Aucun favori"
-          description="Enregistrez des salles, prestataires ou équipements depuis le marketplace pour les retrouver ici."
+          description="Enregistrez une fiche depuis le marketplace."
           action={
             <Link href="/dashboard/catalogue">
               <Button size="sm">Parcourir le marketplace</Button>

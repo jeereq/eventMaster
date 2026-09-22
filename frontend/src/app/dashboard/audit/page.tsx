@@ -153,7 +153,7 @@ export default function AuditPage() {
     <div className="space-y-6 w-full">
       <PageHeader
         title="Journal d’audit"
-        description="Actions Super Admin et Commercial plateforme : impersonation, forfaits, suppressions, réglages."
+        description="Actions sensibles : forfaits, suppressions, réglages."
         breadcrumbs={
           <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard?tab=overview' }, { label: 'Journal d’audit' }]} />
         }
@@ -232,7 +232,7 @@ export default function AuditPage() {
         <EmptyState
           icon={<ScrollText className="w-5 h-5" />}
           title="Aucune entrée"
-          description="Les actions Super Admin (impersonation, forfaits, suppressions) apparaîtront ici."
+          description="Impersonation, forfaits, suppressions."
         />
       ) : (
         <ul className="divide-y divide-border border border-border rounded-[var(--radius-card)] overflow-hidden bg-surface">

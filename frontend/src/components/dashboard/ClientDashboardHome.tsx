@@ -1265,7 +1265,7 @@ export default function ClientDashboardHome() {
             <span>{upgradeModalTitle}</span>
           </div>
         }
-        description="Choisissez votre formule et réglez directement : le type de compte bascule après paiement validé."
+        description="Le type de compte change après paiement."
       >
         <div className="space-y-6 pt-2">
           <div className="flex flex-wrap p-1 rounded-xl bg-surface-muted border border-border gap-1">

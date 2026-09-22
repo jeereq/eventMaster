@@ -616,7 +616,7 @@ export default function AdminCataloguePage() {
     <div className="space-y-6 w-full">
       <PageHeader
         title="Catalogue"
-        description={`Modération des fiches (motif + audit), devis, réservations, GMV et commissions vendeur ${commissionPct} %.`}
+        description={`Fiches, devis, réservations. Commission ${commissionPct} %.`}
         breadcrumbs={
           <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard?tab=overview' }, { label: 'Catalogue' }]} />
         }
@@ -897,7 +897,7 @@ export default function AdminCataloguePage() {
         <EmptyState
           icon={<Wallet className="w-5 h-5" />}
           title={settlement === 'paid' ? 'Aucune commission encaissée' : 'Aucune commission due'}
-          description={`Les commissions ${commissionPct} % des réservations confirmées apparaissent ici.`}
+          description={`Commission ${commissionPct} % sur les réservations confirmées.`}
         />
       ) : (
         <ul className="divide-y divide-border border border-border rounded-[var(--radius-card)] overflow-hidden bg-surface">

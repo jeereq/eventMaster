@@ -190,7 +190,7 @@ export default function AdminEventsPage() {
     <div className="space-y-6 w-full">
       <PageHeader
         title="Événements (supervision)"
-        description="Vue transversale de tous les événements : public / privé, billets, GPS. Détail, impersonation et suppression — pas de création depuis ici."
+        description="Tous les événements. Pas de création ici."
         breadcrumbs={
           <Breadcrumbs
             items={[

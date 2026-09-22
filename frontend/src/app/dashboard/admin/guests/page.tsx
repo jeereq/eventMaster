@@ -209,7 +209,7 @@ export default function AdminGuestsPage() {
     <div className="space-y-6 w-full">
       <PageHeader
         title="Invités (supervision)"
-        description="Liste globale, réponse à l’invitation, PDF d’invitation et présence jour J. Export CSV limité aux 100 premiers résultats filtrés."
+        description="Réponses, invitations et présence. Export : 100 lignes."
         breadcrumbs={
           <Breadcrumbs
             items={[

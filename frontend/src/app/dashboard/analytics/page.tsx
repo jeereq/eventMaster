@@ -238,8 +238,8 @@ export default function AnalyticsPage() {
  title={protocolView ? 'Statistiques protocole' : 'Statistiques des événements'}
  description={
  protocolView
- ? 'Check-in, tâches du jour J et prochains accueils. Le détail réponse à l’invitation reste disponible par événement.'
- : 'Vue organisation : événements, réponse à l’invitation, check-in et tâches. Choisissez un événement pour le détail invités.'
+ ? 'Check-in et tâches du jour J.'
+ : 'Événements, réponses, check-in.'
  }
  breadcrumbs={
  <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Statistiques' }]} />
@@ -277,7 +277,7 @@ export default function AnalyticsPage() {
  <EmptyState
  icon={<Calendar className="w-7 h-7" />}
  title="Aucun événement disponible"
- description="Créez votre premier événement pour accéder aux statistiques détaillées."
+ description="Créez un événement pour voir les chiffres."
  action={
  <Link href="/dashboard/events">
  <Button leftIcon={<ChevronRight className="w-4 h-4" />}>Créer un événement</Button>

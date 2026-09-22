@@ -165,7 +165,7 @@ function DashboardPublicationsPageInner() {
           <EmptyState
             icon={<Rss className="w-5 h-5" />}
             title="Réalisations réservées aux propriétaires"
-            description="Seuls les comptes qui gèrent des salles ou des prestations peuvent créer des réalisations."
+            description="Réservé aux salles et prestations."
           />
         )}
       </div>
@@ -665,7 +665,7 @@ function CreatePublicationPanel({ onCreated }: { onCreated: () => void }) {
       <EmptyState
         icon={<Plus className="w-5 h-5" />}
         title="Aucune fiche à lier"
-        description="Créez et publiez d’abord une salle ou une prestation, puis revenez créer une réalisation."
+        description="Publiez d’abord une salle ou une prestation."
         action={
           <div className="flex flex-wrap gap-2 justify-center">
             <Link href="/dashboard/rooms"><Button size="sm">Mes salles</Button></Link>

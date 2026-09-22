@@ -399,8 +399,8 @@ export default function AdminSaasPayoutsPage() {
         title={payoutTab === 'saas' ? "Versements SaaS" : "Reversements Événements (Billetterie & Dons)"}
         description={
           payoutTab === 'saas'
-            ? `Commissions des commerciaux plateforme (${firstPct} % premier paiement, ${renewPct} % renouvellement). Préférez « Verser via FlexPay » (Mobile Money) ; le marquage manuel avec preuve reste disponible. Les commerciaux org. sont payés par l’organisation parrainante — pas ici.`
-            : `Reversement des recettes de billetterie et des dons solidaires aux organisations après application de la retenue plateforme (5 % sur la billetterie et 4 % sur les dons solidaires). Marquez versé après confirmation de virement bancaire ou Mobile Money.`
+            ? `Commissions commerciaux : ${firstPct} % puis ${renewPct} %.`
+            : 'Recettes billets et dons, après retenue.'
         }
         breadcrumbs={
           <Breadcrumbs
@@ -583,7 +583,7 @@ export default function AdminSaasPayoutsPage() {
         <EmptyState
           icon={<Wallet className="w-5 h-5" />}
           title="Aucun versement"
-          description="Aucune commission plateforme pour ces filtres. Les commerciaux org. n’apparaissent pas dans cette file."
+          description="Aucune commission pour ces filtres."
         />
       ) : (
         <div className={layout === 'grid' ? gridClassName : listStackClass}>
@@ -915,7 +915,7 @@ export default function AdminSaasPayoutsPage() {
             <EmptyState
               icon={<Ticket className="w-8 h-8 text-muted" />}
               title="Aucun événement avec recettes"
-              description="Aucun événement avec des billets vendus ou des dons collectés ne correspond aux critères."
+              description="Aucun événement pour ces critères."
             />
           ) : (
             <div className="space-y-4">

@@ -310,7 +310,7 @@ export default function AdminAiTokensPage() {
     <div className="space-y-6 w-full">
       <PageHeader
         title="Jetons IA"
-        description="Revenus FlexPay séparés des jetons offerts, gratuits ou session support."
+        description="Jetons payants et jetons offerts."
         breadcrumbs={
           <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard?tab=overview' }, { label: 'Jetons IA' }]} />
         }

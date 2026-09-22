@@ -158,18 +158,18 @@ function NotificationsContent() {
     if (user?.role === 'SUPER_ADMIN') {
       return {
         title: 'Aucune notification',
-        description: 'Paiements (billets, abonnements, jetons), demandes d’abonnement, licences et versements commerciaux s’afficheront ici.',
+        description: 'Paiements, abonnements et versements.',
       };
     }
     if (user?.role === 'COMMERCIAL' || access?.level === 'commercial') {
       return {
         title: 'Aucune notification',
-        description: 'Les activations d’abonnement et les récaps de commission s’afficheront ici.',
+        description: 'Abonnements et commissions.',
       };
     }
     return {
       title: 'Aucune notification',
-      description: 'Les alertes de votre espace (tâches, factures, devis, réservations) s’afficheront ici.',
+      description: 'Tâches, factures, devis.',
     };
   }, [access?.level, user?.role]);
 
@@ -247,7 +247,7 @@ function NotificationsContent() {
     <div className="space-y-6 w-full">
       <PageHeader
         title="Notifications"
-        description="Consultez vos alertes en temps réel et personnalisez vos canaux de diffusion."
+        description="Alertes et canaux."
         breadcrumbs={<Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Notifications' }]} />}
         action={
           activeTab === 'inbox' && (data?.unreadCount ?? 0) > 0 ? (
@@ -427,7 +427,7 @@ function NotificationsContent() {
                     Gouvernance Organisation · Billetterie & Dons
                   </span>
                 }
-                description="Définissez qui au sein de votre organisation reçoit les alertes de billetterie et de dons."
+                description="Qui reçoit les alertes billets et dons."
                 action={
                   <Button
                     size="sm"

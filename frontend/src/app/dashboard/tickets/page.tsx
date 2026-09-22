@@ -189,8 +189,8 @@ export default function TicketsPage() {
         title={isOrgRole && activeTab === 'org' ? 'Billetterie de l’organisation' : 'Mes billets & pass'}
         description={
           isOrgRole && activeTab === 'org'
-            ? 'Suivi des ventes, gestion des commandes et contrôle d’accès jour J.'
-            : 'Vos billets et pass QR pour le jour J.'
+            ? 'Ventes et pass QR.'
+            : 'Vos pass QR.'
         }
         breadcrumbs={
           <Breadcrumbs
@@ -273,7 +273,7 @@ export default function TicketsPage() {
             <EmptyState
               icon={<Ticket className="w-5 h-5" />}
               title="Aucun billet pour le moment"
-              description="Découvrez les événements du catalogue pour obtenir vos billets et pass d’accès."
+              description="Les billets du catalogue apparaîtront ici."
               action={
                 <Link href={agendaHref}>
                   <Button size="sm">Découvrir les événements</Button>
@@ -381,7 +381,7 @@ export default function TicketsPage() {
             <EmptyState
               icon={<Ticket className="w-5 h-5" />}
               title="Aucun billet pour ces filtres"
-              description="Changez la recherche, la date (à venir / passés), le type d’entrée ou le lieu."
+              description="Élargissez la recherche."
             />
           ) : (
             <>
