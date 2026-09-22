@@ -153,7 +153,7 @@ export function getDefaultPlans(): PlansConfiguration {
       price: '0 FC',
       monthlyPriceFc: 0,
       description:
-        'Découverte : tester EventMaster — flux invitations (Réponse à l’invitation, plan de table, QR, PDF/GPS) ou 1 salle / 1 prestation.',
+        'Découverte : créer et modifier des invitations (réponse, plan de table, QR, PDF/GPS), ou 1 salle / 1 prestation.',
       audience: 'B2B',
       maxEvents: 3,
       maxGuests: 50,
@@ -161,7 +161,7 @@ export function getDefaultPlans(): PlansConfiguration {
       maxRooms: 1,
       maxServices: 1,
       maxOrgManagers: 1,
-      customTemplates: false,
+      customTemplates: true,
       mockupOcr: false,
       protocolQr: true,
       seatNotifications: true,
