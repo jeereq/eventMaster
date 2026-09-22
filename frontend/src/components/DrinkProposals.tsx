@@ -24,10 +24,10 @@ export default function DrinkProposals({
         const href = offer.vendorSlug
           ? `/marketplace/boissons/${offer.vendorSlug}?offre=${encodeURIComponent(offer.id)}`
           : null;
-        return (
-          <li key={offer.id}>
+        const card = (
             <article className={cn(
               'h-full rounded-[var(--radius-card)] border border-border bg-surface',
+              href && 'transition hover:border-primary/40',
               layout === 'list' ? 'flex flex-wrap items-center gap-3 p-3' : 'flex flex-col',
             )}>
               <div className={cn(
@@ -71,17 +71,21 @@ export default function DrinkProposals({
                     </span>
                   ) : null}
                 </p>
-                {href ? (
-                  <Link
-                    href={href}
-                    aria-label={`Voir les marques de ${offer.vendorName}, à partir de ${offer.brandName}`}
-                    className={GRID_BUTTON}
-                  >
-                    Détail
-                  </Link>
-                ) : null}
+                {href ? <span className={GRID_BUTTON}>Détail</span> : null}
               </div>
             </article>
+        );
+        return (
+          <li key={offer.id} className="h-full">
+            {href ? (
+              <Link
+                href={href}
+                aria-label={`Voir les marques de ${offer.vendorName}, à partir de ${offer.brandName}`}
+                className="block h-full rounded-[var(--radius-card)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                {card}
+              </Link>
+            ) : card}
           </li>
         );
       })}

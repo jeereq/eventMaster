@@ -1150,7 +1150,7 @@ export default function TemplatesPage() {
        >
          Importer l&apos;image
        </Button>
-     </div>
+ </div>
    }
  >
  <div className="space-y-3">
@@ -3097,7 +3097,7 @@ export default function TemplatesPage() {
  ...(importedWithOcr ? { importedFromMockup: true, importedWithOcr } : {}),
  ...(generatedByAi ? { generatedByAi: true } : {}),
  },
- elements: ensureMandatoryRsvpFieldsOnElements(canvasElements),
+ elements: ensureMandatoryRsvpFieldsOnElements(canvasElements), 
  }, {
  title: templateName,
  honorees: invitationHonorees,
@@ -3290,8 +3290,8 @@ export default function TemplatesPage() {
    };
  }, [aiComposeModalOpen, aiComposeBusy]);
 
-const catalogTemplates = templates.filter((t) => t.isGlobal ?? !t.tenantId);
-const ownTemplates = templates.filter((t) => t.isOwned ?? Boolean(t.tenantId));
+ const catalogTemplates = templates.filter((t) => t.isGlobal ?? !t.tenantId);
+ const ownTemplates = templates.filter((t) => t.isOwned ?? Boolean(t.tenantId));
 const studioModelPhotos = useMemo(
   () => invitationModelPhotosFromItems(templates),
   [templates],
@@ -6753,7 +6753,7 @@ const studioModelPhotos = useMemo(
  <PlusCircle className="w-4 h-4" />
  Éditeur vide
  </button>
-   </div>
+ </div>
  </details>
  </div>
  }

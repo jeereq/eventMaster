@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import {
-  Calendar, Users, Mail, CreditCard,
-  PlusCircle, AlertCircle, Award, CheckCircle, Shield,
-  Building2, Activity, TrendingUp, Clock, Trash2, Edit2, Key,
+import { 
+ Calendar, Users, Mail, CreditCard, 
+ PlusCircle, AlertCircle, Award, CheckCircle, Shield,
+ Building2, Activity, TrendingUp, Clock, Trash2, Edit2, Key,
   Globe, Search, Filter, Check, X, FileText, Plus, Loader2, Copy, Eye,
   BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare, History, Briefcase, Wallet, LogIn, Ticket, ClipboardList, ScanLine, Heart
 } from 'lucide-react';
@@ -53,25 +53,25 @@ import { commercialPercent, renewalPercent } from '@/lib/platformRates';
 import type { AuthOtpMethod } from '@/lib/authOtpChannels';
 
 function isPlatformStaff(role?: string) {
-  return role === 'SUPER_ADMIN' || role === 'COMMERCIAL';
+ return role === 'SUPER_ADMIN' || role === 'COMMERCIAL';
 }
 
 const COMMERCIAL_PLATFORM_TABS = ['tenants', 'subscription-requests', 'invoices'] as const;
 
 function planBadgeClass(plan: string): string {
-  if (plan === 'FREE') return 'bg-surface-muted border-border text-muted';
+ if (plan === 'FREE') return 'bg-surface-muted border-border text-muted';
   if (plan.startsWith('PERSONAL')) return 'bg-primary/10 border-primary/20 text-primary';
   if (plan === 'VENUE' || plan === 'SERVICE' || plan === 'CATALOG') return 'bg-festive-accent-soft border-festive-accent/25 text-festive-accent';
   if (plan === 'STANDARD' || plan.startsWith('PREMIUM')) return 'bg-primary/10 border-primary/20 text-primary';
   if (plan.startsWith('ENTERPRISE')) return 'bg-festive-accent-soft border-festive-accent/25 text-festive-accent';
-  return 'bg-surface-muted border-border text-muted';
+ return 'bg-surface-muted border-border text-muted';
 }
 
 function planBarClass(plan: string): string {
-  if (plan === 'FREE') return 'bg-surface-muted';
+ if (plan === 'FREE') return 'bg-surface-muted';
   if (plan.startsWith('PERSONAL') || plan === 'STANDARD' || plan.startsWith('PREMIUM')) return 'bg-primary';
   if (plan === 'VENUE' || plan === 'SERVICE' || plan === 'CATALOG' || plan.startsWith('ENTERPRISE')) return 'bg-festive-accent';
-  return 'bg-surface-muted';
+ return 'bg-surface-muted';
 }
 
 type PendingAdminConfirm =
@@ -131,8 +131,8 @@ function adminConfirmCopy(pending: PendingAdminConfirm): { title: string; descri
 }
 
 interface BillingStatus extends QuotaSnapshot {
-  plan: PlanId;
-  limits: QuotaSnapshot['limits'] & {
+ plan: PlanId;
+ limits: QuotaSnapshot['limits'] & {
     customTemplates: boolean;
   };
 }
@@ -146,61 +146,61 @@ interface EventItem {
 }
 
 interface AdminTenantItem {
-  id: string;
-  name: string;
-  plan: PlanId;
-  licenseActive: boolean;
-  licenseExpiresAt: string | null;
-  licenseKey: string | null;
-  createdAt: string;
-  managerName: string;
-  managerEmail: string;
-  eventsCount: number;
-  usersCount: number;
+ id: string;
+ name: string;
+ plan: PlanId;
+ licenseActive: boolean;
+ licenseExpiresAt: string | null;
+ licenseKey: string | null;
+ createdAt: string;
+ managerName: string;
+ managerEmail: string;
+ eventsCount: number;
+ usersCount: number;
   guestsPeriodCount?: number;
   guestsTotalCount?: number;
   maxGuests?: number;
   periodLabel?: string;
-  accountKind?: string;
-  billingCycle?: 'PERIOD' | 'ANNUAL';
+ accountKind?: string;
+ billingCycle?: 'PERIOD' | 'ANNUAL';
 }
 
 interface AdminStats {
-  stats: {
-    tenants: number;
-    users: number;
-    events: number;
-    guests: number;
-    verifiedUsers?: number;
+ stats: {
+ tenants: number;
+ users: number;
+ events: number;
+ guests: number;
+ verifiedUsers?: number;
     unverifiedUsers?: number;
-    licensesActive?: number;
-    checkedIn?: number;
-    openTasks?: number;
-    overdueTasks?: number;
-    upcomingEvents?: number;
+ licensesActive?: number;
+ checkedIn?: number;
+ openTasks?: number;
+ overdueTasks?: number;
+ upcomingEvents?: number;
     owners?: number;
     staffUsers?: number;
     clientUsers?: number;
     noTenantUsers?: number;
-  };
-  planCounts?: Record<string, number>;
-  accountKindCounts?: Record<string, number>;
-  userRoleCounts?: Record<string, number>;
-  orgRoleCounts?: Record<string, number>;
+ };
+ planCounts?: Record<string, number>;
+ accountKindCounts?: Record<string, number>;
+ userRoleCounts?: Record<string, number>;
+ orgRoleCounts?: Record<string, number>;
 }
 
 interface AdminUserItem {
-  id: string;
-  name: string | null;
-  email: string;
+ id: string;
+ name: string | null;
+ email: string;
   phone?: string | null;
   phoneCountryCode?: string | null;
   verificationMethod?: string | null;
-  role: 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER';
-  orgRole?: 'MANAGER' | 'PROTOCOL' | 'COMMERCIAL' | null;
-  isEmailVerified: boolean;
-  tenantId: string | null;
-  tenantName: string;
+ role: 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER';
+ orgRole?: 'MANAGER' | 'PROTOCOL' | 'COMMERCIAL' | null;
+ isEmailVerified: boolean;
+ tenantId: string | null;
+ tenantName: string;
   tenantPlan?: string | null;
   tenantAccountKind?: string | null;
   tenantLicenseActive?: boolean | null;
@@ -210,210 +210,210 @@ interface AdminUserItem {
   roomStaffCount?: number;
   referredTenantsCount?: number;
   referralCode?: string | null;
-  createdAt: string;
+ createdAt: string;
   updatedAt?: string;
-  commissionRate?: number | null;
-  renewalCommissionRate?: number | null;
+ commissionRate?: number | null;
+ renewalCommissionRate?: number | null;
   commercialPermissions?: import('@/context/AuthContext').CommercialGrantedPermissions | null;
 }
 
 interface AdminTemplateItem {
-  id: string;
-  name: string;
-  content: any;
-  isGlobal: boolean;
-  showOnLanding: boolean;
-  tenantId?: string | null;
-  tenantName: string;
-  createdAt: string;
+ id: string;
+ name: string;
+ content: any;
+ isGlobal: boolean;
+ showOnLanding: boolean;
+ tenantId?: string | null;
+ tenantName: string;
+ createdAt: string;
 }
 
 interface TemplateCounts {
-  total: number;
-  global: number;
-  tenant: number;
-  landing: number;
+ total: number;
+ global: number;
+ tenant: number;
+ landing: number;
 }
 
 interface RevenueReport {
-  period: string;
-  summary: {
-    totalRevenue: number;
-    totalRevenueFormatted: string;
-    invoiceCount: number;
-    totalCommissions: number;
-    totalCommissionsFormatted: string;
-    unpaidCommissions: number;
-    unpaidCommissionsFormatted: string;
-    paidCommissions: number;
-    paidCommissionsFormatted: string;
-    netRevenue: number;
-    netRevenueFormatted: string;
-  };
-  byPlan: Record<string, { count: number; amount: number }>;
-  invoices: Array<{
-    id: string;
-    invoiceNumber: string;
-    tenantName: string;
-    plan: string;
-    amountFormatted: string;
-    type: string;
-    status: string;
-    createdAt: string;
-  }>;
-  commercialCommissions: Array<{
-    commercialId: string;
-    name: string | null;
-    email: string;
-    referralCode: string | null;
-    kind?: 'platform' | 'org';
-    totalInvoiceAmount: number;
-    totalCommission: number;
-    unpaidCommission?: number;
-    paidCommission?: number;
-    entries: Array<{
-      tenantName: string;
-      plan: string;
-      invoiceAmount: number;
-      commissionAmount: number;
-      source: string;
-    }>;
-  }>;
-  monthlyTrend: Array<{
-    period: string;
-    revenue: number;
-    revenueFormatted: string;
-    invoiceCount: number;
-  }>;
+ period: string;
+ summary: {
+ totalRevenue: number;
+ totalRevenueFormatted: string;
+ invoiceCount: number;
+ totalCommissions: number;
+ totalCommissionsFormatted: string;
+ unpaidCommissions: number;
+ unpaidCommissionsFormatted: string;
+ paidCommissions: number;
+ paidCommissionsFormatted: string;
+ netRevenue: number;
+ netRevenueFormatted: string;
+ };
+ byPlan: Record<string, { count: number; amount: number }>;
+ invoices: Array<{
+ id: string;
+ invoiceNumber: string;
+ tenantName: string;
+ plan: string;
+ amountFormatted: string;
+ type: string;
+ status: string;
+ createdAt: string;
+ }>;
+ commercialCommissions: Array<{
+ commercialId: string;
+ name: string | null;
+ email: string;
+ referralCode: string | null;
+ kind?: 'platform' | 'org';
+ totalInvoiceAmount: number;
+ totalCommission: number;
+ unpaidCommission?: number;
+ paidCommission?: number;
+ entries: Array<{
+ tenantName: string;
+ plan: string;
+ invoiceAmount: number;
+ commissionAmount: number;
+ source: string;
+ }>;
+ }>;
+ monthlyTrend: Array<{
+ period: string;
+ revenue: number;
+ revenueFormatted: string;
+ invoiceCount: number;
+ }>;
 }
 
 type AnalyticsSection = 'overview' | 'plans' | 'organisations' | 'revenus' | 'modeles' | 'utilisateurs' | 'evenements' | 'invites' | 'taches';
 
 const ANALYTICS_SECTIONS: Array<{ id: AnalyticsSection; label: string }> = [
-  { id: 'overview', label: 'Vue d\'ensemble' },
-  { id: 'plans', label: 'Plans & licences' },
-  { id: 'organisations', label: 'Organisations' },
-  { id: 'revenus', label: 'Revenus' },
-  { id: 'modeles', label: 'Modèles' },
-  { id: 'utilisateurs', label: 'Utilisateurs' },
-  { id: 'evenements', label: 'Événements' },
-  { id: 'invites', label: 'Invités' },
-  { id: 'taches', label: 'Tâches & équipe' },
+ { id: 'overview', label: 'Vue d\'ensemble' },
+ { id: 'plans', label: 'Plans & licences' },
+ { id: 'organisations', label: 'Organisations' },
+ { id: 'revenus', label: 'Revenus' },
+ { id: 'modeles', label: 'Modèles' },
+ { id: 'utilisateurs', label: 'Utilisateurs' },
+ { id: 'evenements', label: 'Événements' },
+ { id: 'invites', label: 'Invités' },
+ { id: 'taches', label: 'Tâches & équipe' },
 ];
 
 interface PlatformInsights {
-  events: {
-    total: number;
-    publicCount: number;
-    privateCount: number;
-    ticketingEnabled: number;
-    ticketsSold: number;
-    gpsCount: number;
-  };
-  tickets: { paidOrders: number; gmvFc: number };
+ events: {
+  total: number;
+  publicCount: number;
+  privateCount: number;
+  ticketingEnabled: number;
+  ticketsSold: number;
+  gpsCount: number;
+ };
+ tickets: { paidOrders: number; gmvFc: number };
   donations?: { paidDonations: number; gmvFc: number };
-  guests: {
-    total: number;
-    pending: number;
-    accepted: number;
-    declined: number;
-    invitations: number;
-    pdfDelivered: number;
-    pdfMissing: number;
-    checkedIn: number;
-    seatVerified: number;
-  };
-  marketplace: {
-    favorites: number;
-    packs: number;
-    gmvVenueFc: number;
-    gmvTradeFc: number;
-    gmvRentalFc: number;
-  };
-  tasks?: { open: number; overdue: number; done: number };
-  team?: { protocolUsers: number; managerUsers: number };
+ guests: {
+  total: number;
+  pending: number;
+  accepted: number;
+  declined: number;
+  invitations: number;
+  pdfDelivered: number;
+  pdfMissing: number;
+  checkedIn: number;
+  seatVerified: number;
+ };
+ marketplace: {
+  favorites: number;
+  packs: number;
+  gmvVenueFc: number;
+  gmvTradeFc: number;
+  gmvRentalFc: number;
+ };
+ tasks?: { open: number; overdue: number; done: number };
+ team?: { protocolUsers: number; managerUsers: number };
 }
 
 type AdminTabId =
-  | 'overview' | 'tenants' | 'users' | 'templates' | 'message-templates' | 'events'
-  | 'analytics' | 'guests' | 'settings' | 'subscription-requests'
-  | 'subscription-plans' | 'invoices';
+ | 'overview' | 'tenants' | 'users' | 'templates' | 'message-templates' | 'events'
+ | 'analytics' | 'guests' | 'settings' | 'subscription-requests'
+ | 'subscription-plans' | 'invoices';
 
 const ADMIN_TAB_META: Record<AdminTabId, { title: string; description: string; tip?: string }> = {
-  overview: {
-    title: 'Accueil',
-    description: 'Ce qu’il faut traiter aujourd’hui : demandes, licences, factures et organisations récentes.',
-  },
-  tenants: {
-    title: 'Organisations',
-    description: 'Comptes clients SaaS : licence, forfait, gérant et quotas.',
-    tip: 'Créer une organisation génère aussi le compte manager associé.',
-  },
-  users: {
-    title: 'Utilisateurs plateforme',
-    description: 'Tous les comptes (Super Admin, Commercial, membres d’organisations).',
-    tip: 'Les Super Admins n’appartiennent à aucune organisation.',
-  },
-  templates: {
-    title: 'Catalogue modèles (Super Admin)',
-    description: 'Supervision globale : modèles publics EventMaster + modèles privés des organisations. Activez « Vitrine landing » ici.',
-    tip: 'Créer / Modifier ouvre le concepteur visuel, puis vous revient automatiquement sur ce catalogue.',
-  },
-  'message-templates': {
-    title: 'Messages automatiques',
-    description: 'Textes WhatsApp / e-mail envoyés aux invités (invitation, rappel, confirmation…).',
-    tip: 'Utilisez les variables {{firstName}}, {{rsvpLink}}, etc. dans le corps du message.',
-  },
-  events: {
-    title: 'Événements (supervision)',
-    description: 'Vue transversale : privé / public, billets, GPS et organisations.',
-  },
-  guests: {
-    title: 'Invités (supervision)',
+ overview: {
+ title: 'Accueil',
+ description: 'Ce qu’il faut traiter aujourd’hui : demandes, licences, factures et organisations récentes.',
+ },
+ tenants: {
+ title: 'Organisations',
+ description: 'Comptes clients SaaS : licence, forfait, gérant et quotas.',
+ tip: 'Créer une organisation génère aussi le compte manager associé.',
+ },
+ users: {
+ title: 'Utilisateurs plateforme',
+ description: 'Tous les comptes (Super Admin, Commercial, membres d’organisations).',
+ tip: 'Les Super Admins n’appartiennent à aucune organisation.',
+ },
+ templates: {
+ title: 'Catalogue modèles (Super Admin)',
+ description: 'Supervision globale : modèles publics EventMaster + modèles privés des organisations. Activez « Vitrine landing » ici.',
+ tip: 'Créer / Modifier ouvre le concepteur visuel, puis vous revient automatiquement sur ce catalogue.',
+ },
+ 'message-templates': {
+ title: 'Messages automatiques',
+ description: 'Textes WhatsApp / e-mail envoyés aux invités (invitation, rappel, confirmation…).',
+ tip: 'Utilisez les variables {{firstName}}, {{rsvpLink}}, etc. dans le corps du message.',
+ },
+ events: {
+ title: 'Événements (supervision)',
+ description: 'Vue transversale : privé / public, billets, GPS et organisations.',
+ },
+ guests: {
+ title: 'Invités (supervision)',
     description: 'Liste globale, funnel des réponses, PDF non livré et présence jour J.',
-  },
-  analytics: {
-    title: 'Analyses & statistiques',
+ },
+ analytics: {
+ title: 'Analyses & statistiques',
     description: 'Adoption des forfaits, check-in, tâches, événements publics, billets et funnel des réponses.',
-  },
-  settings: {
-    title: 'Réglages plateforme',
-    description: 'Identité, contact public, taux marketplace, maintenance, inscriptions, UltraMsg et SendGrid — appliqués au site et à l’API.',
-    tip: 'Après sauvegarde, landing, contact, footer et inscriptions se mettent à jour immédiatement. Les forfaits sont dans l’onglet dédié.',
-  },
-  'subscription-requests': {
-    title: 'Demandes d’abonnement',
-    description: 'Validez ou refusez les demandes d’upgrade / renouvellement avec preuve de paiement.',
-  },
-  'subscription-plans': {
-    title: 'Forfaits & tarifs',
-    description: 'Prix, quotas et fonctionnalités affichés sur la landing et appliqués à la facturation.',
-    tip: 'Ces forfaits alimentent directement la section tarifs de la page d’accueil.',
-  },
-  invoices: {
-    title: 'Factures plateforme',
-    description: 'Factures générées après approbation, paiement ou renouvellement.',
-  },
+ },
+ settings: {
+ title: 'Réglages plateforme',
+ description: 'Identité, contact public, taux marketplace, maintenance, inscriptions, UltraMsg et SendGrid — appliqués au site et à l’API.',
+ tip: 'Après sauvegarde, landing, contact, footer et inscriptions se mettent à jour immédiatement. Les forfaits sont dans l’onglet dédié.',
+ },
+ 'subscription-requests': {
+ title: 'Demandes d’abonnement',
+ description: 'Validez ou refusez les demandes d’upgrade / renouvellement avec preuve de paiement.',
+ },
+ 'subscription-plans': {
+ title: 'Forfaits & tarifs',
+ description: 'Prix, quotas et fonctionnalités affichés sur la landing et appliqués à la facturation.',
+ tip: 'Ces forfaits alimentent directement la section tarifs de la page d’accueil.',
+ },
+ invoices: {
+ title: 'Factures plateforme',
+ description: 'Factures générées après approbation, paiement ou renouvellement.',
+ },
 };
 
 interface TenantSubscriptionHistoryEntry {
-  id: string;
-  kind: 'REQUEST' | 'INVOICE';
-  date: string;
-  plan: string;
-  durationDays?: number | null;
-  status?: string;
-  statusLabel?: string;
-  proofOfPayment?: string | null;
-  processedAt?: string | null;
-  invoice?: {
-    invoiceNumber: string;
-    amountFormatted: string;
-    statusLabel: string;
-    typeLabel: string;
-    periodStart?: string | null;
-    periodEnd?: string | null;
-  } | null;
+ id: string;
+ kind: 'REQUEST' | 'INVOICE';
+ date: string;
+ plan: string;
+ durationDays?: number | null;
+ status?: string;
+ statusLabel?: string;
+ proofOfPayment?: string | null;
+ processedAt?: string | null;
+ invoice?: {
+ invoiceNumber: string;
+ amountFormatted: string;
+ statusLabel: string;
+ typeLabel: string;
+ periodStart?: string | null;
+ periodEnd?: string | null;
+ } | null;
 }
 
 function filterAdminDashboardEvents<T extends {
@@ -512,249 +512,249 @@ function filterAdminDashboardGuests<T extends {
 }
 
 function DashboardPageContent() {
-  const { user, tenant, access, planQuota, enterSupportSession } = useAuth();
-  const { site } = usePlatformSite();
-  const commercialPct = commercialPercent(site);
-  const renewalPct = renewalPercent(site);
-  const viewPrefs = useViewPreferencesOptional();
-  const widgets = viewPrefs?.prefs.widgets;
-  const {
-    mode: homeEventsMode,
-    setViewMode: setHomeEventsMode,
-    columns: homeEventsColumns,
-    setGridColumns: setHomeEventsColumns,
-    gridClassName: homeEventsGridClass,
-  } = useViewMode('em-view-home-events', 'grid', 2);
-  const {
-    mode: tenantsViewMode,
-    setViewMode: setTenantsViewMode,
-    columns: tenantsColumns,
-    setGridColumns: setTenantsColumns,
-    gridClassName: tenantsGridClass,
-  } = useViewMode('em-view-admin-tenants', 'grid', 3);
-  const {
-    mode: usersViewMode,
-    setViewMode: setUsersViewMode,
-    columns: usersColumns,
-    setGridColumns: setUsersColumns,
-    gridClassName: usersGridClass,
-  } = useViewMode('em-view-admin-users', 'grid', 3);
-  const {
-    mode: adminEventsViewMode,
-    setViewMode: setAdminEventsViewMode,
-    columns: adminEventsColumns,
-    setGridColumns: setAdminEventsColumns,
-    gridClassName: adminEventsGridClass,
-  } = useViewMode('em-view-admin-events', 'grid', 3);
-  const {
-    mode: guestsViewMode,
-    setViewMode: setGuestsViewMode,
-    columns: guestsColumns,
-    setGridColumns: setGuestsColumns,
-    gridClassName: guestsGridClass,
-  } = useViewMode('em-view-admin-guests', 'grid', 3);
-  const {
-    mode: plansViewMode,
-    setViewMode: setPlansViewMode,
-    columns: plansColumns,
-    setGridColumns: setPlansColumns,
-    gridClassName: plansGridClass,
-  } = useViewMode('em-view-admin-plans', 'grid', 4);
-  const {
-    mode: invoicesViewMode,
-    setViewMode: setInvoicesViewMode,
-    columns: invoicesColumns,
-    setGridColumns: setInvoicesColumns,
-    gridClassName: invoicesGridClass,
-  } = useViewMode('em-view-admin-invoices', 'list', 3);
+ const { user, tenant, access, planQuota, enterSupportSession } = useAuth();
+ const { site } = usePlatformSite();
+ const commercialPct = commercialPercent(site);
+ const renewalPct = renewalPercent(site);
+ const viewPrefs = useViewPreferencesOptional();
+ const widgets = viewPrefs?.prefs.widgets;
+ const {
+ mode: homeEventsMode,
+ setViewMode: setHomeEventsMode,
+ columns: homeEventsColumns,
+ setGridColumns: setHomeEventsColumns,
+ gridClassName: homeEventsGridClass,
+ } = useViewMode('em-view-home-events', 'grid', 2);
+ const {
+ mode: tenantsViewMode,
+ setViewMode: setTenantsViewMode,
+ columns: tenantsColumns,
+ setGridColumns: setTenantsColumns,
+ gridClassName: tenantsGridClass,
+ } = useViewMode('em-view-admin-tenants', 'grid', 3);
+ const {
+ mode: usersViewMode,
+ setViewMode: setUsersViewMode,
+ columns: usersColumns,
+ setGridColumns: setUsersColumns,
+ gridClassName: usersGridClass,
+ } = useViewMode('em-view-admin-users', 'grid', 3);
+ const {
+ mode: adminEventsViewMode,
+ setViewMode: setAdminEventsViewMode,
+ columns: adminEventsColumns,
+ setGridColumns: setAdminEventsColumns,
+ gridClassName: adminEventsGridClass,
+ } = useViewMode('em-view-admin-events', 'grid', 3);
+ const {
+ mode: guestsViewMode,
+ setViewMode: setGuestsViewMode,
+ columns: guestsColumns,
+ setGridColumns: setGuestsColumns,
+ gridClassName: guestsGridClass,
+ } = useViewMode('em-view-admin-guests', 'grid', 3);
+ const {
+ mode: plansViewMode,
+ setViewMode: setPlansViewMode,
+ columns: plansColumns,
+ setGridColumns: setPlansColumns,
+ gridClassName: plansGridClass,
+ } = useViewMode('em-view-admin-plans', 'grid', 4);
+ const {
+ mode: invoicesViewMode,
+ setViewMode: setInvoicesViewMode,
+ columns: invoicesColumns,
+ setGridColumns: setInvoicesColumns,
+ gridClassName: invoicesGridClass,
+ } = useViewMode('em-view-admin-invoices', 'list', 3);
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [events, setEvents] = useState<EventItem[]>([]);
-  const [adminData, setAdminData] = useState<AdminStats | null>(null);
-  const [adminTenants, setAdminTenants] = useState<AdminTenantItem[]>([]);
-  const [adminTenantsTotal, setAdminTenantsTotal] = useState(0);
-  const [tenantsLoading, setTenantsLoading] = useState(false);
-  const [tenantOptions, setTenantOptions] = useState<AdminTenantItem[]>([]);
-  const [usersTotal, setUsersTotal] = useState(0);
-  const [templatesTotal, setTemplatesTotal] = useState(0);
-  const [templateCounts, setTemplateCounts] = useState<TemplateCounts>({ total: 0, global: 0, tenant: 0, landing: 0 });
-  const [landingTemplates, setLandingTemplates] = useState<AdminTemplateItem[]>([]);
-  const [deferredSearch, setDeferredSearch] = useState('');
-  const [recentUsers, setRecentUsers] = useState<AdminUserItem[]>([]);
-  const [recentEvents, setRecentEvents] = useState<any[]>([]);
-  const [topTenants, setTopTenants] = useState<AdminTenantItem[]>([]);
+ const [adminData, setAdminData] = useState<AdminStats | null>(null);
+ const [adminTenants, setAdminTenants] = useState<AdminTenantItem[]>([]);
+ const [adminTenantsTotal, setAdminTenantsTotal] = useState(0);
+ const [tenantsLoading, setTenantsLoading] = useState(false);
+ const [tenantOptions, setTenantOptions] = useState<AdminTenantItem[]>([]);
+ const [usersTotal, setUsersTotal] = useState(0);
+ const [templatesTotal, setTemplatesTotal] = useState(0);
+ const [templateCounts, setTemplateCounts] = useState<TemplateCounts>({ total: 0, global: 0, tenant: 0, landing: 0 });
+ const [landingTemplates, setLandingTemplates] = useState<AdminTemplateItem[]>([]);
+ const [deferredSearch, setDeferredSearch] = useState('');
+ const [recentUsers, setRecentUsers] = useState<AdminUserItem[]>([]);
+ const [recentEvents, setRecentEvents] = useState<any[]>([]);
+ const [topTenants, setTopTenants] = useState<AdminTenantItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  const searchParams = useSearchParams();
-  const router = useRouter();
+ const searchParams = useSearchParams();
+ const router = useRouter();
 
-  const tabParam = searchParams.get('tab');
-  const sectionParam = searchParams.get('section');
-  const activeAnalyticsSection: AnalyticsSection =
-    sectionParam && ANALYTICS_SECTIONS.some((s) => s.id === sectionParam)
-      ? (sectionParam as AnalyticsSection)
-      : 'overview';
+ const tabParam = searchParams.get('tab');
+ const sectionParam = searchParams.get('section');
+ const activeAnalyticsSection: AnalyticsSection =
+ sectionParam && ANALYTICS_SECTIONS.some((s) => s.id === sectionParam)
+ ? (sectionParam as AnalyticsSection)
+ : 'overview';
   const isClientDashboard = access?.level === 'client' || tenant?.accountKind === 'CLIENT';
   const isProtocolDashboard = Boolean(access?.isProtocolOnly);
 
-  const setAnalyticsSection = (section: AnalyticsSection) => {
-    router.replace(`/dashboard?tab=analytics&section=${section}`, { scroll: false });
-  };
+ const setAnalyticsSection = (section: AnalyticsSection) => {
+ router.replace(`/dashboard?tab=analytics&section=${section}`, { scroll: false });
+ };
 
-  // Super Admin specific states
-  const [activeTab, setActiveTab] = useState<
-    'overview' | 'tenants' | 'users' | 'templates' | 'message-templates' | 'events' | 'analytics' | 'guests' | 'settings'
-    | 'subscription-requests' | 'subscription-plans' | 'invoices'
-  >('overview');
+ // Super Admin specific states
+ const [activeTab, setActiveTab] = useState<
+ 'overview' | 'tenants' | 'users' | 'templates' | 'message-templates' | 'events' | 'analytics' | 'guests' | 'settings'
+ | 'subscription-requests' | 'subscription-plans' | 'invoices'
+ >('overview');
 
-  useEffect(() => {
+ useEffect(() => {
     if (user?.role === 'SUPER_ADMIN') {
-      if (tabParam === 'events') {
-        router.replace('/dashboard/admin/events');
-        return;
+ if (tabParam === 'events') {
+ router.replace('/dashboard/admin/events');
+ return;
+ }
+ if (tabParam === 'guests') {
+ router.replace('/dashboard/admin/guests');
+ return;
       }
-      if (tabParam === 'guests') {
-        router.replace('/dashboard/admin/guests');
-        return;
-      }
-    }
-    if (isPlatformStaff(user?.role) && (tabParam || user?.role === 'SUPER_ADMIN')) {
-      const legacySubscriptions = tabParam === 'subscriptions' ? 'subscription-requests' : tabParam;
-      const allowedTabs = user?.role === 'COMMERCIAL'
+ }
+ if (isPlatformStaff(user?.role) && (tabParam || user?.role === 'SUPER_ADMIN')) {
+ const legacySubscriptions = tabParam === 'subscriptions' ? 'subscription-requests' : tabParam;
+ const allowedTabs = user?.role === 'COMMERCIAL'
         ? [
           'tenants', 'subscription-requests', 'invoices',
           ...(user.commercialPermissions?.canManageTemplates ? ['templates'] : []),
           ...(user.commercialPermissions?.canManageMessageTemplates ? ['message-templates'] : []),
         ]
-        : [
-          'overview', 'tenants', 'users', 'templates', 'message-templates', 'analytics', 'settings',
-          'subscription-requests', 'subscription-plans', 'invoices',
-        ];
-      if (legacySubscriptions && allowedTabs.includes(legacySubscriptions)) {
-        setActiveTab(legacySubscriptions as typeof activeTab);
-      } else if (user?.role === 'SUPER_ADMIN' && !tabParam) {
-        setActiveTab('overview');
-      }
-    }
-  }, [tabParam, user, router]);
+ : [
+ 'overview', 'tenants', 'users', 'templates', 'message-templates', 'analytics', 'settings',
+ 'subscription-requests', 'subscription-plans', 'invoices',
+ ];
+ if (legacySubscriptions && allowedTabs.includes(legacySubscriptions)) {
+ setActiveTab(legacySubscriptions as typeof activeTab);
+ } else if (user?.role === 'SUPER_ADMIN' && !tabParam) {
+ setActiveTab('overview');
+ }
+ }
+ }, [tabParam, user, router]);
 
-  useEffect(() => {
-    if (searchParams.get('saved') !== '1' || tabParam !== 'templates') return;
-    setTemplateSavedFlash(true);
+ useEffect(() => {
+ if (searchParams.get('saved') !== '1' || tabParam !== 'templates') return;
+ setTemplateSavedFlash(true);
     if (user?.role === 'SUPER_ADMIN' || (user?.role === 'COMMERCIAL' && user?.commercialPermissions?.canManageTemplates)) {
-      void loadTemplates();
-    }
-    const t = setTimeout(() => setTemplateSavedFlash(false), 4500);
-    router.replace('/dashboard?tab=templates');
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- flash one-shot après retour concepteur
+ void loadTemplates();
+ }
+ const t = setTimeout(() => setTemplateSavedFlash(false), 4500);
+ router.replace('/dashboard?tab=templates');
+ return () => clearTimeout(t);
+ // eslint-disable-next-line react-hooks/exhaustive-deps -- flash one-shot après retour concepteur
   }, [searchParams, tabParam, router, user]);
 
-  useEffect(() => {
-    if (user?.role !== 'COMMERCIAL') return;
+ useEffect(() => {
+ if (user?.role !== 'COMMERCIAL') return;
     const commercialAllowed = [
       ...COMMERCIAL_PLATFORM_TABS,
       ...(user.commercialPermissions?.canManageTemplates ? ['templates'] : []),
       ...(user.commercialPermissions?.canManageMessageTemplates ? ['message-templates'] : []),
     ];
     if (!commercialAllowed.includes(activeTab as any)) {
-      setActiveTab('tenants');
-      router.replace('/dashboard?tab=tenants');
-    }
+ setActiveTab('tenants');
+ router.replace('/dashboard?tab=tenants');
+ }
   }, [user?.role, user?.commercialPermissions, activeTab, router]);
 
-  const [users, setUsers] = useState<AdminUserItem[]>([]);
-  const [templates, setTemplates] = useState<AdminTemplateItem[]>([]);
-  const [adminEvents, setAdminEvents] = useState<any[]>([]);
-  const [adminGuests, setAdminGuests] = useState<any[]>([]);
-  const [adminSettings, setAdminSettings] = useState<any>(null);
-  const [templateSavedFlash, setTemplateSavedFlash] = useState(false);
+ const [users, setUsers] = useState<AdminUserItem[]>([]);
+ const [templates, setTemplates] = useState<AdminTemplateItem[]>([]);
+ const [adminEvents, setAdminEvents] = useState<any[]>([]);
+ const [adminGuests, setAdminGuests] = useState<any[]>([]);
+ const [adminSettings, setAdminSettings] = useState<any>(null);
+ const [templateSavedFlash, setTemplateSavedFlash] = useState(false);
 
-  const planCatalogPrices = useMemo(() => {
-    if (!adminSettings?.plans) return undefined;
-    const map: Record<string, number> = {};
-    for (const key of PLAN_IDS) {
-      const p = adminSettings.plans[key];
-      if (p?.monthlyPriceFc != null) map[key] = p.monthlyPriceFc;
-    }
-    return map;
-  }, [adminSettings]);
+ const planCatalogPrices = useMemo(() => {
+ if (!adminSettings?.plans) return undefined;
+ const map: Record<string, number> = {};
+ for (const key of PLAN_IDS) {
+ const p = adminSettings.plans[key];
+ if (p?.monthlyPriceFc != null) map[key] = p.monthlyPriceFc;
+ }
+ return map;
+ }, [adminSettings]);
 
-  const planPromoByPlan = useMemo(() => {
-    if (!adminSettings?.plans) return undefined;
-    const map: Record<string, { price: number; label?: string }> = {};
-    for (const key of PLAN_IDS) {
-      const p = adminSettings.plans[key];
-      if (p?.promoActive && p.promoMonthlyPriceFc != null) {
-        map[key] = { price: p.promoMonthlyPriceFc, label: p.promoLabel };
-      }
-    }
-    return map;
-  }, [adminSettings]);
+ const planPromoByPlan = useMemo(() => {
+ if (!adminSettings?.plans) return undefined;
+ const map: Record<string, { price: number; label?: string }> = {};
+ for (const key of PLAN_IDS) {
+ const p = adminSettings.plans[key];
+ if (p?.promoActive && p.promoMonthlyPriceFc != null) {
+ map[key] = { price: p.promoMonthlyPriceFc, label: p.promoLabel };
+ }
+ }
+ return map;
+ }, [adminSettings]);
 
-  const [subscriptionRequests, setSubscriptionRequests] = useState<any[]>([]);
-  const [adminInvoices, setAdminInvoices] = useState<PlatformInvoiceItem[]>([]);
-  const [loadingAdminInvoices, setLoadingAdminInvoices] = useState(false);
-  const [revenueReport, setRevenueReport] = useState<RevenueReport | null>(null);
-  const [revenuePeriod, setRevenuePeriod] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  });
-  const [loadingRevenueReport, setLoadingRevenueReport] = useState(false);
+ const [subscriptionRequests, setSubscriptionRequests] = useState<any[]>([]);
+ const [adminInvoices, setAdminInvoices] = useState<PlatformInvoiceItem[]>([]);
+ const [loadingAdminInvoices, setLoadingAdminInvoices] = useState(false);
+ const [revenueReport, setRevenueReport] = useState<RevenueReport | null>(null);
+ const [revenuePeriod, setRevenuePeriod] = useState(() => {
+ const now = new Date();
+ return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+ });
+ const [loadingRevenueReport, setLoadingRevenueReport] = useState(false);
   const [subscriptionReport, setSubscriptionReport] = useState<any>(null);
   const [loadingSubReport, setLoadingSubReport] = useState(false);
-  const [notifyingPayouts, setNotifyingPayouts] = useState(false);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [templatesLoading, setTemplatesLoading] = useState(false);
-  const [adminEventsLoading, setAdminEventsLoading] = useState(false);
-  const [adminGuestsLoading, setAdminGuestsLoading] = useState(false);
-  const [adminSettingsLoading, setAdminSettingsLoading] = useState(false);
-  const [subRequestsLoading, setSubRequestsLoading] = useState(false);
+ const [notifyingPayouts, setNotifyingPayouts] = useState(false);
+ const [usersLoading, setUsersLoading] = useState(false);
+ const [templatesLoading, setTemplatesLoading] = useState(false);
+ const [adminEventsLoading, setAdminEventsLoading] = useState(false);
+ const [adminGuestsLoading, setAdminGuestsLoading] = useState(false);
+ const [adminSettingsLoading, setAdminSettingsLoading] = useState(false);
+ const [subRequestsLoading, setSubRequestsLoading] = useState(false);
   const [busySubRequestId, setBusySubRequestId] = useState<string | null>(null);
   const [adminFeedback, setAdminFeedback] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
-  const [approvalModalRequest, setApprovalModalRequest] = useState<SubscriptionApprovalRequest | null>(null);
-  const [commercialOverview, setCommercialOverview] = useState<{
-    stats?: { monthlyCommission?: number; totalCommission?: number };
-    commissionRate?: number;
-  } | null>(null);
-  const [savingSettings, setSavingSettings] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterPlan, setFilterPlan] = useState<string>('ALL');
-  const [filterAccountKind, setFilterAccountKind] = useState<string>('ALL');
-  const [filterRole, setFilterRole] = useState<string>('ALL');
-  const [filterType, setFilterType] = useState<'ALL' | 'GLOBAL' | 'TENANT'>('GLOBAL');
-  const [filterRsvp, setFilterRsvp] = useState<string>('ALL');
-  const [filterVerified, setFilterVerified] = useState<string>('ALL');
-  const [filterUserOrg, setFilterUserOrg] = useState<string>('ALL');
-  const [filterOrgRole, setFilterOrgRole] = useState<string>('ALL');
-  const [filterEventWhen, setFilterEventWhen] = useState<string>('ALL');
-  const [filterEventOrg, setFilterEventOrg] = useState<string>('ALL');
-  const [filterEventGps, setFilterEventGps] = useState<string>('ALL');
-  const [filterEventVisibility, setFilterEventVisibility] = useState<string>('ALL');
-  const [filterEventTicketing, setFilterEventTicketing] = useState<string>('ALL');
-  const [filterGuestOrg, setFilterGuestOrg] = useState<string>('ALL');
-  const [filterGuestEvent, setFilterGuestEvent] = useState<string>('ALL');
-  const [filterGuestCategory, setFilterGuestCategory] = useState<string>('ALL');
-  const [filterGuestCheckin, setFilterGuestCheckin] = useState<string>('ALL');
-  const [filterGuestPdf, setFilterGuestPdf] = useState<string>('ALL');
-  const [platformInsights, setPlatformInsights] = useState<PlatformInsights | null>(null);
+ const [approvalModalRequest, setApprovalModalRequest] = useState<SubscriptionApprovalRequest | null>(null);
+ const [commercialOverview, setCommercialOverview] = useState<{
+ stats?: { monthlyCommission?: number; totalCommission?: number };
+ commissionRate?: number;
+ } | null>(null);
+ const [savingSettings, setSavingSettings] = useState(false);
+ const [searchTerm, setSearchTerm] = useState('');
+ const [filterPlan, setFilterPlan] = useState<string>('ALL');
+ const [filterAccountKind, setFilterAccountKind] = useState<string>('ALL');
+ const [filterRole, setFilterRole] = useState<string>('ALL');
+ const [filterType, setFilterType] = useState<'ALL' | 'GLOBAL' | 'TENANT'>('GLOBAL');
+ const [filterRsvp, setFilterRsvp] = useState<string>('ALL');
+ const [filterVerified, setFilterVerified] = useState<string>('ALL');
+ const [filterUserOrg, setFilterUserOrg] = useState<string>('ALL');
+ const [filterOrgRole, setFilterOrgRole] = useState<string>('ALL');
+ const [filterEventWhen, setFilterEventWhen] = useState<string>('ALL');
+ const [filterEventOrg, setFilterEventOrg] = useState<string>('ALL');
+ const [filterEventGps, setFilterEventGps] = useState<string>('ALL');
+ const [filterEventVisibility, setFilterEventVisibility] = useState<string>('ALL');
+ const [filterEventTicketing, setFilterEventTicketing] = useState<string>('ALL');
+ const [filterGuestOrg, setFilterGuestOrg] = useState<string>('ALL');
+ const [filterGuestEvent, setFilterGuestEvent] = useState<string>('ALL');
+ const [filterGuestCategory, setFilterGuestCategory] = useState<string>('ALL');
+ const [filterGuestCheckin, setFilterGuestCheckin] = useState<string>('ALL');
+ const [filterGuestPdf, setFilterGuestPdf] = useState<string>('ALL');
+ const [platformInsights, setPlatformInsights] = useState<PlatformInsights | null>(null);
 
-  // Pagination states
-  const [tenantsPage, setTenantsPage] = useState(1);
-  const [usersPage, setUsersPage] = useState(1);
-  const [templatesPage, setTemplatesPage] = useState(1);
-  const [eventsPage, setEventsPage] = useState(1);
-  const [guestsPage, setGuestsPage] = useState(1);
-  const [homeEventsPage, setHomeEventsPage] = useState(1);
-  const [plansPage, setPlansPage] = useState(1);
-  const [tenantsPageSize, setTenantsPageSize] = usePageSize('admin-tenants', 8);
-  const [usersPageSize, setUsersPageSize] = usePageSize('admin-users', 8);
-  const [templatesPageSize, setTemplatesPageSize] = usePageSize('admin-templates', 8);
-  const [eventsPageSize, setEventsPageSize] = usePageSize('admin-events', 8);
-  const [guestsPageSize, setGuestsPageSize] = usePageSize('admin-guests', 8);
-  const [homeEventsPageSize, setHomeEventsPageSize] = usePageSize('home-events', 6);
-  const [plansPageSize, setPlansPageSize] = usePageSize('admin-plans', 4);
+ // Pagination states
+ const [tenantsPage, setTenantsPage] = useState(1);
+ const [usersPage, setUsersPage] = useState(1);
+ const [templatesPage, setTemplatesPage] = useState(1);
+ const [eventsPage, setEventsPage] = useState(1);
+ const [guestsPage, setGuestsPage] = useState(1);
+ const [homeEventsPage, setHomeEventsPage] = useState(1);
+ const [plansPage, setPlansPage] = useState(1);
+ const [tenantsPageSize, setTenantsPageSize] = usePageSize('admin-tenants', 8);
+ const [usersPageSize, setUsersPageSize] = usePageSize('admin-users', 8);
+ const [templatesPageSize, setTemplatesPageSize] = usePageSize('admin-templates', 8);
+ const [eventsPageSize, setEventsPageSize] = usePageSize('admin-events', 8);
+ const [guestsPageSize, setGuestsPageSize] = usePageSize('admin-guests', 8);
+ const [homeEventsPageSize, setHomeEventsPageSize] = usePageSize('home-events', 6);
+ const [plansPageSize, setPlansPageSize] = usePageSize('admin-plans', 4);
 
   const filteredEvents = useMemo(
     () =>
@@ -787,79 +787,79 @@ function DashboardPageContent() {
   const paginatedGuests = usePaginateItems(filteredGuests, guestsPage, guestsPageSize);
   const paginatedPlanIds = usePaginateItems(PLAN_IDS, plansPage, plansPageSize);
 
-  // Guest CRUD Modals states (Super Admin)
-  const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
-  const [guestModalMode, setGuestModalMode] = useState<'create' | 'edit'>('create');
-  const [selectedGuest, setSelectedGuest] = useState<any | null>(null);
-  const [modalGuestFirstName, setGuestFirstName] = useState('');
-  const [modalGuestLastName, setGuestLastName] = useState('');
-  const [modalGuestEmail, setGuestEmail] = useState('');
-  const [modalGuestCategory, setGuestCategory] = useState('Général');
-  const [modalGuestRsvp, setGuestRsvp] = useState('PENDING');
-  const [modalGuestEventId, setGuestEventId] = useState('');
-  const [modalGuestPhoneCountryCode, setModalGuestPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
-  const [modalGuestPhoneNational, setModalGuestPhoneNational] = useState('');
-  const [updatingGuest, setUpdatingGuest] = useState(false);
+ // Guest CRUD Modals states (Super Admin)
+ const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
+ const [guestModalMode, setGuestModalMode] = useState<'create' | 'edit'>('create');
+ const [selectedGuest, setSelectedGuest] = useState<any | null>(null);
+ const [modalGuestFirstName, setGuestFirstName] = useState('');
+ const [modalGuestLastName, setGuestLastName] = useState('');
+ const [modalGuestEmail, setGuestEmail] = useState('');
+ const [modalGuestCategory, setGuestCategory] = useState('Général');
+ const [modalGuestRsvp, setGuestRsvp] = useState('PENDING');
+ const [modalGuestEventId, setGuestEventId] = useState('');
+ const [modalGuestPhoneCountryCode, setModalGuestPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
+ const [modalGuestPhoneNational, setModalGuestPhoneNational] = useState('');
+ const [updatingGuest, setUpdatingGuest] = useState(false);
 
-  // Event CRUD Modals states
-  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
-  const [eventModalMode, setEventModalMode] = useState<'create' | 'edit'>('create');
-  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
-  const [modalEventTitle, setEventTitle] = useState('');
-  const [modalEventDescription, setEventDescription] = useState('');
-  const [modalEventDate, setEventDate] = useState('');
-  const [modalEventLocation, setEventLocation] = useState('');
-  const [modalEventReminderFrequency, setEventReminderFrequency] = useState<'NONE' | 'DAILY' | 'WEEKLY'>('NONE');
-  const [modalEventLatitude, setEventLatitude] = useState('');
-  const [modalEventLongitude, setEventLongitude] = useState('');
-  const [modalEventTenantId, setEventTenantId] = useState('');
-  const [updatingEvent, setUpdatingEvent] = useState(false);
+ // Event CRUD Modals states
+ const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+ const [eventModalMode, setEventModalMode] = useState<'create' | 'edit'>('create');
+ const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
+ const [modalEventTitle, setEventTitle] = useState('');
+ const [modalEventDescription, setEventDescription] = useState('');
+ const [modalEventDate, setEventDate] = useState('');
+ const [modalEventLocation, setEventLocation] = useState('');
+ const [modalEventReminderFrequency, setEventReminderFrequency] = useState<'NONE' | 'DAILY' | 'WEEKLY'>('NONE');
+ const [modalEventLatitude, setEventLatitude] = useState('');
+ const [modalEventLongitude, setEventLongitude] = useState('');
+ const [modalEventTenantId, setEventTenantId] = useState('');
+ const [updatingEvent, setUpdatingEvent] = useState(false);
 
-  // Map refs for event modal
-  const mapRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
+ // Map refs for event modal
+ const mapRef = useRef<any>(null);
+ const markerRef = useRef<any>(null);
 
-  // Details Modal states
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [detailsType, setDetailsType] = useState<'tenant' | 'user' | 'template' | 'event' | 'guest' | null>(null);
-  const [detailsData, setDetailsData] = useState<any>(null);
-  const [tenantSubscriptionHistory, setTenantSubscriptionHistory] = useState<TenantSubscriptionHistoryEntry[]>([]);
-  const [loadingTenantHistory, setLoadingTenantHistory] = useState(false);
+ // Details Modal states
+ const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+ const [detailsType, setDetailsType] = useState<'tenant' | 'user' | 'template' | 'event' | 'guest' | null>(null);
+ const [detailsData, setDetailsData] = useState<any>(null);
+ const [tenantSubscriptionHistory, setTenantSubscriptionHistory] = useState<TenantSubscriptionHistoryEntry[]>([]);
+ const [loadingTenantHistory, setLoadingTenantHistory] = useState(false);
 
-  // Tenant CRUD Modals states
-  const [isCreateTenantModalOpen, setIsTenantModalOpen] = useState(false);
-  const [tenantModalMode, setTenantModalMode] = useState<'create' | 'edit'>('create');
-  const [selectedTenant, setSelectedTenant] = useState<AdminTenantItem | null>(null);
-  const [openingWorkspaceId, setOpeningWorkspaceId] = useState<string | null>(null);
-  const [modalTenantName, setTenantName] = useState('');
-  const [modalPlan, setModalPlan] = useState<PlanId>('FREE');
+ // Tenant CRUD Modals states
+ const [isCreateTenantModalOpen, setIsTenantModalOpen] = useState(false);
+ const [tenantModalMode, setTenantModalMode] = useState<'create' | 'edit'>('create');
+ const [selectedTenant, setSelectedTenant] = useState<AdminTenantItem | null>(null);
+ const [openingWorkspaceId, setOpeningWorkspaceId] = useState<string | null>(null);
+ const [modalTenantName, setTenantName] = useState('');
+ const [modalPlan, setModalPlan] = useState<PlanId>('FREE');
   const [modalAccountKind, setModalAccountKind] = useState<TenantAccountKind>('ORGANIZER');
-  const [modalLicenseActive, setModalLicenseActive] = useState(true);
-  const [modalLicenseExpiresAt, setModalLicenseExpiresAt] = useState('');
-  const [modalLicenseKey, setModalLicenseKey] = useState('');
-  const [modalIssueInvoice, setModalIssueInvoice] = useState(false);
-  const [modalExtendLicense, setModalExtendLicense] = useState(true);
-  const [modalBillingDurationDays, setModalBillingDurationDays] = useState('30');
-  const [modalBillingAction, setModalBillingAction] = useState<'AUTO' | 'RENEWAL' | 'PLAN_CHANGE' | 'ACTIVATION'>('AUTO');
-  const [modalDiscountMode, setModalDiscountMode] = useState<'percent' | 'amount'>('percent');
-  const [modalDiscountPercent, setModalDiscountPercent] = useState('0');
-  const [modalApprovedAmount, setModalApprovedAmount] = useState('');
-  const [updatingTenant, setUpdatingTenant] = useState(false);
+ const [modalLicenseActive, setModalLicenseActive] = useState(true);
+ const [modalLicenseExpiresAt, setModalLicenseExpiresAt] = useState('');
+ const [modalLicenseKey, setModalLicenseKey] = useState('');
+ const [modalIssueInvoice, setModalIssueInvoice] = useState(false);
+ const [modalExtendLicense, setModalExtendLicense] = useState(true);
+ const [modalBillingDurationDays, setModalBillingDurationDays] = useState('30');
+ const [modalBillingAction, setModalBillingAction] = useState<'AUTO' | 'RENEWAL' | 'PLAN_CHANGE' | 'ACTIVATION'>('AUTO');
+ const [modalDiscountMode, setModalDiscountMode] = useState<'percent' | 'amount'>('percent');
+ const [modalDiscountPercent, setModalDiscountPercent] = useState('0');
+ const [modalApprovedAmount, setModalApprovedAmount] = useState('');
+ const [updatingTenant, setUpdatingTenant] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<PendingAdminConfirm | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
 
-  // User CRUD Modals states
-  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-  const [userModalMode, setUserModalMode] = useState<'create' | 'edit'>('create');
-  const [selectedUser, setSelectedUser] = useState<AdminUserItem | null>(null);
-  const [modalUserName, setUserName] = useState('');
-  const [modalUserEmail, setUserEmail] = useState('');
-  const [modalUserPassword, setUserPassword] = useState('');
-  const [modalRole, setModalRole] = useState<'SUPER_ADMIN' | 'COMMERCIAL' | 'USER'>('USER');
-  const [modalIsEmailVerified, setModalIsEmailVerified] = useState(false);
-  const [modalUserTenantId, setUserTenantId] = useState('');
-  const [modalCommissionRate, setModalCommissionRate] = useState('30');
-  const [modalRenewalCommissionRate, setModalRenewalCommissionRate] = useState('20');
+ // User CRUD Modals states
+ const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+ const [userModalMode, setUserModalMode] = useState<'create' | 'edit'>('create');
+ const [selectedUser, setSelectedUser] = useState<AdminUserItem | null>(null);
+ const [modalUserName, setUserName] = useState('');
+ const [modalUserEmail, setUserEmail] = useState('');
+ const [modalUserPassword, setUserPassword] = useState('');
+ const [modalRole, setModalRole] = useState<'SUPER_ADMIN' | 'COMMERCIAL' | 'USER'>('USER');
+ const [modalIsEmailVerified, setModalIsEmailVerified] = useState(false);
+ const [modalUserTenantId, setUserTenantId] = useState('');
+ const [modalCommissionRate, setModalCommissionRate] = useState('30');
+ const [modalRenewalCommissionRate, setModalRenewalCommissionRate] = useState('20');
   const [modalCommercialPermissions, setModalCommercialPermissions] = useState({
     canManageTemplates: false,
     canManageMessageTemplates: false,
@@ -878,7 +878,7 @@ function DashboardPageContent() {
   const [modalUserVerificationMethod, setModalUserVerificationMethod] = useState<AuthOtpMethod>('EMAIL');
   const [modalSendNotification, setModalSendNotification] = useState<boolean>(true);
   const [resendingVerificationId, setResendingVerificationId] = useState<string | null>(null);
-  const [updatingUser, setUpdatingUser] = useState(false);
+ const [updatingUser, setUpdatingUser] = useState(false);
 
   const loadSubscriptionReport = useCallback(async () => {
     setLoadingSubReport(true);
@@ -900,68 +900,68 @@ function DashboardPageContent() {
     }
   };
 
-  // Template CRUD Modals states — édition via concepteur visuel uniquement
+ // Template CRUD Modals states — édition via concepteur visuel uniquement
 
-  // Load initial data
+ // Load initial data
   useEffect(() => {
     async function loadDashboardData() {
-      setError('');
-      try {
-        if (isPlatformStaff(user?.role)) {
-          const data = await api.get('/admin/stats');
-          setAdminData(data);
-          return;
-        }
+ setError('');
+ try {
+ if (isPlatformStaff(user?.role)) {
+ const data = await api.get('/admin/stats');
+ setAdminData(data);
+ return;
+ }
 
-        if (!tenant?.id) {
-          return;
-        }
+ if (!tenant?.id) {
+ return;
+ }
 
-        let eventsLoaded = false;
+ let eventsLoaded = false;
 
-        try {
-          const eventsData = await api.get('/events');
-          const eventsList = Array.isArray(eventsData) ? eventsData : eventsData.events || [];
-          setEvents(eventsList);
-          eventsLoaded = true;
-        } catch (err) {
-          console.error('Error loading events:', err);
-        }
+ try {
+ const eventsData = await api.get('/events');
+ const eventsList = Array.isArray(eventsData) ? eventsData : eventsData.events || [];
+ setEvents(eventsList);
+ eventsLoaded = true;
+ } catch (err) {
+ console.error('Error loading events:', err);
+ }
 
-        try {
-          if (access?.canViewBilling) {
-            const billingData = await api.get('/billing/status');
-            setBilling(billingData);
-          } else {
-            const planData = await api.get('/billing/plan-features');
-            setBilling({
-              plan: planData.plan,
-              usage: {
-                events: planData.usage.events,
-                guests: planData.usage.guests,
-                templates: planData.usage.templates,
-                rooms: planData.usage.rooms,
-                orgManagers: planData.usage.orgManagers,
-                services: planData.usage.services ?? 0,
-              },
-              limits: {
-                maxEvents: planData.limits.maxEvents,
-                maxGuests: planData.limits.maxGuests,
-                maxTemplates: planData.limits.maxTemplates,
-                maxRooms: planData.limits.maxRooms,
-                maxServices: planData.limits.maxServices ?? 0,
-                maxOrgManagers: planData.limits.maxOrgManagers,
-                customTemplates: planData.capabilities?.customTemplates ?? false,
-              },
-            });
-          }
-        } catch (err) {
-          console.error('Error loading quotas:', err);
-        }
+ try {
+ if (access?.canViewBilling) {
+ const billingData = await api.get('/billing/status');
+        setBilling(billingData);
+ } else {
+ const planData = await api.get('/billing/plan-features');
+ setBilling({
+ plan: planData.plan,
+ usage: {
+ events: planData.usage.events,
+ guests: planData.usage.guests,
+ templates: planData.usage.templates,
+ rooms: planData.usage.rooms,
+ orgManagers: planData.usage.orgManagers,
+ services: planData.usage.services ?? 0,
+ },
+ limits: {
+ maxEvents: planData.limits.maxEvents,
+ maxGuests: planData.limits.maxGuests,
+ maxTemplates: planData.limits.maxTemplates,
+ maxRooms: planData.limits.maxRooms,
+ maxServices: planData.limits.maxServices ?? 0,
+ maxOrgManagers: planData.limits.maxOrgManagers,
+ customTemplates: planData.capabilities?.customTemplates ?? false,
+ },
+ });
+ }
+ } catch (err) {
+ console.error('Error loading quotas:', err);
+ }
 
-        if (!eventsLoaded) {
-          setError('Impossible de charger les données du tableau de bord.');
-        }
+ if (!eventsLoaded) {
+ setError('Impossible de charger les données du tableau de bord.');
+ }
       } catch (err: any) {
         console.error('Error loading dashboard data:', err);
         setError('Impossible de charger les données du tableau de bord.');
@@ -969,115 +969,115 @@ function DashboardPageContent() {
         setLoading(false);
       }
     }
-    if (user) {
-      loadDashboardData();
-    }
-  }, [user, tenant?.id, access?.canViewBilling]);
+ if (user) {
+    loadDashboardData();
+ }
+ }, [user, tenant?.id, access?.canViewBilling]);
 
-  useEffect(() => {
-    const t = window.setTimeout(() => setDeferredSearch(searchTerm.trim()), 350);
-    return () => window.clearTimeout(t);
-  }, [searchTerm]);
+ useEffect(() => {
+ const t = window.setTimeout(() => setDeferredSearch(searchTerm.trim()), 350);
+ return () => window.clearTimeout(t);
+ }, [searchTerm]);
 
-  // Load users when users tab is active
-  useEffect(() => {
-    if (user?.role === 'SUPER_ADMIN' && activeTab === 'users') {
-      loadUsers();
-    }
-  }, [activeTab, user, usersPage, usersPageSize, deferredSearch, filterRole, filterOrgRole, filterVerified, filterUserOrg]);
+ // Load users when users tab is active
+ useEffect(() => {
+ if (user?.role === 'SUPER_ADMIN' && activeTab === 'users') {
+ loadUsers();
+ }
+ }, [activeTab, user, usersPage, usersPageSize, deferredSearch, filterRole, filterOrgRole, filterVerified, filterUserOrg]);
 
-  useEffect(() => {
-    if (isPlatformStaff(user?.role) && (activeTab === 'users' || activeTab === 'tenants' || isUserModalOpen)) {
-      loadTenantOptions();
-    }
-  }, [activeTab, user, isUserModalOpen]);
+ useEffect(() => {
+ if (isPlatformStaff(user?.role) && (activeTab === 'users' || activeTab === 'tenants' || isUserModalOpen)) {
+ loadTenantOptions();
+ }
+ }, [activeTab, user, isUserModalOpen]);
 
-  useEffect(() => {
-    if (isPlatformStaff(user?.role) && activeTab === 'tenants') {
-      loadAdminTenants();
-    }
-  }, [activeTab, user, tenantsPage, tenantsPageSize, deferredSearch, filterPlan, filterAccountKind]);
+ useEffect(() => {
+ if (isPlatformStaff(user?.role) && activeTab === 'tenants') {
+ loadAdminTenants();
+ }
+ }, [activeTab, user, tenantsPage, tenantsPageSize, deferredSearch, filterPlan, filterAccountKind]);
 
-  // Load templates when templates tab is active
-  useEffect(() => {
+ // Load templates when templates tab is active
+ useEffect(() => {
     const canLoadTemplates = user?.role === 'SUPER_ADMIN' || (user?.role === 'COMMERCIAL' && user?.commercialPermissions?.canManageTemplates);
     if (canLoadTemplates && activeTab === 'templates') {
-      loadTemplates();
-    }
-  }, [activeTab, user, templatesPage, templatesPageSize, deferredSearch, filterType]);
+ loadTemplates();
+ }
+ }, [activeTab, user, templatesPage, templatesPageSize, deferredSearch, filterType]);
 
-  // Load events when events tab is active
-  useEffect(() => {
-    if (user?.role === 'SUPER_ADMIN' && activeTab === 'events') {
-      loadAdminEvents();
-    }
-  }, [activeTab, user]);
+ // Load events when events tab is active
+ useEffect(() => {
+ if (user?.role === 'SUPER_ADMIN' && activeTab === 'events') {
+ loadAdminEvents();
+ }
+ }, [activeTab, user]);
 
-  // Load guests when guests tab is active
-  useEffect(() => {
-    if (user?.role === 'SUPER_ADMIN' && activeTab === 'guests') {
-      loadAdminGuests();
-      loadAdminEvents(); // Also load events for the dropdown
-    }
-  }, [activeTab, user]);
+ // Load guests when guests tab is active
+ useEffect(() => {
+ if (user?.role === 'SUPER_ADMIN' && activeTab === 'guests') {
+ loadAdminGuests();
+ loadAdminEvents(); // Also load events for the dropdown
+ }
+ }, [activeTab, user]);
 
-  // Load settings when settings tab is active
-  useEffect(() => {
-    if (user?.role === 'SUPER_ADMIN' && activeTab === 'settings') {
-      loadAdminSettings();
-    }
-  }, [activeTab, user]);
+ // Load settings when settings tab is active
+ useEffect(() => {
+ if (user?.role === 'SUPER_ADMIN' && activeTab === 'settings') {
+ loadAdminSettings();
+ }
+ }, [activeTab, user]);
 
-  // Load subscription requests
-  useEffect(() => {
-    if (isPlatformStaff(user?.role) && activeTab === 'subscription-requests') {
-      loadSubscriptionRequests();
-    }
-  }, [activeTab, user]);
+ // Load subscription requests
+ useEffect(() => {
+ if (isPlatformStaff(user?.role) && activeTab === 'subscription-requests') {
+ loadSubscriptionRequests();
+ }
+ }, [activeTab, user]);
 
-  // Load subscription plans config
-  useEffect(() => {
-    if (user?.role === 'SUPER_ADMIN' && (activeTab === 'subscription-plans' || activeTab === 'subscription-requests')) {
-      loadAdminSettings();
-    }
-  }, [activeTab, user]);
+ // Load subscription plans config
+ useEffect(() => {
+ if (user?.role === 'SUPER_ADMIN' && (activeTab === 'subscription-plans' || activeTab === 'subscription-requests')) {
+ loadAdminSettings();
+ }
+ }, [activeTab, user]);
 
-  // Load platform invoices
-  useEffect(() => {
-    if (isPlatformStaff(user?.role) && activeTab === 'invoices') {
-      setLoadingAdminInvoices(true);
-      api.get('/admin/invoices')
-        .then((data) => setAdminInvoices(data.invoices || []))
-        .catch(console.error)
-        .finally(() => setLoadingAdminInvoices(false));
-    }
-  }, [activeTab, user]);
+ // Load platform invoices
+ useEffect(() => {
+ if (isPlatformStaff(user?.role) && activeTab === 'invoices') {
+ setLoadingAdminInvoices(true);
+ api.get('/admin/invoices')
+ .then((data) => setAdminInvoices(data.invoices || []))
+ .catch(console.error)
+ .finally(() => setLoadingAdminInvoices(false));
+ }
+ }, [activeTab, user]);
 
-  // Load revenue report when analytics tab is active
-  useEffect(() => {
-    if (user?.role === 'SUPER_ADMIN' && activeTab === 'analytics') {
-      loadRevenueReport(revenuePeriod);
-      api.get('/admin/insights')
-        .then((data) => setPlatformInsights(data))
-        .catch(console.error);
-      api.get(`/admin/users?${adminListParams({ limit: 8 })}`)
-        .then((data) => setRecentUsers(unwrapAdminList<AdminUserItem>(data).items))
-        .catch(console.error);
-      api.get(`/admin/events?${adminListParams({ limit: 8 })}`)
-        .then((data) => setRecentEvents(unwrapAdminList(data).items))
-        .catch(console.error);
-      api.get(`/admin/tenants?${adminListParams({ sort: 'events', limit: 5 })}`)
-        .then((data) => setTopTenants(unwrapAdminList<AdminTenantItem>(data).items))
-        .catch(console.error);
-      api.get(`/admin/templates?${adminListParams({ type: 'GLOBAL', landing: 'yes', limit: 20 })}`)
-        .then((data) => {
-          const list = unwrapAdminList<AdminTemplateItem>(data);
-          setLandingTemplates(list.items);
-          if (data?.counts) setTemplateCounts(data.counts);
-        })
-        .catch(console.error);
-    }
-  }, [activeTab, user, revenuePeriod]);
+ // Load revenue report when analytics tab is active
+ useEffect(() => {
+ if (user?.role === 'SUPER_ADMIN' && activeTab === 'analytics') {
+ loadRevenueReport(revenuePeriod);
+ api.get('/admin/insights')
+  .then((data) => setPlatformInsights(data))
+  .catch(console.error);
+ api.get(`/admin/users?${adminListParams({ limit: 8 })}`)
+  .then((data) => setRecentUsers(unwrapAdminList<AdminUserItem>(data).items))
+  .catch(console.error);
+ api.get(`/admin/events?${adminListParams({ limit: 8 })}`)
+  .then((data) => setRecentEvents(unwrapAdminList(data).items))
+  .catch(console.error);
+ api.get(`/admin/tenants?${adminListParams({ sort: 'events', limit: 5 })}`)
+  .then((data) => setTopTenants(unwrapAdminList<AdminTenantItem>(data).items))
+  .catch(console.error);
+ api.get(`/admin/templates?${adminListParams({ type: 'GLOBAL', landing: 'yes', limit: 20 })}`)
+  .then((data) => {
+    const list = unwrapAdminList<AdminTemplateItem>(data);
+    setLandingTemplates(list.items);
+    if (data?.counts) setTemplateCounts(data.counts);
+  })
+  .catch(console.error);
+ }
+ }, [activeTab, user, revenuePeriod]);
 
   useEffect(() => {
     if (user?.role === 'SUPER_ADMIN' && activeTab === 'analytics' && activeAnalyticsSection === 'plans') {
@@ -1085,98 +1085,98 @@ function DashboardPageContent() {
     }
   }, [activeTab, user, activeAnalyticsSection, loadSubscriptionReport]);
 
-  useEffect(() => {
-    if (user?.role === 'SUPER_ADMIN' && tabParam === 'analytics' && !sectionParam) {
-      router.replace('/dashboard?tab=analytics&section=overview', { scroll: false });
-    }
-  }, [tabParam, sectionParam, user, router]);
+ useEffect(() => {
+ if (user?.role === 'SUPER_ADMIN' && tabParam === 'analytics' && !sectionParam) {
+ router.replace('/dashboard?tab=analytics&section=overview', { scroll: false });
+ }
+ }, [tabParam, sectionParam, user, router]);
 
-  // Reset pages on search or filter change
-  useEffect(() => {
-    setTenantsPage(1);
-    setUsersPage(1);
-    setTemplatesPage(1);
-    setEventsPage(1);
-    setGuestsPage(1);
-  }, [searchTerm, filterPlan, filterAccountKind, filterRole, filterType, filterRsvp, filterVerified, filterUserOrg, filterOrgRole, filterEventWhen, filterEventOrg, filterEventGps, filterEventVisibility, filterEventTicketing, filterGuestOrg, filterGuestEvent, filterGuestCategory, filterGuestCheckin, filterGuestPdf]);
+ // Reset pages on search or filter change
+ useEffect(() => {
+ setTenantsPage(1);
+ setUsersPage(1);
+ setTemplatesPage(1);
+ setEventsPage(1);
+ setGuestsPage(1);
+ }, [searchTerm, filterPlan, filterAccountKind, filterRole, filterType, filterRsvp, filterVerified, filterUserOrg, filterOrgRole, filterEventWhen, filterEventOrg, filterEventGps, filterEventVisibility, filterEventTicketing, filterGuestOrg, filterGuestEvent, filterGuestCategory, filterGuestCheckin, filterGuestPdf]);
 
-  // Leaflet Map Initialization Effect for Super Admin Event Modal
-  useEffect(() => {
-    if (!isEventModalOpen) {
-      mapRef.current = null;
-      markerRef.current = null;
-      return;
-    }
+ // Leaflet Map Initialization Effect for Super Admin Event Modal
+ useEffect(() => {
+ if (!isEventModalOpen) {
+ mapRef.current = null;
+ markerRef.current = null;
+ return;
+ }
 
-    let mapInstance: any = null;
-    let markerInstance: any = null;
+ let mapInstance: any = null;
+ let markerInstance: any = null;
 
-    const initMap = () => {
-      const L = (window as any).L;
-      if (!L) return;
+ const initMap = () => {
+ const L = (window as any).L;
+ if (!L) return;
 
-      // Default coordinates: Kinshasa (-4.3224, 15.3070)
-      const initialLat = modalEventLatitude ? parseFloat(modalEventLatitude) : -4.3224;
-      const initialLng = modalEventLongitude ? parseFloat(modalEventLongitude) : 15.3070;
+ // Default coordinates: Kinshasa (-4.3224, 15.3070)
+ const initialLat = modalEventLatitude ? parseFloat(modalEventLatitude) : -4.3224;
+ const initialLng = modalEventLongitude ? parseFloat(modalEventLongitude) : 15.3070;
 
-      const mapContainer = document.getElementById('admin-map-picker');
-      if (!mapContainer) return;
+ const mapContainer = document.getElementById('admin-map-picker');
+ if (!mapContainer) return;
 
-      // Clear existing map container content
-      mapContainer.innerHTML = '';
-      const mapDiv = document.createElement('div');
-      mapDiv.style.height = '100%';
-      mapDiv.style.width = '100%';
-      mapContainer.appendChild(mapDiv);
+ // Clear existing map container content
+ mapContainer.innerHTML = '';
+ const mapDiv = document.createElement('div');
+ mapDiv.style.height = '100%';
+ mapDiv.style.width = '100%';
+ mapContainer.appendChild(mapDiv);
 
-      try {
-        mapInstance = L.map(mapDiv).setView([initialLat, initialLng], 13);
-        mapRef.current = mapInstance;
+ try {
+ mapInstance = L.map(mapDiv).setView([initialLat, initialLng], 13);
+ mapRef.current = mapInstance;
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(mapInstance);
+ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+ attribution: '&copy; OpenStreetMap contributors'
+ }).addTo(mapInstance);
 
-        // Add marker if coordinates exist
-        if (modalEventLatitude && modalEventLongitude) {
-          markerInstance = L.marker([initialLat, initialLng], { draggable: true }).addTo(mapInstance);
-          markerRef.current = markerInstance;
-        }
+ // Add marker if coordinates exist
+ if (modalEventLatitude && modalEventLongitude) {
+ markerInstance = L.marker([initialLat, initialLng], { draggable: true }).addTo(mapInstance);
+ markerRef.current = markerInstance;
+ }
 
-        // Map click handler
-        mapInstance.on('click', (e: any) => {
-          const { lat, lng } = e.latlng;
-          setEventLatitude(lat.toFixed(6));
-          setEventLongitude(lng.toFixed(6));
+ // Map click handler
+ mapInstance.on('click', (e: any) => {
+ const { lat, lng } = e.latlng;
+ setEventLatitude(lat.toFixed(6));
+ setEventLongitude(lng.toFixed(6));
 
-          if (markerRef.current) {
-            markerRef.current.setLatLng([lat, lng]);
-          } else {
-            const newMarker = L.marker([lat, lng], { draggable: true }).addTo(mapRef.current);
-            markerRef.current = newMarker;
+ if (markerRef.current) {
+ markerRef.current.setLatLng([lat, lng]);
+ } else {
+ const newMarker = L.marker([lat, lng], { draggable: true }).addTo(mapRef.current);
+ markerRef.current = newMarker;
+ 
+ newMarker.on('dragend', (de: any) => {
+ const position = newMarker.getLatLng();
+ setEventLatitude(position.lat.toFixed(6));
+ setEventLongitude(position.lng.toFixed(6));
+ });
+ }
+ });
 
-            newMarker.on('dragend', (de: any) => {
-              const position = newMarker.getLatLng();
-              setEventLatitude(position.lat.toFixed(6));
-              setEventLongitude(position.lng.toFixed(6));
-            });
-          }
-        });
+ if (markerInstance) {
+ markerInstance.on('dragend', (de: any) => {
+ const position = markerInstance.getLatLng();
+ setEventLatitude(position.lat.toFixed(6));
+ setEventLongitude(position.lng.toFixed(6));
+ });
+ }
+ } catch (err) {
+ console.error('Error initializing Leaflet map for admin:', err);
+ }
+ };
 
-        if (markerInstance) {
-          markerInstance.on('dragend', (de: any) => {
-            const position = markerInstance.getLatLng();
-            setEventLatitude(position.lat.toFixed(6));
-            setEventLongitude(position.lng.toFixed(6));
-          });
-        }
-      } catch (err) {
-        console.error('Error initializing Leaflet map for admin:', err);
-      }
-    };
-
-    // Check if Leaflet is already loaded
-    if (!(window as any).L) {
+ // Check if Leaflet is already loaded
+ if (!(window as any).L) {
       const markMapFailed = () => {
         const mapContainer = document.getElementById('admin-map-picker');
         if (mapContainer && !mapContainer.querySelector('[data-map-fallback]')) {
@@ -1189,38 +1189,38 @@ function DashboardPageContent() {
         }
       };
 
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+ const link = document.createElement('link');
+ link.rel = 'stylesheet';
+ link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
       link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
       link.crossOrigin = '';
-      document.head.appendChild(link);
+ document.head.appendChild(link);
 
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+ const script = document.createElement('script');
+ script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
       script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
       script.crossOrigin = '';
-      script.onload = () => {
-        initMap();
-      };
+ script.onload = () => {
+ initMap();
+ };
       script.onerror = markMapFailed;
-      document.body.appendChild(script);
-    } else {
-      // Wait a brief moment for the modal transition to complete and container to be rendered
+ document.body.appendChild(script);
+ } else {
+ // Wait a brief moment for the modal transition to complete and container to be rendered
       const timer = setTimeout(initMap, 250);
-      return () => clearTimeout(timer);
-    }
+ return () => clearTimeout(timer);
+ }
 
-    return () => {
-      if (mapInstance) {
-        try {
-          mapInstance.remove();
-        } catch (e) {
-          console.error('Error removing map instance:', e);
-        }
-      }
-    };
-  }, [isEventModalOpen]);
+ return () => {
+ if (mapInstance) {
+ try {
+ mapInstance.remove();
+ } catch (e) {
+ console.error('Error removing map instance:', e);
+ }
+ }
+ };
+ }, [isEventModalOpen]);
 
   const syncEventMapMarker = (latStr: string, lngStr: string) => {
     const lat = parseFloat(latStr);
@@ -1235,186 +1235,186 @@ function DashboardPageContent() {
     }
   };
 
-  const loadTenantOptions = async () => {
-    try {
-      const data = await api.get(`/admin/tenants?${adminListParams({ limit: 100, sort: 'name' })}`);
-      setTenantOptions(unwrapAdminList<AdminTenantItem>(data).items);
-    } catch {
-      /* liste pour filtres / modales */
-    }
-  };
+ const loadTenantOptions = async () => {
+ try {
+ const data = await api.get(`/admin/tenants?${adminListParams({ limit: 100, sort: 'name' })}`);
+ setTenantOptions(unwrapAdminList<AdminTenantItem>(data).items);
+ } catch {
+ /* liste pour filtres / modales */
+ }
+ };
 
-  const loadAdminTenants = async () => {
-    setTenantsLoading(true);
-    try {
-      const qs = adminListParams({
-        page: tenantsPage,
-        limit: tenantsPageSize,
-        q: deferredSearch,
-        plan: filterPlan,
-        accountKind: filterAccountKind,
-      });
-      const data = await api.get(`/admin/tenants?${qs}`);
-      const list = unwrapAdminList<AdminTenantItem>(data);
-      setAdminTenants(list.items);
-      setAdminTenantsTotal(list.total);
-    } catch (err: any) {
-      console.error('Error loading tenants:', err);
-      setError('Impossible de charger la liste des organisations.');
-    } finally {
-      setTenantsLoading(false);
-    }
-  };
+ const loadAdminTenants = async () => {
+ setTenantsLoading(true);
+ try {
+ const qs = adminListParams({
+ page: tenantsPage,
+ limit: tenantsPageSize,
+ q: deferredSearch,
+ plan: filterPlan,
+ accountKind: filterAccountKind,
+ });
+ const data = await api.get(`/admin/tenants?${qs}`);
+ const list = unwrapAdminList<AdminTenantItem>(data);
+ setAdminTenants(list.items);
+ setAdminTenantsTotal(list.total);
+ } catch (err: any) {
+ console.error('Error loading tenants:', err);
+ setError('Impossible de charger la liste des organisations.');
+ } finally {
+ setTenantsLoading(false);
+ }
+ };
 
-  const loadUsers = async () => {
-    setUsersLoading(true);
-    try {
-      const qs = adminListParams({
-        page: usersPage,
-        limit: usersPageSize,
-        q: deferredSearch,
-        role: filterRole,
-        orgRole: filterOrgRole,
-        verified: filterVerified,
-        org: filterUserOrg,
-      });
-      const data = await api.get(`/admin/users?${qs}`);
-      const list = unwrapAdminList<AdminUserItem>(data);
-      setUsers(list.items);
-      setUsersTotal(list.total);
-    } catch (err: any) {
-      console.error('Error loading users:', err);
-      setError('Impossible de charger la liste des utilisateurs.');
-    } finally {
-      setUsersLoading(false);
-    }
-  };
+ const loadUsers = async () => {
+ setUsersLoading(true);
+ try {
+ const qs = adminListParams({
+ page: usersPage,
+ limit: usersPageSize,
+ q: deferredSearch,
+ role: filterRole,
+ orgRole: filterOrgRole,
+ verified: filterVerified,
+ org: filterUserOrg,
+ });
+ const data = await api.get(`/admin/users?${qs}`);
+ const list = unwrapAdminList<AdminUserItem>(data);
+ setUsers(list.items);
+ setUsersTotal(list.total);
+ } catch (err: any) {
+ console.error('Error loading users:', err);
+ setError('Impossible de charger la liste des utilisateurs.');
+ } finally {
+ setUsersLoading(false);
+ }
+ };
 
-  const loadTemplates = async () => {
-    setTemplatesLoading(true);
-    try {
-      const qs = adminListParams({
-        page: templatesPage,
-        limit: templatesPageSize,
-        q: deferredSearch,
-        type: filterType,
-      });
-      const data = await api.get(`/admin/templates?${qs}`);
-      const list = unwrapAdminList<AdminTemplateItem>(data);
-      setTemplates(list.items);
-      setTemplatesTotal(list.total);
-      if (data?.counts) setTemplateCounts(data.counts);
-    } catch (err: any) {
-      console.error('Error loading templates:', err);
-      setError('Impossible de charger la liste des modèles.');
-    } finally {
-      setTemplatesLoading(false);
-    }
-  };
+ const loadTemplates = async () => {
+ setTemplatesLoading(true);
+ try {
+ const qs = adminListParams({
+ page: templatesPage,
+ limit: templatesPageSize,
+ q: deferredSearch,
+ type: filterType,
+ });
+ const data = await api.get(`/admin/templates?${qs}`);
+ const list = unwrapAdminList<AdminTemplateItem>(data);
+ setTemplates(list.items);
+ setTemplatesTotal(list.total);
+ if (data?.counts) setTemplateCounts(data.counts);
+ } catch (err: any) {
+ console.error('Error loading templates:', err);
+ setError('Impossible de charger la liste des modèles.');
+ } finally {
+ setTemplatesLoading(false);
+ }
+ };
 
-  const loadAdminEvents = async () => {
-    setAdminEventsLoading(true);
-    try {
-      const data = await api.get('/admin/events');
-      setAdminEvents(unwrapAdminList(data).items);
-    } catch (err: any) {
-      console.error('Error loading admin events:', err);
-      setError('Impossible de charger la liste des événements.');
-    } finally {
-      setAdminEventsLoading(false);
-    }
-  };
+ const loadAdminEvents = async () => {
+ setAdminEventsLoading(true);
+ try {
+ const data = await api.get('/admin/events');
+ setAdminEvents(unwrapAdminList(data).items);
+ } catch (err: any) {
+ console.error('Error loading admin events:', err);
+ setError('Impossible de charger la liste des événements.');
+ } finally {
+ setAdminEventsLoading(false);
+ }
+ };
 
-  const loadAdminGuests = async () => {
-    setAdminGuestsLoading(true);
-    try {
-      const data = await api.get('/admin/guests');
-      setAdminGuests(unwrapAdminList(data).items);
-    } catch (err: any) {
-      console.error('Error loading admin guests:', err);
-      setError('Impossible de charger la liste des invités.');
-    } finally {
-      setAdminGuestsLoading(false);
-    }
-  };
+ const loadAdminGuests = async () => {
+ setAdminGuestsLoading(true);
+ try {
+ const data = await api.get('/admin/guests');
+ setAdminGuests(unwrapAdminList(data).items);
+ } catch (err: any) {
+ console.error('Error loading admin guests:', err);
+ setError('Impossible de charger la liste des invités.');
+ } finally {
+ setAdminGuestsLoading(false);
+ }
+ };
 
-  const loadAdminSettings = async () => {
-    setAdminSettingsLoading(true);
-    try {
-      const data = await api.get('/admin/settings');
-      setAdminSettings(data);
-    } catch (err: any) {
-      console.error('Error loading admin settings:', err);
-      setError('Impossible de charger les configurations.');
-    } finally {
-      setAdminSettingsLoading(false);
-    }
-  };
+ const loadAdminSettings = async () => {
+ setAdminSettingsLoading(true);
+ try {
+ const data = await api.get('/admin/settings');
+ setAdminSettings(data);
+ } catch (err: any) {
+ console.error('Error loading admin settings:', err);
+ setError('Impossible de charger les configurations.');
+ } finally {
+ setAdminSettingsLoading(false);
+ }
+ };
 
-  const loadSubscriptionRequests = async () => {
-    setSubRequestsLoading(true);
-    try {
-      const data = await api.get('/admin/subscriptions/requests');
-      setSubscriptionRequests(data);
-    } catch (err: any) {
-      console.error('Error loading subscription requests:', err);
-      setError('Impossible de charger les demandes d\'abonnement.');
-    } finally {
-      setSubRequestsLoading(false);
-    }
-  };
+ const loadSubscriptionRequests = async () => {
+ setSubRequestsLoading(true);
+ try {
+ const data = await api.get('/admin/subscriptions/requests');
+ setSubscriptionRequests(data);
+ } catch (err: any) {
+ console.error('Error loading subscription requests:', err);
+ setError('Impossible de charger les demandes d\'abonnement.');
+ } finally {
+ setSubRequestsLoading(false);
+ }
+ };
 
-  useEffect(() => {
-    if (user?.role !== 'COMMERCIAL') return;
-    loadSubscriptionRequests();
-    api.get('/commercial/dashboard')
-      .then((data) => setCommercialOverview(data))
-      .catch(() => setCommercialOverview(null));
-    api.get('/public/plans')
-      .then((plans) => setAdminSettings((prev: any) => ({ ...(prev || {}), plans })))
-      .catch(console.error);
-  }, [user?.role]);
+ useEffect(() => {
+ if (user?.role !== 'COMMERCIAL') return;
+ loadSubscriptionRequests();
+ api.get('/commercial/dashboard')
+ .then((data) => setCommercialOverview(data))
+ .catch(() => setCommercialOverview(null));
+ api.get('/public/plans')
+ .then((plans) => setAdminSettings((prev: any) => ({ ...(prev || {}), plans })))
+ .catch(console.error);
+ }, [user?.role]);
 
-  const loadRevenueReport = async (period: string) => {
-    setLoadingRevenueReport(true);
-    try {
-      const data = await api.get(`/admin/reports/revenue?period=${period}`);
-      setRevenueReport(data);
-    } catch (err: any) {
-      console.error('Error loading revenue report:', err);
-      setError('Impossible de charger le rapport de revenus.');
-    } finally {
-      setLoadingRevenueReport(false);
-    }
-  };
+ const loadRevenueReport = async (period: string) => {
+ setLoadingRevenueReport(true);
+ try {
+ const data = await api.get(`/admin/reports/revenue?period=${period}`);
+ setRevenueReport(data);
+ } catch (err: any) {
+ console.error('Error loading revenue report:', err);
+ setError('Impossible de charger le rapport de revenus.');
+ } finally {
+ setLoadingRevenueReport(false);
+ }
+ };
 
-  const exportRevenueReport = async (format: 'csv' | 'pdf') => {
-    try {
-      await api.download(
-        `/admin/reports/revenue/export?period=${revenuePeriod}&format=${format}`,
-        `eventmaster-revenus-${revenuePeriod}.${format}`,
-      );
+ const exportRevenueReport = async (format: 'csv' | 'pdf') => {
+ try {
+ await api.download(
+ `/admin/reports/revenue/export?period=${revenuePeriod}&format=${format}`,
+ `eventmaster-revenus-${revenuePeriod}.${format}`,
+ );
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erreur lors de l’export du rapport.');
-    }
-  };
+ }
+ };
 
-  const notifyRevenuePayouts = async () => {
-    setNotifyingPayouts(true);
-    setError('');
-    try {
-      const data = await api.post('/admin/reports/revenue/notify-payouts', { period: revenuePeriod, force: true });
+ const notifyRevenuePayouts = async () => {
+ setNotifyingPayouts(true);
+ setError('');
+ try {
+ const data = await api.post('/admin/reports/revenue/notify-payouts', { period: revenuePeriod, force: true });
       setNotice(data.message || 'Notifications de versement envoyées.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible d’envoyer les notifications de versement.');
-    } finally {
-      setNotifyingPayouts(false);
-    }
-  };
+ } finally {
+ setNotifyingPayouts(false);
+ }
+ };
 
-  const handleApproveSubscription = async (
-    id: string,
-    options?: { discountPercent?: number; approvedAmount?: number },
+ const handleApproveSubscription = async (
+ id: string,
+ options?: { discountPercent?: number; approvedAmount?: number },
     action: 'activate' | 'quote' = 'activate',
   ) => {
     setBusySubRequestId(id);
@@ -1431,9 +1431,9 @@ function DashboardPageContent() {
           ? `/admin/subscriptions/requests/${id}/quote`
           : `/admin/subscriptions/requests/${id}/approve`;
       const response = await api.post(endpoint, {
-        discountPercent: options?.discountPercent ?? 0,
-        approvedAmount: options?.approvedAmount,
-      });
+ discountPercent: options?.discountPercent ?? 0,
+ approvedAmount: options?.approvedAmount,
+ });
       const successMsg =
         response.message ||
         (action === 'quote'
@@ -1443,45 +1443,45 @@ function DashboardPageContent() {
         type: 'success',
         message: successMsg,
       });
-      await loadSubscriptionRequests();
-      await refreshStats();
-      if (activeTab === 'invoices') {
-        const data = await api.get('/admin/invoices');
-        setAdminInvoices(data.invoices || []);
-      }
-      return {
+ await loadSubscriptionRequests();
+ await refreshStats();
+ if (activeTab === 'invoices') {
+ const data = await api.get('/admin/invoices');
+ setAdminInvoices(data.invoices || []);
+ }
+ return {
         message: successMsg,
-        billingAction: response.billingAction,
-        tenant: response.tenant,
-      };
-    } catch (err: unknown) {
+ billingAction: response.billingAction,
+ tenant: response.tenant,
+ };
+ } catch (err: unknown) {
       await loadSubscriptionRequests();
-      const message = err instanceof Error ? err.message : 'Erreur lors de l\'approbation.';
+ const message = err instanceof Error ? err.message : 'Erreur lors de l\'approbation.';
       setAdminFeedback({
         type: 'error',
         message,
       });
-      throw new Error(message);
+ throw new Error(message);
     } finally {
       setBusySubRequestId(null);
-    }
-  };
+ }
+ };
 
-  const handleRejectSubscription = async (id: string) => {
+ const handleRejectSubscription = async (id: string) => {
     setBusySubRequestId(id);
     setAdminFeedback(null);
-    try {
+ try {
       // Mise à jour optimiste immédiate
       setSubscriptionRequests((prev: any[]) =>
         (prev || []).map((req) => (req.id === id ? { ...req, status: 'REJECTED' } : req)),
       );
-      const response = await api.post(`/admin/subscriptions/requests/${id}/reject`);
+ const response = await api.post(`/admin/subscriptions/requests/${id}/reject`);
       const msg = response.message || 'La demande d’abonnement a été rejetée.';
       setAdminFeedback({
         type: 'info',
         message: msg,
       });
-      await loadSubscriptionRequests();
+ await loadSubscriptionRequests();
     } catch (err: unknown) {
       await loadSubscriptionRequests();
       const message = err instanceof Error ? err.message : 'Erreur lors du rejet de la demande.';
@@ -1492,153 +1492,153 @@ function DashboardPageContent() {
       throw err instanceof Error ? err : new Error(message);
     } finally {
       setBusySubRequestId(null);
-    }
-  };
+ }
+ };
 
-  const refreshStats = async () => {
-    try {
-      const data = await api.get('/admin/stats');
-      setAdminData(data);
-      if (isPlatformStaff(user?.role) && activeTab === 'tenants') {
-        await loadAdminTenants();
-      }
-    } catch (err) {
-      console.error('Error refreshing stats:', err);
-    }
-  };
+ const refreshStats = async () => {
+ try {
+ const data = await api.get('/admin/stats');
+ setAdminData(data);
+ if (isPlatformStaff(user?.role) && activeTab === 'tenants') {
+ await loadAdminTenants();
+ }
+ } catch (err) {
+ console.error('Error refreshing stats:', err);
+ }
+ };
 
-  // Tenant handlers
-  const handleOpenCreateTenantModal = () => {
-    setTenantModalMode('create');
-    setSelectedTenant(null);
-    setTenantName('');
-    setModalPlan('FREE');
+ // Tenant handlers
+ const handleOpenCreateTenantModal = () => {
+ setTenantModalMode('create');
+ setSelectedTenant(null);
+ setTenantName('');
+ setModalPlan('FREE');
     setModalAccountKind('ORGANIZER');
-    setModalLicenseActive(true);
-    setModalLicenseExpiresAt('');
-    setModalLicenseKey('');
-    setModalIssueInvoice(false);
-    setModalExtendLicense(true);
-    setModalBillingDurationDays(String(durationDaysForPlan('FREE')));
-    setModalBillingAction('AUTO');
-    setModalDiscountPercent('0');
-    setModalApprovedAmount('');
+ setModalLicenseActive(true);
+ setModalLicenseExpiresAt('');
+ setModalLicenseKey('');
+ setModalIssueInvoice(false);
+ setModalExtendLicense(true);
+ setModalBillingDurationDays(String(durationDaysForPlan('FREE')));
+ setModalBillingAction('AUTO');
+ setModalDiscountPercent('0');
+ setModalApprovedAmount('');
     setNotice('');
-    setIsTenantModalOpen(true);
-  };
+ setIsTenantModalOpen(true);
+ };
 
-  const handleOpenEditTenantModal = (t: AdminTenantItem) => {
-    setTenantModalMode('edit');
-    setSelectedTenant(t);
-    setTenantName(t.name);
-    setModalPlan(t.plan);
+ const handleOpenEditTenantModal = (t: AdminTenantItem) => {
+ setTenantModalMode('edit');
+ setSelectedTenant(t);
+ setTenantName(t.name);
+ setModalPlan(t.plan);
     setModalAccountKind((t.accountKind as TenantAccountKind) || 'ORGANIZER');
-    setModalLicenseActive(t.licenseActive);
-    setModalLicenseExpiresAt(t.licenseExpiresAt ? t.licenseExpiresAt.split('T')[0] : '');
-    setModalLicenseKey(t.licenseKey || '');
-    setModalIssueInvoice(false);
-    setModalExtendLicense(false);
-    setModalBillingDurationDays(
-      String(durationDaysForPlan(t.plan, t.billingCycle === 'ANNUAL' ? 'annual' : 'monthly')),
-    );
-    setModalBillingAction('AUTO');
-    setModalDiscountMode('percent');
-    setModalDiscountPercent(t.billingCycle === 'ANNUAL' ? String(ANNUAL_DISCOUNT_PERCENT) : '0');
-    setModalApprovedAmount('');
+ setModalLicenseActive(t.licenseActive);
+ setModalLicenseExpiresAt(t.licenseExpiresAt ? t.licenseExpiresAt.split('T')[0] : '');
+ setModalLicenseKey(t.licenseKey || '');
+ setModalIssueInvoice(false);
+ setModalExtendLicense(false);
+ setModalBillingDurationDays(
+   String(durationDaysForPlan(t.plan, t.billingCycle === 'ANNUAL' ? 'annual' : 'monthly')),
+ );
+ setModalBillingAction('AUTO');
+ setModalDiscountMode('percent');
+ setModalDiscountPercent(t.billingCycle === 'ANNUAL' ? String(ANNUAL_DISCOUNT_PERCENT) : '0');
+ setModalApprovedAmount('');
     setNotice('');
-    setIsTenantModalOpen(true);
-  };
+ setIsTenantModalOpen(true);
+ };
 
   const handleSaveTenant = async () => {
     if (!modalTenantName.trim()) {
       throw new Error('Le nom de l’organisation est requis.');
-    }
+ }
 
-    setUpdatingTenant(true);
-    try {
+ setUpdatingTenant(true);
+ try {
       setNotice('');
-      if (tenantModalMode === 'create') {
-        await api.post('/admin/tenants', {
-          name: modalTenantName,
-          plan: modalPlan,
+ if (tenantModalMode === 'create') {
+ await api.post('/admin/tenants', {
+ name: modalTenantName,
+ plan: modalPlan,
           accountKind: user?.role === 'SUPER_ADMIN' ? modalAccountKind : undefined,
-          licenseActive: modalLicenseActive,
-          licenseExpiresAt: modalLicenseExpiresAt ? new Date(modalLicenseExpiresAt).toISOString() : null,
-          licenseKey: modalLicenseKey || null,
-        });
-      } else if (selectedTenant) {
-        const pricing = getBillingPricingFromFields(
-          modalPlan,
-          modalDiscountMode,
-          modalDiscountPercent,
-          modalApprovedAmount,
-          planCatalogPrices?.[modalPlan],
-          parseInt(modalBillingDurationDays, 10) || durationDaysForPlan(modalPlan),
-        );
-        const payload: Record<string, unknown> = {
-          name: modalTenantName,
-          plan: modalPlan,
+ licenseActive: modalLicenseActive,
+ licenseExpiresAt: modalLicenseExpiresAt ? new Date(modalLicenseExpiresAt).toISOString() : null,
+ licenseKey: modalLicenseKey || null,
+ });
+ } else if (selectedTenant) {
+ const pricing = getBillingPricingFromFields(
+ modalPlan,
+ modalDiscountMode,
+ modalDiscountPercent,
+ modalApprovedAmount,
+ planCatalogPrices?.[modalPlan],
+ parseInt(modalBillingDurationDays, 10) || durationDaysForPlan(modalPlan),
+ );
+ const payload: Record<string, unknown> = {
+ name: modalTenantName,
+ plan: modalPlan,
           ...(user?.role === 'SUPER_ADMIN' ? { accountKind: modalAccountKind } : {}),
-          licenseActive: modalLicenseActive,
-          licenseExpiresAt: modalLicenseExpiresAt ? new Date(modalLicenseExpiresAt).toISOString() : null,
-          licenseKey: modalLicenseKey || null,
-        };
-        if (modalIssueInvoice && modalPlan !== 'FREE') {
-          payload.billing = {
-            issueInvoice: true,
-            action: modalBillingAction === 'AUTO' ? undefined : modalBillingAction,
-            durationDays: parseInt(modalBillingDurationDays, 10) || durationDaysForPlan(modalPlan),
-            extendLicense: modalExtendLicense,
-            discountPercent: pricing.discountPercent,
-            approvedAmount: pricing.approvedAmount,
-          };
-        }
-        const response = await api.put(`/admin/tenants/${selectedTenant.id}`, payload);
-        if (response.billing?.invoice) {
+ licenseActive: modalLicenseActive,
+ licenseExpiresAt: modalLicenseExpiresAt ? new Date(modalLicenseExpiresAt).toISOString() : null,
+ licenseKey: modalLicenseKey || null,
+ };
+ if (modalIssueInvoice && modalPlan !== 'FREE') {
+ payload.billing = {
+ issueInvoice: true,
+ action: modalBillingAction === 'AUTO' ? undefined : modalBillingAction,
+ durationDays: parseInt(modalBillingDurationDays, 10) || durationDaysForPlan(modalPlan),
+ extendLicense: modalExtendLicense,
+ discountPercent: pricing.discountPercent,
+ approvedAmount: pricing.approvedAmount,
+ };
+ }
+ const response = await api.put(`/admin/tenants/${selectedTenant.id}`, payload);
+ if (response.billing?.invoice) {
           setNotice(
             `${response.message || 'Organisation mise à jour.'} Facture ${response.billing.invoice.invoiceNumber} — ${response.billing.invoice.amount?.toLocaleString('fr-FR')} FC`,
-          );
-        }
-      }
-      setIsTenantModalOpen(false);
-      await refreshStats();
-      if (activeTab === 'invoices') {
-        const data = await api.get('/admin/invoices');
-        setAdminInvoices(data.invoices || []);
-      }
+ );
+ }
+ }
+ setIsTenantModalOpen(false);
+ await refreshStats();
+ if (activeTab === 'invoices') {
+ const data = await api.get('/admin/invoices');
+ setAdminInvoices(data.invoices || []);
+ }
     } catch (err: unknown) {
       throw err instanceof Error ? err : new Error('Erreur lors de l’enregistrement de l’organisation');
-    } finally {
-      setUpdatingTenant(false);
-    }
-  };
+ } finally {
+ setUpdatingTenant(false);
+ }
+ };
 
   const handleDeleteTenant = async (id: string) => {
-    try {
-      await api.delete(`/admin/tenants/${id}`);
-      await refreshStats();
+ try {
+ await api.delete(`/admin/tenants/${id}`);
+ await refreshStats();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la suppression de l’organisation');
       throw err;
-    }
-  };
+ }
+ };
 
-  // User handlers
-  const handleOpenCreateUserModal = () => {
-    setUserModalMode('create');
-    setSelectedUser(null);
-    setUserName('');
-    setUserEmail('');
-    setUserPassword('');
-    setModalRole('USER');
-    setModalIsEmailVerified(false);
-    setUserTenantId('');
+ // User handlers
+ const handleOpenCreateUserModal = () => {
+ setUserModalMode('create');
+ setSelectedUser(null);
+ setUserName('');
+ setUserEmail('');
+ setUserPassword('');
+ setModalRole('USER');
+ setModalIsEmailVerified(false);
+ setUserTenantId('');
     setModalUserPhone('');
     setModalUserPhoneCountryCode(DEFAULT_PHONE_COUNTRY_CODE);
     setModalUserVerificationMethod('EMAIL');
     setModalSendNotification(true);
-    setModalCommissionRate('30');
-    setModalRenewalCommissionRate('20');
+ setModalCommissionRate('30');
+ setModalRenewalCommissionRate('20');
     setModalUserPlan('FREE');
     setModalUserLicenseActive(true);
     setModalUserDurationDays(30);
@@ -1652,24 +1652,24 @@ function DashboardPageContent() {
       canManageGuests: false,
       canManageShowcasePlans: false,
     });
-    setIsUserModalOpen(true);
-  };
+ setIsUserModalOpen(true);
+ };
 
-  const handleOpenEditUserModal = (u: AdminUserItem) => {
-    setUserModalMode('edit');
-    setSelectedUser(u);
-    setUserName(u.name || '');
-    setUserEmail(u.email);
-    setUserPassword(''); // Keep empty, only fill if changing password
-    setModalRole(u.role);
-    setModalIsEmailVerified(u.isEmailVerified);
-    setUserTenantId(u.tenantId || '');
+ const handleOpenEditUserModal = (u: AdminUserItem) => {
+ setUserModalMode('edit');
+ setSelectedUser(u);
+ setUserName(u.name || '');
+ setUserEmail(u.email);
+ setUserPassword(''); // Keep empty, only fill if changing password
+ setModalRole(u.role);
+ setModalIsEmailVerified(u.isEmailVerified);
+ setUserTenantId(u.tenantId || '');
     setModalUserPhone(u.phone || '');
     setModalUserPhoneCountryCode(u.phoneCountryCode || DEFAULT_PHONE_COUNTRY_CODE);
     setModalUserVerificationMethod((u.verificationMethod as AuthOtpMethod) || 'EMAIL');
     setModalSendNotification(false);
-    setModalCommissionRate(String(Math.round((u.commissionRate ?? 0.3) * 100)));
-    setModalRenewalCommissionRate(String(Math.round((u.renewalCommissionRate ?? 0.2) * 100)));
+ setModalCommissionRate(String(Math.round((u.commissionRate ?? 0.3) * 100)));
+ setModalRenewalCommissionRate(String(Math.round((u.renewalCommissionRate ?? 0.2) * 100)));
     setModalUserPlan(u.tenantPlan || 'FREE');
     setModalUserLicenseActive(u.tenantLicenseActive ?? true);
     setModalUserDurationDays(30);
@@ -1683,19 +1683,19 @@ function DashboardPageContent() {
       canManageGuests: Boolean(u.commercialPermissions?.canManageGuests),
       canManageShowcasePlans: Boolean(u.commercialPermissions?.canManageShowcasePlans),
     });
-    setIsUserModalOpen(true);
-  };
+ setIsUserModalOpen(true);
+ };
 
   const handleSaveUser = async () => {
-    if (!modalUserEmail) {
+ if (!modalUserEmail) {
       throw new Error('L’adresse e-mail est requise.');
-    }
-    if (userModalMode === 'create' && !modalUserPassword) {
+ }
+ if (userModalMode === 'create' && !modalUserPassword) {
       throw new Error('Le mot de passe est requis pour un nouvel utilisateur.');
-    }
+ }
 
-    setUpdatingUser(true);
-    try {
+ setUpdatingUser(true);
+ try {
       const subscriptionPayload = {
         plan: modalUserPlan,
         licenseActive: modalUserLicenseActive,
@@ -1704,52 +1704,52 @@ function DashboardPageContent() {
         complimentary: modalUserComplimentary,
       };
 
-      if (userModalMode === 'create') {
+ if (userModalMode === 'create') {
         const res = await api.post('/admin/users', {
-          name: modalUserName || null,
-          email: modalUserEmail,
-          password: modalUserPassword,
-          role: modalRole,
-          isEmailVerified: modalIsEmailVerified,
-          tenantId: modalUserTenantId || null,
+ name: modalUserName || null,
+ email: modalUserEmail,
+ password: modalUserPassword,
+ role: modalRole,
+ isEmailVerified: modalIsEmailVerified,
+ tenantId: modalUserTenantId || null,
           phone: modalUserPhone || undefined,
           phoneCountryCode: modalUserPhoneCountryCode || undefined,
           verificationMethod: modalUserVerificationMethod,
           sendNotification: modalSendNotification,
           subscription: subscriptionPayload,
-          ...(modalRole === 'COMMERCIAL' ? {
-            commissionRate: parseFloat(modalCommissionRate) / 100,
-            renewalCommissionRate: parseFloat(modalRenewalCommissionRate) / 100,
+ ...(modalRole === 'COMMERCIAL' ? {
+ commissionRate: parseFloat(modalCommissionRate) / 100,
+ renewalCommissionRate: parseFloat(modalRenewalCommissionRate) / 100,
             commercialPermissions: modalCommercialPermissions,
-          } : {}),
-        });
+ } : {}),
+ });
         if (res?.message) {
           setNotice(res.message);
         }
-      } else if (selectedUser) {
-        await api.put(`/admin/users/${selectedUser.id}`, {
-          name: modalUserName || null,
-          email: modalUserEmail,
-          password: modalUserPassword || undefined,
-          role: modalRole,
-          isEmailVerified: modalIsEmailVerified,
-          tenantId: modalUserTenantId || null,
+ } else if (selectedUser) {
+ await api.put(`/admin/users/${selectedUser.id}`, {
+ name: modalUserName || null,
+ email: modalUserEmail,
+ password: modalUserPassword || undefined,
+ role: modalRole,
+ isEmailVerified: modalIsEmailVerified,
+ tenantId: modalUserTenantId || null,
           subscription: subscriptionPayload,
-          ...(modalRole === 'COMMERCIAL' ? {
-            commissionRate: parseFloat(modalCommissionRate) / 100,
-            renewalCommissionRate: parseFloat(modalRenewalCommissionRate) / 100,
+ ...(modalRole === 'COMMERCIAL' ? {
+ commissionRate: parseFloat(modalCommissionRate) / 100,
+ renewalCommissionRate: parseFloat(modalRenewalCommissionRate) / 100,
             commercialPermissions: modalCommercialPermissions,
-          } : {}),
-        });
-      }
-      setIsUserModalOpen(false);
-      await loadUsers();
+ } : {}),
+ });
+ }
+ setIsUserModalOpen(false);
+ await loadUsers();
     } catch (err: unknown) {
       throw err instanceof Error ? err : new Error('Erreur lors de l’enregistrement de l’utilisateur');
-    } finally {
-      setUpdatingUser(false);
-    }
-  };
+ } finally {
+ setUpdatingUser(false);
+ }
+ };
 
   const handleResendUserVerification = async (u: AdminUserItem) => {
     setResendingVerificationId(u.id);
@@ -1766,267 +1766,267 @@ function DashboardPageContent() {
   };
 
   const handleDeleteUser = async (id: string) => {
-    try {
-      await api.delete(`/admin/users/${id}`);
-      await loadUsers();
+ try {
+ await api.delete(`/admin/users/${id}`);
+ await loadUsers();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la suppression de l’utilisateur');
       throw err;
-    }
-  };
+ }
+ };
 
-  // Template handlers — création/édition via /dashboard/templates (concepteur visuel)
-  const handleToggleTemplateLanding = async (id: string, currentStatus: boolean) => {
-    try {
-      await api.put(`/admin/templates/${id}/landing`, {
-        showOnLanding: !currentStatus,
-      });
-      await loadTemplates();
+ // Template handlers — création/édition via /dashboard/templates (concepteur visuel)
+ const handleToggleTemplateLanding = async (id: string, currentStatus: boolean) => {
+ try {
+ await api.put(`/admin/templates/${id}/landing`, {
+ showOnLanding: !currentStatus,
+ });
+ await loadTemplates();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la mise à jour de la visibilité sur la landing page');
-    }
-  };
+ }
+ };
 
-  const handleDuplicateAdminTemplate = async (t: any) => {
-    try {
-      const payload = {
-        name: `${t.name} (Copie)`,
-        content: t.content,
-        targetTenantId: t.tenantId || null
-      };
-      await api.post('/templates', payload);
+ const handleDuplicateAdminTemplate = async (t: any) => {
+ try {
+ const payload = {
+ name: `${t.name} (Copie)`,
+ content: t.content,
+ targetTenantId: t.tenantId || null
+ };
+ await api.post('/templates', payload);
       setNotice(`Modèle « ${t.name} » dupliqué.`);
-      await loadTemplates();
+ await loadTemplates();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la duplication du modèle');
     }
   };
 
   const handleDeleteTemplate = async (id: string) => {
-    try {
-      await api.delete(`/admin/templates/${id}`);
-      await loadTemplates();
+ try {
+ await api.delete(`/admin/templates/${id}`);
+ await loadTemplates();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la suppression du modèle');
       throw err;
-    }
-  };
+ }
+ };
 
-  // Event handlers for Super Admin
-  const handleOpenCreateEventModal = () => {
-    setEventModalMode('create');
-    setSelectedEvent(null);
-    setEventTitle('');
-    setEventDescription('');
-    setEventDate('');
-    setEventLocation('');
-    setEventReminderFrequency('NONE');
-    setEventLatitude('');
-    setEventLongitude('');
-    setEventTenantId('');
-    setIsEventModalOpen(true);
-  };
+ // Event handlers for Super Admin
+ const handleOpenCreateEventModal = () => {
+ setEventModalMode('create');
+ setSelectedEvent(null);
+ setEventTitle('');
+ setEventDescription('');
+ setEventDate('');
+ setEventLocation('');
+ setEventReminderFrequency('NONE');
+ setEventLatitude('');
+ setEventLongitude('');
+ setEventTenantId('');
+ setIsEventModalOpen(true);
+ };
 
-  const handleOpenEditEventModal = (e: any) => {
-    setEventModalMode('edit');
-    setSelectedEvent(e);
-    setEventTitle(e.title);
-    setEventDescription(e.description || '');
-    setEventDate(e.date ? new Date(e.date).toISOString().slice(0, 16) : '');
-    setEventLocation(e.location);
-    setEventReminderFrequency(e.reminderFrequency || 'NONE');
-    setEventLatitude(e.latitude !== null && e.latitude !== undefined ? e.latitude.toString() : '');
-    setEventLongitude(e.longitude !== null && e.longitude !== undefined ? e.longitude.toString() : '');
-    setEventTenantId(e.tenantId || '');
-    setIsEventModalOpen(true);
-  };
+ const handleOpenEditEventModal = (e: any) => {
+ setEventModalMode('edit');
+ setSelectedEvent(e);
+ setEventTitle(e.title);
+ setEventDescription(e.description || '');
+ setEventDate(e.date ? new Date(e.date).toISOString().slice(0, 16) : '');
+ setEventLocation(e.location);
+ setEventReminderFrequency(e.reminderFrequency || 'NONE');
+ setEventLatitude(e.latitude !== null && e.latitude !== undefined ? e.latitude.toString() : '');
+ setEventLongitude(e.longitude !== null && e.longitude !== undefined ? e.longitude.toString() : '');
+ setEventTenantId(e.tenantId || '');
+ setIsEventModalOpen(true);
+ };
 
   const handleSaveEvent = async () => {
     if (!modalEventTitle.trim() || !modalEventDate || !modalEventLocation.trim() || !modalEventTenantId) {
       throw new Error('Organisation, titre, date et lieu sont requis.');
-    }
+ }
 
-    setUpdatingEvent(true);
-    try {
-      const payload = {
-        title: modalEventTitle,
-        description: modalEventDescription,
-        date: modalEventDate,
-        location: modalEventLocation,
-        reminderFrequency: modalEventReminderFrequency,
-        latitude: modalEventLatitude ? parseFloat(modalEventLatitude) : null,
-        longitude: modalEventLongitude ? parseFloat(modalEventLongitude) : null,
-        tenantId: modalEventTenantId,
-      };
+ setUpdatingEvent(true);
+ try {
+ const payload = {
+ title: modalEventTitle,
+ description: modalEventDescription,
+ date: modalEventDate,
+ location: modalEventLocation,
+ reminderFrequency: modalEventReminderFrequency,
+ latitude: modalEventLatitude ? parseFloat(modalEventLatitude) : null,
+ longitude: modalEventLongitude ? parseFloat(modalEventLongitude) : null,
+ tenantId: modalEventTenantId,
+ };
 
-      if (eventModalMode === 'create') {
-        await api.post('/admin/events', payload);
-      } else {
-        await api.put(`/admin/events/${selectedEvent.id}`, payload);
-      }
+ if (eventModalMode === 'create') {
+ await api.post('/admin/events', payload);
+ } else {
+ await api.put(`/admin/events/${selectedEvent.id}`, payload);
+ }
 
-      setIsEventModalOpen(false);
-      await loadAdminEvents();
-      await refreshStats();
+ setIsEventModalOpen(false);
+ await loadAdminEvents();
+ await refreshStats();
     } catch (err: unknown) {
       throw err instanceof Error ? err : new Error('Erreur lors de l’enregistrement de l’événement');
-    } finally {
-      setUpdatingEvent(false);
-    }
-  };
+ } finally {
+ setUpdatingEvent(false);
+ }
+ };
 
   const handleDeleteEvent = async (id: string) => {
-    try {
-      await api.delete(`/admin/events/${id}`);
-      await loadAdminEvents();
-      await refreshStats();
+ try {
+ await api.delete(`/admin/events/${id}`);
+ await loadAdminEvents();
+ await refreshStats();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la suppression de l’événement');
       throw err;
-    }
-  };
+ }
+ };
 
-  const handleOpenCreateGuestModal = () => {
-    setGuestModalMode('create');
-    setSelectedGuest(null);
-    setGuestFirstName('');
-    setGuestLastName('');
-    setGuestEmail('');
-    setGuestCategory('Général');
-    setGuestRsvp('PENDING');
-    setGuestEventId(adminEvents[0]?.id || '');
-    setModalGuestPhoneCountryCode(DEFAULT_PHONE_COUNTRY_CODE);
-    setModalGuestPhoneNational('');
-    setIsGuestModalOpen(true);
-  };
+ const handleOpenCreateGuestModal = () => {
+ setGuestModalMode('create');
+ setSelectedGuest(null);
+ setGuestFirstName('');
+ setGuestLastName('');
+ setGuestEmail('');
+ setGuestCategory('Général');
+ setGuestRsvp('PENDING');
+ setGuestEventId(adminEvents[0]?.id || '');
+ setModalGuestPhoneCountryCode(DEFAULT_PHONE_COUNTRY_CODE);
+ setModalGuestPhoneNational('');
+ setIsGuestModalOpen(true);
+ };
 
-  const handleOpenEditGuestModal = (guest: any) => {
-    setGuestModalMode('edit');
-    setSelectedGuest(guest);
-    setGuestFirstName(guest.firstName);
-    setGuestLastName(guest.lastName);
-    setGuestEmail(guest.email);
-    setGuestCategory(guest.category || 'Général');
-    setGuestRsvp(guest.rsvp || 'PENDING');
-    setGuestEventId(guest.eventId);
-    const parts = parseStoredPhone(
-      guest.phone || guest.preferences?.phone || guest.preferences?.telephone,
-      guest.phoneCountryCode,
-    );
-    setModalGuestPhoneCountryCode(parts.countryCode);
-    setModalGuestPhoneNational(parts.national);
-    setIsGuestModalOpen(true);
-  };
+ const handleOpenEditGuestModal = (guest: any) => {
+ setGuestModalMode('edit');
+ setSelectedGuest(guest);
+ setGuestFirstName(guest.firstName);
+ setGuestLastName(guest.lastName);
+ setGuestEmail(guest.email);
+ setGuestCategory(guest.category || 'Général');
+ setGuestRsvp(guest.rsvp || 'PENDING');
+ setGuestEventId(guest.eventId);
+ const parts = parseStoredPhone(
+ guest.phone || guest.preferences?.phone || guest.preferences?.telephone,
+ guest.phoneCountryCode,
+ );
+ setModalGuestPhoneCountryCode(parts.countryCode);
+ setModalGuestPhoneNational(parts.national);
+ setIsGuestModalOpen(true);
+ };
 
   const handleSaveGuest = async () => {
     if (!modalGuestFirstName.trim() || !modalGuestLastName.trim() || !modalGuestEmail.trim() || !modalGuestEventId) {
       throw new Error('Événement, prénom, nom et e-mail sont requis.');
-    }
+ }
 
-    setUpdatingGuest(true);
-    try {
-      const e164 = composeE164(modalGuestPhoneCountryCode, modalGuestPhoneNational) || undefined;
-      const payload = {
-        eventId: modalGuestEventId,
-        firstName: modalGuestFirstName,
-        lastName: modalGuestLastName,
-        email: modalGuestEmail,
-        category: modalGuestCategory,
-        rsvp: modalGuestRsvp,
-        phone: e164,
-        phoneCountryCode: modalGuestPhoneCountryCode,
-        nationalNumber: modalGuestPhoneNational,
-        preferences: selectedGuest?.preferences || {},
-      };
+ setUpdatingGuest(true);
+ try {
+ const e164 = composeE164(modalGuestPhoneCountryCode, modalGuestPhoneNational) || undefined;
+ const payload = {
+ eventId: modalGuestEventId,
+ firstName: modalGuestFirstName,
+ lastName: modalGuestLastName,
+ email: modalGuestEmail,
+ category: modalGuestCategory,
+ rsvp: modalGuestRsvp,
+ phone: e164,
+ phoneCountryCode: modalGuestPhoneCountryCode,
+ nationalNumber: modalGuestPhoneNational,
+ preferences: selectedGuest?.preferences || {},
+ };
 
-      if (guestModalMode === 'create') {
-        await api.post('/admin/guests', payload);
-      } else {
-        await api.put(`/admin/guests/${selectedGuest.id}`, payload);
-      }
+ if (guestModalMode === 'create') {
+ await api.post('/admin/guests', payload);
+ } else {
+ await api.put(`/admin/guests/${selectedGuest.id}`, payload);
+ }
 
-      setIsGuestModalOpen(false);
-      await loadAdminGuests();
-      await refreshStats();
+ setIsGuestModalOpen(false);
+ await loadAdminGuests();
+ await refreshStats();
     } catch (err: unknown) {
       throw err instanceof Error ? err : new Error('Erreur lors de l’enregistrement de l’invité');
-    } finally {
-      setUpdatingGuest(false);
-    }
-  };
+ } finally {
+ setUpdatingGuest(false);
+ }
+ };
 
   const handleDeleteGuest = async (id: string) => {
-    try {
-      await api.delete(`/admin/guests/${id}`);
-      await loadAdminGuests();
-      await refreshStats();
+ try {
+ await api.delete(`/admin/guests/${id}`);
+ await loadAdminGuests();
+ await refreshStats();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erreur lors de la suppression de l’invité');
       throw err;
-    }
-  };
+ }
+ };
 
-  const handleExportAdminGuests = () => {
-    if (adminGuests.length === 0) {
+ const handleExportAdminGuests = () => {
+ if (adminGuests.length === 0) {
       setError('Aucun invité à exporter.');
-      return;
-    }
-
+ return;
+ }
+ 
     const headers = ["Prénom", "Nom", "Email", "Téléphone", "Catégorie", "Statut de réponse", "Événement", "Organisation"];
-    const rows = adminGuests.map(g => {
-      const phone = g.phone || g.preferences?.phone || g.preferences?.telephone || "";
-      return [
-        g.firstName,
-        g.lastName,
-        g.email,
-        phone,
-        g.category || "Général",
-        g.rsvp === "ACCEPTED" ? "Accepté" : g.rsvp === "DECLINED" ? "Décliné" : "En attente",
-        g.eventTitle,
-        g.tenantName
-      ];
-    });
+ const rows = adminGuests.map(g => {
+ const phone = g.phone || g.preferences?.phone || g.preferences?.telephone || "";
+ return [
+ g.firstName,
+ g.lastName,
+ g.email,
+ phone,
+ g.category || "Général",
+ g.rsvp === "ACCEPTED" ? "Accepté" : g.rsvp === "DECLINED" ? "Décliné" : "En attente",
+ g.eventTitle,
+ g.tenantName
+ ];
+ });
+ 
+ const csvContent = [
+ headers.join(","),
+ ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
+ ].join("\n");
+ 
+ const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+ const url = URL.createObjectURL(blob);
+ const link = document.createElement("a");
+ link.setAttribute("href", url);
+ link.setAttribute("download", `tous_les_invites_eventmaster.csv`);
+ document.body.appendChild(link);
+ link.click();
+ document.body.removeChild(link);
+ };
 
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))
-    ].join("\n");
-
-    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `tous_les_invites_eventmaster.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleSaveSettings = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavingSettings(true);
-    try {
+ const handleSaveSettings = async (e: React.FormEvent) => {
+ e.preventDefault();
+ setSavingSettings(true);
+ try {
       const res = await api.put('/admin/settings', adminSettings);
       if (res?.settings) {
         setAdminSettings(res.settings);
       }
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('em-platform-settings-updated'));
-      }
+ if (typeof window !== 'undefined') {
+ window.dispatchEvent(new CustomEvent('em-platform-settings-updated'));
+ }
       setNotice('Paramètres enregistrés. Le site public applique immédiatement les changements.');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Erreur lors de l’enregistrement des configurations');
-    } finally {
-      setSavingSettings(false);
-    }
-  };
+ } finally {
+ setSavingSettings(false);
+ }
+ };
 
-  const loadTenantSubscriptionHistory = async (tenantId: string) => {
-    setLoadingTenantHistory(true);
-    setTenantSubscriptionHistory([]);
-    try {
-      const data = await api.get(`/admin/tenants/${tenantId}/subscription-history`);
-      setTenantSubscriptionHistory(data.history || []);
+ const loadTenantSubscriptionHistory = async (tenantId: string) => {
+ setLoadingTenantHistory(true);
+ setTenantSubscriptionHistory([]);
+ try {
+ const data = await api.get(`/admin/tenants/${tenantId}/subscription-history`);
+ setTenantSubscriptionHistory(data.history || []);
       if (data.guestUsage) {
         setDetailsData((prev: any) => ({
           ...prev,
@@ -2036,49 +2036,49 @@ function DashboardPageContent() {
           periodLabel: data.guestUsage.periodLabel,
         }));
       }
-    } catch (err) {
-      console.error(err);
-      setTenantSubscriptionHistory([]);
-    } finally {
-      setLoadingTenantHistory(false);
-    }
-  };
+ } catch (err) {
+ console.error(err);
+ setTenantSubscriptionHistory([]);
+ } finally {
+ setLoadingTenantHistory(false);
+ }
+ };
 
-  const handleOpenDetailsModal = (type: 'tenant' | 'user' | 'template' | 'event' | 'guest', data: any) => {
-    setDetailsType(type as any);
-    setDetailsData(data);
-    setIsDetailsModalOpen(true);
-    if (type === 'tenant') {
-      loadTenantSubscriptionHistory(data.id);
-    } else {
-      setTenantSubscriptionHistory([]);
-    }
-  };
+ const handleOpenDetailsModal = (type: 'tenant' | 'user' | 'template' | 'event' | 'guest', data: any) => {
+ setDetailsType(type as any);
+ setDetailsData(data);
+ setIsDetailsModalOpen(true);
+ if (type === 'tenant') {
+ loadTenantSubscriptionHistory(data.id);
+ } else {
+ setTenantSubscriptionHistory([]);
+ }
+ };
 
-  const handleOpenWorkspace = async (tenantId: string) => {
-    try {
-      setOpeningWorkspaceId(tenantId);
-      const payload = await api.post(`/admin/tenants/${tenantId}/impersonate`);
-      enterSupportSession(payload);
+ const handleOpenWorkspace = async (tenantId: string) => {
+ try {
+ setOpeningWorkspaceId(tenantId);
+ const payload = await api.post(`/admin/tenants/${tenantId}/impersonate`);
+ enterSupportSession(payload);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible d’ouvrir l’espace de cette organisation.');
-      setOpeningWorkspaceId(null);
-    }
-  };
+ setOpeningWorkspaceId(null);
+ }
+ };
 
-  const orgQuota: QuotaSnapshot | null = React.useMemo(() => {
-    if (isPlatformStaff(user?.role)) return null;
-    if (billing) {
-      return { usage: billing.usage, limits: billing.limits };
-    }
-    if (planQuota) {
-      return {
-        usage: planQuota.usage,
-        limits: planQuota.limits,
-      };
-    }
-    return null;
-  }, [billing, planQuota, user?.role]);
+ const orgQuota: QuotaSnapshot | null = React.useMemo(() => {
+ if (isPlatformStaff(user?.role)) return null;
+ if (billing) {
+ return { usage: billing.usage, limits: billing.limits };
+ }
+ if (planQuota) {
+ return {
+ usage: planQuota.usage,
+ limits: planQuota.limits,
+ };
+ }
+ return null;
+ }, [billing, planQuota, user?.role]);
 
   if (isClientDashboard) {
     return <ClientDashboardHome />;
@@ -2088,325 +2088,325 @@ function DashboardPageContent() {
     return <ProtocolDashboardHome />;
   }
 
-  if (loading) {
-    return <SkeletonDashboardHome />;
-  }
+ if (loading) {
+ return <SkeletonDashboardHome />;
+ }
 
   const getPercentage = (value: number, max: number) => {
     if (max === 0) return 0;
     return Math.min(Math.round((value / max) * 100), 100);
   };
 
-  // Render Super Admin / Commercial plateforme Dashboard
-  if (isPlatformStaff(user?.role)) {
-    const isSuperAdmin = user?.role === 'SUPER_ADMIN';
-    const isCommercialPlatform = user?.role === 'COMMERCIAL';
+ // Render Super Admin / Commercial plateforme Dashboard
+ if (isPlatformStaff(user?.role)) {
+ const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+ const isCommercialPlatform = user?.role === 'COMMERCIAL';
     const canManageTemplates = isSuperAdmin || Boolean(user?.commercialPermissions?.canManageTemplates);
     const canManageMessageTemplates = isSuperAdmin || Boolean(user?.commercialPermissions?.canManageMessageTemplates);
     const canManageEvents = isSuperAdmin || Boolean(user?.commercialPermissions?.canManageEvents);
     const canManageGuests = isSuperAdmin || Boolean(user?.commercialPermissions?.canManageGuests);
     const canManageCatalog = isSuperAdmin || Boolean(user?.commercialPermissions?.canManageCatalog);
-    const pendingSubscriptionCount = subscriptionRequests.filter((r) => r.status === 'PENDING').length;
-    // Filter tenants
-    const filteredTenants = adminTenants;
-    const filteredUsers = users;
+ const pendingSubscriptionCount = subscriptionRequests.filter((r) => r.status === 'PENDING').length;
+ // Filter tenants
+ const filteredTenants = adminTenants;
+ const filteredUsers = users;
 
-    // Filter templates
-    const filteredTemplates = templates;
+ // Filter templates
+ const filteredTemplates = templates;
 
-    const paginatedTenants = filteredTenants;
-    const paginatedUsers = filteredUsers;
-    const paginatedTemplates = filteredTemplates;
-    const userOrgOptions = tenantOptions.map((t) => t.name).filter(Boolean).sort();
-    const eventOrgOptions = [...new Set(adminEvents.map((e) => e.tenantName).filter(Boolean))].sort();
-    const guestOrgOptions = [...new Set(adminGuests.map((g) => g.tenantName).filter(Boolean))].sort();
-    const guestEventOptions = [...new Set(adminGuests.map((g) => g.eventTitle).filter(Boolean))].sort();
-    const guestCategoryOptions = [...new Set(adminGuests.map((g) => g.category).filter(Boolean))].sort();
+ const paginatedTenants = filteredTenants;
+ const paginatedUsers = filteredUsers;
+ const paginatedTemplates = filteredTemplates;
+ const userOrgOptions = tenantOptions.map((t) => t.name).filter(Boolean).sort();
+ const eventOrgOptions = [...new Set(adminEvents.map((e) => e.tenantName).filter(Boolean))].sort();
+ const guestOrgOptions = [...new Set(adminGuests.map((g) => g.tenantName).filter(Boolean))].sort();
+ const guestEventOptions = [...new Set(adminGuests.map((g) => g.eventTitle).filter(Boolean))].sort();
+ const guestCategoryOptions = [...new Set(adminGuests.map((g) => g.category).filter(Boolean))].sort();
     const filterSelectClass =
       'bg-surface-muted dark:bg-background border border-border rounded-xl px-3 py-2.5 text-xs sm:text-sm font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition min-h-11 shrink-0 max-w-[170px] sm:max-w-none';
 
-    const activeLicensesCount = adminData?.stats.licensesActive ?? 0;
-    const paidPlansCount = Object.entries(adminData?.planCounts || {}).reduce(
-      (sum, [plan, count]) => (plan === 'FREE' ? sum : sum + count),
-      0,
-    );
+ const activeLicensesCount = adminData?.stats.licensesActive ?? 0;
+ const paidPlansCount = Object.entries(adminData?.planCounts || {}).reduce(
+ (sum, [plan, count]) => (plan === 'FREE' ? sum : sum + count),
+ 0,
+ );
 
-    const tabMeta = ADMIN_TAB_META[activeTab as AdminTabId] || ADMIN_TAB_META.tenants;
-    const commercialOverrides: Partial<Record<AdminTabId, { description: string }>> = {
-      tenants: { description: 'Organisations liées à votre code de parrainage (plan, licence, gérant).' },
-      'subscription-requests': { description: 'Approuvez ou refusez les demandes de vos organisations parrainées.' },
-      invoices: { description: 'Factures de vos organisations parrainées et commissions associées.' },
-    };
-    const panelDescription = isCommercialPlatform && commercialOverrides[activeTab as AdminTabId]
-      ? commercialOverrides[activeTab as AdminTabId]!.description
-      : tabMeta.description;
+ const tabMeta = ADMIN_TAB_META[activeTab as AdminTabId] || ADMIN_TAB_META.tenants;
+ const commercialOverrides: Partial<Record<AdminTabId, { description: string }>> = {
+ tenants: { description: 'Organisations liées à votre code de parrainage (plan, licence, gérant).' },
+ 'subscription-requests': { description: 'Approuvez ou refusez les demandes de vos organisations parrainées.' },
+ invoices: { description: 'Factures de vos organisations parrainées et commissions associées.' },
+ };
+ const panelDescription = isCommercialPlatform && commercialOverrides[activeTab as AdminTabId]
+ ? commercialOverrides[activeTab as AdminTabId]!.description
+ : tabMeta.description;
 
-    const statCardClass = 'bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3';
+ const statCardClass = 'bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3';
 
-    return (
-      <>
-        <div className="space-y-6">
-          <PageHeader
-            title={isCommercialPlatform ? 'Espace commercial' : 'Console Super Admin'}
-            description={
-              isCommercialPlatform
+  return (
+ <>
+ <div className="space-y-6">
+ <PageHeader
+ title={isCommercialPlatform ? 'Espace commercial' : 'Console Super Admin'}
+ description={
+ isCommercialPlatform
                 ? 'Parrainage et commissions.'
                 : 'Organisations, contenu, facturation.'
-            }
-            breadcrumbs={
-              <Breadcrumbs
-                items={[
-                  { label: isCommercialPlatform ? 'Commercial' : 'Super Admin' },
-                  { label: tabMeta.title },
-                ]}
-              />
-            }
-          />
+ }
+ breadcrumbs={
+ <Breadcrumbs
+ items={[
+ { label: isCommercialPlatform ? 'Commercial' : 'Super Admin' },
+ { label: tabMeta.title },
+ ]}
+ />
+ }
+ />
 
-          {error && <Alert variant="error">{error}</Alert>}
+ {error && <Alert variant="error">{error}</Alert>}
           {notice && <Alert variant="success">{notice}</Alert>}
 
-          {adminData && activeTab !== 'overview' && (
-            <div className={`grid gap-3 ${isCommercialPlatform ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-2 xl:grid-cols-4'}`}>
-              <div className={statCardClass}>
-                <div className="flex items-center justify-between">
+ {adminData && activeTab !== 'overview' && (
+ <div className={`grid gap-3 ${isCommercialPlatform ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-2 xl:grid-cols-4'}`}>
+ <div className={statCardClass}>
+ <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-muted uppercase tracking-wider">
-                    {isCommercialPlatform ? 'Parrainées' : 'Organisations'}
-                  </span>
-                  <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
-                    <Building2 className="w-4 h-4" />
-                  </div>
-                </div>
-                <div>
-                  <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.tenants}</span>
+ {isCommercialPlatform ? 'Parrainées' : 'Organisations'}
+ </span>
+ <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
+ <Building2 className="w-4 h-4" />
+ </div>
+ </div>
+        <div>
+ <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.tenants}</span>
                   <p className="text-xs text-muted mt-1">
-                    {isCommercialPlatform
-                      ? 'Liées à votre code'
-                      : `${activeLicensesCount} licence${activeLicensesCount !== 1 ? 's' : ''} active${activeLicensesCount !== 1 ? 's' : ''}`}
-                  </p>
-                </div>
-              </div>
+ {isCommercialPlatform
+ ? 'Liées à votre code'
+ : `${activeLicensesCount} licence${activeLicensesCount !== 1 ? 's' : ''} active${activeLicensesCount !== 1 ? 's' : ''}`}
+ </p>
+        </div>
+ </div>
 
-              {isCommercialPlatform ? (
-                <>
-                  <div className={statCardClass}>
-                    <div className="flex items-center justify-between">
+ {isCommercialPlatform ? (
+ <>
+ <div className={statCardClass}>
+ <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-muted uppercase tracking-wider">Membres liés</span>
-                      <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
-                        <Users className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.users}</span>
+ <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
+ <Users className="w-4 h-4" />
+ </div>
+ </div>
+ <div>
+ <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.users}</span>
                       <p className="text-xs text-muted mt-1">
-                        {adminData.stats.events} événement{adminData.stats.events !== 1 ? 's' : ''} · {adminData.stats.guests} invité{adminData.stats.guests !== 1 ? 's' : ''}
-                      </p>
-                    </div>
-                  </div>
-                  <div className={statCardClass}>
-                    <div className="flex items-center justify-between">
+ {adminData.stats.events} événement{adminData.stats.events !== 1 ? 's' : ''} · {adminData.stats.guests} invité{adminData.stats.guests !== 1 ? 's' : ''}
+ </p>
+ </div>
+ </div>
+ <div className={statCardClass}>
+ <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-muted uppercase tracking-wider">En attente</span>
                       <div className="bg-festive-accent-soft text-festive-accent p-1.5 rounded-[var(--radius-button)]">
-                        <Clock className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-2xl font-semibold text-foreground tracking-tight">{pendingSubscriptionCount}</span>
+ <Clock className="w-4 h-4" />
+ </div>
+ </div>
+ <div>
+ <span className="text-2xl font-semibold text-foreground tracking-tight">{pendingSubscriptionCount}</span>
                       <p className="text-xs text-muted mt-1">Demandes à traiter</p>
-                    </div>
-                  </div>
-                  <div className={statCardClass}>
-                    <div className="flex items-center justify-between">
+ </div>
+ </div>
+ <div className={statCardClass}>
+ <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-muted uppercase tracking-wider">Commission</span>
                       <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
-                        <Wallet className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-2xl font-semibold text-foreground tracking-tight">
-                        {(commercialOverview?.stats?.monthlyCommission ?? 0).toLocaleString('fr-FR')} FC
-                      </span>
+ <Wallet className="w-4 h-4" />
+ </div>
+ </div>
+ <div>
+ <span className="text-2xl font-semibold text-foreground tracking-tight">
+ {(commercialOverview?.stats?.monthlyCommission ?? 0).toLocaleString('fr-FR')} FC
+ </span>
                       <p className="text-xs text-muted mt-1">
-                        {(commercialOverview?.stats?.totalCommission ?? 0).toLocaleString('fr-FR')} FC au total
-                        {commercialOverview?.commissionRate != null
-                          ? ` · ${Math.round(commercialOverview.commissionRate * 100)} %`
-                          : ''}
-                      </p>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className={statCardClass}>
-                    <div className="flex items-center justify-between">
+ {(commercialOverview?.stats?.totalCommission ?? 0).toLocaleString('fr-FR')} FC au total
+ {commercialOverview?.commissionRate != null
+ ? ` · ${Math.round(commercialOverview.commissionRate * 100)} %`
+ : ''}
+ </p>
+ </div>
+ </div>
+ </>
+ ) : (
+ <>
+ <div className={statCardClass}>
+ <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-muted uppercase tracking-wider">Utilisateurs</span>
-                      <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
-                        <Users className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.users}</span>
+ <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
+ <Users className="w-4 h-4" />
+ </div>
+ </div>
+ <div>
+ <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.users}</span>
                       <p className="text-xs text-muted mt-1">
-                        {paidPlansCount} org. payante{paidPlansCount !== 1 ? 's' : ''}
-                      </p>
-                    </div>
-                  </div>
-                  <div className={statCardClass}>
-                    <div className="flex items-center justify-between">
+ {paidPlansCount} org. payante{paidPlansCount !== 1 ? 's' : ''}
+ </p>
+ </div>
+ </div>
+ <div className={statCardClass}>
+ <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-muted uppercase tracking-wider">Événements</span>
                       <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
-                        <Calendar className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.events}</span>
+ <Calendar className="w-4 h-4" />
+ </div>
+ </div>
+ <div>
+ <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.events}</span>
                       <p className="text-xs text-muted mt-1">Tous tenants confondus</p>
-                    </div>
-                  </div>
-                  <div className={statCardClass}>
-                    <div className="flex items-center justify-between">
+ </div>
+ </div>
+ <div className={statCardClass}>
+ <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-muted uppercase tracking-wider">
-                        {pendingSubscriptionCount > 0 ? 'Demandes' : 'Invités'}
-                      </span>
-                      <div className={cn(
-                        'p-1.5 rounded-[var(--radius-button)]',
-                        pendingSubscriptionCount > 0
+ {pendingSubscriptionCount > 0 ? 'Demandes' : 'Invités'}
+ </span>
+ <div className={cn(
+ 'p-1.5 rounded-[var(--radius-button)]',
+ pendingSubscriptionCount > 0
                           ? 'bg-festive-accent-soft text-festive-accent'
                           : 'bg-festive-accent-soft text-festive-accent',
-                      )}>
-                        {pendingSubscriptionCount > 0 ? <Clock className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-2xl font-semibold text-foreground tracking-tight">
-                        {pendingSubscriptionCount > 0 ? pendingSubscriptionCount : adminData.stats.guests}
-                      </span>
+ )}>
+ {pendingSubscriptionCount > 0 ? <Clock className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
+ </div>
+ </div>
+ <div>
+ <span className="text-2xl font-semibold text-foreground tracking-tight">
+ {pendingSubscriptionCount > 0 ? pendingSubscriptionCount : adminData.stats.guests}
+ </span>
                       <p className="text-xs text-muted mt-1">
-                        {pendingSubscriptionCount > 0
-                          ? `Abonnements en attente · ${adminData.stats.guests} invités`
-                          : 'Enregistrés au total'}
-                      </p>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+ {pendingSubscriptionCount > 0
+ ? `Abonnements en attente · ${adminData.stats.guests} invités`
+ : 'Enregistrés au total'}
+ </p>
+ </div>
+ </div>
+ </>
+ )}
+ </div>
+ )}
 
-          {isSuperAdmin && activeTab === 'overview' && <AdminOpsHome />}
+ {isSuperAdmin && activeTab === 'overview' && <AdminOpsHome />}
 
-          {activeTab !== 'overview' && (
-            <div className="bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden">
-              <div className="border-b border-border bg-surface-muted/50 px-5 py-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                <div className="min-w-0">
-                  <h2 className="text-base font-semibold text-foreground tracking-tight flex items-center gap-2">
-                    {activeTab === 'tenants' && <Building2 className="w-4.5 h-4.5 text-primary shrink-0" />}
-                    {activeTab === 'users' && <Users className="w-4.5 h-4.5 text-primary shrink-0" />}
-                    {activeTab === 'templates' && <FileText className="w-4.5 h-4.5 text-primary shrink-0" />}
-                    {activeTab === 'message-templates' && <MessageSquare className="w-4.5 h-4.5 text-primary shrink-0" />}
-                    {activeTab === 'events' && <Calendar className="w-4.5 h-4.5 text-primary shrink-0" />}
-                    {activeTab === 'guests' && <Users className="w-4.5 h-4.5 text-primary shrink-0" />}
-                    {activeTab === 'analytics' && <BarChart3 className="w-4.5 h-4.5 text-primary shrink-0" />}
-                    {activeTab === 'settings' && <Key className="w-4.5 h-4.5 text-primary shrink-0" />}
-                    {activeTab === 'subscription-requests' && <Clock className="w-4.5 h-4.5 text-primary shrink-0" />}
-                    {activeTab === 'subscription-plans' && <CreditCard className="w-4.5 h-4.5 text-primary shrink-0" />}
-                    {activeTab === 'invoices' && <FileText className="w-4.5 h-4.5 text-primary shrink-0" />}
-                    {tabMeta.title}
-                  </h2>
-                  <p className="text-xs text-muted mt-1 leading-relaxed max-w-2xl">{panelDescription}</p>
-                  {!isCommercialPlatform && tabMeta.tip && (
+ {activeTab !== 'overview' && (
+ <div className="bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden">
+ <div className="border-b border-border bg-surface-muted/50 px-5 py-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+ <div className="min-w-0">
+ <h2 className="text-base font-semibold text-foreground tracking-tight flex items-center gap-2">
+ {activeTab === 'tenants' && <Building2 className="w-4.5 h-4.5 text-primary shrink-0" />}
+ {activeTab === 'users' && <Users className="w-4.5 h-4.5 text-primary shrink-0" />}
+ {activeTab === 'templates' && <FileText className="w-4.5 h-4.5 text-primary shrink-0" />}
+ {activeTab === 'message-templates' && <MessageSquare className="w-4.5 h-4.5 text-primary shrink-0" />}
+ {activeTab === 'events' && <Calendar className="w-4.5 h-4.5 text-primary shrink-0" />}
+ {activeTab === 'guests' && <Users className="w-4.5 h-4.5 text-primary shrink-0" />}
+ {activeTab === 'analytics' && <BarChart3 className="w-4.5 h-4.5 text-primary shrink-0" />}
+ {activeTab === 'settings' && <Key className="w-4.5 h-4.5 text-primary shrink-0" />}
+ {activeTab === 'subscription-requests' && <Clock className="w-4.5 h-4.5 text-primary shrink-0" />}
+ {activeTab === 'subscription-plans' && <CreditCard className="w-4.5 h-4.5 text-primary shrink-0" />}
+ {activeTab === 'invoices' && <FileText className="w-4.5 h-4.5 text-primary shrink-0" />}
+ {tabMeta.title}
+ </h2>
+ <p className="text-xs text-muted mt-1 leading-relaxed max-w-2xl">{panelDescription}</p>
+ {!isCommercialPlatform && tabMeta.tip && (
                     <p className="text-xs text-primary mt-2 font-medium">{tabMeta.tip}</p>
-                  )}
-                </div>
+ )}
+ </div>
 
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
-                  {activeTab === 'tenants' && (
-                    isCommercialPlatform ? (
-                      <Link href="/dashboard/commercial">
-                        <Button type="button" size="sm" variant="secondary" leftIcon={<Plus className="w-4 h-4" />}>
-                          Nouvelle organisation
-                        </Button>
-                      </Link>
-                    ) : (
-                      <Button type="button" size="sm" onClick={handleOpenCreateTenantModal} leftIcon={<Plus className="w-4 h-4" />}>
-                        Créer une organisation
-                      </Button>
-                    )
-                  )}
+ <div className="flex flex-wrap items-center gap-2 shrink-0">
+ {activeTab === 'tenants' && (
+ isCommercialPlatform ? (
+ <Link href="/dashboard/commercial">
+ <Button type="button" size="sm" variant="secondary" leftIcon={<Plus className="w-4 h-4" />}>
+ Nouvelle organisation
+ </Button>
+ </Link>
+ ) : (
+ <Button type="button" size="sm" onClick={handleOpenCreateTenantModal} leftIcon={<Plus className="w-4 h-4" />}>
+ Créer une organisation
+ </Button>
+ )
+ )}
 
-                  {activeTab === 'users' && isSuperAdmin && (
-                    <Button type="button" size="sm" onClick={handleOpenCreateUserModal} leftIcon={<Plus className="w-4 h-4" />}>
-                      Créer un utilisateur
-                    </Button>
-                  )}
+ {activeTab === 'users' && isSuperAdmin && (
+ <Button type="button" size="sm" onClick={handleOpenCreateUserModal} leftIcon={<Plus className="w-4 h-4" />}>
+ Créer un utilisateur
+ </Button>
+ )}
 
                   {activeTab === 'templates' && canManageTemplates && (
-                    <Link href="/dashboard/templates?new=1&from=admin">
-                      <Button type="button" size="sm" leftIcon={<Plus className="w-4 h-4" />}>
-                        Nouveau modèle
-                      </Button>
-                    </Link>
-                  )}
+ <Link href="/dashboard/templates?new=1&from=admin">
+ <Button type="button" size="sm" leftIcon={<Plus className="w-4 h-4" />}>
+ Nouveau modèle
+ </Button>
+ </Link>
+ )}
 
-                  {activeTab === 'events' && isSuperAdmin && (
-                    <Button type="button" size="sm" onClick={handleOpenCreateEventModal} leftIcon={<Plus className="w-4 h-4" />}>
-                      Créer un événement
-                    </Button>
-                  )}
+ {activeTab === 'events' && isSuperAdmin && (
+ <Button type="button" size="sm" onClick={handleOpenCreateEventModal} leftIcon={<Plus className="w-4 h-4" />}>
+ Créer un événement
+ </Button>
+ )}
 
-                  {activeTab === 'guests' && isSuperAdmin && (
-                    <div className="flex gap-2">
-                      {adminGuests.length > 0 && (
-                        <Button type="button" size="sm" variant="secondary" onClick={handleExportAdminGuests} leftIcon={<Download className="w-4 h-4" />}>
-                          Exporter CSV
-                        </Button>
-                      )}
-                      <Button type="button" size="sm" onClick={handleOpenCreateGuestModal} leftIcon={<Plus className="w-4 h-4" />}>
-                        Créer un invité
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
+ {activeTab === 'guests' && isSuperAdmin && (
+ <div className="flex gap-2">
+ {adminGuests.length > 0 && (
+ <Button type="button" size="sm" variant="secondary" onClick={handleExportAdminGuests} leftIcon={<Download className="w-4 h-4" />}>
+ Exporter CSV
+ </Button>
+ )}
+ <Button type="button" size="sm" onClick={handleOpenCreateGuestModal} leftIcon={<Plus className="w-4 h-4" />}>
+ Créer un invité
+ </Button>
+ </div>
+ )}
+ </div>
+ </div>
 
-              {activeTab === 'analytics' && user?.role === 'SUPER_ADMIN' && (
-                <div className="px-5 py-3 border-b border-border bg-surface">
-                  <div className="inline-flex flex-wrap gap-0.5 p-0.5 bg-surface-muted border border-border rounded-[var(--radius-button)]">
-                    {ANALYTICS_SECTIONS.map(({ id, label }) => (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={() => setAnalyticsSection(id)}
-                        className={cn(
-                          'inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
-                          activeAnalyticsSection === id
-                            ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
-                            : 'text-muted hover:text-foreground',
-                        )}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+ {activeTab === 'analytics' && user?.role === 'SUPER_ADMIN' && (
+ <div className="px-5 py-3 border-b border-border bg-surface">
+ <div className="inline-flex flex-wrap gap-0.5 p-0.5 bg-surface-muted border border-border rounded-[var(--radius-button)]">
+ {ANALYTICS_SECTIONS.map(({ id, label }) => (
+ <button
+ key={id}
+ type="button"
+ onClick={() => setAnalyticsSection(id)}
+ className={cn(
+ 'inline-flex items-center px-3 py-1.5 rounded-md text-xs font-medium transition-colors',
+ activeAnalyticsSection === id
+ ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
+ : 'text-muted hover:text-foreground',
+ )}
+ >
+ {label}
+ </button>
+ ))}
+ </div>
+ </div>
+ )}
 
-              {/* Filters and search */}
-              {activeTab !== 'analytics' && activeTab !== 'settings' && activeTab !== 'subscription-requests' && activeTab !== 'subscription-plans' && activeTab !== 'invoices' && activeTab !== 'message-templates' && (
+ {/* Filters and search */}
+ {activeTab !== 'analytics' && activeTab !== 'settings' && activeTab !== 'subscription-requests' && activeTab !== 'subscription-plans' && activeTab !== 'invoices' && activeTab !== 'message-templates' && (
                 <div className="p-3.5 sm:p-5 border-b border-border bg-white dark:bg-background flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
                   <div className="relative flex-1 min-w-0">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-muted pointer-events-none" />
-                    <input
-                      type="text"
-                      placeholder={
-                        activeTab === 'tenants' ? "Rechercher une organisation, un gérant..." :
-                          activeTab === 'users' ? "Rechercher un utilisateur, un email, une organisation..." :
-                            activeTab === 'events' ? "Rechercher un événement, un lieu, une organisation..." :
-                              activeTab === 'guests' ? "Rechercher un invité, un email, une catégorie..." :
-                                "Rechercher un modèle..."
-                      }
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+ <input
+ type="text"
+ placeholder={
+ activeTab === 'tenants' ? "Rechercher une organisation, un gérant..." :
+ activeTab === 'users' ? "Rechercher un utilisateur, un email, une organisation..." :
+ activeTab === 'events' ? "Rechercher un événement, un lieu, une organisation..." :
+ activeTab === 'guests' ? "Rechercher un invité, un email, une catégorie..." :
+ "Rechercher un modèle..."
+ }
+ value={searchTerm}
+ onChange={(e) => setSearchTerm(e.target.value)}
                       className="w-full pl-10 pr-9 min-h-11 bg-surface-muted dark:bg-background border border-border dark:border-border text-foreground dark:text-foreground rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition"
                     />
                     {searchTerm ? (
@@ -2419,457 +2419,457 @@ function DashboardPageContent() {
                         <X className="w-4 h-4" />
                       </button>
                     ) : null}
-                  </div>
+ </div>
 
-                  {activeTab === 'tenants' && (
+ {activeTab === 'tenants' && (
                     <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] w-full lg:w-auto shrink-0">
                       <Filter className="w-4 h-4 text-muted shrink-0 hidden sm:block" />
-                      <select
-                        value={filterPlan}
-                        onChange={(e) => setFilterPlan(e.target.value)}
+ <select
+ value={filterPlan}
+ onChange={(e) => setFilterPlan(e.target.value)}
                         aria-label="Filtrer par forfait"
                         className={filterSelectClass}
-                      >
-                        <option value="ALL">Tous les plans</option>
-                        {PLAN_IDS.map((p) => (
-                          <option key={p} value={p}>{p}</option>
-                        ))}
-                      </select>
-                      <select
-                        value={filterAccountKind}
-                        onChange={(e) => setFilterAccountKind(e.target.value)}
+ >
+ <option value="ALL">Tous les plans</option>
+ {PLAN_IDS.map((p) => (
+ <option key={p} value={p}>{p}</option>
+ ))}
+ </select>
+ <select
+ value={filterAccountKind}
+ onChange={(e) => setFilterAccountKind(e.target.value)}
                         aria-label="Filtrer par type"
                         className={filterSelectClass}
-                      >
-                        <option value="ALL">Tous les types</option>
-                        {(Object.keys(ACCOUNT_KIND_FILTER_LABELS) as TenantAccountKind[]).map((kind) => (
-                          <option key={kind} value={kind}>{ACCOUNT_KIND_FILTER_LABELS[kind]}</option>
-                        ))}
-                      </select>
+ >
+ <option value="ALL">Tous les types</option>
+ {(Object.keys(ACCOUNT_KIND_FILTER_LABELS) as TenantAccountKind[]).map((kind) => (
+ <option key={kind} value={kind}>{ACCOUNT_KIND_FILTER_LABELS[kind]}</option>
+ ))}
+ </select>
                       <div className="shrink-0 ml-auto sm:ml-0">
-                        <ViewModeToggle
-                          storageKey="em-view-admin-tenants"
-                          value={tenantsViewMode}
-                          onChange={setTenantsViewMode}
-                          columns={tenantsColumns}
-                          onColumnsChange={setTenantsColumns}
-                          defaultMode="grid"
-                          defaultColumns={3}
-                        />
+ <ViewModeToggle
+ storageKey="em-view-admin-tenants"
+ value={tenantsViewMode}
+ onChange={setTenantsViewMode}
+ columns={tenantsColumns}
+ onColumnsChange={setTenantsColumns}
+ defaultMode="grid"
+ defaultColumns={3}
+ />
                       </div>
-                    </div>
-                  )}
+ </div>
+ )}
 
-                  {activeTab === 'users' && (
+ {activeTab === 'users' && (
                     <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] w-full lg:w-auto shrink-0">
                       <Filter className="w-4 h-4 text-muted shrink-0 hidden sm:block" />
                       <select value={filterRole} onChange={(e) => setFilterRole(e.target.value)} className={filterSelectClass} aria-label="Filtrer par rôle">
-                        <option value="ALL">Tous les rôles</option>
-                        <option value="USER">Membre d’organisation</option>
-                        <option value="COMMERCIAL">Commercial plateforme</option>
-                        <option value="SUPER_ADMIN">Super Admin</option>
-                      </select>
+ <option value="ALL">Tous les rôles</option>
+ <option value="USER">Membre d’organisation</option>
+ <option value="COMMERCIAL">Commercial plateforme</option>
+ <option value="SUPER_ADMIN">Super Admin</option>
+ </select>
                       <select value={filterOrgRole} onChange={(e) => setFilterOrgRole(e.target.value)} className={filterSelectClass} aria-label="Filtrer par rôle dans l'organisation">
-                        <option value="ALL">Rôle org.</option>
-                        <option value="MANAGER">Manager</option>
-                        <option value="PROTOCOL">Protocole</option>
-                        <option value="COMMERCIAL">Commercial org.</option>
-                      </select>
+ <option value="ALL">Rôle org.</option>
+ <option value="MANAGER">Manager</option>
+ <option value="PROTOCOL">Protocole</option>
+ <option value="COMMERCIAL">Commercial org.</option>
+ </select>
                       <select value={filterVerified} onChange={(e) => setFilterVerified(e.target.value)} className={filterSelectClass} aria-label="Filtrer par vérification">
-                        <option value="ALL">Vérification</option>
-                        <option value="verified">E-mail vérifié</option>
-                        <option value="unverified">Non vérifié</option>
-                      </select>
+ <option value="ALL">Vérification</option>
+ <option value="verified">E-mail vérifié</option>
+ <option value="unverified">Non vérifié</option>
+ </select>
                       <select value={filterUserOrg} onChange={(e) => setFilterUserOrg(e.target.value)} className={filterSelectClass} aria-label="Filtrer par organisation">
-                        <option value="ALL">Toutes les organisations</option>
-                        {userOrgOptions.map((name) => (
-                          <option key={name} value={name}>{name}</option>
-                        ))}
-                      </select>
+ <option value="ALL">Toutes les organisations</option>
+ {userOrgOptions.map((name) => (
+ <option key={name} value={name}>{name}</option>
+ ))}
+ </select>
                       <div className="shrink-0 ml-auto sm:ml-0">
-                        <ViewModeToggle
-                          storageKey="em-view-admin-users"
-                          value={usersViewMode}
-                          onChange={setUsersViewMode}
-                          columns={usersColumns}
-                          onColumnsChange={setUsersColumns}
-                          defaultMode="grid"
-                          defaultColumns={3}
-                        />
+ <ViewModeToggle
+ storageKey="em-view-admin-users"
+ value={usersViewMode}
+ onChange={setUsersViewMode}
+ columns={usersColumns}
+ onColumnsChange={setUsersColumns}
+ defaultMode="grid"
+ defaultColumns={3}
+ />
                       </div>
-                    </div>
-                  )}
+ </div>
+ )}
 
-                  {activeTab === 'events' && (
+ {activeTab === 'events' && (
                     <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] w-full lg:w-auto shrink-0">
                       <Filter className="w-4 h-4 text-muted shrink-0 hidden sm:block" />
                       <select value={filterEventWhen} onChange={(e) => setFilterEventWhen(e.target.value)} className={filterSelectClass} aria-label="Filtrer par date">
-                        <option value="ALL">Toutes les dates</option>
-                        <option value="upcoming">À venir</option>
-                        <option value="past">Passés</option>
-                      </select>
+ <option value="ALL">Toutes les dates</option>
+ <option value="upcoming">À venir</option>
+ <option value="past">Passés</option>
+ </select>
                       <select value={filterEventOrg} onChange={(e) => setFilterEventOrg(e.target.value)} className={filterSelectClass} aria-label="Filtrer par organisation">
-                        <option value="ALL">Toutes les organisations</option>
-                        {eventOrgOptions.map((name) => (
-                          <option key={name} value={name}>{name}</option>
-                        ))}
-                      </select>
+ <option value="ALL">Toutes les organisations</option>
+ {eventOrgOptions.map((name) => (
+ <option key={name} value={name}>{name}</option>
+ ))}
+ </select>
                       <select value={filterEventGps} onChange={(e) => setFilterEventGps(e.target.value)} className={filterSelectClass} aria-label="Filtrer par GPS">
-                        <option value="ALL">Localisation</option>
-                        <option value="yes">Avec GPS</option>
-                        <option value="no">Sans GPS</option>
-                      </select>
+ <option value="ALL">Localisation</option>
+ <option value="yes">Avec GPS</option>
+ <option value="no">Sans GPS</option>
+ </select>
                       <select value={filterEventVisibility} onChange={(e) => setFilterEventVisibility(e.target.value)} className={filterSelectClass} aria-label="Filtrer par visibilité">
-                        <option value="ALL">Visibilité</option>
-                        <option value="public">Publics</option>
-                        <option value="private">Privés</option>
-                      </select>
+ <option value="ALL">Visibilité</option>
+ <option value="public">Publics</option>
+ <option value="private">Privés</option>
+ </select>
                       <select value={filterEventTicketing} onChange={(e) => setFilterEventTicketing(e.target.value)} className={filterSelectClass} aria-label="Filtrer par billetterie">
-                        <option value="ALL">Billets</option>
-                        <option value="yes">Billetterie</option>
-                        <option value="no">Sans billets</option>
-                      </select>
+ <option value="ALL">Billets</option>
+ <option value="yes">Billetterie</option>
+ <option value="no">Sans billets</option>
+ </select>
                       <div className="shrink-0 ml-auto sm:ml-0">
-                        <ViewModeToggle
-                          storageKey="em-view-admin-events"
-                          value={adminEventsViewMode}
-                          onChange={setAdminEventsViewMode}
-                          columns={adminEventsColumns}
-                          onColumnsChange={setAdminEventsColumns}
-                          defaultMode="grid"
-                          defaultColumns={3}
-                        />
+ <ViewModeToggle
+ storageKey="em-view-admin-events"
+ value={adminEventsViewMode}
+ onChange={setAdminEventsViewMode}
+ columns={adminEventsColumns}
+ onColumnsChange={setAdminEventsColumns}
+ defaultMode="grid"
+ defaultColumns={3}
+ />
                       </div>
-                    </div>
-                  )}
+ </div>
+ )}
 
                   {activeTab === 'templates' && canManageTemplates && (
                     <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] w-full lg:w-auto shrink-0">
                       <Filter className="w-4 h-4 text-muted shrink-0 hidden sm:block" />
-                      <select
-                        value={filterType}
-                        onChange={(e) => setFilterType(e.target.value as any)}
+ <select
+ value={filterType}
+ onChange={(e) => setFilterType(e.target.value as any)}
                         aria-label="Filtrer par portée de modèle"
                         className={filterSelectClass}
-                      >
-                        <option value="ALL">Tous les modèles</option>
-                        <option value="GLOBAL">Modèles Globaux (Publics)</option>
-                        <option value="TENANT">Modèles d'organisations</option>
-                      </select>
-                    </div>
-                  )}
+ >
+ <option value="ALL">Tous les modèles</option>
+ <option value="GLOBAL">Modèles Globaux (Publics)</option>
+ <option value="TENANT">Modèles d'organisations</option>
+ </select>
+ </div>
+ )}
 
-                  {activeTab === 'guests' && (
+ {activeTab === 'guests' && (
                     <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none] w-full lg:w-auto shrink-0">
                       <Filter className="w-4 h-4 text-muted shrink-0 hidden sm:block" />
                       <select value={filterRsvp} onChange={(e) => setFilterRsvp(e.target.value)} className={filterSelectClass} aria-label="Filtrer par réponse">
                         <option value="ALL">Toutes les réponses</option>
-                        <option value="PENDING">En attente</option>
-                        <option value="ACCEPTED">Accepté</option>
-                        <option value="DECLINED">Décliné</option>
-                      </select>
+ <option value="PENDING">En attente</option>
+ <option value="ACCEPTED">Accepté</option>
+ <option value="DECLINED">Décliné</option>
+ </select>
                       <select value={filterGuestCheckin} onChange={(e) => setFilterGuestCheckin(e.target.value)} className={filterSelectClass} aria-label="Filtrer par présence">
-                        <option value="ALL">Présence</option>
-                        <option value="in">Enregistrés</option>
-                        <option value="out">Non enregistrés</option>
-                      </select>
+ <option value="ALL">Présence</option>
+ <option value="in">Enregistrés</option>
+ <option value="out">Non enregistrés</option>
+ </select>
                       <select value={filterGuestPdf} onChange={(e) => setFilterGuestPdf(e.target.value)} className={filterSelectClass} aria-label="Filtrer par PDF">
-                        <option value="ALL">PDF invitation</option>
-                        <option value="delivered">PDF livré</option>
-                        <option value="missing">PDF non livré</option>
-                      </select>
+ <option value="ALL">PDF invitation</option>
+ <option value="delivered">PDF livré</option>
+ <option value="missing">PDF non livré</option>
+ </select>
                       <select value={filterGuestCategory} onChange={(e) => setFilterGuestCategory(e.target.value)} className={filterSelectClass} aria-label="Filtrer par catégorie">
-                        <option value="ALL">Toutes les catégories</option>
-                        {guestCategoryOptions.map((name) => (
-                          <option key={name} value={name}>{name}</option>
-                        ))}
-                      </select>
+ <option value="ALL">Toutes les catégories</option>
+ {guestCategoryOptions.map((name) => (
+ <option key={name} value={name}>{name}</option>
+ ))}
+ </select>
                       <select value={filterGuestEvent} onChange={(e) => setFilterGuestEvent(e.target.value)} className={filterSelectClass} aria-label="Filtrer par événement">
-                        <option value="ALL">Tous les événements</option>
-                        {guestEventOptions.map((name) => (
-                          <option key={name} value={name}>{name}</option>
-                        ))}
-                      </select>
+ <option value="ALL">Tous les événements</option>
+ {guestEventOptions.map((name) => (
+ <option key={name} value={name}>{name}</option>
+ ))}
+ </select>
                       <select value={filterGuestOrg} onChange={(e) => setFilterGuestOrg(e.target.value)} className={filterSelectClass} aria-label="Filtrer par organisation">
-                        <option value="ALL">Toutes les organisations</option>
-                        {guestOrgOptions.map((name) => (
-                          <option key={name} value={name}>{name}</option>
-                        ))}
-                      </select>
+ <option value="ALL">Toutes les organisations</option>
+ {guestOrgOptions.map((name) => (
+ <option key={name} value={name}>{name}</option>
+ ))}
+ </select>
                       <div className="shrink-0 ml-auto sm:ml-0">
-                        <ViewModeToggle
-                          storageKey="em-view-admin-guests"
-                          value={guestsViewMode}
-                          onChange={setGuestsViewMode}
-                          columns={guestsColumns}
-                          onColumnsChange={setGuestsColumns}
-                          defaultMode="grid"
-                          defaultColumns={3}
-                        />
+ <ViewModeToggle
+ storageKey="em-view-admin-guests"
+ value={guestsViewMode}
+ onChange={setGuestsViewMode}
+ columns={guestsColumns}
+ onColumnsChange={setGuestsColumns}
+ defaultMode="grid"
+ defaultColumns={3}
+ />
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
+ </div>
+ )}
+ </div>
+ )}
 
-              {/* Content area */}
+ {/* Content area */}
               <div className="p-3.5 sm:p-5 lg:p-6 bg-surface">
-                {/* Tenants Tab */}
-                {activeTab === 'tenants' && (
-                  <div className="space-y-4">
-                    {tenantsLoading ? (
-                      <SkeletonTabContent mode={tenantsViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
-                    ) : filteredTenants.length === 0 ? (
-                      <EmptyState
-                        icon={<Building2 className="w-5 h-5" />}
-                        title="Aucune organisation active"
+ {/* Tenants Tab */}
+ {activeTab === 'tenants' && (
+ <div className="space-y-4">
+ {tenantsLoading ? (
+ <SkeletonTabContent mode={tenantsViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
+ ) : filteredTenants.length === 0 ? (
+              <EmptyState 
+                icon={<Building2 className="w-5 h-5" />} 
+                title="Aucune organisation active" 
                         description="Aucune organisation."
-                      />
-                    ) : (
-                      <div
-                        className={
-                          tenantsViewMode === 'grid'
-                            ? tenantsGridClass
-                            : listStackClass
-                        }
-                      >
-                        {paginatedTenants.map((t) => {
-                          const licenseExpired = Boolean(t.licenseExpiresAt && new Date(t.licenseExpiresAt) < new Date());
-                          const licenseLabel = t.licenseActive
-                            ? (licenseExpired ? 'Licence expirée' : 'Licence active')
-                            : 'Licence désactivée';
-                          const licenseShort = licenseLabel.replace('Licence ', '');
-                          const planChip = (
-                            <StatusPill tone={t.plan === 'FREE' ? 'slate' : t.plan.startsWith('ENTERPRISE') ? 'amber' : 'primary'}>
-                              {t.plan}
-                            </StatusPill>
-                          );
-                          const kindChip = t.accountKind ? (
-                            <StatusPill tone={t.accountKind === 'CLIENT' ? 'slate' : 'primary'}>
-                              {ACCOUNT_KIND_FILTER_LABELS[t.accountKind as TenantAccountKind] || t.accountKind}
-                            </StatusPill>
-                          ) : null;
-                          const licenseChip = (
-                            <StatusPill
-                              tone={t.licenseActive && !licenseExpired ? 'emerald' : 'rose'}
-                            >
-                              {licenseShort}
-                            </StatusPill>
-                          );
+              />
+ ) : (
+ <div
+ className={
+ tenantsViewMode === 'grid'
+ ? tenantsGridClass
+ : listStackClass
+ }
+ >
+ {paginatedTenants.map((t) => {
+ const licenseExpired = Boolean(t.licenseExpiresAt && new Date(t.licenseExpiresAt) < new Date());
+ const licenseLabel = t.licenseActive
+ ? (licenseExpired ? 'Licence expirée' : 'Licence active')
+ : 'Licence désactivée';
+ const licenseShort = licenseLabel.replace('Licence ', '');
+ const planChip = (
+ <StatusPill tone={t.plan === 'FREE' ? 'slate' : t.plan.startsWith('ENTERPRISE') ? 'amber' : 'primary'}>
+ {t.plan}
+ </StatusPill>
+ );
+ const kindChip = t.accountKind ? (
+ <StatusPill tone={t.accountKind === 'CLIENT' ? 'slate' : 'primary'}>
+ {ACCOUNT_KIND_FILTER_LABELS[t.accountKind as TenantAccountKind] || t.accountKind}
+ </StatusPill>
+ ) : null;
+ const licenseChip = (
+ <StatusPill
+ tone={t.licenseActive && !licenseExpired ? 'emerald' : 'rose'}
+ >
+ {licenseShort}
+ </StatusPill>
+ );
 
-                          const actions = (
-                            <>
-                              {tenantsViewMode === 'list' ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenDetailsModal('tenant', t)}
+ const actions = (
+ <>
+ {tenantsViewMode === 'list' ? (
+ <button
+ type="button"
+ onClick={() => handleOpenDetailsModal('tenant', t)}
                                   className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground rounded-lg transition"
-                                  title="Voir détails"
+ title="Voir détails"
                                   aria-label={`Voir les détails de l'organisation ${t.name}`}
-                                >
-                                  <ListRowAction />
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenDetailsModal('tenant', t)}
+ >
+ <ListRowAction />
+ </button>
+ ) : (
+ <button
+ type="button"
+ onClick={() => handleOpenDetailsModal('tenant', t)}
                                   className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
-                                  title="Détails"
+ title="Détails"
                                   aria-label={`Détails de l'organisation ${t.name}`}
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </button>
-                              )}
-                              {!isCommercialPlatform && (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      void handleOpenWorkspace(t.id);
-                                    }}
-                                    disabled={openingWorkspaceId === t.id}
+ >
+ <Eye className="w-4 h-4" />
+ </button>
+ )}
+ {!isCommercialPlatform && (
+ <>
+ <button
+ type="button"
+ onClick={(e) => {
+ e.stopPropagation();
+ void handleOpenWorkspace(t.id);
+ }}
+ disabled={openingWorkspaceId === t.id}
                                     className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition disabled:opacity-50"
-                                    title="Ouvrir l’espace"
+ title="Ouvrir l’espace"
                                     aria-label={`Ouvrir l'espace de ${t.name}`}
-                                  >
-                                    {openingWorkspaceId === t.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenEditTenantModal(t)}
+ >
+ {openingWorkspaceId === t.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogIn className="w-4 h-4" />}
+ </button>
+ <button
+ type="button"
+ onClick={() => handleOpenEditTenantModal(t)}
                                     className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition"
-                                    title="Modifier"
+ title="Modifier"
                                     aria-label={`Modifier l'organisation ${t.name}`}
-                                  >
-                                    <Edit2 className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    type="button"
+ >
+ <Edit2 className="w-4 h-4" />
+ </button>
+ <button
+ type="button"
                                     onClick={() => setPendingConfirm({ kind: 'delete-tenant', id: t.id, name: t.name, phase: 'warn' })}
                                     className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition"
-                                    title="Supprimer"
+ title="Supprimer"
                                     aria-label={`Supprimer l'organisation ${t.name}`}
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </>
-                              )}
-                            </>
-                          );
+ >
+ <Trash2 className="w-4 h-4" />
+ </button>
+ </>
+ )}
+ </>
+ );
 
-                          return (
-                            <ProjectCard
-                              key={t.id}
-                              id={t.id}
-                              title={t.name}
-                              layout={tenantsViewMode}
-                              icon={<Building2 className="w-4 h-4" />}
-                              badge={planChip}
-                              overlayMeta={t.managerName || t.managerEmail || 'Sans gérant'}
-                              ctaLabel="Voir l’organisation"
-                              onClick={() => handleOpenDetailsModal('tenant', t)}
-                              meta={
-                                tenantsViewMode === 'list' ? (
-                                  <span>
-                                    {t.managerName || t.managerEmail || 'Sans gérant'}
-                                    {' · '}
-                                    {t.usersCount} membre{t.usersCount !== 1 ? 's' : ''}
-                                  </span>
-                                ) : (
-                                  <div className="space-y-1">
-                                    <div className="flex flex-wrap items-center gap-1.5">
-                                      {planChip}
-                                      {kindChip}
-                                      {licenseChip}
-                                    </div>
-                                    <p className="truncate">
-                                      {t.managerName || 'Sans gérant'}
-                                      {t.managerEmail ? ` · ${t.managerEmail}` : ''}
-                                    </p>
-                                  </div>
-                                )
-                              }
-                              value={
-                                tenantsViewMode === 'list'
+ return (
+ <ProjectCard
+ key={t.id}
+ id={t.id}
+ title={t.name}
+ layout={tenantsViewMode}
+ icon={<Building2 className="w-4 h-4" />}
+ badge={planChip}
+ overlayMeta={t.managerName || t.managerEmail || 'Sans gérant'}
+ ctaLabel="Voir l’organisation"
+ onClick={() => handleOpenDetailsModal('tenant', t)}
+ meta={
+ tenantsViewMode === 'list' ? (
+ <span>
+ {t.managerName || t.managerEmail || 'Sans gérant'}
+ {' · '}
+ {t.usersCount} membre{t.usersCount !== 1 ? 's' : ''}
+ </span>
+ ) : (
+ <div className="space-y-1">
+ <div className="flex flex-wrap items-center gap-1.5">
+ {planChip}
+ {kindChip}
+ {licenseChip}
+ </div>
+ <p className="truncate">
+ {t.managerName || 'Sans gérant'}
+ {t.managerEmail ? ` · ${t.managerEmail}` : ''}
+ </p>
+ </div>
+ )
+ }
+ value={
+ tenantsViewMode === 'list'
                                   ? `${t.eventsCount} évén. · ${t.guestsPeriodCount ?? 0}/${(t.maxGuests && t.maxGuests >= 9999) ? '∞' : (t.maxGuests ?? 50)} inv.`
-                                  : undefined
-                              }
-                              valueMeta={
-                                tenantsViewMode === 'list'
-                                  ? `Inscrite le ${new Date(t.createdAt).toLocaleDateString('fr-FR')}`
-                                  : undefined
-                              }
-                              aside={
-                                tenantsViewMode === 'list' ? (
-                                  <span className="inline-flex flex-wrap items-center gap-1">
-                                    {kindChip}
-                                    {licenseChip}
-                                  </span>
-                                ) : undefined
-                              }
-                              description={
-                                tenantsViewMode === 'grid'
-                                  ? `Inscrite le ${new Date(t.createdAt).toLocaleDateString('fr-FR')}`
-                                  : undefined
-                              }
-                              footer={
-                                tenantsViewMode === 'grid' ? (
+ : undefined
+ }
+ valueMeta={
+ tenantsViewMode === 'list'
+ ? `Inscrite le ${new Date(t.createdAt).toLocaleDateString('fr-FR')}`
+ : undefined
+ }
+ aside={
+ tenantsViewMode === 'list' ? (
+ <span className="inline-flex flex-wrap items-center gap-1">
+ {kindChip}
+ {licenseChip}
+ </span>
+ ) : undefined
+ }
+ description={
+ tenantsViewMode === 'grid'
+ ? `Inscrite le ${new Date(t.createdAt).toLocaleDateString('fr-FR')}`
+ : undefined
+ }
+ footer={
+ tenantsViewMode === 'grid' ? (
                                   <span className="text-xs text-muted">
                                     {t.usersCount} membre{t.usersCount !== 1 ? 's' : ''} · {t.eventsCount} événement{t.eventsCount !== 1 ? 's' : ''} · {t.guestsPeriodCount ?? 0}/{(t.maxGuests && t.maxGuests >= 9999) ? '∞' : (t.maxGuests ?? 50)} inv. (période)
-                                  </span>
-                                ) : undefined
-                              }
-                              actions={actions}
-                            />
-                          );
-                        })}
-                      </div>
-                    )}
+ </span>
+ ) : undefined
+ }
+ actions={actions}
+ />
+ );
+ })}
+ </div>
+ )}
 
-                    <Pagination
-                      page={tenantsPage}
-                      pageSize={tenantsPageSize}
-                      total={adminTenantsTotal}
-                      onPageChange={setTenantsPage}
-                      onPageSizeChange={setTenantsPageSize}
-                      itemLabel="organisations"
-                    />
-                  </div>
-                )}
+ <Pagination
+ page={tenantsPage}
+ pageSize={tenantsPageSize}
+ total={adminTenantsTotal}
+ onPageChange={setTenantsPage}
+ onPageSizeChange={setTenantsPageSize}
+ itemLabel="organisations"
+ />
+ </div>
+ )}
 
-                {/* Users Tab */}
-                {activeTab === 'users' && (
-                  <div className="space-y-4">
-                    {usersLoading ? (
-                      <SkeletonTabContent mode={usersViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
-                    ) : filteredUsers.length === 0 ? (
-                      <EmptyState
-                        icon={<Users className="w-5 h-5" />}
-                        title="Aucun utilisateur"
+ {/* Users Tab */}
+ {activeTab === 'users' && (
+ <div className="space-y-4">
+ {usersLoading ? (
+ <SkeletonTabContent mode={usersViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
+ ) : filteredUsers.length === 0 ? (
+              <EmptyState 
+                icon={<Users className="w-5 h-5" />} 
+                title="Aucun utilisateur" 
                         description="Ajoutez un collaborateur."
-                      />
-                    ) : (
-                      <>
-                        <div
-                          className={
-                            usersViewMode === 'grid' ? usersGridClass : listStackClass
-                          }
-                        >
-                          {paginatedUsers.map((u) => {
-                            const roleTone =
+              />
+ ) : (
+ <>
+ <div
+ className={
+ usersViewMode === 'grid' ? usersGridClass : listStackClass
+ }
+ >
+ {paginatedUsers.map((u) => {
+ const roleTone =
                               u.role === 'SUPER_ADMIN' ? 'rose' : u.role === 'COMMERCIAL' ? 'amber' : u.isOwner ? 'violet' : 'slate';
                             const orgLabel = orgRoleLabel(u.orgRole, u.isOwner);
-                            const roleChip = (
+ const roleChip = (
                               <StatusPill tone={roleTone as 'rose' | 'amber' | 'violet' | 'slate'}>
                                 {u.role === 'USER' && orgLabel ? orgLabel : platformRoleLabel(u.role)}
                               </StatusPill>
-                            );
-                            const verifiedChip = (
-                              <StatusPill tone={u.isEmailVerified ? 'emerald' : 'slate'}>
-                                {u.isEmailVerified ? 'Vérifié' : 'Non vérifié'}
-                              </StatusPill>
-                            );
+ );
+ const verifiedChip = (
+ <StatusPill tone={u.isEmailVerified ? 'emerald' : 'slate'}>
+ {u.isEmailVerified ? 'Vérifié' : 'Non vérifié'}
+ </StatusPill>
+ );
                             const kindLabel = accountKindShortLabel(u.tenantAccountKind);
                             const commission = formatCommissionPercent(u.commissionRate);
                             const staffBits = [
                               (u.eventStaffCount ?? 0) > 0 ? `${u.eventStaffCount} événement${(u.eventStaffCount ?? 0) > 1 ? 's' : ''}` : null,
                               (u.roomStaffCount ?? 0) > 0 ? `${u.roomStaffCount} salle${(u.roomStaffCount ?? 0) > 1 ? 's' : ''}` : null,
                             ].filter(Boolean);
-                            const actions = (
-                              <>
-                                {usersViewMode === 'list' ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenDetailsModal('user', u)}
+ const actions = (
+ <>
+ {usersViewMode === 'list' ? (
+ <button
+ type="button"
+ onClick={() => handleOpenDetailsModal('user', u)}
                                     className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground rounded-lg transition"
-                                    title="Voir détails"
+ title="Voir détails"
                                     aria-label={`Voir les détails de l'utilisateur ${u.name || u.email}`}
-                                  >
-                                    <ListRowAction />
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenDetailsModal('user', u)}
+ >
+ <ListRowAction />
+ </button>
+ ) : (
+ <button
+ type="button"
+ onClick={() => handleOpenDetailsModal('user', u)}
                                     className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
-                                    title="Détails"
+ title="Détails"
                                     aria-label={`Détails de l'utilisateur ${u.name || u.email}`}
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenEditUserModal(u)}
+ >
+ <Eye className="w-4 h-4" />
+ </button>
+ )}
+ <button
+ type="button"
+ onClick={() => handleOpenEditUserModal(u)}
                                   className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition"
-                                  title="Modifier"
+ title="Modifier"
                                   aria-label={`Modifier l'utilisateur ${u.name || u.email}`}
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                  type="button"
+ >
+ <Edit2 className="w-4 h-4" />
+ </button>
+ <button
+ type="button"
                                   onClick={() => handleResendUserVerification(u)}
                                   disabled={resendingVerificationId === u.id}
                                   className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg transition disabled:opacity-40"
@@ -2885,51 +2885,51 @@ function DashboardPageContent() {
                                 <button
                                   type="button"
                                   onClick={() => setPendingConfirm({ kind: 'delete-user', id: u.id, label: u.email })}
-                                  disabled={u.id === user?.id}
+ disabled={u.id === user?.id}
                                   className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed"
-                                  title="Supprimer"
+ title="Supprimer"
                                   aria-label={`Supprimer l'utilisateur ${u.name || u.email}`}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </>
-                            );
+ >
+ <Trash2 className="w-4 h-4" />
+ </button>
+ </>
+ );
 
-                            return (
-                              <ProjectCard
-                                key={u.id}
-                                id={u.id}
-                                title={u.name || 'Sans nom'}
-                                layout={usersViewMode}
-                                icon={<Users className="w-4 h-4" />}
-                                badge={roleChip}
-                                overlayMeta={u.email}
-                                ctaLabel="Voir le profil"
-                                onClick={() => handleOpenDetailsModal('user', u)}
-                                meta={
-                                  usersViewMode === 'list' ? (
-                                    <span className="truncate">
-                                      {u.email}
-                                      {' · '}
-                                      {u.tenantName || '—'}
+ return (
+ <ProjectCard
+ key={u.id}
+ id={u.id}
+ title={u.name || 'Sans nom'}
+ layout={usersViewMode}
+ icon={<Users className="w-4 h-4" />}
+ badge={roleChip}
+ overlayMeta={u.email}
+ ctaLabel="Voir le profil"
+ onClick={() => handleOpenDetailsModal('user', u)}
+ meta={
+ usersViewMode === 'list' ? (
+ <span className="truncate">
+ {u.email}
+ {' · '}
+ {u.tenantName || '—'}
                                       {u.tenantPlan ? ` · ${u.tenantPlan}` : ''}
                                       {kindLabel ? ` · ${kindLabel}` : ''}
                                       {u.phone ? ` · ${u.phone}` : ''}
-                                    </span>
-                                  ) : (
-                                    <div className="space-y-1.5">
-                                      <p className="truncate text-xs">{u.email}</p>
-                                      <div className="flex flex-wrap items-center gap-1.5">
-                                        {roleChip}
+ </span>
+ ) : (
+ <div className="space-y-1.5">
+ <p className="truncate text-xs">{u.email}</p>
+ <div className="flex flex-wrap items-center gap-1.5">
+ {roleChip}
                                         {u.role === 'USER' && orgLabel && !u.isOwner ? (
                                           <StatusPill tone="slate">{platformRoleLabel(u.role)}</StatusPill>
                                         ) : null}
-                                        {verifiedChip}
+ {verifiedChip}
                                         {u.tenantLicenseActive === false ? (
                                           <StatusPill tone="rose">Licence inactive</StatusPill>
                                         ) : null}
-                                      </div>
-                                      <p className="truncate text-xs text-muted">{u.tenantName || 'Sans organisation'}</p>
+ </div>
+ <p className="truncate text-xs text-muted">{u.tenantName || 'Sans organisation'}</p>
                                       {u.role === 'COMMERCIAL' && (
                                         <div className="flex flex-wrap gap-1 pt-0.5">
                                           {u.commercialPermissions?.canManageTemplates && (
@@ -2972,12 +2972,12 @@ function DashboardPageContent() {
                                           `Inscrit ${formatAdminDate(u.createdAt)}`,
                                         ].filter(Boolean).join(' · ')}
                                       </p>
-                                    </div>
-                                  )
-                                }
-                                status={usersViewMode === 'list' ? roleChip : undefined}
-                                aside={usersViewMode === 'list' ? verifiedChip : undefined}
-                                footer={
+ </div>
+ )
+ }
+ status={usersViewMode === 'list' ? roleChip : undefined}
+ aside={usersViewMode === 'list' ? verifiedChip : undefined}
+ footer={
                                   <span className="text-xs text-muted truncate">
                                     {usersViewMode === 'grid'
                                       ? [
@@ -2993,382 +2993,382 @@ function DashboardPageContent() {
                                         (u.referredTenantsCount ?? 0) > 0 ? `${u.referredTenantsCount} parrainage${(u.referredTenantsCount ?? 0) > 1 ? 's' : ''}` : null,
                                       ].filter(Boolean).join(' · ')}
                                   </span>
-                                }
-                                actions={actions}
-                              />
-                            );
-                          })}
-                        </div>
+ }
+ actions={actions}
+ />
+ );
+ })}
+ </div>
 
-                        <Pagination
-                          page={usersPage}
-                          pageSize={usersPageSize}
-                          total={usersTotal}
-                          onPageChange={setUsersPage}
-                          onPageSizeChange={setUsersPageSize}
-                          itemLabel="utilisateurs"
-                        />
-                      </>
-                    )}
-                  </div>
-                )}
+ <Pagination
+ page={usersPage}
+ pageSize={usersPageSize}
+ total={usersTotal}
+ onPageChange={setUsersPage}
+ onPageSizeChange={setUsersPageSize}
+ itemLabel="utilisateurs"
+ />
+ </>
+ )}
+ </div>
+ )}
 
-                {/* Templates Tab */}
+ {/* Templates Tab */}
                 {activeTab === 'templates' && canManageTemplates && (
-                  <div className="space-y-6">
-                    {templateSavedFlash && (
-                      <Alert variant="success">
-                        Modèle enregistré. Vous êtes de retour sur le catalogue Super Admin (filtres & vitrine landing).
-                      </Alert>
-                    )}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
+ <div className="space-y-6">
+ {templateSavedFlash && (
+ <Alert variant="success">
+ Modèle enregistré. Vous êtes de retour sur le catalogue Super Admin (filtres & vitrine landing).
+ </Alert>
+ )}
+ <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+ <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
                         <p className="text-xs font-bold text-primary uppercase tracking-wider">Modèles globaux</p>
-                        <p className="text-2xl font-extrabold text-primary mt-1">{templateCounts.global}</p>
-                      </div>
+ <p className="text-2xl font-extrabold text-primary mt-1">{templateCounts.global}</p>
+ </div>
                       <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
                         <p className="text-xs font-bold text-primary uppercase tracking-wider">Sur la landing</p>
                         <p className="text-2xl font-extrabold text-primary mt-1">{templateCounts.landing}</p>
-                      </div>
-                      <div className="bg-surface-muted dark:bg-background/50 border border-border dark:border-border rounded-xl p-4">
+ </div>
+ <div className="bg-surface-muted dark:bg-background/50 border border-border dark:border-border rounded-xl p-4">
                         <p className="text-xs font-bold text-muted dark:text-muted uppercase tracking-wider">Organisations</p>
-                        <p className="text-2xl font-extrabold text-foreground dark:text-foreground mt-1">{templateCounts.tenant}</p>
-                      </div>
-                      <div className="bg-surface-muted dark:bg-background/50 border border-border dark:border-border rounded-xl p-4">
+ <p className="text-2xl font-extrabold text-foreground dark:text-foreground mt-1">{templateCounts.tenant}</p>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/50 border border-border dark:border-border rounded-xl p-4">
                         <p className="text-xs font-bold text-muted dark:text-muted uppercase tracking-wider">Affichés (filtre)</p>
-                        <p className="text-2xl font-extrabold text-foreground dark:text-foreground mt-1">{templatesTotal}</p>
-                      </div>
-                    </div>
+ <p className="text-2xl font-extrabold text-foreground dark:text-foreground mt-1">{templatesTotal}</p>
+ </div>
+ </div>
 
-                    <div>
-                      {templatesLoading ? (
-                        <SkeletonTabContent mode="grid" count={6} columns={3} />
-                      ) : (
-                        <>
-                          <TemplateCardGrid
-                            templates={paginatedTemplates.map((t) => ({
-                              id: t.id,
-                              name: t.name,
-                              content: t.content,
-                              createdAt: t.createdAt,
-                              tenantId: t.isGlobal ? null : t.tenantName,
-                              tenantName: t.tenantName,
-                              showOnLanding: t.showOnLanding,
-                              isGlobal: t.isGlobal,
-                            }))}
-                            isSuperAdmin
-                            emptyMessage="Aucun modèle trouvé pour ce filtre."
-                            emptyAction={
-                              <Link
-                                href="/dashboard/templates?new=1&from=admin"
-                                className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition"
-                              >
-                                <Plus className="w-4 h-4" />
-                                Créer un modèle dans le concepteur visuel
-                              </Link>
-                            }
-                            editHref={(t) => `/dashboard/templates?edit=${t.id}&from=admin`}
-                            onViewDetails={(t) => handleOpenDetailsModal('template', paginatedTemplates.find((x) => x.id === t.id))}
-                            onDuplicate={(t) => handleDuplicateAdminTemplate(paginatedTemplates.find((x) => x.id === t.id))}
+ <div>
+ {templatesLoading ? (
+ <SkeletonTabContent mode="grid" count={6} columns={3} />
+ ) : (
+ <>
+ <TemplateCardGrid
+ templates={paginatedTemplates.map((t) => ({
+ id: t.id,
+ name: t.name,
+ content: t.content,
+ createdAt: t.createdAt,
+ tenantId: t.isGlobal ? null : t.tenantName,
+ tenantName: t.tenantName,
+ showOnLanding: t.showOnLanding,
+ isGlobal: t.isGlobal,
+ }))}
+ isSuperAdmin
+ emptyMessage="Aucun modèle trouvé pour ce filtre."
+ emptyAction={
+        <Link 
+ href="/dashboard/templates?new=1&from=admin"
+ className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-sm transition"
+        >
+ <Plus className="w-4 h-4" />
+ Créer un modèle dans le concepteur visuel
+        </Link>
+ }
+ editHref={(t) => `/dashboard/templates?edit=${t.id}&from=admin`}
+ onViewDetails={(t) => handleOpenDetailsModal('template', paginatedTemplates.find((x) => x.id === t.id))}
+ onDuplicate={(t) => handleDuplicateAdminTemplate(paginatedTemplates.find((x) => x.id === t.id))}
                             onDelete={(id, name) => setPendingConfirm({ kind: 'delete-template', id, label: name })}
-                            onToggleLanding={handleToggleTemplateLanding}
-                          />
+ onToggleLanding={handleToggleTemplateLanding}
+ />
 
-                          <Pagination
-                            page={templatesPage}
-                            pageSize={templatesPageSize}
-                            total={templatesTotal}
-                            onPageChange={setTemplatesPage}
-                            onPageSizeChange={setTemplatesPageSize}
-                            itemLabel="modèles"
-                          />
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
+ <Pagination
+ page={templatesPage}
+ pageSize={templatesPageSize}
+ total={templatesTotal}
+ onPageChange={setTemplatesPage}
+ onPageSizeChange={setTemplatesPageSize}
+ itemLabel="modèles"
+ />
+ </>
+ )}
+      </div>
+ </div>
+ )}
 
-                {activeTab === 'message-templates' && (
-                  <GuestMessageTemplatesPanel />
-                )}
+ {activeTab === 'message-templates' && (
+ <GuestMessageTemplatesPanel />
+ )}
 
-                {/* Events Tab */}
-                {activeTab === 'events' && (
-                  <div className="space-y-4">
-                    {adminEventsLoading ? (
-                      <SkeletonTabContent mode={adminEventsViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
-                    ) : filteredEvents.length === 0 ? (
-                      <EmptyState
-                        icon={<Calendar className="w-5 h-5" />}
-                        title="Votre calendrier est libre"
+ {/* Events Tab */}
+ {activeTab === 'events' && (
+ <div className="space-y-4">
+ {adminEventsLoading ? (
+ <SkeletonTabContent mode={adminEventsViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
+ ) : filteredEvents.length === 0 ? (
+              <EmptyState 
+                icon={<Calendar className="w-5 h-5" />} 
+                title="Votre calendrier est libre" 
                         description="Aucun événement."
-                      />
-                    ) : (
-                      <>
-                        <div
-                          className={
-                            adminEventsViewMode === 'grid' ? adminEventsGridClass : listStackClass
-                          }
-                        >
-                          {paginatedEvents.map((e) => {
-                            const dateLabel = new Date(e.date).toLocaleDateString('fr-FR', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            });
-                            const guestsChip = (
-                              <StatusPill tone="primary">{e.guestCount} invités</StatusPill>
-                            );
-                            const invitesChip = (
-                              <StatusPill tone="emerald">{e.invitationCount} invitations</StatusPill>
-                            );
-                            const visibilityChip = (
-                              <StatusPill tone={e.isPublic ? 'primary' : 'slate'}>{e.isPublic ? 'Public' : 'Privé'}</StatusPill>
-                            );
-                            const ticketsChip = e.ticketingEnabled ? (
-                              <StatusPill tone="amber">{e.ticketsSold || 0} billets</StatusPill>
-                            ) : null;
-                            const actions = (
-                              <>
-                                {adminEventsViewMode === 'list' ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenDetailsModal('event', e)}
+              />
+ ) : (
+ <>
+ <div
+ className={
+ adminEventsViewMode === 'grid' ? adminEventsGridClass : listStackClass
+ }
+ >
+ {paginatedEvents.map((e) => {
+ const dateLabel = new Date(e.date).toLocaleDateString('fr-FR', {
+ day: 'numeric',
+ month: 'short',
+ year: 'numeric',
+ hour: '2-digit',
+ minute: '2-digit',
+ });
+ const guestsChip = (
+ <StatusPill tone="primary">{e.guestCount} invités</StatusPill>
+ );
+ const invitesChip = (
+ <StatusPill tone="emerald">{e.invitationCount} invitations</StatusPill>
+ );
+ const visibilityChip = (
+ <StatusPill tone={e.isPublic ? 'primary' : 'slate'}>{e.isPublic ? 'Public' : 'Privé'}</StatusPill>
+ );
+ const ticketsChip = e.ticketingEnabled ? (
+ <StatusPill tone="amber">{e.ticketsSold || 0} billets</StatusPill>
+ ) : null;
+ const actions = (
+ <>
+ {adminEventsViewMode === 'list' ? (
+ <button
+ type="button"
+ onClick={() => handleOpenDetailsModal('event', e)}
                                     className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground rounded-lg transition"
-                                    title="Voir détails"
+ title="Voir détails"
                                     aria-label={`Voir les détails de l'événement ${e.title}`}
-                                  >
-                                    <ListRowAction />
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenDetailsModal('event', e)}
+ >
+ <ListRowAction />
+ </button>
+ ) : (
+ <button
+ type="button"
+ onClick={() => handleOpenDetailsModal('event', e)}
                                     className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
-                                    title="Détails"
+ title="Détails"
                                     aria-label={`Détails de l'événement ${e.title}`}
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenEditEventModal(e)}
+ >
+ <Eye className="w-4 h-4" />
+ </button>
+ )}
+ <button
+ type="button"
+ onClick={() => handleOpenEditEventModal(e)}
                                   className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition"
-                                  title="Modifier"
+ title="Modifier"
                                   aria-label={`Modifier l'événement ${e.title}`}
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                  type="button"
+ >
+ <Edit2 className="w-4 h-4" />
+ </button>
+ <button
+ type="button"
                                   onClick={() => setPendingConfirm({ kind: 'delete-event', id: e.id, label: e.title })}
                                   className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition"
-                                  title="Supprimer"
+ title="Supprimer"
                                   aria-label={`Supprimer l'événement ${e.title}`}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </>
-                            );
+ >
+ <Trash2 className="w-4 h-4" />
+ </button>
+ </>
+ );
 
-                            return (
-                              <ProjectCard
-                                key={e.id}
-                                id={e.id}
-                                title={e.title}
-                                layout={adminEventsViewMode}
-                                icon={<Calendar className="w-4 h-4" />}
-                                badge={visibilityChip}
-                                overlayMeta={dateLabel}
-                                ctaLabel="Voir l’événement"
-                                onClick={() => handleOpenDetailsModal('event', e)}
-                                meta={
-                                  adminEventsViewMode === 'list' ? (
-                                    <span className="truncate">
-                                      {e.tenantName}
-                                      {' · '}
-                                      {e.location || 'Sans lieu'}
-                                      {' · '}
-                                      {dateLabel}
-                                    </span>
-                                  ) : (
-                                    <div className="space-y-1.5">
-                                      <p className="truncate text-xs font-medium">{e.tenantName}</p>
-                                      <p className="truncate text-xs text-muted">{e.location || 'Sans lieu'}</p>
+ return (
+ <ProjectCard
+ key={e.id}
+ id={e.id}
+ title={e.title}
+ layout={adminEventsViewMode}
+ icon={<Calendar className="w-4 h-4" />}
+ badge={visibilityChip}
+ overlayMeta={dateLabel}
+ ctaLabel="Voir l’événement"
+ onClick={() => handleOpenDetailsModal('event', e)}
+ meta={
+ adminEventsViewMode === 'list' ? (
+ <span className="truncate">
+ {e.tenantName}
+ {' · '}
+ {e.location || 'Sans lieu'}
+ {' · '}
+ {dateLabel}
+ </span>
+ ) : (
+ <div className="space-y-1.5">
+ <p className="truncate text-xs font-medium">{e.tenantName}</p>
+ <p className="truncate text-xs text-muted">{e.location || 'Sans lieu'}</p>
                                       <p className="text-xs text-muted">{dateLabel}</p>
-                                      <div className="flex flex-wrap items-center gap-1.5">
-                                        {visibilityChip}
-                                        {ticketsChip}
-                                        {guestsChip}
-                                        {invitesChip}
-                                      </div>
-                                    </div>
-                                  )
-                                }
-                                value={
-                                  adminEventsViewMode === 'list'
-                                    ? `${e.guestCount} inv.`
-                                    : undefined
-                                }
-                                valueMeta={
-                                  adminEventsViewMode === 'list'
-                                    ? `${e.invitationCount} invitations`
-                                    : undefined
-                                }
-                                status={adminEventsViewMode === 'list' ? guestsChip : undefined}
-                                actions={actions}
-                              />
-                            );
-                          })}
-                        </div>
+ <div className="flex flex-wrap items-center gap-1.5">
+ {visibilityChip}
+ {ticketsChip}
+ {guestsChip}
+ {invitesChip}
+ </div>
+ </div>
+ )
+ }
+ value={
+ adminEventsViewMode === 'list'
+ ? `${e.guestCount} inv.`
+ : undefined
+ }
+ valueMeta={
+ adminEventsViewMode === 'list'
+ ? `${e.invitationCount} invitations`
+ : undefined
+ }
+ status={adminEventsViewMode === 'list' ? guestsChip : undefined}
+ actions={actions}
+ />
+ );
+ })}
+ </div>
 
-                        <Pagination
-                          page={eventsPage}
-                          pageSize={eventsPageSize}
-                          total={filteredEvents.length}
-                          onPageChange={setEventsPage}
-                          onPageSizeChange={setEventsPageSize}
-                          itemLabel="événements"
-                        />
-                      </>
-                    )}
-                  </div>
-                )}
+ <Pagination
+ page={eventsPage}
+ pageSize={eventsPageSize}
+ total={filteredEvents.length}
+ onPageChange={setEventsPage}
+ onPageSizeChange={setEventsPageSize}
+ itemLabel="événements"
+ />
+ </>
+ )}
+        </div>
+      )}
 
-                {/* Guests Tab */}
-                {activeTab === 'guests' && (
-                  <div className="space-y-4">
-                    {adminGuestsLoading ? (
-                      <SkeletonTabContent mode={guestsViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
-                    ) : filteredGuests.length === 0 ? (
-                      <EmptyState
-                        icon={<Users className="w-5 h-5" />}
-                        title="Liste d'invités vide"
+ {/* Guests Tab */}
+ {activeTab === 'guests' && (
+ <div className="space-y-4">
+ {adminGuestsLoading ? (
+ <SkeletonTabContent mode={guestsViewMode === 'list' ? 'list' : 'grid'} count={6} columns={3} />
+ ) : filteredGuests.length === 0 ? (
+              <EmptyState 
+                icon={<Users className="w-5 h-5" />} 
+                title="Liste d'invités vide" 
                         description="Ajoutez vos invités."
-                      />
-                    ) : (
-                      <>
-                        <div className={guestsViewMode === 'grid' ? guestsGridClass : listStackClass}>
-                          {paginatedGuests.map((g) => {
-                            const rsvpTone =
-                              g.rsvp === 'ACCEPTED' ? 'emerald' : g.rsvp === 'DECLINED' ? 'rose' : 'amber';
-                            const rsvpLabel =
-                              g.rsvp === 'ACCEPTED' ? 'Accepté' : g.rsvp === 'DECLINED' ? 'Décliné' : 'En attente';
-                            const rsvpChip = <StatusPill tone={rsvpTone}>{rsvpLabel}</StatusPill>;
-                            const categoryChip = <StatusPill tone="slate">{g.category || 'Général'}</StatusPill>;
-                            const pdfChip = g.rsvp === 'ACCEPTED' ? (
-                              <StatusPill tone={g.seatingInvitationPdfUrl ? 'emerald' : 'rose'}>
-                                {g.seatingInvitationPdfUrl ? 'PDF livré' : 'PDF manquant'}
-                              </StatusPill>
-                            ) : null;
-                            const checkinChip = g.checkedInAt ? <StatusPill tone="primary">Présent</StatusPill> : null;
-                            const actions = (
-                              <>
-                                {guestsViewMode === 'list' ? (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenDetailsModal('guest', g)}
+              />
+ ) : (
+ <>
+ <div className={guestsViewMode === 'grid' ? guestsGridClass : listStackClass}>
+ {paginatedGuests.map((g) => {
+ const rsvpTone =
+ g.rsvp === 'ACCEPTED' ? 'emerald' : g.rsvp === 'DECLINED' ? 'rose' : 'amber';
+ const rsvpLabel =
+ g.rsvp === 'ACCEPTED' ? 'Accepté' : g.rsvp === 'DECLINED' ? 'Décliné' : 'En attente';
+ const rsvpChip = <StatusPill tone={rsvpTone}>{rsvpLabel}</StatusPill>;
+ const categoryChip = <StatusPill tone="slate">{g.category || 'Général'}</StatusPill>;
+ const pdfChip = g.rsvp === 'ACCEPTED' ? (
+ <StatusPill tone={g.seatingInvitationPdfUrl ? 'emerald' : 'rose'}>
+ {g.seatingInvitationPdfUrl ? 'PDF livré' : 'PDF manquant'}
+ </StatusPill>
+ ) : null;
+ const checkinChip = g.checkedInAt ? <StatusPill tone="primary">Présent</StatusPill> : null;
+ const actions = (
+ <>
+ {guestsViewMode === 'list' ? (
+ <button
+ type="button"
+ onClick={() => handleOpenDetailsModal('guest', g)}
                                     className="min-h-11 min-w-11 inline-flex items-center justify-center text-muted hover:text-foreground rounded-lg transition"
-                                    title="Voir détails"
+ title="Voir détails"
                                     aria-label={`Voir les détails de l'invité ${g.firstName} ${g.lastName}`}
-                                  >
-                                    <ListRowAction />
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleOpenDetailsModal('guest', g)}
+ >
+ <ListRowAction />
+ </button>
+ ) : (
+ <button
+ type="button"
+ onClick={() => handleOpenDetailsModal('guest', g)}
                                     className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-foreground hover:bg-surface-muted rounded-lg transition"
-                                    title="Détails"
+ title="Détails"
                                     aria-label={`Détails de l'invité ${g.firstName} ${g.lastName}`}
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenEditGuestModal(g)}
+ >
+ <Eye className="w-4 h-4" />
+ </button>
+ )}
+ <button
+ type="button"
+ onClick={() => handleOpenEditGuestModal(g)}
                                   className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition"
-                                  title="Modifier"
+ title="Modifier"
                                   aria-label={`Modifier l'invité ${g.firstName} ${g.lastName}`}
-                                >
-                                  <Edit2 className="w-4 h-4" />
-                                </button>
-                                <button
-                                  type="button"
+ >
+ <Edit2 className="w-4 h-4" />
+ </button>
+ <button
+ type="button"
                                   onClick={() => setPendingConfirm({ kind: 'delete-guest', id: g.id, label: `${g.firstName} ${g.lastName}` })}
                                   className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition"
-                                  title="Supprimer"
+ title="Supprimer"
                                   aria-label={`Supprimer l'invité ${g.firstName} ${g.lastName}`}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </>
-                            );
+ >
+ <Trash2 className="w-4 h-4" />
+ </button>
+ </>
+ );
 
-                            return (
-                              <ProjectCard
-                                key={g.id}
-                                id={g.id}
-                                title={`${g.lastName} ${g.firstName}`}
-                                layout={guestsViewMode}
-                                icon={<Users className="w-4 h-4" />}
-                                badge={rsvpChip}
-                                overlayMeta={g.eventTitle}
-                                ctaLabel="Fiche invité"
-                                onClick={() => handleOpenDetailsModal('guest', g)}
-                                meta={
-                                  guestsViewMode === 'list' ? (
-                                    <span className="truncate">
-                                      {g.email}
-                                      {' · '}
-                                      {g.eventTitle}
-                                      {' · '}
-                                      {g.tenantName}
-                                    </span>
-                                  ) : (
-                                    <div className="space-y-1.5">
-                                      <p className="truncate text-xs">{g.email}</p>
-                                      <div className="flex flex-wrap gap-1.5">
-                                        {rsvpChip}
-                                        {categoryChip}
-                                        {pdfChip}
-                                        {checkinChip}
-                                      </div>
-                                      <p className="truncate text-xs font-medium">{g.eventTitle}</p>
+ return (
+ <ProjectCard
+ key={g.id}
+ id={g.id}
+ title={`${g.lastName} ${g.firstName}`}
+ layout={guestsViewMode}
+ icon={<Users className="w-4 h-4" />}
+ badge={rsvpChip}
+ overlayMeta={g.eventTitle}
+ ctaLabel="Fiche invité"
+ onClick={() => handleOpenDetailsModal('guest', g)}
+ meta={
+ guestsViewMode === 'list' ? (
+ <span className="truncate">
+ {g.email}
+ {' · '}
+ {g.eventTitle}
+ {' · '}
+ {g.tenantName}
+ </span>
+ ) : (
+ <div className="space-y-1.5">
+ <p className="truncate text-xs">{g.email}</p>
+ <div className="flex flex-wrap gap-1.5">
+ {rsvpChip}
+ {categoryChip}
+ {pdfChip}
+ {checkinChip}
+ </div>
+ <p className="truncate text-xs font-medium">{g.eventTitle}</p>
                                       <p className="truncate text-xs text-muted">{g.tenantName}</p>
-                                    </div>
-                                  )
-                                }
-                                status={guestsViewMode === 'list' ? rsvpChip : undefined}
-                                aside={guestsViewMode === 'list' ? (pdfChip || categoryChip) : undefined}
-                                actions={actions}
-                              />
-                            );
-                          })}
-                        </div>
+            </div>
+ )
+ }
+ status={guestsViewMode === 'list' ? rsvpChip : undefined}
+ aside={guestsViewMode === 'list' ? (pdfChip || categoryChip) : undefined}
+ actions={actions}
+ />
+ );
+ })}
+ </div>
 
-                        <Pagination
-                          page={guestsPage}
-                          pageSize={guestsPageSize}
-                          total={filteredGuests.length}
-                          onPageChange={setGuestsPage}
-                          onPageSizeChange={setGuestsPageSize}
-                          itemLabel="invités"
-                        />
-                      </>
-                    )}
-                  </div>
-                )}
+ <Pagination
+ page={guestsPage}
+ pageSize={guestsPageSize}
+ total={filteredGuests.length}
+ onPageChange={setGuestsPage}
+ onPageSizeChange={setGuestsPageSize}
+ itemLabel="invités"
+ />
+ </>
+ )}
+ </div>
+ )}
 
-                {/* Settings Tab */}
-                {activeTab === 'settings' && (
-                  <div className="w-full">
-                    {adminSettingsLoading ? (
-                      <SkeletonTabContent mode="grid" count={6} columns={3} />
+ {/* Settings Tab */}
+ {activeTab === 'settings' && (
+ <div className="w-full">
+ {adminSettingsLoading ? (
+ <SkeletonTabContent mode="grid" count={6} columns={3} />
                     ) : adminSettings ? (
                       <AdminPlatformSettings
                         value={adminSettings}
@@ -3377,7 +3377,7 @@ function DashboardPageContent() {
                         saving={savingSettings}
                       />
                     ) : null}
-                  </div>
+ </div>
                 )}
 
                 {/* Demandes d'abonnement */}
@@ -3390,277 +3390,277 @@ function DashboardPageContent() {
                       >
                         <div className="flex items-center justify-between w-full">
                           <span className="font-medium text-xs sm:text-sm">{adminFeedback.message}</span>
-                          <button
+ <button
                             type="button"
                             onClick={() => setAdminFeedback(null)}
                             className="text-xs font-semibold underline ml-3 shrink-0 cursor-pointer"
                           >
                             Fermer
-                          </button>
-                        </div>
+ </button>
+ </div>
                       </Alert>
                     )}
-                    <div className="bg-white dark:bg-background rounded-2xl border border-border dark:border-border shadow-sm p-6">
-                      <SubscriptionRequestListPanel
-                        requests={subscriptionRequests as AdminSubscriptionRequestItem[]}
-                        loading={subRequestsLoading}
+ <div className="bg-white dark:bg-background rounded-2xl border border-border dark:border-border shadow-sm p-6">
+ <SubscriptionRequestListPanel
+ requests={subscriptionRequests as AdminSubscriptionRequestItem[]}
+ loading={subRequestsLoading}
                         busyId={busySubRequestId}
-                        onApprove={(req) =>
-                          setApprovalModalRequest({
-                            id: req.id,
-                            requestedPlan: req.requestedPlan,
-                            durationDays: req.durationDays,
+ onApprove={(req) =>
+ setApprovalModalRequest({
+ id: req.id,
+ requestedPlan: req.requestedPlan,
+ durationDays: req.durationDays,
                             requestKind: req.requestKind,
                             discountRequestNote: req.discountRequestNote,
                             requestedDiscountPercent: req.requestedDiscountPercent,
                             requestedAmount: req.requestedAmount,
                             status: req.status,
-                            tenant: req.tenant,
-                          })
-                        }
+ tenant: req.tenant,
+ })
+ }
                         onReject={(id) => setPendingConfirm({ kind: 'reject-sub', id })}
-                      />
-                    </div>
-                  </div>
-                )}
+ />
+ </div>
+ </div>
+ )}
 
-                {/* Forfaits & abonnements */}
-                {activeTab === 'subscription-plans' && isSuperAdmin && (
-                  <div className="space-y-6 animate-in fade-in duration-200">
-                    {adminSettingsLoading ? (
-                      <SkeletonTabContent mode="grid" count={4} columns={2} />
-                    ) : adminSettings && adminSettings.plans ? (
-                      <div className="bg-white dark:bg-background rounded-2xl border border-border dark:border-border shadow-sm p-6 space-y-6">
-                        <div className="flex flex-wrap justify-between items-center gap-3 border-b border-border-subtle dark:border-border pb-4">
-                          <h4 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2">
-                            <CreditCard className="w-5 h-5 text-primary" />
-                            Configuration des forfaits ({PLAN_IDS.length})
-                          </h4>
-                          <ViewModeToggle
-                            storageKey="em-view-admin-plans"
-                            value={plansViewMode}
-                            onChange={setPlansViewMode}
-                            columns={plansColumns}
-                            onColumnsChange={setPlansColumns}
-                            defaultMode="grid"
-                            defaultColumns={4}
-                          />
-                        </div>
+ {/* Forfaits & abonnements */}
+ {activeTab === 'subscription-plans' && isSuperAdmin && (
+ <div className="space-y-6 animate-in fade-in duration-200">
+ {adminSettingsLoading ? (
+ <SkeletonTabContent mode="grid" count={4} columns={2} />
+ ) : adminSettings && adminSettings.plans ? (
+ <div className="bg-white dark:bg-background rounded-2xl border border-border dark:border-border shadow-sm p-6 space-y-6">
+ <div className="flex flex-wrap justify-between items-center gap-3 border-b border-border-subtle dark:border-border pb-4">
+ <h4 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2">
+ <CreditCard className="w-5 h-5 text-primary" />
+ Configuration des forfaits ({PLAN_IDS.length})
+ </h4>
+ <ViewModeToggle
+ storageKey="em-view-admin-plans"
+ value={plansViewMode}
+ onChange={setPlansViewMode}
+ columns={plansColumns}
+ onColumnsChange={setPlansColumns}
+ defaultMode="grid"
+ defaultColumns={4}
+ />
+ </div>
 
-                        <div className={plansViewMode === 'grid' ? plansGridClass : listStackClass}>
-                          {paginatedPlanIds.map((planKey) => {
-                            const plan = adminSettings.plans[planKey];
-                            if (!plan) return null;
+ <div className={plansViewMode === 'grid' ? plansGridClass : listStackClass}>
+ {paginatedPlanIds.map((planKey) => {
+ const plan = adminSettings.plans[planKey];
+ if (!plan) return null;
 
-                            return (
-                              <div
-                                key={planKey}
-                                className={
-                                  plansViewMode === 'list'
-                                    ? 'bg-surface-muted border border-border rounded-2xl p-5 space-y-4 md:grid md:grid-cols-2 xl:grid-cols-3 md:gap-4 md:space-y-0'
-                                    : 'bg-surface-muted border border-border rounded-2xl p-5 space-y-4'
-                                }
-                              >
-                                <div className={`flex items-center justify-between ${plansViewMode === 'list' ? 'md:col-span-full' : ''}`}>
-                                  <span className="text-xs font-extrabold text-primary uppercase tracking-wider">{planKey}</span>
-                                  <div className="flex items-center gap-1.5">
+ return (
+ <div
+ key={planKey}
+ className={
+ plansViewMode === 'list'
+ ? 'bg-surface-muted border border-border rounded-2xl p-5 space-y-4 md:grid md:grid-cols-2 xl:grid-cols-3 md:gap-4 md:space-y-0'
+ : 'bg-surface-muted border border-border rounded-2xl p-5 space-y-4'
+ }
+ >
+ <div className={`flex items-center justify-between ${plansViewMode === 'list' ? 'md:col-span-full' : ''}`}>
+ <span className="text-xs font-extrabold text-primary uppercase tracking-wider">{planKey}</span>
+ <div className="flex items-center gap-1.5">
                                     <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-border bg-surface">
-                                      {planAudienceLabel(plan.audience || planKey)}
-                                    </span>
-                                    <span className="text-xs bg-primary/10 text-primary font-bold px-2.5 py-0.5 rounded-full">
-                                      {planKey === 'FREE' ? 'Gratuit' : isB2cPlanId(planKey) ? 'Trimestriel · annuel −10 %' : 'Mensuel · annuel −10 %'}
-                                    </span>
-                                  </div>
-                                </div>
+ {planAudienceLabel(plan.audience || planKey)}
+ </span>
+ <span className="text-xs bg-primary/10 text-primary font-bold px-2.5 py-0.5 rounded-full">
+ {planKey === 'FREE' ? 'Gratuit' : isB2cPlanId(planKey) ? 'Trimestriel · annuel −10 %' : 'Mensuel · annuel −10 %'}
+ </span>
+ </div>
+ </div>
 
-                                <div className={plansViewMode === 'list' ? 'contents' : 'space-y-3'}>
-                                  <div className="space-y-1">
+ <div className={plansViewMode === 'list' ? 'contents' : 'space-y-3'}>
+ <div className="space-y-1">
                                     <label className="text-xs font-bold text-muted uppercase tracking-wider">Nom du Plan</label>
-                                    <input
-                                      type="text"
-                                      value={plan.name}
-                                      onChange={(e) => {
-                                        const updatedPlans = { ...adminSettings.plans };
-                                        updatedPlans[planKey] = { ...plan, name: e.target.value };
-                                        setAdminSettings({ ...adminSettings, plans: updatedPlans });
-                                      }}
-                                      className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
-                                      required
-                                    />
-                                  </div>
+ <input
+ type="text"
+ value={plan.name}
+ onChange={(e) => {
+ const updatedPlans = { ...adminSettings.plans };
+ updatedPlans[planKey] = { ...plan, name: e.target.value };
+ setAdminSettings({ ...adminSettings, plans: updatedPlans });
+ }}
+ className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
+ required
+ />
+ </div>
 
-                                  <div className="space-y-1">
+ <div className="space-y-1">
                                     <label className="text-xs font-bold text-muted uppercase tracking-wider">Description</label>
-                                    <textarea
-                                      value={plan.description || ''}
-                                      onChange={(e) => {
-                                        const updatedPlans = { ...adminSettings.plans };
-                                        updatedPlans[planKey] = { ...plan, description: e.target.value };
-                                        setAdminSettings({ ...adminSettings, plans: updatedPlans });
-                                      }}
-                                      rows={2}
-                                      className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-medium focus:outline-none focus:border-primary transition resize-none"
-                                    />
-                                  </div>
+ <textarea
+ value={plan.description || ''}
+ onChange={(e) => {
+ const updatedPlans = { ...adminSettings.plans };
+ updatedPlans[planKey] = { ...plan, description: e.target.value };
+ setAdminSettings({ ...adminSettings, plans: updatedPlans });
+ }}
+ rows={2}
+ className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-medium focus:outline-none focus:border-primary transition resize-none"
+ />
+ </div>
 
-                                  <div className="space-y-1">
+ <div className="space-y-1">
                                     <label className="text-xs font-bold text-muted uppercase tracking-wider">
-                                      {isB2cPlanId(planKey) ? 'Prix trimestriel (90 j) — annuel −10 %' : 'Prix mensuel — annuel −10 %'}
-                                    </label>
-                                    <input
-                                      type="text"
-                                      value={plan.price}
-                                      onChange={(e) => {
-                                        const updatedPlans = { ...adminSettings.plans };
-                                        const digits = e.target.value.replace(/[^\d]/g, '');
-                                        updatedPlans[planKey] = {
-                                          ...plan,
-                                          price: e.target.value,
-                                          monthlyPriceFc: digits ? parseInt(digits, 10) : plan.monthlyPriceFc,
-                                        };
-                                        setAdminSettings({ ...adminSettings, plans: updatedPlans });
-                                      }}
-                                      className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
-                                      required
-                                    />
-                                  </div>
+ {isB2cPlanId(planKey) ? 'Prix trimestriel (90 j) — annuel −10 %' : 'Prix mensuel — annuel −10 %'}
+ </label>
+ <input
+ type="text"
+ value={plan.price}
+ onChange={(e) => {
+ const updatedPlans = { ...adminSettings.plans };
+ const digits = e.target.value.replace(/[^\d]/g, '');
+ updatedPlans[planKey] = {
+ ...plan,
+ price: e.target.value,
+ monthlyPriceFc: digits ? parseInt(digits, 10) : plan.monthlyPriceFc,
+ };
+ setAdminSettings({ ...adminSettings, plans: updatedPlans });
+ }}
+ className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
+ required
+ />
+ </div>
 
-                                  {planKey !== 'FREE' && (
+ {planKey !== 'FREE' && (
                                     <div className="space-y-2 p-3 bg-festive-accent-soft border border-festive-accent/25 rounded-xl">
-                                      <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                          type="checkbox"
-                                          checked={Boolean(plan.promoActive)}
-                                          onChange={(e) => {
-                                            const updatedPlans = { ...adminSettings.plans };
-                                            updatedPlans[planKey] = { ...plan, promoActive: e.target.checked };
-                                            setAdminSettings({ ...adminSettings, plans: updatedPlans });
-                                          }}
+ <label className="flex items-center gap-2 cursor-pointer">
+ <input
+ type="checkbox"
+ checked={Boolean(plan.promoActive)}
+ onChange={(e) => {
+ const updatedPlans = { ...adminSettings.plans };
+ updatedPlans[planKey] = { ...plan, promoActive: e.target.checked };
+ setAdminSettings({ ...adminSettings, plans: updatedPlans });
+ }}
                                           className="w-4 h-4 text-festive-accent border-border rounded focus:ring-festive-accent"
-                                        />
+ />
                                         <span className="text-xs font-bold text-festive-accent uppercase tracking-wider">
-                                          Promotion active
-                                        </span>
-                                      </label>
-                                      {plan.promoActive && (
-                                        <>
-                                          <div className="space-y-1">
+ Promotion active
+ </span>
+ </label>
+ {plan.promoActive && (
+ <>
+ <div className="space-y-1">
                                             <label className="text-xs font-bold text-muted uppercase tracking-wider">Prix promo (mensuel)</label>
-                                            <input
-                                              type="text"
-                                              value={plan.promoPrice || ''}
-                                              placeholder="Ex: 25.000 FC"
-                                              onChange={(e) => {
-                                                const updatedPlans = { ...adminSettings.plans };
-                                                const digits = e.target.value.replace(/[^\d]/g, '');
-                                                updatedPlans[planKey] = {
-                                                  ...plan,
-                                                  promoPrice: e.target.value,
-                                                  promoMonthlyPriceFc: digits ? parseInt(digits, 10) : plan.promoMonthlyPriceFc,
-                                                };
-                                                setAdminSettings({ ...adminSettings, plans: updatedPlans });
-                                              }}
+ <input
+ type="text"
+ value={plan.promoPrice || ''}
+ placeholder="Ex: 25.000 FC"
+ onChange={(e) => {
+ const updatedPlans = { ...adminSettings.plans };
+ const digits = e.target.value.replace(/[^\d]/g, '');
+ updatedPlans[planKey] = {
+ ...plan,
+ promoPrice: e.target.value,
+ promoMonthlyPriceFc: digits ? parseInt(digits, 10) : plan.promoMonthlyPriceFc,
+ };
+ setAdminSettings({ ...adminSettings, plans: updatedPlans });
+ }}
                                               className="w-full px-3 py-2 bg-white border border-festive-accent/30 rounded-xl text-xs font-bold focus:outline-none focus:border-festive-accent transition"
-                                            />
-                                          </div>
-                                          <div className="space-y-1">
+ />
+ </div>
+ <div className="space-y-1">
                                             <label className="text-xs font-bold text-muted uppercase tracking-wider">Libellé promo</label>
-                                            <input
-                                              type="text"
-                                              value={plan.promoLabel || ''}
-                                              placeholder="Ex: Offre de lancement"
-                                              onChange={(e) => {
-                                                const updatedPlans = { ...adminSettings.plans };
-                                                updatedPlans[planKey] = { ...plan, promoLabel: e.target.value };
-                                                setAdminSettings({ ...adminSettings, plans: updatedPlans });
-                                              }}
+ <input
+ type="text"
+ value={plan.promoLabel || ''}
+ placeholder="Ex: Offre de lancement"
+ onChange={(e) => {
+ const updatedPlans = { ...adminSettings.plans };
+ updatedPlans[planKey] = { ...plan, promoLabel: e.target.value };
+ setAdminSettings({ ...adminSettings, plans: updatedPlans });
+ }}
                                               className="w-full px-3 py-2 bg-white border border-festive-accent/30 rounded-xl text-xs font-medium focus:outline-none focus:border-festive-accent transition"
-                                            />
-                                          </div>
-                                        </>
-                                      )}
-                                    </div>
-                                  )}
+ />
+ </div>
+ </>
+ )}
+ </div>
+ )}
 
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div className="space-y-1">
+ <div className="grid grid-cols-2 gap-2">
+ <div className="space-y-1">
                                       <label className="text-xs font-bold text-muted uppercase tracking-wider">Max Événements</label>
-                                      <input
-                                        type="number"
-                                        value={plan.maxEvents}
-                                        onChange={(e) => {
-                                          const updatedPlans = { ...adminSettings.plans };
-                                          updatedPlans[planKey] = { ...plan, maxEvents: parseInt(e.target.value) || 0 };
-                                          setAdminSettings({ ...adminSettings, plans: updatedPlans });
-                                        }}
-                                        className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
-                                        required
-                                      />
-                                    </div>
+ <input
+ type="number"
+ value={plan.maxEvents}
+ onChange={(e) => {
+ const updatedPlans = { ...adminSettings.plans };
+ updatedPlans[planKey] = { ...plan, maxEvents: parseInt(e.target.value) || 0 };
+ setAdminSettings({ ...adminSettings, plans: updatedPlans });
+ }}
+ className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
+ required
+ />
+ </div>
 
-                                    <div className="space-y-1">
+ <div className="space-y-1">
                                       <label className="text-xs font-bold text-muted uppercase tracking-wider">Max Invités</label>
-                                      <input
-                                        type="number"
-                                        value={plan.maxGuests}
-                                        onChange={(e) => {
-                                          const updatedPlans = { ...adminSettings.plans };
-                                          updatedPlans[planKey] = { ...plan, maxGuests: parseInt(e.target.value) || 0 };
-                                          setAdminSettings({ ...adminSettings, plans: updatedPlans });
-                                        }}
-                                        className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
-                                        required
-                                      />
-                                    </div>
-                                  </div>
+ <input
+ type="number"
+ value={plan.maxGuests}
+ onChange={(e) => {
+ const updatedPlans = { ...adminSettings.plans };
+ updatedPlans[planKey] = { ...plan, maxGuests: parseInt(e.target.value) || 0 };
+ setAdminSettings({ ...adminSettings, plans: updatedPlans });
+ }}
+ className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
+ required
+ />
+ </div>
+ </div>
 
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div className="space-y-1">
+ <div className="grid grid-cols-2 gap-2">
+ <div className="space-y-1">
                                       <label className="text-xs font-bold text-muted uppercase tracking-wider">Max Modèles</label>
-                                      <input
-                                        type="number"
-                                        value={plan.maxTemplates}
-                                        onChange={(e) => {
-                                          const updatedPlans = { ...adminSettings.plans };
-                                          updatedPlans[planKey] = { ...plan, maxTemplates: parseInt(e.target.value) || 0 };
-                                          setAdminSettings({ ...adminSettings, plans: updatedPlans });
-                                        }}
-                                        className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
-                                        required
-                                      />
-                                    </div>
-                                  </div>
+ <input
+ type="number"
+ value={plan.maxTemplates}
+ onChange={(e) => {
+ const updatedPlans = { ...adminSettings.plans };
+ updatedPlans[planKey] = { ...plan, maxTemplates: parseInt(e.target.value) || 0 };
+ setAdminSettings({ ...adminSettings, plans: updatedPlans });
+ }}
+ className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
+ required
+ />
+ </div>
+ </div>
 
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div className="space-y-1">
+ <div className="grid grid-cols-2 gap-2">
+ <div className="space-y-1">
                                       <label className="text-xs font-bold text-muted uppercase tracking-wider">Max Salles</label>
-                                      <input
-                                        type="number"
-                                        value={plan.maxRooms ?? 0}
-                                        onChange={(e) => {
-                                          const updatedPlans = { ...adminSettings.plans };
-                                          updatedPlans[planKey] = { ...plan, maxRooms: parseInt(e.target.value) || 0 };
-                                          setAdminSettings({ ...adminSettings, plans: updatedPlans });
-                                        }}
-                                        className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
-                                        required
-                                      />
-                                    </div>
-                                    <div className="space-y-1">
+ <input
+ type="number"
+ value={plan.maxRooms ?? 0}
+ onChange={(e) => {
+ const updatedPlans = { ...adminSettings.plans };
+ updatedPlans[planKey] = { ...plan, maxRooms: parseInt(e.target.value) || 0 };
+ setAdminSettings({ ...adminSettings, plans: updatedPlans });
+ }}
+ className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
+ required
+ />
+ </div>
+ <div className="space-y-1">
                                       <label className="text-xs font-bold text-muted uppercase tracking-wider">Max Prestations</label>
-                                      <input
-                                        type="number"
-                                        value={plan.maxServices ?? 0}
-                                        onChange={(e) => {
-                                          const updatedPlans = { ...adminSettings.plans };
-                                          updatedPlans[planKey] = { ...plan, maxServices: parseInt(e.target.value) || 0 };
-                                          setAdminSettings({ ...adminSettings, plans: updatedPlans });
-                                        }}
-                                        className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
-                                        required
-                                      />
-                                    </div>
-                                  </div>
+ <input
+ type="number"
+ value={plan.maxServices ?? 0}
+ onChange={(e) => {
+ const updatedPlans = { ...adminSettings.plans };
+ updatedPlans[planKey] = { ...plan, maxServices: parseInt(e.target.value) || 0 };
+ setAdminSettings({ ...adminSettings, plans: updatedPlans });
+ }}
+ className="w-full px-3 py-2 bg-white border border-border rounded-xl text-xs font-bold focus:outline-none focus:border-primary transition"
+ required
+ />
+ </div>
+ </div>
 
                                   <div className="grid grid-cols-2 gap-2">
                                     <div className="space-y-1">
@@ -3695,39 +3695,39 @@ function DashboardPageContent() {
                                     </div>
                                   </div>
 
-                                  <div className="flex flex-wrap items-center gap-4 pt-5">
-                                    <div className="flex items-center gap-2">
-                                      <input
-                                        type="checkbox"
-                                        id={`custom-templates-${planKey}`}
-                                        checked={plan.customTemplates}
-                                        onChange={(e) => {
-                                          const updatedPlans = { ...adminSettings.plans };
-                                          updatedPlans[planKey] = { ...plan, customTemplates: e.target.checked };
-                                          setAdminSettings({ ...adminSettings, plans: updatedPlans });
-                                        }}
-                                        className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
-                                      />
+ <div className="flex flex-wrap items-center gap-4 pt-5">
+ <div className="flex items-center gap-2">
+ <input
+ type="checkbox"
+ id={`custom-templates-${planKey}`}
+ checked={plan.customTemplates}
+ onChange={(e) => {
+ const updatedPlans = { ...adminSettings.plans };
+ updatedPlans[planKey] = { ...plan, customTemplates: e.target.checked };
+ setAdminSettings({ ...adminSettings, plans: updatedPlans });
+ }}
+ className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
+ />
                                       <label htmlFor={`custom-templates-${planKey}`} className="text-xs font-bold text-muted uppercase tracking-wider cursor-pointer">
-                                        Modèles Perso.
-                                      </label>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <input
-                                        type="checkbox"
-                                        id={`custom-rsvp-${planKey}`}
-                                        checked={plan.customRsvpFields !== false}
-                                        onChange={(e) => {
-                                          const updatedPlans = { ...adminSettings.plans };
-                                          updatedPlans[planKey] = { ...plan, customRsvpFields: e.target.checked };
-                                          setAdminSettings({ ...adminSettings, plans: updatedPlans });
-                                        }}
-                                        className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
-                                      />
+ Modèles Perso.
+ </label>
+ </div>
+ <div className="flex items-center gap-2">
+ <input
+ type="checkbox"
+ id={`custom-rsvp-${planKey}`}
+ checked={plan.customRsvpFields !== false}
+ onChange={(e) => {
+ const updatedPlans = { ...adminSettings.plans };
+ updatedPlans[planKey] = { ...plan, customRsvpFields: e.target.checked };
+ setAdminSettings({ ...adminSettings, plans: updatedPlans });
+ }}
+ className="w-4 h-4 text-primary border-border rounded focus:ring-primary"
+ />
                                       <label htmlFor={`custom-rsvp-${planKey}`} className="text-xs font-bold text-muted uppercase tracking-wider cursor-pointer">
                                         Champs de réponse à l’invitation
-                                      </label>
-                                    </div>
+ </label>
+ </div>
                                     <div className="flex items-center gap-2">
                                       <input
                                         type="checkbox"
@@ -3743,7 +3743,7 @@ function DashboardPageContent() {
                                       <label htmlFor={`protocol-qr-${planKey}`} className="text-xs font-bold text-muted uppercase tracking-wider cursor-pointer">
                                         QR protocole
                                       </label>
-                                    </div>
+ </div>
                                     <div className="flex items-center gap-2">
                                       <input
                                         type="checkbox"
@@ -3793,255 +3793,255 @@ function DashboardPageContent() {
                                       </label>
                                     </div>
                                   </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
+ </div>
+ </div>
+ );
+ })}
+ </div>
 
-                        <Pagination
-                          page={plansPage}
-                          pageSize={plansPageSize}
-                          total={PLAN_IDS.length}
-                          onPageChange={setPlansPage}
-                          onPageSizeChange={setPlansPageSize}
-                          itemLabel="forfaits"
-                        />
+ <Pagination
+ page={plansPage}
+ pageSize={plansPageSize}
+ total={PLAN_IDS.length}
+ onPageChange={setPlansPage}
+ onPageSizeChange={setPlansPageSize}
+ itemLabel="forfaits"
+ />
 
-                        <div className="flex justify-end border-t border-border-subtle pt-4">
-                          <button
-                            onClick={async () => {
-                              setSavingSettings(true);
-                              try {
-                                await api.put('/admin/settings', { plans: adminSettings.plans });
+ <div className="flex justify-end border-t border-border-subtle pt-4">
+ <button
+ onClick={async () => {
+ setSavingSettings(true);
+ try {
+ await api.put('/admin/settings', { plans: adminSettings.plans });
                                 setNotice('Forfaits d’abonnement mis à jour.');
-                                await loadAdminSettings();
+ await loadAdminSettings();
                               } catch (err: unknown) {
                                 setError(err instanceof Error ? err.message : 'Erreur lors de la mise à jour des forfaits.');
-                              } finally {
-                                setSavingSettings(false);
-                              }
-                            }}
-                            disabled={savingSettings}
-                            className="px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md disabled:opacity-50 cursor-pointer"
-                          >
-                            {savingSettings ? (
-                              <>
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                                Enregistrement...
-                              </>
-                            ) : (
-                              <>
-                                <Check className="w-4 h-4" />
-                                Enregistrer les modifications de forfaits
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted text-center py-8">Impossible de charger la configuration des forfaits.</p>
-                    )}
-                  </div>
-                )}
+ } finally {
+ setSavingSettings(false);
+ }
+ }}
+ disabled={savingSettings}
+ className="px-5 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl text-xs transition flex items-center gap-2 shadow-md disabled:opacity-50 cursor-pointer"
+ >
+ {savingSettings ? (
+ <>
+ <Loader2 className="w-4 h-4 animate-spin" />
+ Enregistrement...
+ </>
+ ) : (
+ <>
+ <Check className="w-4 h-4" />
+ Enregistrer les modifications de forfaits
+ </>
+ )}
+ </button>
+ </div>
+ </div>
+ ) : (
+ <p className="text-sm text-muted text-center py-8">Impossible de charger la configuration des forfaits.</p>
+ )}
+ </div>
+ )}
 
-                {/* Invoices Tab */}
-                {activeTab === 'invoices' && (
-                  <div className="space-y-6 animate-in fade-in duration-200">
-                    <div className="bg-white dark:bg-background rounded-2xl border border-border dark:border-border shadow-sm p-6">
-                      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                        <h4 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2">
-                          <FileText className="w-5 h-5 text-primary" />
-                          Toutes les factures ({adminInvoices.length})
-                        </h4>
-                        <ViewModeToggle
-                          storageKey="em-view-admin-invoices"
-                          value={invoicesViewMode}
-                          onChange={setInvoicesViewMode}
-                          columns={invoicesColumns}
-                          onColumnsChange={setInvoicesColumns}
-                          defaultMode="list"
-                          defaultColumns={3}
-                        />
-                      </div>
-                      {loadingAdminInvoices ? (
-                        <SkeletonTabContent mode={invoicesViewMode === 'list' ? 'list' : 'grid'} count={5} columns={3} />
-                      ) : (
-                        <InvoiceListPanel
-                          invoices={adminInvoices}
-                          showOrganization
-                          showCommissions
-                          apiPrefix="admin"
-                          allowMarkPaid={user?.role === 'SUPER_ADMIN'}
-                          onInvoiceUpdated={(inv) => {
-                            setAdminInvoices((prev) => prev.map((row) => (row.id === inv.id ? { ...row, ...inv } : row)));
-                          }}
-                          layout={invoicesViewMode}
-                          gridClassName={invoicesGridClass}
-                          emptyMessage="Aucune facture générée. Les factures apparaissent ici dès qu'une demande d'abonnement est approuvée."
-                        />
-                      )}
-                    </div>
-                  </div>
-                )}
+ {/* Invoices Tab */}
+ {activeTab === 'invoices' && (
+ <div className="space-y-6 animate-in fade-in duration-200">
+ <div className="bg-white dark:bg-background rounded-2xl border border-border dark:border-border shadow-sm p-6">
+ <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+ <h4 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2">
+ <FileText className="w-5 h-5 text-primary" />
+ Toutes les factures ({adminInvoices.length})
+ </h4>
+ <ViewModeToggle
+ storageKey="em-view-admin-invoices"
+ value={invoicesViewMode}
+ onChange={setInvoicesViewMode}
+ columns={invoicesColumns}
+ onColumnsChange={setInvoicesColumns}
+ defaultMode="list"
+ defaultColumns={3}
+ />
+ </div>
+ {loadingAdminInvoices ? (
+ <SkeletonTabContent mode={invoicesViewMode === 'list' ? 'list' : 'grid'} count={5} columns={3} />
+ ) : (
+ <InvoiceListPanel
+ invoices={adminInvoices}
+ showOrganization
+ showCommissions
+ apiPrefix="admin"
+ allowMarkPaid={user?.role === 'SUPER_ADMIN'}
+ onInvoiceUpdated={(inv) => {
+ setAdminInvoices((prev) => prev.map((row) => (row.id === inv.id ? { ...row, ...inv } : row)));
+ }}
+ layout={invoicesViewMode}
+ gridClassName={invoicesGridClass}
+ emptyMessage="Aucune facture générée. Les factures apparaissent ici dès qu'une demande d'abonnement est approuvée."
+ />
+ )}
+ </div>
+ </div>
+ )}
 
-                {/* Analytics Tab */}
-                {activeTab === 'analytics' && (
-                  <div className="space-y-8 animate-in fade-in duration-200">
-                    {activeAnalyticsSection === 'overview' && (
-                      <div className="space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                          <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ {/* Analytics Tab */}
+ {activeTab === 'analytics' && (
+ <div className="space-y-8 animate-in fade-in duration-200">
+ {activeAnalyticsSection === 'overview' && (
+ <div className="space-y-6">
+ <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-primary/10 text-primary rounded-xl">
+ <Building2 className="w-6 h-6" />
+            </div>
+            <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.tenants ?? 0}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Organisations</span>
+              </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-primary/10 dark:bg-primary/15 text-primary dark:text-primary rounded-xl">
+ <Users className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.users ?? 0}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Utilisateurs</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
                             <div className="p-3 bg-primary/10 text-primary rounded-xl">
-                              <Building2 className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.tenants ?? 0}</span>
-                              <span className="text-xs text-muted dark:text-muted font-bold">Organisations</span>
-                            </div>
-                          </div>
-                          <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
-                            <div className="p-3 bg-primary/10 dark:bg-primary/15 text-primary dark:text-primary rounded-xl">
-                              <Users className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.users ?? 0}</span>
-                              <span className="text-xs text-muted dark:text-muted font-bold">Utilisateurs</span>
-                            </div>
-                          </div>
-                          <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
-                            <div className="p-3 bg-primary/10 text-primary rounded-xl">
-                              <Calendar className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.events ?? 0}</span>
-                              <span className="text-xs text-muted dark:text-muted font-bold">Événements</span>
-                            </div>
-                          </div>
-                          <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <Calendar className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.events ?? 0}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Événements</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
                             <div className="p-3 bg-festive-accent-soft text-festive-accent rounded-xl">
-                              <Mail className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.guests ?? 0}</span>
-                              <span className="text-xs text-muted dark:text-muted font-bold">Invités</span>
-                            </div>
-                          </div>
-                        </div>
+ <Mail className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.guests ?? 0}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Invités</span>
+ </div>
+ </div>
+ </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                          <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-primary/10 text-primary rounded-xl">
+ <Users className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">
+ {adminData?.stats.tenants
+ ? ((adminData.stats.users || 0) / adminData.stats.tenants).toFixed(1)
+ : '0'}
+ </span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Membres / Organisation</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
                             <div className="p-3 bg-primary/10 text-primary rounded-xl">
-                              <Users className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">
-                                {adminData?.stats.tenants
-                                  ? ((adminData.stats.users || 0) / adminData.stats.tenants).toFixed(1)
-                                  : '0'}
-                              </span>
-                              <span className="text-xs text-muted dark:text-muted font-bold">Membres / Organisation</span>
-                            </div>
-                          </div>
-                          <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <Calendar className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">
+ {adminData?.stats.tenants
+ ? ((adminData.stats.events || 0) / adminData.stats.tenants).toFixed(1)
+ : '0'}
+ </span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Événements / Organisation</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400 rounded-xl">
+ <Award className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">
+ {adminData?.stats.licensesActive ?? 0}
+ </span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Licences actives</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
                             <div className="p-3 bg-primary/10 text-primary rounded-xl">
-                              <Calendar className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">
-                                {adminData?.stats.tenants
-                                  ? ((adminData.stats.events || 0) / adminData.stats.tenants).toFixed(1)
-                                  : '0'}
-                              </span>
-                              <span className="text-xs text-muted dark:text-muted font-bold">Événements / Organisation</span>
-                            </div>
-                          </div>
-                          <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
-                            <div className="p-3 bg-teal-50 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400 rounded-xl">
-                              <Award className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">
-                                {adminData?.stats.licensesActive ?? 0}
-                              </span>
-                              <span className="text-xs text-muted dark:text-muted font-bold">Licences actives</span>
-                            </div>
-                          </div>
-                          <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
-                            <div className="p-3 bg-primary/10 text-primary rounded-xl">
-                              <CheckCircle className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">
-                                {adminData?.stats.users
-                                  ? `${Math.round(((adminData.stats.verifiedUsers || 0) / adminData.stats.users) * 100)}%`
-                                  : '0%'}
-                              </span>
-                              <span className="text-xs text-muted dark:text-muted font-bold">Utilisateurs vérifiés</span>
-                            </div>
-                          </div>
-                        </div>
+ <CheckCircle className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">
+ {adminData?.stats.users
+ ? `${Math.round(((adminData.stats.verifiedUsers || 0) / adminData.stats.users) * 100)}%`
+ : '0%'}
+ </span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Utilisateurs vérifiés</span>
+ </div>
+ </div>
+ </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                          <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
                             <div className="p-3 bg-primary/10 text-primary rounded-xl">
-                              <ScanLine className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.checkedIn ?? 0}</span>
-                              <span className="text-xs text-muted dark:text-muted font-bold">Check-in (scan)</span>
-                            </div>
-                          </div>
-                          <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
-                            <div className="p-3 bg-primary/10 text-primary rounded-xl">
-                              <Calendar className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.upcomingEvents ?? 0}</span>
-                              <span className="text-xs text-muted dark:text-muted font-bold">Événements à venir</span>
-                            </div>
-                          </div>
-                          <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <ScanLine className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.checkedIn ?? 0}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Check-in (scan)</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-primary/10 text-primary rounded-xl">
+ <Calendar className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.upcomingEvents ?? 0}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Événements à venir</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
                             <div className="p-3 bg-festive-accent-soft text-festive-accent rounded-xl">
-                              <ClipboardList className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.openTasks ?? 0}</span>
-                              <span className="text-xs text-muted dark:text-muted font-bold">Actions en cours</span>
-                            </div>
-                          </div>
-                          <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
-                            <div className="p-3 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-xl">
-                              <AlertCircle className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.overdueTasks ?? 0}</span>
-                              <span className="text-xs text-muted dark:text-muted font-bold">Urgences</span>
-                            </div>
-                          </div>
-                        </div>
+ <ClipboardList className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.openTasks ?? 0}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Actions en cours</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-xl">
+ <AlertCircle className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{adminData?.stats.overdueTasks ?? 0}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Urgences</span>
+ </div>
+ </div>
+ </div>
 
-                        {platformInsights && (
+ {platformInsights && (
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-                            <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
-                              <div className="p-3 bg-primary/10 text-primary rounded-xl">
-                                <Globe className="w-6 h-6" />
-                              </div>
-                              <div>
-                                <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.events.publicCount}</span>
-                                <span className="text-xs text-muted dark:text-muted font-bold">Événements publics</span>
-                              </div>
-                            </div>
-                            <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-primary/10 text-primary rounded-xl">
+ <Globe className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.events.publicCount}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Événements publics</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
                               <div className="p-3 bg-festive-accent-soft text-festive-accent rounded-xl">
-                                <Ticket className="w-6 h-6" />
-                              </div>
-                              <div>
-                                <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{formatFc(platformInsights.tickets.gmvFc)}</span>
-                                <span className="text-xs text-muted dark:text-muted font-bold">GMV billets</span>
-                              </div>
-                            </div>
-                            <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <Ticket className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{formatFc(platformInsights.tickets.gmvFc)}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">GMV billets</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
                               <div className="p-3 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-xl">
                                 <Heart className="w-6 h-6" />
                               </div>
@@ -4056,78 +4056,78 @@ function DashboardPageContent() {
                             </div>
                             <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
                               <div className="p-3 bg-primary/10 text-primary rounded-xl">
-                                <CheckCircle className="w-6 h-6" />
-                              </div>
-                              <div>
-                                <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.guests.accepted}</span>
+ <CheckCircle className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.guests.accepted}</span>
                                 <span className="text-xs text-muted dark:text-muted font-bold">Présences confirmées</span>
-                              </div>
-                            </div>
-                            <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
                               <div className="p-3 bg-festive-accent-soft text-festive-accent rounded-xl">
-                                <Wallet className="w-6 h-6" />
-                              </div>
-                              <div>
-                                <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">
-                                  {formatFc((platformInsights.marketplace.gmvVenueFc || 0) + (platformInsights.marketplace.gmvTradeFc || 0) + (platformInsights.marketplace.gmvRentalFc || 0))}
-                                </span>
-                                <span className="text-xs text-muted dark:text-muted font-bold">GMV marketplace</span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
+ <Wallet className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">
+ {formatFc((platformInsights.marketplace.gmvVenueFc || 0) + (platformInsights.marketplace.gmvTradeFc || 0) + (platformInsights.marketplace.gmvRentalFc || 0))}
+ </span>
+ <span className="text-xs text-muted dark:text-muted font-bold">GMV marketplace</span>
+ </div>
+ </div>
+ </div>
+ )}
 
-                        {platformInsights && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ {platformInsights && (
+ <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
                               <div className="p-3 bg-primary/10 text-primary rounded-xl">
-                                <ScanLine className="w-6 h-6" />
-                              </div>
-                              <div>
-                                <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.guests.checkedIn}</span>
-                                <span className="text-xs text-muted dark:text-muted font-bold">Invités scannés</span>
-                              </div>
-                            </div>
-                            <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <ScanLine className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.guests.checkedIn}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Invités scannés</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
                               <div className="p-3 bg-festive-accent-soft text-festive-accent rounded-xl">
-                                <ClipboardList className="w-6 h-6" />
-                              </div>
-                              <div>
-                                <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.tasks?.open ?? 0}</span>
-                                <span className="text-xs text-muted dark:text-muted font-bold">Actions en cours</span>
-                              </div>
-                            </div>
-                            <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
-                              <div className="p-3 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-xl">
-                                <AlertCircle className="w-6 h-6" />
-                              </div>
-                              <div>
-                                <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.tasks?.overdue ?? 0}</span>
-                                <span className="text-xs text-muted dark:text-muted font-bold">Urgences</span>
-                              </div>
-                            </div>
-                            <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
-                              <div className="p-3 bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 rounded-xl">
-                                <Users className="w-6 h-6" />
-                              </div>
-                              <div>
-                                <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.team?.protocolUsers ?? 0}</span>
-                                <span className="text-xs text-muted dark:text-muted font-bold">Comptes protocole</span>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
+ <ClipboardList className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.tasks?.open ?? 0}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Actions en cours</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-xl">
+ <AlertCircle className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.tasks?.overdue ?? 0}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Urgences</span>
+ </div>
+ </div>
+ <div className="bg-surface-muted dark:bg-background/60 border border-border dark:border-border rounded-2xl p-5 flex items-center gap-4">
+ <div className="p-3 bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400 rounded-xl">
+ <Users className="w-6 h-6" />
+ </div>
+ <div>
+ <span className="block text-2xl font-extrabold text-foreground dark:text-foreground">{platformInsights.team?.protocolUsers ?? 0}</span>
+ <span className="text-xs text-muted dark:text-muted font-bold">Comptes protocole</span>
+ </div>
+ </div>
+ </div>
+ )}
+ </div>
+ )}
 
-                    {activeAnalyticsSection === 'plans' && (
+ {activeAnalyticsSection === 'plans' && (
                       <div className="bg-surface border border-border rounded-2xl p-6 space-y-6 shadow-sm">
                         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
                           <div>
-                            <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                              <PieChart className="w-5 h-5 text-primary" />
+ <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+ <PieChart className="w-5 h-5 text-primary" />
                               Pilotage &amp; Reporting des Abonnements SaaS
-                            </h3>
+ </h3>
                             <p className="text-xs text-muted mt-0.5">
                               Suivi des revenus récurrents (MRR/ARR), licences actives et expirations contractuelles.
                             </p>
@@ -4219,334 +4219,334 @@ function DashboardPageContent() {
                             </div>
                           </div>
                         )}
-
-                        <div className="space-y-4">
+ 
+ <div className="space-y-4">
                           <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
                             <BarChart3 className="w-4 h-4 text-primary" />
                             Répartition par Forfait
                           </h4>
-                          {PLAN_IDS.map((plan) => {
-                            const count = adminData?.planCounts?.[plan] || 0;
-                            const total = adminData?.stats.tenants || 1;
-                            const pct = Math.round((count / total) * 100);
+ {PLAN_IDS.map((plan) => {
+ const count = adminData?.planCounts?.[plan] || 0;
+ const total = adminData?.stats.tenants || 1;
+ const pct = Math.round((count / total) * 100);
+ 
+ return (
+ <div key={plan} className="space-y-1.5">
+ <div className="flex justify-between text-sm font-bold">
+ <span className={`px-2 py-0.5 rounded text-xs font-extrabold border ${planBadgeClass(plan)}`}>
+ {plan}
+ </span>
+ <span className="text-muted">{count} ({pct}%)</span>
+ </div>
+ <div className="w-full bg-surface-muted h-2.5 rounded-full overflow-hidden">
+ <div 
+ className={`h-full rounded-full transition-all duration-500 ${planBarClass(plan)}`}
+ style={{ width: `${pct}%` }}
+ ></div>
+ </div>
+ </div>
+ );
+ })}
+ </div>
 
-                            return (
-                              <div key={plan} className="space-y-1.5">
-                                <div className="flex justify-between text-sm font-bold">
-                                  <span className={`px-2 py-0.5 rounded text-xs font-extrabold border ${planBadgeClass(plan)}`}>
-                                    {plan}
-                                  </span>
-                                  <span className="text-muted">{count} ({pct}%)</span>
-                                </div>
-                                <div className="w-full bg-surface-muted h-2.5 rounded-full overflow-hidden">
-                                  <div
-                                    className={`h-full rounded-full transition-all duration-500 ${planBarClass(plan)}`}
-                                    style={{ width: `${pct}%` }}
-                                  ></div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        <div className="border-t border-border-subtle pt-6">
-                          <h4 className="text-sm font-bold text-foreground mb-4 flex items-center gap-2">
-                            <Sparkles className="w-4 h-4 text-primary" />
+ <div className="border-t border-border-subtle pt-6">
+ <h4 className="text-sm font-bold text-foreground mb-4 flex items-center gap-2">
+ <Sparkles className="w-4 h-4 text-primary" />
                             Statut Global des Licences
-                          </h4>
-                          <div className="grid grid-cols-2 gap-4">
+ </h4>
+ <div className="grid grid-cols-2 gap-4">
                             <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 text-center">
                               <span className="block text-2xl font-extrabold text-primary">
-                                {adminData?.stats.licensesActive ?? 0}
-                              </span>
+ {adminData?.stats.licensesActive ?? 0}
+ </span>
                               <span className="text-xs text-primary font-bold">Valides / Actives</span>
-                            </div>
-                            <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-center">
-                              <span className="block text-2xl font-extrabold text-rose-700">
-                                {Math.max(0, (adminData?.stats.tenants || 0) - (adminData?.stats.licensesActive || 0))}
-                              </span>
-                              <span className="text-xs text-rose-600 font-bold">Inactives / Expirées</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+ </div>
+ <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 text-center">
+ <span className="block text-2xl font-extrabold text-rose-700">
+ {Math.max(0, (adminData?.stats.tenants || 0) - (adminData?.stats.licensesActive || 0))}
+ </span>
+ <span className="text-xs text-rose-600 font-bold">Inactives / Expirées</span>
+ </div>
+ </div>
+ </div>
+ </div>
+ )}
 
-                    {activeAnalyticsSection === 'organisations' && (
+ {activeAnalyticsSection === 'organisations' && (
                       <div className="bg-surface border border-border rounded-2xl p-6 space-y-6 shadow-sm">
-                        <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                          <TrendingUp className="w-5 h-5 text-primary" />
-                          Organisations les Plus Actives
-                        </h3>
+ <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+ <TrendingUp className="w-5 h-5 text-primary" />
+ Organisations les Plus Actives
+ </h3>
+ 
+ <div className="divide-y divide-border">
+ {topTenants
+ .map((t, idx) => (
+ <div key={t.id} className="py-3 flex items-center justify-between first:pt-0 last:pb-0">
+ <div className="flex items-center gap-3">
+ <span className="w-6 h-6 rounded-full bg-surface-muted text-muted flex items-center justify-center text-xs font-bold">
+ {idx + 1}
+ </span>
+ <div>
+ <span className="font-bold text-foreground block">{t.name}</span>
+ <span className="text-xs text-muted">Gérant : {t.managerName}</span>
+ </div>
+ </div>
+ <div className="text-right">
+ <span className="font-extrabold text-primary block">{t.eventsCount} events</span>
+ <span className="text-xs text-muted font-medium">{t.usersCount} membres</span>
+ </div>
+ </div>
+ ))}
+ {topTenants.length === 0 && (
+ <p className="text-sm text-muted text-center py-8">Aucune donnée disponible.</p>
+ )}
+ </div>
+ </div>
+ )}
 
-                        <div className="divide-y divide-border">
-                          {topTenants
-                            .map((t, idx) => (
-                              <div key={t.id} className="py-3 flex items-center justify-between first:pt-0 last:pb-0">
-                                <div className="flex items-center gap-3">
-                                  <span className="w-6 h-6 rounded-full bg-surface-muted text-muted flex items-center justify-center text-xs font-bold">
-                                    {idx + 1}
-                                  </span>
-                                  <div>
-                                    <span className="font-bold text-foreground block">{t.name}</span>
-                                    <span className="text-xs text-muted">Gérant : {t.managerName}</span>
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <span className="font-extrabold text-primary block">{t.eventsCount} events</span>
-                                  <span className="text-xs text-muted font-medium">{t.usersCount} membres</span>
-                                </div>
-                              </div>
-                            ))}
-                          {topTenants.length === 0 && (
-                            <p className="text-sm text-muted text-center py-8">Aucune donnée disponible.</p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {activeAnalyticsSection === 'revenus' && (
+ {activeAnalyticsSection === 'revenus' && (
                       <div className="bg-surface border border-border rounded-2xl p-6 space-y-6 shadow-sm">
-                        <div className="flex flex-wrap items-center justify-between gap-4">
-                          <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
-                            <CreditCard className="w-5 h-5 text-primary" />
-                            Revenus & Commissions Commerciales
-                          </h3>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <input
-                              type="month"
-                              value={revenuePeriod}
-                              onChange={(e) => setRevenuePeriod(e.target.value)}
-                              className="px-3 py-2 border border-border rounded-xl text-sm font-medium"
-                            />
-                            <button
-                              onClick={() => loadRevenueReport(revenuePeriod)}
-                              className="px-4 py-2 bg-primary hover:bg-primary-hover text-white text-xs font-bold rounded-xl transition"
-                            >
-                              Actualiser
-                            </button>
-                            <button
-                              onClick={() => exportRevenueReport('csv')}
-                              className="px-4 py-2 border border-border text-foreground text-xs font-bold rounded-xl hover:bg-surface-muted transition flex items-center gap-1.5"
-                            >
-                              <Download className="w-3.5 h-3.5" />
-                              CSV
-                            </button>
-                            <button
-                              onClick={() => exportRevenueReport('pdf')}
-                              className="px-4 py-2 border border-border text-foreground text-xs font-bold rounded-xl hover:bg-surface-muted transition flex items-center gap-1.5"
-                            >
-                              <Download className="w-3.5 h-3.5" />
-                              PDF
-                            </button>
-                            <button
-                              onClick={notifyRevenuePayouts}
-                              disabled={notifyingPayouts}
+ <div className="flex flex-wrap items-center justify-between gap-4">
+ <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+ <CreditCard className="w-5 h-5 text-primary" />
+ Revenus & Commissions Commerciales
+ </h3>
+ <div className="flex flex-wrap items-center gap-2">
+ <input
+ type="month"
+ value={revenuePeriod}
+ onChange={(e) => setRevenuePeriod(e.target.value)}
+ className="px-3 py-2 border border-border rounded-xl text-sm font-medium"
+ />
+ <button
+ onClick={() => loadRevenueReport(revenuePeriod)}
+ className="px-4 py-2 bg-primary hover:bg-primary-hover text-white text-xs font-bold rounded-xl transition"
+ >
+ Actualiser
+ </button>
+ <button
+ onClick={() => exportRevenueReport('csv')}
+ className="px-4 py-2 border border-border text-foreground text-xs font-bold rounded-xl hover:bg-surface-muted transition flex items-center gap-1.5"
+ >
+ <Download className="w-3.5 h-3.5" />
+ CSV
+ </button>
+ <button
+ onClick={() => exportRevenueReport('pdf')}
+ className="px-4 py-2 border border-border text-foreground text-xs font-bold rounded-xl hover:bg-surface-muted transition flex items-center gap-1.5"
+ >
+ <Download className="w-3.5 h-3.5" />
+ PDF
+ </button>
+ <button
+ onClick={notifyRevenuePayouts}
+ disabled={notifyingPayouts}
                               className="px-4 py-2 border border-festive-accent/30 bg-festive-accent-soft text-festive-accent text-xs font-bold rounded-xl hover:bg-festive-accent-soft transition flex items-center gap-1.5 disabled:opacity-60"
-                            >
-                              {notifyingPayouts ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
-                              Notifier les versements
-                            </button>
-                            <Link
-                              href={`/dashboard/admin/payouts?period=${encodeURIComponent(revenuePeriod)}`}
-                              className="px-4 py-2 border border-border text-foreground text-xs font-bold rounded-xl hover:bg-surface-muted transition"
-                            >
-                              File versements
-                            </Link>
-                          </div>
-                        </div>
+ >
+ {notifyingPayouts ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+ Notifier les versements
+ </button>
+ <Link
+ href={`/dashboard/admin/payouts?period=${encodeURIComponent(revenuePeriod)}`}
+ className="px-4 py-2 border border-border text-foreground text-xs font-bold rounded-xl hover:bg-surface-muted transition"
+ >
+ File versements
+ </Link>
+              </div>
+ </div>
 
-                        {loadingRevenueReport ? (
-                          <div className="flex items-center justify-center py-12 text-muted">
-                            <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                            Chargement du rapport...
-                          </div>
-                        ) : revenueReport ? (
-                          <>
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                              <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
-                                <span className="text-xs font-bold text-primary uppercase">Revenus bruts</span>
-                                <p className="text-xl font-extrabold text-primary mt-1">{revenueReport.summary.totalRevenueFormatted}</p>
-                                <span className="text-xs text-primary">{revenueReport.summary.invoiceCount} facture(s)</span>
-                              </div>
+ {loadingRevenueReport ? (
+ <div className="flex items-center justify-center py-12 text-muted">
+ <Loader2 className="w-6 h-6 animate-spin mr-2" />
+ Chargement du rapport...
+ </div>
+ ) : revenueReport ? (
+ <>
+ <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+ <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
+ <span className="text-xs font-bold text-primary uppercase">Revenus bruts</span>
+ <p className="text-xl font-extrabold text-primary mt-1">{revenueReport.summary.totalRevenueFormatted}</p>
+ <span className="text-xs text-primary">{revenueReport.summary.invoiceCount} facture(s)</span>
+ </div>
                               <div className="bg-festive-accent-soft border border-festive-accent/25 rounded-xl p-4">
                                 <span className="text-xs font-bold text-festive-accent uppercase">Commissions SaaS</span>
                                 <p className="text-xl font-extrabold text-festive-accent mt-1">{revenueReport.summary.totalCommissionsFormatted}</p>
-                                {revenueReport.summary.unpaidCommissionsFormatted ? (
+ {revenueReport.summary.unpaidCommissionsFormatted ? (
                                   <span className="text-xs text-festive-accent">Dû : {revenueReport.summary.unpaidCommissionsFormatted} · {commercialPct}/{renewalPct} %</span>
-                                ) : (
+ ) : (
                                   <span className="text-xs text-festive-accent">{commercialPct} % puis {renewalPct} %</span>
-                                )}
-                              </div>
+ )}
+ </div>
                               <div className="bg-primary/10 border border-primary/20 rounded-xl p-4">
                                 <span className="text-xs font-bold text-primary uppercase">Revenu net plateforme</span>
                                 <p className="text-xl font-extrabold text-primary mt-1">{revenueReport.summary.netRevenueFormatted}</p>
-                              </div>
-                              <div className="bg-surface-muted border border-border rounded-xl p-4">
-                                <span className="text-xs font-bold text-muted uppercase">Période</span>
-                                <p className="text-xl font-extrabold text-foreground mt-1">{revenueReport.period}</p>
-                              </div>
-                            </div>
+ </div>
+ <div className="bg-surface-muted border border-border rounded-xl p-4">
+ <span className="text-xs font-bold text-muted uppercase">Période</span>
+ <p className="text-xl font-extrabold text-foreground mt-1">{revenueReport.period}</p>
+ </div>
+ </div>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                              <div>
-                                <h4 className="text-sm font-bold text-foreground mb-3">Tendance sur 6 mois</h4>
-                                <div className="space-y-2">
-                                  {revenueReport.monthlyTrend.map((m) => (
-                                    <div key={m.period} className="flex items-center justify-between text-sm py-2 border-b border-border-subtle">
-                                      <span className="font-medium text-muted">{m.period}</span>
-                                      <span className="font-bold text-primary">{m.revenueFormatted}</span>
-                                      <span className="text-xs text-muted">{m.invoiceCount} fact.</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
+ <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+ <div>
+ <h4 className="text-sm font-bold text-foreground mb-3">Tendance sur 6 mois</h4>
+ <div className="space-y-2">
+ {revenueReport.monthlyTrend.map((m) => (
+ <div key={m.period} className="flex items-center justify-between text-sm py-2 border-b border-border-subtle">
+ <span className="font-medium text-muted">{m.period}</span>
+ <span className="font-bold text-primary">{m.revenueFormatted}</span>
+ <span className="text-xs text-muted">{m.invoiceCount} fact.</span>
+ </div>
+ ))}
+ </div>
+ </div>
 
-                              <div>
-                                <h4 className="text-sm font-bold text-foreground mb-3">Commissions par commercial</h4>
-                                {revenueReport.commercialCommissions.length === 0 ? (
-                                  <p className="text-sm text-muted">Aucune commission ce mois-ci.</p>
-                                ) : (
-                                  <div className="space-y-3 max-h-64 overflow-y-auto">
-                                    {revenueReport.commercialCommissions.map((c) => (
-                                      <div key={c.commercialId} className="border border-border-subtle rounded-xl p-3">
-                                        <div className="flex justify-between items-start gap-2">
-                                          <div>
-                                            <p className="font-bold text-foreground">{c.name || c.email}</p>
-                                            <p className="text-xs text-muted">{c.referralCode || '—'}{c.kind === 'org' ? ' · org' : ' · plateforme'}</p>
-                                          </div>
+ <div>
+ <h4 className="text-sm font-bold text-foreground mb-3">Commissions par commercial</h4>
+ {revenueReport.commercialCommissions.length === 0 ? (
+ <p className="text-sm text-muted">Aucune commission ce mois-ci.</p>
+ ) : (
+ <div className="space-y-3 max-h-64 overflow-y-auto">
+ {revenueReport.commercialCommissions.map((c) => (
+ <div key={c.commercialId} className="border border-border-subtle rounded-xl p-3">
+ <div className="flex justify-between items-start gap-2">
+ <div>
+ <p className="font-bold text-foreground">{c.name || c.email}</p>
+ <p className="text-xs text-muted">{c.referralCode || '—'}{c.kind === 'org' ? ' · org' : ' · plateforme'}</p>
+ </div>
                                           <span className="font-extrabold text-festive-accent shrink-0">
-                                            {c.totalCommission.toLocaleString('fr-FR')} FC
-                                          </span>
-                                        </div>
-                                        <p className="text-xs text-muted mt-1">
-                                          CA parrainé : {c.totalInvoiceAmount.toLocaleString('fr-FR')} FC · {c.entries.length} org.
-                                          {(c.unpaidCommission ?? 0) > 0 ? ` · Dû ${c.unpaidCommission!.toLocaleString('fr-FR')} FC` : ' · Versé'}
-                                        </p>
-                                        {c.kind === 'platform' && (c.unpaidCommission ?? 0) > 0 ? (
-                                          <Link
-                                            href={`/dashboard/admin/payouts?period=${encodeURIComponent(revenuePeriod)}&q=${encodeURIComponent(c.email)}`}
-                                            className="mt-2 inline-block text-xs font-semibold text-primary hover:underline"
-                                          >
-                                            Verser (preuve + motif)
-                                          </Link>
-                                        ) : c.kind === 'org' && (c.unpaidCommission ?? 0) > 0 ? (
+ {c.totalCommission.toLocaleString('fr-FR')} FC
+ </span>
+ </div>
+ <p className="text-xs text-muted mt-1">
+ CA parrainé : {c.totalInvoiceAmount.toLocaleString('fr-FR')} FC · {c.entries.length} org.
+ {(c.unpaidCommission ?? 0) > 0 ? ` · Dû ${c.unpaidCommission!.toLocaleString('fr-FR')} FC` : ' · Versé'}
+ </p>
+ {c.kind === 'platform' && (c.unpaidCommission ?? 0) > 0 ? (
+ <Link
+ href={`/dashboard/admin/payouts?period=${encodeURIComponent(revenuePeriod)}&q=${encodeURIComponent(c.email)}`}
+ className="mt-2 inline-block text-xs font-semibold text-primary hover:underline"
+ >
+ Verser (preuve + motif)
+ </Link>
+ ) : c.kind === 'org' && (c.unpaidCommission ?? 0) > 0 ? (
                                           <p className="mt-2 text-xs text-muted">À verser par l’organisation parrainante, hors EventMaster.</p>
-                                        ) : null}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
+ ) : null}
+ </div>
+ ))}
+ </div>
+ )}
+ </div>
+          </div>
 
-                            {revenueReport.invoices.length > 0 && (
-                              <div>
-                                <h4 className="text-sm font-bold text-foreground mb-3">Factures du mois</h4>
-                                <div className="overflow-x-auto border border-border-subtle rounded-xl">
-                                  <table className="w-full text-sm">
-                                    <thead className="bg-surface-muted">
-                                      <tr>
-                                        <th className="text-left px-4 py-2 font-bold text-muted">N°</th>
-                                        <th className="text-left px-4 py-2 font-bold text-muted">Organisation</th>
-                                        <th className="text-left px-4 py-2 font-bold text-muted">Forfait</th>
-                                        <th className="text-left px-4 py-2 font-bold text-muted">Montant</th>
-                                        <th className="text-left px-4 py-2 font-bold text-muted">Type</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {revenueReport.invoices.map((inv) => (
-                                        <tr key={inv.id} className="border-t border-border-subtle">
-                                          <td className="px-4 py-2 font-mono text-xs">{inv.invoiceNumber}</td>
-                                          <td className="px-4 py-2">{inv.tenantName}</td>
-                                          <td className="px-4 py-2">{inv.plan}</td>
-                                          <td className="px-4 py-2 font-bold text-primary">{inv.amountFormatted}</td>
-                                          <td className="px-4 py-2 text-xs text-muted">{inv.type}</td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <p className="text-sm text-muted text-center py-8">Aucune donnée de facturation disponible.</p>
-                        )}
-                      </div>
-                    )}
+ {revenueReport.invoices.length > 0 && (
+ <div>
+ <h4 className="text-sm font-bold text-foreground mb-3">Factures du mois</h4>
+ <div className="overflow-x-auto border border-border-subtle rounded-xl">
+ <table className="w-full text-sm">
+ <thead className="bg-surface-muted">
+ <tr>
+ <th className="text-left px-4 py-2 font-bold text-muted">N°</th>
+ <th className="text-left px-4 py-2 font-bold text-muted">Organisation</th>
+ <th className="text-left px-4 py-2 font-bold text-muted">Forfait</th>
+ <th className="text-left px-4 py-2 font-bold text-muted">Montant</th>
+ <th className="text-left px-4 py-2 font-bold text-muted">Type</th>
+ </tr>
+ </thead>
+ <tbody>
+ {revenueReport.invoices.map((inv) => (
+ <tr key={inv.id} className="border-t border-border-subtle">
+ <td className="px-4 py-2 font-mono text-xs">{inv.invoiceNumber}</td>
+ <td className="px-4 py-2">{inv.tenantName}</td>
+ <td className="px-4 py-2">{inv.plan}</td>
+ <td className="px-4 py-2 font-bold text-primary">{inv.amountFormatted}</td>
+ <td className="px-4 py-2 text-xs text-muted">{inv.type}</td>
+ </tr>
+ ))}
+ </tbody>
+ </table>
+              </div>
+            </div>
+ )}
+ </>
+ ) : (
+ <p className="text-sm text-muted text-center py-8">Aucune donnée de facturation disponible.</p>
+ )}
+ </div>
+ )}
 
-                    {activeAnalyticsSection === 'modeles' && (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
-                          <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
-                            <FileText className="w-5 h-5 text-primary" />
-                            Répartition des modèles
-                          </h3>
-                          <div className="space-y-3">
-                            {[
-                              { label: 'Total des modèles', value: templateCounts.total, color: 'text-foreground dark:text-foreground' },
-                              { label: 'Modèles globaux (publics)', value: templateCounts.global, color: 'text-primary' },
-                              { label: 'Modèles d\'organisations', value: templateCounts.tenant, color: 'text-foreground dark:text-foreground' },
+ {activeAnalyticsSection === 'modeles' && (
+ <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+ <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
+ <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
+ <FileText className="w-5 h-5 text-primary" />
+ Répartition des modèles
+ </h3>
+ <div className="space-y-3">
+ {[
+ { label: 'Total des modèles', value: templateCounts.total, color: 'text-foreground dark:text-foreground' },
+ { label: 'Modèles globaux (publics)', value: templateCounts.global, color: 'text-primary' },
+ { label: 'Modèles d\'organisations', value: templateCounts.tenant, color: 'text-foreground dark:text-foreground' },
                               { label: 'Affichés sur la landing page', value: templateCounts.landing, color: 'text-primary' },
-                            ].map((row) => (
-                              <div key={row.label} className="flex justify-between text-sm">
-                                <span className="text-muted dark:text-muted font-medium">{row.label}</span>
-                                <span className={`font-bold ${row.color}`}>{row.value}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <Link
-                            href="/dashboard?tab=templates"
-                            className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline pt-2"
-                          >
-                            Gérer les modèles globaux
-                            <ChevronRight className="w-3.5 h-3.5" />
-                          </Link>
-                        </div>
+ ].map((row) => (
+ <div key={row.label} className="flex justify-between text-sm">
+ <span className="text-muted dark:text-muted font-medium">{row.label}</span>
+ <span className={`font-bold ${row.color}`}>{row.value}</span>
+ </div>
+ ))}
+ </div>
+ <Link
+ href="/dashboard?tab=templates"
+ className="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline pt-2"
+ >
+ Gérer les modèles globaux
+ <ChevronRight className="w-3.5 h-3.5" />
+ </Link>
+ </div>
 
-                        <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
-                          <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
+ <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
+ <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
                             <Globe className="w-5 h-5 text-primary" />
-                            Modèles visibles sur la landing
-                          </h3>
-                          {landingTemplates.length === 0 ? (
-                            <p className="text-sm text-muted dark:text-muted py-4 text-center">
-                              Aucun modèle global activé pour la landing. Activez « Sur la Landing Page » depuis l&apos;onglet Modèles.
-                            </p>
-                          ) : (
-                            <div className="divide-y divide-border dark:divide-border max-h-64 overflow-y-auto">
-                              {landingTemplates.map((t) => (
-                                <div key={t.id} className="py-3 flex items-center gap-3 first:pt-0 last:pb-0">
-                                  <TemplatePreviewThumb content={t.content} name={t.name} />
-                                  <div className="min-w-0 flex-1">
-                                    <p className="font-bold text-foreground dark:text-foreground truncate">{t.name}</p>
-                                    <p className="text-xs text-muted">{getTemplateElementSummary(t.content)}</p>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
+ Modèles visibles sur la landing
+ </h3>
+ {landingTemplates.length === 0 ? (
+ <p className="text-sm text-muted dark:text-muted py-4 text-center">
+ Aucun modèle global activé pour la landing. Activez « Sur la Landing Page » depuis l&apos;onglet Modèles.
+ </p>
+ ) : (
+ <div className="divide-y divide-border dark:divide-border max-h-64 overflow-y-auto">
+ {landingTemplates.map((t) => (
+ <div key={t.id} className="py-3 flex items-center gap-3 first:pt-0 last:pb-0">
+ <TemplatePreviewThumb content={t.content} name={t.name} />
+ <div className="min-w-0 flex-1">
+ <p className="font-bold text-foreground dark:text-foreground truncate">{t.name}</p>
+ <p className="text-xs text-muted">{getTemplateElementSummary(t.content)}</p>
+ </div>
+ </div>
+ ))}
+ </div>
+ )}
+ </div>
+ </div>
+ )}
 
-                    {activeAnalyticsSection === 'utilisateurs' && (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
-                          <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
-                            <Users className="w-5 h-5 text-primary" />
-                            Rôles des utilisateurs
-                          </h3>
-                          <div className="space-y-3">
-                            {[
-                              { label: 'Total', value: adminData?.stats.users ?? 0, color: 'text-foreground dark:text-foreground' },
-                              { label: 'Super administrateurs', value: adminData?.userRoleCounts?.SUPER_ADMIN ?? 0, color: 'text-rose-600 dark:text-rose-400' },
+ {activeAnalyticsSection === 'utilisateurs' && (
+ <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+ <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
+ <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
+ <Users className="w-5 h-5 text-primary" />
+ Rôles des utilisateurs
+ </h3>
+ <div className="space-y-3">
+ {[
+ { label: 'Total', value: adminData?.stats.users ?? 0, color: 'text-foreground dark:text-foreground' },
+ { label: 'Super administrateurs', value: adminData?.userRoleCounts?.SUPER_ADMIN ?? 0, color: 'text-rose-600 dark:text-rose-400' },
                               { label: 'Commerciaux plateforme', value: adminData?.userRoleCounts?.COMMERCIAL ?? 0, color: 'text-festive-accent' },
                               { label: 'Membres d’organisation', value: adminData?.userRoleCounts?.USER ?? 0, color: 'text-foreground dark:text-foreground' },
                               { label: 'Propriétaires (gérants)', value: adminData?.stats.owners ?? 0, color: 'text-festive-accent' },
-                              { label: 'Managers d’organisation', value: adminData?.orgRoleCounts?.MANAGER ?? 0, color: 'text-primary' },
-                              { label: 'Protocole', value: adminData?.orgRoleCounts?.PROTOCOL ?? 0, color: 'text-sky-600 dark:text-sky-400' },
+ { label: 'Managers d’organisation', value: adminData?.orgRoleCounts?.MANAGER ?? 0, color: 'text-primary' },
+ { label: 'Protocole', value: adminData?.orgRoleCounts?.PROTOCOL ?? 0, color: 'text-sky-600 dark:text-sky-400' },
                               { label: 'Commerciaux org.', value: adminData?.orgRoleCounts?.COMMERCIAL ?? 0, color: 'text-festive-accent' },
                               { label: 'Sans rôle org.', value: adminData?.orgRoleCounts?.NONE ?? 0, color: 'text-muted' },
                               { label: 'Staff salle / événement', value: adminData?.stats.staffUsers ?? 0, color: 'text-foreground dark:text-foreground' },
@@ -4554,222 +4554,222 @@ function DashboardPageContent() {
                               { label: 'Sans organisation', value: adminData?.stats.noTenantUsers ?? 0, color: 'text-muted' },
                               { label: 'E-mails vérifiés', value: adminData?.stats.verifiedUsers ?? 0, color: 'text-primary' },
                               { label: 'E-mails non vérifiés', value: adminData?.stats.unverifiedUsers ?? 0, color: 'text-festive-accent' },
-                            ].map((row) => (
-                              <div key={row.label} className="flex justify-between text-sm">
-                                <span className="text-muted dark:text-muted font-medium">{row.label}</span>
-                                <span className={`font-bold ${row.color}`}>{row.value}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
-                          <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
-                            <TrendingUp className="w-5 h-5 text-primary" />
-                            Inscriptions récentes
-                          </h3>
-                          <div className="divide-y divide-border dark:divide-border max-h-64 overflow-y-auto">
-                            {recentUsers.map((u) => (
-                              <div key={u.id} className="py-2.5 flex items-center justify-between gap-2 first:pt-0 last:pb-0">
-                                <div className="min-w-0">
-                                  <p className="font-semibold text-foreground dark:text-foreground truncate text-sm">{u.name || u.email}</p>
+ ].map((row) => (
+ <div key={row.label} className="flex justify-between text-sm">
+ <span className="text-muted dark:text-muted font-medium">{row.label}</span>
+ <span className={`font-bold ${row.color}`}>{row.value}</span>
+ </div>
+ ))}
+ </div>
+ </div>
+ <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
+ <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
+ <TrendingUp className="w-5 h-5 text-primary" />
+ Inscriptions récentes
+ </h3>
+ <div className="divide-y divide-border dark:divide-border max-h-64 overflow-y-auto">
+ {recentUsers.map((u) => (
+ <div key={u.id} className="py-2.5 flex items-center justify-between gap-2 first:pt-0 last:pb-0">
+ <div className="min-w-0">
+ <p className="font-semibold text-foreground dark:text-foreground truncate text-sm">{u.name || u.email}</p>
                                   <p className="text-xs text-muted truncate">
                                     {[u.tenantName, orgRoleLabel(u.orgRole, u.isOwner) || platformRoleLabel(u.role), formatAdminDate(u.createdAt)].filter(Boolean).join(' · ')}
                                   </p>
-                                </div>
+ </div>
                                 <span className="text-xs font-bold uppercase px-2 py-0.5 rounded-full bg-surface-muted dark:bg-surface-muted text-muted dark:text-muted shrink-0">
                                   {u.role === 'USER' && orgRoleLabel(u.orgRole, u.isOwner)
                                     ? orgRoleLabel(u.orgRole, u.isOwner)
                                     : platformRoleLabel(u.role)}
                                 </span>
-                              </div>
-                            ))}
-                            {recentUsers.length === 0 && (
-                              <p className="text-sm text-muted dark:text-muted text-center py-6">Aucun utilisateur.</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
+ </div>
+ ))}
+ {recentUsers.length === 0 && (
+ <p className="text-sm text-muted dark:text-muted text-center py-6">Aucun utilisateur.</p>
+ )}
+ </div>
+ </div>
+ </div>
+ )}
 
-                    {activeAnalyticsSection === 'evenements' && (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
-                          <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
-                            <Calendar className="w-5 h-5 text-primary" />
-                            Statistiques des événements
-                          </h3>
-                          <div className="space-y-3">
-                            {[
-                              { label: 'Total des événements', value: platformInsights?.events.total ?? 0 },
-                              { label: 'Publics', value: platformInsights?.events.publicCount ?? 0 },
-                              { label: 'Privés', value: platformInsights?.events.privateCount ?? 0 },
-                              { label: 'Avec billetterie', value: platformInsights?.events.ticketingEnabled ?? 0 },
-                              { label: 'Billets vendus', value: platformInsights?.events.ticketsSold ?? 0 },
-                              { label: 'GMV billets', value: formatFc(platformInsights?.tickets.gmvFc ?? 0) },
+ {activeAnalyticsSection === 'evenements' && (
+ <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+ <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
+ <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
+ <Calendar className="w-5 h-5 text-primary" />
+ Statistiques des événements
+ </h3>
+ <div className="space-y-3">
+ {[
+ { label: 'Total des événements', value: platformInsights?.events.total ?? 0 },
+ { label: 'Publics', value: platformInsights?.events.publicCount ?? 0 },
+ { label: 'Privés', value: platformInsights?.events.privateCount ?? 0 },
+ { label: 'Avec billetterie', value: platformInsights?.events.ticketingEnabled ?? 0 },
+ { label: 'Billets vendus', value: platformInsights?.events.ticketsSold ?? 0 },
+ { label: 'GMV billets', value: formatFc(platformInsights?.tickets.gmvFc ?? 0) },
                               { label: 'Dons solidaires récoltés', value: formatFc(platformInsights?.donations?.gmvFc ?? 0) },
                               { label: 'Nombre de dons enregistrés', value: platformInsights?.donations?.paidDonations ?? 0 },
-                              { label: 'Avec localisation GPS', value: platformInsights?.events.gpsCount ?? 0 },
-                              { label: 'À venir', value: adminData?.stats.upcomingEvents ?? 0 },
-                              { label: 'Actions en cours', value: platformInsights?.tasks?.open ?? adminData?.stats.openTasks ?? 0 },
-                              { label: 'Urgences', value: platformInsights?.tasks?.overdue ?? adminData?.stats.overdueTasks ?? 0 },
-                            ].map((row) => (
-                              <div key={row.label} className="flex justify-between text-sm">
-                                <span className="text-muted dark:text-muted font-medium">{row.label}</span>
-                                <span className="font-bold text-foreground dark:text-foreground">{row.value}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
-                          <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
+ { label: 'Avec localisation GPS', value: platformInsights?.events.gpsCount ?? 0 },
+ { label: 'À venir', value: adminData?.stats.upcomingEvents ?? 0 },
+{ label: 'Actions en cours', value: platformInsights?.tasks?.open ?? adminData?.stats.openTasks ?? 0 },
+{ label: 'Urgences', value: platformInsights?.tasks?.overdue ?? adminData?.stats.overdueTasks ?? 0 },
+ ].map((row) => (
+ <div key={row.label} className="flex justify-between text-sm">
+ <span className="text-muted dark:text-muted font-medium">{row.label}</span>
+ <span className="font-bold text-foreground dark:text-foreground">{row.value}</span>
+ </div>
+ ))}
+ </div>
+ </div>
+ <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
+ <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
                             <Activity className="w-5 h-5 text-primary" />
-                            Événements récents
-                          </h3>
-                          <div className="divide-y divide-border dark:divide-border max-h-64 overflow-y-auto">
-                            {recentEvents.map((e) => (
-                              <div key={e.id} className="py-2.5 flex items-center justify-between gap-2 first:pt-0 last:pb-0">
-                                <div className="min-w-0">
-                                  <p className="font-semibold text-foreground dark:text-foreground truncate text-sm">{e.title}</p>
-                                  <p className="text-xs text-muted truncate">
-                                    {e.tenantName} · {e.isPublic ? 'Public' : 'Privé'}
-                                    {e.ticketingEnabled ? ` · ${e.ticketsSold || 0} billets` : ''}
-                                    {' · '}
-                                    {e.location || 'Lieu non défini'}
-                                  </p>
-                                </div>
-                                <span className="text-xs text-muted dark:text-muted shrink-0">{new Date(e.date).toLocaleDateString('fr-FR')}</span>
-                              </div>
-                            ))}
-                            {recentEvents.length === 0 && (
-                              <p className="text-sm text-muted dark:text-muted text-center py-6">Aucun événement.</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
+ Événements récents
+ </h3>
+ <div className="divide-y divide-border dark:divide-border max-h-64 overflow-y-auto">
+ {recentEvents.map((e) => (
+ <div key={e.id} className="py-2.5 flex items-center justify-between gap-2 first:pt-0 last:pb-0">
+ <div className="min-w-0">
+ <p className="font-semibold text-foreground dark:text-foreground truncate text-sm">{e.title}</p>
+ <p className="text-xs text-muted truncate">
+ {e.tenantName} · {e.isPublic ? 'Public' : 'Privé'}
+ {e.ticketingEnabled ? ` · ${e.ticketsSold || 0} billets` : ''}
+ {' · '}
+ {e.location || 'Lieu non défini'}
+ </p>
+ </div>
+ <span className="text-xs text-muted dark:text-muted shrink-0">{new Date(e.date).toLocaleDateString('fr-FR')}</span>
+ </div>
+ ))}
+ {recentEvents.length === 0 && (
+ <p className="text-sm text-muted dark:text-muted text-center py-6">Aucun événement.</p>
+ )}
+ </div>
+ </div>
+ </div>
+ )}
 
-                    {activeAnalyticsSection === 'invites' && (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
-                          <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
-                            <Users className="w-5 h-5 text-primary" />
+ {activeAnalyticsSection === 'invites' && (
+ <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+ <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
+ <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
+ <Users className="w-5 h-5 text-primary" />
                             Funnel des réponses
-                          </h3>
-                          <div className="space-y-3">
-                            {[
-                              { label: 'Invités', value: platformInsights?.guests.total ?? 0 },
-                              { label: 'Invitations envoyées', value: platformInsights?.guests.invitations ?? 0 },
-                              { label: 'En attente', value: platformInsights?.guests.pending ?? 0 },
-                              { label: 'Acceptés', value: platformInsights?.guests.accepted ?? 0 },
-                              { label: 'Déclinés', value: platformInsights?.guests.declined ?? 0 },
-                              { label: 'PDF livrés', value: platformInsights?.guests.pdfDelivered ?? 0 },
-                              { label: 'PDF non livrés (acceptés)', value: platformInsights?.guests.pdfMissing ?? 0 },
-                              { label: 'Check-in (scan web)', value: platformInsights?.guests.checkedIn ?? 0 },
-                              { label: 'Place vérifiée', value: platformInsights?.guests.seatVerified ?? 0 },
-                            ].map((row) => (
-                              <div key={row.label} className="flex justify-between text-sm">
-                                <span className="text-muted dark:text-muted font-medium">{row.label}</span>
-                                <span className="font-bold text-foreground dark:text-foreground">{row.value}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <p className="text-xs text-muted pt-2">
+ </h3>
+ <div className="space-y-3">
+ {[
+ { label: 'Invités', value: platformInsights?.guests.total ?? 0 },
+ { label: 'Invitations envoyées', value: platformInsights?.guests.invitations ?? 0 },
+ { label: 'En attente', value: platformInsights?.guests.pending ?? 0 },
+ { label: 'Acceptés', value: platformInsights?.guests.accepted ?? 0 },
+ { label: 'Déclinés', value: platformInsights?.guests.declined ?? 0 },
+ { label: 'PDF livrés', value: platformInsights?.guests.pdfDelivered ?? 0 },
+ { label: 'PDF non livrés (acceptés)', value: platformInsights?.guests.pdfMissing ?? 0 },
+ { label: 'Check-in (scan web)', value: platformInsights?.guests.checkedIn ?? 0 },
+ { label: 'Place vérifiée', value: platformInsights?.guests.seatVerified ?? 0 },
+ ].map((row) => (
+ <div key={row.label} className="flex justify-between text-sm">
+ <span className="text-muted dark:text-muted font-medium">{row.label}</span>
+ <span className="font-bold text-foreground dark:text-foreground">{row.value}</span>
+ </div>
+ ))}
+ </div>
+ <p className="text-xs text-muted pt-2">
                             Le PDF et le plan de table partent après présence confirmée et place assignée. Filtrez « PDF non livré » dans Invités pour le support.
-                          </p>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => router.replace('/dashboard/admin/guests')}
-                          >
-                            Ouvrir la file invités
-                          </Button>
-                        </div>
-                        <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
-                          <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
+ </p>
+ <Button
+ type="button"
+ size="sm"
+ variant="secondary"
+ onClick={() => router.replace('/dashboard/admin/guests')}
+ >
+ Ouvrir la file invités
+ </Button>
+ </div>
+ <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
+ <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
                             <Wallet className="w-5 h-5 text-primary" />
-                            Marketplace & packs
-                          </h3>
-                          <div className="space-y-3">
-                            {[
-                              { label: 'Favoris catalogue', value: platformInsights?.marketplace.favorites ?? 0 },
-                              { label: 'Packs enregistrés', value: platformInsights?.marketplace.packs ?? 0 },
-                              { label: 'GMV salles', value: formatFc(platformInsights?.marketplace.gmvVenueFc ?? 0) },
+ Marketplace & packs
+ </h3>
+ <div className="space-y-3">
+ {[
+ { label: 'Favoris catalogue', value: platformInsights?.marketplace.favorites ?? 0 },
+ { label: 'Packs enregistrés', value: platformInsights?.marketplace.packs ?? 0 },
+ { label: 'GMV salles', value: formatFc(platformInsights?.marketplace.gmvVenueFc ?? 0) },
                               { label: 'GMV prestataires', value: formatFc(platformInsights?.marketplace.gmvTradeFc ?? 0) },
                               { label: 'GMV matériel & équipements', value: formatFc(platformInsights?.marketplace.gmvRentalFc ?? 0) },
-                            ].map((row) => (
-                              <div key={row.label} className="flex justify-between text-sm">
-                                <span className="text-muted dark:text-muted font-medium">{row.label}</span>
-                                <span className="font-bold text-foreground dark:text-foreground">{row.value}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => router.push('/dashboard/admin/catalogue')}
-                          >
-                            Ouvrir le catalogue
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+ ].map((row) => (
+ <div key={row.label} className="flex justify-between text-sm">
+ <span className="text-muted dark:text-muted font-medium">{row.label}</span>
+ <span className="font-bold text-foreground dark:text-foreground">{row.value}</span>
+ </div>
+ ))}
+ </div>
+ <Button
+ type="button"
+ size="sm"
+ variant="secondary"
+ onClick={() => router.push('/dashboard/admin/catalogue')}
+ >
+ Ouvrir le catalogue
+ </Button>
+ </div>
+ </div>
+ )}
 
-                    {activeAnalyticsSection === 'taches' && (
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
-                          <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
-                            <ClipboardList className="w-5 h-5 text-primary" />
-                            Tâches événements
-                          </h3>
-                          <div className="space-y-3">
-                            {[
-                              { label: 'Ouvertes', value: platformInsights?.tasks?.open ?? adminData?.stats.openTasks ?? 0 },
-                              { label: 'En retard', value: platformInsights?.tasks?.overdue ?? adminData?.stats.overdueTasks ?? 0 },
-                              { label: 'Terminées', value: platformInsights?.tasks?.done ?? 0 },
-                              { label: 'Check-in (scan)', value: platformInsights?.guests.checkedIn ?? adminData?.stats.checkedIn ?? 0 },
-                              { label: 'Événements à venir', value: adminData?.stats.upcomingEvents ?? 0 },
-                            ].map((row) => (
-                              <div key={row.label} className="flex justify-between text-sm">
-                                <span className="text-muted dark:text-muted font-medium">{row.label}</span>
-                                <span className="font-bold text-foreground dark:text-foreground">{row.value}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <p className="text-xs text-muted pt-2">
-                            Les rappels d’échéance partent automatiquement la veille / le jour J, puis en cas de retard.
-                          </p>
-                        </div>
-                        <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
-                          <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
-                            <ScanLine className="w-5 h-5 text-sky-600" />
-                            Équipe organisations
-                          </h3>
-                          <div className="space-y-3">
-                            {[
+ {activeAnalyticsSection === 'taches' && (
+ <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+ <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
+ <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
+ <ClipboardList className="w-5 h-5 text-primary" />
+ Tâches événements
+ </h3>
+ <div className="space-y-3">
+ {[
+ { label: 'Ouvertes', value: platformInsights?.tasks?.open ?? adminData?.stats.openTasks ?? 0 },
+ { label: 'En retard', value: platformInsights?.tasks?.overdue ?? adminData?.stats.overdueTasks ?? 0 },
+ { label: 'Terminées', value: platformInsights?.tasks?.done ?? 0 },
+ { label: 'Check-in (scan)', value: platformInsights?.guests.checkedIn ?? adminData?.stats.checkedIn ?? 0 },
+ { label: 'Événements à venir', value: adminData?.stats.upcomingEvents ?? 0 },
+ ].map((row) => (
+ <div key={row.label} className="flex justify-between text-sm">
+ <span className="text-muted dark:text-muted font-medium">{row.label}</span>
+ <span className="font-bold text-foreground dark:text-foreground">{row.value}</span>
+ </div>
+ ))}
+ </div>
+ <p className="text-xs text-muted pt-2">
+ Les rappels d’échéance partent automatiquement la veille / le jour J, puis en cas de retard.
+ </p>
+ </div>
+ <div className="bg-white dark:bg-background border border-border dark:border-border rounded-2xl p-6 space-y-4 shadow-sm">
+ <h3 className="text-base font-bold text-foreground dark:text-foreground flex items-center gap-2 border-b border-border-subtle dark:border-border pb-3">
+ <ScanLine className="w-5 h-5 text-sky-600" />
+ Équipe organisations
+ </h3>
+ <div className="space-y-3">
+ {[
                               { label: 'Propriétaires', value: adminData?.stats.owners ?? 0 },
-                              { label: 'Managers', value: platformInsights?.team?.managerUsers ?? adminData?.orgRoleCounts?.MANAGER ?? 0 },
-                              { label: 'Protocole', value: platformInsights?.team?.protocolUsers ?? adminData?.orgRoleCounts?.PROTOCOL ?? 0 },
-                              { label: 'Commerciaux org.', value: adminData?.orgRoleCounts?.COMMERCIAL ?? 0 },
-                              { label: 'Sans rôle org.', value: adminData?.orgRoleCounts?.NONE ?? 0 },
+ { label: 'Managers', value: platformInsights?.team?.managerUsers ?? adminData?.orgRoleCounts?.MANAGER ?? 0 },
+ { label: 'Protocole', value: platformInsights?.team?.protocolUsers ?? adminData?.orgRoleCounts?.PROTOCOL ?? 0 },
+ { label: 'Commerciaux org.', value: adminData?.orgRoleCounts?.COMMERCIAL ?? 0 },
+ { label: 'Sans rôle org.', value: adminData?.orgRoleCounts?.NONE ?? 0 },
                               { label: 'Staff salle / événement', value: adminData?.stats.staffUsers ?? 0 },
                               { label: 'Clients catalogue', value: adminData?.stats.clientUsers ?? 0 },
-                            ].map((row) => (
-                              <div key={row.label} className="flex justify-between text-sm">
-                                <span className="text-muted dark:text-muted font-medium">{row.label}</span>
-                                <span className="font-bold text-foreground dark:text-foreground">{row.value}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+ ].map((row) => (
+ <div key={row.label} className="flex justify-between text-sm">
+ <span className="text-muted dark:text-muted font-medium">{row.label}</span>
+ <span className="font-bold text-foreground dark:text-foreground">{row.value}</span>
+ </div>
+ ))}
+ </div>
+ </div>
+ </div>
+ )}
+ </div>
+ )}
+ </div>
+ </div>
+ )}
 
           <AdminGuestFormModal
             open={isGuestModalOpen}
@@ -4812,9 +4812,9 @@ function DashboardPageContent() {
             extendLicense={modalExtendLicense}
             billingAction={modalBillingAction}
             billingDurationDays={modalBillingDurationDays}
-            discountMode={modalDiscountMode}
-            discountPercent={modalDiscountPercent}
-            approvedAmount={modalApprovedAmount}
+ discountMode={modalDiscountMode}
+ discountPercent={modalDiscountPercent}
+ approvedAmount={modalApprovedAmount}
             catalogPriceFc={planCatalogPrices?.[modalPlan]}
             onClose={() => setIsTenantModalOpen(false)}
             onSubmit={handleSaveTenant}
@@ -4915,45 +4915,45 @@ function DashboardPageContent() {
             }}
           />
 
-          <AdminDetailsModal
-            open={isDetailsModalOpen && Boolean(detailsData)}
-            type={detailsType}
-            data={detailsData}
-            onClose={() => setIsDetailsModalOpen(false)}
-            planBadgeClass={planBadgeClass}
-            tenantSubscriptionHistory={tenantSubscriptionHistory}
-            loadingTenantHistory={loadingTenantHistory}
-            onOpenWorkspace={
-              detailsType === 'tenant' && !isCommercialPlatform && detailsData?.id
-                ? () => void handleOpenWorkspace(detailsData.id)
-                : undefined
-            }
-            openingWorkspace={Boolean(detailsData?.id && openingWorkspaceId === detailsData.id)}
-            onEdit={
-              detailsType === 'tenant'
-                ? () => {
-                  setIsDetailsModalOpen(false);
-                  handleOpenEditTenantModal(detailsData);
-                }
-                : detailsType === 'user'
-                  ? () => {
-                    setIsDetailsModalOpen(false);
-                    handleOpenEditUserModal(detailsData);
-                  }
-                  : detailsType === 'guest'
-                    ? () => {
-                      setIsDetailsModalOpen(false);
-                      handleOpenEditGuestModal(detailsData);
-                    }
-                    : detailsType === 'event'
-                      ? () => {
-                        setIsDetailsModalOpen(false);
-                        handleOpenEditEventModal(detailsData);
-                      }
-                      : undefined
-            }
-          />
-        </div>
+ <AdminDetailsModal
+ open={isDetailsModalOpen && Boolean(detailsData)}
+ type={detailsType}
+ data={detailsData}
+ onClose={() => setIsDetailsModalOpen(false)}
+ planBadgeClass={planBadgeClass}
+ tenantSubscriptionHistory={tenantSubscriptionHistory}
+ loadingTenantHistory={loadingTenantHistory}
+ onOpenWorkspace={
+ detailsType === 'tenant' && !isCommercialPlatform && detailsData?.id
+ ? () => void handleOpenWorkspace(detailsData.id)
+ : undefined
+ }
+ openingWorkspace={Boolean(detailsData?.id && openingWorkspaceId === detailsData.id)}
+ onEdit={
+ detailsType === 'tenant'
+ ? () => {
+ setIsDetailsModalOpen(false);
+ handleOpenEditTenantModal(detailsData);
+ }
+ : detailsType === 'user'
+ ? () => {
+ setIsDetailsModalOpen(false);
+ handleOpenEditUserModal(detailsData);
+ }
+ : detailsType === 'guest'
+ ? () => {
+ setIsDetailsModalOpen(false);
+ handleOpenEditGuestModal(detailsData);
+ }
+ : detailsType === 'event'
+ ? () => {
+ setIsDetailsModalOpen(false);
+ handleOpenEditEventModal(detailsData);
+ }
+ : undefined
+ }
+ />
+ </div>
 
         <ConfirmDialog
           open={Boolean(pendingConfirm)}
@@ -4995,29 +4995,29 @@ function DashboardPageContent() {
           }}
         />
 
-        <SubscriptionApprovalModal
-          request={approvalModalRequest}
-          onClose={() => setApprovalModalRequest(null)}
-          catalogPrices={planCatalogPrices}
-          promoByPlan={planPromoByPlan}
+ <SubscriptionApprovalModal
+ request={approvalModalRequest}
+ onClose={() => setApprovalModalRequest(null)}
+ catalogPrices={planCatalogPrices}
+ promoByPlan={planPromoByPlan}
           onConfirm={async (requestId, { discountPercent, approvedAmount }, action) =>
             handleApproveSubscription(requestId, { discountPercent, approvedAmount }, action)
-          }
-        />
-      </>
-    );
-  }
+ }
+ />
+ </>
+ );
+ }
 
-  // Render Regular Tenant Dashboard
-  const usage = orgQuota?.usage;
-  const limits = orgQuota?.limits;
-  const formatQuota = (used?: number, max?: number) => {
-    if (used == null) return '—';
-    if (max == null || max < 0) return String(used);
-    return `${used} / ${max}`;
-  };
+ // Render Regular Tenant Dashboard
+ const usage = orgQuota?.usage;
+ const limits = orgQuota?.limits;
+ const formatQuota = (used?: number, max?: number) => {
+ if (used == null) return '—';
+ if (max == null || max < 0) return String(used);
+ return `${used} / ${max}`;
+ };
 
-  return (
+ return (
     <OrganizerDashboardHome
       events={events}
       billing={billing}
@@ -5036,16 +5036,16 @@ function DashboardPageContent() {
 }
 
 export default function DashboardPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-surface-muted dark:bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-10 h-10 text-primary animate-spin" />
+ return (
+ <Suspense fallback={
+ <div className="min-h-screen flex items-center justify-center bg-surface-muted dark:bg-background">
+ <div className="flex flex-col items-center gap-4">
+ <Loader2 className="w-10 h-10 text-primary animate-spin" />
           <p className="text-sm font-medium text-muted dark:text-muted">Préparation de votre tableau de bord...</p>
-        </div>
-      </div>
-    }>
-      <DashboardPageContent />
-    </Suspense>
-  );
+ </div>
+ </div>
+ }>
+ <DashboardPageContent />
+ </Suspense>
+ );
 }

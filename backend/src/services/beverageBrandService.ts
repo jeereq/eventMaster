@@ -1,5 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../db';
+import { uniqueSlug } from '../utils/slug';
 import { activePromoPrice } from './offerPromotion';
 import {
   BEVERAGE_KIND_LABELS,
@@ -57,6 +58,27 @@ export async function listBeverageBrands(options?: { includeInactive?: boolean }
   });
 }
 
+async function ensureVendorProfile(tenantId: string, displayName: string) {
+  const existing = await prisma.vendorProfile.findUnique({ where: { tenantId } });
+  if (existing) return existing;
+  const name = displayName.trim() || 'Prestataire';
+  const slug = await uniqueSlug(name, async (candidate) => {
+    const hit = await prisma.vendorProfile.findUnique({ where: { slug: candidate }, select: { id: true } });
+    return Boolean(hit);
+  });
+  try {
+    return await prisma.vendorProfile.create({
+      data: { tenantId, slug, displayName: name },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      const again = await prisma.vendorProfile.findUnique({ where: { tenantId } });
+      if (again) return again;
+    }
+    throw error;
+  }
+}
+
 export async function listPublicBeverageOffers(tenantId?: string) {
   const rows = await prisma.vendorBeveragePrice.findMany({
     where: {
@@ -67,6 +89,7 @@ export async function listPublicBeverageOffers(tenantId?: string) {
     orderBy: [{ brand: { kind: 'asc' } }, { brand: { name: 'asc' } }, { priceFc: 'asc' }],
     select: {
       id: true,
+      tenantId: true,
       unitKind: true,
       quantity: true,
       unitLabel: true,
@@ -94,6 +117,17 @@ export async function listPublicBeverageOffers(tenantId?: string) {
       },
     },
   });
+  const profiles = new Map<string, { slug: string; displayName: string }>();
+  for (const row of rows) {
+    const current = row.tenant.vendorProfile;
+    if (current?.slug) {
+      profiles.set(row.tenantId, { slug: current.slug, displayName: current.displayName });
+      continue;
+    }
+    if (profiles.has(row.tenantId)) continue;
+    const created = await ensureVendorProfile(row.tenantId, row.tenant.name);
+    profiles.set(row.tenantId, { slug: created.slug, displayName: created.displayName });
+  }
   return rows.map((row) => {
     const payable = activePromoPrice({
       priceFc: row.priceFc,
@@ -111,8 +145,8 @@ export async function listPublicBeverageOffers(tenantId?: string) {
       country: row.brand.country,
       volumeLabel: row.brand.volumeLabel,
       description: row.brand.description,
-      vendorName: row.tenant.vendorProfile?.displayName || row.tenant.name,
-      vendorSlug: row.tenant.vendorProfile?.slug || null,
+      vendorName: profiles.get(row.tenantId)?.displayName || row.tenant.name,
+      vendorSlug: profiles.get(row.tenantId)?.slug || null,
       unitKind: row.unitKind,
       quantity: row.quantity,
       unitLabel: row.unitLabel,
@@ -230,6 +264,11 @@ export async function replaceVendorBeveragePrices(tenantId: string, body: unknow
     if (found.length !== brandIds.length) {
       throw new Error('Une ou plusieurs marques ne sont plus disponibles au catalogue.');
     }
+  }
+
+  if (parsed.offers.length) {
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
+    await ensureVendorProfile(tenantId, tenant?.name || 'Prestataire');
   }
 
   await prisma.$transaction(async (tx) => {
