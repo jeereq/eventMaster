@@ -47,7 +47,7 @@ export function getSmsGatewayCredentials(): SmsGatewayCredentials {
       runtimeCredentials?.dreamDigitalApiId ||
       process.env.DREAM_DIGITAL_API_ID ||
       process.env.SMS_API_ID ||
-      '',
+      'API1633619985',
     dreamDigitalApiPassword:
       runtimeCredentials?.dreamDigitalApiPassword ||
       process.env.DREAM_DIGITAL_API_PASSWORD ||
