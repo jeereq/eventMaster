@@ -42,7 +42,7 @@ export function getSmsGatewayCredentials(): SmsGatewayCredentials {
       runtimeCredentials?.dreamDigitalBaseUrl ||
       process.env.DREAM_DIGITAL_BASE_URL ||
       process.env.SMS_API_URL ||
-      'https://sms.dreamdigital.cd',
+      'https://api2.dream-digital.info',
     dreamDigitalApiId:
       runtimeCredentials?.dreamDigitalApiId ||
       process.env.DREAM_DIGITAL_API_ID ||
