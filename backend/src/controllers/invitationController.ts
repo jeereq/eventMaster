@@ -2,7 +2,10 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
 import { sendRealEmail, sendRealWhatsApp, sendRealSms } from '../services/notificationService';
-import { resolveDeliveryChannels } from '../utils/notificationChannels';
+import {
+  clampInvitationChannelToPlatform,
+  resolvePlatformDeliveryChannels,
+} from '../utils/invitationChannelPolicy';
 import { applyInvitationGuidelineVariables, guestGuidelinesInvitationText } from '../utils/guestGuidelines';
 import { canManageEvent, canAccessEvent } from '../services/permissionsService';
 import {
@@ -58,6 +61,20 @@ function getGuestPhone(guest: any): string | null {
   return extractGuestPhone(guest);
 }
 
+function invitationContentError(channel: string, emailBody: string, waBody: string): string | null {
+  const methods = resolvePlatformDeliveryChannels(channel);
+  if (methods.length === 0) {
+    return 'Aucun moyen de communication autorisé pour cette invitation.';
+  }
+  if (methods.includes('EMAIL') && !emailBody) {
+    return 'Le texte e-mail est requis';
+  }
+  if (methods.includes('WHATSAPP') && !waBody && !emailBody) {
+    return 'Le texte WhatsApp est requis';
+  }
+  return null;
+}
+
 // Get all invitations for an event
 export async function getInvitations(req: AuthenticatedRequest, res: Response) {
   try {
@@ -107,12 +124,13 @@ export async function createInvitation(req: AuthenticatedRequest, res: Response)
     if (!subject || !channel) {
       return res.status(400).json({ error: 'Les champs subject et channel sont requis' });
     }
-    if (channel === 'WHATSAPP') {
-      if (!waBody && !emailBody) {
-        return res.status(400).json({ error: 'Le texte WhatsApp est requis' });
-      }
-    } else if (!emailBody) {
-      return res.status(400).json({ error: 'Le texte e-mail est requis' });
+    const storedChannel = clampInvitationChannelToPlatform(String(channel));
+    if (!storedChannel) {
+      return res.status(400).json({ error: 'Aucun moyen de communication autorisé pour cette invitation.' });
+    }
+    const contentError = invitationContentError(storedChannel, emailBody, waBody);
+    if (contentError) {
+      return res.status(400).json({ error: contentError });
     }
 
     const invitation = await prisma.invitation.create({
@@ -122,7 +140,7 @@ export async function createInvitation(req: AuthenticatedRequest, res: Response)
         subject,
         body: emailBody || waBody,
         whatsappBody: waBody || null,
-        channel,
+        channel: storedChannel,
       },
     });
 
@@ -188,6 +206,12 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
     }
 
     const activeChannel = channel || invitation.channel;
+    const channelsToSend = resolvePlatformDeliveryChannels(activeChannel);
+    if (channelsToSend.length === 0) {
+      return res.status(400).json({
+        error: 'Aucun moyen de communication autorisé pour cet envoi. Modifiez l’invitation ou les canaux de la plateforme.',
+      });
+    }
 
     // Fetch event details for variable replacement
     const event = await prisma.event.findFirst({
@@ -239,9 +263,6 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
       const guidelinesAlreadyInBody = Boolean(
         guidelinesText && body.includes(guidelinesText.slice(0, Math.min(24, guidelinesText.length))),
       );
-
-      // Canaux : e-mail et WhatsApp uniquement (SMS / alias legacy convertis)
-      const channelsToSend = resolveDeliveryChannels(activeChannel);
 
       const channelResults = [];
       for (const chan of channelsToSend) {
@@ -465,6 +486,15 @@ export async function updateInvitation(req: AuthenticatedRequest, res: Response)
       return res.status(404).json({ error: 'Invitation non trouvée dans cet événement' });
     }
 
+    let nextChannel = existingInvitation.channel;
+    if (channel !== undefined) {
+      const clamped = clampInvitationChannelToPlatform(String(channel));
+      if (!clamped) {
+        return res.status(400).json({ error: 'Aucun moyen de communication autorisé pour cette invitation.' });
+      }
+      nextChannel = clamped;
+    }
+
     const updatedInvitation = await prisma.invitation.update({
       where: { id },
       data: {
@@ -472,7 +502,7 @@ export async function updateInvitation(req: AuthenticatedRequest, res: Response)
         subject: subject !== undefined ? subject : existingInvitation.subject,
         body: body !== undefined ? body : existingInvitation.body,
         whatsappBody: whatsappBody !== undefined ? (whatsappBody?.trim() || null) : existingInvitation.whatsappBody,
-        channel: channel !== undefined ? channel : existingInvitation.channel,
+        channel: nextChannel,
       },
       include: { template: true },
     });

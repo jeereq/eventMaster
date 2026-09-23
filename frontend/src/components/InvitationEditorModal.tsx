@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Undo, Redo, LayoutTemplate, MessageSquare, Tag, Bold, Italic, Strikethrough,
   Eye, Edit3, Mail, Check, Sparkles, ArrowRight, RefreshCw, Shirt, AlertCircle,
@@ -14,6 +14,16 @@ import { templateContentToLandingPreview } from '@/lib/landingTemplateAdapter';
 import { toWhatsAppTone } from '@/lib/whatsappTone';
 import { formatGuestGuidelinesBlock, normalizeGuestGuidelines, type GuestGuidelines } from '@/lib/guestGuidelines';
 import { cn } from '@/lib/cn';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import {
+  clampInvitationChannel,
+  defaultInvitationChannel,
+  invitationChannelLabel,
+  invitationChannelUses,
+  invitationMethodsFromPlatform,
+  visibleInvitationChannelPresets,
+  type InvitationDeliveryMethod,
+} from '@/lib/invitationChannels';
 
 const INVITATION_VARIABLES = [
   { tag: '{{rsvpLink}}', label: 'Lien de réponse à l’invitation', desc: 'Indispensable pour confirmer & accéder au QR pass', isCrucial: true },
@@ -51,28 +61,18 @@ export type InvitationFormData = {
 };
 
 export function getInvitationChannelLabel(channel: string): string {
-  switch (channel) {
-    case 'EMAIL':
-      return 'E-mail seul';
-    case 'WHATSAPP':
-      return 'WhatsApp seul';
-    case 'SMS':
-      return 'SMS seul';
-    case 'EMAIL_AND_WHATSAPP':
-    case 'WHATSAPP_AND_EMAIL':
-      return 'E-mail & WhatsApp';
-    case 'EMAIL_AND_SMS':
-    case 'SMS_AND_EMAIL':
-      return 'E-mail & SMS';
-    case 'WHATSAPP_AND_SMS':
-    case 'SMS_AND_WHATSAPP':
-      return 'WhatsApp & SMS';
-    case 'ALL_CHANNELS':
-      return 'Les trois (E-mail, WhatsApp & SMS)';
-    default:
-      return channel;
-  }
+  return invitationChannelLabel(channel);
 }
+
+const INVITATION_CHANNEL_CHOICES: Array<{
+  id: InvitationDeliveryMethod;
+  title: string;
+  hint: string;
+}> = [
+  { id: 'EMAIL', title: 'Canal E-mail', hint: 'Lettre officielle SendGrid' },
+  { id: 'WHATSAPP', title: 'Canal WhatsApp', hint: 'Mobile direct & pass QR' },
+  { id: 'SMS', title: 'Canal SMS', hint: 'Dream Digital (aSMSC)' },
+];
 
 interface InvitationEditorModalProps {
   open: boolean;
@@ -111,6 +111,18 @@ export default function InvitationEditorModal({
   const [activeField, setActiveField] = useState<'subject' | 'body' | 'whatsappBody'>('body');
   const [feedbackMessage, setFeedbackMessage] = useState<{ text: string; type: 'success' | 'info' } | null>(null);
   const [previewGraphicModalOpen, setPreviewGraphicModalOpen] = useState(false);
+  const { site } = usePlatformSite();
+  const allowedMethods = useMemo(
+    () => invitationMethodsFromPlatform(site.notificationChannels),
+    [site.notificationChannels],
+  );
+  const channelPresets = useMemo(
+    () => visibleInvitationChannelPresets(allowedMethods),
+    [allowedMethods],
+  );
+  const allowedMethodsKey = allowedMethods.join(',');
+  const allowedMethodsRef = useRef(allowedMethods);
+  allowedMethodsRef.current = allowedMethods;
 
   const selectedGraphicTemplate = templates.find((t) => t.id === data.templateId);
 
@@ -133,9 +145,11 @@ export default function InvitationEditorModal({
   // Initialize data and history when modal opens
   useEffect(() => {
     if (open) {
+      const allowedNow = allowedMethodsRef.current;
+      const fallbackChannel = defaultInvitationChannel(allowedNow) || 'EMAIL';
       const normalizedInitial: InvitationFormData = {
         templateId: initialData.templateId || '',
-        channel: initialData.channel || 'EMAIL_AND_WHATSAPP',
+        channel: clampInvitationChannel(initialData.channel || fallbackChannel, allowedNow) || fallbackChannel,
         subject: initialData.subject || (eventTitle ? `Invitation : ${eventTitle}` : ''),
         body: initialData.body || '',
         whatsappBody: initialData.whatsappBody || '',
@@ -157,6 +171,15 @@ export default function InvitationEditorModal({
       }
     }
   }, [open, initialData, eventTitle]);
+
+  useEffect(() => {
+    if (!open) return;
+    setData((prev) => {
+      const nextChannel = clampInvitationChannel(prev.channel, allowedMethods);
+      if (!nextChannel || nextChannel === prev.channel) return prev;
+      return { ...prev, channel: nextChannel };
+    });
+  }, [open, allowedMethodsKey, allowedMethods]);
 
   const pushToHistory = useCallback((nextData: InvitationFormData) => {
     setHistory((prev) => {
@@ -389,9 +412,15 @@ export default function InvitationEditorModal({
       return;
     }
 
+    const storedChannel = clampInvitationChannel(data.channel, allowedMethods);
+    if (!storedChannel) {
+      setError('Aucun moyen de communication n’est autorisé pour les invitations.');
+      return;
+    }
+
     setSaving(true);
     try {
-      await onSave(data);
+      await onSave({ ...data, channel: storedChannel });
     } catch (err: any) {
       setError(err.message || 'Erreur lors de l’enregistrement de l’invitation.');
     } finally {
@@ -399,34 +428,15 @@ export default function InvitationEditorModal({
     }
   };
 
-  const channelNeedsEmail =
-    data.channel === 'EMAIL' ||
-    data.channel === 'EMAIL_AND_WHATSAPP' ||
-    data.channel === 'WHATSAPP_AND_EMAIL' ||
-    data.channel === 'EMAIL_AND_SMS' ||
-    data.channel === 'SMS_AND_EMAIL' ||
-    data.channel === 'ALL_CHANNELS';
-
-  const channelNeedsWhatsApp =
-    data.channel === 'WHATSAPP' ||
-    data.channel === 'EMAIL_AND_WHATSAPP' ||
-    data.channel === 'WHATSAPP_AND_EMAIL' ||
-    data.channel === 'WHATSAPP_AND_SMS' ||
-    data.channel === 'SMS_AND_WHATSAPP' ||
-    data.channel === 'ALL_CHANNELS';
-
-  const channelNeedsSms =
-    data.channel === 'SMS' ||
-    data.channel === 'EMAIL_AND_SMS' ||
-    data.channel === 'SMS_AND_EMAIL' ||
-    data.channel === 'WHATSAPP_AND_SMS' ||
-    data.channel === 'SMS_AND_WHATSAPP' ||
-    data.channel === 'ALL_CHANNELS';
+  const channelNeedsEmail = invitationChannelUses(data.channel, 'EMAIL');
+  const channelNeedsWhatsApp = invitationChannelUses(data.channel, 'WHATSAPP');
+  const channelNeedsSms = invitationChannelUses(data.channel, 'SMS');
 
   const toggleChannel = (target: 'EMAIL' | 'WHATSAPP' | 'SMS') => {
-    let nextEmail = channelNeedsEmail;
-    let nextWhatsApp = channelNeedsWhatsApp;
-    let nextSms = channelNeedsSms;
+    if (!allowedMethods.includes(target)) return;
+    let nextEmail = allowedMethods.includes('EMAIL') && channelNeedsEmail;
+    let nextWhatsApp = allowedMethods.includes('WHATSAPP') && channelNeedsWhatsApp;
+    let nextSms = allowedMethods.includes('SMS') && channelNeedsSms;
 
     if (target === 'EMAIL') nextEmail = !nextEmail;
     if (target === 'WHATSAPP') nextWhatsApp = !nextWhatsApp;
@@ -592,101 +602,69 @@ export default function InvitationEditorModal({
               </span>
             </div>
 
-            {/* Sélecteur de canaux interactif & combinaisons */}
             <div className="space-y-3">
-              {/* Toggles des 3 canaux fondamentaux */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => toggleChannel('EMAIL')}
-                  aria-pressed={channelNeedsEmail}
-                  className={cn(
-                    'p-3.5 rounded-xl border text-left transition flex items-center justify-between min-h-14 cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100',
-                    channelNeedsEmail
-                      ? 'border-primary bg-primary/10 ring-2 ring-primary/20 shadow-xs'
-                      : 'border-border bg-surface hover:bg-surface-muted/60 opacity-75',
-                  )}
+              {allowedMethods.length === 0 ? (
+                <p className="text-xs text-muted leading-relaxed">
+                  Aucun moyen de communication n’est autorisé pour les invitations. Activez l’e-mail, WhatsApp ou le SMS dans les réglages de la plateforme.
+                </p>
+              ) : (
+                <div className={cn(
+                  'grid grid-cols-1 gap-2.5',
+                  allowedMethods.length === 2 && 'sm:grid-cols-2',
+                  allowedMethods.length >= 3 && 'sm:grid-cols-3',
+                )}
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className={cn('p-2 rounded-lg', channelNeedsEmail ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted')}>
-                      <Mail className="w-4 h-4" aria-hidden />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-foreground">Canal E-mail</p>
-                      <p className="text-[11px] text-muted truncate">Lettre officielle SendGrid</p>
-                    </div>
-                  </div>
-                  <span className={cn('w-5 h-5 rounded-full flex items-center justify-center shrink-0 border', channelNeedsEmail ? 'bg-primary border-primary text-primary-foreground' : 'border-border bg-surface')}>
-                    {channelNeedsEmail && <Check className="w-3 h-3" />}
-                  </span>
-                </button>
+                  {INVITATION_CHANNEL_CHOICES.filter((choice) => allowedMethods.includes(choice.id)).map((choice) => {
+                    const active = choice.id === 'EMAIL'
+                      ? channelNeedsEmail
+                      : choice.id === 'WHATSAPP'
+                        ? channelNeedsWhatsApp
+                        : channelNeedsSms;
+                    const Icon = choice.id === 'EMAIL' ? Mail : choice.id === 'WHATSAPP' ? MessageSquare : Smartphone;
+                    return (
+                      <button
+                        key={choice.id}
+                        type="button"
+                        onClick={() => toggleChannel(choice.id)}
+                        aria-pressed={active}
+                        className={cn(
+                          'p-3.5 rounded-xl border text-left transition flex items-center justify-between min-h-14 cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100',
+                          active
+                            ? 'border-primary bg-primary/10 ring-2 ring-primary/20 shadow-xs'
+                            : 'border-border bg-surface hover:bg-surface-muted/60 opacity-75',
+                        )}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className={cn('p-2 rounded-lg', active ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted')}>
+                            <Icon className="w-4 h-4" aria-hidden />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-xs font-bold text-foreground">{choice.title}</p>
+                            <p className="text-[11px] text-muted truncate">{choice.hint}</p>
+                          </div>
+                        </div>
+                        <span className={cn('w-5 h-5 rounded-full flex items-center justify-center shrink-0 border', active ? 'bg-primary border-primary text-primary-foreground' : 'border-border bg-surface')}>
+                          {active && <Check className="w-3 h-3" />}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
 
-                <button
-                  type="button"
-                  onClick={() => toggleChannel('WHATSAPP')}
-                  aria-pressed={channelNeedsWhatsApp}
-                  className={cn(
-                    'p-3.5 rounded-xl border text-left transition flex items-center justify-between min-h-14 cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100',
-                    channelNeedsWhatsApp
-                      ? 'border-primary bg-primary/10 ring-2 ring-primary/20 shadow-xs'
-                      : 'border-border bg-surface hover:bg-surface-muted/60 opacity-75',
-                  )}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className={cn('p-2 rounded-lg', channelNeedsWhatsApp ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted')}>
-                      <MessageSquare className="w-4 h-4" aria-hidden />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-foreground">Canal WhatsApp</p>
-                      <p className="text-[11px] text-muted truncate">Mobile direct & pass QR</p>
-                    </div>
-                  </div>
-                  <span className={cn('w-5 h-5 rounded-full flex items-center justify-center shrink-0 border', channelNeedsWhatsApp ? 'bg-primary border-primary text-primary-foreground' : 'border-border bg-surface')}>
-                    {channelNeedsWhatsApp && <Check className="w-3 h-3" />}
-                  </span>
-                </button>
+              {allowedMethods.length > 0 && allowedMethods.length < 3 && (
+                <p className="text-[11px] text-muted">
+                  Seuls les moyens de communication autorisés sur la plateforme sont proposés.
+                </p>
+              )}
 
-                <button
-                  type="button"
-                  onClick={() => toggleChannel('SMS')}
-                  aria-pressed={channelNeedsSms}
-                  className={cn(
-                    'p-3.5 rounded-xl border text-left transition flex items-center justify-between min-h-14 cursor-pointer touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100',
-                    channelNeedsSms
-                      ? 'border-primary bg-primary/10 ring-2 ring-primary/20 shadow-xs'
-                      : 'border-border bg-surface hover:bg-surface-muted/60 opacity-75',
-                  )}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className={cn('p-2 rounded-lg', channelNeedsSms ? 'bg-primary text-primary-foreground' : 'bg-surface-muted text-muted')}>
-                      <Smartphone className="w-4 h-4" aria-hidden />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-foreground">Canal SMS</p>
-                      <p className="text-[11px] text-muted truncate">Dream Digital (aSMSC)</p>
-                    </div>
-                  </div>
-                  <span className={cn('w-5 h-5 rounded-full flex items-center justify-center shrink-0 border', channelNeedsSms ? 'bg-primary border-primary text-primary-foreground' : 'border-border bg-surface')}>
-                    {channelNeedsSms && <Check className="w-3 h-3" />}
-                  </span>
-                </button>
-              </div>
-
-              {/* Raccourcis de combinaisons rapides */}
+              {channelPresets.length > 1 && (
               <div className="space-y-1.5 pt-1">
                 <span className="text-[11px] font-semibold text-muted uppercase tracking-wider block">
                   Combinaisons directes à 1 clic :
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { id: 'ALL_CHANNELS', label: '⭐ Les trois (E-mail, WhatsApp & SMS)', desc: 'Portée maximale absolue' },
-                    { id: 'EMAIL_AND_WHATSAPP', label: 'E-mail & WhatsApp', desc: 'Classique & Mobile' },
-                    { id: 'EMAIL_AND_SMS', label: 'E-mail & SMS', desc: 'Direct & Lettre' },
-                    { id: 'WHATSAPP_AND_SMS', label: 'WhatsApp & SMS', desc: '100% Smartphone' },
-                    { id: 'EMAIL', label: 'E-mail seul', desc: 'Courriel' },
-                    { id: 'WHATSAPP', label: 'WhatsApp seul', desc: 'Messagerie instantanée' },
-                    { id: 'SMS', label: 'SMS seul', desc: 'Message texte direct' },
-                  ].map((preset) => {
+                  {channelPresets.map((preset) => {
                     const active = data.channel === preset.id;
                     return (
                       <button
@@ -700,12 +678,13 @@ export default function InvitationEditorModal({
                             : 'border-border bg-surface hover:border-primary/50 hover:bg-surface-muted text-foreground',
                         )}
                       >
-                        <span>{preset.label}</span>
+                        <span>{preset.id === 'ALL_CHANNELS' ? `⭐ ${preset.label}` : preset.label}</span>
                       </button>
                     );
                   })}
                 </div>
               </div>
+              )}
             </div>
 
             {/* Faire-part graphique & Page de réponse à l’invitation */}

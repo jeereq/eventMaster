@@ -7,7 +7,7 @@ import {
 } from './notificationService';
 import { generateAndStoreSeatingInvitationPdf } from './seatingInvitationStorageService';
 import { extractGuestEmail, extractGuestPhone } from '../utils/guestIdentity';
-import { resolveDeliveryChannels } from '../utils/notificationChannels';
+import { resolvePlatformDeliveryChannels } from '../utils/invitationChannelPolicy';
 import { applyInvitationGuidelineVariables, guestGuidelinesInvitationText } from '../utils/guestGuidelines';
 import { prisma } from '../db';
 import {
@@ -298,7 +298,7 @@ export async function notifyGuestTableAssignment(params: {
     { guidelinesBlock: guestGuidelinesInvitationText(event.guestGuidelines) },
   );
 
-  const channelsToSend = resolveDeliveryChannels(invitation?.channel);
+  const channelsToSend = resolvePlatformDeliveryChannels(invitation?.channel);
   const tasks: Promise<void>[] = [];
 
   if (channelsToSend.includes('EMAIL') && email) {
