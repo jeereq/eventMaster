@@ -1,6 +1,6 @@
 import { prisma } from '../db';
 import { sendRealEmail, sendRealWhatsApp, sendRealSms } from './notificationService';
-import { resolvePlatformDeliveryChannels } from '../utils/invitationChannelPolicy';
+import { resolveDeliveryChannels } from '../utils/notificationChannels';
 import { renderGuestMessage, applyTemplateVariables } from './messageTemplateService';
 import { applyInvitationGuidelineVariables, guestGuidelinesInvitationText } from '../utils/guestGuidelines';
 import {
@@ -197,7 +197,7 @@ export async function processReminders() {
         });
 
         const channel = latestInvitation.channel || 'EMAIL';
-        const channelsToSend = resolvePlatformDeliveryChannels(channel);
+        const channelsToSend = resolveDeliveryChannels(channel);
 
         for (const chan of channelsToSend) {
           if (chan === 'EMAIL') {

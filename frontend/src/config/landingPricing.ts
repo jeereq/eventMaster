@@ -322,7 +322,7 @@ export const LANDING_PLANS: LandingPlan[] = [
     ctaVariant: 'outline',
     tier: 'essentials',
     audience: 'B2B',
-    highlights: ['3 événements · 50 invités (essai)', '4 essais IA offerts, puis jetons', 'Créer et modifier des invitations, QR, PDF/GPS', '1 salle · 1 prestation / matériel'],
+    highlights: ['3 événements · 50 invités (essai)', '4 essais IA offerts, puis jetons', 'Invitations, réponse à l’invitation, QR, PDF/GPS', '1 salle · 1 prestation / matériel'],
   },
   {
     id: 'PERSONAL_50',
@@ -606,7 +606,7 @@ export const FEATURE_COMPARISON: PlanFeatureRow[] = fillVendorPlans([
     category: 'Événements',
     label: 'Modèles personnalisés',
     values: {
-      FREE: true,
+      FREE: false,
       ...b2cSame(true),
       STANDARD: false,
       PREMIUM_1: true,

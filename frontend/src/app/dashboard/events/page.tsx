@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   Calendar, MapPin, Users, PlusCircle, Trash2, Edit3,
   ChevronRight, ArrowLeft, Check, Upload, Mail, Send,
@@ -60,14 +59,6 @@ import {
 } from '@/lib/guestContact';
 import InvitationMessagePreview from '@/components/InvitationMessagePreview';
 import InvitationEditorModal, { type InvitationFormData } from '@/components/InvitationEditorModal';
-import {
-  clampInvitationChannel,
-  defaultInvitationChannel,
-  invitationChannelLabel,
-  invitationChannelUses,
-  invitationMethodsFromPlatform,
-  visibleInvitationChannelPresets,
-} from '@/lib/invitationChannels';
 import { resolveWhatsAppInvitationBody, toWhatsAppTone } from '@/lib/whatsappTone';
 import {
   extractRsvpFieldsFromTemplateContent,
@@ -263,7 +254,24 @@ function getBroadcastStatusMeta(status: string) {
 }
 
 function getChannelLabel(channel: string) {
-  return invitationChannelLabel(channel);
+  switch (channel) {
+    case 'EMAIL':
+      return 'E-mail';
+    case 'WHATSAPP':
+      return 'WhatsApp';
+    case 'SMS':
+      return 'SMS';
+    case 'EMAIL_AND_WHATSAPP':
+      return 'E-mail et WhatsApp';
+    case 'EMAIL_AND_SMS':
+      return 'E-mail et SMS';
+    case 'WHATSAPP_AND_SMS':
+      return 'WhatsApp et SMS';
+    case 'ALL_CHANNELS':
+      return 'Tous les canaux (E-mail, WhatsApp, SMS)';
+    default:
+      return channel;
+  }
 }
 
 function guestHasValidEmail(guest: GuestItem): boolean {
@@ -281,15 +289,15 @@ function guestHasPhone(guest: GuestItem): boolean {
 }
 
 function channelNeedsEmail(channel: string): boolean {
-  return invitationChannelUses(channel, 'EMAIL');
+  return channel === 'EMAIL' || channel === 'EMAIL_AND_WHATSAPP' || channel === 'EMAIL_AND_SMS' || channel === 'ALL_CHANNELS';
 }
 
 function channelNeedsWhatsApp(channel: string): boolean {
-  return invitationChannelUses(channel, 'WHATSAPP');
+  return channel === 'WHATSAPP' || channel === 'EMAIL_AND_WHATSAPP' || channel === 'WHATSAPP_AND_SMS' || channel === 'ALL_CHANNELS';
 }
 
 function channelNeedsSms(channel: string): boolean {
-  return invitationChannelUses(channel, 'SMS');
+  return channel === 'SMS' || channel === 'EMAIL_AND_SMS' || channel === 'WHATSAPP_AND_SMS' || channel === 'ALL_CHANNELS';
 }
 
 function summarizeSendAudience(guestList: GuestItem[], channel: string) {
@@ -650,20 +658,6 @@ export default function EventsPage() {
 
 function EventsPageInner() {
   const { user, access, planFeatures, planQuota, tenant } = useAuth();
-  const { site } = usePlatformSite();
-  const allowedInvitationMethods = useMemo(
-    () => invitationMethodsFromPlatform(site.notificationChannels),
-    [site.notificationChannels],
-  );
-  const invitationChannelOptions = useMemo(
-    () => visibleInvitationChannelPresets(allowedInvitationMethods),
-    [allowedInvitationMethods],
-  );
-  const authorizedInviteChannel = useCallback((channel: string | null | undefined) => {
-    return clampInvitationChannel(channel, allowedInvitationMethods)
-      || defaultInvitationChannel(allowedInvitationMethods)
-      || '';
-  }, [allowedInvitationMethods]);
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -786,13 +780,6 @@ function EventsPageInner() {
   const [showBulkInviteModal, setShowBulkInviteModal] = useState(false);
   const [bulkSelectedInviteId, setBulkSelectedInviteId] = useState('');
   const [bulkSelectedChannel, setBulkSelectedChannel] = useState('EMAIL');
-
-  useEffect(() => {
-    setBulkSelectedChannel((current) => {
-      const next = authorizedInviteChannel(current);
-      return next && next !== current ? next : current;
-    });
-  }, [authorizedInviteChannel]);
 
   // Error/Success state
   const [error, setError] = useState('');
@@ -980,10 +967,8 @@ function EventsPageInner() {
 
   const broadcastConfirmInvite = invitations.find((invite) => invite.id === broadcastConfirmInviteId) || null;
   const broadcastAudience = useMemo(
-    () => (broadcastConfirmInvite
-      ? summarizeSendAudience(guests, authorizedInviteChannel(broadcastConfirmInvite.channel))
-      : null),
-    [broadcastConfirmInvite, guests, authorizedInviteChannel],
+    () => (broadcastConfirmInvite ? summarizeSendAudience(guests, broadcastConfirmInvite.channel) : null),
+    [broadcastConfirmInvite, guests],
   );
   const bulkAudience = useMemo(
     () => summarizeSendAudience(
@@ -1020,7 +1005,7 @@ function EventsPageInner() {
           setInviteBody('');
           setInviteWhatsAppBody('');
           setSelectedTemplateId('');
-          setInviteChannel(defaultInvitationChannel(allowedInvitationMethods) || 'EMAIL');
+          setInviteChannel('EMAIL');
           setShowInviteModal(true);
         }
         break;
@@ -1942,7 +1927,7 @@ Merci de confirmer votre présence :
     setInviteBody(invite.body);
     setInviteWhatsAppBody(invite.whatsappBody || '');
     setSelectedTemplateId(invite.template?.id || '');
-    setInviteChannel(authorizedInviteChannel(invite.channel || 'EMAIL'));
+    setInviteChannel(invite.channel || 'EMAIL');
     setShowInviteModal(true);
   };
 
@@ -1952,7 +1937,7 @@ Merci de confirmer votre présence :
     setInviteBody('');
     setInviteWhatsAppBody('');
     setSelectedTemplateId('');
-    setInviteChannel(defaultInvitationChannel(allowedInvitationMethods) || 'EMAIL_AND_WHATSAPP');
+    setInviteChannel('EMAIL_AND_WHATSAPP');
     setShowInviteModal(true);
   };
 
@@ -2738,7 +2723,7 @@ Merci de confirmer votre présence :
                               return;
                             }
                             setBulkSelectedInviteId(invitations[0]?.id || '');
-                            setBulkSelectedChannel(authorizedInviteChannel(invitations[0]?.channel || 'EMAIL'));
+                            setBulkSelectedChannel(invitations[0]?.channel || 'EMAIL');
                             setShowBulkInviteModal(true);
                           }}
                           size="sm"
@@ -3332,14 +3317,14 @@ Merci de confirmer votre présence :
                             <div className="flex items-center justify-between gap-2">
                               <StatusPill
                                 tone={
-                                  authorizedInviteChannel(invite.channel) === 'WHATSAPP' || authorizedInviteChannel(invite.channel) === 'SMS'
+                                  invite.channel === 'WHATSAPP' || invite.channel === 'SMS'
                                     ? 'emerald'
-                                    : authorizedInviteChannel(invite.channel) === 'EMAIL_AND_WHATSAPP' || authorizedInviteChannel(invite.channel) === 'EMAIL_AND_SMS' || authorizedInviteChannel(invite.channel) === 'ALL_CHANNELS'
+                                    : invite.channel === 'EMAIL_AND_WHATSAPP' || invite.channel === 'EMAIL_AND_SMS' || invite.channel === 'ALL_CHANNELS'
                                       ? 'sky'
                                       : 'primary'
                                 }
                               >
-                                {getChannelLabel(authorizedInviteChannel(invite.channel))}
+                                {getChannelLabel(invite.channel)}
                               </StatusPill>
                               <span className="text-xs font-semibold uppercase tracking-wider text-muted truncate">
                                 {invite.template?.name || 'Sans modèle'}
@@ -4083,7 +4068,7 @@ Merci de confirmer votre présence :
                     const id = e.target.value;
                     setBulkSelectedInviteId(id);
                     const invite = invitations.find((item) => item.id === id);
-                    if (invite?.channel) setBulkSelectedChannel(authorizedInviteChannel(invite.channel));
+                    if (invite?.channel) setBulkSelectedChannel(invite.channel);
                   }}
                   className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
                   required
@@ -4102,17 +4087,15 @@ Merci de confirmer votre présence :
                   onChange={(e) => setBulkSelectedChannel(e.target.value)}
                   className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
                 >
-                  {invitationChannelOptions.map((option) => (
-                    <option key={option.id} value={option.id}>{option.label}</option>
-                  ))}
+                  <option value="EMAIL">E-mail uniquement</option>
+                  <option value="WHATSAPP">WhatsApp uniquement</option>
+                  <option value="SMS">SMS uniquement</option>
+                  <option value="EMAIL_AND_WHATSAPP">E-mail et WhatsApp</option>
+                  <option value="EMAIL_AND_SMS">E-mail et SMS</option>
+                  <option value="WHATSAPP_AND_SMS">WhatsApp et SMS</option>
+                  <option value="ALL_CHANNELS">Tous les trois (E-mail, WhatsApp, SMS)</option>
                 </select>
               </div>
-
-              {allowedInvitationMethods.length > 0 && allowedInvitationMethods.length < 3 && (
-                <p className="text-[11px] text-muted">
-                  Seuls les moyens de communication autorisés sur la plateforme sont proposés.
-                </p>
-              )}
 
               <SendAudienceStats stats={bulkAudience} />
               {bulkAudience.reachable === 0 && (
@@ -4235,7 +4218,7 @@ Merci de confirmer votre présence :
           {broadcastWizardStep === 1 ? (
             <div className="space-y-3">
               <p className="text-sm text-muted">
-                Canal : <span className="font-semibold text-foreground">{getChannelLabel(authorizedInviteChannel(broadcastConfirmInvite?.channel || 'EMAIL'))}</span>
+                Canal : <span className="font-semibold text-foreground">{getChannelLabel(broadcastConfirmInvite?.channel || 'EMAIL')}</span>
                 {broadcastConfirmInvite?.subject ? ` · ${broadcastConfirmInvite.subject}` : ''}
               </p>
               {broadcastAudience ? <SendAudienceStats stats={broadcastAudience} /> : null}
@@ -4267,7 +4250,7 @@ Merci de confirmer votre présence :
                 selectedEvent,
                 tenant?.name || 'Organisation',
               )}
-              channel={authorizedInviteChannel(broadcastConfirmInvite.channel || 'EMAIL')}
+              channel={broadcastConfirmInvite.channel || 'EMAIL'}
               orgName={tenant?.name || 'Organisation'}
               primary={tenant?.branding?.primary}
               accent={tenant?.branding?.accent}
@@ -4278,7 +4261,7 @@ Merci de confirmer votre présence :
           {broadcastWizardStep === 3 ? (
             <div className="space-y-2 rounded-xl border border-border bg-surface-muted/50 px-4 py-3">
               <p className="text-sm text-foreground">
-                <span className="font-semibold">{broadcastAudience?.reachable ?? 0}</span> destinataire{(broadcastAudience?.reachable ?? 0) > 1 ? 's' : ''} prêt{(broadcastAudience?.reachable ?? 0) > 1 ? 's' : ''} · {getChannelLabel(authorizedInviteChannel(broadcastConfirmInvite?.channel || 'EMAIL'))}
+                <span className="font-semibold">{broadcastAudience?.reachable ?? 0}</span> destinataire{(broadcastAudience?.reachable ?? 0) > 1 ? 's' : ''} prêt{(broadcastAudience?.reachable ?? 0) > 1 ? 's' : ''} · {getChannelLabel(broadcastConfirmInvite?.channel || 'EMAIL')}
               </p>
               <p className="text-xs text-muted">
                 Lien Répondez s’il vous plaît seulement. Le PDF de table part après confirmation, si une place est attribuée.

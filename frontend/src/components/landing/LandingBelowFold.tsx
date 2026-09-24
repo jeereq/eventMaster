@@ -4,6 +4,7 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
 import FaqSection from '@/components/landing/FaqSection';
+import LandingTrustPricingBand from '@/components/landing/LandingTrustPricingBand';
 import PublicCtaBand from '@/components/PublicCtaBand';
 import SiteFooter from '@/components/SiteFooter';
 import LandingDashboardQuickAccess from '@/components/landing/LandingDashboardQuickAccess';
@@ -32,6 +33,16 @@ const Landing3DTeaserBand = dynamic(
   { ssr: false, loading: () => <LandingSectionFallback label="Chargement de la salle 3D…" /> },
 );
 
+/** FAQ courte de l’accueil : la liste complète reste sur /faq. */
+const LANDING_FAQ_IDS = [
+  'what-is-eventmaster',
+  'free-trial',
+  'plans-quotas',
+  'marketplace-venues',
+  'protocol-qr',
+  'support',
+];
+
 export default function LandingBelowFold() {
   const { user } = useAuth();
   const { site } = usePlatformSite();
@@ -50,7 +61,12 @@ export default function LandingBelowFold() {
       <LandingLazyMount label="Chargement du simulateur IA…" eagerHash="simulateur-ia">
         <LandingSimulatorTeaser />
       </LandingLazyMount>
-      <FaqSection />
+      <LandingTrustPricingBand />
+      <FaqSection
+        subtitle="Les questions les plus posées avant de se lancer."
+        itemIds={LANDING_FAQ_IDS}
+        moreHref="/faq"
+      />
       <PublicCtaBand
         title="Prêt à lancer votre événement ?"
         description="Créez votre compte gratuit en 1 minute. Sans carte bancaire."

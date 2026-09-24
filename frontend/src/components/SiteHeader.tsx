@@ -128,7 +128,7 @@ export default function SiteHeader({
               >
                 <span>{item.label}</span>
                 {item.href === '/simulateur' && site?.studioVisibility?.budget === false && (
-                  <span className="ml-1.5 px-1.5 py-0.5 text-xs font-bold rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
+                  <span className="ml-1.5 px-1.5 py-0.5 text-xs font-bold rounded-full bg-festive-accent-soft text-festive-accent border border-festive-accent/20">
                     À venir
                   </span>
                 )}

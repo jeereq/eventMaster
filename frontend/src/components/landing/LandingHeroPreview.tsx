@@ -179,6 +179,14 @@ export const PROFILE_ACTIONS: Record<LandingProfileId, ActionCard[]> = {
       ctaLabel: 'Recevoir des demandes',
       highlight: true,
     },
+    {
+      title: 'Plans 3D de Salle',
+      badge: 'Éditeur',
+      description: 'Configurez vos espaces pour le placement virtuel.',
+      icon: LayoutGrid,
+      href: (isLoggedIn) => (isLoggedIn ? '/dashboard/rooms' : '/register?kind=VENDOR&intent=vendor&action=room_editor'),
+      ctaLabel: 'Configurer mes salles',
+    },
   ],
 };
 
@@ -207,16 +215,16 @@ export default function LandingHeroPreview({
       ) : null}
 
       <div className={cn('overflow-hidden space-y-4', embedded ? 'p-0' : 'em-hud-card p-4 sm:p-6')}>
-        {/* En-tête de la console d'outils directes */}
+        {/* En-tête de la console d'actions directes */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-border/80 pb-3">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-primary-solid animate-pulse motion-reduce:animate-none shrink-0" aria-hidden />
-            <h4 className="text-sm font-bold text-foreground">
-              <span className="sm:hidden">Outils inclus</span>
-              <span className="hidden sm:inline">Outils disponibles immédiatement pour ce projet</span>
-            </h4>
-            <span className="hidden sm:inline text-xs font-semibold text-primary px-2 py-0.5 rounded-full bg-primary/10 border border-primary/20">
-              Accès en 1 clic
+            <h3 className="text-sm font-bold text-foreground">
+              <span className="sm:hidden">Actions</span>
+              <span className="hidden sm:inline">Actions directes disponibles</span>
+            </h3>
+            <span className="hidden sm:inline text-xs font-semibold text-muted px-2 py-0.5 rounded-full bg-surface-muted border border-border">
+              Accès immédiat
             </span>
           </div>
 
@@ -226,7 +234,7 @@ export default function LandingHeroPreview({
                 Connecté · Accès direct à votre espace
               </span>
             ) : (
-              'Cliquez sur un outil pour tester ou démarrer sans attendre'
+              'Cliquez sur une action pour démarrer sans attendre'
             )}
           </span>
         </div>

@@ -1442,7 +1442,7 @@ function DashboardPageContent() {
       setAdminFeedback({
         type: 'success',
         message: successMsg,
-      });
+ });
  await loadSubscriptionRequests();
  await refreshStats();
  if (activeTab === 'invoices') {
@@ -3692,8 +3692,8 @@ function DashboardPageContent() {
                                         <option value="advanced">Premium · 36 tables</option>
                                         <option value="complete">Complet · 80 tables</option>
                                       </select>
-                                    </div>
-                                  </div>
+ </div>
+ </div>
 
  <div className="flex flex-wrap items-center gap-4 pt-5">
  <div className="flex items-center gap-2">
