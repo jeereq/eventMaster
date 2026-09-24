@@ -13,7 +13,7 @@ export const SITE_CONTACT = {
 
 export const FOOTER_FEATURES = [
   'Organisation complète en ligne',
-  'Invitations WhatsApp & Répondez s’il vous plaît en direct',
+  'Invitations WhatsApp, SMS et e-mail · confirmations en direct',
   'Billetterie Mobile Money & pass QR',
   'Plans de salle 2D cotés & visite 3D',
   'Simulateur de budget CDF & USD',
@@ -42,7 +42,7 @@ export const FOOTER_RESOURCES = [
 ] as const;
 
 export const FOOTER_BRAND_DESCRIPTION =
-  'Plateforme événementielle en RDC : invitations WhatsApp, plans 2D/3D, billetterie Mobile Money et marketplace (salles, métiers, matériel, boissons).';
+  'Plateforme événementielle en RDC : invitations par WhatsApp, SMS et e-mail, plans 2D/3D, billetterie Mobile Money et marketplace (salles, métiers, matériel, boissons).';
 
 export interface FaqItem {
   id: string;
@@ -61,7 +61,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'mobile-app',
     question: 'Existe-t-il une application mobile ?',
     answer:
-      'Pas encore. En attendant, Répondez s’il vous plaît, scan QR, tableau de bord et marketplace fonctionnent dans le navigateur — y compris sur téléphone.',
+      'Pas encore. En attendant, confirmations de présence, scan QR, tableau de bord et marketplace fonctionnent dans le navigateur — y compris sur téléphone.',
   },
   {
     id: 'placement-delivery',
@@ -73,7 +73,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'public-events',
     question: 'Puis-je organiser un événement public avec billets payants ?',
     answer:
-      'Oui. Choisissez Public à la création : l’événement apparaît sur le marketplace. Vous pouvez configurer des tarifs par zone (VIP, Standard, Fosse...) avec choix de place sur le plan. Lors de l’achat d’un billet (via M-Pesa, Orange Money, Airtel, Afrimoney ou Carte), la présence de l’invité est automatiquement validée (Répondez s’il vous plaît confirmé) et son pass QR sécurisé est généré immédiatement. L’activation de la billetterie exige d’accepter les conditions en vigueur. En plus de l’abonnement, EventMaster se réserve le droit de prélever {collectionCommission} du montant global collecté avant reversement.',
+      'Oui. Choisissez Public à la création : l’événement apparaît sur le marketplace. Vous pouvez configurer des tarifs par zone (VIP, Standard, Fosse...) avec choix de place sur le plan. Lors de l’achat d’un billet (via M-Pesa, Orange Money, Airtel, Afrimoney ou Carte), la présence de l’invité est automatiquement validée (présence confirmée) et son pass QR sécurisé est généré immédiatement. L’activation de la billetterie exige d’accepter les conditions en vigueur. En plus de l’abonnement, EventMaster se réserve le droit de prélever {collectionCommission} du montant global collecté avant reversement.',
   },
   {
     id: 'event-donations',
@@ -163,7 +163,7 @@ export const FAQ_ITEMS: FaqItem[] = [
     id: 'guest-quota-period',
     question: 'Comment sont comptabilisés les invités pour un abonnement mensuel ?',
     answer:
-      'Le quota d’invités est comptabilisé uniquement sur la période payée en cours (chaque mois pour les forfaits Business, Premium et Enterprise ; chaque trimestre de 90 jours pour les forfaits Particulier) et non sur l’ensemble de l’historique de votre compte. À chaque renouvellement de période, votre compteur d’invitations repart pour accueillir vos prochains événements. Les invités et réponses Répondez s’il vous plaît de vos événements passés restent précieusement archivés et consultables dans votre espace.',
+      'Le quota d’invités est comptabilisé uniquement sur la période payée en cours (chaque mois pour les forfaits Business, Premium et Enterprise ; chaque trimestre de 90 jours pour les forfaits Particulier) et non sur l’ensemble de l’historique de votre compte. À chaque renouvellement de période, votre compteur d’invitations repart pour accueillir vos prochains événements. Les invités et confirmations de présence de vos événements passés restent précieusement archivés et consultables dans votre espace.',
   },
   {
     id: 'room-editor-plans',

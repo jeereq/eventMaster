@@ -16,6 +16,8 @@ interface FaqSectionProps {
   className?: string;
   /** Si fourni, n’affiche que ces questions (ordre conservé). */
   itemIds?: string[];
+  /** Lien vers la FAQ complète, affiché quand la liste est filtrée. */
+  moreHref?: string;
 }
 
 export default function FaqSection({
@@ -25,6 +27,7 @@ export default function FaqSection({
   showContactLink = true,
   className = '',
   itemIds,
+  moreHref,
 }: FaqSectionProps) {
   const { site } = usePlatformSite();
   const source = useMemo(() => {
@@ -103,6 +106,17 @@ export default function FaqSection({
             );
           })}
         </div>
+
+        {moreHref ? (
+          <div className="mt-5 max-w-3xl">
+            <Link
+              href={moreHref}
+              className="inline-flex items-center min-h-11 text-sm font-semibold text-primary hover:underline rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            >
+              Voir toutes les questions ({FAQ_ITEMS.length}) →
+            </Link>
+          </div>
+        ) : null}
 
         {showContactLink && (
           <div className="mt-8 flex items-center gap-2 text-xs text-muted">

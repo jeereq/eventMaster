@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { formatPhoneForAsmsc, detectAsmscEncoding, DreamDigitalSmsProvider } from './dreamDigitalProvider.ts';
 import { smsRegistry, registerSmsProvider, getSmsProvider, getActiveSmsProvider } from './smsProviderRegistry.ts';
 import { sendRealSms } from './smsService.ts';
-import { resolveDeliveryChannels } from '../../utils/notificationChannels.ts';
+import {
+  clampInvitationChannel,
+  resolveDeliveryChannels,
+} from '../../utils/notificationChannels.ts';
 import { resetOutboundClaims } from '../notificationDedup.ts';
 import type { SmsProvider, SmsSendOptions, SmsSendResult } from './types.ts';
 
@@ -96,6 +99,13 @@ describe('Résolution des canaux de diffusion (notificationChannels)', () => {
     assert.deepEqual(resolveDeliveryChannels('WHATSAPP_AND_SMS'), ['WHATSAPP', 'SMS']);
     assert.deepEqual(resolveDeliveryChannels('ALL_CHANNELS'), ['EMAIL', 'WHATSAPP', 'SMS']);
     assert.deepEqual(resolveDeliveryChannels(['EMAIL', 'SMS']), ['EMAIL', 'SMS']);
+  });
+
+  it('ne conserve que les moyens d invitation autorisés par la plateforme', () => {
+    assert.equal(clampInvitationChannel('ALL_CHANNELS', ['EMAIL', 'WHATSAPP']), 'EMAIL_AND_WHATSAPP');
+    assert.equal(clampInvitationChannel('WHATSAPP_AND_SMS', ['SMS']), 'SMS');
+    assert.equal(clampInvitationChannel('EMAIL', ['WHATSAPP', 'SMS']), null);
+    assert.equal(clampInvitationChannel('SMS_AND_EMAIL', ['EMAIL', 'SMS']), 'EMAIL_AND_SMS');
   });
 });
 

@@ -17,6 +17,7 @@ import {
 } from './seed/helpers';
 import { seedMarketplaceCatalog } from './seed/marketplaceCatalog';
 import { seedMarketplaceActivity } from './seed/marketplaceActivity';
+import { seedBeverageBrands } from './seed/beverageBrands';
 import { seedAccountsMatrix } from './seed/accountsMatrix';
 import { seedEventsVolume } from './seed/eventsVolume';
 import { seedRoomBlueprint } from './seed/roomBlueprints';
@@ -71,6 +72,14 @@ async function clearDatabase() {
   await prisma.aiTokenOrder.deleteMany({});
   await prisma.aiSimulationWallet.deleteMany({});
   await prisma.paymentTrace.deleteMany({});
+  await prisma.marketplaceInquiryBeverageLine.deleteMany({});
+  await prisma.marketplaceBookingBeverageLine.deleteMany({});
+  await prisma.marketplaceInquiryMessage.deleteMany({});
+  await prisma.vendorBeveragePrice.deleteMany({});
+  await prisma.invitationTemplateFavorite.deleteMany({});
+  await prisma.studioJob.deleteMany({});
+  await prisma.aiTemplateComposeRun.deleteMany({});
+  await prisma.aiRoomPlanComposeRun.deleteMany({});
   await prisma.commercialPayoutTransfer.deleteMany({});
   await prisma.commercialCommission.deleteMany({});
   await prisma.platformInvoice.deleteMany({});
@@ -142,6 +151,7 @@ async function main() {
         roomEditorLevel: def.roomEditorLevel,
         commercialNetwork: def.commercialNetwork,
         supportLevel: def.supportLevel,
+        customRsvpFields: def.customRsvpFields,
         sortOrder: PLAN_SORT_ORDER[key],
         isActive: true,
       },
@@ -149,7 +159,11 @@ async function main() {
         name: def.name,
         price: def.price,
         monthlyPriceFc: def.monthlyPriceFc,
+        promoActive: Boolean(def.promoActive),
+        promoPrice: def.promoPrice ?? null,
+        promoMonthlyPriceFc: def.promoMonthlyPriceFc ?? null,
         promoLabel: def.promoLabel ?? null,
+        customRsvpFields: def.customRsvpFields,
         description: def.description,
         audience: def.audience,
         maxEvents: def.maxEvents,
@@ -894,6 +908,7 @@ async function main() {
   });
 
   await seedMarketplaceCatalog(prisma, passwordHash);
+  await seedBeverageBrands(prisma);
 
   const matrix = await seedAccountsMatrix(prisma, passwordHash, commercial.id);
   await seedEventsVolume(prisma, {

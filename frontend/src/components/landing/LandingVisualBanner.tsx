@@ -167,7 +167,7 @@ export default function LandingVisualBanner() {
                 'min-h-[44px] w-full sm:w-auto px-1 sm:px-3.5 py-2 rounded-[var(--radius-button)] text-sm font-semibold leading-tight text-center transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background inline-flex items-center justify-center',
                 activeCategory === 'all'
                   ? 'bg-primary-solid text-primary-foreground shadow-xs'
-                  : 'bg-surface border border-border text-foreground hover:bg-surface-muted',
+                  : 'bg-surface-muted border border-border text-muted hover:text-foreground',
               )}
             >
               <span className="sm:hidden">Tout</span>
@@ -183,7 +183,7 @@ export default function LandingVisualBanner() {
                   'min-h-[44px] w-full sm:w-auto px-1 sm:px-3.5 py-2 rounded-[var(--radius-button)] text-sm font-semibold leading-tight text-center transition cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background inline-flex items-center justify-center',
                   activeCategory === item.id
                     ? 'bg-primary-solid text-primary-foreground shadow-xs'
-                    : 'bg-surface border border-border text-foreground hover:bg-surface-muted',
+                    : 'bg-surface-muted border border-border text-muted hover:text-foreground',
                 )}
               >
                 <span className="sm:hidden">{item.chip}</span>
@@ -214,7 +214,7 @@ export default function LandingVisualBanner() {
 
                   {/* Badge flottant en haut */}
                   <div className="absolute top-3 left-3 flex items-center gap-1.5">
-                    <span className="px-2.5 py-1 rounded-full bg-stage/80 border border-stage-foreground/20 text-stage-foreground text-sm font-bold inline-flex items-center gap-1 shadow-sm">
+                    <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white text-xs font-bold inline-flex items-center gap-1 shadow-sm">
                       <Icon className="w-3.5 h-3.5 text-festive-on-stage" />
                       {item.badge}
                     </span>
@@ -222,7 +222,7 @@ export default function LandingVisualBanner() {
 
                   {/* Titre et localisation incrustés en bas de l'image */}
                   <div className="absolute bottom-3 left-3 right-3 text-white">
-                    <span className="hidden sm:block text-sm font-bold text-festive-on-stage">
+                    <span className="hidden sm:block text-xs font-bold uppercase tracking-wider text-festive-on-stage">
                       {item.category}
                     </span>
                     <h3 className="text-base font-bold text-white drop-shadow-sm line-clamp-1">
@@ -234,11 +234,11 @@ export default function LandingVisualBanner() {
                 {/* Contenu et Call to action */}
                 <div className="p-4 space-y-3 flex-1 flex flex-col justify-between">
                   <div className="space-y-1.5">
-                    <div className="flex items-center gap-1 text-sm text-foreground font-medium">
+                    <div className="flex items-center gap-1 text-xs text-muted font-medium">
                       <MapPin className="w-3.5 h-3.5 text-primary shrink-0" />
                       <span className="truncate">{item.location}</span>
                     </div>
-                    <p className="text-sm text-foreground leading-relaxed hidden sm:block line-clamp-2">
+                    <p className="text-xs text-muted leading-relaxed hidden sm:block line-clamp-2">
                       {item.description}
                     </p>
                   </div>
@@ -246,7 +246,7 @@ export default function LandingVisualBanner() {
                   <div className="pt-2.5 border-t border-border flex items-center justify-between gap-2">
                     <Link
                       href={item.href}
-                      className="min-h-[44px] inline-flex items-center justify-center sm:justify-start gap-1.5 text-sm font-bold text-primary hover:text-primary-hover group/link transition touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-[var(--radius-button)]"
+                      className="min-h-11 inline-flex items-center justify-center sm:justify-start gap-1.5 text-xs font-bold text-primary hover:text-primary-hover group/link transition touch-manipulation active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-[var(--radius-button)]"
                       aria-label={`Explorer : ${item.title}`}
                     >
                       <span className="sm:hidden">Explorer</span>
@@ -257,7 +257,7 @@ export default function LandingVisualBanner() {
                     {isBudgetBlocked ? (
                       <Link
                         href={budgetHref}
-                        className="min-h-[44px] px-3 py-2 rounded-[var(--radius-button)] bg-festive-accent/10 hover:bg-festive-accent/20 text-foreground text-sm font-bold inline-flex items-center justify-center gap-1.5 transition touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background border border-festive-accent/30"
+                        className="min-h-11 px-3 py-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-bold inline-flex items-center justify-center gap-1.5 transition touch-manipulation active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background border border-amber-500/20"
                         aria-label="Simulateur budget IA (Fonctionnalité à venir)"
                         title="Simulateur budget IA (Fonctionnalité à venir)"
                       >
@@ -268,7 +268,7 @@ export default function LandingVisualBanner() {
                     ) : (
                       <Link
                         href={budgetHref}
-                        className="min-h-[44px] px-3 py-2 rounded-[var(--radius-button)] bg-primary/10 hover:bg-primary/20 text-primary text-sm font-bold inline-flex items-center justify-center gap-1.5 transition touch-manipulation active:scale-[0.98] motion-reduce:active:scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                        className="min-h-11 px-3 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold inline-flex items-center justify-center gap-1.5 transition touch-manipulation active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                         aria-label={user
                           ? 'Ouvrir le simulateur budget dans le tableau de bord (1 jeton)'
                           : 'Estimer un budget avec 3 formules IA (1 jeton)'}
