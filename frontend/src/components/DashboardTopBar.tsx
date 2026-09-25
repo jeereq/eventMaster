@@ -32,7 +32,8 @@ export function useDashboardTitle(): { title: string; subtitle?: string } {
     if (pathname.startsWith('/dashboard/notifications')) return { title: 'Notifications', subtitle: 'Alertes de votre compte' };
     if (pathname.startsWith('/dashboard/audit')) return { title: 'Journal d’audit', subtitle: 'Actions plateforme' };
     if (pathname.startsWith('/dashboard/tickets')) {
-      const isOrg = Boolean(access?.isOwner || access?.level === 'owner' || access?.level === 'manager' || access?.level === 'protocol' || tenant?.accountKind === 'ORGANIZER');
+      const isClient = tenant?.accountKind === 'CLIENT' || access?.level === 'client';
+      const isOrg = !isClient && Boolean(access?.isOwner || access?.level === 'owner' || access?.level === 'manager' || access?.level === 'protocol' || tenant?.accountKind === 'ORGANIZER');
       return isOrg
         ? { title: 'Billetterie', subtitle: 'Commandes, entrées et contrôle d’accès' }
         : { title: 'Mes billets', subtitle: 'Pass d’accès et QR codes' };
@@ -83,11 +84,14 @@ export function useDashboardTitle(): { title: string; subtitle?: string } {
           subtitle: titles[key] || 'Pilotage',
         };
       }
+      if (tenant?.accountKind === 'CLIENT' || access?.level === 'client') {
+        return { title: 'Accueil', subtitle: 'Mon espace client' };
+      }
       return { title: 'Tableau de bord', subtitle: 'Vue d’ensemble' };
     }
 
     return { title: 'EventMaster', subtitle: undefined };
-  }, [pathname, tab, user?.role]);
+  }, [pathname, tab, user?.role, access?.level, access?.isOwner, tenant?.accountKind]);
 }
 
 export default function DashboardTopBar({

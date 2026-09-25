@@ -366,17 +366,17 @@ function buildDashboardNav(opts: {
  if (isClientAccount) {
   return buildNavSections(
    navSection('Mon Espace', [
-    { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-client-dashboard', icon: LayoutDashboard, description: 'Définir vos objectifs, recommandations et synthèse de vos activités' },
-    { name: 'Marketplace', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, matériel & équipements et fiches publiques' },
-    ...(!allStudiosBlocked ? [{ name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator', icon: Sparkles, description: 'Simulateur budget IA, assemblage de packs et devis groupés' }] : []),
+    { name: 'Accueil', href: '/dashboard', tourId: 'nav-client-dashboard', icon: LayoutDashboard, description: 'Ce qui vous attend, vos activités et la recherche rapide' },
+    { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, matériel & équipements et fiches publiques' },
     { name: 'Événements', href: '/dashboard/catalogue?kind=event', tourId: 'nav-agenda', icon: Calendar, description: 'Événements publics du marketplace — inscriptions et billets' },
+    ...(!allStudiosBlocked ? [{ name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator', icon: Sparkles, description: 'Simulateur budget IA, assemblage de packs et devis groupés' }] : []),
    ]),
    navSection('Mes activités', [
+    { name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox, description: 'Devis reçus et échanges avec les prestataires' },
+    { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck, description: 'Dates confirmées et acomptes' },
     { name: 'Mes billets', href: '/dashboard/tickets', tourId: 'nav-tickets', icon: Ticket, description: 'Inscriptions, filtres, vue grille/liste et badges QR' },
-    { name: 'Réalisations', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Fil des réalisations des salles et prestations' },
-    { name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox },
-    { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck },
     { name: 'Mes favoris', href: '/dashboard/catalogue?tab=favorites', tourId: 'nav-favorites', icon: Heart, description: 'Salles et prestataires mis de côté' },
+    { name: 'Réalisations', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Fil des réalisations des salles et prestations' },
    ]),
    navSection('Compte', compteNavItems()),
   );
