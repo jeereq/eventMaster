@@ -1,6 +1,7 @@
 'use client';
 
 import type { InstrumentStyle } from '@/lib/roomLayoutUtils';
+import { SurfaceMat, type SurfaceFinish } from '@/components/room/SurfaceMaterial';
 
 const INSTRUMENT_NATIVE: Record<InstrumentStyle, { w: number; d: number }> = {
   piano: { w: 1.72, d: 0.86 },
@@ -31,12 +32,21 @@ function Mat({
   color,
   roughness = 0.5,
   metalness = 0.08,
+  finish,
+  clearcoat,
+  repeat,
+  vertical,
 }: {
   color: string;
   roughness?: number;
   metalness?: number;
+  finish?: SurfaceFinish;
+  clearcoat?: number;
+  repeat?: number | [number, number];
+  vertical?: boolean;
 }) {
-  return <meshStandardMaterial color={color} roughness={roughness} metalness={metalness} />;
+  // Sans finition explicite : les pièces métalliques (≥ 0,5) reçoivent un brossé / laiton automatiques.
+  return <SurfaceMat color={color} finish={finish ?? 'auto'} roughness={roughness} metalness={finish === 'wood' || finish === 'lacquer' ? 0 : metalness} clearcoat={clearcoat} repeat={repeat} vertical={vertical} />;
 }
 
 function PianoKeys({ width, y, z }: { width: number; y: number; z: number }) {
@@ -88,15 +98,15 @@ function HourglassBody({
     <group scale={[scale, scale, scale]}>
       <mesh position={[0, 0.08, 0]} castShadow>
         <sphereGeometry args={[0.13, 14, 12]} />
-        <Mat color={color} roughness={0.42} />
+        <Mat color={color} finish="wood" roughness={0.35} clearcoat={0.8} />
       </mesh>
       <mesh position={[0, 0.26, 0]} castShadow>
         <sphereGeometry args={[0.11, 14, 12]} />
-        <Mat color={color} roughness={0.42} />
+        <Mat color={color} finish="wood" roughness={0.35} clearcoat={0.8} />
       </mesh>
       <mesh position={[0, 0.17, 0]} castShadow>
         <cylinderGeometry args={[0.05, 0.06, 0.1, 12]} />
-        <Mat color={color} roughness={0.45} />
+        <Mat color={color} finish="wood" roughness={0.35} clearcoat={0.8} />
       </mesh>
     </group>
   );
@@ -113,22 +123,22 @@ function InstrumentGlyph({
   const black = accent ?? '#171717';
   const wood = accent ?? '#5c4030';
   const chrome = '#d4d4d8';
-  const brass = '#ca8a04';
+  const brass = '#c9a227';
 
   if (style === 'piano') {
     return (
       <group>
         <mesh position={[0.08, 0.38, -0.06]} castShadow receiveShadow>
           <boxGeometry args={[1.15, 0.2, 0.62]} />
-          <Mat color={black} roughness={0.22} metalness={0.18} />
+          <Mat color={black} finish="lacquer" roughness={0.14} />
         </mesh>
         <mesh position={[-0.62, 0.38, -0.02]} scale={[1, 1, 0.92]} castShadow>
           <cylinderGeometry args={[0.34, 0.34, 0.2, 20]} />
-          <Mat color={black} roughness={0.22} metalness={0.18} />
+          <Mat color={black} finish="lacquer" roughness={0.14} />
         </mesh>
         <mesh position={[0.05, 0.72, -0.22]} rotation={[-0.72, 0, 0]} castShadow>
           <boxGeometry args={[1.05, 0.03, 0.62]} />
-          <Mat color={black} roughness={0.2} metalness={0.22} />
+          <Mat color={black} finish="lacquer" roughness={0.12} />
         </mesh>
         <mesh position={[0.52, 0.58, -0.08]} rotation={[0, 0, 0.15]} castShadow>
           <boxGeometry args={[0.03, 0.38, 0.03]} />
@@ -137,13 +147,13 @@ function InstrumentGlyph({
         <PianoKeys width={1.05} y={0.5} z={0.28} />
         <mesh position={[0.22, 0.62, 0.16]} castShadow>
           <boxGeometry args={[0.42, 0.14, 0.02]} />
-          <Mat color={black} roughness={0.25} />
+          <Mat color={black} finish="lacquer" roughness={0.16} />
         </mesh>
         {([-0.55, 0.12, 0.62] as const).map((x) => (
           <group key={x} position={[x, 0, x < 0 ? -0.08 : 0.16]}>
             <mesh position={[0, 0.16, 0]} castShadow>
               <cylinderGeometry args={[0.028, 0.036, 0.32, 10]} />
-              <Mat color={black} />
+              <Mat color={black} finish="lacquer" roughness={0.16} />
             </mesh>
             <mesh position={[0, 0.02, 0]} castShadow>
               <cylinderGeometry args={[0.04, 0.045, 0.04, 10]} />
@@ -170,11 +180,11 @@ function InstrumentGlyph({
       <group>
         <mesh position={[0, 0.62, 0]} castShadow receiveShadow>
           <boxGeometry args={[1.28, 1.12, 0.28]} />
-          <Mat color={black} roughness={0.28} metalness={0.12} />
+          <Mat color={black} finish="lacquer" roughness={0.16} />
         </mesh>
         <mesh position={[0, 0.72, 0.12]} castShadow>
           <boxGeometry args={[1.12, 0.42, 0.06]} />
-          <Mat color={black} roughness={0.3} />
+          <Mat color={black} finish="lacquer" roughness={0.18} />
         </mesh>
         <PianoKeys width={1.1} y={0.48} z={0.16} />
         <mesh position={[0, 0.58, 0.18]} castShadow>
@@ -184,7 +194,7 @@ function InstrumentGlyph({
         {([-0.5, 0.5] as const).map((x) => (
           <mesh key={x} position={[x, 0.12, 0.04]} castShadow>
             <boxGeometry args={[0.08, 0.24, 0.22]} />
-            <Mat color={black} />
+            <Mat color={black} finish="lacquer" roughness={0.16} />
           </mesh>
         ))}
       </group>
@@ -224,7 +234,7 @@ function InstrumentGlyph({
       <group>
         <mesh position={[0, 0.34, 0.04]} castShadow>
           <cylinderGeometry args={[0.3, 0.32, 0.46, 18]} />
-          <Mat color="#1e3a5f" />
+          <Mat color="#1e3a5f" finish="lacquer" roughness={0.2} />
         </mesh>
         <mesh position={[0, 0.58, 0.04]}>
           <cylinderGeometry args={[0.29, 0.29, 0.02, 18]} />
@@ -303,15 +313,15 @@ function InstrumentGlyph({
       <group>
         <mesh position={[-0.18, 0.72, 0]} rotation={[0, 0, 0.18]} castShadow>
           <boxGeometry args={[0.06, 1.28, 0.08]} />
-          <Mat color={wood} roughness={0.4} />
+          <Mat color={wood} finish="wood" roughness={0.4} clearcoat={0.5} />
         </mesh>
         <mesh position={[0.16, 0.22, 0]} castShadow>
           <boxGeometry args={[0.42, 0.1, 0.16]} />
-          <Mat color={wood} roughness={0.42} />
+          <Mat color={wood} finish="wood" roughness={0.42} clearcoat={0.5} />
         </mesh>
         <mesh position={[0.22, 0.95, 0]} rotation={[0, 0, -0.85]} castShadow>
           <boxGeometry args={[0.05, 0.95, 0.06]} />
-          <Mat color={wood} roughness={0.38} />
+          <Mat color={wood} finish="wood" roughness={0.38} clearcoat={0.5} />
         </mesh>
         {Array.from({ length: HARP_STRINGS }).map((_, i) => {
           const t = (i + 0.5) / HARP_STRINGS;
@@ -413,11 +423,11 @@ function InstrumentGlyph({
         <HourglassBody color={wood} scale={0.72} />
         <mesh position={[0, 0.52, 0]} castShadow>
           <boxGeometry args={[0.028, 0.34, 0.035]} />
-          <Mat color="#3f2a1d" />
+          <Mat color="#3f2a1d" finish="wood" roughness={0.4} />
         </mesh>
         <mesh position={[0.14, 0.22, 0]} rotation={[0, 0, 0.55]} castShadow>
           <cylinderGeometry args={[0.006, 0.006, 0.42, 8]} />
-          <Mat color={wood} />
+          <Mat color={wood} finish="wood" />
         </mesh>
         <InstrumentStand height={0.22} />
       </group>
@@ -431,7 +441,7 @@ function InstrumentGlyph({
           <group key={x} position={[x, 0, 0]}>
             <mesh position={[0, i === 0 ? 0.38 : 0.32, 0]} castShadow>
               <cylinderGeometry args={[i === 0 ? 0.16 : 0.14, 0.13, i === 0 ? 0.72 : 0.6, 16]} />
-              <Mat color="#7c2d12" roughness={0.55} />
+              <Mat color="#9a4a24" finish="wood" roughness={0.38} clearcoat={0.7} repeat={[1, 3]} vertical />
             </mesh>
             <mesh position={[0, i === 0 ? 0.75 : 0.63, 0]}>
               <cylinderGeometry args={[i === 0 ? 0.155 : 0.135, i === 0 ? 0.155 : 0.135, 0.02, 16]} />
@@ -448,7 +458,7 @@ function InstrumentGlyph({
       <group>
         <mesh position={[0, 0.24, 0]} castShadow receiveShadow>
           <boxGeometry args={[0.32, 0.48, 0.3]} />
-          <Mat color={wood} roughness={0.55} />
+          <Mat color={wood} finish="wood" roughness={0.55} clearcoat={0.5} />
         </mesh>
         <mesh position={[0, 0.24, 0.155]} castShadow>
           <boxGeometry args={[0.28, 0.42, 0.012]} />
@@ -499,7 +509,7 @@ function InstrumentGlyph({
       <group>
         <mesh position={[0, 0.34, 0]} castShadow receiveShadow>
           <boxGeometry args={[0.56, 0.64, 0.32]} />
-          <Mat color="#292524" roughness={0.68} />
+          <Mat color="#292524" finish="leather" roughness={0.7} repeat={2} />
         </mesh>
         {([-0.24, 0.24] as const).flatMap((x) =>
           ([-0.28, 0.28] as const).map((y) => (
@@ -511,7 +521,7 @@ function InstrumentGlyph({
         )}
         <mesh position={[0, 0.36, 0.17]} castShadow>
           <cylinderGeometry args={[0.17, 0.17, 0.02, 18]} />
-          <Mat color="#78716c" roughness={0.85} />
+          <Mat color="#57534e" finish="fabric" roughness={0.9} repeat={2} />
         </mesh>
         <mesh position={[0, 0.62, 0.165]}>
           <boxGeometry args={[0.42, 0.04, 0.01]} />
