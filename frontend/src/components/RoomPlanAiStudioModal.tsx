@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { AlertCircle, Clock, Coins, Loader2, Sparkles, Upload, Users, Wand2, X, XCircle } from 'lucide-react';
+import { AlertCircle, Clock, Coins, ImagePlus, Loader2, PenLine, Sparkles, Upload, Users, Wand2, X } from 'lucide-react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   AI_ROOM_PLAN_TOKEN_COST,
@@ -317,136 +317,165 @@ export default function RoomPlanAiStudioModal({
 
           {studioTab === 'create' ? (
           <>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              aria-pressed={intent === 'brief'}
-              disabled={busy}
-              onClick={() => setIntent('brief')}
-              className={cn(
-                'min-h-11 px-3 py-2.5 rounded-[var(--radius-card)] border text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                intent === 'brief' ? 'border-primary bg-primary/10 font-bold' : 'border-border bg-surface hover:bg-surface-muted',
-              )}
-            >
-              <span className="block text-xs text-foreground">1. Décrire par écrit</span>
-              <span className="hidden sm:block text-[11px] text-muted">Brief ou inspiration</span>
-            </button>
-            <button
-              type="button"
-              aria-pressed={intent === 'photo'}
-              disabled={busy}
-              onClick={() => setIntent('photo')}
-              className={cn(
-                'min-h-11 px-3 py-2.5 rounded-[var(--radius-card)] border text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                intent === 'photo' ? 'border-primary bg-primary/10 font-bold' : 'border-border bg-surface hover:bg-surface-muted',
-              )}
-            >
-              <span className="block text-xs text-foreground">2. Importer une photo</span>
-              <span className="hidden sm:block text-[11px] text-muted">Plan 2D ou photo de salle</span>
-            </button>
+          <div role="radiogroup" aria-label="Point de départ" className="grid grid-cols-2 gap-1 p-1 rounded-[var(--radius-card)] bg-surface-muted border border-border">
+            {([
+              { id: 'brief', label: 'Décrire l’événement', hint: 'Quelques mots suffisent', icon: PenLine },
+              { id: 'photo', label: 'Partir d’une photo', hint: 'Photo ou plan de la salle', icon: ImagePlus },
+            ] as const).map((option) => {
+              const active = intent === option.id;
+              const Icon = option.icon;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  disabled={busy}
+                  onClick={() => {
+                    setIntent(option.id);
+                    setError('');
+                  }}
+                  className={cn(
+                    'min-h-11 px-3 py-2 rounded-[var(--radius-button)] text-left transition flex items-center gap-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                    active ? 'bg-surface shadow-[var(--shadow-soft)] text-foreground' : 'text-muted hover:text-foreground',
+                  )}
+                >
+                  <Icon className={cn('w-4 h-4 shrink-0', active ? 'text-primary-solid' : '')} aria-hidden />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold truncate">{option.label}</span>
+                    <span className="hidden sm:block text-xs text-muted truncate">{option.hint}</span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          <p className="hidden sm:block text-xs text-muted">
-            Inspirations prêtes à coller : onglet{' '}
-            <button type="button" className="font-bold text-primary hover:underline" onClick={() => setStudioTab('prompts')}>
-              Prompts
-            </button>
-            .
-          </p>
-
-          {/* Jauge rapide de convives */}
-          <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-            <span className="text-xs text-muted font-semibold flex items-center gap-1 mr-1">
-              <Users className="w-3.5 h-3.5 text-primary" />
-              Capacité :
-            </span>
-            {CAPACITY_PRESETS.map((cap) => (
-              <button
-                key={cap}
-                type="button"
-                disabled={busy}
-                onClick={() => applyCapacity(cap)}
-                className="px-2.5 py-0.5 text-xs font-semibold rounded-full border border-border hover:border-primary/50 hover:bg-primary/10 text-foreground transition bg-surface"
-              >
-                {cap} places
-              </button>
-            ))}
-          </div>
-
-          {/* Zone de glisser-déposer de photo */}
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              setIsDraggingOver(true);
-            }}
-            onDragLeave={() => setIsDraggingOver(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setIsDraggingOver(false);
-              const dropped = e.dataTransfer.files?.[0];
-              if (dropped) pickFile(dropped);
-            }}
-            onClick={() => fileRef.current?.click()}
-            className={cn(
-              'w-full min-h-16 rounded-[var(--radius-card)] border-2 border-dashed p-3 text-left transition cursor-pointer flex items-center justify-between gap-3',
-              isDraggingOver
-                ? 'border-primary bg-primary/15'
-                : 'border-border hover:border-primary/50 hover:bg-surface-muted/40 bg-surface',
-            )}
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                <Upload className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground">
-                  {file ? file.name : 'Ajouter ou glisser une photo / plan de salle'}
-                </p>
-                <p className="text-[11px] text-muted truncate">
-                  {file
-                    ? `${(file.size / (1024 * 1024)).toFixed(2)} Mo · Fichier sélectionné`
-                    : 'JPEG, PNG ou WebP jusqu’à 8 Mo. L’IA détecte les murs, tables et décors.'}
-                </p>
-              </div>
-            </div>
-            {previewUrl ? (
-              <div
-                className="relative w-12 h-12 rounded-lg overflow-hidden border border-border shrink-0"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={previewUrl} alt="Photo à analyser" className="w-full h-full object-cover" />
+          {intent === 'photo' ? (
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDraggingOver(true);
+              }}
+              onDragLeave={() => setIsDraggingOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDraggingOver(false);
+                const dropped = e.dataTransfer.files?.[0];
+                if (dropped) pickFile(dropped);
+              }}
+              className={cn(
+                'rounded-[var(--radius-card)] border-2 border-dashed transition overflow-hidden',
+                isDraggingOver ? 'border-primary bg-primary/10' : 'border-border bg-surface',
+              )}
+            >
+              {previewUrl ? (
+                <div className="flex flex-col sm:flex-row gap-3 p-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={previewUrl} alt="Photo à analyser" className="w-full sm:w-40 h-32 object-cover rounded-[var(--radius-button)] border border-border" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <p className="text-sm font-semibold text-foreground truncate">{file?.name}</p>
+                    <p className="text-xs text-muted">
+                      {file ? `${(file.size / (1024 * 1024)).toFixed(2)} Mo` : ''} · l’IA reprend les murs, les tables et le décor visibles.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={() => fileRef.current?.click()}>
+                        Changer de photo
+                      </Button>
+                      <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => setPhoto(null)}>
+                        Retirer
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={() => setPhoto(null)}
-                  className="absolute top-0.5 right-0.5 p-0.5 bg-black/70 text-white rounded-full hover:bg-black"
-                  aria-label="Retirer la photo"
+                  onClick={() => fileRef.current?.click()}
+                  className="w-full flex flex-col items-center justify-center gap-2 px-4 py-8 text-center hover:bg-surface-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 >
-                  <XCircle className="w-3.5 h-3.5" />
+                  <span className="w-11 h-11 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                    <Upload className="w-5 h-5" aria-hidden />
+                  </span>
+                  <span className="text-sm font-semibold text-foreground">Glissez une photo ici ou choisissez un fichier</span>
+                  <span className="text-xs text-muted">JPEG, PNG ou WebP jusqu’à 8 Mo · photo de la salle ou plan dessiné</span>
                 </button>
-              </div>
-            ) : null}
-          </div>
+              )}
+            </div>
+          ) : null}
 
           <label className="block space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-foreground">Brief d’aménagement</span>
-              <span className="text-xs text-muted font-mono">
-                {prompt.length}/1500 car. · {prompt.trim().split(/\s+/).filter(Boolean).length} mot{prompt.trim().split(/\s+/).filter(Boolean).length > 1 ? 's' : ''}
+            <span className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-foreground">
+                {intent === 'photo' ? 'Précisions (facultatif)' : 'Votre événement'}
               </span>
-            </div>
+              <span className="text-xs text-muted tabular-nums">{prompt.length}/1500</span>
+            </span>
             <textarea
-              rows={3}
+              rows={intent === 'photo' ? 2 : 4}
               maxLength={1500}
               value={prompt}
               disabled={busy}
               onChange={(event) => setPrompt(event.target.value)}
-              placeholder="Ex. Banquet 80 personnes, 10 tables rondes, scène et piste au centre…"
-              className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 min-h-[5rem] resize-y"
+              placeholder={intent === 'photo'
+                ? 'Ex. Garder la scène au fond, 10 tables rondes…'
+                : 'Ex. Mariage de 120 invités, tables rondes, piste de danse au centre, estrade d’honneur…'}
+              className="w-full rounded-[var(--radius-button)] border border-border bg-surface px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y"
             />
           </label>
 
+          {intent === 'brief' ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs text-muted font-semibold flex items-center gap-1 mr-0.5">
+                  <Users className="w-3.5 h-3.5 text-primary" aria-hidden />
+                  Invités
+                </span>
+                {CAPACITY_PRESETS.map((cap) => (
+                  <button
+                    key={cap}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => applyCapacity(cap)}
+                    className="min-h-9 px-2.5 text-xs font-semibold rounded-full border border-border hover:border-primary/50 hover:bg-primary/10 text-foreground transition bg-surface"
+                  >
+                    {cap}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs text-muted font-semibold mr-0.5">Idées</span>
+                {ROOM_SCENARIOS.map((sc) => (
+                  <button
+                    key={sc.label}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setPrompt(sc.prompt)}
+                    aria-pressed={prompt === sc.prompt}
+                    className={cn(
+                      'min-h-9 px-2.5 text-xs font-semibold rounded-full border transition',
+                      prompt === sc.prompt
+                        ? 'border-primary/50 bg-primary/10 text-primary'
+                        : 'border-border bg-surface hover:border-primary/50 hover:bg-primary/5 text-foreground',
+                    )}
+                  >
+                    {sc.label}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className="min-h-9 px-1 text-xs font-semibold text-primary hover:underline"
+                  onClick={() => setStudioTab('prompts')}
+                >
+                  Plus d’exemples
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <p className="text-xs text-muted leading-relaxed">
+            Salle actuelle : {current.canvas.widthM} × {current.canvas.heightM} m. Le plan en cours est remplacé ; vous pourrez revenir en arrière avec Annuler (Ctrl+Z).
+          </p>
           </>
           ) : null}
 

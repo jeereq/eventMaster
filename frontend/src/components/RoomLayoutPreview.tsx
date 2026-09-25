@@ -21,8 +21,10 @@ import { getSeatCoordinates, getTableVisualStyle } from '@/lib/tablePlanUtils';
 import { mapTicketSelectionsToWebGL, resolveTicketSeatPick } from '@/lib/seatSelectionLayout';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import {
+  GUEST_PLAN_DEFAULT_DEPTH,
   depthScaleForY,
   furnitureDepthStyle,
+  resolveDepthAmount,
   resolveFloorStyle,
 } from '@/lib/roomFloorUtils';
 import FloorDepthFrame from '@/components/FloorDepthFrame';
@@ -586,19 +588,19 @@ export default function RoomLayoutPreview({
   const [showRoof, setShowRoof] = useState(false);
   const [walkthroughActive, setWalkthroughActive] = useState(false);
   const [walkthroughLabel, setWalkthroughLabel] = useState('');
-  const skipAutoExpandRef = React.useRef(true);
+  const previousForce2dRef = React.useRef(force2d);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Plein écran seulement quand l’utilisateur passe du plan 2D à la 3D
+  // (jamais au chargement, ni en revenant au 2D).
   useEffect(() => {
+    const was2d = previousForce2dRef.current;
+    previousForce2dRef.current = force2d;
     if (!expandWhen3d) return;
-    if (skipAutoExpandRef.current) {
-      skipAutoExpandRef.current = false;
-      return;
-    }
-    setExpanded(true);
+    if (was2d && !force2d) setExpanded(true);
   }, [expandWhen3d, force2d, setExpanded]);
 
   const canvasClass = useMemo(() => {
@@ -623,21 +625,30 @@ export default function RoomLayoutPreview({
   const canExpand = (allowExpand ?? allowMobileExpand ?? quality !== 'thumb') && quality !== 'thumb';
   const viewBlueprint = applyPlanSceneVisibility(blueprint, { showWalls, showRoof });
 
+  // La « Vue 3D » doit toujours être en perspective : un plan enregistré à plat (profondeur 0)
+  // donnait une vue du dessus identique au plan 2D.
+  const perspectiveBlueprint = resolveDepthAmount(viewBlueprint.metadata) > 0
+    ? viewBlueprint
+    : {
+        ...viewBlueprint,
+        metadata: { ...viewBlueprint.metadata, depthAmount: GUEST_PLAN_DEFAULT_DEPTH, depthView: true },
+      };
+
   const webglBlueprint = quality === 'showcase'
     ? {
-        ...viewBlueprint,
+        ...perspectiveBlueprint,
         metadata: {
-          ...viewBlueprint.metadata,
-          showChandeliers: viewBlueprint.metadata.showChandeliers ?? true,
-          showUplights: viewBlueprint.metadata.showUplights ?? true,
-          showCurtains: viewBlueprint.metadata.showCurtains ?? false,
-          showDecorPlants: viewBlueprint.metadata.showDecorPlants ?? true,
+          ...perspectiveBlueprint.metadata,
+          showChandeliers: perspectiveBlueprint.metadata.showChandeliers ?? true,
+          showUplights: perspectiveBlueprint.metadata.showUplights ?? true,
+          showCurtains: perspectiveBlueprint.metadata.showCurtains ?? false,
+          showDecorPlants: perspectiveBlueprint.metadata.showDecorPlants ?? true,
           showRoof,
           showWalls,
           renderQuality: 'showcase' as const,
         },
       }
-    : viewBlueprint;
+    : perspectiveBlueprint;
 
   return (
     <div className={cn('space-y-2', className)}>
