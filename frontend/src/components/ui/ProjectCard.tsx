@@ -138,6 +138,8 @@ export interface ProjectCardProps {
   onClick?: () => void;
   layout?: ProjectCardLayout;
   className?: string;
+  /** Classes du bandeau visuel en grille (ex. ratio plus bas pour les listes d’administration). */
+  coverClassName?: string;
   children?: React.ReactNode;
 }
 
@@ -198,6 +200,7 @@ export function ProjectCard({
   onClick,
   layout = 'grid',
   className,
+  coverClassName,
   children,
 }: ProjectCardProps) {
   const stripe = accentColor ?? accentFromId(id);
@@ -330,7 +333,7 @@ export function ProjectCard({
         className,
       )}
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-surface-muted">
+      <div className={cn('relative aspect-[4/3] overflow-hidden bg-surface-muted', coverClassName)}>
         {media}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent pointer-events-none" />
         {overlayBadge ? (

@@ -46,7 +46,10 @@ export default function GlobalAiSimulatorFab() {
   const [allowance, setAllowance] = useState<AiAllowance>(createEmptyAiAllowance);
 
   const hidden =
-    Boolean(access?.isProtocolOnly) || isAiFabHiddenRoute(pathname);
+    Boolean(access?.isProtocolOnly) ||
+    // La console Super Admin n’a pas d’usage des studios IA ; le bouton masquait les listes.
+    (user?.role === 'SUPER_ADMIN' && pathname.startsWith('/dashboard')) ||
+    isAiFabHiddenRoute(pathname);
 
   const canUseRooms = Boolean(
     user &&
