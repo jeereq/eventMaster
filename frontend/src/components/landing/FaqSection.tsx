@@ -18,6 +18,8 @@ interface FaqSectionProps {
   itemIds?: string[];
   /** Lien vers la FAQ complète, affiché quand la liste est filtrée. */
   moreHref?: string;
+  /** Titre, liens et contact à gauche, questions à droite (grands écrans). */
+  split?: boolean;
 }
 
 export default function FaqSection({
@@ -28,6 +30,7 @@ export default function FaqSection({
   className = '',
   itemIds,
   moreHref,
+  split = false,
 }: FaqSectionProps) {
   const { site } = usePlatformSite();
   const source = useMemo(() => {
@@ -51,17 +54,59 @@ export default function FaqSection({
         : interpolateRates(item.answer, site),
   }));
 
+  const links = (
+    <>
+      {moreHref ? (
+        <div className={cn('max-w-3xl', split ? 'mt-2' : 'mt-5')}>
+          <Link
+            href={moreHref}
+            className="inline-flex items-center min-h-11 text-sm font-semibold text-primary hover:underline rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          >
+            Voir toutes les questions ({FAQ_ITEMS.length}) →
+          </Link>
+        </div>
+      ) : null}
+
+      {showContactLink && (
+        <div className={cn('flex items-center gap-2 text-xs text-muted', split ? 'mt-2' : 'mt-8')}>
+          <HelpCircle className="w-4 h-4 text-primary shrink-0" aria-hidden />
+          <span>
+            Une question ?{' '}
+            <Link
+              href="/contact"
+              className="font-bold text-primary hover:underline rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            >
+              <span className="sm:hidden">Nous écrire</span>
+              <span className="hidden sm:inline">Contactez notre équipe de support →</span>
+            </Link>
+          </span>
+        </div>
+      )}
+    </>
+  );
+
   return (
     <section id={id} className={cn('em-landing-defer py-8 sm:py-20 bg-surface/80 dark:bg-background/80 border-t border-border scroll-mt-16 em-landing-section-glow', className)}>
-      <div className="page-container relative z-10">
-        <div className="max-w-2xl mb-5 sm:mb-8 space-y-2.5">
-          <h2 className="em-landing-heading text-xl sm:text-3xl text-foreground">{title}</h2>
-          {subtitle ? (
-            <p className="hidden sm:block text-sm text-muted leading-relaxed">{subtitle}</p>
+      <div
+        className={cn(
+          'page-container relative z-10',
+          split && 'lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] lg:gap-16 lg:items-start',
+        )}
+      >
+        <div className={cn('max-w-2xl mb-5 sm:mb-8 space-y-2.5', split && 'lg:mb-0 lg:sticky lg:top-28')}>
+          {split ? (
+            <span className="block text-xs sm:text-sm font-bold text-primary tracking-[0.06em] uppercase">FAQ</span>
           ) : null}
+          <h2 className={cn('em-landing-heading text-foreground', split ? 'text-3xl sm:text-[2.5rem]' : 'text-xl sm:text-3xl')}>
+            {title}
+          </h2>
+          {subtitle ? (
+            <p className={cn('text-sm text-muted leading-relaxed', !split && 'hidden sm:block')}>{subtitle}</p>
+          ) : null}
+          {split ? <div className="hidden lg:block pt-2">{links}</div> : null}
         </div>
 
-        <div className="space-y-2.5 max-w-3xl">
+        <div className={cn('space-y-2.5', !split && 'max-w-3xl')}>
           {items.map((item) => {
             const isOpen = openId === item.id;
             return (
@@ -107,32 +152,7 @@ export default function FaqSection({
           })}
         </div>
 
-        {moreHref ? (
-          <div className="mt-5 max-w-3xl">
-            <Link
-              href={moreHref}
-              className="inline-flex items-center min-h-11 text-sm font-semibold text-primary hover:underline rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-            >
-              Voir toutes les questions ({FAQ_ITEMS.length}) →
-            </Link>
-          </div>
-        ) : null}
-
-        {showContactLink && (
-          <div className="mt-8 flex items-center gap-2 text-xs text-muted">
-            <HelpCircle className="w-4 h-4 text-primary shrink-0" aria-hidden />
-            <span>
-              Une question ?{' '}
-              <Link
-                href="/contact"
-                className="font-bold text-primary hover:underline rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-              >
-                <span className="sm:hidden">Nous écrire</span>
-                <span className="hidden sm:inline">Contactez notre équipe de support →</span>
-              </Link>
-            </span>
-          </div>
-        )}
+        {split ? <div className="lg:hidden">{links}</div> : links}
       </div>
     </section>
   );

@@ -41,8 +41,29 @@ export default function LandingBelowFold() {
 
   return (
     <>
-      <LandingStepsBento />
-      <LandingLazyMount label="Chargement de la vitrine…">
+      <LandingStepsBento
+        stepsAction={
+          user ? (
+            <Button href="/dashboard/events" size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
+              Voir mes événements
+            </Button>
+          ) : site.allowRegistration ? (
+            <>
+              <Button
+                href="/register?kind=ORGANIZER&intent=personal&action=event"
+                size="lg"
+                rightIcon={<ArrowRight className="w-4 h-4" />}
+              >
+                Créer mon événement
+              </Button>
+              <Button href="/simulateur" size="lg" variant="secondary">
+                Estimer mon budget
+              </Button>
+            </>
+          ) : null
+        }
+      />
+      <LandingLazyMount label="Chargement de la vitrine…" eagerHash="catalogue">
         <LandingVitrineSection />
       </LandingLazyMount>
       <LandingLazyMount label="Chargement du simulateur IA…" eagerHash="simulateur-ia">
@@ -53,6 +74,7 @@ export default function LandingBelowFold() {
         subtitle="Les questions les plus posées avant de se lancer."
         itemIds={LANDING_FAQ_IDS}
         moreHref="/faq"
+        split
       />
       <PublicCtaBand
         title="Prêt à organiser votre événement ?"
