@@ -8,7 +8,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { Sun, Moon, Sparkles, LayoutDashboard, ArrowRight } from 'lucide-react';
+import { Sun, Moon, LayoutDashboard, ArrowRight } from 'lucide-react';
 import PublicAccentPicker from '@/components/PublicAccentPicker';
 import SiteMobileBottomBar from '@/components/SiteMobileBottomBar';
 import SiteBrandMark from '@/components/SiteBrandMark';
@@ -25,11 +25,12 @@ interface SiteHeaderProps {
   className?: string;
 }
 
+/** Navigation publique : Réalisations et Plans 2D/3D restent accessibles depuis le pied de page. */
 const PUBLIC_LINKS: SiteHeaderLink[] = [
+  { href: '/', label: 'Accueil' },
   { href: '/marketplace', label: 'Marketplace' },
+  { href: '/evenements', label: 'Événements' },
   { href: '/simulateur', label: 'Simulateur' },
-  { href: '/activite', label: 'Réalisations' },
-  { href: '/plans-3d', label: 'Plans 2D/3D' },
   { href: '/modeles', label: 'Modèles' },
   { href: '/tarifs', label: 'Tarifs' },
   { href: '/contact', label: 'Contact' },
@@ -59,8 +60,14 @@ export default function SiteHeader({
     'p-2.5 min-w-11 min-h-11 flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition active:scale-95 touch-manipulation focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary cursor-pointer';
 
   const isLinkActive = (href: string) => {
+    if (href === '/') {
+      return pathname === '/';
+    }
     if (href === '/marketplace') {
-      return pathname.startsWith('/marketplace') || pathname.startsWith('/evenements');
+      return pathname.startsWith('/marketplace') && !pathname.startsWith('/marketplace/evenements');
+    }
+    if (href === '/evenements') {
+      return pathname.startsWith('/evenements') || pathname.startsWith('/marketplace/evenements');
     }
     if (href === '/activite') {
       return pathname === '/activite' || pathname.startsWith('/activite/');
@@ -91,22 +98,22 @@ export default function SiteHeader({
     <>
       <header
         className={cn(
-          'fixed inset-x-0 top-0 z-50 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md bg-background/85 dark:bg-background/80 border-b border-border/80 transition-colors duration-200',
+          'fixed inset-x-0 top-0 z-50 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md bg-surface/95 dark:bg-background/85 border-b border-border transition-colors duration-200',
           className,
         )}
       >
-        <div className="page-container h-12 md:h-14 flex items-center justify-between gap-3 sm:gap-6">
+        <div className="page-container h-12 md:h-[4.75rem] flex items-center justify-between gap-3 sm:gap-6">
         <SiteBrandMark />
 
-        {/* Barre de navigation HUD centrale */}
-        <nav className="hidden md:flex items-center gap-1 p-1 rounded-full bg-surface-muted/60 dark:bg-surface-muted/50 border border-border/60 backdrop-blur-xs min-w-0">
+        {/* Navigation principale */}
+        <nav className="hidden md:flex items-center gap-4 lg:gap-7 min-w-0">
           {links.map((item) => {
             const active = isLinkActive(item.href);
             const itemClass = cn(
-              'inline-flex items-center min-h-11 px-3.5 text-xs font-semibold transition rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+              'inline-flex items-center min-h-11 text-sm lg:text-[15px] transition rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
               active
-                ? 'text-primary bg-surface dark:bg-surface shadow-xs border border-primary/20 font-bold'
-                : 'text-muted hover:text-foreground hover:bg-surface/50 dark:hover:bg-surface-muted',
+                ? 'text-primary font-bold'
+                : 'text-foreground font-medium hover:text-primary',
             );
 
             return item.href.startsWith('/#') ? (
@@ -159,8 +166,8 @@ export default function SiteHeader({
             <>
               <Button
                 href="/dashboard"
-                size="sm"
-                className="hidden sm:inline-flex ml-1 shadow-sm shadow-primary/20"
+                size="md"
+                className="hidden sm:inline-flex ml-1 font-semibold"
                 rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
               >
                 Tableau de bord
@@ -177,16 +184,15 @@ export default function SiteHeader({
             <div className="flex items-center gap-1 sm:gap-1.5 ml-1">
               <Link
                 href="/login"
-                className="hidden min-[420px]:inline-flex items-center min-h-11 text-xs font-semibold text-muted hover:text-foreground px-2 sm:px-3 rounded-md transition hover:bg-surface-muted"
+                className="hidden min-[420px]:inline-flex items-center min-h-11 text-sm md:text-[15px] font-semibold text-foreground hover:text-primary px-2 sm:px-4 rounded-md transition"
               >
                 Connexion
               </Link>
               {site.allowRegistration ? (
                 <Button
                   href="/register"
-                  size="sm"
-                  className="inline-flex text-xs px-2.5 sm:px-3 shadow-xs"
-                  rightIcon={<Sparkles className="w-3.5 h-3.5" />}
+                  size="md"
+                  className="inline-flex text-sm md:text-[15px] px-3 sm:px-5 font-semibold"
                 >
                   Créer un compte
                 </Button>
@@ -198,7 +204,7 @@ export default function SiteHeader({
     </header>
     <div
       aria-hidden
-      className="h-[calc(3rem+env(safe-area-inset-top,0px))] md:h-[calc(3.5rem+env(safe-area-inset-top,0px))] shrink-0"
+      className="h-[calc(3rem+env(safe-area-inset-top,0px))] md:h-[calc(4.75rem+env(safe-area-inset-top,0px))] shrink-0"
     />
 
     {variant !== 'minimal' && (

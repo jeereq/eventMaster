@@ -4,27 +4,27 @@
 
 /* ─── Asana-inspired tokens: warm neutrals, flat elevation, soft radius ─── */
 :root {
-  --background: #f6f7f8;
-  --foreground: #1e1f21;
+  --background: #f4f7f5;
+  --foreground: #0f1f1a;
   --surface: #ffffff;
-  --surface-muted: #ededee;
-  --border: #e8e8e9;
-  --border-subtle: #f0f0f1;
-  --primary: #059669;
-  --primary-hover: #047857;
+  --surface-muted: #edf2ef;
+  --border: #dfe7e3;
+  --border-subtle: #edf2ef;
+  --primary: #047857;
+  --primary-hover: #065f46;
   /** Fond de bouton / pastille : blanc AA (≥ 4.5:1). Ne pas réutiliser --primary (trop clair en dark). */
   --primary-solid: #047857;
   --primary-solid-hover: #065f46;
   --primary-foreground: #ffffff;
   --brand-accent: #10b981;
-  --muted: #6d6e6f;
-  --sidebar: #f0f1f3;
-  --card-hover: #fafafa;
-  --radius-card: 0.5rem; /* Asana ~8px */
-  --radius-button: 0.5rem;
+  --muted: #3d4f48;
+  --sidebar: #edf2ef;
+  --card-hover: #f8faf9;
+  --radius-card: 1.125rem; /* cartes arrondies ~18px */
+  --radius-button: 0.75rem;
   --shadow-soft: 0 0 0 1px rgba(0, 0, 0, 0.04);
   /* Barre publique mobile flottante / surélevée (marge + capsule + safe-area) */
-  --em-site-header: 3.5rem;
+  --em-site-header: 4.75rem;
   --em-site-bottom-nav: calc(0.5rem + 3.25rem + max(0.5rem, env(safe-area-inset-bottom, 0px)));
   --em-site-install-bar: 0px;
   --em-site-fab-bottom: calc(var(--em-site-bottom-nav) + var(--em-site-install-bar) + 0.75rem);
@@ -41,7 +41,7 @@
   --festive-accent: #d97706;
   --festive-accent-soft: color-mix(in srgb, #d97706 14%, transparent);
   --festive-on-stage: #fbbf24;
-  --surface-warm: #f3f5f2;
+  --surface-warm: #f4f7f5;
   --celebrate-glow: 217, 119, 6;
   /* Scène inversée (bandeaux 3D / CTA) : ardoise chaude, pas le slate Tailwind */
   --stage: #171614;
@@ -53,12 +53,12 @@
 
 /* Ambiance Celebrate — surfaces tièdes, accent festif (dashboard reste Work par défaut) */
 html[data-mood="celebrate"] {
-  --background: #f6f7f8;
-  --surface-muted: #ededee;
-  --border: #e8e8e9;
-  --border-subtle: #f0f0f1;
-  --sidebar: #f0f1f3;
-  --card-hover: #fafafa;
+  --background: #f4f7f5;
+  --surface-muted: #edf2ef;
+  --border: #dfe7e3;
+  --border-subtle: #edf2ef;
+  --sidebar: #edf2ef;
+  --card-hover: #f8faf9;
 }
 
 html[data-mood="celebrate"].dark,
@@ -123,8 +123,8 @@ html[data-mood="celebrate"].dark,
   --color-stage-elevated: var(--stage-elevated);
   --color-stage-foreground: var(--stage-foreground);
   --color-danger: var(--danger);
-  --font-sans: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-display: var(--font-fraunces), var(--font-inter), Georgia, serif;
+  --font-sans: var(--font-body), system-ui, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-heading), var(--font-body), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --radius-card: var(--radius-card);
   --radius-button: var(--radius-button);
@@ -166,10 +166,10 @@ a {
 }
 
 .em-landing-heading {
-  font-family: var(--font-fraunces), var(--font-inter), Georgia, serif;
+  font-family: var(--font-heading), var(--font-body), system-ui, sans-serif;
   font-weight: 600;
-  letter-spacing: -0.025em;
-  line-height: 1.14;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
 }
 
 html[data-density="compact"] .em-dashboard-content {
@@ -211,9 +211,9 @@ html[data-density="compact"] .em-dashboard-home.space-y-6 > :not([hidden]) ~ :no
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: var(--font-body), system-ui, "Helvetica Neue", Arial, sans-serif;
   font-weight: 400;
-  letter-spacing: -0.011em;
+  letter-spacing: 0;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -502,8 +502,8 @@ h1, h2, h3, h4 {
 }
 
 .font-display {
-  font-family: var(--font-fraunces), var(--font-inter), Georgia, serif;
-  letter-spacing: -0.025em;
+  font-family: var(--font-heading), var(--font-body), system-ui, sans-serif;
+  letter-spacing: -0.015em;
 }
 
 html[data-mood="celebrate"] h1.font-display,

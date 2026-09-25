@@ -46,35 +46,22 @@ export function AuthSplitLayout({
     <div className="min-h-screen flex bg-background text-foreground">
       <CelebrateMood />
       {/* Panneau marketing — couleurs via --auth-* / --primary */}
-      <div
-        className="hidden lg:flex lg:w-[46%] xl:w-1/2 text-white p-10 xl:p-12 flex-col justify-between relative overflow-hidden border-r border-white/10"
-        style={{
-          background: `linear-gradient(145deg, var(--auth-from) 0%, var(--auth-via) 48%, var(--auth-to) 100%)`,
-        }}
-      >
-        <div
-          className="absolute top-[-18%] left-[-18%] w-[55%] h-[55%] rounded-full blur-[56px] motion-reduce:blur-none pointer-events-none opacity-40"
-          style={{ background: `rgb(var(--auth-glow))` }}
+      <div className="hidden lg:flex lg:w-[46%] xl:w-1/2 bg-[#064e3b] text-white p-10 xl:p-14 flex-col justify-between relative overflow-hidden">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -right-24 -top-24 h-[22rem] w-[22rem] rounded-[5rem] border-[3.5rem] border-[#065f46]"
         />
-        <div
-          className="absolute bottom-[-22%] right-[-12%] w-[50%] h-[50%] rounded-full blur-[48px] motion-reduce:blur-none pointer-events-none opacity-25"
-          style={{ background: `rgb(var(--celebrate-glow))` }}
-        />
-        <div
-          className="absolute inset-0 opacity-[0.07] pointer-events-none"
-          style={{
-            backgroundImage:
-              'radial-gradient(circle at 20% 20%, white 0.5px, transparent 0.5px), radial-gradient(circle at 80% 60%, white 0.5px, transparent 0.5px)',
-            backgroundSize: '24px 24px',
-          }}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -left-20 -bottom-28 h-72 w-72 rounded-full border-[3rem] border-[#065f46]/70"
         />
 
         <SiteBrandMark href="/" tone="onDark" className="relative z-10" />
 
         <div className="space-y-8 my-auto relative z-10 max-w-md">
           <div className="space-y-3">
-            <h1 className="text-3xl xl:text-4xl font-display font-semibold tracking-tight leading-tight">{title}</h1>
-            <p className="text-white/90 text-sm leading-relaxed">{description}</p>
+            <h1 className="text-4xl xl:text-5xl font-display font-bold leading-[1.05]">{title}</h1>
+            <p className="text-[#d1fae5] text-base leading-relaxed">{description}</p>
           </div>
 
           {features.length > 0 && (
@@ -84,15 +71,15 @@ export function AuthSplitLayout({
                 return (
                   <li
                     key={feat.title}
-                    className="flex gap-3.5 items-start bg-white/[0.04] border border-white/[0.08] p-3.5 rounded-[var(--radius-card)]"
+                    className="flex gap-3.5 items-start bg-white/[0.06] border border-white/10 p-4 rounded-[var(--radius-card)]"
                     style={{ animationDelay: `${index * 70}ms` }}
                   >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-button)] border border-white/20 text-xs font-semibold tabular-nums text-white/90">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-button)] bg-[#10b981] text-[#022c22] text-sm font-bold tabular-nums font-display">
                       {step}
                     </span>
                     <div className="min-w-0">
                       <h3 className="font-semibold text-sm text-white">{feat.title}</h3>
-                      <p className="text-xs text-white/90 leading-relaxed mt-0.5">{feat.desc}</p>
+                      <p className="text-sm text-[#a7f3d0] leading-relaxed mt-0.5">{feat.desc}</p>
                     </div>
                   </li>
                 );
@@ -101,7 +88,7 @@ export function AuthSplitLayout({
           )}
         </div>
 
-        <div className="text-xs text-white/90 relative z-10 flex justify-between items-center gap-3">
+        <div className="text-xs text-[#a7f3d0] relative z-10 flex justify-between items-center gap-3">
           <span>© {new Date().getFullYear()} {site.platformName}</span>
           <Link
             href="/contact"
@@ -141,7 +128,7 @@ export function AuthSplitLayout({
 
         <main id="main-content" className={cn(maxWidthClassName || 'max-w-md', 'w-full mx-auto space-y-4 pt-16 sm:pt-14 lg:pt-12')}>
           {hideMobileTitle ? null : (
-            <h1 className="lg:hidden text-xl font-semibold tracking-tight text-foreground">{title}</h1>
+            <h1 className="lg:hidden font-display text-2xl font-bold text-foreground">{title}</h1>
           )}
           {children}
           <p className="text-center text-xs text-muted lg:hidden">© {new Date().getFullYear()} {site.platformName}</p>

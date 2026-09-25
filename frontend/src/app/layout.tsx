@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
-import { Inter, Geist_Mono, Fraunces } from "next/font/google";
+import { DM_Sans, Outfit, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { StudioJobsProvider } from "@/context/StudioJobsContext";
@@ -20,20 +20,20 @@ import SessionExpiredDialog from "@/components/SessionExpiredDialog";
 import AiTokenShortageAlert from "@/components/AiTokenShortageAlert";
 import { fetchPublicSiteSnapshot, resolveMetadataBase } from "@/lib/publicSiteServer";
 
-/** Inter ≈ substitut open-source de TWK Lausanne / Asana Sans (UI produit Asana). */
-const inter = Inter({
-  variable: "--font-inter",
+/** DM Sans : texte courant, formulaires et chiffres. */
+const dmSans = DM_Sans({
+  variable: "--font-body",
   subsets: ["latin"],
   display: "swap",
   weight: ["400", "500", "600", "700"],
 });
 
-/** Display Celebrate — titres landing / réponse à l’invitation / auth. */
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
+/** Outfit : titres, marque et gros chiffres. */
+const outfit = Outfit({
+  variable: "--font-heading",
   subsets: ["latin"],
   display: "swap",
-  weight: ["600", "700"],
+  weight: ["500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -90,7 +90,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${inter.variable} ${fraunces.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="fr" className={`${dmSans.variable} ${outfit.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
@@ -114,7 +114,7 @@ html.em-splash-boot,html.em-splash-boot body{background:#f6f7f8!important;overfl
           }}
         />
       </head>
-      <body className={`${inter.className} min-h-full flex flex-col font-sans bg-background text-foreground`}>
+      <body className={`${dmSans.className} min-h-full flex flex-col font-sans bg-background text-foreground`}>
         <div id="em-native-splash" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-label="EventMaster">
           <span className="em-ns-mark">
             {/* eslint-disable-next-line @next/next/no-img-element */}

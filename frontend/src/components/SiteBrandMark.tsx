@@ -52,24 +52,28 @@ export default function SiteBrandMark({
     <>
       <span
         className={cn(
-          'bg-gradient-to-br from-primary via-emerald-600 to-emerald-700 text-primary-foreground shadow-sm shadow-primary/25 shrink-0 flex items-center justify-center',
+          'font-display font-bold shrink-0 flex items-center justify-center leading-none',
+          tone === 'onDark'
+            ? 'bg-brand-accent text-[#022c22]'
+            : 'bg-primary-solid text-primary-foreground',
           size === 'lg'
-            ? 'w-11 h-11 p-2 rounded-xl'
+            ? 'w-11 h-11 rounded-xl text-xl'
             : size === 'sm'
-              ? 'w-6 h-6 p-1 rounded-md'
-              : 'w-8 h-8 p-1.5 rounded-lg',
+              ? 'w-6 h-6 rounded-md text-xs'
+              : 'w-8 h-8 sm:w-[34px] sm:h-[34px] rounded-[10px] text-base',
           interactive && 'group-hover:scale-105 transition-transform',
         )}
+        aria-hidden
       >
-        <BrandStarIcon className="w-full h-full" />
+        {label.trim().charAt(0).toUpperCase() || 'E'}
       </span>
       {showLabel ? (
         <span className="min-w-0">
           <span
             className={cn(
-              'font-bold tracking-tight block leading-none truncate max-w-[9.5rem] sm:max-w-[14rem]',
+              'font-display font-semibold block leading-none truncate max-w-[9.5rem] sm:max-w-[14rem]',
               tone === 'onDark' ? 'text-white' : 'text-foreground',
-              size === 'sm' ? 'text-xs' : size === 'lg' ? 'text-base sm:text-lg' : 'text-[13px] sm:text-[15px]',
+              size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-lg sm:text-xl' : 'text-base sm:text-[1.3rem]',
             )}
           >
             {label}

@@ -10,7 +10,7 @@ export type PublicCtaHighlight = {
   label: string;
 };
 
-const HIGHLIGHT_ICON_TONE = 'text-festive-on-stage';
+const HIGHLIGHT_ICON_TONE = 'text-brand-accent';
 
 export default function PublicCtaBand({
   title,
@@ -32,30 +32,27 @@ export default function PublicCtaBand({
   actions?: React.ReactNode;
 }) {
   return (
-    <section className="em-landing-defer py-8 sm:py-14 border-t border-border bg-gradient-to-b from-surface/90 to-surface-muted/50">
+    <section className="em-landing-defer relative overflow-hidden bg-[#064e3b] text-white py-14 sm:py-24">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-24 -bottom-40 w-[26rem] h-[26rem] rounded-full border-[64px] border-brand-accent opacity-15"
+      />
       <div className="page-container relative z-10">
-        <div className="rounded-[var(--radius-card)] border border-primary/30 em-stage p-6 sm:p-10">
-          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6 sm:gap-8">
-            <div className="max-w-2xl space-y-3">
-              <h2 className="em-landing-heading text-xl sm:text-3xl lg:text-4xl text-stage-foreground">
+        <div className="flex flex-col items-center text-center gap-6 sm:gap-8">
+            <div className="max-w-2xl space-y-3 sm:space-y-4">
+              <h2 className="em-landing-heading text-3xl sm:text-5xl text-white">
                 {title}
               </h2>
-              <p className="text-sm text-stage-foreground/80 leading-relaxed max-w-xl">
+              <p className="text-base sm:text-lg text-[#d1fae5] leading-relaxed">
                 {description}
               </p>
               {highlights?.length ? (
-                <div
-                  className={
-                    highlights.length >= 4
-                      ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-1 text-xs text-stage-foreground/90 font-medium'
-                      : 'grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-xs text-stage-foreground/90 font-medium'
-                  }
-                >
+                <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 pt-1 text-sm text-[#d1fae5] font-medium">
                   {highlights.map((item) => {
                     const Icon = item.icon;
                     return (
                       <div key={item.label} className="flex items-center gap-1.5">
-                        <Icon className={`w-3.5 h-3.5 shrink-0 ${HIGHLIGHT_ICON_TONE}`} />
+                        <Icon className={`w-4 h-4 shrink-0 ${HIGHLIGHT_ICON_TONE}`} />
                         <span>{item.label}</span>
                       </div>
                     );
@@ -64,7 +61,7 @@ export default function PublicCtaBand({
               ) : null}
             </div>
 
-            <div className="flex flex-col sm:flex-row lg:flex-col gap-2.5 shrink-0 w-full sm:w-auto lg:min-w-[16rem] [&>*]:w-full [&>*]:justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto [&>*]:justify-center [&_.bg-primary-solid]:bg-white [&_.bg-primary-solid]:text-[#064e3b] [&_.bg-primary-solid:hover]:bg-[#ecfdf5]">
               {actions || (
                 <>
                   {primaryHref && primaryLabel ? (
@@ -73,7 +70,7 @@ export default function PublicCtaBand({
                       size="lg"
                       variant="primary"
                       rightIcon={<ArrowRight className="w-4 h-4" />}
-                      className="w-full justify-center shadow-md font-semibold text-xs sm:text-sm"
+                      className="w-full sm:w-auto justify-center font-semibold"
                     >
                       {primaryLabel}
                     </Button>
@@ -83,7 +80,7 @@ export default function PublicCtaBand({
                       href={secondaryHref}
                       size="lg"
                       variant="secondary"
-                      className="w-full justify-center bg-stage-foreground/10 text-stage-foreground hover:bg-stage-foreground/20 border-stage-foreground/20 text-xs sm:text-sm font-semibold"
+                      className="w-full sm:w-auto justify-center bg-transparent text-white hover:bg-white/10 border-[#6ee7b7] font-semibold"
                     >
                       {secondaryLabel}
                     </Button>
@@ -91,7 +88,6 @@ export default function PublicCtaBand({
                 </>
               )}
             </div>
-          </div>
         </div>
       </div>
     </section>

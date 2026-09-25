@@ -21,7 +21,7 @@ const variants = {
 const sizes = {
   sm: 'min-h-[44px] px-3 py-1.5 text-xs gap-1.5 rounded-[var(--radius-button)]',
   md: 'min-h-[44px] px-3.5 py-2 text-sm gap-2 rounded-[var(--radius-button)]',
-  lg: 'min-h-[44px] px-4 py-2.5 text-sm gap-2 rounded-[var(--radius-button)]',
+  lg: 'min-h-[48px] px-5 py-2.5 text-[15px] gap-2 rounded-[var(--radius-button)]',
 } as const;
 
 export interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'href'> {
