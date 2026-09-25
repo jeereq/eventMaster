@@ -68,6 +68,7 @@ import {
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import UserAvatar from '@/components/UserAvatar';
 import NextEventCard, { pickNextEvent } from '@/components/dashboard/NextEventCard';
+import B2bOrganizerHome from '@/components/dashboard/B2bOrganizerHome';
 import QuotaUsagePanel from '@/components/QuotaUsagePanel';
 import type { QuotaSnapshot } from '@/lib/quotaDisplay';
 import type { PlanId } from '@/config/landingPricing';
@@ -682,6 +683,49 @@ export default function OrganizerDashboardHome({
       document.getElementById(`org-tab-${nextTab}`)?.focus();
     });
   };
+
+  /** Organisateur B2B payant : accueil dédié (les autres onglets restent accessibles via ?tab=). */
+  const isB2bOrganizer = isB2bPaidPlan && !isVendor && hasOrgEvents;
+  if (isB2bOrganizer && activeTab === 'overview') {
+    return (
+      <B2bOrganizerHome
+        userName={user?.name}
+        userAvatarUrl={user?.avatarUrl}
+        tenantName={tenant?.name}
+        planName={currentPlanDisplayName}
+        daysUntilExpiry={daysUntilExpiry}
+        isOwner={isOwner}
+        isManager={isManager}
+        canManageTeam={canManageTeam}
+        canViewBilling={isOwner || Boolean(access?.canViewBilling)}
+        canSell={canSell}
+        showRooms={Boolean(access?.canManageRooms) && (limits?.maxRooms ?? 0) > 0}
+        showProtocol={planFeatures?.protocolQr !== false && Boolean(isOwner || access?.canProtocolAllEvents)}
+        events={events}
+        pendingQuotesCount={pendingQuotesCount}
+        pendingBookingsCount={pendingBookingsCount}
+        marketPerspective={vendorRolePerspective}
+        ticketing={ticketingSummary}
+        eventsQuota={{ used: usage?.events, max: limits?.maxEvents }}
+        guestsQuota={{ used: usage?.guests, max: limits?.maxGuests }}
+        managersQuota={{ used: usage?.orgManagers, max: limits?.maxOrgManagers }}
+        checklist={
+          user?.role === 'USER' ? (
+            <GettingStartedChecklist
+              hasEvents={events.length > 0}
+              hasGuests={(planQuota?.usage.guests ?? 0) > 0}
+              firstEventId={events[0]?.id}
+              variant="organizer"
+              hasRooms={(planQuota?.usage.rooms ?? 0) > 0}
+              hasServices={(planQuota?.usage.services ?? 0) > 0}
+              preferServices={(planQuota?.limits.maxRooms ?? 1) <= 0}
+              canSell={canSell}
+            />
+          ) : null
+        }
+      />
+    );
+  }
 
   return (
     <div className="space-y-8 pb-16 animate-fade-in em-dashboard-home">

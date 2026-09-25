@@ -205,6 +205,69 @@ function compteNavItems(): NavItem[] {
  ];
 }
 
+/**
+ * Organisateur B2B (forfaits Business, Premium, Entreprise) : menu rangé par métier,
+ * du pilotage au jour J, puis achats, vitrine et administration de l’organisation.
+ */
+function buildB2bOrganizerNav(opts: {
+ access?: OrgAccess | null;
+ workspace: WorkspaceModules;
+ allStudiosBlocked?: boolean;
+}): NavSection[] {
+ const { access, workspace, allStudiosBlocked } = opts;
+ return buildNavSections(
+  navSection('Pilotage', [
+   { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard, description: 'À traiter, indicateurs et agenda de l’organisation' },
+   ...(workspace.showAnalytics
+    ? [{ name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3, description: 'Réponses, présences et check-in par événement' }]
+    : []),
+  ]),
+  navSection('Événements', [
+   ...(workspace.showEvents
+    ? [
+      { name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar, description: 'Créer, suivre et gérer les invités' },
+      { name: 'Billetterie', href: '/dashboard/tickets', tourId: 'nav-tickets-org', icon: Ticket, description: 'Commandes, recettes et contrôle d’accès' },
+     ]
+    : []),
+   ...(workspace.showProtocol
+    ? [{ name: 'Protocole', href: '/dashboard/protocol', tourId: 'nav-protocol', icon: ScanLine, description: 'Scan QR et accueil le jour J' }]
+    : []),
+   ...(workspace.showTemplates
+    ? [{ name: 'Modèles', href: '/dashboard/templates', tourId: 'nav-templates', icon: Mail, description: 'Invitations et faire-part' }]
+    : []),
+  ]),
+  navSection('Achats & prestataires', [
+   { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, matériel & équipements' },
+   ...(!allStudiosBlocked
+    ? [{ name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator-org', icon: Sparkles, description: 'Budget IA, formules clés en main et devis' }]
+    : []),
+   { name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox, description: 'Devis demandés et reçus' },
+   { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck, description: 'Réservations de salles et prestations' },
+  ]),
+  navSection('Vitrine', [
+   ...(workspace.showRooms
+    ? [{ name: 'Salles', href: '/dashboard/rooms', tourId: 'nav-rooms', icon: Building2, description: 'Plans 2D / 3D et publication au catalogue' }]
+    : []),
+   ...(workspace.showMarketplace
+    ? [{ name: 'Mes offres', href: '/dashboard/marketplace', tourId: 'nav-marketplace', icon: Briefcase, description: 'Fiches vendeur publiées au catalogue' }]
+    : []),
+   { name: 'Réalisations', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Photos et actualités de vos événements' },
+  ]),
+  navSection('Organisation', [
+   ...(workspace.showTeam
+    ? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users, description: 'Managers, protocole et droits d’accès' }]
+    : []),
+   ...(access?.canViewBilling
+    ? [{ name: 'Facturation & plan', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard, description: 'Forfait, quotas et renouvellement' }]
+    : []),
+   ...(access?.canViewInvoices
+    ? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText, description: 'Historique et téléchargement' }]
+    : []),
+  ]),
+  navSection('Compte', compteNavItems()),
+ );
+}
+
 function buildDashboardNav(opts: {
  role?: string;
  access?: OrgAccess | null;
@@ -459,6 +522,10 @@ function buildDashboardNav(opts: {
 				: []),
 			navSection('Compte', compteNavItems()),
 		);
+	}
+
+	if (audience === 'B2B' && tenantPlan && tenantPlan !== 'FREE' && !vendorOnly && workspace.showEvents) {
+		return buildB2bOrganizerNav({ access, workspace, allStudiosBlocked });
 	}
 
 	const primarySectionLabel =
