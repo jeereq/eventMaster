@@ -25,7 +25,7 @@ import {
  extractItemVariants,
 } from '@/lib/aiTemplateComposeHistory';
 import AiTemplateComposeHistoryList from '@/components/AiTemplateComposeHistoryList';
-import { StudioAiTabs, StudioHowTo, type StudioAiTabId } from '@/components/StudioAiTabs';
+import { StudioAiTabs, type StudioAiTabId } from '@/components/StudioAiTabs';
 import {
  persistInvitationArtStyle,
  readStoredInvitationArtStyle,
@@ -226,6 +226,16 @@ function getElementFieldInfo(el: Record<string, unknown>, index: number): {
 
  return { label: `Texte personnalisé (${index + 1})`, iconType: 'type', placeholder: 'Texte sur la carte' };
 }
+
+const ELEMENT_TYPE_META: Record<CanvasElement['type'], { label: string; icon: typeof Type }> = {
+ text: { label: 'Texte', icon: Type },
+ button: { label: 'Bouton', icon: Columns },
+ image: { label: 'Image', icon: Image },
+ divider: { label: 'Séparateur', icon: Palette },
+ 'rsvp-block': { label: 'Formulaire de réponse', icon: CheckSquare },
+ curve: { label: 'Courbe', icon: Spline },
+ triangle: { label: 'Triangle', icon: Triangle },
+};
 
 export default function TemplatesPage() {
  const { user, planFeatures, planQuota, tenant, access } = useAuth();
@@ -440,7 +450,8 @@ export default function TemplatesPage() {
  const [mockupImportModalOpen, setMockupImportModalOpen] = useState(false);
  const [pendingMockupFile, setPendingMockupFile] = useState<File | null>(null);
  const [pendingMockupOpenEditor, setPendingMockupOpenEditor] = useState(true);
- const [mockupImportMode, setMockupImportMode] = useState<MockupImportTextMode>('placeholders');
+ const [mockupImportMode, setMockupImportMode] = useState<MockupImportTextMode | 'ai'>('placeholders');
+ const [pendingMockupPreview, setPendingMockupPreview] = useState('');
  const mockupInputRef = useRef<HTMLInputElement>(null);
  const mockupEditorInputRef = useRef<HTMLInputElement>(null);
  const aiComposeInputRef = useRef<HTMLInputElement>(null);
@@ -479,9 +490,8 @@ export default function TemplatesPage() {
  const [aiComposeAdvancedOpen, setAiComposeAdvancedOpen] = useState(false);
  const [aiTokenModalOpen, setAiTokenModalOpen] = useState(false);
  const [aiAllowance, setAiAllowance] = useState<AiAllowance>(() => createEmptyAiAllowance());
- const [studioRail, setStudioRail] = useState<'content' | 'style'>('content');
+ const [studioRail, setStudioRail] = useState<'ai' | 'content' | 'style'>('ai');
  const [mobilePane, setMobilePane] = useState<'canvas' | 'tools' | 'inspect'>('canvas');
- const [studioGuideDismissed, setStudioGuideDismissed] = useState(false);
  const [showAllThemes, setShowAllThemes] = useState(false);
  const [showDecorTools, setShowDecorTools] = useState(false);
  const [propsAdvanced, setPropsAdvanced] = useState(false);
@@ -661,8 +671,8 @@ export default function TemplatesPage() {
  setCanvasHeight(CANVAS_SIZE_PRESETS.standard.height);
  
  setSelectedElementId(null);
- setStudioGuideDismissed(false);
  setEditorOpen(true);
+ setStudioRail('ai');
  };
 
  const handleEditTemplateClick = (t: TemplateItem, origin: StudioOrigin = 'studio') => {
@@ -717,8 +727,8 @@ export default function TemplatesPage() {
  setCanvasHeight(global.canvasHeight || dims?.height || CANVAS_SIZE_PRESETS.standard.height);
  
  setSelectedElementId(null);
- setStudioGuideDismissed(true);
  setEditorOpen(true);
+ setStudioRail('content');
  };
 
  useEffect(() => {
@@ -878,7 +888,6 @@ export default function TemplatesPage() {
 
  const handleElementSelect = (id: string) => {
  setSelectedElementId(id);
- setStudioRail('content');
  setPropsAdvanced(false);
  setMobilePane('inspect');
  const el = canvasElements.find(e => e.id === id);
@@ -1045,6 +1054,7 @@ export default function TemplatesPage() {
  setColorThemeId('');
  setEditingTemplateId(null);
  if (openEditor) setEditorOpen(true);
+ setStudioRail('content');
  setSuccess(
  useOcr
  ? 'Maquette importée — texte de l\'image détecté et appliqué aux emplacements.'
@@ -1071,10 +1081,18 @@ export default function TemplatesPage() {
  setError('Veuillez sélectionner une image (JPEG, PNG, WebP).');
  return;
  }
+ if (pendingMockupPreview) URL.revokeObjectURL(pendingMockupPreview);
  setPendingMockupFile(file);
+ setPendingMockupPreview(URL.createObjectURL(file));
  setPendingMockupOpenEditor(openEditor);
  setMockupImportMode('placeholders');
  setMockupImportModalOpen(true);
+ };
+
+ const clearPendingMockup = () => {
+   if (pendingMockupPreview) URL.revokeObjectURL(pendingMockupPreview);
+   setPendingMockupPreview('');
+   setPendingMockupFile(null);
  };
 
  const handleConfirmMockupImport = async () => {
@@ -1083,41 +1101,64 @@ export default function TemplatesPage() {
  const file = pendingMockupFile;
  const openEditor = pendingMockupOpenEditor;
  const mode = mockupImportMode;
- setPendingMockupFile(null);
+ clearPendingMockup();
+ if (mode === 'ai') {
+   // Import par l’IA : la photo devient la carte de départ de l’assistant « Transformer une carte ».
+   setError('');
+   if (!editorOpen) handleCreateTemplateClick('studio');
+   await openAiComposeModal(undefined, { isAlteration: true });
+   addAiComposeFiles([file]);
+   return;
+ }
  await handleMockupImport(file, openEditor, mode);
  };
 
  const renderMockupImportModal = () => {
  if (!mockupImportModalOpen || !pendingMockupFile) return null;
 
+ const aiImportAvailable = canUseCustomTemplates && !isInviteBlocked;
  const modes: Array<{
- id: MockupImportTextMode;
+ id: MockupImportTextMode | 'ai';
  title: string;
  description: string;
+ icon: typeof Wand2;
  disabled?: boolean;
  badge?: string;
  }> = [
- {
- id: 'image-only',
- title: 'Fond image uniquement',
- description: 'Importe la palette et l\'image de fond, sans aucun élément par-dessus.',
- },
+ ...(aiImportAvailable
+   ? [{
+       id: 'ai' as const,
+       icon: Wand2,
+       title: 'Recréer avec l’IA',
+       description: `L’IA reprend le style de la photo et refait une carte propre, textes modifiables. Dès ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons.`,
+     }]
+   : []),
  {
  id: 'placeholders',
- title: 'Avec emplacements texte',
- description: 'Ajoute des blocs texte génériques (titre, date, lieu…) à personnaliser.',
- },
- {
- id: 'structure-only',
- title: 'Sans blocs texte',
- description: 'Conserve réponse à l’invitation, boutons et séparateurs, mais supprime tous les blocs texte.',
+ icon: Type,
+ title: 'Image + textes à remplir',
+ description: 'L’image devient le fond, avec un titre, une date et un lieu prêts à personnaliser.',
+ badge: 'Conseillé',
  },
  {
  id: 'ocr',
- title: 'Reconnaître le texte de l\'image',
- description: 'Lit le texte visible sur l\'image et remplit les emplacements du modèle.',
+ icon: Eye,
+ title: 'Lire le texte de l’image',
+ description: 'Reprend les textes visibles sur la photo et les rend modifiables.',
  disabled: !canUseMockupOcr,
- badge: canUseMockupOcr ? 'Premium 2+' : 'Premium 2 requis',
+ badge: canUseMockupOcr ? undefined : 'Premium 2 requis',
+ },
+ {
+ id: 'structure-only',
+ icon: CheckSquare,
+ title: 'Image + boutons, sans texte',
+ description: 'Garde le formulaire de réponse, les boutons et séparateurs, sans bloc texte.',
+ },
+ {
+ id: 'image-only',
+ icon: Image,
+ title: 'Image seule',
+ description: 'Reprend l’image et ses couleurs, rien d’autre par-dessus.',
  },
  ];
 
@@ -1125,11 +1166,11 @@ export default function TemplatesPage() {
  <Modal
    open
    size="lg"
-   title="Comment importer cette image ?"
-   description={`Fichier : ${pendingMockupFile.name}`}
+   title="Que faire de cette image ?"
+   description="Choisissez comment la carte importée arrive dans l’éditeur."
    onClose={() => {
      setMockupImportModalOpen(false);
-     setPendingMockupFile(null);
+     clearPendingMockup();
    }}
    footer={
      <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end w-full">
@@ -1138,7 +1179,7 @@ export default function TemplatesPage() {
          variant="secondary"
          onClick={() => {
            setMockupImportModalOpen(false);
-           setPendingMockupFile(null);
+           clearPendingMockup();
          }}
        >
          Annuler
@@ -1147,44 +1188,71 @@ export default function TemplatesPage() {
          type="button"
          disabled={mockupImportMode === 'ocr' && !canUseMockupOcr}
          onClick={handleConfirmMockupImport}
+         leftIcon={mockupImportMode === 'ai' ? <Wand2 className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
        >
-         Importer l&apos;image
+         {mockupImportMode === 'ai' ? 'Continuer avec l’IA' : 'Importer'}
        </Button>
  </div>
    }
  >
- <div className="space-y-3">
- {modes.map((mode) => (
+ <div className="grid gap-4 sm:grid-cols-[9rem_minmax(0,1fr)] items-start">
+ <div className="flex sm:flex-col items-center gap-3 sm:gap-2">
+   {pendingMockupPreview ? (
+     // eslint-disable-next-line @next/next/no-img-element
+     <img
+       src={pendingMockupPreview}
+       alt="Image importée"
+       className="w-20 sm:w-full aspect-[2/3] rounded-[var(--radius-button)] object-cover border border-border bg-surface-muted"
+     />
+   ) : null}
+   <p className="text-xs text-muted break-all sm:text-center">{pendingMockupFile.name}</p>
+ </div>
+ <div className="space-y-2" role="radiogroup" aria-label="Façon d’importer">
+ {modes.map((mode) => {
+ const ModeIcon = mode.icon;
+ const active = mockupImportMode === mode.id;
+ return (
  <label
  key={mode.id}
- className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition ${
- mockupImportMode === mode.id
- ? 'border-primary bg-primary/10'
- : 'border-border hover:border-border hover:bg-surface-muted'
- } ${mode.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+ className={cn(
+ 'flex items-start gap-3 p-3 rounded-[var(--radius-button)] border cursor-pointer transition focus-within:ring-2 focus-within:ring-primary/50',
+ active ? 'border-primary bg-primary/10' : 'border-border hover:bg-surface-muted',
+ mode.disabled && 'opacity-50 cursor-not-allowed',
+ )}
  >
  <input
  type="radio"
  name="mockup-import-mode"
  value={mode.id}
- checked={mockupImportMode === mode.id}
+ checked={active}
  disabled={mode.disabled}
  onChange={() => setMockupImportMode(mode.id)}
- className="mt-1 text-primary focus:ring-primary"
+ className="sr-only"
  />
+ <span className={cn(
+   'w-8 h-8 shrink-0 rounded-lg flex items-center justify-center',
+   active ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted text-muted',
+ )}>
+   <ModeIcon className="w-4 h-4" aria-hidden />
+ </span>
  <span className="min-w-0">
  <span className="flex items-center gap-2 flex-wrap">
  <span className="text-sm font-bold text-foreground">{mode.title}</span>
  {mode.badge && (
- <span className="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface-muted text-muted">
+ <span className={cn(
+   'text-xs font-semibold px-2 py-0.5 rounded-full',
+   mode.badge === 'Conseillé' ? 'bg-primary/10 text-primary' : 'bg-surface-muted text-muted',
+ )}>
  {mode.badge}
  </span>
  )}
  </span>
- <span className="block text-xs text-muted mt-1 leading-relaxed">{mode.description}</span>
+ <span className="block text-xs text-muted mt-0.5 leading-relaxed">{mode.description}</span>
  </span>
  </label>
- ))}
+ );
+ })}
+ </div>
  </div>
  </Modal>
  );
@@ -1366,9 +1434,6 @@ export default function TemplatesPage() {
    return next.slice(0, merged.length);
  });
  setAiComposePreviewUrls(merged.map((f) => URL.createObjectURL(f)));
- if (merged.length > 0 && !aiComposeCoupleFaceSwap) {
-   setAiComposeIsAlteration(true);
- }
  };
 
  const setAiComposeIncomingFromFile = (file: File | null) => {
@@ -1478,17 +1543,9 @@ export default function TemplatesPage() {
       incomingUrl = modelUrl;
     }
 
-    const hasReplacementKeyword =
-      /remplac|substitu|chang|swap|retouch|ajust|refin|altér|réajust|modifier/i.test(aiComposePrompt);
-    const hasBaseTarget =
-      Boolean(incomingUrl) ||
-      Boolean(aiComposeModelPhoto) ||
-      Boolean(aiComposeIncomingFile) ||
-      Boolean(currentBgUrl);
-    const isAlteration =
-      aiComposeCoupleFaceSwap ||
-      aiComposeIsAlteration ||
-      (hasBaseTarget && (hasReplacementKeyword || hasTexts || aiComposeFiles.length > 0));
+    // Le mode choisi dans l’assistant fait foi : « Nouvelle carte » ne doit pas basculer
+    // en retouche simplement parce qu’un fond ou une photo d’inspiration est présent.
+    const isAlteration = aiComposeCoupleFaceSwap || aiComposeIsAlteration || Boolean(aiComposeModelPhoto);
 
     const existingTextSummaries = canvasElements
       .filter((el) => typeof el.text === 'string' && el.text.trim().length > 0)
@@ -1548,7 +1605,7 @@ export default function TemplatesPage() {
       imageUrls: composeImageUrls,
       baseImageUrl: aiComposeCoupleFaceSwap
         ? incomingUrl
-        : modelUrl || (isAlteration ? currentBgUrl : undefined),
+        : modelUrl || (isAlteration && uploadedUrls.length === 0 ? currentBgUrl : undefined),
       existingElements: isAlteration ? canvasElements : undefined,
       isAlteration,
       generateBackground: true,
@@ -1682,16 +1739,88 @@ export default function TemplatesPage() {
    description: aiComposeStructured.description,
  };
  const aiComposeHasTexts = hasInvitationIdentity(aiComposeCardIdentity);
+ const aiComposeMode: 'create' | 'modify' | 'faces' = aiComposeCoupleFaceSwap
+   ? 'faces'
+   : aiComposeIsAlteration || aiComposeModelPhoto
+     ? 'modify'
+     : 'create';
 
- const composeBlockedReason = aiComposeCoupleFaceSwap
+ const composeBlockedReason = aiComposeMode === 'faces'
    ? (aiComposeFiles.length < 1
      ? 'Ajoutez au moins une photo du couple.'
      : !hasIncomingCard
        ? 'Ajoutez la carte dont les visages doivent être remplacés.'
        : null)
-   : aiComposeIsAlteration && !hasIncomingCard
-     ? 'Choisissez un modèle ou une photo de carte à modifier.'
-   : (!aiComposeHasTexts && aiComposePrompt.trim().length < 8 ? 'Décrivez la fête en quelques mots ou renseignez les informations de la carte.' : null);
+   : aiComposeMode === 'modify' && !hasIncomingCard && aiComposeFiles.length === 0
+     ? 'Choisissez un modèle ou importez la photo de la carte à transformer.'
+   : (!aiComposeHasTexts && aiComposePrompt.trim().length < 8
+     ? (aiComposeMode === 'modify'
+       ? 'Indiquez ce qui doit changer, ou les nouveaux textes de la carte.'
+       : 'Décrivez la fête en quelques mots, ou renseignez les textes de la carte.')
+     : null);
+ const aiComposeModes = [
+   {
+     id: 'create' as const,
+     icon: Wand2,
+     label: 'Nouvelle carte',
+     hint: 'L’IA peint un fond neuf, vos textes restent modifiables.',
+   },
+   {
+     id: 'modify' as const,
+     icon: Edit3,
+     label: 'Transformer une carte',
+     hint: 'Partir d’un modèle ou d’une photo, changer textes ou style.',
+   },
+   {
+     id: 'faces' as const,
+     icon: Users,
+     label: 'Visages du couple',
+     hint: 'Mettre vos photos à la place des visages d’une carte.',
+   },
+ ];
+ const aiComposeSectionTitles =
+   aiComposeMode === 'faces'
+     ? ['Type de création', 'Carte et photos du couple', 'Textes et consignes']
+     : aiComposeMode === 'modify'
+       ? ['Type de création', 'Carte de départ', 'Textes et ambiance']
+       : ['Type de création', 'Inspiration (optionnel)', 'Textes et ambiance'];
+ const selectAiComposeMode = (mode: 'create' | 'modify' | 'faces') => {
+   if (aiComposeBusy || mode === aiComposeMode) return;
+   const isDefaultOrRetouchPrompt =
+     aiComposePrompt.trim() === COUPLE_FACE_SWAP_DEFAULT_PROMPT ||
+     /remplac|substitu|chang|swap|retouch|ajust|refin|altér|réajust|modifier/i.test(aiComposePrompt);
+   if (mode === 'create') {
+     setAiComposeCoupleFaceSwap(false);
+     setAiComposeIsAlteration(false);
+     setAiComposeModelPhoto(null);
+     setAiComposeIncomingFromFile(null);
+     if (isDefaultOrRetouchPrompt) setAiComposePrompt('');
+     return;
+   }
+   if (mode === 'modify') {
+     setAiComposeCoupleFaceSwap(false);
+     setAiComposeIsAlteration(true);
+     if (aiComposePrompt.trim() === COUPLE_FACE_SWAP_DEFAULT_PROMPT) setAiComposePrompt('');
+     return;
+   }
+   setAiComposeCoupleFaceSwap(true);
+   setAiComposeIsAlteration(true);
+   setAiComposeTitle(
+     templateName.trim() && !/^Nouveau Modèle|^Nouvelle invitation|^Invitation IA$/i.test(templateName)
+       ? templateName
+       : '',
+   );
+   setAiComposeHonorees(invitationHonorees === 'Hassan & Ayesha' ? '' : invitationHonorees);
+   setAiComposeDate(invitationDate === '2026-06-15' ? '' : invitationDate);
+   if (aiComposePrompt.trim().length < 8) {
+     setAiComposePrompt(COUPLE_FACE_SWAP_DEFAULT_PROMPT);
+   }
+   if (aiComposeFiles.length > 2) {
+     aiComposePreviewUrls.slice(2).forEach((url) => URL.revokeObjectURL(url));
+     setAiComposeFiles((prev) => prev.slice(0, 2));
+     setAiComposePreviewUrls((prev) => prev.slice(0, 2));
+   }
+ };
  if (typeof document === 'undefined') return null;
  return createPortal(
  <div
@@ -1714,15 +1843,17 @@ export default function TemplatesPage() {
  <div className="shrink-0 px-5 sm:px-8 lg:px-10 pt-5 sm:pt-7 pb-4 border-b border-border-subtle flex items-start justify-between gap-3">
  <div className="min-w-0">
             <h2 id="ai-compose-title" className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2.5">
-              {aiComposeCoupleFaceSwap ? <Users className="w-6 h-6 text-primary" aria-hidden /> : <Wand2 className="w-6 h-6 text-primary" aria-hidden />}
-              {aiComposeCoupleFaceSwap ? 'Visages du couple' : aiComposeIsAlteration ? 'Modifier un modèle' : 'Fond pur + variables'}
+              <Wand2 className="w-6 h-6 text-primary" aria-hidden />
+              Créer avec l’IA
             </h2>
             <p className="text-sm sm:text-base text-muted mt-1.5 leading-relaxed max-w-4xl">
-              {aiComposeCoupleFaceSwap
-                ? `Posez la carte, puis les photos du couple. L’identité change ; décor et expressions du carton restent. ${composeTokenCost} jetons.`
-                : aiComposeIsAlteration
-                ? `Partez d’un modèle et remplacez les textes ou les visages. ${composeTokenCost} jetons.`
-                : `Fond généré, textes dynamiques posés ensuite. ${composeTokenCost} jetons.`}
+              {aiComposeMode === 'faces'
+                ? 'Posez la carte, puis les photos du couple. Les visages changent ; décor, pose et expressions restent.'
+                : aiComposeMode === 'modify'
+                ? 'Partez d’un modèle ou d’une photo de carte, puis changez les textes ou l’ambiance.'
+                : 'Décrivez la fête : l’IA crée le fond, vos textes restent modifiables dans l’éditeur.'}
+              {' '}
+              <span className="whitespace-nowrap font-semibold text-foreground">{composeTokenCost} jetons.</span>
             </p>
  </div>
  <button
@@ -1814,37 +1945,18 @@ export default function TemplatesPage() {
      </div>
    </div>
  ) : null}
- <StudioHowTo
-   steps={
-     aiComposeCoupleFaceSwap
-       ? ['Ajoutez la carte à modifier', 'Ajoutez 1 ou 2 photos du couple', 'Générez']
-       : aiComposeIsAlteration
-         ? ['Choisissez un modèle', 'Indiquez les textes à remplacer', 'Générez']
-         : ['Choisissez Fond pur', 'Renseignez les infos de la carte', 'Générez']
-   }
- />
  <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-10 xl:gap-12 lg:items-start space-y-6 lg:space-y-0">
  <div className="space-y-6">
  <div>
- <p className="text-sm font-semibold text-foreground mb-2">1. Que voulez-vous faire ?</p>
+ <p className="text-sm font-semibold text-foreground mb-2">1. {aiComposeSectionTitles[0]}</p>
  <div
    role="radiogroup"
-   aria-label="Mode de l’assistant"
-   className="grid grid-cols-2 gap-3"
+   aria-label="Type de création"
+   className="grid grid-cols-1 sm:grid-cols-3 gap-2.5"
  >
-   {([
-     { id: 'create', label: 'Fond pur + variables', hint: 'Carte neuve, textes dynamiques' },
-     { id: 'modify', label: 'Modifier un modèle', hint: 'Textes / visages sur une base' },
-   ] as const).map((mode) => {
-     const hasModificationActive =
-       aiComposeIsAlteration ||
-       aiComposeCoupleFaceSwap ||
-       Boolean(aiComposeModelPhoto) ||
-       Boolean(aiComposeIncomingFile);
-     const active =
-       mode.id === 'modify'
-         ? hasModificationActive
-         : !hasModificationActive;
+   {aiComposeModes.map((mode) => {
+     const active = aiComposeMode === mode.id;
+     const ModeIcon = mode.icon;
      return (
        <button
          key={mode.id}
@@ -1852,81 +1964,33 @@ export default function TemplatesPage() {
          role="radio"
          aria-checked={active}
          disabled={aiComposeBusy}
-         onClick={() => {
-           if (mode.id === 'modify') {
-             setAiComposeIsAlteration(true);
-             if (aiComposePrompt.trim() === COUPLE_FACE_SWAP_DEFAULT_PROMPT && !aiComposeCoupleFaceSwap) {
-               setAiComposePrompt('');
-             }
-           } else {
-             setAiComposeCoupleFaceSwap(false);
-             setAiComposeIsAlteration(false);
-             setAiComposeModelPhoto(null);
-             setAiComposeIncomingFile(null);
-             if (aiComposeIncomingPreview) {
-               URL.revokeObjectURL(aiComposeIncomingPreview);
-               setAiComposeIncomingPreview('');
-             }
-             if (aiComposePrompt.trim() === COUPLE_FACE_SWAP_DEFAULT_PROMPT || /remplac|substitu|chang|swap|retouch|ajust|refin|altér|réajust|modifier/i.test(aiComposePrompt)) {
-               setAiComposePrompt('');
-             }
-           }
-         }}
-         className={`min-h-14 px-3 py-3 rounded-[var(--radius-button)] border text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+         onClick={() => selectAiComposeMode(mode.id)}
+         className={cn(
+           'min-h-14 px-3 py-3 rounded-[var(--radius-button)] border text-left transition flex sm:flex-col items-start gap-2.5 sm:gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60',
            active
              ? 'border-primary bg-primary/10 shadow-xs'
-             : 'border-border bg-surface hover:border-primary/40'
-         }`}
+             : 'border-border bg-surface hover:border-primary/40',
+         )}
        >
-         <span className="block text-sm font-bold text-foreground">{mode.label}</span>
-         <span className="block text-xs text-muted mt-0.5">{mode.hint}</span>
+         <span className={cn(
+           'w-8 h-8 shrink-0 rounded-lg flex items-center justify-center',
+           active ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted text-muted',
+         )}>
+           <ModeIcon className="w-4 h-4" aria-hidden />
+         </span>
+         <span className="min-w-0">
+           <span className="block text-sm font-bold text-foreground">{mode.label}</span>
+           <span className="block text-xs text-muted mt-0.5 leading-snug">{mode.hint}</span>
+         </span>
        </button>
      );
    })}
  </div>
- {(aiComposeIsAlteration || aiComposeCoupleFaceSwap) ? (
-   <label className="mt-3 flex min-h-11 items-center gap-2.5 rounded-[var(--radius-button)] border border-border bg-surface px-3 py-2.5 cursor-pointer">
-     <input
-       type="checkbox"
-       checked={aiComposeCoupleFaceSwap}
-       disabled={aiComposeBusy}
-       onChange={(e) => {
-         const on = e.target.checked;
-         setAiComposeCoupleFaceSwap(on);
-         setAiComposeIsAlteration(true);
-         if (on) {
-           setAiComposeTitle(
-             templateName.trim() && !/^Nouveau Modèle|^Nouvelle invitation|^Invitation IA$/i.test(templateName)
-               ? templateName
-               : '',
-           );
-           setAiComposeHonorees(invitationHonorees === 'Hassan & Ayesha' ? '' : invitationHonorees);
-           setAiComposeDate(invitationDate === '2026-06-15' ? '' : invitationDate);
-           if (aiComposePrompt.trim().length < 8) {
-             setAiComposePrompt(COUPLE_FACE_SWAP_DEFAULT_PROMPT);
-           }
-           if (aiComposeFiles.length > 2) {
-             aiComposePreviewUrls.slice(2).forEach((url) => URL.revokeObjectURL(url));
-             setAiComposeFiles((prev) => prev.slice(0, 2));
-             setAiComposePreviewUrls((prev) => prev.slice(0, 2));
-           }
-         } else if (aiComposePrompt.trim() === COUPLE_FACE_SWAP_DEFAULT_PROMPT) {
-           setAiComposePrompt('');
-         }
-       }}
-       className="rounded border-border text-primary focus:ring-primary"
-     />
-     <span className="min-w-0">
-       <span className="block text-sm font-bold text-foreground">Remplacer les visages du couple</span>
-       <span className="block text-xs text-muted">Sous-option : carte modèle + 1 ou 2 photos</span>
-     </span>
-   </label>
- ) : null}
  </div>
 
  {aiComposeCoupleFaceSwap ? (
  <div className="space-y-3">
-   <p className="text-sm font-semibold text-foreground">2. Photos du couple</p>
+   <p className="text-sm font-semibold text-foreground">2. {aiComposeSectionTitles[1]}</p>
    <div>
      <label htmlFor="ai-compose-incoming" className="text-sm font-semibold text-muted">Carte à modifier</label>
      <input
@@ -2078,19 +2142,36 @@ export default function TemplatesPage() {
  </div>
  ) : (
  <div className="space-y-3">
- <p className="text-sm font-semibold text-foreground">2. Photos (optionnel)</p>
- <InvitationModelPhotoPicker
-   id="ai-compose-model-photos"
-   selectedId={aiComposeModelPhoto?.id || null}
-   models={studioModelPhotos}
-   disabled={aiComposeBusy}
-   onSelect={(photo) => {
-     setAiComposeModelPhoto(photo);
-     if (!aiComposeCoupleFaceSwap) setAiComposeIsAlteration(true);
-   }}
-   onClear={() => setAiComposeModelPhoto(null)}
- />
- <label htmlFor="ai-compose-optional-photos" className="text-sm font-semibold text-muted">Images de référence (1–4)</label>
+ <p className="text-sm font-semibold text-foreground">2. {aiComposeSectionTitles[1]}</p>
+ {aiComposeMode === 'modify' ? (
+   <>
+     {bgImageUrl && /^https?:\/\//i.test(bgImageUrl) && !aiComposeModelPhoto && aiComposeFiles.length === 0 ? (
+       <div className="flex items-center gap-3 rounded-[var(--radius-card)] border border-primary/30 bg-primary/5 p-3">
+         {/* eslint-disable-next-line @next/next/no-img-element */}
+         <img src={bgImageUrl} alt="Carte actuelle" className="w-14 h-20 rounded-lg object-cover border border-border shrink-0" />
+         <p className="text-xs text-muted leading-relaxed">
+           <span className="block text-sm font-bold text-foreground">La carte ouverte dans l’éditeur</span>
+           Elle sert de base. Choisissez un modèle ou importez une photo pour partir d’une autre carte.
+         </p>
+       </div>
+     ) : null}
+     <InvitationModelPhotoPicker
+       id="ai-compose-model-photos"
+       selectedId={aiComposeModelPhoto?.id || null}
+       models={studioModelPhotos}
+       disabled={aiComposeBusy}
+       onSelect={(photo) => setAiComposeModelPhoto(photo)}
+       onClear={() => setAiComposeModelPhoto(null)}
+     />
+   </>
+ ) : (
+   <p className="text-xs text-muted leading-relaxed">
+     Ajoutez des photos qui inspirent l’ambiance (lieu, tenue, couleurs). Elles guident l’IA sans être copiées.
+   </p>
+ )}
+ <label htmlFor="ai-compose-optional-photos" className="text-sm font-semibold text-muted">
+   {aiComposeMode === 'modify' ? 'Ou la photo de la carte à transformer' : 'Photos d’inspiration (1 à 4)'}
+ </label>
  <input
  id="ai-compose-optional-photos"
  ref={aiComposeInputRef}
@@ -2129,8 +2210,10 @@ export default function TemplatesPage() {
  </>
  ) : (
  <>
- <span className="sm:hidden">Ajouter des photos</span>
- <span className="hidden sm:inline">Glisser ou cliquer pour ajouter des photos (1–4)</span>
+ <span className="sm:hidden">{aiComposeMode === 'modify' ? 'Ajouter la photo' : 'Ajouter des photos'}</span>
+ <span className="hidden sm:inline">
+   {aiComposeMode === 'modify' ? 'Glisser ou cliquer pour ajouter la photo de la carte' : 'Glisser ou cliquer pour ajouter des photos (1 à 4)'}
+ </span>
  </>
  )}
  </button>
@@ -2160,7 +2243,7 @@ export default function TemplatesPage() {
  <div className="space-y-4">
  <div>
  <p className="text-sm font-semibold text-foreground mb-2">
-   {aiComposeCoupleFaceSwap ? '3. Écrits & Consignes' : '3. Écrits & Style de la fête'}
+   3. {aiComposeSectionTitles[2]}
  </p>
 
  <div
@@ -2190,7 +2273,7 @@ export default function TemplatesPage() {
      )}
    >
      <PenTool className="w-3.5 h-3.5" aria-hidden />
-     <span>Écrits de la carte</span>
+     <span>Textes de la carte</span>
      {aiComposeHasTexts && (
        <span className="w-1.5 h-1.5 rounded-full bg-primary" aria-label="Contient des textes saisis" />
      )}
@@ -2217,7 +2300,7 @@ export default function TemplatesPage() {
      )}
    >
      <Sparkles className="w-3.5 h-3.5" aria-hidden />
-     <span>Ambiance & Cérémonie</span>
+     <span>Ambiance et cérémonie</span>
    </button>
  </div>
 
@@ -2258,7 +2341,7 @@ export default function TemplatesPage() {
 
  <div className="flex items-center justify-between mt-3">
  <label htmlFor="ai-compose-prompt" className="text-xs font-semibold text-muted">
-   {aiComposeCoupleFaceSwap ? 'Consigne libre (optionnelle)' : 'Consigne libre ou retouche'}
+   {aiComposeMode === 'create' ? 'Décrivez la fête en une phrase' : 'Ce qui doit changer (optionnel)'}
  </label>
  <span className="hidden sm:inline text-xs text-muted tabular-nums">
  {aiComposePrompt.length} car.
@@ -2272,17 +2355,19 @@ export default function TemplatesPage() {
  onChange={(e) => setAiComposePrompt(e.target.value)}
  placeholder={aiComposeCoupleFaceSwap
    ? 'Optionnel : préciser qui est à gauche / à droite, ou garder une tenue…'
-   : 'Ex. Copier fidèlement cette invitation en or et ivoire, ou décrire l’ambiance : mariage princier, éclairage naturel chaleureux…'}
+   : aiComposeMode === 'modify'
+     ? 'Ex. Passer en or et ivoire, remplacer les fleurs par du wax, garder la mise en page…'
+     : 'Ex. Mariage coutumier chic à Kinshasa, tons or et ivoire, fleurs blanches, lumière chaude…'}
  className="mt-1 w-full rounded-[var(--radius-card)] border border-border bg-surface-muted px-3.5 py-2.5 text-xs sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[4.5rem]"
  />
 
  <div className="mt-3 flex items-center justify-between gap-3 p-3 rounded-xl border border-border bg-surface">
    <div>
-     <span className="block text-xs font-bold text-foreground">Mode arrière-plan pur</span>
-     <span className="block text-[11px] text-muted">
+     <span className="block text-xs font-bold text-foreground">Textes modifiables après la création</span>
+     <span className="block text-xs text-muted">
        {aiComposeEmbedText
-         ? 'Désactivé : les textes sont dessinés et intégrés directement sur l’image.'
-         : 'Activé : image nette sans texte incrusté (textes gérés par calques éditables).'}
+         ? 'Non : l’IA dessine les textes dans l’image, ils ne se modifient plus.'
+         : 'Oui : l’image reste sans texte, noms et date restent modifiables dans l’éditeur.'}
      </span>
    </div>
    <button
@@ -2297,12 +2382,12 @@ export default function TemplatesPage() {
          : 'bg-surface-muted text-muted hover:text-foreground border-border'
      }`}
    >
-     {!aiComposeEmbedText ? 'Fond pur actif' : 'Fond avec textes'}
+     {!aiComposeEmbedText ? 'Oui (conseillé)' : 'Non'}
    </button>
  </div>
 
  <p className="mt-2 text-xs text-muted">
- Besoin d’un exemple ? Ouvrez <button type="button" className="font-bold text-primary hover:underline" onClick={() => setAiComposeStudioTab('prompts')}>Exemples</button> — quatre mariages coutumiers prêts à lancer.
+ Besoin d’une idée ? Ouvrez <button type="button" className="font-bold text-primary hover:underline" onClick={() => setAiComposeStudioTab('prompts')}>Exemples</button> : des descriptions prêtes à lancer.
  </p>
 
  <button
@@ -2485,15 +2570,11 @@ export default function TemplatesPage() {
             {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
             {aiComposeBusy
               ? 'Génération…'
-              : aiComposeCoupleFaceSwap
-                ? (aiComposeHasTexts
-                    ? `Modifier le modèle (visages & écrits · ${composeTokenCost} jetons)`
-                    : `Remplacer les visages (${composeTokenCost} jetons)`)
-                : aiComposeIsAlteration
-                  ? (aiComposeHasTexts
-                      ? `Modifier les écrits (${composeTokenCost} jetons)`
-                      : `Modifier le modèle (${composeTokenCost} jetons)`)
-                  : `Générer (${composeTokenCost} jetons)`}
+              : aiComposeMode === 'faces'
+                ? `Remplacer les visages (${composeTokenCost} jetons)`
+                : aiComposeMode === 'modify'
+                  ? `Transformer la carte (${composeTokenCost} jetons)`
+                  : `Créer la carte (${composeTokenCost} jetons)`}
  </button>
  </div>
  </div>
@@ -2836,6 +2917,25 @@ export default function TemplatesPage() {
  .replace(/\{\{eventTitle\}\}/gi, previewIdentity.title || templateName)
  .replace(/\{\{location\}\}/gi, 'Kinshasa')
  .replace(/\{\{date\}\}/gi, previewIdentity.date || '15 juin 2026');
+
+ /** Texte du canevas : les champs automatiques ({{title}}…) montrent une valeur d’exemple,
+  *  soulignée en pointillés hors aperçu invité pour signaler qu’ils changent selon l’invité. */
+ const renderCanvasText = (text: string) => {
+   if (showGuestPreview || !/\{\{\w+\}\}/.test(text)) return substitutePreviewVars(text);
+   return text.split(/(\{\{\w+\}\})/g).map((part, i) =>
+     /^\{\{\w+\}\}$/.test(part) ? (
+       <span
+         key={i}
+         className="underline decoration-dotted decoration-1 underline-offset-4"
+         title={`Rempli automatiquement : ${part}`}
+       >
+         {substitutePreviewVars(part)}
+       </span>
+     ) : (
+       part
+     ),
+   );
+ };
 
  const draftKey = `em-template-draft-${editingTemplateId || 'new'}-${tenant?.id || 'global'}`;
 
@@ -3478,8 +3578,9 @@ const studioModelPhotos = useMemo(
  }
 
  if (editorOpen) {
+ // z-[10040] : sous les Modal partagés (z 11000+) pour que import, historique et sortie restent visibles.
  const editorTree = (
- <div className="fixed inset-0 z-[11020] bg-background overflow-y-auto overscroll-contain">
+ <div className="fixed inset-0 z-[10040] bg-background overflow-y-auto overscroll-contain">
  {renderMockupImportModal()}
  {renderAiComposeModal()}
  {renderQuickTextModal()}
@@ -3699,193 +3800,162 @@ const studioModelPhotos = useMemo(
             </button>
           </div>
         )}
- {/* Editor Header — identity left, primary actions right, admin meta secondary */}
- <header className="shrink-0 space-y-3 border-b border-border pb-4">
- <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
- <div className="flex items-start gap-3 min-w-0">
-              <button
-                type="button"
-                onClick={() => requestCloseEditor()}
-                className="inline-flex h-11 w-11 shrink-0 items-center justify-center hover:bg-surface-muted rounded-[var(--radius-button)] transition text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
- title={fromAdminConsole ? 'Retour au catalogue Super Admin' : 'Retour à mes modèles'}
-                aria-label={fromAdminConsole ? 'Retour au catalogue Super Admin' : 'Retour à mes modèles'}
- >
- <ArrowLeft className="w-5 h-5" />
- </button>
-              <div className="min-w-0 flex-1 pt-1">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="relative flex-1 max-w-md group">
- <input 
- type="text" 
- value={templateName}
- onChange={(e) => setTemplateName(e.target.value)}
-                      maxLength={120}
-                      className="w-full min-w-0 text-lg sm:text-xl font-semibold text-foreground bg-transparent border-b border-border/40 hover:border-border focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary pr-6 py-0.5 transition"
- placeholder="Titre de l’invitation"
-                      aria-label="Titre de l’invitation"
-                    />
-                    <Edit3 className="w-3.5 h-3.5 text-muted/40 group-hover:text-muted pointer-events-none absolute right-1 top-2 transition-colors" />
-                  </div>
-                  {draftSavedAt && (
-                    <span
-                      className="shrink-0 text-xs font-bold uppercase tracking-wider text-festive-accent bg-festive-accent/10 border border-festive-accent/20 px-2 py-0.5 rounded-md whitespace-nowrap"
-                      title="Modifications locales non encore enregistrées"
-                    >
-                      Brouillon
-                    </span>
-                  )}
-                </div>
-                {templateName.length >= 100 && (
-                  <p className="text-xs text-muted mt-0.5">{templateName.length}/120 caractères</p>
-                )}
-                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-2xl">
-                  <Input
-                    label="Cérémonie, couple ou personne"
-                    value={invitationHonorees}
-                    onChange={(e) => setInvitationHonorees(e.target.value)}
-                    placeholder="ex. Amina & Jean-Marc"
-                    leftIcon={<Users className="h-4 w-4" aria-hidden />}
-                    hint="Nom affiché en grand sur le carton."
-                  />
-                  <Input
-                    label="Date de la cérémonie"
-                    type="date"
-                    value={invitationDate}
-                    onChange={(e) => setInvitationDate(e.target.value)}
-                    leftIcon={<Calendar className="h-4 w-4" aria-hidden />}
-                    hint="S’écrit tout de suite sur le carton."
-                  />
-                </div>
-                <div className="mt-1 flex items-center gap-2">
- {fromAdminConsole ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md">
- <Globe className="w-3 h-3" />
-                      Catalogue Super Admin
- </span>
- ) : (
-                    <span className="text-xs text-muted font-semibold">
-                      {isSuperAdmin ? 'Modèle plateforme' : 'Atelier d’invitation'}
-                    </span>
- )}
- {fromAdminConsole && (
-                    <span className="text-xs text-muted hidden sm:inline">
-                      · L’enregistrement synchronise le catalogue public
-                    </span>
- )}
- </div>
- </div>
- </div>
-            <div className="flex flex-wrap items-center gap-2 sm:justify-end shrink-0">
-              {rsvpReportingIssues.length > 0 ? (
-                <p
-                  role="status"
-                  className="w-full sm:w-auto text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1.5 max-w-xs sm:text-right"
-                  title={rsvpReportingIssues[0]}
-                >
-                  Formulaire de réponse à l’invitation à finaliser
-                </p>
-              ) : canvasElements.some((el) => el.type === 'rsvp-block') ? (
-                <p
-                  role="status"
-                  className="w-full sm:w-auto text-xs font-semibold text-primary bg-primary/10 border border-primary/20 rounded-lg px-2.5 py-1.5 sm:text-right"
-                >
-                  Formulaire de réponse à l’invitation prêt ✓
-                </p>
-              ) : null}
- <div className="flex items-center gap-1 border border-border rounded-xl p-1 bg-surface shadow-2xs">
- <button
- type="button"
- onClick={handleStudioUndo}
- disabled={studioHistoryIndex <= 0}
- className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition disabled:opacity-30 cursor-pointer"
- title="Annuler (Ctrl+Z)"
- aria-label="Annuler la dernière action"
- >
- <Undo2 className="w-4 h-4" />
- </button>
- <button
- type="button"
- onClick={handleStudioRedo}
- disabled={studioHistoryIndex >= studioHistory.length - 1}
- className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition disabled:opacity-30 cursor-pointer"
- title="Rétablir (Ctrl+Y)"
- aria-label="Rétablir la dernière action"
- >
- <Redo2 className="w-4 h-4" />
- </button>
- <button
- type="button"
- onClick={() => setStudioHistoryModalOpen(true)}
- className="inline-flex min-h-11 items-center gap-1.5 px-2.5 rounded-lg text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition cursor-pointer"
- title="Historique d'actions"
- aria-label="Ouvrir l'historique d'actions"
- >
- <History className="w-3.5 h-3.5 text-primary" />
- <span className="hidden md:inline">Historique</span>
- {studioHistory.length > 0 && (
- <span className="text-xs font-mono px-1 rounded bg-surface-muted text-foreground">
- {studioHistoryIndex + 1}/{studioHistory.length}
- </span>
- )}
- </button>
- </div>
- {bgImageUrl ? (
- <button
- type="button"
- disabled={aiImageDownloading}
- onClick={async () => {
- if (!bgImageUrl || aiImageDownloading) return;
- setAiImageDownloading(true);
- try {
- await downloadAiGeneratedImage(bgImageUrl);
- } finally {
- setAiImageDownloading(false);
- }
- }}
- className="inline-flex min-h-11 items-center justify-center gap-2 px-3.5 py-2.5 border border-border font-bold rounded-[var(--radius-button)] text-sm text-muted hover:border-primary hover:text-primary transition disabled:opacity-60"
- title="Télécharger l’image générée"
- >
- {aiImageDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
- <span className="hidden sm:inline">Télécharger</span>
- </button>
- ) : null}
- <button
- type="button"
- onClick={() => setShowGuestPreview((v) => !v)}
- aria-pressed={showGuestPreview}
- className={`inline-flex min-h-11 items-center justify-center gap-2 px-4 py-2.5 border font-bold rounded-[var(--radius-button)] text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
- showGuestPreview
- ? 'border-primary bg-primary/10 text-primary'
- : 'border-border text-muted hover:border-primary hover:text-primary'
- }`}
- >
- <Eye className="w-4 h-4" />
- <span className="hidden sm:inline">Voir comme un invité</span>
- <span className="sm:hidden">Aperçu</span>
- </button>
- <button 
- type="button"
- onClick={handleSaveTemplate}
- disabled={saving}
- title={rsvpReportingIssues.length > 0 ? rsvpReportingIssues[0] : undefined}
- className="inline-flex min-h-11 items-center justify-center gap-2 px-5 py-2.5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-bold rounded-[var(--radius-button)] text-sm transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2"
- >
- {saving ? (
- <>
- <Loader2 className="w-4.5 h-4.5 animate-spin" />
- Enregistrement…
- </>
- ) : (
- <>
- <Save className="w-4.5 h-4.5" />
- Enregistrer
- </>
- )}
- </button>
- </div>
+ {/* Editor Header — one compact row so the card stays above the fold */}
+ <header className="shrink-0 space-y-2 border-b border-border pb-3">
+ <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+   <button
+     type="button"
+     onClick={() => requestCloseEditor()}
+     className="inline-flex h-11 w-11 shrink-0 items-center justify-center hover:bg-surface-muted rounded-[var(--radius-button)] transition text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+     title={fromAdminConsole ? 'Retour au catalogue Super Admin' : 'Retour à mes modèles'}
+     aria-label={fromAdminConsole ? 'Retour au catalogue Super Admin' : 'Retour à mes modèles'}
+   >
+     <ArrowLeft className="w-5 h-5" />
+   </button>
+   <div className="min-w-0 flex-1 basis-48 flex items-center gap-2">
+     <div className="relative min-w-0 flex-1 max-w-md group">
+       <input
+         type="text"
+         value={templateName}
+         onChange={(e) => setTemplateName(e.target.value)}
+         maxLength={120}
+         className="w-full min-w-0 text-lg font-semibold text-foreground bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 pr-6 py-1 transition"
+         placeholder="Nom de la carte"
+         aria-label="Nom de la carte"
+       />
+       <Edit3 className="w-3.5 h-3.5 text-muted/50 group-hover:text-muted pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 transition-colors" aria-hidden />
+     </div>
+     {fromAdminConsole ? (
+       <span className="hidden sm:inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md" title="L’enregistrement synchronise le catalogue public">
+         <Globe className="w-3 h-3" aria-hidden />
+         Catalogue
+       </span>
+     ) : null}
+     {draftSavedAt ? (
+       <span
+         className="shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold text-festive-accent bg-festive-accent/10 border border-festive-accent/20 pl-2 pr-1 py-0.5 rounded-md whitespace-nowrap"
+         title={`Brouillon gardé sur cet appareil à ${draftSavedAt}. Les invités ne voient rien avant l’enregistrement.`}
+         role="status"
+       >
+         <span className="w-1.5 h-1.5 rounded-full bg-festive-accent" aria-hidden />
+         <span>Non enregistré</span>
+         <button
+           type="button"
+           onClick={() => {
+             try {
+               localStorage.removeItem(draftKey);
+               setDraftSavedAt(null);
+             } catch {
+               /* ignore */
+             }
+           }}
+           className="ml-0.5 inline-flex h-6 w-6 items-center justify-center rounded hover:bg-festive-accent/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+           aria-label="Effacer le brouillon local"
+           title="Effacer le brouillon local"
+         >
+           <X className="w-3 h-3" aria-hidden />
+         </button>
+       </span>
+     ) : null}
+   </div>
+   <div className="flex flex-wrap items-center gap-2 ml-auto">
+     {rsvpReportingIssues.length > 0 ? (
+       <span
+         role="status"
+         className="hidden md:inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1.5"
+         title={rsvpReportingIssues[0]}
+       >
+         <AlertCircle className="w-3.5 h-3.5" aria-hidden />
+         Formulaire à finaliser
+       </span>
+     ) : canvasElements.some((el) => el.type === 'rsvp-block') ? (
+       <span
+         role="status"
+         className="hidden xl:inline-flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary/10 border border-primary/20 rounded-lg px-2.5 py-1.5"
+       >
+         <CheckCircle2 className="w-3.5 h-3.5" aria-hidden />
+         Formulaire prêt
+       </span>
+     ) : null}
+     <div className="flex items-center gap-0.5 border border-border rounded-[var(--radius-button)] p-0.5 bg-surface">
+       <button
+         type="button"
+         onClick={handleStudioUndo}
+         disabled={studioHistoryIndex <= 0}
+         className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition disabled:opacity-30 cursor-pointer"
+         title="Annuler (Ctrl+Z)"
+         aria-label="Annuler la dernière action"
+       >
+         <Undo2 className="w-4 h-4" />
+       </button>
+       <button
+         type="button"
+         onClick={handleStudioRedo}
+         disabled={studioHistoryIndex >= studioHistory.length - 1}
+         className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition disabled:opacity-30 cursor-pointer"
+         title="Rétablir (Ctrl+Y)"
+         aria-label="Rétablir la dernière action"
+       >
+         <Redo2 className="w-4 h-4" />
+       </button>
+       <button
+         type="button"
+         onClick={() => setStudioHistoryModalOpen(true)}
+         className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition cursor-pointer"
+         title="Historique des actions"
+         aria-label="Ouvrir l’historique des actions"
+       >
+         <History className="w-4 h-4" />
+       </button>
+     </div>
+     {bgImageUrl ? (
+       <button
+         type="button"
+         disabled={aiImageDownloading}
+         onClick={async () => {
+           if (!bgImageUrl || aiImageDownloading) return;
+           setAiImageDownloading(true);
+           try {
+             await downloadAiGeneratedImage(bgImageUrl);
+           } finally {
+             setAiImageDownloading(false);
+           }
+         }}
+         className="inline-flex h-11 w-11 items-center justify-center border border-border rounded-[var(--radius-button)] text-muted hover:border-primary hover:text-primary transition disabled:opacity-60"
+         title="Télécharger l’image de fond"
+         aria-label="Télécharger l’image de fond"
+       >
+         {aiImageDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+       </button>
+     ) : null}
+     <button
+       type="button"
+       onClick={() => setShowGuestPreview((v) => !v)}
+       aria-pressed={showGuestPreview}
+       className={`inline-flex min-h-11 items-center justify-center gap-2 px-3.5 border font-semibold rounded-[var(--radius-button)] text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+         showGuestPreview
+           ? 'border-primary bg-primary/10 text-primary'
+           : 'border-border text-foreground hover:border-primary hover:text-primary'
+       }`}
+     >
+       <Eye className="w-4 h-4" />
+       <span className="hidden sm:inline">{showGuestPreview ? 'Revenir à l’édition' : 'Voir comme un invité'}</span>
+       <span className="sm:hidden">{showGuestPreview ? 'Éditer' : 'Aperçu'}</span>
+     </button>
+     <button
+       type="button"
+       onClick={handleSaveTemplate}
+       disabled={saving}
+       title={rsvpReportingIssues.length > 0 ? rsvpReportingIssues[0] : undefined}
+       className="inline-flex min-h-11 items-center justify-center gap-2 px-5 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-[var(--radius-button)] text-sm transition disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2"
+     >
+       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+       {saving ? 'Enregistrement…' : 'Enregistrer'}
+     </button>
+   </div>
  </div>
  {isSuperAdmin && (
- <div className="flex flex-wrap items-center gap-2 pl-14">
+ <div className="flex flex-wrap items-center gap-2 sm:pl-14">
  <label className="text-xs font-bold text-muted uppercase tracking-wider" htmlFor="template-scope">
  Visible pour
  </label>
@@ -3914,10 +3984,10 @@ const studioModelPhotos = useMemo(
  />
  Afficher sur la page d&apos;accueil
  </label>
- <label htmlFor="template-ai-token-cost" className="inline-flex min-h-[44px] items-center gap-1.5 text-xs font-bold text-muted px-2">
+ <label htmlFor="template-ai-token-cost-header" className="inline-flex min-h-[44px] items-center gap-1.5 text-xs font-bold text-muted px-2">
  <span>Jetons IA</span>
  <input
- id="template-ai-token-cost"
+ id="template-ai-token-cost-header"
  type="number"
  min={1}
  max={50}
@@ -3936,44 +4006,6 @@ const studioModelPhotos = useMemo(
  </div>
  )}
  </header>
-
- {!studioGuideDismissed && (
-          <div className="px-4 py-3 rounded-[var(--radius-card)] bg-surface border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3" role="note">
-            <p className="text-sm text-foreground leading-relaxed">
-              <span className="font-semibold">Pour composer :</span>{' '}
-              renseignez le titre, les hôtes et la date, puis créez avec l’IA ou ajoutez des textes. Enregistrez quand la carte est prête.
-            </p>
-            <button
-              type="button"
-              onClick={() => setStudioGuideDismissed(true)}
-              className="inline-flex min-h-11 shrink-0 items-center justify-center px-3 rounded-[var(--radius-button)] border border-border bg-surface-muted text-xs font-semibold text-foreground hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-            >
-              Compris
-            </button>
-          </div>
-        )}
- {draftSavedAt && (
-          <div className="px-4 py-2.5 rounded-xl bg-surface border border-border text-foreground text-xs flex items-center justify-between gap-3 shadow-2xs" role="status">
-            <span className="flex items-center gap-2 text-muted">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" aria-hidden />
-              <span>Brouillon local à {draftSavedAt} — pas encore enregistré</span>
-            </span>
- <button
- type="button"
-              className="text-muted hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-md px-1 font-medium transition-colors"
- onClick={() => {
- try {
- localStorage.removeItem(draftKey);
- setDraftSavedAt(null);
- } catch {
- /* ignore */
- }
- }}
- >
-              Effacer le brouillon
- </button>
- </div>
- )}
 
  {success && (
  <div
@@ -4051,45 +4083,43 @@ const studioModelPhotos = useMemo(
  )}
 
  {/* Editor Workspace — canvas leads; denser sticky rails support */}
- <div className="grid grid-cols-1 lg:grid-cols-[minmax(13rem,15rem)_minmax(0,1fr)_minmax(14rem,16rem)] gap-4 lg:gap-5 items-start max-lg:flex-1 max-lg:min-h-0 max-lg:overflow-y-auto">
+ <div className="grid grid-cols-1 lg:grid-cols-[minmax(15rem,17rem)_minmax(0,1fr)_minmax(14rem,16rem)] gap-4 lg:gap-5 items-start max-lg:flex-1 max-lg:min-h-0 max-lg:overflow-y-auto">
  {/* Left Toolbox — Contenu | Style */}
  <aside className={cn(
   'order-2 lg:order-1 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto overscroll-contain bg-surface border border-border rounded-[var(--radius-card)] p-4 space-y-4',
   mobilePane === 'tools' ? 'max-lg:block' : 'max-lg:hidden',
  )}>
- <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-surface-muted border border-border" role="tablist" aria-label="Outils du studio">
- <button
- type="button"
- role="tab"
- aria-selected={studioRail === 'content'}
- onClick={() => setStudioRail('content')}
- className={`min-h-11 py-2 rounded-lg text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
- studioRail === 'content'
- ? 'bg-surface text-foreground shadow-sm'
- : 'text-muted hover:text-foreground'
- }`}
- >
- Ajouter
- </button>
- <button
- type="button"
- role="tab"
- aria-selected={studioRail === 'style'}
- onClick={() => {
- setStudioRail('style');
- setSelectedElementId(null);
- }}
- className={`min-h-11 py-2 rounded-lg text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
- studioRail === 'style'
- ? 'bg-surface text-foreground shadow-sm'
- : 'text-muted hover:text-foreground'
- }`}
- >
- Apparence
- </button>
+<div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-surface-muted border border-border" role="tablist" aria-label="Outils du studio">
+ {([
+   { id: 'ai', label: 'IA', icon: Wand2 },
+   { id: 'content', label: 'Ajouter', icon: PlusCircle },
+   { id: 'style', label: 'Apparence', icon: Palette },
+ ] as const).map((tab) => {
+   const TabIcon = tab.icon;
+   const active = studioRail === tab.id;
+   return (
+     <button
+       key={tab.id}
+       type="button"
+       role="tab"
+       aria-selected={active}
+       onClick={() => {
+         setStudioRail(tab.id);
+         if (tab.id === 'style') setSelectedElementId(null);
+       }}
+       className={cn(
+         'min-h-11 py-2 rounded-lg text-xs font-bold transition inline-flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer',
+         active ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground',
+       )}
+     >
+       <TabIcon className={cn('w-3.5 h-3.5', active ? 'text-primary' : '')} aria-hidden />
+       {tab.label}
+     </button>
+   );
+ })}
  </div>
 
- {studioRail === 'content' ? (
+ {studioRail === 'ai' ? (
  <>
         {canUseCustomTemplates && (
           <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3.5 space-y-2.5">
@@ -4099,10 +4129,10 @@ const studioModelPhotos = useMemo(
               </span>
               <div className="min-w-0">
                 <h3 className="text-xs font-bold text-foreground">
-                  Créer le carton
+                  Assistant IA
                 </h3>
                 <p className="text-xs text-muted leading-relaxed mt-0.5">
-                  Décrivez la fête, ou partez d’un modèle pour remplacer textes et visages. Coût selon le modèle (dès {AI_INVITATION_COMPOSE_TOKEN_COST} jetons).
+                  Décrivez la fête et l’IA compose la carte. Dès {AI_INVITATION_COMPOSE_TOKEN_COST} jetons.
                 </p>
               </div>
             </div>
@@ -4126,7 +4156,7 @@ const studioModelPhotos = useMemo(
                   className="w-full min-h-11 flex items-center justify-center gap-2 p-2.5 rounded-[var(--radius-button)] bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-bold text-xs transition disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
                 >
                   {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden /> : <Wand2 className="w-4 h-4" aria-hidden />}
-                  {aiComposeBusy ? 'Création en cours…' : 'Décrire et créer'}
+                  {aiComposeBusy ? 'Création en cours…' : 'Créer une carte'}
                 </button>
 
                 {canvasElements.length > 0 && (
@@ -4142,7 +4172,7 @@ const studioModelPhotos = useMemo(
                     className="w-full min-h-11 flex items-center justify-center gap-1.5 p-2 rounded-[var(--radius-button)] border border-border bg-surface hover:bg-surface-muted text-foreground font-bold text-xs transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   >
                     <Sparkles className="w-3.5 h-3.5" aria-hidden />
-                    Retoucher cette carte
+                    Transformer cette carte
                   </button>
                 )}
                 <button
@@ -4157,16 +4187,6 @@ const studioModelPhotos = useMemo(
               </>
             )}
 
-            {canvasElements.some((el) => ['text', 'button', 'rsvp-block'].includes(el.type)) && (
-              <button
-                type="button"
-                onClick={() => setQuickTextModalOpen(true)}
-                className="w-full min-h-11 flex items-center justify-center gap-1.5 p-2 rounded-[var(--radius-button)] border border-border bg-surface hover:bg-surface-muted text-foreground font-bold text-xs transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-              >
-                <Edit3 className="w-3.5 h-3.5 text-primary" aria-hidden />
-                Changer les noms et la date
-              </button>
-            )}
           </div>
         )}
 
@@ -4174,11 +4194,11 @@ const studioModelPhotos = useMemo(
  <div className="space-y-2">
  <h3 className="text-xs font-bold text-muted flex items-center gap-1.5">
  <Upload className="w-3.5 h-3.5" aria-hidden />
- Partir d’une maquette
+ Importer une carte existante
  </h3>
  <p className="text-xs text-muted leading-relaxed">
- Importez une photo de faire-part pour reprendre ses couleurs
- {canUseMockupOcr ? ', et le texte s’il est lisible.' : '.'}
+ Une photo ou capture de faire-part : l’IA peut la recréer, ou l’image sert de fond avec ses couleurs
+ {canUseMockupOcr ? ' et son texte.' : '.'}
  </p>
  {ocrProgress !== null && (
  <p className="text-xs text-primary font-bold">Détection du texte… {ocrProgress}%</p>
@@ -4266,42 +4286,37 @@ const studioModelPhotos = useMemo(
  </div>
  </div>
  )}
-
-        <div className="space-y-2">
-          <h3 className="text-xs font-bold text-muted">Placement sur la carte</h3>
- <div className="grid grid-cols-1 gap-1.5">
- <button
- type="button"
- onClick={() => convertToFlowLayout()}
-              title="Les éléments se placent les uns sous les autres"
-              aria-pressed={layoutMode === 'flow'}
-              className={`min-h-11 py-2 px-2.5 rounded-[var(--radius-button)] text-xs font-bold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
- layoutMode === 'flow'
-                  ? 'border-primary bg-primary/10 text-primary shadow-2xs'
-                  : 'border-border text-muted hover:bg-surface-muted hover:text-foreground'
- }`}
- >
-              <Layers className="w-3.5 h-3.5" />
-              <span>L’un sous l’autre</span>
- </button>
- <button
- type="button"
- onClick={() => (layoutMode === 'free' ? setLayoutMode('free') : convertToFreeLayout())}
-              title="Glissez-déposez librement sur la carte"
-              aria-pressed={layoutMode === 'free'}
-              className={`min-h-11 py-2 px-2.5 rounded-[var(--radius-button)] text-xs font-bold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
- layoutMode === 'free'
-                  ? 'border-primary bg-primary/10 text-primary shadow-2xs'
-                  : 'border-border text-muted hover:bg-surface-muted hover:text-foreground'
- }`}
- >
-              <Move className="w-3.5 h-3.5" />
-              <span>Glisser où je veux</span>
- </button>
- </div>
- </div>
-
-        <EditorialLayoutPicker onSelect={applyEditorialLayout} selectedId={editorialLayoutId} />
+ </>
+ ) : studioRail === 'content' ? (
+ <>
+        <div className="space-y-2.5">
+          <h3 className="text-xs font-bold text-muted">Infos de la carte</h3>
+          <Input
+            label="Couple, personne ou cérémonie"
+            value={invitationHonorees}
+            onChange={(e) => setInvitationHonorees(e.target.value)}
+            placeholder="ex. Amina & Jean-Marc"
+            leftIcon={<Users className="h-4 w-4" aria-hidden />}
+          />
+          <Input
+            label="Date de la cérémonie"
+            type="date"
+            value={invitationDate}
+            onChange={(e) => setInvitationDate(e.target.value)}
+            leftIcon={<Calendar className="h-4 w-4" aria-hidden />}
+          />
+          <p className="text-xs text-muted leading-relaxed">S’affichent tout de suite sur la carte.</p>
+          {canvasElements.some((el) => ['text', 'button', 'rsvp-block'].includes(el.type)) && (
+            <button
+              type="button"
+              onClick={() => setQuickTextModalOpen(true)}
+              className="w-full min-h-11 flex items-center justify-center gap-1.5 p-2 rounded-[var(--radius-button)] border border-border bg-surface hover:bg-surface-muted text-foreground font-bold text-xs transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-primary" aria-hidden />
+              Modifier tous les textes
+            </button>
+          )}
+        </div>
 
         <div className="space-y-2.5">
           <h3 className="text-xs font-bold text-muted">Ajouter sur la carte</h3>
@@ -4448,8 +4463,46 @@ const studioModelPhotos = useMemo(
  className="w-full flex items-center justify-center gap-2 p-2.5 border border-dashed border-primary/30 rounded-xl hover:bg-primary/5 text-primary font-bold text-xs transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
  >
  <Sparkles className="w-4 h-4" />
- Preset titre · date · bouton
+ Titre, date et bouton tout prêts
  </button>
+
+        <div className="space-y-3 pt-3 border-t border-border-subtle">
+          <h3 className="text-xs font-bold text-muted">Mise en page</h3>
+        <div className="space-y-2">
+          <h3 className="text-xs font-bold text-muted">Placement sur la carte</h3>
+ <div className="grid grid-cols-1 gap-1.5">
+ <button
+ type="button"
+ onClick={() => convertToFlowLayout()}
+              title="Les éléments se placent les uns sous les autres"
+              aria-pressed={layoutMode === 'flow'}
+              className={`min-h-11 py-2 px-2.5 rounded-[var(--radius-button)] text-xs font-bold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
+ layoutMode === 'flow'
+                  ? 'border-primary bg-primary/10 text-primary shadow-2xs'
+                  : 'border-border text-muted hover:bg-surface-muted hover:text-foreground'
+ }`}
+ >
+              <Layers className="w-3.5 h-3.5" />
+              <span>L’un sous l’autre</span>
+ </button>
+ <button
+ type="button"
+ onClick={() => (layoutMode === 'free' ? setLayoutMode('free') : convertToFreeLayout())}
+              title="Glissez-déposez librement sur la carte"
+              aria-pressed={layoutMode === 'free'}
+              className={`min-h-11 py-2 px-2.5 rounded-[var(--radius-button)] text-xs font-bold border transition flex items-center justify-center gap-1.5 cursor-pointer ${
+ layoutMode === 'free'
+                  ? 'border-primary bg-primary/10 text-primary shadow-2xs'
+                  : 'border-border text-muted hover:bg-surface-muted hover:text-foreground'
+ }`}
+ >
+              <Move className="w-3.5 h-3.5" />
+              <span>Glisser où je veux</span>
+ </button>
+ </div>
+ </div>
+        <EditorialLayoutPicker onSelect={applyEditorialLayout} selectedId={editorialLayoutId} />
+        </div>
  </>
  ) : (
  <>
@@ -4515,9 +4568,332 @@ const studioModelPhotos = useMemo(
  </button>
  </div>
 
- <p className="text-xs text-muted leading-relaxed rounded-xl bg-surface-muted border border-border px-3 py-2">
- Fond, format et cadre : ouvrez l’onglet Apparence.
+ {/* Canvas dimensions */}
+ <div className="space-y-3 p-3 rounded-2xl border border-primary/20 bg-primary/10">
+          <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
+ <Layout className="w-3.5 h-3.5" />
+ Taille du modèle
+ </h4>
+ <div className="space-y-1.5">
+            <label className="text-xs font-bold text-muted uppercase tracking-wider">Format prédéfini</label>
+ <select
+ value={canvasSizePreset}
+ onChange={(e) => handleCanvasPresetChange(e.target.value as CanvasSizePreset)}
+              className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs font-semibold text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+ >
+ {Object.entries(CANVAS_SIZE_PRESETS).map(([key, preset]) => (
+ <option key={key} value={key}>{preset.label}</option>
+ ))}
+ <option value="custom">Personnalisé</option>
+ </select>
+ </div>
+ <div className="grid grid-cols-2 gap-2">
+ <div className="space-y-1">
+              <label className="text-xs font-bold text-muted uppercase">Largeur (px)</label>
+ <input
+ type="number"
+ min={280}
+ max={1200}
+ value={canvasWidth}
+ onChange={(e) => {
+ setCanvasSizePreset('custom');
+ setCanvasWidth(Number(e.target.value) || CANVAS_SIZE_PRESETS.standard.width);
+ }}
+                className="w-full px-2.5 py-1.5 bg-surface-muted border border-border rounded-lg text-xs text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+ />
+ </div>
+ <div className="space-y-1">
+              <label className="text-xs font-bold text-muted uppercase">Hauteur min. (px)</label>
+ <input
+ type="number"
+ min={400}
+ max={1600}
+ value={canvasHeight}
+ onChange={(e) => {
+ setCanvasSizePreset('custom');
+ setCanvasHeight(Number(e.target.value) || CANVAS_SIZE_PRESETS.standard.height);
+ }}
+                className="w-full px-2.5 py-1.5 bg-surface-muted border border-border rounded-lg text-xs text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+ />
+ </div>
+ </div>
+ <p className="text-xs text-muted leading-relaxed">
+ Utilisée pour l&apos;aperçu, l&apos;invitation de réponse et les cartes du catalogue.
  </p>
+ </div>
+
+ {/* Background Type */}
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Type d'arrière-plan</label>
+ <div className="grid grid-cols-3 gap-1.5">
+ {[
+ { id: 'color', label: 'Couleur' },
+ { id: 'pattern', label: 'Texture' },
+ { id: 'image', label: 'Image' }
+ ].map((type) => (
+ <button
+ key={type.id}
+ type="button"
+ onClick={() => setBgType(type.id as any)}
+ className={`py-1.5 border rounded-lg text-xs font-bold transition ${bgType === type.id ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted hover:bg-surface-muted'}`}
+ >
+ {type.label}
+ </button>
+ ))}
+ </div>
+ </div>
+
+ {/* Background Color Picker (For color and pattern types) */}
+ {bgType !== 'image' && (
+ <div className="space-y-2">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider block">Couleur de fond</label>
+ <div className="flex gap-2">
+ <input 
+ type="color" 
+ value={bgColor.startsWith('#') ? bgColor : '#faf8f5'}
+ onChange={(e) => setBgColor(e.target.value)}
+ className="w-8 h-8 rounded-lg border border-border cursor-pointer overflow-hidden p-0"
+ />
+ <input 
+ type="text" 
+ value={bgColor}
+ onChange={(e) => setBgColor(e.target.value)}
+ className="flex-1 px-3 py-1.5 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition font-mono"
+ />
+ </div>
+
+ {/* Luxury Predefined Background Palette */}
+ <button
+ type="button"
+ onClick={() => setStyleAdvancedOpen((v) => !v)}
+ className="text-xs font-bold text-primary hover:underline"
+ >
+ {styleAdvancedOpen ? 'Masquer les fonds recommandés' : 'Fonds recommandés'}
+ </button>
+ {styleAdvancedOpen && (
+ <div className="flex flex-wrap gap-1.5 pt-1">
+ {[
+ { hex: '#faf8f5', name: 'Blanc Pur' },
+ { hex: '#faf6f0', name: 'Ivoire Doux' },
+ { hex: '#f4f1ea', name: 'Lin Naturel' },
+ { hex: '#f3e0da', name: 'Rose Poudré' },
+ { hex: '#e2e8f0', name: 'Gris Perle' },
+ { hex: '#7d8c5c', name: 'Vert Sauge' },
+ { hex: '#58111a', name: 'Bourgogne' },
+ { hex: '#1d2d44', name: 'Bleu Nuit' },
+ { hex: '#1e1b18', name: 'Noir Ébène' },
+ ].map((c) => (
+ <button
+ key={c.hex}
+ type="button"
+ onClick={() => setBgColor(c.hex)}
+ className="w-6 h-6 rounded-full border border-border shadow-sm transition hover:scale-110"
+ style={{ backgroundColor: c.hex }}
+ title={c.name}
+ />
+ ))}
+ </div>
+ )}
+ </div>
+ )}
+
+ {/* Pattern Selector */}
+ {bgType === 'pattern' && (
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Style de Texture</label>
+ <select 
+ value={bgPattern}
+ onChange={(e) => setBgPattern(e.target.value as any)}
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
+ >
+ <option value="none">Aucune texture</option>
+ <option value="paper">Papier grainé de luxe (Hassan Raza)</option>
+ <option value="watercolor">Aquarelle artistique (Ananya & Rishabh)</option>
+ <option value="boho">Boho Botanique (Feuillage Ornemental)</option>
+ <option value="linen">Lin de luxe (Tissu texturé)</option>
+ <option value="marble">Marbre blanc (Veines dorées)</option>
+ <option value="gold-dust">Poussière d'or (Scintillant)</option>
+ <option value="parchment">Parchemin ancien (Kraft)</option>
+ <option value="velvet">Velours royal (Sombre)</option>
+                    <option value="vellum">Vellum givré / Verre translucide (Tendance 2026)</option>
+                    <option value="art-deco-geom">Art Déco Géométrique Doré (Gatsby)</option>
+                    <option value="kuba-weave">Tissage Royal Kuba (Afro-Luxe)</option>
+                    <option value="deckled-cotton">Papier Coton Artisanal Pressé (Letterpress)</option>
+                    <option value="celestial">Nuit Céleste & Étoiles (Cosmique)</option>
+ </select>
+ </div>
+ )}
+
+ {/* Global Image Upload */}
+ {bgType === 'image' && (
+ <div className="space-y-4">
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Image de fond</label>
+ <input 
+ type="file" 
+ accept="image/*"
+ onChange={handleGlobalImageUpload}
+ className="w-full text-xs text-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/15 cursor-pointer"
+ />
+ </div>
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Ou URL d'image de fond</label>
+ <input 
+ type="text" 
+ value={bgImageUrl}
+ onChange={(e) => setBgImageUrl(e.target.value)}
+ placeholder="https://images.unsplash.com/..."
+ className="w-full px-3 py-1.5 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
+ />
+ </div>
+ {bgImageUrl && (
+ <div className="space-y-3">
+            {aiSafetyFallbackNotice && (
+              <div className="p-3 bg-surface border border-border rounded-xl flex items-start gap-2.5 shadow-2xs">
+                <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" aria-hidden />
+                <div className="text-xs text-muted">
+                  <span className="font-semibold text-foreground block">Décor thématique sans visage appliqué</span>
+                  Le filtre de sécurité du modèle d’image a préservé un arrière-plan décoratif de haute qualité. Vous pouvez insérer votre photo directement dans le cadre ou réajuster vos références.
+                </div>
+              </div>
+            )}
+
+ {aiVariants.length > 1 && (
+   <div className="space-y-1.5 pt-1">
+     <label className="text-xs font-bold text-muted uppercase tracking-wider flex items-center justify-between">
+       <span>Fidèle ou ample ({aiVariants.length})</span>
+       <span className="text-[10px] text-primary lowercase font-normal">cliquez pour basculer</span>
+     </label>
+     <div className="grid grid-cols-2 gap-2">
+       {aiVariants.map((varUrl, idx) => {
+         const isSelected = bgImageUrl === varUrl;
+         return (
+           <button
+             key={varUrl}
+             type="button"
+             onClick={() => setBgImageUrl(varUrl)}
+             className={`relative aspect-[9/16] rounded-xl overflow-hidden border-2 transition group ${isSelected ? 'border-primary shadow-md ring-2 ring-primary/30' : 'border-border hover:border-primary/50'}`}
+           >
+             <img src={varUrl} alt={idx === 0 ? 'Proposition fidèle' : 'Proposition ample'} className="w-full h-full object-cover" />
+             <span className={`absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md text-xs font-bold ${isSelected ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'bg-foreground/70 text-background'}`}>
+               {idx === 0 ? 'Fidèle' : 'Ample'} {isSelected && '✓'}
+             </span>
+           </button>
+         );
+       })}
+     </div>
+   </div>
+ )}
+
+ <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+ <button
+ type="button"
+ onClick={() => handleOpenCropper('background')}
+ className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-4 bg-primary/10 hover:bg-primary/15 text-primary font-bold rounded-xl text-xs transition border border-primary/20 shadow-sm"
+ >
+ <Crop className="w-3.5 h-3.5" />
+ Rogner l'image de fond
+ </button>
+ <button
+ type="button"
+ disabled={aiImageDownloading}
+ onClick={async () => {
+ if (!bgImageUrl || aiImageDownloading) return;
+ setAiImageDownloading(true);
+ try {
+ await downloadAiGeneratedImage(bgImageUrl);
+ } finally {
+ setAiImageDownloading(false);
+ }
+ }}
+ className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-4 bg-primary/10 hover:bg-primary/15 text-primary font-bold rounded-xl text-xs transition border border-primary/20 shadow-sm disabled:opacity-60"
+ >
+ {aiImageDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+ Télécharger l'image
+ </button>
+ </div>
+ </div>
+ )}
+ </div>
+ )}
+
+ {/* Frame Type Selection */}
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Style d'Encadrement / Cadre</label>
+ <select 
+ value={frameType}
+ onChange={(e) => setFrameType(e.target.value as any)}
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
+ >
+ <option value="none">Aucun cadre (Bords normaux)</option>
+ <option value="arch">Arche Royale de Luxe (Ananya / Watercolor)</option>
+ <option value="double-border">Double Bordure Fine (Hassan Raza / Boho)</option>
+ <option value="gold-border">Bordure Or Lumineuse (Luxury Modern)</option>
+                    <option value="art-deco">Art Déco Gatsby Doré (Symétrie & Chevrons)</option>
+                    <option value="deckled">Papier Artisanal Bords Frangés (Deckled Edge)</option>
+                    <option value="embossed-arch">Arche en Gaufrage à Sec (Quiet Luxury 2026)</option>
+                    <option value="passport-vip">Passeport Diplomatique / Billet VIP</option>
+                    <option value="frosted-glass">Verre Dépoli & Reflets Translucides</option>
+ <option value="floral-wreath">Couronne Florale Dorée (Centre)</option>
+ <option value="floral-arch">Arche de Roses Rouges (Haut)</option>
+ <option value="boho-dried">Feuillage Séché Boho (Coins)</option>
+ <option value="gold-leaves-circle">Cercle de Feuilles d'Or et Perles</option>
+ <option value="minimal-leaves">Feuilles Minimalistes (Angles)</option>
+ </select>
+ </div>
+
+ {/* Floral Customization Panel */}
+ {frameType === 'floral-arch' && (
+ <div className="space-y-4 border-t border-border-subtle pt-4">
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider">Type de Fleurs</label>
+ <select 
+ value={floralType}
+ onChange={(e) => setFloralType(e.target.value as any)}
+ className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
+ >
+ <option value="roses">Roses de Luxe (Mariage Royal)</option>
+ <option value="cherry-blossom">Fleurs de Cerisier (Romantique)</option>
+ <option value="gold-leaves">Feuillage d'Or & Perles (Prestige)</option>
+ <option value="sunflowers">Tournesols Lumineux (Chaleureux)</option>
+ <option value="eucalyptus">Eucalyptus & Baies (Boho Chic)</option>
+ </select>
+ </div>
+
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider block">Couleur des Fleurs</label>
+ <div className="flex gap-2">
+ <input 
+ type="color" 
+ value={floralColor.startsWith('#') ? floralColor : '#b91c1c'}
+ onChange={(e) => setFloralColor(e.target.value)}
+ className="w-8 h-8 rounded-lg border border-border cursor-pointer overflow-hidden p-0"
+ />
+ <input 
+ type="text" 
+ value={floralColor}
+ onChange={(e) => setFloralColor(e.target.value)}
+ className="flex-1 px-3 py-1.5 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition font-mono"
+ />
+ </div>
+ </div>
+
+ <div className="space-y-1.5">
+ <label className="text-xs font-bold text-muted uppercase tracking-wider flex justify-between">
+ <span>Densité de l'Arche</span>
+ <span className="text-primary font-extrabold">{floralDensity} fleurs</span>
+ </label>
+ <input 
+ type="range" 
+ min="15" 
+ max="80" 
+ value={floralDensity}
+ onChange={(e) => setFloralDensity(parseInt(e.target.value))}
+ className="w-full accent-[var(--primary)] cursor-pointer"
+ />
+ </div>
+ </div>
+ )}
  </>
  )}
  </aside>
@@ -4554,27 +4930,16 @@ const studioModelPhotos = useMemo(
                 <kbd className="hidden sm:inline px-1 py-0.5 text-[10px] font-mono rounded bg-surface border border-border/80 text-foreground">Échap</kbd>
               </button>
             ) : (
-              <span className="text-xs text-muted hidden sm:inline">Cliquez un texte pour le modifier</span>
+              <span className="text-xs text-muted hidden sm:inline">
+                {showGuestPreview ? 'Aperçu invité : les champs automatiques sont remplis.' : 'Cliquez un élément pour le régler'}
+              </span>
             )}
-            <button
-              type="button"
-              onClick={() => setShowGuestPreview((v) => !v)}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition cursor-pointer ${
-                showGuestPreview
-                  ? 'border-primary/40 bg-primary/10 text-primary shadow-2xs'
-                  : 'border-border text-muted hover:text-foreground hover:bg-surface-muted'
-              }`}
-              title="Aperçu des balises de personnalisation {{firstName}}, etc."
-            >
-              <User className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Voir comme un invité</span>
-              <span className="sm:hidden">Invité</span>
-            </button>
+
           </div>
         </div>
 
         <p className="lg:hidden text-center text-xs text-muted">
-          Touchez un texte pour le régler. Ajouter et styles sont dans le dock en bas.
+          Touchez un élément pour le régler. IA, ajouts et apparence sont dans le dock en bas.
         </p>
 
         <div className="w-full rounded-3xl bg-surface-muted/30 dark:bg-black/20 border border-border/60 p-4 sm:p-8 min-h-[560px] flex flex-col items-center justify-center relative overflow-hidden">
@@ -5161,7 +5526,7 @@ const studioModelPhotos = useMemo(
  }}
  className="leading-relaxed break-words whitespace-pre-line"
  >
- {showGuestPreview ? substitutePreviewVars(el.text) : el.text}
+ {renderCanvasText(el.text)}
  </div>
  )}
 
@@ -5187,7 +5552,7 @@ const studioModelPhotos = useMemo(
  'px-6 py-2.5 rounded-xl shadow-md'
  }`}
  >
- {showGuestPreview ? substitutePreviewVars(el.text) : el.text}
+ {renderCanvasText(el.text)}
  {el.buttonLink && (
  <span className="text-xs opacity-80" title={`Lien : ${el.buttonLink}`}>🔗</span>
  )}
@@ -5904,13 +6269,60 @@ const studioModelPhotos = useMemo(
  ) : (
  // Global Style Panel
  <div className="space-y-5">
- <div className="border-b border-border-subtle pb-2">
- <h3 className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
- <Palette className="w-4 h-4 text-primary" /> Style de la carte
- </h3>
- <p className="text-xs text-muted mt-1">
- Les thèmes et la typographie se règlent dans l&apos;onglet Style à gauche.
- </p>
+ <div className="space-y-3">
+   <div>
+     <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+       <Layers className="w-4 h-4 text-primary" aria-hidden /> Éléments de la carte
+     </h3>
+     <p className="text-xs text-muted mt-1 leading-relaxed">
+       Choisissez un élément ici ou sur la carte pour le régler.
+     </p>
+   </div>
+   {canvasElements.length === 0 ? (
+     <p className="text-xs text-muted rounded-[var(--radius-button)] border border-dashed border-border px-3 py-4 text-center leading-relaxed">
+       La carte est vide. Ajoutez un texte depuis l’onglet Ajouter, ou créez-la avec l’IA.
+     </p>
+   ) : (
+     <ul className="space-y-1" aria-label="Éléments de la carte">
+       {canvasElements.map((el) => {
+         const meta = ELEMENT_TYPE_META[el.type] || ELEMENT_TYPE_META.text;
+         const MetaIcon = meta.icon;
+         const preview = el.type === 'text' || el.type === 'button'
+           ? substitutePreviewVars(String(el.text || '')).replace(/\s+/g, ' ').trim()
+           : el.type === 'rsvp-block'
+             ? (el.rsvpPlacement === 'outside' ? 'Sous la carte' : 'Dans la carte')
+             : '';
+         return (
+           <li key={el.id}>
+             <button
+               type="button"
+               onClick={() => handleElementSelect(el.id)}
+               className="w-full min-h-11 flex items-center gap-2.5 px-2 py-1.5 rounded-[var(--radius-button)] text-left hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+             >
+               <span className="w-7 h-7 shrink-0 rounded-lg bg-surface-muted text-muted flex items-center justify-center">
+                 <MetaIcon className="w-3.5 h-3.5" aria-hidden />
+               </span>
+               <span className="min-w-0">
+                 <span className="block text-xs font-semibold text-foreground">{meta.label}</span>
+                 {preview ? <span className="block text-xs text-muted truncate">{preview}</span> : null}
+               </span>
+             </button>
+           </li>
+         );
+       })}
+     </ul>
+   )}
+   <button
+     type="button"
+     onClick={() => {
+       setStudioRail('style');
+       setMobilePane('tools');
+     }}
+     className="w-full min-h-11 inline-flex items-center justify-center gap-1.5 px-3 rounded-[var(--radius-button)] border border-border text-xs font-semibold text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 cursor-pointer"
+   >
+     <Palette className="w-3.5 h-3.5 text-primary" aria-hidden />
+     Fond, format et cadre
+   </button>
  </div>
 
  {isSuperAdmin && !selectedTenantId && (
@@ -5977,332 +6389,6 @@ const studioModelPhotos = useMemo(
  </div>
  )}
 
- {/* Canvas dimensions */}
- <div className="space-y-3 p-3 rounded-2xl border border-primary/20 bg-primary/10">
-          <h4 className="text-xs font-bold text-primary uppercase tracking-wider flex items-center gap-1.5">
- <Layout className="w-3.5 h-3.5" />
- Taille du modèle
- </h4>
- <div className="space-y-1.5">
-            <label className="text-xs font-bold text-muted uppercase tracking-wider">Format prédéfini</label>
- <select
- value={canvasSizePreset}
- onChange={(e) => handleCanvasPresetChange(e.target.value as CanvasSizePreset)}
-              className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs font-semibold text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
- >
- {Object.entries(CANVAS_SIZE_PRESETS).map(([key, preset]) => (
- <option key={key} value={key}>{preset.label}</option>
- ))}
- <option value="custom">Personnalisé</option>
- </select>
- </div>
- <div className="grid grid-cols-2 gap-2">
- <div className="space-y-1">
-              <label className="text-xs font-bold text-muted uppercase">Largeur (px)</label>
- <input
- type="number"
- min={280}
- max={1200}
- value={canvasWidth}
- onChange={(e) => {
- setCanvasSizePreset('custom');
- setCanvasWidth(Number(e.target.value) || CANVAS_SIZE_PRESETS.standard.width);
- }}
-                className="w-full px-2.5 py-1.5 bg-surface-muted border border-border rounded-lg text-xs text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
- />
- </div>
- <div className="space-y-1">
-              <label className="text-xs font-bold text-muted uppercase">Hauteur min. (px)</label>
- <input
- type="number"
- min={400}
- max={1600}
- value={canvasHeight}
- onChange={(e) => {
- setCanvasSizePreset('custom');
- setCanvasHeight(Number(e.target.value) || CANVAS_SIZE_PRESETS.standard.height);
- }}
-                className="w-full px-2.5 py-1.5 bg-surface-muted border border-border rounded-lg text-xs text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
- />
- </div>
- </div>
- <p className="text-xs text-muted leading-relaxed">
- Utilisée pour l&apos;aperçu, l&apos;invitation de réponse et les cartes du catalogue.
- </p>
- </div>
-
- {/* Background Type */}
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Type d'arrière-plan</label>
- <div className="grid grid-cols-3 gap-1.5">
- {[
- { id: 'color', label: 'Couleur' },
- { id: 'pattern', label: 'Texture' },
- { id: 'image', label: 'Image' }
- ].map((type) => (
- <button
- key={type.id}
- type="button"
- onClick={() => setBgType(type.id as any)}
- className={`py-1.5 border rounded-lg text-xs font-bold transition ${bgType === type.id ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted hover:bg-surface-muted'}`}
- >
- {type.label}
- </button>
- ))}
- </div>
- </div>
-
- {/* Background Color Picker (For color and pattern types) */}
- {bgType !== 'image' && (
- <div className="space-y-2">
- <label className="text-xs font-bold text-muted uppercase tracking-wider block">Couleur de fond</label>
- <div className="flex gap-2">
- <input 
- type="color" 
- value={bgColor.startsWith('#') ? bgColor : '#faf8f5'}
- onChange={(e) => setBgColor(e.target.value)}
- className="w-8 h-8 rounded-lg border border-border cursor-pointer overflow-hidden p-0"
- />
- <input 
- type="text" 
- value={bgColor}
- onChange={(e) => setBgColor(e.target.value)}
- className="flex-1 px-3 py-1.5 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition font-mono"
- />
- </div>
-
- {/* Luxury Predefined Background Palette */}
- <button
- type="button"
- onClick={() => setStyleAdvancedOpen((v) => !v)}
- className="text-xs font-bold text-primary hover:underline"
- >
- {styleAdvancedOpen ? 'Masquer les fonds recommandés' : 'Fonds recommandés'}
- </button>
- {styleAdvancedOpen && (
- <div className="flex flex-wrap gap-1.5 pt-1">
- {[
- { hex: '#faf8f5', name: 'Blanc Pur' },
- { hex: '#faf6f0', name: 'Ivoire Doux' },
- { hex: '#f4f1ea', name: 'Lin Naturel' },
- { hex: '#f3e0da', name: 'Rose Poudré' },
- { hex: '#e2e8f0', name: 'Gris Perle' },
- { hex: '#7d8c5c', name: 'Vert Sauge' },
- { hex: '#58111a', name: 'Bourgogne' },
- { hex: '#1d2d44', name: 'Bleu Nuit' },
- { hex: '#1e1b18', name: 'Noir Ébène' },
- ].map((c) => (
- <button
- key={c.hex}
- type="button"
- onClick={() => setBgColor(c.hex)}
- className="w-6 h-6 rounded-full border border-border shadow-sm transition hover:scale-110"
- style={{ backgroundColor: c.hex }}
- title={c.name}
- />
- ))}
- </div>
- )}
- </div>
- )}
-
- {/* Pattern Selector */}
- {bgType === 'pattern' && (
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Style de Texture</label>
- <select 
- value={bgPattern}
- onChange={(e) => setBgPattern(e.target.value as any)}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
- >
- <option value="none">Aucune texture</option>
- <option value="paper">Papier grainé de luxe (Hassan Raza)</option>
- <option value="watercolor">Aquarelle artistique (Ananya & Rishabh)</option>
- <option value="boho">Boho Botanique (Feuillage Ornemental)</option>
- <option value="linen">Lin de luxe (Tissu texturé)</option>
- <option value="marble">Marbre blanc (Veines dorées)</option>
- <option value="gold-dust">Poussière d'or (Scintillant)</option>
- <option value="parchment">Parchemin ancien (Kraft)</option>
- <option value="velvet">Velours royal (Sombre)</option>
-                    <option value="vellum">Vellum givré / Verre translucide (Tendance 2026)</option>
-                    <option value="art-deco-geom">Art Déco Géométrique Doré (Gatsby)</option>
-                    <option value="kuba-weave">Tissage Royal Kuba (Afro-Luxe)</option>
-                    <option value="deckled-cotton">Papier Coton Artisanal Pressé (Letterpress)</option>
-                    <option value="celestial">Nuit Céleste & Étoiles (Cosmique)</option>
- </select>
- </div>
- )}
-
- {/* Global Image Upload */}
- {bgType === 'image' && (
- <div className="space-y-4">
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Image de fond</label>
- <input 
- type="file" 
- accept="image/*"
- onChange={handleGlobalImageUpload}
- className="w-full text-xs text-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/15 cursor-pointer"
- />
- </div>
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Ou URL d'image de fond</label>
- <input 
- type="text" 
- value={bgImageUrl}
- onChange={(e) => setBgImageUrl(e.target.value)}
- placeholder="https://images.unsplash.com/..."
- className="w-full px-3 py-1.5 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
- />
- </div>
- {bgImageUrl && (
- <div className="space-y-3">
-            {aiSafetyFallbackNotice && (
-              <div className="p-3 bg-surface border border-border rounded-xl flex items-start gap-2.5 shadow-2xs">
-                <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" aria-hidden />
-                <div className="text-xs text-muted">
-                  <span className="font-semibold text-foreground block">Décor thématique sans visage appliqué</span>
-                  Le filtre de sécurité du modèle d’image a préservé un arrière-plan décoratif de haute qualité. Vous pouvez insérer votre photo directement dans le cadre ou réajuster vos références.
-                </div>
-              </div>
-            )}
-
- {aiVariants.length > 1 && (
-   <div className="space-y-1.5 pt-1">
-     <label className="text-xs font-bold text-muted uppercase tracking-wider flex items-center justify-between">
-       <span>Fidèle ou ample ({aiVariants.length})</span>
-       <span className="text-[10px] text-primary lowercase font-normal">cliquez pour basculer</span>
-     </label>
-     <div className="grid grid-cols-2 gap-2">
-       {aiVariants.map((varUrl, idx) => {
-         const isSelected = bgImageUrl === varUrl;
-         return (
-           <button
-             key={varUrl}
-             type="button"
-             onClick={() => setBgImageUrl(varUrl)}
-             className={`relative aspect-[9/16] rounded-xl overflow-hidden border-2 transition group ${isSelected ? 'border-primary shadow-md ring-2 ring-primary/30' : 'border-border hover:border-primary/50'}`}
-           >
-             <img src={varUrl} alt={idx === 0 ? 'Proposition fidèle' : 'Proposition ample'} className="w-full h-full object-cover" />
-             <span className={`absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-md text-xs font-bold ${isSelected ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'bg-foreground/70 text-background'}`}>
-               {idx === 0 ? 'Fidèle' : 'Ample'} {isSelected && '✓'}
-             </span>
-           </button>
-         );
-       })}
-     </div>
-   </div>
- )}
-
- <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
- <button
- type="button"
- onClick={() => handleOpenCropper('background')}
- className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-4 bg-primary/10 hover:bg-primary/15 text-primary font-bold rounded-xl text-xs transition border border-primary/20 shadow-sm"
- >
- <Crop className="w-3.5 h-3.5" />
- Rogner l'image de fond
- </button>
- <button
- type="button"
- disabled={aiImageDownloading}
- onClick={async () => {
- if (!bgImageUrl || aiImageDownloading) return;
- setAiImageDownloading(true);
- try {
- await downloadAiGeneratedImage(bgImageUrl);
- } finally {
- setAiImageDownloading(false);
- }
- }}
- className="w-full inline-flex items-center justify-center gap-1.5 py-2 px-4 bg-primary/10 hover:bg-primary/15 text-primary font-bold rounded-xl text-xs transition border border-primary/20 shadow-sm disabled:opacity-60"
- >
- {aiImageDownloading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
- Télécharger l'image
- </button>
- </div>
- </div>
- )}
- </div>
- )}
-
- {/* Frame Type Selection */}
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Style d'Encadrement / Cadre</label>
- <select 
- value={frameType}
- onChange={(e) => setFrameType(e.target.value as any)}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
- >
- <option value="none">Aucun cadre (Bords normaux)</option>
- <option value="arch">Arche Royale de Luxe (Ananya / Watercolor)</option>
- <option value="double-border">Double Bordure Fine (Hassan Raza / Boho)</option>
- <option value="gold-border">Bordure Or Lumineuse (Luxury Modern)</option>
-                    <option value="art-deco">Art Déco Gatsby Doré (Symétrie & Chevrons)</option>
-                    <option value="deckled">Papier Artisanal Bords Frangés (Deckled Edge)</option>
-                    <option value="embossed-arch">Arche en Gaufrage à Sec (Quiet Luxury 2026)</option>
-                    <option value="passport-vip">Passeport Diplomatique / Billet VIP</option>
-                    <option value="frosted-glass">Verre Dépoli & Reflets Translucides</option>
- <option value="floral-wreath">Couronne Florale Dorée (Centre)</option>
- <option value="floral-arch">Arche de Roses Rouges (Haut)</option>
- <option value="boho-dried">Feuillage Séché Boho (Coins)</option>
- <option value="gold-leaves-circle">Cercle de Feuilles d'Or et Perles</option>
- <option value="minimal-leaves">Feuilles Minimalistes (Angles)</option>
- </select>
- </div>
-
- {/* Floral Customization Panel */}
- {frameType === 'floral-arch' && (
- <div className="space-y-4 border-t border-border-subtle pt-4">
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider">Type de Fleurs</label>
- <select 
- value={floralType}
- onChange={(e) => setFloralType(e.target.value as any)}
- className="w-full px-3 py-2 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition"
- >
- <option value="roses">Roses de Luxe (Mariage Royal)</option>
- <option value="cherry-blossom">Fleurs de Cerisier (Romantique)</option>
- <option value="gold-leaves">Feuillage d'Or & Perles (Prestige)</option>
- <option value="sunflowers">Tournesols Lumineux (Chaleureux)</option>
- <option value="eucalyptus">Eucalyptus & Baies (Boho Chic)</option>
- </select>
- </div>
-
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider block">Couleur des Fleurs</label>
- <div className="flex gap-2">
- <input 
- type="color" 
- value={floralColor.startsWith('#') ? floralColor : '#b91c1c'}
- onChange={(e) => setFloralColor(e.target.value)}
- className="w-8 h-8 rounded-lg border border-border cursor-pointer overflow-hidden p-0"
- />
- <input 
- type="text" 
- value={floralColor}
- onChange={(e) => setFloralColor(e.target.value)}
- className="flex-1 px-3 py-1.5 bg-surface-muted border border-border rounded-xl text-xs focus:outline-none focus:border-primary transition font-mono"
- />
- </div>
- </div>
-
- <div className="space-y-1.5">
- <label className="text-xs font-bold text-muted uppercase tracking-wider flex justify-between">
- <span>Densité de l'Arche</span>
- <span className="text-primary font-extrabold">{floralDensity} fleurs</span>
- </label>
- <input 
- type="range" 
- min="15" 
- max="80" 
- value={floralDensity}
- onChange={(e) => setFloralDensity(parseInt(e.target.value))}
- className="w-full accent-[var(--primary)] cursor-pointer"
- />
- </div>
- </div>
- )}
  </div>
  )}
  </aside>
@@ -6314,7 +6400,7 @@ const studioModelPhotos = useMemo(
   onChange={setMobilePane}
   panes={[
     { id: 'canvas', label: 'Carte', icon: LayoutTemplate, hint: 'Voir la carte' },
-    { id: 'tools', label: 'Ajouter', icon: PlusCircle, hint: 'Ajouter un élément ou un style' },
+    { id: 'tools', label: 'Outils', icon: PlusCircle, hint: 'IA, ajouts et apparence' },
     { id: 'inspect', label: 'Régler', icon: SlidersHorizontal, hint: 'Régler l’élément ou la carte' },
   ]}
  />
@@ -6534,7 +6620,7 @@ const studioModelPhotos = useMemo(
  description={
  isSuperAdmin
  ? 'Création des modèles. La vitrine se règle dans la console.'
- : 'Créez le carton, ou partez d’un modèle.'
+ : 'Créez la carte avec l’IA, importez-en une, ou partez d’un modèle de la bibliothèque.'
  }
  breadcrumbs={
  <Breadcrumbs
@@ -6565,10 +6651,10 @@ const studioModelPhotos = useMemo(
  <Button
  onClick={startAiComposeFromList}
  disabled={aiComposeBusy}
- title={`Créer un carton à partir d’un brief (${AI_INVITATION_COMPOSE_TOKEN_COST} jetons IA)`}
+ title={`Décrire la fête et laisser l’IA créer la carte (dès ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons)`}
  leftIcon={aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
  >
- Créer un carton
+ Créer avec l’IA
  </Button>
  <>
  <input
@@ -6584,7 +6670,7 @@ const studioModelPhotos = useMemo(
  disabled={mockupImporting}
  leftIcon={mockupImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
  >
- {mockupImporting ? (ocrProgress !== null ? `Texte ${ocrProgress}%` : 'Import…') : 'Importer'}
+ {mockupImporting ? (ocrProgress !== null ? `Texte ${ocrProgress}%` : 'Import…') : 'Importer une carte'}
  </Button>
  </>
  <Button
@@ -6592,7 +6678,7 @@ const studioModelPhotos = useMemo(
  onClick={() => handleCreateTemplateClick('studio')}
  leftIcon={<PlusCircle className="w-4 h-4" />}
  >
- Éditeur
+ Partir de zéro
  </Button>
  </div>
  }
