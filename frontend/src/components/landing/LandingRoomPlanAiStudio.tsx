@@ -1,20 +1,16 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import {
-  Camera,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
   Coins,
   LayoutGrid,
   Loader2,
-  PenLine,
-  Upload,
   Wand2,
-  XCircle,
   Clock,
   Sparkles,
 } from 'lucide-react';
@@ -31,7 +27,6 @@ import {
 } from '@/lib/aiTokens';
 import {
   ROOM_PLAN_BRIEF_MIN,
-  ROOM_PLAN_PHOTO_ACCEPT,
   composeRoomPlanWithAiPublic,
   previewRoomPlanDraft,
   roomPlanFileToDataUrl,
@@ -48,6 +43,7 @@ import {
   type AiRoomPlanComposeHistoryItem,
 } from '@/lib/aiRoomPlanComposeHistory';
 import RoomPlanPromptSelector from '@/components/RoomPlanPromptSelector';
+import RoomPlanAiComposeForm from '@/components/RoomPlanAiComposeForm';
 import {
   StudioAiTabs,
   StudioHowTo,
@@ -99,7 +95,6 @@ export default function LandingRoomPlanAiStudio({
   const isRoomBlocked = site?.studioVisibility?.room === false;
   const protocolLocked = isProtocolUser(access);
   const router = useRouter();
-  const fileRef = useRef<HTMLInputElement>(null);
   const [expanded, setExpanded] = useState(defaultExpanded || lockExpanded);
   const showExpanded = lockExpanded || expanded;
   const [intent, setIntent] = useState<'brief' | 'photo'>('brief');
@@ -113,7 +108,6 @@ export default function LandingRoomPlanAiStudio({
   const [force2d, setForce2d] = useState(true);
   const [allowance, setAllowance] = useState<AiAllowance>(() => createEmptyAiAllowance());
   const [tokenModalOpen, setTokenModalOpen] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
   const [lastImageUrl, setLastImageUrl] = useState<string>();
   const [history, setHistory] = useState<AiRoomPlanComposeHistoryItem[]>([]);
   const [activeHistoryId, setActiveHistoryId] = useState<string | null>(null);
@@ -429,21 +423,8 @@ export default function LandingRoomPlanAiStudio({
             </>
           )}
 
-          <div id={`${id}-body`} className="grid grid-cols-1 xl:grid-cols-[minmax(18rem,26rem)_minmax(0,1fr)] xl:divide-x divide-border">
+          <div id={`${id}-body`} className="grid grid-cols-1 xl:grid-cols-[minmax(20rem,30rem)_minmax(0,1fr)] xl:divide-x divide-border">
             <div className="p-4 sm:p-6 space-y-4 flex flex-col">
-              <input
-                ref={fileRef}
-                type="file"
-                accept={ROOM_PLAN_PHOTO_ACCEPT}
-                className="sr-only"
-                tabIndex={-1}
-                aria-label="Ajouter une photo de la salle"
-                onChange={(event) => {
-                  pickFile(event.target.files?.[0]);
-                  event.target.value = '';
-                }}
-              />
-
               <StudioAiTabs
                 value={studioTab}
                 onChange={setStudioTab}
@@ -462,155 +443,56 @@ export default function LandingRoomPlanAiStudio({
 
               {studioTab === 'create' ? (
               <>
-              <div className="grid grid-cols-2 gap-2" role="group" aria-label="Point de départ du plan">
-                {([
-                  { value: 'brief', icon: PenLine, title: 'Décrire la salle', hint: 'Quelques mots suffisent' },
-                  { value: 'photo', icon: Camera, title: 'Partir d’une photo', hint: 'L’IA relève l’espace' },
-                ] as const).map((option) => {
-                  const Icon = option.icon;
-                  const selected = intent === option.value;
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      aria-pressed={selected}
-                      disabled={busy}
-                      onClick={() => setIntent(option.value)}
-                      className={cn(
-                        'min-h-11 p-3 rounded-[var(--radius-card)] border text-left transition flex items-start gap-2.5 touch-manipulation',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                        selected
-                          ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
-                          : 'border-border hover:border-primary/40 hover:bg-card-hover',
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          'w-8 h-8 rounded-lg inline-flex items-center justify-center shrink-0',
-                          selected ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted text-primary-solid',
-                        )}
-                      >
-                        <Icon className="w-4 h-4" aria-hidden />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-sm font-semibold text-foreground">{option.title}</span>
-                        <span className="block text-xs text-muted mt-0.5">{option.hint}</span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {intent === 'photo' || previewUrl ? (
-                previewUrl ? (
-                  <div className="flex items-center gap-3 rounded-[var(--radius-card)] border border-border bg-surface-muted/50 p-2.5">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={previewUrl} alt="Photo de la salle" className="w-16 h-16 rounded-lg object-cover border border-border shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-foreground truncate">{file?.name || 'Photo de la salle'}</p>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => fileRef.current?.click()}
-                        className="min-h-11 text-xs font-semibold text-primary-solid hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm"
-                      >
-                        Changer de photo
-                      </button>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => setPhoto(null)}
-                      className="min-w-11 min-h-11 inline-flex items-center justify-center rounded-full text-muted hover:text-foreground hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                      aria-label="Retirer la photo"
-                    >
-                      <XCircle className="w-5 h-5" aria-hidden />
-                    </button>
+              <RoomPlanAiComposeForm
+                idPrefix={id}
+                intent={intent}
+                onIntentChange={(next) => {
+                  setIntent(next);
+                  setError('');
+                }}
+                prompt={prompt}
+                onPromptChange={setPrompt}
+                file={file}
+                previewUrl={previewUrl}
+                onPickFile={pickFile}
+                onRemovePhoto={() => setPhoto(null)}
+                busy={busy}
+                error={error}
+                onDismissError={() => setError('')}
+                onRetry={() => void generate()}
+                onRecharge={() => setTokenModalOpen(true)}
+                onShowExamples={() => setStudioTab('prompts')}
+                beforeBrief={(
+                <div className="space-y-1.5">
+                  <p className="text-xs font-semibold text-foreground">Type de salle</p>
+                  <div className="flex flex-wrap gap-1.5" role="group" aria-label="Type de salle">
+                    {PICKABLE_ROOM_TYPES.map((type) => {
+                      const selected = roomType === type;
+                      return (
+                        <button
+                          key={type}
+                          type="button"
+                          aria-pressed={selected}
+                          disabled={busy}
+                          onClick={() => setRoomType(type)}
+                          className={cn(
+                            'min-h-11 px-3.5 rounded-full border text-xs font-semibold transition touch-manipulation',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                            selected
+                              ? 'border-primary-solid bg-primary-solid text-primary-foreground'
+                              : 'border-border bg-surface text-foreground hover:border-primary/50',
+                          )}
+                        >
+                          {roomTypeLabels[type]}
+                        </button>
+                      );
+                    })}
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => fileRef.current?.click()}
-                    onDragOver={(event) => {
-                      event.preventDefault();
-                      if (!busy) setDragOver(true);
-                    }}
-                    onDragLeave={() => setDragOver(false)}
-                    onDrop={(event) => {
-                      event.preventDefault();
-                      setDragOver(false);
-                      pickFile(event.dataTransfer.files?.[0]);
-                    }}
-                    className={cn(
-                      'w-full rounded-[var(--radius-card)] border-2 border-dashed p-5 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                      dragOver ? 'border-primary bg-primary/10' : 'border-primary/25 hover:border-primary/50 hover:bg-primary/5',
-                    )}
-                  >
-                    <Upload className="w-6 h-6 text-primary-solid mx-auto mb-2" aria-hidden />
-                    <p className="text-sm font-semibold text-foreground">Déposez une photo de la salle</p>
-                    <p className="text-xs text-muted mt-0.5">ou touchez pour choisir · JPEG, PNG, WebP · 8 Mo max</p>
-                  </button>
-                )
-              ) : null}
-
-              <div className="space-y-1.5">
-                <p className="text-xs font-semibold text-foreground">Type de salle</p>
-                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Type de salle">
-                  {PICKABLE_ROOM_TYPES.map((type) => {
-                    const selected = roomType === type;
-                    return (
-                      <button
-                        key={type}
-                        type="button"
-                        aria-pressed={selected}
-                        disabled={busy}
-                        onClick={() => setRoomType(type)}
-                        className={cn(
-                          'min-h-11 px-3.5 rounded-full border text-xs font-semibold transition touch-manipulation',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                          selected
-                            ? 'border-primary-solid bg-primary-solid text-primary-foreground'
-                            : 'border-border bg-surface text-foreground hover:border-primary/50',
-                        )}
-                      >
-                        {roomTypeLabels[type]}
-                      </button>
-                    );
-                  })}
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <label htmlFor={`${id}-brief`} className="text-xs font-semibold text-foreground">
-                  {intent === 'photo' ? 'Précisions (optionnel)' : 'Décrivez la salle'}
-                </label>
-                <textarea
-                  id={`${id}-brief`}
-                  rows={4}
-                  maxLength={1500}
-                  value={prompt}
-                  disabled={busy}
-                  onChange={(event) => setPrompt(event.target.value)}
-                  placeholder="Ex. Mariage 120 convives, 12 tables rondes, allée, table d’honneur…"
-                  className="w-full rounded-[var(--radius-button)] border border-border bg-surface-muted px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 min-h-[6rem]"
-                />
-                <div className="flex items-center justify-between gap-2 text-xs text-muted">
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => setStudioTab('prompts')}
-                    className="min-h-11 inline-flex items-center gap-1 font-semibold text-primary-solid hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" aria-hidden />
-                    Voir des exemples
-                  </button>
-                  <span className="tabular-nums">{prompt.trim().length}/1500</span>
-                </div>
-              </div>
+                )}
+              />
 
               {protocolLocked ? <Alert variant="info">{PROTOCOL_CREATIVE_DENIED}</Alert> : null}
-              {error ? <Alert variant="error">{error}</Alert> : null}
 
               <div className={studioActionBarClass(inline)}>
                 <Button

@@ -7,9 +7,7 @@ import {
   ImageIcon,
   Loader2,
   Sparkles,
-  Upload,
   Wand2,
-  XCircle,
   ArrowRight,
   Type,
   Eye,
@@ -27,8 +25,6 @@ import {
   Calendar,
   MapPin,
   User,
-  Users,
-  PenTool,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -75,8 +71,6 @@ import {
   studioActionBarClass,
   type StudioAiTabId,
 } from '@/components/StudioAiTabs';
-import InvitationContextSourcePicker from '@/components/InvitationContextSourcePicker';
-import InvitationArtStylePicker from '@/components/InvitationArtStylePicker';
 import {
   persistInvitationArtStyle,
   readStoredInvitationArtStyle,
@@ -90,10 +84,12 @@ import {
 } from '@/lib/invitationContextSource';
 import type { LandingTemplate } from '@/config/landingTemplates';
 import { Button, Modal, Alert } from '@/components/ui';
-import InvitationStructuredBriefFields from '@/components/InvitationStructuredBriefFields';
-import InvitationCardInfoFields from '@/components/InvitationCardInfoFields';
 import { emptyInvitationStructuredBrief, type InvitationStructuredBrief } from '@/config/invitationStructuredBrief';
-import InvitationModelPhotoPicker from '@/components/InvitationModelPhotoPicker';
+import InvitationAiComposeForm, {
+  invitationComposeActionLabel,
+  invitationComposeBlockedReason,
+  type InvitationComposeMode,
+} from '@/components/InvitationAiComposeForm';
 import type { InvitationModelPhoto } from '@/lib/invitationModelPhoto';
 import {
   applyInvitationIdentityToContent,
@@ -300,7 +296,6 @@ export default function LandingInvitationAiGenerator({
   const router = useRouter();
   const { trackJob } = useStudioJobs();
   const { runningJob: invitationStudioJob, isHidden: invitationLoaderHidden, hideOverlay: hideInvitationLoader, showOverlay: showInvitationLoader } = useStudioLoaderOverlay('invitation');
-  const inputRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
 
   const [prompt, setPrompt] = useState('');
@@ -311,7 +306,6 @@ export default function LandingInvitationAiGenerator({
   const [composeMode, setComposeMode] = useState<'create' | 'modify'>('create');
   const [coupleFaceSwap, setCoupleFaceSwap] = useState(false);
   const pendingCoupleIdentityRef = useRef<InvitationIdentity>({});
-  const incomingInputRef = useRef<HTMLInputElement>(null);
   const [incomingFile, setIncomingFile] = useState<File | null>(null);
   const [incomingPreview, setIncomingPreview] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -337,7 +331,6 @@ export default function LandingInvitationAiGenerator({
   const [allowance, setAllowance] = useState<AiAllowance>(() => createEmptyAiAllowance());
   const [tokenModalOpen, setTokenModalOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
   const [previewTab, setPreviewTab] = useState<'card' | 'customize' | 'alter' | 'artwork' | 'details'>('card');
   const [customizeAccordionOpen, setCustomizeAccordionOpen] = useState(false);
   const [alterAccordionOpen, setAlterAccordionOpen] = useState(false);
@@ -359,8 +352,26 @@ export default function LandingInvitationAiGenerator({
 
   const composeTokenCost = resolveInvitationComposeTokenCostClient(selectedModelPhoto);
   const isModifyMode = composeMode === 'modify';
+  const briefHasTexts = hasInvitationIdentity({
+    title: structuredBrief.title,
+    honorees: structuredBrief.honorees,
+    date: structuredBrief.date,
+    description: structuredBrief.description,
+  });
+  // Même parcours que l’assistant de l’éditeur : Nouvelle carte, Transformer une carte, Visages du couple.
+  const composeUiMode: InvitationComposeMode = coupleFaceSwap
+    ? 'faces'
+    : isModifyMode || incomingFile || selectedModelPhoto
+      ? 'modify'
+      : 'create';
+  const composeBlockedReason = invitationComposeBlockedReason({
+    mode: composeUiMode,
+    hasIncomingCard: coupleFaceSwap ? Boolean(incomingFile || selectedModelPhoto) : Boolean(selectedModelPhoto),
+    filesCount: files.length,
+    hasTexts: briefHasTexts,
+    prompt,
+  });
   const currentStep = busy || invitationStudioJob ? 1 : result ? 2 : 0;
-  const [formDetailsTab, setFormDetailsTab] = useState<'text' | 'style'>('text');
 
   useEffect(() => {
     return () => {
@@ -559,9 +570,6 @@ export default function LandingInvitationAiGenerator({
       return next.slice(0, merged.length);
     });
     setPreviews(merged.map((f) => URL.createObjectURL(f)));
-    if (merged.length > 0 && !coupleFaceSwap) {
-      setComposeMode('modify');
-    }
     setError('');
     logAction(
       'upload',
@@ -588,12 +596,6 @@ export default function LandingInvitationAiGenerator({
     setSelectedModelPhoto(null);
     setComposeMode('modify');
     setError('');
-  };
-
-  const onPickFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const list = Array.from(e.target.files || []);
-    e.target.value = '';
-    addFiles(list);
   };
 
   const removeFile = (index: number) => {
@@ -665,6 +667,25 @@ export default function LandingInvitationAiGenerator({
     } else if (prompt.trim() === COUPLE_FACE_SWAP_DEFAULT_PROMPT) {
       setPrompt('');
     }
+  };
+
+  const selectComposeUiMode = (next: InvitationComposeMode) => {
+    if (next === 'faces') {
+      toggleCoupleFaceSwap(true);
+    } else if (next === 'modify' && coupleFaceSwap) {
+      toggleCoupleFaceSwap(false);
+    } else {
+      switchComposeMode(next);
+    }
+  };
+
+  const toggleFileRole = (index: number) => {
+    setFileRoles((prev) => {
+      const next = [...prev];
+      const current = next[index] || (index === 0 ? 'groom' : 'bride');
+      next[index] = current === 'groom' ? 'bride' : 'groom';
+      return next;
+    });
   };
 
   const scrollResultIntoView = () => {
@@ -1590,19 +1611,10 @@ export default function LandingInvitationAiGenerator({
 
           <div
             id={`${id}-body`}
-            className="grid grid-cols-1 xl:grid-cols-[minmax(18rem,26rem)_minmax(0,1fr)] gap-0 xl:divide-x divide-border"
+            className="grid grid-cols-1 xl:grid-cols-[minmax(20rem,30rem)_minmax(0,1fr)] gap-0 xl:divide-x divide-border"
           >
         {/* Compose */}
         <div className="p-4 sm:p-6 space-y-4 flex flex-col">
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            multiple
-            className="hidden"
-            onChange={onPickFiles}
-          />
-
           <StudioAiTabs
             value={studioTab}
             onChange={setStudioTab}
@@ -1635,321 +1647,65 @@ export default function LandingInvitationAiGenerator({
               }
             />
           ) : null}
-          <div
-            role="radiogroup"
-            aria-label="Comment créer la carte"
-            className="grid grid-cols-2 gap-2"
-          >
-            <button
-              type="button"
-              role="radio"
-              aria-checked={composeMode === 'create' && !incomingFile && !selectedModelPhoto && !coupleFaceSwap}
-              disabled={busy}
-              onClick={() => switchComposeMode('create')}
-              className={cn(
-                'min-h-11 px-3 py-2.5 rounded-[var(--radius-card)] border text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                composeMode === 'create' && !incomingFile && !selectedModelPhoto && !coupleFaceSwap
-                  ? 'border-primary bg-primary/10 shadow-xs'
-                  : 'border-border bg-surface hover:border-primary/40',
-              )}
-            >
-              <span className="block text-sm font-semibold text-foreground">Nouvelle carte</span>
-              <span className="block text-xs text-muted mt-0.5">À partir de votre brief</span>
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={isModifyMode || Boolean(incomingFile) || Boolean(selectedModelPhoto) || coupleFaceSwap}
-              disabled={busy}
-              onClick={() => switchComposeMode('modify')}
-              className={cn(
-                'min-h-11 px-3 py-2.5 rounded-[var(--radius-card)] border text-left transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                isModifyMode || Boolean(incomingFile) || Boolean(selectedModelPhoto) || coupleFaceSwap
-                  ? 'border-primary bg-primary/10 shadow-xs'
-                  : 'border-border bg-surface hover:border-primary/40',
-              )}
-            >
-              <span className="block text-sm font-semibold text-foreground">Modifier une carte</span>
-              <span className="block text-xs text-muted mt-0.5">Changer textes ou visages</span>
-            </button>
-          </div>
-          {isModifyMode || Boolean(incomingFile) || Boolean(selectedModelPhoto) || coupleFaceSwap ? (
-            <label className="flex min-h-11 items-center gap-2.5 rounded-[var(--radius-card)] border border-border bg-surface px-3 py-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={coupleFaceSwap}
-                disabled={busy}
-                onChange={(e) => toggleCoupleFaceSwap(e.target.checked)}
-                className="rounded border-border text-primary focus:ring-primary"
-              />
-              <span className="min-w-0">
-                <span className="block text-xs font-bold text-foreground">Remplacer les visages du couple</span>
-                <span className="block text-xs text-muted">Sous-option : carte + 1 ou 2 photos</span>
-              </span>
-            </label>
-          ) : null}
-
-          <div className="space-y-4">
-              {coupleFaceSwap ? (
-                <>
-                  <input
-                    ref={incomingInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] || null;
-                      e.target.value = '';
-                      setIncomingFromFile(file);
-                    }}
-                  />
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => incomingInputRef.current?.click()}
-                    className="w-full flex items-center gap-3 rounded-[var(--radius-card)] border-2 border-dashed p-3 text-left transition border-primary/25 hover:border-primary/50 hover:bg-primary/5"
-                  >
-                    {(incomingPreview || selectedModelPhoto?.imageUrl) ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={incomingPreview || selectedModelPhoto?.imageUrl} alt="" className="w-14 h-14 rounded-lg object-cover border border-border shrink-0" />
-                    ) : (
-                      <span className="w-14 h-14 rounded-lg bg-surface-muted border border-border flex items-center justify-center shrink-0">
-                        <ImageIcon className="w-5 h-5 text-primary" />
-                      </span>
-                    )}
-                    <span className="min-w-0">
-                      <span className="block text-sm font-bold text-foreground">
-                        {incomingFile
-                          ? incomingFile.name
-                          : selectedModelPhoto
-                            ? selectedModelPhoto.name
-                            : 'Image d’invitation à modifier'}
-                      </span>
-                      <span className="block text-xs text-muted mt-0.5">
-                        Les visages de cette carte seront remplacés. Pose du corps, décor et expressions du carton restent ; vos photos donnent l’identité.
-                      </span>
-                    </span>
-                  </button>
-                </>
-              ) : null}
-              <button
-                type="button"
-                aria-label={
-                  files.length >= (coupleFaceSwap ? 2 : 4)
-                    ? 'Maximum d’images atteint'
-                    : isModifyMode && !coupleFaceSwap
-                      ? 'Ajouter une photo de la carte à modifier (JPEG, PNG ou WebP)'
-                      : coupleFaceSwap
-                        ? 'Ajouter jusqu’à 2 photos du couple (JPEG, PNG ou WebP)'
-                      : 'Ajouter jusqu’à 4 photos de visages, optionnel (JPEG, PNG ou WebP)'
-                }
-                aria-disabled={busy || files.length >= (coupleFaceSwap ? 2 : 4)}
-                aria-controls={previews.length ? `${id}-refs` : undefined}
-                onClick={() => {
-                  if (!busy && files.length < (coupleFaceSwap ? 2 : 4)) inputRef.current?.click();
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  if (!busy && files.length < (coupleFaceSwap ? 2 : 4)) setDragOver(true);
-                }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragOver(false);
-                  if (busy || files.length >= (coupleFaceSwap ? 2 : 4)) return;
-                  addFiles(Array.from(e.dataTransfer.files || []));
-                }}
-                className={cn(
-                  'w-full rounded-[var(--radius-card)] border-2 border-dashed p-4 sm:p-5 text-center transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                  dragOver
-                    ? 'border-primary bg-primary/10'
-                    : 'border-primary/25 hover:border-primary/50 hover:bg-primary/5',
-                  (busy || files.length >= (coupleFaceSwap ? 2 : 4)) && 'opacity-70 cursor-not-allowed',
-                )}
-              >
-                {coupleFaceSwap ? (
-                  <Users className="w-5 h-5 text-primary mx-auto mb-1.5" aria-hidden />
-                ) : (
-                  <Upload className="w-5 h-5 text-primary mx-auto mb-1.5" aria-hidden />
-                )}
-                <p className="text-sm font-bold text-foreground">
-                  {isModifyMode && !coupleFaceSwap
-                    ? 'Photo de la carte à modifier'
-                    : coupleFaceSwap
-                      ? 'Photos du couple (1 ou 2)'
-                    : 'Photos de visages (optionnel)'}
-                </p>
-                <p className="text-xs text-muted mt-0.5">
-                  {isModifyMode && !coupleFaceSwap
-                    ? 'Une photo nette de l’invitation à modifier. JPEG, PNG ou WebP, jusqu’à 4 vues.'
-                    : coupleFaceSwap
-                      ? 'Visages nets, bien cadrés. Ils fourniront l’identité ; l’expression (sourire, regard) vient des visages déjà sur la carte.'
-                    : 'Sans photo : carte depuis le brief. Avec photos : visages et expressions conservés (yeux, sourire, émotion).'}
-                </p>
-              </button>
-
-              <InvitationModelPhotoPicker
-                id={`${id}-model-photos`}
-                selectedId={selectedModelPhoto?.id || null}
-                onSelect={applyModelPhoto}
-                onClear={clearModelPhoto}
-                disabled={busy}
-              />
-
-              {previews.length > 0 && (
-                <div id={`${id}-refs`} className="flex flex-wrap gap-2.5">
-                  {previews.map((url, i) => {
-                    const role = fileRoles[i] || (i === 0 ? 'groom' : i === 1 ? 'bride' : 'auto');
-                    return (
-                      <div
-                        key={url}
-                        className="relative w-24 h-32 sm:w-28 sm:h-36 rounded-[var(--radius-card)] overflow-hidden border border-border shadow-xs group bg-surface-muted flex flex-col"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={url} alt={`Photo référence ${i + 1}`} className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeFile(i);
-                          }}
-                          className="absolute top-1 right-1 min-w-[36px] min-h-[36px] inline-flex items-center justify-center bg-foreground/85 text-background rounded-full opacity-90 hover:opacity-100 disabled:opacity-40 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shadow-xs z-10"
-                          aria-label={`Retirer la photo référence ${i + 1}`}
-                        >
-                          <XCircle className="w-4 h-4" aria-hidden />
-                        </button>
-                        {coupleFaceSwap && (
-                          <button
-                            type="button"
-                            disabled={busy}
-                            aria-label={`Rôle pour la photo ${i + 1} : ${role === 'groom' ? 'Marié (costume)' : 'Mariée (robe)'}. Cliquez pour permuter.`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setFileRoles((prev) => {
-                                const next = [...prev];
-                                const current = next[i] || (i === 0 ? 'groom' : 'bride');
-                                next[i] = current === 'groom' ? 'bride' : 'groom';
-                                return next;
-                              });
-                            }}
-                            className={cn(
-                              'absolute bottom-0 inset-x-0 min-h-[32px] py-1 text-xs font-bold text-center tracking-tight transition z-10 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                              role === 'groom'
-                                ? 'bg-stage/95 hover:bg-stage text-stage-foreground border-t border-white/10'
-                                : 'bg-festive-accent/95 hover:bg-festive-accent text-white border-t border-white/10',
-                            )}
-                            title="Cliquez pour changer le rôle (Marié ou Mariée)"
-                          >
-                            {role === 'groom' ? '🤵 Marié' : '👰 Mariée'}
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {coupleFaceSwap && (
-                <div className="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 flex items-center gap-2 text-xs text-primary font-medium">
-                  <Sparkles className="w-3.5 h-3.5 shrink-0 text-primary" />
-                  <span>Harmonisation réaliste active : carnation, lumière et contours du cou fondus au décor.</span>
-                </div>
-              )}
-
-              <div className="space-y-2.5">
-                {/* Sélecteur compact : Écrits vs Ambiance */}
-                <div
-                  className="flex items-center gap-1.5 p-1 bg-surface-muted rounded-lg border border-border"
-                  role="tablist"
-                  aria-label="Sections de configuration de la carte"
-                >
-                  <button
-                    id={`${id}-tab-text`}
-                    type="button"
-                    role="tab"
-                    aria-selected={formDetailsTab === 'text'}
-                    aria-controls={`${id}-panel-text`}
-                    tabIndex={formDetailsTab === 'text' ? 0 : -1}
-                    onClick={() => setFormDetailsTab('text')}
-                    onKeyDown={(e) => {
-                      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-                        e.preventDefault();
-                        setFormDetailsTab('style');
-                      }
-                    }}
-                    className={cn(
-                      'flex-1 min-h-[44px] px-3 py-2 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                      formDetailsTab === 'text'
-                        ? 'bg-surface text-foreground shadow-xs border border-border/80'
-                        : 'text-muted hover:text-foreground',
-                    )}
-                  >
-                    <PenTool className="w-3.5 h-3.5" aria-hidden />
-                    <span>Écrits de la carte</span>
-                    {hasInvitationIdentity({
-                      title: structuredBrief.title,
-                      honorees: structuredBrief.honorees,
-                      date: structuredBrief.date,
-                      description: structuredBrief.description,
-                    }) && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-primary" aria-label="Contient des textes saisis" />
-                    )}
-                  </button>
-                  <button
-                    id={`${id}-tab-style`}
-                    type="button"
-                    role="tab"
-                    aria-selected={formDetailsTab === 'style'}
-                    aria-controls={`${id}-panel-style`}
-                    tabIndex={formDetailsTab === 'style' ? 0 : -1}
-                    onClick={() => setFormDetailsTab('style')}
-                    onKeyDown={(e) => {
-                      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-                        e.preventDefault();
-                        setFormDetailsTab('text');
-                      }
-                    }}
-                    className={cn(
-                      'flex-1 min-h-[44px] px-3 py-2 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                      formDetailsTab === 'style'
-                        ? 'bg-surface text-foreground shadow-xs border border-border/80'
-                        : 'text-muted hover:text-foreground',
-                    )}
-                  >
-                    <Sparkles className="w-3.5 h-3.5" aria-hidden />
-                    <span>Ambiance & Cérémonie</span>
-                  </button>
-                </div>
-
-                <div
-                  id={`${id}-panel-text`}
-                  role="tabpanel"
-                  aria-labelledby={`${id}-tab-text`}
-                  hidden={formDetailsTab !== 'text'}
-                >
-                  {formDetailsTab === 'text' && (
-                    <InvitationCardInfoFields
-                      id={`${id}-card-info`}
-                      value={structuredBrief}
-                      onChange={setStructuredBrief}
-                      showReplaceToggles={isModifyMode}
-                      disabled={busy}
-                      compact
-                    />
-                  )}
-                </div>
-
-                <div
-                  id={`${id}-panel-style`}
-                  role="tabpanel"
-                  aria-labelledby={`${id}-tab-style`}
-                  hidden={formDetailsTab !== 'style'}
-                  className="space-y-2.5"
-                >
-                  {formDetailsTab === 'style' && (
-                    <>
-                      {composeMode === 'create' ? (
+          <InvitationAiComposeForm
+            idPrefix={`${id}-compose`}
+            columns={1}
+            mode={composeUiMode}
+            onModeChange={selectComposeUiMode}
+            busy={busy}
+            stage={stage}
+            busyHint="La création continue même si vous quittez cet écran ; la carte s’affiche ici dès qu’elle est prête."
+            error={error}
+            onDismissError={() => setError('')}
+            onRetry={() => {
+              setError('');
+              requestGenerate();
+            }}
+            onRecharge={() => setTokenModalOpen(true)}
+            incomingFile={incomingFile}
+            incomingPreview={incomingPreview}
+            onIncomingFile={setIncomingFromFile}
+            modelPhoto={selectedModelPhoto}
+            onModelPhotoChange={(photo) => (photo ? applyModelPhoto(photo) : clearModelPhoto())}
+            files={files}
+            previewUrls={previews}
+            fileRoles={fileRoles}
+            onAddFiles={addFiles}
+            onRemoveFile={removeFile}
+            onToggleFileRole={toggleFileRole}
+            structured={structuredBrief}
+            onStructuredChange={setStructuredBrief}
+            hasTexts={briefHasTexts}
+            prompt={prompt}
+            onPromptChange={(next) => updatePromptWithHistory(next)}
+            promptTools={(
+              <>
+                    {/* Boutons d'action annuler/rétablir */}
+                    <button
+                      type="button"
+                      disabled={promptHistoryIndex <= 0 || busy}
+                      onClick={handleUndoPrompt}
+                      className="text-xs font-semibold text-muted hover:text-foreground inline-flex items-center justify-center gap-1 min-h-11 min-w-11 px-2.5 rounded-[var(--radius-button)] hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-30"
+                      title="Annuler (Undo)"
+                      aria-label="Annuler la modification du prompt"
+                    >
+                      <Undo2 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Annuler</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={promptHistoryIndex >= promptHistory.length - 1 || busy}
+                      onClick={handleRedoPrompt}
+                      className="text-xs font-semibold text-muted hover:text-foreground inline-flex items-center justify-center gap-1 min-h-11 min-w-11 px-2.5 rounded-[var(--radius-button)] hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-30"
+                      title="Rétablir (Redo)"
+                      aria-label="Rétablir la modification du prompt"
+                    >
+                      <Redo2 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Rétablir</span>
+                    </button>
+              </>
+            )}
+            styleIntro={composeMode === 'create' && !coupleFaceSwap ? (
                         <div className="space-y-1.5" role="group" aria-label="Inspirations festives instantanées">
                           <span className="text-xs text-muted font-medium flex items-center gap-1">
                             <Sparkles className="w-3 h-3 text-primary" />
@@ -1982,234 +1738,25 @@ export default function LandingInvitationAiGenerator({
                             })}
                           </div>
                         </div>
-                      ) : null}
+            ) : null}
+            embedText={!pureBackground}
+            onEmbedTextChange={(next) => setPureBackground(!next)}
+            onShowExamples={() => setStudioTab('prompts')}
+            artStyle={artStyle}
+            onArtStyleChange={(style) => {
+              setArtStyle(style);
+              persistInvitationArtStyle(style);
+            }}
+            contextSource={contextSource}
+            onContextSourceChange={handleContextSourceChange}
+            canUseOrg={Boolean(user && tenant?.id)}
+            speedMode={speedMode}
+            onSpeedModeChange={setSpeedMode}
+          />
 
-                      <InvitationStructuredBriefFields
-                        id={`${id}-structured`}
-                        value={structuredBrief}
-                        onChange={setStructuredBrief}
-                        disabled={busy}
-                        compact
-                      />
-                    </>
-                  )}
-                </div>
+          {protocolLocked ? <Alert variant="info">{PROTOCOL_CREATIVE_DENIED}</Alert> : null}
 
-                <div className="flex items-center justify-between gap-2">
-                  <label htmlFor={`${id}-brief`} className="text-xs font-bold text-foreground">
-                    {isModifyMode && !coupleFaceSwap ? 'Ce qu’il faut reprendre' : coupleFaceSwap ? 'Consigne (optionnelle)' : 'Décrivez la fête'}
-                  </label>
-                  <div className="flex items-center gap-2">
-                    {/* Boutons d'action annuler/rétablir */}
-                    <button
-                      type="button"
-                      disabled={promptHistoryIndex <= 0 || busy}
-                      onClick={handleUndoPrompt}
-                      className="text-xs font-semibold text-muted hover:text-foreground inline-flex items-center justify-center gap-1 min-h-11 min-w-11 px-2.5 rounded-[var(--radius-button)] hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-30"
-                      title="Annuler (Undo)"
-                      aria-label="Annuler la modification du prompt"
-                    >
-                      <Undo2 className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Annuler</span>
-                    </button>
-                    <button
-                      type="button"
-                      disabled={promptHistoryIndex >= promptHistory.length - 1 || busy}
-                      onClick={handleRedoPrompt}
-                      className="text-xs font-semibold text-muted hover:text-foreground inline-flex items-center justify-center gap-1 min-h-11 min-w-11 px-2.5 rounded-[var(--radius-button)] hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-30"
-                      title="Rétablir (Redo)"
-                      aria-label="Rétablir la modification du prompt"
-                    >
-                      <Redo2 className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Rétablir</span>
-                    </button>
-                    <span className="text-xs text-muted tabular-nums ml-1" aria-live="polite">
-                      {prompt.trim().length}/1500
-                    </span>
-                  </div>
-                </div>
-
-                <textarea
-                  id={`${id}-brief`}
-                  rows={3}
-                  maxLength={1500}
-                  value={prompt}
-                  disabled={busy}
-                  onChange={(e) => updatePromptWithHistory(e.target.value)}
-                  placeholder={
-                    isModifyMode && !coupleFaceSwap
-                      ? 'Ex. Reprendre l’or et l’ivoire, garder la date en haut, noms en script…'
-                      : coupleFaceSwap
-                        ? 'Optionnel : elle à gauche, lui à droite, garder les tenues…'
-                      : 'Ex. Mariage princier, or et ivoire, éclairage naturel, invitation WhatsApp…'
-                  }
-                  className="w-full rounded-[var(--radius-card)] border border-border bg-surface px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[5.5rem] disabled:opacity-60"
-                />
-
-                {/* Indicateur de statut de saisie dynamique */}
-                <div className="flex items-center justify-between text-xs text-muted px-0.5">
-                  {coupleFaceSwap && prompt.trim().length < 8 ? (
-                    <span className="text-muted">
-                      La consigne est optionnelle : les photos suffisent pour remplacer les visages.
-                    </span>
-                  ) : prompt.trim().length === 0 ? (
-                    <span className="text-muted">
-                      💡 Cliquez sur une inspiration ci-dessus ou décrivez votre célébration.
-                    </span>
-                  ) : prompt.trim().length < 8 ? (
-                    <span className="text-festive-accent font-medium">
-                      ✍️ Ajoutez encore quelques mots (minimum 8 caractères).
-                    </span>
-                  ) : (
-                    <span className="text-primary font-semibold flex items-center gap-1">
-                      <Check className="w-3 h-3" />
-                      Brief prêt pour la composition IA.
-                    </span>
-                  )}
-                </div>
-
-                <InvitationArtStylePicker
-                  id={`${id}-art-style`}
-                  value={artStyle}
-                  onChange={(style) => {
-                    setArtStyle(style);
-                    persistInvitationArtStyle(style);
-                  }}
-                  disabled={busy}
-                />
-
-                <div className="pt-1">
-                  <InvitationContextSourcePicker
-                    id={`${id}-context`}
-                    value={contextSource}
-                    onChange={handleContextSourceChange}
-                    disabled={busy}
-                    canUseOrg={Boolean(user && tenant?.id)}
-                  />
-                </div>
-
-                <div className="w-full flex items-start gap-3 rounded-[var(--radius-card)] border border-primary/20 bg-primary/5 px-3.5 py-3 text-left">
-                  <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                  <div className="min-w-0">
-                    <span className="block text-xs font-bold text-foreground">Arrière-plan pur & Variables dynamiques</span>
-                    <span className="block text-xs text-muted mt-0.5 leading-relaxed">
-                      Aucun texte n’est gravé sur l’image : l’IA produit un visuel artistique propre et place les textes en calques éditables avec les variables <code className="text-primary font-mono text-xs font-semibold">{`{{title}}`}</code>, <code className="text-primary font-mono text-xs font-semibold">{`{{date}}`}</code>, <code className="text-primary font-mono text-xs font-semibold">{`{{location}}`}</code> et <code className="text-primary font-mono text-xs font-semibold">{`{{firstName}}`}</code> pour une personnalisation instantanée.
-                    </span>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-3">
-                  <div>
-                    <span className="block text-xs font-bold text-foreground">Vitesse & Rendu</span>
-                    <span className="block text-xs text-muted">Rapide ou haute définition</span>
-                  </div>
-                  <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-lg border border-border">
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => setSpeedMode('fast')}
-                      aria-pressed={speedMode === 'fast'}
-                      className={cn(
-                        'min-h-[44px] px-2.5 py-1 text-xs font-bold rounded-md transition',
-                        speedMode === 'fast' ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
-                      )}
-                      title="Génération rapide"
-                    >
-                      Rapide
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => setSpeedMode('quality')}
-                      aria-pressed={speedMode === 'quality'}
-                      className={cn(
-                        'min-h-[44px] px-2.5 py-1 text-xs font-bold rounded-md transition',
-                        speedMode === 'quality' ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
-                      )}
-                      title="Rendu haute définition"
-                    >
-                      Qualité
-                    </button>
-                  </div>
-                </div>
-
-                <div className="pt-2 border-t border-border/60 flex items-center justify-between gap-3">
-                  <div>
-                    <span className="block text-xs font-bold text-foreground">Mode arrière-plan pur</span>
-                    <span className="block text-xs text-muted">
-                      {pureBackground
-                        ? 'Image pure sans texte incrusté (variables dynamiques par-dessus)'
-                        : 'Arrière-plan avec les textes dessinés et intégrés à l’image'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 bg-surface-muted p-1 rounded-lg border border-border shrink-0">
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => setPureBackground(true)}
-                      aria-pressed={pureBackground}
-                      className={cn(
-                        'min-h-[44px] px-2.5 py-1 text-xs font-bold rounded-md transition',
-                        pureBackground ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
-                      )}
-                    >
-                      Fond pur
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => setPureBackground(false)}
-                      aria-pressed={!pureBackground}
-                      className={cn(
-                        'min-h-[44px] px-2.5 py-1 text-xs font-bold rounded-md transition',
-                        !pureBackground ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
-                      )}
-                    >
-                      Avec textes
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-
-              {error ? (
-                <Alert variant="error" title="Création interrompue" className="!p-3 text-xs">
-                  <p className="break-words">{error}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      disabled={busy}
-                      onClick={() => {
-                        setError('');
-                        requestGenerate();
-                      }}
-                    >
-                      Réessayer
-                    </Button>
-                    {error.toLowerCase().includes('jeton') ? (
-                      <Button type="button" size="sm" onClick={() => setTokenModalOpen(true)}>
-                        Recharger
-                      </Button>
-                    ) : null}
-                  </div>
-                </Alert>
-              ) : null}
-
-              {protocolLocked ? <Alert variant="info">{PROTOCOL_CREATIVE_DENIED}</Alert> : null}
-
-              <p className="text-xs text-muted">
-                Briefs coutumiers Kongo, Luba, Mongo et Lunda :{' '}
-                <button
-                  type="button"
-                  className="min-h-11 font-semibold text-primary-solid hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm"
-                  onClick={() => setStudioTab('prompts')}
-                >
-                  voir les exemples
-                </button>
-                .
-              </p>
+          <div className="space-y-4">
 
               <div className={studioActionBarClass(inline)}>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
@@ -2217,13 +1764,7 @@ export default function LandingInvitationAiGenerator({
                     type="button"
                     className="w-full sm:flex-1 min-h-11"
                     onClick={requestGenerate}
-                    disabled={
-                      protocolLocked ||
-                      busy ||
-                      (coupleFaceSwap
-                        ? (!incomingFile && !selectedModelPhoto) || files.length < 1
-                        : prompt.trim().length < 8 || (isModifyMode && !coupleFaceSwap && files.length === 0 && !selectedModelPhoto))
-                    }
+                    disabled={protocolLocked || busy || Boolean(composeBlockedReason)}
                     leftIcon={
                       busy ? (
                         <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" />
@@ -2232,27 +1773,7 @@ export default function LandingInvitationAiGenerator({
                       )
                     }
                   >
-                    {busy
-                      ? 'Création…'
-                      : coupleFaceSwap
-                        ? hasInvitationIdentity({
-                            title: structuredBrief.title,
-                            honorees: structuredBrief.honorees,
-                            date: structuredBrief.date,
-                            description: structuredBrief.description,
-                          })
-                          ? `Modifier le modèle (visages & écrits · ${composeTokenCost} jetons)`
-                          : `Remplacer les visages (${composeTokenCost} jetons)`
-                        : isModifyMode
-                          ? hasInvitationIdentity({
-                              title: structuredBrief.title,
-                              honorees: structuredBrief.honorees,
-                              date: structuredBrief.date,
-                              description: structuredBrief.description,
-                            })
-                            ? `Modifier les écrits (${composeTokenCost} jetons)`
-                            : `Modifier le modèle (${composeTokenCost} jetons)`
-                          : `Créer la carte (${composeTokenCost} jetons)`}
+                    {busy ? 'Création…' : invitationComposeActionLabel(composeUiMode, composeTokenCost)}
                   </Button>
                   {result ? (
                     <Button type="button" variant="secondary" className="min-h-11" onClick={resetResult} disabled={busy}>
@@ -2260,26 +1781,9 @@ export default function LandingInvitationAiGenerator({
                     </Button>
                   ) : null}
                 </div>
-                {composeMode === 'create' && !coupleFaceSwap && prompt.trim().length === 0 ? (
+                {composeBlockedReason ? (
                   <p className="mt-2 text-xs text-muted text-center" role="status" aria-live="polite">
-                    Décrivez la fête ci-dessus pour activer la création.
-                  </p>
-                ) : null}
-                {composeMode === 'create' && prompt.trim().length > 0 && prompt.trim().length < 8 ? (
-                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300" role="status" aria-live="polite">
-                    Ajoutez encore quelques mots au brief (8 caractères min.).
-                  </p>
-                ) : null}
-                {coupleFaceSwap && ((!incomingFile && !selectedModelPhoto) || files.length < 1) ? (
-                  <p className="mt-2 text-xs text-muted text-center" role="status" aria-live="polite">
-                    {!incomingFile && !selectedModelPhoto
-                      ? 'Ajoutez la carte à modifier, puis 1 ou 2 photos du couple.'
-                      : 'Ajoutez 1 ou 2 photos du couple.'}
-                  </p>
-                ) : null}
-                {isModifyMode && !coupleFaceSwap && files.length === 0 && !selectedModelPhoto ? (
-                  <p className="mt-2 text-xs text-amber-700 dark:text-amber-300" role="status" aria-live="polite">
-                    Déposez une carte modèle ou choisissez-en une à modifier.
+                    {composeBlockedReason}
                   </p>
                 ) : null}
               </div>
