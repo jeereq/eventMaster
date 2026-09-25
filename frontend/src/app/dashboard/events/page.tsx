@@ -73,6 +73,7 @@ import {
   type RsvpField,
 } from '@/lib/rsvpFormFields';
 import RsvpFieldTypeEditor from '@/components/RsvpFieldTypeEditor';
+import EventDeleteDialog from '@/components/EventDeleteDialog';
 
 const EventConfigForm = dynamic(() => import('@/components/EventConfigForm'), { ssr: false });
 const TablePlanner = dynamic(() => import('./TablePlanner'), { ssr: false });
@@ -85,6 +86,29 @@ const ProtocolTasksInbox = dynamic(() => import('@/components/ProtocolTasksInbox
 const EventPrepPanel = dynamic(() => import('@/components/EventPrepPanel'), { ssr: false });
 const OrgTicketingView = dynamic(() => import('@/components/OrgTicketingView'), { ssr: false });
 const EventDonationsReportView = dynamic(() => import('@/components/EventDonationsReportView'), { ssr: false });
+
+/** Repère temporel court pour les cartes : « Aujourd’hui », « Dans 12 j », « Terminé »… */
+function eventTimingLabel(dateValue: string): string {
+  const d = new Date(dateValue);
+  if (Number.isNaN(d.getTime())) return '';
+  const startOfDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const days = Math.round((startOfDay(d) - startOfDay(new Date())) / 86_400_000);
+  if (days === 0) return 'Aujourd’hui';
+  if (days === 1) return 'Demain';
+  if (days > 1) return days < 60 ? `Dans ${days} j` : `Dans ${Math.round(days / 30)} mois`;
+  return 'Terminé';
+}
+
+/** À venir d’abord (le plus proche en tête), puis les passés (le plus récent en tête). */
+function compareEventsByDate(a: { date: string }, b: { date: string }): number {
+  const now = Date.now();
+  const ta = new Date(a.date).getTime();
+  const tb = new Date(b.date).getTime();
+  const aUpcoming = ta >= now;
+  const bUpcoming = tb >= now;
+  if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
+  return aUpcoming ? ta - tb : tb - ta;
+}
 
 function EventsFixedOverlay({ children }: { children: React.ReactNode }) {
   if (typeof document === 'undefined') return null;
@@ -709,6 +733,7 @@ function EventsPageInner() {
   const [orgRooms, setOrgRooms] = useState<OrgRoomOption[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [savingEvent, setSavingEvent] = useState(false);
+  const [eventFormError, setEventFormError] = useState('');
   const [importingLayout, setImportingLayout] = useState(false);
   const [guestGuidelines, setGuestGuidelines] = useState<GuestGuidelines>(defaultGuestGuidelines());
   const [savingGuidelines, setSavingGuidelines] = useState(false);
@@ -932,7 +957,7 @@ function EventsPageInner() {
       || (eventEntry === 'paid' && paid)
       || (eventEntry === 'free' && !paid);
     return matchesSearch && matchesWhen && matchesVisibility && matchesEntry;
-  });
+  }).sort(compareEventsByDate);
   const paginatedEventsList = usePaginateItems(filteredEventsList, eventsListPage, eventsPageSize);
   const paginatedGuestsList = usePaginateItems(filteredGuests, guestsListPage, guestsPageSize);
 
@@ -1082,6 +1107,7 @@ function EventsPageInner() {
       return;
     }
     setEventFormTarget(null);
+    setEventFormError('');
     setShowEventModal(true);
   };
 
@@ -1186,6 +1212,7 @@ Merci de confirmer votre présence :
   const handleCreateOrUpdateEvent = async (form: EventConfigPayload) => {
     setError('');
     setSuccess('');
+    setEventFormError('');
 
     setSavingEvent(true);
     try {
@@ -1275,7 +1302,8 @@ Merci de confirmer votre présence :
       setShowEventModal(false);
       loadEvents();
     } catch (err: any) {
-      setError(err.message || "Erreur d'enregistrement de l'événement");
+      // Le formulaire reste ouvert : l’erreur doit s’afficher dedans, pas derrière la fenêtre.
+      setEventFormError(err.message || "Erreur d'enregistrement de l'événement");
     } finally {
       setSavingEvent(false);
     }
@@ -1283,6 +1311,7 @@ Merci de confirmer votre présence :
 
   const handleEditEventClick = (event: EventItem) => {
     setEventFormTarget(event);
+    setEventFormError('');
     setShowEventModal(true);
     void api.get(`/events/${event.id}`).then((detail: EventItem) => {
       setEventFormTarget(detail);
@@ -2472,7 +2501,20 @@ Merci de confirmer votre présence :
                   leftIcon={<Edit3 className="w-4 h-4" />}
                   className="flex-1 sm:flex-initial"
                 >
-                  Configurer
+                  Modifier
+                </Button>
+              )}
+              {!protocolDesk && canManageEvents && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => requestDeleteEvent(selectedEvent.id)}
+                  leftIcon={<Trash2 className="w-4 h-4" />}
+                  className="text-danger hover:bg-danger/10"
+                  aria-label={`Supprimer l'événement ${selectedEvent.title}`}
+                >
+                  <span className="sr-only sm:not-sr-only">Supprimer</span>
                 </Button>
               )}
             </div>
@@ -2543,7 +2585,22 @@ Merci de confirmer votre présence :
             <div className="col-span-full text-center py-14 px-6 bg-surface border border-border rounded-[var(--radius-card)]">
               <Search className="w-10 h-10 text-muted mx-auto mb-3 opacity-60" />
               <h3 className="font-semibold text-foreground">Aucun événement ne correspond</h3>
-              <p className="text-sm text-muted mt-1">Modifiez la recherche ou le filtre de dates.</p>
+              <p className="text-sm text-muted mt-1">Modifiez la recherche ou les filtres.</p>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="mt-4"
+                onClick={() => {
+                  setEventSearch('');
+                  setEventWhen('ALL');
+                  setEventVisibility('all');
+                  setEventEntry('');
+                  setEventsListPage(1);
+                }}
+              >
+                Réinitialiser les filtres
+              </Button>
             </div>
           ) : (
             paginatedEventsList.map((event) => {
@@ -2552,9 +2609,18 @@ Merci de confirmer votre présence :
                 day: 'numeric',
                 year: 'numeric',
               });
+              const timing = eventTimingLabel(event.date);
+              const isPast = timing === 'Terminé';
               const meta = (
                 <div className="flex flex-col gap-0.5">
-                  <span className="font-medium text-primary">{dateLabel}</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="font-medium text-primary">{dateLabel}</span>
+                    {timing ? (
+                      <span className={cn('rounded-full px-1.5 py-px text-[10px] font-semibold', isPast ? 'bg-surface-muted text-muted' : 'bg-primary/10 text-primary')}>
+                        {timing}
+                      </span>
+                    ) : null}
+                  </span>
                   <span className="flex items-center gap-1 truncate">
                     <MapPin className="w-3 h-3 shrink-0 opacity-70" />
                     {event.placeLabel || formatEventPlace(event) || event.location}
@@ -2583,6 +2649,17 @@ Merci de confirmer votre présence :
                   {!protocolDesk && canManageEvents && (
                     <button
                       type="button"
+                      onClick={() => handleEditEventClick(event)}
+                      className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition touch-manipulation"
+                      title="Modifier l'événement"
+                      aria-label={`Modifier l'événement ${event.title}`}
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                  )}
+                  {!protocolDesk && canManageEvents && (
+                    <button
+                      type="button"
                       onClick={() => requestDeleteEvent(event.id)}
                       className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-muted hover:text-danger hover:bg-danger/10 rounded-lg transition touch-manipulation"
                       title="Supprimer l'événement"
@@ -2602,7 +2679,7 @@ Merci de confirmer votre présence :
                   layout={eventsViewMode}
                   icon={<Calendar className="w-4 h-4" />}
                   coverUrl={coverFromPhotos(event.photos)}
-                  overlayMeta={dateLabel}
+                  overlayMeta={timing ? `${dateLabel} · ${timing}` : dateLabel}
                   badge={
                     event.isPublic ? (
                       <StatusPill tone="emerald">Public</StatusPill>
@@ -2613,15 +2690,11 @@ Merci de confirmer votre présence :
                   ctaLabel={protocolDesk ? 'Accueillir' : 'Gérer'}
                   meta={
                     eventsViewMode === 'list'
-                      ? event.placeLabel || formatEventPlace(event) || event.location
+                      ? [event.placeLabel || formatEventPlace(event) || event.location, event.room?.name].filter(Boolean).join(' · ')
                       : meta
                   }
                   value={eventsViewMode === 'list' ? dateLabel : undefined}
-                  valueMeta={
-                    eventsViewMode === 'list' && event.room
-                      ? event.room.name
-                      : undefined
-                  }
+                  valueMeta={eventsViewMode === 'list' ? timing || undefined : undefined}
                   description={
                     eventsViewMode === 'grid' && event.description
                       ? event.description
@@ -3468,30 +3541,24 @@ Merci de confirmer votre présence :
 
       {/* MODALS */}
 
-      <ConfirmDialog
-        open={pendingDestructive?.type === 'event'}
-        onClose={() => !confirmBusy && setPendingDestructive(null)}
-        title={
+      <EventDeleteDialog
+        target={
           (() => {
-            const evId = pendingDestructive?.type === 'event' ? pendingDestructive.id : '';
-            const ev = events.find((e) => e.id === evId);
-            return (ev?.ticketsSold ?? 0) > 0
-              ? `Supprimer cet événement (${ev?.ticketsSold} billets vendus) ?`
-              : 'Supprimer l’événement ?';
+            if (pendingDestructive?.type !== 'event') return null;
+            const evId = pendingDestructive.id;
+            const ev = events.find((e) => e.id === evId) || (selectedEvent?.id === evId ? selectedEvent : undefined);
+            return {
+              id: evId,
+              title: ev?.title || 'Cet événement',
+              date: ev?.date,
+              placeLabel: ev ? ev.placeLabel || formatEventPlace(ev) || ev.location : null,
+              ticketsSold: ev?.ticketsSold ?? 0,
+              guestCount: selectedEvent?.id === evId ? guests.length : null,
+            };
           })()
         }
-        description={
-          (() => {
-            const evId = pendingDestructive?.type === 'event' ? pendingDestructive.id : '';
-            const ev = events.find((e) => e.id === evId);
-            return (ev?.ticketsSold ?? 0) > 0
-              ? `⚠️ ATTENTION CRITIQUE : Cet événement a déjà enregistré ${ev?.ticketsSold} billet(s) vendu(s) ! La suppression entraînera la perte définitive de toutes les données d'achat, de placement et d'accès des acheteurs. Cette action est irréversible.`
-              : 'Cet événement et tous ses invités seront supprimés. Cette action est irréversible.';
-          })()
-        }
-        confirmLabel="Supprimer"
-        tone="danger"
         loading={confirmBusy}
+        onClose={() => !confirmBusy && setPendingDestructive(null)}
         onConfirm={async () => {
           if (pendingDestructive?.type !== 'event') return;
           setConfirmBusy(true);
@@ -3622,6 +3689,7 @@ Merci de confirmer votre présence :
         loadingRooms={loadingRooms}
         templates={templates}
         saving={savingEvent}
+        saveError={eventFormError}
         createDisabled={eventsAtLimit}
         createDisabledTitle={eventsQuotaMsg || undefined}
         onSave={handleCreateOrUpdateEvent}

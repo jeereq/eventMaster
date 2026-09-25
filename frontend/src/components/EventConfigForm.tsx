@@ -37,7 +37,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { api } from '@/lib/api';
-import { Button, Input, Modal, PhoneInput, parseStoredPhone } from '@/components/ui';
+import { Button, ConfirmDialog, Input, Modal, PhoneInput, parseStoredPhone } from '@/components/ui';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
 import CityLocationFields from '@/components/CityLocationFields';
 import EventGuestGuidelinesEditor from '@/components/EventGuestGuidelinesEditor';
@@ -165,6 +165,8 @@ type EventConfigFormProps = {
   loadingRooms?: boolean;
   templates: TemplateOption[];
   saving?: boolean;
+  /** Erreur renvoyée par l’enregistrement (affichée dans le formulaire resté ouvert). */
+  saveError?: string;
   createDisabled?: boolean;
   createDisabledTitle?: string;
   onSave: (payload: EventConfigPayload) => Promise<void> | void;
@@ -180,6 +182,7 @@ export default function EventConfigForm({
   loadingRooms = false,
   templates,
   saving = false,
+  saveError = '',
   createDisabled = false,
   createDisabledTitle,
   onSave,
@@ -231,6 +234,9 @@ export default function EventConfigForm({
   const [searchingLocation, setSearchingLocation] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [formError, setFormError] = useState('');
+  const [baselineToken, setBaselineToken] = useState(0);
+  const [baseline, setBaseline] = useState<string | null>(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const mapRef = useRef<any>(null);
   const markerRef = useRef<any>(null);
 
@@ -276,6 +282,9 @@ export default function EventConfigForm({
 
   useEffect(() => {
     if (!open) return;
+    setConfirmDiscard(false);
+    setBaseline(null);
+    setBaselineToken((n) => n + 1);
     setTab('essentials');
     setAccessSubTab('ticketing');
     setEssentialsSubTab('general');
@@ -1031,6 +1040,18 @@ export default function EventConfigForm({
     await submit();
   };
 
+  // À la création, « Entrée » dans un champ avance d’une étape au lieu de tout valider d’un coup.
+  const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+    if (e.defaultPrevented || e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return;
+    const target = e.target as HTMLElement;
+    if (target.tagName !== 'INPUT') return;
+    const type = (target as HTMLInputElement).type;
+    if (type === 'checkbox' || type === 'radio' || type === 'file') return;
+    if (editingId || !nextEventConfigTab(tab)) return;
+    e.preventDefault();
+    handleNext();
+  };
+
   const handleSkip = async () => {
     await submit();
   };
@@ -1138,6 +1159,31 @@ export default function EventConfigForm({
     [themeId],
   );
 
+  // Empreinte des champs saisis à la main, pour prévenir avant de fermer sans enregistrer.
+  const draftSnapshot = JSON.stringify([
+    title, partnerFirst, partnerSecond, description, date, endsAt, location, city, commune, neighborhood,
+    eventKind, clientName, estimatedGuests, isPublic, ticketing, ticketPrice, ticketsTotal, photos,
+    roomId, contactName, contactNational, donationsEnabled, donationCause, donationTargetFc,
+  ]);
+
+  // Relevé au rendu qui suit la réinitialisation, une fois les valeurs chargées.
+  const [baselineFor, setBaselineFor] = useState(0);
+  if (open && baselineFor !== baselineToken) {
+    setBaselineFor(baselineToken);
+    setBaseline(draftSnapshot);
+  }
+
+  const isDirty = open && baseline !== null && baseline !== draftSnapshot;
+
+  const requestClose = () => {
+    if (saving) return;
+    if (isDirty) {
+      setConfirmDiscard(true);
+      return;
+    }
+    onClose();
+  };
+
   const tabNeedsAttention = (id: EventConfigTab) => {
     if (id === 'essentials') return !title.trim() || !date;
     if (id === 'place') return !location.trim() || !commune.trim() || !neighborhood.trim();
@@ -1149,8 +1195,8 @@ export default function EventConfigForm({
     <>
       <Modal
       open={open}
-      onClose={onClose}
-      title={editingId ? 'Configurer l’événement' : 'Nouvel événement'}
+      onClose={requestClose}
+      title={editingId ? `Modifier « ${initialEvent?.title || 'l’événement'} »` : 'Nouvel événement'}
       description={
         complete
           ? 'Renseignez les détails de l’événement. Les onglets se complètent librement.'
@@ -1160,7 +1206,7 @@ export default function EventConfigForm({
       footer={
         <div className="flex w-full flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Button type="button" variant="secondary" size="sm" onClick={onClose}>
+            <Button type="button" variant="secondary" size="sm" onClick={requestClose}>
               Annuler
             </Button>
             {tabStatus.allRequiredDone ? (
@@ -1217,7 +1263,7 @@ export default function EventConfigForm({
         </div>
       }
     >
-      <form id="event-config-form" onSubmit={handleFormSubmit} className="space-y-4">
+      <form id="event-config-form" onSubmit={handleFormSubmit} onKeyDown={handleFormKeyDown} className="space-y-4">
         {/* En-tête Stepper & Mode Switcher */}
         <div className="space-y-3 pb-3 border-b border-border">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
@@ -1336,9 +1382,13 @@ export default function EventConfigForm({
           </div>
         </div>
 
-        {formError && (
-          <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 font-medium">
-            {formError}
+        {(formError || saveError) && (
+          <div
+            role="alert"
+            className="flex items-start gap-2 rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-600 dark:text-rose-400 font-medium"
+          >
+            <AlertCircle className="w-4 h-4 shrink-0" aria-hidden />
+            <span>{formError || saveError}</span>
           </div>
         )}
 
@@ -3206,6 +3256,24 @@ export default function EventConfigForm({
         </label>
       </div>
     </Modal>
+
+      <ConfirmDialog
+        open={confirmDiscard}
+        onClose={() => setConfirmDiscard(false)}
+        onConfirm={() => {
+          setConfirmDiscard(false);
+          onClose();
+        }}
+        title={editingId ? 'Abandonner les modifications ?' : 'Abandonner ce nouvel événement ?'}
+        description={
+          editingId
+            ? 'Les changements non enregistrés seront perdus.'
+            : 'Les informations saisies seront perdues.'
+        }
+        cancelLabel="Continuer la saisie"
+        confirmLabel="Abandonner"
+        tone="danger"
+      />
 
       <CollectionTermsAcceptanceModal
         open={collectionTermsModal !== null}
