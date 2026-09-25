@@ -27,6 +27,7 @@ import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import ProtocolDashboardHome from '@/components/ProtocolDashboardHome';
 import ClientDashboardHome from '@/components/dashboard/ClientDashboardHome';
 import OrganizerDashboardHome from '@/components/dashboard/OrganizerDashboardHome';
+import VendorDashboardHome from '@/components/dashboard/VendorDashboardHome';
 import PersonalOrganizerHome, { isPersonalOrganizerPlan } from '@/components/dashboard/PersonalOrganizerHome';
 import { useViewPreferencesOptional } from '@/context/ViewPreferencesContext';
 import { PLAN_IDS, planAudienceLabel, isB2cPlanId, durationDaysForPlan, durationPresetsForPlan, ANNUAL_DISCOUNT_PERCENT, formatFc, type PlanId } from '@/config/landingPricing';
@@ -2087,6 +2088,10 @@ function DashboardPageContent() {
 
   if (isProtocolDashboard) {
     return <ProtocolDashboardHome />;
+  }
+
+  if (user?.role === 'USER' && tenant?.accountKind === 'VENDOR' && (access?.level === 'owner' || access?.level === 'manager')) {
+    return <VendorDashboardHome />;
   }
 
  if (loading) {

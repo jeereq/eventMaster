@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Calendar,
   Store,
+  CalendarCheck,
   Ticket,
   Inbox,
   ScanLine,
@@ -181,6 +182,11 @@ export function buildMobileBottomItems(
 ): MobileBottomNavItem[] {
   // Console Super Admin : pas de simulateur client, la barre reste dédiée au pilotage.
   if (input.role === 'SUPER_ADMIN') return buildRoleMobileBottomItems(input);
+  // Salle / prestataire : la barre sert le travail quotidien (devis, planning, fiches) ;
+  // Simulateur et Réalisations restent dans le menu « Plus ».
+  if (input.accountKind === 'VENDOR' && !input.isClientAccount && input.access?.level !== 'commercial' && !input.access?.isProtocolOnly) {
+    return buildRoleMobileBottomItems(input);
+  }
   const items = withSimulatorTab(buildRoleMobileBottomItems(input));
   return input.showRealisations ? withRealisationsTab(items) : items;
 }
@@ -262,9 +268,11 @@ function buildRoleMobileBottomItems({
   if (accountKind === 'VENDOR' || (!workspace.showEvents && workspace.showMarketplace)) {
     return [
       { id: 'home', name: 'Accueil', href: '/dashboard', icon: LayoutDashboard },
-      { id: 'offers', name: 'Mes offres', href: '/dashboard/marketplace', icon: Briefcase },
       { id: 'quotes', name: 'Devis', href: '/dashboard/bookings?tab=quotes', icon: Inbox },
-      { id: 'catalogue', name: 'Explorer', href: '/dashboard/catalogue', icon: Store },
+      { id: 'bookings', name: 'Planning', href: '/dashboard/bookings?tab=bookings', icon: CalendarCheck },
+      workspace.showRooms
+        ? { id: 'rooms', name: 'Salles', href: '/dashboard/rooms', icon: Building2 }
+        : { id: 'offers', name: 'Offres', href: '/dashboard/marketplace', icon: Briefcase },
       { id: 'menu', name: 'Plus', href: '#menu', icon: Menu, isMenuTrigger: true },
     ];
   }
