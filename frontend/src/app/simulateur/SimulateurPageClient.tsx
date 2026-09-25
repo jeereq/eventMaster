@@ -3,9 +3,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
+import PublicPageShell from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
-import { Alert, Button, Modal } from '@/components/ui';
+import { Alert, Button } from '@/components/ui';
 import { api } from '@/lib/api';
 import {
   claimAiTokenCheckoutReturn,
@@ -24,14 +24,13 @@ import {
   Store,
   Sparkles,
   Wallet,
-  Wand2,
   Users,
   MapPin,
-  LayoutGrid,
-  CheckCircle2,
   Mail,
-  Building2,
+  Box,
   Clock,
+  X,
+  type LucideIcon,
 } from 'lucide-react';
 import AiSimulationCounter, { isAiSimulationThresholdReached } from '@/components/AiSimulationCounter';
 import AiTokenBuyButton from '@/components/AiTokenBuyButton';
@@ -100,6 +99,18 @@ const AiTokenPurchaseModal = dynamic(
 );
 
 export type SimulatorStudioTab = 'budget' | 'invite' | 'room';
+
+const STUDIOS: Array<{
+  id: SimulatorStudioTab;
+  icon: LucideIcon;
+  title: string;
+  shortTitle: string;
+  text: string;
+}> = [
+  { id: 'budget', icon: Wallet, title: 'Budget', shortTitle: 'Budget', text: '3 formules chiffrées en 1 clic' },
+  { id: 'invite', icon: Mail, title: 'Invitation', shortTitle: 'Invitation', text: 'Carte 9:16 prête pour WhatsApp' },
+  { id: 'room', icon: Box, title: 'Plan de salle', shortTitle: 'Plan 3D', text: 'Tables et décor en 2D / 3D' },
+];
 
 type ScenarioBrief = {
   id: string;
@@ -171,7 +182,6 @@ export default function SimulateurPageClient() {
   const marketplaceCities = enabledMarketplaceCities(site);
 
   const [activeStudio, setActiveStudio] = useState<SimulatorStudioTab>('budget');
-  const [studioModalOpen, setStudioModalOpen] = useState(false);
   const [checkoutNotice, setCheckoutNotice] = useState<'success' | 'canceled' | null>(null);
   const [allowance, setAllowance] = useState<AiAllowance>(createEmptyAiAllowance);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
@@ -237,14 +247,10 @@ export default function SimulateurPageClient() {
         setPreferDefaults(true);
       }
     }
-
-    if (studioParam || paramScenario) setStudioModalOpen(true);
   }, [exchangeRate]);
 
   const handleSwitchStudio = (tab: SimulatorStudioTab) => {
     setActiveStudio(tab);
-    if (!isStudioBlocked(tab)) setStudioModalOpen(true);
-    else setStudioModalOpen(false);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
       url.searchParams.set('studio', tab);
@@ -252,41 +258,28 @@ export default function SimulateurPageClient() {
     }
   };
 
-  const openActiveStudioModal = () => {
-    if (!isCurrentStudioBlocked) setStudioModalOpen(true);
-  };
-
-  const closeStudioModal = () => setStudioModalOpen(false);
-
   const handleTabKeyDown = (e: React.KeyboardEvent, currentTab: SimulatorStudioTab) => {
-    const tabs: SimulatorStudioTab[] = ['budget', 'invite', 'room'];
+    const tabs = STUDIOS.map((studio) => studio.id);
     const currentIndex = tabs.indexOf(currentTab);
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-      e.preventDefault();
-      const nextTab = tabs[(currentIndex + 1) % tabs.length];
-      handleSwitchStudio(nextTab);
-      document.getElementById(`studio-tab-${nextTab}`)?.focus();
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      const prevTab = tabs[(currentIndex - 1 + tabs.length) % tabs.length];
-      handleSwitchStudio(prevTab);
-      document.getElementById(`studio-tab-${prevTab}`)?.focus();
-    } else if (e.key === 'Home') {
-      e.preventDefault();
-      handleSwitchStudio(tabs[0]);
-      document.getElementById(`studio-tab-${tabs[0]}`)?.focus();
-    } else if (e.key === 'End') {
-      e.preventDefault();
-      handleSwitchStudio(tabs[tabs.length - 1]);
-      document.getElementById(`studio-tab-${tabs[tabs.length - 1]}`)?.focus();
-    }
+    let nextTab: SimulatorStudioTab | null = null;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextTab = tabs[(currentIndex + 1) % tabs.length];
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') nextTab = tabs[(currentIndex - 1 + tabs.length) % tabs.length];
+    else if (e.key === 'Home') nextTab = tabs[0];
+    else if (e.key === 'End') nextTab = tabs[tabs.length - 1];
+    if (!nextTab) return;
+    e.preventDefault();
+    handleSwitchStudio(nextTab);
+    document.getElementById(`studio-tab-${nextTab}`)?.focus();
   };
 
   const handleSelectScenario = (scenario: ScenarioBrief) => {
+    if (scenario.id === selectedScenarioId) {
+      handleClearScenario();
+      return;
+    }
     setSelectedScenarioId(scenario.id);
     setLiveDefaults(scenarioToDefaults(scenario, exchangeRate));
     setPreferDefaults(true);
-    if (!isBudgetBlocked) setStudioModalOpen(true);
   };
 
   const handleClearScenario = () => {
@@ -295,75 +288,123 @@ export default function SimulateurPageClient() {
     setPreferDefaults(false);
   };
 
-  const activeScenario = visibleScenarios.find((s) => s.id === selectedScenarioId);
-
-  const heroInfo = useMemo(() => {
-    if (activeStudio === 'invite') {
-      return {
-        title: 'Studio d’Invitations & Faire-part IA',
-        description: isInviteBlocked
-          ? 'Fonctionnalité à venir : composition graphique 9:16 WhatsApp avec RSVP instantané.'
-          : 'Créez vos faire-part 9:16 WhatsApp personnalisés avec confirmation de présence en direct.',
-      };
-    }
-    if (activeStudio === 'room') {
-      return {
-        title: 'Studio Plans de Salle 2D & Visite 3D',
-        description: isRoomBlocked
-          ? 'Fonctionnalité à venir : aménagement spatial de salle et visite 3D interactive.'
-          : 'Disposition des tables, cotation au millimètre et visite 3D interactive de votre réception.',
-      };
-    }
-    return {
-      title: 'Simulateur de Budget & Formules IA',
-      description: isBudgetBlocked
-        ? 'Fonctionnalité à venir : 3 formules chiffrées selon votre budget.'
-        : '3 formules clés en main (Éco, Équilibré, Confort) en 1 clic.',
-    };
-  }, [activeStudio, isBudgetBlocked, isInviteBlocked, isRoomBlocked]);
-
   return (
     <PublicPageShell faqHref="/faq" mobileFooterPad>
-      <PublicPageHero
-        title={heroInfo.title}
-        description={heroInfo.description}
-        compact
-      >
-        <div className="pt-2 flex flex-wrap items-center gap-2">
-          {/* Badge taux du jour */}
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface border border-border text-xs font-semibold text-foreground tabular-nums shadow-2xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
-            Taux du jour : 1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
-          </span>
+      <section className="relative em-landing-hero">
+        <div className="page-container relative z-10 pt-5 pb-4 md:pt-10 md:pb-6">
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+            <div className="max-w-2xl space-y-2">
+              <p className="text-xs font-bold tracking-[0.08em] uppercase text-primary-solid">Studios IA</p>
+              <h1 className="em-landing-heading text-2xl md:text-3xl lg:text-[2.5rem] text-foreground">
+                Préparez votre fête, étape par étape
+              </h1>
+              <p className="text-sm md:text-base text-muted">
+                Estimez le budget, créez l’invitation, dessinez la salle.
+              </p>
+            </div>
 
-          {isCurrentStudioBlocked ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-xs font-bold text-amber-800 dark:text-amber-300">
-              <Clock className="w-3.5 h-3.5" />
-              Fonctionnalité à venir
-            </span>
-          ) : (
-            <>
-              {/* Compteur jetons / simulations */}
-              {!allowance.unlimited && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-bold text-primary tabular-nums">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  {allowance.totalRemaining} simulation{allowance.totalRemaining > 1 ? 's' : ''} disponible{allowance.totalRemaining > 1 ? 's' : ''}
-                </span>
-              )}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface border border-border text-xs font-semibold text-foreground tabular-nums">
+                <span className="w-2 h-2 rounded-full bg-brand-accent" aria-hidden />
+                1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
+              </span>
+              {!allowance.unlimited ? (
+                <>
+                  {/* Le studio budget affiche déjà son propre bouton d’achat. */}
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary-solid tabular-nums">
+                    <Sparkles className="w-3.5 h-3.5" aria-hidden />
+                    {allowance.totalRemaining} jeton{allowance.totalRemaining > 1 ? 's' : ''} IA
+                  </span>
+                  {activeStudio !== 'budget' || isBudgetBlocked ? (
+                    <AiTokenBuyButton
+                      compact
+                      variant="secondary"
+                      onClick={() => setPurchaseModalOpen(true)}
+                      className="text-xs min-h-11 py-2 px-3.5"
+                    />
+                  ) : null}
+                </>
+              ) : null}
+            </div>
+          </div>
 
-              {!allowance.unlimited && (
-                <AiTokenBuyButton
-                  variant="secondary"
-                  onClick={() => setPurchaseModalOpen(true)}
-                  className="text-xs min-h-11 py-2 px-3.5"
-                />
-              )}
-            </>
-          )}
+          {/* ─── CHOIX DU STUDIO ─── */}
+          <div
+            role="tablist"
+            aria-label="Choix du studio"
+            className="mt-5 md:mt-7 grid grid-cols-3 gap-2 sm:gap-3"
+          >
+            {STUDIOS.map((studio) => {
+              const Icon = studio.icon;
+              const selected = activeStudio === studio.id;
+              const blocked = isStudioBlocked(studio.id);
+              return (
+                <button
+                  key={studio.id}
+                  type="button"
+                  role="tab"
+                  id={`studio-tab-${studio.id}`}
+                  aria-controls={`studio-panel-${studio.id}`}
+                  aria-selected={selected}
+                  tabIndex={selected ? 0 : -1}
+                  onClick={() => handleSwitchStudio(studio.id)}
+                  onKeyDown={(e) => handleTabKeyDown(e, studio.id)}
+                  className={cn(
+                    'group relative overflow-hidden text-left rounded-[var(--radius-card)] border transition-colors cursor-pointer touch-manipulation',
+                    'p-3 sm:p-4 min-h-11 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                    selected
+                      ? 'bg-[#064e3b] border-[#064e3b] text-white shadow-[0_12px_32px_-18px_rgba(2,44,34,0.8)]'
+                      : 'bg-surface border-border text-foreground hover:border-primary/40 hover:bg-card-hover',
+                  )}
+                >
+                  {selected ? (
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-[2rem] border-[1.25rem] border-[#065f46]"
+                    />
+                  ) : null}
+                  <span
+                    className={cn(
+                      'relative w-9 h-9 sm:w-11 sm:h-11 rounded-xl inline-flex items-center justify-center shrink-0',
+                      selected ? 'bg-white/10 text-[#6ee7b7]' : 'bg-[#d1fae5] text-primary-solid dark:bg-primary/15',
+                    )}
+                  >
+                    <Icon className="w-[18px] h-[18px] sm:w-5 sm:h-5" aria-hidden />
+                  </span>
+                  <span className="relative min-w-0">
+                    <span className="font-display block text-sm sm:text-lg font-semibold leading-tight">
+                      <span className="sm:hidden">{studio.shortTitle}</span>
+                      <span className="hidden sm:inline">{studio.title}</span>
+                    </span>
+                    <span
+                      className={cn(
+                        'hidden sm:block text-xs mt-0.5 truncate',
+                        selected ? 'text-[#d1fae5]' : 'text-muted',
+                      )}
+                    >
+                      {blocked ? 'Bientôt disponible' : studio.text}
+                    </span>
+                    {blocked ? (
+                      <span
+                        className={cn(
+                          'sm:hidden mt-1 inline-flex items-center gap-1 text-[11px] font-semibold',
+                          selected ? 'text-[#fcd34d]' : 'text-amber-700 dark:text-amber-300',
+                        )}
+                      >
+                        <Clock className="w-3 h-3" aria-hidden />
+                        À venir
+                      </span>
+                    ) : null}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </PublicPageHero>
+      </section>
 
-      <div className="page-container py-6 sm:py-10 space-y-8">
+      <div className="page-container pt-5 sm:pt-7 pb-8 sm:pb-12 space-y-5">
         {/* Messages d'achat de jetons */}
         {checkoutNotice === 'success' ? (
           <Alert variant="success">Jetons IA crédités. Vous pouvez lancer votre simulation.</Alert>
@@ -372,8 +413,8 @@ export default function SimulateurPageClient() {
           <Alert variant="warning">Paiement annulé — aucun jeton n’a été débité.</Alert>
         ) : null}
 
-        {!isCurrentStudioBlocked && isAiSimulationThresholdReached(allowance) ? (
-          <div className="max-w-xl mx-auto">
+        {!isCurrentStudioBlocked && activeStudio !== 'budget' && isAiSimulationThresholdReached(allowance) ? (
+          <div className="max-w-xl">
             <AiSimulationCounter
               allowance={allowance}
               onBuy={() => setPurchaseModalOpen(true)}
@@ -381,455 +422,171 @@ export default function SimulateurPageClient() {
           </div>
         ) : null}
 
-        {/* ─── SÉLECTEUR DES 3 ATELIERS ─── */}
-        <section aria-label="Ateliers créatifs de simulation" className="space-y-3">
-          <div
-            role="tablist"
-            aria-label="Choix de l'atelier de simulation"
-            className="grid grid-cols-1 sm:grid-cols-3 gap-2.5"
-          >
-            {/* Atelier 1: Budget */}
-            <button
-              type="button"
-              role="tab"
-              id="studio-tab-budget"
-              aria-controls="studio-panel-budget"
-              aria-selected={activeStudio === 'budget'}
-              onClick={() => handleSwitchStudio('budget')}
-              onKeyDown={(e) => handleTabKeyDown(e, 'budget')}
-              className={cn(
-                'p-3.5 rounded-xl border text-left transition flex items-center justify-between gap-2 cursor-pointer min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                activeStudio === 'budget'
-                  ? 'border-2 border-primary bg-primary/10 shadow-sm ring-1 ring-primary/30'
-                  : 'border-border bg-surface hover:bg-surface-muted hover:border-primary/40'
-              )}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                  <Wand2 className="w-4 h-4" aria-hidden />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-foreground truncate">Simulateur Budget</p>
-                  <p className="text-xs text-muted truncate">
-                    {isBudgetBlocked ? 'Bientôt disponible' : '3 formules catalogue'}
-                  </p>
-                </div>
-              </div>
-              <span
-                className={cn(
-                  'inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
-                  isBudgetBlocked
-                    ? 'bg-amber-500/15 text-amber-800 dark:text-amber-200'
-                    : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
-                )}
-              >
-                {isBudgetBlocked ? (
-                  <>
-                    <Clock className="w-3 h-3" aria-hidden />
-                    À venir
-                  </>
-                ) : (
-                  <>
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" aria-hidden />
-                    Actif
-                  </>
-                )}
-              </span>
-            </button>
-
-            {/* Atelier 2: Invitations */}
-            <button
-              type="button"
-              role="tab"
-              id="studio-tab-invite"
-              aria-controls="studio-panel-invite"
-              aria-selected={activeStudio === 'invite'}
-              onClick={() => handleSwitchStudio('invite')}
-              onKeyDown={(e) => handleTabKeyDown(e, 'invite')}
-              className={cn(
-                'p-3.5 rounded-xl border text-left transition flex items-center justify-between gap-2 cursor-pointer min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-festive-accent',
-                activeStudio === 'invite'
-                  ? 'border-2 border-festive-accent bg-festive-accent/10 shadow-sm ring-1 ring-festive-accent/30'
-                  : 'border-border bg-surface hover:bg-surface-muted hover:border-festive-accent/40'
-              )}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-festive-accent/10 text-festive-accent dark:text-festive-accent flex items-center justify-center shrink-0">
-                  <Mail className="w-4 h-4" aria-hidden />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-foreground truncate">Studio Invitations</p>
-                  <p className="text-xs text-muted truncate">
-                    {isInviteBlocked ? 'Bientôt disponible' : 'Faire-part 9:16 WhatsApp'}
-                  </p>
-                </div>
-              </div>
-              <span
-                className={cn(
-                  'inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
-                  isInviteBlocked
-                    ? 'bg-amber-500/15 text-amber-800 dark:text-amber-200'
-                    : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
-                )}
-              >
-                {isInviteBlocked ? (
-                  <>
-                    <Clock className="w-3 h-3" aria-hidden />
-                    À venir
-                  </>
-                ) : (
-                  <>
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" aria-hidden />
-                    Actif
-                  </>
-                )}
-              </span>
-            </button>
-
-            {/* Atelier 3: Plans 2D / 3D */}
-            <button
-              type="button"
-              role="tab"
-              id="studio-tab-room"
-              aria-controls="studio-panel-room"
-              aria-selected={activeStudio === 'room'}
-              onClick={() => handleSwitchStudio('room')}
-              onKeyDown={(e) => handleTabKeyDown(e, 'room')}
-              className={cn(
-                'p-3.5 rounded-xl border text-left transition flex items-center justify-between gap-2 cursor-pointer min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                activeStudio === 'room'
-                  ? 'border-2 border-primary bg-primary/10 shadow-sm ring-1 ring-primary/30'
-                  : 'border-border bg-surface hover:bg-surface-muted hover:border-primary/40'
-              )}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary dark:text-primary flex items-center justify-center shrink-0">
-                  <Building2 className="w-4 h-4" aria-hidden />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-foreground truncate">Studio Plans 3D</p>
-                  <p className="text-xs text-muted truncate">
-                    {isRoomBlocked ? 'Bientôt disponible' : 'Visite & tables 3D'}
-                  </p>
-                </div>
-              </div>
-              <span
-                className={cn(
-                  'inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full shrink-0',
-                  isRoomBlocked
-                    ? 'bg-amber-500/15 text-amber-800 dark:text-amber-200'
-                    : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
-                )}
-              >
-                {isRoomBlocked ? (
-                  <>
-                    <Clock className="w-3 h-3" aria-hidden />
-                    À venir
-                  </>
-                ) : (
-                  <>
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" aria-hidden />
-                    Actif
-                  </>
-                )}
-              </span>
-            </button>
-          </div>
-        </section>
-
-        {/* ─── CONTENU ATELIER 1 : BUDGET ─── */}
+        {/* ─── STUDIO BUDGET ─── */}
         {activeStudio === 'budget' && (
           <div
             id="studio-panel-budget"
             role="tabpanel"
             aria-labelledby="studio-tab-budget"
-            tabIndex={0}
-            className="space-y-8 animate-in fade-in duration-200 motion-reduce:animate-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-2xl"
+            className="space-y-4 animate-in fade-in duration-200 motion-reduce:animate-none"
           >
-            {/* Barre de sélection rapide de scénarios types */}
-            <section aria-labelledby="scenarios-heading" className="space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <h2 id="scenarios-heading" className="text-sm font-bold text-foreground flex items-center gap-2">
-                    <Wand2 className="w-4 h-4 text-primary" />
-                    <span>{isBudgetBlocked ? 'Aperçu des futurs projets types' : 'Projets types prêts à l’emploi'}</span>
-                    {isBudgetBlocked && (
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300">
-                        À venir
-                      </span>
-                    )}
-                  </h2>
-                  <p className="text-xs text-muted">
-                    {isBudgetBlocked
-                      ? 'Exemples chiffrés dès l’activation du simulateur.'
-                      : 'Chargez un exemple type en 1 clic.'}
-                  </p>
-                </div>
-
-                {selectedScenarioId && (
-                  <button
-                    type="button"
-                    onClick={handleClearScenario}
-                    className="text-xs text-muted hover:text-foreground underline underline-offset-2 self-start sm:self-auto touch-manipulation cursor-pointer min-h-11 inline-flex items-center px-2 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  >
-                    Simulation libre
-                  </button>
-                )}
-              </div>
-
-              <div
-                className="flex gap-2.5 overflow-x-auto pb-1.5 pt-0.5 sm:grid sm:grid-cols-3 sm:overflow-visible scrollbar-none touch-pan-x"
-                role="group"
-                aria-label="Sélection de projet type"
-              >
-                {visibleScenarios.map((scenario) => {
-                  const isSelected = scenario.id === selectedScenarioId;
-                  const usdEst = Math.round(scenario.budgetTargetFc / exchangeRate);
-
-                  return (
-                    <button
-                      key={scenario.id}
-                      type="button"
-                      aria-pressed={isSelected}
-                      onClick={() => handleSelectScenario(scenario)}
-                      className={`min-w-[260px] sm:min-w-0 p-3.5 rounded-[var(--radius-card)] border text-left transition-all duration-200 cursor-pointer touch-manipulation flex flex-col justify-between shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-                        isSelected
-                          ? 'border-primary-solid bg-primary/10 shadow-sm ring-1 ring-primary/30'
-                          : 'border-border bg-surface hover:bg-surface-muted hover:border-primary/40'
-                      }`}
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-bold text-foreground truncate">{scenario.name}</span>
-                          {isSelected && (
-                            <span className="w-2 h-2 rounded-full bg-primary-solid shrink-0" aria-hidden />
-                          )}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
-                          <span className="inline-flex items-center gap-1">
-                            <Users className="w-3 h-3 text-primary" />
-                            {scenario.guests} invités
-                          </span>
-                          <span>·</span>
-                          <span className="inline-flex items-center gap-1">
-                            <MapPin className="w-3 h-3 text-primary" />
-                            {scenario.city}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="pt-2.5 mt-2 border-t border-border/60 flex items-center justify-between text-xs">
-                        <span className="font-bold text-foreground tabular-nums">
-                          {formatFc(scenario.budgetTargetFc)}
-                        </span>
-                        <span className="text-muted tabular-nums">≈ {usdEst} $</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {activeScenario && (
-                <div className="p-3 rounded-xl bg-surface-muted/70 border border-border text-xs text-muted flex items-start gap-2 animate-fade-in motion-reduce:animate-none">
-                  <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-semibold text-foreground">Scénario actif : </span>
-                    {activeScenario.prompt}
-                  </div>
-                </div>
-              )}
-            </section>
-
-            {/* Zone interactive du simulateur */}
-            <section id="simulateur" className="scroll-mt-24 space-y-4">
-              {isBudgetBlocked && (
-                <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0">
-                      <Clock className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs sm:text-sm font-bold text-foreground">
-                        Simulateur de budget · Fonctionnalité à venir
-                      </p>
-                      <p className="text-xs text-muted">
-                        L&apos;estimation IA est temporairement désactivée. Explorez nos espaces et prestataires certifiés.
-                      </p>
-                    </div>
-                  </div>
-                  <Button href="/marketplace" size="sm" variant="primary" className="shrink-0 min-h-11">
+            {isBudgetBlocked ? (
+              <ComingSoonPanel
+                title="Le simulateur de budget arrive bientôt"
+                text="En attendant, parcourez les salles et prestataires du catalogue."
+                actions={(
+                  <Button href="/marketplace" variant="primary" size="sm" className="min-h-11">
                     Explorer le catalogue
                   </Button>
-                </div>
-              )}
-
-              {!isBudgetBlocked && studioModalOpen ? (
-                <p className="text-sm text-muted text-center py-6" role="status">
-                  Le simulateur de budget est ouvert dans la fenêtre.
-                </p>
-              ) : null}
-
-              {!isBudgetBlocked && !studioModalOpen ? (
-                <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
-                  <div className="space-y-1 min-w-0">
-                    <p className="text-sm font-bold text-foreground">Simulation libre</p>
-                    <p className="text-xs text-muted leading-relaxed">
-                      Ou ouvrez l’atelier sans projet type pour saisir votre brief.
-                    </p>
+                )}
+              />
+            ) : (
+              <>
+                <section aria-labelledby="scenarios-heading" className="space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <h2 id="scenarios-heading" className="font-display text-sm sm:text-base font-semibold text-foreground">
+                      Partir d’un exemple
+                      <span className="ml-2 text-xs font-normal text-muted">ou remplissez le brief librement</span>
+                    </h2>
+                    {selectedScenarioId ? (
+                      <button
+                        type="button"
+                        onClick={handleClearScenario}
+                        className="min-h-11 px-2 inline-flex items-center gap-1 text-xs font-semibold text-muted hover:text-foreground rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                      >
+                        <X className="w-3.5 h-3.5" aria-hidden />
+                        Effacer
+                      </button>
+                    ) : null}
                   </div>
-                  <Button type="button" size="sm" onClick={openActiveStudioModal} className="shrink-0 min-h-11">
-                    Ouvrir le simulateur
-                  </Button>
-                </div>
-              ) : null}
-            </section>
+                  <div
+                    className="flex gap-2.5 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible scrollbar-none touch-pan-x"
+                    role="group"
+                    aria-label="Exemples de projets"
+                  >
+                    {visibleScenarios.map((scenario) => {
+                      const isSelected = scenario.id === selectedScenarioId;
+                      const usdEst = Math.round(scenario.budgetTargetFc / exchangeRate);
+                      return (
+                        <button
+                          key={scenario.id}
+                          type="button"
+                          aria-pressed={isSelected}
+                          onClick={() => handleSelectScenario(scenario)}
+                          className={cn(
+                            'min-w-[15rem] sm:min-w-0 shrink-0 p-3.5 rounded-[var(--radius-card)] border text-left transition-colors cursor-pointer touch-manipulation',
+                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                            isSelected
+                              ? 'border-primary-solid bg-primary/10 ring-1 ring-primary/30'
+                              : 'border-border bg-surface hover:border-primary/40 hover:bg-card-hover',
+                          )}
+                        >
+                          <span className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-semibold text-foreground truncate">{scenario.type}</span>
+                            <span
+                              aria-hidden
+                              className={cn(
+                                'w-4 h-4 rounded-full border-2 shrink-0',
+                                isSelected ? 'border-primary-solid bg-primary-solid shadow-[inset_0_0_0_2px_var(--surface)]' : 'border-border',
+                              )}
+                            />
+                          </span>
+                          <span className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-muted">
+                            <span className="inline-flex items-center gap-1">
+                              <Users className="w-3 h-3" aria-hidden />
+                              {scenario.guests} invités
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <MapPin className="w-3 h-3" aria-hidden />
+                              {scenario.city}
+                            </span>
+                          </span>
+                          <span className="mt-2 flex items-baseline justify-between gap-2 text-xs">
+                            <span className="font-display text-sm font-semibold text-foreground tabular-nums">
+                              {formatFc(scenario.budgetTargetFc)}
+                            </span>
+                            <span className="text-muted tabular-nums">≈ {usdEst.toLocaleString('fr-FR')} $</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                <section
+                  id="simulateur"
+                  aria-label="Simulateur de budget"
+                  className="scroll-mt-24 sm:rounded-[1.25rem] sm:border sm:border-border sm:bg-surface sm:p-6"
+                >
+                  <EventPrepAiSimulator
+                    embedded
+                    defaultOpen
+                    defaults={liveDefaults}
+                    preferDefaults={preferDefaults}
+                  />
+                </section>
+              </>
+            )}
           </div>
         )}
 
-        {/* ─── CONTENU ATELIER 2 : INVITATIONS ─── */}
+        {/* ─── STUDIO INVITATIONS ─── */}
         {activeStudio === 'invite' && (
-          <section
+          <div
             id="studio-panel-invite"
             role="tabpanel"
             aria-labelledby="studio-tab-invite"
-            tabIndex={0}
-            className="space-y-6 animate-in fade-in duration-200 motion-reduce:animate-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-festive-accent/40 rounded-2xl"
+            className="animate-in fade-in duration-200 motion-reduce:animate-none"
           >
             {isInviteBlocked ? (
-              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6 sm:p-8 text-center space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center mx-auto">
-                  <Clock className="w-6 h-6" />
-                </div>
-                <div className="space-y-1.5 max-w-lg mx-auto">
-                  <h3 className="text-base sm:text-lg font-bold text-foreground">
-                    Studio Invitations IA · Fonctionnalité à venir
-                  </h3>
-                  <p className="text-xs sm:text-sm text-muted leading-relaxed">
-                    La génération automatique d&apos;invitations IA est temporairement désactivée par l&apos;administration. Vous pouvez explorer notre catalogue de modèles prêts à l&apos;emploi.
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-                  <Button href="/modeles" variant="primary" size="sm" className="min-h-11">
-                    Consulter les modèles existants
-                  </Button>
-                  <Button href="/marketplace" variant="secondary" size="sm" className="min-h-11">
-                    Voir les prestataires
-                  </Button>
-                </div>
-              </div>
-            ) : studioModalOpen ? (
-              <p className="text-sm text-muted text-center py-8" role="status">
-                Le studio invitations est ouvert dans la fenêtre.
-              </p>
+              <ComingSoonPanel
+                title="Le studio d’invitations arrive bientôt"
+                text="En attendant, choisissez parmi nos modèles prêts à l’emploi."
+                actions={(
+                  <>
+                    <Button href="/modeles" variant="primary" size="sm" className="min-h-11">
+                      Voir les modèles
+                    </Button>
+                    <Button href="/marketplace" variant="secondary" size="sm" className="min-h-11">
+                      Voir les prestataires
+                    </Button>
+                  </>
+                )}
+              />
             ) : (
-              <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
-                <div className="space-y-1 min-w-0">
-                  <p className="text-sm font-bold text-foreground inline-flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-festive-accent" aria-hidden />
-                    Studio Invitations
-                  </p>
-                  <p className="text-xs text-muted leading-relaxed">
-                    Composez une carte 9:16 WhatsApp à partir d’un brief ou d’une photo.
-                  </p>
-                </div>
-                <Button type="button" size="sm" onClick={openActiveStudioModal} className="shrink-0 min-h-11">
-                  Réouvrir le studio
-                </Button>
-              </div>
+              <LandingInvitationAiGenerator lockExpanded inline />
             )}
-          </section>
+          </div>
         )}
 
-        {/* ─── CONTENU ATELIER 3 : PLANS 2D / 3D ─── */}
+        {/* ─── STUDIO PLANS 2D / 3D ─── */}
         {activeStudio === 'room' && (
-          <section
+          <div
             id="studio-panel-room"
             role="tabpanel"
             aria-labelledby="studio-tab-room"
-            tabIndex={0}
-            className="space-y-6 animate-in fade-in duration-200 motion-reduce:animate-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 rounded-2xl"
+            className="animate-in fade-in duration-200 motion-reduce:animate-none"
           >
             {isRoomBlocked ? (
-              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-6 sm:p-8 text-center space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center mx-auto">
-                  <Clock className="w-6 h-6" />
-                </div>
-                <div className="space-y-1.5 max-w-lg mx-auto">
-                  <h3 className="text-base sm:text-lg font-bold text-foreground">
-                    Studio Plans 2D / 3D IA · Fonctionnalité à venir
-                  </h3>
-                  <p className="text-xs sm:text-sm text-muted leading-relaxed">
-                    La composition automatique de plans de salle par IA est temporairement désactivée par l&apos;administration. Vous pouvez explorer les plans témoins ou ouvrir l&apos;éditeur manuel.
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-                  <Button href="/plans-3d" variant="primary" size="sm" className="min-h-11">
-                    Explorer les plans témoins 3D
-                  </Button>
-                  <Button href="/dashboard/rooms" variant="secondary" size="sm" className="min-h-11">
-                    Ouvrir l&apos;éditeur de salle
-                  </Button>
-                </div>
-              </div>
-            ) : studioModalOpen ? (
-              <p className="text-sm text-muted text-center py-8" role="status">
-                Le studio plans est ouvert dans la fenêtre.
-              </p>
-            ) : (
-              <div className="rounded-2xl border border-border bg-surface p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
-                <div className="space-y-1 min-w-0">
-                  <p className="text-sm font-bold text-foreground inline-flex items-center gap-2">
-                    <LayoutGrid className="w-4 h-4 text-primary" aria-hidden />
-                    Studio Plans 2D / 3D
-                  </p>
-                  <p className="text-xs text-muted leading-relaxed">
-                    Brief ou photo → tables et décor sur le plan interactif.
-                  </p>
-                </div>
-                <Button type="button" size="sm" onClick={openActiveStudioModal} className="shrink-0 min-h-11">
-                  Réouvrir le studio
-                </Button>
-              </div>
-            )}
-          </section>
-        )}
-
-        <Modal
-          open={studioModalOpen && !isCurrentStudioBlocked}
-          onClose={closeStudioModal}
-          title={
-            activeStudio === 'invite'
-              ? 'Créer une invitation'
-              : activeStudio === 'room'
-                ? 'Composer un plan de salle'
-                : 'Simuler mon budget'
-          }
-          size="full"
-          contentClassName="p-0 sm:p-0"
-        >
-          {activeStudio === 'budget' ? (
-            <div className="p-4 sm:p-6">
-              <EventPrepAiSimulator
-                embedded
-                defaultOpen
-                defaults={liveDefaults}
-                preferDefaults={preferDefaults}
+              <ComingSoonPanel
+                title="Le studio de plans arrive bientôt"
+                text="En attendant, explorez les plans témoins ou ouvrez l’éditeur manuel."
+                actions={(
+                  <>
+                    <Button href="/plans-3d" variant="primary" size="sm" className="min-h-11">
+                      Voir les plans 3D
+                    </Button>
+                    <Button href="/dashboard/rooms" variant="secondary" size="sm" className="min-h-11">
+                      Ouvrir l’éditeur
+                    </Button>
+                  </>
+                )}
               />
-            </div>
-          ) : null}
-          {activeStudio === 'invite' ? (
-            <LandingInvitationAiGenerator
-              lockExpanded
-              className="border-0 shadow-none rounded-none"
-            />
-          ) : null}
-          {activeStudio === 'room' ? (
-            <LandingRoomPlanAiStudio
-              lockExpanded
-              className="border-0 shadow-none rounded-none"
-            />
-          ) : null}
-        </Modal>
+            ) : (
+              <LandingRoomPlanAiStudio lockExpanded inline />
+            )}
+          </div>
+        )}
       </div>
 
       <PublicCtaBand
@@ -857,5 +614,29 @@ export default function SimulateurPageClient() {
         />
       ) : null}
     </PublicPageShell>
+  );
+}
+
+/** Studio masqué par l’administration : message court et pistes pour continuer. */
+function ComingSoonPanel({
+  title,
+  text,
+  actions,
+}: {
+  title: string;
+  text: string;
+  actions: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-[1.25rem] border border-border bg-surface p-6 sm:p-10 text-center space-y-4">
+      <span className="w-12 h-12 rounded-2xl bg-[#d1fae5] text-primary-solid dark:bg-primary/15 inline-flex items-center justify-center">
+        <Clock className="w-6 h-6" aria-hidden />
+      </span>
+      <div className="space-y-1.5 max-w-md mx-auto">
+        <h2 className="font-display text-lg sm:text-xl font-semibold text-foreground">{title}</h2>
+        <p className="text-sm text-muted">{text}</p>
+      </div>
+      <div className="flex flex-wrap items-center justify-center gap-2.5">{actions}</div>
+    </div>
   );
 }

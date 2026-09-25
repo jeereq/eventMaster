@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Sparkles, Wand2, Clock, PlusCircle, Check, ArrowRight, DollarSign, MapPin } from 'lucide-react';
+import { ChevronDown, Sparkles, Wand2, Clock, PlusCircle, Check, ArrowRight, DollarSign, MapPin, Lightbulb } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Alert, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -50,7 +50,7 @@ import {
   type AiMomentId,
   type AiSettingId,
 } from '@/lib/aiSimulationCriteria';
-import { StudioAiTabs, StudioHowTo, studioAiTabPanelId, type StudioAiTabId } from '@/components/StudioAiTabs';
+import { StudioAiTabs, StudioStepper, studioAiTabPanelId, type StudioAiTabId } from '@/components/StudioAiTabs';
 import { EVENT_PREP_PROMPT_MODELS } from '@/config/eventPrepPromptModels';
 import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
 
@@ -799,21 +799,16 @@ export default function EventPrepAiSimulator({
           aria-labelledby={`${tabsId}-tab-create`}
           className="space-y-3"
         >
-          <StudioHowTo
-            steps={
-              budgetScope === 'drinks'
-                ? ['Choisissez Boissons', 'Indiquez les invités ou une commande précise', 'Lancez et comparez les 3 formules']
-                : budgetScope === 'rentals'
-                  ? ['Choisissez Locations', 'Indiquez la ville, les invités et le budget', 'Affinez le matériel, puis lancez']
-                  : budgetScope === 'services'
-                    ? ['Choisissez Services', 'Indiquez la ville et le budget', 'Affinez les métiers, puis lancez']
-                    : ['Choisissez la simulation', 'Indiquez le lieu, les invités et le budget', 'Affinez si besoin, puis lancez']
-            }
+          <StudioStepper
+            steps={['Votre brief', 'Calcul IA', '3 formules']}
+            current={loading ? 1 : result?.packages.length ? 2 : 0}
           />
           {open ? (
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(18rem,0.95fr)] lg:gap-x-6 lg:items-start">
         <div className="order-1 lg:col-start-1 lg:row-start-1 space-y-3 min-w-0">
-          <p className="text-xs text-foreground leading-relaxed rounded-[var(--radius-card)] border border-border bg-surface-muted/50 px-3 py-2" aria-live="polite">
+          <p className="flex items-start gap-2 text-xs text-foreground leading-relaxed rounded-[var(--radius-card)] bg-primary/5 border border-primary/15 px-3 py-2.5" aria-live="polite">
+            <Lightbulb className="w-4 h-4 text-primary-solid shrink-0 mt-px" aria-hidden />
+            <span>
             {budgetScope === 'drinks'
               ? (wantedDrinkLines.length > 0
                 ? 'La commande précise remplace le calcul par invité. Vous pouvez lancer.'
@@ -827,32 +822,36 @@ export default function EventPrepAiSimulator({
                   : Number(guestCount) > 0
                     ? 'Le brief est prêt. Affiner les marques ou les métiers reste facultatif.'
                     : 'Ajoutez le nombre d’invités pour dimensionner la salle, les chaises et les boissons.'}
+            </span>
           </p>
-          <BudgetSimulationScopePicker value={budgetScope} onChange={applyBudgetScope} />
-          <div className="space-y-1.5">
-            <p className={FIELD_LABEL}>Type d’événement</p>
-            <div
-              className="flex flex-wrap gap-1.5"
-              role="group"
-              aria-label="Type d’événement"
-            >
-              {LISTING_EVENT_TYPES.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  aria-pressed={eventType === item.id}
-                  onClick={() => setEventType(item.id)}
-                  className={cn(CHIP, chipTone(eventType === item.id))}
-                >
-                  {item.label}
-                </button>
-              ))}
+          <BudgetFormGroup step={1} title="Votre événement">
+            <BudgetSimulationScopePicker value={budgetScope} onChange={applyBudgetScope} />
+            <div className="space-y-1.5">
+              <p className={FIELD_LABEL}>Type d’événement</p>
+              <div
+                className="flex flex-wrap gap-1.5"
+                role="group"
+                aria-label="Type d’événement"
+              >
+                {LISTING_EVENT_TYPES.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    aria-pressed={eventType === item.id}
+                    onClick={() => setEventType(item.id)}
+                    className={cn(CHIP, chipTone(eventType === item.id))}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {budgetScope !== 'drinks' ? (
-            <>
+          </BudgetFormGroup>
+
+          {budgetScope !== 'drinks' ? (
+          <BudgetFormGroup step={2} title="Le lieu">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <label className="space-y-1">
               <span className={FIELD_LABEL}>Ville</span>
               <select
@@ -964,8 +963,12 @@ export default function EventPrepAiSimulator({
                     ? 'Le quartier et le GPS classent les prestataires et le matériel.'
                     : 'Choisissez une commune pour afficher les quartiers. Le GPS classe aussi sans quartier.')}
             </p>
-            </>
-            ) : null}
+            </div>
+          </BudgetFormGroup>
+          ) : null}
+
+          <BudgetFormGroup step={budgetScope === 'drinks' ? 2 : 3} title="Invités, date et budget">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div className="space-y-1.5">
               <Input
                 label="Invités"
@@ -1018,174 +1021,174 @@ export default function EventPrepAiSimulator({
                 onChange={(e) => setEventDate(e.target.value)}
               />
             </div>
-          </div>
-
-          {/* Bloc Budget Max intuitif */}
-          <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3.5 space-y-2.5">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="space-y-0.5">
-                <span className={FIELD_LABEL}>Budget maximum</span>
-                <p className="text-xs text-muted">
-                  Saisissez directement en dollars ou en francs congolais
-                </p>
-              </div>
-
-              {/* Devise USD / CDF */}
-              <div
-                className="inline-flex rounded-lg p-0.5 bg-surface-muted border border-border text-xs"
-                role="group"
-                aria-label="Devise du budget"
-              >
-                <button
-                  type="button"
-                  aria-pressed={budgetCurrency === 'USD'}
-                  onClick={() => handleCurrencySwitch('USD')}
-                  className={cn(
-                    'px-3 min-h-11 font-bold rounded-md text-xs transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                    budgetCurrency === 'USD'
-                      ? 'bg-primary-solid text-primary-foreground'
-                      : 'text-muted hover:text-foreground',
-                  )}
-                >
-                  $ USD
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={budgetCurrency === 'CDF'}
-                  onClick={() => handleCurrencySwitch('CDF')}
-                  className={cn(
-                    'px-3 min-h-11 font-bold rounded-md text-xs transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                    budgetCurrency === 'CDF'
-                      ? 'bg-primary-solid text-primary-foreground'
-                      : 'text-muted hover:text-foreground',
-                  )}
-                >
-                  FC (CDF)
-                </button>
-              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-start">
-              <Input
-                label=""
-                type="number"
-                min={1}
-                value={budgetInputVal}
-                onChange={(e) => setBudgetInputVal(e.target.value)}
-                placeholder={budgetCurrency === 'USD' ? 'Ex. 2 500' : 'Ex. 7 000 000'}
-                aria-label={budgetCurrency === 'USD' ? 'Budget maximum en dollars' : 'Budget maximum en francs congolais'}
-              />
-              <div className="sm:self-center px-3 py-2 rounded-[var(--radius-card)] bg-surface-muted border border-border/80 text-xs text-muted flex items-center justify-between sm:justify-start gap-2">
-                <span>Équivalent :</span>
-                <span className="font-extrabold text-primary-solid tabular-nums">
-                  {budgetCurrency === 'USD'
-                    ? (budgetMaxFcCalculated > 0 ? `${budgetMaxFcCalculated.toLocaleString('fr-FR')} FC` : '—')
-                    : (budgetMaxUsdCalculated > 0 ? `${budgetMaxUsdCalculated.toLocaleString('fr-FR')} $` : '—')}
-                </span>
-              </div>
-            </div>
+            {/* Bloc Budget Max intuitif */}
+            <div className="space-y-2.5 pt-1">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="space-y-0.5">
+                  <span className={FIELD_LABEL}>Budget maximum</span>
+                  <p className="text-xs text-muted">
+                    En dollars ou en francs, au choix
+                  </p>
+                </div>
 
-            {/* Presets rapides de budget */}
-            <div className="flex flex-wrap gap-1.5 items-center pt-0.5" role="group" aria-label="Paliers de budget">
-              <span className="text-xs text-muted mr-0.5 font-medium">Paliers suggérés :</span>
-              {(budgetCurrency === 'USD' ? BUDGET_PRESETS_USD : BUDGET_PRESETS_CDF).map((preset) => {
-                const active = budgetInputVal === String(preset);
-                const label = budgetCurrency === 'USD'
-                  ? `${preset.toLocaleString('fr-FR')} $`
-                  : `${(preset / 1_000_000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} M FC`;
-                return (
+                {/* Devise USD / CDF */}
+                <div
+                  className="inline-flex rounded-lg p-0.5 bg-surface-muted border border-border text-xs"
+                  role="group"
+                  aria-label="Devise du budget"
+                >
                   <button
-                    key={preset}
                     type="button"
-                    aria-pressed={active}
-                    onClick={() => setBudgetInputVal(String(preset))}
+                    aria-pressed={budgetCurrency === 'USD'}
+                    onClick={() => handleCurrencySwitch('USD')}
                     className={cn(
-                      'text-xs font-semibold px-3 min-h-11 rounded-full border transition cursor-pointer touch-manipulation inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                      active
-                        ? 'border-primary-solid bg-primary-solid text-primary-foreground'
-                        : 'border-border bg-surface-muted text-foreground hover:border-primary/50 hover:bg-surface',
+                      'px-3 min-h-11 font-bold rounded-md text-xs transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                      budgetCurrency === 'USD'
+                        ? 'bg-primary-solid text-primary-foreground'
+                        : 'text-muted hover:text-foreground',
                     )}
                   >
-                    {label}
+                    $ USD
                   </button>
-                );
-              })}
-            </div>
-          </div>
+                  <button
+                    type="button"
+                    aria-pressed={budgetCurrency === 'CDF'}
+                    onClick={() => handleCurrencySwitch('CDF')}
+                    className={cn(
+                      'px-3 min-h-11 font-bold rounded-md text-xs transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                      budgetCurrency === 'CDF'
+                        ? 'bg-primary-solid text-primary-foreground'
+                        : 'text-muted hover:text-foreground',
+                    )}
+                  >
+                    FC (CDF)
+                  </button>
+                </div>
+              </div>
 
-          {/* Ratio par invité en direct */}
-          {guestRatio ? (
-            <div className="rounded-[var(--radius-card)] border border-primary/25 bg-primary/5 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-colors">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-foreground">Ratio par convive :</span>
-                  <span className="text-sm font-extrabold text-primary-solid tabular-nums">
-                    ~{guestRatio.perGuestUsd} $ <span className="text-xs font-semibold text-muted">({guestRatio.perGuestFc.toLocaleString('fr-FR')} FC)</span>
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-start">
+                <Input
+                  label=""
+                  type="number"
+                  min={1}
+                  value={budgetInputVal}
+                  onChange={(e) => setBudgetInputVal(e.target.value)}
+                  placeholder={budgetCurrency === 'USD' ? 'Ex. 2 500' : 'Ex. 7 000 000'}
+                  aria-label={budgetCurrency === 'USD' ? 'Budget maximum en dollars' : 'Budget maximum en francs congolais'}
+                />
+                <div className="sm:self-center px-3 py-2 rounded-[var(--radius-card)] bg-surface-muted border border-border/80 text-xs text-muted flex items-center justify-between sm:justify-start gap-2">
+                  <span>Soit</span>
+                  <span className="font-extrabold text-primary-solid tabular-nums">
+                    {budgetCurrency === 'USD'
+                      ? (budgetMaxFcCalculated > 0 ? `${budgetMaxFcCalculated.toLocaleString('fr-FR')} FC` : '—')
+                      : (budgetMaxUsdCalculated > 0 ? `${budgetMaxUsdCalculated.toLocaleString('fr-FR')} $` : '—')}
+                  </span>
+                  <span className="tabular-nums" title="Taux de change appliqué">
+                    · 1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
                   </span>
                 </div>
-                <p className="text-xs text-muted leading-relaxed">
-                  {guestRatio.advice}
-                </p>
               </div>
-              <span className={cn(
-                'inline-flex items-center text-xs font-bold px-2.5 min-h-11 rounded-full shrink-0 self-start sm:self-center',
-                guestRatio.tone === 'amber'
-                  ? 'bg-festive-accent-soft text-foreground border border-festive-accent/40'
-                  : 'bg-primary/15 text-primary-solid border border-primary/30',
-              )}>
-                {guestRatio.tone === 'emerald' ? 'Grand confort' : guestRatio.tone === 'amber' ? 'Budget serré' : 'Équilibré'}
-              </span>
+
+              {/* Presets rapides de budget */}
+              <div className="flex flex-wrap gap-1.5 items-center pt-0.5" role="group" aria-label="Paliers de budget">
+                <span className="text-xs text-muted mr-0.5 font-medium">Paliers suggérés :</span>
+                {(budgetCurrency === 'USD' ? BUDGET_PRESETS_USD : BUDGET_PRESETS_CDF).map((preset) => {
+                  const active = budgetInputVal === String(preset);
+                  const label = budgetCurrency === 'USD'
+                    ? `${preset.toLocaleString('fr-FR')} $`
+                    : `${(preset / 1_000_000).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} M FC`;
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setBudgetInputVal(String(preset))}
+                      className={cn(
+                        'text-xs font-semibold px-3 min-h-11 rounded-full border transition cursor-pointer touch-manipulation inline-flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                        active
+                          ? 'border-primary-solid bg-primary-solid text-primary-foreground'
+                          : 'border-border bg-surface-muted text-foreground hover:border-primary/50 hover:bg-surface',
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          ) : null}
 
-          <div className="flex items-center justify-between text-xs text-muted bg-surface-muted/60 px-3 py-1.5 rounded-[var(--radius-card)] border border-border/70">
-            <span>Taux de change appliqué :</span>
-            <span className="font-semibold text-foreground">
-              1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
-            </span>
-          </div>
-
-          {budgetScope === 'complete' ? (
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-foreground">
-            <label className="inline-flex items-center gap-2 min-h-11">
-              <input type="checkbox" className="size-5 accent-primary shrink-0" checked={includeVenue} onChange={(e) => setIncludeVenue(e.target.checked)} />
-              Salle
-            </label>
-            <label className="inline-flex items-center gap-2 min-h-11">
-              <input type="checkbox" className="size-5 accent-primary shrink-0" checked={includeTrades} onChange={(e) => setIncludeTrades(e.target.checked)} />
-              Prestataires
-            </label>
-            <label className="inline-flex items-center gap-2 min-h-11">
-              <input type="checkbox" className="size-5 accent-primary shrink-0" checked={includeRentals} onChange={(e) => setIncludeRentals(e.target.checked)} />
-              Matériel & Équipements
-            </label>
-            {defaults?.keepVenueSlug ? (
-              <label className="inline-flex items-center gap-2 min-h-11">
-                <input type="checkbox" className="size-5 accent-primary shrink-0" checked={keepVenue} onChange={(e) => setKeepVenue(e.target.checked)} />
-                Garder la salle déjà retenue
-              </label>
+            {/* Ratio par invité en direct */}
+            {guestRatio ? (
+              <div className="rounded-[var(--radius-card)] border border-primary/25 bg-primary/5 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-colors">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-foreground">Ratio par convive :</span>
+                    <span className="text-sm font-extrabold text-primary-solid tabular-nums">
+                      ~{guestRatio.perGuestUsd} $ <span className="text-xs font-semibold text-muted">({guestRatio.perGuestFc.toLocaleString('fr-FR')} FC)</span>
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted leading-relaxed">
+                    {guestRatio.advice}
+                  </p>
+                </div>
+                <span className={cn(
+                  'inline-flex items-center text-xs font-bold px-2.5 min-h-11 rounded-full shrink-0 self-start sm:self-center',
+                  guestRatio.tone === 'amber'
+                    ? 'bg-festive-accent-soft text-foreground border border-festive-accent/40'
+                    : 'bg-primary/15 text-primary-solid border border-primary/30',
+                )}>
+                  {guestRatio.tone === 'emerald' ? 'Grand confort' : guestRatio.tone === 'amber' ? 'Budget serré' : 'Équilibré'}
+                </span>
+              </div>
             ) : null}
-          </div>
-          ) : null}
+
+          </BudgetFormGroup>
 
           {budgetScope !== 'drinks' ? (
-          <label className="space-y-1 block">
-            <span className={FIELD_LABEL}>Décrivez votre événement</span>
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={3}
-              placeholder="Ex. mariage 120 personnes à Gombe, ambiance chic, besoin traiteur + DJ + habits…"
-              className={cn(NATIVE_FIELD, 'resize-y min-h-[4.5rem] py-2.5')}
-            />
-            <p className="text-xs text-muted">
-              Mariages coutumiers Kongo, Luba, Mongo, Lunda :{' '}
-              <button type="button" className="font-bold text-primary-solid hover:underline min-h-11 inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-sm" onClick={() => setActiveTab('prompts')}>
-                onglet Prompts
-              </button>
-              .
-            </p>
-          </label>
+          <BudgetFormGroup step={4} title="Vos envies">
+            {budgetScope === 'complete' ? (
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-foreground">
+              <label className="inline-flex items-center gap-2 min-h-11">
+                <input type="checkbox" className="size-5 accent-primary shrink-0" checked={includeVenue} onChange={(e) => setIncludeVenue(e.target.checked)} />
+                Salle
+              </label>
+              <label className="inline-flex items-center gap-2 min-h-11">
+                <input type="checkbox" className="size-5 accent-primary shrink-0" checked={includeTrades} onChange={(e) => setIncludeTrades(e.target.checked)} />
+                Prestataires
+              </label>
+              <label className="inline-flex items-center gap-2 min-h-11">
+                <input type="checkbox" className="size-5 accent-primary shrink-0" checked={includeRentals} onChange={(e) => setIncludeRentals(e.target.checked)} />
+                Matériel & Équipements
+              </label>
+              {defaults?.keepVenueSlug ? (
+                <label className="inline-flex items-center gap-2 min-h-11">
+                  <input type="checkbox" className="size-5 accent-primary shrink-0" checked={keepVenue} onChange={(e) => setKeepVenue(e.target.checked)} />
+                  Garder la salle déjà retenue
+                </label>
+              ) : null}
+            </div>
+            ) : null}
+
+            <label className="space-y-1 block">
+              <span className={FIELD_LABEL}>Décrivez votre événement</span>
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={3}
+                placeholder="Ex. mariage 120 personnes à Gombe, ambiance chic, besoin traiteur + DJ + habits…"
+                className={cn(NATIVE_FIELD, 'resize-y min-h-[4.5rem] py-2.5')}
+              />
+              <p className="text-xs text-muted">
+                Mariages coutumiers Kongo, Luba, Mongo, Lunda :{' '}
+                <button type="button" className="font-bold text-primary-solid hover:underline min-h-11 inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-sm" onClick={() => setActiveTab('prompts')}>
+                  voir les exemples
+                </button>
+                .
+              </p>
+            </label>
+          </BudgetFormGroup>
           ) : null}
         </div>
 
@@ -1515,6 +1518,30 @@ export default function EventPrepAiSimulator({
         }}
       />
     </section>
+  );
+}
+
+/** Bloc numéroté du formulaire : guide la saisie étape par étape. */
+function BudgetFormGroup({
+  step,
+  title,
+  children,
+}: {
+  step: number;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <fieldset className="space-y-2.5 rounded-[var(--radius-card)] border border-border bg-surface p-3.5 sm:p-4 min-w-0">
+      <legend className="sr-only">{title}</legend>
+      <p aria-hidden className="flex items-center gap-2">
+        <span className="font-display w-6 h-6 rounded-full bg-primary/15 text-primary-solid text-xs font-semibold inline-flex items-center justify-center shrink-0">
+          {step}
+        </span>
+        <span className="font-display text-sm font-semibold text-foreground">{title}</span>
+      </p>
+      {children}
+    </fieldset>
   );
 }
 
