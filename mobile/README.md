@@ -111,7 +111,4 @@ mobile/
 
 ## Compte de test
 
-Utilisez les comptes seed du backend :
-
-- Organisateur : `demo@novaevents.cd` / `password123`
-- Super admin : `superadmin@eventmaster.cd` / `password123`
+Le seed du backend ne crée plus de comptes de démonstration. Créez un compte organisateur via l’inscription de l’app ; le Super Admin se crée avec `SEED_SUPERADMIN_EMAIL=… SEED_SUPERADMIN_PASSWORD=… npm run seed` dans `backend/`.

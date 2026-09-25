@@ -252,7 +252,7 @@ EXPO_PUBLIC_API_URL=http://localhost:5001/api
    ```
 2. Migrer `App.tsx` vers `app/_layout.tsx`
 3. Implémenter `src/lib/api.ts` + écran login
-4. Tester login avec compte seed : `demo@novaevents.cd` / `password123`
+4. Tester login avec un compte créé via l’inscription (le seed ne crée plus de comptes de démonstration)
 5. Mettre à jour le README racine du monorepo
 
 ---
