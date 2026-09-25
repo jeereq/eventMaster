@@ -66,6 +66,6 @@ Configurer dans `eas.json` → `submit.production` :
 
 ## Notes App Review
 
-- Compte démo pour review Apple : `demo@novaevents.cd` / `password123`
+- Compte démo pour review Apple : créer un compte organisateur dédié en production (le seed ne crée plus de comptes de démonstration) et renseigner ses identifiants dans App Store Connect
 - Protocole QR nécessite forfait Business+ (mentionner dans notes si fonctionnalité testée)
 - Caméra : usage exclusif scan QR invités

@@ -95,7 +95,7 @@ eventmaster/
 - `eventmaster://event/:id`
 - `eventmaster://protocol/:eventId`
 
-**Compte seed** : `demo@novaevents.cd` / `password123`
+**Comptes** : le seed ne crée plus de comptes de démonstration ; créer un compte via l’inscription (Super Admin : `SEED_SUPERADMIN_EMAIL` / `SEED_SUPERADMIN_PASSWORD` au seed)
 
 ---
 
