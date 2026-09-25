@@ -21,7 +21,7 @@ import {
   Moon,
   Download,
   Shield,
-  Compass,
+  Images,
   ArrowRight,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -33,6 +33,7 @@ import { useTheme } from '@/context/ThemeContext';
 import PublicAccentPicker from '@/components/PublicAccentPicker';
 import usePwaInstall from '@/hooks/usePwaInstall';
 import { Button } from '@/components/ui';
+import { scrollAppToTop, tapHaptic, useMobileRouteFade } from '@/lib/mobileNative';
 
 const SIMULATOR_HREF = '/simulateur';
 
@@ -65,11 +66,10 @@ export const SITE_MOBILE_NAV_ITEMS: MobileNavItem[] = [
     icon: Sparkles,
   },
   {
-    id: 'models',
-    label: 'Modèles',
-    shortLabel: 'Modèles',
-    href: '/modeles',
-    icon: FileText,
+    id: 'realisations',
+    label: 'Réalisations',
+    href: '/activite',
+    icon: Images,
   },
   {
     id: 'more',
@@ -89,10 +89,10 @@ const MORE_LINKS = [
     iconBg: 'bg-primary/10',
   },
   {
-    href: '/activite',
-    label: 'Réalisations & Événements',
-    description: 'Vitrine et retours d’expérience',
-    icon: Compass,
+    href: '/modeles',
+    label: 'Modèles d’invitations',
+    description: 'Invitations prêtes à l’emploi ou créées par IA',
+    icon: FileText,
     iconColor: 'text-festive-accent',
     iconBg: 'bg-festive-accent-soft',
   },
@@ -131,7 +131,7 @@ function isItemActive(
     return (
       sheetOpen ||
       [
-        '/activite',
+        '/modeles',
         '/plans-3d',
         '/editeur',
         '/tarifs',
@@ -149,8 +149,8 @@ function isItemActive(
   if (itemHref === SIMULATOR_HREF) {
     return pathname === '/simulateur' || pathname.startsWith('/simulateur');
   }
-  if (itemHref === '/modeles') {
-    return pathname === '/modeles' || pathname.startsWith('/modeles/');
+  if (itemHref === '/activite') {
+    return pathname === '/activite' || pathname.startsWith('/activite/');
   }
   if (itemHref === '/marketplace') {
     return pathname.startsWith('/marketplace') || pathname.startsWith('/evenements');
@@ -212,7 +212,14 @@ export default function SiteMobileBottomBar({
     };
   }, [sheetOpen]);
 
-  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, item: MobileNavItem) => {
+  useMobileRouteFade();
+
+  const handleClick = (
+    e: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>,
+    item: MobileNavItem,
+    active: boolean,
+  ) => {
+    tapHaptic();
     if (item.id === 'more') {
       e.preventDefault();
       setSheetOpen((prev) => !prev);
@@ -221,16 +228,19 @@ export default function SiteMobileBottomBar({
     if (sheetOpen) {
       setSheetOpen(false);
     }
-    if (item.href === '/') {
-      if (pathname === '/') {
-        e.preventDefault();
-        window.scrollTo({ top: 0, behavior: motionSafeScrollBehavior() });
-        if (currentHash) {
-          window.history.replaceState(null, '', '/');
-          setCurrentHash('');
-        }
+    if (item.href === '/' && pathname === '/') {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: motionSafeScrollBehavior() });
+      if (currentHash) {
+        window.history.replaceState(null, '', '/');
+        setCurrentHash('');
       }
       return;
+    }
+    // Re-taper l'onglet courant remonte en haut, comme dans une app native.
+    if (active && pathname === item.href) {
+      e.preventDefault();
+      scrollAppToTop();
     }
   };
 
@@ -239,19 +249,20 @@ export default function SiteMobileBottomBar({
       <nav
         aria-label="Navigation mobile principale"
         className={cn(
-          'em-site-bottom-nav md:hidden pointer-events-none px-3 sm:px-4 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-1',
+          'em-site-bottom-nav em-tabbar md:hidden pointer-events-none px-3 sm:px-4 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-1',
           className,
         )}
       >
-        <div className="pointer-events-auto max-w-md mx-auto bg-surface/92 dark:bg-stage-elevated/95 backdrop-blur-2xl border border-border/80 dark:border-border-subtle/30 rounded-full shadow-[0_12px_36px_-6px_rgba(0,0,0,0.14),0_4px_16px_-2px_rgba(0,0,0,0.06)] dark:shadow-[0_16px_40px_-6px_rgba(0,0,0,0.6)] px-1.5 py-1 grid grid-cols-5 gap-0.5 items-center relative">
+        <div className="pointer-events-auto max-w-md mx-auto bg-surface/92 dark:bg-stage-elevated/95 backdrop-blur-2xl backdrop-saturate-150 border border-border/80 dark:border-border-subtle/30 rounded-[1.75rem] shadow-[0_12px_36px_-6px_rgba(0,0,0,0.16),0_4px_16px_-2px_rgba(0,0,0,0.06)] dark:shadow-[0_16px_40px_-6px_rgba(0,0,0,0.6)] px-1 py-1 grid grid-cols-5 gap-0.5 items-end relative">
           {SITE_MOBILE_NAV_ITEMS.map((item) => {
             const active = isItemActive(item.href, pathname, currentHash, sheetOpen);
-            const Icon = item.icon;
-            const isSimulatorUpcoming = item.id === 'simulator' && isBudgetBlocked;
+            const Icon = item.id === 'more' && sheetOpen ? X : item.icon;
+            const isSimulator = item.id === 'simulator';
+            const isSimulatorUpcoming = isSimulator && isBudgetBlocked;
 
             const classNameItem = cn(
-              'relative flex flex-col items-center justify-center gap-0.5 min-h-[46px] py-1 px-1 rounded-full transition-all duration-200 select-none touch-manipulation cursor-pointer',
-              'active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+              'em-tab relative flex flex-col items-center justify-center gap-0.5 min-h-[50px] py-1 px-0.5 rounded-2xl transition-colors duration-200 touch-manipulation cursor-pointer',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
               active
                 ? 'text-primary-solid dark:text-primary font-bold'
                 : 'text-muted hover:text-foreground',
@@ -259,34 +270,26 @@ export default function SiteMobileBottomBar({
 
             const inner = (
               <>
-                {/* Icône avec pastille d'état actif et badge événementiel */}
-                <div
-                  className={cn(
-                    'p-1.5 rounded-full transition-all duration-200 flex items-center justify-center relative',
-                    active
-                      ? 'bg-primary/12 text-primary-solid dark:text-primary scale-105'
-                      : 'bg-transparent text-muted group-hover:text-foreground',
-                  )}
-                >
-                  <Icon className="w-[18px] h-[18px]" aria-hidden />
+                {isSimulator ? (
+                  <span className="em-tab-fab relative">
+                    <Icon className="w-6 h-6" aria-hidden />
+                    {isSimulatorUpcoming ? (
+                      <span
+                        className="absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-festive-accent ring-2 ring-surface dark:ring-stage-elevated"
+                        title="Fonctionnalité à venir"
+                      />
+                    ) : null}
+                  </span>
+                ) : (
+                  <span className="em-tab-pill">
+                    <Icon className="relative w-[20px] h-[20px]" aria-hidden />
+                  </span>
+                )}
 
-                  {/* Badge d'alerte fonctionnalité à venir */}
-                  {isSimulatorUpcoming ? (
-                    <span
-                      className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-festive-accent ring-2 ring-surface dark:ring-stage-elevated"
-                      title="Fonctionnalité à venir"
-                    />
-                  ) : null}
-
-                  {/* Point indicateur discret sous l'icône active */}
-                  {active && !isSimulatorUpcoming && (
-                    <span className="absolute -bottom-0.5 w-1 h-1 rounded-full bg-primary-solid dark:bg-primary" />
-                  )}
-                </div>
-
-                {/* Typographie propre aux codes de la plateforme (min 12px) */}
-                <span className="text-xs tracking-tight leading-tight truncate max-w-full text-center">
-                  {item.shortLabel ? (
+                <span className="text-[10.5px] min-[400px]:text-xs tracking-tight leading-tight truncate max-w-full text-center">
+                  {item.id === 'more' && sheetOpen ? (
+                    'Fermer'
+                  ) : item.shortLabel ? (
                     <>
                       <span className="hidden min-[400px]:inline">{item.label}</span>
                       <span className="inline min-[400px]:hidden">{item.shortLabel}</span>
@@ -303,10 +306,10 @@ export default function SiteMobileBottomBar({
                 <button
                   key={item.id}
                   type="button"
-                  onClick={(e) => handleClick(e as unknown as React.MouseEvent<HTMLAnchorElement>, item)}
+                  onClick={(e) => handleClick(e, item, active)}
                   aria-expanded={sheetOpen}
                   aria-controls="site-mobile-more-sheet"
-                  aria-label={item.label}
+                  aria-label={sheetOpen ? 'Fermer le menu' : item.label}
                   className={classNameItem}
                 >
                   {inner}
@@ -318,7 +321,7 @@ export default function SiteMobileBottomBar({
               <Link
                 key={item.id}
                 href={item.href}
-                onClick={(e) => handleClick(e, item)}
+                onClick={(e) => handleClick(e, item, active)}
                 aria-current={active ? 'page' : undefined}
                 aria-label={isSimulatorUpcoming ? `${item.label} (Fonctionnalité à venir)` : item.label}
                 className={classNameItem}

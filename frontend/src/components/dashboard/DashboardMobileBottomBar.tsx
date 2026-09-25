@@ -19,14 +19,14 @@ import {
   Menu,
   X,
   Sparkles,
-  Bookmark,
-  Rss,
+  Images,
 } from 'lucide-react';
 import type { OrgAccess } from '@/context/AuthContext';
 import type { TenantAccountKind } from '@/lib/marketplace';
 import type { WorkspaceModules } from '@/lib/planAccess';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { cn } from '@/lib/cn';
+import { scrollAppToTop, tapHaptic, useMobileRouteFade } from '@/lib/mobileNative';
 
 export interface MobileBottomNavItem {
   id: string;
@@ -43,6 +43,7 @@ interface DashboardMobileBottomBarProps {
   workspace: WorkspaceModules;
   accountKind?: TenantAccountKind;
   isClientAccount?: boolean;
+  showRealisations?: boolean;
   mobileMenuOpen: boolean;
   onToggleMobileMenu: () => void;
   onCloseMobileMenu: () => void;
@@ -133,6 +134,35 @@ function withSimulatorTab(items: MobileBottomNavItem[]): MobileBottomNavItem[] {
   return [...items.slice(0, insertAt), SIMULATOR_ITEM, ...items.slice(insertAt)];
 }
 
+const REALISATIONS_ITEM: MobileBottomNavItem = {
+  id: 'publications',
+  name: 'Réalisations',
+  href: '/dashboard/publications',
+  icon: Images,
+};
+
+/** Une tab bar native tient en 5 onglets ; le reste passe dans le menu « Plus ». */
+const MAX_BOTTOM_TABS = 5;
+
+/**
+ * Espaces organisation / client : 5 onglets au plus, avec Réalisations toujours visible
+ * et le Simulateur au centre (bouton surélevé). Les onglets retirés restent
+ * dans le menu « Plus » (filterNavForMobileSheet ne masque que ceux de la barre).
+ */
+function withRealisationsTab(items: MobileBottomNavItem[]): MobileBottomNavItem[] {
+  const home = items.find((item) => item.id === 'home');
+  const simulator = items.find((item) => item.id === 'simulator');
+  const menu = items.find((item) => item.isMenuTrigger);
+  const others = items.filter(
+    (item) => item !== home && item !== simulator && item !== menu && item.id !== 'publications',
+  );
+  const pinnedCount = [home, simulator, REALISATIONS_ITEM, menu].filter(Boolean).length;
+  const kept = others.slice(0, Math.max(0, MAX_BOTTOM_TABS - pinnedCount));
+  return [home, ...kept, simulator, REALISATIONS_ITEM, menu].filter(
+    (item): item is MobileBottomNavItem => Boolean(item),
+  );
+}
+
 export function buildMobileBottomItems(
   input: {
     role?: string;
@@ -141,9 +171,12 @@ export function buildMobileBottomItems(
     accountKind?: TenantAccountKind;
     isClientAccount?: boolean;
     allStudiosBlocked?: boolean;
+    /** Le menu du compte donne accès aux Réalisations (même règle que la sidebar). */
+    showRealisations?: boolean;
   },
 ): MobileBottomNavItem[] {
-  return withSimulatorTab(buildRoleMobileBottomItems(input));
+  const items = withSimulatorTab(buildRoleMobileBottomItems(input));
+  return input.showRealisations ? withRealisationsTab(items) : items;
 }
 
 function buildRoleMobileBottomItems({
@@ -198,7 +231,7 @@ function buildRoleMobileBottomItems({
     return [
       { id: 'home', name: 'Accueil', href: '/dashboard', icon: LayoutDashboard },
       { id: 'protocol', name: 'Protocole', href: '/dashboard/protocol', icon: ScanLine },
-      { id: 'publications', name: 'Réalisations', href: '/dashboard/publications', icon: Rss },
+      { id: 'publications', name: 'Réalisations', href: '/dashboard/publications', icon: Images },
       { id: 'catalogue', name: 'Explorer', href: '/dashboard/catalogue', icon: Store },
       { id: 'menu', name: 'Plus', href: '#menu', icon: Menu, isMenuTrigger: true },
     ];
@@ -237,7 +270,7 @@ function buildRoleMobileBottomItems({
       managerItems.push({ id: 'events', name: 'Événements', href: '/dashboard/events', icon: Calendar });
     }
     if (workspace.showBrowseCatalogue) {
-      managerItems.push({ id: 'publications', name: 'Réalisations', href: '/dashboard/publications', icon: Rss });
+      managerItems.push({ id: 'publications', name: 'Réalisations', href: '/dashboard/publications', icon: Images });
       managerItems.push({ id: 'catalogue', name: 'Explorer', href: '/dashboard/catalogue', icon: Store });
     } else if (workspace.showProtocol) {
       managerItems.push({ id: 'protocol', name: 'Protocole', href: '/dashboard/protocol', icon: ScanLine });
@@ -282,6 +315,7 @@ export default function DashboardMobileBottomBar({
   workspace,
   accountKind,
   isClientAccount,
+  showRealisations,
   mobileMenuOpen,
   onToggleMobileMenu,
   onCloseMobileMenu,
@@ -308,52 +342,69 @@ export default function DashboardMobileBottomBar({
       accountKind,
       isClientAccount,
       allStudiosBlocked,
+      showRealisations,
     });
-  }, [role, access, workspace, accountKind, isClientAccount, allStudiosBlocked]);
+  }, [role, access, workspace, accountKind, isClientAccount, allStudiosBlocked, showRealisations]);
+
+  useMobileRouteFade();
+
+  const tabClassName = (active: boolean) =>
+    cn(
+      'em-tab relative flex flex-col items-center justify-center gap-0.5 min-h-[50px] py-1 px-0.5 rounded-2xl transition-colors duration-200 touch-manipulation cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+      active
+        ? 'text-primary-solid dark:text-primary font-semibold'
+        : 'text-muted hover:text-foreground',
+    );
+
+  const centerIndex = items.length % 2 === 1 ? Math.floor(items.length / 2) : -1;
 
   const nav = (
     <nav
       aria-label="Navigation principale mobile"
-      className="em-dash-bottom-nav md:hidden pointer-events-none"
+      className="em-dash-bottom-nav em-tabbar md:hidden pointer-events-none"
     >
       <div
-        className="pointer-events-auto bg-surface/95 dark:bg-stage-elevated/95 backdrop-blur-xl border-t border-border px-2 pt-1.5 pb-[max(0.65rem,env(safe-area-inset-bottom))] grid gap-0.5 items-center relative"
+        className="pointer-events-auto bg-surface/92 dark:bg-stage-elevated/95 backdrop-blur-2xl backdrop-saturate-150 border-t border-border/70 dark:border-border-subtle/30 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.18)] px-1.5 pt-1 pb-[max(0.5rem,env(safe-area-inset-bottom))] grid gap-0.5 items-end relative"
         style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
       >
-        {items.map((item) => {
+        {items.map((item, index) => {
           const isMenu = Boolean(item.isMenuTrigger);
           const Icon = isMenu && mobileMenuOpen ? X : item.icon;
           const active = isMenu ? mobileMenuOpen : isBottomItemActive(pathname, searchParams.toString(), item, currentTab);
+          const raised = item.id === 'simulator' && index === centerIndex;
+
+          const inner = (
+            <>
+              {raised ? (
+                <span className="em-tab-fab">
+                  <Icon className="w-6 h-6" aria-hidden />
+                </span>
+              ) : (
+                <span className="em-tab-pill">
+                  <Icon className="relative w-[20px] h-[20px]" aria-hidden />
+                </span>
+              )}
+              <span className="text-[10.5px] min-[400px]:text-[11px] leading-tight truncate max-w-full">
+                {isMenu && mobileMenuOpen ? 'Fermer' : item.name}
+              </span>
+            </>
+          );
 
           if (isMenu) {
             return (
               <button
                 key={item.id}
                 type="button"
-                onClick={onToggleMobileMenu}
+                onClick={() => {
+                  tapHaptic();
+                  onToggleMobileMenu();
+                }}
                 aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu Plus'}
                 aria-expanded={mobileMenuOpen}
                 aria-controls="dashboard-mobile-menu-sheet"
-                className={cn(
-                  'relative flex flex-col items-center justify-center gap-1 min-h-[46px] py-1 px-1 rounded-xl transition-colors duration-200 select-none touch-manipulation cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                  active
-                    ? 'text-primary-solid dark:text-primary font-semibold'
-                    : 'text-muted hover:text-foreground',
-                )}
+                className={tabClassName(active)}
               >
-                <div
-                  className={cn(
-                    'rounded-full transition-colors duration-200 flex items-center justify-center',
-                    active
-                      ? 'text-primary-solid dark:text-primary'
-                      : 'text-muted',
-                  )}
-                >
-                  <Icon className="w-[22px] h-[22px]" />
-                </div>
-                <span className="text-[11px] leading-none truncate max-w-full">
-                  {mobileMenuOpen ? 'Fermer' : item.name}
-                </span>
+                {inner}
               </button>
             );
           }
@@ -362,9 +413,16 @@ export default function DashboardMobileBottomBar({
             <Link
               key={item.id}
               href={item.href}
-              onClick={() => {
+              onClick={(e) => {
                 if (document.body.dataset.emTour === '1') return;
+                tapHaptic();
                 onCloseMobileMenu();
+                // Re-taper l'onglet courant remonte en haut, comme dans une app native.
+                if (active && !item.href.includes('?') && pathname === item.href) {
+                  e.preventDefault();
+                  scrollAppToTop();
+                  return;
+                }
                 if (typeof window !== 'undefined' && pathname === '/dashboard/catalogue') {
                   if (item.id === 'catalogue') {
                     window.dispatchEvent(new CustomEvent('em-switch-tab', { detail: 'explore' }));
@@ -374,26 +432,9 @@ export default function DashboardMobileBottomBar({
                 }
               }}
               aria-current={active ? 'page' : undefined}
-              className={cn(
-                'relative flex flex-col items-center justify-center gap-1 min-h-[46px] py-1 px-1 rounded-xl transition-colors duration-200 select-none touch-manipulation cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                active
-                  ? 'text-primary-solid dark:text-primary font-semibold'
-                  : 'text-muted hover:text-foreground',
-              )}
+              className={tabClassName(active)}
             >
-              <div
-                className={cn(
-                  'rounded-full transition-colors duration-200 flex items-center justify-center relative',
-                  active
-                    ? 'text-primary-solid dark:text-primary'
-                    : 'text-muted',
-                )}
-              >
-                <Icon className="w-[22px] h-[22px]" />
-              </div>
-              <span className="text-[11px] leading-none truncate max-w-full">
-                {item.name}
-              </span>
+              {inner}
             </Link>
           );
         })}
