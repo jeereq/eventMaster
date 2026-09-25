@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
-import { DM_Sans, Outfit, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { StudioJobsProvider } from "@/context/StudioJobsContext";
@@ -20,26 +20,33 @@ import SessionExpiredDialog from "@/components/SessionExpiredDialog";
 import AiTokenShortageAlert from "@/components/AiTokenShortageAlert";
 import { fetchPublicSiteSnapshot, resolveMetadataBase } from "@/lib/publicSiteServer";
 
+/*
+ * Polices auto-hébergées (src/app/fonts, sous-ensemble latin, variables) :
+ * next/font/google télécharge les fichiers au build et échouait sur l'hébergeur
+ * (module-not-found dans dm_sans_*.module.css).
+ */
+
 /** DM Sans : texte courant, formulaires et chiffres. */
-const dmSans = DM_Sans({
+const dmSans = localFont({
+  src: "./fonts/DMSans-latin-var.woff2",
   variable: "--font-body",
-  subsets: ["latin"],
   display: "swap",
-  weight: ["400", "500", "600", "700"],
+  weight: "100 1000",
 });
 
 /** Outfit : titres, marque et gros chiffres. */
-const outfit = Outfit({
+const outfit = localFont({
+  src: "./fonts/Outfit-latin-var.woff2",
   variable: "--font-heading",
-  subsets: ["latin"],
   display: "swap",
-  weight: ["500", "600", "700"],
+  weight: "100 900",
 });
 
-const geistMono = Geist_Mono({
+const geistMono = localFont({
+  src: "./fonts/GeistMono-latin-var.woff2",
   variable: "--font-geist-mono",
-  subsets: ["latin"],
   display: "swap",
+  weight: "100 900",
   preload: false,
 });
 
