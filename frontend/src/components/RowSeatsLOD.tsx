@@ -131,6 +131,7 @@ export function RowSeatsLOD({
 
   const numbers = numberLabel ? (
     <Html
+      zIndexRange={[20, 0]}
       center
       distanceFactor={10}
       style={{ pointerEvents: 'none' }}

@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
@@ -207,7 +207,7 @@ import {
 } from '@/lib/roomLayoutClearance';
 import { readImageFile } from '@/lib/imageCropUtils';
 import { uploadImageFile } from '@/lib/cloudinaryUpload';
-import PlanCreationPath, { type PlanCreationPathId } from '@/components/PlanCreationPath';
+import type { PlanCreationPathId } from '@/components/PlanCreationPath';
 import RoomPlanAiStudioModal from '@/components/RoomPlanAiStudioModal';
 import { scrollToElementId } from '@/lib/prefersReducedMotion';
 import {
@@ -327,18 +327,22 @@ function DiscloseChevron({ open }: { open: boolean }) {
   );
 }
 
-type EditorToolGroupId = 'view' | 'light' | 'furniture' | 'zones' | 'building' | 'scene' | 'hospitality';
+type EditorToolGroupId = 'display' | 'view' | 'light' | 'furniture' | 'zones' | 'building' | 'scene' | 'hospitality';
 
 function ToolbarCluster({
   label,
+  labelClassName,
+  className,
   children,
 }: {
   label: string;
+  labelClassName?: string;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5 min-w-0 py-0.5 pl-2.5 border-l-2 border-border">
-      <span className="text-xs font-semibold uppercase tracking-wide text-muted shrink-0 w-full sm:w-auto">
+    <div role="group" aria-label={label} className={cn('flex flex-wrap items-center gap-1.5 min-w-0', className)}>
+      <span className={cn('text-xs font-semibold uppercase tracking-wide text-muted shrink-0 w-full lg:w-auto lg:mr-0.5', labelClassName)}>
         {label}
       </span>
       {children}
@@ -351,20 +355,42 @@ function EditorToolGroup({
   label,
   openId,
   onToggle,
+  icon,
   children,
 }: {
   id: EditorToolGroupId;
   label: string;
   openId: EditorToolGroupId | null;
   onToggle: (id: EditorToolGroupId) => void;
+  icon?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const items = React.Children.toArray(children).filter(Boolean);
-  if (items.length === 0) return null;
   const open = openId === id;
+  const wrapRef = useRef<HTMLDivElement>(null);
   const panelId = `editor-tool-group-${id}`;
+
+  // Menu flottant (desktop) : clic à l’extérieur ou Échap referme sans bouger le plan.
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (event: PointerEvent) => {
+      const node = wrapRef.current;
+      if (node && event.target instanceof Node && !node.contains(event.target)) onToggle(id);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onToggle(id);
+    };
+    document.addEventListener('pointerdown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open, id, onToggle]);
+
+  if (items.length === 0) return null;
   return (
-    <>
+    <div ref={wrapRef} className="contents lg:relative lg:inline-flex">
       <button
         type="button"
         className={cn(
@@ -372,21 +398,29 @@ function EditorToolGroup({
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
           open
             ? 'bg-primary-solid text-primary-foreground border-transparent'
-            : 'bg-surface border-border text-muted hover:bg-surface-muted hover:text-foreground',
+            : 'bg-surface border-border text-foreground hover:bg-surface-muted',
         )}
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => onToggle(id)}
       >
+        {icon}
         {label}
         <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 opacity-80 transition-transform', open && 'rotate-180')} aria-hidden />
       </button>
       {open ? (
-        <div id={panelId} className="basis-full w-full flex flex-wrap items-center gap-1.5">
+        <div
+          id={panelId}
+          className={cn(
+            'basis-full w-full flex flex-wrap items-center gap-1.5',
+            'lg:absolute lg:left-0 lg:top-full lg:z-40 lg:mt-2 lg:w-max lg:max-w-[min(40rem,calc(100vw-4rem))]',
+            'lg:p-2 lg:rounded-[var(--radius-card)] lg:border lg:border-border lg:bg-surface lg:shadow-xl',
+          )}
+        >
           {items}
         </div>
       ) : null}
-    </>
+    </div>
   );
 }
 
@@ -761,6 +795,7 @@ export default function RoomLayoutEditor({
   const isRoomBlocked = site?.studioVisibility?.room === false;
   const blueprint = ensureBlueprintDefaults(rawBlueprint);
   const caps = roomEditorCapabilities(editorLevel, allowThemesFixtures);
+  const canOpenStudio = caps.canPlanFromPhoto && !readOnly && !isRoomBlocked;
   const [selection, setSelection] = useState<LayoutSelectionItem[]>([]);
   const [mobilePane, setMobilePane] = useState<'plan' | 'tools' | 'edit'>('plan');
   const [isExpanded, setIsExpanded] = useState(false);
@@ -775,6 +810,7 @@ export default function RoomLayoutEditor({
   const [lastPlanPhotoUrl, setLastPlanPhotoUrl] = useState('');
   const [planPath, setPlanPath] = useState<PlanCreationPathId>(focusPlanImport ? 'photo' : 'manual');
   const [studioOpen, setStudioOpen] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   const [hudAlignOpen, setHudAlignOpen] = useState(false);
   const [hudColorOpen, setHudColorOpen] = useState(false);
   const [hudRotateOpen, setHudRotateOpen] = useState(false);
@@ -782,7 +818,7 @@ export default function RoomLayoutEditor({
   const [arrangeDensity, setArrangeDensity] = useState<ArrangeDensity>('comfortable');
   const [keepTemplateStyle, setKeepTemplateStyle] = useState(true);
   const [keepThemeFloor, setKeepThemeFloor] = useState(false);
-  const [accordion, setAccordion] = useState<string>('murs-sols');
+  const [accordion, setAccordion] = useState<string>('');
   const [toolbarGroup, setToolbarGroup] = useState<EditorToolGroupId | null>(null);
   const toggleToolbarGroup = useCallback((id: EditorToolGroupId) => {
     setToolbarGroup((current) => (current === id ? null : id));
@@ -808,9 +844,8 @@ export default function RoomLayoutEditor({
   const [quickAisleStyle, setQuickAisleStyle] = useState<AisleStyle>('royalRed');
   const [elementsFilter, setElementsFilter] = useState<'all' | LayoutSelectionItem['kind']>('all');
   const [elementsQuery, setElementsQuery] = useState('');
-  const [elementsOpen, setElementsOpen] = useState(() =>
-    typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)').matches : false,
-  );
+  // Replié par défaut : le panneau s’ouvre sur « Créer le plan » et les réglages.
+  const [elementsOpen, setElementsOpen] = useState(false);
   const [groupStyleColor, setGroupStyleColor] = useState('#c4a06a');
   const [customAmbienceName, setCustomAmbienceName] = useState('');
   const [ambienceLibrary, setAmbienceLibrary] = useState<import('@/lib/roomLayoutUtils').SavedRoomAmbience[]>([]);
@@ -1039,7 +1074,6 @@ export default function RoomLayoutEditor({
   useEffect(() => {
     if (!focusPlanImport && !seedPlanPhoto) return;
     setPlanPath('photo');
-    setAccordion('murs-sols');
     window.requestAnimationFrame(() => scrollToElementId('plan-import-ia'));
   }, [focusPlanImport, seedPlanPhoto]);
 
@@ -2502,11 +2536,69 @@ export default function RoomLayoutEditor({
           widthM={blueprint.canvas.widthM}
           heightM={blueprint.canvas.heightM}
           showGrid={false}
+          placement="grouped"
           className="z-10"
         />
       )}
+      {!readOnly && !walkthroughActive ? (
+        <div
+          className="hidden lg:flex absolute top-2.5 right-2.5 z-20 items-center gap-1 p-1 rounded-full bg-background/90 backdrop-blur-md border border-border/70 shadow-sm"
+          role="toolbar"
+          aria-label="Vue du plan"
+        >
+          <div role="group" aria-label="Mode d’affichage" className="flex items-center gap-0.5 p-0.5 rounded-full bg-surface-muted">
+            {([
+              { amount: 0, label: '2D', icon: LayoutGrid, title: 'Plan 2D vu du dessus (Ctrl+2)' },
+              { amount: 60, label: '3D', icon: Box, title: 'Perspective 3D (Ctrl+3)' },
+            ] as const).map((mode) => {
+              const active = mode.amount === 0 ? depthAmount === 0 : depthAmount > 0;
+              const Icon = mode.icon;
+              return (
+                <button
+                  key={mode.label}
+                  type="button"
+                  aria-pressed={active}
+                  title={mode.title}
+                  onClick={() => {
+                    if (active) return;
+                    setDepthAmount(mode.amount);
+                  }}
+                  className={cn(
+                    'inline-flex items-center gap-1 min-h-9 px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                    active ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground',
+                  )}
+                >
+                  <Icon className="w-3.5 h-3.5" aria-hidden />
+                  {mode.label}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            onClick={() => setLockOrbit((v) => !v)}
+            aria-pressed={!lockOrbit}
+            title={lockOrbit ? 'Mode Déplacer : glissez les objets. Cliquez pour tourner la vue (Ctrl+L)' : 'Mode Regarder : glissez pour tourner la vue. Cliquez pour déplacer les objets (Ctrl+L)'}
+            className="inline-flex items-center gap-1.5 min-h-9 px-3 rounded-full text-xs font-semibold text-foreground hover:bg-surface-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          >
+            {lockOrbit ? <MoveHorizontal className="w-3.5 h-3.5" aria-hidden /> : <Video className="w-3.5 h-3.5" aria-hidden />}
+            {lockOrbit ? 'Déplacer' : 'Regarder'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              webglRef.current?.resetCamera?.();
+            }}
+            title="Recentrer la vue sur la salle"
+            aria-label="Recentrer la vue"
+            className="inline-flex items-center justify-center min-h-9 min-w-9 rounded-full text-foreground hover:bg-surface-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          >
+            <Crosshair className="w-4 h-4" aria-hidden />
+          </button>
+        </div>
+      ) : null}
       {selection.length > 0 && !readOnly && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 p-1 rounded-full bg-surface/95 dark:bg-surface-elevated/95 backdrop-blur-md border border-border shadow-xl text-foreground animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 p-1 rounded-full bg-surface/95 dark:bg-surface-elevated/95 backdrop-blur-md border border-border shadow-xl text-foreground animate-in fade-in zoom-in-95 duration-150">
           <div className="px-3 min-h-11 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center gap-1.5 select-none">
             <BoxSelect className="w-4 h-4" aria-hidden />
             <span>{selection.length}</span>
@@ -2547,7 +2639,7 @@ export default function RoomLayoutEditor({
             </button>
 
             {hudRotateOpen && (
-              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-2.5 rounded-xl bg-surface dark:bg-surface-elevated border border-border shadow-2xl z-40 w-64 space-y-2 animate-in fade-in slide-in-from-top-1">
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2.5 rounded-xl bg-surface dark:bg-surface-elevated border border-border shadow-2xl z-40 w-64 space-y-2 animate-in fade-in slide-in-from-bottom-1">
                 <div className="flex items-center justify-between px-1">
                   <span className="text-xs font-bold uppercase tracking-wider text-muted">
                     Rotation & Angle
@@ -2687,7 +2779,7 @@ export default function RoomLayoutEditor({
               </button>
 
               {hudAlignOpen && (
-                <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-2.5 rounded-xl bg-surface dark:bg-surface-elevated border border-border shadow-2xl z-40 w-60 space-y-2 animate-in fade-in slide-in-from-top-1">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-2.5 rounded-xl bg-surface dark:bg-surface-elevated border border-border shadow-2xl z-40 w-60 space-y-2 animate-in fade-in slide-in-from-bottom-1">
                   <span className="text-xs font-bold uppercase tracking-wider text-muted px-1 block">
                     Aligner & répartir
                   </span>
@@ -2765,7 +2857,7 @@ export default function RoomLayoutEditor({
             </button>
 
             {hudColorOpen && (
-              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 p-3 rounded-xl bg-surface dark:bg-surface-elevated border border-border shadow-2xl z-40 w-52 space-y-2.5 animate-in fade-in slide-in-from-top-1">
+              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-3 rounded-xl bg-surface dark:bg-surface-elevated border border-border shadow-2xl z-40 w-52 space-y-2.5 animate-in fade-in slide-in-from-bottom-1">
                 <span className="text-xs font-bold uppercase tracking-wider text-muted px-1 block">
                   Palette rapide
                 </span>
@@ -3268,42 +3360,166 @@ export default function RoomLayoutEditor({
     if (!selected) {
       return (
         <div className="space-y-4">
-          {caps.canPlanFromPhoto && !readOnly && !isRoomBlocked ? (
-            <button
-              type="button"
-              disabled={aiPlanReading}
-              onClick={() => setStudioOpen(true)}
-              className="w-full text-left p-3.5 rounded-[var(--radius-card)] border border-primary bg-primary/10 min-h-11 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+          <section aria-labelledby="editor-create-heading" className="rounded-[var(--radius-card)] border border-border bg-surface p-3 space-y-2.5 shadow-sm">
+            <div className="flex items-baseline justify-between gap-2">
+              <h3 id="editor-create-heading" className="text-sm font-semibold text-foreground">Créer le plan</h3>
+              <span className="text-xs text-muted">Annulable (Ctrl+Z)</span>
+            </div>
+            {canOpenStudio ? (
+              <button
+                type="button"
+                disabled={aiPlanReading}
+                onClick={() => setStudioOpen(true)}
+                className="w-full flex items-start gap-3 text-left p-3 rounded-[var(--radius-card)] border border-primary/50 bg-primary/10 hover:bg-primary/15 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-60"
+              >
+                <span className="w-9 h-9 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4" aria-hidden />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-bold text-foreground">Composer avec l’IA</span>
+                  <span className="block text-sm text-muted leading-snug mt-0.5">
+                    Décrivez l’événement ou ajoutez une photo : l’IA pose tables, scène et décor.
+                  </span>
+                </span>
+              </button>
+            ) : null}
+            <div className="grid grid-cols-3 gap-2">
+              {caps.canPlanFromPhoto && !isRoomBlocked ? (
+                <button
+                  type="button"
+                  aria-pressed={planPath === 'photo'}
+                  disabled={aiPlanReading}
+                  onClick={() => {
+                    setPlanPath('photo');
+                    setSelection([]);
+                    if (!lastPlanPhotoUrl) aiPlanFileRef.current?.click();
+                  }}
+                  className={cn(EDITOR_PICK, 'items-center justify-center gap-1 text-center', planPath === 'photo' && 'border-primary/50 bg-primary/5')}
+                >
+                  <ImagePlus className="w-4 h-4 text-primary-solid" aria-hidden />
+                  <span className="text-xs font-semibold text-foreground leading-tight">Depuis une photo</span>
+                </button>
+              ) : null}
+              {caps.canTemplates ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTemplatesOpen(true);
+                    setMobilePane('tools');
+                    window.requestAnimationFrame(() => scrollToElementId('editor-templates'));
+                  }}
+                  className={cn(EDITOR_PICK, 'items-center justify-center gap-1 text-center')}
+                >
+                  <LayoutTemplate className="w-4 h-4 text-primary-solid" aria-hidden />
+                  <span className="text-xs font-semibold text-foreground leading-tight">Un modèle</span>
+                </button>
+              ) : null}
+              <button
+                type="button"
+                aria-pressed={planPath === 'manual' && toolbarGroup === 'furniture'}
+                onClick={() => {
+                  setPlanPath('manual');
+                  setSelection([]);
+                  setToolbarGroup('furniture');
+                  setMobilePane('tools');
+                }}
+                className={cn(EDITOR_PICK, 'items-center justify-center gap-1 text-center')}
+              >
+                <Pencil className="w-4 h-4 text-primary-solid" aria-hidden />
+                <span className="text-xs font-semibold text-foreground leading-tight">À la main</span>
+              </button>
+            </div>
+            {planPath === 'photo' && caps.canPlanFromPhoto && !isRoomBlocked ? (
+            <div
+              id="plan-import-ia"
+              aria-busy={aiPlanReading || undefined}
+              className="space-y-2 rounded-[var(--radius-card)] border border-primary/40 bg-primary/5 p-3"
             >
-              <p className="text-sm font-bold text-foreground flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary-solid" aria-hidden />
-                Studio IA — plan 2D / 3D
+              <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-primary" aria-hidden />
+                Reproduire la salle depuis une photo
               </p>
-              <p className="text-sm text-foreground mt-1 leading-snug">
-                Décrivez la salle ou importez une photo. L’IA pose tables, rangées et décor.
+              <p className="text-sm leading-snug text-muted">
+                L’IA relève le mobilier visible et le pose sur le plan. JPEG, PNG ou WebP, 8 Mo max, {AI_ROOM_PLAN_TOKEN_COST} jetons. Vérifiez les positions ensuite.
               </p>
-            </button>
-          ) : null}
-          <PlanCreationPath
-            value={planPath}
-            busy={aiPlanReading}
-            photoLocked={!caps.canPlanFromPhoto}
-            onPhotoFile={(file) => {
-              void readRoomPlanWithAi(file);
-            }}
-            onChange={(next) => {
-              setPlanPath(next);
-              if (next === 'photo') {
-                setAccordion('murs-sols');
-                setSelection([]);
-                window.requestAnimationFrame(() => scrollToElementId('plan-import-ia'));
-                return;
-              }
-              setAccordion('');
-              setToolbarGroup('furniture');
-              setSelection([]);
-            }}
-          />
+              <label className="block space-y-1">
+                <span className="text-sm font-medium text-foreground">Contexte (optionnel)</span>
+                <textarea
+                  value={aiPlanBrief}
+                  onChange={(event) => setAiPlanBrief(event.target.value)}
+                  disabled={readOnly || aiPlanReading}
+                  rows={2}
+                  maxLength={400}
+                  placeholder="Mariage, 80 convives, piste au centre…"
+                  className={cn(EDITOR_FIELD, 'resize-y')}
+                />
+              </label>
+              {aiPlanReading ? (
+                <p role="status" aria-live="polite" className="text-sm text-foreground">
+                  Lecture du plan en cours…
+                </p>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={readOnly || aiPlanReading}
+                  aria-busy={aiPlanReading || undefined}
+                  onClick={() => {
+                    if (lastPlanPhotoUrl) {
+                      void readRoomPlanWithAi();
+                      return;
+                    }
+                    aiPlanFileRef.current?.click();
+                  }}
+                  className={cn(EDITOR_PANEL_BTN, 'bg-primary-solid text-primary-foreground border-transparent hover:bg-primary-solid-hover')}
+                >
+                  <Sparkles className="w-3.5 h-3.5" aria-hidden />
+                  {aiPlanReading
+                    ? 'Lecture en cours…'
+                    : lastPlanPhotoUrl
+                      ? 'Relire la dernière photo'
+                      : 'Choisir une photo de la salle'}
+                </button>
+                {retryPlanPhoto && aiPlanError ? (
+                  <button
+                    type="button"
+                    disabled={readOnly || aiPlanReading}
+                    onClick={() => void readRoomPlanWithAi(retryPlanPhoto)}
+                    className={cn(EDITOR_PANEL_BTN, 'bg-surface border-border text-foreground')}
+                  >
+                    Réessayer
+                  </button>
+                ) : null}
+                {lastPlanPhotoUrl ? (
+                  <button
+                    type="button"
+                    disabled={readOnly || aiPlanReading}
+                    onClick={() => aiPlanFileRef.current?.click()}
+                    className={cn(EDITOR_PANEL_BTN, 'bg-surface border-border text-foreground')}
+                  >
+                    Autre photo
+                  </button>
+                ) : null}
+              </div>
+              {aiPlanError ? <Alert variant="error">{aiPlanError}</Alert> : null}
+              {aiPlanWarnings.length > 0 ? (
+                <Alert variant="warning" title="À vérifier">
+                  <ul className="list-disc pl-4 space-y-1 text-sm">
+                    {aiPlanWarnings.map((warning) => (
+                      <li key={warning}>{warning}</li>
+                    ))}
+                  </ul>
+                </Alert>
+              ) : null}
+            </div>
+            ) : null}
+            {!caps.canPlanFromPhoto ? (
+              <p className="text-xs text-muted">
+                L’IA n’est pas incluse dans ce forfait.{' '}
+                <a href="/dashboard/billing" className="font-semibold text-primary-solid hover:underline">Voir les forfaits</a>
+              </p>
+            ) : null}
+          </section>
           {!caps.canThemes ? (
             <Alert variant="warning" title={`Forfait ${caps.label}`}>
               <p>{caps.description}</p>
@@ -3328,93 +3544,6 @@ export default function RoomLayoutEditor({
               
               {accordion === 'murs-sols' && (
                 <div id="editor-panel-murs-sols" className="p-4 bg-surface space-y-5 border-t border-border">
-                  {caps.canPlanFromPhoto ? (
-                    <div
-                      id="plan-import-ia"
-                      aria-busy={aiPlanReading || undefined}
-                      className={cn(
-                        'space-y-2 rounded-[var(--radius-card)] border p-3',
-                        planPath === 'photo' ? 'border-primary bg-primary/10' : 'border-border bg-surface',
-                      )}
-                    >
-                      <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-primary" aria-hidden />
-                        Lire le plan avec l’IA
-                      </p>
-                      <p className={cn('text-sm leading-snug', planPath === 'photo' ? 'text-foreground' : 'text-muted')}>
-                        L’IA détecte le mobilier visible et l’importe. JPEG / PNG / WebP, 8 Mo. Vérifiez les positions ensuite.
-                      </p>
-                      <label className="block space-y-1">
-                        <span className="text-sm font-medium text-foreground">Contexte (optionnel)</span>
-                        <textarea
-                          value={aiPlanBrief}
-                          onChange={(event) => setAiPlanBrief(event.target.value)}
-                          disabled={readOnly || aiPlanReading}
-                          rows={2}
-                          maxLength={400}
-                          placeholder="Mariage, 80 convives, piste au centre…"
-                          className={cn(EDITOR_FIELD, 'resize-y')}
-                        />
-                      </label>
-                      {aiPlanReading ? (
-                        <p role="status" aria-live="polite" className="text-sm text-foreground">
-                          Lecture du plan en cours…
-                        </p>
-                      ) : null}
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          disabled={readOnly || aiPlanReading}
-                          aria-busy={aiPlanReading || undefined}
-                          onClick={() => {
-                            if (lastPlanPhotoUrl) {
-                              void readRoomPlanWithAi();
-                              return;
-                            }
-                            aiPlanFileRef.current?.click();
-                          }}
-                          className={cn(EDITOR_PANEL_BTN, 'bg-primary-solid text-primary-foreground border-transparent hover:bg-primary-solid-hover')}
-                        >
-                          <Sparkles className="w-3.5 h-3.5" aria-hidden />
-                          {aiPlanReading
-                            ? 'Lecture en cours…'
-                            : lastPlanPhotoUrl
-                              ? 'Relire la dernière photo'
-                              : 'Choisir une photo de la salle'}
-                        </button>
-                        {retryPlanPhoto && aiPlanError ? (
-                          <button
-                            type="button"
-                            disabled={readOnly || aiPlanReading}
-                            onClick={() => void readRoomPlanWithAi(retryPlanPhoto)}
-                            className={cn(EDITOR_PANEL_BTN, 'bg-surface border-border text-foreground')}
-                          >
-                            Réessayer
-                          </button>
-                        ) : null}
-                        {lastPlanPhotoUrl ? (
-                          <button
-                            type="button"
-                            disabled={readOnly || aiPlanReading}
-                            onClick={() => aiPlanFileRef.current?.click()}
-                            className={cn(EDITOR_PANEL_BTN, 'bg-surface border-border text-foreground')}
-                          >
-                            Autre photo
-                          </button>
-                        ) : null}
-                      </div>
-                      {aiPlanError ? <Alert variant="error">{aiPlanError}</Alert> : null}
-                      {aiPlanWarnings.length > 0 ? (
-                        <Alert variant="warning" title="À vérifier">
-                          <ul className="list-disc pl-4 space-y-1 text-sm">
-                            {aiPlanWarnings.map((warning) => (
-                              <li key={warning}>{warning}</li>
-                            ))}
-                          </ul>
-                        </Alert>
-                      ) : null}
-                    </div>
-                  ) : null}
                   <div className="space-y-3">
                     <p className="text-sm font-semibold text-foreground flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> Thème de la salle</p>
                 <label className="flex items-center gap-2 min-h-11 text-sm text-muted cursor-pointer">
@@ -6962,7 +7091,12 @@ export default function RoomLayoutEditor({
   };
 
   const templateBar = !readOnly && caps.canTemplates && (
-    <details className="group rounded-[var(--radius-card)] border border-border bg-surface overflow-hidden">
+    <details
+      id="editor-templates"
+      open={templatesOpen}
+      onToggle={(event) => setTemplatesOpen(event.currentTarget.open)}
+      className="group rounded-[var(--radius-card)] border border-border bg-surface overflow-hidden scroll-mt-4"
+    >
       <summary className="min-h-11 px-3 flex items-center justify-between gap-2 text-sm font-semibold text-foreground cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
         <span className="inline-flex items-center gap-2">
           <LayoutTemplate className="w-3.5 h-3.5" aria-hidden /> Modèles de salle
@@ -7130,142 +7264,9 @@ export default function RoomLayoutEditor({
     </details>
   );
 
-  const toolbar = !readOnly && (
-    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start" role="toolbar" aria-label="Outils du plan">
-      <ToolbarCluster label="Caméra">
-      <button
-        type="button"
-        onClick={() => setLockOrbit((v) => !v)}
-        title="Déplacer le mobilier ou tourner la vue (Ctrl+L)"
-        className={cn(EDITOR_TOOL, lockOrbit ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
-      >
-        {lockOrbit ? <MoveHorizontal className="w-3.5 h-3.5" aria-hidden /> : <Video className="w-3.5 h-3.5" aria-hidden />}
-        {lockOrbit ? 'Déplacer' : 'Regarder'}
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          webglRef.current?.resetCamera?.();
-          log('Vue 3D recentrée au centre de la salle', 'info');
-        }}
-        title="Recentrer la caméra au centre de la scène"
-        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
-      >
-        <Crosshair className="w-3.5 h-3.5" aria-hidden /> Recentrer
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          if (depthAmount === 0) {
-            setDepthAmount(60);
-            log('Vue 3D perspective activée (Ctrl+3)', 'info');
-          } else {
-            setDepthAmount(0);
-            log('Vue Plan 2D d’architecte activée (Ctrl+2)', 'info');
-          }
-        }}
-        title={depthAmount === 0 ? 'Passer en perspective 3D (Ctrl+3)' : 'Passer en plan 2D d’architecte zénithal (Ctrl+2)'}
-        className={cn(EDITOR_TOOL, depthAmount === 0 ? 'bg-primary/20 text-primary border-primary/50 font-bold' : EDITOR_TOOL_IDLE)}
-      >
-        {depthAmount === 0 ? <LayoutGrid className="w-3.5 h-3.5 text-primary" aria-hidden /> : <Box className="w-3.5 h-3.5" aria-hidden />}
-        {depthAmount === 0 ? 'Plan 2D' : 'Plan 2D / 3D'}
-      </button>
-      <button
-        type="button"
-        onClick={toggleRoofVisible}
-        aria-pressed={roofVisible}
-        title={roofVisible ? 'Masquer le toit / plafond' : 'Afficher le toit / plafond'}
-        className={cn(EDITOR_TOOL, roofVisible ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
-      >
-        {roofVisible ? <Eye className="w-3.5 h-3.5" aria-hidden /> : <EyeOff className="w-3.5 h-3.5" aria-hidden />}
-        {roofVisible ? 'Toit' : 'Toit masqué'}
-      </button>
-      <button
-        type="button"
-        onClick={toggleWallsVisible}
-        aria-pressed={wallsVisible}
-        title={wallsVisible ? 'Masquer les murs (sans les supprimer)' : 'Réafficher les murs'}
-        className={cn(EDITOR_TOOL, wallsVisible ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
-      >
-        <BrickWall className="w-3.5 h-3.5" aria-hidden />
-        {wallsVisible ? 'Murs' : 'Murs masqués'}
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          if (walkthroughActive) {
-            setWalkthroughActive(false);
-            setWalkthroughLabel('');
-            return;
-          }
-          setLockOrbit(false);
-          if (blueprint.metadata.presentationMode) {
-            updateBlueprint({
-              ...blueprint,
-              metadata: { ...blueprint.metadata, presentationMode: false },
-            }, { message: 'Présentation désactivée pour la visite', kind: 'settings' });
-          }
-          setWalkthroughActive(true);
-          setWalkthroughLabel('Approche de l’entrée');
-          log('Visite guidée démarrée', 'info');
-        }}
-        title="Entre par la porte et visite la salle en 3D"
-        className={cn(EDITOR_TOOL, walkthroughActive ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
-      >
-        <DoorOpen className="w-3.5 h-3.5" aria-hidden />
-        {walkthroughActive ? (walkthroughLabel || 'Visite…') : 'Faire le tour'}
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          const next = !blueprint.metadata.showSightlines;
-          updateBlueprint({
-            ...blueprint,
-            metadata: { ...blueprint.metadata, showSightlines: next },
-          }, { message: next ? 'Lignes de visibilité scène activées' : 'Lignes de visibilité scène masquées', kind: 'settings' });
-        }}
-        title="Vérifier la visibilité directe des tables vers la scène ou l'écran géant (vert = dégagé, rouge = obstrué)"
-        className={cn(EDITOR_TOOL, blueprint.metadata.showSightlines ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
-      >
-        <Eye className="w-3.5 h-3.5" aria-hidden />
-        {blueprint.metadata.showSightlines ? 'Visibilité scène ON' : 'Visibilité scène'}
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          const next = !blueprint.metadata.showCirculationHeatmap;
-          updateBlueprint({
-            ...blueprint,
-            metadata: { ...blueprint.metadata, showCirculationHeatmap: next },
-          }, { message: next ? 'Carte des allées de sécurité activée' : 'Carte des allées masquée', kind: 'settings' });
-        }}
-        title="Afficher les allées de circulation et les gabarits de sécurité incendie / PMR (vert = conforme, orange/rouge = étroit)"
-        className={cn(EDITOR_TOOL, blueprint.metadata.showCirculationHeatmap ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
-      >
-        <ShieldCheck className="w-3.5 h-3.5" aria-hidden />
-        {blueprint.metadata.showCirculationHeatmap ? 'Allées & Sécurité ON' : 'Allées & Sécurité'}
-      </button>
-      </ToolbarCluster>
-
-      <ToolbarCluster label="Éditer">
-      <button
-        type="button"
-        onClick={undo}
-        disabled={!canUndo}
-        title="Annuler (Ctrl+Z)"
-        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
-      >
-        <Undo2 className="w-3.5 h-3.5" aria-hidden /> Annuler
-      </button>
-      <button
-        type="button"
-        onClick={redo}
-        disabled={!canRedo}
-        title="Rétablir (Ctrl+Y)"
-        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
-      >
-        <Redo2 className="w-3.5 h-3.5" aria-hidden /> Rétablir
-      </button>
+  /** Contrôles d’analyse : dans l’en-tête sur desktop, dans l’onglet Ajouter sur mobile. */
+  const verifyTools = !readOnly ? (
+    <>
       <button
         type="button"
         onClick={() => setClearanceModalOpen(true)}
@@ -7287,47 +7288,12 @@ export default function RoomLayoutEditor({
       </button>
       <button
         type="button"
-        onClick={() => {
-          const nextVal = !blueprint.metadata.showPmrClearanceOverlay;
-          updateBlueprint(
-            {
-              ...blueprint,
-              metadata: {
-                ...blueprint.metadata,
-                showPmrClearanceOverlay: nextVal,
-              },
-            },
-            {
-              message: nextVal ? 'Mode accessibilité PMR activé' : 'Mode accessibilité standard',
-              kind: 'settings',
-            },
-          );
-        }}
-        title="Activer/désactiver l'affichage des repères d'accessibilité PMR et allées de circulation"
-        className={cn(
-          EDITOR_TOOL,
-          blueprint.metadata.showPmrClearanceOverlay
-            ? 'border-sky-500/50 bg-sky-500/15 text-sky-700 dark:text-sky-300 font-bold'
-            : (blueprint.metadata.totalPmrSeats ?? 0) > 0 || blueprint.metadata.hasPmrAccess
-              ? 'border-sky-500/30 text-sky-600 dark:text-sky-400 bg-surface'
-              : EDITOR_TOOL_IDLE,
-        )}
-      >
-        <span aria-hidden>♿</span>
-        <span>Normes PMR</span>
-        {(blueprint.metadata.totalPmrSeats ?? 0) > 0 && (
-          <span className="px-1.5 py-0.5 rounded-full bg-sky-500/20 text-sky-700 dark:text-sky-300 text-xs font-bold">
-            {blueprint.metadata.totalPmrSeats} pl.
-          </span>
-        )}
-      </button>
-      <button
-        type="button"
         onClick={() => setShortcutsModalOpen(true)}
         title="Consulter les raccourcis clavier"
-        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+        aria-label="Raccourcis clavier"
+        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'px-0 min-w-11')}
       >
-        <Keyboard className="w-3.5 h-3.5" aria-hidden /> Raccourcis
+        <Keyboard className="w-4 h-4" aria-hidden />
       </button>
       <button
         type="button"
@@ -7352,121 +7318,11 @@ export default function RoomLayoutEditor({
           <Trash2 className="w-3.5 h-3.5" aria-hidden /> Supprimer{selection.length > 1 ? ` (${selection.length})` : ''}
         </button>
       )}
-      </ToolbarCluster>
+    </>
+  ) : null;
 
-      <ToolbarCluster label="Réglages">
-      <EditorToolGroup
-        id="view"
-        label="Vue"
-        openId={toolbarGroup}
-        onToggle={toggleToolbarGroup}
-      >
-      <label className={cn(EDITOR_TOOL, 'bg-surface-muted border-border text-muted')}>
-        <Aperture className="w-3.5 h-3.5" aria-hidden />
-        <select
-          value={renderQuality}
-          onChange={(e) => setRenderQuality(e.target.value as RenderQuality)}
-          className="bg-transparent text-xs font-bold text-foreground outline-none"
-          title="Qualité de rendu"
-        >
-          {(Object.keys(renderQualityLabels) as RenderQuality[])
-            .filter((q) => q !== 'showcase' || caps.canShowcaseRender)
-            .map((q) => (
-            <option key={q} value={q}>{renderQualityLabels[q]}</option>
-          ))}
-        </select>
-      </label>
-      {caps.canShowcaseRender ? (
-      <button
-        type="button"
-        onClick={() => {
-          const next = !blueprint.metadata.presentationMode;
-          updateBlueprint({
-            ...blueprint,
-            metadata: {
-              ...blueprint.metadata,
-              presentationMode: next,
-              ...(next ? {
-                showChandeliers: true,
-                showUplights: true,
-                renderQuality: 'showcase' as RenderQuality,
-              } : {}),
-            },
-          }, { message: next ? 'Mode présentation activé' : 'Mode présentation désactivé', kind: 'settings' });
-          if (next) {
-            setLockOrbit(false);
-            setWalkthroughActive(false);
-          }
-        }}
-        title="Orbit automatique, ambiance, sans labels"
-        className={cn(EDITOR_TOOL, blueprint.metadata.presentationMode ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
-      >
-        <Presentation className="w-3.5 h-3.5" aria-hidden />
-        {blueprint.metadata.presentationMode ? 'Présentation ON' : 'Présentation'}
-      </button>
-      ) : null}
-      <button
-        type="button"
-        onClick={exportShowcasePng}
-        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
-        title="Exporter une capture PNG haute définition"
-      >
-        <Download className="w-3.5 h-3.5" aria-hidden /> Export PNG
-      </button>
-      </EditorToolGroup>
-
-      <EditorToolGroup
-        id="light"
-        label="Lumière"
-        openId={toolbarGroup}
-        onToggle={toggleToolbarGroup}
-      >
-      <label className={cn(EDITOR_TOOL, 'bg-surface-muted border-border text-muted')}>
-        <Sun className="w-3.5 h-3.5" aria-hidden />
-        <select
-          value={lightingPreset}
-          onChange={(e) => setLightingPreset(e.target.value as LightingPreset)}
-          className="bg-transparent text-xs font-bold text-foreground outline-none max-w-[140px]"
-          title="Éclairage scénique"
-        >
-          {lightingPresetGroups.map((group) => (
-            <optgroup key={group.label} label={group.label}>
-              {group.presets.map((p) => (
-                <option key={p} value={p}>{lightingPresetLabels[p]}</option>
-              ))}
-            </optgroup>
-          ))}
-        </select>
-      </label>
-      <button
-        type="button"
-        onClick={() => setLightingPreset('day')}
-        title="Soleil de midi — lumière zénithale, ombres franches"
-        className={cn(EDITOR_TOOL, lightingPreset === 'day' ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
-      >
-        <Sun className="w-3.5 h-3.5" aria-hidden />
-        Midi
-      </button>
-      <button
-        type="button"
-        onClick={() => setLightingPreset('dusk')}
-        title="Crépuscule — ciel orange / rose / violet, lumière latérale douce"
-        className={cn(EDITOR_TOOL, lightingPreset === 'dusk' ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
-      >
-        Crépuscule
-      </button>
-      <button
-        type="button"
-        onClick={() => setLightingPreset('night')}
-        title="Nuit — ciel étoilé + réglette LED sur le haut du plan"
-        className={cn(EDITOR_TOOL, lightingPreset === 'night' ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
-      >
-        <Moon className="w-3.5 h-3.5" aria-hidden />
-        Nuit LED
-      </button>
-      </EditorToolGroup>
-      </ToolbarCluster>
-
+  const toolbar = !readOnly && (
+    <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-4 lg:gap-y-2" role="toolbar" aria-label="Outils du plan">
       <ToolbarCluster label="Ajouter">
       <EditorToolGroup
         id="furniture"
@@ -7867,6 +7723,240 @@ export default function RoomLayoutEditor({
       ) : null}
       </EditorToolGroup>
       </ToolbarCluster>
+      <ToolbarCluster label="Vue" labelClassName="lg:sr-only">
+      <EditorToolGroup
+        id="display"
+        label="Affichage"
+        icon={<Eye className="w-3.5 h-3.5" aria-hidden />}
+        openId={toolbarGroup}
+        onToggle={toggleToolbarGroup}
+      >
+      <button
+        type="button"
+        onClick={toggleRoofVisible}
+        aria-pressed={roofVisible}
+        title={roofVisible ? 'Masquer le toit / plafond' : 'Afficher le toit / plafond'}
+        className={cn(EDITOR_TOOL, roofVisible ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+      >
+        {roofVisible ? <Eye className="w-3.5 h-3.5" aria-hidden /> : <EyeOff className="w-3.5 h-3.5" aria-hidden />}
+        {roofVisible ? 'Toit' : 'Toit masqué'}
+      </button>
+      <button
+        type="button"
+        onClick={toggleWallsVisible}
+        aria-pressed={wallsVisible}
+        title={wallsVisible ? 'Masquer les murs (sans les supprimer)' : 'Réafficher les murs'}
+        className={cn(EDITOR_TOOL, wallsVisible ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+      >
+        <BrickWall className="w-3.5 h-3.5" aria-hidden />
+        {wallsVisible ? 'Murs' : 'Murs masqués'}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          if (walkthroughActive) {
+            setWalkthroughActive(false);
+            setWalkthroughLabel('');
+            return;
+          }
+          setLockOrbit(false);
+          if (blueprint.metadata.presentationMode) {
+            updateBlueprint({
+              ...blueprint,
+              metadata: { ...blueprint.metadata, presentationMode: false },
+            }, { message: 'Présentation désactivée pour la visite', kind: 'settings' });
+          }
+          setWalkthroughActive(true);
+          setWalkthroughLabel('Approche de l’entrée');
+          log('Visite guidée démarrée', 'info');
+        }}
+        title="Entre par la porte et visite la salle en 3D"
+        className={cn(EDITOR_TOOL, walkthroughActive ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+      >
+        <DoorOpen className="w-3.5 h-3.5" aria-hidden />
+        {walkthroughActive ? (walkthroughLabel || 'Visite…') : 'Faire le tour'}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          const next = !blueprint.metadata.showSightlines;
+          updateBlueprint({
+            ...blueprint,
+            metadata: { ...blueprint.metadata, showSightlines: next },
+          }, { message: next ? 'Lignes de visibilité scène activées' : 'Lignes de visibilité scène masquées', kind: 'settings' });
+        }}
+        title="Vérifier la visibilité directe des tables vers la scène ou l'écran géant (vert = dégagé, rouge = obstrué)"
+        className={cn(EDITOR_TOOL, blueprint.metadata.showSightlines ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+      >
+        <Eye className="w-3.5 h-3.5" aria-hidden />
+        {blueprint.metadata.showSightlines ? 'Visibilité scène ON' : 'Visibilité scène'}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          const next = !blueprint.metadata.showCirculationHeatmap;
+          updateBlueprint({
+            ...blueprint,
+            metadata: { ...blueprint.metadata, showCirculationHeatmap: next },
+          }, { message: next ? 'Carte des allées de sécurité activée' : 'Carte des allées masquée', kind: 'settings' });
+        }}
+        title="Afficher les allées de circulation et les gabarits de sécurité incendie / PMR (vert = conforme, orange/rouge = étroit)"
+        className={cn(EDITOR_TOOL, blueprint.metadata.showCirculationHeatmap ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+      >
+        <ShieldCheck className="w-3.5 h-3.5" aria-hidden />
+        {blueprint.metadata.showCirculationHeatmap ? 'Allées & Sécurité ON' : 'Allées & Sécurité'}
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          const nextVal = !blueprint.metadata.showPmrClearanceOverlay;
+          updateBlueprint(
+            {
+              ...blueprint,
+              metadata: {
+                ...blueprint.metadata,
+                showPmrClearanceOverlay: nextVal,
+              },
+            },
+            {
+              message: nextVal ? 'Mode accessibilité PMR activé' : 'Mode accessibilité standard',
+              kind: 'settings',
+            },
+          );
+        }}
+        title="Activer/désactiver l'affichage des repères d'accessibilité PMR et allées de circulation"
+        className={cn(
+          EDITOR_TOOL,
+          blueprint.metadata.showPmrClearanceOverlay
+            ? 'border-sky-500/50 bg-sky-500/15 text-sky-700 dark:text-sky-300 font-bold'
+            : (blueprint.metadata.totalPmrSeats ?? 0) > 0 || blueprint.metadata.hasPmrAccess
+              ? 'border-sky-500/30 text-sky-600 dark:text-sky-400 bg-surface'
+              : EDITOR_TOOL_IDLE,
+        )}
+      >
+        <span aria-hidden>♿</span>
+        <span>Normes PMR</span>
+        {(blueprint.metadata.totalPmrSeats ?? 0) > 0 && (
+          <span className="px-1.5 py-0.5 rounded-full bg-sky-500/20 text-sky-700 dark:text-sky-300 text-xs font-bold">
+            {blueprint.metadata.totalPmrSeats} pl.
+          </span>
+        )}
+      </button>
+      </EditorToolGroup>
+      <EditorToolGroup
+        id="view"
+        label="Rendu"
+        openId={toolbarGroup}
+        onToggle={toggleToolbarGroup}
+      >
+      <label className={cn(EDITOR_TOOL, 'bg-surface-muted border-border text-muted')}>
+        <Aperture className="w-3.5 h-3.5" aria-hidden />
+        <select
+          value={renderQuality}
+          onChange={(e) => setRenderQuality(e.target.value as RenderQuality)}
+          className="bg-transparent text-xs font-bold text-foreground outline-none"
+          title="Qualité de rendu"
+        >
+          {(Object.keys(renderQualityLabels) as RenderQuality[])
+            .filter((q) => q !== 'showcase' || caps.canShowcaseRender)
+            .map((q) => (
+            <option key={q} value={q}>{renderQualityLabels[q]}</option>
+          ))}
+        </select>
+      </label>
+      {caps.canShowcaseRender ? (
+      <button
+        type="button"
+        onClick={() => {
+          const next = !blueprint.metadata.presentationMode;
+          updateBlueprint({
+            ...blueprint,
+            metadata: {
+              ...blueprint.metadata,
+              presentationMode: next,
+              ...(next ? {
+                showChandeliers: true,
+                showUplights: true,
+                renderQuality: 'showcase' as RenderQuality,
+              } : {}),
+            },
+          }, { message: next ? 'Mode présentation activé' : 'Mode présentation désactivé', kind: 'settings' });
+          if (next) {
+            setLockOrbit(false);
+            setWalkthroughActive(false);
+          }
+        }}
+        title="Orbit automatique, ambiance, sans labels"
+        className={cn(EDITOR_TOOL, blueprint.metadata.presentationMode ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+      >
+        <Presentation className="w-3.5 h-3.5" aria-hidden />
+        {blueprint.metadata.presentationMode ? 'Présentation ON' : 'Présentation'}
+      </button>
+      ) : null}
+      <button
+        type="button"
+        onClick={exportShowcasePng}
+        className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+        title="Exporter une capture PNG haute définition"
+      >
+        <Download className="w-3.5 h-3.5" aria-hidden /> Export PNG
+      </button>
+      </EditorToolGroup>
+
+      <EditorToolGroup
+        id="light"
+        label="Lumière"
+        openId={toolbarGroup}
+        onToggle={toggleToolbarGroup}
+      >
+      <label className={cn(EDITOR_TOOL, 'bg-surface-muted border-border text-muted')}>
+        <Sun className="w-3.5 h-3.5" aria-hidden />
+        <select
+          value={lightingPreset}
+          onChange={(e) => setLightingPreset(e.target.value as LightingPreset)}
+          className="bg-transparent text-xs font-bold text-foreground outline-none max-w-[140px]"
+          title="Éclairage scénique"
+        >
+          {lightingPresetGroups.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.presets.map((p) => (
+                <option key={p} value={p}>{lightingPresetLabels[p]}</option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+      </label>
+      <button
+        type="button"
+        onClick={() => setLightingPreset('day')}
+        title="Soleil de midi — lumière zénithale, ombres franches"
+        className={cn(EDITOR_TOOL, lightingPreset === 'day' ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+      >
+        <Sun className="w-3.5 h-3.5" aria-hidden />
+        Midi
+      </button>
+      <button
+        type="button"
+        onClick={() => setLightingPreset('dusk')}
+        title="Crépuscule — ciel orange / rose / violet, lumière latérale douce"
+        className={cn(EDITOR_TOOL, lightingPreset === 'dusk' ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+      >
+        Crépuscule
+      </button>
+      <button
+        type="button"
+        onClick={() => setLightingPreset('night')}
+        title="Nuit — ciel étoilé + réglette LED sur le haut du plan"
+        className={cn(EDITOR_TOOL, lightingPreset === 'night' ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+      >
+        <Moon className="w-3.5 h-3.5" aria-hidden />
+        Nuit LED
+      </button>
+      </EditorToolGroup>
+      </ToolbarCluster>
+      <div className="lg:hidden">
+        <ToolbarCluster label="Vérifier">{verifyTools}</ToolbarCluster>
+      </div>
     </div>
   );
 
@@ -8590,7 +8680,7 @@ export default function RoomLayoutEditor({
         <Eye className="w-3.5 h-3.5" aria-hidden />
         {blueprint.metadata.stackView ? 'Empilés · ON' : 'Empiler'}
       </button>
-      <p className="text-xs text-muted w-full sm:w-auto sm:ml-1">
+      <p className="hidden sm:block text-xs text-muted sm:ml-1">
         {blueprint.metadata.stackView
           ? 'Étages empilés en 3D'
           : `Édition : ${activeStory?.label ?? 'RDC'}`}
@@ -8598,21 +8688,70 @@ export default function RoomLayoutEditor({
     </div>
   );
 
+  const planElementCount = blueprint.furniture.length + blueprint.fixtures.length + (blueprint.walls?.length ?? 0);
+
   const header = (
     <div className="flex items-center justify-between gap-2 shrink-0">
-      <p className="text-sm font-semibold text-foreground truncate min-w-0">
-        Plan — {roomTypeLabels[blueprint.roomType as RoomType]} · {blueprint.metadata.totalSeats} places
-      </p>
-      {layout !== 'fill' ? (
-        <button
-          type="button"
-          onClick={() => setIsExpanded((v) => !v)}
-          className={cn(EDITOR_TOOL, EDITOR_TOOL_MUTED)}
-        >
-          {isExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-          {isExpanded ? 'Réduire' : 'Agrandir'}
-        </button>
-      ) : null}
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-foreground truncate">
+          Plan · {roomTypeLabels[blueprint.roomType as RoomType]}
+        </p>
+        <p className="text-xs text-muted tabular-nums truncate">
+          {blueprint.metadata.totalSeats} places · {blueprint.canvas.widthM} × {blueprint.canvas.heightM} m · {planElementCount} élément{planElementCount > 1 ? 's' : ''}
+        </p>
+      </div>
+      <div className="flex items-center gap-1.5 shrink-0">
+        {!readOnly ? (
+          <div className="hidden lg:flex items-center gap-1.5">
+            {verifyTools}
+            <span className="h-6 w-px bg-border mx-0.5" aria-hidden />
+            <button
+              type="button"
+              onClick={undo}
+              disabled={!canUndo}
+              className={cn(EDITOR_TOOL_ICON, 'disabled:opacity-40 disabled:cursor-not-allowed')}
+              aria-label="Annuler"
+              title="Annuler (Ctrl+Z)"
+            >
+              <Undo2 className="w-4 h-4" aria-hidden />
+            </button>
+            <button
+              type="button"
+              onClick={redo}
+              disabled={!canRedo}
+              className={cn(EDITOR_TOOL_ICON, 'disabled:opacity-40 disabled:cursor-not-allowed')}
+              aria-label="Rétablir"
+              title="Rétablir (Ctrl+Y)"
+            >
+              <Redo2 className="w-4 h-4" aria-hidden />
+            </button>
+          </div>
+        ) : null}
+        {canOpenStudio ? (
+          <button
+            type="button"
+            disabled={aiPlanReading}
+            onClick={() => setStudioOpen(true)}
+            className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY, 'px-3.5')}
+            title="Décrire la salle ou importer une photo : l’IA compose le plan"
+          >
+            <Sparkles className="w-4 h-4" aria-hidden />
+            <span className="hidden sm:inline">Studio IA</span>
+            <span className="sm:hidden">IA</span>
+          </button>
+        ) : null}
+        {layout !== 'fill' ? (
+          <button
+            type="button"
+            onClick={() => setIsExpanded((v) => !v)}
+            className={cn(EDITOR_TOOL, EDITOR_TOOL_MUTED)}
+            aria-label={isExpanded ? 'Réduire l’éditeur' : 'Agrandir l’éditeur'}
+          >
+            {isExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">{isExpanded ? 'Réduire' : 'Agrandir'}</span>
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 
@@ -8645,27 +8784,32 @@ export default function RoomLayoutEditor({
           <Crosshair className="w-3.5 h-3.5" aria-hidden />
           Recentrer
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            if (depthAmount === 0) {
-              setDepthAmount(60);
-              log('Vue 3D perspective activée', 'info');
-            } else {
-              setDepthAmount(0);
-              log('Vue Plan 2D activée', 'info');
-            }
-          }}
-          className={cn(
-            EDITOR_TOOL,
-            'shrink-0',
-            depthAmount === 0 ? 'bg-primary/20 text-primary border-primary/50 font-bold' : EDITOR_TOOL_IDLE,
-          )}
-          title={depthAmount === 0 ? 'Passer en 3D' : 'Passer en plan 2D'}
-        >
-          {depthAmount === 0 ? <LayoutGrid className="w-3.5 h-3.5 text-primary" aria-hidden /> : <Box className="w-3.5 h-3.5" aria-hidden />}
-          {depthAmount === 0 ? '2D' : '3D'}
-        </button>
+        <div role="group" aria-label="Mode d’affichage" className="flex items-center gap-0.5 p-0.5 rounded-[var(--radius-button)] border border-border bg-surface-muted shrink-0">
+          {([
+            { amount: 0, label: '2D', icon: LayoutGrid },
+            { amount: 60, label: '3D', icon: Box },
+          ] as const).map((mode) => {
+            const active = mode.amount === 0 ? depthAmount === 0 : depthAmount > 0;
+            const Icon = mode.icon;
+            return (
+              <button
+                key={mode.label}
+                type="button"
+                aria-pressed={active}
+                onClick={() => {
+                  if (!active) setDepthAmount(mode.amount);
+                }}
+                className={cn(
+                  'inline-flex items-center gap-1 min-h-10 px-2.5 rounded-[var(--radius-button)] text-xs font-bold transition-colors',
+                  active ? 'bg-primary-solid text-primary-foreground' : 'text-muted',
+                )}
+              >
+                <Icon className="w-3.5 h-3.5" aria-hidden />
+                {mode.label}
+              </button>
+            );
+          })}
+        </div>
         <button
           type="button"
           onClick={undo}
@@ -9275,7 +9419,7 @@ export default function RoomLayoutEditor({
             {renderCanvas('em-plan-stage lg:min-h-[min(64vh,40rem)]')}
           </div>
           <div className={cn(
-            'max-lg:max-h-[min(70dvh,32rem)] lg:max-h-[520px] overflow-y-auto space-y-3 contain-layout contain-paint pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]',
+            'max-lg:max-h-[min(70dvh,32rem)] lg:max-h-[min(72vh,42rem)] overflow-y-auto space-y-3 contain-layout contain-paint pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]',
             mobilePane !== 'edit' && 'max-lg:hidden',
           )}>
             {renderCanvasInventory()}

@@ -1350,6 +1350,7 @@ function StoryStackDecks({
 
             {!hideLabels ? (
               <Html
+                zIndexRange={[20, 0]}
                 position={[-widthM / 2 - 0.15, Math.min(1.2, storyClear * 0.35), -heightM / 2]}
                 style={{ pointerEvents: 'none', userSelect: 'none' }}
                 distanceFactor={14}
@@ -2222,7 +2223,7 @@ function TableMesh({
                 </mesh>
 
                 {/* 3. Badge flottant 3D avec flèche pointant sur l'assise */}
-                <Html center distanceFactor={7} style={{ pointerEvents: 'none' }} position={[0, 1.05, 0]}>
+                <Html zIndexRange={[20, 0]} center distanceFactor={7} style={{ pointerEvents: 'none' }} position={[0, 1.05, 0]}>
                   <div className="flex flex-col items-center em-seat-float select-none drop-shadow-xl">
                     <div className="px-3 py-1.5 rounded-full bg-primary-solid text-primary-foreground text-xs font-black whitespace-nowrap shadow-xl border-2 border-white flex items-center gap-1.5 ring-4 ring-primary/40">
                       <span className="relative flex h-2 w-2">
@@ -2240,7 +2241,7 @@ function TableMesh({
         );
       })}
       {selected && !hideLabels && (
-        <Html center distanceFactor={8} style={{ pointerEvents: 'none' }} position={[0, topY + 0.35, 0]}>
+        <Html zIndexRange={[20, 0]} center distanceFactor={8} style={{ pointerEvents: 'none' }} position={[0, topY + 0.35, 0]}>
           <div className="px-2.5 py-1 rounded-md bg-foreground/90 backdrop-blur-md text-white text-xs font-bold whitespace-nowrap shadow-md border border-white/20 flex items-center gap-1.5">
             <span className="text-primary-solid font-black">{name}</span>
             {seatPicked ? (
@@ -2332,7 +2333,7 @@ function ZoneMesh({
         <meshStandardMaterial color="#fef3c7" emissive="#f59e0b" emissiveIntensity={0.45} />
       </mesh>
       {!hideLabels && (
-        <Html center distanceFactor={12} style={{ pointerEvents: 'none' }} position={[0, thickness + 0.22, 0]}>
+        <Html zIndexRange={[20, 0]} center distanceFactor={12} style={{ pointerEvents: 'none' }} position={[0, thickness + 0.22, 0]}>
           <span className="text-xs font-bold text-background bg-foreground/85 px-1.5 py-0.5 rounded shadow-sm">{label}</span>
         </Html>
       )}
@@ -2409,7 +2410,7 @@ function FreeChairMesh({
         selected={selected}
       />
       {selected && !hideLabels && (
-        <Html center distanceFactor={9} style={{ pointerEvents: 'none' }} position={[0, 1.05, 0]}>
+        <Html zIndexRange={[20, 0]} center distanceFactor={9} style={{ pointerEvents: 'none' }} position={[0, 1.05, 0]}>
           <span className="text-xs font-bold bg-primary-solid text-primary-foreground px-1.5 py-0.5 rounded">{label || 'Chaise'}</span>
         </Html>
       )}
@@ -2914,7 +2915,7 @@ function FixtureMesh({
         </mesh>
       )}
       {(selected || label) && !hideLabels && (
-        <Html center distanceFactor={10} style={{ pointerEvents: 'none' }} position={[0, height + 0.35, 0]}>
+        <Html zIndexRange={[20, 0]} center distanceFactor={10} style={{ pointerEvents: 'none' }} position={[0, height + 0.35, 0]}>
           <span className="text-xs font-bold bg-foreground/85 text-background px-1.5 py-0.5 rounded">
             {label || kind}
           </span>
@@ -3218,15 +3219,34 @@ function SceneContent({
       });
   }, [blueprint, stories, widthM, heightM]);
 
-  const { camera } = useThree();
+  const { camera, size } = useThree();
+  // Arrondi pour ne recadrer qu’au vrai changement de format (agrandir, rotation du mobile).
+  const viewportAspect = size.width > 0 && size.height > 0
+    ? Math.round((size.width / size.height) * 20) / 20
+    : 1.6;
   useEffect(() => {
     if (walkthroughActive) return;
     const isTopDown = depthAmount === 0;
     const tilt = (depthAmount / 100) * 55;
+    const tiltRad = (tilt * Math.PI) / 180;
     const buildingH = stackView ? topStoryElev + wallHeightM : wallHeightM;
-    const dist = Math.max(widthM, heightM, buildingH * 1.2) * (1.15 + (100 - depthAmount) * 0.008);
-    const elev = Math.cos((tilt * Math.PI) / 180) * dist + (stackView ? focusY * 0.35 : 0);
-    const back = isTopDown ? 0.001 : Math.sin((tilt * Math.PI) / 180) * dist + heightM * (stackView ? 0.35 : 0.15);
+    const fov = isTopDown ? Math.min(32, qualitySettings.fov) : qualitySettings.fov;
+    let dist: number;
+    if (stackView) {
+      dist = Math.max(widthM, heightM, buildingH * 1.2) * (1.15 + (100 - depthAmount) * 0.008);
+    } else {
+      // Cadre la salle entière dans le canvas, quel que soit son format (paysage, portrait).
+      const halfTan = Math.tan((fov * Math.PI) / 360);
+      const spanV = heightM * Math.cos(tiltRad) + wallHeightM * Math.sin(tiltRad);
+      const margin = isTopDown ? 1.1 : 1.16;
+      dist = Math.max(
+        (spanV / 2) * margin / halfTan,
+        (widthM / 2) * margin / (halfTan * viewportAspect),
+        6,
+      );
+    }
+    const elev = Math.cos(tiltRad) * dist + (stackView ? focusY * 0.35 : 0);
+    const back = isTopDown ? 0.001 : Math.sin(tiltRad) * dist + heightM * (stackView ? 0.35 : 0.05);
     camera.position.set(
       stackView ? dist * 0.35 : 0,
       Math.max(elev, stackView ? focusY + 4 : 4),
@@ -3234,10 +3254,17 @@ function SceneContent({
     );
     camera.lookAt(0, focusY, 0);
     if ('fov' in camera) {
-      (camera as THREE.PerspectiveCamera).fov = isTopDown ? Math.min(32, qualitySettings.fov) : qualitySettings.fov;
+      (camera as THREE.PerspectiveCamera).fov = fov;
     }
     camera.updateProjectionMatrix();
-  }, [camera, depthAmount, widthM, heightM, qualitySettings.fov, walkthroughActive, stackView, focusY, topStoryElev, wallHeightM]);
+    // « Recentrer » revient à ce cadrage (et non à la position initiale du canvas).
+    const controls = (orbitControlsRef as { current?: { target?: THREE.Vector3; update?: () => void; saveState?: () => void } } | undefined)?.current;
+    if (controls?.target) {
+      controls.target.set(0, focusY, 0);
+      controls.update?.();
+      controls.saveState?.();
+    }
+  }, [camera, depthAmount, widthM, heightM, qualitySettings.fov, walkthroughActive, stackView, focusY, topStoryElev, wallHeightM, viewportAspect, orbitControlsRef]);
 
   const [dragSession, setDragSession] = React.useState<DragSession | null>(null);
 
@@ -3687,7 +3714,7 @@ function SceneContent({
                 );
               })()}
               {!hideLabels && (
-                <Html center distanceFactor={10} style={{ pointerEvents: 'none' }} position={[0, elevation + 1.1, 0]}>
+                <Html zIndexRange={[20, 0]} center distanceFactor={10} style={{ pointerEvents: 'none' }} position={[0, elevation + 1.1, 0]}>
                   <span className="text-xs font-bold bg-foreground/85 text-background px-1.5 py-0.5 rounded shadow-sm">{item.label}</span>
                 </Html>
               )}
@@ -3880,7 +3907,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
     let target: [number, number, number];
     switch (key) {
       case 'overview':
-        pos = [0, Math.max(widthM, heightM) * 1.05, Math.max(widthM, heightM) * 0.98];
+        pos = [0, Math.max(widthM, heightM) * 0.85, Math.max(widthM, heightM) * 0.72];
         target = [0, 0, 0];
         break;
       case 'stage':
@@ -4150,7 +4177,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
         </div>
       ) : qualitySettings.showHints ? (
         <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
-          <div className="rounded-md bg-foreground/85 px-2 py-1 text-xs font-medium text-background">
+          <div className="max-w-[min(26rem,55%)] rounded-md bg-foreground/85 px-2 py-1 text-xs font-medium text-background">
             {previewMode
               ? 'Glissez pour tourner la vue · molette pour zoomer'
               : orbitLocked

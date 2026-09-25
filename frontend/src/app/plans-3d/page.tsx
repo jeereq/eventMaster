@@ -420,23 +420,23 @@ export default function Plans3DPage() {
               )}
             </div>
 
-            {/* Barre flottante d'indicateurs de capacité */}
-            <div className="absolute bottom-3 inset-x-3 sm:bottom-4 sm:inset-x-4 flex items-center justify-between gap-2 pointer-events-none">
-              <div className="pointer-events-auto flex items-center gap-2 sm:gap-3 bg-foreground/85 px-3 py-1.5 rounded-full border border-background/20 text-background text-xs">
+            {/* Indicateurs sous le plan : ils ne recouvrent plus les commandes du visualiseur. */}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 sm:px-4 border-t border-stage-foreground/10 text-stage-foreground text-xs">
+              <div className="flex items-center gap-3">
                 {stats.seats > 0 && (
                   <span className="flex items-center gap-1 font-semibold tabular-nums">
-                    <Users className="w-3.5 h-3.5 text-primary" />
+                    <Users className="w-3.5 h-3.5 text-festive-on-stage" />
                     <span>~{stats.seats} convives</span>
                   </span>
                 )}
                 {stats.tables > 0 && (
-                  <span className="flex items-center gap-1 text-background/80 tabular-nums">
+                  <span className="flex items-center gap-1 text-stage-foreground/80 tabular-nums">
                     <LayoutGrid className="w-3 h-3" />
                     <span>{stats.tables} tables</span>
                   </span>
                 )}
               </div>
-              <p className="pointer-events-auto text-xs text-background bg-foreground/80 px-2.5 py-1.5 rounded-full border border-background/15">
+              <p className="text-stage-foreground/80">
                 {force2d ? 'Plan coté vu du dessus' : 'Glissez pour tourner à 360°'}
               </p>
             </div>

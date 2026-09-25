@@ -8,6 +8,15 @@ interface Room2DScaleCompassProps {
   heightM: number;
   showGrid?: boolean;
   className?: string;
+  /**
+   * `split` (défaut) : boussole en haut à gauche, dimensions en haut à droite, échelle en bas.
+   * `grouped` : tout en bas à droite, pour laisser le haut aux contrôles de vue (éditeur, aperçus).
+   */
+  placement?: 'split' | 'grouped';
+}
+
+function formatMeters(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
 export default function Room2DScaleCompass({
@@ -15,6 +24,7 @@ export default function Room2DScaleCompass({
   heightM,
   showGrid = true,
   className = '',
+  placement = 'split',
 }: Room2DScaleCompassProps) {
   const safeW = Math.max(5, widthM || 20);
   const safeH = Math.max(5, heightM || 16);
@@ -54,28 +64,57 @@ export default function Room2DScaleCompass({
         </svg>
       )}
 
-      {/* Rose des vents / Boussole NORD (Haut gauche) */}
-      <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-black/60 backdrop-blur-xs text-white shadow-2xs border border-white/10 text-xs font-bold tracking-wider">
-        <Compass className="w-4 h-4 text-amber-400" />
-        <span>N</span>
-      </div>
+      {placement === 'grouped' ? (
+        <>
+          {/* Repères d’architecte regroupés en bas à droite : ils ne masquent plus les contrôles de vue en haut. */}
+          <div className="absolute bottom-2.5 right-2.5 z-10 flex items-center gap-2.5 px-2.5 py-1.5 rounded-md bg-black/60 backdrop-blur-xs text-white shadow-2xs border border-white/10">
+            <span className="flex items-center gap-1 text-xs font-bold tracking-wider">
+              <Compass className="w-4 h-4 text-amber-400" />
+              N
+            </span>
+            <span className="hidden sm:block h-6 w-px bg-white/20" />
+            <span className="hidden sm:inline text-xs font-mono font-semibold tabular-nums whitespace-nowrap">
+              {formatMeters(safeW)} × {formatMeters(safeH)} m · {areaM2} m²
+            </span>
+            <span className="h-6 w-px bg-white/20" />
+            <span className="flex flex-col items-stretch gap-0.5">
+              <span className="flex items-center justify-between text-[10px] font-mono font-bold gap-2">
+                <span>0</span>
+                <span>{scaleM} m</span>
+              </span>
+              <span className="h-1.5 bg-white/20 rounded-xs overflow-hidden flex border border-white/40" style={{ width: `${Math.max(40, Math.min(88, scalePct * 2.5))}px` }}>
+                <span className="w-1/2 h-full bg-white" />
+                <span className="w-1/2 h-full bg-black/80" />
+              </span>
+            </span>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Rose des vents / Boussole NORD (Haut gauche) */}
+          <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-black/60 backdrop-blur-xs text-white shadow-2xs border border-white/10 text-xs font-bold tracking-wider">
+            <Compass className="w-4 h-4 text-amber-400" />
+            <span>N</span>
+          </div>
 
-      {/* Dimensions réelles de la salle (Haut droite) */}
-      <div className="absolute top-2.5 right-2.5 z-10 px-2.5 py-1.5 rounded-md bg-black/60 backdrop-blur-xs text-white shadow-2xs border border-white/10 text-xs font-mono font-semibold tabular-nums">
-        {safeW.toFixed(1)} m × {safeH.toFixed(1)} m ({areaM2} m²)
-      </div>
+          {/* Dimensions réelles de la salle (Haut droite) */}
+          <div className="absolute top-2.5 right-2.5 z-10 px-2.5 py-1.5 rounded-md bg-black/60 backdrop-blur-xs text-white shadow-2xs border border-white/10 text-xs font-mono font-semibold tabular-nums">
+            {safeW.toFixed(1)} m × {safeH.toFixed(1)} m ({areaM2} m²)
+          </div>
 
-      {/* Barre d'échelle métrique (Bas droite) */}
-      <div className="absolute bottom-2.5 right-2.5 z-10 flex flex-col items-end gap-0.5 px-2.5 py-1.5 rounded-md bg-black/60 backdrop-blur-xs text-white shadow-2xs border border-white/10">
-        <div className="flex items-center justify-between text-xs font-mono font-bold w-full gap-2.5">
-          <span>0</span>
-          <span>{scaleM} m</span>
-        </div>
-        <div className="h-1.5 bg-white/20 rounded-xs overflow-hidden flex border border-white/40" style={{ width: `${Math.max(48, Math.min(100, scalePct * 2.5))}px` }}>
-          <div className="w-1/2 h-full bg-white" />
-          <div className="w-1/2 h-full bg-black/80" />
-        </div>
-      </div>
+          {/* Barre d'échelle métrique (Bas droite) */}
+          <div className="absolute bottom-2.5 right-2.5 z-10 flex flex-col items-end gap-0.5 px-2.5 py-1.5 rounded-md bg-black/60 backdrop-blur-xs text-white shadow-2xs border border-white/10">
+            <div className="flex items-center justify-between text-xs font-mono font-bold w-full gap-2.5">
+              <span>0</span>
+              <span>{scaleM} m</span>
+            </div>
+            <div className="h-1.5 bg-white/20 rounded-xs overflow-hidden flex border border-white/40" style={{ width: `${Math.max(48, Math.min(100, scalePct * 2.5))}px` }}>
+              <div className="w-1/2 h-full bg-white" />
+              <div className="w-1/2 h-full bg-black/80" />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
