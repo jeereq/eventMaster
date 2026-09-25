@@ -10,7 +10,7 @@ import { enabledMarketplaceCities } from '@/lib/platformCities';
 import {
   Building2, Plus, Trash2, Users, UserPlus, Check, CheckCircle2,
   ChevronLeft, ChevronRight, LayoutGrid, Theater, Tent, Presentation, Edit3, Sparkles, Ruler,
-  Globe, GlobeLock, Lock, Eye, AlertTriangle, AlertCircle, ExternalLink,
+  Globe, GlobeLock, Lock, Eye, AlertTriangle, AlertCircle, ExternalLink, Accessibility, Maximize2, Armchair, X,
 } from 'lucide-react';
 import {
   ProjectCard, ListRowAction, StatusPill, ViewModeToggle, useViewMode, listStackClass, SkeletonRoomsView,
@@ -94,6 +94,38 @@ const RoomLayoutEditor = dynamic(() => import('@/components/RoomLayoutEditor'), 
 
 const iconActionClass =
   'inline-flex items-center justify-center min-h-11 min-w-11 p-2 text-muted hover:text-foreground hover:bg-surface-muted rounded-[var(--radius-button)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+
+/** Chiffres clés d’une salle, lus depuis le plan (repli sur la capacité saisie). */
+function getRoomFacts(room: RoomItem) {
+  const blueprint = room.layoutBlueprint;
+  const widthM = blueprint?.canvas?.widthM;
+  const heightM = blueprint?.canvas?.heightM;
+  const pmrSeats = blueprint?.metadata?.totalPmrSeats ?? 0;
+  return {
+    seats: blueprint?.metadata?.totalSeats || room.capacity || 0,
+    surface: widthM && heightM ? Math.round(widthM * heightM) : null,
+    dims: widthM && heightM ? `${widthM}×${heightM} m` : null,
+    tables: blueprint?.furniture?.filter((f) => f.kind === 'table').length ?? 0,
+    pmr: Boolean(blueprint?.metadata?.hasPmrAccess) || pmrSeats > 0,
+    pmrSeats,
+  };
+}
+
+function RoomFactChip({ icon, children, tone = 'neutral' }: { icon: React.ReactNode; children: React.ReactNode; tone?: 'neutral' | 'primary' }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full border tabular-nums',
+        tone === 'primary'
+          ? 'bg-primary/10 text-primary border-primary/20'
+          : 'bg-surface-muted text-foreground border-border',
+      )}
+    >
+      <span aria-hidden className={cn('[&>svg]:w-3.5 [&>svg]:h-3.5', tone === 'primary' ? 'text-primary' : 'text-muted')}>{icon}</span>
+      {children}
+    </span>
+  );
+}
 
 interface RoomStaffItem {
   id: string;
@@ -407,6 +439,9 @@ export default function RoomsManagement() {
   const [assignRoomId, setAssignRoomId] = useState<string | null>(null);
   const [assignUserId, setAssignUserId] = useState('');
   const [assignRole, setAssignRole] = useState<'MANAGER' | 'PROTOCOL'>('PROTOCOL');
+  const [staffToRemove, setStaffToRemove] = useState<string | null>(null);
+  const [staffBusy, setStaffBusy] = useState(false);
+  const [staffError, setStaffError] = useState('');
   const [listingRoom, setListingRoom] = useState<RoomItem | null>(null);
   const [wizardListingDraft, setWizardListingDraft] = useState<RoomPublicationDraft>(() => createDefaultListingDraft());
   const [editListingDraft, setEditListingDraft] = useState<RoomPublicationDraft>(() => createDefaultListingDraft());
@@ -1076,29 +1111,50 @@ export default function RoomsManagement() {
     })();
   };
 
+  const openStaffManager = (room: RoomItem) => {
+    setAssignRoomId(room.id);
+    setAssignUserId('');
+    setAssignRole('PROTOCOL');
+    setStaffToRemove(null);
+    setStaffError('');
+  };
+
+  const closeStaffManager = () => {
+    if (staffBusy) return;
+    setAssignRoomId(null);
+    setStaffToRemove(null);
+    setStaffError('');
+  };
+
   const handleAssignStaff = async (roomId: string) => {
     if (!assignUserId) return;
+    setStaffBusy(true);
+    setStaffError('');
     try {
       await api.post(`/rooms/${roomId}/staff`, {
         userId: assignUserId,
         staffRole: assignRole,
       });
-      setSuccess('Staff assigné à la salle.');
-      setAssignRoomId(null);
       setAssignUserId('');
       await load();
     } catch (err: any) {
-      setError(err.message || 'Erreur lors de l\'assignation.');
+      setStaffError(err.message || 'Impossible d’assigner ce membre. Réessayez.');
+    } finally {
+      setStaffBusy(false);
     }
   };
 
   const handleRemoveStaff = async (roomId: string, userId: string) => {
+    setStaffBusy(true);
+    setStaffError('');
     try {
       await api.delete(`/rooms/${roomId}/staff/${userId}`);
-      setSuccess('Staff retiré.');
+      setStaffToRemove(null);
       await load();
     } catch (err: any) {
-      setError(err.message || 'Erreur.');
+      setStaffError(err.message || 'Impossible de retirer ce membre. Réessayez.');
+    } finally {
+      setStaffBusy(false);
     }
   };
 
@@ -1342,15 +1398,40 @@ export default function RoomsManagement() {
             {canCatalogPublish
               ? ' Vous pouvez ensuite la publier pour la location.'
               : ' Ces salles servent au plan de table — elles ne sont pas publiées sur le marketplace.'}
-            {planQuota && (
-              <span className="block mt-1 font-medium text-primary">
-                Salles : {planQuota.usage.rooms} / {planQuota.limits.maxRooms >= 9999 ? '∞' : planQuota.limits.maxRooms}
-                {planFeatures?.roomEditorLevel && (
-                  <> · Éditeur {planFeatures.roomEditorLevel}</>
-                )}
-              </span>
-            )}
           </p>
+          {planQuota && (() => {
+            const max = planQuota.limits.maxRooms;
+            const unlimited = max >= 9999;
+            const used = planQuota.usage.rooms;
+            const pct = unlimited || max <= 0 ? 0 : Math.min(100, Math.round((used / max) * 100));
+            return (
+              <div className="mt-3 max-w-xs space-y-1">
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="font-semibold text-foreground tabular-nums">
+                    {used} / {unlimited ? '∞' : max} salle{used > 1 ? 's' : ''}
+                  </span>
+                  {planFeatures?.roomEditorLevel && (
+                    <span className="text-muted">Éditeur {planFeatures.roomEditorLevel}</span>
+                  )}
+                </div>
+                {!unlimited && (
+                  <div
+                    className="h-1.5 rounded-full bg-surface-muted overflow-hidden"
+                    role="progressbar"
+                    aria-label="Salles utilisées sur votre forfait"
+                    aria-valuemin={0}
+                    aria-valuemax={max}
+                    aria-valuenow={used}
+                  >
+                    <div
+                      className={cn('h-full rounded-full transition-all', pct >= 100 ? 'bg-danger' : pct >= 80 ? 'bg-festive-accent' : 'bg-primary')}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {rooms.length > 0 && (
@@ -1604,7 +1685,16 @@ export default function RoomsManagement() {
         </nav>
 
         {wizardStep === 1 && (
-          <div className="space-y-5">
+          <div
+            className="space-y-5"
+            onKeyDown={(e) => {
+              // Entrée dans un champ texte = étape suivante (pas dans la description multi-lignes).
+              if (e.key !== 'Enter' || e.nativeEvent.isComposing) return;
+              if (!(e.target instanceof HTMLInputElement) || e.target.type === 'checkbox') return;
+              e.preventDefault();
+              goToStep(2);
+            }}
+          >
             <div>
               <h3 className="text-sm font-semibold text-foreground">Identité</h3>
               <p className="text-xs text-muted mt-1 mb-3">Nom et emplacement visibles pour l’équipe et le catalogue.</p>
@@ -1644,7 +1734,7 @@ export default function RoomsManagement() {
             <div className="p-3.5 rounded-xl border border-border bg-surface-muted/40 flex items-center justify-between gap-3">
               <div className="space-y-0.5">
                 <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                  <span aria-hidden>♿</span> Accès PMR & Mobilité Réduite
+                  <Accessibility className="w-4 h-4 text-primary" aria-hidden /> Accès PMR & mobilité réduite
                 </span>
                 <p className="text-xs text-muted">
                   La salle dispose d’accès plain-pied, d’ascenseurs ou de rampes adaptés.
@@ -2158,12 +2248,205 @@ export default function RoomsManagement() {
           </div>
         }
       >
-        {error && roomToDelete ? <Alert variant="error">{error}</Alert> : (
-          <p className="text-sm text-muted">
-            Confirmez seulement si vous n’avez plus besoin de cette salle.
-          </p>
-        )}
+        {roomToDelete && (() => {
+          const facts = getRoomFacts(roomToDelete);
+          const eventsCount = roomToDelete._count?.events ?? 0;
+          const planBits = [
+            facts.seats ? `${facts.seats} places` : null,
+            facts.tables ? `${facts.tables} table${facts.tables > 1 ? 's' : ''}` : null,
+          ].filter(Boolean).join(', ');
+          const impacts = [
+            `Le plan${planBits ? ` (${planBits})` : ''} sera effacé.`,
+            roomToDelete.staff.length > 0
+              ? `${roomToDelete.staff.length} membre${roomToDelete.staff.length > 1 ? 's' : ''} du staff perdr${roomToDelete.staff.length > 1 ? 'ont' : 'a'} l’accès à cette salle.`
+              : null,
+            eventsCount > 0
+              ? `${eventsCount} événement${eventsCount > 1 ? 's' : ''} ne ser${eventsCount > 1 ? 'ont' : 'a'} plus rattaché${eventsCount > 1 ? 's' : ''} à une salle.`
+              : null,
+            canCatalogPublish && roomToDelete.venueListing?.isPublic
+              ? 'La fiche publique disparaîtra du marketplace.'
+              : null,
+          ].filter(Boolean) as string[];
+          return (
+            <div className="space-y-3">
+              {error ? <Alert variant="error">{error}</Alert> : null}
+              <ul className="space-y-1.5 text-sm text-foreground">
+                {impacts.map((line) => (
+                  <li key={line} className="flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 text-danger shrink-0 mt-0.5" aria-hidden />
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })()}
       </Modal>
+
+      {(() => {
+        const staffRoom = assignRoomId ? rooms.find((r) => r.id === assignRoomId) ?? null : null;
+        const assignedIds = new Set(staffRoom?.staff.map((s) => s.user.id) ?? []);
+        const availableMembers = teamMembers.filter((m) => !assignedIds.has(m.id));
+        return (
+          <Modal
+            open={Boolean(staffRoom) && canManage}
+            onClose={closeStaffManager}
+            title={staffRoom ? `Staff · ${staffRoom.name}` : 'Staff de la salle'}
+            description="Les managers gèrent la salle ; le protocole accueille et place les invités le jour J."
+            size="md"
+            footer={
+              <div className="flex w-full justify-end">
+                <Button type="button" variant="secondary" size="sm" onClick={closeStaffManager} disabled={staffBusy}>
+                  Terminé
+                </Button>
+              </div>
+            }
+          >
+            {staffRoom && (
+              <div className="space-y-5">
+                {staffError ? <Alert variant="error">{staffError}</Alert> : null}
+
+                <section className="space-y-2">
+                  <h3 className="text-sm font-semibold text-foreground">
+                    Membres assignés ({staffRoom.staff.length})
+                  </h3>
+                  {staffRoom.staff.length === 0 ? (
+                    <p className="text-sm text-muted rounded-[var(--radius-card)] border border-dashed border-border px-3 py-4 text-center">
+                      Personne n’est encore assigné à cette salle.
+                    </p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {staffRoom.staff.map((s) => {
+                        const label = s.user.name || s.user.email;
+                        const confirming = staffToRemove === s.user.id;
+                        return (
+                          <li
+                            key={s.id}
+                            className={cn(
+                              'flex items-center gap-3 rounded-[var(--radius-button)] border px-3 py-2',
+                              confirming ? 'border-danger/30 bg-danger/5' : 'border-border bg-surface',
+                            )}
+                          >
+                            <span
+                              className="w-8 h-8 shrink-0 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center"
+                              aria-hidden
+                            >
+                              {label.charAt(0).toUpperCase()}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-foreground truncate">{label}</p>
+                              <p className="text-xs text-muted">{roleLabels[s.staffRole]}</p>
+                            </div>
+                            {confirming ? (
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="danger"
+                                  loading={staffBusy}
+                                  onClick={() => void handleRemoveStaff(staffRoom.id, s.user.id)}
+                                >
+                                  Retirer
+                                </Button>
+                                <button
+                                  type="button"
+                                  onClick={() => setStaffToRemove(null)}
+                                  disabled={staffBusy}
+                                  className={iconActionClass}
+                                  aria-label="Annuler le retrait"
+                                >
+                                  <X className="w-4 h-4" aria-hidden />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setStaffToRemove(s.user.id)}
+                                disabled={staffBusy}
+                                className={cn(iconActionClass, 'shrink-0 hover:text-danger hover:bg-danger/10')}
+                                aria-label={`Retirer ${label} de ${staffRoom.name}`}
+                                title="Retirer de la salle"
+                              >
+                                <Trash2 className="w-4 h-4" aria-hidden />
+                              </button>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </section>
+
+                <section className="space-y-3 pt-4 border-t border-border">
+                  <h3 className="text-sm font-semibold text-foreground">Ajouter un membre</h3>
+                  {availableMembers.length === 0 ? (
+                    <p className="text-sm text-muted">
+                      Tous les membres de l’équipe sont déjà assignés.{' '}
+                      <Link href="/dashboard/team" className="font-semibold text-primary underline-offset-2 hover:underline">
+                        Inviter quelqu’un
+                      </Link>
+                    </p>
+                  ) : (
+                    <>
+                      <label className="block">
+                        <span className={labelClass}>Membre de l’équipe</span>
+                        <select
+                          value={assignUserId}
+                          onChange={(e) => setAssignUserId(e.target.value)}
+                          className={fieldClass}
+                        >
+                          <option value="">Choisir un membre</option>
+                          {availableMembers.map((m) => (
+                            <option key={m.id} value={m.id}>{m.name || m.email}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <div role="radiogroup" aria-label="Rôle dans la salle" className="grid grid-cols-2 gap-2">
+                        {([
+                          { id: 'PROTOCOL', label: 'Protocole', hint: 'Accueil et placement' },
+                          { id: 'MANAGER', label: 'Manager', hint: 'Gère plan et staff' },
+                        ] as const).map((opt) => {
+                          const selected = assignRole === opt.id;
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              role="radio"
+                              aria-checked={selected}
+                              onClick={() => setAssignRole(opt.id)}
+                              className={cn(
+                                'text-left min-h-11 px-3 py-2 rounded-[var(--radius-button)] border transition-colors',
+                                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                                selected ? 'border-primary bg-primary/5' : 'border-border bg-surface hover:bg-surface-muted',
+                              )}
+                            >
+                              <span className={cn('block text-sm font-semibold', selected ? 'text-primary' : 'text-foreground')}>
+                                {opt.label}
+                              </span>
+                              <span className="block text-xs text-muted">{opt.hint}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="w-full"
+                        disabled={!assignUserId}
+                        loading={staffBusy && !staffToRemove}
+                        onClick={() => void handleAssignStaff(staffRoom.id)}
+                        leftIcon={<UserPlus className="w-4 h-4" />}
+                      >
+                        Assigner à la salle
+                      </Button>
+                    </>
+                  )}
+                </section>
+              </div>
+            )}
+          </Modal>
+        );
+      })()}
 
       {loading ? (
         <SkeletonRoomsView mode={roomsViewMode} />
@@ -2185,6 +2468,21 @@ export default function RoomsManagement() {
           icon={<Building2 className="w-5 h-5" />}
           title="Aucune salle pour ces filtres"
           description="Élargissez le type, la ville ou la visibilité, ou créez une nouvelle salle."
+          action={
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setRoomQuery('');
+                setFilterRoomType('');
+                setFilterVisibility('all');
+                setFilterCity('');
+              }}
+            >
+              Réinitialiser les filtres
+            </Button>
+          }
         />
       ) : (
         <div
@@ -2195,239 +2493,194 @@ export default function RoomsManagement() {
           }
         >
           {pagedRooms.map((room) => {
-            const metaLine = [room.floor, room.location, room.capacity ? `${room.capacity} places` : null]
-              .filter(Boolean)
-              .join(' · ') || 'Sans détails';
-            const actions = (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setViewingRoom(room)}
-                  className={roomsViewMode === 'list' ? 'inline-flex items-center min-h-11' : iconActionClass}
-                  aria-label={`Voir les détails de ${room.name}`}
-                  title="Voir les détails"
-                >
-                  {roomsViewMode === 'list' ? <ListRowAction>Détails</ListRowAction> : <Eye className="w-4 h-4" aria-hidden />}
-                </button>
-                {canManage ? (
+            const facts = getRoomFacts(room);
+            const typeLabel = roomTypeLabels[room.roomType || 'SIMPLE'];
+            const isPublished = canCatalogPublish && Boolean(room.venueListing?.isPublic);
+            const placeLine = [room.floor, room.location].filter(Boolean).join(' · ');
+            const listMeta = [typeLabel, placeLine || null, `${room.staff.length} staff`].filter(Boolean).join(' · ');
+            const isList = roomsViewMode === 'list';
+
+            const secondaryActions = canManage ? (
               <>
                 {canCatalogPublish && (
-                <button
-                  type="button"
-                  onClick={() => openListing(room)}
-                  className={iconActionClass}
-                  aria-label={room.venueListing?.isPublic ? `Fiche marketplace de ${room.name}` : `Publier ${room.name}`}
-                  title={room.venueListing?.isPublic ? 'Fiche marketplace' : 'Publier cette salle'}
-                >
-                  {room.venueListing?.isPublic ? <Globe className="w-4 h-4" aria-hidden /> : <GlobeLock className="w-4 h-4" aria-hidden />}
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => openListing(room)}
+                    className={iconActionClass}
+                    aria-label={isPublished ? `Fiche marketplace de ${room.name}` : `Publier ${room.name}`}
+                    title={isPublished ? 'Fiche marketplace' : 'Publier cette salle'}
+                  >
+                    {isPublished ? <Globe className="w-4 h-4 text-primary" aria-hidden /> : <GlobeLock className="w-4 h-4" aria-hidden />}
+                  </button>
                 )}
                 <button
                   type="button"
-                  onClick={() => openEditLayout(room)}
-                  className={roomsViewMode === 'list' ? 'inline-flex items-center min-h-11' : iconActionClass}
-                  aria-label={`Modifier le plan de ${room.name}`}
-                  title="Modifier le plan"
+                  onClick={() => openStaffManager(room)}
+                  className={iconActionClass}
+                  aria-label={`Gérer le staff de ${room.name}`}
+                  title="Gérer le staff"
                 >
-                  {roomsViewMode === 'list' ? <ListRowAction>Plan</ListRowAction> : <Edit3 className="w-4 h-4" aria-hidden />}
+                  <UserPlus className="w-4 h-4" aria-hidden />
                 </button>
                 <button
                   type="button"
                   onClick={() => setRoomToDelete(room)}
-                  className={iconActionClass}
+                  className={cn(iconActionClass, 'hover:text-danger hover:bg-danger/10')}
                   aria-label={`Supprimer ${room.name}`}
                   title="Supprimer la salle"
                 >
                   <Trash2 className="w-4 h-4" aria-hidden />
                 </button>
               </>
-                ) : null}
+            ) : null;
+
+            const actions = isList ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setViewingRoom(room)}
+                  className="inline-flex items-center min-h-11 px-1"
+                  aria-label={`Voir les détails de ${room.name}`}
+                >
+                  <ListRowAction>Détails</ListRowAction>
+                </button>
+                {canManage && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => openEditLayout(room)}
+                    leftIcon={<Edit3 className="w-4 h-4" />}
+                    aria-label={`Modifier ${room.name}`}
+                  >
+                    Modifier
+                  </Button>
+                )}
+                {secondaryActions}
               </>
+            ) : (
+              <div className="flex w-full items-center gap-1.5">
+                {canManage ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => openEditLayout(room)}
+                    leftIcon={<Edit3 className="w-4 h-4" />}
+                    aria-label={`Modifier ${room.name}`}
+                  >
+                    Modifier
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="flex-1"
+                    onClick={() => setViewingRoom(room)}
+                    leftIcon={<Eye className="w-4 h-4" />}
+                  >
+                    Voir la salle
+                  </Button>
+                )}
+                {secondaryActions}
+              </div>
             );
 
             return (
-              <div key={room.id} className="space-y-2">
-                <ProjectCard
-                  id={room.id}
-                  title={room.name}
-                  layout={roomsViewMode}
-                  icon={<Building2 className="w-4 h-4" />}
-                  overlayMeta={roomTypeLabels[room.roomType || 'SIMPLE']}
-                  ctaLabel="Ouvrir la salle"
-                  onClick={() => setViewingRoom(room)}
-                  cover={
-                    room.layoutBlueprint ? (
-                      <RoomLayoutPreview
-                        blueprint={room.layoutBlueprint as RoomLayoutBlueprint}
-                        quality="thumb"
-                        showMeta={false}
-                        className="!space-y-0 h-full w-full [&_.em-floor-canvas]:rounded-none [&_.em-floor-canvas]:border-0 [&_.em-floor-canvas]:h-full"
-                      />
-                    ) : undefined
-                  }
-                  meta={
-                    roomsViewMode === 'list' ? (
-                      <span>{metaLine}</span>
-                    ) : (
-                      <div className="space-y-0.5">
-                        <span className="inline-flex text-xs font-semibold uppercase tracking-wide text-primary">
-                          {roomTypeLabels[room.roomType || 'SIMPLE']}
-                        </span>
-                        <p>{metaLine}</p>
-                      </div>
-                    )
-                  }
-                  value={
-                    roomsViewMode === 'list'
-                      ? `${room.staff.length} staff`
-                      : undefined
-                  }
-                  status={
-                    roomsViewMode === 'list' ? (
-                      canCatalogPublish && room.venueListing?.isPublic ? (
-                        <StatusPill tone="emerald">Publiée</StatusPill>
-                      ) : (
-                      <StatusPill tone="primary">
-                        {roomTypeLabels[room.roomType || 'SIMPLE']}
-                      </StatusPill>
-                      )
-                    ) : canCatalogPublish && room.venueListing?.isPublic ? (
-                      <StatusPill tone="emerald">Publiée</StatusPill>
-                    ) : undefined
-                  }
-                  description={roomsViewMode === 'grid' ? room.description : undefined}
-                  actions={actions}
-                >
-                  <div className="space-y-1.5">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1">
-                      <Users className="w-3.5 h-3.5" /> Staff ({room.staff.length})
-                    </p>
-                    {room.staff.length === 0 ? (
-                      <p className="text-xs text-muted italic">Aucun staff assigné.</p>
-                    ) : (
-                      room.staff.slice(0, roomsViewMode === 'grid' ? 2 : 4).map((s) => (
-                        <div
-                          key={s.id}
-                          className="flex items-center justify-between text-xs bg-surface-muted rounded-[var(--radius-button)] px-2.5 py-1.5"
-                        >
-                          <div className="min-w-0 truncate">
-                            <span className="font-medium text-foreground">
-                              {s.user.name || s.user.email}
-                            </span>
-                            <span className="ml-1.5 text-xs font-semibold uppercase text-primary">
-                              {roleLabels[s.staffRole]}
-                            </span>
-                          </div>
-                          {canManage && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveStaff(room.id, s.user.id)}
-                              className={cn(iconActionClass, 'shrink-0')}
-                              aria-label={`Retirer ${s.user.name || s.user.email} de ${room.name}`}
-                            >
-                              <Trash2 className="w-4 h-4" aria-hidden />
-                            </button>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  {/* Badges d'accessibilité PMR et caractéristiques du plan */}
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-border/40">
-                    {room.layoutBlueprint?.canvas?.widthM && room.layoutBlueprint?.canvas?.heightM ? (
-                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-surface-muted text-muted border border-border">
-                        {room.layoutBlueprint.canvas.widthM * room.layoutBlueprint.canvas.heightM} m² ({room.layoutBlueprint.canvas.widthM}×{room.layoutBlueprint.canvas.heightM}m)
-                      </span>
-                    ) : null}
-                    {(room.layoutBlueprint?.metadata?.hasPmrAccess || (room.layoutBlueprint?.metadata?.totalPmrSeats ?? 0) > 0) && (
-                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/20 inline-flex items-center gap-1">
-                        <span aria-hidden>♿</span> Accès PMR {(room.layoutBlueprint?.metadata?.totalPmrSeats ?? 0) > 0 ? `(${room.layoutBlueprint?.metadata?.totalPmrSeats} pl.)` : ''}
-                      </span>
-                    )}
-                    {(room.layoutBlueprint?.furniture?.filter((f) => f.kind === 'table').length ?? 0) > 0 && (
-                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-surface-muted text-muted border border-border">
-                        {room.layoutBlueprint?.furniture?.filter((f) => f.kind === 'table').length} table{(room.layoutBlueprint?.furniture?.filter((f) => f.kind === 'table').length ?? 0) > 1 ? 's' : ''}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Actions directes rapides et intuitives */}
-                  <div className="flex items-center gap-2 pt-2 border-t border-border/60">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setViewingRoom(room);
-                      }}
-                      className="flex-1 min-h-9 px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-surface border border-border hover:bg-surface-muted hover:border-primary/40 text-foreground transition inline-flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <Eye className="w-3.5 h-3.5 text-primary" />
-                      <span>Détails & Rendu</span>
-                    </button>
-                    {canManage && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditLayout(room);
-                        }}
-                        className="flex-1 min-h-9 px-2.5 py-1.5 text-xs font-bold rounded-lg bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover transition inline-flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                        <span>Modifier plan</span>
-                      </button>
-                    )}
-                  </div>
-                </ProjectCard>
-
-                {canManage && (
-                  assignRoomId === room.id ? (
-                    <div className="flex flex-wrap gap-2 items-end p-3 border border-border rounded-[var(--radius-card)] bg-surface-muted">
-                      <label className="flex-1 min-w-[140px]">
-                        <span className="sr-only">Membre à assigner</span>
-                        <select
-                          value={assignUserId}
-                          onChange={(e) => setAssignUserId(e.target.value)}
-                          className={fieldClass}
-                          aria-label="Membre à assigner"
-                        >
-                        <option value="">Choisir un utilisateur</option>
-                        {teamMembers.map((m) => (
-                          <option key={m.id} value={m.id}>{m.name || m.email}</option>
-                        ))}
-                        </select>
-                      </label>
-                      <label>
-                        <span className="sr-only">Rôle dans la salle</span>
-                        <select
-                          value={assignRole}
-                          onChange={(e) => setAssignRole(e.target.value as 'MANAGER' | 'PROTOCOL')}
-                          className={fieldClass}
-                          aria-label="Rôle dans la salle"
-                        >
-                        <option value="MANAGER">Manager</option>
-                        <option value="PROTOCOL">Protocole</option>
-                        </select>
-                      </label>
-                      <Button type="button" size="sm" onClick={() => handleAssignStaff(room.id)}>
-                        Assigner
-                      </Button>
-                      <Button type="button" size="sm" variant="secondary" onClick={() => setAssignRoomId(null)}>
-                        Annuler
-                      </Button>
+              <ProjectCard
+                key={room.id}
+                id={room.id}
+                title={room.name}
+                layout={roomsViewMode}
+                icon={<Building2 className="w-4 h-4" />}
+                overlayMeta={[typeLabel, facts.seats ? `${facts.seats} places` : null].filter(Boolean).join(' · ')}
+                hideCta
+                onClick={() => setViewingRoom(room)}
+                cover={
+                  room.layoutBlueprint ? (
+                    <RoomLayoutPreview
+                      blueprint={room.layoutBlueprint as RoomLayoutBlueprint}
+                      quality="thumb"
+                      showMeta={false}
+                      className="!space-y-0 h-full w-full [&_.em-floor-canvas]:rounded-none [&_.em-floor-canvas]:border-0 [&_.em-floor-canvas]:h-full"
+                    />
+                  ) : undefined
+                }
+                meta={isList ? <span>{listMeta}</span> : placeLine ? <p className="truncate">{placeLine}</p> : undefined}
+                value={isList ? (facts.seats ? `${facts.seats} pl.` : '—') : undefined}
+                valueMeta={isList && facts.surface ? `${facts.surface} m²` : undefined}
+                status={
+                  isPublished ? (
+                    <StatusPill tone="emerald">Publiée</StatusPill>
+                  ) : isList ? (
+                    <StatusPill tone="slate">Privée</StatusPill>
+                  ) : undefined
+                }
+                description={isList ? undefined : room.description}
+                actions={actions}
+              >
+                {isList ? null : (
+                  <>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <RoomFactChip icon={<Armchair />}>
+                        {facts.seats ? `${facts.seats} places` : 'Capacité à définir'}
+                      </RoomFactChip>
+                      {facts.surface ? (
+                        <RoomFactChip icon={<Maximize2 />}>{facts.surface} m²</RoomFactChip>
+                      ) : null}
+                      {facts.tables > 0 ? (
+                        <RoomFactChip icon={<LayoutGrid />}>
+                          {facts.tables} table{facts.tables > 1 ? 's' : ''}
+                        </RoomFactChip>
+                      ) : null}
+                      {facts.pmr ? (
+                        <RoomFactChip icon={<Accessibility />} tone="primary">
+                          PMR{facts.pmrSeats > 0 ? ` · ${facts.pmrSeats} pl.` : ''}
+                        </RoomFactChip>
+                      ) : null}
                     </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setAssignRoomId(room.id)}
-                      className="inline-flex items-center gap-1.5 min-h-11 text-sm font-medium text-primary underline-offset-2 hover:underline px-1 rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+
+                    <div
+                      className="flex items-center justify-between gap-2 pt-2 border-t border-border/60"
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      <UserPlus className="w-3.5 h-3.5" /> Assigner un staff
-                    </button>
-                  )
+                      <div className="min-w-0 flex items-center gap-2">
+                        {room.staff.length > 0 ? (
+                          <div className="flex -space-x-1.5 shrink-0" aria-hidden>
+                            {room.staff.slice(0, 3).map((s) => (
+                              <span
+                                key={s.id}
+                                className="w-7 h-7 rounded-full bg-primary/10 text-primary border-2 border-surface text-xs font-semibold flex items-center justify-center"
+                              >
+                                {(s.user.name || s.user.email).charAt(0).toUpperCase()}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <Users className="w-4 h-4 text-muted shrink-0" aria-hidden />
+                        )}
+                        <p className="text-xs text-muted truncate">
+                          {room.staff.length === 0
+                            ? 'Aucun staff assigné'
+                            : room.staff.length === 1
+                              ? `${room.staff[0].user.name || room.staff[0].user.email} · ${roleLabels[room.staff[0].staffRole]}`
+                              : `${room.staff.length} membres du staff`}
+                        </p>
+                      </div>
+                      {canManage && (
+                        <button
+                          type="button"
+                          onClick={() => openStaffManager(room)}
+                          className="shrink-0 inline-flex items-center min-h-11 px-2 text-xs font-semibold text-primary rounded-[var(--radius-button)] hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                        >
+                          {room.staff.length === 0 ? 'Assigner' : 'Gérer'}
+                        </button>
+                      )}
+                    </div>
+                  </>
                 )}
-              </div>
+              </ProjectCard>
             );
           })}
         </div>
@@ -2455,14 +2708,30 @@ export default function RoomsManagement() {
               <Button type="button" variant="secondary" size="sm" onClick={() => setViewingRoom(null)}>
                 Fermer
               </Button>
+              {canManage && viewingRoom && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-danger hover:bg-danger/10"
+                  leftIcon={<Trash2 className="w-4 h-4" />}
+                  onClick={() => {
+                    const room = viewingRoom;
+                    setViewingRoom(null);
+                    setRoomToDelete(room);
+                  }}
+                >
+                  Supprimer
+                </Button>
+              )}
               {canCatalogPublish && viewingRoom?.venueListing?.isPublic && viewingRoom.venueListing.slug && (
                 <Link
                   href={`/marketplace/salles/${viewingRoom.venueListing.slug}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="min-h-9 px-3 py-1.5 rounded-lg border border-border text-xs font-semibold text-foreground hover:bg-surface-muted transition inline-flex items-center gap-1.5"
+                  className="min-h-11 px-3 py-1.5 rounded-[var(--radius-button)] border border-border text-xs font-semibold text-foreground hover:bg-surface-muted transition inline-flex items-center gap-1.5"
                 >
-                  <Globe className="w-3.5 h-3.5 text-emerald-600" />
+                  <Globe className="w-3.5 h-3.5 text-primary" />
                   <span>Fiche publique</span>
                   <ExternalLink className="w-3 h-3" />
                 </Link>
@@ -2479,7 +2748,7 @@ export default function RoomsManagement() {
                 }}
                 leftIcon={<Edit3 className="w-4 h-4" />}
               >
-                Modifier le plan 3D
+                Modifier la salle
               </Button>
             )}
           </div>
@@ -2510,8 +2779,8 @@ export default function RoomsManagement() {
                 <p className="text-xs font-bold uppercase text-muted">Accessibilité PMR</p>
                 <p className="font-semibold text-foreground">
                   {viewingRoom.layoutBlueprint?.metadata?.hasPmrAccess || (viewingRoom.layoutBlueprint?.metadata?.totalPmrSeats ?? 0) > 0 ? (
-                    <span className="text-sky-600 dark:text-sky-400 font-bold flex items-center gap-1">
-                      <span aria-hidden>♿</span> {(viewingRoom.layoutBlueprint?.metadata?.totalPmrSeats ?? 0) > 0 ? `${viewingRoom.layoutBlueprint?.metadata?.totalPmrSeats} pl. PMR` : 'Conforme'}
+                    <span className="text-primary font-bold flex items-center gap-1">
+                      <Accessibility className="w-3.5 h-3.5" aria-hidden /> {(viewingRoom.layoutBlueprint?.metadata?.totalPmrSeats ?? 0) > 0 ? `${viewingRoom.layoutBlueprint?.metadata?.totalPmrSeats} pl. PMR` : 'Conforme'}
                     </span>
                   ) : (
                     <span className="text-muted">Standard</span>
@@ -2550,11 +2819,29 @@ export default function RoomsManagement() {
                 showDepthControls
               />
             </div>
-            {viewingRoom.staff.length > 0 && (
+            {(viewingRoom.staff.length > 0 || canManage) && (
               <div className="space-y-1.5">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1">
-                  <Users className="w-3.5 h-3.5" /> Staff
-                </p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted flex items-center gap-1">
+                    <Users className="w-3.5 h-3.5" /> Staff
+                  </p>
+                  {canManage && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const room = viewingRoom;
+                        setViewingRoom(null);
+                        openStaffManager(room);
+                      }}
+                      className="inline-flex items-center gap-1 min-h-11 px-2 text-xs font-semibold text-primary rounded-[var(--radius-button)] hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" aria-hidden /> Gérer le staff
+                    </button>
+                  )}
+                </div>
+                {viewingRoom.staff.length === 0 && (
+                  <p className="text-xs text-muted">Aucun membre assigné à cette salle.</p>
+                )}
                 {viewingRoom.staff.map((s) => (
                   <div key={s.id} className="flex items-center justify-between text-xs bg-surface-muted rounded-[var(--radius-button)] px-2.5 py-1.5">
                     <span className="font-medium text-foreground">{s.user.name || s.user.email}</span>
@@ -2724,7 +3011,7 @@ export default function RoomsManagement() {
                 <div className="p-3.5 rounded-xl border border-border bg-surface-muted/40 flex items-center justify-between gap-3">
                   <div className="space-y-0.5">
                     <span className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                      <span aria-hidden>♿</span> Accès PMR & Mobilité Réduite
+                      <Accessibility className="w-4 h-4 text-primary" aria-hidden /> Accès PMR & mobilité réduite
                     </span>
                     <p className="text-xs text-muted">
                       La salle dispose d’aménagements pour personnes à mobilité réduite.
