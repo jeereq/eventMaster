@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowRight, Check, LayoutDashboard } from 'lucide-react';
+import { ArrowRight, Check, LayoutDashboard, MessageCircle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { LANDING_PROFILES, type LandingProfileId } from '@/lib/landingProfiles';
@@ -54,11 +54,24 @@ const LOGGED_IN_TARGETS: Record<LandingProfileId, { href: string; label: string 
 };
 
 const DEMO_GUESTS = [
-  { initials: 'JK', name: 'Jean-Marc K.', status: 'Confirmé', pending: false },
-  { initials: 'SM', name: 'Sarah M.', status: 'Confirmé', pending: false },
-  { initials: 'DL', name: 'Didier L.', status: 'En attente', pending: true },
-  { initials: 'EI', name: 'Esther I.', status: 'Confirmé', pending: false },
+  { initials: 'JK', name: 'Jean-Marc K.', detail: 'Table 3 · 2 places', status: 'Confirmé', pending: false },
+  { initials: 'SM', name: 'Sarah M.', detail: 'Table 5 · 1 place', status: 'Confirmé', pending: false },
+  { initials: 'DL', name: 'Didier L.', detail: 'Relancé hier', status: 'En attente', pending: true },
+  { initials: 'EI', name: 'Esther I.', detail: 'Table 1 · 4 places', status: 'Confirmé', pending: false },
 ];
+
+/** Exemple chiffré du hero : 120 invités, budget moyen à Kinshasa (taux 1 $ = 2 800 FC). */
+const DEMO_BUDGET = {
+  total: '4 200 000 FC',
+  usd: '≈ 1 500 $',
+  guests: 120,
+  lines: [
+    { label: 'Salle', share: 35, tone: 'bg-[#065f46]' },
+    { label: 'Traiteur', share: 30, tone: 'bg-brand-accent' },
+    { label: 'Déco', share: 20, tone: 'bg-[#6ee7b7]' },
+    { label: 'Photo & DJ', share: 15, tone: 'bg-[#c7d6cf]' },
+  ],
+};
 
 /**
  * Les sections du bas se montent à la demande et changent de hauteur en chargeant :
@@ -86,45 +99,70 @@ function formatCitySentence(cities: string[]): string {
   return `${cities.slice(0, -1).join(', ')} et ${cities[cities.length - 1]}`;
 }
 
-/** Maquette décorative du tableau des invités (exemple, pas de données réelles). */
+/** Maquette décorative : suivi des invités, budget IA et scan à l’entrée (exemple, pas de données réelles). */
 function HeroPhoneMock() {
+  const cardClass =
+    'em-light-island bg-[#ffffff] text-[#0f1f1a] rounded-[18px] shadow-[0_16px_40px_rgba(2,44,34,0.35)]';
   return (
     <div
       aria-hidden
       className="relative h-[460px] lg:h-[540px] rounded-[2rem] bg-[#064e3b] overflow-hidden select-none"
     >
       <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full border-[48px] border-brand-accent opacity-20" />
-      <div className="absolute left-1/2 -translate-x-[30%] top-10 w-[240px] lg:w-[250px] h-[400px] lg:h-[480px] rounded-[2.25rem] bg-[#0b1512] p-2.5">
-        <div className="em-light-island w-full h-full rounded-[1.75rem] bg-[#f4f7f5] text-[#0f1f1a] px-3.5 py-4 flex flex-col gap-3">
-          <div className="font-display text-[15px] font-semibold">Invités</div>
-          <div className="grid grid-cols-3 gap-1.5">
-            {[
-              ['186', 'Confirmés', 'text-primary-solid'],
-              ['41', 'En attente', 'text-amber-700'],
-              ['23', 'Déclinés', 'text-[#4b5c56]'],
-            ].map(([value, label, tone]) => (
-              <div key={label} className="bg-white rounded-[10px] p-2 flex flex-col gap-0.5">
-                <span className={cn('font-display text-[17px] font-semibold', tone)}>{value}</span>
-                <span className="text-[9px] text-[#4b5c56]">{label}</span>
-              </div>
-            ))}
+      <div className="absolute -left-24 -bottom-28 w-72 h-72 rounded-full border-[40px] border-[#065f46]" />
+
+      {/* Téléphone : liste des invités */}
+      <div className="absolute right-5 lg:right-4 xl:right-8 top-8 w-[236px] xl:w-[252px] h-[400px] lg:h-[476px] rounded-[2.25rem] bg-[#0b1512] p-2.5 shadow-[0_24px_60px_rgba(2,44,34,0.45)]">
+        <div className="em-light-island w-full h-full rounded-[1.75rem] bg-[#f4f7f5] text-[#0f1f1a] px-3.5 pt-3 pb-3.5 flex flex-col gap-2.5 overflow-hidden">
+          <div className="mx-auto w-16 h-1.5 rounded-full bg-[#dfe8e3]" />
+          <div className="flex flex-col">
+            <span className="text-[9px] font-bold tracking-[0.06em] text-primary-solid">MARIAGE · SAM. 14 DÉC.</span>
+            <span className="font-display text-[15px] font-semibold leading-tight">Grâce &amp; Patrick</span>
+            <span className="text-[10px] text-[#4b5c56]">Salle Le Palmier · Kinshasa</span>
           </div>
-          <div className="bg-white rounded-xl flex flex-col">
+          <div className="bg-[#ffffff] rounded-[10px] p-2.5 flex flex-col gap-1.5">
+            <span className="flex items-baseline justify-between text-[10px] text-[#4b5c56]">
+              <span className="font-semibold text-[#0f1f1a]">Réponses</span>
+              <span>
+                <span className="font-semibold text-[#0f1f1a]">108</span> / {DEMO_BUDGET.guests}
+              </span>
+            </span>
+            <span className="flex h-1.5 rounded-full overflow-hidden bg-[#edf2ef]">
+              <span className="w-[72%] bg-primary-solid" />
+              <span className="w-[18%] bg-amber-400" />
+            </span>
+            <span className="grid grid-cols-3 gap-1 pt-0.5">
+              {[
+                ['86', 'Confirmés', 'text-primary-solid'],
+                ['12', 'En attente', 'text-amber-700'],
+                ['10', 'Déclinés', 'text-[#4b5c56]'],
+              ].map(([value, label, tone]) => (
+                <span key={label} className="flex flex-col">
+                  <span className={cn('font-display text-[15px] font-semibold leading-none', tone)}>{value}</span>
+                  <span className="text-[8.5px] text-[#4b5c56]">{label}</span>
+                </span>
+              ))}
+            </span>
+          </div>
+          <div className="bg-[#ffffff] rounded-xl flex flex-col">
             {DEMO_GUESTS.map((guest, index) => (
               <div
                 key={guest.initials}
                 className={cn(
-                  'flex items-center gap-2 px-2.5 py-2',
+                  'flex items-center gap-2 px-2.5 py-[7px]',
                   index < DEMO_GUESTS.length - 1 && 'border-b border-[#edf2ef]',
                 )}
               >
-                <span className="w-[26px] h-[26px] rounded-full bg-[#ecfdf5] text-[10px] font-semibold text-[#065f46] flex items-center justify-center">
+                <span className="w-[26px] h-[26px] shrink-0 rounded-full bg-[#ecfdf5] text-[10px] font-semibold text-[#065f46] flex items-center justify-center">
                   {guest.initials}
                 </span>
-                <span className="grow text-[11px] font-semibold">{guest.name}</span>
+                <span className="grow min-w-0 flex flex-col">
+                  <span className="text-[11px] font-semibold leading-tight truncate">{guest.name}</span>
+                  <span className="text-[9px] text-[#4b5c56] leading-tight truncate">{guest.detail}</span>
+                </span>
                 <span
                   className={cn(
-                    'text-[9px] font-semibold px-1.5 py-0.5 rounded-full',
+                    'shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full',
                     guest.pending ? 'text-amber-800 bg-amber-100' : 'text-[#065f46] bg-[#d1fae5]',
                   )}
                 >
@@ -133,29 +171,52 @@ function HeroPhoneMock() {
               </div>
             ))}
           </div>
-          <div className="mt-auto h-10 rounded-[10px] bg-primary-solid text-white text-[11px] font-semibold flex items-center justify-center">
-            Relancer sur WhatsApp
+          <div className="mt-auto h-10 shrink-0 rounded-[10px] bg-primary-solid text-white text-[11px] font-semibold flex items-center justify-center gap-1.5">
+            <MessageCircle className="w-3.5 h-3.5" />
+            Relancer 12 invités
           </div>
         </div>
       </div>
-      <div className="absolute left-6 lg:left-8 top-24 lg:top-28 w-[200px] lg:w-[220px] em-light-island bg-white text-[#0f1f1a] rounded-[18px] p-4 flex flex-col gap-2.5 shadow-[0_16px_40px_rgba(2,44,34,0.35)]">
-        <span className="text-[11px] font-bold text-primary-solid tracking-[0.05em]">BUDGET IA</span>
-        <span className="font-display text-[28px] font-semibold leading-none">12 400 $</span>
-        <span className="flex h-2 rounded overflow-hidden gap-0.5">
-          <span className="w-[34%] bg-[#065f46]" />
-          <span className="w-[28%] bg-brand-accent" />
-          <span className="w-[22%] bg-[#6ee7b7]" />
-          <span className="w-[16%] bg-[#e5ece8]" />
+
+      {/* Carte budget IA */}
+      <div className={cn(cardClass, 'absolute left-5 lg:left-4 xl:left-8 top-10 lg:top-12 w-[208px] lg:w-[192px] xl:w-[228px] p-4 flex flex-col gap-2.5')}>
+        <span className="flex items-center justify-between text-[10px] font-bold tracking-[0.05em] text-primary-solid">
+          <span className="inline-flex items-center gap-1">
+            <Sparkles className="w-3 h-3" />
+            BUDGET IA
+          </span>
+          <span className="text-[#4b5c56] font-semibold tracking-normal">{DEMO_BUDGET.guests} invités</span>
         </span>
-        <span className="text-xs text-[#4b5c56]">Salle, traiteur, déco, photo, DJ</span>
+        <span className="flex flex-col">
+          <span className="font-display text-[24px] lg:text-[22px] xl:text-[26px] font-semibold leading-none tabular-nums">
+            {DEMO_BUDGET.total}
+          </span>
+          <span className="mt-1 text-[11px] text-[#4b5c56]">{DEMO_BUDGET.usd} · formule Équilibre</span>
+        </span>
+        <span className="flex h-2 rounded overflow-hidden gap-0.5">
+          {DEMO_BUDGET.lines.map((line) => (
+            <span key={line.label} className={line.tone} style={{ width: `${line.share}%` }} />
+          ))}
+        </span>
+        <span className="grid grid-cols-2 gap-x-2 gap-y-1">
+          {DEMO_BUDGET.lines.map((line) => (
+            <span key={line.label} className="inline-flex items-center gap-1.5 text-[10px] text-[#4b5c56]">
+              <span className={cn('w-2 h-2 rounded-full shrink-0', line.tone)} />
+              {line.label}
+            </span>
+          ))}
+        </span>
       </div>
-      <div className="absolute right-5 lg:right-7 top-[17rem] lg:top-[19rem] w-[210px] lg:w-[230px] em-light-island bg-white text-[#0f1f1a] rounded-[18px] p-3.5 flex items-center gap-3 shadow-[0_16px_40px_rgba(2,44,34,0.35)]">
+
+      {/* Carte scan à l’entrée */}
+      <div className={cn(cardClass, 'absolute left-5 lg:left-4 xl:left-8 bottom-10 lg:bottom-14 w-[208px] lg:w-[192px] xl:w-[228px] p-3.5 flex items-center gap-3')}>
         <span className="w-11 h-11 rounded-full bg-primary-solid text-white flex items-center justify-center shrink-0">
           <Check className="w-5 h-5" strokeWidth={2.6} />
         </span>
-        <span className="flex flex-col gap-0.5">
-          <span className="text-[11px] font-bold text-primary-solid">QR SCANNÉ · ENTRÉE</span>
-          <span className="text-sm font-semibold">Table 3 · 2 places</span>
+        <span className="flex flex-col gap-0.5 min-w-0">
+          <span className="text-[10px] font-bold text-primary-solid tracking-[0.04em]">QR SCANNÉ · ENTRÉE</span>
+          <span className="text-sm font-semibold">Jean-Marc K.</span>
+          <span className="text-[11px] text-[#4b5c56]">Table 3 · 2 places</span>
         </span>
       </div>
     </div>
