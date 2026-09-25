@@ -64,7 +64,7 @@ function HeroPhoneMock() {
     >
       <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full border-[48px] border-brand-accent opacity-20" />
       <div className="absolute left-1/2 -translate-x-[30%] top-10 w-[240px] lg:w-[250px] h-[400px] lg:h-[480px] rounded-[2.25rem] bg-[#0b1512] p-2.5">
-        <div className="w-full h-full rounded-[1.75rem] bg-[#f4f7f5] text-[#0f1f1a] px-3.5 py-4 flex flex-col gap-3">
+        <div className="em-light-island w-full h-full rounded-[1.75rem] bg-[#f4f7f5] text-[#0f1f1a] px-3.5 py-4 flex flex-col gap-3">
           <div className="font-display text-[15px] font-semibold">Invités</div>
           <div className="grid grid-cols-3 gap-1.5">
             {[
@@ -107,7 +107,7 @@ function HeroPhoneMock() {
           </div>
         </div>
       </div>
-      <div className="absolute left-6 lg:left-8 top-24 lg:top-28 w-[200px] lg:w-[220px] bg-white text-[#0f1f1a] rounded-[18px] p-4 flex flex-col gap-2.5 shadow-[0_16px_40px_rgba(2,44,34,0.35)]">
+      <div className="absolute left-6 lg:left-8 top-24 lg:top-28 w-[200px] lg:w-[220px] em-light-island bg-white text-[#0f1f1a] rounded-[18px] p-4 flex flex-col gap-2.5 shadow-[0_16px_40px_rgba(2,44,34,0.35)]">
         <span className="text-[11px] font-bold text-primary-solid tracking-[0.05em]">BUDGET IA</span>
         <span className="font-display text-[28px] font-semibold leading-none">12 400 $</span>
         <span className="flex h-2 rounded overflow-hidden gap-0.5">
@@ -118,7 +118,7 @@ function HeroPhoneMock() {
         </span>
         <span className="text-xs text-[#4b5c56]">Salle, traiteur, déco, photo, DJ</span>
       </div>
-      <div className="absolute right-5 lg:right-7 top-[17rem] lg:top-[19rem] w-[210px] lg:w-[230px] bg-white text-[#0f1f1a] rounded-[18px] p-3.5 flex items-center gap-3 shadow-[0_16px_40px_rgba(2,44,34,0.35)]">
+      <div className="absolute right-5 lg:right-7 top-[17rem] lg:top-[19rem] w-[210px] lg:w-[230px] em-light-island bg-white text-[#0f1f1a] rounded-[18px] p-3.5 flex items-center gap-3 shadow-[0_16px_40px_rgba(2,44,34,0.35)]">
         <span className="w-11 h-11 rounded-full bg-primary-solid text-white flex items-center justify-center shrink-0">
           <Check className="w-5 h-5" strokeWidth={2.6} />
         </span>

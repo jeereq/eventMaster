@@ -63,40 +63,47 @@ html[data-mood="celebrate"] {
 
 html[data-mood="celebrate"].dark,
 .dark[data-mood="celebrate"] {
-  --background: #1e1f21;
-  --surface: #2a2b2d;
-  --surface-muted: #323437;
-  --border: #3e3f42;
-  --border-subtle: #48494b;
-  --sidebar: #191a1c;
-  --card-hover: #303133;
+  --background: #131a17;
+  --surface: #1a2320;
+  --surface-muted: #212c28;
+  --border: #2c3833;
+  --border-subtle: #36433d;
+  --sidebar: #0f1513;
+  --card-hover: #1f2925;
+  --surface-warm: #131a17;
   --brand-accent: #6ee7b7;
   --festive-accent: #fbbf24;
   --festive-on-stage: #fcd34d;
-  --stage: #121110;
-  --stage-elevated: #1c1a18;
+  --stage: #0c110f;
+  --stage-elevated: #151d1a;
 }
 
+/* Sombre « forêt » : anthracite teinté vert, aligné sur le design public émeraude.
+   Contrastes (WCAG AA) : foreground 14:1, muted 7:1, primary 6.3:1 sur --surface. */
 .dark {
-  --background: #1e1f21;
-  --foreground: #f5f5f5;
-  --surface: #2a2b2d;
-  --surface-muted: #323437;
-  --border: #3e3f42;
-  --border-subtle: #48494b;
+  color-scheme: dark;
+  --background: #131a17;
+  --foreground: #eef3f1;
+  --surface: #1a2320;
+  --surface-muted: #212c28;
+  --border: #2c3833;
+  --border-subtle: #36433d;
   --primary: #10b981;
   --primary-hover: #34d399;
   --primary-solid: #047857;
   --primary-solid-hover: #065f46;
   --primary-foreground: #ffffff;
   --brand-accent: #6ee7b7;
-  --muted: #a2a0a2;
-  --sidebar: #191a1c;
-  --card-hover: #303133;
+  --muted: #9fb0a8;
+  --sidebar: #0f1513;
+  --card-hover: #1f2925;
+  --surface-warm: #131a17;
   --shadow-soft: 0 0 0 1px rgba(255, 255, 255, 0.04);
+  /* #be123c tombait à 2.5:1 sur fond sombre ; les boutons pleins gardent le rose foncé (voir .bg-danger). */
+  --danger: #fb7185;
   --festive-on-stage: #fcd34d;
-  --stage: #121110;
-  --stage-elevated: #1c1a18;
+  --stage: #0c110f;
+  --stage-elevated: #151d1a;
 }
 
 @theme inline {
@@ -2448,83 +2455,258 @@ body[data-em-sheet-open] .em-ai-fab {
   }
 }
 
-/* Dark Mode Global Overrides — Asana charcoal */
+/* Dark Mode Global Overrides — anthracite vert.
+   Filet de sécurité pour les classes « claires » sans variante dark:.
+   `.em-light-island` : maquettes / aperçus volontairement clairs (ex. écran de téléphone
+   du hero) — exclus de ces surcharges et remis sur les tokens clairs. */
+.dark .em-light-island {
+  color-scheme: light;
+  --background: #f4f7f5;
+  --foreground: #0f1f1a;
+  --surface: #ffffff;
+  --surface-muted: #edf2ef;
+  --border: #dfe7e3;
+  --border-subtle: #edf2ef;
+  --primary: #047857;
+  --primary-hover: #065f46;
+  --muted: #3d4f48;
+  --card-hover: #f8faf9;
+  --danger: #be123c;
+  color: var(--foreground);
+}
+
 .dark {
-  .bg-white {
+  .bg-white:not(.em-light-island, .em-light-island *) {
     background-color: var(--surface) !important;
   }
-  .bg-slate-50 {
+  .bg-slate-50:not(.em-light-island, .em-light-island *) {
     background-color: var(--background) !important;
   }
-  .bg-slate-100 {
+  .bg-slate-100:not(.em-light-island, .em-light-island *) {
     background-color: var(--surface-muted) !important;
   }
-  .bg-slate-900 {
+  .bg-slate-900:not(.em-light-island, .em-light-island *) {
     background-color: var(--surface) !important;
   }
 
-  .hover\:bg-slate-50:hover {
+  .hover\:bg-slate-50:hover:not(.em-light-island, .em-light-island *) {
     background-color: var(--card-hover) !important;
   }
-  .hover\:bg-slate-100:hover {
+  .hover\:bg-slate-100:hover:not(.em-light-island, .em-light-island *) {
     background-color: var(--surface-muted) !important;
   }
-  .hover\:text-slate-900:hover {
+  .hover\:text-slate-900:hover:not(.em-light-island, .em-light-island *) {
     color: #ffffff !important;
   }
 
-  .text-slate-900 {
-    color: #f5f5f5 !important;
+  .text-slate-900:not(.em-light-island, .em-light-island *) {
+    color: var(--foreground) !important;
   }
-  .text-slate-800 {
-    color: #ececec !important;
+  .text-slate-800:not(.em-light-island, .em-light-island *) {
+    color: #e3ebe7 !important;
   }
-  .text-slate-700 {
-    color: #d8d8d8 !important;
+  .text-slate-700:not(.em-light-island, .em-light-island *) {
+    color: #d0dbd6 !important;
   }
-  .text-slate-600 {
-    color: #c0c0c0 !important;
+  .text-slate-600:not(.em-light-island, .em-light-island *) {
+    color: #b8c5bf !important;
   }
-  .text-slate-500 {
+  .text-slate-500:not(.em-light-island, .em-light-island *) {
     color: var(--muted) !important;
   }
-  .text-slate-400 {
-    color: #8b8a8b !important;
+  .text-slate-400:not(.em-light-island, .em-light-island *) {
+    color: #859690 !important;
   }
 
-  .border-slate-100,
-  .border-slate-150,
-  .border-slate-200,
-  .border-slate-300,
-  .border-slate-800 {
+  .border-slate-100:not(.em-light-island, .em-light-island *),
+  .border-slate-150:not(.em-light-island, .em-light-island *),
+  .border-slate-200:not(.em-light-island, .em-light-island *),
+  .border-slate-300:not(.em-light-island, .em-light-island *),
+  .border-slate-800:not(.em-light-island, .em-light-island *) {
     border-color: var(--border) !important;
   }
 
-  input, textarea, select {
+  :is(input, textarea, select):not(.em-light-island, .em-light-island *) {
     background-color: var(--background) !important;
     color: var(--foreground) !important;
     border-color: var(--border) !important;
   }
-  input::placeholder, textarea::placeholder {
-    color: #6d6e6f !important;
+  :is(input, textarea)::placeholder {
+    color: #7b8c85 !important;
   }
-  input:focus, textarea:focus, select:focus {
+  :is(input, textarea, select):focus:not(.em-light-island, .em-light-island *) {
     border-color: var(--primary) !important;
     background-color: var(--background) !important;
   }
+  /* Cases à cocher / radios / curseurs : pas de fond plein, accent émeraude */
+  :is(input[type='checkbox'], input[type='radio'], input[type='range'], input[type='color']) {
+    background-color: transparent !important;
+    accent-color: var(--primary);
+  }
 
-  table {
+  table:not(.em-light-island, .em-light-island *) {
     background-color: var(--surface) !important;
     border-color: var(--border) !important;
   }
-  th {
+  th:not(.em-light-island, .em-light-island *) {
     background-color: var(--background) !important;
     color: var(--muted) !important;
     border-color: var(--border) !important;
   }
-  td {
+  td:not(.em-light-island, .em-light-island *) {
     border-color: var(--border) !important;
   }
+
+  /* Boutons pleins « danger » : le token --danger devient clair en sombre (texte),
+     le fond garde un rose foncé pour que le texte blanc reste lisible (6:1). */
+  .bg-danger:not(.em-light-island, .em-light-island *) {
+    background-color: #be123c !important;
+  }
+}
+
+
+/* Pastilles / bandeaux d'état clairs (bg-*-50, text-*-700…) sans variante dark: —
+   tons translucides lisibles sur fond sombre. Ignorés dès que l'élément porte une classe dark: du même type. */
+.dark :is(.bg-emerald-50, .bg-emerald-50\/50, .bg-emerald-50\/80, .bg-emerald-50\/90, .bg-emerald-50\/95, .bg-emerald-100, .bg-emerald-100\/50, .bg-emerald-100\/80, .bg-emerald-100\/90, .bg-emerald-100\/95):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
+  background-color: rgb(16 185 129 / 0.12);
+}
+.dark :is(.text-emerald-600, .text-emerald-700, .text-emerald-800, .text-emerald-900, .text-emerald-950):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
+  color: #6ee7b7;
+}
+.dark :is(.border-emerald-100, .border-emerald-100\/60, .border-emerald-100\/80, .border-emerald-200, .border-emerald-200\/60, .border-emerald-200\/80, .border-emerald-300, .border-emerald-300\/60, .border-emerald-300\/80):not(.em-light-island, .em-light-island *):not([class*='dark:border-']) {
+  border-color: rgb(16 185 129 / 0.3);
+}
+.dark :is(.bg-green-50, .bg-green-50\/50, .bg-green-50\/80, .bg-green-50\/90, .bg-green-50\/95, .bg-green-100, .bg-green-100\/50, .bg-green-100\/80, .bg-green-100\/90, .bg-green-100\/95):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
+  background-color: rgb(16 185 129 / 0.12);
+}
+.dark :is(.text-green-600, .text-green-700, .text-green-800, .text-green-900, .text-green-950):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
+  color: #6ee7b7;
+}
+.dark :is(.border-green-100, .border-green-100\/60, .border-green-100\/80, .border-green-200, .border-green-200\/60, .border-green-200\/80, .border-green-300, .border-green-300\/60, .border-green-300\/80):not(.em-light-island, .em-light-island *):not([class*='dark:border-']) {
+  border-color: rgb(16 185 129 / 0.3);
+}
+.dark :is(.bg-teal-50, .bg-teal-50\/50, .bg-teal-50\/80, .bg-teal-50\/90, .bg-teal-50\/95, .bg-teal-100, .bg-teal-100\/50, .bg-teal-100\/80, .bg-teal-100\/90, .bg-teal-100\/95):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
+  background-color: rgb(20 184 166 / 0.12);
+}
+.dark :is(.text-teal-600, .text-teal-700, .text-teal-800, .text-teal-900, .text-teal-950):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
+  color: #5eead4;
+}
+.dark :is(.border-teal-100, .border-teal-100\/60, .border-teal-100\/80, .border-teal-200, .border-teal-200\/60, .border-teal-200\/80, .border-teal-300, .border-teal-300\/60, .border-teal-300\/80):not(.em-light-island, .em-light-island *):not([class*='dark:border-']) {
+  border-color: rgb(20 184 166 / 0.3);
+}
+.dark :is(.bg-rose-50, .bg-rose-50\/50, .bg-rose-50\/80, .bg-rose-50\/90, .bg-rose-50\/95, .bg-rose-100, .bg-rose-100\/50, .bg-rose-100\/80, .bg-rose-100\/90, .bg-rose-100\/95):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
+  background-color: rgb(244 63 94 / 0.12);
+}
+.dark :is(.text-rose-600, .text-rose-700, .text-rose-800, .text-rose-900, .text-rose-950):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
+  color: #fda4af;
+}
+.dark :is(.border-rose-100, .border-rose-100\/60, .border-rose-100\/80, .border-rose-200, .border-rose-200\/60, .border-rose-200\/80, .border-rose-300, .border-rose-300\/60, .border-rose-300\/80):not(.em-light-island, .em-light-island *):not([class*='dark:border-']) {
+  border-color: rgb(244 63 94 / 0.3);
+}
+.dark :is(.bg-red-50, .bg-red-50\/50, .bg-red-50\/80, .bg-red-50\/90, .bg-red-50\/95, .bg-red-100, .bg-red-100\/50, .bg-red-100\/80, .bg-red-100\/90, .bg-red-100\/95):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
+  background-color: rgb(244 63 94 / 0.12);
+}
+.dark :is(.text-red-600, .text-red-700, .text-red-800, .text-red-900, .text-red-950):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
+  color: #fda4af;
+}
+.dark :is(.border-red-100, .border-red-100\/60, .border-red-100\/80, .border-red-200, .border-red-200\/60, .border-red-200\/80, .border-red-300, .border-red-300\/60, .border-red-300\/80):not(.em-light-island, .em-light-island *):not([class*='dark:border-']) {
+  border-color: rgb(244 63 94 / 0.3);
+}
+.dark :is(.bg-pink-50, .bg-pink-50\/50, .bg-pink-50\/80, .bg-pink-50\/90, .bg-pink-50\/95, .bg-pink-100, .bg-pink-100\/50, .bg-pink-100\/80, .bg-pink-100\/90, .bg-pink-100\/95):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
+  background-color: rgb(236 72 153 / 0.12);
+}
+.dark :is(.text-pink-600, .text-pink-700, .text-pink-800, .text-pink-900, .text-pink-950):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
+  color: #f9a8d4;
+}
+.dark :is(.border-pink-100, .border-pink-100\/60, .border-pink-100\/80, .border-pink-200, .border-pink-200\/60, .border-pink-200\/80, .border-pink-300, .border-pink-300\/60, .border-pink-300\/80):not(.em-light-island, .em-light-island *):not([class*='dark:border-']) {
+  border-color: rgb(236 72 153 / 0.3);
+}
+.dark :is(.bg-amber-50, .bg-amber-50\/50, .bg-amber-50\/80, .bg-amber-50\/90, .bg-amber-50\/95, .bg-amber-100, .bg-amber-100\/50, .bg-amber-100\/80, .bg-amber-100\/90, .bg-amber-100\/95):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
+  background-color: rgb(245 158 11 / 0.12);
+}
+.dark :is(.text-amber-600, .text-amber-700, .text-amber-800, .text-amber-900, .text-amber-950):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
+  color: #fcd34d;
+}
+.dark :is(.border-amber-100, .border-amber-100\/60, .border-amber-100\/80, .border-amber-200, .border-amber-200\/60, .border-amber-200\/80, .border-amber-300, .border-amber-300\/60, .border-amber-300\/80):not(.em-light-island, .em-light-island *):not([class*='dark:border-']) {
+  border-color: rgb(245 158 11 / 0.3);
+}
+.dark :is(.bg-yellow-50, .bg-yellow-50\/50, .bg-yellow-50\/80, .bg-yellow-50\/90, .bg-yellow-50\/95, .bg-yellow-100, .bg-yellow-100\/50, .bg-yellow-100\/80, .bg-yellow-100\/90, .bg-yellow-100\/95):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
+  background-color: rgb(234 179 8 / 0.12);
+}
+.dark :is(.text-yellow-600, .text-yellow-700, .text-yellow-800, .text-yellow-900, .text-yellow-950):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
+  color: #fde047;
+}
+.dark :is(.border-yellow-100, .border-yellow-100\/60, .border-yellow-100\/80, .border-yellow-200, .border-yellow-200\/60, .border-yellow-200\/80, .border-yellow-300, .border-yellow-300\/60, .border-yellow-300\/80):not(.em-light-island, .em-light-island *):not([class*='dark:border-']) {
+  border-color: rgb(234 179 8 / 0.3);
+}
+.dark :is(.bg-orange-50, .bg-orange-50\/50, .bg-orange-50\/80, .bg-orange-50\/90, .bg-orange-50\/95, .bg-orange-100, .bg-orange-100\/50, .bg-orange-100\/80, .bg-orange-100\/90, .bg-orange-100\/95):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
+  background-color: rgb(249 115 22 / 0.12);
+}
+.dark :is(.text-orange-600, .text-orange-700, .text-orange-800, .text-orange-900, .text-orange-950):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
+  color: #fdba74;
+}
+.dark :is(.border-orange-100, .border-orange-100\/60, .border-orange-100\/80, .border-orange-200, .border-orange-200\/60, .border-orange-200\/80, .border-orange-300, .border-orange-300\/60, .border-orange-300\/80):not(.em-light-island, .em-light-island *):not([class*='dark:border-']) {
+  border-color: rgb(249 115 22 / 0.3);
+}
+.dark :is(.bg-sky-50, .bg-sky-50\/50, .bg-sky-50\/80, .bg-sky-50\/90, .bg-sky-50\/95, .bg-sky-100, .bg-sky-100\/50, .bg-sky-100\/80, .bg-sky-100\/90, .bg-sky-100\/95):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
+  background-color: rgb(56 189 248 / 0.12);
+}
+.dark :is(.text-sky-600, .text-sky-700, .text-sky-800, .text-sky-900, .text-sky-950):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
+  color: #7dd3fc;
+}
+.dark :is(.border-sky-100, .border-sky-100\/60, .border-sky-100\/80, .border-sky-200, .border-sky-200\/60, .border-sky-200\/80, .border-sky-300, .border-sky-300\/60, .border-sky-300\/80):not(.em-light-island, .em-light-island *):not([class*='dark:border-']) {
+  border-color: rgb(56 189 248 / 0.3);
+}
+.dark :is(.bg-blue-50, .bg-blue-50\/50, .bg-blue-50\/80, .bg-blue-50\/90, .bg-blue-50\/95, .bg-blue-100, .bg-blue-100\/50, .bg-blue-100\/80, .bg-blue-100\/90, .bg-blue-100\/95):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
+  background-color: rgb(59 130 246 / 0.12);
+}
+.dark :is(.text-blue-600, .text-blue-700, .text-blue-800, .text-blue-900, .text-blue-950):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
+  color: #93c5fd;
+}
+.dark :is(.border-blue-100, .border-blue-100\/60, .border-blue-100\/80, .border-blue-200, .border-blue-200\/60, .border-blue-200\/80, .border-blue-300, .border-blue-300\/60, .border-blue-300\/80):not(.em-light-island, .em-light-island *):not([class*='dark:border-']) {
+  border-color: rgb(59 130 246 / 0.3);
+}
+.dark :is(.bg-cyan-50, .bg-cyan-50\/50, .bg-cyan-50\/80, .bg-cyan-50\/90, .bg-cyan-50\/95, .bg-cyan-100, .bg-cyan-100\/50, .bg-cyan-100\/80, .bg-cyan-100\/90, .bg-cyan-100\/95):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
+  background-color: rgb(6 182 212 / 0.12);
+}
+.dark :is(.text-cyan-600, .text-cyan-700, .text-cyan-800, .text-cyan-900, .text-cyan-950):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
+  color: #67e8f9;
+}
+.dark :is(.border-cyan-100, .border-cyan-100\/60, .border-cyan-100\/80, .border-cyan-200, .border-cyan-200\/60, .border-cyan-200\/80, .border-cyan-300, .border-cyan-300\/60, .border-cyan-300\/80):not(.em-light-island, .em-light-island *):not([class*='dark:border-']) {
+  border-color: rgb(6 182 212 / 0.3);
+}
+.dark :is(.bg-indigo-50, .bg-indigo-50\/50, .bg-indigo-50\/80, .bg-indigo-50\/90, .bg-indigo-50\/95, .bg-indigo-100, .bg-indigo-100\/50, .bg-indigo-100\/80, .bg-indigo-100\/90, .bg-indigo-100\/95):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
+  background-color: rgb(99 102 241 / 0.12);
+}
+.dark :is(.text-indigo-600, .text-indigo-700, .text-indigo-800, .text-indigo-900, .text-indigo-950):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
+  color: #a5b4fc;
+}
+.dark :is(.border-indigo-100, .border-indigo-100\/60, .border-indigo-100\/80, .border-indigo-200, .border-indigo-200\/60, .border-indigo-200\/80, .border-indigo-300, .border-indigo-300\/60, .border-indigo-300\/80):not(.em-light-island, .em-light-island *):not([class*='dark:border-']) {
+  border-color: rgb(99 102 241 / 0.3);
+}
+.dark :is(.bg-violet-50, .bg-violet-50\/50, .bg-violet-50\/80, .bg-violet-50\/90, .bg-violet-50\/95, .bg-violet-100, .bg-violet-100\/50, .bg-violet-100\/80, .bg-violet-100\/90, .bg-violet-100\/95):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
+  background-color: rgb(139 92 246 / 0.12);
+}
+.dark :is(.text-violet-600, .text-violet-700, .text-violet-800, .text-violet-900, .text-violet-950):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
+  color: #c4b5fd;
+}
+.dark :is(.border-violet-100, .border-violet-100\/60, .border-violet-100\/80, .border-violet-200, .border-violet-200\/60, .border-violet-200\/80, .border-violet-300, .border-violet-300\/60, .border-violet-300\/80):not(.em-light-island, .em-light-island *):not([class*='dark:border-']) {
+  border-color: rgb(139 92 246 / 0.3);
+}
+.dark :is(.bg-purple-50, .bg-purple-50\/50, .bg-purple-50\/80, .bg-purple-50\/90, .bg-purple-50\/95, .bg-purple-100, .bg-purple-100\/50, .bg-purple-100\/80, .bg-purple-100\/90, .bg-purple-100\/95):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
+  background-color: rgb(168 85 247 / 0.12);
+}
+.dark :is(.text-purple-600, .text-purple-700, .text-purple-800, .text-purple-900, .text-purple-950):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
+  color: #d8b4fe;
+}
+.dark :is(.border-purple-100, .border-purple-100\/60, .border-purple-100\/80, .border-purple-200, .border-purple-200\/60, .border-purple-200\/80, .border-purple-300, .border-purple-300\/60, .border-purple-300\/80):not(.em-light-island, .em-light-island *):not([class*='dark:border-']) {
+  border-color: rgb(168 85 247 / 0.3);
+}
+.dark :is(.bg-\[\#ecfdf5\], .bg-\[\#d1fae5\]):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
+  background-color: rgb(16 185 129 / 0.12);
+}
+.dark :is(.text-\[\#064e3b\], .text-\[\#065f46\]):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
+  color: #6ee7b7;
 }
 
 /* Ombres discrètes (Asana = flat + hairline) */
