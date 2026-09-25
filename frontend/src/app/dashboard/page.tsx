@@ -27,6 +27,7 @@ import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import ProtocolDashboardHome from '@/components/ProtocolDashboardHome';
 import ClientDashboardHome from '@/components/dashboard/ClientDashboardHome';
 import OrganizerDashboardHome from '@/components/dashboard/OrganizerDashboardHome';
+import PersonalOrganizerHome, { isPersonalOrganizerPlan } from '@/components/dashboard/PersonalOrganizerHome';
 import { useViewPreferencesOptional } from '@/context/ViewPreferencesContext';
 import { PLAN_IDS, planAudienceLabel, isB2cPlanId, durationDaysForPlan, durationPresetsForPlan, ANNUAL_DISCOUNT_PERCENT, formatFc, type PlanId } from '@/config/landingPricing';
 import TemplatePreviewThumb from '@/components/TemplatePreviewThumb';
@@ -512,7 +513,7 @@ function filterAdminDashboardGuests<T extends {
 }
 
 function DashboardPageContent() {
- const { user, tenant, access, planQuota, enterSupportSession } = useAuth();
+ const { user, tenant, access, planQuota, planFeatures, enterSupportSession } = useAuth();
  const { site } = usePlatformSite();
  const commercialPct = commercialPercent(site);
  const renewalPct = renewalPercent(site);
@@ -5028,6 +5029,15 @@ function DashboardPageContent() {
  if (max == null || max < 0) return String(used);
  return `${used} / ${max}`;
  };
+
+ // Particulier (B2C) : accueil centré sur la fête ; les onglets détaillés restent accessibles via ?tab=
+ if (
+  isPersonalOrganizerPlan(tenant?.plan, planFeatures)
+  && !access?.isProtocolOnly
+  && (!tabParam || tabParam === 'overview')
+ ) {
+  return <PersonalOrganizerHome events={events} />;
+ }
 
  return (
     <OrganizerDashboardHome
