@@ -54,17 +54,20 @@ import {
  Columns, Eye, CheckSquare, Loader2, XCircle, X,
  Spline, Triangle, Trash, Layout, Palette, Square,
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins,
- Undo2, Redo2, History, Download, Tag, SlidersHorizontal, LayoutTemplate,
- Calendar, MapPin, User, Users, PenTool, MessageSquare, Layers, Move, Crown, ArrowRight, Check, Clock,
+ Undo2, Redo2, History, Download, SlidersHorizontal, LayoutTemplate,
+ Calendar, MapPin, User, Users, MessageSquare, Layers, Move, Crown, ArrowRight, Check, Clock,
 } from 'lucide-react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
 import { PageHeader, Alert, Button, Input, SkeletonTemplatesView, ViewModeToggle, useViewMode, Breadcrumbs, Pagination, usePaginateItems, usePageSize, Modal } from '@/components/ui';
 import InvitationDuplicateModal, { type InvitationDuplicateValues } from '@/components/InvitationDuplicateModal';
-import InvitationStructuredBriefFields from '@/components/InvitationStructuredBriefFields';
-import InvitationCardInfoFields from '@/components/InvitationCardInfoFields';
 import { emptyInvitationStructuredBrief, type InvitationStructuredBrief } from '@/config/invitationStructuredBrief';
-import InvitationModelPhotoPicker from '@/components/InvitationModelPhotoPicker';
+import InvitationAiComposeForm, {
+  invitationComposeActionLabel,
+  invitationComposeBlockedReason,
+  invitationComposeIntro,
+  type InvitationComposeMode,
+} from '@/components/InvitationAiComposeForm';
 import {
   invitationModelPhotoFromContent,
   invitationModelPhotosFromItems,
@@ -103,8 +106,6 @@ import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/a
 
 const EditorialLayoutPicker = dynamic(() => import('@/components/EditorialLayoutPicker'), { ssr: false });
 const PromptModelSelector = dynamic(() => import('@/components/PromptModelSelector'), { ssr: false });
-const InvitationContextSourcePicker = dynamic(() => import('@/components/InvitationContextSourcePicker'), { ssr: false });
-const InvitationArtStylePicker = dynamic(() => import('@/components/InvitationArtStylePicker'), { ssr: false });
 
 interface TemplateItem {
  id: string;
@@ -454,8 +455,6 @@ export default function TemplatesPage() {
  const [pendingMockupPreview, setPendingMockupPreview] = useState('');
  const mockupInputRef = useRef<HTMLInputElement>(null);
  const mockupEditorInputRef = useRef<HTMLInputElement>(null);
- const aiComposeInputRef = useRef<HTMLInputElement>(null);
- const aiComposeIncomingInputRef = useRef<HTMLInputElement>(null);
  const [aiComposeModalOpen, setAiComposeModalOpen] = useState(false);
  const [aiComposePrompt, setAiComposePrompt] = useState('');
  const [aiComposeStructured, setAiComposeStructured] = useState<InvitationStructuredBrief>(() => emptyInvitationStructuredBrief());
@@ -470,7 +469,6 @@ export default function TemplatesPage() {
   const [aiComposeTitle, setAiComposeTitle] = useState('');
   const [aiComposeHonorees, setAiComposeHonorees] = useState('');
   const [aiComposeDate, setAiComposeDate] = useState('');
-  const [aiComposeDetailsSection, setAiComposeDetailsSection] = useState<'texts' | 'style'>('texts');
   const pendingCoupleIdentityRef = useRef<{ title?: string; honorees?: string; date?: string } | null>(null);
   const [aiComposeBusy, setAiComposeBusy] = useState(false);
   const showInvitationStudioLoader = !invitationLoaderHidden && (aiComposeBusy || Boolean(invitationStudioJob));
@@ -481,13 +479,11 @@ export default function TemplatesPage() {
  const [aiSafetyFallbackNotice, setAiSafetyFallbackNotice] = useState(false);
  const [aiComposeArtStyle, setAiComposeArtStyle] = useState<InvitationArtStyleId>(DEFAULT_INVITATION_ART_STYLE);
  const [aiComposeContextSource, setAiComposeContextSource] = useState<InvitationContextSource>('none');
- const [aiComposeDragging, setAiComposeDragging] = useState(false);
  const [aiImageDownloading, setAiImageDownloading] = useState(false);
  const [aiComposeHistory, setAiComposeHistory] = useState<AiTemplateComposeHistoryItem[]>([]);
  const [aiComposeHistoryId, setAiComposeHistoryId] = useState<string | null>(null);
  const studioQueryAppliedRef = useRef(false);
  const [aiComposeStudioTab, setAiComposeStudioTab] = useState<StudioAiTabId>('create');
- const [aiComposeAdvancedOpen, setAiComposeAdvancedOpen] = useState(false);
  const [aiTokenModalOpen, setAiTokenModalOpen] = useState(false);
  const [aiAllowance, setAiAllowance] = useState<AiAllowance>(() => createEmptyAiAllowance());
  const [studioRail, setStudioRail] = useState<'ai' | 'content' | 'style'>('ai');
@@ -1449,14 +1445,13 @@ export default function TemplatesPage() {
  setAiComposeIsAlteration(true);
  };
 
- const handleAiComposeFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
- const list = Array.from(e.target.files || []);
- e.target.value = '';
- addAiComposeFiles(list);
- };
-
- const insertAiComposeVariable = (tag: string) => {
- setAiComposePrompt((prev) => (prev ? `${prev.trim()} ${tag}` : tag));
+ const toggleAiComposeFileRole = (index: number) => {
+   setAiComposeFileRoles((prev) => {
+     const next = [...prev];
+     const current = next[index] || (index === 0 ? 'groom' : 'bride');
+     next[index] = current === 'groom' ? 'bride' : 'groom';
+     return next;
+   });
  };
 
  const removeAiComposeFile = (index: number) => {
@@ -1739,52 +1734,20 @@ export default function TemplatesPage() {
    description: aiComposeStructured.description,
  };
  const aiComposeHasTexts = hasInvitationIdentity(aiComposeCardIdentity);
- const aiComposeMode: 'create' | 'modify' | 'faces' = aiComposeCoupleFaceSwap
+ const aiComposeMode: InvitationComposeMode = aiComposeCoupleFaceSwap
    ? 'faces'
    : aiComposeIsAlteration || aiComposeModelPhoto
      ? 'modify'
      : 'create';
 
- const composeBlockedReason = aiComposeMode === 'faces'
-   ? (aiComposeFiles.length < 1
-     ? 'Ajoutez au moins une photo du couple.'
-     : !hasIncomingCard
-       ? 'Ajoutez la carte dont les visages doivent être remplacés.'
-       : null)
-   : aiComposeMode === 'modify' && !hasIncomingCard && aiComposeFiles.length === 0
-     ? 'Choisissez un modèle ou importez la photo de la carte à transformer.'
-   : (!aiComposeHasTexts && aiComposePrompt.trim().length < 8
-     ? (aiComposeMode === 'modify'
-       ? 'Indiquez ce qui doit changer, ou les nouveaux textes de la carte.'
-       : 'Décrivez la fête en quelques mots, ou renseignez les textes de la carte.')
-     : null);
- const aiComposeModes = [
-   {
-     id: 'create' as const,
-     icon: Wand2,
-     label: 'Nouvelle carte',
-     hint: 'L’IA peint un fond neuf, vos textes restent modifiables.',
-   },
-   {
-     id: 'modify' as const,
-     icon: Edit3,
-     label: 'Transformer une carte',
-     hint: 'Partir d’un modèle ou d’une photo, changer textes ou style.',
-   },
-   {
-     id: 'faces' as const,
-     icon: Users,
-     label: 'Visages du couple',
-     hint: 'Mettre vos photos à la place des visages d’une carte.',
-   },
- ];
- const aiComposeSectionTitles =
-   aiComposeMode === 'faces'
-     ? ['Type de création', 'Carte et photos du couple', 'Textes et consignes']
-     : aiComposeMode === 'modify'
-       ? ['Type de création', 'Carte de départ', 'Textes et ambiance']
-       : ['Type de création', 'Inspiration (optionnel)', 'Textes et ambiance'];
- const selectAiComposeMode = (mode: 'create' | 'modify' | 'faces') => {
+ const composeBlockedReason = invitationComposeBlockedReason({
+   mode: aiComposeMode,
+   hasIncomingCard,
+   filesCount: aiComposeFiles.length,
+   hasTexts: aiComposeHasTexts,
+   prompt: aiComposePrompt,
+ });
+ const selectAiComposeMode = (mode: InvitationComposeMode) => {
    if (aiComposeBusy || mode === aiComposeMode) return;
    const isDefaultOrRetouchPrompt =
      aiComposePrompt.trim() === COUPLE_FACE_SWAP_DEFAULT_PROMPT ||
@@ -1847,11 +1810,7 @@ export default function TemplatesPage() {
               Créer avec l’IA
             </h2>
             <p className="text-sm sm:text-base text-muted mt-1.5 leading-relaxed max-w-4xl">
-              {aiComposeMode === 'faces'
-                ? 'Posez la carte, puis les photos du couple. Les visages changent ; décor, pose et expressions restent.'
-                : aiComposeMode === 'modify'
-                ? 'Partez d’un modèle ou d’une photo de carte, puis changez les textes ou l’ambiance.'
-                : 'Décrivez la fête : l’IA crée le fond, vos textes restent modifiables dans l’éditeur.'}
+              {invitationComposeIntro(aiComposeMode)}
               {' '}
               <span className="whitespace-nowrap font-semibold text-foreground">{composeTokenCost} jetons.</span>
             </p>
@@ -1898,611 +1857,54 @@ export default function TemplatesPage() {
 
  <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 sm:px-8 lg:px-10 py-6">
  {aiComposeStudioTab === 'create' ? (
- <>
- {error ? (
-   <div
-     role="alert"
-     aria-live="assertive"
-     className="mb-5 p-4 rounded-2xl border border-rose-500/50 bg-rose-50 dark:bg-rose-950/40 text-rose-950 dark:text-rose-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm ring-1 ring-rose-500/20 animate-in fade-in"
-   >
-     <div className="flex items-start gap-3 min-w-0">
-       <div className="p-1 rounded-full bg-rose-500/20 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5">
-         <AlertCircle className="w-5 h-5" />
-       </div>
-       <div className="min-w-0">
-         <p className="text-sm font-bold text-foreground">Impossible de composer l’invitation</p>
-         <p className="text-xs text-rose-800 dark:text-rose-200 mt-0.5 leading-relaxed break-words">{error}</p>
-       </div>
-     </div>
-     <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-       {error.toLowerCase().includes('jeton') ? (
-         <button
-           type="button"
-           onClick={() => setAiTokenModalOpen(true)}
-           className="min-h-9 px-3.5 text-xs font-bold rounded-lg bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition"
-         >
-           Recharger des jetons
-         </button>
-       ) : (
-         <button
-           type="button"
-           disabled={aiComposeBusy}
-           onClick={handleAiComposeGenerate}
-           className="min-h-9 px-3.5 text-xs font-bold rounded-lg bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground shadow-xs transition inline-flex items-center gap-1.5"
-         >
-           <Wand2 className="w-3.5 h-3.5" />
-           Réessayer
-         </button>
-       )}
-       <button
-         type="button"
-         onClick={() => setError('')}
-         className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition"
-         aria-label="Fermer le message d’erreur"
-       >
-         <X className="w-4 h-4" />
-       </button>
-     </div>
-   </div>
- ) : null}
- <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-10 xl:gap-12 lg:items-start space-y-6 lg:space-y-0">
- <div className="space-y-6">
- <div>
- <p className="text-sm font-semibold text-foreground mb-2">1. {aiComposeSectionTitles[0]}</p>
- <div
-   role="radiogroup"
-   aria-label="Type de création"
-   className="grid grid-cols-1 sm:grid-cols-3 gap-2.5"
- >
-   {aiComposeModes.map((mode) => {
-     const active = aiComposeMode === mode.id;
-     const ModeIcon = mode.icon;
-     return (
-       <button
-         key={mode.id}
-         type="button"
-         role="radio"
-         aria-checked={active}
-         disabled={aiComposeBusy}
-         onClick={() => selectAiComposeMode(mode.id)}
-         className={cn(
-           'min-h-14 px-3 py-3 rounded-[var(--radius-button)] border text-left transition flex sm:flex-col items-start gap-2.5 sm:gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60',
-           active
-             ? 'border-primary bg-primary/10 shadow-xs'
-             : 'border-border bg-surface hover:border-primary/40',
-         )}
-       >
-         <span className={cn(
-           'w-8 h-8 shrink-0 rounded-lg flex items-center justify-center',
-           active ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted text-muted',
-         )}>
-           <ModeIcon className="w-4 h-4" aria-hidden />
-         </span>
-         <span className="min-w-0">
-           <span className="block text-sm font-bold text-foreground">{mode.label}</span>
-           <span className="block text-xs text-muted mt-0.5 leading-snug">{mode.hint}</span>
-         </span>
-       </button>
-     );
-   })}
- </div>
- </div>
-
- {aiComposeCoupleFaceSwap ? (
- <div className="space-y-3">
-   <p className="text-sm font-semibold text-foreground">2. {aiComposeSectionTitles[1]}</p>
-   <div>
-     <label htmlFor="ai-compose-incoming" className="text-sm font-semibold text-muted">Carte à modifier</label>
-     <input
-       id="ai-compose-incoming"
-       ref={aiComposeIncomingInputRef}
-       type="file"
-       accept="image/jpeg,image/png,image/webp"
-       className="sr-only"
-       onChange={(e) => {
-         const file = e.target.files?.[0] || null;
-         e.target.value = '';
-         setAiComposeIncomingFromFile(file);
-       }}
-     />
-     <button
-       type="button"
-       disabled={aiComposeBusy}
-       onClick={() => aiComposeIncomingInputRef.current?.click()}
-       className="mt-1.5 min-h-28 w-full flex items-center gap-4 p-4 border-2 border-dashed rounded-[var(--radius-card)] text-left transition border-primary/30 hover:border-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-     >
-       {(aiComposeIncomingPreview || aiComposeModelPhoto?.imageUrl || (bgImageUrl && /^https?:\/\//i.test(bgImageUrl))) ? (
-         // eslint-disable-next-line @next/next/no-img-element
-         <img
-           src={aiComposeIncomingPreview || aiComposeModelPhoto?.imageUrl || bgImageUrl}
-           alt="Invitation dont les visages seront remplacés"
-           className="w-20 h-20 sm:w-24 sm:h-24 rounded-[var(--radius-button)] object-cover border border-border shrink-0"
-         />
-       ) : (
-         <span className="w-20 h-20 sm:w-24 sm:h-24 rounded-[var(--radius-button)] bg-surface-muted border border-border flex items-center justify-center shrink-0">
-           <Image className="w-5 h-5 text-primary" />
-         </span>
-       )}
-       <span className="min-w-0">
-         <span className="block text-xs font-bold text-foreground">
-           {aiComposeIncomingFile
-             ? aiComposeIncomingFile.name
-             : aiComposeModelPhoto
-               ? aiComposeModelPhoto.name
-               : bgImageUrl
-                 ? 'Carton actuel du studio'
-                 : 'Choisir une invitation'}
-         </span>
-         <span className="block text-xs text-muted mt-0.5">
-           Les visages de cette image seront remplacés. Pose du corps, décor et expressions du carton restent ; vos photos fournissent seulement l’identité.
-         </span>
-       </span>
-     </button>
-     <div className="mt-3">
-       <InvitationModelPhotoPicker
-         id="ai-compose-model-incoming"
-         selectedId={aiComposeModelPhoto?.id || null}
-         models={studioModelPhotos}
-         disabled={aiComposeBusy}
-         onSelect={(photo) => {
-           setAiComposeIncomingFromFile(null);
-           setAiComposeModelPhoto(photo);
-         }}
-         onClear={() => setAiComposeModelPhoto(null)}
-       />
-     </div>
-   </div>
-   <div>
-     <label htmlFor="ai-compose-couple-photos" className="text-sm font-semibold text-muted">Photos du couple (1 ou 2)</label>
-     <input
-       id="ai-compose-couple-photos"
-       ref={aiComposeInputRef}
-       type="file"
-       accept="image/jpeg,image/png,image/webp"
-       multiple
-       className="sr-only"
-       onChange={handleAiComposeFilesSelected}
-     />
-     <button
-       type="button"
-       disabled={aiComposeBusy}
-       onDragOver={(e) => {
-         e.preventDefault();
-         setAiComposeDragging(true);
-       }}
-       onDragLeave={() => setAiComposeDragging(false)}
-       onDrop={(e) => {
-         e.preventDefault();
-         setAiComposeDragging(false);
-         const dropped = Array.from(e.dataTransfer.files || []);
-         if (dropped.length) addAiComposeFiles(dropped);
-       }}
-       onClick={() => aiComposeInputRef.current?.click()}
-       className={`mt-1.5 min-h-28 w-full flex items-center justify-center gap-2 p-6 border-2 border-dashed rounded-[var(--radius-card)] text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
-         aiComposeDragging
-           ? 'border-primary bg-primary/15 text-primary'
-           : 'border-primary/30 hover:border-primary hover:bg-primary/5 text-primary'
-       }`}
-     >
-       <Users className="w-5 h-5" aria-hidden />
-       {aiComposeFiles.length > 0
-         ? `Ajouter une autre photo (${aiComposeFiles.length}/2)`
-         : 'Elle / lui — photos nettes, visage visible'}
-     </button>
-     {aiComposePreviewUrls.length > 0 && (
-       <div className="mt-2 flex flex-wrap gap-2.5">
-         {aiComposePreviewUrls.map((url, i) => {
-           const role = aiComposeFileRoles[i] || (i === 0 ? 'groom' : i === 1 ? 'bride' : 'auto');
-           return (
-             <div key={url} className="relative w-24 h-32 sm:w-28 sm:h-36 rounded-[var(--radius-button)] overflow-hidden border border-border flex flex-col bg-surface-muted">
-               {/* eslint-disable-next-line @next/next/no-img-element */}
-               <img src={url} alt={i === 0 ? 'Premier visage du couple' : 'Second visage du couple'} className="w-full h-full object-cover" loading="lazy" />
-               <button
-                 type="button"
-                 disabled={aiComposeBusy}
-                 onClick={() => removeAiComposeFile(i)}
-                 className="absolute top-1 right-1 inline-flex min-h-[36px] min-w-[36px] items-center justify-center bg-foreground/85 hover:bg-foreground text-background rounded-full transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary shadow-xs z-10"
-                 aria-label={i === 0 ? 'Retirer le premier visage' : 'Retirer le second visage'}
-               >
-                 <XCircle className="w-4 h-4" aria-hidden />
-               </button>
-               <button
-                 type="button"
-                 disabled={aiComposeBusy}
-                 aria-label={`Rôle pour la photo ${i + 1} : ${role === 'groom' ? 'Marié (costume)' : 'Mariée (robe)'}. Cliquez pour permuter.`}
-                 onClick={(e) => {
-                   e.stopPropagation();
-                   setAiComposeFileRoles((prev) => {
-                     const next = [...prev];
-                     const current = next[i] || (i === 0 ? 'groom' : 'bride');
-                     next[i] = current === 'groom' ? 'bride' : 'groom';
-                     return next;
-                   });
-                 }}
-                 className={cn(
-                   'absolute bottom-0 inset-x-0 min-h-[32px] py-1 text-xs font-bold text-center tracking-tight transition z-10 cursor-pointer shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                   role === 'groom'
-                     ? 'bg-stage/95 hover:bg-stage text-stage-foreground border-t border-white/10'
-                     : 'bg-festive-accent/95 hover:bg-festive-accent text-white border-t border-white/10',
-                 )}
-                 title="Cliquez pour changer le rôle (Marié ou Mariée)"
-               >
-                 {role === 'groom' ? '🤵 Marié' : '👰 Mariée'}
-               </button>
-             </div>
-           );
-         })}
-       </div>
-     )}
-     <div className="mt-2.5 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 flex items-center gap-2 text-xs text-primary font-medium">
-       <Sparkles className="w-3.5 h-3.5 shrink-0 text-primary" />
-       <span>Harmonisation réaliste active : carnation, lumière et contours du cou fondus au décor.</span>
-     </div>
-   </div>
- </div>
- ) : (
- <div className="space-y-3">
- <p className="text-sm font-semibold text-foreground">2. {aiComposeSectionTitles[1]}</p>
- {aiComposeMode === 'modify' ? (
-   <>
-     {bgImageUrl && /^https?:\/\//i.test(bgImageUrl) && !aiComposeModelPhoto && aiComposeFiles.length === 0 ? (
-       <div className="flex items-center gap-3 rounded-[var(--radius-card)] border border-primary/30 bg-primary/5 p-3">
-         {/* eslint-disable-next-line @next/next/no-img-element */}
-         <img src={bgImageUrl} alt="Carte actuelle" className="w-14 h-20 rounded-lg object-cover border border-border shrink-0" />
-         <p className="text-xs text-muted leading-relaxed">
-           <span className="block text-sm font-bold text-foreground">La carte ouverte dans l’éditeur</span>
-           Elle sert de base. Choisissez un modèle ou importez une photo pour partir d’une autre carte.
-         </p>
-       </div>
-     ) : null}
-     <InvitationModelPhotoPicker
-       id="ai-compose-model-photos"
-       selectedId={aiComposeModelPhoto?.id || null}
-       models={studioModelPhotos}
-       disabled={aiComposeBusy}
-       onSelect={(photo) => setAiComposeModelPhoto(photo)}
-       onClear={() => setAiComposeModelPhoto(null)}
-     />
-   </>
- ) : (
-   <p className="text-xs text-muted leading-relaxed">
-     Ajoutez des photos qui inspirent l’ambiance (lieu, tenue, couleurs). Elles guident l’IA sans être copiées.
-   </p>
- )}
- <label htmlFor="ai-compose-optional-photos" className="text-sm font-semibold text-muted">
-   {aiComposeMode === 'modify' ? 'Ou la photo de la carte à transformer' : 'Photos d’inspiration (1 à 4)'}
- </label>
- <input
- id="ai-compose-optional-photos"
- ref={aiComposeInputRef}
- type="file"
- accept="image/jpeg,image/png,image/webp"
- multiple
- className="sr-only"
- onChange={handleAiComposeFilesSelected}
- />
- <button
- type="button"
- disabled={aiComposeBusy}
- onDragOver={(e) => {
- e.preventDefault();
- setAiComposeDragging(true);
- }}
- onDragLeave={() => setAiComposeDragging(false)}
- onDrop={(e) => {
- e.preventDefault();
- setAiComposeDragging(false);
- const dropped = Array.from(e.dataTransfer.files || []);
- if (dropped.length) addAiComposeFiles(dropped);
- }}
- onClick={() => aiComposeInputRef.current?.click()}
- className={`mt-1.5 min-h-36 w-full flex flex-col items-center justify-center gap-2 p-8 border-2 border-dashed rounded-[var(--radius-card)] text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
- aiComposeDragging
- ? 'border-primary bg-primary/15 text-primary'
- : 'border-primary/30 hover:border-primary hover:bg-primary/5 text-primary'
- }`}
- >
- <Upload className="w-6 h-6" />
- {aiComposeFiles.length > 0 ? (
- <>
- <span className="sm:hidden">Ajouter ({aiComposeFiles.length}/4)</span>
- <span className="hidden sm:inline">{`Ajouter d'autres photos (${aiComposeFiles.length}/4)`}</span>
- </>
- ) : (
- <>
- <span className="sm:hidden">{aiComposeMode === 'modify' ? 'Ajouter la photo' : 'Ajouter des photos'}</span>
- <span className="hidden sm:inline">
-   {aiComposeMode === 'modify' ? 'Glisser ou cliquer pour ajouter la photo de la carte' : 'Glisser ou cliquer pour ajouter des photos (1 à 4)'}
- </span>
- </>
- )}
- </button>
- {aiComposePreviewUrls.length > 0 && (
- <div className="mt-2 flex flex-wrap gap-2">
- {aiComposePreviewUrls.map((url, i) => (
- <div key={url} className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-[var(--radius-button)] overflow-hidden border border-border">
- {/* eslint-disable-next-line @next/next/no-img-element */}
- <img src={url} alt={`Référence ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
- <button
- type="button"
- disabled={aiComposeBusy}
- onClick={() => removeAiComposeFile(i)}
- className="absolute top-0.5 right-0.5 inline-flex min-h-11 min-w-11 items-center justify-center bg-foreground/80 text-background rounded-full"
- aria-label={`Retirer l’image ${i + 1}`}
- >
- <XCircle className="w-3.5 h-3.5" aria-hidden />
- </button>
- </div>
- ))}
- </div>
- )}
- </div>
- )}
- </div>
-
- <div className="space-y-4">
- <div>
- <p className="text-sm font-semibold text-foreground mb-2">
-   3. {aiComposeSectionTitles[2]}
- </p>
-
- <div
-   className="flex items-center gap-1.5 p-1 bg-surface-muted rounded-lg border border-border mb-3"
-   role="tablist"
-   aria-label="Sections du studio d'invitation"
- >
-   <button
-     id="ai-compose-tab-texts"
-     type="button"
-     role="tab"
-     aria-selected={aiComposeDetailsSection === 'texts'}
-     aria-controls="ai-compose-panel-texts"
-     tabIndex={aiComposeDetailsSection === 'texts' ? 0 : -1}
-     onClick={() => setAiComposeDetailsSection('texts')}
-     onKeyDown={(e) => {
-       if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-         e.preventDefault();
-         setAiComposeDetailsSection('style');
-       }
-     }}
-     className={cn(
-       'flex-1 min-h-[44px] px-3 py-2 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-       aiComposeDetailsSection === 'texts'
-         ? 'bg-surface text-foreground shadow-xs border border-border/80'
-         : 'text-muted hover:text-foreground',
-     )}
-   >
-     <PenTool className="w-3.5 h-3.5" aria-hidden />
-     <span>Textes de la carte</span>
-     {aiComposeHasTexts && (
-       <span className="w-1.5 h-1.5 rounded-full bg-primary" aria-label="Contient des textes saisis" />
-     )}
-   </button>
-   <button
-     id="ai-compose-tab-style"
-     type="button"
-     role="tab"
-     aria-selected={aiComposeDetailsSection === 'style'}
-     aria-controls="ai-compose-panel-style"
-     tabIndex={aiComposeDetailsSection === 'style' ? 0 : -1}
-     onClick={() => setAiComposeDetailsSection('style')}
-     onKeyDown={(e) => {
-       if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-         e.preventDefault();
-         setAiComposeDetailsSection('texts');
-       }
-     }}
-     className={cn(
-       'flex-1 min-h-[44px] px-3 py-2 rounded-md text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-       aiComposeDetailsSection === 'style'
-         ? 'bg-surface text-foreground shadow-xs border border-border/80'
-         : 'text-muted hover:text-foreground',
-     )}
-   >
-     <Sparkles className="w-3.5 h-3.5" aria-hidden />
-     <span>Ambiance et cérémonie</span>
-   </button>
- </div>
-
- <div
-   id="ai-compose-panel-texts"
-   role="tabpanel"
-   aria-labelledby="ai-compose-tab-texts"
-   hidden={aiComposeDetailsSection !== 'texts'}
- >
-   {aiComposeDetailsSection === 'texts' && (
-     <InvitationCardInfoFields
-       id="ai-compose-card-info"
-       value={aiComposeStructured}
-       onChange={handleStudioStructuredChange}
-       showReplaceToggles={aiComposeIsAlteration || aiComposeCoupleFaceSwap}
-       disabled={aiComposeBusy}
-       compact
-     />
-   )}
- </div>
-
- <div
-   id="ai-compose-panel-style"
-   role="tabpanel"
-   aria-labelledby="ai-compose-tab-style"
-   hidden={aiComposeDetailsSection !== 'style'}
- >
-   {aiComposeDetailsSection === 'style' && (
-     <InvitationStructuredBriefFields
-       id="ai-compose-structured"
-       value={aiComposeStructured}
-       onChange={handleStudioStructuredChange}
-       disabled={aiComposeBusy}
-       compact
-     />
-   )}
- </div>
-
- <div className="flex items-center justify-between mt-3">
- <label htmlFor="ai-compose-prompt" className="text-xs font-semibold text-muted">
-   {aiComposeMode === 'create' ? 'Décrivez la fête en une phrase' : 'Ce qui doit changer (optionnel)'}
- </label>
- <span className="hidden sm:inline text-xs text-muted tabular-nums">
- {aiComposePrompt.length} car.
- </span>
- </div>
- <textarea
- id="ai-compose-prompt"
- rows={3}
- value={aiComposePrompt}
- disabled={aiComposeBusy}
- onChange={(e) => setAiComposePrompt(e.target.value)}
- placeholder={aiComposeCoupleFaceSwap
-   ? 'Optionnel : préciser qui est à gauche / à droite, ou garder une tenue…'
-   : aiComposeMode === 'modify'
-     ? 'Ex. Passer en or et ivoire, remplacer les fleurs par du wax, garder la mise en page…'
-     : 'Ex. Mariage coutumier chic à Kinshasa, tons or et ivoire, fleurs blanches, lumière chaude…'}
- className="mt-1 w-full rounded-[var(--radius-card)] border border-border bg-surface-muted px-3.5 py-2.5 text-xs sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 resize-y min-h-[4.5rem]"
- />
-
- <div className="mt-3 flex items-center justify-between gap-3 p-3 rounded-xl border border-border bg-surface">
-   <div>
-     <span className="block text-xs font-bold text-foreground">Textes modifiables après la création</span>
-     <span className="block text-xs text-muted">
-       {aiComposeEmbedText
-         ? 'Non : l’IA dessine les textes dans l’image, ils ne se modifient plus.'
-         : 'Oui : l’image reste sans texte, noms et date restent modifiables dans l’éditeur.'}
-     </span>
-   </div>
-   <button
-     type="button"
-     role="switch"
-     aria-checked={!aiComposeEmbedText}
-     disabled={aiComposeBusy}
-     onClick={() => setAiComposeEmbedText((v) => !v)}
-     className={`min-h-9 px-3 rounded-lg text-xs font-bold transition border ${
-       !aiComposeEmbedText
-         ? 'bg-primary-solid text-primary-foreground border-primary shadow-xs'
-         : 'bg-surface-muted text-muted hover:text-foreground border-border'
-     }`}
-   >
-     {!aiComposeEmbedText ? 'Oui (conseillé)' : 'Non'}
-   </button>
- </div>
-
- <p className="mt-2 text-xs text-muted">
- Besoin d’une idée ? Ouvrez <button type="button" className="font-bold text-primary hover:underline" onClick={() => setAiComposeStudioTab('prompts')}>Exemples</button> : des descriptions prêtes à lancer.
- </p>
-
- <button
-   type="button"
-   aria-expanded={aiComposeAdvancedOpen}
-   disabled={aiComposeBusy}
-   onClick={() => setAiComposeAdvancedOpen((open) => !open)}
-   className="mt-4 min-h-11 w-full inline-flex items-center justify-between gap-2 px-3 rounded-[var(--radius-button)] border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
- >
-   <span>Options avancées</span>
-   <span className="text-xs font-medium text-muted">{aiComposeAdvancedOpen ? 'Masquer' : 'Style, jetons, variations'}</span>
- </button>
-
- {aiComposeAdvancedOpen ? (
- <div className="mt-3 space-y-3 rounded-[var(--radius-card)] border border-border bg-surface-muted/40 p-4">
- <div className="flex items-center gap-1.5 flex-wrap">
- <span className="text-xs font-semibold text-muted flex items-center gap-1">
- <Tag className="w-3 h-3 text-primary" />
- Insérer dans le brief
- </span>
- {[
- { tag: '{{firstName}}', label: 'Prénom' },
- { tag: '{{lastName}}', label: 'Nom' },
- { tag: '{{date}}', label: 'Date' },
- { tag: '{{location}}', label: 'Lieu' },
- { tag: '{{title}}', label: 'Événement' },
- ].map((v) => (
- <button
- key={v.tag}
- type="button"
- disabled={aiComposeBusy}
- onClick={() => insertAiComposeVariable(v.tag)}
- className="min-h-11 px-3 rounded-md text-xs font-bold border border-border bg-surface hover:border-primary/40 hover:bg-primary/5 text-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
- title={`Insérer ${v.tag}`}
- >
- {v.label}
- </button>
- ))}
- </div>
- <InvitationArtStylePicker
- id="ai-compose-art-style"
- value={aiComposeArtStyle}
- onChange={(style) => {
- setAiComposeArtStyle(style);
- persistInvitationArtStyle(style);
- }}
- disabled={aiComposeBusy}
- />
- <InvitationContextSourcePicker
- id="ai-compose-context"
- value={aiComposeContextSource}
- onChange={(source) => {
- setAiComposeContextSource(source);
- persistInvitationContextSource(source);
- }}
- disabled={aiComposeBusy}
- canUseOrg={Boolean(tenant?.id) || isSuperAdmin}
- />
-
- <div className="pt-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-   <div>
-     <span className="block text-sm font-bold text-foreground">Vitesse</span>
-     <span className="block text-xs text-muted">Rapide ou plus net</span>
-   </div>
-   <div className="flex items-center gap-1 bg-surface p-1 rounded-lg border border-border">
-     <button
-       type="button"
-       disabled={aiComposeBusy}
-       onClick={() => setAiComposeSpeedMode('fast')}
-       className={`min-h-11 px-3 text-xs font-bold rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${aiComposeSpeedMode === 'fast' ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground'}`}
-       title="Génération en 4 à 8 secondes"
-     >
-       Rapide
-     </button>
-     <button
-       type="button"
-       disabled={aiComposeBusy}
-       onClick={() => setAiComposeSpeedMode('quality')}
-       className={`min-h-11 px-3 text-xs font-bold rounded-md transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${aiComposeSpeedMode === 'quality' ? 'bg-primary-solid text-primary-foreground shadow-xs' : 'text-muted hover:text-foreground'}`}
-       title="Image plus nette, un peu plus longue"
-     >
-       Plus nette
-     </button>
-   </div>
- </div>
-
- </div>
- ) : null}
- </div>
- </div>
- </div>
-
- {aiComposeBusy ? (
-   <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 flex items-center gap-3.5 shadow-sm">
-     <div className="relative shrink-0">
-       <span className="absolute inset-0 rounded-full animate-ping bg-primary/20" />
-       <Loader2 className="w-5 h-5 animate-spin text-primary relative" />
-     </div>
-     <div className="min-w-0 flex-1">
-       <p className="text-xs font-extrabold text-foreground tracking-wide uppercase flex items-center gap-1.5">
-         <Sparkles className="w-3.5 h-3.5 text-primary" />
-         {aiComposeStage || 'Génération de l’invitation IA…'}
-       </p>
-       <p className="text-xs text-muted mt-0.5 leading-snug">
-         L’intelligence artificielle traite la composition. Vous pouvez patienter ici ou fermer la fenêtre : le travail continuera en tâche de fond et s’ouvrira dans l’éditeur dès qu’il sera prêt.
-       </p>
-     </div>
-   </div>
- ) : aiComposeStage ? (
- <p className="text-xs font-bold text-primary flex items-center gap-2">
- <Loader2 className="w-3.5 h-3.5 animate-spin" />
- {aiComposeStage}
- </p>
- ) : null}
- </>
+<InvitationAiComposeForm
+  idPrefix="ai-compose"
+  mode={aiComposeMode}
+  onModeChange={selectAiComposeMode}
+  busy={aiComposeBusy}
+  stage={aiComposeStage}
+  error={error}
+  onDismissError={() => setError('')}
+  onRetry={handleAiComposeGenerate}
+  onRecharge={() => setAiTokenModalOpen(true)}
+  currentCardUrl={bgImageUrl && /^https?:\/\//i.test(bgImageUrl) ? bgImageUrl : undefined}
+  incomingFile={aiComposeIncomingFile}
+  incomingPreview={aiComposeIncomingPreview}
+  onIncomingFile={setAiComposeIncomingFromFile}
+  modelPhoto={aiComposeModelPhoto}
+  models={studioModelPhotos}
+  onModelPhotoChange={(photo) => {
+    if (photo && aiComposeCoupleFaceSwap) setAiComposeIncomingFromFile(null);
+    setAiComposeModelPhoto(photo);
+  }}
+  files={aiComposeFiles}
+  previewUrls={aiComposePreviewUrls}
+  fileRoles={aiComposeFileRoles}
+  onAddFiles={addAiComposeFiles}
+  onRemoveFile={removeAiComposeFile}
+  onToggleFileRole={toggleAiComposeFileRole}
+  structured={aiComposeStructured}
+  onStructuredChange={handleStudioStructuredChange}
+  hasTexts={aiComposeHasTexts}
+  prompt={aiComposePrompt}
+  onPromptChange={setAiComposePrompt}
+  embedText={aiComposeEmbedText}
+  onEmbedTextChange={setAiComposeEmbedText}
+  onShowExamples={() => setAiComposeStudioTab('prompts')}
+  artStyle={aiComposeArtStyle}
+  onArtStyleChange={(style) => {
+    setAiComposeArtStyle(style);
+    persistInvitationArtStyle(style);
+  }}
+  contextSource={aiComposeContextSource}
+  onContextSourceChange={(source) => {
+    setAiComposeContextSource(source);
+    persistInvitationContextSource(source);
+  }}
+  canUseOrg={Boolean(tenant?.id) || isSuperAdmin}
+  speedMode={aiComposeSpeedMode}
+  onSpeedModeChange={setAiComposeSpeedMode}
+/>
  ) : null}
 
  {aiComposeStudioTab === 'history' ? (
@@ -2570,11 +1972,7 @@ export default function TemplatesPage() {
             {aiComposeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
             {aiComposeBusy
               ? 'Génération…'
-              : aiComposeMode === 'faces'
-                ? `Remplacer les visages (${composeTokenCost} jetons)`
-                : aiComposeMode === 'modify'
-                  ? `Transformer la carte (${composeTokenCost} jetons)`
-                  : `Créer la carte (${composeTokenCost} jetons)`}
+              : invitationComposeActionLabel(aiComposeMode, composeTokenCost)}
  </button>
  </div>
  </div>
