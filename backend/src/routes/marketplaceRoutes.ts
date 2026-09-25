@@ -42,6 +42,7 @@ import {
   listVendorFeedOwner,
   createVendorFeedPost,
   deleteMarketplaceFeedPost,
+  updateMarketplaceFeedPost,
   toggleMarketplaceFeedLike,
   createMarketplaceFeedComment,
   listFeedTargets,
@@ -99,6 +100,7 @@ router.post('/vendors/me/feed', createVendorFeedPost);
 router.get('/feed/targets', listFeedTargets);
 router.get('/feed/mine', listMyFeedPosts);
 router.post('/feed', createLinkedFeedPost);
+router.patch('/feed/:postId', updateMarketplaceFeedPost);
 router.delete('/feed/:postId', deleteMarketplaceFeedPost);
 router.post('/feed/:postId/like', toggleMarketplaceFeedLike);
 router.post('/feed/:postId/comments', createMarketplaceFeedComment);
