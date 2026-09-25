@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
+/* Les variantes dark: ne s'appliquent pas dans un `.em-light-island` (aperçu / document volontairement clair). */
+@custom-variant dark (&:where(.dark, .dark *):not(:where(.em-light-island, .em-light-island *)));
 
 /* ─── Asana-inspired tokens: warm neutrals, flat elevation, soft radius ─── */
 :root {

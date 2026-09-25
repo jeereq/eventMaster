@@ -324,7 +324,7 @@ export default function GuestInvitationPrintDocument({ data }: { data: GuestPrin
 
   return (
     <div
-      className="min-h-screen guest-print-doc"
+      className="em-light-island min-h-screen guest-print-doc"
       style={{ background: 'linear-gradient(180deg, #f1f5f9 0%, #f8fafc 40%, #ffffff 100%)', ...brandVars }}
       data-pdf-ready={pdfReady ? 'true' : 'false'}
     >

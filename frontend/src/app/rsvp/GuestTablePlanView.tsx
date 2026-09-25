@@ -367,7 +367,7 @@ export default function GuestTablePlanView({
               />
 
               {/* Beacon HUD 3D "Mon emplacement" */}
-              <div className="absolute top-3 left-3 z-20 flex items-center gap-2.5 rounded-2xl bg-foreground/90 backdrop-blur-md px-3.5 py-2 text-background shadow-lg border border-background/20 animate-fade-in pointer-events-none max-w-[85%]">
+              <div className="absolute top-3 left-3 z-20 flex items-center gap-2.5 rounded-2xl bg-stage/90 backdrop-blur-md px-3.5 py-2 text-stage-foreground shadow-lg border border-white/15 animate-fade-in pointer-events-none max-w-[85%]">
                 <span className="relative flex h-3 w-3 shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 motion-reduce:hidden"></span>
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-400"></span>
