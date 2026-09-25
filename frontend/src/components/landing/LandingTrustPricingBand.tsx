@@ -76,8 +76,9 @@ export default function LandingTrustPricingBand() {
 
   return (
     <section
+      id="tarifs"
       aria-labelledby="landing-trust-title"
-      className="em-landing-defer py-8 sm:py-14 border-t border-border bg-surface/80 dark:bg-background/80"
+      className="em-landing-defer scroll-mt-16 md:scroll-mt-24 py-8 sm:py-14 border-t border-border bg-surface/80 dark:bg-background/80"
     >
       <div className="page-container grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <div className="rounded-[var(--radius-card)] border border-border bg-surface p-5 sm:p-6 space-y-4">

@@ -34,7 +34,7 @@ import {
   type CatalogueEntityExtras,
 } from '@/lib/catalogueEntityFilters';
 import { fetchPublicServicesForCatalogue } from '@/lib/catalogueFetch';
-import { ArrowRight, Building2, Calendar, KeyRound, RefreshCw, Sparkles, Clock, Wine } from 'lucide-react';
+import { ArrowRight, Building2, Calendar, KeyRound, RefreshCw, Sparkles, Wine } from 'lucide-react';
 import { useCatalogueGridCols, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
 import { marketplaceSectionUrl } from '@/lib/share';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
@@ -49,7 +49,6 @@ const emptyFilters: EntityFilters = { ...EMPTY_CATALOGUE_GEO, ...EMPTY_CATALOGUE
 export default function LandingVitrineSection() {
   const revealRef = useLandingReveal<HTMLElement>();
   const { site } = usePlatformSite();
-  const isBudgetBlocked = site?.studioVisibility?.budget === false;
   const marketplaceCities = enabledMarketplaceCities(site);
   const [tab, setTab] = useState<VitrineTab>('venues');
   const [venues, setVenues] = useState<PublicVenue[]>([]);
@@ -299,15 +298,16 @@ export default function LandingVitrineSection() {
       <div id="evenements" className="scroll-mt-16" />
       <div className="page-container relative z-10 space-y-5 sm:space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 sm:gap-6">
-          <div className="max-w-xl space-y-2.5">
-            <h2 className="em-landing-heading text-xl sm:text-3xl text-foreground">
+          <div className="max-w-2xl flex flex-col gap-3">
+            <span className="text-xs sm:text-sm font-bold text-primary tracking-[0.06em] uppercase">Marketplace</span>
+            <h2 className="em-landing-heading text-3xl sm:text-[2.5rem] text-foreground">
               Salles, métiers, matériel et billetteries
             </h2>
-            <p className="text-sm text-muted leading-relaxed">
-              Salles, prestataires, matériel, boissons et événements.
+            <p className="text-base text-muted leading-relaxed">
+              Choisissez une catégorie, cherchez par nom ou filtrez par ville et par prix.
             </p>
           </div>
-          <Button href="/marketplace" className="w-full sm:w-auto" rightIcon={<ArrowRight className="w-4 h-4" />}>
+          <Button href="/marketplace" variant="secondary" className="w-full sm:w-auto shrink-0" rightIcon={<ArrowRight className="w-4 h-4" />}>
             Tout le marketplace
           </Button>
         </div>
@@ -348,61 +348,6 @@ export default function LandingVitrineSection() {
           </Link>
         </div>
 
-        <div
-          className={`flex items-center justify-between gap-3 p-3 sm:p-4 rounded-[var(--radius-card)] border shadow-xs ${
-            isBudgetBlocked
-              ? 'bg-amber-500/10 border-amber-500/25'
-              : 'bg-gradient-to-r from-primary/10 via-surface to-primary/5 border-primary/25'
-          }`}
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div
-              className={`w-9 h-9 rounded-[var(--radius-button)] flex items-center justify-center shrink-0 ${
-                isBudgetBlocked
-                  ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
-                  : 'bg-primary/15 text-primary'
-              }`}
-            >
-              {isBudgetBlocked ? <Clock className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-            </div>
-            <div>
-              <p className="text-sm font-bold text-foreground flex items-center gap-2">
-                <span className="sm:hidden">
-                  {isBudgetBlocked ? 'Pack budget IA' : 'Pack budget'}
-                </span>
-                <span className="hidden sm:inline">
-                  {isBudgetBlocked
-                    ? 'Simulateur de pack budget IA'
-                    : 'Besoin d’un pack complet selon votre budget ?'}
-                </span>
-                {isBudgetBlocked && (
-                  <span className="px-1.5 py-0.5 text-xs font-bold rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/20">
-                    À venir
-                  </span>
-                )}
-              </p>
-              <p className="text-xs text-muted hidden sm:block">
-                {isBudgetBlocked
-                  ? 'L’estimation et composition automatique par IA sera disponible prochainement. Vous pouvez directement composer votre panier depuis les fiches prestataires.'
-                  : 'Laissez notre simulateur IA composer instantanément 3 formules (salle + traiteur + déco + DJ) adaptées à votre enveloppe.'}
-              </p>
-            </div>
-          </div>
-          <Button
-            href="/simulateur"
-            size="sm"
-            variant={isBudgetBlocked ? 'secondary' : 'primary'}
-            className="shrink-0"
-            aria-label={isBudgetBlocked ? 'En savoir plus sur la fonctionnalité à venir' : 'Tester la simulation IA'}
-            rightIcon={isBudgetBlocked ? <Clock className="w-3.5 h-3.5" /> : <ArrowRight className="w-3.5 h-3.5" />}
-          >
-            <span className="sm:hidden">{isBudgetBlocked ? 'À venir' : 'Simuler'}</span>
-            <span className="hidden sm:inline">
-              {isBudgetBlocked ? 'Fonctionnalité à venir' : 'Tester la simulation IA'}
-            </span>
-          </Button>
-        </div>
-
         {catalogError ? (
           <div
             role="alert"
@@ -422,7 +367,7 @@ export default function LandingVitrineSection() {
           </div>
         ) : null}
 
-        {tab === 'venues' && (
+        {!catalogError && tab === 'venues' && (
           <div
             id="vitrine-panel-venues"
             className="space-y-4"
@@ -460,7 +405,7 @@ export default function LandingVitrineSection() {
           </div>
         )}
 
-        {tab === 'services' && (
+        {!catalogError && tab === 'services' && (
           <div
             id="vitrine-panel-services"
             className="space-y-4"
@@ -498,7 +443,7 @@ export default function LandingVitrineSection() {
           </div>
         )}
 
-        {tab === 'rentals' && (
+        {!catalogError && tab === 'rentals' && (
           <div
             id="vitrine-panel-rentals"
             className="space-y-4"
@@ -536,7 +481,7 @@ export default function LandingVitrineSection() {
           </div>
         )}
 
-        {tab === 'events' && (
+        {!catalogError && tab === 'events' && (
           <div
             id="vitrine-panel-events"
             className="space-y-4"

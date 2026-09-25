@@ -9,7 +9,18 @@ import { cn } from '@/lib/cn';
 import { LANDING_PROFILES, type LandingProfileId } from '@/lib/landingProfiles';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { enabledPublicCities } from '@/lib/platformCities';
-import { FLEXPAY_MOBILE_OPERATORS } from '@/lib/flexPayOperators';
+import { revealAndScrollToSection, scrollToPageSection } from '@/lib/aiFabPlacement';
+
+/** Sommaire de la page : chaque lien fait défiler jusqu’à sa section (montée à la demande si besoin). */
+const PAGE_SECTIONS = [
+  { id: 'profils', label: 'Pour qui ?' },
+  { id: 'etapes', label: 'Comment ça marche' },
+  { id: 'outils', label: 'Les outils' },
+  { id: 'catalogue', label: 'Salles & prestataires' },
+  { id: 'simulateur-ia', label: 'Simulateur IA' },
+  { id: 'tarifs', label: 'Tarifs' },
+  { id: 'faq', label: 'FAQ' },
+];
 
 /** Textes courts des cartes « Quel est votre projet ? ». */
 const PROFILE_CARDS: Record<LandingProfileId, { eyebrow: string; title: string; desc: string }> = {
@@ -48,6 +59,26 @@ const DEMO_GUESTS = [
   { initials: 'DL', name: 'Didier L.', status: 'En attente', pending: true },
   { initials: 'EI', name: 'Esther I.', status: 'Confirmé', pending: false },
 ];
+
+/**
+ * Les sections du bas se montent à la demande et changent de hauteur en chargeant :
+ * on recale la cible quelques fois, sauf si le visiteur a repris la main entre-temps.
+ */
+function goToSection(id: string) {
+  revealAndScrollToSection(id);
+  let userMoved = false;
+  const stop = () => {
+    userMoved = true;
+  };
+  const events = ['wheel', 'touchstart', 'keydown', 'pointerdown'] as const;
+  events.forEach((name) => window.addEventListener(name, stop, { once: true, passive: true }));
+  [350, 900, 1600].forEach((delay) =>
+    window.setTimeout(() => {
+      if (!userMoved) scrollToPageSection(id);
+    }, delay),
+  );
+  window.setTimeout(() => events.forEach((name) => window.removeEventListener(name, stop)), 1700);
+}
 
 function formatCitySentence(cities: string[]): string {
   if (cities.length === 0) return '';
@@ -137,7 +168,6 @@ export default function LandingHeroStreamlined() {
   const cities = enabledPublicCities(site);
   const citySentence = formatCitySentence(cities);
   const isLoggedIn = Boolean(user);
-  const paymentMethods = [...FLEXPAY_MOBILE_OPERATORS, 'Visa · Mastercard'];
 
   return (
     <>
@@ -151,7 +181,7 @@ export default function LandingHeroStreamlined() {
               </span>
             ) : null}
             <h1 className="em-landing-heading text-4xl min-[400px]:text-[2.6rem] sm:text-6xl lg:text-5xl xl:text-[4rem] leading-[1.04] text-foreground text-balance">
-              Votre événement, de A à Z — parfaitement orchestré.
+              Votre événement, de A à Z, parfaitement orchestré.
             </h1>
             <p className="text-base sm:text-[19px] leading-relaxed text-muted max-w-[540px]">
               Trouvez la salle, estimez le budget, invitez sur WhatsApp et contrôlez les entrées par QR code.
@@ -215,24 +245,33 @@ export default function LandingHeroStreamlined() {
         </div>
       </section>
 
-      <section className="border-y border-border bg-background">
-        <div className="page-container py-6 sm:py-8 flex flex-col md:flex-row md:items-center md:justify-end gap-3">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 text-sm text-muted">
-            <span className="w-full sm:w-auto">Paiement sécurisé</span>
-            {paymentMethods.map((method) => (
-              <span
-                key={method}
-                className="h-10 px-3.5 rounded-[10px] bg-surface border border-border inline-flex items-center font-semibold text-foreground"
-              >
-                {method}
-              </span>
+      <nav aria-label="Sur cette page" className="border-y border-border bg-background">
+        <div className="page-container py-3 sm:py-4 flex items-center gap-3">
+          <span className="hidden md:inline shrink-0 text-sm font-semibold text-muted">Sur cette page</span>
+          <ul
+            className="flex items-center gap-2 min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex-wrap"
+            role="list"
+          >
+            {PAGE_SECTIONS.map((section) => (
+              <li key={section.id} className="shrink-0">
+                <a
+                  href={`/#${section.id}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    goToSection(section.id);
+                  }}
+                  className="inline-flex items-center min-h-10 px-3.5 rounded-full border border-border bg-surface text-sm font-semibold text-foreground hover:border-primary/40 hover:text-primary transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                >
+                  {section.label}
+                </a>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
-      </section>
+      </nav>
 
-      <section id="profils" className="bg-background">
-        <div className="page-container py-16 sm:py-24 lg:py-28 flex flex-col gap-8 sm:gap-12">
+      <section id="profils" className="bg-background scroll-mt-16 md:scroll-mt-24">
+        <div className="page-container pt-10 pb-8 sm:pt-20 sm:pb-12 lg:pt-24 flex flex-col gap-8 sm:gap-12">
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3 lg:gap-8">
             <div className="flex flex-col gap-3">
               <span className="text-xs sm:text-sm font-bold text-primary tracking-[0.06em] uppercase">Pour qui ?</span>
@@ -248,32 +287,43 @@ export default function LandingHeroStreamlined() {
               const card = PROFILE_CARDS[profile.id];
               const target = isLoggedIn ? LOGGED_IN_TARGETS[profile.id] : profile.cta;
               const featured = index === 0;
+              const Icon = profile.icon;
               return (
                 <li key={profile.id}>
                   <Link
                     href={target.href}
                     className={cn(
-                      'group h-full min-h-[240px] sm:min-h-[300px] rounded-3xl p-6 sm:p-7 flex flex-col gap-4 transition duration-200 hover:-translate-y-[3px] hover:shadow-[0_14px_32px_rgba(15,31,26,0.12)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                      'group h-full sm:min-h-[300px] rounded-3xl p-5 sm:p-7 flex flex-col gap-3 sm:gap-4 transition duration-200 hover:-translate-y-[3px] hover:shadow-[0_14px_32px_rgba(15,31,26,0.12)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                       featured
                         ? 'bg-[#064e3b] text-white'
                         : 'bg-surface text-foreground border border-border',
                     )}
                   >
-                    <span
-                      className={cn(
-                        'text-xs sm:text-[13px] font-bold tracking-[0.05em] uppercase',
-                        featured ? 'text-[#6ee7b7]' : 'text-primary',
-                      )}
-                    >
-                      {card.eyebrow}
+                    <span className="flex items-center gap-2.5">
+                      <span
+                        className={cn(
+                          'w-9 h-9 rounded-xl flex items-center justify-center shrink-0',
+                          featured ? 'bg-white/10 text-[#6ee7b7]' : 'bg-primary/10 text-primary',
+                        )}
+                      >
+                        <Icon className="w-[18px] h-[18px]" aria-hidden />
+                      </span>
+                      <span
+                        className={cn(
+                          'text-xs sm:text-[13px] font-bold tracking-[0.05em] uppercase',
+                          featured ? 'text-[#6ee7b7]' : 'text-primary',
+                        )}
+                      >
+                        {card.eyebrow}
+                      </span>
                     </span>
-                    <span className="font-display text-2xl sm:text-[26px] font-semibold leading-[1.15]">{card.title}</span>
+                    <span className="font-display text-[22px] sm:text-[26px] font-semibold leading-[1.15]">{card.title}</span>
                     <span className={cn('text-[15px] leading-relaxed', featured ? 'text-[#d1fae5]' : 'text-muted')}>
                       {card.desc}
                     </span>
                     <span
                       className={cn(
-                        'mt-auto inline-flex items-center gap-2 font-semibold',
+                        'mt-auto pt-2 inline-flex items-center gap-2 font-semibold',
                         featured ? 'text-white' : 'text-primary',
                       )}
                     >
