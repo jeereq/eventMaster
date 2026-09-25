@@ -4,10 +4,14 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import {
+  Camera,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
   Coins,
+  LayoutGrid,
   Loader2,
+  PenLine,
   Upload,
   Wand2,
   XCircle,
@@ -35,7 +39,7 @@ import {
   saveRoomPlanAiDraft,
   type RoomPlanVisionDraft,
 } from '@/lib/roomPlanAi';
-import type { RoomLayoutBlueprint, RoomType } from '@/lib/roomLayoutUtils';
+import { roomTypeLabels, type RoomLayoutBlueprint, type RoomType } from '@/lib/roomLayoutUtils';
 import type { RoomPlanPromptModel } from '@/config/roomPlanPromptModels';
 import { AiRoomPlanFullscreenLoader } from '@/components/AiComposeFullscreenLoader';
 import AiRoomPlanComposeHistoryList from '@/components/AiRoomPlanComposeHistoryList';
@@ -44,7 +48,13 @@ import {
   type AiRoomPlanComposeHistoryItem,
 } from '@/lib/aiRoomPlanComposeHistory';
 import RoomPlanPromptSelector from '@/components/RoomPlanPromptSelector';
-import { StudioAiTabs, StudioHowTo, type StudioAiTabId } from '@/components/StudioAiTabs';
+import {
+  StudioAiTabs,
+  StudioHowTo,
+  StudioToolbar,
+  studioActionBarClass,
+  type StudioAiTabId,
+} from '@/components/StudioAiTabs';
 import PlanViewModeToggle from '@/components/PlanViewModeToggle';
 import AiTokenPurchaseModal from '@/components/AiTokenPurchaseModal';
 import { Alert, Button } from '@/components/ui';
@@ -54,6 +64,9 @@ import { isStudioJobAccepted, onStudioJob } from '@/lib/studioJobs';
 import { useStudioJobs, useStudioLoaderOverlay } from '@/context/StudioJobsContext';
 
 const ROOM_TYPES: RoomType[] = ['SIMPLE', 'BANQUET', 'CONFERENCE', 'AMPHITHEATER', 'TENT', 'CUSTOM'];
+/** Types proposés au choix dans le studio (le type libre reste accessible via l’éditeur). */
+const PICKABLE_ROOM_TYPES: RoomType[] = ['BANQUET', 'CONFERENCE', 'AMPHITHEATER', 'TENT', 'SIMPLE'];
+const STUDIO_STEPS = ['Décrire la salle', 'Générer', 'Explorer le plan'];
 
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
   ssr: false,
@@ -66,6 +79,7 @@ export default function LandingRoomPlanAiStudio({
   id = 'studio-ia',
   defaultExpanded = false,
   lockExpanded = false,
+  inline = false,
   onBlueprintChange,
   className,
 }: {
@@ -73,6 +87,8 @@ export default function LandingRoomPlanAiStudio({
   defaultExpanded?: boolean;
   /** Toujours ouvert (ex. dans une modale) — pas de bandeau compact ni de « Réduire » */
   lockExpanded?: boolean;
+  /** Posé directement dans une page (pas dans une modale) : barres collantes adaptées au site. */
+  inline?: boolean;
   onBlueprintChange?: (blueprint: RoomLayoutBlueprint | null) => void;
   className?: string;
 }) {
@@ -125,6 +141,8 @@ export default function LandingRoomPlanAiStudio({
       onBlueprintChange?.(applied.blueprint);
     });
   }, [onBlueprintChange, roomType]);
+
+  const currentStep = busy || roomStudioJob ? 1 : draft ? 2 : 0;
 
   const asRoomType = (value?: string | null): RoomType => (
     value && ROOM_TYPES.includes(value as RoomType) ? (value as RoomType) : 'BANQUET'
@@ -311,7 +329,7 @@ export default function LandingRoomPlanAiStudio({
       aria-busy={busy}
       aria-labelledby={`${id}-title`}
       className={cn(
-        'rounded-[var(--radius-card)] border border-border bg-surface overflow-hidden scroll-mt-20',
+        'rounded-[var(--radius-card)] border border-border bg-surface overflow-clip scroll-mt-20',
         className,
       )}
     >
@@ -398,22 +416,17 @@ export default function LandingRoomPlanAiStudio({
             </div>
           </div>
           ) : (
-            <div className="px-4 sm:px-6 py-2.5 border-b border-border bg-surface sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2">
+            <>
               <h2 id={`${id}-title`} className="sr-only">
                 Studio IA — plan de salle
               </h2>
-              <p className="text-xs text-muted">
-                <span className="font-semibold text-foreground">1.</span> Brief ou photo{' '}
-                <span className="text-border mx-1">→</span>
-                <span className="font-semibold text-foreground">2.</span> Générer{' '}
-                <span className="text-border mx-1">→</span>
-                <span className="font-semibold text-foreground">3.</span> Explorer le plan
-              </p>
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-foreground px-3 py-1.5 rounded-full bg-surface-muted border border-border tabular-nums">
-                <Coins className="w-3.5 h-3.5 text-primary-solid" aria-hidden />
-                {allowance.unlimited ? 'Illimité' : `${aiTokenBalanceLabel(allowance)} jeton${allowance.totalRemaining === 1 ? '' : 's'}`}
-              </span>
-            </div>
+              <StudioToolbar
+                steps={STUDIO_STEPS}
+                current={currentStep}
+                allowance={allowance}
+                sticky={!inline}
+              />
+            </>
           )}
 
           <div id={`${id}-body`} className="grid grid-cols-1 xl:grid-cols-[minmax(18rem,26rem)_minmax(0,1fr)] xl:divide-x divide-border">
@@ -449,80 +462,128 @@ export default function LandingRoomPlanAiStudio({
 
               {studioTab === 'create' ? (
               <>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  aria-pressed={intent === 'brief'}
-                  disabled={busy}
-                  onClick={() => setIntent('brief')}
-                  className={cn(
-                    'min-h-11 px-3 py-2.5 rounded-[var(--radius-card)] border text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                    intent === 'brief' ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/40',
-                  )}
-                >
-                  <span className="block text-xs font-bold text-foreground">Décrire la salle</span>
-                  <span className="block text-xs text-muted mt-0.5">Brief seul</span>
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={intent === 'photo'}
-                  disabled={busy}
-                  onClick={() => setIntent('photo')}
-                  className={cn(
-                    'min-h-11 px-3 py-2.5 rounded-[var(--radius-card)] border text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                    intent === 'photo' ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/40',
-                  )}
-                >
-                  <span className="block text-xs font-bold text-foreground">Depuis une photo</span>
-                  <span className="block text-xs text-muted mt-0.5">Analyse + import</span>
-                </button>
+              <div className="grid grid-cols-2 gap-2" role="group" aria-label="Point de départ du plan">
+                {([
+                  { value: 'brief', icon: PenLine, title: 'Décrire la salle', hint: 'Quelques mots suffisent' },
+                  { value: 'photo', icon: Camera, title: 'Partir d’une photo', hint: 'L’IA relève l’espace' },
+                ] as const).map((option) => {
+                  const Icon = option.icon;
+                  const selected = intent === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={selected}
+                      disabled={busy}
+                      onClick={() => setIntent(option.value)}
+                      className={cn(
+                        'min-h-11 p-3 rounded-[var(--radius-card)] border text-left transition flex items-start gap-2.5 touch-manipulation',
+                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                        selected
+                          ? 'border-primary bg-primary/10 ring-1 ring-primary/30'
+                          : 'border-border hover:border-primary/40 hover:bg-card-hover',
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          'w-8 h-8 rounded-lg inline-flex items-center justify-center shrink-0',
+                          selected ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted text-primary-solid',
+                        )}
+                      >
+                        <Icon className="w-4 h-4" aria-hidden />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold text-foreground">{option.title}</span>
+                        <span className="block text-xs text-muted mt-0.5">{option.hint}</span>
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => fileRef.current?.click()}
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  if (!busy) setDragOver(true);
-                }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  setDragOver(false);
-                  pickFile(event.dataTransfer.files?.[0]);
-                }}
-                className={cn(
-                  'w-full rounded-[var(--radius-card)] border-2 border-dashed p-4 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                  dragOver ? 'border-primary bg-primary/10' : 'border-primary/25 hover:border-primary/50',
-                )}
-              >
-                <Upload className="w-5 h-5 text-primary-solid mx-auto mb-1.5" aria-hidden />
-                <p className="text-sm font-bold text-foreground">
-                  {intent === 'photo' ? 'Photo de la salle' : 'Photo optionnelle'}
-                </p>
-                <p className="text-xs text-muted mt-0.5">JPEG, PNG ou WebP, 8 Mo max.</p>
-              </button>
-
-              {previewUrl ? (
-                <div className="relative w-20 h-20 rounded-[var(--radius-card)] overflow-hidden border border-border">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={previewUrl} alt="Photo de la salle" className="w-full h-full object-cover" />
+              {intent === 'photo' || previewUrl ? (
+                previewUrl ? (
+                  <div className="flex items-center gap-3 rounded-[var(--radius-card)] border border-border bg-surface-muted/50 p-2.5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={previewUrl} alt="Photo de la salle" className="w-16 h-16 rounded-lg object-cover border border-border shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-foreground truncate">{file?.name || 'Photo de la salle'}</p>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => fileRef.current?.click()}
+                        className="min-h-11 text-xs font-semibold text-primary-solid hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm"
+                      >
+                        Changer de photo
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setPhoto(null)}
+                      className="min-w-11 min-h-11 inline-flex items-center justify-center rounded-full text-muted hover:text-foreground hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                      aria-label="Retirer la photo"
+                    >
+                      <XCircle className="w-5 h-5" aria-hidden />
+                    </button>
+                  </div>
+                ) : (
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => setPhoto(null)}
-                    className="absolute top-0.5 right-0.5 min-w-11 min-h-11 inline-flex items-center justify-center bg-foreground/85 text-background rounded-full"
-                    aria-label="Retirer la photo"
+                    onClick={() => fileRef.current?.click()}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      if (!busy) setDragOver(true);
+                    }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      setDragOver(false);
+                      pickFile(event.dataTransfer.files?.[0]);
+                    }}
+                    className={cn(
+                      'w-full rounded-[var(--radius-card)] border-2 border-dashed p-5 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                      dragOver ? 'border-primary bg-primary/10' : 'border-primary/25 hover:border-primary/50 hover:bg-primary/5',
+                    )}
                   >
-                    <XCircle className="w-3.5 h-3.5" aria-hidden />
+                    <Upload className="w-6 h-6 text-primary-solid mx-auto mb-2" aria-hidden />
+                    <p className="text-sm font-semibold text-foreground">Déposez une photo de la salle</p>
+                    <p className="text-xs text-muted mt-0.5">ou touchez pour choisir · JPEG, PNG, WebP · 8 Mo max</p>
                   </button>
-                </div>
+                )
               ) : null}
+
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold text-foreground">Type de salle</p>
+                <div className="flex flex-wrap gap-1.5" role="group" aria-label="Type de salle">
+                  {PICKABLE_ROOM_TYPES.map((type) => {
+                    const selected = roomType === type;
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        aria-pressed={selected}
+                        disabled={busy}
+                        onClick={() => setRoomType(type)}
+                        className={cn(
+                          'min-h-11 px-3.5 rounded-full border text-xs font-semibold transition touch-manipulation',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                          selected
+                            ? 'border-primary-solid bg-primary-solid text-primary-foreground'
+                            : 'border-border bg-surface text-foreground hover:border-primary/50',
+                        )}
+                      >
+                        {roomTypeLabels[type]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
               <div className="space-y-2">
                 <label htmlFor={`${id}-brief`} className="text-xs font-semibold text-foreground">
-                  {intent === 'photo' ? 'Précisez ce qu’il faut reprendre' : 'Décrivez la salle'}
+                  {intent === 'photo' ? 'Précisions (optionnel)' : 'Décrivez la salle'}
                 </label>
                 <textarea
                   id={`${id}-brief`}
@@ -534,19 +595,24 @@ export default function LandingRoomPlanAiStudio({
                   placeholder="Ex. Mariage 120 convives, 12 tables rondes, allée, table d’honneur…"
                   className="w-full rounded-[var(--radius-button)] border border-border bg-surface-muted px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 min-h-[6rem]"
                 />
-                <p className="text-xs text-muted tabular-nums text-right">{prompt.trim().length}/1500</p>
+                <div className="flex items-center justify-between gap-2 text-xs text-muted">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => setStudioTab('prompts')}
+                    className="min-h-11 inline-flex items-center gap-1 font-semibold text-primary-solid hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" aria-hidden />
+                    Voir des exemples
+                  </button>
+                  <span className="tabular-nums">{prompt.trim().length}/1500</span>
+                </div>
               </div>
 
               {protocolLocked ? <Alert variant="info">{PROTOCOL_CREATIVE_DENIED}</Alert> : null}
               {error ? <Alert variant="error">{error}</Alert> : null}
 
-              <div
-                className={cn(
-                  'sticky bottom-0 z-30 mt-auto -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 border-t border-border',
-                  'bg-surface shadow-[0_-10px_28px_-16px_rgba(0,0,0,0.2)]',
-                  'pb-[max(0.75rem,env(safe-area-inset-bottom))]',
-                )}
-              >
+              <div className={studioActionBarClass(inline)}>
                 <Button
                   type="button"
                   className="w-full min-h-11"
@@ -554,8 +620,17 @@ export default function LandingRoomPlanAiStudio({
                   onClick={() => void generate()}
                   leftIcon={busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
                 >
-                  {busy ? 'Composition…' : `Générer (${AI_ROOM_PLAN_TOKEN_COST} jetons)`}
+                  {busy ? 'Composition…' : `Générer le plan · ${AI_ROOM_PLAN_TOKEN_COST} jetons`}
                 </Button>
+                {intent === 'brief' && prompt.trim().length < ROOM_PLAN_BRIEF_MIN ? (
+                  <p className="mt-1.5 text-xs text-muted text-center" aria-live="polite">
+                    Décrivez la salle en quelques mots pour lancer la génération.
+                  </p>
+                ) : intent === 'photo' && !file ? (
+                  <p className="mt-1.5 text-xs text-muted text-center" aria-live="polite">
+                    Ajoutez une photo de la salle pour lancer la génération.
+                  </p>
+                ) : null}
               </div>
               </>
               ) : null}
@@ -584,29 +659,13 @@ export default function LandingRoomPlanAiStudio({
               ) : null}
             </div>
 
-            <div className="p-4 sm:p-6 space-y-3 bg-stage/40 min-h-[320px]">
-              {preview ? (
-                <div className="p-3 sm:p-3.5 rounded-2xl border border-emerald-500/40 bg-emerald-50/90 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 flex items-center justify-between gap-3 text-xs shadow-xs animate-in fade-in">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="p-1 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 shrink-0">
-                      <Sparkles className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-bold text-foreground truncate">Plan composé avec succès !</p>
-                      <p className="text-[11px] text-muted-foreground dark:text-muted truncate">
-                        {preview.blueprint.furniture.length + preview.blueprint.fixtures.length} éléments disposés · visualisez en 2D ou en 3D.
-                      </p>
-                    </div>
-                  </div>
-                  <span className="hidden sm:inline-flex px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 shrink-0">
-                    Studio 2D / 3D
-                  </span>
-                </div>
-              ) : null}
-
+            <div className="p-4 sm:p-6 space-y-3 bg-surface-muted/40 min-h-[320px]">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-foreground">
-                  {preview ? 'Aperçu généré' : 'Aperçu 2D / 3D'}
+                <p className="font-display text-base font-semibold text-foreground inline-flex items-center gap-2">
+                  {preview ? (
+                    <CheckCircle2 className="w-4 h-4 text-primary-solid" aria-hidden />
+                  ) : null}
+                  {preview ? 'Votre plan est prêt' : 'Aperçu du plan'}
                 </p>
                 <PlanViewModeToggle force2d={force2d} onChange={setForce2d} />
               </div>
@@ -625,21 +684,26 @@ export default function LandingRoomPlanAiStudio({
                     className="w-full h-full"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center p-6 text-center">
-                    <p className="text-sm text-muted max-w-sm">
-                      Générez un plan : le studio pose les éléments ici, en 2D ou en 3D.
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-3 p-6 text-center">
+                    <span className="w-12 h-12 rounded-2xl bg-stage-elevated text-festive-on-stage inline-flex items-center justify-center">
+                      <LayoutGrid className="w-6 h-6" aria-hidden />
+                    </span>
+                    <p className="text-sm text-stage-foreground/80 max-w-xs">
+                      Votre plan apparaîtra ici, en 2D ou en 3D, dès la génération terminée.
                     </p>
                   </div>
                 )}
               </div>
 
               {preview ? (
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs text-foreground">
-                    {preview.blueprint.furniture.length + preview.blueprint.fixtures.length} éléments
-                    {preview.warnings[0] ? ` · ${preview.warnings[0]}` : ''}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-3">
+                  <p className="text-xs text-muted">
+                    <span className="font-semibold text-foreground">
+                      {preview.blueprint.furniture.length + preview.blueprint.fixtures.length} éléments posés
+                    </span>
+                    {preview.warnings[0] ? ` · ${preview.warnings[0]}` : ' · ajustez-les librement dans l’éditeur.'}
                   </p>
-                  <Button type="button" size="sm" onClick={openEditor} disabled={protocolLocked}>
+                  <Button type="button" size="sm" onClick={openEditor} disabled={protocolLocked} className="min-h-11 shrink-0">
                     Ouvrir dans l’éditeur
                   </Button>
                 </div>

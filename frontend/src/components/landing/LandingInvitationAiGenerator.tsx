@@ -68,7 +68,13 @@ import {
 } from '@/lib/aiTemplateComposeHistory';
 import AiTemplateComposeHistoryList from '@/components/AiTemplateComposeHistoryList';
 import PromptModelSelector from '@/components/PromptModelSelector';
-import { StudioAiTabs, StudioHowTo, type StudioAiTabId } from '@/components/StudioAiTabs';
+import {
+  StudioAiTabs,
+  StudioHowTo,
+  StudioToolbar,
+  studioActionBarClass,
+  type StudioAiTabId,
+} from '@/components/StudioAiTabs';
 import InvitationContextSourcePicker from '@/components/InvitationContextSourcePicker';
 import InvitationArtStylePicker from '@/components/InvitationArtStylePicker';
 import {
@@ -275,6 +281,7 @@ export default function LandingInvitationAiGenerator({
   id = 'generateur-ia',
   defaultExpanded = false,
   lockExpanded = false,
+  inline = false,
   preselectedModelPhoto = null,
 }: {
   className?: string;
@@ -282,6 +289,8 @@ export default function LandingInvitationAiGenerator({
   defaultExpanded?: boolean;
   /** Toujours ouvert (ex. dans une modale) — pas de bandeau compact ni de « Réduire » */
   lockExpanded?: boolean;
+  /** Posé directement dans une page (pas dans une modale) : barres collantes adaptées au site. */
+  inline?: boolean;
   preselectedModelPhoto?: InvitationModelPhoto | null;
 }) {
   const { user, tenant, access } = useAuth();
@@ -350,6 +359,7 @@ export default function LandingInvitationAiGenerator({
 
   const composeTokenCost = resolveInvitationComposeTokenCostClient(selectedModelPhoto);
   const isModifyMode = composeMode === 'modify';
+  const currentStep = busy || invitationStudioJob ? 1 : result ? 2 : 0;
   const [formDetailsTab, setFormDetailsTab] = useState<'text' | 'style'>('text');
 
   useEffect(() => {
@@ -1458,7 +1468,7 @@ export default function LandingInvitationAiGenerator({
       aria-busy={busy}
       aria-labelledby={`${id}-title`}
       className={cn(
-        'rounded-[1.25rem] border border-border bg-surface shadow-sm overflow-hidden scroll-mt-20 transition-all duration-300',
+        'rounded-[1.25rem] border border-border bg-surface shadow-sm overflow-clip scroll-mt-20 transition-all duration-300',
         className,
       )}
     >
@@ -1559,32 +1569,23 @@ export default function LandingInvitationAiGenerator({
             </div>
           </div>
           ) : (
-            <div className="px-4 sm:px-6 py-2.5 border-b border-border/80 bg-surface sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2">
+            <>
               <h2 id={`${id}-title`} className="sr-only">
                 Créer une invitation
               </h2>
-              <p className="text-xs text-muted">
-                <span className="font-semibold text-foreground">1.</span> Brief ou photo{' '}
-                <span className="text-border mx-1">→</span>
-                <span className="font-semibold text-foreground">2.</span> Générer{' '}
-                <span className="text-border mx-1">→</span>
-                <span className="font-semibold text-foreground">3.</span> Éditer
-              </p>
-              <div className="flex items-center gap-2 shrink-0">
-                <span
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-foreground px-3 py-1.5 rounded-full bg-surface-muted border border-border tabular-nums"
-                  title="Jetons IA disponibles"
-                >
-                  <Coins className="w-3.5 h-3.5 text-primary" aria-hidden />
-                  {allowance.unlimited ? 'Illimité' : `${aiTokenBalanceLabel(allowance)} jeton${allowance.totalRemaining === 1 ? '' : 's'}`}
-                </span>
+              <StudioToolbar
+                steps={['Votre brief', 'Création', 'Retouches']}
+                current={currentStep}
+                allowance={allowance}
+                sticky={!inline}
+              >
                 {!canAffordAiAction(allowance, composeTokenCost) ? (
                   <Button type="button" size="sm" variant="secondary" onClick={() => setTokenModalOpen(true)}>
                     Recharger
                   </Button>
                 ) : null}
-              </div>
-            </div>
+              </StudioToolbar>
+            </>
           )}
 
           <div
@@ -1627,7 +1628,7 @@ export default function LandingInvitationAiGenerator({
                         'Générez puis éditez',
                       ]
                     : [
-                        'Choisissez fond pur',
+                        'Choisissez « Nouvelle carte »',
                         'Renseignez les infos de la carte',
                         'Générez puis éditez',
                       ]
@@ -1652,8 +1653,8 @@ export default function LandingInvitationAiGenerator({
                   : 'border-border bg-surface hover:border-primary/40',
               )}
             >
-              <span className="block text-xs font-bold text-foreground">Fond pur + variables</span>
-              <span className="block text-xs text-muted mt-0.5">Textes dynamiques</span>
+              <span className="block text-sm font-semibold text-foreground">Nouvelle carte</span>
+              <span className="block text-xs text-muted mt-0.5">À partir de votre brief</span>
             </button>
             <button
               type="button"
@@ -1668,8 +1669,8 @@ export default function LandingInvitationAiGenerator({
                   : 'border-border bg-surface hover:border-primary/40',
               )}
             >
-              <span className="block text-xs font-bold text-foreground">Modifier un modèle</span>
-              <span className="block text-xs text-muted mt-0.5">Textes / visages</span>
+              <span className="block text-sm font-semibold text-foreground">Modifier une carte</span>
+              <span className="block text-xs text-muted mt-0.5">Changer textes ou visages</span>
             </button>
           </div>
           {isModifyMode || Boolean(incomingFile) || Boolean(selectedModelPhoto) || coupleFaceSwap ? (
@@ -2200,19 +2201,17 @@ export default function LandingInvitationAiGenerator({
 
               <p className="text-xs text-muted">
                 Briefs coutumiers Kongo, Luba, Mongo et Lunda :{' '}
-                <button type="button" className="font-bold text-primary hover:underline" onClick={() => setStudioTab('prompts')}>
-                  onglet Prompts
+                <button
+                  type="button"
+                  className="min-h-11 font-semibold text-primary-solid hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-sm"
+                  onClick={() => setStudioTab('prompts')}
+                >
+                  voir les exemples
                 </button>
                 .
               </p>
 
-              <div
-                className={cn(
-                  'sticky bottom-0 z-30 mt-auto -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 border-t border-border',
-                  'bg-surface shadow-[0_-10px_28px_-16px_rgba(0,0,0,0.2)]',
-                  'pb-[max(0.75rem,env(safe-area-inset-bottom))]',
-                )}
-              >
+              <div className={studioActionBarClass(inline)}>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
                   <Button
                     type="button"
@@ -2261,9 +2260,21 @@ export default function LandingInvitationAiGenerator({
                     </Button>
                   ) : null}
                 </div>
+                {composeMode === 'create' && !coupleFaceSwap && prompt.trim().length === 0 ? (
+                  <p className="mt-2 text-xs text-muted text-center" role="status" aria-live="polite">
+                    Décrivez la fête ci-dessus pour activer la création.
+                  </p>
+                ) : null}
                 {composeMode === 'create' && prompt.trim().length > 0 && prompt.trim().length < 8 ? (
                   <p className="mt-2 text-xs text-amber-700 dark:text-amber-300" role="status" aria-live="polite">
                     Ajoutez encore quelques mots au brief (8 caractères min.).
+                  </p>
+                ) : null}
+                {coupleFaceSwap && ((!incomingFile && !selectedModelPhoto) || files.length < 1) ? (
+                  <p className="mt-2 text-xs text-muted text-center" role="status" aria-live="polite">
+                    {!incomingFile && !selectedModelPhoto
+                      ? 'Ajoutez la carte à modifier, puis 1 ou 2 photos du couple.'
+                      : 'Ajoutez 1 ou 2 photos du couple.'}
                   </p>
                 ) : null}
                 {isModifyMode && !coupleFaceSwap && files.length === 0 && !selectedModelPhoto ? (
