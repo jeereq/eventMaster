@@ -78,7 +78,7 @@ export function NotificationBell({ className }: { className?: string }) {
           setOpen((v) => !v);
           if (!open) void refresh();
         }}
-        className="relative inline-flex min-h-11 min-w-11 items-center justify-center p-2 rounded-xl border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
+        className="relative inline-flex min-h-11 min-w-11 items-center justify-center p-2 rounded-full border border-border bg-surface text-foreground hover:bg-surface-muted transition"
         aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} non lues` : 'Notifications'}
         aria-expanded={open}
       >

@@ -3,10 +3,10 @@ import { cn } from '@/lib/cn';
 
 const variants = {
  default: 'bg-surface-muted dark:bg-surface-muted text-foreground dark:text-foreground',
- primary: 'bg-primary/10 text-primary border border-primary/20',
- success: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-900/50',
-  warning: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20',
- danger: 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-100 dark:border-rose-900/50',
+ primary: 'bg-emerald-100 text-emerald-800 dark:bg-primary/15 dark:text-primary',
+ success: 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300',
+ warning: 'bg-amber-100 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300',
+ danger: 'bg-rose-100 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300',
 } as const;
 
 export interface BadgeProps {
@@ -19,7 +19,7 @@ export default function Badge({ children, variant = 'default', className }: Badg
  return (
  <span
  className={cn(
- 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold',
+ 'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold',
  variants[variant],
  className,
  )}

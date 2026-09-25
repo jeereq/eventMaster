@@ -55,7 +55,7 @@ export default function Input({
         <input
           id={id}
           className={cn(
-            'block w-full min-h-11 py-2.5 bg-surface-muted dark:bg-background border rounded-[var(--radius-button)]',
+            'block w-full min-h-12 py-2.5 bg-surface dark:bg-background border rounded-[var(--radius-button)]',
             'text-base sm:text-sm text-foreground placeholder:text-muted',
             'transition duration-150',
             'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary',

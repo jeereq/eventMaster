@@ -110,7 +110,7 @@ export default function DashboardTopBar({
 
   return (
     <header className="hidden md:block sticky top-0 z-30 shrink-0 border-b border-border bg-surface/95 backdrop-blur-md isolate">
-      <div className="em-auth-container h-14 flex items-center justify-between gap-4">
+      <div className="em-auth-container h-16 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
           {onToggleSidebar && (
             <Tooltip
@@ -120,7 +120,7 @@ export default function DashboardTopBar({
               <button
                 type="button"
                 onClick={onToggleSidebar}
-                className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition touch-manipulation cursor-pointer shrink-0"
+                className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 rounded-full border border-border bg-surface text-foreground hover:bg-surface-muted transition touch-manipulation cursor-pointer shrink-0"
                 aria-label={sidebarCollapsed ? 'Déplier la barre latérale' : 'Réduire la barre latérale'}
               >
                 {sidebarCollapsed ? <PanelLeft className="w-4 h-4 text-primary" /> : <PanelLeftClose className="w-4 h-4" />}
@@ -129,8 +129,8 @@ export default function DashboardTopBar({
           )}
 
           <div className="min-w-0">
-            <h1 className="text-sm font-semibold text-foreground tracking-tight truncate">{title}</h1>
-            {subtitle && <p className="text-[11px] text-muted truncate">{subtitle}</p>}
+            <h1 className="em-dash-title text-base lg:text-lg font-semibold text-foreground truncate leading-tight">{title}</h1>
+            {subtitle && <p className="text-xs text-muted truncate">{subtitle}</p>}
           </div>
         </div>
 
@@ -142,7 +142,7 @@ export default function DashboardTopBar({
             <button
               type="button"
               onClick={toggleTheme}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition cursor-pointer"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 rounded-full border border-border bg-surface text-foreground hover:bg-surface-muted transition cursor-pointer"
               aria-label="Changer de thème"
             >
               {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
@@ -150,9 +150,9 @@ export default function DashboardTopBar({
           </Tooltip>
           <Link
             href="/dashboard/profile"
-            className="inline-flex min-h-11 items-center gap-2 pl-2 pr-3 py-1 rounded-[var(--radius-button)] border border-border hover:bg-surface-muted transition max-w-[14rem]"
+            className="inline-flex min-h-11 items-center gap-2 pl-1.5 pr-3 py-1 rounded-full border border-border bg-surface hover:bg-surface-muted transition max-w-[14rem]"
           >
-            <UserAvatar name={user?.name} src={user?.avatarUrl} size="sm" className="rounded-md" />
+            <UserAvatar name={user?.name} src={user?.avatarUrl} size="sm" className="rounded-full" />
             <span className="min-w-0 hidden lg:block">
               <span className="block text-xs font-semibold text-foreground truncate">{user?.name || 'Compte'}</span>
               <span className="block text-[10px] text-muted truncate">{roleLabel}</span>
@@ -163,7 +163,7 @@ export default function DashboardTopBar({
             <button
               type="button"
               onClick={logout}
-              className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 rounded-[var(--radius-button)] border border-border text-muted hover:text-rose-600 hover:bg-rose-500/10 hover:border-rose-500/30 transition cursor-pointer"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center p-2 rounded-full border border-border bg-surface text-muted hover:text-rose-600 hover:bg-rose-500/10 hover:border-rose-500/30 transition cursor-pointer"
               aria-label="Se déconnecter"
             >
               <LogOut className="w-4 h-4" />

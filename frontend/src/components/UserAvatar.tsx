@@ -34,7 +34,7 @@ export default function UserAvatar({
   return (
     <span
       className={cn(
-        'inline-flex items-center justify-center rounded-full bg-primary/15 text-primary font-bold shrink-0 ring-1 ring-primary/20 overflow-hidden',
+        'inline-flex items-center justify-center rounded-full bg-emerald-100 text-emerald-800 dark:bg-primary/20 dark:text-primary font-display font-semibold shrink-0 overflow-hidden',
         sizes[size],
         className,
       )}
