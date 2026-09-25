@@ -7,6 +7,7 @@ import FaqSection from '@/components/landing/FaqSection';
 import LandingTrustPricingBand from '@/components/landing/LandingTrustPricingBand';
 import PublicCtaBand from '@/components/PublicCtaBand';
 import SiteFooter from '@/components/SiteFooter';
+import LandingStepsBento from '@/components/landing/LandingStepsBento';
 import LandingDashboardQuickAccess from '@/components/landing/LandingDashboardQuickAccess';
 import LandingLazyMount, { LandingSectionFallback } from '@/components/landing/LandingLazyMount';
 import { Button } from '@/components/ui';
@@ -23,15 +24,6 @@ const LandingVitrineSection = dynamic(
   { loading: () => <LandingSectionFallback label="Chargement de la vitrine…" /> },
 );
 
-const LandingVisualBanner = dynamic(
-  () => import('@/components/landing/LandingVisualBanner'),
-  { loading: () => <LandingSectionFallback label="Chargement des inspirations…" /> },
-);
-
-const Landing3DTeaserBand = dynamic(
-  () => import('@/components/landing/Landing3DTeaserBand'),
-  { ssr: false, loading: () => <LandingSectionFallback label="Chargement de la salle 3D…" /> },
-);
 
 /** FAQ courte de l’accueil : la liste complète reste sur /faq. */
 const LANDING_FAQ_IDS = [
@@ -49,14 +41,9 @@ export default function LandingBelowFold() {
 
   return (
     <>
-      <LandingLazyMount label="Chargement des inspirations…">
-        <LandingVisualBanner />
-      </LandingLazyMount>
+      <LandingStepsBento />
       <LandingLazyMount label="Chargement de la vitrine…">
         <LandingVitrineSection />
-      </LandingLazyMount>
-      <LandingLazyMount label="Chargement de la salle 3D…">
-        <Landing3DTeaserBand />
       </LandingLazyMount>
       <LandingLazyMount label="Chargement du simulateur IA…" eagerHash="simulateur-ia">
         <LandingSimulatorTeaser />
@@ -68,7 +55,7 @@ export default function LandingBelowFold() {
         moreHref="/faq"
       />
       <PublicCtaBand
-        title="Prêt à lancer votre événement ?"
+        title="Prêt à organiser votre événement ?"
         description="Créez votre compte gratuit en 1 minute. Sans carte bancaire."
         actions={
           user ? (
@@ -93,7 +80,7 @@ export default function LandingBelowFold() {
                 href="/marketplace"
                 size="lg"
                 variant="secondary"
-                className="bg-stage-foreground/10 text-stage-foreground hover:bg-stage-foreground/20 border-stage-foreground/20 text-sm font-semibold"
+                className="bg-transparent text-white border-[#6ee7b7] hover:bg-white/10 text-sm font-semibold"
                 aria-label="Explorer le marketplace"
               >
                 <span className="sm:hidden">Marketplace</span>
