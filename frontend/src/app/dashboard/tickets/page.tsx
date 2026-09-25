@@ -76,7 +76,7 @@ export default function TicketsPage() {
     columns,
     setGridColumns,
     gridClassName,
-  } = useViewMode('em-view-tickets', 'grid', 2);
+  } = useViewMode('em-view-tickets', 'list', 2);
 
   // Si c'est un client, l'onglet est toujours exclusivement 'my'
   useEffect(() => {
@@ -127,7 +127,16 @@ export default function TicketsPage() {
         if (!hay.includes(needle)) return false;
       }
       return true;
-    });
+    })
+      // Prochains événements d'abord (du plus proche au plus lointain), puis les passés (du plus récent au plus ancien)
+      .sort((a, b) => {
+        const aTime = new Date(a.event.date).getTime();
+        const bTime = new Date(b.event.date).getTime();
+        const aUpcoming = aTime >= now;
+        const bUpcoming = bTime >= now;
+        if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
+        return aUpcoming ? aTime - bTime : bTime - aTime;
+      });
   }, [tickets, q, when, entry, location, now]);
 
   useEffect(() => {
@@ -164,7 +173,7 @@ export default function TicketsPage() {
       ) : ticket.guestId ? (
         <Link href={`/rsvp/${ticket.guestId}`} className="inline-flex">
           <Button size="sm" leftIcon={<QrCode className="w-4 h-4" />}>
-            Badge QR
+            Mon pass QR
           </Button>
         </Link>
       ) : null}
@@ -190,20 +199,20 @@ export default function TicketsPage() {
         description={
           isOrgRole && activeTab === 'org'
             ? 'Ventes et pass QR.'
-            : 'Vos pass QR.'
+            : 'Présentez votre pass QR à l’entrée. Vos prochains événements s’affichent en premier.'
         }
         breadcrumbs={
           <Breadcrumbs
             items={[
-              { label: isClient ? 'Marketplace' : 'Accueil', href: isClient ? '/dashboard/catalogue' : '/dashboard' },
+              { label: 'Accueil', href: '/dashboard' },
               { label: isOrgRole && activeTab === 'org' ? 'Billetterie' : 'Mes billets' },
             ]}
           />
         }
         action={
           <Link href={agendaHref} className="inline-flex">
-            <Button size="sm" leftIcon={<Calendar className="w-4 h-4" />}>
-              Événements
+            <Button size="sm" variant="secondary" leftIcon={<Calendar className="w-4 h-4" />}>
+              Trouver un événement
             </Button>
           </Link>
         }
@@ -297,7 +306,7 @@ export default function TicketsPage() {
                       type="button"
                       onClick={() => setWhen(id)}
                       className={cn(
-                        'px-2.5 py-1.5 min-h-[34px] rounded-lg text-xs font-semibold border transition touch-manipulation whitespace-nowrap',
+                        'px-3 py-1.5 min-h-11 rounded-lg text-xs font-semibold border transition touch-manipulation whitespace-nowrap',
                         when === id
                           ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
                           : 'border-border bg-surface-muted/60 text-muted hover:text-foreground hover:border-primary/40',
@@ -321,7 +330,7 @@ export default function TicketsPage() {
                       type="button"
                       onClick={() => setEntry(id)}
                       className={cn(
-                        'px-2.5 py-1.5 min-h-[34px] rounded-lg text-xs font-semibold border transition touch-manipulation whitespace-nowrap',
+                        'px-3 py-1.5 min-h-11 rounded-lg text-xs font-semibold border transition touch-manipulation whitespace-nowrap',
                         entry === id
                           ? 'bg-primary-solid text-primary-foreground border-primary-solid shadow-xs'
                           : 'border-border bg-surface-muted/60 text-muted hover:text-foreground hover:border-primary/40',

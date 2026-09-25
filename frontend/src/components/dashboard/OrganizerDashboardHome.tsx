@@ -183,6 +183,12 @@ export default function OrganizerDashboardHome({
   /** Organisation B2B (ou essai) qui vend aussi : ne pas basculer en « prestataire / salle pur ». */
   const isOrgWithCatalog = canSell && hasOrgEvents && !isVendor;
 
+  /** Particulier : ses 2 salles servent à ses plans de table, pas à la location. */
+  const isB2cPlan = Boolean(
+    tenant?.plan?.startsWith('PERSONAL') ||
+      planFeatures?.audience === 'B2C'
+  );
+
   const isServiceProvider =
     tenant?.plan === 'SERVICE' ||
     planFeatures?.audience === 'SERVICE' ||
@@ -191,6 +197,7 @@ export default function OrganizerDashboardHome({
   const isVenueProvider =
     !isServiceProvider &&
     !isOrgWithCatalog &&
+    !isB2cPlan &&
     (tenant?.plan === 'VENUE' || planFeatures?.audience === 'VENUE' || (Boolean(access?.canManageRooms) && (planQuota?.limits.maxRooms ?? 0) > 0));
 
   const isCatalogProvider =
@@ -198,10 +205,6 @@ export default function OrganizerDashboardHome({
     !isVenueProvider &&
     (tenant?.plan === 'CATALOG' || planFeatures?.audience === 'CATALOG' || isBoth);
 
-  const isB2cPlan = Boolean(
-    tenant?.plan?.startsWith('PERSONAL') ||
-      planFeatures?.audience === 'B2C'
-  );
   const isB2bPaidPlan = Boolean(
     planFeatures?.audience === 'B2B' &&
       tenant?.plan &&
@@ -224,7 +227,7 @@ export default function OrganizerDashboardHome({
     planFeatures?.audience === 'VENUE' ||
     planFeatures?.audience === 'SERVICE' ||
     planFeatures?.audience === 'CATALOG' ||
-    Boolean(access?.canManageRooms);
+    (Boolean(access?.canManageRooms) && !isB2cPlan);
 
   const normalizeDashboardTab = (raw: string | null): OrganizerDashboardTab => {
     if (!raw) return 'overview';

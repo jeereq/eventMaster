@@ -38,7 +38,7 @@ import ViewCustomizerDrawer, {
 import { Tooltip } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
-import { LANDING_PLANS } from '@/config/landingPricing';
+import { LANDING_PLANS, isB2cPlanId } from '@/config/landingPricing';
 import { TourProvider } from '@/context/TourContext';
 import ProductTourOverlay from '@/components/guide/ProductTourOverlay';
 import FirstLoginTourHost from '@/components/guide/FirstLoginTourHost';
@@ -366,17 +366,17 @@ function buildDashboardNav(opts: {
  if (isClientAccount) {
   return buildNavSections(
    navSection('Mon Espace', [
-    { name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-client-dashboard', icon: LayoutDashboard, description: 'Définir vos objectifs, recommandations et synthèse de vos activités' },
-    { name: 'Marketplace', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, matériel & équipements et fiches publiques' },
-    ...(!allStudiosBlocked ? [{ name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator', icon: Sparkles, description: 'Simulateur budget IA, assemblage de packs et devis groupés' }] : []),
+    { name: 'Accueil', href: '/dashboard', tourId: 'nav-client-dashboard', icon: LayoutDashboard, description: 'Ce qui vous attend, vos activités et la recherche rapide' },
+    { name: 'Explorer', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Salles, prestataires, matériel & équipements et fiches publiques' },
     { name: 'Événements', href: '/dashboard/catalogue?kind=event', tourId: 'nav-agenda', icon: Calendar, description: 'Événements publics du marketplace — inscriptions et billets' },
+    ...(!allStudiosBlocked ? [{ name: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator', icon: Sparkles, description: 'Simulateur budget IA, assemblage de packs et devis groupés' }] : []),
    ]),
    navSection('Mes activités', [
+    { name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox, description: 'Devis reçus et échanges avec les prestataires' },
+    { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck, description: 'Dates confirmées et acomptes' },
     { name: 'Mes billets', href: '/dashboard/tickets', tourId: 'nav-tickets', icon: Ticket, description: 'Inscriptions, filtres, vue grille/liste et badges QR' },
-    { name: 'Réalisations', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Fil des réalisations des salles et prestations' },
-    { name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox },
-    { name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck },
     { name: 'Mes favoris', href: '/dashboard/catalogue?tab=favorites', tourId: 'nav-favorites', icon: Heart, description: 'Salles et prestataires mis de côté' },
+    { name: 'Réalisations', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Fil des réalisations des salles et prestations' },
    ]),
    navSection('Compte', compteNavItems()),
   );
@@ -480,6 +480,56 @@ function buildDashboardNav(opts: {
 			navSection('Organisation', [
 				...(workspace.showTeam ? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users }] : []),
 				...billingItems,
+			]),
+			navSection('Compte', compteNavItems()),
+		);
+	}
+
+	// Particulier (B2C) : menu rangé dans l’ordre de préparation d’une fête, sans jargon pro.
+	if (!vendorOnly && ((tenantPlan && isB2cPlanId(tenantPlan)) || audience === 'B2C')) {
+		return buildNavSections(
+			navSection('Accueil', [
+				{ name: 'Ma fête', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard, description: 'Prochaine fête, réponses des invités et étape suivante' },
+			]),
+			navSection('Préparer', [
+				...(workspace.showEvents
+					? [{ name: 'Mes fêtes', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar, description: 'Invités, faire-part, plan de table et tâches' }]
+					: []),
+				...(workspace.showRooms
+					? [{ name: 'Plans de salle', href: '/dashboard/rooms', tourId: 'nav-rooms', icon: Building2, description: 'Tables, allées et décor en 2D / 3D' }]
+					: []),
+				...(workspace.showTemplates
+					? [{ name: 'Faire-part', href: '/dashboard/templates', tourId: 'nav-templates', icon: Mail, description: 'Modèles d’invitation' }]
+					: []),
+				...(workspace.showProtocol
+					? [{ name: 'Accueil jour J', href: '/dashboard/protocol', tourId: 'nav-protocol', icon: ScanLine, description: 'Scan des QR à l’entrée' }]
+					: []),
+			]),
+			navSection('Prestataires', [
+				{ name: 'Salles & prestataires', href: '/dashboard/catalogue', tourId: 'nav-catalogue', icon: Store, description: 'Traiteur, déco, DJ, photo, salles' },
+				...(!allStudiosBlocked ? [{ name: 'Budget IA', href: '/dashboard/catalogue?tab=plan&planView=ai', tourId: 'nav-simulator-org', icon: Sparkles, description: 'Simulateur budget IA et 3 formules' }] : []),
+				{ name: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes', tourId: 'nav-quotes', icon: Inbox },
+				{ name: 'Réservations', href: '/dashboard/bookings?tab=bookings', tourId: 'nav-reservations', icon: CalendarCheck },
+			]),
+			navSection('Plus d’outils', [
+				...(workspace.showEvents
+					? [{ name: 'Billetterie & dons', href: '/dashboard/tickets', tourId: 'nav-tickets-org', icon: Ticket, description: 'Entrées payantes et cagnotte' }]
+					: []),
+				...(workspace.showAnalytics
+					? [{ name: 'Statistiques', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 }]
+					: []),
+				{ name: 'Réalisations', href: '/dashboard/publications', tourId: 'nav-publications', icon: Rss, description: 'Photos des salles et prestataires' },
+				...(workspace.showTeam
+					? [{ name: 'Co-organisateurs', href: '/dashboard/team', tourId: 'nav-team', icon: Users, description: 'Famille ou amis qui vous aident' }]
+					: []),
+			]),
+			navSection('Mon forfait', [
+				...(access?.canViewBilling
+					? [{ name: 'Forfait & paiement', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
+					: []),
+				...(access?.canViewInvoices
+					? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }]
+					: []),
 			]),
 			navSection('Compte', compteNavItems()),
 		);
