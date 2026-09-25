@@ -603,6 +603,10 @@ html[data-mood="celebrate"] .font-display {
   contain-intrinsic-size: auto 720px;
 }
 
+body[data-em-sheet-open] .em-ai-fab {
+  display: none;
+}
+
 .em-public-bottom-pad {
   padding-bottom: calc(var(--em-site-bottom-nav) + var(--em-site-install-bar) + 0.5rem);
 }
@@ -1697,15 +1701,16 @@ html[data-mood="celebrate"] .font-display {
   contain: layout paint;
 }
 
+/* Tablette : le visuel laisse voir titre, prix et infos clés sans défiler. */
 @media (min-width: 768px) {
   .em-listing-hero {
-    height: min(74vh, 40rem);
+    height: min(52vh, 30rem);
   }
 }
 
 @media (min-width: 1280px) {
   .em-listing-hero {
-    height: min(82vh, 48rem);
+    height: min(64vh, 40rem);
   }
 }
 

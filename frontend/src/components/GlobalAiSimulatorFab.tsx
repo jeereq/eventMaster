@@ -28,9 +28,8 @@ import {
   type AiAllowance,
 } from '@/lib/aiTokens';
 import { resolveAiFabPlacement, revealAndScrollToSection } from '@/lib/aiFabPlacement';
+import { isAiFabHiddenRoute } from '@/lib/aiFabVisibility';
 
-const HIDDEN_PREFIXES = ['/rsvp/', '/invite/', '/print'];
-const LISTING_DETAIL = /^\/marketplace\/(salles|prestataires|evenements)\/[^/]+/;
 
 export default function GlobalAiSimulatorFab() {
   const pathname = usePathname() || '/';
@@ -47,9 +46,7 @@ export default function GlobalAiSimulatorFab() {
   const [allowance, setAllowance] = useState<AiAllowance>(createEmptyAiAllowance);
 
   const hidden =
-    Boolean(access?.isProtocolOnly) ||
-    HIDDEN_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
-    LISTING_DETAIL.test(pathname);
+    Boolean(access?.isProtocolOnly) || isAiFabHiddenRoute(pathname);
 
   const canUseRooms = Boolean(
     user &&
@@ -109,7 +106,7 @@ export default function GlobalAiSimulatorFab() {
         type="button"
         onClick={handleClick}
         className={cn(
-          'fixed z-[60] right-[max(1rem,env(safe-area-inset-right))] bottom-[var(--em-site-fab-bottom)] md:bottom-6 md:right-6',
+          'em-ai-fab fixed z-[60] right-[max(1rem,env(safe-area-inset-right))] bottom-[var(--em-site-fab-bottom)] md:bottom-6 md:right-6',
           'inline-flex items-center gap-2.5 min-h-12 pl-3 pr-3.5 sm:pr-4 rounded-2xl',
           'transition cursor-pointer touch-manipulation text-left',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',

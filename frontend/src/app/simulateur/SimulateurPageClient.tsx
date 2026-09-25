@@ -460,7 +460,7 @@ export default function SimulateurPageClient() {
                     ) : null}
                   </div>
                   <div
-                    className="flex gap-2.5 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible scrollbar-none touch-pan-x"
+                    className="flex gap-2.5 overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible scrollbar-none touch-pan-x"
                     role="group"
                     aria-label="Exemples de projets"
                   >
