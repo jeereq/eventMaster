@@ -17,7 +17,7 @@ export default function PageHeader({ title, description, action, breadcrumbs, cl
       )}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="min-w-0 space-y-1">
-          <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
+          <h1 className="em-dash-title text-2xl sm:text-[1.75rem] font-semibold text-foreground leading-tight">
             {title}
           </h1>
           {description && (

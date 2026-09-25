@@ -66,6 +66,8 @@ import {
   type GridColumns,
 } from '@/components/ui';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
+import UserAvatar from '@/components/UserAvatar';
+import NextEventCard, { pickNextEvent } from '@/components/dashboard/NextEventCard';
 import QuotaUsagePanel from '@/components/QuotaUsagePanel';
 import type { QuotaSnapshot } from '@/lib/quotaDisplay';
 import type { PlanId } from '@/config/landingPricing';
@@ -380,6 +382,8 @@ export default function OrganizerDashboardHome({
   const greetingHour = new Date().getHours();
   const greetingLabel =
     greetingHour < 12 ? 'Bonjour' : greetingHour < 18 ? 'Bon après-midi' : 'Bonsoir';
+
+  const nextEvent = useMemo(() => pickNextEvent(events), [events]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -727,79 +731,67 @@ export default function OrganizerDashboardHome({
           </div>
         )}
 
-        {/* Bannière Hero avec recherche intégrée et raccourcis en 1 clic */}
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-surface to-surface-muted p-5 sm:p-7 shadow-xs">
-          <div className="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-primary/10 rounded-full blur-2xl pointer-events-none" />
-
-          <div className="relative space-y-4 max-w-3xl">
-            <div className="space-y-1.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/15 text-primary border border-primary/25">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  {isManager
-                    ? 'Espace Manager'
-                    : isServiceProvider
-                    ? 'Espace Prestataire de Services'
-                    : isOrgWithCatalog
-                    ? 'Espace Organisation & Vitrine'
-                    : isVenueProvider
-                    ? 'Espace Gestionnaire de Salle'
-                    : isCatalogProvider
-                    ? 'Espace Vitrine & Catalogue'
-                    : isVendor
-                    ? 'Espace Prestataire / Salles'
-                    : isBoth
-                    ? 'Espace Organisation & Vitrine'
-                    : isOwner
-                    ? 'Espace Propriétaire'
-                    : 'Espace Organisateur'}
-                </span>
-                {tenant?.name && (
-                  <span className="text-xs font-semibold text-muted">
-                    · {tenant.name}
-                  </span>
-                )}
-                {tenant?.plan && (
-                  <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-surface border border-border text-foreground">
-                    Forfait {currentPlanDisplayName}
-                  </span>
-                )}
-                {isOwner && daysUntilExpiry != null && (
-                  <span
-                    className={cn(
-                      'text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-md border',
-                      daysUntilExpiry <= 0
-                        ? 'bg-danger/10 border-danger/30 text-danger'
-                        : daysUntilExpiry <= 15
-                        ? 'bg-festive-accent-soft border-festive-accent/30 text-festive-accent'
-                        : 'bg-primary/10 border-primary/30 text-primary'
-                    )}
-                  >
-                    {daysUntilExpiry <= 0 ? 'Expiré' : `Licence · ${daysUntilExpiry}j restants`}
-                  </span>
-                )}
-              </div>
-
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground truncate">
+        {/* En-tête : salutation, espace et forfait */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <UserAvatar name={user?.name} src={user?.avatarUrl} size="lg" className="w-12 h-12 text-base" />
+            <div className="min-w-0">
+              <p className="text-sm text-muted truncate">
                 {greetingLabel}{user?.name ? `, ${user.name.split(' ')[0]}` : ''}
-              </h1>
-              <p className="text-xs sm:text-sm text-muted leading-relaxed">
-                {isServiceProvider
-                  ? 'Gérez vos prestations, répondez aux demandes de devis des organisateurs et suivez votre planning d’interventions.'
-                  : isOrgWithCatalog
-                  ? 'Organisez vos événements et publiez votre vitrine (salles et prestations) sur le marketplace.'
-                  : isVenueProvider
-                  ? 'Modélisez vos salles en 2D/3D, gérez vos dates de privatisation et traitez vos demandes de réservation.'
-                  : isOwner
-                  ? 'Pilotage stratégique et financier de votre organisation, événements et équipe.'
-                  : isManager
-                  ? 'Gestion opérationnelle quotidienne de vos événements, équipe et devis.'
-                  : isVendor
-                  ? 'Gestion de vos prestations, fiches marketplace et réponses aux devis.'
-                  : 'Créez vos événements, invitations WhatsApp et plans de table 2D/3D.'}
               </p>
+              <h1 className="text-2xl sm:text-[1.75rem] font-semibold text-foreground leading-tight truncate">
+                {isManager
+                  ? 'Espace Manager'
+                  : isServiceProvider
+                  ? 'Mes prestations'
+                  : isOrgWithCatalog
+                  ? 'Organisation & vitrine'
+                  : isVenueProvider
+                  ? 'Mes salles'
+                  : isCatalogProvider
+                  ? 'Ma vitrine'
+                  : isVendor
+                  ? 'Prestations & salles'
+                  : isBoth
+                  ? 'Organisation & vitrine'
+                  : 'Mes événements'}
+              </h1>
             </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {tenant?.name && (
+              <span className="text-xs font-medium text-muted truncate max-w-[14rem]">{tenant.name}</span>
+            )}
+            {tenant?.plan && (
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 dark:bg-primary/15 dark:text-primary">
+                Forfait {currentPlanDisplayName}
+              </span>
+            )}
+            {isOwner && daysUntilExpiry != null && (
+              <span
+                className={cn(
+                  'text-xs font-semibold px-2.5 py-1 rounded-full',
+                  daysUntilExpiry <= 0
+                    ? 'bg-danger/10 text-danger'
+                    : daysUntilExpiry <= 15
+                    ? 'bg-amber-100 text-amber-800 dark:bg-festive-accent-soft dark:text-festive-accent'
+                    : 'bg-surface border border-border text-muted'
+                )}
+              >
+                {daysUntilExpiry <= 0 ? 'Expiré' : `Licence · ${daysUntilExpiry} j restants`}
+              </span>
+            )}
+          </div>
+        </div>
 
+        <div className={cn('grid gap-4', nextEvent && 'lg:grid-cols-5')}>
+          {nextEvent ? (
+            <div className="lg:col-span-3">
+              <NextEventCard event={nextEvent} />
+            </div>
+          ) : null}
+
+          <div className={cn('rounded-3xl border border-border bg-surface p-4 sm:p-5 space-y-4', nextEvent && 'lg:col-span-2')}>
             {/* Barre de recherche universelle */}
             <form onSubmit={handleSearchSubmit} className="relative">
               <div className="relative flex items-center">
@@ -810,12 +802,12 @@ export default function OrganizerDashboardHome({
                   type="search"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Rechercher un événement, un invité, une salle…"
-                  className="w-full min-h-11 pl-11 pr-32 py-3 rounded-xl border border-border bg-surface text-sm text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent shadow-xs transition"
+                  placeholder="Événement, invité, salle…"
+                  className="w-full min-h-12 pl-11 pr-32 py-3 rounded-2xl border border-border bg-background text-[15px] text-foreground placeholder:text-muted focus:outline-hidden focus:ring-2 focus:ring-primary focus:border-transparent shadow-xs transition"
                 />
                 <button
                   type="submit"
-                  className="absolute right-1.5 min-h-11 px-3.5 py-1.5 rounded-lg bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition flex items-center gap-1.5 touch-manipulation cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary-solid"
+                  className="absolute right-1.5 min-h-10 px-4 py-1.5 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition flex items-center gap-1.5 touch-manipulation cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-primary-solid"
                 >
                   <span>Rechercher</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -824,14 +816,14 @@ export default function OrganizerDashboardHome({
             </form>
 
             {/* Raccourcis directs en 1 clic */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-xs">
-              <span className="text-xs font-medium text-muted mr-1">Raccourcis :</span>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="sr-only">Raccourcis</span>
               {isServiceProvider ? (
                 <>
                   <button
                     type="button"
                     onClick={() => handleTabChange('spaces')}
-                    className="min-h-11 px-3 py-1.5 rounded-lg bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
                   >
                     <Briefcase className="w-3.5 h-3.5" />
                     Mes prestations
@@ -839,7 +831,7 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('quotes')}
-                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-festive-accent/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-festive-accent/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
                     <Inbox className="w-3.5 h-3.5 text-festive-accent" />
                     Devis reçus
@@ -852,7 +844,7 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('reservations')}
-                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
                     <CalendarCheck className="w-3.5 h-3.5 text-primary" />
                     Planning réservations
@@ -865,7 +857,7 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('analytics')}
-                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
                     <BarChart3 className="w-3.5 h-3.5 text-primary" />
                     Analyses & CA
@@ -873,17 +865,17 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('explore')}
-                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
                     <Store className="w-3.5 h-3.5 text-primary" />
                     Explorer catalogue
                   </button>
                   <Link
                     href="/dashboard/marketplace?new=1"
-                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface-muted hover:bg-primary/10 hover:text-primary border border-border text-xs font-medium text-muted transition inline-flex items-center gap-1"
+                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface hover:bg-primary/10 hover:text-primary border border-dashed border-border text-xs font-medium text-muted transition inline-flex items-center gap-1"
                   >
                     <PlusCircle className="w-3.5 h-3.5 text-primary" />
-                    + Nouvelle offre
+                    Nouvelle offre
                   </Link>
                 </>
               ) : isVenueOrVendorOrCatalog ? (
@@ -891,7 +883,7 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('spaces')}
-                    className="min-h-11 px-3 py-1.5 rounded-lg bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover text-xs font-bold transition inline-flex items-center gap-1.5 cursor-pointer shadow-2xs"
                   >
                     <Building2 className="w-3.5 h-3.5" />
                     Mes salles
@@ -899,7 +891,7 @@ export default function OrganizerDashboardHome({
                   {canSell ? (
                     <Link
                       href="/dashboard/marketplace"
-                      className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
+                      className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
                     >
                       <Briefcase className="w-3.5 h-3.5 text-primary" />
                       Mes offres
@@ -908,7 +900,7 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('reservations')}
-                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
                     <CalendarCheck className="w-3.5 h-3.5 text-primary" />
                     Réservations
@@ -921,7 +913,7 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('quotes')}
-                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-festive-accent/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-festive-accent/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
                     <Inbox className="w-3.5 h-3.5 text-festive-accent" />
                     Devis reçus
@@ -934,7 +926,7 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('explore')}
-                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
                     <Store className="w-3.5 h-3.5 text-primary" />
                     Explorer catalogue
@@ -942,7 +934,7 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('analytics')}
-                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
                     <BarChart3 className="w-3.5 h-3.5 text-primary" />
                     Analyses
@@ -952,14 +944,14 @@ export default function OrganizerDashboardHome({
                 <>
                   <Link
                     href="/dashboard/events"
-                    className="min-h-11 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
+                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
                   >
                     <PlusCircle className="w-3.5 h-3.5" />
                     Créer un événement
                   </Link>
                   <Link
                     href="/dashboard/tickets"
-                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
+                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1"
                   >
                     <Ticket className="w-3.5 h-3.5 text-primary" />
                     Billetterie
@@ -967,7 +959,7 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('reservations')}
-                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
                     <CalendarCheck className="w-3.5 h-3.5 text-primary" />
                     Réservations
@@ -979,7 +971,7 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('team')}
-                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
                     <UserCheck className="w-3.5 h-3.5 text-primary" />
                     Équipe
@@ -987,7 +979,7 @@ export default function OrganizerDashboardHome({
                   <button
                     type="button"
                     onClick={() => handleTabChange('billing')}
-                    className="min-h-11 px-3 py-1.5 rounded-lg bg-surface/80 border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
+                    className="min-h-11 px-3.5 py-1.5 rounded-full bg-surface border border-border hover:border-primary/40 text-xs font-medium text-foreground transition inline-flex items-center gap-1 cursor-pointer"
                   >
                     <Award className="w-3.5 h-3.5 text-primary" />
                     Abonnement
@@ -996,7 +988,7 @@ export default function OrganizerDashboardHome({
               ) : null}
               <Link
                 href="/dashboard/catalogue?tab=plan&planView=ai"
-                className="min-h-11 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
+                className="min-h-11 px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 hover:border-primary text-xs font-bold text-primary transition inline-flex items-center gap-1"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 Simulateur IA
@@ -1015,7 +1007,7 @@ export default function OrganizerDashboardHome({
             role="tablist"
             aria-label="Sections du tableau de bord"
             onKeyDown={handleTabKeyDown}
-            className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory rounded-2xl border border-border bg-surface/90 p-1.5 shadow-2xs"
+            className="flex items-center gap-2 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-0.5"
           >
             {tabs.map((tab) => {
               const active = activeTab === tab.id;
@@ -1031,11 +1023,11 @@ export default function OrganizerDashboardHome({
                   tabIndex={active ? 0 : -1}
                   onClick={() => handleTabChange(tab.id)}
                   className={cn(
-                    'inline-flex min-h-11 max-w-[min(100%,18rem)] snap-start items-center gap-2 rounded-xl px-3 sm:px-3.5 py-2 text-xs sm:text-sm font-semibold transition shrink-0 cursor-pointer',
+                    'inline-flex min-h-11 max-w-[min(100%,18rem)] snap-start items-center gap-2 rounded-full px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-semibold transition shrink-0 cursor-pointer border',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                     active
-                      ? 'bg-primary-solid text-primary-foreground shadow-xs'
-                      : 'text-muted hover:bg-surface-muted hover:text-foreground',
+                      ? 'bg-foreground text-background border-foreground'
+                      : 'bg-surface border-border text-foreground hover:border-primary/40',
                   )}
                 >
                   <Icon className="w-4 h-4 shrink-0" aria-hidden />
@@ -1047,8 +1039,8 @@ export default function OrganizerDashboardHome({
                       className={cn(
                         'ml-0.5 max-w-[7.5rem] truncate rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums',
                         active
-                          ? 'bg-primary-foreground/20 text-primary-foreground'
-                          : 'bg-surface-muted text-muted border border-border',
+                          ? 'bg-background/20 text-background'
+                          : 'bg-surface-muted text-muted',
                       )}
                     >
                       {tab.badge}
@@ -1677,32 +1669,29 @@ export default function OrganizerDashboardHome({
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {events.slice(0, 3).map((event) => {
-                  const dateLabel = new Date(event.date).toLocaleDateString('fr-FR', {
-                    weekday: 'short',
-                    day: 'numeric',
-                    month: 'short',
-                  });
+                  const eventDate = new Date(event.date);
+                  const monthLabel = eventDate.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
+                  const dayLabel = eventDate.toLocaleDateString('fr-FR', { day: '2-digit' });
+                  const weekdayLabel = eventDate.toLocaleDateString('fr-FR', { weekday: 'long' });
                   return (
                     <Link
                       key={event.id}
                       href={`/dashboard/events/${event.id}`}
-                      className="p-3.5 rounded-xl border border-border bg-surface-muted/30 hover:border-primary/40 hover:bg-primary/5 transition group flex flex-col justify-between"
+                      className="p-3 rounded-2xl border border-border bg-surface hover:border-primary/40 transition group flex items-center gap-3"
                     >
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between text-xs text-muted">
-                          <span className="font-semibold text-primary">{dateLabel}</span>
-                          <ChevronRight className="w-3.5 h-3.5 opacity-60 group-hover:translate-x-0.5 transition" />
-                        </div>
-                        <h4 className="font-bold text-sm text-foreground truncate group-hover:text-primary transition">
+                      <span className="w-12 h-[52px] shrink-0 rounded-xl bg-primary/10 flex flex-col items-center justify-center" aria-hidden>
+                        <span className="text-[11px] font-semibold uppercase text-primary leading-none">{monthLabel}</span>
+                        <span className="font-display text-xl font-semibold text-foreground leading-tight">{dayLabel}</span>
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-semibold text-[15px] text-foreground truncate group-hover:text-primary transition">
                           {event.title}
-                        </h4>
-                        {event.location && (
-                          <p className="text-xs text-muted truncate flex items-center gap-1">
-                            <MapPin className="w-3 h-3 shrink-0" />
-                            {event.location}
-                          </p>
-                        )}
-                      </div>
+                        </span>
+                        <span className="block text-xs text-muted truncate first-letter:uppercase">
+                          {event.location ? `${weekdayLabel} · ${event.location}` : weekdayLabel}
+                        </span>
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-muted shrink-0 group-hover:translate-x-0.5 transition" aria-hidden />
                     </Link>
                   );
                 })}

@@ -622,34 +622,23 @@ function SidebarNav({
  aria-label={unreadLabel ? `${item.name}, ${unreadLabel}` : undefined}
  title={collapsed ? (unreadLabel ? `${item.name} · ${unreadLabel}` : item.name) : undefined}
  className={cn(
- 'group relative flex w-full items-center rounded-[var(--radius-button)] text-sm font-medium transition-colors duration-150 touch-manipulation select-none active:scale-[0.99]',
+ 'group relative flex w-full items-center rounded-xl text-sm font-medium transition-colors duration-150 touch-manipulation select-none active:scale-[0.99]',
  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
  isSheet
-  ? 'justify-between min-h-12 gap-3 p-2.5 rounded-2xl border'
+  ? 'justify-between min-h-14 gap-3 p-3 rounded-[var(--radius-card)] border'
   : collapsed
     ? 'justify-center px-2 py-2.5'
     : 'gap-3 px-3 py-2.5 min-h-11',
  isActive
   ? isSheet
     ? 'bg-primary/10 border-primary/30 text-foreground font-semibold'
-    : 'bg-surface text-foreground shadow-[var(--shadow-soft)] font-semibold'
+    : 'bg-primary/10 text-primary-solid dark:text-primary font-semibold'
   : isSheet
-    ? 'bg-surface-muted/40 border-border/60 text-foreground hover:bg-surface-muted'
-    : 'text-muted hover:text-foreground hover:bg-surface-muted/80',
+    ? 'bg-surface border-border text-foreground hover:bg-surface-muted'
+    : 'text-muted hover:text-foreground hover:bg-surface-muted',
  )}
  >
- {isActive && !isSheet && (
- <span
- className={cn(
- 'absolute bg-primary rounded-full',
- collapsed
- ? 'left-1 top-1/2 -translate-y-1/2 h-4 w-0.5'
- : 'left-0 top-1/2 -translate-y-1/2 h-5 w-0.5',
- )}
- aria-hidden
- />
- )}
- <span className={cn('relative shrink-0', isSheet && 'flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10')}>
+ <span className={cn('relative shrink-0', isSheet && 'flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10')}>
  <Icon
  className={cn(
  'w-[18px] h-[18px] shrink-0 transition-colors',
@@ -690,7 +679,7 @@ function SidebarNav({
 
 function DashboardMobileTitle() {
  const { title } = useDashboardTitle();
- return <span className="font-semibold text-sm text-foreground truncate">{title}</span>;
+ return <span className="em-dash-title font-semibold text-base text-foreground truncate">{title}</span>;
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -942,7 +931,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         style={{ ['--em-sidebar-width' as string]: sidebarCollapsed ? '4.5rem' : '16rem' }}
       >
         {/* Header mobile */}
-        <header className="md:hidden bg-sidebar border-b border-border px-3 flex items-center justify-between fixed inset-x-0 top-0 z-40 pt-[env(safe-area-inset-top,0px)]">
+        <header className="md:hidden bg-surface/95 backdrop-blur-md border-b border-border px-3 flex items-center justify-between fixed inset-x-0 top-0 z-40 pt-[env(safe-area-inset-top,0px)]">
           <div className="h-12 w-full flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
               <SiteBrandMark href="/dashboard" showLabel={false} />
@@ -953,14 +942,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <ViewCustomizerTrigger />
               <button
                 onClick={toggleTheme}
-                className="inline-flex items-center justify-center min-h-11 min-w-11 p-2 rounded-lg border border-border text-muted hover:bg-surface-muted hover:text-foreground transition touch-manipulation"
+                className="inline-flex items-center justify-center min-h-11 min-w-11 p-2 rounded-full border border-border bg-surface text-foreground hover:bg-surface-muted transition touch-manipulation"
                 aria-label="Changer de thème"
               >
                 {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
               </button>
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="inline-flex items-center justify-center min-h-11 min-w-11 p-2 rounded-lg text-muted hover:bg-surface-muted hover:text-foreground transition touch-manipulation"
+                className="inline-flex items-center justify-center min-h-11 min-w-11 p-2 rounded-full text-foreground hover:bg-surface-muted transition touch-manipulation"
                 aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
                 aria-expanded={mobileMenuOpen}
                 aria-controls="dashboard-mobile-menu-sheet"
@@ -980,7 +969,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           className={cn(
             'hidden md:flex md:flex-col',
             'md:sticky md:top-0 md:h-full md:max-w-none md:z-30',
-            'bg-sidebar border-r border-border',
+            'bg-surface border-r border-border',
             'transition-[width] duration-200 ease-in-out',
             sidebarCollapsed ? 'md:w-[4.5rem]' : 'md:w-64',
           )}
@@ -1010,7 +999,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   <button
                     type="button"
                     onClick={toggleSidebarCollapsed}
-                    className="p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
+                    className="p-2 rounded-full border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
                     aria-label={sidebarCollapsed ? 'Agrandir la barre latérale' : 'Réduire la barre latérale'}
                   >
                     {sidebarCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
@@ -1021,7 +1010,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <button
                       type="button"
                       onClick={toggleTheme}
-                      className="p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
+                      className="p-2 rounded-full border border-border text-muted hover:bg-surface-muted hover:text-foreground transition"
                       aria-label="Changer de thème"
                     >
                       {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
@@ -1035,32 +1024,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {!sidebarCollapsed && (
               <>
                 {user?.role === 'SUPER_ADMIN' ? (
-                  <div className="p-3 bg-surface border border-border rounded-lg">
-                    <div className="text-xs text-muted font-bold uppercase tracking-wider">Rôle global</div>
+                  <div className="p-3 rounded-2xl bg-primary/5 border border-primary/15">
+                    <div className="text-xs text-muted font-medium">Rôle global</div>
                     <div className="font-semibold text-sm mt-0.5 text-foreground">Super Admin</div>
-                    <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 text-xs font-bold text-primary">
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-xs font-bold text-primary">
                       <ShieldCheck className="w-3.5 h-3.5" />
                       Plateforme SaaS
                     </div>
                   </div>
                 ) : user?.role === 'COMMERCIAL' ? (
-                  <div className="p-3 bg-surface border border-border rounded-lg">
-                    <div className="text-xs text-muted font-bold uppercase tracking-wider">Rôle global</div>
+                  <div className="p-3 rounded-2xl bg-primary/5 border border-primary/15">
+                    <div className="text-xs text-muted font-medium">Rôle global</div>
                     <div className="font-semibold text-sm mt-0.5 text-foreground">Commercial plateforme</div>
-                    <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 text-xs font-bold text-amber-700 dark:text-amber-300">
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-xs font-bold text-amber-700 dark:text-amber-300">
                       <Briefcase className="w-3.5 h-3.5" />
                       Parrainage
                     </div>
                   </div>
                 ) : tenant ? (
-                  <div className="p-3 bg-surface border border-border rounded-lg">
-                    <div className="text-xs text-muted font-bold uppercase tracking-wider">
+                  <div className="p-3 rounded-2xl bg-primary/5 border border-primary/15">
+                    <div className="text-xs text-muted font-medium">
                       {isClientAccount ? 'Compte' : 'Organisation'}
                     </div>
                     <div className="font-semibold text-foreground text-sm truncate mt-0.5">
                       {tenant.name}
                     </div>
-                    <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 text-xs font-bold text-primary">
+                    <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-xs font-bold text-primary">
                       <ShieldCheck className="w-3.5 h-3.5" />
                       {isClientAccount
                         ? 'Client'
@@ -1129,7 +1118,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 type="button"
                 onClick={logout}
                 className={cn(
-                  'flex w-full items-center rounded-[var(--radius-button)] text-sm font-medium text-rose-500 hover:bg-rose-500/10 transition touch-manipulation',
+                  'flex w-full items-center rounded-xl text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition touch-manipulation',
                   sidebarCollapsed ? 'justify-center p-2' : 'gap-3 px-3 py-2',
                 )}
               >
@@ -1172,22 +1161,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }
         >
           {user?.role === 'SUPER_ADMIN' ? (
-            <div className="p-3 rounded-2xl bg-surface-muted/40 dark:bg-surface-muted/20 border border-border/60">
-              <div className="text-xs text-muted font-bold uppercase tracking-wider">Rôle global</div>
+            <div className="p-3 rounded-2xl bg-primary/5 border border-primary/15">
+              <div className="text-xs text-muted font-medium">Rôle global</div>
               <div className="font-semibold text-sm mt-0.5 text-foreground">Super Admin</div>
             </div>
           ) : user?.role === 'COMMERCIAL' ? (
-            <div className="p-3 rounded-2xl bg-surface-muted/40 dark:bg-surface-muted/20 border border-border/60">
-              <div className="text-xs text-muted font-bold uppercase tracking-wider">Rôle global</div>
+            <div className="p-3 rounded-2xl bg-primary/5 border border-primary/15">
+              <div className="text-xs text-muted font-medium">Rôle global</div>
               <div className="font-semibold text-sm mt-0.5 text-foreground">Commercial plateforme</div>
             </div>
           ) : tenant ? (
-            <div className="p-3 rounded-2xl bg-surface-muted/40 dark:bg-surface-muted/20 border border-border/60">
-              <div className="text-xs text-muted font-bold uppercase tracking-wider">
+            <div className="p-3 rounded-2xl bg-primary/5 border border-primary/15">
+              <div className="text-xs text-muted font-medium">
                 {isClientAccount ? 'Compte' : 'Organisation'}
               </div>
               <div className="font-semibold text-foreground text-sm truncate mt-0.5">{tenant.name}</div>
-              <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 text-xs font-bold text-primary">
+              <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-xs font-bold text-primary">
                 <ShieldCheck className="w-3.5 h-3.5" />
                 {isClientAccount
                   ? 'Client'
@@ -1261,7 +1250,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </DashboardMobileMenuSheet>
 
       {/* Contenu principal */}
-      <main id="main-content" className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain bg-background flex flex-col em-dashboard-glow-bg">
+      <main id="main-content" className="flex-1 min-h-0 min-w-0 overflow-y-auto overscroll-contain bg-background flex flex-col">
         <DashboardTopBar
           sidebarCollapsed={sidebarCollapsed}
           onToggleSidebar={toggleSidebarCollapsed}

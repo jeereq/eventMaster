@@ -227,6 +227,20 @@ h1, h2, h3, h4 {
   font-weight: 600;
 }
 
+/* Tableau de bord : titres en Outfit, comme le site public */
+.em-dashboard-content :is(h1, h2, h3),
+.em-dash-title {
+  font-family: var(--font-heading), var(--font-body), system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* Chiffres clés : Outfit, poids moyen (moins « criard » que l’extrabold) */
+.em-dashboard-content .tabular-nums.font-extrabold {
+  font-family: var(--font-heading), var(--font-body), system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
 :focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;

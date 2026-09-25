@@ -60,7 +60,7 @@ export default function DashboardMobileMenuSheet({
         className={cn(
           'fixed inset-x-0 bottom-0 z-[60] max-h-[min(82vh,calc(100dvh-var(--em-dash-bottom-nav)-0.5rem))]',
           'overflow-y-auto overscroll-contain rounded-t-3xl',
-          'bg-surface dark:bg-stage-elevated border-t border-border/80 dark:border-border-subtle/30',
+          'bg-background dark:bg-stage-elevated border-t border-border/80 dark:border-border-subtle/30',
           'shadow-[0_-16px_48px_rgba(0,0,0,0.35)]',
           'px-4 sm:px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]',
           'animate-in slide-in-from-bottom duration-250 ease-out space-y-3',
@@ -70,7 +70,7 @@ export default function DashboardMobileMenuSheet({
 
         <div className="flex items-center justify-between pb-2 border-b border-border/60 dark:border-border-subtle/30">
           <div className="min-w-0">
-            <h3 className="text-sm font-bold text-foreground truncate">{title}</h3>
+            <h3 className="em-dash-title text-lg font-semibold text-foreground truncate">{title}</h3>
             <p className="text-xs text-muted truncate">{subtitle}</p>
           </div>
           <button

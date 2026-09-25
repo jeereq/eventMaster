@@ -4,18 +4,18 @@ import React from 'react';
 import { ArrowRight, Eye } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
-/** Palette de fonds média (sans photo) — mêmes tons que la vitrine. */
+/** Palette de fonds média (sans photo) — verts profonds et tons chauds du nouveau design. */
 const ACCENT_STRIPES = [
-  '#4573d2',
-  '#f06a6a',
-  '#f1bd6c',
-  '#5da283',
-  '#9b51e0',
-  '#e362e3',
-  '#4f46e5',
-  '#4186e0',
-  '#aaaca6',
-  '#fc8f66',
+  '#064e3b',
+  '#047857',
+  '#0f766e',
+  '#065f46',
+  '#166534',
+  '#115e59',
+  '#b45309',
+  '#9a3412',
+  '#3f6212',
+  '#1f3a33',
 ] as const;
 
 export function accentFromId(id: string): string {

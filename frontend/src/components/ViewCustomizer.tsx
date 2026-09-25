@@ -39,7 +39,7 @@ function PaletteButton({
       type="button"
       onClick={onClick}
       className={cn(
-        'relative p-2 rounded-[var(--radius-button)] border border-border text-muted hover:bg-surface-muted hover:text-foreground transition',
+        'relative p-2 rounded-full border border-border bg-surface text-muted hover:bg-surface-muted hover:text-foreground transition',
         className,
       )}
       aria-label="Personnaliser la vue"
