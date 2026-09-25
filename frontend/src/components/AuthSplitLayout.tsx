@@ -100,21 +100,26 @@ export function AuthSplitLayout({
       </div>
 
       {/* Formulaire */}
-      <div className="w-full lg:w-[54%] xl:w-1/2 flex flex-col justify-center p-5 sm:p-10 lg:p-14 relative bg-background">
+      <div className="w-full lg:w-[54%] xl:w-1/2 flex flex-col justify-start sm:justify-center p-5 sm:p-10 lg:p-14 relative bg-background">
         <div className="absolute top-4 left-4 right-4 sm:top-6 sm:left-6 sm:right-6 z-10 flex items-center gap-2">
           {backHref ? (
             <Link
               href={backHref}
-              className="inline-flex items-center gap-2 min-h-11 max-w-[min(100%,16rem)] px-3 rounded-[var(--radius-button)] border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted hover:border-primary/30 transition shadow-[var(--shadow-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              aria-label={backLabel}
+              className="inline-flex items-center justify-center gap-2 min-h-11 min-w-11 max-w-[min(100%,16rem)] px-3 rounded-[var(--radius-button)] border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted hover:border-primary/30 transition shadow-[var(--shadow-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
             >
               <ArrowLeft className="w-4 h-4 shrink-0" aria-hidden />
-              <span className="truncate">{backLabel}</span>
+              <span className="hidden sm:inline truncate">{backLabel}</span>
             </Link>
           ) : null}
           <div className="ml-auto flex items-center gap-2 shrink-0">
-            <PWAInstallCta variant="inline" />
+            <div className="hidden sm:flex items-center gap-2">
+              <PWAInstallCta variant="inline" />
+            </div>
             <SiteBrandMark href="/" size="sm" className="lg:hidden" />
-            <PublicAccentPicker />
+            <div className="hidden sm:flex items-center">
+              <PublicAccentPicker />
+            </div>
             <button
               type="button"
               onClick={toggleTheme}

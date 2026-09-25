@@ -278,7 +278,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                     </span>
                   )}
                   <span className={cn(
-                    'text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border',
+                    'text-xs font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full border',
                     isVendor
                       ? 'bg-amber-500/20 text-amber-300 border-amber-400/30'
                       : 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30',
@@ -286,7 +286,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                     {isVendor ? 'Pro' : 'Salle'}
                   </span>
                 </div>
-                <span className="text-[11px] text-white/85 font-medium truncate flex items-center gap-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
+                <span className="text-xs text-white/85 font-medium truncate flex items-center gap-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
                   {author?.city ? `${author.city} · ` : ''}{formatRelativeDate(post.createdAt)}
                 </span>
               </div>
@@ -368,7 +368,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                 'w-5 h-5 transition-transform duration-200',
                 liked ? 'text-rose-500 fill-rose-500 scale-110 drop-shadow-[0_0_8px_rgba(244,63,94,0.7)]' : 'text-white',
               )} />
-              <span className="text-[10px] font-bold text-white drop-shadow-xs -mt-0.5 tabular-nums tracking-tight">
+              <span className="text-xs font-bold text-white drop-shadow-xs -mt-0.5 tabular-nums tracking-tight">
                 {post.likeCount ?? likes.length}
               </span>
             </button>
@@ -387,7 +387,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
               title="Commentaires"
             >
               <MessageCircle className="w-5 h-5 text-white" />
-              <span className="text-[10px] font-bold text-white drop-shadow-xs -mt-0.5 tabular-nums tracking-tight">
+              <span className="text-xs font-bold text-white drop-shadow-xs -mt-0.5 tabular-nums tracking-tight">
                 {commentCount}
               </span>
             </button>
@@ -408,7 +408,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
               ) : (
                 <Share2 className="w-5 h-5 text-white" />
               )}
-              <span className="text-[9px] font-bold drop-shadow-xs -mt-0.5 tracking-tight" aria-live="polite">
+              <span className="text-xs font-bold drop-shadow-xs -mt-0.5 tracking-tight" aria-live="polite">
                 {isCopied ? 'OK' : 'Partager'}
               </span>
             </button>
@@ -435,10 +435,10 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
             {/* Badge indicateur de snap si multi-snaps */}
             {media.length > 1 && (
               <div className="flex items-center gap-2 pointer-events-auto">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-white border border-white/10 tabular-nums">
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-white border border-white/10 tabular-nums">
                   Snap {activeSnapIndex + 1} / {media.length}
                 </span>
-                <span className="hidden sm:inline text-[11px] text-white/85 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">Touchez les côtés ou glissez</span>
+                <span className="hidden sm:inline text-xs text-white/85 font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">Touchez les côtés ou glissez</span>
               </div>
             )}
 
@@ -457,7 +457,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                   <button
                     type="button"
                     onClick={() => setTextExpanded((prev) => !prev)}
-                    className="text-[11px] font-bold text-white/90 hover:text-white underline underline-offset-2 mt-0.5 focus-visible:outline-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
+                    className="text-xs font-bold text-white/90 hover:text-white underline underline-offset-2 mt-0.5 focus-visible:outline-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]"
                   >
                     {textExpanded ? 'Moins' : 'Lire la suite'}
                   </button>
@@ -490,11 +490,11 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-xs sm:text-sm text-white drop-shadow-xs">{author?.name || 'Partenaire'}</span>
-                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-white/20 border border-white/20 text-white">
+                  <span className="text-xs font-bold px-1.5 py-0.2 rounded-full bg-white/20 border border-white/20 text-white">
                     {isVendor ? 'Pro' : 'Salle'}
                   </span>
                 </div>
-                <p className="text-[10px] text-white/70">{formatRelativeDate(post.createdAt)}</p>
+                <p className="text-xs text-white/70">{formatRelativeDate(post.createdAt)}</p>
               </div>
             </div>
             {href && (
@@ -569,7 +569,7 @@ const GlobalFeedPostCard = React.memo(function GlobalFeedPostCard({
                   >
                     <div className="flex justify-between items-center gap-2">
                       <span className="font-semibold text-foreground break-words tracking-tight">{c.authorName}</span>
-                      <span className="text-[11px] text-muted shrink-0 tabular-nums">{formatRelativeDate(c.createdAt)}</span>
+                      <span className="text-xs text-muted shrink-0 tabular-nums">{formatRelativeDate(c.createdAt)}</span>
                     </div>
                     <p className="text-foreground/90 whitespace-pre-line leading-relaxed break-words">{c.content}</p>
                   </li>
@@ -888,7 +888,7 @@ export default function MarketplaceGlobalActivityFeed({
               Afficher tout
             </button>
           ) : (
-            <span className="text-[11px] text-muted font-medium hidden sm:inline">Activité en direct des pros</span>
+            <span className="text-xs text-muted font-medium hidden sm:inline">Activité en direct des pros</span>
           )}
         </div>
 
@@ -903,11 +903,11 @@ export default function MarketplaceGlobalActivityFeed({
               <div className="w-full h-full rounded-full bg-surface border-2 border-surface flex items-center justify-center text-primary shadow-2xs">
                 <Plus className="w-5 h-5 sm:w-6 sm:h-6 group-hover/story:rotate-90 transition-transform duration-300" />
               </div>
-              <span className="absolute bottom-0 right-0 w-4.5 h-4.5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold shadow-xs">
+              <span className="absolute bottom-0 right-0 w-4.5 h-4.5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shadow-xs">
                 +
               </span>
             </div>
-            <span className="text-[11px] font-bold text-foreground text-center truncate max-w-[64px]">
+            <span className="text-xs font-bold text-foreground text-center truncate max-w-[64px]">
               {user ? 'Votre Story' : 'Publier'}
             </span>
           </Link>
@@ -961,14 +961,14 @@ export default function MarketplaceGlobalActivityFeed({
                   </div>
                   {/* Badge Salle ou Pro */}
                   <span className={cn(
-                    'absolute bottom-0 right-0 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold shadow-xs border border-surface text-white',
+                    'absolute bottom-0 right-0 w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold shadow-xs border border-surface text-white',
                     isVendor ? 'bg-amber-500' : 'bg-emerald-500',
                   )}>
                     {isVendor ? '★' : '🏛'}
                   </span>
                 </div>
                 <span className={cn(
-                  'text-[11px] text-center truncate max-w-[68px] transition-colors',
+                  'text-xs text-center truncate max-w-[68px] transition-colors',
                   isSelected ? 'text-primary font-bold' : 'text-foreground font-medium',
                 )}>
                   {author.name}
@@ -980,7 +980,7 @@ export default function MarketplaceGlobalActivityFeed({
       </div>
 
       {/* Barre d'outils / Filtres & Recherche (Toujours visible lors du défilement) */}
-      <div className="sticky top-[var(--em-site-header)] z-30 flex flex-col md:flex-row gap-1.5 md:gap-3 md:items-center justify-between bg-surface/95 backdrop-blur-xl p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl border border-border/80 shadow-md">
+      <div className="md:sticky md:top-[var(--em-site-header)] z-30 flex flex-col md:flex-row gap-1.5 md:gap-3 md:items-center justify-between bg-surface/95 backdrop-blur-xl p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl border border-border/80 shadow-md">
         <div className="inline-flex gap-1 p-0.5 sm:p-1 rounded-lg sm:rounded-xl bg-surface-muted/80 border border-border/50 max-w-full overflow-x-auto [scrollbar-width:none]">
           {kindTabs.map((tab) => {
             const Icon = tab.icon;
@@ -991,7 +991,7 @@ export default function MarketplaceGlobalActivityFeed({
                 type="button"
                 onClick={() => setKind(tab.id)}
                 className={cn(
-                  'inline-flex items-center gap-1 sm:gap-2 min-h-8 sm:min-h-10 px-2 sm:px-3.5 rounded-lg text-[11px] sm:text-xs font-semibold transition shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                  'inline-flex items-center gap-1 sm:gap-2 min-h-11 sm:min-h-10 px-2 sm:px-3.5 rounded-lg text-xs sm:text-xs font-semibold transition shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                   active
                     ? tab.id === 'vendor'
                       ? 'bg-surface text-amber-700 dark:text-amber-300 shadow-xs border border-amber-500/30 font-bold'
@@ -1031,7 +1031,7 @@ export default function MarketplaceGlobalActivityFeed({
                   type="button"
                   onClick={() => setCity(active ? '' : name)}
                   className={cn(
-                    'inline-flex items-center gap-1 min-h-8 px-2.5 rounded-lg text-[11px] font-semibold shrink-0 border transition',
+                    'inline-flex items-center gap-1 min-h-11 md:min-h-8 px-2.5 rounded-lg text-xs font-semibold shrink-0 border transition',
                     active
                       ? 'bg-primary-solid text-primary-foreground border-primary-solid'
                       : 'bg-surface text-muted border-border hover:text-foreground',
@@ -1059,7 +1059,7 @@ export default function MarketplaceGlobalActivityFeed({
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Rechercher un pro, ville…"
-              className="w-full min-h-9 sm:min-h-11 pl-9 pr-16 rounded-xl border border-border bg-surface text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+              className="w-full min-h-11 pl-9 pr-16 rounded-xl border border-border bg-surface text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
               aria-label="Rechercher dans les réalisations"
             />
             {q.trim() && (

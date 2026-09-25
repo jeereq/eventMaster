@@ -52,7 +52,7 @@ export function PublicPageHero({
     <section className="relative em-landing-hero">
       <div className={cn(
         'page-container relative z-10',
-        compact ? 'py-3 md:py-8 lg:py-10' : 'py-4 md:py-12 lg:py-14',
+        compact ? 'pt-6 pb-4 md:py-8 lg:py-10' : 'pt-7 pb-5 md:py-12 lg:py-14',
       )}>
         <div className="max-w-3xl space-y-1.5 md:space-y-3.5">
           <h1 className={cn(

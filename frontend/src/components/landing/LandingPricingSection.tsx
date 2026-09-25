@@ -479,7 +479,7 @@ export default function LandingPricingSection({
  <div className="px-6 sm:px-7 pb-6 sm:pb-7 pt-0">
  <Link
  href={user ? `/dashboard/billing?plan=${plan.id}&billing=${billing}` : plan.ctaHref}
- className={`block w-full text-center py-2.5 rounded-[var(--radius-button)] text-sm font-medium transition ${
+ className={`flex w-full min-h-11 items-center justify-center text-center py-2.5 rounded-[var(--radius-button)] text-sm font-medium transition ${
  plan.ctaVariant === 'outline' || plan.ctaVariant === 'contact'
  ? 'border border-border text-foreground hover:bg-surface-muted'
  : plan.highlighted

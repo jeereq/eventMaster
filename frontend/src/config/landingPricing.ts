@@ -265,7 +265,9 @@ export const CURRENCY_NAME = 'franc congolais';
 export function formatFc(amount: number | string | null | undefined): string {
   const num = typeof amount === 'number' ? amount : parseFloat(String(amount ?? 0));
   const val = Number.isFinite(num) ? num : 0;
-  return `${val.toLocaleString('fr-FR')} ${CURRENCY_CODE}`;
+  // fr-FR sépare les milliers par une espace fine (U+202F) que la police de titres
+  // n'affiche pas : on la remplace par une espace insécable classique.
+  return `${val.toLocaleString('fr-FR').replace(/\u202f/g, '\u00a0')} ${CURRENCY_CODE}`;
 }
 
 /** Normalise un libellé de prix (jamais USD/EUR). */

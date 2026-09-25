@@ -27,8 +27,9 @@ export default function MarketplacePublicNav({
   return (
     <div
       className={cn(
-        'inline-flex gap-0.5 p-0.5 rounded-[var(--radius-button)] border border-border bg-surface-muted',
-        'w-full max-w-full flex-nowrap overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:w-auto md:flex-wrap md:overflow-visible',
+        'gap-0.5 p-0.5 rounded-[var(--radius-button)] border border-border bg-surface-muted',
+        // Mobile : deux rangées de trois onglets, tout reste visible sans défilement caché.
+        'grid grid-cols-3 w-full max-w-full md:inline-flex md:w-auto md:flex-wrap',
         className,
       )}
     >
@@ -39,7 +40,7 @@ export default function MarketplacePublicNav({
             key={item.id}
             href={item.href}
             className={cn(
-              'inline-flex items-center rounded-[var(--radius-button)] text-xs font-semibold transition shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+              'inline-flex items-center justify-center md:justify-start rounded-[var(--radius-button)] text-xs font-semibold transition shrink-0 min-w-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
               dense ? 'min-h-11 gap-1 px-2.5' : 'min-h-11 gap-1.5 px-3.5',
               active === item.id
                 ? 'bg-surface text-foreground shadow-sm'

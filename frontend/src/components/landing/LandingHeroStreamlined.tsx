@@ -150,7 +150,7 @@ export default function LandingHeroStreamlined() {
                 Disponible à {citySentence}
               </span>
             ) : null}
-            <h1 className="em-landing-heading text-4xl min-[400px]:text-[2.6rem] sm:text-6xl lg:text-[4rem] leading-[1.04] text-foreground text-balance">
+            <h1 className="em-landing-heading text-4xl min-[400px]:text-[2.6rem] sm:text-6xl lg:text-5xl xl:text-[4rem] leading-[1.04] text-foreground text-balance">
               Votre événement, de A à Z — parfaitement orchestré.
             </h1>
             <p className="text-base sm:text-[19px] leading-relaxed text-muted max-w-[540px]">
@@ -159,11 +159,11 @@ export default function LandingHeroStreamlined() {
             </p>
 
             {isLoggedIn ? (
-              <div className="flex flex-col min-[420px]:flex-row gap-3">
+              <div className="flex flex-col min-[420px]:flex-row min-[420px]:flex-wrap gap-3">
                 <Button
                   href="/dashboard"
                   size="lg"
-                  className="min-h-14 px-7 text-base sm:text-[17px] justify-center"
+                  className="min-h-14 px-7 text-base sm:text-[17px] justify-center whitespace-nowrap"
                   rightIcon={<ArrowRight className="w-5 h-5" />}
                 >
                   Ouvrir mon espace
@@ -177,12 +177,12 @@ export default function LandingHeroStreamlined() {
                 </Link>
               </div>
             ) : (
-              <div className="flex flex-col min-[420px]:flex-row gap-3">
+              <div className="flex flex-col min-[420px]:flex-row min-[420px]:flex-wrap gap-3">
                 {site.allowRegistration ? (
                   <Button
                     href="/register?kind=ORGANIZER&intent=personal&action=event"
                     size="lg"
-                    className="min-h-14 px-7 text-base sm:text-[17px] justify-center"
+                    className="min-h-14 px-7 text-base sm:text-[17px] justify-center whitespace-nowrap"
                     rightIcon={<ArrowRight className="w-5 h-5" />}
                   >
                     Créer mon compte gratuit
@@ -192,7 +192,7 @@ export default function LandingHeroStreamlined() {
                   href="/marketplace/salles"
                   size="lg"
                   variant="secondary"
-                  className="min-h-14 px-6 text-base sm:text-[17px] justify-center border-[1.5px] border-[#c9d6d0] dark:border-border"
+                  className="min-h-14 px-6 text-base sm:text-[17px] justify-center whitespace-nowrap border-[1.5px] border-[#c9d6d0] dark:border-border"
                 >
                   Voir les salles
                 </Button>

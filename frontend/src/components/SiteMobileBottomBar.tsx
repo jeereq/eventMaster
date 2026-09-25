@@ -195,6 +195,8 @@ export default function SiteMobileBottomBar({
     if (!sheetOpen) return;
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    // Le bouton flottant IA se masque tant que le tiroir est ouvert (voir globals.css).
+    document.body.dataset.emSheetOpen = 'true';
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -205,6 +207,7 @@ export default function SiteMobileBottomBar({
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       document.body.style.overflow = originalOverflow;
+      delete document.body.dataset.emSheetOpen;
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [sheetOpen]);

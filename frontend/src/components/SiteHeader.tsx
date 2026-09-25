@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
@@ -8,7 +8,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { Sun, Moon, LayoutDashboard, ArrowRight } from 'lucide-react';
+import { Sun, Moon, LayoutDashboard, ArrowRight, Menu, X } from 'lucide-react';
 import PublicAccentPicker from '@/components/PublicAccentPicker';
 import SiteMobileBottomBar from '@/components/SiteMobileBottomBar';
 import SiteBrandMark from '@/components/SiteBrandMark';
@@ -36,6 +36,13 @@ const PUBLIC_LINKS: SiteHeaderLink[] = [
   { href: '/contact', label: 'Contact' },
 ];
 
+/** Liens complémentaires du menu tablette (la barre mobile du bas n'existe pas à partir de md). */
+const TABLET_EXTRA_LINKS: SiteHeaderLink[] = [
+  { href: '/plans-3d', label: 'Plans 2D/3D' },
+  { href: '/activite', label: 'Réalisations' },
+  { href: '/faq', label: 'FAQ' },
+];
+
 export default function SiteHeader({
   variant = 'landing',
   className,
@@ -45,6 +52,29 @@ export default function SiteHeader({
   const { site } = usePlatformSite();
   const pathname = usePathname();
   const [currentHash, setCurrentHash] = useState('');
+  // Le menu tablette mémorise la page où il a été ouvert : il se referme seul à la navigation.
+  const [tabletMenuPath, setTabletMenuPath] = useState<string | null>(null);
+  const tabletMenuOpen = tabletMenuPath === pathname;
+  const setTabletMenuOpen = (open: boolean) => setTabletMenuPath(open ? pathname : null);
+  const tabletMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!tabletMenuOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (tabletMenuRef.current && !tabletMenuRef.current.contains(e.target as Node)) {
+        setTabletMenuPath(null);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setTabletMenuPath(null);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [tabletMenuOpen]);
 
   useEffect(() => {
     const onHashChange = () => {
@@ -106,7 +136,7 @@ export default function SiteHeader({
         <SiteBrandMark />
 
         {/* Navigation principale */}
-        <nav className="hidden md:flex items-center gap-4 lg:gap-7 min-w-0">
+        <nav className="hidden xl:flex items-center gap-4 2xl:gap-7 min-w-0">
           {links.map((item) => {
             const active = isLinkActive(item.href);
             const itemClass = cn(
@@ -146,7 +176,10 @@ export default function SiteHeader({
 
         {/* Actions à droite : Palette de couleurs, Thème Nuit/Jour, Auth */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <PWAInstallCta variant="header" />
+          {/* Masqué de xl à 2xl pour laisser la place aux liens de navigation. */}
+          <div className="flex xl:hidden 2xl:flex items-center">
+            <PWAInstallCta variant="header" />
+          </div>
           <div className="hidden sm:flex items-center">
             <PublicAccentPicker />
           </div>
@@ -199,6 +232,47 @@ export default function SiteHeader({
               ) : null}
             </div>
           )}
+
+          {links.length > 0 ? (
+            <div ref={tabletMenuRef} className="relative hidden md:block xl:hidden">
+              <button
+                type="button"
+                onClick={() => setTabletMenuOpen(!tabletMenuOpen)}
+                className={cn(iconBtn, 'text-foreground')}
+                aria-expanded={tabletMenuOpen}
+                aria-controls="site-tablet-menu"
+                aria-label={tabletMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+              >
+                {tabletMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
+              {tabletMenuOpen ? (
+                <div
+                  id="site-tablet-menu"
+                  className="absolute right-0 top-full mt-2 w-72 rounded-[var(--radius-card)] border border-border bg-surface shadow-xl p-2 flex flex-col gap-0.5"
+                >
+                  {[...links, ...TABLET_EXTRA_LINKS].map((item) => {
+                    const active = isLinkActive(item.href);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        aria-current={active ? 'page' : undefined}
+                        onClick={() => setTabletMenuOpen(false)}
+                        className={cn(
+                          'flex items-center min-h-11 px-3 rounded-lg text-[15px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                          active
+                            ? 'bg-primary/10 text-primary font-bold'
+                            : 'text-foreground font-medium hover:bg-surface-muted',
+                        )}
+                      >
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
     </header>
@@ -210,7 +284,6 @@ export default function SiteHeader({
     {variant !== 'minimal' && (
       <>
         <SiteMobileBottomBar />
-        <PWAInstallCta variant="bar" />
       </>
     )}
   </>
