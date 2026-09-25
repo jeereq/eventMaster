@@ -902,6 +902,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   commercialPermissions: user?.commercialPermissions,
   allStudiosBlocked,
  });
+ const showRealisations = navSections.some((section) =>
+  section.items.some((item) => item.href === '/dashboard/publications'),
+ );
  const bottomNavItems = buildMobileBottomItems({
   role: user?.role,
   access,
@@ -909,6 +912,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   accountKind: tenant?.accountKind,
   isClientAccount,
   allStudiosBlocked,
+  showRealisations,
  });
  const sheetNavSections = filterNavForMobileSheet(navSections, bottomNavItems);
 
@@ -1270,6 +1274,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         workspace={workspace}
         accountKind={tenant?.accountKind}
         isClientAccount={isClientAccount}
+        showRealisations={showRealisations}
         mobileMenuOpen={mobileMenuOpen}
         onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
         onCloseMobileMenu={() => setMobileMenuOpen(false)}
