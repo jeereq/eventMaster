@@ -94,6 +94,7 @@ import { clampRowSeatCount } from '@/lib/roomAmphitheaterGeom';
 import { detectLayoutClearanceConflicts } from '@/lib/roomLayoutClearance';
 import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
 import RoomShowcasePostProcessing from '@/components/RoomShowcasePostProcessing';
+import { LocalRoomEnvironment } from '@/components/room/LocalRoomEnvironment';
 import {
   resolveLightingPreset,
   resolveRenderQuality,
@@ -536,6 +537,13 @@ function FloorPlane({
     }
 
     const geo = new THREE.ShapeGeometry(shape);
+    // ShapeGeometry place les UV en mètres : on les ramène sur 0–1 comme le plan rectangulaire,
+    // sinon la répétition calculée pour la salle entière s'applique à chaque mètre (sol 10× trop fin).
+    const uv = geo.getAttribute('uv') as THREE.BufferAttribute;
+    for (let i = 0; i < uv.count; i += 1) {
+      uv.setXY(i, uv.getX(i) / widthM + 0.5, uv.getY(i) / heightM + 0.5);
+    }
+    uv.needsUpdate = true;
     geo.rotateX(-Math.PI / 2);
     return geo;
   }, [outline, widthM, heightM, stairHoles]);
@@ -1853,6 +1861,8 @@ function WallMesh({
               map={mat.map}
               bumpMap={mat.bumpMap}
               bumpScale={mat.bumpScale}
+              normalMap={mat.normalMap}
+              normalScale={mat.normalMap ? new THREE.Vector2(mat.normalScale ?? 0.6, mat.normalScale ?? 0.6) : undefined}
               roughness={mat.roughness}
               metalness={mat.metalness}
               emissive={selected ? '#312e81' : '#000000'}
@@ -3326,13 +3336,19 @@ function SceneContent({
       ) : null}
 
       {qualitySettings.environment ? (
-        <Room3DSubErrorBoundary name="Environment">
+        <Room3DSubErrorBoundary
+          name="Environment"
+          fallback={<LocalRoomEnvironment intensity={lighting.environmentIntensity} />}
+        >
           <Environment
             preset={lighting.environmentPreset}
             environmentIntensity={lighting.environmentIntensity * (qualitySettings.environmentIntensity / 0.28)}
           />
         </Room3DSubErrorBoundary>
-      ) : null}
+      ) : (
+        // Sans HDRI (brouillon / mobile) : reflets locaux légers pour que métaux et vernis restent lisibles.
+        <LocalRoomEnvironment intensity={lighting.environmentIntensity * 0.8} />
+      )}
 
       {walkthroughActive ? (
         <RoomWalkthroughCamera

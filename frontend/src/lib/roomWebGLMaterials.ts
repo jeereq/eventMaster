@@ -5,6 +5,7 @@ import type { ChairType, ChairStyle, SeatMaterial, TableShape, TableSurfaceStyle
 import { SEAT_MATERIAL_COLORS, WALL_TEXTURE_COLORS } from '@/lib/roomLayoutUtils';
 import { getFloorAsset, FLOOR_TEXTURE_REPEAT_M } from '@/lib/roomFloorUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
+import { getDetailSet, withRepeat, type DetailKind } from '@/lib/roomSurfaceFinish';
 
 const textureCache = new Map<string, THREE.Texture>();
 const canvasCache = new Map<string, THREE.CanvasTexture>();
@@ -17,16 +18,47 @@ function configureMap(tex: THREE.Texture, repeatX: number, repeatY: number) {
   return tex;
 }
 
-export function loadTiledTexture(url: string, repeatX: number, repeatY: number): THREE.Texture {
-  const key = `${url}|${repeatX.toFixed(2)}|${repeatY.toFixed(2)}`;
+/** Résolution de rastérisation des SVG procéduraux (sinon rendus à leur taille native, parfois 80 px). */
+const SVG_RASTER_PX = 1024;
+
+function isSvgUrl(url: string) {
+  return /\.svg($|\?)/i.test(url);
+}
+
+/** Charge un SVG et le rastérise sur un canvas carré haute résolution (texture nette, mipmaps propres). */
+function loadSvgAsCanvasTexture(url: string): THREE.Texture {
+  const canvas = document.createElement('canvas');
+  canvas.width = SVG_RASTER_PX;
+  canvas.height = SVG_RASTER_PX;
+  const tex = new THREE.CanvasTexture(canvas);
+  const img = new Image();
+  img.decoding = 'async';
+  img.onload = () => {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(img, 0, 0, SVG_RASTER_PX, SVG_RASTER_PX);
+    tex.needsUpdate = true;
+  };
+  img.src = url;
+  return tex;
+}
+
+export function loadTiledTexture(url: string, repeatX: number, repeatY: number, colorData = false): THREE.Texture {
+  const key = `${url}|${repeatX.toFixed(2)}|${repeatY.toFixed(2)}|${colorData ? 'data' : 'srgb'}`;
   const cached = textureCache.get(key);
   if (cached) return cached;
 
-  const loader = new THREE.TextureLoader();
-  const tex = loader.load(url);
+  const tex = isSvgUrl(url) ? loadSvgAsCanvasTexture(url) : new THREE.TextureLoader().load(url);
   configureMap(tex, repeatX, repeatY);
+  if (colorData) tex.colorSpace = THREE.NoColorSpace;
   textureCache.set(key, tex);
   return tex;
+}
+
+/** Carte de normales générée à côté des textures procédurales (`/floors/gen/x.jpg` → `x-normal.jpg`). */
+export function normalMapUrlFor(url: string): string | null {
+  if (!url.startsWith('/floors/gen/') || !url.endsWith('.jpg')) return null;
+  return url.replace(/\.jpg$/, '-normal.jpg');
 }
 
 /** Image de plan : un seul panneau, sans répétition (évite le mosaïque). */
@@ -180,26 +212,63 @@ export function resolveFloorMap(
 
   if (type === 'parquetVersailles') {
     const tileM = FLOOR_TEXTURE_REPEAT_M.parquetVersailles;
-    const { map: versTex, bumpMap: versBump, normalMap: versNormal } = makeCanvasTexture('floor:parquet-versailles-v1', (ctx, size) => {
-      ctx.fillStyle = '#b48344';
+    const { map: versTex, bumpMap: versBump, normalMap: versNormal } = makeCanvasTexture('floor:parquet-versailles-v2', (ctx, size) => {
+      // Panneau Versailles : cadre périphérique + treillis diagonal entrelacé, lames veinées.
+      const rand = seededRandom(29);
+      const grainFill = (angle: number) => {
+        ctx.save();
+        ctx.translate(size / 2, size / 2);
+        ctx.rotate(angle);
+        for (let i = -size; i < size; i += 3) {
+          const t = rand();
+          ctx.fillStyle = `rgba(${t > 0.5 ? '255,236,200' : '70,40,15'},${0.05 + rand() * 0.08})`;
+          ctx.fillRect(-size, i, size * 2, 1 + rand() * 2);
+        }
+        ctx.restore();
+      };
+      ctx.fillStyle = '#b07d45';
       ctx.fillRect(0, 0, size, size);
-      const b = size * 0.1;
-      ctx.strokeStyle = '#5a3b1a';
-      ctx.lineWidth = 3;
+      grainFill(Math.PI / 4);
+      const b = size * 0.09;
+      const band = size * 0.07;
+      // Treillis : deux diagonales de lames.
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(b, b, size - 2 * b, size - 2 * b);
+      ctx.clip();
+      for (const dir of [1, -1]) {
+        ctx.save();
+        ctx.translate(size / 2, size / 2);
+        ctx.rotate((dir * Math.PI) / 4);
+        ctx.fillStyle = dir > 0 ? 'rgba(150,100,50,0.55)' : 'rgba(120,78,36,0.5)';
+        for (const off of [-size * 0.35, 0, size * 0.35]) {
+          ctx.fillRect(-size, off - band / 2, size * 2, band);
+          ctx.strokeStyle = 'rgba(60,35,15,0.55)';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(-size, off - band / 2, size * 2, band);
+        }
+        ctx.restore();
+      }
+      ctx.restore();
+      // Cadre : quatre lames de bordure, joints d'onglet.
+      ctx.fillStyle = 'rgba(135,90,45,0.6)';
+      ctx.fillRect(0, 0, size, b);
+      ctx.fillRect(0, size - b, size, b);
+      ctx.fillStyle = 'rgba(120,80,38,0.6)';
+      ctx.fillRect(0, b, b, size - 2 * b);
+      ctx.fillRect(size - b, b, b, size - 2 * b);
+      ctx.strokeStyle = 'rgba(55,32,12,0.6)';
+      ctx.lineWidth = 1.5;
       ctx.strokeRect(b, b, size - 2 * b, size - 2 * b);
+      ctx.strokeRect(0.75, 0.75, size - 1.5, size - 1.5);
       ctx.beginPath();
-      ctx.moveTo(size / 2, b);
-      ctx.lineTo(size - b, size / 2);
-      ctx.lineTo(size / 2, size - b);
-      ctx.lineTo(b, size / 2);
-      ctx.closePath();
+      ctx.moveTo(0, 0); ctx.lineTo(b, b);
+      ctx.moveTo(size, 0); ctx.lineTo(size - b, b);
+      ctx.moveTo(0, size); ctx.lineTo(b, size - b);
+      ctx.moveTo(size, size); ctx.lineTo(size - b, size - b);
       ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(0, 0); ctx.lineTo(size, size);
-      ctx.moveTo(size, 0); ctx.lineTo(0, size);
-      ctx.stroke();
-      noise(ctx, size, 0.07);
-    }, 512, true, true, 2.8);
+      noise(ctx, size, 0.05);
+    }, 512, true, true, 2.2);
     versTex.repeat.set(widthM / tileM, heightM / tileM);
     if (versBump) versBump.repeat.set(widthM / tileM, heightM / tileM);
     if (versNormal) versNormal.repeat.set(widthM / tileM, heightM / tileM);
@@ -220,22 +289,31 @@ export function resolveFloorMap(
 
   if (type === 'betonCire') {
     const tileM = FLOOR_TEXTURE_REPEAT_M.betonCire;
-    const { map: betonTex, bumpMap: betonBump, normalMap: betonNormal } = makeCanvasTexture('floor:beton-cire-v1', (ctx, size) => {
+    const { map: betonTex, bumpMap: betonBump, normalMap: betonNormal } = makeCanvasTexture('floor:beton-cire-v2', (ctx, size) => {
       ctx.fillStyle = '#8f8c85';
       ctx.fillRect(0, 0, size, size);
+      const rand = seededRandom(41);
       for (let i = 0; i < 28; i++) {
-        const x = Math.random() * size;
-        const y = Math.random() * size;
-        const radius = size * (0.15 + Math.random() * 0.35);
-        const grad = ctx.createRadialGradient(x, y, radius * 0.1, x, y, radius);
-        const alpha = 0.04 + Math.random() * 0.06;
-        grad.addColorStop(0, `rgba(240,238,232,${alpha})`);
-        grad.addColorStop(0.6, `rgba(100,98,92,${alpha * 0.7})`);
-        grad.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(x, y, radius, 0, Math.PI * 2);
-        ctx.fill();
+        const x0 = rand() * size;
+        const y0 = rand() * size;
+        const radius = size * (0.15 + rand() * 0.35);
+        const alpha = 0.04 + rand() * 0.06;
+        // Chaque nuage est redessiné sur les tuiles voisines : raccord invisible au bord.
+        for (const dx of [-size, 0, size]) {
+          for (const dy of [-size, 0, size]) {
+            const x = x0 + dx;
+            const y = y0 + dy;
+            if (x + radius < 0 || x - radius > size || y + radius < 0 || y - radius > size) continue;
+            const grad = ctx.createRadialGradient(x, y, radius * 0.1, x, y, radius);
+            grad.addColorStop(0, `rgba(240,238,232,${alpha})`);
+            grad.addColorStop(0.6, `rgba(100,98,92,${alpha * 0.7})`);
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
       }
       noise(ctx, size, 0.05);
     }, 512, true, true, 1.8);
@@ -391,6 +469,9 @@ export function resolveFloorMap(
     envMapIntensity = 0.55;
   }
 
+  const normalUrl = normalMapUrlFor(asset.url);
+  const normalMap = normalUrl ? loadTiledTexture(normalUrl, widthM / tileM, heightM / tileM, true) : null;
+
   const tint = floorColor && floorColor !== '#ffffff' ? floorColor : asset.fallback;
   const isWood =
     type === 'parquet' || type === 'chevron' || type === 'chevronGris' || type === 'chevronGreige'
@@ -405,8 +486,11 @@ export function resolveFloorMap(
     clearcoat,
     envMapIntensity,
     isPlan: false,
-    bumpMap: map ? bumpFromAlbedo(map) : null,
+    // Relief : vraie carte de normales pour les textures générées, sinon relief tiré de l'albédo.
+    bumpMap: normalMap ? null : map ? bumpFromAlbedo(map) : null,
     bumpScale: isWood ? 0.016 : clearcoat > 0.4 ? 0.008 : 0.01,
+    normalMap,
+    normalScale: normalMap ? (clearcoat > 0.4 ? 0.35 : isWood ? 0.8 : 0.9) : undefined,
   };
 }
 
@@ -560,6 +644,18 @@ function noise(ctx: CanvasRenderingContext2D, size: number, alpha = 0.08) {
   ctx.putImageData(img, 0, 0);
 }
 
+/** Aléatoire déterministe : même rendu à chaque chargement (et entre 2D / 3D). */
+function seededRandom(seed: number) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace('#', '');
   const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
@@ -571,192 +667,55 @@ function shadeRgb(r: number, g: number, b: number, factor: number): string {
   return `rgb(${Math.round(Math.min(255, Math.max(0, r * factor)))},${Math.round(Math.min(255, Math.max(0, g * factor)))},${Math.round(Math.min(255, Math.max(0, b * factor)))})`;
 }
 
-/** Texture tissu / cuir / velours pour assises. */
-export function resolveSeatFabricMap(material?: SeatMaterial, tint?: string): {
-  map: THREE.Texture;
+const SEAT_DETAIL: Record<SeatMaterial, { kind: DetailKind | null; repeat: number }> = {
+  fabric: { kind: 'fabricWeave', repeat: 3 },
+  linen: { kind: 'linen', repeat: 3 },
+  velvet: { kind: 'velvet', repeat: 1.5 },
+  leather: { kind: 'leather', repeat: 2 },
+  suede: { kind: 'suede', repeat: 2 },
+  boucle: { kind: 'boucle', repeat: 2.5 },
+  mesh: { kind: 'mesh', repeat: 2 },
+  rattan: { kind: 'rattan', repeat: 2 },
+  wood: { kind: 'woodGrain', repeat: 1 },
+  plastic: { kind: null, repeat: 1 },
+};
+
+/**
+ * Texture tissu / cuir / velours pour assises.
+ * Textures neutres (niveaux de gris) + normales : la teinte vient de la couleur du matériau,
+ * sans double teinte (l'ancienne texture pré-colorée, multipliée par la couleur, noircissait les sièges).
+ * `_tint` est conservé pour compatibilité d'appel.
+ */
+export function resolveSeatFabricMap(material?: SeatMaterial, _tint?: string): {
+  map: THREE.Texture | null;
+  normalMap: THREE.Texture | null;
+  normalScale: number;
   roughness: number;
   metalness: number;
 } {
   const mat = material ?? 'fabric';
-  const base = tint ?? '#1e3a5f';
-  const key = `seat:${mat}:${base}`;
-  const { map } = makeCanvasTexture(key, (ctx, size) => {
-    const [r, g, b] = hexToRgb(base);
-    ctx.fillStyle = shadeRgb(r, g, b, 0.85);
-    ctx.fillRect(0, 0, size, size);
-
-    if (mat === 'leather') {
-      for (let i = 0; i < 120; i += 1) {
-        const x = Math.random() * size;
-        const y = Math.random() * size;
-        ctx.strokeStyle = `rgba(0,0,0,${0.04 + Math.random() * 0.08})`;
-        ctx.beginPath();
-        ctx.ellipse(x, y, 4 + Math.random() * 14, 2 + Math.random() * 6, Math.random() * Math.PI, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      noise(ctx, size, 0.18);
-      return;
-    }
-
-    if (mat === 'velvet') {
-      const grad = ctx.createRadialGradient(size * 0.4, size * 0.35, 10, size * 0.5, size * 0.5, size * 0.7);
-      grad.addColorStop(0, shadeRgb(r, g, b, 1.25));
-      grad.addColorStop(1, shadeRgb(r, g, b, 0.7));
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, size, size);
-      for (let y = 0; y < size; y += 2) {
-        ctx.fillStyle = `rgba(255,255,255,${0.015 + (y % 4 === 0 ? 0.02 : 0)})`;
-        ctx.fillRect(0, y, size, 1);
-      }
-      noise(ctx, size, 0.1);
-      return;
-    }
-
-    if (mat === 'linen') {
-      ctx.fillStyle = shadeRgb(r, g, b, 1.05);
-      ctx.fillRect(0, 0, size, size);
-      for (let i = 0; i < size; i += 3) {
-        ctx.strokeStyle = `rgba(255,255,255,0.07)`;
-        ctx.beginPath();
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i, size);
-        ctx.stroke();
-        ctx.strokeStyle = `rgba(0,0,0,0.05)`;
-        ctx.beginPath();
-        ctx.moveTo(0, i);
-        ctx.lineTo(size, i);
-        ctx.stroke();
-      }
-      noise(ctx, size, 0.08);
-      return;
-    }
-
-    if (mat === 'wood') {
-      const grad = ctx.createLinearGradient(0, 0, size, 0);
-      grad.addColorStop(0, shadeRgb(r, g, b, 0.75));
-      grad.addColorStop(0.5, shadeRgb(r, g, b, 1.15));
-      grad.addColorStop(1, shadeRgb(r, g, b, 0.85));
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, size, size);
-      for (let i = 0; i < 22; i += 1) {
-        ctx.strokeStyle = `rgba(40,24,8,${0.1 + Math.random() * 0.12})`;
-        ctx.beginPath();
-        ctx.moveTo(0, (i / 22) * size);
-        ctx.bezierCurveTo(size * 0.35, (i / 22) * size + 6, size * 0.65, (i / 22) * size - 5, size, (i / 22) * size + 3);
-        ctx.stroke();
-      }
-      return;
-    }
-
-    if (mat === 'plastic') {
-      const grad = ctx.createLinearGradient(0, 0, size, size);
-      grad.addColorStop(0, shadeRgb(r, g, b, 0.9));
-      grad.addColorStop(0.5, shadeRgb(r, g, b, 1.2));
-      grad.addColorStop(1, shadeRgb(r, g, b, 0.95));
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, size, size);
-      noise(ctx, size, 0.05);
-      return;
-    }
-
-    if (mat === 'boucle') {
-      for (let y = 0; y < size; y += 2) {
-        for (let x = 0; x < size; x += 2) {
-          const curl = ((x * 7 + y * 13) % 5) / 5;
-          ctx.fillStyle = shadeRgb(r, g, b, 0.72 + curl * 0.35);
-          ctx.fillRect(x, y, 2.5, 2.5);
-        }
-      }
-      noise(ctx, size, 0.14);
-      return;
-    }
-
-    if (mat === 'suede') {
-      const grad = ctx.createLinearGradient(0, 0, size * 0.6, size);
-      grad.addColorStop(0, shadeRgb(r, g, b, 1.1));
-      grad.addColorStop(1, shadeRgb(r, g, b, 0.75));
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, size, size);
-      for (let i = 0; i < 80; i += 1) {
-        ctx.fillStyle = `rgba(255,255,255,${0.02 + Math.random() * 0.04})`;
-        ctx.fillRect(Math.random() * size, Math.random() * size, 1 + Math.random() * 3, 0.8);
-      }
-      noise(ctx, size, 0.2);
-      return;
-    }
-
-    if (mat === 'mesh') {
-      ctx.fillStyle = shadeRgb(r, g, b, 0.9);
-      ctx.fillRect(0, 0, size, size);
-      const step = size / 16;
-      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-      ctx.lineWidth = 1.2;
-      for (let i = 0; i <= 16; i += 1) {
-        ctx.beginPath();
-        ctx.moveTo(i * step, 0);
-        ctx.lineTo(i * step, size);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(0, i * step);
-        ctx.lineTo(size, i * step);
-        ctx.stroke();
-      }
-      noise(ctx, size, 0.06);
-      return;
-    }
-
-    if (mat === 'rattan') {
-      ctx.fillStyle = shadeRgb(r, g, b, 0.95);
-      ctx.fillRect(0, 0, size, size);
-      const step = size / 8;
-      for (let row = 0; row < 8; row += 1) {
-        for (let col = 0; col < 8; col += 1) {
-          const x = col * step;
-          const y = row * step;
-          ctx.strokeStyle = shadeRgb(r, g, b, row % 2 === 0 ? 0.65 : 1.15);
-          ctx.lineWidth = 2.2;
-          ctx.beginPath();
-          if (row % 2 === 0) {
-            ctx.arc(x + step / 2, y + step / 2, step * 0.38, 0, Math.PI);
-          } else {
-            ctx.arc(x + step / 2, y + step / 2, step * 0.38, Math.PI, Math.PI * 2);
-          }
-          ctx.stroke();
-        }
-      }
-      noise(ctx, size, 0.1);
-      return;
-    }
-
-    // fabric weave
-    for (let y = 0; y < size; y += 4) {
-      for (let x = 0; x < size; x += 4) {
-        const dark = (x + y) % 8 === 0;
-        ctx.fillStyle = dark ? shadeRgb(r, g, b, 0.78) : shadeRgb(r, g, b, 1.08);
-        ctx.fillRect(x, y, 4, 4);
-      }
-    }
-    noise(ctx, size, 0.1);
-  }, 512);
-
-  map.repeat.set(2.5, 2.5);
+  const { kind, repeat } = SEAT_DETAIL[mat] ?? SEAT_DETAIL.fabric;
+  const set = kind ? getDetailSet(kind) : null;
 
   const roughness =
-    mat === 'leather' ? 0.55 :
-    mat === 'velvet' ? 0.95 :
-    mat === 'plastic' ? 0.35 :
-    mat === 'wood' ? 0.65 :
-    mat === 'linen' ? 0.88 :
-    mat === 'boucle' ? 0.92 :
-    mat === 'suede' ? 0.88 :
-    mat === 'mesh' ? 0.45 :
-    mat === 'rattan' ? 0.78 : 0.82;
+    mat === 'leather' ? 0.48 :
+    mat === 'velvet' ? 0.92 :
+    mat === 'plastic' ? 0.3 :
+    mat === 'wood' ? 0.55 :
+    mat === 'linen' ? 0.9 :
+    mat === 'boucle' ? 0.95 :
+    mat === 'suede' ? 0.9 :
+    mat === 'mesh' ? 0.6 :
+    mat === 'rattan' ? 0.75 : 0.88;
 
-  const metalness =
-    mat === 'plastic' ? 0.12 :
-    mat === 'leather' ? 0.08 :
-    mat === 'mesh' ? 0.15 : 0.02;
-  return { map, roughness, metalness };
+  return {
+    map: withRepeat(set?.map ?? null, repeat, repeat),
+    normalMap: withRepeat(set?.normalMap ?? null, repeat, repeat),
+    normalScale: set?.normalScale ?? 0,
+    roughness,
+    // Tissus, cuir, bois, plastique : diélectriques.
+    metalness: 0,
+  };
 }
 
 /** Contremarche / nez de marche bois. */
@@ -780,13 +739,17 @@ function photoWallMaterial(
   bumpScale: number,
 ): WallSurfaceMaterial {
   const map = loadTiledTexture(url, repeatX, repeatY);
+  const normalUrl = normalMapUrlFor(url);
+  const normalMap = normalUrl ? loadTiledTexture(normalUrl, repeatX, repeatY, true) : undefined;
   return {
     map,
-    bumpMap: bumpFromAlbedo(map),
+    bumpMap: normalMap ? undefined : bumpFromAlbedo(map),
+    normalMap,
+    normalScale: 0.6,
     color,
     roughness,
     metalness,
-    bumpScale,
+    bumpScale: normalMap ? 0 : bumpScale,
   };
 }
 export const WALL_TEXTURE_TILE_M: Record<WallTextureStyle, { w: number; h: number }> = {
@@ -827,6 +790,8 @@ const WALL_BUMP_SCALE: Partial<Record<WallTextureStyle, number>> = {
 export type WallSurfaceMaterial = {
   map: THREE.Texture;
   bumpMap?: THREE.Texture;
+  normalMap?: THREE.Texture;
+  normalScale?: number;
   color: string;
   roughness: number;
   metalness: number;
@@ -838,7 +803,7 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
 
   if (style === 'wood') {
     return photoWallMaterial(
-      '/floors/wood-amber.png',
+      '/floors/gen/wood-amber.jpg',
       2.4,
       2.4,
       colorOverride && colorOverride !== '#ffffff' ? colorOverride : '#ffffff',
@@ -850,7 +815,7 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
 
   if (style === 'woodPanel') {
     return photoWallMaterial(
-      '/floors/wood-panel.png',
+      '/floors/gen/wood-panel.jpg',
       1.8,
       2.2,
       colorOverride && colorOverride !== '#ffffff' ? colorOverride : '#ffffff',
@@ -862,7 +827,7 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
 
   if (style === 'travertine') {
     return photoWallMaterial(
-      '/floors/marble-calacatta.png',
+      '/floors/gen/travertine.jpg',
       2.8,
       2.8,
       colorOverride && colorOverride !== '#ffffff' ? colorOverride : '#f5f5f4',
@@ -872,10 +837,11 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
     );
   }
 
-  const key = `wall:${style}:${base}`;
-  const useBump = style !== 'limewash' && style !== 'tadelakt' && style !== 'plaster';
+  const key = `wall:${style}:${base}:v2`;
+  // Enduits lisses : micro-relief générique ; parements (brique, pierre…) : normales tirées du dessin.
+  const smoothFinish = style === 'limewash' || style === 'tadelakt' || style === 'plaster';
 
-  const { map, bumpMap } = makeCanvasTexture(key, (ctx, size) => {
+  const { map, normalMap: drawnNormal } = makeCanvasTexture(key, (ctx, size) => {
     if (style === 'brick' || style === 'paintedBrick') {
       const mortar = style === 'paintedBrick' ? '#e2e8f0' : '#c4b5a5';
       ctx.fillStyle = mortar;
@@ -885,13 +851,17 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
       const tones = style === 'paintedBrick'
         ? ['#f1f5f9', '#e2e8f0', '#f8fafc', '#cbd5e1', '#f1f5f9']
         : ['#9a4a32', '#b4533c', '#8b3a2a', '#a65d45', '#7c3a28'];
+      const rand = seededRandom(style === 'paintedBrick' ? 7 : 3);
+      // Une teinte par brique réelle : la brique coupée au bord droit reprend celle du bord gauche (raccord).
+      const brickTone = Array.from({ length: 10 * 5 }, () => ({ tone: Math.floor(rand() * tones.length), shade: 0.85 + rand() * 0.25 }));
       for (let row = 0; row < 10; row += 1) {
         const offset = row % 2 === 0 ? 0 : bw / 2;
         for (let col = -1; col < 6; col += 1) {
           const x = col * bw + offset;
           const y = row * bh;
-          const shade = 0.85 + Math.random() * 0.25;
-          ctx.fillStyle = tones[(row + col + Math.floor(Math.random() * 3)) % tones.length];
+          const b = brickTone[row * 5 + ((col % 5) + 5) % 5];
+          const shade = b.shade;
+          ctx.fillStyle = tones[b.tone];
           ctx.globalAlpha = shade;
           ctx.fillRect(x + 1.5, y + 1.5, bw - 3, bh - 3);
           ctx.globalAlpha = 1;
@@ -932,24 +902,48 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
     }
 
     if (style === 'stone' || style === 'slate') {
-      ctx.fillStyle = style === 'slate' ? '#3f3f46' : '#5c574f';
-      ctx.fillRect(0, 0, size, size);
-      const count = style === 'slate' ? 40 : 55;
+      // Appareillage en assises : blocs rectangulaires joints au mortier, dessinés en boucle (sans raccord).
+      const rand = seededRandom(style === 'slate' ? 17 : 13);
       const tones = style === 'slate'
-        ? ['#52525b', '#3f3f46', '#27272a', '#71717a', '#18181b']
-        : ['#8a8278', '#57534e', '#78716c', '#a8a29e', '#44403c'];
-      for (let i = 0; i < count; i += 1) {
-        const x = Math.random() * size;
-        const y = Math.random() * size;
-        const r = 6 + Math.random() * (style === 'slate' ? 28 : 32);
-        ctx.fillStyle = tones[i % tones.length];
-        ctx.beginPath();
-        ctx.ellipse(x, y, r, r * (0.55 + Math.random() * 0.4), Math.random(), 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(0,0,0,0.18)';
-        ctx.stroke();
+        ? ['#4b4b53', '#3f3f46', '#52525b', '#36363c', '#5b5b63']
+        : ['#8a8177', '#7a7166', '#968c80', '#6e665c', '#a39a8d', '#81786c'];
+      ctx.fillStyle = style === 'slate' ? '#1f1f23' : '#5d574f';
+      ctx.fillRect(0, 0, size, size);
+      const joint = style === 'slate' ? 2 : 4;
+      const rowHeights: number[] = [];
+      let used = 0;
+      while (used < size) {
+        let h = style === 'slate' ? 18 + rand() * 26 : 48 + rand() * 50;
+        if (size - used - h < (style === 'slate' ? 18 : 48)) h = size - used;
+        rowHeights.push(h);
+        used += h;
       }
-      noise(ctx, size, 0.16);
+      let y = 0;
+      for (const h of rowHeights) {
+        let x = rand() * size;
+        const end = x + size;
+        while (x < end - 1) {
+          let w = style === 'slate' ? 60 + rand() * 120 : 70 + rand() * 110;
+          if (end - x - w < 40) w = end - x;
+          const tone = tones[Math.floor(rand() * tones.length)];
+          const lift = 0.9 + rand() * 0.2;
+          for (const dx of [0, -size]) {
+            const bx = x + dx + joint / 2;
+            ctx.globalAlpha = lift > 1 ? 1 : lift;
+            ctx.fillStyle = tone;
+            ctx.fillRect(bx, y + joint / 2, w - joint, h - joint);
+            ctx.globalAlpha = 1;
+            // Arête supérieure éclairée / inférieure ombrée : lecture du relief.
+            ctx.fillStyle = 'rgba(255,255,255,0.10)';
+            ctx.fillRect(bx, y + joint / 2, w - joint, 2);
+            ctx.fillStyle = 'rgba(0,0,0,0.18)';
+            ctx.fillRect(bx, y + h - joint / 2 - 2, w - joint, 2);
+          }
+          x += w;
+        }
+        y += h;
+      }
+      noise(ctx, size, style === 'slate' ? 0.1 : 0.16);
       return;
     }
 
@@ -1075,7 +1069,8 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
     ctx.fillStyle = base;
     ctx.fillRect(0, 0, size, size);
     noise(ctx, size, 0.14);
-  }, 512, useBump);
+  }, 512, false, !smoothFinish, 2.4);
+  const normalMap = drawnNormal ?? getDetailSet('plaster').normalMap ?? undefined;
 
   const repeatX =
     style === 'brick' || style === 'paintedBrick' ? 4 :
@@ -1088,7 +1083,6 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
     style === 'fluted' ? 2 :
     style === 'metalCorrugated' ? 2 : 2;
   map.repeat.set(repeatX, repeatY);
-  if (bumpMap) bumpMap.repeat.set(repeatX, repeatY);
 
   const roughness =
     style === 'concrete' || style === 'boardConcrete' ? 0.9 :
@@ -1109,11 +1103,12 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
 
   return {
     map,
-    bumpMap,
+    normalMap,
+    normalScale: smoothFinish ? 0.35 : 0.8,
     color: '#ffffff',
     roughness,
     metalness,
-    bumpScale: WALL_BUMP_SCALE[style] ?? 0,
+    bumpScale: 0,
   };
 }
 
@@ -1130,16 +1125,20 @@ export function wallTextureForSurface(
   const repeatY = Math.max(0.5, heightM / tile.h);
   const map = base.map.clone();
   configureMap(map, repeatX, repeatY);
+  let normalMap: THREE.Texture | undefined;
+  if (base.normalMap) {
+    normalMap = base.normalMap.clone();
+    normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
+    // Micro-relief d'enduit : grain plus fin que la teinte (≈ 60 cm).
+    const smooth = !base.bumpMap && (style === 'plaster' || style === 'limewash' || style === 'tadelakt');
+    normalMap.repeat.set(smooth ? widthM / 0.6 : repeatX, smooth ? heightM / 0.6 : repeatY);
+  }
   let bumpMap: THREE.Texture | undefined;
-  if (base.bumpMap) {
-    bumpMap = base.bumpMap.clone();
-    bumpMap.repeat.set(repeatX, repeatY);
-    bumpMap.wrapS = bumpMap.wrapT = THREE.RepeatWrapping;
-  } else if (!base.bumpMap && base.map) {
+  if (!normalMap && base.map) {
     bumpMap = bumpFromAlbedo(map);
     bumpMap.repeat.set(repeatX, repeatY);
   }
-  return { ...base, map, bumpMap, bumpScale: base.bumpScale || (bumpMap ? 0.006 : 0) };
+  return { ...base, map, normalMap, bumpMap, bumpScale: bumpMap ? base.bumpScale || 0.006 : 0 };
 }
 
 /** Texture et PBR pour battants de porte selon le matériau. */
@@ -1209,8 +1208,8 @@ export function getDoorMaterialProps(
   };
 }
 
-export const TABLE_DEFAULT_TEXTURE = '/floors/table-wood.svg';
-export const TABLE_LINEN_TEXTURE = '/floors/table-linen.svg';
+export const TABLE_DEFAULT_TEXTURE = '/floors/gen/table-wood.jpg';
+export const TABLE_LINEN_TEXTURE = '/floors/gen/table-linen.jpg';
 
 export function resolveTableMaterial(
   shape: TableShape,
@@ -1226,10 +1225,14 @@ export function resolveTableMaterial(
   opacity?: number;
   bumpMap?: THREE.Texture;
   bumpScale?: number;
+  normalMap?: THREE.Texture;
+  normalScale?: number;
   clearcoat?: number;
   clearcoatRoughness?: number;
   transmission?: number;
   ior?: number;
+  /** Plateau nappé (lin) : la table reçoit une retombée de nappe. */
+  isCloth?: boolean;
 } {
   if (imageUrl) {
     return {
@@ -1277,37 +1280,44 @@ export function resolveTableMaterial(
   const textureBySurface: Record<Exclude<TableSurfaceStyle, 'glass' | 'whiteLacquer'>, string> = {
     wood: TABLE_DEFAULT_TEXTURE,
     linen: TABLE_LINEN_TEXTURE,
-    walnut: '/floors/wood-charcoal.png',
-    marble: '/floors/marble-calacatta.png',
-    darkWood: '/floors/wood-rustic.png',
+    walnut: '/floors/gen/table-walnut.jpg',
+    marble: '/floors/gen/marble-calacatta.jpg',
+    darkWood: '/floors/gen/table-darkwood.jpg',
   };
 
   const url = textureBySurface[resolvedSurface as keyof typeof textureBySurface] ?? TABLE_DEFAULT_TEXTURE;
+  // Les textures portent déjà la teinte du matériau : blanc = couleur de la texture telle quelle.
   const defaultColors: Record<TableSurfaceStyle, string> = {
-    wood: '#f5f0e8',
-    linen: '#faf7f2',
-    walnut: '#d4c4a8',
-    marble: '#f5f5f4',
-    darkWood: '#44403c',
+    wood: '#ffffff',
+    linen: '#ffffff',
+    walnut: '#ffffff',
+    marble: '#ffffff',
+    darkWood: '#ffffff',
     whiteLacquer: '#fafafa',
     glass: '#e2e8f0',
   };
 
-  const map = loadTiledTexture(url, 1.4, 1.4);
-  const bumpScale =
-    resolvedSurface === 'marble' ? 0.008 :
-    resolvedSurface === 'walnut' || resolvedSurface === 'darkWood' ? 0.012 :
-    resolvedSurface === 'wood' ? 0.01 : 0.008;
+  const isLinen = resolvedSurface === 'linen';
+  const isMarble = resolvedSurface === 'marble';
+  // Nappe : trame fine (plus de répétitions) ; bois / marbre : une planche par plateau environ.
+  const repeat = isLinen ? 4 : isMarble ? 1 : 1.2;
+  const map = loadTiledTexture(url, repeat, repeat);
+  const normalUrl = normalMapUrlFor(url);
+  const normalMap = normalUrl ? loadTiledTexture(normalUrl, repeat, repeat, true) : undefined;
 
   return {
     map,
-    bumpMap: bumpFromAlbedo(map),
-    bumpScale,
+    bumpMap: normalMap ? undefined : bumpFromAlbedo(map),
+    bumpScale: normalMap ? 0 : 0.008,
+    normalMap,
+    normalScale: isLinen ? 0.6 : isMarble ? 0.25 : 0.5,
     color: color && color !== '#ffffff' ? color : defaultColors[resolvedSurface],
-    roughness: resolvedSurface === 'marble' ? 0.22 : resolvedSurface === 'linen' ? 0.36 : resolvedSurface === 'walnut' || resolvedSurface === 'darkWood' ? 0.48 : 0.45,
-    metalness: resolvedSurface === 'marble' ? 0.12 : resolvedSurface === 'linen' ? 0.04 : 0.08,
-    clearcoat: resolvedSurface === 'marble' ? 0.75 : resolvedSurface === 'linen' ? 0 : 0.15,
-    clearcoatRoughness: resolvedSurface === 'marble' ? 0.15 : 0.3,
+    isCloth: isLinen,
+    // Bois vernis satiné, marbre poli, nappe mate : matériaux diélectriques (métal = 0).
+    roughness: isMarble ? 0.12 : isLinen ? 0.92 : resolvedSurface === 'walnut' || resolvedSurface === 'darkWood' ? 0.42 : 0.48,
+    metalness: 0,
+    clearcoat: isMarble ? 0.8 : isLinen ? 0 : 0.35,
+    clearcoatRoughness: isMarble ? 0.06 : 0.22,
   };
 }
 
@@ -1628,7 +1638,7 @@ export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
   }
   if (mat === 'parquet' || mat === 'wood') {
     return {
-      map: loadTiledTexture('/floors/wood-amber.png', 1.8, 1.8),
+      map: loadTiledTexture('/floors/gen/wood-amber.jpg', 1.8, 1.8),
       color: '#ffffff',
       roughness: 0.42,
       metalness: 0.06,

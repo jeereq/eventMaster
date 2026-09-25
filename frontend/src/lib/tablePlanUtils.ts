@@ -114,11 +114,11 @@ export function getTableVisualClasses(shape: TableShape | string, active = false
 }
 
 const TABLE_SURFACE_2D: Partial<Record<TableSurfaceStyle, string>> = {
-  wood: '/floors/table-wood.svg',
-  linen: '/floors/table-linen.svg',
-  walnut: '/floors/wood-charcoal.png',
-  marble: '/floors/marble-calacatta.png',
-  darkWood: '/floors/wood-rustic.png',
+  wood: '/floors/gen/table-wood.jpg',
+  linen: '/floors/gen/table-linen.jpg',
+  walnut: '/floors/gen/table-walnut.jpg',
+  marble: '/floors/gen/marble-calacatta.jpg',
+  darkWood: '/floors/gen/table-darkwood.jpg',
 };
 
 export function getTableVisualStyle(
@@ -139,8 +139,8 @@ export function getTableVisualStyle(
     ? (shape === 'cocktail' || shape === 'highTop' ? 'round' : shape)
     : 'rectangular';
   const className = `${size} em-table-realistic em-table-realistic--${shapeKey}${active ? ' em-table-realistic--active' : ''}`;
-  const linen = 'url(/floors/table-linen.svg)';
-  const wood = 'url(/floors/table-wood.svg)';
+  const linen = 'url(/floors/gen/table-linen.jpg)';
+  const wood = 'url(/floors/gen/table-wood.jpg)';
   const dark = isDarkTableColor(tableColor);
   const tint = tableColor || (dark ? '#1e293b' : '#f3e6c8');
   const customCornerRadius = typeof customDims?.cornerRadiusM === 'number' && customDims.cornerRadiusM > 0

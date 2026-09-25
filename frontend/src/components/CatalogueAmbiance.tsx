@@ -9,13 +9,14 @@ import {
 } from '@/lib/roomCeilingUtils';
 import type { DoorStyle, AisleStyle, ChandelierFixtureStyle, OpeningMaterial } from '@/lib/roomLayoutUtils';
 import { getDoorMaterialProps } from '@/lib/roomWebGLMaterials';
+import { SurfaceMat } from '@/components/room/SurfaceMaterial';
 
 function ChandelierClassic({ pointLights }: { pointLights: boolean }) {
   return (
     <group>
       <mesh position={[0, 0.25, 0]}>
         <cylinderGeometry args={[0.008, 0.008, 0.5, 6]} />
-        <meshStandardMaterial color="#a8a29e" metalness={0.7} roughness={0.3} />
+        <SurfaceMat color="#a8a29e" metalness={0.7} roughness={0.3} />
       </mesh>
       <mesh position={[0, -0.05, 0]} castShadow>
         <sphereGeometry args={[0.14, 16, 16]} />
@@ -27,7 +28,7 @@ function ChandelierClassic({ pointLights }: { pointLights: boolean }) {
           <group key={a} rotation={[0, ang, 0]}>
             <mesh position={[0.22, -0.08, 0]} rotation={[0, 0, 0.4]} castShadow>
               <cylinderGeometry args={[0.012, 0.012, 0.28, 6]} />
-              <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.25} />
+              <SurfaceMat color="#d4af37" metalness={0.8} roughness={0.25} />
             </mesh>
             <mesh position={[0.34, -0.18, 0]} castShadow>
               <sphereGeometry args={[0.05, 10, 10]} />
@@ -48,11 +49,11 @@ function ChandelierCrystal({ pointLights }: { pointLights: boolean }) {
     <group>
       <mesh position={[0, 0.28, 0]}>
         <cylinderGeometry args={[0.006, 0.006, 0.45, 6]} />
-        <meshStandardMaterial color="#cbd5e1" metalness={0.85} roughness={0.2} />
+        <SurfaceMat color="#cbd5e1" metalness={0.85} roughness={0.2} />
       </mesh>
       <mesh position={[0, 0.02, 0]} castShadow>
         <octahedronGeometry args={[0.1, 0]} />
-        <meshStandardMaterial color="#e0f2fe" metalness={0.9} roughness={0.08} transparent opacity={0.85} />
+        <SurfaceMat color="#f5fbff" finish="crystal" opacity={0.7} />
       </mesh>
       {[0, 1, 2, 3, 4, 5, 6, 7].map((a) => {
         const ang = (a / 8) * Math.PI * 2;
@@ -61,19 +62,11 @@ function ChandelierCrystal({ pointLights }: { pointLights: boolean }) {
           <group key={a} rotation={[0, ang, 0]}>
             <mesh position={[r, -0.12, 0]} castShadow>
               <octahedronGeometry args={[0.045, 0]} />
-              <meshPhysicalMaterial
-                color="#f0f9ff"
-                metalness={0.15}
-                roughness={0.05}
-                transmission={0.55}
-                thickness={0.4}
-                transparent
-                opacity={0.9}
-              />
+              <SurfaceMat color="#f0f9ff" finish="crystal" />
             </mesh>
             <mesh position={[r * 0.7, -0.28, 0]} castShadow>
               <octahedronGeometry args={[0.03, 0]} />
-              <meshStandardMaterial color="#e0f2fe" emissive="#bae6fd" emissiveIntensity={0.35} roughness={0.1} />
+              <SurfaceMat color="#f0f9ff" finish="crystal" emissive="#fef3c7" emissiveIntensity={0.25} />
             </mesh>
           </group>
         );
@@ -90,11 +83,11 @@ function ChandelierModern({ pointLights }: { pointLights: boolean }) {
     <group>
       <mesh position={[0, 0.35, 0]}>
         <cylinderGeometry args={[0.005, 0.005, 0.55, 6]} />
-        <meshStandardMaterial color="#57534e" metalness={0.6} roughness={0.35} />
+        <SurfaceMat color="#57534e" metalness={0.6} roughness={0.35} />
       </mesh>
       <mesh position={[0, 0.02, 0]} castShadow>
         <cylinderGeometry args={[0.09, 0.11, 0.28, 24]} />
-        <meshStandardMaterial color="#1c1917" metalness={0.55} roughness={0.35} />
+        <SurfaceMat color="#1c1917" metalness={0.55} roughness={0.35} />
       </mesh>
       <mesh position={[0, -0.14, 0]}>
         <cylinderGeometry args={[0.08, 0.08, 0.04, 24]} />
@@ -112,7 +105,7 @@ function ChandelierIndustrial({ pointLights }: { pointLights: boolean }) {
     <group>
       <mesh position={[0, 0.32, 0]}>
         <cylinderGeometry args={[0.01, 0.01, 0.5, 6]} />
-        <meshStandardMaterial color="#292524" metalness={0.7} roughness={0.4} />
+        <SurfaceMat color="#292524" metalness={0.7} roughness={0.4} />
       </mesh>
       <mesh position={[0, 0.05, 0]} castShadow>
         <coneGeometry args={[0.18, 0.22, 16, 1, true]} />
@@ -134,11 +127,11 @@ function ChandelierLantern({ pointLights }: { pointLights: boolean }) {
     <group>
       <mesh position={[0, 0.3, 0]}>
         <cylinderGeometry args={[0.006, 0.006, 0.4, 6]} />
-        <meshStandardMaterial color="#a8a29e" metalness={0.75} roughness={0.3} />
+        <SurfaceMat color="#a8a29e" metalness={0.75} roughness={0.3} />
       </mesh>
       <mesh position={[0, 0.08, 0]} castShadow>
         <boxGeometry args={[0.22, 0.06, 0.22]} />
-        <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.25} />
+        <SurfaceMat color="#d4af37" metalness={0.8} roughness={0.25} />
       </mesh>
       <mesh position={[0, -0.08, 0]} castShadow>
         <boxGeometry args={[0.2, 0.28, 0.2]} />
@@ -147,12 +140,12 @@ function ChandelierLantern({ pointLights }: { pointLights: boolean }) {
       {[0, 1, 2, 3].map((i) => (
         <mesh key={i} position={[0, -0.08, 0]} rotation={[0, (i * Math.PI) / 2, 0]} castShadow>
           <boxGeometry args={[0.22, 0.28, 0.012]} />
-          <meshStandardMaterial color="#b45309" metalness={0.55} roughness={0.4} />
+          <SurfaceMat color="#b45309" metalness={0.55} roughness={0.4} />
         </mesh>
       ))}
       <mesh position={[0, -0.24, 0]} castShadow>
         <boxGeometry args={[0.22, 0.04, 0.22]} />
-        <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.25} />
+        <SurfaceMat color="#d4af37" metalness={0.8} roughness={0.25} />
       </mesh>
       {pointLights ? (
         <pointLight position={[0, -0.1, 0]} intensity={0.6} color="#fdba74" distance={9} decay={2} />
@@ -276,7 +269,7 @@ export function RoomUplights({
         <group key={i} position={pos}>
           <mesh castShadow>
             <cylinderGeometry args={[0.06, 0.08, 0.12, 12]} />
-            <meshStandardMaterial color="#292524" metalness={0.55} roughness={0.4} />
+            <SurfaceMat color="#292524" metalness={0.55} roughness={0.4} />
           </mesh>
           <mesh position={[0, 0.08, 0]}>
             <sphereGeometry args={[0.022, 8, 8]} />
@@ -343,7 +336,7 @@ export function RoomCurtains({
           })}
           <mesh position={[0, h / 2 + 0.04, 0.02]} castShadow>
             <cylinderGeometry args={[0.02, 0.02, p.w * 1.05, 8]} />
-            <meshStandardMaterial color="#d4af37" metalness={0.75} roughness={0.25} />
+            <SurfaceMat color="#d4af37" metalness={0.75} roughness={0.25} />
           </mesh>
         </group>
       ))}
@@ -534,7 +527,7 @@ export function CatalogueDoor({
             {/* Fronton / imposte dorée */}
             <mesh position={[0, frameH / 2 + 0.15, 0]} castShadow>
               <boxGeometry args={[frameW * 1.1, 0.2, 0.1]} />
-              <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.2} />
+              <SurfaceMat color="#d4af37" metalness={0.8} roughness={0.2} />
             </mesh>
             {/* Battant gauche orné */}
             <group position={[-frameW / 4, 0, 0]}>
@@ -545,12 +538,12 @@ export function CatalogueDoor({
               {/* Moulure or */}
               <mesh position={[0, 0, doorThick / 2 + 0.005]} castShadow>
                 <boxGeometry args={[frameW / 2 - frameThickness * 2, frameH * 0.75, 0.01]} />
-                <meshStandardMaterial color="#d4af37" metalness={0.75} roughness={0.25} />
+                <SurfaceMat color="#d4af37" metalness={0.75} roughness={0.25} />
               </mesh>
               {/* Poignée dorée */}
               <mesh position={[frameW / 4 - 0.08, -0.1, doorThick / 2 + 0.02]} castShadow>
                 <cylinderGeometry args={[0.015, 0.015, 0.25, 12]} />
-                <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.15} />
+                <SurfaceMat color="#fbbf24" metalness={0.9} roughness={0.15} />
               </mesh>
             </group>
             {/* Battant droit orné */}
@@ -561,11 +554,11 @@ export function CatalogueDoor({
               </mesh>
               <mesh position={[0, 0, doorThick / 2 + 0.005]} castShadow>
                 <boxGeometry args={[frameW / 2 - frameThickness * 2, frameH * 0.75, 0.01]} />
-                <meshStandardMaterial color="#d4af37" metalness={0.75} roughness={0.25} />
+                <SurfaceMat color="#d4af37" metalness={0.75} roughness={0.25} />
               </mesh>
               <mesh position={[-frameW / 4 + 0.08, -0.1, doorThick / 2 + 0.02]} castShadow>
                 <cylinderGeometry args={[0.015, 0.015, 0.25, 12]} />
-                <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.15} />
+                <SurfaceMat color="#fbbf24" metalness={0.9} roughness={0.15} />
               </mesh>
             </group>
           </>
@@ -597,7 +590,7 @@ export function CatalogueDoor({
                 {/* Poignée laiton */}
                 <mesh position={[-side * (frameW / 4 - 0.08), -0.1, doorThick / 2 + 0.02]} castShadow>
                   <cylinderGeometry args={[0.012, 0.012, 0.18, 12]} />
-                  <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.25} />
+                  <SurfaceMat color="#d4af37" metalness={0.8} roughness={0.25} />
                 </mesh>
               </group>
             ))}
@@ -610,13 +603,13 @@ export function CatalogueDoor({
             {/* Rail supérieur en acier noir */}
             <mesh position={[0, frameH / 2 + 0.08, 0.06]} castShadow>
               <boxGeometry args={[frameW * 1.3, 0.04, 0.04]} />
-              <meshStandardMaterial color="#1c1917" metalness={0.85} roughness={0.3} />
+              <SurfaceMat color="#1c1917" metalness={0.85} roughness={0.3} />
             </mesh>
             {/* Roulettes de suspension */}
             {[-frameW / 3, frameW / 3].map((rx, idx) => (
               <mesh key={idx} position={[rx, frameH / 2 + 0.08, 0.08]} rotation={[Math.PI / 2, 0, 0]} castShadow>
                 <cylinderGeometry args={[0.035, 0.035, 0.02, 16]} />
-                <meshStandardMaterial color="#0f172a" metalness={0.9} roughness={0.2} />
+                <SurfaceMat color="#0f172a" metalness={0.9} roughness={0.2} />
               </mesh>
             ))}
             {/* Panneau bois massif avec croisillons en Z */}
@@ -628,7 +621,7 @@ export function CatalogueDoor({
               {/* Poignée barre en fonte noire */}
               <mesh position={[frameW * 0.35, -0.1, 0.045]} castShadow>
                 <boxGeometry args={[0.02, 0.35, 0.03]} />
-                <meshStandardMaterial color="#18181b" metalness={0.8} roughness={0.3} />
+                <SurfaceMat color="#18181b" metalness={0.8} roughness={0.3} />
               </mesh>
             </group>
           </>
@@ -640,7 +633,7 @@ export function CatalogueDoor({
             {/* Tringle en laiton doré */}
             <mesh position={[0, frameH / 2 + 0.05, 0.05]} rotation={[0, 0, Math.PI / 2]} castShadow>
               <cylinderGeometry args={[0.02, 0.02, frameW * 1.2, 12]} />
-              <meshStandardMaterial color="#d4af37" metalness={0.85} roughness={0.2} />
+              <SurfaceMat color="#d4af37" metalness={0.85} roughness={0.2} />
             </mesh>
             {/* Rideau velours drapé gauche */}
             <mesh position={[-frameW * 0.3, -0.05, 0.04]} castShadow>
@@ -656,7 +649,7 @@ export function CatalogueDoor({
             {[-frameW * 0.3, frameW * 0.3].map((cx, idx) => (
               <mesh key={idx} position={[cx, -0.15, 0.08]} castShadow>
                 <torusGeometry args={[0.12, 0.02, 8, 24]} />
-                <meshStandardMaterial color="#fbbf24" metalness={0.8} roughness={0.2} />
+                <SurfaceMat color="#fbbf24" metalness={0.8} roughness={0.2} />
               </mesh>
             ))}
           </>
@@ -680,7 +673,7 @@ export function CatalogueDoor({
             {/* Barre anti-panique */}
             <mesh position={[0, -0.1, doorThick / 2 + 0.03]} castShadow>
               <boxGeometry args={[frameW * 0.75, 0.05, 0.03]} />
-              <meshStandardMaterial color="#dc2626" metalness={0.6} roughness={0.3} />
+              <SurfaceMat color="#dc2626" metalness={0.6} roughness={0.3} />
             </mesh>
           </>
         )}
@@ -709,13 +702,13 @@ export function CatalogueDoor({
             <group position={[frameW * 0.32, 0, 0.045]}>
               <mesh castShadow>
                 <cylinderGeometry args={[0.016, 0.016, 1.25, 16]} />
-                <meshStandardMaterial color="#e2e8f0" metalness={0.92} roughness={0.12} />
+                <SurfaceMat color="#e2e8f0" metalness={0.92} roughness={0.12} />
               </mesh>
               {/* Fixations murales / entretoises de la poignée */}
               {[-0.5, 0.5].map((py, pi) => (
                 <mesh key={pi} position={[0, py, -0.025]} rotation={[Math.PI / 2, 0, 0]} castShadow>
                   <cylinderGeometry args={[0.012, 0.012, 0.05, 12]} />
-                  <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.15} />
+                  <SurfaceMat color="#cbd5e1" metalness={0.9} roughness={0.15} />
                 </mesh>
               ))}
             </group>
@@ -729,7 +722,7 @@ export function CatalogueDoor({
             {[-frameH * 0.48, frameH * 0.48].map((py, pi) => (
               <mesh key={pi} position={[-frameW * 0.28, py, 0]} castShadow>
                 <cylinderGeometry args={[0.025, 0.025, 0.04, 16]} />
-                <meshStandardMaterial color="#18181b" metalness={0.9} roughness={0.2} />
+                <SurfaceMat color="#18181b" metalness={0.9} roughness={0.2} />
               </mesh>
             ))}
             {/* Vantail pivotant en bois noir texturé ou métal liquide */}
@@ -771,11 +764,11 @@ export function CatalogueDoor({
                   <group position={[-side * (leafW * 0.35), -0.05, doorThick / 2 + 0.015]}>
                     <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
                       <cylinderGeometry args={[0.025, 0.025, 0.008, 16]} />
-                      <meshStandardMaterial color="#fbbf24" metalness={0.85} roughness={0.2} />
+                      <SurfaceMat color="#fbbf24" metalness={0.85} roughness={0.2} />
                     </mesh>
                     <mesh position={[side * 0.05, 0, 0.025]} castShadow>
                       <boxGeometry args={[0.11, 0.018, 0.018]} />
-                      <meshStandardMaterial color="#d4af37" metalness={0.9} roughness={0.18} />
+                      <SurfaceMat color="#d4af37" metalness={0.9} roughness={0.18} />
                     </mesh>
                   </group>
                 </group>
@@ -799,12 +792,12 @@ export function CatalogueDoor({
             {/* Heurtoir en fer forgé */}
             <mesh position={[0, frameH * 0.1, doorThick / 2 + 0.02]} castShadow>
               <torusGeometry args={[0.065, 0.012, 10, 20]} />
-              <meshStandardMaterial color="#1c1917" metalness={0.8} roughness={0.3} />
+              <SurfaceMat color="#1c1917" metalness={0.8} roughness={0.3} />
             </mesh>
             {/* Poignée */}
             <mesh position={[frameW * 0.32, -0.1, doorThick / 2 + 0.02]} castShadow>
               <cylinderGeometry args={[0.015, 0.015, 0.16, 12]} />
-              <meshStandardMaterial color="#fbbf24" metalness={0.85} roughness={0.2} />
+              <SurfaceMat color="#fbbf24" metalness={0.85} roughness={0.2} />
             </mesh>
           </group>
         )}
@@ -838,17 +831,17 @@ export function CatalogueDoor({
               <group position={[frameW * 0.34, -0.06, doorThick / 2 + 0.015]}>
                 <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
                   <cylinderGeometry args={[0.026, 0.026, 0.008, 16]} />
-                  <meshStandardMaterial color="#94a3b8" metalness={0.85} roughness={0.2} />
+                  <SurfaceMat color="#94a3b8" metalness={0.85} roughness={0.2} />
                 </mesh>
                 {/* Béquille en L */}
                 <mesh position={[-0.05, 0, 0.02]} castShadow>
                   <boxGeometry args={[0.11, 0.018, 0.016]} />
-                  <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.15} />
+                  <SurfaceMat color="#cbd5e1" metalness={0.9} roughness={0.15} />
                 </mesh>
                 {/* Trou de serrure sous la rosace */}
                 <mesh position={[0, -0.06, 0]} rotation={[Math.PI / 2, 0, 0]}>
                   <cylinderGeometry args={[0.016, 0.016, 0.006, 12]} />
-                  <meshStandardMaterial color="#64748b" metalness={0.8} roughness={0.3} />
+                  <SurfaceMat color="#64748b" metalness={0.8} roughness={0.3} />
                 </mesh>
               </group>
             </group>
@@ -890,7 +883,7 @@ export function CatalogueChandelierFixture({
       {/* Câble / tige de suspension du plafond */}
       <mesh position={[0, 0.45, 0]}>
         <cylinderGeometry args={[0.006, 0.006, 0.9, 6]} />
-        <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.2} />
+        <SurfaceMat color="#475569" metalness={0.8} roughness={0.2} />
       </mesh>
 
       {/* 1. CASCADE DE CRISTAL ROYAL */}
@@ -899,7 +892,7 @@ export function CatalogueChandelierFixture({
           {/* Couronne supérieure dorée */}
           <mesh position={[0, 0.05, 0]} castShadow>
             <cylinderGeometry args={[0.35, 0.38, 0.08, 24]} />
-            <meshStandardMaterial color={selected ? '#c7d2fe' : '#d4af37'} metalness={0.85} roughness={0.2} />
+            <SurfaceMat color={selected ? '#c7d2fe' : '#d4af37'} metalness={0.85} roughness={0.2} />
           </mesh>
           {/* Cascades de pampilles en cristal transparent */}
           {[0, 1, 2].map((tier) => {
@@ -917,13 +910,9 @@ export function CatalogueChandelierFixture({
                       castShadow
                     >
                       <octahedronGeometry args={[0.035, 0]} />
-                      <meshPhysicalMaterial
+                      <SurfaceMat
                         color="#f8fafc"
-                        transmission={0.85}
-                        opacity={0.85}
-                        transparent
-                        roughness={0.05}
-                        metalness={0.1}
+                        finish="crystal"
                         emissive={lightColor}
                         emissiveIntensity={0.18 * Math.max(0.4, lightIntensity)}
                       />
@@ -947,12 +936,14 @@ export function CatalogueChandelierFixture({
               castShadow
             >
               <torusGeometry args={[ringR, 0.015, 12, 36]} />
-              <meshStandardMaterial
+              <SurfaceMat
                 color={selected ? '#c7d2fe' : '#d4af37'}
-                metalness={0.85}
+                finish="brass"
+                metalness={0.95}
                 roughness={0.25}
+                repeat={[8, 1]}
                 emissive="#fde68a"
-                emissiveIntensity={0.2}
+                emissiveIntensity={0.12}
               />
             </mesh>
           ))}
@@ -965,7 +956,7 @@ export function CatalogueChandelierFixture({
           {/* Abat-jour rotin tressé */}
           <mesh position={[0, 0, 0]} castShadow>
             <cylinderGeometry args={[0.2, 0.38, 0.3, 16, 1, true]} />
-            <meshStandardMaterial color="#d97706" roughness={0.85} side={THREE.DoubleSide} />
+            <SurfaceMat color="#c8914a" finish="rattan" roughness={0.8} repeat={[4, 1.5]} side={THREE.DoubleSide} />
           </mesh>
           {/* Éventail d'herbes de pampa autour */}
           {Array.from({ length: 10 }).map((_, i) => {
@@ -1016,7 +1007,7 @@ export function CatalogueChandelierFixture({
           {/* Tige centrale or */}
           <mesh position={[0, 0, 0]} castShadow>
             <cylinderGeometry args={[0.03, 0.05, 0.4, 12]} />
-            <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.25} />
+            <SurfaceMat color="#d4af37" metalness={0.8} roughness={0.25} />
           </mesh>
           {/* 6 bras recourbés avec bougies */}
           {Array.from({ length: 6 }).map((_, i) => {
@@ -1027,7 +1018,7 @@ export function CatalogueChandelierFixture({
               <group key={i}>
                 <mesh position={[bx * 0.6, -0.06, bz * 0.6]} rotation={[0, ang, 0.5]} castShadow>
                   <cylinderGeometry args={[0.012, 0.012, 0.28, 8]} />
-                  <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.25} />
+                  <SurfaceMat color="#d4af37" metalness={0.8} roughness={0.25} />
                 </mesh>
                 {/* Bougie cire */}
                 <mesh position={[bx, 0.06, bz]} castShadow>
@@ -1146,11 +1137,11 @@ export function CatalogueAisle({
         <>
           <mesh position={[-w / 2 + 0.025, 0.028, 0]} receiveShadow castShadow>
             <boxGeometry args={[0.04, 0.01, d]} />
-            <meshStandardMaterial color="#fbbf24" metalness={0.8} roughness={0.25} />
+            <SurfaceMat color="#fbbf24" metalness={0.8} roughness={0.25} />
           </mesh>
           <mesh position={[w / 2 - 0.025, 0.028, 0]} receiveShadow castShadow>
             <boxGeometry args={[0.04, 0.01, d]} />
-            <meshStandardMaterial color="#fbbf24" metalness={0.8} roughness={0.25} />
+            <SurfaceMat color="#fbbf24" metalness={0.8} roughness={0.25} />
           </mesh>
         </>
       )}
@@ -1177,7 +1168,7 @@ export function CatalogueAisle({
               <group key={`${side}-${idx}`} position={[side * (w / 2 + 0.12), 0.12, (t - 0.5) * d]}>
                 <mesh castShadow>
                   <boxGeometry args={[0.12, 0.22, 0.12]} />
-                  <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.25} />
+                  <SurfaceMat color="#d4af37" metalness={0.8} roughness={0.25} />
                 </mesh>
                 <mesh position={[0, 0, 0]}>
                   <boxGeometry args={[0.09, 0.18, 0.09]} />
@@ -1243,7 +1234,7 @@ export function CatalogueAisle({
         <>
           <mesh position={[0, 0.028, 0]} receiveShadow>
             <boxGeometry args={[w * 0.18, 0.006, d]} />
-            <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.25} />
+            <SurfaceMat color="#d4af37" metalness={0.7} roughness={0.25} />
           </mesh>
           {([-0.22, 0.22] as const).map((x) => (
             <mesh key={x} position={[x * w, 0.026, 0]}>

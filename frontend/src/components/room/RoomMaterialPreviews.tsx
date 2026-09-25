@@ -97,6 +97,9 @@ export function SeatMaterialSwatch({
       style={{
         backgroundColor: SEAT_MATERIAL_COLORS[material].seat,
         backgroundImage: preview,
+        // Texture neutre (grain / trame) teintée par la couleur du matériau, comme en 3D.
+        backgroundBlendMode: 'multiply',
+        backgroundSize: '48px 48px',
       }}
     />
   );
@@ -214,11 +217,11 @@ export function TableSurfaceSwatch({
     if (surface === 'glass') return 'linear-gradient(135deg, rgba(248,250,252,0.9), rgba(203,213,225,0.5))';
     if (surface === 'whiteLacquer') return 'linear-gradient(180deg, #ffffff, #e2e8f0)';
     const urls: Partial<Record<TableSurfaceStyle, string>> = {
-      wood: '/floors/table-wood.svg',
-      linen: '/floors/table-linen.svg',
-      walnut: '/floors/wood-charcoal.png',
-      marble: '/floors/marble-calacatta.png',
-      darkWood: '/floors/wood-rustic.png',
+      wood: '/floors/gen/table-wood.jpg',
+      linen: '/floors/gen/table-linen.jpg',
+      walnut: '/floors/gen/table-walnut.jpg',
+      marble: '/floors/gen/marble-calacatta.jpg',
+      darkWood: '/floors/gen/table-darkwood.jpg',
     };
     const url = urls[surface];
     return url ? `url(${url})` : undefined;
