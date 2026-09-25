@@ -1,14 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
-import GuestPortalShell from '@/components/GuestPortalShell';
+import GuestPortalShell, { GuestEventHero } from '@/components/GuestPortalShell';
 import GuestGuidelinesView from '@/components/GuestGuidelinesView';
 import GuestDonationForm from '@/components/rsvp/GuestDonationForm';
 import {
-  Calendar, MapPin, CheckCircle2, XCircle, Utensils, Loader2, Clock,
-  User, Heart,
+  MapPin, Loader2, Clock, Heart, PartyPopper, HeartHandshake, Navigation, ArrowDown,
 } from 'lucide-react';
 import {
   type RsvpField,
@@ -46,6 +45,56 @@ const lightenColor = (hex: string, percent = 30) => {
   b = Math.min(255, Math.floor(b + (255 - b) * (percent / 100)));
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 };
+
+const fieldLabelClass = 'block text-sm font-semibold text-foreground mb-1.5';
+const fieldInputClass =
+  'w-full min-h-12 px-3.5 py-2.5 border border-transparent rounded-xl text-base sm:text-sm text-foreground bg-surface-muted focus:outline-none focus:border-primary focus:bg-surface transition placeholder:text-muted disabled:opacity-60';
+
+/** Deux grandes tuiles « Je viens » / « Je ne peux pas » : le cœur de la réponse. */
+function RsvpChoice({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: 'ACCEPTED' | 'DECLINED';
+  onChange: (status: 'ACCEPTED' | 'DECLINED') => void;
+  disabled: boolean;
+}) {
+  const options = [
+    { id: 'ACCEPTED' as const, label: 'Je viens', icon: PartyPopper },
+    { id: 'DECLINED' as const, label: 'Je ne peux pas', icon: HeartHandshake },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Serez-vous parmi nous ?">
+      {options.map((option) => {
+        const selected = value === option.id;
+        const Icon = option.icon;
+        return (
+          <button
+            key={option.id}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            disabled={disabled}
+            onClick={() => !disabled && onChange(option.id)}
+            className={cn(
+              'relative min-h-[5.5rem] px-3 py-4 rounded-2xl border-2 flex flex-col items-center justify-center gap-2 text-sm font-semibold transition touch-manipulation active:scale-[0.98]',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-60 disabled:active:scale-100',
+              selected
+                ? option.id === 'ACCEPTED'
+                  ? 'border-primary-solid bg-primary-solid text-primary-foreground'
+                  : 'border-foreground/70 bg-surface-muted text-foreground'
+                : 'border-border bg-surface text-foreground hover:border-primary/40',
+            )}
+          >
+            <Icon className={cn('w-7 h-7', !selected && 'text-primary')} aria-hidden />
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function GuestPendingInvitationView({
   guest,
@@ -87,6 +136,28 @@ export default function GuestPendingInvitationView({
   submitError?: string;
 }) {
   const { site } = usePlatformSite();
+  const [showAnswerShortcut, setShowAnswerShortcut] = useState(false);
+
+  // Invitation longue : un bouton flottant mène au formulaire tant qu'il est plus bas dans la page.
+  useEffect(() => {
+    if (rsvpLocked || typeof IntersectionObserver === 'undefined') return;
+    const target = document.getElementById('rsvp-section');
+    if (!target) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setShowAnswerShortcut(!entry.isIntersecting && entry.boundingClientRect.top > 0);
+      },
+      { threshold: 0.05 },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [rsvpLocked]);
+
+  const scrollToAnswer = () => {
+    const target = document.getElementById('rsvp-section');
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const getBackgroundStyle = (type: string, color: string, url: string, pattern: string) => {
     if (type === 'color') return { backgroundColor: color };
@@ -203,7 +274,7 @@ export default function GuestPendingInvitationView({
 
   const renderRsvpFieldInput = (field: RsvpField) => {
     const options = parseFieldOptions(field.options);
-    const inputClass = 'w-full min-h-11 px-3.5 py-2.5 border border-border rounded-xl text-base sm:text-sm text-foreground focus:outline-primary bg-surface';
+    const inputClass = fieldInputClass;
     const value = customFieldValues[field.id];
     const inputId = `rsvp-field-${field.id}`;
 
@@ -252,7 +323,7 @@ export default function GuestPendingInvitationView({
                 required={field.required}
                 className="text-primary focus:ring-primary"
               />
-              <span className="text-xs text-muted font-semibold">{opt}</span>
+              <span className="text-sm text-foreground">{opt}</span>
             </label>
           ))}
         </fieldset>
@@ -269,7 +340,7 @@ export default function GuestPendingInvitationView({
             required={field.required}
             className="rounded text-primary focus:ring-primary"
           />
-          <span className="text-xs text-muted font-semibold">{field.label}</span>
+          <span className="text-sm text-foreground">{field.label}</span>
         </label>
       );
     }
@@ -350,14 +421,117 @@ export default function GuestPendingInvitationView({
 
   const renderRsvpLockedBanner = () =>
     rsvpLocked ? (
-      <div className="bg-festive-accent-soft border border-festive-accent/30 rounded-xl p-4 flex items-start gap-3 text-sm text-festive-accent">
-        <Clock className="w-5 h-5 flex-shrink-0" aria-hidden />
+      <div className="bg-surface-muted rounded-2xl p-3.5 flex items-center gap-3 text-left">
+        <Clock className="w-5 h-5 flex-shrink-0 text-muted" aria-hidden />
+        <p className="text-sm text-foreground">L&apos;événement est passé : les réponses sont fermées.</p>
+      </div>
+    ) : null;
+
+  const renderIdentityFields = (idPrefix: string) => (
+    <div className="space-y-3">
+      <p className="font-display text-base font-semibold text-foreground">Votre nom sur le pass</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <p className="font-bold text-foreground">Réponse verrouillée</p>
-          <p className="text-xs mt-0.5 text-muted">
-            La date de l&apos;événement est passée. Vous ne pouvez plus modifier votre présence.
-          </p>
+          <label htmlFor={`${idPrefix}-first-name`} className={fieldLabelClass}>
+            Prénom <span className="text-danger" aria-hidden>*</span>
+          </label>
+          <input
+            id={`${idPrefix}-first-name`}
+            type="text"
+            value={firstName ?? guest.firstName}
+            onChange={(e) => setFirstName?.(e.target.value)}
+            disabled={rsvpLocked}
+            className={fieldInputClass}
+            placeholder="Votre prénom"
+            autoComplete="given-name"
+            required
+          />
         </div>
+        <div>
+          <label htmlFor={`${idPrefix}-last-name`} className={fieldLabelClass}>
+            Nom
+          </label>
+          <input
+            id={`${idPrefix}-last-name`}
+            type="text"
+            value={lastName ?? guest.lastName}
+            onChange={(e) => setLastName?.(e.target.value)}
+            disabled={rsvpLocked}
+            className={fieldInputClass}
+            placeholder="Votre nom"
+            autoComplete="family-name"
+          />
+        </div>
+      </div>
+      <div>
+        <label htmlFor={`${idPrefix}-phone`} className={fieldLabelClass}>
+          WhatsApp
+        </label>
+        <input
+          id={`${idPrefix}-phone`}
+          type="tel"
+          value={phone ?? guest.phone ?? ''}
+          onChange={(e) => setPhone?.(e.target.value)}
+          disabled={rsvpLocked}
+          className={fieldInputClass}
+          placeholder="+243 812 345 678"
+          autoComplete="tel"
+        />
+      </div>
+    </div>
+  );
+
+  const renderFieldList = (fields: RsvpField[]) =>
+    fields.map((field: RsvpField) => (
+      <div key={field.id} className="space-y-1">
+        {field.type !== 'checkbox' && (
+          <label htmlFor={`rsvp-field-${field.id}`} className={fieldLabelClass}>
+            {field.label} {field.required && <span className="text-danger" aria-hidden>*</span>}
+          </label>
+        )}
+        {field.helpText && <p className="text-xs text-muted">{field.helpText}</p>}
+        {renderRsvpFieldInput(field)}
+      </div>
+    ));
+
+  const renderNotesField = (idPrefix: string) => (
+    <div>
+      <label htmlFor={`${idPrefix}-notes`} className={fieldLabelClass}>
+        Un mot pour l&apos;organisateur <span className="font-normal text-muted">(facultatif)</span>
+      </label>
+      <textarea
+        id={`${idPrefix}-notes`}
+        value={additionalNotes}
+        onChange={(e) => setAdditionalNotes(e.target.value)}
+        disabled={rsvpLocked}
+        className={cn(fieldInputClass, 'resize-none')}
+        placeholder="Ex. : je viendrai avec…"
+        rows={2}
+      />
+    </div>
+  );
+
+  const renderSubmitButton = (label: string) => (
+    <button
+      type="submit"
+      disabled={submitting || rsvpLocked}
+      className="w-full min-h-[3.25rem] py-3 bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold rounded-2xl transition disabled:opacity-50 flex items-center justify-center gap-2 touch-manipulation text-base active:scale-[0.99]"
+    >
+      {submitting ? (
+        <>
+          <Loader2 className="w-5 h-5 animate-spin" aria-hidden />
+          Envoi…
+        </>
+      ) : (
+        label
+      )}
+    </button>
+  );
+
+  const renderSubmitError = () =>
+    submitError ? (
+      <div className="bg-danger/10 text-danger px-4 py-3 rounded-2xl text-sm font-semibold text-left" role="alert">
+        {submitError}
       </div>
     ) : null;
 
@@ -365,151 +539,29 @@ export default function GuestPendingInvitationView({
     const isOutside = variant === 'outside';
     return (
       <div
-        className={
-          isOutside
-            ? 'bg-surface border border-border rounded-[var(--radius-card)] p-6 sm:p-8 space-y-6 text-center shadow-[var(--shadow-soft)] relative w-full'
-            : 'bg-surface border border-border rounded-[var(--radius-card)] p-6 space-y-5 text-center shadow-[var(--shadow-soft)]'
-        }
+        className={cn(
+          'bg-surface border border-border rounded-3xl text-left relative w-full',
+          isOutside ? 'p-5 sm:p-7' : 'p-5',
+        )}
       >
-        {isOutside && (
-          <div className="absolute top-0 inset-x-0 h-px bg-border" />
-        )}
-        <div className={isOutside ? 'relative z-10' : undefined}>
-        {renderRsvpLockedBanner()}
-        {submitError ? (
-          <div className="bg-danger/10 border border-danger/25 text-danger px-4 py-3 rounded-[var(--radius-card)] text-sm font-semibold text-left" role="alert">
-            {submitError}
+        <div className="space-y-5">
+          {renderRsvpLockedBanner()}
+          {renderSubmitError()}
+          <div className={cn('font-display font-semibold text-foreground text-center', isOutside ? 'text-xl' : 'text-lg')}>
+            {formatText(el.text)}
           </div>
-        ) : null}
-        <div className={`font-semibold text-foreground ${isOutside ? 'text-base sm:text-lg' : 'text-sm'}`}>{formatText(el.text)}</div>
-        
-        {/* Yes/No Buttons */}
-        <div className="grid grid-cols-2 gap-4" role="group" aria-label="Serez-vous parmi nous ?">
-          <button
-            type="button"
-            disabled={rsvpLocked}
-            aria-pressed={rsvpStatus === 'ACCEPTED'}
-            onClick={() => !rsvpLocked && setRsvpStatus('ACCEPTED')}
-            className={`min-h-[4.5rem] py-3.5 px-4 border rounded-[var(--radius-button)] flex flex-col items-center justify-center gap-1.5 transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${rsvpStatus === 'ACCEPTED' ? 'border-primary bg-primary/10 text-primary' : 'border-border hover:bg-surface-muted text-muted'}`}
-          >
-            <CheckCircle2 className={`w-6 h-6 ${rsvpStatus === 'ACCEPTED' ? 'text-primary' : 'text-foreground/80'}`} />
-            <span className="text-xs font-semibold">Oui, je serai présent</span>
-          </button>
 
-          <button
-            type="button"
-            disabled={rsvpLocked}
-            aria-pressed={rsvpStatus === 'DECLINED'}
-            onClick={() => !rsvpLocked && setRsvpStatus('DECLINED')}
-            className={`min-h-[4.5rem] py-3.5 px-4 border rounded-[var(--radius-button)] flex flex-col items-center justify-center gap-1.5 transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${rsvpStatus === 'DECLINED' ? 'border-danger bg-danger/10 text-danger' : 'border-border hover:bg-surface-muted text-muted'}`}
-          >
-            <XCircle className={`w-6 h-6 ${rsvpStatus === 'DECLINED' ? 'text-danger' : 'text-foreground/80'}`} />
-            <span className="text-xs font-semibold">Non, je ne pourrai pas</span>
-          </button>
-        </div>
+          <RsvpChoice value={rsvpStatus} onChange={setRsvpStatus} disabled={rsvpLocked} />
 
-        {/* If attending, show custom and standard fields */}
-        {rsvpStatus === 'ACCEPTED' && (
-          <div className="space-y-4 border-t border-border/60 pt-4 text-left">
-            {/* Identity Fields */}
-            <div className="space-y-3 pb-3 border-b border-border/60">
-              <div className="flex items-center gap-1.5 font-bold text-foreground">
-                <User className="w-3.5 h-3.5 text-primary" />
-                <span className="text-xs uppercase tracking-wider">Vos coordonnées pour ce pass</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                <div>
-                  <label htmlFor={`rsvp-first-name-${variant}`} className="block text-xs font-semibold text-muted mb-1">
-                    Prénom <span className="text-danger">*</span>
-                  </label>
-                  <input
-                    id={`rsvp-first-name-${variant}`}
-                    type="text"
-                    value={firstName ?? guest.firstName}
-                    onChange={(e) => setFirstName?.(e.target.value)}
-                    disabled={rsvpLocked}
-                    className="w-full min-h-11 px-3 py-2 border border-border rounded-xl text-sm bg-surface text-foreground focus:outline-primary"
-                    placeholder="Votre prénom"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor={`rsvp-last-name-${variant}`} className="block text-xs font-semibold text-muted mb-1">
-                    Nom de famille
-                  </label>
-                  <input
-                    id={`rsvp-last-name-${variant}`}
-                    type="text"
-                    value={lastName ?? guest.lastName}
-                    onChange={(e) => setLastName?.(e.target.value)}
-                    disabled={rsvpLocked}
-                    className="w-full min-h-11 px-3 py-2 border border-border rounded-xl text-sm bg-surface text-foreground focus:outline-primary"
-                    placeholder="Votre nom"
-                  />
-                </div>
-              </div>
-              <div>
-                <label htmlFor={`rsvp-phone-${variant}`} className="block text-xs font-semibold text-muted mb-1">
-                  Numéro de téléphone / WhatsApp
-                </label>
-                <input
-                  id={`rsvp-phone-${variant}`}
-                  type="tel"
-                  value={phone ?? guest.phone ?? ''}
-                  onChange={(e) => setPhone?.(e.target.value)}
-                  disabled={rsvpLocked}
-                  className="w-full min-h-11 px-3 py-2 border border-border rounded-xl text-sm bg-surface text-foreground focus:outline-primary"
-                  placeholder="Ex : +243 812 345 678"
-                />
-              </div>
+          {rsvpStatus === 'ACCEPTED' && (
+            <div className="space-y-5 border-t border-border pt-5 animate-fade-in">
+              {renderIdentityFields(`rsvp-${variant}`)}
+              {renderFieldList(ensureMandatoryRsvpFields(el.rsvpFields || []))}
+              {renderNotesField(`rsvp-${variant}`)}
             </div>
-
-            {/* Custom Fields */}
-            {ensureMandatoryRsvpFields(el.rsvpFields || []).map((field: RsvpField) => (
-              <div key={field.id} className="space-y-1.5">
-                {field.type !== 'checkbox' && (
-                  <label htmlFor={`rsvp-field-${field.id}`} className="block text-xs font-bold text-muted uppercase tracking-wider">
-                    {field.label} {field.required && <span className="text-danger">*</span>}
-                  </label>
-                )}
-                {field.helpText && (
-                  <p className="text-xs text-muted">{field.helpText}</p>
-                )}
-                {renderRsvpFieldInput(field)}
-              </div>
-            ))}
-
-            {/* Standard Fields */}
-            <div className="space-y-4 border-t border-border pt-4">
-              <div>
-                <label className="block text-xs font-bold text-muted uppercase mb-1">Message à l'organisateur</label>
-                <textarea
-                  value={additionalNotes}
-                  onChange={e => setAdditionalNotes(e.target.value)}
-                  className="w-full min-h-11 px-3 py-2.5 border border-border rounded-xl text-base sm:text-sm text-foreground focus:outline-primary bg-surface"
-                  placeholder="Ex: Je serai accompagné(e) de..."
-                  rows={2}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={submitting || rsvpLocked}
-          className="w-full min-h-12 py-3 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold rounded-[var(--radius-button)] transition disabled:opacity-50 flex items-center justify-center gap-2 touch-manipulation text-sm"
-        >
-          {submitting ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              Envoi de la réponse...
-            </>
-          ) : (
-            'Envoyer ma réponse'
           )}
-        </button>
+
+          {renderSubmitButton(rsvpStatus === 'ACCEPTED' ? 'Confirmer ma venue' : 'Envoyer ma réponse')}
         </div>
       </div>
     );
@@ -537,33 +589,39 @@ export default function GuestPendingInvitationView({
           title={`${guest.event.title} · Invitation`}
           text={`Invitation ${site.platformName} pour ${guest.firstName}.`}
           url={guestRsvpUrl(guestId)}
-          className="!bg-surface border-border"
+          className="!rounded-full !shadow-none !text-foreground"
         />
       }
-      contentClassName="flex flex-col items-center gap-5 max-w-none w-full overflow-x-clip"
+      contentClassName="flex flex-col items-center gap-5 max-w-none w-full overflow-x-clip pb-24"
     >
       {guest.donations?.enabled && (
         <a
           href="#donations-section"
-          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/25 text-rose-700 dark:text-rose-300 text-xs font-semibold hover:bg-rose-500/20 transition-colors"
+          className="inline-flex items-center gap-1.5 min-h-9 px-3.5 rounded-full bg-rose-500/10 text-rose-700 dark:text-rose-300 text-xs font-semibold hover:bg-rose-500/15 transition-colors"
         >
-          <Heart className="w-3.5 h-3.5 fill-rose-500/30" />
-          <span>Faire un don solidaire</span>
+          <Heart className="w-3.5 h-3.5" aria-hidden />
+          <span>Soutenir l&apos;événement</span>
         </a>
       )}
       <InvitationWrapper {...invitationWrapperProps}>
       <div
-        style={{
-          ...(template ? getBackgroundStyle(bgType, bgColor, bgImageUrl, bgPattern) : { backgroundColor: '#ffffff' }),
-          maxWidth: canvasStyle.maxWidth,
-          minHeight: canvasStyle.minHeight,
-        }}
-        className={`w-full max-w-full border border-border shadow-[var(--shadow-soft)] relative z-10 overflow-hidden flex flex-col transition-all duration-300 ${
-          template && frameType === 'arch' ? 'rounded-t-[min(240px,40vw)] border border-amber-200/60' : 'rounded-[var(--radius-card)]'
-        }`}
+        style={
+          template
+            ? {
+                ...getBackgroundStyle(bgType, bgColor, bgImageUrl, bgPattern),
+                maxWidth: canvasStyle.maxWidth,
+                minHeight: canvasStyle.minHeight,
+              }
+            : { maxWidth: '36rem' }
+        }
+        className={
+          template
+            ? `w-full max-w-full border border-border shadow-[var(--shadow-soft)] relative z-10 overflow-hidden flex flex-col transition-all duration-300 ${
+                frameType === 'arch' ? 'rounded-t-[min(240px,40vw)] border border-amber-200/60' : 'rounded-[var(--radius-card)]'
+              }`
+            : 'w-full max-w-full relative z-10'
+        }
       >
-        {/* Top visual envelope flap (only shown if not using custom template) */}
-        {!template && <div className="h-3 bg-gradient-to-r from-primary to-primary/80" />}
 
         {/* Double Border Frame */}
         {template && frameType === 'double-border' && (
@@ -918,7 +976,7 @@ export default function GuestPendingInvitationView({
         )}
 
         {/* Event Card Content */}
-        <div className={`${global.layoutMode === 'free' ? 'relative flex-1 z-10' : 'p-8 space-y-8 flex-1 relative z-10'}`}>
+        <div className={!template ? 'relative z-10' : `${global.layoutMode === 'free' ? 'relative flex-1 z-10' : 'p-8 space-y-8 flex-1 relative z-10'}`}>
           {/* Header */}
           {template ? (
             <div
@@ -1161,226 +1219,66 @@ export default function GuestPendingInvitationView({
               })}
             </div>
           ) : (
-            <div className="space-y-8">
-              <div className="text-center space-y-2">
-                <h1 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight leading-tight">
-                  {guest.event.title}
-                </h1>
-                <p className="text-sm font-medium text-muted">
-                  Adressée à <span className="text-foreground font-semibold">{guest.firstName} {guest.lastName}</span>
-                </p>
-              </div>
-
-              {/* Event Details Box */}
-              <div className="bg-surface-muted border border-border rounded-[var(--radius-card)] p-5 space-y-4 text-sm">
-                {guest.event.description && (
-                  <p className="text-muted italic leading-relaxed text-center border-b border-border pb-3.5">
-                    "{guest.event.description}"
-                  </p>
-                )}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-primary/10 text-primary p-2 rounded-[var(--radius-button)]"><Calendar className="w-5 h-5" /></div>
-                    <div className="space-y-0.5">
-                      <div className="text-xs font-bold text-muted uppercase tracking-widest">Date</div>
-                      <div className="font-semibold text-foreground text-xs">
-                        {new Date(guest.event.date).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="bg-primary/10 text-primary p-2 rounded-[var(--radius-button)]"><MapPin className="w-5 h-5" /></div>
-                    <div className="space-y-0.5">
-                      <div className="text-xs font-bold text-muted uppercase tracking-widest">Lieu</div>
-                      <div className="font-semibold text-foreground text-xs truncate max-w-[150px]">{guest.event.location}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <GuestGuidelinesView
-                guidelines={guest.event.guestGuidelines}
-                variant="light"
-                className="text-left"
+            <div className="space-y-4">
+              <GuestEventHero
+                greeting={`Pour ${guest.firstName} ${guest.lastName}`.trim()}
+                title={guest.event.title}
+                date={guest.event.date}
+                location={guest.event.location}
+                badge={
+                  guest.organizationName ? (
+                    <span className="em-guest-chip em-guest-chip--glass">{guest.organizationName}</span>
+                  ) : null
+                }
               />
 
-              {/* Default réponse à l’invitation Form */}
-              <form onSubmit={onSubmit} className="space-y-6">
-                {renderRsvpLockedBanner()}
-                {submitError ? (
-                  <div className="bg-danger/10 border border-danger/25 text-danger px-4 py-3 rounded-[var(--radius-card)] text-sm font-semibold text-left" role="alert">
-                    {submitError}
-                  </div>
-                ) : null}
-                <div className="space-y-3">
-                  <label className="block text-xs font-bold text-muted uppercase tracking-wider text-center mb-1">
-                    Serez-vous parmi nous ?
-                  </label>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" role="group" aria-label="Serez-vous parmi nous ?">
-                    <button
-                      type="button"
-                      disabled={rsvpLocked}
-                      aria-pressed={rsvpStatus === 'ACCEPTED'}
-                      onClick={() => !rsvpLocked && setRsvpStatus('ACCEPTED')}
-                      className={cn(
-                        "py-5 px-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all duration-300 border-2",
-                        rsvpStatus === 'ACCEPTED' 
-                          ? "border-primary bg-primary/10 shadow-sm ring-4 ring-primary/15" 
-                          : "border-border/50 bg-surface hover:bg-surface-muted hover:border-border"
-                      )}
-                    >
-                      <CheckCircle2 className={cn("w-8 h-8", rsvpStatus === 'ACCEPTED' ? "text-primary" : "text-muted")} />
-                      <span className={cn("text-sm font-semibold", rsvpStatus === 'ACCEPTED' ? "text-primary" : "text-foreground")}>
-                        Oui, je serai présent
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={rsvpLocked}
-                      aria-pressed={rsvpStatus === 'DECLINED'}
-                      onClick={() => !rsvpLocked && setRsvpStatus('DECLINED')}
-                      className={cn(
-                        "py-5 px-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all duration-300 border-2",
-                        rsvpStatus === 'DECLINED' 
-                          ? "border-danger bg-danger/10 shadow-sm ring-4 ring-danger/10" 
-                          : "border-border/50 bg-surface hover:bg-surface-muted hover:border-border"
-                      )}
-                    >
-                      <XCircle className={cn("w-8 h-8", rsvpStatus === 'DECLINED' ? "text-danger" : "text-muted")} />
-                      <span className={cn("text-sm font-semibold", rsvpStatus === 'DECLINED' ? "text-danger" : "text-foreground")}>
-                        Non, je décline
-                      </span>
-                    </button>
-                  </div>
-
-                  {rsvpStatus === 'DECLINED' && guest.donations?.enabled && (
-                    <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-center space-y-1.5 animate-fade-in">
-                      <p className="text-xs text-rose-700 dark:text-rose-300 font-semibold">
-                        Vous ne pouvez pas venir ? Vous pouvez soutenir l&apos;événement ci-dessous.
-                      </p>
-                      <a
-                        href="#donations-section"
-                        className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-700 dark:text-rose-300 underline underline-offset-2"
-                      >
-                        <Heart className="w-3.5 h-3.5 fill-rose-500/30" />
-                        Accéder au formulaire de don
-                      </a>
-                    </div>
-                  )}
+              {guest.event.description?.trim() ? (
+                <div className="rounded-[1.125rem] border border-border bg-surface p-4">
+                  <p className="text-sm text-muted leading-relaxed whitespace-pre-line">{guest.event.description}</p>
                 </div>
+              ) : null}
 
-                {/* Identity & Meal Preferences Panel - Only show if attending */}
-                {rsvpStatus === 'ACCEPTED' && (
-                  <>
-                    <div className="p-5 border border-border rounded-[var(--radius-card)] bg-surface space-y-4 text-sm text-left">
-                      <div className="flex items-center gap-2 font-bold text-foreground border-b border-border pb-2.5">
-                        <User className="w-4 h-4 text-primary" />
-                        <h4 className="text-sm">Vos coordonnées</h4>
-                      </div>
+              <GuestGuidelinesView guidelines={guest.event.guestGuidelines} />
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <label htmlFor="rsvp-default-first-name" className="block text-xs font-bold text-muted uppercase tracking-wider">
-                            Prénom <span className="text-danger">*</span>
-                          </label>
-                          <input
-                            id="rsvp-default-first-name"
-                            type="text"
-                            value={firstName ?? guest.firstName}
-                            onChange={(e) => setFirstName?.(e.target.value)}
-                            disabled={rsvpLocked}
-                            className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-primary bg-surface"
-                            placeholder="Votre prénom"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label htmlFor="rsvp-default-last-name" className="block text-xs font-bold text-muted uppercase tracking-wider">
-                            Nom de famille
-                          </label>
-                          <input
-                            id="rsvp-default-last-name"
-                            type="text"
-                            value={lastName ?? guest.lastName}
-                            onChange={(e) => setLastName?.(e.target.value)}
-                            disabled={rsvpLocked}
-                            className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-primary bg-surface"
-                            placeholder="Votre nom"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label htmlFor="rsvp-default-phone" className="block text-xs font-bold text-muted uppercase tracking-wider">
-                          Numéro de téléphone / WhatsApp
-                        </label>
-                        <input
-                          id="rsvp-default-phone"
-                          type="tel"
-                          value={phone ?? guest.phone ?? ''}
-                          onChange={(e) => setPhone?.(e.target.value)}
-                          disabled={rsvpLocked}
-                          className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-primary bg-surface"
-                          placeholder="Ex : +243 812 345 678"
-                        />
-                      </div>
-                    </div>
+              {/* Formulaire de réponse par défaut */}
+              <form
+                id="rsvp-section"
+                onSubmit={onSubmit}
+                className="bg-surface border border-border rounded-3xl p-5 space-y-5 scroll-mt-20"
+              >
+                {renderRsvpLockedBanner()}
+                {renderSubmitError()}
+                <h2 className="font-display text-xl font-semibold text-foreground text-center">
+                  Serez-vous des nôtres&nbsp;?
+                </h2>
 
-                    <div className="p-5 border border-border rounded-[var(--radius-card)] bg-surface space-y-4 text-sm">
-                      <div className="flex items-center gap-2 font-bold text-foreground border-b border-border pb-2.5">
-                        <Utensils className="w-4 h-4 text-primary" />
-                        <h4 className="text-sm">Préférences</h4>
-                      </div>
+                <RsvpChoice value={rsvpStatus} onChange={setRsvpStatus} disabled={rsvpLocked} />
 
-                      <div className="space-y-3">
-                        {parseEventRsvpForm(guest.event.rsvpForm).map((field) => (
-                          <div key={field.id} className="space-y-1.5">
-                            {field.type !== 'checkbox' && (
-                              <label htmlFor={`rsvp-field-${field.id}`} className="block text-xs font-bold text-muted uppercase tracking-wider">
-                                {field.label} <span className="text-danger">*</span>
-                              </label>
-                            )}
-                            {field.helpText && (
-                              <p className="text-xs text-muted">{field.helpText}</p>
-                            )}
-                            {renderRsvpFieldInput(field)}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </>
+                {rsvpStatus === 'DECLINED' && guest.donations?.enabled && (
+                  <a
+                    href="#donations-section"
+                    className="flex items-center gap-3 rounded-2xl bg-rose-500/[0.07] p-3.5 text-left hover:bg-rose-500/10 transition animate-fade-in"
+                  >
+                    <Heart className="w-5 h-5 shrink-0 text-rose-600 dark:text-rose-300" aria-hidden />
+                    <span className="text-sm text-foreground">Vous pouvez quand même soutenir l&apos;événement.</span>
+                  </a>
                 )}
 
-                {/* Additional notes */}
-                <div>
-                  <label className="block text-xs font-bold text-muted uppercase mb-1">
-                    Message à l&apos;organisateur
-                  </label>
-                  <textarea
-                    value={additionalNotes}
-                    onChange={e => setAdditionalNotes(e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] text-sm text-foreground focus:outline-primary"
-                    placeholder="Ex: Je serai accompagné(e) de..."
-                    rows={2}
-                  />
-                </div>
+                {rsvpStatus === 'ACCEPTED' && (
+                  <div className="space-y-5 border-t border-border pt-5 animate-fade-in">
+                    {renderIdentityFields('rsvp-default')}
+                    {parseEventRsvpForm(guest.event.rsvpForm).length > 0 && (
+                      <div className="space-y-4">
+                        <p className="font-display text-base font-semibold text-foreground">Vos préférences</p>
+                        {renderFieldList(parseEventRsvpForm(guest.event.rsvpForm))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
-                <button
-                  type="submit"
-                  disabled={submitting || rsvpLocked}
-                  className="w-full min-h-12 py-3 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold rounded-[var(--radius-button)] transition disabled:opacity-50 flex items-center justify-center gap-2 touch-manipulation text-sm"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Envoi…
-                    </>
-                  ) : (
-                    'Confirmer ma réponse'
-                  )}
-                </button>
+                {renderNotesField('rsvp-default')}
+
+                {renderSubmitButton(rsvpStatus === 'ACCEPTED' ? 'Confirmer ma venue' : 'Envoyer ma réponse')}
               </form>
             </div>
           )}
@@ -1398,7 +1296,7 @@ export default function GuestPendingInvitationView({
 
       {/* Campagne solidaire si active */}
       {guest.donations && guest.donations.enabled && (
-        <div id="donations-section" className="w-full max-w-lg space-y-2">
+        <div id="donations-section" className="w-full max-w-xl space-y-2 scroll-mt-20">
           <GuestDonationForm
             guestId={guestId}
             guestName={`${firstName || guest.firstName} ${lastName || guest.lastName}`.trim()}
@@ -1409,24 +1307,22 @@ export default function GuestPendingInvitationView({
         </div>
       )}
 
-      {/* Event Location & Directions Card */}
+      {/* Lieu et itinéraire */}
       {guest && guest.event?.location && (
-        <div className="w-full max-w-lg bg-surface rounded-[var(--radius-card)] border border-border shadow-[var(--shadow-soft)] p-5 space-y-4 text-center relative">
-          <div className="flex flex-col items-center gap-2">
-            <div className="bg-primary/10 text-primary p-2 rounded-xl border border-primary/15">
-              <MapPin className="w-4 h-4" />
+        <div className="w-full max-w-xl bg-surface rounded-3xl border border-border p-4 space-y-3.5">
+          <div className="flex items-center gap-3">
+            <span className="em-guest-icon"><MapPin className="w-5 h-5" aria-hidden /></span>
+            <div className="min-w-0">
+              <p className="text-xs text-muted">Lieu</p>
+              <p className="text-sm font-semibold text-foreground leading-snug">{guest.event.location}</p>
             </div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted">Lieu</h3>
-            <p className="text-sm text-foreground font-semibold max-w-md mx-auto leading-relaxed">
-              {guest.event.location}
-            </p>
           </div>
 
           {guest.placementAccessible ? (
             <>
-              {/* Interactive Map Embed */}
-              <div className="w-full overflow-hidden rounded-[var(--radius-card)] border border-border h-[250px] relative bg-surface-muted">
+              <div className="w-full overflow-hidden rounded-2xl border border-border h-[220px] relative bg-surface-muted">
                 <iframe
+                  title={`Carte : ${guest.event.location}`}
                   width="100%"
                   height="100%"
                   style={{ border: 0 }}
@@ -1442,8 +1338,8 @@ export default function GuestPendingInvitationView({
                 ></iframe>
               </div>
 
-              <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
-                <a 
+              <div className="flex gap-2">
+                <a
                   href={
                     guest.event.latitude && guest.event.longitude
                       ? `https://www.google.com/maps/search/?api=1&query=${guest.event.latitude},${guest.event.longitude}`
@@ -1451,31 +1347,39 @@ export default function GuestPendingInvitationView({
                   }
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-2 min-h-11 px-4 py-2.5 bg-surface hover:bg-surface-muted text-foreground font-semibold rounded-[var(--radius-button)] text-xs border border-border transition"
+                  className="flex-1 inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-full bg-surface-muted hover:bg-primary/10 text-foreground font-semibold text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 >
-                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-                  </svg>
-                  Ouvrir dans Google Maps
+                  <Navigation className="w-4 h-4 text-primary" aria-hidden />
+                  Google Maps
                 </a>
                 {guest.event.latitude && guest.event.longitude && (
-                  <a 
+                  <a
                     href={`https://www.waze.com/ul?ll=${guest.event.latitude},${guest.event.longitude}&navigate=yes`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 min-h-11 px-4 py-2.5 bg-primary hover:bg-primary-hover text-primary-foreground font-semibold rounded-[var(--radius-button)] text-xs transition"
+                    className="flex-1 inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-full bg-surface-muted hover:bg-primary/10 text-foreground font-semibold text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   >
-                    Naviguer avec Waze
+                    Waze
                   </a>
                 )}
               </div>
             </>
           ) : (
-            <p className="text-xs text-muted max-w-sm mx-auto">
-              Itinéraire détaillé disponible après confirmation.
-            </p>
+            <p className="text-xs text-muted">L&apos;itinéraire s&apos;affiche après votre réponse.</p>
           )}
         </div>
+      )}
+
+      {/* Raccourci « Répondre » tant que le formulaire n'est pas à l'écran */}
+      {showAnswerShortcut && (
+        <button
+          type="button"
+          onClick={scrollToAnswer}
+          className="fixed z-30 left-1/2 -translate-x-1/2 bottom-[max(1rem,env(safe-area-inset-bottom))] inline-flex items-center gap-2 h-12 px-5 rounded-full bg-primary-solid text-primary-foreground text-sm font-semibold shadow-[0_10px_24px_-6px_rgba(4,120,87,0.55)] hover:bg-primary-solid-hover active:scale-95 transition animate-fade-in touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
+          <ArrowDown className="w-4 h-4" aria-hidden />
+          Répondre à l&apos;invitation
+        </button>
       )}
     </GuestPortalShell>
   );

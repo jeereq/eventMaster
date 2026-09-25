@@ -6,17 +6,17 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { downloadMedia, getMediaExtension, sanitizeFilenamePart } from '@/lib/downloadMedia';
-import GuestPortalShell, { GuestPortalTabBar, GuestPortalCard } from '@/components/GuestPortalShell';
+import GuestPortalShell, { GuestPortalTabBar, GuestPortalCard, GuestEventHero } from '@/components/GuestPortalShell';
 import Link from 'next/link';
 import GuestGuidelinesView from '@/components/GuestGuidelinesView';
 import type { ChairType, RoomLayoutBlueprint, RoomOutlineShape } from '@/lib/roomLayoutUtils';
 import type { LightingPreset } from '@/lib/roomRenderQuality';
-import { 
-  Calendar, MapPin, CheckCircle2, AlertCircle,
-  Loader2, Award, Image, Send, Heart, LayoutGrid, MessageCircle, MessageSquare,
+import {
+  MapPin, CheckCircle2,
+  Loader2, Image, Send, Heart, LayoutGrid, MessageCircle, MessageSquare,
   ChevronLeft, ChevronRight, X, ThumbsUp, Download, Navigation,
-  QrCode, Maximize2, Printer, User, UserCog, Pencil, Utensils, Sparkles,
-  Ticket, Copy, Check, Users,
+  QrCode, Maximize2, Printer, UserCog, UserPen, Pencil,
+  Ticket, Copy, Check, Users, Link2Off, HeartHandshake, RefreshCw, Repeat, CalendarHeart,
 } from 'lucide-react';
 import GuestDonationForm from '@/components/rsvp/GuestDonationForm';
 import {
@@ -572,25 +572,35 @@ export default function RsvpPage() {
     }
   };
 
+  const shareButton = guest ? (
+    <ShareButton
+      title={`${guest.event.title} · Invitation`}
+      text={`Invitation ${site.platformName} pour ${guest.firstName}.`}
+      url={guestRsvpUrl(guestId)}
+      className="!rounded-full !shadow-none !text-foreground"
+    />
+  ) : null;
+
+  const openIdentityEditor = () => {
+    setIdentitySaveError('');
+    setIdentitySaveSuccess(false);
+    setIsEditIdentityOpen(true);
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen em-guest-page flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-md space-y-6">
-          {/* Hero skeleton */}
-          <div className="space-y-3 text-center">
-            <Skeleton className="h-8 w-3/4 mx-auto rounded-lg" />
-            <Skeleton className="h-4 w-1/2 mx-auto rounded-full" />
+      <div className="min-h-screen em-guest-page flex flex-col items-center p-4 pt-20" role="status" aria-busy="true">
+        <span className="sr-only">Chargement de votre invitation…</span>
+        <div className="w-full max-w-xl space-y-4">
+          <div className="rounded-3xl bg-[#064e3b] p-5 space-y-4">
+            <Skeleton className="h-6 w-28 rounded-full !bg-white/15" />
+            <Skeleton className="h-8 w-3/4 rounded-lg !bg-white/15" />
+            <Skeleton className="h-4 w-2/3 rounded-full !bg-white/10" />
+            <Skeleton className="h-4 w-1/2 rounded-full !bg-white/10" />
           </div>
-          {/* QR Code skeleton */}
-          <div className="flex flex-col items-center gap-4 py-6 bg-surface rounded-[var(--radius-card)] border border-border shadow-[var(--shadow-soft)]">
+          <div className="flex flex-col items-center gap-4 py-6 bg-surface rounded-[1.125rem] border border-border">
             <Skeleton className="w-48 h-48 rounded-2xl" />
-            <Skeleton className="h-3 w-24 rounded-full" />
-          </div>
-          {/* Details skeleton */}
-          <div className="space-y-3">
-            <Skeleton className="h-4 w-full rounded-lg" />
-            <Skeleton className="h-4 w-5/6 rounded-lg" />
-            <Skeleton className="h-4 w-4/6 rounded-lg" />
+            <Skeleton className="h-3 w-32 rounded-full" />
           </div>
         </div>
       </div>
@@ -600,17 +610,32 @@ export default function RsvpPage() {
   if (error || !guest) {
     return (
       <div className="min-h-screen em-guest-page flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-surface p-8 rounded-[var(--radius-card)] border border-border shadow-[var(--shadow-soft)] text-center space-y-4">
-          <div className="bg-danger/10 text-danger p-4 rounded-[var(--radius-card)] w-16 h-16 flex items-center justify-center mx-auto border border-danger/25">
-            <AlertCircle className="w-8 h-8" />
+        <div className="max-w-sm w-full bg-surface p-7 rounded-3xl border border-border text-center space-y-5" role="alert">
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-surface-muted text-muted">
+            <Link2Off className="h-7 w-7" aria-hidden />
+          </span>
+          <div className="space-y-2">
+            <h1 className="font-display text-2xl font-semibold text-foreground">Ce lien ne s’ouvre pas</h1>
+            <p className="text-sm text-muted leading-relaxed">
+              {error ? 'Il est incomplet ou a expiré.' : 'Invitation introuvable.'} Demandez un nouveau lien à l’organisateur.
+            </p>
           </div>
-          <h1 className="text-xl font-semibold text-foreground tracking-tight">Invitation introuvable</h1>
-          <p className="text-muted leading-relaxed text-sm">
-            {error || 'Ce lien d’invitation est invalide ou a expiré.'}
-          </p>
-          <p className="text-xs text-muted">
-            Demandez un nouveau lien à l’organisateur, ou ouvrez celui reçu par WhatsApp ou e-mail.
-          </p>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="inline-flex items-center justify-center gap-2 min-h-12 rounded-2xl bg-primary-solid text-primary-foreground text-sm font-semibold hover:bg-primary-solid-hover transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+            >
+              <RefreshCw className="w-4 h-4" aria-hidden />
+              Réessayer
+            </button>
+            <Link
+              href="/guide/invite"
+              className="inline-flex items-center justify-center min-h-11 rounded-2xl text-sm font-semibold text-primary hover:bg-primary/5 transition"
+            >
+              Besoin d’aide ?
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -622,48 +647,48 @@ export default function RsvpPage() {
           title={guest.event.title}
           guestId={guestId}
           organizationName={guest.organizationName}
-          headerRight={
-            <ShareButton
-              title={`${guest.event.title} · Invitation`}
-              text={`Invitation ${site.platformName} pour ${guest.firstName}.`}
-              url={guestRsvpUrl(guestId)}
-              className="!bg-surface border-border"
-            />
-          }
-          contentClassName="space-y-5"
+          headerRight={shareButton}
+          contentClassName="space-y-4"
         >
-          <GuestPortalCard className="text-center space-y-4 py-8">
-            <h2 className="text-xl font-display font-semibold text-foreground tracking-tight">
-              {guest.firstName}, votre absence est bien notée.
-            </h2>
-            <p className="text-xs text-muted max-w-sm mx-auto">
-              Vous pouvez changer d&apos;avis tant que les réponses sont ouvertes.
-            </p>
+          <GuestPortalCard className="text-center space-y-5 !py-8">
+            <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <HeartHandshake className="h-7 w-7" aria-hidden />
+            </span>
+            <div className="space-y-2">
+              <h2 className="font-display text-2xl font-semibold text-foreground">
+                C’est noté, {guest.firstName}
+              </h2>
+              <p className="text-sm text-muted max-w-xs mx-auto leading-relaxed">
+                Vous nous manquerez à « {guest.event.title} ».
+              </p>
+            </div>
             {!rsvpLocked && (
               <button
                 type="button"
-                onClick={() => setSubmitted(false)}
-                className="inline-flex items-center justify-center min-h-11 px-5 py-2.5 rounded-xl border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted transition shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                onClick={() => {
+                  setRsvpStatus('ACCEPTED');
+                  setSubmitted(false);
+                }}
+                className="inline-flex items-center justify-center gap-2 min-h-12 px-6 rounded-2xl border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               >
-                Modifier ma réponse
+                <Repeat className="w-4 h-4 text-primary" aria-hidden />
+                Finalement, je viens
               </button>
             )}
           </GuestPortalCard>
 
           {/* Formulaire de don pour soutenir l'événement même en cas d'absence */}
           {hasDonations && guest.donations && (
-            <div className="space-y-2">
-              <GuestDonationForm
-                guestId={guestId}
-                guestName={`${guest.firstName} ${guest.lastName}`}
-                guestEmail={guest.email}
-                guestPhone={guest.phone}
-                donations={guest.donations}
-                onDonationSuccess={() => {
-                  loadRsvpDetails();
-                }}
-              />
-            </div>
+            <GuestDonationForm
+              guestId={guestId}
+              guestName={`${guest.firstName} ${guest.lastName}`}
+              guestEmail={guest.email}
+              guestPhone={guest.phone}
+              donations={guest.donations}
+              onDonationSuccess={() => {
+                loadRsvpDetails();
+              }}
+            />
           )}
         </GuestPortalShell>
       );
@@ -672,13 +697,20 @@ export default function RsvpPage() {
     // Portail invité confirmé — layout plateforme (simple / moderne)
     if (submitted && rsvpStatus === 'ACCEPTED') {
       const guestTabs = [
-        { id: 'badge', label: 'Pass QR', shortLabel: 'QR', icon: <Award className="w-4 h-4" /> },
-        { id: 'table', label: 'Ma table', shortLabel: 'Table', icon: <LayoutGrid className="w-4 h-4" /> },
-        { id: 'route', label: 'Lieu', shortLabel: 'Lieu', icon: <Navigation className="w-4 h-4" /> },
-        ...(hasDonations ? [{ id: 'donations', label: 'Faire un don', shortLabel: 'Don', icon: <Heart className="w-4 h-4 text-rose-600 fill-rose-600" /> }] : []),
-        { id: 'guestbook', label: "Livre d'or", shortLabel: 'Livre', icon: <MessageSquare className="w-4 h-4" /> },
-        { id: 'feed', label: 'Actualités', shortLabel: 'Actu', icon: <MessageCircle className="w-4 h-4" /> },
+        { id: 'badge', label: 'Mon pass', shortLabel: 'Pass', icon: <QrCode className="w-5 h-5" /> },
+        { id: 'table', label: 'Ma table', shortLabel: 'Table', icon: <LayoutGrid className="w-5 h-5" /> },
+        { id: 'route', label: 'Lieu', shortLabel: 'Lieu', icon: <Navigation className="w-5 h-5" /> },
+        ...(hasDonations ? [{ id: 'donations', label: 'Faire un don', shortLabel: 'Don', icon: <Heart className="w-5 h-5" /> }] : []),
+        { id: 'guestbook', label: "Livre d'or", shortLabel: 'Livre', icon: <MessageSquare className="w-5 h-5" /> },
+        { id: 'feed', label: 'Actualités', shortLabel: 'Actu', icon: <MessageCircle className="w-5 h-5" /> },
       ];
+
+      const tableName = guest.ticketPlacement?.tableName || guest.tableDetails?.tableName || null;
+      const seatNumber =
+        guest.ticketPlacement?.seatNumber ??
+        (guest.tableDetails?.seatIndex != null ? guest.tableDetails.seatIndex + 1 : null);
+      const neighborCount = guest.tableDetails?.neighbors?.length ?? 0;
+      const passCode = guest.id.split('-')[0]?.toUpperCase();
 
       return (
         <>
@@ -690,14 +722,7 @@ export default function RsvpPage() {
           swipeTabIds={[...guestTabIds]}
           activeTabId={activeGuestTab}
           onTabChange={goGuestTab}
-          headerRight={
-            <ShareButton
-              title={`${guest.event.title} · Invitation`}
-              text={`Invitation ${site.platformName} pour ${guest.firstName}.`}
-              url={guestRsvpUrl(guestId)}
-              className="!bg-surface border-border"
-            />
-          }
+          headerRight={shareButton}
           tabs={
             <GuestPortalTabBar
               tabs={guestTabs}
@@ -705,201 +730,207 @@ export default function RsvpPage() {
               onChange={goGuestTab}
             />
           }
-          contentClassName="space-y-5 pb-[calc(10.75rem+env(safe-area-inset-bottom))]"
+          contentClassName="space-y-5"
         >
-            {/* 1. BADGE & INFOS TAB */}
+            {/* 1. PASS & INFOS */}
             <div id="guest-panel-badge" role="tabpanel" aria-labelledby="guest-tab-badge" hidden={activeGuestTab !== 'badge'}>
             {activeGuestTab === 'badge' && (
-              <div className="space-y-6 animate-fade-in">
-                <div className="em-guest-hero">
-                  <div className="em-guest-hero__banner !py-4 !px-5">
-                    <div className="relative z-[1] flex flex-wrap items-center justify-between gap-2">
-                      <div className="min-w-0 space-y-0.5">
-                        <h2 className="text-xl sm:text-2xl font-display font-semibold leading-tight tracking-tight text-white truncate">
-                          Bonjour {guest.firstName} {guest.lastName}
-                        </h2>
-                        <p className="text-sm text-white/85 truncate">{guest.event.title}</p>
-                      </div>
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-white/15 border border-white/25 text-xs font-semibold text-white shrink-0">
-                        Confirmé
-                      </span>
-                    </div>
+              <div className="space-y-4 animate-fade-in">
+                <GuestEventHero
+                  greeting={`Mbote, ${guest.firstName}`}
+                  title={guest.event.title}
+                  date={guest.event.date}
+                  location={guest.event.location}
+                  badge={
+                    <span className="em-guest-chip em-guest-chip--glass">
+                      <Check className="w-3.5 h-3.5" aria-hidden />
+                      Présence confirmée
+                    </span>
+                  }
+                />
+
+                {/* Pass QR : l'essentiel du jour J */}
+                <GuestPortalCard className="flex flex-col items-center gap-4 text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedQrGuestId(guest.id);
+                      setShowFullScreenQr(true);
+                    }}
+                    className="p-3 bg-white rounded-2xl border border-border hover:scale-[1.02] active:scale-[0.98] transition-transform cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    aria-label="Agrandir mon pass QR"
+                  >
+                    <img
+                      src={getGuestQrImageUrl(guest.id, 280)}
+                      alt={`Pass QR de ${guest.firstName} ${guest.lastName}`}
+                      className="w-48 h-48 sm:w-56 sm:h-56"
+                    />
+                  </button>
+                  <div className="space-y-0.5">
+                    <p className="font-display text-lg font-semibold text-foreground">
+                      {guest.firstName} {guest.lastName}
+                    </p>
+                    <p className="text-sm text-muted">
+                      À montrer à l&apos;accueil
+                      {passCode ? <span className="font-mono tracking-wider"> · {passCode}</span> : null}
+                    </p>
                   </div>
-
-                  <div className="px-5 py-7 sm:px-8 flex flex-col items-center gap-5 bg-surface">
-                    <button
-                      type="button"
-                      onClick={() => setShowFullScreenQr(true)}
-                      className="p-3 sm:p-4 bg-white rounded-2xl border border-border shadow-[0_16px_48px_rgba(15,23,42,0.1)] hover:scale-[1.02] active:scale-[0.98] transition-transform group relative cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                      title="Agrandir le pass QR"
+                  <div className="grid w-full grid-cols-3 gap-2">
+                    {[
+                      {
+                        key: 'zoom',
+                        label: 'Agrandir',
+                        icon: <Maximize2 className="w-5 h-5" aria-hidden />,
+                        onClick: () => {
+                          setSelectedQrGuestId(guest.id);
+                          setShowFullScreenQr(true);
+                        },
+                      },
+                      {
+                        key: 'infos',
+                        label: 'Mes infos',
+                        icon: <UserPen className="w-5 h-5" aria-hidden />,
+                        onClick: openIdentityEditor,
+                      },
+                    ].map((action) => (
+                      <button
+                        key={action.key}
+                        type="button"
+                        onClick={action.onClick}
+                        className="flex flex-col items-center justify-center gap-1.5 min-h-[4.25rem] rounded-2xl bg-surface-muted text-xs font-semibold text-foreground hover:bg-primary/10 active:scale-[0.97] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                      >
+                        <span className="text-primary">{action.icon}</span>
+                        {action.label}
+                      </button>
+                    ))}
+                    <Link
+                      href={`/rsvp/${guestId}/print`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-col items-center justify-center gap-1.5 min-h-[4.25rem] rounded-2xl bg-surface-muted text-xs font-semibold text-foreground hover:bg-primary/10 active:scale-[0.97] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                     >
-                      <img
-                        src={getGuestQrImageUrl(guest.id, 280)}
-                        alt={`Pass QR de ${guest.firstName} ${guest.lastName}`}
-                        className="w-52 h-52 sm:w-60 sm:h-60"
-                      />
-                      <span className="absolute inset-0 rounded-2xl bg-black/5 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                        <span className="bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-sm">
-                          <Maximize2 className="w-3.5 h-3.5" aria-hidden />
-                          Agrandir
-                        </span>
-                      </span>
-                    </button>
+                      <Printer className="w-5 h-5 text-primary" aria-hidden />
+                      Imprimer
+                    </Link>
+                  </div>
+                </GuestPortalCard>
 
-                    <div className="text-center space-y-2 w-full max-w-xs">
-                      <p className="text-xs text-muted leading-tight font-medium">
-                        Présentez ce QR à l&apos;accueil
-                      </p>
-                      <p className="text-[11px] text-muted/70 tracking-widest font-mono">
-                        {guest.id.split('-')[0]?.toUpperCase()}
-                      </p>
-                      <div className="flex items-center justify-center gap-3 text-xs text-muted pt-0.5">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-primary" aria-hidden />
-                          {new Date(guest.event.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                        </span>
-                        <span className="text-border" aria-hidden>·</span>
-                        <span>
-                          {new Date(guest.event.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+                {/* Billet transmis sans nom : inviter à le personnaliser */}
+                {guest.firstName?.toLowerCase().startsWith('invité') && (
+                  <button
+                    type="button"
+                    onClick={openIdentityEditor}
+                    className="w-full flex items-center gap-3 rounded-[1.125rem] border border-primary/25 bg-primary/5 p-3.5 text-left hover:bg-primary/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                  >
+                    <span className="em-guest-icon"><Pencil className="w-[18px] h-[18px]" aria-hidden /></span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm font-semibold text-foreground">Ce billet vous a été transmis ?</span>
+                      <span className="block text-xs text-muted">Mettez-y votre nom.</span>
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-muted shrink-0" aria-hidden />
+                  </button>
+                )}
+
+                {/* Place assignée */}
+                {(guest.ticketPlacement?.isAssigned || tableName) && (
+                  <GuestPortalCard padding="sm" className="space-y-3.5">
+                    <div className="flex items-center gap-3">
+                      <span className="em-guest-icon"><LayoutGrid className="w-5 h-5" aria-hidden /></span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-muted">
+                          Votre table{guest.ticketPlacement?.zoneName ? ` · ${guest.ticketPlacement.zoneName}` : ''}
+                        </p>
+                        <p className="font-display text-xl font-semibold text-foreground truncate">
+                          {tableName || 'Table assignée'}
+                        </p>
                       </div>
-                      <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => setShowFullScreenQr(true)}
-                          className="flex-1 inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary-hover transition shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                        >
-                          <Maximize2 className="w-4 h-4" aria-hidden />
-                          Plein écran
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIdentitySaveError('');
-                            setIdentitySaveSuccess(false);
-                            setIsEditIdentityOpen(true);
-                          }}
-                          className="flex-1 inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-xl border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                        >
-                          <UserCog className="w-4 h-4 text-primary" aria-hidden />
-                          Mes infos
-                        </button>
-                        <Link
-                          href={`/rsvp/${guestId}/print`}
+                      {seatNumber != null && (
+                        <div className="rounded-2xl bg-primary/10 px-3.5 py-2 text-center shrink-0">
+                          <p className="text-[11px] font-semibold text-primary">Siège</p>
+                          <p className="font-display text-xl font-semibold text-foreground tabular-nums leading-none">{seatNumber}</p>
+                        </div>
+                      )}
+                    </div>
+                    {neighborCount > 0 && (
+                      <p className="text-xs text-muted flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-primary" aria-hidden />
+                        {neighborCount} convive{neighborCount > 1 ? 's' : ''} à votre table
+                      </p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => goGuestTab('table')}
+                        className="flex-1 inline-flex items-center justify-center gap-2 min-h-11 px-3.5 rounded-2xl bg-primary-solid text-primary-foreground text-sm font-semibold hover:bg-primary-solid-hover transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                      >
+                        Voir sur le plan
+                      </button>
+                      {guest.seatingInvitationPdfUrl && (
+                        <a
+                          href={guest.seatingInvitationPdfUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-xl border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                          className="inline-flex items-center justify-center gap-1.5 min-h-11 px-4 rounded-2xl border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                         >
-                          <Printer className="w-4 h-4" aria-hidden />
-                          Imprimer
-                        </Link>
-                      </div>
+                          <Download className="w-4 h-4" aria-hidden />
+                          PDF
+                        </a>
+                      )}
                     </div>
-                  </div>
-                </div>
+                  </GuestPortalCard>
+                )}
 
-                {/* Bandeau d'invitation transmise si billet non personnalisé */}
-                {guest.firstName?.toLowerCase().startsWith('invité') && (
-                  <div className="rounded-2xl border border-primary/25 bg-primary/10 p-3.5 flex items-center justify-between gap-3 text-left">
-                    <p className="text-xs text-foreground/90 font-medium">
-                      Ce billet vous a été transmis ? Inscrivez vos coordonnées.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIdentitySaveError('');
-                        setIdentitySaveSuccess(false);
-                        setIsEditIdentityOpen(true);
-                      }}
-                      className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover shadow-xs transition"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      Personnaliser
-                    </button>
+                {/* Billet sans placement encore attribué */}
+                {guest.ticketPlacement?.hasTicket && !guest.ticketPlacement?.isAssigned && !tableName && (
+                  <div className="flex items-center gap-3 rounded-[1.125rem] border border-border bg-surface p-3.5">
+                    <span className="em-guest-icon"><Ticket className="w-5 h-5" aria-hidden /></span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground">
+                        Billet confirmé{guest.ticketPlacement?.zoneName ? ` · ${guest.ticketPlacement.zoneName}` : ''}
+                      </p>
+                      <p className="text-xs text-muted">Votre place vous sera indiquée à l&apos;accueil.</p>
+                    </div>
                   </div>
                 )}
 
-                {/* Carte des pass multiples si commande de plusieurs billets */}
+                {/* Plusieurs billets dans la même commande */}
                 {guest.orderPasses && guest.orderPasses.passes.length > 1 && (
-                  <div className="rounded-2xl border border-primary/25 bg-surface p-4 sm:p-5 space-y-4 shadow-xs text-left">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div className="flex items-center gap-2.5">
-                        <span className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
-                          <Ticket className="w-4 h-4" />
-                        </span>
-                        <div>
-                          <h3 className="text-sm font-bold text-foreground">
-                            Vos billets pour cet événement
-                    </h3>
-                          <p className="text-xs text-muted">
-                            Commande de {guest.orderPasses.totalCount} places &middot; Un pass d&apos;entrée individuel avec QR code est disponible pour chacun.
-                          </p>
-                  </div>
-                      </div>
-                      <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold border border-primary/20 shrink-0">
-                        {guest.orderPasses.totalCount} billets
-                      </span>
+                  <section className="space-y-2.5">
+                    <div className="flex items-baseline justify-between px-1">
+                      <h3 className="font-display text-base font-semibold text-foreground">Vos billets</h3>
+                      <span className="text-xs font-semibold text-muted">{guest.orderPasses.totalCount} places</span>
                     </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="em-guest-list">
                       {guest.orderPasses.passes.map((pass) => {
                         const isCurrent = pass.guestId === guestId;
-                        const passDisplayName = `${pass.firstName} ${pass.lastName}`.trim();
-                        const hasSeat = Boolean(pass.tableName || pass.seatNumber);
+                        const passDisplayName = `${pass.firstName} ${pass.lastName}`.trim() || `Invité ${pass.ticketNumber}`;
+                        const seatLabel = [
+                          pass.tableName,
+                          pass.seatNumber != null ? `siège ${pass.seatNumber}` : null,
+                        ].filter(Boolean).join(' · ');
+                        const iconBtn =
+                          'inline-flex items-center justify-center h-11 w-11 shrink-0 rounded-full border border-border bg-surface text-muted hover:text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 touch-manipulation';
 
                         return (
-                          <div
-                            key={pass.guestId}
-                            className={cn(
-                              'rounded-xl border p-3.5 space-y-2.5 transition',
-                              isCurrent
-                                ? 'border-primary bg-primary/5 ring-1 ring-primary/40'
-                                : 'border-border bg-surface-muted/40 hover:bg-surface-muted/70',
-                            )}
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
-                                    Billet n°{pass.ticketNumber}
-                                  </span>
-                                  {isCurrent ? (
-                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-primary text-primary-foreground">
-                                      Pass affiché
-                                    </span>
-                                  ) : (
-                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-surface border border-border text-muted">
-                                      Accompagnateur
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-sm font-bold text-foreground truncate mt-0.5">
-                                  {passDisplayName || `Invité ${pass.ticketNumber}`}
+                          <div key={pass.guestId} className={cn('p-3 space-y-2.5', isCurrent && 'bg-primary/[0.04]')}>
+                            <div className="flex items-center gap-3">
+                              <span className="em-guest-icon font-display text-sm font-semibold">{pass.ticketNumber}</span>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold text-foreground truncate">{passDisplayName}</p>
+                                <p className="text-xs text-muted truncate">
+                                  {isCurrent ? 'Pass affiché' : 'Accompagnateur'}
+                                  {seatLabel ? ` · ${seatLabel}` : ''}
                                 </p>
                               </div>
-
-                              {hasSeat && (
-                                <div className="text-right shrink-0">
-                                  <p className="text-[11px] font-bold text-primary truncate">
-                                    {pass.tableName ?? 'Table'}
-                                  </p>
-                                  {pass.seatNumber != null && (
-                                    <p className="text-[10px] text-muted">
-                                      Siège n°{pass.seatNumber}
-                                    </p>
-                                  )}
-                        </div>
-                              )}
-                        </div>
-
-                            <div className="flex items-center gap-1.5 pt-1 flex-wrap">
+                            </div>
+                            <div className="flex items-center gap-1.5">
                               {!isCurrent ? (
                                 <Link
                                   href={`/rsvp/${pass.guestId}`}
-                                  className="flex-1 inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 touch-manipulation"
+                                  className="flex-1 inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-full bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/15 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 touch-manipulation"
                                 >
                                   <QrCode className="w-4 h-4" aria-hidden />
-                                  <span>Afficher ce pass</span>
+                                  Afficher ce pass
                                 </Link>
                               ) : (
                                 <button
@@ -908,29 +939,24 @@ export default function RsvpPage() {
                                     setSelectedQrGuestId(pass.guestId);
                                     setShowFullScreenQr(true);
                                   }}
-                                  className="flex-1 inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-xl bg-primary/15 text-primary text-xs font-semibold hover:bg-primary/25 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 touch-manipulation"
+                                  className="flex-1 inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-full bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/15 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 touch-manipulation"
                                 >
                                   <Maximize2 className="w-4 h-4" aria-hidden />
-                                  <span>Pass plein écran</span>
+                                  Plein écran
                                 </button>
                               )}
-
-                              {/* Bouton WhatsApp direct pour transmettre le pass à l'accompagnateur */}
                               <a
                                 href={`https://wa.me/?text=${encodeURIComponent(
                                   `Bonjour ! Voici ton pass d'accès personnel pour « ${guest.event.title} » (Table : ${pass.tableName || 'à l’accueil'}, Siège : ${pass.seatNumber ? `n°${pass.seatNumber}` : '—'}) :\n${pass.rsvpUrl}`
                                 )}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                title="Transmettre ce pass par WhatsApp"
-                                aria-label={`Transmettre le pass de ${pass.firstName} par WhatsApp`}
-                                className="inline-flex items-center justify-center min-h-11 px-3 rounded-xl border border-border bg-surface text-xs font-semibold text-emerald-600 hover:bg-emerald-500/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 touch-manipulation"
+                                title="Envoyer par WhatsApp"
+                                aria-label={`Envoyer le pass de ${pass.firstName} par WhatsApp`}
+                                className={cn(iconBtn, '!text-primary')}
                               >
-                                <MessageCircle className="w-4 h-4 mr-1 text-emerald-600" aria-hidden />
-                                <span>WhatsApp</span>
+                                <MessageCircle className="w-4 h-4" aria-hidden />
                               </a>
-
-                              {/* Bouton copier le lien */}
                               <button
                                 type="button"
                                 onClick={async () => {
@@ -940,9 +966,9 @@ export default function RsvpPage() {
                                     setTimeout(() => setCopiedPassId(null), 2500);
                                   } catch {}
                                 }}
-                                title="Copier le lien unique du pass"
-                                aria-label={`Copier le lien unique du pass de ${pass.firstName}`}
-                                className="inline-flex items-center justify-center min-h-11 px-3 rounded-xl border border-border bg-surface text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 touch-manipulation"
+                                title="Copier le lien du pass"
+                                aria-label={`Copier le lien du pass de ${pass.firstName}`}
+                                className={iconBtn}
                               >
                                 {copiedPassId === pass.guestId ? (
                                   <Check className="w-4 h-4 text-primary" aria-hidden />
@@ -950,8 +976,6 @@ export default function RsvpPage() {
                                   <Copy className="w-4 h-4" aria-hidden />
                                 )}
                               </button>
-
-                              {/* Bouton modifier le nom de ce pass */}
                               <button
                                 type="button"
                                 onClick={() => {
@@ -959,221 +983,93 @@ export default function RsvpPage() {
                                   setGuestFirstName(pass.firstName);
                                   setGuestLastName(pass.lastName);
                                   setGuestPhone(pass.phone || '');
-                                  setIdentitySaveError('');
-                                  setIdentitySaveSuccess(false);
-                                  setIsEditIdentityOpen(true);
+                                  openIdentityEditor();
                                 }}
-                                title="Renommer le titulaire du billet"
-                                aria-label={`Renommer le titulaire du billet : ${pass.firstName} ${pass.lastName}`}
-                                className="inline-flex items-center justify-center min-h-11 px-3 rounded-xl border border-border bg-surface text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 touch-manipulation"
+                                title="Changer le nom sur ce billet"
+                                aria-label={`Changer le nom sur le billet de ${pass.firstName} ${pass.lastName}`}
+                                className={iconBtn}
                               >
                                 <Pencil className="w-4 h-4" aria-hidden />
                               </button>
-                      </div>
-                        </div>
+                            </div>
+                          </div>
                         );
                       })}
-                        </div>
-                      </div>
+                    </div>
+                  </section>
                 )}
 
-                {/* Carte de placement assigné (très visible pour les billets payés et invités placés) */}
-                {(guest.ticketPlacement?.isAssigned || guest.tableDetails?.tableName) && (
-                  <div className="rounded-2xl border border-primary/25 bg-primary/5 p-4 sm:p-5 space-y-3.5 text-left shadow-xs">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold">
-                        <LayoutGrid className="w-3.5 h-3.5 text-primary" />
-                        <span>Votre place réservée</span>
-                      </span>
-                      {guest.ticketPlacement?.zoneName && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface border border-border">
-                          <Sparkles className="w-3 h-3 text-amber-500" />
-                          <span>{guest.ticketPlacement.zoneName}</span>
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="space-y-0.5 min-w-0">
-                        <p className="text-[11px] uppercase font-bold text-muted tracking-wider">Table assignée</p>
-                        <p className="text-lg sm:text-xl font-display font-bold text-foreground truncate">
-                          {guest.ticketPlacement?.tableName || guest.tableDetails?.tableName || 'Table assignée'}
-                        </p>
-                        {guest.tableDetails?.neighbors && guest.tableDetails.neighbors.length > 0 && (
-                          <p className="text-xs text-muted flex items-center gap-1 pt-0.5">
-                            <Users className="w-3.5 h-3.5 text-primary" />
-                            <span>
-                              {guest.tableDetails.neighbors.length} convive{guest.tableDetails.neighbors.length > 1 ? 's' : ''} à votre table
-                            </span>
-                          </p>
-                        )}
-                  </div>
-
-                      {(guest.ticketPlacement?.seatNumber != null || guest.tableDetails?.seatIndex != null) && (
-                        <div className="rounded-xl px-4 py-2 border border-primary/30 bg-surface text-center shrink-0 shadow-xs">
-                          <p className="text-[10px] uppercase font-bold text-muted tracking-wider">Siège</p>
-                          <p className="text-lg sm:text-xl font-black text-primary tabular-nums">
-                            n° {guest.ticketPlacement?.seatNumber ?? ((guest.tableDetails?.seatIndex ?? 0) + 1)}
-                          </p>
-                      </div>
-                      )}
-                    </div>
-
-                    <div className="pt-1 flex flex-col sm:flex-row gap-2">
-                      <button
-                        type="button"
-                        onClick={() => goGuestTab('table')}
-                        className="flex-1 inline-flex items-center justify-center gap-2 min-h-11 py-2 px-3.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary-hover transition shadow-sm"
-                      >
-                        <LayoutGrid className="w-4 h-4" />
-                        <span>Voir ma place sur le plan (2D / 3D)</span>
-                      </button>
-                      {guest.seatingInvitationPdfUrl && (
-                        <a
-                          href={guest.seatingInvitationPdfUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center justify-center gap-1.5 min-h-11 py-2 px-3 rounded-xl border border-border bg-surface text-xs font-semibold text-foreground hover:bg-surface-muted transition"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          <span>PDF</span>
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Si l'invité a acheté un billet mais sans placement de table encore attribué */}
-                {guest.ticketPlacement?.hasTicket && !guest.ticketPlacement?.isAssigned && !guest.tableDetails?.tableName && (
-                  <div className="rounded-2xl border border-border bg-surface-muted/40 p-4 space-y-2 text-left">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface border border-border text-xs font-bold text-foreground">
-                        <Ticket className="w-3.5 h-3.5 text-primary" />
-                        <span>Billet confirmé</span>
-                      </span>
-                      {guest.ticketPlacement?.zoneName && (
-                        <span className="text-xs font-semibold text-primary">
-                          Zone {guest.ticketPlacement.zoneName}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted leading-relaxed">
-                      Billet validé. Placement communiqué à l&apos;accueil.
-                        </p>
-                      </div>
-                )}
-
-                {/* Bandeau de campagne solidaire si les dons sont activés */}
+                {/* Campagne solidaire */}
                 {hasDonations && guest.donations && (
-                  <div className="rounded-2xl border border-rose-500/25 bg-rose-500/5 p-4 sm:p-5 space-y-3 text-left">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/25 text-rose-700 dark:text-rose-300 text-xs font-bold">
-                        <Heart className="w-3 h-3 fill-rose-500/30" />
-                        Campagne solidaire
+                  <button
+                    type="button"
+                    onClick={() => goGuestTab('donations')}
+                    className="w-full rounded-[1.125rem] border border-rose-500/20 bg-rose-500/[0.06] p-4 text-left space-y-3 hover:bg-rose-500/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40"
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-300">
+                        <Heart className="w-5 h-5" aria-hidden />
                       </span>
-                      {guest.donations.progressPercent != null && (
-                        <span className="text-xs font-bold text-rose-700 dark:text-rose-300 tabular-nums">
-                          {guest.donations.progressPercent}% collectés
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-sm font-semibold text-foreground truncate">
+                          {guest.donations.cause || 'Soutenir cet événement'}
                         </span>
-                      )}
-                    </div>
-
-                    <div className="space-y-0.5">
-                      <h4 className="text-sm font-bold text-foreground">
-                        {guest.donations.cause || 'Soutenir cet événement'}
-                      </h4>
-                      <p className="text-xs text-muted">
-                        Paiement par Mobile Money ou Carte bancaire.
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => goGuestTab('donations')}
-                      className="w-full inline-flex items-center justify-center gap-2 min-h-12 py-3 px-4 rounded-xl bg-rose-700 hover:bg-rose-800 text-white text-sm font-bold transition shadow-sm dark:bg-rose-600 dark:hover:bg-rose-700"
-                    >
-                      <Heart className="w-4 h-4 fill-white" />
-                      <span>Faire un don (Mobile Money / Carte)</span>
-                    </button>
-                  </div>
+                        <span className="block text-xs text-muted">Mobile Money ou carte</span>
+                      </span>
+                      <span className="text-sm font-semibold text-rose-700 dark:text-rose-300 shrink-0">Donner</span>
+                    </span>
+                    {guest.donations.progressPercent != null && (
+                      <span className="block space-y-1">
+                        <span className="block h-2 rounded-full bg-rose-500/15 overflow-hidden">
+                          <span
+                            className="block h-2 rounded-full bg-rose-500"
+                            style={{ width: `${Math.min(100, Math.max(0, guest.donations.progressPercent))}%` }}
+                          />
+                        </span>
+                        <span className="block text-xs text-muted tabular-nums">{guest.donations.progressPercent}% collectés</span>
+                      </span>
+                    )}
+                  </button>
                 )}
 
-                <section className="space-y-4 px-0.5">
-                  <div>
-                    <h3 className="font-display font-semibold text-foreground text-base tracking-tight">
-                      {guest.event.title}
-                    </h3>
-                    {guest.event.description?.trim() ? (
-                      <p className="mt-2 text-muted text-sm leading-relaxed whitespace-pre-line">
-                        {guest.event.description}
-                      </p>
-                    ) : null}
-                        </div>
+                {guest.event.description?.trim() ? (
+                  <GuestPortalCard padding="sm" className="space-y-1.5">
+                    <h3 className="font-display text-base font-semibold text-foreground">Le mot de l&apos;organisateur</h3>
+                    <p className="text-sm text-muted leading-relaxed whitespace-pre-line">{guest.event.description}</p>
+                  </GuestPortalCard>
+                ) : null}
 
-                  <ul className="space-y-3 text-sm text-muted">
-                    <li className="flex items-start gap-3">
-                      <Calendar className="w-4 h-4 text-primary shrink-0 mt-0.5" aria-hidden />
-                      <span>
-                        <span className="font-semibold text-foreground block">Date & heure</span>
-                        {new Date(guest.event.date).toLocaleDateString('fr-FR', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" aria-hidden />
-                      <span>
-                        <span className="font-semibold text-foreground block">Lieu</span>
-                          {guest.event.location}
-                      </span>
-                    </li>
-                  </ul>
+                <GuestGuidelinesView guidelines={guest.event.guestGuidelines} />
 
+                {/* Raccourcis, façon réglages d'app */}
+                <nav aria-label="Raccourcis" className="em-guest-list">
                   {guest.event.location ? (
-                    <button
-                      type="button"
-                      onClick={() => goGuestTab('route')}
-                      className="w-full inline-flex items-center justify-center gap-2 min-h-11 py-2.5 rounded-xl border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                    >
-                      <Navigation className="w-4 h-4 text-primary" aria-hidden />
-                      Guide jusqu&apos;au lieu
+                    <button type="button" onClick={() => goGuestTab('route')} className="em-guest-list-row">
+                      <span className="em-guest-icon"><Navigation className="w-[18px] h-[18px]" aria-hidden /></span>
+                      <span className="flex-1 text-sm font-semibold">Itinéraire jusqu&apos;au lieu</span>
+                      <ChevronRight className="w-4 h-4 text-muted" aria-hidden />
                     </button>
                   ) : null}
-                </section>
-
-                <GuestGuidelinesView
-                  guidelines={guest.event.guestGuidelines}
-                  className="pt-1"
-                />
-
-                {!rsvpLocked && (
-                  <div className="space-y-2.5 pt-2">
-                <button
-                      type="button"
-                      onClick={() => {
-                        setIdentitySaveError('');
-                        setIdentitySaveSuccess(false);
-                        setIsEditIdentityOpen(true);
-                      }}
-                      className="w-full inline-flex items-center justify-center gap-2 min-h-11 py-2.5 rounded-xl border border-primary/30 bg-primary/5 text-sm font-semibold text-primary hover:bg-primary/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                    >
-                      <UserCog className="w-4 h-4" />
-                      Modifier mes coordonnées et préférences
+                  {!rsvpLocked && (
+                    <button type="button" onClick={openIdentityEditor} className="em-guest-list-row">
+                      <span className="em-guest-icon"><UserCog className="w-[18px] h-[18px]" aria-hidden /></span>
+                      <span className="flex-1 text-sm font-semibold">Mes infos et préférences</span>
+                      <ChevronRight className="w-4 h-4 text-muted" aria-hidden />
                     </button>
-                    <button
-                      type="button"
-                  onClick={() => setSubmitted(false)}
-                      className="w-full min-h-11 py-2.5 border border-border bg-surface hover:bg-surface-muted text-muted font-semibold rounded-xl text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                >
-                      Modifier ma réponse (présence / absence)
-                </button>
-                  </div>
-                )}
+                  )}
+                  {!rsvpLocked && (
+                    <button type="button" onClick={() => setSubmitted(false)} className="em-guest-list-row">
+                      <span className="em-guest-icon"><Repeat className="w-[18px] h-[18px]" aria-hidden /></span>
+                      <span className="flex-1 text-sm font-semibold">Changer ma réponse</span>
+                      <ChevronRight className="w-4 h-4 text-muted" aria-hidden />
+                    </button>
+                  )}
+                  <Link href={`/rsvp/${guestId}/home`} className="em-guest-list-row">
+                    <span className="em-guest-icon"><CalendarHeart className="w-[18px] h-[18px]" aria-hidden /></span>
+                    <span className="flex-1 text-sm font-semibold">Toutes mes invitations</span>
+                    <ChevronRight className="w-4 h-4 text-muted" aria-hidden />
+                  </Link>
+                </nav>
               </div>
             )}
             </div>
@@ -1203,11 +1099,7 @@ export default function RsvpPage() {
             <div id="guest-panel-table" role="tabpanel" aria-labelledby="guest-tab-table" hidden={activeGuestTab !== 'table'}>
             {activeGuestTab === 'table' && (
               <div className="space-y-4 animate-fade-in">
-                <div className="px-1">
-                  <h2 className="text-base font-display font-semibold leading-snug tracking-tight text-foreground">
-                    Plan de table
-                  </h2>
-                </div>
+                <h2 className="px-1 font-display text-xl font-semibold text-foreground">Ma table</h2>
                   <GuestTablePlanView
                     guestId={guestId}
                     placementAccessible={guest.placementAccessible}
@@ -1274,10 +1166,8 @@ export default function RsvpPage() {
             {activeGuestTab === 'guestbook' && (
               <div className="space-y-4 animate-fade-in">
                 <div className="space-y-0.5 px-1">
-                  <h3 className="font-display font-semibold text-foreground text-base">Livre d&apos;or</h3>
-                  <p className="text-muted text-xs">
-                    Laissez un message ou des photos aux organisateurs.
-                  </p>
+                  <h2 className="font-display text-xl font-semibold text-foreground">Livre d&apos;or</h2>
+                  <p className="text-muted text-sm">Un mot ou des photos pour l&apos;organisateur.</p>
                 </div>
 
                 {guestbookSuccess && (
@@ -1293,9 +1183,9 @@ export default function RsvpPage() {
                   </div>
                 )}
 
-                <form onSubmit={handleSubmitGuestbook} className="space-y-4">
+                <form onSubmit={handleSubmitGuestbook} className="space-y-3 rounded-[1.125rem] border border-border bg-surface p-4">
                   <div className="space-y-1.5">
-                    <label htmlFor="guestbook-message" className="block text-xs font-semibold text-foreground">
+                    <label htmlFor="guestbook-message" className="sr-only">
                       Votre message
                     </label>
                     <textarea
@@ -1304,15 +1194,15 @@ export default function RsvpPage() {
                       onChange={(e) => setGuestbookMessage(e.target.value)}
                       placeholder="Ex. : Merci pour cette belle invitation…"
                       rows={4}
-                      className="w-full min-h-[6.5rem] px-4 py-3 bg-surface border border-border shadow-[var(--shadow-soft)] rounded-[var(--radius-card)] text-base sm:text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors resize-none text-foreground placeholder:text-muted"
+                      className="w-full min-h-[6.5rem] px-4 py-3 bg-surface-muted border border-transparent rounded-xl text-base sm:text-sm focus:outline-none focus:border-primary focus:bg-surface transition-colors resize-none text-foreground placeholder:text-muted"
                     />
                   </div>
 
                   {/* Previews of uploaded guestbook photos */}
                   {guestbookPhotos.length > 0 && (
                     <div className="space-y-2">
-                      <span className="text-xs font-semibold text-muted uppercase tracking-wider block">
-                        Photos sélectionnées ({guestbookPhotos.length})
+                      <span className="text-xs font-semibold text-muted block">
+                        {guestbookPhotos.length} photo{guestbookPhotos.length > 1 ? 's' : ''}
                       </span>
                       <div className="grid grid-cols-3 gap-2">
                         {guestbookPhotos.map((photo, idx) => (
@@ -1345,10 +1235,10 @@ export default function RsvpPage() {
                     </div>
                   )}
 
-                  <div className="flex items-center justify-between gap-3 pt-2">
-                    <label className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3 py-2 bg-surface-muted hover:bg-surface-muted text-foreground/80 font-semibold rounded-xl text-xs cursor-pointer transition touch-manipulation">
+                  <div className="flex items-center justify-between gap-3">
+                    <label className="inline-flex items-center justify-center gap-1.5 min-h-11 px-4 py-2 bg-surface-muted hover:bg-primary/10 text-foreground font-semibold rounded-full text-sm cursor-pointer transition touch-manipulation focus-within:ring-2 focus-within:ring-primary/40">
                       <Image className="w-4 h-4 text-primary" aria-hidden />
-                      Ajouter des photos
+                      Photos
                       <input
                         type="file"
                         multiple
@@ -1361,7 +1251,7 @@ export default function RsvpPage() {
                     <button
                       type="submit"
                       disabled={submittingGuestbook || isGuestbookUploading || (!guestbookMessage.trim() && guestbookPhotos.length === 0)}
-                      className="inline-flex items-center justify-center gap-1.5 min-h-11 px-5 py-2.5 bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground font-semibold rounded-xl text-xs transition shadow-md shadow-primary/20 touch-manipulation"
+                      className="inline-flex items-center justify-center gap-1.5 min-h-11 px-5 py-2.5 bg-primary-solid hover:bg-primary-solid-hover disabled:opacity-50 text-primary-foreground font-semibold rounded-full text-sm transition touch-manipulation"
                     >
                       {submittingGuestbook ? (
                         <>
@@ -1379,11 +1269,10 @@ export default function RsvpPage() {
                 </form>
 
                 {/* Liste des messages du Livre d'or */}
-                <div className="border-t border-border pt-6 space-y-4">
-                  <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider flex items-center gap-1.5">
-                    <Heart className="w-4 h-4 text-primary" />
-                    Messages des invités ({guestbookShares.length})
-                  </h4>
+                <div className="pt-2 space-y-3">
+                  <h3 className="px-1 font-display text-base font-semibold text-foreground">
+                    Messages{guestbookShares.length ? ` · ${guestbookShares.length}` : ''}
+                  </h3>
 
                   {loadingGuestbook && guestbookShares.length === 0 ? (
                     <div className="py-8 flex flex-col items-center justify-center gap-2">
@@ -1391,12 +1280,12 @@ export default function RsvpPage() {
                       <p className="text-xs text-muted">Chargement des messages…</p>
                     </div>
                   ) : guestbookShares.length === 0 ? (
-                    <div className="text-center py-8 bg-surface-muted/40 rounded-[var(--radius-card)] border border-border p-4 space-y-1">
-                      <p className="text-sm font-semibold text-foreground">Aucun message pour l’instant</p>
-                      <p className="text-muted text-xs">Écrivez le premier mot ci-dessus pour ouvrir le livre d&apos;or.</p>
+                    <div className="text-center py-8 rounded-[1.125rem] border border-dashed border-border px-4 space-y-1">
+                      <p className="text-sm font-semibold text-foreground">Pas encore de message</p>
+                      <p className="text-muted text-sm">Soyez le premier à écrire.</p>
                     </div>
                   ) : (
-                    <div className="space-y-4 max-h-[350px] overflow-y-auto pr-1">
+                    <div className="space-y-3">
                       {guestbookShares.map((share) => {
                         const photosList = share.photos && Array.isArray(share.photos) 
                           ? share.photos 
@@ -1406,12 +1295,12 @@ export default function RsvpPage() {
                         );
 
                         return (
-                          <div key={share.id} className="bg-surface border border-border shadow-[var(--shadow-soft)] rounded-[var(--radius-card)] p-3 space-y-2.5">
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-foreground text-[11px]">
+                          <div key={share.id} className="bg-surface border border-border rounded-[1.125rem] p-3.5 space-y-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-semibold text-foreground text-sm truncate">
                                 {share.guest ? `${share.guest.firstName} ${share.guest.lastName}` : 'Invité'}
                               </span>
-                              <span className="text-[9px] text-muted">
+                              <span className="text-xs text-muted shrink-0">
                                 {new Date(share.createdAt).toLocaleDateString('fr-FR', {
                                   day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
                                 })}
@@ -1419,7 +1308,7 @@ export default function RsvpPage() {
                             </div>
 
                             {share.message && (
-                              <p className="text-foreground/80 text-xs leading-relaxed whitespace-pre-line">
+                              <p className="text-foreground/85 text-sm leading-relaxed whitespace-pre-line">
                                 {share.message}
                               </p>
                             )}
@@ -1470,11 +1359,9 @@ export default function RsvpPage() {
             <div id="guest-panel-feed" role="tabpanel" aria-labelledby="guest-tab-feed" hidden={activeGuestTab !== 'feed'}>
             {activeGuestTab === 'feed' && (
               <div className="space-y-6 animate-fade-in">
-                <div className="space-y-0.5">
-                  <h3 className="font-semibold text-foreground text-sm">Actualités</h3>
-                  <p className="text-muted text-xs">
-                    Publications et annonces officielles de l&apos;événement.
-                  </p>
+                <div className="space-y-0.5 px-1">
+                  <h2 className="font-display text-xl font-semibold text-foreground">Actualités</h2>
+                  <p className="text-muted text-sm">Les annonces de l&apos;organisateur.</p>
                 </div>
 
                 {feedActionError && (
@@ -1490,13 +1377,11 @@ export default function RsvpPage() {
                   </div>
                 ) : feedPosts.length === 0 ? (
                   <div className="text-center py-16 space-y-3 max-w-xs mx-auto">
-                    <div className="inline-flex items-center justify-center bg-primary/10 p-5 rounded-[var(--radius-card)] text-primary">
-                      <MessageCircle className="w-8 h-8" />
-                    </div>
-                    <h4 className="font-semibold text-foreground text-sm">Pas encore de publication</h4>
-                    <p className="text-muted text-xs">
-                      Les annonces de l&apos;organisateur apparaîtront ici dès qu&apos;elles seront publiées.
-                    </p>
+                    <span className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-primary/10 text-primary">
+                      <MessageCircle className="w-7 h-7" aria-hidden />
+                    </span>
+                    <h3 className="font-display font-semibold text-foreground text-base">Rien pour l’instant</h3>
+                    <p className="text-muted text-sm">Les annonces arriveront ici.</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
@@ -1506,15 +1391,15 @@ export default function RsvpPage() {
                         : (post.mediaUrl ? [{ url: post.mediaUrl, type: post.mediaType || 'IMAGE' }] : []);
 
                       return (
-                        <div key={post.id} className="bg-surface border border-border shadow-[var(--shadow-soft)] rounded-[var(--radius-card)] p-4 space-y-4">
+                        <div key={post.id} className="bg-surface border border-border rounded-[1.125rem] p-4 space-y-3.5">
                           {/* Post Header */}
                           <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-semibold text-primary text-xs">
-                              O
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-display font-semibold text-primary text-sm">
+                              {(guest.organizationName || 'O').slice(0, 1).toUpperCase()}
                             </div>
                             <div>
-                              <span className="font-semibold text-foreground text-xs block leading-tight">Organisateur</span>
-                              <span className="text-[9px] text-muted font-medium">
+                              <span className="font-semibold text-foreground text-sm block leading-tight">{guest.organizationName || 'Organisateur'}</span>
+                              <span className="text-xs text-muted">
                                 {new Date(post.createdAt).toLocaleDateString('fr-FR', {
                                   day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
                                 })}
@@ -1524,7 +1409,7 @@ export default function RsvpPage() {
 
                           {/* Post Content */}
                           {post.content && (
-                            <p className="text-foreground text-xs leading-relaxed whitespace-pre-line">
+                            <p className="text-foreground text-sm leading-relaxed whitespace-pre-line">
                               {post.content}
                             </p>
                           )}
@@ -1594,16 +1479,17 @@ export default function RsvpPage() {
                           </div>
 
                           {/* Comments Section */}
-                          <div className="border-t border-border pt-3.5 space-y-4">
-                            <h4 className="font-semibold text-muted text-xs uppercase tracking-wider flex items-center gap-1.5">
-                              <MessageCircle className="w-3.5 h-3.5 text-muted" />
-                              Commentaires ({post.comments.length})
-                            </h4>
+                          <div className="border-t border-border pt-3 space-y-3">
+                            {post.comments.length > 0 && (
+                              <p className="text-xs font-semibold text-muted">
+                                {post.comments.length} commentaire{post.comments.length > 1 ? 's' : ''}
+                              </p>
+                            )}
 
                             {post.comments.length > 0 && (
                               <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
                                 {post.comments.map((comment: any) => (
-                                  <div key={comment.id} className="bg-surface border border-border shadow-[var(--shadow-soft)] p-3 rounded-[var(--radius-card)] text-[11px] space-y-1">
+                                  <div key={comment.id} className="bg-surface-muted p-3 rounded-2xl text-sm space-y-1">
                                     <div className="flex items-center justify-between">
                                       <span className="font-semibold text-primary">{comment.authorName}</span>
                                       <span className="text-xs text-muted font-medium">
@@ -1627,26 +1513,26 @@ export default function RsvpPage() {
                               <input
                                   id={`feed-comment-${post.id}`}
                                 type="text"
-                                  placeholder="Ex. : Super photo !"
+                                  placeholder="Écrire un commentaire…"
                                 value={guestCommentContents[post.id] || ''}
                                 onChange={(e) => setGuestCommentContents({ ...guestCommentContents, [post.id]: e.target.value })}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') handleCreateGuestComment(post.id);
                                 }}
-                                  className="w-full min-h-11 px-3.5 py-2.5 bg-surface border border-border shadow-[var(--shadow-soft)] rounded-xl text-base sm:text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors text-foreground placeholder:text-muted"
+                                  className="w-full min-h-11 px-4 py-2.5 bg-surface-muted border border-transparent rounded-full text-base sm:text-sm focus:outline-none focus:border-primary focus:bg-surface transition-colors text-foreground placeholder:text-muted"
                               />
                               </div>
                               <button
                                 type="button"
                                 onClick={() => handleCreateGuestComment(post.id)}
                                 disabled={guestCommentSubmitting[post.id] || !guestCommentContents[post.id]?.trim()}
-                                className="p-2.5 min-h-11 min-w-11 inline-flex items-center justify-center bg-primary hover:bg-primary/90 disabled:bg-primary/50 text-primary-foreground rounded-xl transition shadow-sm"
+                                className="h-11 w-11 shrink-0 inline-flex items-center justify-center bg-primary-solid hover:bg-primary-solid-hover disabled:opacity-50 text-primary-foreground rounded-full transition"
                                 aria-label="Publier le commentaire"
                               >
                                 {guestCommentSubmitting[post.id] ? (
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  <Loader2 className="w-4 h-4 animate-spin" />
                                 ) : (
-                                  <Send className="w-3.5 h-3.5" />
+                                  <Send className="w-4 h-4" />
                                 )}
                               </button>
                             </div>
@@ -1754,40 +1640,20 @@ export default function RsvpPage() {
           </div>
         )}
 
-        {/* Bouton sticky Pass Express — masqué sur l’onglet Table pour ne pas recouvrir les convives */}
-        {activeGuestTab !== 'table' && (
-          <div className="fixed left-1/2 -translate-x-1/2 z-30 w-full max-w-sm px-4 bottom-[calc(5.75rem+env(safe-area-inset-bottom))] pointer-events-none animate-fade-in">
+        {/* Pass QR toujours à portée de pouce (sauf sur le pass lui-même et le plan de table) */}
+        {activeGuestTab !== 'table' && activeGuestTab !== 'badge' && (
           <button
             type="button"
-              onClick={() => {
-                setSelectedQrGuestId(guest.id);
-                setShowFullScreenQr(true);
-              }}
-              className="pointer-events-auto w-full min-h-14 py-3 px-4 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-between gap-3 border border-primary/40 active:scale-[0.98] transition-all hover:bg-primary-hover cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 shrink-0 rounded-xl bg-white/15 text-white flex items-center justify-center font-bold text-xs ring-1 ring-white/25">
-                  <QrCode className="w-4 h-4" aria-hidden />
-              </div>
-                <div className="text-left min-w-0">
-                  <p className="text-sm font-bold leading-tight truncate">Mon Pass d&apos;entrée QR</p>
-                  <p className="text-xs text-white/80 truncate">
-                    {guest.ticketPlacement?.tableName || guest.tableDetails?.tableName
-                      ? `${guest.ticketPlacement?.tableName || guest.tableDetails?.tableName}${
-                          (guest.ticketPlacement?.seatNumber != null || guest.tableDetails?.seatIndex != null)
-                            ? ` • Place ${guest.ticketPlacement?.seatNumber ?? ((guest.tableDetails?.seatIndex ?? 0) + 1)}`
-                            : ''
-                        }`
-                      : 'Ouvrir le pass pour l’accueil'}
-                </p>
-              </div>
-            </div>
-              <span className="hidden min-[380px]:inline text-xs font-bold uppercase tracking-wider bg-white/20 px-2.5 py-1 rounded-lg text-white shrink-0">
-                Ouvrir
-            </span>
-              <Maximize2 className="w-4 h-4 shrink-0 opacity-90 min-[380px]:hidden" aria-hidden />
+            onClick={() => {
+              setSelectedQrGuestId(guest.id);
+              setShowFullScreenQr(true);
+            }}
+            className="fixed z-30 right-[max(1rem,env(safe-area-inset-right))] bottom-[calc(5.25rem+env(safe-area-inset-bottom))] inline-flex items-center gap-2 h-12 pl-3.5 pr-4 rounded-full bg-primary-solid text-primary-foreground text-sm font-semibold shadow-[0_10px_24px_-6px_rgba(4,120,87,0.55)] hover:bg-primary-solid-hover active:scale-95 transition animate-fade-in touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            aria-label="Ouvrir mon pass QR"
+          >
+            <QrCode className="w-5 h-5" aria-hidden />
+            Mon pass
           </button>
-        </div>
         )}
 
         {/* Modal QR Code Plein Écran & Contraste Élevé pour le scan d'accueil */}
@@ -1823,12 +1689,12 @@ export default function RsvpPage() {
             </button>
 
             <div
-                className="bg-surface rounded-3xl p-5 sm:p-7 text-center max-w-sm w-full shadow-2xl space-y-4 animate-scale-up border border-border"
+                className="bg-surface rounded-3xl p-5 sm:p-7 text-center max-w-sm w-full shadow-2xl space-y-4 animate-scale-up"
               onClick={(e) => e.stopPropagation()}
             >
                 {/* Sélecteur de billets si commande multiple */}
                 {guest.orderPasses && guest.orderPasses.passes.length > 1 && (
-                  <div className="flex items-center justify-center gap-1 p-1 rounded-xl bg-surface-muted border border-border" role="tablist" aria-label="Choisir le pass à scanner">
+                  <div className="flex items-center justify-center gap-1 p-1 rounded-full bg-surface-muted" role="tablist" aria-label="Choisir le pass à scanner">
                     {guest.orderPasses.passes.map((p) => {
                       const isSel = p.guestId === activeQrPass.guestId;
                       return (
@@ -1839,13 +1705,13 @@ export default function RsvpPage() {
                           aria-selected={isSel}
                           onClick={() => setSelectedQrGuestId(p.guestId)}
                           className={cn(
-                            'flex-1 min-h-10 px-2 py-1.5 rounded-lg text-xs font-bold transition touch-manipulation truncate',
+                            'flex-1 min-h-10 px-2 py-1.5 rounded-full text-xs font-semibold transition touch-manipulation truncate',
                             isSel
                               ? 'bg-primary text-primary-foreground shadow-xs'
                               : 'text-muted hover:text-foreground hover:bg-surface'
                           )}
                         >
-                          Pass {p.ticketNumber} ({p.firstName})
+                          {p.firstName || `Pass ${p.ticketNumber}`}
                         </button>
                       );
                     })}
@@ -1853,7 +1719,7 @@ export default function RsvpPage() {
                 )}
 
                 <div className="space-y-0.5">
-                  <h3 id="guest-pass-qr-title" className="text-xl font-bold text-foreground">
+                  <h3 id="guest-pass-qr-title" className="font-display text-xl font-semibold text-foreground">
                     {activeQrPass.firstName} {activeQrPass.lastName}
                 </h3>
                   {guest.orderPasses && guest.orderPasses.passes.length > 1 && (
@@ -1864,16 +1730,16 @@ export default function RsvpPage() {
               </div>
 
                 {(activeQrPass.tableName || activeQrPass.zoneName) && (
-                  <div className="py-2.5 px-4 rounded-xl bg-surface-muted border border-border text-left">
+                  <div className="py-2.5 px-4 rounded-2xl bg-primary/10 text-left">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-xs uppercase font-bold text-muted tracking-wider">Placement assigné</p>
+                      <p className="text-xs font-semibold text-primary">Votre place</p>
                       {activeQrPass.zoneName && (
                         <span className="text-xs font-semibold text-primary">
                           Zone {activeQrPass.zoneName}
                         </span>
                       )}
                     </div>
-                    <p className="text-base font-extrabold text-foreground">
+                    <p className="text-base font-semibold text-foreground">
                       {activeQrPass.tableName || 'Table assignée'}
                       {activeQrPass.seatNumber != null ? ` • Siège n° ${activeQrPass.seatNumber}` : ''}
                   </p>
@@ -1881,7 +1747,7 @@ export default function RsvpPage() {
               )}
 
                 {/* Fond blanc volontaire : contraste maximal pour le scan d'accueil */}
-                <div className="p-3 bg-white border-2 border-foreground rounded-2xl inline-block shadow-inner">
+                <div className="p-3 bg-white border border-border rounded-2xl inline-block">
                   <img
                     src={getGuestQrImageUrl(activeQrPass.guestId, 320)}
                     alt={`Pass QR de ${activeQrPass.firstName} ${activeQrPass.lastName}`}
@@ -1890,13 +1756,13 @@ export default function RsvpPage() {
               </div>
 
                 <p className="text-xs text-muted leading-snug">
-                Présentez ce QR Code directement à l&apos;équipe d&apos;accueil à l&apos;entrée de la salle.
+                À montrer à l&apos;accueil. Montez la luminosité si besoin.
               </p>
 
               <button
                 type="button"
                   onClick={closeFullScreenQr}
-                  className="w-full min-h-11 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary-hover transition"
+                  className="w-full min-h-12 py-2.5 rounded-2xl bg-primary-solid text-primary-foreground text-sm font-semibold hover:bg-primary-solid-hover transition"
               >
                 Fermer
               </button>
@@ -1908,28 +1774,26 @@ export default function RsvpPage() {
         {/* Modal Modification des coordonnées de l'invité */}
         {isEditIdentityOpen && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-[rgba(11,21,18,0.5)] animate-fade-in"
             role="dialog"
             aria-modal="true"
             aria-labelledby="edit-identity-title"
           >
             <div
               ref={editModalPanelRef}
-              className="bg-surface border border-border rounded-2xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto"
+              className="bg-surface rounded-t-3xl sm:rounded-3xl w-full max-w-lg px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-6 shadow-2xl space-y-4 max-h-[92dvh] overflow-y-auto animate-slide-up sm:animate-scale-up"
             >
-              <div className="flex items-center justify-between pb-3 border-b border-border">
+              <span aria-hidden className="mx-auto block h-1.5 w-10 rounded-full bg-border sm:hidden" />
+              <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-xl bg-primary/10 text-primary">
-                    <UserCog className="w-5 h-5" aria-hidden />
-        </div>
         <div>
-                    <h3 id="edit-identity-title" className="text-base font-bold text-foreground">
-                      {targetEditGuestId !== guestId ? 'Modifier le titulaire de ce billet' : 'Modifier mes coordonnées'}
+                    <h3 id="edit-identity-title" className="font-display text-xl font-semibold text-foreground">
+                      {targetEditGuestId !== guestId ? 'Nom sur ce billet' : 'Mes infos'}
                     </h3>
                     <p className="text-xs text-muted">
                       {targetEditGuestId !== guestId
-                        ? 'Indiquez les coordonnées de la personne qui utilisera ce pass d’entrée le jour J.'
-                        : 'Ce nom figurera sur votre pass QR, votre siège et à l’accueil.'}
+                        ? 'La personne qui utilisera ce pass.'
+                        : 'Ce nom figure sur votre pass.'}
           </p>
         </div>
       </div>
@@ -1938,7 +1802,7 @@ export default function RsvpPage() {
             type="button"
                   disabled={savingIdentity}
                   onClick={() => setIsEditIdentityOpen(false)}
-                  className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 rounded-xl text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  className="h-11 w-11 shrink-0 inline-flex items-center justify-center rounded-full bg-surface-muted text-foreground hover:bg-border transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                   aria-label="Fermer"
                 >
                   <X className="w-5 h-5" />
@@ -1952,9 +1816,9 @@ export default function RsvpPage() {
               )}
 
               {identitySaveSuccess && (
-                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 text-xs font-semibold flex items-center gap-2" role="status">
+                <div className="p-3 rounded-xl bg-primary/10 text-primary text-sm font-semibold flex items-center gap-2" role="status">
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
-                  Vos informations ont été enregistrées avec succès.
+                  C’est enregistré.
           </div>
         )}
 
@@ -1970,7 +1834,7 @@ export default function RsvpPage() {
                       value={guestFirstName}
                       onChange={(e) => setGuestFirstName(e.target.value)}
                       disabled={savingIdentity}
-                      className="w-full min-h-11 px-3 py-2 border border-border rounded-xl text-sm bg-surface text-foreground focus:outline-primary"
+                      className="w-full min-h-12 px-3.5 py-2 border border-transparent rounded-xl text-base sm:text-sm bg-surface-muted text-foreground focus:outline-none focus:border-primary focus:bg-surface transition"
                       placeholder="Ex : Paul"
                       required
                     />
@@ -1985,7 +1849,7 @@ export default function RsvpPage() {
                       value={guestLastName}
                       onChange={(e) => setGuestLastName(e.target.value)}
                       disabled={savingIdentity}
-                      className="w-full min-h-11 px-3 py-2 border border-border rounded-xl text-sm bg-surface text-foreground focus:outline-primary"
+                      className="w-full min-h-12 px-3.5 py-2 border border-transparent rounded-xl text-base sm:text-sm bg-surface-muted text-foreground focus:outline-none focus:border-primary focus:bg-surface transition"
                       placeholder="Ex : Kasongo"
                     />
         </div>
@@ -2001,24 +1865,19 @@ export default function RsvpPage() {
                     value={guestPhone}
                     onChange={(e) => setGuestPhone(e.target.value)}
                     disabled={savingIdentity}
-                    className="w-full min-h-11 px-3 py-2 border border-border rounded-xl text-sm bg-surface text-foreground focus:outline-primary"
+                    className="w-full min-h-12 px-3.5 py-2 border border-transparent rounded-xl text-base sm:text-sm bg-surface-muted text-foreground focus:outline-none focus:border-primary focus:bg-surface transition"
                     placeholder="Ex : +243 812 345 678"
                   />
-                  <p className="text-[11px] text-muted">
-                    Utilisé pour vous transmettre votre badge et les notifications de placement.
-                </p>
+                  <p className="text-xs text-muted">Pour recevoir votre pass et votre place.</p>
               </div>
 
                 {/* Préférences & Remarques */}
-                <div className="pt-2 border-t border-border space-y-3">
-                  <p className="text-xs font-bold text-muted uppercase tracking-wider flex items-center gap-1.5">
-                    <Utensils className="w-3.5 h-3.5 text-primary" />
-                    Préférences & remarques
-                  </p>
+                <div className="pt-3 border-t border-border space-y-3">
+                  <p className="font-display text-base font-semibold text-foreground">Préférences</p>
 
                   <div className="space-y-1">
                     <label htmlFor="modal-allergies" className="block text-xs font-semibold text-foreground">
-                      Allergies ou régimes particuliers
+                      Allergies ou régime
                   </label>
                     <input
                       id="modal-allergies"
@@ -2026,40 +1885,40 @@ export default function RsvpPage() {
                       value={allergies}
                       onChange={(e) => setAllergies(e.target.value)}
                       disabled={savingIdentity}
-                      className="w-full min-h-11 px-3 py-2 border border-border rounded-xl text-sm bg-surface text-foreground focus:outline-primary"
+                      className="w-full min-h-12 px-3.5 py-2 border border-transparent rounded-xl text-base sm:text-sm bg-surface-muted text-foreground focus:outline-none focus:border-primary focus:bg-surface transition"
                       placeholder="Ex : Sans arachides, sans gluten..."
                     />
                 </div>
 
                   <div className="space-y-1">
                     <label htmlFor="modal-notes" className="block text-xs font-semibold text-foreground">
-                      Message / Remarques pour l&apos;organisateur
+                      Un mot pour l&apos;organisateur
                   </label>
                   <textarea
                       id="modal-notes"
                     value={additionalNotes}
                       onChange={(e) => setAdditionalNotes(e.target.value)}
                       disabled={savingIdentity}
-                      className="w-full min-h-20 px-3 py-2 border border-border rounded-xl text-sm bg-surface text-foreground focus:outline-primary"
+                      className="w-full min-h-20 px-3.5 py-2.5 border border-transparent rounded-xl text-base sm:text-sm bg-surface-muted text-foreground focus:outline-none focus:border-primary focus:bg-surface transition"
                       placeholder="Une précision sur votre venue, accompagnement..."
                     rows={2}
                   />
                   </div>
                 </div>
 
-                <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-3 border-t border-border">
+                <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-2">
                   <button
                     type="button"
                     disabled={savingIdentity}
                     onClick={() => setIsEditIdentityOpen(false)}
-                    className="w-full sm:w-auto min-h-11 px-4 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
+                    className="w-full sm:w-auto min-h-12 px-4 py-2.5 rounded-2xl text-sm font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition"
                   >
                     Annuler
                   </button>
                 <button
                   type="submit"
                     disabled={savingIdentity}
-                    className="w-full sm:w-auto min-h-11 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary-hover shadow-sm transition flex items-center justify-center gap-2"
+                    className="w-full sm:w-auto min-h-12 px-5 py-2.5 rounded-2xl bg-primary-solid text-primary-foreground text-sm font-semibold hover:bg-primary-solid-hover transition flex items-center justify-center gap-2"
                 >
                     {savingIdentity ? (
                     <>
@@ -2067,7 +1926,7 @@ export default function RsvpPage() {
                         Enregistrement…
                     </>
                   ) : (
-                      'Enregistrer mes coordonnées'
+                      'Enregistrer'
                   )}
                 </button>
                 </div>

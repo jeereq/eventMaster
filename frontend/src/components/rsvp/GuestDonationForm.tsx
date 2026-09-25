@@ -259,7 +259,7 @@ export default function GuestDonationForm({
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Choix des montants suggérés */}
         <div className="space-y-1.5">
-          <label className="block text-xs font-bold uppercase tracking-wider text-muted">
+          <label className="block text-sm font-semibold text-foreground">
             Montant
           </label>
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-2" role="radiogroup" aria-label="Montant du don">
@@ -333,7 +333,7 @@ export default function GuestDonationForm({
 
         {/* Mot d'encouragement / note */}
         <div className="space-y-1">
-          <label htmlFor="guest-donation-note" className="block text-xs font-bold uppercase tracking-wider text-muted">
+          <label htmlFor="guest-donation-note" className="block text-sm font-semibold text-foreground">
             Message de soutien (optionnel)
           </label>
           <Input
@@ -349,7 +349,7 @@ export default function GuestDonationForm({
 
         {/* Choix du moyen de paiement */}
         <div className="space-y-2">
-          <label className="block text-xs font-bold uppercase tracking-wider text-muted">
+          <label className="block text-sm font-semibold text-foreground">
             Mode de règlement
           </label>
           <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Mode de règlement">
