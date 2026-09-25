@@ -42,6 +42,7 @@ import { LANDING_PLANS } from '@/config/landingPricing';
 import { TourProvider } from '@/context/TourContext';
 import ProductTourOverlay from '@/components/guide/ProductTourOverlay';
 import FirstLoginTourHost from '@/components/guide/FirstLoginTourHost';
+import { useAdminPendingCounts, type AdminPendingCounts } from '@/components/admin/useAdminPendingCounts';
 
 interface NavItem {
  name: string;
@@ -51,6 +52,8 @@ interface NavItem {
  /** Texte d’aide pour l’infobulle */
  description?: string;
  icon: React.ComponentType<{ className?: string }>;
+ /** Pastille « à traiter » (ex. demandes en attente) */
+ badge?: number;
 }
 
 interface NavSection {
@@ -213,8 +216,9 @@ function buildDashboardNav(opts: {
  audience?: string | null;
  commercialPermissions?: import('@/context/AuthContext').CommercialGrantedPermissions | null;
  allStudiosBlocked?: boolean;
+ adminCounts?: AdminPendingCounts;
 }): NavSection[] {
- const { role, access, workspace, accountKind, isClientAccount, tenantPlan, audience, commercialPermissions, allStudiosBlocked } = opts;
+ const { role, access, workspace, accountKind, isClientAccount, tenantPlan, audience, commercialPermissions, allStudiosBlocked, adminCounts } = opts;
  const vendorOnly = accountKind === 'VENDOR';
  const isServiceProvider =
   tenantPlan === 'SERVICE' ||
@@ -224,15 +228,23 @@ function buildDashboardNav(opts: {
  if (role === 'SUPER_ADMIN') {
   return buildNavSections(
    navSection('Pilotage', [
-    { name: 'Accueil', href: '/dashboard?tab=overview', tab: 'overview', tourId: 'nav-overview', icon: LayoutDashboard },
+    { name: 'Accueil', href: '/dashboard?tab=overview', tab: 'overview', tourId: 'nav-overview', icon: LayoutDashboard, description: 'Ce qui attend une action aujourd’hui' },
     { name: 'Analyses', href: '/dashboard?tab=analytics&section=overview', tab: 'analytics', tourId: 'nav-analytics', icon: BarChart3 },
-    { name: 'Journal d’audit', href: '/dashboard/audit', tourId: 'nav-audit', icon: ScrollText },
    ]),
    navSection('Organisations', [
-    { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', tourId: 'nav-tenants', icon: Building2 },
+    { name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', tourId: 'nav-tenants', icon: Building2, badge: adminCounts?.licensesExpiring },
     { name: 'Utilisateurs', href: '/dashboard?tab=users', tab: 'users', tourId: 'nav-users', icon: Users },
-    { name: 'Événements', href: '/dashboard/admin/events', tourId: 'nav-events-admin', icon: Calendar },
-    { name: 'Invités', href: '/dashboard/admin/guests', tourId: 'nav-guests', icon: Users },
+    { name: 'Événements', href: '/dashboard/admin/events', tourId: 'nav-events-admin', icon: Calendar, description: 'Événements de toutes les organisations' },
+    { name: 'Invités', href: '/dashboard/admin/guests', tourId: 'nav-guests', icon: Users, description: 'Invités de toutes les organisations' },
+   ]),
+   navSection('Facturation', [
+    { name: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', tourId: 'nav-subscription-requests', icon: Clock, badge: adminCounts?.pendingRequests },
+    { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', tourId: 'nav-invoices', icon: FileText, badge: adminCounts?.unpaidInvoices },
+    { name: 'Paiements', href: '/dashboard/admin/payments', tourId: 'nav-payments-admin', icon: CreditCard },
+    { name: 'Versements SaaS', href: '/dashboard/admin/payouts', tourId: 'nav-payouts', icon: Wallet, badge: adminCounts?.saasPayoutsDue },
+    { name: 'Dons solidaires', href: '/dashboard/admin/donations', tourId: 'nav-donations-admin', icon: Heart },
+    { name: 'Jetons IA', href: '/dashboard/admin/ai-tokens', tourId: 'nav-ai-tokens', icon: Coins },
+    { name: 'Forfaits & tarifs', href: '/dashboard?tab=subscription-plans', tab: 'subscription-plans', tourId: 'nav-subscription-plans', icon: CreditCard },
    ]),
    navSection('Contenu & vitrine', [
     { name: 'Modèles invitation', href: '/dashboard?tab=templates', tab: 'templates', tourId: 'nav-templates', icon: FileText },
@@ -240,17 +252,9 @@ function buildDashboardNav(opts: {
     { name: 'Messages automatiques', href: '/dashboard?tab=message-templates', tab: 'message-templates', tourId: 'nav-message-templates', icon: MessageSquare },
     { name: 'Catalogue', href: '/dashboard/admin/catalogue', tourId: 'nav-catalog-admin', icon: Store },
    ]),
-   navSection('Facturation', [
-    { name: 'Demandes abonnement', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', tourId: 'nav-subscription-requests', icon: Clock },
-    { name: 'Forfaits & tarifs', href: '/dashboard?tab=subscription-plans', tab: 'subscription-plans', tourId: 'nav-subscription-plans', icon: CreditCard },
-    { name: 'Paiements', href: '/dashboard/admin/payments', tourId: 'nav-payments-admin', icon: CreditCard },
-    { name: 'Dons solidaires', href: '/dashboard/admin/donations', tourId: 'nav-donations-admin', icon: Heart },
-    { name: 'Jetons IA', href: '/dashboard/admin/ai-tokens', tourId: 'nav-ai-tokens', icon: Coins },
-    { name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', tourId: 'nav-invoices', icon: FileText },
-    { name: 'Versements SaaS', href: '/dashboard/admin/payouts', tourId: 'nav-payouts', icon: Wallet },
-   ]),
    navSection('Système', [
     { name: 'Réglages plateforme', href: '/dashboard?tab=settings', tab: 'settings', tourId: 'nav-settings', icon: Key },
+    { name: 'Journal d’audit', href: '/dashboard/audit', tourId: 'nav-audit', icon: ScrollText },
    ]),
    navSection('Compte', compteNavItems()),
   );
@@ -578,7 +582,9 @@ function SidebarNav({
  const isNotifications = item.href === '/dashboard/notifications';
  const unreadLabel = isNotifications && unreadCount > 0
   ? `${unreadCount} non lue${unreadCount > 1 ? 's' : ''}`
-  : null;
+  : !isNotifications && item.badge
+    ? `${item.badge} à traiter`
+    : null;
 
  const tip = item.description ? (
  <span className="flex flex-col gap-0.5 text-left">
@@ -645,6 +651,9 @@ function SidebarNav({
  isActive || isSheet ? 'text-primary' : 'text-muted group-hover:text-foreground',
  )}
  />
+ {collapsed && !isNotifications && item.badge ? (
+  <span aria-hidden className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-festive-accent ring-2 ring-surface" />
+ ) : null}
  {collapsed && isNotifications ? (
   <UnreadCountBadge
     count={unreadCount}
@@ -665,6 +674,11 @@ function SidebarNav({
     count={unreadCount}
     className="ml-auto min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full bg-danger text-primary-foreground text-[10px] font-bold tabular-nums"
   />
+ ) : null}
+ {!collapsed && !isNotifications && item.badge ? (
+  <span className="ml-auto min-w-[20px] h-5 px-1.5 inline-flex items-center justify-center rounded-full bg-festive-accent-soft text-festive-accent text-[11px] font-bold tabular-nums">
+    {item.badge > 99 ? '99+' : item.badge}
+  </span>
  ) : null}
  </Link>
  </Tooltip>
@@ -691,6 +705,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
  const router = useRouter();
  const pathname = usePathname();
  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+ const adminCounts = useAdminPendingCounts(user?.role === 'SUPER_ADMIN' && !supportSession);
  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
   if (typeof window === 'undefined') return false;
   try {
@@ -901,6 +916,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   audience: planFeatures?.audience,
   commercialPermissions: user?.commercialPermissions,
   allStudiosBlocked,
+  adminCounts,
  });
  const showRealisations = navSections.some((section) =>
   section.items.some((item) => item.href === '/dashboard/publications'),
@@ -913,6 +929,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   isClientAccount,
   allStudiosBlocked,
   showRealisations,
+  adminCounts,
  });
  const sheetNavSections = filterNavForMobileSheet(navSections, bottomNavItems);
 
@@ -1028,12 +1045,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {!sidebarCollapsed && (
               <>
                 {user?.role === 'SUPER_ADMIN' ? (
-                  <div className="p-3 rounded-2xl bg-primary/5 border border-primary/15">
-                    <div className="text-xs text-muted font-medium">Rôle global</div>
-                    <div className="font-semibold text-sm mt-0.5 text-foreground">Super Admin</div>
-                    <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 text-xs font-bold text-primary">
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      Plateforme SaaS
+                  <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl bg-primary/5 border border-primary/15">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <ShieldCheck className="w-4 h-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-semibold text-sm text-foreground leading-tight">Super Admin</div>
+                      <div className="text-xs text-muted leading-tight">Toute la plateforme</div>
                     </div>
                   </div>
                 ) : user?.role === 'COMMERCIAL' ? (
@@ -1165,9 +1183,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }
         >
           {user?.role === 'SUPER_ADMIN' ? (
-            <div className="p-3 rounded-2xl bg-primary/5 border border-primary/15">
-              <div className="text-xs text-muted font-medium">Rôle global</div>
-              <div className="font-semibold text-sm mt-0.5 text-foreground">Super Admin</div>
+            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-2xl bg-primary/5 border border-primary/15">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <ShieldCheck className="w-4 h-4" />
+              </span>
+              <div className="min-w-0">
+                <div className="font-semibold text-sm text-foreground leading-tight">Super Admin</div>
+                <div className="text-xs text-muted leading-tight">Toute la plateforme</div>
+              </div>
             </div>
           ) : user?.role === 'COMMERCIAL' ? (
             <div className="p-3 rounded-2xl bg-primary/5 border border-primary/15">
@@ -1275,6 +1298,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         accountKind={tenant?.accountKind}
         isClientAccount={isClientAccount}
         showRealisations={showRealisations}
+        adminCounts={adminCounts}
         mobileMenuOpen={mobileMenuOpen}
         onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
         onCloseMobileMenu={() => setMobileMenuOpen(false)}

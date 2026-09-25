@@ -10,7 +10,7 @@ import {
  PlusCircle, AlertCircle, Award, CheckCircle, Shield,
  Building2, Activity, TrendingUp, Clock, Trash2, Edit2, Key,
   Globe, Search, Filter, Check, X, FileText, Plus, Loader2, Copy, Eye,
-  BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare, History, Briefcase, Wallet, LogIn, Ticket, ClipboardList, ScanLine, Heart
+  BarChart3, PieChart, ChevronLeft, ChevronRight, CheckSquare, Sparkles, MapPin, Download, MessageSquare, History, Briefcase, Wallet, LogIn, Ticket, ClipboardList, ScanLine, Heart, Lightbulb
 } from 'lucide-react';
 import GuestMessageTemplatesPanel from './GuestMessageTemplatesPanel';
 import { cn } from '@/lib/cn';
@@ -355,7 +355,7 @@ const ADMIN_TAB_META: Record<AdminTabId, { title: string; description: string; t
  tip: 'Les Super Admins n’appartiennent à aucune organisation.',
  },
  templates: {
- title: 'Catalogue modèles (Super Admin)',
+ title: 'Modèles d’invitation',
  description: 'Supervision globale : modèles publics EventMaster + modèles privés des organisations. Activez « Vitrine landing » ici.',
  tip: 'Créer / Modifier ouvre le concepteur visuel, puis vous revient automatiquement sur ce catalogue.',
  },
@@ -2143,16 +2143,75 @@ function DashboardPageContent() {
 
  const statCardClass = 'bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3';
 
+ // Actions principales de l’onglet : dans l’en-tête de page (Super Admin) ou du panneau (Commercial).
+ const panelActions = (
+ <>
+ {activeTab === 'tenants' && (
+ isCommercialPlatform ? (
+ <Link href="/dashboard/commercial">
+ <Button type="button" size="sm" variant="secondary" leftIcon={<Plus className="w-4 h-4" />}>
+ Nouvelle organisation
+ </Button>
+ </Link>
+ ) : (
+ <Button type="button" size="sm" onClick={handleOpenCreateTenantModal} leftIcon={<Plus className="w-4 h-4" />}>
+ Créer une organisation
+ </Button>
+ )
+ )}
+
+ {activeTab === 'users' && isSuperAdmin && (
+ <Button type="button" size="sm" onClick={handleOpenCreateUserModal} leftIcon={<Plus className="w-4 h-4" />}>
+ Créer un utilisateur
+ </Button>
+ )}
+
+                  {activeTab === 'templates' && canManageTemplates && (
+ <Link href="/dashboard/templates?new=1&from=admin">
+ <Button type="button" size="sm" leftIcon={<Plus className="w-4 h-4" />}>
+ Nouveau modèle
+ </Button>
+ </Link>
+ )}
+
+ {activeTab === 'events' && isSuperAdmin && (
+ <Button type="button" size="sm" onClick={handleOpenCreateEventModal} leftIcon={<Plus className="w-4 h-4" />}>
+ Créer un événement
+ </Button>
+ )}
+
+ {activeTab === 'guests' && isSuperAdmin && (
+ <div className="flex gap-2">
+ {adminGuests.length > 0 && (
+ <Button type="button" size="sm" variant="secondary" onClick={handleExportAdminGuests} leftIcon={<Download className="w-4 h-4" />}>
+ Exporter CSV
+ </Button>
+ )}
+ <Button type="button" size="sm" onClick={handleOpenCreateGuestModal} leftIcon={<Plus className="w-4 h-4" />}>
+ Créer un invité
+ </Button>
+ </div>
+ )}
+ </>
+ );
+
   return (
  <>
  <div className="space-y-6">
  <PageHeader
- title={isCommercialPlatform ? 'Espace commercial' : 'Console Super Admin'}
+ title={
+ isCommercialPlatform
+ ? 'Espace commercial'
+ : tabMeta.title
+ }
  description={
  isCommercialPlatform
                 ? 'Parrainage et commissions.'
-                : 'Organisations, contenu, facturation.'
+                : activeTab === 'overview'
+                  ? `Bonjour${user?.name ? ` ${user.name}` : ''}, voici ce qui attend une action sur la plateforme.`
+                  : panelDescription
  }
+ action={isSuperAdmin && activeTab !== 'overview' ? panelActions : undefined}
  breadcrumbs={
  <Breadcrumbs
  items={[
@@ -2166,8 +2225,45 @@ function DashboardPageContent() {
  {error && <Alert variant="error">{error}</Alert>}
           {notice && <Alert variant="success">{notice}</Alert>}
 
- {adminData && activeTab !== 'overview' && (
- <div className={`grid gap-3 ${isCommercialPlatform ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-2 xl:grid-cols-4'}`}>
+ {adminData && activeTab !== 'overview' && isSuperAdmin && (
+ <nav aria-label="Chiffres clés de la plateforme" className="-mx-4 px-4 sm:mx-0 sm:px-0 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none]">
+ <ul className="flex sm:flex-wrap gap-2 w-max sm:w-auto">
+ {[
+ { label: 'organisations', value: adminData.stats.tenants, hint: `${activeLicensesCount} licence${activeLicensesCount !== 1 ? 's' : ''} active${activeLicensesCount !== 1 ? 's' : ''}`, href: '/dashboard?tab=tenants', icon: Building2, tab: 'tenants' },
+ { label: 'utilisateurs', value: adminData.stats.users, hint: `${paidPlansCount} org. payante${paidPlansCount !== 1 ? 's' : ''}`, href: '/dashboard?tab=users', icon: Users, tab: 'users' },
+ { label: 'événements', value: adminData.stats.events, href: '/dashboard/admin/events', icon: Calendar },
+ { label: 'invités', value: adminData.stats.guests, href: '/dashboard/admin/guests', icon: Mail },
+ ].map((chip) => {
+ const ChipIcon = chip.icon;
+ const current = chip.tab === activeTab;
+ return (
+ <li key={chip.label}>
+ <Link
+ href={chip.href}
+ aria-current={current ? 'page' : undefined}
+ className={cn(
+ 'inline-flex items-center gap-2 min-h-11 pl-2 pr-3.5 rounded-full border text-sm transition whitespace-nowrap touch-manipulation',
+ current
+ ? 'border-primary/30 bg-primary/10 text-foreground'
+ : 'border-border bg-surface text-foreground hover:bg-surface-muted',
+ )}
+ >
+ <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary">
+ <ChipIcon className="w-3.5 h-3.5" aria-hidden />
+ </span>
+ <span className="font-semibold tabular-nums">{chip.value.toLocaleString('fr-FR')}</span>
+ <span className="text-muted">{chip.label}</span>
+ {chip.hint ? <span className="hidden lg:inline text-xs text-muted">· {chip.hint}</span> : null}
+ </Link>
+ </li>
+ );
+ })}
+ </ul>
+ </nav>
+ )}
+
+ {adminData && activeTab !== 'overview' && isCommercialPlatform && (
+ <div className="grid gap-3 grid-cols-2 xl:grid-cols-4">
  <div className={statCardClass}>
  <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-muted uppercase tracking-wider">
@@ -2235,61 +2331,7 @@ function DashboardPageContent() {
  </div>
  </div>
  </>
- ) : (
- <>
- <div className={statCardClass}>
- <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-muted uppercase tracking-wider">Utilisateurs</span>
- <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
- <Users className="w-4 h-4" />
- </div>
- </div>
- <div>
- <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.users}</span>
-                      <p className="text-xs text-muted mt-1">
- {paidPlansCount} org. payante{paidPlansCount !== 1 ? 's' : ''}
- </p>
- </div>
- </div>
- <div className={statCardClass}>
- <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-muted uppercase tracking-wider">Événements</span>
-                      <div className="bg-primary/10 text-primary p-1.5 rounded-[var(--radius-button)]">
- <Calendar className="w-4 h-4" />
- </div>
- </div>
- <div>
- <span className="text-2xl font-semibold text-foreground tracking-tight">{adminData.stats.events}</span>
-                      <p className="text-xs text-muted mt-1">Tous tenants confondus</p>
- </div>
- </div>
- <div className={statCardClass}>
- <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-muted uppercase tracking-wider">
- {pendingSubscriptionCount > 0 ? 'Demandes' : 'Invités'}
- </span>
- <div className={cn(
- 'p-1.5 rounded-[var(--radius-button)]',
- pendingSubscriptionCount > 0
-                          ? 'bg-festive-accent-soft text-festive-accent'
-                          : 'bg-festive-accent-soft text-festive-accent',
- )}>
- {pendingSubscriptionCount > 0 ? <Clock className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
- </div>
- </div>
- <div>
- <span className="text-2xl font-semibold text-foreground tracking-tight">
- {pendingSubscriptionCount > 0 ? pendingSubscriptionCount : adminData.stats.guests}
- </span>
-                      <p className="text-xs text-muted mt-1">
- {pendingSubscriptionCount > 0
- ? `Abonnements en attente · ${adminData.stats.guests} invités`
- : 'Enregistrés au total'}
- </p>
- </div>
- </div>
- </>
- )}
+ ) : null}
  </div>
  )}
 
@@ -2297,6 +2339,14 @@ function DashboardPageContent() {
 
  {activeTab !== 'overview' && (
  <div className="bg-surface border border-border rounded-[var(--radius-card)] overflow-hidden">
+ {isSuperAdmin ? (
+ tabMeta.tip ? (
+ <p className="border-b border-border bg-surface-muted/50 px-4 sm:px-5 py-2.5 flex items-start gap-2 text-xs text-muted leading-relaxed">
+ <Lightbulb className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" aria-hidden />
+ {tabMeta.tip}
+ </p>
+ ) : null
+ ) : (
  <div className="border-b border-border bg-surface-muted/50 px-5 py-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
  <div className="min-w-0">
  <h2 className="text-base font-semibold text-foreground tracking-tight flex items-center gap-2">
@@ -2319,55 +2369,13 @@ function DashboardPageContent() {
  )}
  </div>
 
+ {!isSuperAdmin && (
  <div className="flex flex-wrap items-center gap-2 shrink-0">
- {activeTab === 'tenants' && (
- isCommercialPlatform ? (
- <Link href="/dashboard/commercial">
- <Button type="button" size="sm" variant="secondary" leftIcon={<Plus className="w-4 h-4" />}>
- Nouvelle organisation
- </Button>
- </Link>
- ) : (
- <Button type="button" size="sm" onClick={handleOpenCreateTenantModal} leftIcon={<Plus className="w-4 h-4" />}>
- Créer une organisation
- </Button>
- )
- )}
-
- {activeTab === 'users' && isSuperAdmin && (
- <Button type="button" size="sm" onClick={handleOpenCreateUserModal} leftIcon={<Plus className="w-4 h-4" />}>
- Créer un utilisateur
- </Button>
- )}
-
-                  {activeTab === 'templates' && canManageTemplates && (
- <Link href="/dashboard/templates?new=1&from=admin">
- <Button type="button" size="sm" leftIcon={<Plus className="w-4 h-4" />}>
- Nouveau modèle
- </Button>
- </Link>
- )}
-
- {activeTab === 'events' && isSuperAdmin && (
- <Button type="button" size="sm" onClick={handleOpenCreateEventModal} leftIcon={<Plus className="w-4 h-4" />}>
- Créer un événement
- </Button>
- )}
-
- {activeTab === 'guests' && isSuperAdmin && (
- <div className="flex gap-2">
- {adminGuests.length > 0 && (
- <Button type="button" size="sm" variant="secondary" onClick={handleExportAdminGuests} leftIcon={<Download className="w-4 h-4" />}>
- Exporter CSV
- </Button>
- )}
- <Button type="button" size="sm" onClick={handleOpenCreateGuestModal} leftIcon={<Plus className="w-4 h-4" />}>
- Créer un invité
- </Button>
+ {panelActions}
  </div>
  )}
  </div>
- </div>
+ )}
 
  {activeTab === 'analytics' && user?.role === 'SUPER_ADMIN' && (
  <div className="px-5 py-3 border-b border-border bg-surface">
@@ -2720,6 +2728,7 @@ function DashboardPageContent() {
 
  return (
  <ProjectCard
+ coverClassName={isSuperAdmin ? 'aspect-[5/2] sm:aspect-[16/9]' : undefined}
  key={t.id}
  id={t.id}
  title={t.name}
@@ -2897,6 +2906,7 @@ function DashboardPageContent() {
 
  return (
  <ProjectCard
+ coverClassName={isSuperAdmin ? 'aspect-[5/2] sm:aspect-[16/9]' : undefined}
  key={u.id}
  id={u.id}
  title={u.name || 'Sans nom'}
@@ -3176,6 +3186,7 @@ function DashboardPageContent() {
 
  return (
  <ProjectCard
+ coverClassName={isSuperAdmin ? 'aspect-[5/2] sm:aspect-[16/9]' : undefined}
  key={e.id}
  id={e.id}
  title={e.title}
@@ -3311,6 +3322,7 @@ function DashboardPageContent() {
 
  return (
  <ProjectCard
+ coverClassName={isSuperAdmin ? 'aspect-[5/2] sm:aspect-[16/9]' : undefined}
  key={g.id}
  id={g.id}
  title={`${g.lastName} ${g.firstName}`}

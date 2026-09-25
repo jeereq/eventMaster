@@ -12,7 +12,6 @@ import {
   Inbox,
   ScanLine,
   Building2,
-  Users,
   Clock,
   Briefcase,
   FileText,
@@ -27,6 +26,7 @@ import type { WorkspaceModules } from '@/lib/planAccess';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { cn } from '@/lib/cn';
 import { scrollAppToTop, tapHaptic, useMobileRouteFade } from '@/lib/mobileNative';
+import type { AdminPendingCounts } from '@/components/admin/useAdminPendingCounts';
 
 export interface MobileBottomNavItem {
   id: string;
@@ -35,6 +35,8 @@ export interface MobileBottomNavItem {
   tab?: string;
   icon: React.ComponentType<{ className?: string }>;
   isMenuTrigger?: boolean;
+  /** Pastille « à traiter » */
+  badge?: number;
 }
 
 interface DashboardMobileBottomBarProps {
@@ -44,6 +46,7 @@ interface DashboardMobileBottomBarProps {
   accountKind?: TenantAccountKind;
   isClientAccount?: boolean;
   showRealisations?: boolean;
+  adminCounts?: AdminPendingCounts;
   mobileMenuOpen: boolean;
   onToggleMobileMenu: () => void;
   onCloseMobileMenu: () => void;
@@ -173,8 +176,11 @@ export function buildMobileBottomItems(
     allStudiosBlocked?: boolean;
     /** Le menu du compte donne accès aux Réalisations (même règle que la sidebar). */
     showRealisations?: boolean;
+    adminCounts?: AdminPendingCounts;
   },
 ): MobileBottomNavItem[] {
+  // Console Super Admin : pas de simulateur client, la barre reste dédiée au pilotage.
+  if (input.role === 'SUPER_ADMIN') return buildRoleMobileBottomItems(input);
   const items = withSimulatorTab(buildRoleMobileBottomItems(input));
   return input.showRealisations ? withRealisationsTab(items) : items;
 }
@@ -186,7 +192,9 @@ function buildRoleMobileBottomItems({
   accountKind,
   isClientAccount,
   allStudiosBlocked,
+  adminCounts,
 }: {
+  adminCounts?: AdminPendingCounts;
   role?: string;
   access?: OrgAccess | null;
   workspace: WorkspaceModules;
@@ -197,10 +205,10 @@ function buildRoleMobileBottomItems({
   // 1. Super Admin
   if (role === 'SUPER_ADMIN') {
     return [
-      { id: 'overview', name: 'Synthèse', href: '/dashboard?tab=overview', tab: 'overview', icon: LayoutDashboard },
-      { id: 'tenants', name: 'Organisations', href: '/dashboard?tab=tenants', tab: 'tenants', icon: Building2 },
-      { id: 'users', name: 'Utilisateurs', href: '/dashboard?tab=users', tab: 'users', icon: Users },
-      { id: 'requests', name: 'Demandes', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', icon: Clock },
+      { id: 'overview', name: 'Accueil', href: '/dashboard?tab=overview', tab: 'overview', icon: LayoutDashboard },
+      { id: 'tenants', name: 'Orgas', href: '/dashboard?tab=tenants', tab: 'tenants', icon: Building2, badge: adminCounts?.licensesExpiring },
+      { id: 'requests', name: 'Demandes', href: '/dashboard?tab=subscription-requests', tab: 'subscription-requests', icon: Clock, badge: adminCounts?.pendingRequests },
+      { id: 'invoices', name: 'Factures', href: '/dashboard?tab=invoices', tab: 'invoices', icon: FileText, badge: adminCounts?.unpaidInvoices },
       { id: 'menu', name: 'Plus', href: '#menu', icon: Menu, isMenuTrigger: true },
     ];
   }
@@ -316,6 +324,7 @@ export default function DashboardMobileBottomBar({
   accountKind,
   isClientAccount,
   showRealisations,
+  adminCounts,
   mobileMenuOpen,
   onToggleMobileMenu,
   onCloseMobileMenu,
@@ -343,8 +352,9 @@ export default function DashboardMobileBottomBar({
       isClientAccount,
       allStudiosBlocked,
       showRealisations,
+      adminCounts,
     });
-  }, [role, access, workspace, accountKind, isClientAccount, allStudiosBlocked, showRealisations]);
+  }, [role, access, workspace, accountKind, isClientAccount, allStudiosBlocked, showRealisations, adminCounts]);
 
   useMobileRouteFade();
 
@@ -380,8 +390,13 @@ export default function DashboardMobileBottomBar({
                   <Icon className="w-6 h-6" aria-hidden />
                 </span>
               ) : (
-                <span className="em-tab-pill">
+                <span className="em-tab-pill relative">
                   <Icon className="relative w-[20px] h-[20px]" aria-hidden />
+                  {item.badge ? (
+                    <span className="absolute -top-1 -right-1.5 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full bg-festive-accent text-white text-[10px] font-bold tabular-nums ring-2 ring-surface">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  ) : null}
                 </span>
               )}
               <span className="text-[10.5px] min-[400px]:text-[11px] leading-tight truncate max-w-full">
@@ -432,6 +447,7 @@ export default function DashboardMobileBottomBar({
                 }
               }}
               aria-current={active ? 'page' : undefined}
+              aria-label={item.badge ? `${item.name}, ${item.badge} à traiter` : undefined}
               className={tabClassName(active)}
             >
               {inner}
