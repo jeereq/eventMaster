@@ -51,8 +51,8 @@ export default function GuestGuidelinesView({
   const activeRecs = guidelines.recommendations.filter((r) => r.enabled && (r.content.trim() || (r.imageUrls?.length ?? 0) > 0));
 
   return (
-    <div className={cn('space-y-4', className)}>
-      <h3 className="text-base font-display font-semibold text-foreground tracking-tight">
+    <div className={cn('rounded-[1.125rem] border border-border bg-surface px-4 pt-4 pb-1 space-y-3', className)}>
+      <h3 className="text-base font-display font-semibold text-foreground">
         Infos pour le jour J
       </h3>
 

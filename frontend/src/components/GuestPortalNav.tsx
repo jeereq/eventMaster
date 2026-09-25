@@ -21,15 +21,15 @@ export function GuestPortalHomeLink({
       aria-label="Mes invitations"
       title="Mes invitations"
       className={cn(
-        'inline-flex items-center justify-center gap-1.5 min-h-11 min-w-11 sm:min-w-0 px-2.5 py-1.5 rounded-[var(--radius-button)]',
-        'border border-border bg-surface text-xs font-semibold text-muted',
-        'hover:text-foreground hover:bg-surface-muted transition',
+        'inline-flex items-center justify-center h-11 w-11 rounded-full',
+        'border border-border bg-surface text-foreground',
+        'hover:bg-surface-muted transition',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
         className,
       )}
     >
-      <Home className="w-3.5 h-3.5" aria-hidden />
-      <span>{label}</span>
+      <Home className="w-[18px] h-[18px]" aria-hidden />
+      <span className="sr-only">{label}</span>
     </Link>
   );
 }

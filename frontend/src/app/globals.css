@@ -1124,25 +1124,12 @@ body[data-em-sheet-open] .em-ai-fab {
   position: relative;
   min-height: 100dvh;
   caret-color: var(--primary);
-  background:
-    radial-gradient(ellipse 120% 60% at 50% -10%, color-mix(in srgb, var(--primary) 12%, transparent), transparent 55%),
-    linear-gradient(180deg, var(--surface-muted) 0%, var(--background) 42%, var(--background) 100%);
+  background: var(--background);
 }
 
 .em-guest-page ::selection {
   background: color-mix(in srgb, var(--primary) 28%, transparent);
   color: var(--foreground);
-}
-
-.em-guest-page::before {
-  content: '';
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(color-mix(in srgb, var(--foreground) 4%, transparent) 0.6px, transparent 0.6px);
-  background-size: 18px 18px;
-  opacity: 0.35;
-  mask-image: linear-gradient(180deg, #000 0%, transparent 55%);
 }
 
 .em-guest-welcome {
@@ -1153,30 +1140,146 @@ body[data-em-sheet-open] .em-ai-fab {
   position: relative;
   overflow: hidden;
   border-radius: 1.5rem;
-  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border: 1px solid var(--border);
   background: var(--surface);
-  box-shadow: 0 18px 50px color-mix(in srgb, var(--foreground) 6%, transparent);
 }
 
+/* Carte vert profond du nouveau design (compte à rebours, titre, date, lieu) */
 .em-guest-hero__banner {
   position: relative;
-  padding: 1.35rem 1.5rem 1.5rem;
+  overflow: hidden;
+  padding: 1.35rem 1.35rem 1.5rem;
   color: #fff;
-  background: linear-gradient(
-    135deg,
-    var(--primary) 0%,
-    color-mix(in srgb, var(--primary) 70%, var(--foreground)) 100%
-  );
+  background: #064e3b;
 }
 
 .em-guest-hero__banner::after {
   content: '';
   position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 18% 0%, rgba(255, 255, 255, 0.28), transparent 42%),
-    radial-gradient(circle at 88% 100%, rgba(255, 255, 255, 0.16), transparent 40%);
+  right: -2.5rem;
+  top: -2.5rem;
+  width: 10rem;
+  height: 10rem;
+  border-radius: 999px;
+  border: 28px solid #10b981;
+  opacity: 0.25;
   pointer-events: none;
+}
+
+.em-guest-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.em-guest-chip--count {
+  background: #10b981;
+  color: #022c22;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.em-guest-chip--glass {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+
+/* Liste d'actions façon réglages d'app (icône ronde, libellé, chevron) */
+.em-guest-list {
+  overflow: hidden;
+  border-radius: 1.125rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.em-guest-list > * + * {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.em-guest-list-row {
+  display: flex;
+  width: 100%;
+  min-height: 3.5rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.9rem;
+  text-align: left;
+  color: var(--foreground);
+  transition: background-color 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.em-guest-list-row:hover {
+  background: var(--card-hover);
+}
+
+.em-guest-list-row:active {
+  background: var(--surface-muted);
+}
+
+.em-guest-list-row:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--primary) 50%, transparent);
+  outline-offset: -2px;
+}
+
+.em-guest-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+}
+
+/* Bloc date (mois / jour) des listes d'événements */
+.em-guest-date {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 3.1rem;
+  height: 3.35rem;
+  border-radius: 0.875rem;
+  background: color-mix(in srgb, var(--primary) 9%, transparent);
+}
+
+.em-guest-date__month {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.em-guest-date__day {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--foreground);
+}
+
+.em-tab[aria-selected='true'] .em-tab-pill::before {
+  transform: scaleX(1);
+  opacity: 1;
+}
+
+.em-tab[aria-selected='true'] .em-tab-pill > svg {
+  animation: em-tab-pop 320ms cubic-bezier(0.2, 0.9, 0.3, 1.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .em-tab[aria-selected='true'] .em-tab-pill > svg {
+    animation: none;
+  }
 }
 
 .em-guest-section-label {
