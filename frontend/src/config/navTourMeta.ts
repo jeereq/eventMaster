@@ -200,9 +200,9 @@ export const NAV_TOUR_META: Record<string, NavTourMeta> = {
     route: '/dashboard/profile',
   },
   'nav-client-dashboard': {
-    title: 'Tableau de bord',
+    title: 'Accueil',
     description:
-      'Accueil de votre espace client : objectifs, recommandations et synthèse de vos devis, réservations et billets.',
+      'Accueil de votre espace client : ce qui vous attend (devis reçus, prochain billet), vos activités et la recherche rapide.',
     route: '/dashboard',
   },
   'nav-simulator': {

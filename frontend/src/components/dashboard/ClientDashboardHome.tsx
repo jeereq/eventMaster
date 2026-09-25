@@ -24,13 +24,13 @@ import {
   Crown,
   CheckCircle2,
   CreditCard,
-  Smartphone,
   Check,
-  Users,
-  Percent,
-  ScanLine,
-  Zap,
   Loader2,
+  BellRing,
+  QrCode,
+  Clock,
+  Music,
+  Store,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -213,6 +213,157 @@ function defaultPlanForCategory(category: UpgradeCategory): PlanId {
   }
 }
 
+interface ClientTicketSummary {
+  orderId: string;
+  status?: string;
+  guestId: string | null;
+  event: { title: string; date: string; location: string };
+}
+
+interface ClientInquirySummary {
+  id: string;
+  title: string;
+  status: string;
+  quotedAmountFc: number | null;
+  hasBooking: boolean;
+  closedAt?: string | null;
+}
+
+const QUICK_SEARCHES = [
+  { label: 'Salles Gombe', href: '/dashboard/catalogue?kind=venue&q=Gombe', icon: Building2 },
+  { label: 'Traiteurs', href: '/dashboard/catalogue?kind=service&cat=caterer', icon: Utensils },
+  { label: 'DJ & Sono', href: '/dashboard/catalogue?kind=service&cat=dj', icon: Music },
+];
+
+const FIRST_STEPS = [
+  {
+    title: 'Explorez le catalogue',
+    detail: 'Salles, prestataires et matériel, avec photos, prix et visite 3D.',
+    href: '/dashboard/catalogue',
+  },
+  {
+    title: 'Demandez un devis gratuit',
+    detail: 'Le prestataire vous répond ici, sans engagement.',
+    href: '/dashboard/catalogue?kind=service',
+  },
+  {
+    title: 'Confirmez et réservez',
+    detail: 'Acceptez le devis qui vous convient, puis suivez votre réservation.',
+    href: '/dashboard/bookings?tab=quotes',
+  },
+];
+
+const CATALOGUE_UNIVERSES = [
+  { title: 'Salles & espaces', detail: 'Salles, jardins, domaines', href: '/dashboard/catalogue?kind=venue', icon: Building2 },
+  { title: 'Prestataires', detail: 'Traiteurs, DJ, photo, déco', href: '/dashboard/catalogue?kind=service', icon: Utensils },
+  { title: 'Matériel & cortèges', detail: 'Chaises, tentes, voitures', href: '/dashboard/catalogue?kind=rental', icon: Truck },
+  { title: 'Billetterie', detail: 'Concerts, galas, pass QR', href: '/dashboard/catalogue?kind=event', icon: Ticket },
+];
+
+const STUDIOS = [
+  { id: 'budget' as const, title: 'Simulateur budget', detail: '3 formules en CDF et USD, devis direct', action: 'Calculer', icon: Wand2 },
+  { id: 'invite' as const, title: 'Invitations & cartes', detail: 'Format 9:16, partage WhatsApp', action: 'Créer', icon: Mail },
+  { id: 'room' as const, title: 'Plan de salle 3D', detail: 'Tables, buffets et visite immersive', action: 'Agencer', icon: Building2 },
+];
+
+function formatShortDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+function FollowUpRow({
+  href,
+  icon,
+  title,
+  detail,
+  tone,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+  detail?: string;
+  tone: 'festive' | 'muted';
+}) {
+  return (
+    <li>
+      <Link
+        href={href}
+        className="group flex items-center gap-3 rounded-2xl border border-border p-3 hover:border-primary/50 hover:bg-surface-muted/40 transition"
+      >
+        <span
+          className={cn(
+            'w-10 h-10 rounded-xl flex items-center justify-center shrink-0',
+            tone === 'festive' ? 'bg-festive-accent-soft text-festive-accent' : 'bg-surface-muted text-muted',
+          )}
+        >
+          {icon}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-foreground">{title}</span>
+          {detail ? <span className="block text-xs text-muted truncate">{detail}</span> : null}
+        </span>
+        <ChevronRight className="w-4 h-4 text-muted group-hover:translate-x-0.5 transition shrink-0" aria-hidden />
+      </Link>
+    </li>
+  );
+}
+
+function UpgradePathCard({
+  icon,
+  title,
+  detail,
+  features,
+  options,
+  onChoose,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  detail: string;
+  features?: string[];
+  options: Array<{ id: UpgradeCategory; label: string; hint: string; price: string }>;
+  onChoose: (category: UpgradeCategory) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5 flex flex-col gap-4">
+      <div className="flex items-start gap-3">
+        <span className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">{icon}</span>
+        <div className="min-w-0">
+          <h3 className="text-base font-bold text-foreground">{title}</h3>
+          <p className="text-sm text-muted leading-relaxed">{detail}</p>
+        </div>
+      </div>
+      {features && features.length > 0 ? (
+        <ul className="space-y-1.5 text-sm text-muted">
+          {features.map((feature) => (
+            <li key={feature} className="flex items-center gap-2">
+              <Check className="w-4 h-4 text-primary shrink-0" aria-hidden />
+              <span>{feature}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <div className="space-y-2 mt-auto">
+        {options.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => onChoose(option.id)}
+            className="group w-full min-h-14 flex items-center gap-3 rounded-xl border border-border bg-background/60 px-3.5 py-2.5 text-left hover:border-primary hover:bg-primary/5 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-foreground group-hover:text-primary transition">{option.label}</span>
+              <span className="block text-xs text-muted truncate">{option.hint}</span>
+            </span>
+            <span className="text-xs font-bold text-foreground tabular-nums shrink-0">{option.price}</span>
+            <ChevronRight className="w-4 h-4 text-muted group-hover:text-primary group-hover:translate-x-0.5 transition shrink-0" aria-hidden />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function ClientDashboardHome() {
   const { user, tenant } = useAuth();
   const { site } = usePlatformSite();
@@ -229,6 +380,15 @@ export default function ClientDashboardHome() {
     bookingsCount: 0,
     packsCount: 0,
     loading: true,
+  });
+  const [activity, setActivity] = useState<{
+    tickets: ClientTicketSummary[];
+    inquiries: ClientInquirySummary[];
+    loadedAt: number;
+  }>({
+    tickets: [],
+    inquiries: [],
+    loadedAt: 0,
   });
 
   // États pour l'évolution de compte (org ou catalogue) et paiement direct
@@ -429,7 +589,7 @@ export default function ClientDashboardHome() {
     }, 1500);
   };
 
-  // Chargement des compteurs temps réel
+  // Chargement des compteurs et des éléments à suivre
   useEffect(() => {
     let mounted = true;
     Promise.allSettled([
@@ -439,20 +599,16 @@ export default function ClientDashboardHome() {
       api.get('/marketplace/event-packs'),
     ]).then(([ticketsRes, bookingsRes, inquiriesRes, packsRes]) => {
       if (!mounted) return;
-      let ticketsCount = 0;
-      let quotesCount = 0;
+      let tickets: ClientTicketSummary[] = [];
+      let inquiries: ClientInquirySummary[] = [];
       let bookingsCount = 0;
       let packsCount = 0;
 
-      if (ticketsRes.status === 'fulfilled' && ticketsRes.value?.tickets) {
-        ticketsCount = Array.isArray(ticketsRes.value.tickets)
-          ? ticketsRes.value.tickets.length
-          : 0;
+      if (ticketsRes.status === 'fulfilled' && Array.isArray(ticketsRes.value?.tickets)) {
+        tickets = ticketsRes.value.tickets;
       }
-      if (inquiriesRes.status === 'fulfilled' && inquiriesRes.value?.inquiries) {
-        quotesCount = Array.isArray(inquiriesRes.value.inquiries)
-          ? inquiriesRes.value.inquiries.length
-          : 0;
+      if (inquiriesRes.status === 'fulfilled' && Array.isArray(inquiriesRes.value?.inquiries)) {
+        inquiries = inquiriesRes.value.inquiries;
       }
       if (bookingsRes.status === 'fulfilled' && bookingsRes.value?.bookings) {
         bookingsCount = Array.isArray(bookingsRes.value.bookings)
@@ -465,9 +621,10 @@ export default function ClientDashboardHome() {
         else if (Array.isArray(pVal)) packsCount = pVal.length;
       }
 
+      setActivity({ tickets, inquiries, loadedAt: Date.now() });
       setStats({
-        ticketsCount,
-        quotesCount,
+        ticketsCount: tickets.length,
+        quotesCount: inquiries.length,
         bookingsCount,
         packsCount,
         loading: false,
@@ -478,6 +635,40 @@ export default function ClientDashboardHome() {
       mounted = false;
     };
   }, []);
+
+  /** Ce qui attend le client : devis reçus, paiements à finaliser, prochain billet. */
+  const followUp = useMemo(() => {
+    const now = activity.loadedAt;
+    const openInquiries = activity.inquiries.filter((item) => !item.closedAt && !item.hasBooking);
+    const quotesToReview = openInquiries.filter((item) => item.status === 'QUOTED');
+    const awaitingReply = openInquiries.filter((item) => item.status === 'NEW' || item.status === 'CONTACTED');
+    const pendingPayments = activity.tickets.filter((ticket) => ticket.status === 'PENDING');
+    const nextTicket = activity.tickets
+      .filter((ticket) => ticket.status !== 'PENDING' && new Date(ticket.event.date).getTime() >= now)
+      .sort((a, b) => new Date(a.event.date).getTime() - new Date(b.event.date).getTime())[0] ?? null;
+    return { quotesToReview, awaitingReply, pendingPayments, nextTicket };
+  }, [activity]);
+
+  const hasFollowUp =
+    followUp.quotesToReview.length > 0
+    || followUp.awaitingReply.length > 0
+    || followUp.pendingPayments.length > 0
+    || Boolean(followUp.nextTicket);
+
+  /** Prix d'appel affichés sur les cartes d'évolution (tarifs dynamiques si disponibles). */
+  const upgradeFromPrices = useMemo(() => {
+    const vendorPrice = (id: PlanId) => {
+      const plan = UPGRADE_VENDOR_PLANS.find((p) => p.id === id);
+      return plan ? resolvePlanPricing(plan.id, plan.monthlyPriceFc, 'monthly').priceLabel : '';
+    };
+    return {
+      b2c: resolvePlanPricing(UPGRADE_B2C_PLANS[0].id, UPGRADE_B2C_PLANS[0].basePriceFc, 'monthly').priceLabel,
+      b2b: resolvePlanPricing(UPGRADE_B2B_PLANS[0].id, UPGRADE_B2B_PLANS[0].monthlyPriceFc, 'monthly').priceLabel,
+      venue: vendorPrice('VENUE'),
+      service: vendorPrice('SERVICE'),
+      catalog: vendorPrice('CATALOG'),
+    };
+  }, [resolvePlanPricing]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -491,8 +682,8 @@ export default function ClientDashboardHome() {
   const userName = user?.name ? user.name.split(' ')[0] : '';
 
   return (
-    <div className="space-y-6 pb-12 animate-fade-in max-w-7xl mx-auto">
-      {/* ─── 1. EN-TÊTE HUMAIN & RECHERCHE ─── */}
+    <div className="space-y-8 pb-12 animate-fade-in max-w-7xl mx-auto">
+      {/* ─── 1. EN-TÊTE ─── */}
       <section className="space-y-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3 min-w-0">
@@ -506,757 +697,379 @@ export default function ClientDashboardHome() {
           </div>
           <span className="inline-flex w-fit items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-primary/15 dark:text-primary">
             <ShieldCheck className="w-3.5 h-3.5" />
-            Gratuit · sans abonnement
+            Compte gratuit · sans abonnement
           </span>
         </div>
 
-        <div className="rounded-3xl border border-border bg-surface p-4 sm:p-5 space-y-4">
-          {/* Recherche directe */}
-          <form onSubmit={handleSearchSubmit} className="relative">
-            <div className="relative flex items-center rounded-2xl bg-background border border-border focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition">
-              <Search className="w-5 h-5 text-muted absolute left-4 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Salle à la Gombe, traiteur, DJ, mobilier, pass QR…"
-                aria-label="Rechercher une salle, un prestataire ou un équipement"
-                className="w-full pl-12 pr-28 py-3.5 bg-transparent text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none"
-              />
-              <button
-                type="submit"
-                className="absolute right-1.5 min-h-10 px-4 py-2 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition flex items-center gap-1 touch-manipulation cursor-pointer"
-              >
-                <span>Chercher</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          {/* Recherche + raccourcis */}
+          <div className="lg:col-span-3 rounded-3xl border border-border bg-surface p-4 sm:p-5 flex flex-col gap-4 shadow-2xs">
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold text-foreground">Que préparez-vous ?</h2>
+              <p className="text-sm text-muted">
+                Trouvez une salle, un prestataire ou du matériel, puis demandez un devis gratuit.
+              </p>
             </div>
-          </form>
+            <form onSubmit={handleSearchSubmit} role="search">
+              <div className="relative flex items-center rounded-2xl bg-background border border-border focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition">
+                <Search className="w-5 h-5 text-muted absolute left-4 pointer-events-none" />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Salle à la Gombe, traiteur, DJ…"
+                  aria-label="Rechercher une salle, un prestataire ou un équipement"
+                  className="w-full min-h-12 pl-12 pr-28 py-3 bg-transparent text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  className="absolute right-1.5 min-h-10 px-4 py-2 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition flex items-center gap-1 touch-manipulation cursor-pointer"
+                >
+                  <span>Chercher</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </form>
 
-          {/* Raccourcis 1 clic */}
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <Link
-              href="/dashboard/catalogue?kind=venue&q=Gombe"
-              className="inline-flex items-center min-h-11 px-3.5 rounded-full bg-surface border border-border hover:border-primary/50 text-foreground font-medium transition"
-            >
-              Salles Gombe
-            </Link>
-            <Link
-              href="/dashboard/catalogue?kind=service&cat=caterer"
-              className="inline-flex items-center min-h-11 px-3.5 rounded-full bg-surface border border-border hover:border-primary/50 text-foreground font-medium transition"
-            >
-              Traiteurs
-            </Link>
-            <Link
-              href="/dashboard/catalogue?kind=service&cat=dj"
-              className="inline-flex items-center min-h-11 px-3.5 rounded-full bg-surface border border-border hover:border-primary/50 text-foreground font-medium transition"
-            >
-              DJ &amp; Sono
-            </Link>
-            {activeStudiosCount > 0 && (
-              <Link
-                href="/dashboard/catalogue?tab=plan&planView=ai"
-                className="min-h-11 px-3.5 rounded-full bg-primary/10 border border-primary/25 hover:border-primary text-primary font-bold transition inline-flex items-center gap-1"
-              >
-                <Sparkles className="w-3 h-3" />
-                Simulateur
-              </Link>
+            <div className="flex flex-wrap items-center gap-2 text-xs" aria-label="Recherches rapides">
+              {QUICK_SEARCHES.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-full bg-surface border border-border hover:border-primary/50 hover:text-primary text-foreground font-medium transition"
+                >
+                  <item.icon className="w-3.5 h-3.5 text-primary" aria-hidden />
+                  {item.label}
+                </Link>
+              ))}
+              {activeStudiosCount > 0 && (
+                <Link
+                  href="/dashboard/catalogue?tab=plan&planView=ai"
+                  className="min-h-11 px-3.5 rounded-full bg-primary/10 border border-primary/25 hover:border-primary text-primary font-bold transition inline-flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5" aria-hidden />
+                  Simuler mon budget
+                </Link>
+              )}
+            </div>
+
+            <nav aria-labelledby="universes-heading" className="mt-auto pt-4 border-t border-border/70 space-y-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <h2 id="universes-heading" className="text-xs font-semibold text-muted">Parcourir par univers</h2>
+                <Link
+                  href="/dashboard/catalogue"
+                  className="min-h-11 -my-3 text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  Tout le catalogue
+                  <ArrowRight className="w-3.5 h-3.5" aria-hidden />
+                </Link>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {CATALOGUE_UNIVERSES.map((universe) => (
+                  <Link
+                    key={universe.href}
+                    href={universe.href}
+                    className="group rounded-2xl border border-border bg-background/60 p-3 hover:border-primary/50 hover:bg-primary/5 transition flex flex-col gap-2"
+                  >
+                    <span className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition">
+                      <universe.icon className="w-4 h-4" aria-hidden />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold text-foreground group-hover:text-primary transition">{universe.title}</span>
+                      <span className="block text-xs text-muted leading-snug">{universe.detail}</span>
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </nav>
+          </div>
+
+          {/* À suivre / premiers pas */}
+          <div
+            className={cn(
+              'lg:col-span-2 rounded-3xl border border-border bg-surface p-4 sm:p-5 shadow-2xs flex flex-col',
+              // Sur mobile, ce qui attend une action passe avant la recherche
+              hasFollowUp && 'order-first lg:order-none',
+            )}
+          >
+            {stats.loading ? (
+              <div className="space-y-3" aria-busy="true" aria-label="Chargement de vos activités">
+                <div className="h-5 w-32 rounded bg-foreground/10 animate-pulse motion-reduce:animate-none" />
+                <div className="h-14 rounded-2xl bg-foreground/5 animate-pulse motion-reduce:animate-none" />
+                <div className="h-14 rounded-2xl bg-foreground/5 animate-pulse motion-reduce:animate-none" />
+              </div>
+            ) : hasFollowUp ? (
+              <>
+                <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+                  <BellRing className="w-4 h-4 text-festive-accent" aria-hidden />
+                  À suivre
+                </h2>
+                <ul className="mt-3 space-y-2">
+                  {followUp.nextTicket && (
+                    <li>
+                      <Link
+                        href={followUp.nextTicket.guestId ? `/rsvp/${followUp.nextTicket.guestId}` : '/dashboard/tickets'}
+                        className="group flex items-center gap-3 rounded-2xl border border-primary/25 bg-primary/5 p-3 hover:border-primary transition"
+                      >
+                        <span className="w-10 h-10 rounded-xl bg-primary-solid text-primary-foreground flex items-center justify-center shrink-0">
+                          <QrCode className="w-5 h-5" aria-hidden />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-xs font-semibold text-primary">Prochain événement</span>
+                          <span className="block text-sm font-semibold text-foreground truncate">{followUp.nextTicket.event.title}</span>
+                          <span className="block text-xs text-muted truncate">
+                            {formatShortDate(followUp.nextTicket.event.date)}
+                            {followUp.nextTicket.event.location ? ` · ${followUp.nextTicket.event.location}` : ''}
+                          </span>
+                        </span>
+                        <span className="text-xs font-bold text-primary shrink-0 hidden sm:inline">Mon pass</span>
+                        <ChevronRight className="w-4 h-4 text-muted group-hover:translate-x-0.5 transition shrink-0" aria-hidden />
+                      </Link>
+                    </li>
+                  )}
+                  {followUp.quotesToReview.length > 0 && (
+                    <FollowUpRow
+                      href="/dashboard/bookings?tab=quotes"
+                      icon={<Inbox className="w-4 h-4" aria-hidden />}
+                      tone="festive"
+                      title={
+                        followUp.quotesToReview.length === 1
+                          ? 'Un devis attend votre réponse'
+                          : `${followUp.quotesToReview.length} devis attendent votre réponse`
+                      }
+                      detail={
+                        followUp.quotesToReview.length === 1
+                          ? [
+                              followUp.quotesToReview[0].title,
+                              followUp.quotesToReview[0].quotedAmountFc
+                                ? formatFc(followUp.quotesToReview[0].quotedAmountFc)
+                                : null,
+                            ].filter(Boolean).join(' · ')
+                          : 'Comparez-les et confirmez votre réservation.'
+                      }
+                    />
+                  )}
+                  {followUp.pendingPayments.length > 0 && (
+                    <FollowUpRow
+                      href="/dashboard/tickets"
+                      icon={<CreditCard className="w-4 h-4" aria-hidden />}
+                      tone="festive"
+                      title={
+                        followUp.pendingPayments.length === 1
+                          ? 'Un paiement de billet à finaliser'
+                          : `${followUp.pendingPayments.length} paiements de billets à finaliser`
+                      }
+                      detail={followUp.pendingPayments[0].event.title}
+                    />
+                  )}
+                  {followUp.awaitingReply.length > 0 && (
+                    <FollowUpRow
+                      href="/dashboard/bookings?tab=quotes"
+                      icon={<Clock className="w-4 h-4" aria-hidden />}
+                      tone="muted"
+                      title={
+                        followUp.awaitingReply.length === 1
+                          ? 'Une demande en attente du prestataire'
+                          : `${followUp.awaitingReply.length} demandes en attente des prestataires`
+                      }
+                      detail="Vous serez notifié dès qu’un devis arrive."
+                    />
+                  )}
+                </ul>
+              </>
+            ) : (
+              <>
+                <h2 className="text-base font-semibold text-foreground">Comment ça marche</h2>
+                <ol className="mt-3 space-y-3">
+                  {FIRST_STEPS.map((step, index) => (
+                    <li key={step.title}>
+                      <Link href={step.href} className="group flex items-start gap-3 rounded-2xl p-2 -m-2 hover:bg-surface-muted/60 transition">
+                        <span className="w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0 tabular-nums">
+                          {index + 1}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold text-foreground group-hover:text-primary transition">{step.title}</span>
+                          <span className="block text-xs text-muted leading-relaxed">{step.detail}</span>
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ol>
+              </>
             )}
           </div>
         </div>
       </section>
 
-      {/* ─── 2. BAROMÈTRE D'ACTIVITÉ : CHIFFRES CLÉS (ULTRA-PURIFIÉ) ─── */}
-      <section aria-label="Compteurs d'activité" className="rounded-3xl border border-border bg-surface p-1.5">
-        <div className="grid grid-cols-2 md:grid-cols-5 divide-y md:divide-y-0 md:divide-x divide-border/60">
-          <Link
-            href="/dashboard/bookings?tab=quotes"
-            className="p-3 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
-          >
-            <div>
-              <span className="text-xs font-medium text-muted block">Devis</span>
-              <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
-                {stats.loading ? (
-                  <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
-                ) : (
-                  stats.quotesCount
-                )}
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition">
-              <Inbox className="w-4 h-4" />
-            </div>
-          </Link>
-
-          <Link
-            href="/dashboard/bookings?tab=bookings"
-            className="p-3 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
-          >
-            <div>
-              <span className="text-xs font-medium text-muted block">Réservations</span>
-              <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
-                {stats.loading ? (
-                  <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
-                ) : (
-                  stats.bookingsCount
-                )}
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition">
-              <CalendarCheck className="w-4 h-4" />
-            </div>
-          </Link>
-
-          <Link
-            href="/dashboard/tickets"
-            className="p-3 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
-          >
-            <div>
-              <span className="text-xs font-medium text-muted block">Billets</span>
-              <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
-                {stats.loading ? (
-                  <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
-                ) : (
-                  stats.ticketsCount
-                )}
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition">
-              <Ticket className="w-4 h-4" />
-            </div>
-          </Link>
-
-          <Link
-            href="/dashboard/catalogue?tab=packs"
-            className="p-3 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3"
-          >
-            <div>
-              <span className="text-xs font-medium text-muted block">Packs</span>
-              <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
-                {stats.loading ? (
-                  <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
-                ) : (
-                  stats.packsCount
-                )}
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition">
-              <Bookmark className="w-4 h-4" />
-            </div>
-          </Link>
-
-          <Link
-            href="/dashboard/catalogue?tab=favorites"
-            className="p-3 sm:p-4 hover:bg-surface-muted/50 rounded-xl transition group flex items-center justify-between gap-3 col-span-2 md:col-span-1"
-          >
-            <div>
-              <span className="text-xs font-medium text-muted block">Favoris</span>
-              <p className="text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
-                {stats.loading ? (
-                  <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
-                ) : (
-                  favoriteItems.length
-                )}
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition">
-              <Heart className="w-4 h-4" />
-            </div>
-          </Link>
-        </div>
-      </section>
-
-      {/* ─── CALL TO ACTION : ÉVOLUTION VERS ORGANISATION B2C OU B2B ─── */}
-      <section
-        aria-labelledby="upgrade-heading"
-        className="relative overflow-hidden rounded-3xl border border-primary/25 bg-linear-to-br from-primary/10 via-surface to-surface-muted p-5 sm:p-7 shadow-xs space-y-6"
-      >
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="space-y-1.5 max-w-2xl">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-primary/15 text-primary border border-primary/25">
-              <Crown className="w-3.5 h-3.5" />
-              <span>Évolution de compte · Paiement direct</span>
-            </div>
-            <h2 id="upgrade-heading" className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight">
-              Passez organisateur ou publiez au catalogue
-            </h2>
-            <p className="text-xs sm:text-sm text-muted leading-relaxed">
-              Payez un abonnement Particulier, Entreprise, Salle, Prestataire ou Salle & presta : votre type de compte
-              s’adapte automatiquement après validation du paiement.
-            </p>
-          </div>
-
-          <div className="shrink-0 flex items-center gap-2">
+      {/* ─── 2. MES ACTIVITÉS ─── */}
+      <section aria-labelledby="activity-heading" className="space-y-3">
+        <h2 id="activity-heading" className="font-display text-lg sm:text-xl font-semibold text-foreground tracking-tight">
+          Mes activités
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
+          {[
+            { label: 'Devis', value: stats.quotesCount, href: '/dashboard/bookings?tab=quotes', icon: Inbox },
+            { label: 'Réservations', value: stats.bookingsCount, href: '/dashboard/bookings?tab=bookings', icon: CalendarCheck },
+            { label: 'Billets', value: stats.ticketsCount, href: '/dashboard/tickets', icon: Ticket },
+            { label: 'Packs', value: stats.packsCount, href: '/dashboard/catalogue?tab=packs', icon: Bookmark },
+            { label: 'Favoris', value: favoriteItems.length, href: '/dashboard/catalogue?tab=favorites', icon: Heart },
+          ].map((tile, index) => (
             <Link
-              href="/dashboard/billing?tab=plans"
-              className="text-xs font-semibold text-muted hover:text-foreground transition underline underline-offset-4"
+              key={tile.href}
+              href={tile.href}
+              className={cn(
+                'group rounded-2xl border border-border bg-surface p-3.5 sm:p-4 hover:border-primary/50 hover:shadow-xs transition flex items-center justify-between gap-3',
+                index === 4 && 'col-span-2 sm:col-span-1',
+              )}
             >
-              Grille tarifaire
-            </Link>
-          </div>
-        </div>
-
-        {/* Choix : org B2C / B2B + catalogue salle / presta / salle+presta */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Carte 1 : Organisation Particulier (B2C) */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Choisir la formule Particulier : Mariages & Célébrations Privées"
-            onClick={() => handleOpenUpgrade('b2c')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleOpenUpgrade('b2c');
-              }
-            }}
-            className="cursor-pointer group p-5 rounded-2xl border border-rose-500/25 bg-surface hover:border-rose-500/50 hover:shadow-md transition-all flex flex-col justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
-          >
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20">
-                  <Heart className="w-3.5 h-3.5" />
-                  Organisation Particulier (B2C)
+              <span className="min-w-0">
+                <span className="text-xs font-medium text-muted block truncate">{tile.label}</span>
+                <span className="block text-xl sm:text-2xl font-extrabold text-foreground tabular-nums">
+                  {stats.loading ? (
+                    <span className="inline-block w-6 h-6 bg-foreground/10 rounded animate-pulse motion-reduce:animate-none" />
+                  ) : (
+                    tile.value
+                  )}
                 </span>
-                <span className="text-xs font-black text-foreground">Dès 60 000 FC / 90 j</span>
-              </div>
-
-              <div>
-                <h3 className="text-base font-bold text-foreground group-hover:text-rose-600 dark:group-hover:text-rose-400 transition">
-                  Mariages & Célébrations Privées
-                </h3>
-                <p className="text-xs text-muted leading-relaxed mt-1">
-                  Mariages, anniversaires et fêtes privées sans engagement mensuel.
-                </p>
-              </div>
-
-              <div className="space-y-1.5 pt-1 text-xs text-muted">
-                <div className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                  <span>3 événements inclus · 50 à 500 invités</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                  <span>Faire-part WhatsApp nominatifs avec réponse à l’invitation</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                  <span>Plan de table 2D/3D & scan smartphone</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-border flex items-center justify-between gap-2 mt-auto">
-              <span className="text-xs font-medium text-muted">Durée : 90 jours</span>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleOpenUpgrade('b2c');
-                }}
-                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-                className="bg-rose-600 hover:bg-rose-700 text-white shadow-xs"
-              >
-                Choisir Particulier
-              </Button>
-            </div>
-          </div>
-
-          {/* Carte 2 : Organisation Professionnelle (B2B) */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Choisir la formule Entreprise : Entreprises, Galas & Agences Pro"
-            onClick={() => handleOpenUpgrade('b2b')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleOpenUpgrade('b2b');
-              }
-            }}
-            className="cursor-pointer group p-5 rounded-2xl border border-primary/25 bg-surface hover:border-primary/50 hover:shadow-md transition-all flex flex-col justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          >
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
-                  <Building2 className="w-3.5 h-3.5" />
-                  Organisation Professionnelle (B2B)
-                </span>
-                <span className="text-xs font-black text-foreground">Dès 30 000 FC / mois</span>
-              </div>
-
-              <div>
-                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
-                  Entreprises, Galas & Agences Pro
-                </h3>
-                <p className="text-xs text-muted leading-relaxed mt-1">
-                  Concerts, conférences, galas et billetterie en ligne.
-                </p>
-              </div>
-
-              <div className="space-y-1.5 pt-1 text-xs text-muted">
-                <div className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-primary shrink-0" />
-                  <span>Multi-événements · 150 à 3 500+ invités</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-primary shrink-0" />
-                  <span>Billetterie en ligne, dons solidaires et encaissements</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="w-3.5 h-3.5 text-primary shrink-0" />
-                  <span>Gestion d’équipe (Managers) & scan QR illimité</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-border flex items-center justify-between gap-2 mt-auto">
-              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 font-semibold">
-                −10 % en annuel (365 j)
               </span>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleOpenUpgrade('b2b');
-                }}
-                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-                className="shadow-xs shadow-primary/20"
-              >
-                Choisir Entreprise
-              </Button>
-            </div>
-          </div>
-
-          {/* Carte 3 : Salle */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Choisir la formule Salle : Mettre mes salles en ligne"
-            onClick={() => handleOpenUpgrade('venue')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleOpenUpgrade('venue');
-              }
-            }}
-            className="cursor-pointer group p-5 rounded-2xl border border-amber-500/25 bg-surface hover:border-amber-500/50 hover:shadow-md transition-all flex flex-col justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
-          >
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-500/20">
-                  <Utensils className="w-3.5 h-3.5" />
-                  Catalogue · Salle
-                </span>
-                <span className="text-xs font-black text-foreground shrink-0">14 900 FC / mois</span>
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-foreground group-hover:text-amber-700 dark:group-hover:text-amber-400 transition">
-                  Mettre mes salles en ligne
-                </h3>
-                <p className="text-xs text-muted leading-relaxed mt-1">
-                  Salles illimitées, éditeur 2D/3D — sans organiser d’événements.
-                </p>
-              </div>
-            </div>
-            <div className="pt-3 border-t border-border flex items-center justify-between gap-2 mt-auto">
-              <span className="text-xs font-medium text-muted">Compte prestataire / salle</span>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleOpenUpgrade('venue');
-                }}
-                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-                className="bg-amber-600 hover:bg-amber-700 text-white shadow-xs"
-              >
-                Choisir Salle
-              </Button>
-            </div>
-          </div>
-
-          {/* Carte 4 : Prestataire */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Choisir la formule Prestataire : Publier mes prestations"
-            onClick={() => handleOpenUpgrade('service')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleOpenUpgrade('service');
-              }
-            }}
-            className="cursor-pointer group p-5 rounded-2xl border border-sky-500/25 bg-surface hover:border-sky-500/50 hover:shadow-md transition-all flex flex-col justify-between gap-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-          >
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-500/10 text-sky-800 dark:text-sky-300 border border-sky-500/20">
-                  <Truck className="w-3.5 h-3.5" />
-                  Catalogue · Prestataire
-                </span>
-                <span className="text-xs font-black text-foreground shrink-0">9 900 FC / mois</span>
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-foreground group-hover:text-sky-700 dark:group-hover:text-sky-400 transition">
-                  Publier mes prestations
-                </h3>
-                <p className="text-xs text-muted leading-relaxed mt-1">
-                  Métiers et Matériel & Équipements illimités — sans salles ni événements.
-                </p>
-              </div>
-            </div>
-            <div className="pt-3 border-t border-border flex items-center justify-between gap-2 mt-auto">
-              <span className="text-xs font-medium text-muted">Compte prestataire</span>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleOpenUpgrade('service');
-                }}
-                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-                className="bg-sky-600 hover:bg-sky-700 text-white shadow-xs"
-              >
-                Choisir Prestataire
-              </Button>
-            </div>
-          </div>
-
-          {/* Carte 5 : Salle & presta */}
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Choisir la formule Salle & presta : Vendre salles et métiers ensemble"
-            onClick={() => handleOpenUpgrade('catalog')}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleOpenUpgrade('catalog');
-              }
-            }}
-            className="cursor-pointer group p-5 rounded-2xl border border-primary/25 bg-surface hover:border-primary/50 hover:shadow-md transition-all flex flex-col justify-between gap-4 md:col-span-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          >
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary-solid dark:text-emerald-300 border border-primary/20">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Catalogue · Salle &amp; presta
-                </span>
-                <span className="text-xs font-black text-foreground">19 900 FC / mois</span>
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition">
-                  Vendre salles et métiers ensemble
-                </h3>
-                <p className="text-xs text-muted leading-relaxed mt-1 max-w-2xl">
-                  Un seul forfait pour salles + prestations / matériel, sans organiser d’événements.
-                </p>
-              </div>
-            </div>
-            <div className="pt-3 border-t border-border flex items-center justify-between gap-2 mt-auto">
-              <span className="text-xs font-medium text-muted">−10 % en annuel</span>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleOpenUpgrade('catalog');
-                }}
-                rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
-                className="shadow-xs shadow-primary/20"
-              >
-                Choisir Salle &amp; presta
-              </Button>
-            </div>
-          </div>
+              <span className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                <tile.icon className="w-4 h-4" aria-hidden />
+              </span>
+            </Link>
+          ))}
         </div>
       </section>
 
-      {/* ─── 3. LES STUDIOS ACTIFS (VISUEL · ZÉRO TEXTE PESANT) ─── */}
+      {/* ─── 3. STUDIOS ─── */}
       {activeStudiosCount > 0 && (
-        <section aria-labelledby="studios-heading" className="space-y-3.5">
-          <div className="flex items-center justify-between border-b border-border/70 pb-2.5">
-            <h2 id="studios-heading" className="font-display text-lg sm:text-xl font-semibold text-foreground tracking-tight flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
-              Studios Actifs
-            </h2>
+        <section aria-labelledby="studios-heading" className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 id="studios-heading" className="font-display text-lg sm:text-xl font-semibold text-foreground tracking-tight">
+                Préparer avec les studios
+              </h2>
+              <p className="text-sm text-muted">Estimez, imaginez et visualisez avant de réserver.</p>
+            </div>
             <Link
               href="/dashboard/catalogue?tab=plan&planView=ai"
-              className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
+              className="min-h-11 shrink-0 text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
             >
-              <span>Simulateur complet</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>Simulateur</span>
+              <ArrowRight className="w-3.5 h-3.5" aria-hidden />
             </Link>
           </div>
 
           <div
             className={cn(
-              'grid grid-cols-1 gap-3.5',
+              'grid grid-cols-1 gap-2.5 sm:gap-3.5',
               activeStudiosCount === 3
-                ? 'md:grid-cols-3'
+                ? 'sm:grid-cols-3'
                 : activeStudiosCount === 2
-                  ? 'md:grid-cols-2'
+                  ? 'sm:grid-cols-2'
                   : 'max-w-md',
             )}
           >
-            {/* Studio 1 : Budget */}
-            {visibility.budget && (
+            {STUDIOS.filter((studio) => visibility[studio.id]).map((studio) => (
               <Link
-                href="/dashboard/catalogue?tab=plan&planView=ai&studio=budget"
-                className="rounded-2xl border border-primary/30 bg-gradient-to-b from-primary/5 via-surface to-surface p-4 flex flex-col justify-between gap-3 transition hover:border-primary hover:shadow-xs group"
+                key={studio.id}
+                href={`/dashboard/catalogue?tab=plan&planView=ai&studio=${studio.id}`}
+                className="group rounded-2xl border border-border bg-surface p-4 flex items-center gap-3 transition hover:border-primary/50 hover:shadow-xs"
               >
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:scale-105 transition">
-                      <Wand2 className="w-5 h-5" />
-                    </div>
-                    <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
-                      Actif
-                    </span>
-                  </div>
-                  <h3 className="font-display text-base font-semibold text-foreground group-hover:text-primary transition">
-                    Simulateur Budget
-                  </h3>
-                  <div className="flex flex-wrap gap-1">
-                    <span className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                      3 formules
-                    </span>
-                    <span className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                      CDF &amp; USD
-                    </span>
-                    <span className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                      Devis direct
-                    </span>
-                  </div>
-                </div>
-                <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs font-bold text-primary group-hover:translate-x-0.5 transition">
-                  <span>Calculer</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </div>
+                <span className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+                  <studio.icon className="w-5 h-5" aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-bold text-foreground group-hover:text-primary transition">{studio.title}</span>
+                  <span className="block text-xs text-muted leading-relaxed">{studio.detail}</span>
+                </span>
+                <span className="text-xs font-bold text-primary shrink-0 inline-flex items-center gap-1">
+                  {studio.action}
+                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition" aria-hidden />
+                </span>
               </Link>
-            )}
-
-            {/* Studio 2 : Invitations */}
-            {visibility.invite && (
-              <Link
-                href="/dashboard/catalogue?tab=plan&planView=ai&studio=invite"
-                className="rounded-2xl border border-pink-500/30 bg-gradient-to-b from-pink-500/5 via-surface to-surface p-4 flex flex-col justify-between gap-3 transition hover:border-pink-500 hover:shadow-xs group"
-              >
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <div className="w-9 h-9 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center group-hover:scale-105 transition">
-                      <Mail className="w-5 h-5" />
-                    </div>
-                    <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
-                      Actif
-                    </span>
-                  </div>
-                  <h3 className="font-display text-base font-semibold text-foreground group-hover:text-pink-600 dark:group-hover:text-pink-400 transition">
-                    Invitations &amp; Cartes
-                  </h3>
-                  <div className="flex flex-wrap gap-1">
-                    <span className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                      Format 9:16
-                    </span>
-                    <span className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                      WhatsApp
-                    </span>
-                    <span className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                      Lien de réponse à l’invitation
-                    </span>
-                  </div>
-                </div>
-                <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs font-bold text-pink-600 dark:text-pink-400 group-hover:translate-x-0.5 transition">
-                  <span>Créer</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </div>
-              </Link>
-            )}
-
-            {/* Studio 3 : Plans 3D */}
-            {visibility.room && (
-              <Link
-                href="/dashboard/catalogue?tab=plan&planView=ai&studio=room"
-                className="rounded-2xl border border-sky-500/30 bg-gradient-to-b from-sky-500/5 via-surface to-surface p-4 flex flex-col justify-between gap-3 transition hover:border-sky-500 hover:shadow-xs group"
-              >
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <div className="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center group-hover:scale-105 transition">
-                      <Building2 className="w-5 h-5" />
-                    </div>
-                    <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse motion-reduce:animate-none" />
-                      Actif
-                    </span>
-                  </div>
-                  <h3 className="font-display text-base font-semibold text-foreground group-hover:text-sky-600 dark:group-hover:text-sky-400 transition">
-                    Plans de Salle 3D
-                  </h3>
-                  <div className="flex flex-wrap gap-1">
-                    <span className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                      Visite WebGL
-                    </span>
-                    <span className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                      Tables &amp; Buffets
-                    </span>
-                    <span className="text-xs font-medium bg-surface-muted text-muted px-2 py-0.5 rounded-md">
-                      Immersion
-                    </span>
-                  </div>
-                </div>
-                <div className="pt-2 border-t border-border/70 flex items-center justify-between text-xs font-bold text-sky-600 dark:text-sky-400 group-hover:translate-x-0.5 transition">
-                  <span>Agencer</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </div>
-              </Link>
-            )}
+            ))}
           </div>
         </section>
       )}
 
-      {/* ─── 4. EXPLORATION PAR UNIVERS (CHIPS DIRECTS) ─── */}
-      <section aria-labelledby="marketplace-heading" className="space-y-3.5">
-        <div className="flex items-center justify-between border-b border-border/70 pb-2.5">
-          <h2 id="marketplace-heading" className="font-display text-lg sm:text-xl font-semibold text-foreground tracking-tight">
-            Explorer le Catalogue
-          </h2>
+      {/* ─── 4. ÉVOLUTION DE COMPTE ─── */}
+      <section aria-labelledby="upgrade-heading" className="space-y-3">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 id="upgrade-heading" className="font-display text-lg sm:text-xl font-semibold text-foreground tracking-tight">
+              Vous organisez ou vous vendez ?
+            </h2>
+            <p className="text-sm text-muted max-w-2xl">
+              Activez un forfait : votre compte s’adapte dès que le paiement est validé.
+            </p>
+          </div>
           <Link
-            href="/dashboard/catalogue"
-            className="text-xs font-bold text-muted hover:text-foreground inline-flex items-center gap-1 transition"
+            href="/dashboard/billing?tab=plans"
+            className="min-h-11 shrink-0 text-xs font-semibold text-muted hover:text-foreground transition underline underline-offset-4 inline-flex items-center"
           >
-            <span>Tout voir</span>
-            <ArrowRight className="w-3.5 h-3.5" />
+            Comparer les forfaits
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {/* Salles */}
-          <Link
-            href="/dashboard/catalogue?kind=venue"
-            className="group rounded-2xl border border-border bg-surface p-4 hover:border-primary/50 transition hover:shadow-xs flex flex-col justify-between gap-3"
-          >
-            <div className="space-y-2">
-              <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-105 transition">
-                <Building2 className="w-4 h-4" />
-              </div>
-              <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition">
-                Lieux &amp; Espaces
-              </h3>
-              <div className="flex flex-wrap gap-1">
-                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Salles</span>
-                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Jardins</span>
-                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Domaines</span>
-              </div>
-            </div>
-            <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">
-              <span>Explorer</span>
-              <ChevronRight className="w-3.5 h-3.5 text-muted group-hover:translate-x-0.5 transition" />
-            </div>
-          </Link>
-
-          {/* Prestataires */}
-          <Link
-            href="/dashboard/catalogue?kind=service"
-            className="group rounded-2xl border border-border bg-surface p-4 hover:border-primary/50 transition hover:shadow-xs flex flex-col justify-between gap-3"
-          >
-            <div className="space-y-2">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition">
-                <Utensils className="w-4 h-4" />
-              </div>
-              <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition">
-                Prestataires
-              </h3>
-              <div className="flex flex-wrap gap-1">
-                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Traiteurs</span>
-                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">DJ</span>
-                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Photo</span>
-              </div>
-            </div>
-            <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">
-              <span>Explorer</span>
-              <ChevronRight className="w-3.5 h-3.5 text-muted group-hover:translate-x-0.5 transition" />
-            </div>
-          </Link>
-
-          {/* Mobilier & Cortèges */}
-          <Link
-            href="/dashboard/catalogue?kind=rental"
-            className="group rounded-2xl border border-border bg-surface p-4 hover:border-primary/50 transition hover:shadow-xs flex flex-col justify-between gap-3"
-          >
-            <div className="space-y-2">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:scale-105 transition">
-                <Truck className="w-4 h-4" />
-              </div>
-              <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition">
-                Mobilier &amp; Cortèges
-              </h3>
-              <div className="flex flex-wrap gap-1">
-                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Chaises</span>
-                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Tentes</span>
-                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Voitures</span>
-              </div>
-            </div>
-            <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">
-              <span>Explorer</span>
-              <ChevronRight className="w-3.5 h-3.5 text-muted group-hover:translate-x-0.5 transition" />
-            </div>
-          </Link>
-
-          {/* Sorties & Billetterie */}
-          <Link
-            href="/dashboard/catalogue?kind=event"
-            className="group rounded-2xl border border-border bg-surface p-4 hover:border-primary/50 transition hover:shadow-xs flex flex-col justify-between gap-3"
-          >
-            <div className="space-y-2">
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-105 transition">
-                <Ticket className="w-4 h-4" />
-              </div>
-              <h3 className="text-sm font-bold text-foreground group-hover:text-primary transition">
-                Billetterie
-              </h3>
-              <div className="flex flex-wrap gap-1">
-                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Concerts</span>
-                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Galas</span>
-                <span className="text-xs bg-surface-muted text-muted px-1.5 py-0.5 rounded">Pass QR</span>
-              </div>
-            </div>
-            <div className="pt-2 border-t border-border/60 flex items-center justify-between text-xs font-semibold text-foreground group-hover:text-primary transition">
-              <span>Explorer</span>
-              <ChevronRight className="w-3.5 h-3.5 text-muted group-hover:translate-x-0.5 transition" />
-            </div>
-          </Link>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <UpgradePathCard
+            icon={<Crown className="w-5 h-5" aria-hidden />}
+            title="Organiser mon événement"
+            detail="Invitez, placez vos invités et accueillez-les le jour J."
+            features={['Invitations nominatives et réponses WhatsApp', 'Plan de table 2D/3D', 'Scan QR des invités à l’entrée']}
+            options={[
+              {
+                id: 'b2c',
+                label: 'Particulier',
+                hint: 'Mariage, anniversaire, fête privée',
+                price: `Dès ${upgradeFromPrices.b2c} / 90 j`,
+              },
+              {
+                id: 'b2b',
+                label: 'Entreprise',
+                hint: 'Galas, conférences, billetterie',
+                price: `Dès ${upgradeFromPrices.b2b} / mois`,
+              },
+            ]}
+            onChoose={handleOpenUpgrade}
+          />
+          <UpgradePathCard
+            icon={<Store className="w-5 h-5" aria-hidden />}
+            title="Publier au catalogue"
+            detail="Recevez des demandes de devis et des réservations, sans organiser d’événement."
+            options={[
+              { id: 'venue', label: 'Salle', hint: 'Salles illimitées, éditeur 2D/3D', price: `${upgradeFromPrices.venue} / mois` },
+              { id: 'service', label: 'Prestataire', hint: 'Prestations et matériel illimités', price: `${upgradeFromPrices.service} / mois` },
+              { id: 'catalog', label: 'Salle & presta', hint: 'Les deux, un seul forfait', price: `${upgradeFromPrices.catalog} / mois` },
+            ]}
+            onChoose={handleOpenUpgrade}
+          />
         </div>
       </section>
 
-      {/* ─── 5. ENGAGEMENTS DIRECTS (1 SEULE LIGNE ÉPURÉE) ─── */}
+      {/* ─── 5. ENGAGEMENTS & AIDE ─── */}
       <section className="rounded-2xl border border-border/80 bg-surface p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
-        <div className="flex items-center gap-2 text-xs text-muted font-medium">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-          <span>Devis gratuits et sans engagement · Acomptes versés directement aux prestataires</span>
+        <div className="flex items-center gap-2 text-sm text-muted">
+          <ShieldCheck className="w-4 h-4 text-primary shrink-0" aria-hidden />
+          <span>Devis gratuits et sans engagement. Les acomptes sont versés directement aux prestataires.</span>
         </div>
 
         <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
           <Link
             href="/dashboard/guide"
-            className="flex-1 sm:flex-none text-center px-3.5 py-1.5 rounded-xl border border-border bg-surface hover:bg-surface-muted text-xs font-semibold text-foreground transition min-h-[38px] inline-flex items-center justify-center"
+            className="flex-1 sm:flex-none px-3.5 rounded-xl border border-border bg-surface hover:bg-surface-muted text-xs font-semibold text-foreground transition min-h-11 inline-flex items-center justify-center gap-1.5"
           >
+            <HelpCircle className="w-4 h-4" aria-hidden />
             Guide
           </Link>
           <Link
             href="/contact"
-            className="flex-1 sm:flex-none text-center px-3.5 py-1.5 rounded-xl bg-primary-solid text-primary-foreground text-xs font-bold hover:bg-primary-solid-hover transition shadow-xs min-h-[38px] inline-flex items-center justify-center"
+            className="flex-1 sm:flex-none px-3.5 rounded-xl border border-border bg-surface hover:bg-surface-muted text-xs font-semibold text-foreground transition min-h-11 inline-flex items-center justify-center"
           >
             Assistance
           </Link>
         </div>
       </section>
-
       {/* ─── MODALE D'ÉVOLUTION DE COMPTE & SÉLECTION DE FORFAIT ─── */}
       <Modal
         open={upgradeModalOpen}
@@ -1273,13 +1086,13 @@ export default function ClientDashboardHome() {
         description="Le type de compte change après paiement."
       >
         <div className="space-y-6 pt-2">
-          <div className="flex flex-wrap p-1 rounded-xl bg-surface-muted border border-border gap-1">
+          <div className="grid grid-cols-2 sm:grid-cols-5 p-1 rounded-xl bg-surface-muted border border-border gap-1">
             {(
               [
-                { id: 'b2c' as const, label: 'Particulier', icon: Heart, iconClass: 'text-rose-500' },
+                { id: 'b2c' as const, label: 'Particulier', icon: Heart, iconClass: 'text-primary' },
                 { id: 'b2b' as const, label: 'Entreprise', icon: Building2, iconClass: 'text-primary' },
-                { id: 'venue' as const, label: 'Salle', icon: Utensils, iconClass: 'text-amber-600' },
-                { id: 'service' as const, label: 'Prestataire', icon: Truck, iconClass: 'text-sky-600' },
+                { id: 'venue' as const, label: 'Salle', icon: Utensils, iconClass: 'text-primary' },
+                { id: 'service' as const, label: 'Prestataire', icon: Truck, iconClass: 'text-primary' },
                 { id: 'catalog' as const, label: 'Salle & presta', icon: Sparkles, iconClass: 'text-primary' },
               ] as const
             ).map((tab) => (
@@ -1288,7 +1101,7 @@ export default function ClientDashboardHome() {
                 type="button"
                 onClick={() => handleOpenUpgrade(tab.id)}
                 className={cn(
-                  'flex-1 min-w-[7.5rem] min-h-11 py-2 px-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
+                  'min-h-11 py-2 px-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 last:col-span-2 sm:last:col-span-1',
                   upgradeCategory === tab.id
                     ? 'bg-surface text-foreground shadow-xs border border-border'
                     : 'text-muted hover:text-foreground',
@@ -1382,9 +1195,18 @@ export default function ClientDashboardHome() {
                     return (
                       <div
                         key={plan.id}
+                        role="button"
+                        tabIndex={0}
+                        aria-pressed={isSelected}
                         onClick={() => setSelectedPlanId(plan.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedPlanId(plan.id);
+                          }
+                        }}
                         className={cn(
-                          'cursor-pointer p-4 rounded-xl border transition flex flex-col justify-between gap-3 text-left relative',
+                          'cursor-pointer p-4 rounded-xl border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary flex flex-col justify-between gap-3 text-left relative',
                           isSelected
                             ? 'border-primary bg-primary/5 ring-2 ring-primary/20 shadow-xs'
                             : 'border-border bg-surface hover:border-primary/40',
@@ -1398,7 +1220,7 @@ export default function ClientDashboardHome() {
                               {pricing.promoSavingsPercent ? ` (−${pricing.promoSavingsPercent} %)` : ''}
                             </span>
                           ) : plan.popular ? (
-                            <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-rose-600 text-white shadow-xs">
+                            <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground shadow-xs">
                               Recommandé Mariage
                             </span>
                           ) : null}
@@ -1409,7 +1231,7 @@ export default function ClientDashboardHome() {
                             <span className="text-sm font-bold text-foreground">
                               {pricing.displayName || plan.name}
                             </span>
-                            <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">
+                            <span className="text-xs font-semibold text-primary">
                               {plan.badge}
                             </span>
                           </div>
@@ -1432,7 +1254,7 @@ export default function ClientDashboardHome() {
                         <div className="space-y-1 pt-2 border-t border-border/60 text-xs text-muted">
                           {plan.highlights.map((h, idx) => (
                             <div key={idx} className="flex items-center gap-1.5">
-                              <Check className="w-3 h-3 text-rose-600 shrink-0" />
+                              <Check className="w-3 h-3 text-primary shrink-0" />
                               <span className="truncate">{h}</span>
                             </div>
                           ))}
@@ -1447,9 +1269,18 @@ export default function ClientDashboardHome() {
                       return (
                         <div
                           key={plan.id}
+                          role="button"
+                          tabIndex={0}
+                          aria-pressed={isSelected}
                           onClick={() => setSelectedPlanId(plan.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setSelectedPlanId(plan.id);
+                            }
+                          }}
                           className={cn(
-                            'cursor-pointer p-4 rounded-xl border transition flex flex-col justify-between gap-3 text-left relative',
+                            'cursor-pointer p-4 rounded-xl border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary flex flex-col justify-between gap-3 text-left relative',
                             isSelected
                               ? 'border-primary bg-primary/5 ring-2 ring-primary/20 shadow-xs'
                               : 'border-border bg-surface hover:border-primary/40',
@@ -1514,9 +1345,18 @@ export default function ClientDashboardHome() {
                         return (
                           <div
                             key={plan.id}
+                            role="button"
+                            tabIndex={0}
+                            aria-pressed={isSelected}
                             onClick={() => setSelectedPlanId(plan.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setSelectedPlanId(plan.id);
+                              }
+                            }}
                             className={cn(
-                              'cursor-pointer p-4 rounded-xl border transition flex flex-col justify-between gap-3 text-left relative sm:col-span-2',
+                              'cursor-pointer p-4 rounded-xl border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary flex flex-col justify-between gap-3 text-left relative sm:col-span-2',
                               isSelected
                                 ? 'border-primary bg-primary/5 ring-2 ring-primary/20 shadow-xs'
                                 : 'border-border bg-surface hover:border-primary/40',
