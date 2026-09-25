@@ -83,6 +83,13 @@ function kindIcon(kind: MarketplaceInquiryItem['kind']) {
   return <Sparkles className="w-4 h-4" />;
 }
 
+/** « Palais Kinshasa 1 — Rooftop 5 » → « Rooftop 5 » quand le préfixe est le nom du vendeur. */
+function listingShortTitle(title: string, vendorName?: string | null) {
+  const sep = title.indexOf(' — ');
+  if (sep > 0 && (!vendorName || title.slice(0, sep).trim() === vendorName.trim())) return title.slice(sep + 3);
+  return title;
+}
+
 function inquiryStatusLabel(item: MarketplaceInquiryItem, organizerView: boolean) {
   if (item.hasBooking) return 'Réservée';
   if (item.status === 'QUOTED') return 'Devis chiffré';
@@ -172,7 +179,7 @@ export default function MarketplaceInquiriesPanel({
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return inquiries.filter((item) => {
+    const rows = inquiries.filter((item) => {
       if (status && status !== 'all') {
         if (status === 'BOOKED') {
           if (!item.hasBooking) return false;
@@ -188,7 +195,14 @@ export default function MarketplaceInquiriesPanel({
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [inquiries, status, kind, query]);
+    if (organizerView) return rows;
+    // Côté salle / prestataire : les demandes qui attendent une réponse d’abord.
+    const rank = (item: MarketplaceInquiryItem) =>
+      item.hasBooking || item.status === 'DECLINED' || item.closedAt ? 2 : item.status === 'NEW' ? 0 : 1;
+    return [...rows].sort(
+      (a, b) => rank(a) - rank(b) || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  }, [inquiries, status, kind, query, organizerView]);
   const pagedVisible = usePaginateItems(visible, page, pageSize);
 
   useEffect(() => {
@@ -828,8 +842,12 @@ export default function MarketplaceInquiriesPanel({
                 <MarketplaceDealCard
                   key={item.id}
                   id={item.id}
-                  title={item.title}
-                  subtitle={[kindLabel(item.kind), counterpart].filter(Boolean).join(' · ')}
+                  title={organizerView ? item.title : item.fromName || item.title}
+                  subtitle={
+                    organizerView
+                      ? [kindLabel(item.kind), counterpart].filter(Boolean).join(' · ')
+                      : [kindLabel(item.kind), listingShortTitle(item.title, item.vendorName)].filter(Boolean).join(' · ')
+                  }
                   timestamp={new Date(item.createdAt).toLocaleString('fr-FR')}
                   icon={kindIcon(item.kind)}
                   status={<StatusPill tone={inquiryStatusTone(item)}>{inquiryStatusLabel(item, organizerView)}</StatusPill>}

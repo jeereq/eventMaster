@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -239,6 +239,23 @@ export default function MarketplaceDeskPage() {
     setError('');
     setEditorOpen(true);
   };
+
+  // `?new=1` (bouton « Nouvelle offre » de l’accueil) : ouvre directement le formulaire.
+  const newRequested = useRef(false);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('new') !== '1') return;
+    newRequested.current = true;
+    params.delete('new');
+    const qs = params.toString();
+    window.history.replaceState(null, '', `/dashboard/marketplace${qs ? `?${qs}` : ''}`);
+  }, []);
+  useEffect(() => {
+    if (!newRequested.current || loading || !canManage) return;
+    newRequested.current = false;
+    openCreate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, canManage]);
 
   const openEdit = (item: ServiceItem) => {
     setEditing(item);

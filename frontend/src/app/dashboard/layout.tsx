@@ -382,52 +382,71 @@ function buildDashboardNav(opts: {
   );
  }
 
-	if (isServiceProvider) {
-		const providerActivityItems: NavItem[] = [
-			{
-				name: 'Mes prestations',
-				href: '/dashboard/marketplace',
-				tourId: 'nav-marketplace',
-				icon: Briefcase,
-				description: 'Publier et gérer vos fiches vendeur (traiteur, déco, DJ, photo, matériel…)',
-			},
+	if (isServiceProvider || vendorOnly) {
+		// Salle ou prestataire : le travail du jour d’abord (devis, réservations),
+		// puis la vitrine, le suivi, le réseau ; l’abonnement passe en bas.
+		const venue = !isServiceProvider && workspace.showRooms;
+		const activityItems: NavItem[] = [
 			{
 				name: 'Demandes de devis',
 				href: '/dashboard/bookings?tab=quotes',
 				tourId: 'nav-quotes',
 				icon: Inbox,
-				description: 'Chiffrages et demandes reçues des organisateurs',
+				description: 'Demandes reçues des clients et organisateurs : répondre, chiffrer',
 			},
 			{
-				name: 'Réservations & Planning',
+				name: 'Réservations & planning',
 				href: '/dashboard/bookings?tab=bookings',
 				tourId: 'nav-reservations',
 				icon: CalendarCheck,
-				description: 'Dates d’intervention et acomptes confirmés',
+				description: 'Dates confirmées, acomptes et disponibilités',
 			},
-			{
-				name: 'Statistiques & Revenus',
-				href: '/dashboard/analytics',
-				tourId: 'nav-analytics-org',
-				icon: BarChart3,
-				description: 'Volume financier, taux de concrétisation et bilans',
-			},
+		];
+
+		const showcaseItems: NavItem[] = [
+			...(venue
+				? [{ name: 'Mes salles', href: '/dashboard/rooms', tourId: 'nav-rooms', icon: Building2, description: 'Fiches catalogue, plans 2D/3D et staff de vos salles' }]
+				: []),
+			...(workspace.showMarketplace || isServiceProvider
+				? [{
+					name: venue ? 'Mes offres' : 'Mes prestations',
+					href: '/dashboard/marketplace',
+					tourId: 'nav-marketplace',
+					icon: Briefcase,
+					description: 'Publier et gérer vos fiches vendeur (traiteur, déco, DJ, photo, matériel…)',
+				}]
+				: []),
 			{
 				name: 'Réalisations',
 				href: '/dashboard/publications',
 				tourId: 'nav-publications',
 				icon: Rss,
-				description: 'Portfolio de réalisations et vitrine catalogue',
+				description: 'Photos de vos derniers événements, visibles dans le catalogue',
 			},
 		];
 
-		const providerNetworkItems: NavItem[] = [
+		const eventItems: NavItem[] = [
+			...(workspace.showEvents
+				? [
+					{ name: 'Événements', href: '/dashboard/events', tourId: 'nav-events', icon: Calendar },
+					{ name: 'Billetterie', href: '/dashboard/tickets', tourId: 'nav-tickets-org', icon: Ticket },
+				]
+				: []),
+			...(workspace.showProtocol
+				? [{ name: 'Protocole', href: '/dashboard/protocol', tourId: 'nav-protocol', icon: ScanLine }]
+				: []),
+			...(workspace.showTemplates
+				? [{ name: 'Modèles', href: '/dashboard/templates', tourId: 'nav-templates', icon: Mail }]
+				: []),
+		];
+
+		const networkItems: NavItem[] = [
 			{
 				name: 'Explorer le catalogue',
 				href: '/dashboard/catalogue',
 				tourId: 'nav-catalogue',
 				icon: Store,
-				description: 'Catalogue partenaires : salles, confrères et équipements',
+				description: 'Salles, confrères et équipements du réseau',
 			},
 			...(!allStudiosBlocked ? [{
 				name: 'Simulateur IA',
@@ -440,7 +459,7 @@ function buildDashboardNav(opts: {
 
 		const billingItems: NavItem[] = [
 			...(access?.canViewBilling
-				? [{ name: 'Abonnement & forfaits', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
+				? [{ name: 'Abonnement & forfait', href: '/dashboard/billing', tourId: 'nav-billing', icon: CreditCard }]
 				: []),
 			...(access?.canViewInvoices
 				? [{ name: 'Factures', href: '/dashboard/invoices', tourId: 'nav-invoices', icon: FileText }]
@@ -449,14 +468,19 @@ function buildDashboardNav(opts: {
 
 		return buildNavSections(
 			navSection('Accueil', [
-				{ name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard },
+				{ name: 'Tableau de bord', href: '/dashboard', tourId: 'nav-dashboard', icon: LayoutDashboard, description: 'Ce qui attend une réponse aujourd’hui' },
 			]),
-			navSection('Abonnement & quotas', billingItems),
-			navSection('Prestations & Devis', providerActivityItems),
-			navSection('Réseau & Marketplace', providerNetworkItems),
-			navSection('Organisation', workspace.showTeam
-				? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users }]
-				: []),
+			navSection('Activité', activityItems),
+			navSection('Ma vitrine', showcaseItems),
+			navSection('Suivi', [
+				{ name: 'Statistiques & revenus', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 },
+			]),
+			navSection('Mes événements', eventItems),
+			navSection('Réseau', networkItems),
+			navSection('Organisation', [
+				...(workspace.showTeam ? [{ name: 'Équipe', href: '/dashboard/team', tourId: 'nav-team', icon: Users }] : []),
+				...billingItems,
+			]),
 			navSection('Compte', compteNavItems()),
 		);
 	}
