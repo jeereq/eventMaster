@@ -537,6 +537,43 @@ export async function deleteMarketplaceFeedPost(req: AuthenticatedRequest, res: 
   }
 }
 
+/** Modifie le texte et les médias d’une réalisation du tenant (la fiche liée reste inchangée). */
+export async function updateMarketplaceFeedPost(req: AuthenticatedRequest, res: Response) {
+  try {
+    const tenantId = req.user?.tenantId;
+    const userId = req.user?.id;
+    const postId = String(req.params.postId || '').trim();
+    if (!tenantId || !userId) return res.status(403).json({ error: 'Tenant non identifié.' });
+
+    const access = await resolveOrgAccess(userId, tenantId);
+    if (!access.canManageRooms) return res.status(403).json({ error: 'Accès refusé.' });
+
+    const existing = await prisma.marketplacePost.findFirst({
+      where: { id: postId, tenantId },
+    });
+    if (!existing) return res.status(404).json({ error: 'Réalisation introuvable.' });
+
+    const content = String(req.body?.content || '').trim().slice(0, MAX_CONTENT);
+    const mediaUrls = normalizeMediaUrls(req.body?.mediaUrls);
+    if (!content && mediaUrls.length === 0) {
+      return res.status(400).json({ error: 'Ajoutez un texte ou au moins un média.' });
+    }
+
+    const post = await prisma.marketplacePost.update({
+      where: { id: existing.id },
+      data: {
+        content: content || null,
+        mediaUrls: mediaUrls.length ? mediaUrls : Prisma.DbNull,
+      },
+      include: publicFeedInclude,
+    });
+    return res.json(serializePublicFeedPost(post));
+  } catch (error) {
+    console.error('updateMarketplaceFeedPost:', error);
+    return res.status(500).json({ error: 'Impossible de modifier la réalisation.' });
+  }
+}
+
 export async function toggleMarketplaceFeedLike(req: AuthenticatedRequest, res: Response) {
   try {
     const userId = req.user?.id;
