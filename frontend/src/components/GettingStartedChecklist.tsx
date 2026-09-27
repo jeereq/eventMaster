@@ -163,14 +163,14 @@ export default function GettingStartedChecklist({
     return [
       {
         id: 'event',
-        title: '1. Créer votre événement',
+        title: 'Créer votre événement',
         description: 'Donnez un nom, une date et un lieu à votre célébration.',
         href: '/dashboard/events?create=1',
         done: hasEvents,
       },
       {
         id: 'guests',
-        title: '2. Ajouter vos invités',
+        title: 'Ajouter vos invités',
         description: 'Importez vos contacts et organisez facilement le plan de table.',
         href: guestsHref,
         done: (hasGuests || Boolean(flow.guestsDone)) && hasEvents,
@@ -179,7 +179,7 @@ export default function GettingStartedChecklist({
       },
       {
         id: 'invite',
-        title: '3. Envoyer vos invitations WhatsApp',
+        title: 'Envoyer vos invitations WhatsApp',
         description: 'Partagez vos faire-part avec confirmation de présence en ligne.',
         href: inviteHref,
         done: (hasInvitations || Boolean(flow.inviteDone)) && hasEvents,
@@ -190,7 +190,7 @@ export default function GettingStartedChecklist({
         ? [
             {
               id: 'offer',
-              title: '4. Publier une offre marketplace',
+              title: 'Publier une offre marketplace',
               description: 'Mettez en ligne une salle ou une prestation pour recevoir des devis.',
               href: '/dashboard/marketplace',
               done: hasRooms || hasServices,
@@ -199,7 +199,7 @@ export default function GettingStartedChecklist({
         : []),
       {
         id: canSell ? 'guide' : 'guide',
-        title: canSell ? '5. Préparer l’accueil du jour J' : '4. Préparer l’accueil du jour J',
+        title: 'Préparer l’accueil du jour J',
         description: 'Scannez les pass QR de vos invités en quelques secondes à l’entrée.',
         href: '/dashboard/guide?view=tour&start=1',
         done: Boolean(flow.guideDone),

@@ -13,6 +13,7 @@ import {
   Button, Modal, EmptyState, Alert, Input, Badge, Pagination, usePaginateItems, usePageSize,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import UserAvatar from '@/components/UserAvatar';
 import { DEFAULT_PHONE_COUNTRY_CODE, composeE164 } from '@/lib/phone';
 import { getQuotaActionMessage } from '@/lib/planAccess';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
@@ -83,7 +84,7 @@ export default function TeamManagement() {
     columns: teamColumns,
     setGridColumns: setTeamColumns,
     gridClassName: teamGridClass,
-  } = useViewMode('em-view-team', 'grid', 2);
+  } = useViewMode('em-view-team', 'grid', 3);
   const [membersPage, setMembersPage] = useState(1);
   const [membersPageSize, setMembersPageSize] = usePageSize('org-team', 10);
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -120,6 +121,7 @@ export default function TeamManagement() {
   const managerCount = members.filter((m) => m.orgRole === 'MANAGER' || m.isOwner).length;
   const maxManagers = planQuota?.limits.maxOrgManagers ?? null;
   const managersAtLimit = maxManagers !== null && maxManagers < 9999 && managerCount >= maxManagers;
+  const pendingCount = members.filter((m) => !m.isEmailVerified && !m.isOwner).length;
 
   const loadTeam = async () => {
     setLoading(true);
@@ -267,22 +269,19 @@ export default function TeamManagement() {
 
   return (
     <div className="bg-surface border border-border rounded-[var(--radius-card)] p-5 sm:p-6 space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border">
+      <div className="flex flex-col gap-4 pb-4 border-b border-border">
         <div>
           <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
             <Users className="w-5 h-5 text-primary" />
             Équipe de l&apos;organisation
           </h2>
           <p className="text-xs text-muted mt-1">
-            Invitez managers, protocole{hasCommercialNetwork ? ' et commerciaux' : ''}.
-            {planQuota && maxManagers !== null && (
-              <span className="block mt-1 font-medium text-primary">
-                Managers : {managerCount} / {maxManagers >= 9999 ? '∞' : maxManagers}
-              </span>
-            )}
+            Managers : gestion des événements, salles et équipe. Protocole : accueil et check-in le jour J.
+            {hasCommercialNetwork ? ' Commerciaux : apport de clients et commissions.' : ''}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <div className="mr-auto">
           {members.length > 0 && (
             <ViewModeToggle
               storageKey="em-view-team"
@@ -291,9 +290,10 @@ export default function TeamManagement() {
               columns={teamColumns}
               onColumnsChange={setTeamColumns}
               defaultMode="grid"
-              defaultColumns={2}
+              defaultColumns={3}
             />
           )}
+          </div>
           {access?.isOwner && (
             <Button
               type="button"
@@ -312,6 +312,33 @@ export default function TeamManagement() {
           )}
         </div>
       </div>
+
+      {members.length > 0 && (
+        <div className={cn('grid gap-2', hasCommercialNetwork ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3')} aria-label="Répartition de l’équipe">
+          {[
+            { label: 'Managers', value: maxManagers !== null && maxManagers < 9999 ? `${managerCount} / ${maxManagers}` : String(managerCount), hint: 'propriétaire inclus', gauge: maxManagers !== null && maxManagers > 0 && maxManagers < 9999 ? managerCount / maxManagers : null },
+            { label: 'Protocole', value: String(members.filter((m) => m.orgRole === 'PROTOCOL').length), hint: 'accueil et check-in', gauge: null },
+            ...(hasCommercialNetwork
+              ? [{ label: 'Commerciaux', value: String(members.filter((m) => m.orgRole === 'COMMERCIAL').length), hint: 'apporteurs d’affaires', gauge: null }]
+              : []),
+            { label: 'À valider', value: String(pendingCount), hint: pendingCount > 0 ? 'code de validation non saisi' : 'tous les comptes sont actifs', gauge: null },
+          ].map((stat) => (
+            <div key={stat.label} className="rounded-[var(--radius-card)] border border-border bg-surface-muted/60 px-3 py-2.5">
+              <p className="text-[11px] font-medium text-muted">{stat.label}</p>
+              <p className="text-lg font-semibold tabular-nums text-foreground">{stat.value}</p>
+              <p className="hidden truncate text-[11px] text-muted sm:block">{stat.hint}</p>
+              {stat.gauge != null && (
+                <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-border" aria-hidden>
+                  <div
+                    className={cn('h-full rounded-full', stat.gauge >= 1 ? 'bg-festive-accent' : 'bg-primary')}
+                    style={{ width: `${Math.min(100, Math.round(stat.gauge * 100))}%` }}
+                  />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {managersAtLimit && (
         <PlanLimitCallout kind="orgManagers" planQuota={planQuota} planName={tenant?.plan} />
@@ -528,7 +555,7 @@ export default function TeamManagement() {
       </Modal>
 
       {loading ? (
-        <SkeletonGrid count={4} columns={2} />
+        <SkeletonGrid count={3} columns={3} />
       ) : members.length === 0 ? (
         <EmptyState
           icon={<Users className="w-5 h-5" />}
@@ -564,10 +591,10 @@ export default function TeamManagement() {
                     type="button"
                     onClick={() => handleResendOtp(member)}
                     disabled={resendingId === member.id}
-                    className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md border border-border text-muted hover:bg-surface-muted inline-flex items-center gap-1"
+                    className="min-h-8 text-[11px] font-semibold px-2.5 rounded-md border border-border text-foreground hover:bg-surface-muted inline-flex items-center gap-1.5"
                   >
                     {resendingId === member.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
-                    Renvoyer OTP
+                    Renvoyer le code
                   </button>
                 )}
                 {member.orgRole === 'COMMERCIAL' && canManageTeam && !member.isOwner && (
@@ -617,30 +644,44 @@ export default function TeamManagement() {
                   </div>
                 )}
                 {canManageTeam && !member.isOwner && member.orgRole !== 'COMMERCIAL' && (
-                  <div className="flex gap-2 flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() => handleRoleChange(member, 'MANAGER')}
-                      className="text-[10px] font-medium px-2 py-1 rounded-md border border-border text-muted hover:border-primary/30 hover:text-primary"
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] font-medium text-muted">Rôle</span>
+                    <div
+                      role="group"
+                      aria-label={`Rôle de ${member.name || member.email}`}
+                      className="inline-flex rounded-[var(--radius-button)] border border-border bg-surface-muted p-0.5"
                     >
-                      → Manager
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRoleChange(member, 'PROTOCOL')}
-                      className="text-[10px] font-medium px-2 py-1 rounded-md border border-border text-muted hover:border-primary/30 hover:text-primary"
-                    >
-                      → Protocole
-                    </button>
-                    {hasCommercialNetwork && (
-                      <button
-                        type="button"
-                        onClick={() => handleRoleChange(member, 'COMMERCIAL')}
-                        className="text-[10px] font-medium px-2 py-1 rounded-md border border-border text-muted hover:border-primary/30 hover:text-primary"
-                      >
-                        → Commercial
-                      </button>
-                    )}
+                      {visibleRoles.map((role) => {
+                        const current = member.orgRole === role.id;
+                        const blocked = !current && role.id === 'MANAGER' && managersAtLimit;
+                        return (
+                          <button
+                            key={role.id}
+                            type="button"
+                            aria-pressed={current}
+                            disabled={current || blocked}
+                            onClick={() => handleRoleChange(member, role.id)}
+                            title={
+                              current
+                                ? `${role.label} (rôle actuel)`
+                                : blocked
+                                  ? 'Quota de managers atteint pour ce forfait'
+                                  : `Passer en ${role.label}`
+                            }
+                            className={cn(
+                              'min-h-8 rounded-[calc(var(--radius-button)-2px)] px-2.5 text-[11px] font-semibold transition-colors',
+                              current
+                                ? 'bg-surface text-foreground shadow-xs cursor-default'
+                                : blocked
+                                  ? 'text-muted/50 cursor-not-allowed'
+                                  : 'text-muted hover:text-primary',
+                            )}
+                          >
+                            {role.label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </>
@@ -681,7 +722,7 @@ export default function TeamManagement() {
                   }
                   aside={
                     !member.isEmailVerified && !member.isOwner ? (
-                      <StatusPill tone="amber">OTP</StatusPill>
+                      <StatusPill tone="amber">Compte à valider</StatusPill>
                     ) : undefined
                   }
                   actions={
@@ -705,42 +746,58 @@ export default function TeamManagement() {
             }
 
             return (
-            <ProjectCard
-              key={member.id}
-              id={member.id}
-              title={member.name || 'Sans nom'}
-              layout="grid"
-              icon={<Users className="w-4 h-4" />}
-              badge={
-                member.isOwner ? (
-                  <StatusPill tone="amber">Propriétaire</StatusPill>
-                ) : (
-                  <StatusPill tone={roleTone as 'amber' | 'violet' | 'primary'}>{roleLabel}</StatusPill>
-                )
-              }
-              overlayMeta={member.email}
-              hideCta
-              meta={
-                <div className="flex flex-wrap items-center gap-2 text-xs">
-                  {member.phone && <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" />{member.phone}</span>}
-                  {!member.isEmailVerified && !member.isOwner && <StatusPill tone="amber">OTP</StatusPill>}
+              <article
+                key={member.id}
+                className="flex flex-col gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-4 transition hover:border-primary/30"
+              >
+                <div className="flex items-start gap-3">
+                  <UserAvatar name={member.name || member.email} size="lg" className="h-11 w-11 shrink-0 text-sm" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <h3 className="truncate text-sm font-semibold text-foreground">{member.name || 'Sans nom'}</h3>
+                      {member.id === user?.id && <span className="text-[11px] text-muted">(vous)</span>}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                      <StatusPill tone={roleTone as 'amber' | 'violet' | 'primary'}>{roleLabel}</StatusPill>
+                      {!member.isEmailVerified && !member.isOwner && (
+                        <StatusPill tone="amber">Compte à valider</StatusPill>
+                      )}
+                    </div>
+                  </div>
+                  {canManageTeam && !member.isOwner && (
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(member)}
+                      className="-mr-1 -mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-button)] text-muted transition hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30"
+                      title="Retirer de l'organisation"
+                      aria-label={`Retirer ${member.name || member.email} de l'organisation`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
-              }
-              actions={
-                canManageTeam && !member.isOwner ? (
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(member)}
-                    className="p-2 text-muted hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-[var(--radius-button)] transition"
-                    title="Retirer de l'organisation"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                ) : undefined
-              }
-            >
-              <div className="space-y-2">{managementExtras}</div>
-            </ProjectCard>
+                <div className="space-y-1 text-xs text-muted">
+                  <a href={`mailto:${member.email}`} className="flex min-w-0 items-center gap-1.5 hover:text-primary">
+                    <Mail className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{member.email}</span>
+                  </a>
+                  {member.phone && (
+                    <a href={`tel:${member.phone}`} className="flex items-center gap-1.5 hover:text-primary">
+                      <Phone className="h-3.5 w-3.5 shrink-0" />
+                      {member.phone}
+                    </a>
+                  )}
+                  {member.orgRole === 'COMMERCIAL' && member.referralCode && (
+                    <span className="flex items-center gap-1.5">
+                      <TrendingUp className="h-3.5 w-3.5 shrink-0" />
+                      Code {member.referralCode}
+                    </span>
+                  )}
+                </div>
+                {!member.isOwner && canManageTeam && (
+                  <div className="space-y-2 border-t border-border pt-3">{managementExtras}</div>
+                )}
+              </article>
             );
           })}
         </div>
