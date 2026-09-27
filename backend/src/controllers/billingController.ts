@@ -10,6 +10,13 @@ import {
   getTenantPlanSnapshot,
 } from '../services/planFeaturesService';
 import { isOnlinePaymentsEnabled } from '../services/platformSettingsService';
+import { areBillingMocksEnabled } from '../config/security';
+
+function rejectDisabledBillingMock(res: Response) {
+  return res.status(403).json({
+    error: 'Les simulations de forfait sont désactivées dans cet environnement.',
+  });
+}
 
 function getPlansFromSettings() {
   return getPlansConfiguration();
@@ -188,6 +195,9 @@ export async function createCheckoutSession(req: AuthenticatedRequest, res: Resp
 
     // Mock upgrade local (dev) — forfaits réels : demande manuelle ou FlexPay.
     if (req.body.mock === true) {
+      if (!areBillingMocksEnabled()) {
+        return rejectDisabledBillingMock(res);
+      }
       // Direct mock upgrade for local dev convenience - also activate and extend license
       const durationDays = resolveDurationDaysForPlan(planType);
       const expiryDate = new Date();
@@ -270,6 +280,10 @@ export async function mockUpgrade(req: AuthenticatedRequest, res: Response) {
 
     if (!(await assertCanViewBilling(userId, tenantId))) {
       return res.status(403).json({ error: 'Seul le propriétaire peut modifier le forfait.' });
+    }
+
+    if (!areBillingMocksEnabled()) {
+      return rejectDisabledBillingMock(res);
     }
 
     if (!plan || !PLAN_KEYS.includes(plan)) {

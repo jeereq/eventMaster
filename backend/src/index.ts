@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { rateLimit } from 'express-rate-limit';
 import authRoutes from './routes/authRoutes';
 import eventRoutes from './routes/eventRoutes';
 import templateRoutes from './routes/templateRoutes';
@@ -26,17 +27,26 @@ import { loadSubscriptionPlansFromDb } from './services/subscriptionPlanCatalogS
 import { hydratePlatformSettingsFromDb } from './services/platformSettingsService';
 import { isSendGridConfigured, logNotificationConfigStatus } from './config/notificationConfig';
 import { maintenanceGuard } from './middleware/maintenanceGuard';
+import { createCorsOptions, getJwtSecret, getRateLimitConfig } from './config/security';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5001;
+const rateLimits = getRateLimitConfig();
+
+// Valide les secrets dès le démarrage, avant d'accepter du trafic.
+getJwtSecret();
 
 // Global Middlewares
-app.use(cors({
-  origin: '*', // We can restrict this to the frontend URL later if needed
-  credentials: true
+app.set('trust proxy', 1);
+app.use(cors(createCorsOptions()));
+app.use(rateLimit({
+  windowMs: rateLimits.windowMs,
+  limit: rateLimits.globalMax,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -64,7 +74,12 @@ app.get('/api/health', async (req: Request, res: Response) => {
 app.use(maintenanceGuard);
 
 // Mount Routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', rateLimit({
+  windowMs: rateLimits.windowMs,
+  limit: rateLimits.authMax,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+}), authRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/uploads', uploadRoutes);

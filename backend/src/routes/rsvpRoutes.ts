@@ -9,6 +9,7 @@ import {
 } from '../controllers/rsvpController';
 import { submitGuestShare, getEventFeed, createEventComment, getPublicEventShares, toggleLikeEventPost } from '../controllers/feedController';
 import { acceptGuestLegalHandler, getGuestLegalStatusHandler } from '../controllers/legalController';
+import { optionalAuth } from '../middleware/auth';
 
 const router = Router();
 
@@ -25,7 +26,7 @@ router.post('/:guestId/donations', submitGuestDonation);
 router.post('/:guestId/share', submitGuestShare);
 router.get('/event/:eventId/feed', getEventFeed);
 router.get('/event/:eventId/shares', getPublicEventShares);
-router.post('/feed/post/:postId/comment', createEventComment);
-router.post('/feed/post/:postId/like', toggleLikeEventPost);
+router.post('/feed/post/:postId/comment', optionalAuth, createEventComment);
+router.post('/feed/post/:postId/like', optionalAuth, toggleLikeEventPost);
 
 export default router;

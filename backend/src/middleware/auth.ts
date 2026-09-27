@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { prisma } from '../db';
 import { createTtlCache } from '../utils/ttlCache';
+import { getJwtSecret } from '../config/security';
 
 const LICENSE_CACHE_TTL_MS = 60_000;
 const licenseCache = createTtlCache<{
@@ -13,8 +14,6 @@ const licenseCache = createTtlCache<{
 export function invalidateLicenseCache(tenantId: string) {
   licenseCache.delete(tenantId);
 }
-
-export const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
 
 export interface AuthTokenPayload {
   userId: string;
@@ -33,7 +32,7 @@ export interface AuthenticatedRequest extends Request {
 }
 
 export function signUserToken(payload: AuthTokenPayload, expiresIn: string = '24h') {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: expiresIn as SignOptions['expiresIn'] });
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: expiresIn as SignOptions['expiresIn'] });
 }
 
 function userFromPayload(payload: AuthTokenPayload) {
@@ -52,7 +51,7 @@ export function optionalAuth(req: AuthenticatedRequest, _res: Response, next: Ne
   }
   const token = authHeader.split(' ')[1];
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as AuthTokenPayload;
+    const payload = jwt.verify(token, getJwtSecret()) as AuthTokenPayload;
     req.user = userFromPayload(payload);
   } catch {
     /* ignore invalid token on public routes */
@@ -69,7 +68,7 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
 
   const token = authHeader.split(' ')[1];
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as AuthTokenPayload;
+    const payload = jwt.verify(token, getJwtSecret()) as AuthTokenPayload;
     req.user = userFromPayload(payload);
     next();
   } catch (error) {

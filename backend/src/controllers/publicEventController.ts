@@ -23,6 +23,7 @@ import { formatEventPlace } from '../utils/eventPlace';
 import { haversineKm, toDateKey } from '../utils/marketplaceDates';
 import { enabledMarketplaceCities, normalizeAllowedCity, pointInCityBounds } from '../utils/rdcCities';
 import { isOnlinePaymentsEnabled, loadPlatformSettings, getDonationsAccess } from '../services/platformSettingsService';
+import { buildGuestRsvpUrl } from '../services/guestAccessService';
 import {
   resolveDonationsAccess,
   extractEventDonationsConfig,
@@ -748,7 +749,7 @@ export async function checkoutPublicEvent(req: AuthenticatedRequest, res: Respon
         paid: false,
         orderId: order.id,
         guestId: primary?.id,
-        rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
+        rsvpUrl: primary ? buildGuestRsvpUrl(FRONTEND_URL, primary.id) : null,
         message: 'Inscription confirmée. Conservez le lien de votre badge QR.',
       });
     }
@@ -880,12 +881,12 @@ export async function getTicketOrderBySession(req: Request, res: Response) {
       amountFc: order.amountFc,
       event: order.event,
       guestId: primary?.id,
-      rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
+      rsvpUrl: primary ? buildGuestRsvpUrl(FRONTEND_URL, primary.id) : null,
       guests: order.guests.map((g) => ({
         id: g.id,
         firstName: g.firstName,
         email: g.email,
-        rsvpUrl: `${FRONTEND_URL}/rsvp/${g.id}`,
+        rsvpUrl: buildGuestRsvpUrl(FRONTEND_URL, g.id),
       })),
     });
   } catch (error) {

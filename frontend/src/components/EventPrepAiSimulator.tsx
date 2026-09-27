@@ -53,6 +53,7 @@ import {
 import { StudioAiTabs, StudioStepper, studioAiTabPanelId, type StudioAiTabId } from '@/components/StudioAiTabs';
 import { EVENT_PREP_PROMPT_MODELS } from '@/config/eventPrepPromptModels';
 import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
+import { getAuthToken } from '@/lib/authSession';
 
 const VENUE_PARAM_AMENITIES = VENUE_AMENITIES.filter((item) =>
   ['parking', 'ac', 'generator', 'garden', 'sound', 'wifi', 'stage', 'security'].includes(item.id),
@@ -366,7 +367,7 @@ export default function EventPrepAiSimulator({
       if (synced) publishAllowance(synced);
     });
     void (async () => {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const token = getAuthToken();
       const items = token ? await claimAiSimulationHistory() : await fetchAiSimulationHistory();
       setHistory(items);
       if (!cached && !preferDefaults && items[0]) applyCached(historyItemToCache(items[0]), items[0].id);

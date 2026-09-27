@@ -8,6 +8,7 @@ import {
 import { extractTablePlanSummaryForPdf } from '../utils/tablePlanPdfSummary';
 import type { SeatingInvitationPdfInput } from './invitationPdfService';
 import { orgBrandFromTenant } from '../utils/brandedMessaging';
+import { buildGuestRsvpUrl } from './guestAccessService';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -48,7 +49,7 @@ function buildFallbackInput(
     tableName: input.assignedSeat?.tableName ?? null,
     seatNumber: input.assignedSeat ? input.assignedSeat.seatIndex + 1 : null,
     tableMates: input.tableMates ?? [],
-    rsvpUrl: `${FRONTEND_URL}/rsvp/${input.guestId}`,
+    rsvpUrl: buildGuestRsvpUrl(FRONTEND_URL, input.guestId),
     dressCode: input.dressCode,
     tablePlanTables: summary?.tables,
     includeQrCode: true,

@@ -11,14 +11,13 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import { isCloudinaryConfigured, getTemplateUploadFolder } from '../src/config/cloudinaryConfig';
 import { uploadDataUrl } from '../src/services/cloudinaryService';
+import { getPostgresSslConfig } from '../src/config/security';
 
 const dryRun = process.argv.includes('--dry-run');
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('localhost')
-    ? undefined
-    : { rejectUnauthorized: false },
+  ssl: getPostgresSslConfig(),
 });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });

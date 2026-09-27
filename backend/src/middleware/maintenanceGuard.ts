@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { loadPlatformSettings } from '../services/platformSettingsService';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
+import { getJwtSecret } from '../config/security';
 
 const ALLOWED_PREFIXES = [
   '/health',
@@ -44,7 +43,7 @@ export function maintenanceGuard(req: Request, res: Response, next: NextFunction
     const auth = req.headers.authorization;
     if (auth?.startsWith('Bearer ')) {
       try {
-        const payload = jwt.verify(auth.slice(7), JWT_SECRET) as { role?: string };
+        const payload = jwt.verify(auth.slice(7), getJwtSecret()) as { role?: string };
         if (payload.role === 'SUPER_ADMIN') return next();
       } catch {
         /* ignore */

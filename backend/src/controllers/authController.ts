@@ -28,8 +28,7 @@ import { loadPlatformSettings, getContactDestinations, assertAuthOtpMethodAllowe
 import { resolvePhoneFields } from '../utils/phone';
 import { wrapBrandedEmail } from '../utils/brandedMessaging';
 import { escapeHtml, getPlatformBrand } from '../utils/brandingUtils';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'eventmaster-secret-key-12345';
+import { getJwtSecret } from '../config/security';
 
 async function issueAndSendOtp(params: {
   userId: string;
@@ -650,7 +649,7 @@ export async function forgotPassword(req: Request, res: Response) {
 
     const resetToken = jwt.sign(
       { userId: user.id, purpose: 'password-reset' },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '1h' },
     );
 
@@ -713,7 +712,7 @@ export async function resetPassword(req: Request, res: Response) {
 
     let decoded: any;
     try {
-      decoded = jwt.verify(token, JWT_SECRET);
+      decoded = jwt.verify(token, getJwtSecret());
     } catch {
       return res.status(400).json({ error: 'Le jeton de réinitialisation est invalide ou a expiré.' });
     }

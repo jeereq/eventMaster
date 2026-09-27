@@ -329,9 +329,7 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false,
   const handleToggleLike = async (postId: string) => {
     if (!user?.id) return;
     try {
-      const response = await api.post(`/events/${eventId}/feed/${postId}/like`, {
-        userId: user.id,
-      });
+      const response = await api.post(`/events/${eventId}/feed/${postId}/like`);
       setPosts(posts.map((p) => (p.id === postId ? { ...p, likes: response.likes } : p)));
     } catch (err) {
       console.error('Error toggling like:', err);
@@ -345,7 +343,6 @@ export default function EventFeedManager({ eventId, canPublishOnListing = false,
     try {
       const newComment = await api.post(`/rsvp/feed/post/${postId}/comment`, {
         content,
-        userId: user?.id,
       });
       setPosts(posts.map(p => {
         if (p.id === postId) {

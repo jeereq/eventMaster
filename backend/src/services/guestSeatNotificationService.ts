@@ -18,6 +18,7 @@ import {
 } from '../utils/brandedMessaging';
 import { escapeHtml } from '../utils/brandingUtils';
 import { GUEST_COPY } from '../utils/guestMessageCopy';
+import { buildGuestRsvpUrl } from './guestAccessService';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -124,7 +125,7 @@ export async function notifyGuestTableAssignment(params: {
 
   const email = extractGuestEmail(guest);
   const phone = extractGuestPhone(guest);
-  const rsvpUrl = `${FRONTEND_URL}/rsvp/${guest.id}`;
+  const rsvpUrl = buildGuestRsvpUrl(FRONTEND_URL, guest.id);
   const seatNumber = String(assignedSeat.seatIndex + 1);
   const formattedDate = formatFrenchDate(event.date);
   const tableMatesText = formatTableMatesList(tableMates);

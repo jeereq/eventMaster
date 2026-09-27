@@ -68,6 +68,7 @@ export default function RsvpPage() {
   const searchParams = useSearchParams();
   const guestId = params.guestId as string;
   const initialTabParam = searchParams?.get('tab');
+  const guestAccessToken = searchParams?.get('access') || '';
   const { site } = usePlatformSite();
 
   const [guest, setGuest] = useState<GuestRsvpData | null>(null);
@@ -328,9 +329,11 @@ export default function RsvpPage() {
 
   const handleToggleLike = async (postId: string) => {
     try {
-      const response = await api.post(`/rsvp/feed/post/${postId}/like`, {
-        guestId: guest?.id,
-      });
+      const response = await api.post(
+        `/rsvp/feed/post/${postId}/like`,
+        undefined,
+        { headers: { 'X-Guest-Token': guestAccessToken } },
+      );
 
       setFeedPosts(feedPosts.map(p => {
         if (p.id === postId) {
@@ -353,10 +356,11 @@ export default function RsvpPage() {
     setGuestCommentSubmitting(prev => ({ ...prev, [postId]: true }));
     setFeedActionError('');
     try {
-      const newComment = await api.post(`/rsvp/feed/post/${postId}/comment`, {
-        content,
-        guestId: guest?.id,
-      });
+      const newComment = await api.post(
+        `/rsvp/feed/post/${postId}/comment`,
+        { content },
+        { headers: { 'X-Guest-Token': guestAccessToken } },
+      );
 
       setFeedPosts(feedPosts.map(p => {
         if (p.id === postId) {

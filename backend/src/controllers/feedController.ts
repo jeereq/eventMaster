@@ -2,6 +2,24 @@ import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { canManageEvent } from '../services/permissionsService';
+import { resolveFeedActor, type FeedIdentityDependencies } from '../services/feedIdentityService';
+
+const feedIdentityDependencies: FeedIdentityDependencies = {
+  findUser: (id) => prisma.user.findUnique({
+    where: { id },
+    select: { id: true, name: true, email: true },
+  }),
+  findGuestInEvent: (id, eventId) => prisma.guest.findFirst({
+    where: { id, eventId },
+    select: { id: true, firstName: true, lastName: true },
+  }),
+  canManageEvent,
+};
+
+function guestTokenFromRequest(req: Request): string | undefined {
+  const value = req.headers['x-guest-token'];
+  return Array.isArray(value) ? value[0] : value;
+}
 
 // 1. Submit Guest Share (Public - Guest réponse à l’invitation page)
 export async function submitGuestShare(req: Request, res: Response) {
@@ -280,12 +298,12 @@ export async function deleteGuestShare(req: AuthenticatedRequest, res: Response)
 }
 
 // 6. Create Event Comment (Public - Guest réponse à l’invitation page and Dashboard)
-export async function createEventComment(req: Request, res: Response) {
+export async function createEventComment(req: AuthenticatedRequest, res: Response) {
   try {
     const postId = req.params.postId as string;
-    const { content, guestId, userId } = req.body;
+    const { content } = req.body;
 
-    if (!content || content.trim() === '') {
+    if (typeof content !== 'string' || content.trim() === '') {
       return res.status(400).json({ error: 'Le contenu du commentaire est requis.' });
     }
 
@@ -297,33 +315,22 @@ export async function createEventComment(req: Request, res: Response) {
       return res.status(404).json({ error: 'Publication non trouvée.' });
     }
 
-    let authorName = 'Anonyme';
-
-    if (userId) {
-      // Comment from Organizer
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-      });
-      if (user) {
-        authorName = (user.name || user.email) + ' (Organisateur)';
-      }
-    } else if (guestId) {
-      // Comment from Guest
-      const guest = await prisma.guest.findUnique({
-        where: { id: guestId },
-      });
-      if (guest) {
-        authorName = `${guest.firstName} ${guest.lastName}`;
-      }
+    const actor = await resolveFeedActor({
+      eventId: post.eventId,
+      user: req.user,
+      guestToken: guestTokenFromRequest(req),
+    }, feedIdentityDependencies);
+    if (!actor) {
+      return res.status(401).json({ error: 'Identité non vérifiée pour cet événement.' });
     }
 
     const comment = await prisma.eventComment.create({
       data: {
         postId,
-        authorName,
-        guestId: guestId || null,
-        userId: userId || null,
-        content,
+        authorName: actor.authorName,
+        guestId: actor.kind === 'guest' ? actor.id : null,
+        userId: actor.kind === 'user' ? actor.id : null,
+        content: content.trim(),
       },
     });
 
@@ -335,14 +342,9 @@ export async function createEventComment(req: Request, res: Response) {
 }
 
 // 7. Toggle Like on Event Post (Public - Guest réponse à l’invitation page and Dashboard)
-export async function toggleLikeEventPost(req: Request, res: Response) {
+export async function toggleLikeEventPost(req: AuthenticatedRequest, res: Response) {
   try {
     const postId = req.params.postId as string;
-    const { guestId, userId } = req.body;
-
-    if (!guestId && !userId) {
-      return res.status(400).json({ error: 'Identifiant requis (guestId ou userId).' });
-    }
 
     const post = await prisma.eventPost.findUnique({
       where: { id: postId },
@@ -352,7 +354,16 @@ export async function toggleLikeEventPost(req: Request, res: Response) {
       return res.status(404).json({ error: 'Publication non trouvée.' });
     }
 
-    const likerId = userId ? `user_${userId}` : `guest_${guestId}`;
+    const actor = await resolveFeedActor({
+      eventId: post.eventId,
+      user: req.user,
+      guestToken: guestTokenFromRequest(req),
+    }, feedIdentityDependencies);
+    if (!actor) {
+      return res.status(401).json({ error: 'Identité non vérifiée pour cet événement.' });
+    }
+
+    const likerId = actor.likerId;
     let currentLikes: string[] = [];
 
     if (post.likes && Array.isArray(post.likes)) {

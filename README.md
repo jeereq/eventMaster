@@ -119,14 +119,17 @@ eventmaster/
    ```bash
    cd backend
    ```
-2. Créez un fichier .env à la racine de backend/ et configurez vos variables (le fichier est déjà initialisé avec des valeurs de démo) :
+2. Copiez `backend/.env.example` vers `backend/.env`, puis configurez vos variables :
    ```env
    DATABASE_URL="postgresql://utilisateur:mot_de_passe@localhost:5432/nom_de_bdd?schema=public"
    JWT_SECRET="cle_secrete_super_robuste_pour_signature_jwt"
+   CORS_ALLOWED_ORIGINS="http://localhost:3000"
+   DATABASE_SSL="disable"
    PORT=5001
    STRIPE_SECRET_KEY="votre_cle_stripe_test"
    STRIPE_WEBHOOK_SECRET="votre_secret_webhook_stripe"
    ```
+   `JWT_SECRET` est obligatoire (32 caractères minimum). En production, configurez les origines CORS explicitement et laissez la vérification TLS PostgreSQL active.
 3. Appliquez les migrations Prisma de votre schéma à la base PostgreSQL :
    ```bash
    npx prisma db push
