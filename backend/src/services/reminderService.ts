@@ -1,4 +1,5 @@
 import { prisma } from '../db';
+import { buildGuestRsvpUrl } from './guestAccessService';
 import { sendRealEmail, sendRealWhatsApp, sendRealSms } from './notificationService';
 import { resolveDeliveryChannels } from '../utils/notificationChannels';
 import { renderGuestMessage, applyTemplateVariables } from './messageTemplateService';
@@ -159,7 +160,7 @@ export async function processReminders() {
           .replaceAll('{{location}}', event.location || '')
           .replaceAll('{{date}}', formattedDate);
         
-        const rsvpLink = `${FRONTEND_URL}/rsvp/${guest.id}`;
+        const rsvpLink = buildGuestRsvpUrl(FRONTEND_URL, guest.id);
         const templateVars = {
           firstName: guest.firstName || '',
           lastName: guest.lastName || '',

@@ -7,6 +7,7 @@ import { assignSeatInTablePlan, assignMultipleSeatsInTablePlan } from './seatSel
 import { brandedEventDetailsHtml, orgBrandFromTenant, wrapBrandedEmail } from '../utils/brandedMessaging';
 import { escapeHtml } from '../utils/brandingUtils';
 import { GUEST_COPY } from '../utils/guestMessageCopy';
+import { buildGuestRsvpUrl } from './guestAccessService';
 
 import {
   splitBuyerName,
@@ -220,7 +221,7 @@ export async function fulfillTicketOrder(orderId: string, stripeSession?: {
   if (isDonation) {
     const subject = `Merci pour votre don — ${event.title}`;
     const text = `Bonjour ${order.buyerName},\n\nNous vous remercions très chaleureusement pour votre don de ${order.amountFc.toLocaleString('fr-FR')} FC en soutien à « ${event.title} ».\n\nOrganisé par ${event.tenant.name}.\n`;
-    const rsvpUrl = primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null;
+    const rsvpUrl = primary ? buildGuestRsvpUrl(FRONTEND_URL, primary.id) : null;
     const html = wrapBrandedEmail({
       branding: orgBrand.branding,
       orgName: orgBrand.orgName,
@@ -237,7 +238,7 @@ export async function fulfillTicketOrder(orderId: string, stripeSession?: {
     });
     void sendRealEmail(order.buyerEmail, subject, text, html).catch(() => undefined);
   } else if (primary) {
-    const rsvpUrl = `${FRONTEND_URL}/rsvp/${primary.id}`;
+    const rsvpUrl = buildGuestRsvpUrl(FRONTEND_URL, primary.id);
     let seatLine = '';
     if (parsedSeats.length === 1) {
       seatLine = `\nPlace réservée : table ${parsedSeats[0].tableId} · siège ${parsedSeats[0].seatIndex + 1}\n`;
@@ -257,7 +258,7 @@ export async function fulfillTicketOrder(orderId: string, stripeSession?: {
           .map((g, idx) => {
             const s = parsedSeats[idx];
             const sInfo = s ? ` (Table ${s.tableId}, place n°${s.seatIndex + 1})` : '';
-            return ` - Pass ${idx + 1} [${idx === 0 ? order.buyerName : g.firstName}] : ${FRONTEND_URL}/rsvp/${g.id}${sInfo}`;
+            return ` - Pass ${idx + 1} [${idx === 0 ? order.buyerName : g.firstName}] : ${buildGuestRsvpUrl(FRONTEND_URL, g.id)}${sInfo}`;
           })
           .join('\n') +
         '\nVous pouvez transférer directement ces liens uniques à vos accompagnateurs.\n';
@@ -270,7 +271,7 @@ export async function fulfillTicketOrder(orderId: string, stripeSession?: {
               .map((g, idx) => {
                 const s = parsedSeats[idx];
                 const sInfo = s ? ` &middot; <span style="color:#059669;font-weight:600;">Table ${escapeHtml(String(s.tableId))}, place n°${s.seatIndex + 1}</span>` : '';
-                return `<li><strong>Billet ${idx + 1}</strong> (${escapeHtml(idx === 0 ? order.buyerName : g.firstName)}) : <a href="${FRONTEND_URL}/rsvp/${g.id}" style="color:#059669;text-decoration:underline;font-weight:600;">Ouvrir le pass ${idx + 1}</a>${sInfo}</li>`;
+                return `<li><strong>Billet ${idx + 1}</strong> (${escapeHtml(idx === 0 ? order.buyerName : g.firstName)}) : <a href="${buildGuestRsvpUrl(FRONTEND_URL, g.id)}" style="color:#059669;text-decoration:underline;font-weight:600;">Ouvrir le pass ${idx + 1}</a>${sInfo}</li>`;
               })
               .join('')}
           </ul>

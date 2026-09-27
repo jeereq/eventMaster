@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { AuthenticatedRequest } from '../middleware/auth';
+import { buildGuestRsvpUrl } from '../services/guestAccessService';
 import { parsePhotoUrls, coverFromMedia, priceUnitLabel, serviceCategoryLabel, isServiceRentalCategory } from '../utils/publicVenue';
 import { buildEventPlanProposals } from '../services/eventPlannerService';
 import { parseEventPlanInput, serializeBriefPayload } from '../services/eventPlanBrief';
@@ -787,11 +788,11 @@ export async function listMyTickets(req: AuthenticatedRequest, res: Response) {
           buyerName: order.buyerName,
           event: order.event,
           guestId: primary?.id || null,
-          rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
+          rsvpUrl: primary ? buildGuestRsvpUrl(FRONTEND_URL, primary.id) : null,
           guests: order.guests.map((g) => ({
             id: g.id,
             email: g.email,
-            rsvpUrl: `${FRONTEND_URL}/rsvp/${g.id}`,
+            rsvpUrl: buildGuestRsvpUrl(FRONTEND_URL, g.id),
           })),
           selectedSeats: order.selectedSeats,
           publicHref: order.event.slug && order.event.isPublic ? `/dashboard/catalogue/evenements/${order.event.slug}` : null,

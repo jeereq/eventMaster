@@ -1,5 +1,6 @@
 import { notifyAiTokensInsufficient } from '@/lib/aiTokenEvents';
 import { isAuthExemptPath, notifySessionExpired } from '@/lib/sessionEvents';
+import { getAuthToken } from '@/lib/authSession';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:5001/api';
 // const API_URL = "https://eventmaster-backend-ysgk.onrender.com/api"
@@ -11,7 +12,7 @@ interface FetchOptions extends RequestInit {
 }
 
 async function request(path: string, options: FetchOptions = {}) {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const token = getAuthToken();
 
   const headers = new Headers(options.headers || {});
   if (token) {
@@ -94,7 +95,7 @@ export const api = {
   put: (path: string, body?: any, options?: FetchOptions) => request(path, { ...options, method: 'PUT', body }),
   delete: (path: string, options?: FetchOptions) => request(path, { ...options, method: 'DELETE' }),
   download: async (path: string, filename: string) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const token = getAuthToken();
     const headers = new Headers();
     if (token) headers.set('Authorization', `Bearer ${token}`);
 

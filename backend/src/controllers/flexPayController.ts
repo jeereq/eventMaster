@@ -19,6 +19,7 @@ import {
 import { parseFlexPayChargeCurrency, resolveFlexPayCharge } from '../services/flexPayChargeCurrency';
 import { finalizeCommercialFlexPayPayout } from '../services/commercialFlexPayPayoutService';
 import { isOnlinePaymentsEnabled, loadPlatformSettings } from '../services/platformSettingsService';
+import { buildGuestRsvpUrl } from '../services/guestAccessService';
 import {
   findAiTokenOrderForFlexPay,
   verifyAndFinalizeAiTokenOrder,
@@ -442,12 +443,12 @@ export async function verifyFlexPayCardOrder(req: Request, res: Response) {
         orderId: order.id,
         quantity: order.quantity,
         guestId: primary?.id,
-        rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
+        rsvpUrl: primary ? buildGuestRsvpUrl(FRONTEND_URL, primary.id) : null,
         guests: order.guests.map((g) => ({
           id: g.id,
           firstName: g.firstName,
           email: g.email,
-          rsvpUrl: `${FRONTEND_URL}/rsvp/${g.id}`,
+          rsvpUrl: buildGuestRsvpUrl(FRONTEND_URL, g.id),
         })),
         event: order.event,
         channel: order.flexPayChannel,
@@ -523,12 +524,12 @@ export async function verifyFlexPayCardOrder(req: Request, res: Response) {
       orderId: order.id,
       quantity: order.quantity,
       guestId: primary?.id,
-      rsvpUrl: primary ? `${FRONTEND_URL}/rsvp/${primary.id}` : null,
+      rsvpUrl: primary ? buildGuestRsvpUrl(FRONTEND_URL, primary.id) : null,
       guests: (fulfilled?.guests || []).map((g) => ({
         id: g.id,
         firstName: g.firstName,
         email: g.email,
-        rsvpUrl: `${FRONTEND_URL}/rsvp/${g.id}`,
+        rsvpUrl: buildGuestRsvpUrl(FRONTEND_URL, g.id),
       })),
       event: order.event,
       channel: checked.channel || order.flexPayChannel,

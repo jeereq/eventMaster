@@ -7,6 +7,7 @@ import { DEFAULT_GUEST_MESSAGE_TEMPLATES } from '../src/config/defaultGuestMessa
 import { getDefaultPlans, PLAN_KEYS, type PlanTypeKey } from '../src/config/plansConfig';
 import { buildTemplateContent, GLOBAL_CATALOG_TEMPLATES } from './seed/helpers';
 import { seedBeverageBrands } from './seed/beverageBrands';
+import { getPostgresSslConfig } from '../src/config/security';
 
 /**
  * Seed minimal : uniquement les données dont l’application a besoin pour fonctionner.
@@ -39,7 +40,7 @@ const PLAN_SORT_ORDER: Record<PlanTypeKey, number> = {
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('localhost') ? undefined : { rejectUnauthorized: false },
+  ssl: getPostgresSslConfig(),
 });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });

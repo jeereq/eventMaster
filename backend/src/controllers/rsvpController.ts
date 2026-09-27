@@ -23,6 +23,7 @@ import {
 } from '../utils/brandedMessaging';
 import { customTenantBranding, escapeHtml } from '../utils/brandingUtils';
 import { GUEST_COPY } from '../utils/guestMessageCopy';
+import { buildGuestRsvpUrl } from '../services/guestAccessService';
 import { formatEventPlace } from '../utils/eventPlace';
 import { ensureMandatoryRsvpFieldsOnContent, overlayRsvpFieldsOnContent } from '../utils/mandatoryRsvpFields';
 import { sanitizeLayoutBlueprint } from '../utils/publicVenue';
@@ -771,7 +772,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
             email: og.email,
             phone: og.phone,
             isCurrentGuest: isCurrent,
-            rsvpUrl: `${FRONTEND_URL}/rsvp/${og.id}`,
+            rsvpUrl: buildGuestRsvpUrl(FRONTEND_URL, og.id),
             qrImageUrl: `${FRONTEND_URL}/api/rsvp/${og.id}/qr.png`,
             tableName: foundTableName,
             seatIndex: pSeatIndex,
@@ -1254,7 +1255,7 @@ export async function getGuestQrPng(req: Request, res: Response) {
     }
 
     const FRONTEND = process.env.FRONTEND_URL || 'http://localhost:3000';
-    const rsvpUrl = `${FRONTEND}/rsvp/${guest.id}`;
+    const rsvpUrl = buildGuestRsvpUrl(FRONTEND, guest.id);
     const png = await generateQrPngBuffer(rsvpUrl, { size });
 
     res.setHeader('Content-Type', 'image/png');
@@ -1410,6 +1411,7 @@ export async function submitGuestDonation(req: Request, res: Response) {
     const charge = resolveFlexPayCharge(amountFc, 'USD', loadPlatformSettings().usdExchangeRateCdf);
     const apiBase = getPublicApiBaseUrl();
     const reference = buildFlexPayReference('dn', order.id);
+    const guestRsvpUrl = buildGuestRsvpUrl(FRONTEND_URL, guest.id);
     try {
       const flex = await createFlexPayCardCheckout({
         reference,
@@ -1417,9 +1419,9 @@ export async function submitGuestDonation(req: Request, res: Response) {
         currency: charge.currency,
         description: `Don solidaire: ${guest.event.title}`.slice(0, 100),
         callbackUrl: `${apiBase}/api/public/payments/flexpay/callback`,
-        approveUrl: `${FRONTEND_URL}/rsvp/${guest.id}?donationSuccess=1&orderId=${order.id}`,
-        cancelUrl: `${FRONTEND_URL}/rsvp/${guest.id}?donationCancelled=1`,
-        declineUrl: `${FRONTEND_URL}/rsvp/${guest.id}?donationDeclined=1`,
+        approveUrl: `${guestRsvpUrl}&donationSuccess=1&orderId=${order.id}`,
+        cancelUrl: `${guestRsvpUrl}&donationCancelled=1`,
+        declineUrl: `${guestRsvpUrl}&donationDeclined=1`,
       });
 
       await prisma.ticketOrder.update({

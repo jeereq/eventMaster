@@ -15,6 +15,7 @@ import {
 } from '../utils/brandedMessaging';
 import { escapeHtml } from '../utils/brandingUtils';
 import { extractGuestEmail, extractGuestPhone } from '../utils/guestIdentity';
+import { buildGuestRsvpUrl } from '../services/guestAccessService';
 import { resolveWhatsAppInvitationBody } from '../utils/whatsappTone';
 import { formatEventPlace } from '../utils/eventPlace';
 import { GUEST_COPY, rewriteStaleGuestMessageCopy } from '../utils/guestMessageCopy';
@@ -206,7 +207,7 @@ export async function sendInvitation(req: AuthenticatedRequest, res: Response) {
     // Send and generate réponse à l’invitation links
     const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
     const sentInvitations = await Promise.all(guests.map(async (guest) => {
-    const rsvpLink = `${FRONTEND_URL}/rsvp/${guest.id}`;
+    const rsvpLink = buildGuestRsvpUrl(FRONTEND_URL, guest.id);
       const vars = {
         firstName: guest.firstName || '',
         lastName: guest.lastName || '',

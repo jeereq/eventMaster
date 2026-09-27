@@ -15,6 +15,7 @@ import { setAiTokenSessionUnlimited } from '@/lib/aiTokens';
 import { SESSION_EXPIRED_EVENT } from '@/lib/sessionEvents';
 import { requestMobileSplashAfterAuth } from '@/lib/mobileSplash';
 import type { AuthOtpMethod } from '@/lib/authOtpChannels';
+import { clearAuthToken, getAuthToken, setAuthToken } from '@/lib/authSession';
 
 export interface OrgAccess {
   level: 'owner' | 'manager' | 'protocol' | 'commercial' | 'staff' | 'client' | 'none';
@@ -187,7 +188,7 @@ function persistSession(payload: {
   tenant: Tenant | null;
   access: OrgAccess | null;
 }) {
-  localStorage.setItem('token', payload.token);
+  setAuthToken(payload.token);
   localStorage.setItem('user', JSON.stringify(payload.user));
   if (payload.tenant) {
     localStorage.setItem('tenant', JSON.stringify(payload.tenant));
@@ -199,7 +200,7 @@ function persistSession(payload: {
 
 function readSupportBackup(): SupportBackup | null {
   try {
-    const raw = localStorage.getItem(SUPPORT_BACKUP_KEY);
+    const raw = sessionStorage.getItem(SUPPORT_BACKUP_KEY);
     if (!raw) return null;
     return JSON.parse(raw) as SupportBackup;
   } catch {
@@ -235,7 +236,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const savedToken = localStorage.getItem('token');
+    const savedToken = getAuthToken();
     const savedUser = localStorage.getItem('user');
     const savedTenant = localStorage.getItem('tenant');
     const savedAccess = localStorage.getItem('access');
@@ -259,7 +260,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     access?: OrgAccess | null;
   }) => {
     if (data.token) {
-      localStorage.setItem('token', data.token);
+      setAuthToken(data.token);
       setToken(data.token);
     }
     if (data.user) {
@@ -285,7 +286,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const lastSessionRefreshAt = useRef(0);
 
   const refreshLiveSession = async () => {
-    const savedToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const savedToken = getAuthToken();
     if (!savedToken) return;
     try {
       const data = await api.post('/auth/refresh');
@@ -329,7 +330,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await api.post('/auth/login', { email, password });
 
-      localStorage.setItem('token', data.token);
+      setAuthToken(data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       if (data.tenant) {
         localStorage.setItem('tenant', JSON.stringify(data.tenant));
@@ -344,7 +345,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAccess(data.access ?? null);
       setSupportSession(false);
       setSessionExpired(false);
-      localStorage.removeItem(SUPPORT_BACKUP_KEY);
+      sessionStorage.removeItem(SUPPORT_BACKUP_KEY);
       setLoading(false);
       void claimAiSimulationHistory();
       void claimAiTemplateComposeHistory();
@@ -415,7 +416,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       const data = await api.post('/auth/verify-otp', { email, otp });
-      localStorage.setItem('token', data.token);
+      setAuthToken(data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       if (data.tenant) {
         localStorage.setItem('tenant', JSON.stringify(data.tenant));
@@ -429,7 +430,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAccess(data.access ?? null);
       setSupportSession(false);
       setSessionExpired(false);
-      localStorage.removeItem(SUPPORT_BACKUP_KEY);
+      sessionStorage.removeItem(SUPPORT_BACKUP_KEY);
       setLoading(false);
       void claimAiSimulationHistory();
       void claimAiTemplateComposeHistory();
@@ -462,11 +463,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     try {
-      localStorage.removeItem('token');
+      clearAuthToken();
       localStorage.removeItem('user');
       localStorage.removeItem('tenant');
       localStorage.removeItem('access');
-      localStorage.removeItem(SUPPORT_BACKUP_KEY);
+      sessionStorage.removeItem(SUPPORT_BACKUP_KEY);
     } catch {
       // Ignorer les erreurs d'accès à localStorage en navigation privée
     }
@@ -594,7 +595,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const enterSupportSession = (payload: SupportSessionPayload) => {
     if (typeof window === 'undefined') return;
     if (!readSupportBackup()) {
-      const currentToken = localStorage.getItem('token');
+      const currentToken = getAuthToken();
       const currentUser = localStorage.getItem('user');
       if (currentToken && currentUser) {
         const backup: SupportBackup = {
@@ -603,7 +604,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           tenant: localStorage.getItem('tenant') ? JSON.parse(localStorage.getItem('tenant') as string) : null,
           access: localStorage.getItem('access') ? JSON.parse(localStorage.getItem('access') as string) : null,
         };
-        localStorage.setItem(SUPPORT_BACKUP_KEY, JSON.stringify(backup));
+        sessionStorage.setItem(SUPPORT_BACKUP_KEY, JSON.stringify(backup));
       }
     }
     const nextUser: User = {
@@ -622,7 +623,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const exitSupportSession = () => {
     if (typeof window === 'undefined') return;
     const backup = readSupportBackup();
-    localStorage.removeItem(SUPPORT_BACKUP_KEY);
+    sessionStorage.removeItem(SUPPORT_BACKUP_KEY);
     if (!backup?.token) {
       logout();
       return;

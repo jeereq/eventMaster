@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import { CheckCircle, XCircle, Loader2, Sparkles, Calendar, Table, MessageSquare } from 'lucide-react';
 import { AuthSplitLayout } from '@/components/AuthSplitLayout';
 import { Button, Alert, Card } from '@/components/ui';
+import { setAuthToken } from '@/lib/authSession';
 
 const FEATURES = [
   { icon: Calendar, title: "Gestion d'événements et réponses à l’invitation", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
@@ -36,7 +37,7 @@ function VerifyEmailContent() {
         setMessage(res.message || 'Votre e-mail a été vérifié avec succès !');
 
         if (res.token && res.user) {
-          localStorage.setItem('token', res.token);
+          setAuthToken(res.token);
           localStorage.setItem('user', JSON.stringify(res.user));
           if (res.tenant) {
             localStorage.setItem('tenant', JSON.stringify(res.tenant));

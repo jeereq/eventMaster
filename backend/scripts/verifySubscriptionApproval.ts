@@ -7,10 +7,11 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 import { computeApprovedAmount, getPlanAmount } from '../src/services/invoiceService';
+import { getPostgresSslConfig } from '../src/config/security';
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('localhost') ? undefined : { rejectUnauthorized: false },
+  ssl: getPostgresSslConfig(),
 });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
