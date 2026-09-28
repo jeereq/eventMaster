@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Heart, Building2, PartyPopper, Sparkles, Crown } from 'lucide-react';
+import { Heart, Building2, PartyPopper, Sparkles, Crown, Trees } from 'lucide-react';
 import {
   ROOM_PLAN_PROMPT_CATEGORIES,
   ROOM_PLAN_PROMPT_MODELS,
@@ -29,6 +29,7 @@ export default function RoomPlanPromptSelector({
     if (id === 'wedding') return <Heart className="w-3.5 h-3.5" aria-hidden />;
     if (id === 'banquet') return <Sparkles className="w-3.5 h-3.5" aria-hidden />;
     if (id === 'pro') return <Building2 className="w-3.5 h-3.5" aria-hidden />;
+    if (id === 'outdoor') return <Trees className="w-3.5 h-3.5" aria-hidden />;
     return <PartyPopper className="w-3.5 h-3.5" aria-hidden />;
   };
 

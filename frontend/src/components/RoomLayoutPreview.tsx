@@ -584,7 +584,14 @@ export default function RoomLayoutPreview({
   const [mounted, setMounted] = useState(false);
   const { expanded, setExpanded, panelRef } = usePlanFullscreen();
   const [localForce2d, setLocalForce2d] = useState(false);
-  const [showWalls, setShowWalls] = useState(true);
+  // Les réceptions à ciel ouvert (murs masqués dans le plan) s’ouvrent sans murs.
+  const blueprintShowsWalls = rawBlueprint ? isBlueprintWallsVisible(rawBlueprint.metadata) : true;
+  const [showWalls, setShowWalls] = useState(blueprintShowsWalls);
+  const [wallsDefault, setWallsDefault] = useState(blueprintShowsWalls);
+  if (wallsDefault !== blueprintShowsWalls) {
+    setWallsDefault(blueprintShowsWalls);
+    setShowWalls(blueprintShowsWalls);
+  }
   const [showRoof, setShowRoof] = useState(false);
   const [walkthroughActive, setWalkthroughActive] = useState(false);
   const [walkthroughLabel, setWalkthroughLabel] = useState('');

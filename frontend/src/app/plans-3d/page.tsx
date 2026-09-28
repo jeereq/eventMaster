@@ -64,6 +64,12 @@ const SHOWCASE_TEMPLATES = [
   { id: 'boardroom', category: 'pro', label: 'Salle de Conseil VIP' },
   { id: 'chairs-theater', category: 'pro', label: 'Auditorium & Théâtre' },
   { id: 'classroom', category: 'pro', label: 'Formation & Classe' },
+  { id: 'garden-dusk-reception', category: 'outdoor', label: 'Réception au jardin' },
+  { id: 'beach-wedding', category: 'outdoor', label: 'Mariage sur la plage' },
+  { id: 'pool-party', category: 'outdoor', label: 'Pool party & Piscine' },
+  { id: 'vineyard-long-table', category: 'outdoor', label: 'Dîner dans les vignes' },
+  { id: 'forest-ceremony', category: 'outdoor', label: 'Cérémonie en clairière' },
+  { id: 'courtyard-gala', category: 'outdoor', label: 'Gala en cour pavée' },
 ];
 
 const INITIAL_SHOWCASE_PLANS: ShowcasePlanData[] = SHOWCASE_TEMPLATES.map((item, idx) => {
@@ -87,6 +93,7 @@ const CATEGORIES = [
   { id: 'banquet', label: 'Banquets' },
   { id: 'pro', label: 'Entreprise' },
   { id: 'cocktail', label: 'Cocktails' },
+  { id: 'outdoor', label: 'Plein air' },
 ];
 
 function resolvePlanBlueprint(
