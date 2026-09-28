@@ -129,7 +129,7 @@ function TableDetailPopover({
               >
                 <span>{table.name.replace(/^Table\s*/i, 'T')}</span>
                 {Array.from({ length: Math.min(table.capacity, 16) }).map((_, sIdx) => {
-                  const coords = getSeatCoordinates(table.shape, table.capacity, sIdx, 36);
+                  const coords = getSeatCoordinates(table.shape, table.capacity, sIdx, 36, table.seatingSide);
                   const isMine = sIdx === effectiveSeatIndex;
                   return (
                     <div
@@ -558,7 +558,7 @@ export default function GuestRoomPlanCanvas({
 
                     {/* Sièges / Chaises disposés autour de la table */}
                     {table.capacity > 0 && Array.from({ length: Math.min(table.capacity, 16) }).map((_, seatIdx) => {
-                      const coords = getSeatCoordinates(table.shape, table.capacity, seatIdx, seatRadius);
+                      const coords = getSeatCoordinates(table.shape, table.capacity, seatIdx, seatRadius, table.seatingSide);
                       const isMySeat = isGuest && typeof mySeatIdx === 'number' && seatIdx === mySeatIdx;
 
                       if (isMySeat) {

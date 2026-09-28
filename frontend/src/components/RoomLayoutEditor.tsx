@@ -290,7 +290,7 @@ import {
   type FoundationKind,
 } from '@/lib/roomBuildingUtils';
 import { cn } from '@/lib/cn';
-import { tablePlateSizeMeters } from '@/lib/tablePlanUtils';
+import { supportsOneSideSeating, tablePlateSizeMeters } from '@/lib/tablePlanUtils';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
 import { Alert, Button, Input, Modal } from '@/components/ui';
 
@@ -1592,6 +1592,7 @@ export default function RoomLayoutEditor({
       seatMaterial: amphiSeatMaterial,
       aisleSplit: amphiAisleSplit,
       groupId,
+      depthM: blueprint.canvas.heightM,
     }).map((r) => ({ ...r, storyId: activeStoryId }));
 
     const hasStage = blueprint.fixtures.some((f) => f.kind === 'stage' || f.kind === 'podium');
@@ -6138,14 +6139,60 @@ export default function RoomLayoutEditor({
                 <input
                   type="number"
                   min={2}
-                  max={24}
+                  max={40}
                   value={selectedFurniture.capacity}
-                  onChange={(e) => updateFurniture(selectedFurniture.id, { capacity: parseInt(e.target.value, 10) })}
+                  onChange={(e) => {
+                    const next = parseInt(e.target.value, 10);
+                    if (Number.isFinite(next)) updateFurniture(selectedFurniture.id, { capacity: Math.max(1, Math.min(40, next)) });
+                  }}
                   aria-label="Nombre de places de la table"
                   className={EDITOR_FIELD}
                 />
               </label>
             </div>
+            {supportsOneSideSeating(selectedFurniture.shape) ? (
+              <div className="space-y-1">
+                <span className="text-xs font-semibold text-muted">Disposition des chaises</span>
+                <div className="grid grid-cols-2 gap-1.5" role="radiogroup" aria-label="Disposition des chaises">
+                  {([
+                    ['around', 'Tout autour'],
+                    ['oneSide', 'Un seul côté'],
+                  ] as const).map(([value, text]) => {
+                    const active = (selectedFurniture.seatingSide ?? 'around') === value;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => updateFurniture(
+                          selectedFurniture.id,
+                          { seatingSide: value === 'around' ? undefined : value, hiddenSeatIndices: [] },
+                          value === 'oneSide' ? 'Chaises alignées d’un seul côté, face à la salle' : 'Chaises réparties tout autour',
+                        )}
+                        className={cn(
+                          EDITOR_PANEL_BTN,
+                          active ? 'border-primary/40 bg-primary/10 text-primary font-semibold' : 'border-border text-muted hover:bg-surface-muted',
+                        )}
+                      >
+                        {text}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+            {(() => {
+              const [autoW, autoD] = tablePlateSizeMeters(selectedFurniture.shape, selectedFurniture.capacity, undefined, selectedFurniture.seatingSide);
+              const fmt = (v: number) => v.toFixed(2).replace('.', ',');
+              const round = selectedFurniture.shape === 'round' || selectedFurniture.shape === 'cocktail' || selectedFurniture.shape === 'highTop';
+              return (
+                <p className="text-xs text-muted">
+                  Taille auto pour {selectedFurniture.capacity} places : {round ? `Ø ${fmt(autoW)} m` : `${fmt(autoW)} × ${fmt(autoD)} m`}
+                  {selectedFurniture.shape === 'arc' ? '' : ' (≈ 60 cm par convive)'}
+                </p>
+              );
+            })()}
 
             {/* Dimensions & Radius personnalisés de la table */}
             <div className="p-3 rounded-[var(--radius-card)] bg-surface-muted border border-border/80 space-y-2.5">
@@ -6173,7 +6220,7 @@ export default function RoomLayoutEditor({
 
               {/* Cas 1 : Table Ronde / Mange-debout / Cocktail */}
               {(selectedFurniture.shape === 'round' || selectedFurniture.shape === 'cocktail' || selectedFurniture.shape === 'highTop') && (() => {
-                const [defW] = tablePlateSizeMeters(selectedFurniture.shape, selectedFurniture.capacity);
+                const [defW] = tablePlateSizeMeters(selectedFurniture.shape, selectedFurniture.capacity, undefined, selectedFurniture.seatingSide);
                 const curDiam = selectedFurniture.customWidthM ?? (selectedFurniture.customRadiusM ? selectedFurniture.customRadiusM * 2 : defW);
                 const curRadius = selectedFurniture.customRadiusM ?? Math.round((curDiam / 2) * 100) / 100;
                 return (
@@ -6253,7 +6300,7 @@ export default function RoomLayoutEditor({
 
               {/* Cas 2 : Table Ovale */}
               {selectedFurniture.shape === 'oval' && (() => {
-                const [defW, defD] = tablePlateSizeMeters(selectedFurniture.shape, selectedFurniture.capacity);
+                const [defW, defD] = tablePlateSizeMeters(selectedFurniture.shape, selectedFurniture.capacity, undefined, selectedFurniture.seatingSide);
                 const curW = selectedFurniture.customWidthM ?? defW;
                 const curD = selectedFurniture.customDepthM ?? defD;
                 return (
@@ -6325,7 +6372,7 @@ export default function RoomLayoutEditor({
 
               {/* Cas 3 : Table Rectangulaire, Carrée, ou en Arc */}
               {(selectedFurniture.shape === 'rectangular' || selectedFurniture.shape === 'square' || selectedFurniture.shape === 'arc') && (() => {
-                const [defW, defD] = tablePlateSizeMeters(selectedFurniture.shape, selectedFurniture.capacity);
+                const [defW, defD] = tablePlateSizeMeters(selectedFurniture.shape, selectedFurniture.capacity, undefined, selectedFurniture.seatingSide);
                 const curW = selectedFurniture.customWidthM ?? defW;
                 const curD = selectedFurniture.customDepthM ?? defD;
                 const curCornerR = selectedFurniture.cornerRadiusM ?? 0;

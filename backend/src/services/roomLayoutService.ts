@@ -83,6 +83,8 @@ export interface RoomLayoutBlueprint {
         locked?: boolean;
         hiddenSeatIndices?: number[];
         pmrSeatIndices?: number[];
+        /** 'oneSide' : tous les convives du même côté, face à la salle. */
+        seatingSide?: 'around' | 'oneSide';
       }
     | {
         id: string;
@@ -185,6 +187,7 @@ function furnitureToPlanTable(item: Extract<RoomLayoutBlueprint['furniture'][num
       locked: item.locked ?? false,
       hiddenSeatIndices: item.hiddenSeatIndices,
       pmrSeatIndices: item.pmrSeatIndices,
+      ...(item.seatingSide === 'oneSide' ? { seatingSide: 'oneSide' as const } : {}),
     };
   }
 

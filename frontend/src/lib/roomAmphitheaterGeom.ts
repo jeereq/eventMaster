@@ -43,9 +43,24 @@ export function rowSeatLocalX(
   return t * spacing + side * (gap / 2);
 }
 
+/**
+ * Décalage en profondeur d’un siège selon sa position latérale.
+ * La scène est devant la rangée (Z local négatif) : les extrémités avancent
+ * vers elle pour former un arc concave, comme dans un vrai amphithéâtre où
+ * chaque siège reste à distance à peu près égale du point focal.
+ */
 export function rowArcZ(localX: number, spacing: number, curveFactor: number): number {
   const t = spacing === 0 ? 0 : localX / spacing;
-  return curveFactor * t * t * ROW_ARC_Z_K;
+  const depth = curveFactor * t * t * ROW_ARC_Z_K;
+  return depth === 0 ? 0 : -depth;
+}
+
+/** Courbure (en %) qui rend une rangée concentrique à un foyer situé à `radiusM` mètres. */
+export function concentricRowCurvePercent(radiusM: number, spacing = 0.55, concentricity = 1): number {
+  if (!(radiusM > 0) || !(spacing > 0)) return 0;
+  // Parabole z = a·x² avec a = curve·K/spacing² ; cercle osculateur : a = 1 / (2R).
+  const curve = (spacing * spacing) / (2 * radiusM * ROW_ARC_Z_K);
+  return Math.round(Math.min(95, Math.max(0, curve * concentricity * 100)));
 }
 
 /** Espacement pixel 2D calé sur la largeur des pastilles de siège (~32px). */
