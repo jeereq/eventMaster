@@ -1,4 +1,4 @@
-import { LANDSCAPE_STYLE_META } from '@/lib/roomOutdoorUtils';
+import { LANDSCAPE_STYLE_META, landscapeFootprintPct, type LandscapeStyle } from '@/lib/roomOutdoorUtils';
 import { rowSeatCode, seatsGrownForTier } from '@/lib/roomAmphitheaterGeom';
 import { enforceRealLayoutClearances } from './roomLayoutClearance';
 
@@ -2797,6 +2797,256 @@ function emptyRoomTemplate(
   });
 }
 
+// ───────────────── habillage des modèles (murs, sols, abords, végétation) ─────────────────
+
+type BlueprintFixture = RoomLayoutBlueprint['fixtures'][number];
+
+/**
+ * Élément paysager placé par son centre, en % du contour par défaut de la salle
+ * (0 = bord intérieur du mur, 100 = mur opposé).
+ */
+type LandscapeSpot = {
+  style: LandscapeStyle;
+  x: number;
+  y: number;
+  /** Empreinte en % du plan ; par défaut, taille réelle du style ramenée au plan. */
+  w?: number;
+  h?: number;
+  heightM?: number;
+};
+
+type TemplateDressing = {
+  /** Texture et teinte appliquées à tous les murs. */
+  walls?: { texture: WallTextureStyle; color?: string };
+  /** Réception à ciel ouvert : murs et toit masqués. */
+  openAir?: boolean;
+  metadata?: Partial<RoomLayoutBlueprint['metadata']>;
+  landscape?: LandscapeSpot[];
+  fixtures?: BlueprintFixture[];
+};
+
+function landscapeFixture(
+  canvas: RoomLayoutBlueprint['canvas'],
+  spot: LandscapeSpot,
+): BlueprintFixture {
+  const meta = LANDSCAPE_STYLE_META[spot.style];
+  const size = landscapeFootprintPct(spot.style, canvas?.widthM ?? 20, canvas?.heightM ?? 16);
+  const w = spot.w ?? size.w;
+  const h = spot.h ?? size.h;
+  const outline = defaultRoomOutline();
+  const cx = outline.x + (outline.w * spot.x) / 100;
+  const cy = outline.y + (outline.h * spot.y) / 100;
+  return {
+    ...createBlueprintFixture('landscape'),
+    id: makeLayoutId('landscape'),
+    x: Math.max(0, Math.min(100 - w, cx - w / 2)),
+    y: Math.max(0, Math.min(100 - h, cy - h / 2)),
+    w,
+    h,
+    label: meta.label,
+    color: meta.color,
+    heightM: spot.heightM ?? meta.heightM,
+    landscapeStyle: spot.style,
+  };
+}
+
+/** `count` éléments alignés entre deux points (bords inclus). */
+function landscapeRow(
+  style: LandscapeStyle,
+  from: [number, number],
+  to: [number, number],
+  count: number,
+  extra: Partial<LandscapeSpot> = {},
+): LandscapeSpot[] {
+  return Array.from({ length: count }, (_, i) => {
+    const t = count === 1 ? 0.5 : i / (count - 1);
+    return {
+      style,
+      x: from[0] + (to[0] - from[0]) * t,
+      y: from[1] + (to[1] - from[1]) * t,
+      ...extra,
+    };
+  });
+}
+
+/** Haie horizontale (h = false) ou verticale, longueur en % du plan. */
+function hedgeSpot(
+  canvas: RoomLayoutBlueprint['canvas'],
+  x: number,
+  y: number,
+  lengthPct: number,
+  vertical = false,
+): LandscapeSpot {
+  const depth = landscapeFootprintPct('hedge', canvas?.widthM ?? 20, canvas?.heightM ?? 16);
+  return vertical
+    ? { style: 'hedge', x, y, w: depth.h * ((canvas?.heightM ?? 16) / (canvas?.widthM ?? 20)), h: lengthPct }
+    : { style: 'hedge', x, y, w: lengthPct, h: depth.h };
+}
+
+function dressBlueprint(
+  blueprint: RoomLayoutBlueprint,
+  dressing: TemplateDressing,
+): RoomLayoutBlueprint {
+  const walls = dressing.walls
+    ? resolveBlueprintWalls(blueprint).map((wall) => ({
+      ...wall,
+      texture: dressing.walls!.texture,
+      color: dressing.walls!.color ?? wall.color,
+    }))
+    : blueprint.walls;
+  const fixtures = [
+    ...blueprint.fixtures,
+    ...(dressing.fixtures ?? []),
+    ...(dressing.landscape ?? []).map((spot) => landscapeFixture(blueprint.canvas, spot)),
+  ];
+  return refreshBlueprintMetadata({
+    ...blueprint,
+    walls,
+    fixtures,
+    metadata: {
+      ...blueprint.metadata,
+      ...(dressing.openAir ? { showWalls: false, showRoof: false, showChandeliers: false } : {}),
+      // Une nouvelle matière de sol ne garde pas l’ancienne teinte, qui assombrirait la texture.
+      ...(dressing.metadata?.floorType ? { floorColor: undefined } : {}),
+      ...dressing.metadata,
+    },
+  });
+}
+
+/** Coins du plan, en retrait de `inset` %. */
+function cornerSpots(style: LandscapeStyle, inset = 4, extra: Partial<LandscapeSpot> = {}): LandscapeSpot[] {
+  return [
+    { style, x: inset, y: inset, ...extra },
+    { style, x: 100 - inset, y: inset, ...extra },
+    { style, x: inset, y: 100 - inset, ...extra },
+    { style, x: 100 - inset, y: 100 - inset, ...extra },
+  ];
+}
+
+/**
+ * Habillage appliqué aux modèles existants : textures réalistes de murs et de sols,
+ * abords extérieurs et végétation pour les réceptions en plein air.
+ */
+const TEMPLATE_DRESSINGS: Record<string, (bp: RoomLayoutBlueprint) => TemplateDressing> = {
+  'banquet-honor': () => ({
+    walls: { texture: 'fluted', color: '#f3ede3' },
+    metadata: { floorType: 'parquetVersailles', lightingPreset: 'banquet', showChandeliers: true, chandelierType: 'crystal', wallPaintColor: '#f3ede3' },
+    landscape: cornerSpots('planter', 3),
+  }),
+  'banquet-classic': () => ({
+    walls: { texture: 'limewash', color: '#efe7da' },
+    metadata: { floorType: 'chevron', lightingPreset: 'banquet', showChandeliers: true, chandelierType: 'classic', wallPaintColor: '#efe7da' },
+  }),
+  'banquet-ushape': () => ({
+    walls: { texture: 'stone', color: '#e7dfd0' },
+    metadata: { floorType: 'tometteProvencale', lightingPreset: 'banquet', showChandeliers: true, chandelierType: 'lantern' },
+    landscape: cornerSpots('planter', 3),
+  }),
+  cocktail: () => ({
+    walls: { texture: 'brick' },
+    metadata: { floorType: 'betonCire', lightingPreset: 'dusk', showChandeliers: true, chandelierType: 'industrial' },
+    landscape: cornerSpots('planter', 3),
+  }),
+  'conference-standard': () => ({
+    walls: { texture: 'woodPanel' },
+    metadata: { floorType: 'moquette', lightingPreset: 'conference' },
+  }),
+  boardroom: () => ({
+    walls: { texture: 'woodPanel' },
+    metadata: { floorType: 'moquette', lightingPreset: 'conference', showChandeliers: true, chandelierType: 'modern' },
+    landscape: cornerSpots('planter', 3),
+  }),
+  'chairs-theater': () => ({
+    walls: { texture: 'fluted', color: '#3f1d1d' },
+    metadata: { floorType: 'moquetteRouge', lightingPreset: 'night', wallPaintColor: '#3f1d1d' },
+  }),
+  classroom: () => ({
+    walls: { texture: 'boardConcrete' },
+    metadata: { floorType: 'terrazzo', lightingPreset: 'conference' },
+    landscape: cornerSpots('planter', 3),
+  }),
+  'grand-hall-classical': () => ({
+    walls: { texture: 'travertine' },
+  }),
+  'chairs-ceremony': (bp) => ({
+    openAir: true,
+    metadata: { floorType: 'pelouseRayee', lightingPreset: 'day', outdoorSurroundings: 'garden' },
+    landscape: [
+      ...landscapeRow('cypress', [3, 12], [3, 88], 5),
+      ...landscapeRow('cypress', [97, 12], [97, 88], 5),
+      hedgeSpot(bp.canvas, 30, 97, 36),
+      hedgeSpot(bp.canvas, 70, 97, 36),
+      { style: 'shrub', x: 12, y: 5 },
+      { style: 'shrub', x: 88, y: 5 },
+    ],
+  }),
+  'tent-garden': () => ({
+    metadata: { floorType: 'pelouse', outdoorSurroundings: 'park' },
+    landscape: [
+      { style: 'olive', x: 5, y: 5 },
+      { style: 'olive', x: 95, y: 5 },
+      { style: 'shrub', x: 5, y: 95 },
+      { style: 'shrub', x: 95, y: 95 },
+    ],
+  }),
+  'garden-dusk-reception': (bp) => ({
+    openAir: true,
+    metadata: { floorType: 'pelouseRayee', lightingPreset: 'dusk', outdoorSurroundings: 'garden' },
+    landscape: [
+      hedgeSpot(bp.canvas, 2, 50, 70, true),
+      hedgeSpot(bp.canvas, 98, 50, 70, true),
+      ...cornerSpots('cypress', 3),
+      ...landscapeRow('torch', [22, 97], [78, 97], 4),
+      { style: 'firePit', x: 88, y: 84 },
+    ],
+  }),
+  'night-banquet-edison': () => ({
+    openAir: true,
+    metadata: { floorType: 'gravierFonce', lightingPreset: 'night', outdoorSurroundings: 'countryside' },
+    landscape: [
+      ...landscapeRow('torch', [3, 10], [3, 90], 5),
+      ...landscapeRow('torch', [97, 10], [97, 90], 5),
+      { style: 'olive', x: 6, y: 6 },
+      { style: 'olive', x: 94, y: 94 },
+    ],
+  }),
+  'courtyard-gala': () => ({
+    walls: { texture: 'stone' },
+    metadata: { showRoof: false, outdoorSurroundings: 'courtyard' },
+    landscape: [
+      ...cornerSpots('olive', 5),
+      ...landscapeRow('planter', [20, 3], [80, 3], 2),
+    ],
+  }),
+  'fountain-gala': (bp) => ({
+    openAir: true,
+    metadata: { floorType: 'dallesIrregulieres', outdoorSurroundings: 'garden' },
+    landscape: [
+      hedgeSpot(bp.canvas, 50, 98, 36),
+      ...landscapeRow('cypress', [36, 94], [64, 94], 2),
+    ],
+  }),
+  'stone-amphitheater-backyard': () => ({
+    metadata: { showWalls: false, outdoorSurroundings: 'park' },
+    landscape: [
+      { style: 'oak', x: 6, y: 90 },
+      { style: 'boulder', x: 92, y: 88 },
+      { style: 'shrub', x: 10, y: 10 },
+    ],
+  }),
+  'restaurant-terrasse': () => ({
+    metadata: { outdoorSurroundings: 'courtyard' },
+  }),
+  'restaurant-patio-guinguette': () => ({
+    metadata: { outdoorSurroundings: 'garden' },
+  }),
+};
+
+function dressTemplate(templateId: string, blueprint: RoomLayoutBlueprint): RoomLayoutBlueprint {
+  const dressing = TEMPLATE_DRESSINGS[templateId];
+  return dressing ? dressBlueprint(blueprint, dressing(blueprint)) : blueprint;
+}
+
 export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
   {
     id: 'banquet-classic',
@@ -3185,8 +3435,11 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
       return refreshBlueprintMetadata({
         ...next,
         roomType: 'CONFERENCE',
+        // Salle de conseil à l’échelle d’une vraie salle de réunion, pas d’un hall de banquet.
+        canvas: { widthM: 12, heightM: 9 },
         furniture,
         fixtures: [
+          { ...createBlueprintFixture('screen'), id: makeLayoutId('screen'), x: 35, y: 6, w: 30, h: 4 },
           {
             id: makeLayoutId('entrance'),
             kind: 'entrance',
@@ -5185,6 +5438,183 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
       });
     },
   },
+  {
+    id: 'beach-wedding',
+    name: 'Plage — mariage au coucher du soleil',
+    description: 'Sable, palmiers, torches, piste en bois et arche face à la mer',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const next = composeTemplate(
+        'beach-wedding',
+        'BANQUET',
+        'rectangle',
+        { tableCount: p?.tableCount ?? 8, tableShape: 'round', seatsPerTable: 8, chairType: 'CROSSBACK', ...p },
+        'circle',
+      );
+      const furniture = [
+        ...next.furniture.map((item) =>
+          item.kind === 'table'
+            ? {
+              ...item,
+              chairType: 'CROSSBACK' as const,
+              chairStyle: 'crossback' as const,
+              seatMaterial: 'linen' as const,
+              tableSurface: 'linen' as const,
+              tableColor: '#fbf7ef',
+              hasCenterpiece: true,
+              centerpieceStyle: 'candleCluster' as const,
+              hasCouverts: true,
+            }
+            : item,
+        ),
+        {
+          ...createBlueprintZone('Piste en bois', 1, { zoneKind: 'dance', material: 'wood', w: 24, h: 20 }),
+          x: 38,
+          y: 40,
+        },
+      ];
+      return dressBlueprint(
+        refreshBlueprintMetadata({ ...next, furniture, fixtures: next.fixtures.filter((f) => f.kind !== 'stage') }),
+        {
+          openAir: true,
+          metadata: { floorType: 'sable', lightingPreset: 'dusk', outdoorSurroundings: 'beach' },
+          fixtures: [
+            { ...createBlueprintFixture('arch'), id: makeLayoutId('arch'), x: 38, y: 2, w: 24, h: 10 },
+            { ...createBlueprintFixture('stringLight'), id: makeLayoutId('stringLight') },
+          ],
+          landscape: [
+            ...cornerSpots('palm', 6),
+            ...landscapeRow('torch', [3, 25], [3, 75], 3),
+            ...landscapeRow('torch', [97, 25], [97, 75], 3),
+          ],
+        },
+      );
+    },
+  },
+  {
+    id: 'pool-party',
+    name: 'Pool party — terrasse en ipé',
+    description: 'Piscine, palmiers, bar extérieur et tables hautes sur deck en bois',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const next = composeTemplate(
+        'pool-party',
+        'BANQUET',
+        'rectangle',
+        { tableCount: 6, tableShape: 'round', seatsPerTable: p?.seatsPerTable ?? 4, chairType: 'STOOL', ...p },
+        'grid',
+      );
+      const tables = next.furniture.filter((item) => item.kind === 'table');
+      const furniture = [
+        ...tables.map((item, index) => ({
+          ...item,
+          x: 18 + (index % 3) * 32,
+          y: 60 + Math.floor(index / 3) * 18,
+          tableColor: '#f5f5f4',
+        })),
+        ...next.furniture.filter((item) => item.kind !== 'table'),
+      ];
+      return dressBlueprint(
+        refreshBlueprintMetadata({
+          ...next,
+          canvas: { widthM: 24, heightM: 20 },
+          furniture,
+          fixtures: next.fixtures.filter((f) => f.kind !== 'stage'),
+        }),
+        {
+          openAir: true,
+          metadata: { floorType: 'terrasseIpe', lightingPreset: 'day', outdoorSurroundings: 'park' },
+          fixtures: [
+            { ...createBlueprintFixture('bar'), id: makeLayoutId('bar'), x: 36, y: 89, w: 28, h: 8 },
+          ],
+          landscape: [
+            { style: 'pool', x: 50, y: 25 },
+            { style: 'palm', x: 9, y: 12 },
+            { style: 'palm', x: 91, y: 12 },
+            { style: 'palm', x: 9, y: 90 },
+            { style: 'planter', x: 91, y: 92 },
+            { style: 'shrub', x: 9, y: 44 },
+            { style: 'shrub', x: 91, y: 44 },
+          ],
+        },
+      );
+    },
+  },
+  {
+    id: 'vineyard-long-table',
+    name: 'Vignes — grandes tablées',
+    description: 'Tables longues sur terre battue, guirlandes, oliviers et clôture bois',
+    roomType: 'BANQUET',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const next = composeTemplate(
+        'vineyard-long-table',
+        'BANQUET',
+        'rectangle',
+        { tableCount: p?.tableCount ?? 4, tableShape: 'rectangular', seatsPerTable: 14, chairType: 'CROSSBACK', ...p },
+        'longBanquet',
+      );
+      const furniture = next.furniture.map((item) =>
+        item.kind === 'table'
+          ? {
+            ...item,
+            chairType: 'CROSSBACK' as const,
+            chairStyle: 'crossback' as const,
+            seatMaterial: 'wood' as const,
+            tableSurface: 'wood' as const,
+            hasCenterpiece: true,
+            centerpieceStyle: 'greeneryRunner' as const,
+            hasCouverts: true,
+          }
+          : item,
+      );
+      return dressBlueprint(
+        refreshBlueprintMetadata({ ...next, furniture, fixtures: next.fixtures.filter((f) => f.kind !== 'stage') }),
+        {
+          openAir: true,
+          metadata: { floorType: 'terreBattue', lightingPreset: 'dusk', outdoorSurroundings: 'countryside' },
+          fixtures: [
+            { ...createBlueprintFixture('stringLight'), id: makeLayoutId('stringLight'), x: 8, y: 8, w: 84, h: 84 },
+          ],
+          landscape: [
+            ...cornerSpots('olive', 7),
+            ...landscapeRow('fence', [25, 98], [75, 98], 2),
+          ],
+        },
+      );
+    },
+  },
+  {
+    id: 'forest-ceremony',
+    name: 'Clairière — cérémonie en forêt',
+    description: 'Rangées de chaises dans une prairie, rochers, torches et brasero',
+    roomType: 'CONFERENCE',
+    outlineShape: 'rectangle',
+    build: (p) => {
+      const bp = generateChairOnlyBlueprint(
+        { rowCount: p?.rowCount ?? 7, seatsPerRow: p?.seatsPerRow ?? 8, ...p },
+        p?.chairType ?? 'FOLDING',
+        'ceremony',
+      );
+      return dressBlueprint(
+        refreshBlueprintMetadata({ ...bp, templateId: 'forest-ceremony', roomOutline: defaultRoomOutline('rectangle') }),
+        {
+          openAir: true,
+          metadata: { floorType: 'prairie', lightingPreset: 'day', outdoorSurroundings: 'forest' },
+          landscape: [
+            ...landscapeRow('torch', [4, 20], [4, 90], 4),
+            ...landscapeRow('torch', [96, 20], [96, 90], 4),
+            { style: 'boulder', x: 8, y: 6 },
+            { style: 'boulder', x: 92, y: 6 },
+            { style: 'firePit', x: 90, y: 94 },
+            { style: 'shrub', x: 10, y: 95 },
+          ],
+        },
+      );
+    },
+  },
 ];
 
 export interface ApplyTemplateOptions {
@@ -5248,7 +5678,7 @@ export function applyRoomTemplate(
   const tpl = ROOM_LAYOUT_TEMPLATES.find((t) => t.id === templateId);
   if (!tpl) return null;
   const resolved = layoutParamsFromCapacity(tpl, params ?? {});
-  let built = refreshBlueprintMetadata(tpl.build(resolved));
+  let built = refreshBlueprintMetadata(dressTemplate(tpl.id, tpl.build(resolved)));
   if (resolved.totalSeats) {
     built = fitBlueprintToSeatCount(built, resolved.totalSeats);
   }

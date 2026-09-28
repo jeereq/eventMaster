@@ -1,4 +1,4 @@
-export type RoomPlanPromptCategory = 'coutumier' | 'wedding' | 'banquet' | 'pro' | 'cocktail';
+export type RoomPlanPromptCategory = 'coutumier' | 'wedding' | 'banquet' | 'pro' | 'cocktail' | 'outdoor';
 
 export type RoomPlanPromptModel = {
   id: string;
@@ -17,6 +17,7 @@ export const ROOM_PLAN_PROMPT_CATEGORIES: Array<{ id: RoomPlanPromptCategory; la
   { id: 'banquet', label: 'Banquets' },
   { id: 'pro', label: 'Conférences' },
   { id: 'cocktail', label: 'Cocktails' },
+  { id: 'outdoor', label: 'Plein air' },
 ];
 
 export const ROOM_PLAN_PROMPT_MODELS: RoomPlanPromptModel[] = [
@@ -139,5 +140,45 @@ export const ROOM_PLAN_PROMPT_MODELS: RoomPlanPromptModel[] = [
     prompt:
       'Design a draped tent reception. [Subject] TentSwag roof with honeycomb rounds around a fountain. [Action] Enter through a south floral arch; place 8 round tables of 8 in a soft oval honeycomb around a central fountain; aisle from the arch around the fountain to a small north honor table. [Location/context] Outdoor tent hospitality. [Composition] Lantern chandeliers above fountain and honor, string lights on the perimeter; west service exit. [Style] Surrounding grass #5f7d3e, ivory drapes #f4efe6, linen cloths, light parquet under the tent.',
     roomType: 'TENT',
+  },
+  {
+    id: 'outdoor-beach',
+    title: 'Mariage sur la plage',
+    category: 'outdoor',
+    badge: 'Plage',
+    summary: 'Sable, palmiers, torches et piste en bois.',
+    prompt:
+      'Compose an open-air beach wedding dinner for 64 guests. [Subject] Sand venue with no walls or roof, facing the sea. [Action] Enter from the south; place 8 round tables of 8 in a soft ring around a central wooden dance deck; a floral arch at the north edge facing the sea. [Location/context] Sunset beach reception. [Composition] Palm trees at the four corners, tiki torches along the east and west edges, Edison string lights above the tables. [Style] Sand floor, ivory linens, cross-back wood chairs, candle centerpieces.',
+    roomType: 'BANQUET',
+  },
+  {
+    id: 'outdoor-pool',
+    title: 'Pool party',
+    category: 'outdoor',
+    badge: 'Piscine',
+    summary: 'Piscine, deck en ipé, bar et palmiers.',
+    prompt:
+      'Lay out an open-air pool party for 40 guests. [Subject] Ipe wood deck around a rectangular swimming pool, no walls. [Action] Pool in the north half; 6 high-top tables of 4 in two rows south of the pool; outdoor bar along the south edge. [Location/context] Daytime villa pool party. [Composition] Palm trees at the pool corners, flowering shrubs and planters along the sides. [Style] Ipe decking, white stools, turquoise water.',
+    roomType: 'BANQUET',
+  },
+  {
+    id: 'outdoor-vineyard',
+    title: 'Dîner dans les vignes',
+    category: 'outdoor',
+    badge: 'Tablées',
+    summary: 'Grandes tablées, guirlandes, oliviers.',
+    prompt:
+      'Compose a long-table vineyard dinner for 42 guests. [Subject] Open-air dirt terrace between vine rows. [Action] Three long rectangular tables of 14 set parallel, north-south; entrance through a wooden fence gate at the south. [Location/context] Countryside harvest dinner at dusk. [Composition] Olive trees at the four corners, Edison string lights covering the dining area, a wooden fence along the south edge. [Style] Rammed-earth floor, natural wood tabletops, greenery runners, cross-back chairs.',
+    roomType: 'BANQUET',
+  },
+  {
+    id: 'outdoor-forest',
+    title: 'Cérémonie en forêt',
+    category: 'outdoor',
+    badge: 'Clairière',
+    summary: 'Rangées de chaises, rochers, brasero.',
+    prompt:
+      'Lay out a forest clearing ceremony for 56 guests. [Subject] Meadow clearing surrounded by trees, no walls. [Action] Seven rows of 8 chairs in two blocks with a central aisle leading to a north altar and floral arch. [Location/context] Evening woodland ceremony. [Composition] Garden torches along both sides, boulders at the north corners, a fire pit near the south-east exit. [Style] Wild meadow floor, cross-back wood chairs, candles and greenery.',
+    roomType: 'CONFERENCE',
   },
 ];

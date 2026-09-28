@@ -54,6 +54,7 @@ const CATEGORY_OPTIONS = [
   { id: 'banquet', label: 'Banquets & Réceptions' },
   { id: 'pro', label: 'Conférences & Entreprise' },
   { id: 'cocktail', label: 'Cocktails & Debout' },
+  { id: 'outdoor', label: 'Plein air & Jardins' },
   { id: 'other', label: 'Autre agencement' },
 ];
 
