@@ -53,6 +53,10 @@ export type FloorType =
   | 'verreLumineux'
   | 'pavesEventail'
   | 'gazonFleurie'
+  | 'pelouseRayee'
+  | 'terrasseIpe'
+  | 'galets'
+  | 'terreBattue'
   | 'custom';
 
 export type BuiltInRoomThemeId =

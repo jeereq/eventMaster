@@ -53,6 +53,10 @@ export const floorTypeLabels: Record<FloorType, string> = {
   verreLumineux: 'Dalles de verre luminescentes',
   pavesEventail: 'Pavés de cour en éventail',
   gazonFleurie: 'Pelouse anglaise fleurie',
+  pelouseRayee: 'Pelouse tondue à l’anglaise',
+  terrasseIpe: 'Terrasse en bois exotique',
+  galets: 'Galets de rivière',
+  terreBattue: 'Terre battue',
   custom: 'Image importée',
 };
 
@@ -66,7 +70,7 @@ export const FLOOR_TYPE_PICKER_ORDER: FloorType[] = [
   'marbreCalacatta', 'marbreOr', 'marbreBourgogne', 'marbre', 'epoxyMenthe', 'epoxy',
   'pavesPinwheel', 'pierreModulaire', 'pavesGranit', 'dallesIrregulieres',
   'carrelage', 'damier', 'terrazzo', 'pierre', 'moquette',
-  'herbe', 'pelouse', 'gazonFleurie', 'gazonSynth', 'prairie', 'sable', 'gravier', 'gravierFonce', 'beton', 'brique',
+  'herbe', 'pelouse', 'pelouseRayee', 'gazonFleurie', 'gazonSynth', 'prairie', 'terrasseIpe', 'sable', 'galets', 'gravier', 'gravierFonce', 'terreBattue', 'beton', 'brique',
 ];
 
 export type FloorCategory = 'all' | 'prestige' | 'wood' | 'stone' | 'outdoor';
@@ -76,7 +80,7 @@ export const FLOOR_CATEGORIES: Array<{ id: FloorCategory; label: string }> = [
   { id: 'prestige', label: 'Prestige & Gala' },
   { id: 'wood', label: 'Bois & Parquets' },
   { id: 'stone', label: 'Pierres & Minéraux' },
-  { id: 'outdoor', label: 'Extérieur & Moquettes' },
+  { id: 'outdoor', label: 'Extérieur & Jardin' },
 ];
 
 export const FLOOR_CATEGORY_MEMBERS: Record<Exclude<FloorCategory, 'all'>, FloorType[]> = {
@@ -94,7 +98,8 @@ export const FLOOR_CATEGORY_MEMBERS: Record<Exclude<FloorCategory, 'all'>, Floor
     'pavesPinwheel', 'pavesGranit', 'beton', 'brique',
   ],
   outdoor: [
-    'gazonFleurie', 'pavesEventail', 'moquette', 'herbe', 'pelouse', 'gazonSynth', 'prairie', 'sable', 'gravier', 'gravierFonce',
+    'herbe', 'pelouse', 'pelouseRayee', 'gazonFleurie', 'prairie', 'gazonSynth', 'terrasseIpe', 'pavesEventail', 'pavesGranit',
+    'dallesIrregulieres', 'tometteProvencale', 'brique', 'sable', 'galets', 'gravier', 'gravierFonce', 'terreBattue', 'beton', 'moquette',
   ],
 };
 
@@ -114,7 +119,7 @@ const PHOTO = '120px 120px';
 
 export const FLOOR_ASSETS: Record<Exclude<FloorType, 'custom'>, FloorAsset> = {
   parquet: { url: '/floors/gen/parquet-oak-herringbone.jpg', size: '176px 176px', fallback: '#c4a06a' },
-  chevron: { url: '/floors/chevron.svg', size: '72px 44px', fallback: '#c9a06a' },
+  chevron: { url: '/floors/gen/herringbone-honey.jpg', size: PHOTO, fallback: '#c9a06a' },
   bois: { url: '/floors/gen/oak-planks.jpg', size: '192px 192px', fallback: '#d2b07a' },
   boisPanel: { url: '/floors/gen/wood-panel.jpg', size: PHOTO, fallback: '#4a3018' },
   boisHex: { url: '/floors/gen/wood-hex.jpg', size: PHOTO, fallback: '#6b4423' },
@@ -134,36 +139,40 @@ export const FLOOR_ASSETS: Record<Exclude<FloorType, 'custom'>, FloorAsset> = {
   pierreModulaire: { url: '/floors/gen/stone-modular-brown.jpg', size: PHOTO, fallback: '#5c4030' },
   pavesGranit: { url: '/floors/gen/cobble-granite.jpg', size: PHOTO, fallback: '#8a8a8a' },
   dallesIrregulieres: { url: '/floors/gen/flagstone.jpg', size: PHOTO, fallback: '#6b6558' },
-  carrelage: { url: '/floors/tile.svg', size: '56px 56px', fallback: '#e2dcd0' },
-  marbre: { url: '/floors/marble.svg', size: DAMIER_TILE, fallback: '#ebe6dc' },
-  damier: { url: '/floors/damier.svg', size: DAMIER_TILE, fallback: '#1c1917' },
-  terrazzo: { url: '/floors/terrazzo.svg', size: '64px 64px', fallback: '#e8e0d4' },
-  pierre: { url: '/floors/pierre.svg', size: DAMIER_TILE, fallback: '#c8c0b4' },
-  moquette: { url: '/floors/carpet.svg', size: '56px 56px', fallback: '#1a1528' },
-  herbe: { url: '/floors/grass.svg', size: DAMIER_TILE, fallback: '#166534' },
-  pelouse: { url: '/floors/pelouse.svg', size: DAMIER_TILE, fallback: '#22c55e' },
-  gazonSynth: { url: '/floors/gazon-synth.svg', size: DAMIER_TILE, fallback: '#15803d' },
-  prairie: { url: '/floors/prairie.svg', size: DAMIER_TILE, fallback: '#65a30d' },
-  sable: { url: '/floors/sable.svg', size: '48px 48px', fallback: '#e8d5a3' },
-  beton: { url: '/floors/concrete.svg', size: DAMIER_TILE, fallback: '#8b95a3' },
-  epoxy: { url: '/floors/epoxy.svg', size: DAMIER_TILE, fallback: '#cbd5e1' },
-  brique: { url: '/floors/brique.svg', size: '64px 32px', fallback: '#b45309' },
-  gravier: { url: '/floors/sable.svg', size: '40px 40px', fallback: '#c4b8a4' },
-  gravierFonce: { url: '/floors/gen/cobble-granite.jpg', size: PHOTO, fallback: '#3f3f46' },
+  carrelage: { url: '/floors/gen/stone-tile.jpg', size: PHOTO, fallback: '#ddd7cb' },
+  marbre: { url: '/floors/gen/marble-veined.jpg', size: PHOTO, fallback: '#ebe8e3' },
+  damier: { url: '/floors/gen/marble-checker.jpg', size: PHOTO, fallback: '#1c1917' },
+  terrazzo: { url: '/floors/gen/terrazzo-classic.jpg', size: PHOTO, fallback: '#e8e0d4' },
+  pierre: { url: '/floors/gen/limestone-slabs.jpg', size: PHOTO, fallback: '#d8cdb8' },
+  moquette: { url: '/floors/gen/carpet-navy.jpg', size: PHOTO, fallback: '#1a1d3a' },
+  herbe: { url: '/floors/gen/grass-lawn.jpg', size: PHOTO, fallback: '#3f7a2d' },
+  pelouse: { url: '/floors/gen/grass-fine.jpg', size: PHOTO, fallback: '#4f9a38' },
+  gazonSynth: { url: '/floors/gen/turf-synthetic.jpg', size: PHOTO, fallback: '#2f8a3a' },
+  prairie: { url: '/floors/gen/meadow.jpg', size: PHOTO, fallback: '#6c8f3a' },
+  sable: { url: '/floors/gen/sand.jpg', size: PHOTO, fallback: '#dcc79f' },
+  beton: { url: '/floors/gen/concrete.jpg', size: PHOTO, fallback: '#9d9b95' },
+  epoxy: { url: '/floors/gen/epoxy-grey.jpg', size: PHOTO, fallback: '#cbd5e1' },
+  brique: { url: '/floors/gen/brick-pavers.jpg', size: PHOTO, fallback: '#9c4a31' },
+  gravier: { url: '/floors/gen/gravel-light.jpg', size: PHOTO, fallback: '#c4b8a4' },
+  gravierFonce: { url: '/floors/gen/gravel-dark.jpg', size: PHOTO, fallback: '#3f3f46' },
   miroirNoir: { url: '/floors/damier.svg', size: DAMIER_TILE, fallback: '#0b0c10' },
   parquetVersailles: { url: '/floors/gen/wood-panel.jpg', size: PHOTO, fallback: '#b38243' },
-  betonCire: { url: '/floors/concrete.svg', size: DAMIER_TILE, fallback: '#87857e' },
-  travertin: { url: '/floors/tile.svg', size: '64px 64px', fallback: '#ded3be' },
-  moquetteRouge: { url: '/floors/carpet.svg', size: '56px 56px', fallback: '#80131d' },
+  betonCire: { url: '/floors/gen/concrete-polished.jpg', size: PHOTO, fallback: '#8f8c85' },
+  travertin: { url: '/floors/gen/travertine.jpg', size: PHOTO, fallback: '#ded3be' },
+  moquetteRouge: { url: '/floors/gen/carpet-red.jpg', size: PHOTO, fallback: '#80131d' },
   dancefloorLed: { url: '/floors/gen/epoxy-mint-gold.jpg', size: PHOTO, fallback: '#07090e' },
-  terrazzoVenitien: { url: '/floors/tile.svg', size: '64px 64px', fallback: '#e8e2d8' },
-  tometteProvencale: { url: '/floors/tile.svg', size: '48px 48px', fallback: '#c85a32' },
+  terrazzoVenitien: { url: '/floors/gen/terrazzo-venetian.jpg', size: PHOTO, fallback: '#e8e2d8' },
+  tometteProvencale: { url: '/floors/gen/tomettes.jpg', size: PHOTO, fallback: '#b5532f' },
   pointDeHongrie: { url: '/floors/gen/wood-panel.jpg', size: PHOTO, fallback: '#be925f' },
-  damierMarbreNoirBlanc: { url: '/floors/damier.svg', size: DAMIER_TILE, fallback: '#1e2022' },
+  damierMarbreNoirBlanc: { url: '/floors/gen/marble-checker.jpg', size: PHOTO, fallback: '#1e2022' },
   dancefloorBoisVitrifié: { url: '/floors/gen/wood-panel.jpg', size: PHOTO, fallback: '#d4a373' },
   verreLumineux: { url: '/floors/damier.svg', size: DAMIER_TILE, fallback: '#0f172a' },
-  pavesEventail: { url: '/floors/gen/cobble-granite.jpg', size: PHOTO, fallback: '#6b7280' },
-  gazonFleurie: { url: '/floors/herbe.svg', size: '48px 48px', fallback: '#2e7d32' },
+  pavesEventail: { url: '/floors/gen/pavers-fan.jpg', size: PHOTO, fallback: '#7d7a75' },
+  gazonFleurie: { url: '/floors/gen/lawn-flowers.jpg', size: PHOTO, fallback: '#3f7a2d' },
+  pelouseRayee: { url: '/floors/gen/grass-striped.jpg', size: PHOTO, fallback: '#4b9535' },
+  terrasseIpe: { url: '/floors/gen/deck-ipe.jpg', size: PHOTO, fallback: '#6b3a22' },
+  galets: { url: '/floors/gen/pebbles.jpg', size: PHOTO, fallback: '#a8a092' },
+  terreBattue: { url: '/floors/gen/dirt.jpg', size: PHOTO, fallback: '#7a5e44' },
 };
 
 /** Répétition monde (mètres) pour textures WebGL. */
@@ -189,36 +198,40 @@ export const FLOOR_TEXTURE_REPEAT_M: Record<Exclude<FloorType, 'custom'>, number
   pierreModulaire: 1.8,
   pavesGranit: 1.2,
   dallesIrregulieres: 2.0,
-  carrelage: 1.2,
-  marbre: 2.8,
-  damier: 1.0,
+  carrelage: 2.4,
+  marbre: 2.4,
+  damier: 1.6,
   terrazzo: 1.6,
-  pierre: 1.8,
-  moquette: 1.4,
+  pierre: 1.6,
+  moquette: 2.0,
   herbe: 2.0,
-  pelouse: 1.8,
-  gazonSynth: 1.6,
-  prairie: 2.2,
-  sable: 1.5,
-  beton: 2.5,
+  pelouse: 1.6,
+  gazonSynth: 1.4,
+  prairie: 2.4,
+  sable: 2.5,
+  beton: 3.0,
   epoxy: 3.0,
-  brique: 1.4,
+  brique: 1.6,
   gravier: 1.2,
-  gravierFonce: 1.1,
+  gravierFonce: 1.2,
   miroirNoir: 2.4,
   parquetVersailles: 2.0,
-  betonCire: 2.4,
-  travertin: 2.0,
-  moquetteRouge: 1.6,
+  betonCire: 3.0,
+  travertin: 1.6,
+  moquetteRouge: 2.0,
   dancefloorLed: 2.0,
   terrazzoVenitien: 1.8,
-  tometteProvencale: 1.2,
+  tometteProvencale: 1.3,
   pointDeHongrie: 2.0,
   damierMarbreNoirBlanc: 1.6,
   dancefloorBoisVitrifié: 2.4,
   verreLumineux: 2.0,
-  pavesEventail: 1.6,
-  gazonFleurie: 2.2,
+  pavesEventail: 2.8,
+  gazonFleurie: 2.0,
+  pelouseRayee: 6.0,
+  terrasseIpe: 1.0,
+  galets: 1.2,
+  terreBattue: 2.5,
 };
 
 export function getFloorAsset(floorType: FloorType | undefined): FloorAsset {
@@ -250,7 +263,10 @@ function lightingOverlays(floorType: FloorType): { image: string; size: string; 
       blend: 'soft-light, multiply',
     };
   }
-  if (floorType === 'herbe' || floorType === 'pelouse' || floorType === 'gazonSynth' || floorType === 'prairie' || floorType === 'sable') {
+  if (
+    floorType === 'herbe' || floorType === 'pelouse' || floorType === 'gazonSynth' || floorType === 'prairie' || floorType === 'sable'
+    || floorType === 'gazonFleurie' || floorType === 'pelouseRayee' || floorType === 'galets' || floorType === 'terreBattue'
+  ) {
     return {
       image: [
         'radial-gradient(ellipse at 50% 40%, rgba(255,255,255,0.1) 0%, transparent 50%)',
