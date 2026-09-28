@@ -1,3 +1,4 @@
+import { LANDSCAPE_STYLE_META } from '@/lib/roomOutdoorUtils';
 import { rowSeatCode, seatsGrownForTier } from '@/lib/roomAmphitheaterGeom';
 import { enforceRealLayoutClearances } from './roomLayoutClearance';
 
@@ -178,7 +179,8 @@ export type RoomFixtureKind =
   | 'condimentStation'
   | 'loungeSofa'
   | 'car'
-  | 'parasol';
+  | 'parasol'
+  | 'landscape';
 export type FloorDecalKind = 'rose' | 'butterfly' | 'custom' | 'path';
 export type PedestalStyle = 'squareWhite' | 'columnGold';
 export type CenterpieceStyle = 'floral' | 'greeneryRunner' | 'candleCluster';
@@ -493,6 +495,8 @@ export interface RoomLayoutBlueprint {
     instrumentStyle?: InstrumentStyle;
     /** Type de bar (cocktail, vin, champagne…). */
     barStyle?: BarStyle;
+    /** Aménagement extérieur (arbre, haie, piscine, brasero…). */
+    landscapeStyle?: import('@/lib/roomOutdoorUtils').LandscapeStyle;
     /** Podium / escalier : nombre de marches. */
     steps?: number;
     /** Buffet : afficher assiettes / couverts. */
@@ -729,6 +733,8 @@ export interface RoomLayoutBlueprint {
     curtainColor?: string;
     /** Plantes d’angle. */
     showDecorPlants?: boolean;
+    /** Terrain et décor autour du plan en 3D (jardin, plage, forêt…). */
+    outdoorSurroundings?: import('@/lib/roomOutdoorUtils').OutdoorSurroundings;
     /** Mode présentation (orbit auto, labels masqués). */
     presentationMode?: boolean;
     /** Modèle de structure multi-étages appliqué. */
@@ -1252,6 +1258,7 @@ export function createBlueprintFixture(
     loungeSofa: { x: 70, y: 60, w: 20, h: 10, label: 'Canapé Lounge' },
     car: { x: 45, y: 75, w: 14, h: 24, label: 'Emplacement véhicule' },
     parasol: { x: 50, y: 50, w: 12, h: 12, label: 'Parasol terrasse' },
+    landscape: { x: 44, y: 44, w: 12, h: 12, label: LANDSCAPE_STYLE_META.oak.label },
   };
   const d = defaults[kind] ?? { x: 40, y: 40, w: 20, h: 10, label: kind };
   return {
@@ -1289,6 +1296,7 @@ export function createBlueprintFixture(
       kind === 'loungeSofa' ? '#334155' :
       kind === 'car' ? '#0f766e' :
       kind === 'parasol' ? '#f59e0b' :
+      kind === 'landscape' ? LANDSCAPE_STYLE_META.oak.color :
       undefined,
     flowerType: kind === 'arch' || kind === 'pedestal' ? 'rose' as FlowerType : kind === 'flower' ? 'boquet' as FlowerType : undefined,
     flowerColor: kind === 'arch' || kind === 'pedestal' ? '#f4e8e4' : kind === 'flower' ? '#e11d48' : undefined,
@@ -1332,7 +1340,9 @@ export function createBlueprintFixture(
       kind === 'loungeSofa' ? 0.8 :
       kind === 'car' ? 1.5 :
       kind === 'parasol' ? 2.6 :
+      kind === 'landscape' ? LANDSCAPE_STYLE_META.oak.heightM :
       undefined,
+    landscapeStyle: kind === 'landscape' ? 'oak' : undefined,
     steps: kind === 'podium' ? 2 : kind === 'stairs' ? 6 : undefined,
     hasCouverts: kind === 'buffet' ? true : undefined,
     buffetStyle: kind === 'buffet' ? 'straight' : undefined,
@@ -6703,6 +6713,8 @@ export function getFixtureClass(kind: string): string {
       return 'bg-teal-50 border-teal-500 text-teal-900';
     case 'parasol':
       return 'bg-yellow-50 border-yellow-400 text-yellow-900';
+    case 'landscape':
+      return 'bg-transparent border-transparent';
     case 'perimeter':
       return 'bg-sky-50 border-sky-300 border-dashed text-sky-600';
     default:

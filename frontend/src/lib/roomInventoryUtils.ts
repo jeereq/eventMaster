@@ -72,6 +72,7 @@ const FIXTURE_LABELS: Partial<Record<RoomFixtureKind, string>> = {
   loungeSofa: 'Canapé lounge grand confort',
   car: 'Véhicule d’honneur / Exposition',
   parasol: 'Grand parasol de terrasse',
+  landscape: 'Aménagement extérieur (arbre, haie, eau…)',
 };
 
 export function computeRoomInventory(blueprint: RoomLayoutBlueprint): RoomInventoryReport {

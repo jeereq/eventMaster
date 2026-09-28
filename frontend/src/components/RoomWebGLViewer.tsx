@@ -95,6 +95,8 @@ import { detectLayoutClearanceConflicts } from '@/lib/roomLayoutClearance';
 import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
 import RoomShowcasePostProcessing from '@/components/RoomShowcasePostProcessing';
 import { LocalRoomEnvironment } from '@/components/room/LocalRoomEnvironment';
+import { LandscapeMesh, OutdoorSurroundingsScene, seedFromId } from '@/components/room/OutdoorLandscapeMeshes';
+import { resolveOutdoorSurroundings, type LandscapeStyle } from '@/lib/roomOutdoorUtils';
 import {
   resolveLightingPreset,
   resolveRenderQuality,
@@ -206,11 +208,14 @@ function ScenicLights({
   heightM,
   lighting,
   shadowMapSize,
+  hasSurroundings = false,
 }: {
   widthM: number;
   heightM: number;
   lighting: ReturnType<typeof resolveLightingPreset>;
   shadowMapSize: number;
+  /** Abords extérieurs actifs : leur terrain remplace le disque de sol uni. */
+  hasSurroundings?: boolean;
 }) {
   const extent = Math.max(widthM, heightM);
   const [sx, sy, sz] = lighting.sunPosition;
@@ -242,7 +247,7 @@ function ScenicLights({
         <Stars radius={100} depth={60} count={3200} factor={2.6} saturation={0} fade={false} speed={0} />
       ) : null}
 
-      {lighting.showSky && !isNight ? (
+      {lighting.showSky && !isNight && !hasSurroundings ? (
         <mesh position={[0, -0.04, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
           <circleGeometry args={[extent * 2.2, 64]} />
           <meshStandardMaterial color={lighting.hemiGround} roughness={0.96} metalness={0} />
@@ -2553,6 +2558,8 @@ function FixtureMesh({
   podiumStyle,
   instrumentStyle,
   barStyle,
+  landscapeStyle,
+  fixtureId,
   screenKind,
   screenRatio,
   screenElevationM,
@@ -2608,6 +2615,8 @@ function FixtureMesh({
   podiumStyle?: PodiumStyle;
   instrumentStyle?: InstrumentStyle;
   barStyle?: BarStyle;
+  landscapeStyle?: LandscapeStyle;
+  fixtureId?: string;
   screenKind?: import('@/lib/roomLayoutUtils').ScreenKind;
   screenRatio?: import('@/lib/roomLayoutUtils').ScreenRatio;
   screenElevationM?: number;
@@ -2747,6 +2756,15 @@ function FixtureMesh({
         <FountainMesh color={baseColor} selected={selected} />
       ) : kind === 'gazebo' ? (
         <GazeboMesh w={w} d={d} heightM={height} selected={selected} />
+      ) : kind === 'landscape' ? (
+        <LandscapeMesh
+          style={landscapeStyle ?? 'oak'}
+          w={w}
+          d={d}
+          heightM={podiumHeightM}
+          seed={seedFromId(fixtureId ?? label ?? 'landscape')}
+          selected={selected}
+        />
       ) : kind === 'instrument' ? (
         <ConcertInstrumentMesh style={instrumentStyle ?? 'piano'} w={w} d={d} selected={selected} />
       ) : kind === 'bar' ? (
@@ -3311,6 +3329,7 @@ function SceneContent({
     return map;
   }, [blockedSeats]);
   const surfacePickable = !lockOrbit && !dragSession;
+  const outdoorSurroundings = resolveOutdoorSurroundings(blueprint.metadata.outdoorSurroundings);
 
   return (
     <>
@@ -3320,6 +3339,7 @@ function SceneContent({
         heightM={heightM}
         lighting={lighting}
         shadowMapSize={qualitySettings.shadowMapSize}
+        hasSurroundings={outdoorSurroundings !== 'none'}
       />
       <LightingExposure exposure={lighting.exposure * (qualitySettings.exposure / 1.16)} />
       <ShadowHardness hard={lighting.preset === 'day'} softPreferred={qualitySettings.softShadows} />
@@ -3405,6 +3425,15 @@ function SceneContent({
           stairHoles={activeStoryStairHoles}
         />
       )}
+
+      {!stackView && outdoorSurroundings !== 'none' ? (
+        <OutdoorSurroundingsScene
+          kind={outdoorSurroundings}
+          widthM={widthM}
+          depthM={heightM}
+          lite={qualitySettings.quality === 'draft'}
+        />
+      ) : null}
 
       {/* Texture de sol sur l’étage RDC en vue empilée */}
       {stackView ? (
@@ -3557,6 +3586,8 @@ function SceneContent({
             podiumStyle={f.podiumStyle}
             instrumentStyle={f.instrumentStyle}
             barStyle={f.barStyle}
+            landscapeStyle={f.landscapeStyle}
+            fixtureId={f.id}
             screenKind={f.screenKind}
             screenRatio={f.screenRatio}
             screenElevationM={f.screenElevationM}

@@ -816,6 +816,48 @@ def soft_marble(seed: int, base: list[tuple[float, str]], vein: str, freq: float
     return albedo, 0.9 - 0.05 * v
 
 
+def water():
+    """Clapot : vaguelettes croisées (sert surtout de carte de normales animée) sur un bleu d'eau profonde."""
+    size = SIZE
+    a = spectral_noise(size, 801, beta=3.4, sx=1.0, sy=1.6)
+    b = spectral_noise(size, 802, beta=2.6, sx=1.6, sy=1.0)
+    h = 0.6 * a + 0.4 * b
+    albedo = colorize(h, [(0, '#1f7fa3'), (0.6, '#2a9cc2'), (1, '#45b6d6')])
+    return albedo, h
+
+
+def foliage():
+    """Feuillage dense (haies, couronnes) : petites feuilles ovales superposées, ombre entre les couches."""
+    size = SIZE
+    big = size * 2
+    rng = np.random.default_rng(811)
+    img = Image.new('RGB', (big, big), (22, 38, 16))
+    hm = Image.new('L', (big, big), 0)
+    d = ImageDraw.Draw(img)
+    dh = ImageDraw.Draw(hm)
+    cols = [rgb(c) for c in ('#3f6b2a', '#4c7d31', '#355e24', '#5a8c3a', '#2d5220', '#6b9a44')]
+    for layer in range(4):
+        shade = 0.55 + 0.15 * layer
+        for _ in range(9000):
+            x, y = rng.uniform(0, big, 2)
+            L = rng.uniform(14, 26)
+            W = L * rng.uniform(0.4, 0.6)
+            ang = rng.uniform(0, np.pi)
+            c = cols[int(rng.integers(0, len(cols)))] * rng.uniform(0.85, 1.15) * shade
+            fill = tuple(int(v) for v in np.clip(c * 255, 0, 255))
+            ca, sa = np.cos(ang), np.sin(ang)
+            for (px, py) in wrap_positions(x, y, big, L + 2):
+                pts = [(px + ca * L * np.cos(t) - sa * W * np.sin(t), py + sa * L * np.cos(t) + ca * W * np.sin(t)) for t in np.linspace(0, 2 * np.pi, 10)]
+                d.polygon(pts, fill=fill)
+                dh.polygon(pts, fill=int(60 + 60 * layer))
+                # Nervure centrale plus claire.
+                d.line([(px - ca * L * 0.8, py - sa * L * 0.8), (px + ca * L * 0.8, py + sa * L * 0.8)], fill=tuple(min(255, int(v * 1.25)) for v in fill), width=2)
+    albedo = np.asarray(img.resize((size, size), Image.LANCZOS), dtype=np.float64) / 255.0
+    h = np.asarray(hm.resize((size, size), Image.LANCZOS), dtype=np.float64) / 255.0
+    albedo *= (0.6 + 0.4 * ao_from_height(h, 5, 1.6))[..., None]
+    return albedo, h
+
+
 def veined_marble():
     return soft_marble(651, [(0, '#e6e3de'), (0.6, '#efede9'), (1, '#f8f7f4')], '#7b7771')
 
@@ -856,10 +898,13 @@ JOBS = {
     # Textiles
     'carpet-navy': lambda: (carpet(661, ['#171a33', '#232749', '#303660']), 2.5),
     'carpet-red': lambda: (carpet(671, ['#4d0a12', '#6e1019', '#8c1a22']), 2.5),
+    # Eau & végétation (aménagements extérieurs)
+    'water': lambda: (water(), 4),
+    'foliage': lambda: (foliage(), 6),
     # Murs
     'wall-brick': lambda: (brick_wall(701, ['#9a4a33', '#a6553b', '#8b402d', '#b0603f', '#7c3829', '#a14c34', '#93503d'], '#b7ab98'), 8),
     'wall-brick-painted': lambda: (brick_wall(711, ['#9a4a33', '#a6553b', '#8b402d'], '#d8d4cc', painted='#f1efea', wear=0.25), 7),
-    'wall-stone': lambda: (ashlar_wall(721, ['#b8ad99', '#c7bda9', '#a89c86', '#d0c6b3', '#9e917b'], '#8a8272'), 8),
+    'wall-stone': lambda: (ashlar_wall(721, ['#b3a58c', '#c7bda9', '#9c8f78', '#d2c7b2', '#a3927a', '#8f8472'], '#857c6b', joint_px=6, chisel=1.8), 9),
     'wall-slate': lambda: (ledgestone(), 9),
     'wall-concrete': lambda: (architectural_concrete(), 5),
     'wall-board-concrete': lambda: (architectural_concrete(731, boards=8), 6),

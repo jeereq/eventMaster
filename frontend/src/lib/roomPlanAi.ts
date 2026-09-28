@@ -1,3 +1,4 @@
+import { LANDSCAPE_STYLE_META, type LandscapeStyle } from '@/lib/roomOutdoorUtils';
 import { api } from '@/lib/api';
 import { isStudioJobAccepted, type StudioJobAccepted } from '@/lib/studioJobs';
 import { applyServerAllowance, getOrCreateDeviceId, AI_ROOM_PLAN_TOKEN_COST, type AiAllowance } from '@/lib/aiTokens';
@@ -95,7 +96,8 @@ export type RoomPlanVisionItemKind =
   | 'condimentStation'
   | 'loungeSofa'
   | 'car'
-  | 'parasol';
+  | 'parasol'
+  | 'landscape';
 
 export interface RoomPlanVisionItem {
   kind: RoomPlanVisionItemKind;
@@ -218,6 +220,7 @@ const FIXTURE_KINDS = new Set<RoomLayoutBlueprint['fixtures'][number]['kind']>([
   'loungeSofa',
   'car',
   'parasol',
+  'landscape',
 ]);
 
 const OUTLINE_SHAPES = new Set<RoomOutlineShape>([
@@ -491,7 +494,59 @@ const VISION_KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   partition: 'partition',
   cloison: 'partition',
   retail: 'partition',
+
+  // Aménagements extérieurs
+  tree: 'landscape',
+  trees: 'landscape',
+  arbre: 'landscape',
+  arbres: 'landscape',
+  palm: 'landscape',
+  palmier: 'landscape',
+  olivier: 'landscape',
+  cypres: 'landscape',
+  hedge: 'landscape',
+  haie: 'landscape',
+  shrub: 'landscape',
+  massif: 'landscape',
+  jardiniere: 'landscape',
+  planter: 'landscape',
+  pool: 'landscape',
+  piscine: 'landscape',
+  pond: 'landscape',
+  bassin: 'landscape',
+  brasero: 'landscape',
+  firepit: 'landscape',
+  torch: 'landscape',
+  torche: 'landscape',
+  fence: 'landscape',
+  cloture: 'landscape',
+  barriere: 'landscape',
+  rock: 'landscape',
+  rocks: 'landscape',
+  rocher: 'landscape',
+  rochers: 'landscape',
 };
+
+/** Devine le type d'aménagement extérieur à partir du libellé (« Palmier », « Piscine »…). */
+function inferLandscapeStyle(text: string | undefined): LandscapeStyle {
+  const t = (text ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const rules: Array<[RegExp, LandscapeStyle]> = [
+    [/palm/, 'palm'],
+    [/olivi|olive/, 'olive'],
+    [/cypr|conif|sapin|pine|fir/, 'cypress'],
+    [/haie|hedge|buis/, 'hedge'],
+    [/massif|buisson|shrub|bush/, 'shrub'],
+    [/jardini|planter|bac/, 'planter'],
+    [/piscine|pool/, 'pool'],
+    [/bassin|mare|etang|pond|lac/, 'pond'],
+    [/brasero|fire|feu|foyer/, 'firePit'],
+    [/torch/, 'torch'],
+    [/clotur|barri|fence|palissade/, 'fence'],
+    [/roch|rock|pierre|boulder/, 'boulder'],
+  ];
+  for (const [re, style] of rules) if (re.test(t)) return style;
+  return 'oak';
+}
 
 const ZONE_KIND_ALIASES: Record<string, ZoneKind> = {
   dance: 'dance',
@@ -1180,7 +1235,12 @@ export function applyRoomPlanVisionDraft(
         warnings.push(`« ${zone.label} » importé comme zone — élément hors forfait décor.`);
         continue;
       }
-      const created = applyFixtureLook(createNeutralFixtureForImport(fixtureKind), item);
+      let created = applyFixtureLook(createNeutralFixtureForImport(fixtureKind), item);
+      if (fixtureKind === 'landscape') {
+        const style = inferLandscapeStyle(item.label);
+        const meta = LANDSCAPE_STYLE_META[style];
+        created = { ...created, landscapeStyle: style, label: meta.label, heightM: meta.heightM, color: item.color ?? meta.color };
+      }
       const box = itemFootprint(item, { w: created.w, h: created.h });
       const rawRot = item.rotation;
       const rot = (fixtureKind === 'door' || fixtureKind === 'entrance')
