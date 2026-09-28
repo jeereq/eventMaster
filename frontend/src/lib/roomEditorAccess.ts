@@ -107,7 +107,7 @@ export function roomEditorCapabilities(
       tableShapes: ['round', 'rectangular', 'square', 'oval', 'cocktail', 'highTop', 'arc'] as TableShape[],
       canPlanFromPhoto: true,
       fixtureKinds: themesFixtures
-        ? ['stage', 'podium', 'aisle', 'corridor', 'entrance', 'door', 'chandelier', 'column', 'flower', 'buffet', 'stairs', 'balcony', 'arch', 'partition', 'decal', 'pedestal', 'stringLight', 'screen', 'instrument', 'bar', 'orderCounter', 'pickupCounter', 'pizzaOven', 'kitchenLine', 'displayCase', 'stylingStation', 'washBasin', 'condimentStation', 'loungeSofa', 'car', 'parasol']
+        ? ['stage', 'podium', 'aisle', 'corridor', 'entrance', 'door', 'chandelier', 'column', 'flower', 'buffet', 'stairs', 'balcony', 'arch', 'partition', 'decal', 'pedestal', 'stringLight', 'screen', 'instrument', 'bar', 'orderCounter', 'pickupCounter', 'pizzaOven', 'kitchenLine', 'displayCase', 'stylingStation', 'washBasin', 'condimentStation', 'loungeSofa', 'car', 'parasol', 'landscape']
         : [],
     } satisfies Partial<RoomEditorCapabilities>);
   } else if (parsed === 'complete') {
@@ -134,7 +134,7 @@ export function roomEditorCapabilities(
       canShowcaseRender: true,
       tableShapes: ['round', 'rectangular', 'square', 'oval', 'cocktail', 'highTop', 'arc'] as TableShape[],
       fixtureKinds: themesFixtures
-        ? ['stage', 'podium', 'aisle', 'corridor', 'entrance', 'door', 'chandelier', 'column', 'flower', 'perimeter', 'buffet', 'carpet', 'stairs', 'balcony', 'arch', 'partition', 'decal', 'pedestal', 'stringLight', 'fountain', 'gazebo', 'djBooth', 'screen', 'instrument', 'bar', 'orderCounter', 'pickupCounter', 'pizzaOven', 'kitchenLine', 'displayCase', 'stylingStation', 'washBasin', 'condimentStation', 'loungeSofa', 'car', 'parasol']
+        ? ['stage', 'podium', 'aisle', 'corridor', 'entrance', 'door', 'chandelier', 'column', 'flower', 'perimeter', 'buffet', 'carpet', 'stairs', 'balcony', 'arch', 'partition', 'decal', 'pedestal', 'stringLight', 'fountain', 'gazebo', 'djBooth', 'screen', 'instrument', 'bar', 'orderCounter', 'pickupCounter', 'pizzaOven', 'kitchenLine', 'displayCase', 'stylingStation', 'washBasin', 'condimentStation', 'loungeSofa', 'car', 'parasol', 'landscape']
         : [],
     } satisfies Partial<RoomEditorCapabilities>);
   }

@@ -287,124 +287,6 @@ export function resolveFloorMap(
     };
   }
 
-  if (type === 'betonCire') {
-    const tileM = FLOOR_TEXTURE_REPEAT_M.betonCire;
-    const { map: betonTex, bumpMap: betonBump, normalMap: betonNormal } = makeCanvasTexture('floor:beton-cire-v2', (ctx, size) => {
-      ctx.fillStyle = '#8f8c85';
-      ctx.fillRect(0, 0, size, size);
-      const rand = seededRandom(41);
-      for (let i = 0; i < 28; i++) {
-        const x0 = rand() * size;
-        const y0 = rand() * size;
-        const radius = size * (0.15 + rand() * 0.35);
-        const alpha = 0.04 + rand() * 0.06;
-        // Chaque nuage est redessiné sur les tuiles voisines : raccord invisible au bord.
-        for (const dx of [-size, 0, size]) {
-          for (const dy of [-size, 0, size]) {
-            const x = x0 + dx;
-            const y = y0 + dy;
-            if (x + radius < 0 || x - radius > size || y + radius < 0 || y - radius > size) continue;
-            const grad = ctx.createRadialGradient(x, y, radius * 0.1, x, y, radius);
-            grad.addColorStop(0, `rgba(240,238,232,${alpha})`);
-            grad.addColorStop(0.6, `rgba(100,98,92,${alpha * 0.7})`);
-            grad.addColorStop(1, 'rgba(0,0,0,0)');
-            ctx.fillStyle = grad;
-            ctx.beginPath();
-            ctx.arc(x, y, radius, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
-      }
-      noise(ctx, size, 0.05);
-    }, 512, true, true, 1.8);
-    betonTex.repeat.set(widthM / tileM, heightM / tileM);
-    if (betonBump) betonBump.repeat.set(widthM / tileM, heightM / tileM);
-    if (betonNormal) betonNormal.repeat.set(widthM / tileM, heightM / tileM);
-    return {
-      map: betonTex,
-      color: floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff',
-      roughness: 0.44,
-      metalness: 0.05,
-      clearcoat: 0.32,
-      envMapIntensity: 0.55,
-      isPlan: false,
-      bumpMap: betonBump ?? null,
-      bumpScale: 0.01,
-      normalMap: betonNormal ?? null,
-      normalScale: 0.5,
-    };
-  }
-
-  if (type === 'travertin') {
-    const tileM = FLOOR_TEXTURE_REPEAT_M.travertin;
-    const { map: travTex, bumpMap: travBump, normalMap: travNormal } = makeCanvasTexture('floor:travertin-romain-v1', (ctx, size) => {
-      ctx.fillStyle = '#ded5c4';
-      ctx.fillRect(0, 0, size, size);
-      const half = size / 2;
-      ctx.strokeStyle = 'rgba(120,110,95,0.45)';
-      ctx.lineWidth = 2.5;
-      ctx.strokeRect(2, 2, half - 3, half - 3);
-      ctx.strokeRect(half + 1, 2, half - 3, half - 3);
-      ctx.strokeRect(2, half + 1, half - 3, half - 3);
-      ctx.strokeRect(half + 1, half + 1, half - 3, half - 3);
-      for (let i = 0; i < 350; i++) {
-        const x = Math.random() * size;
-        const y = Math.random() * size;
-        const len = 4 + Math.random() * 18;
-        ctx.fillStyle = Math.random() > 0.4 ? 'rgba(165,152,132,0.22)' : 'rgba(245,240,230,0.3)';
-        ctx.fillRect(x, y, len, 1.2);
-      }
-      noise(ctx, size, 0.06);
-    }, 512, true, true, 2.6);
-    travTex.repeat.set(widthM / tileM, heightM / tileM);
-    if (travBump) travBump.repeat.set(widthM / tileM, heightM / tileM);
-    if (travNormal) travNormal.repeat.set(widthM / tileM, heightM / tileM);
-    return {
-      map: travTex,
-      color: floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff',
-      roughness: 0.65,
-      metalness: 0.03,
-      clearcoat: 0.08,
-      envMapIntensity: 0.45,
-      isPlan: false,
-      bumpMap: travBump ?? null,
-      bumpScale: 0.014,
-      normalMap: travNormal ?? null,
-      normalScale: 0.8,
-    };
-  }
-
-  if (type === 'moquetteRouge') {
-    const tileM = FLOOR_TEXTURE_REPEAT_M.moquetteRouge;
-    const { map: redCarpetTex, bumpMap: redCarpetBump, normalMap: redCarpetNormal } = makeCanvasTexture('floor:moquette-rouge-v1', (ctx, size) => {
-      ctx.fillStyle = '#83141f';
-      ctx.fillRect(0, 0, size, size);
-      for (let i = 0; i < 3000; i++) {
-        const x = Math.random() * size;
-        const y = Math.random() * size;
-        ctx.fillStyle = Math.random() > 0.5 ? '#9e1b27' : '#690e17';
-        ctx.fillRect(x, y, 1.2, 2.0);
-      }
-      noise(ctx, size, 0.09);
-    }, 512, true, true, 2.2);
-    redCarpetTex.repeat.set(widthM / tileM, heightM / tileM);
-    if (redCarpetBump) redCarpetBump.repeat.set(widthM / tileM, heightM / tileM);
-    if (redCarpetNormal) redCarpetNormal.repeat.set(widthM / tileM, heightM / tileM);
-    return {
-      map: redCarpetTex,
-      color: floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff',
-      roughness: 0.97,
-      metalness: 0,
-      clearcoat: 0,
-      envMapIntensity: 0.15,
-      isPlan: false,
-      bumpMap: redCarpetBump ?? null,
-      bumpScale: 0.02,
-      normalMap: redCarpetNormal ?? null,
-      normalScale: 0.7,
-    };
-  }
-
   const asset = getFloorAsset(type);
   const tileM = FLOOR_TEXTURE_REPEAT_M[type] ?? 2;
   const map = loadTiledTexture(asset.url, widthM / tileM, heightM / tileM);
@@ -441,11 +323,28 @@ export function resolveFloorMap(
     roughness = 0.82;
     metalness = 0.04;
     envMapIntensity = 0.32;
-  } else if (type === 'moquette' || type === 'herbe' || type === 'pelouse' || type === 'prairie' || type === 'gazonSynth' || type === 'gazonFleurie') {
+  } else if (
+    type === 'moquette' || type === 'moquetteRouge' || type === 'herbe' || type === 'pelouse' || type === 'prairie'
+    || type === 'gazonSynth' || type === 'gazonFleurie' || type === 'pelouseRayee' || type === 'sable' || type === 'terreBattue'
+  ) {
     roughness = 0.98;
     metalness = 0;
     envMapIntensity = 0.15;
-  } else if (type === 'beton' || type === 'pavesPinwheel' || type === 'pavesGranit') {
+  } else if (type === 'galets' || type === 'gravier' || type === 'gravierFonce') {
+    roughness = 0.9;
+    metalness = 0.02;
+    envMapIntensity = 0.28;
+  } else if (type === 'betonCire' || type === 'travertin') {
+    roughness = type === 'betonCire' ? 0.38 : 0.5;
+    metalness = 0.04;
+    clearcoat = type === 'betonCire' ? 0.35 : 0.15;
+    envMapIntensity = 0.55;
+  } else if (type === 'terrasseIpe') {
+    roughness = 0.62;
+    metalness = 0.02;
+    clearcoat = 0.12;
+    envMapIntensity = 0.4;
+  } else if (type === 'beton' || type === 'pavesPinwheel' || type === 'pavesGranit' || type === 'brique' || type === 'pierre' || type === 'carrelage') {
     roughness = 0.88;
     metalness = 0.04;
     envMapIntensity = 0.3;
@@ -737,6 +636,7 @@ function photoWallMaterial(
   roughness: number,
   metalness: number,
   bumpScale: number,
+  normalScale = 0.6,
 ): WallSurfaceMaterial {
   const map = loadTiledTexture(url, repeatX, repeatY);
   const normalUrl = normalMapUrlFor(url);
@@ -745,7 +645,7 @@ function photoWallMaterial(
     map,
     bumpMap: normalMap ? undefined : bumpFromAlbedo(map),
     normalMap,
-    normalScale: 0.6,
+    normalScale,
     color,
     roughness,
     metalness,
@@ -754,20 +654,20 @@ function photoWallMaterial(
 }
 export const WALL_TEXTURE_TILE_M: Record<WallTextureStyle, { w: number; h: number }> = {
   plaster: { w: 2.4, h: 2.4 },
-  brick: { w: 0.65, h: 0.32 },
+  brick: { w: 0.9, h: 0.9 },
   wood: { w: 1.2, h: 1.2 },
-  concrete: { w: 2, h: 2 },
+  concrete: { w: 2.4, h: 2.4 },
   wallpaper: { w: 0.55, h: 0.55 },
-  stone: { w: 1.4, h: 1.4 },
+  stone: { w: 2, h: 2 },
   limewash: { w: 3, h: 3 },
   tadelakt: { w: 2.5, h: 2.5 },
-  boardConcrete: { w: 2.8, h: 0.45 },
-  paintedBrick: { w: 0.65, h: 0.32 },
+  boardConcrete: { w: 1.2, h: 1.2 },
+  paintedBrick: { w: 0.9, h: 0.9 },
   fluted: { w: 0.28, h: 2.6 },
   travertine: { w: 0.6, h: 0.6 },
-  slate: { w: 0.9, h: 0.9 },
+  slate: { w: 1.6, h: 1.6 },
   metalCorrugated: { w: 0.35, h: 2.4 },
-  metroTile: { w: 0.2, h: 0.1 },
+  metroTile: { w: 0.8, h: 0.8 },
   woodPanel: { w: 0.35, h: 2.4 },
 };
 
@@ -785,6 +685,19 @@ const WALL_BUMP_SCALE: Partial<Record<WallTextureStyle, number>> = {
   wood: 0.008,
   woodPanel: 0.01,
   travertine: 0.006,
+};
+
+/** Styles muraux rendus par texture générée ; `tinted` = albédo quasi blanc teinté par la peinture du mur. */
+const GENERATED_WALLS: Partial<Record<WallTextureStyle, { url: string; roughness: number; normalScale: number; tinted?: boolean; metalness?: number }>> = {
+  brick: { url: '/floors/gen/wall-brick.jpg', roughness: 0.93, normalScale: 1.1 },
+  paintedBrick: { url: '/floors/gen/wall-brick-painted.jpg', roughness: 0.82, normalScale: 1.0, tinted: true },
+  stone: { url: '/floors/gen/wall-stone.jpg', roughness: 0.9, normalScale: 1.1 },
+  slate: { url: '/floors/gen/wall-slate.jpg', roughness: 0.78, normalScale: 1.2 },
+  concrete: { url: '/floors/gen/wall-concrete.jpg', roughness: 0.86, normalScale: 0.7, metalness: 0.04 },
+  boardConcrete: { url: '/floors/gen/wall-board-concrete.jpg', roughness: 0.88, normalScale: 0.9, metalness: 0.04 },
+  plaster: { url: '/floors/gen/wall-plaster.jpg', roughness: 0.9, normalScale: 0.45, tinted: true },
+  limewash: { url: '/floors/gen/wall-limewash.jpg', roughness: 0.92, normalScale: 0.4, tinted: true },
+  metroTile: { url: '/floors/gen/wall-metro.jpg', roughness: 0.18, normalScale: 0.8 },
 };
 
 export type WallSurfaceMaterial = {
@@ -834,6 +747,22 @@ export function getWallTexture(style: WallTextureStyle, colorOverride?: string):
       0.28,
       0.08,
       WALL_BUMP_SCALE.travertine ?? 0.006,
+    );
+  }
+
+  // Parements et enduits réalistes : textures générées (scripts/textures/generate_surfaces.py) avec vraie carte de normales.
+  const generated = GENERATED_WALLS[style];
+  if (generated) {
+    const tile = WALL_TEXTURE_TILE_M[style];
+    return photoWallMaterial(
+      generated.url,
+      3 / tile.w,
+      3 / tile.h,
+      generated.tinted ? base : '#ffffff',
+      generated.roughness,
+      generated.metalness ?? 0.02,
+      0,
+      generated.normalScale,
     );
   }
 
@@ -1130,7 +1059,7 @@ export function wallTextureForSurface(
     normalMap = base.normalMap.clone();
     normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
     // Micro-relief d'enduit : grain plus fin que la teinte (≈ 60 cm).
-    const smooth = !base.bumpMap && (style === 'plaster' || style === 'limewash' || style === 'tadelakt');
+    const smooth = !base.bumpMap && style === 'tadelakt';
     normalMap.repeat.set(smooth ? widthM / 0.6 : repeatX, smooth ? heightM / 0.6 : repeatY);
   }
   let bumpMap: THREE.Texture | undefined;
@@ -1647,7 +1576,7 @@ export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
   }
   if (mat === 'marble') {
     return {
-      map: loadTiledTexture('/floors/marble.svg', 1.5, 1.5),
+      map: loadTiledTexture('/floors/gen/marble-veined.jpg', 1.5, 1.5),
       color: '#ffffff',
       roughness: 0.22,
       metalness: 0.15,
@@ -1656,7 +1585,7 @@ export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
   }
   if (mat === 'concrete') {
     return {
-      map: loadTiledTexture('/floors/concrete.svg', 2, 2),
+      map: loadTiledTexture('/floors/gen/concrete.jpg', 1, 1),
       color: '#ffffff',
       roughness: 0.85,
       metalness: 0.05,
@@ -1665,7 +1594,7 @@ export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
   }
   if (mat === 'epoxy') {
     return {
-      map: loadTiledTexture('/floors/epoxy.svg', 2, 2),
+      map: loadTiledTexture('/floors/gen/epoxy-grey.jpg', 1, 1),
       color: '#ffffff',
       roughness: 0.15,
       metalness: 0.22,
@@ -1674,7 +1603,7 @@ export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
   }
   if (mat === 'grass') {
     return {
-      map: loadTiledTexture('/floors/grass.svg', 2, 2),
+      map: loadTiledTexture('/floors/gen/grass-lawn.jpg', 1.5, 1.5),
       color: '#ffffff',
       roughness: 0.95,
       metalness: 0,
@@ -1683,8 +1612,8 @@ export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
   }
   if (mat === 'gravel') {
     return {
-      map: loadTiledTexture('/floors/sable.svg', 1.4, 1.4),
-      color: '#a8a29e',
+      map: loadTiledTexture('/floors/gen/gravel-light.jpg', 3, 3),
+      color: '#ffffff',
       roughness: 0.92,
       metalness: 0.02,
       thicknessM: 0.025,
@@ -1692,7 +1621,7 @@ export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
   }
   if (mat === 'brick') {
     return {
-      map: loadTiledTexture('/floors/brique.svg', 1.6, 1.6),
+      map: loadTiledTexture('/floors/gen/brick-pavers.jpg', 1.5, 1.5),
       color: '#ffffff',
       roughness: 0.78,
       metalness: 0.04,

@@ -3,8 +3,20 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil,
+  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees,
 } from 'lucide-react';
+import {
+  LANDSCAPE_GROUP_LABELS,
+  LANDSCAPE_STYLE_META,
+  LANDSCAPE_STYLE_ORDER,
+  OUTDOOR_SURROUNDINGS_META,
+  OUTDOOR_SURROUNDINGS_ORDER,
+  landscapeFootprintPct,
+  resolveOutdoorSurroundings,
+  type LandscapeGroup,
+  type LandscapeStyle,
+  type OutdoorSurroundings,
+} from '@/lib/roomOutdoorUtils';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
 import ImageCropModal from '@/components/ImageCropModal';
@@ -327,7 +339,7 @@ function DiscloseChevron({ open }: { open: boolean }) {
   );
 }
 
-type EditorToolGroupId = 'display' | 'view' | 'light' | 'furniture' | 'zones' | 'building' | 'scene' | 'hospitality';
+type EditorToolGroupId = 'display' | 'view' | 'light' | 'furniture' | 'zones' | 'building' | 'scene' | 'hospitality' | 'outdoor';
 
 function ToolbarCluster({
   label,
@@ -1693,6 +1705,42 @@ export default function RoomLayoutEditor({
     );
     setSelection([{ kind: 'fixture', id: fixture.id }]);
     setQuickCreate(null);
+  };
+
+  const addLandscapeFixture = (style: LandscapeStyle) => {
+    if (!caps.canFixtures || !caps.fixtureKinds.includes('landscape')) {
+      log('Les aménagements extérieurs ne sont pas inclus dans votre forfait', 'info');
+      return;
+    }
+    const meta = LANDSCAPE_STYLE_META[style];
+    const size = landscapeFootprintPct(style, blueprint.canvas?.widthM ?? 20, blueprint.canvas?.heightM ?? 16);
+    const fixture = placeFixtureWithClearance(blueprint, {
+      ...createBlueprintFixture('landscape'),
+      ...size,
+      x: 50 - size.w / 2,
+      y: 50 - size.h / 2,
+      label: meta.label,
+      color: meta.color,
+      heightM: meta.heightM,
+      landscapeStyle: style,
+      storyId: resolveActiveStoryId(blueprint),
+    });
+    updateBlueprint(
+      { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
+      { message: `${meta.label} ajouté`, kind: 'add' },
+    );
+    setSelection([{ kind: 'fixture', id: fixture.id }]);
+  };
+
+  const outdoorSurroundings = resolveOutdoorSurroundings(blueprint.metadata.outdoorSurroundings);
+  const setOutdoorSurroundings = (value: OutdoorSurroundings) => {
+    updateBlueprint(
+      { ...blueprint, metadata: { ...blueprint.metadata, outdoorSurroundings: value } },
+      {
+        message: value === 'none' ? 'Abords extérieurs retirés' : `Abords : ${OUTDOOR_SURROUNDINGS_META[value].label}`,
+        kind: 'settings',
+      },
+    );
   };
 
   const addBarFixture = (style: BarStyle) => {
@@ -4888,6 +4936,7 @@ export default function RoomLayoutEditor({
       const isPodium = selectedFixture.kind === 'podium';
       const isInstrument = selectedFixture.kind === 'instrument';
       const isBar = selectedFixture.kind === 'bar';
+      const isLandscape = selectedFixture.kind === 'landscape';
       const isStage = selectedFixture.kind === 'stage' || isPodium;
       const isFlower = selectedFixture.kind === 'flower';
       const isArch = selectedFixture.kind === 'arch';
@@ -5590,6 +5639,53 @@ export default function RoomLayoutEditor({
                 <span className="text-xs text-muted">{barStyleHints[(selectedFixture.barStyle ?? 'cocktail') as BarStyle]}</span>
               </label>
             )}
+
+            {isLandscape && (() => {
+              const style = (selectedFixture.landscapeStyle ?? 'oak') as LandscapeStyle;
+              const meta = LANDSCAPE_STYLE_META[style];
+              return (
+                <>
+                  <label className="block text-xs space-y-1">
+                    <span className="font-semibold text-muted">Élément extérieur</span>
+                    <select
+                      value={style}
+                      onChange={(e) => {
+                        const next = e.target.value as LandscapeStyle;
+                        const nextMeta = LANDSCAPE_STYLE_META[next];
+                        const size = landscapeFootprintPct(next, blueprint.canvas?.widthM ?? 20, blueprint.canvas?.heightM ?? 16);
+                        updateFixture(selectedFixture.id, {
+                          landscapeStyle: next,
+                          ...size,
+                          heightM: nextMeta.heightM,
+                          color: nextMeta.color,
+                          label: nextOwnedLabel(selectedFixture.label, meta.label, nextMeta.label),
+                        }, nextMeta.label);
+                      }}
+                      className={EDITOR_FIELD}
+                    >
+                      {LANDSCAPE_STYLE_ORDER.map((id) => (
+                        <option key={id} value={id}>{LANDSCAPE_STYLE_META[id].label}</option>
+                      ))}
+                    </select>
+                    <span className="text-xs text-muted">{meta.hint}</span>
+                  </label>
+                  {style !== 'pool' && style !== 'pond' && style !== 'firePit' ? (
+                    <label className="block text-xs space-y-1">
+                      <span className="font-semibold text-muted">Hauteur (m)</span>
+                      <input
+                        type="number"
+                        min={0.3}
+                        max={15}
+                        step={0.1}
+                        value={selectedFixture.heightM ?? meta.heightM}
+                        onChange={(e) => updateFixture(selectedFixture.id, { heightM: parseFloat(e.target.value) || meta.heightM }, 'Hauteur')}
+                        className={EDITOR_FIELD}
+                      />
+                    </label>
+                  ) : null}
+                </>
+              );
+            })()}
 
             {isBuffet && (
               <>
@@ -7687,16 +7783,6 @@ export default function RoomLayoutEditor({
           Guirlandes
         </button>
       ) : null}
-      {caps.fixtureKinds.includes('fountain') ? (
-        <button type="button" onClick={() => addFixture('fountain')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
-          Fontaine
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('gazebo') ? (
-        <button type="button" onClick={() => addFixture('gazebo')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
-          Gloriette
-        </button>
-      ) : null}
       {caps.fixtureKinds.includes('djBooth') ? (
         <button type="button" onClick={() => addFixture('djBooth')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
           Régie DJ
@@ -7720,6 +7806,63 @@ export default function RoomLayoutEditor({
             PC Fixe
           </button>
         </>
+      ) : null}
+      </EditorToolGroup>
+
+      <EditorToolGroup
+        id="outdoor"
+        label="Extérieur"
+        icon={<Trees className="w-3.5 h-3.5" aria-hidden />}
+        openId={toolbarGroup}
+        onToggle={toggleToolbarGroup}
+      >
+      {caps.canFixtures ? (
+        <label className="flex items-center gap-1.5 text-xs font-bold text-foreground" title="Terrain et décor autour du plan en 3D">
+          <span className="shrink-0">Abords</span>
+          <select
+            value={outdoorSurroundings}
+            onChange={(e) => setOutdoorSurroundings(e.target.value as OutdoorSurroundings)}
+            className={cn(EDITOR_FIELD, 'w-auto min-w-[11rem]')}
+            aria-label="Abords extérieurs de la salle"
+          >
+            {OUTDOOR_SURROUNDINGS_ORDER.map((id) => (
+              <option key={id} value={id}>{id === 'none' ? 'Aucun (salle seule)' : OUTDOOR_SURROUNDINGS_META[id].label}</option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+      {caps.fixtureKinds.includes('landscape')
+        ? (['vegetation', 'water', 'ambiance'] as LandscapeGroup[]).map((group) => (
+          <React.Fragment key={group}>
+            <span className="basis-full text-[11px] font-semibold uppercase tracking-wide text-muted pt-1">{LANDSCAPE_GROUP_LABELS[group]}</span>
+            {LANDSCAPE_STYLE_ORDER.filter((style) => LANDSCAPE_STYLE_META[style].group === group).map((style) => (
+              <button
+                key={style}
+                type="button"
+                onClick={() => addLandscapeFixture(style)}
+                className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+                title={LANDSCAPE_STYLE_META[style].hint}
+              >
+                {LANDSCAPE_STYLE_META[style].label}
+              </button>
+            ))}
+          </React.Fragment>
+        ))
+        : null}
+      {caps.fixtureKinds.includes('fountain') ? (
+        <button type="button" onClick={() => addFixture('fountain')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+          Fontaine
+        </button>
+      ) : null}
+      {caps.fixtureKinds.includes('gazebo') ? (
+        <button type="button" onClick={() => addFixture('gazebo')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+          Gloriette
+        </button>
+      ) : null}
+      {caps.fixtureKinds.includes('parasol') ? (
+        <button type="button" onClick={() => addFixture('parasol')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+          Parasol
+        </button>
       ) : null}
       </EditorToolGroup>
       </ToolbarCluster>

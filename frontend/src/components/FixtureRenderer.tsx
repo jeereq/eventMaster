@@ -15,11 +15,87 @@ import {
   podiumStyleLabels,
 } from '@/lib/roomLayoutUtils';
 import { ZONE_MATERIAL_COLORS } from '@/lib/roomWebGLMaterials';
+import { LANDSCAPE_STYLE_META, type LandscapeStyle } from '@/lib/roomOutdoorUtils';
 import { getCroppedBackgroundStyle } from '@/lib/imageCropUtils';
 import FlowerRenderer from '@/components/FlowerRenderer';
 import { Sparkles, DoorOpen, ShieldAlert } from 'lucide-react';
 
 type Fixture = RoomLayoutBlueprint['fixtures'][number];
+
+/** Vue de dessus des aménagements extérieurs (arbres, eau, feu…). */
+function LandscapePlanGlyph({ style }: { style: LandscapeStyle }) {
+  switch (style) {
+    case 'oak':
+    case 'olive':
+    case 'cypress': {
+      const fill = style === 'olive' ? '#8e9a6e' : style === 'cypress' ? '#2f4f28' : '#4a7a32';
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible" aria-hidden>
+          <ellipse cx="54" cy="56" rx="44" ry="42" fill="rgba(0,0,0,0.18)" />
+          {[[50, 50, 40], [30, 38, 20], [68, 36, 20], [70, 64, 20], [32, 66, 20]].map(([x, y, r], i) => (
+            <circle key={i} cx={x} cy={y} r={style === 'cypress' ? r * 0.8 : r} fill={fill} stroke="rgba(0,0,0,0.25)" strokeWidth="1.5" />
+          ))}
+          <circle cx="42" cy="40" r="12" fill="rgba(255,255,255,0.14)" />
+        </svg>
+      );
+    }
+    case 'palm':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible" aria-hidden>
+          {Array.from({ length: 9 }, (_, i) => {
+            const a = (i / 9) * Math.PI * 2;
+            return <path key={i} d={`M50 50 Q ${50 + Math.cos(a + 0.3) * 30} ${50 + Math.sin(a + 0.3) * 30} ${50 + Math.cos(a) * 48} ${50 + Math.sin(a) * 48}`} stroke="#4f7f2f" strokeWidth="9" strokeLinecap="round" fill="none" />;
+          })}
+          <circle cx="50" cy="50" r="7" fill="#7a5a34" />
+        </svg>
+      );
+    case 'hedge':
+      return <div className="w-full h-full rounded-md bg-[#3d6a2c] border border-[#2b4d20] shadow-inner" style={{ backgroundImage: 'radial-gradient(circle at 30% 40%, rgba(255,255,255,0.12) 0 18%, transparent 20%)', backgroundSize: '14px 14px' }} />;
+    case 'shrub':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible" aria-hidden>
+          {[[28, 40, 22], [60, 34, 24], [72, 66, 20], [38, 68, 22]].map(([x, y, r], i) => <circle key={i} cx={x} cy={y} r={r} fill="#517f36" stroke="#355a24" strokeWidth="1.5" />)}
+          {[[30, 34], [62, 28], [70, 62], [40, 72], [52, 50]].map(([x, y], i) => <circle key={`f${i}`} cx={x} cy={y} r="4" fill={i % 2 ? '#f9a8d4' : '#fde047'} />)}
+        </svg>
+      );
+    case 'planter':
+      return <div className="w-full h-full rounded-sm bg-[#7a5334] border-2 border-[#5a3a22] p-[8%]"><div className="w-full h-full rounded-sm bg-[#7f9a4c]" /></div>;
+    case 'pool':
+      return (
+        <div className="w-full h-full rounded-md bg-[#e9e3d6] p-[5%] shadow-sm">
+          <div className="w-full h-full rounded-sm border border-[#1f6f8c] bg-gradient-to-br from-[#5fd0e6] to-[#1f8fb3]" />
+        </div>
+      );
+    case 'pond':
+      return <div className="w-full h-full rounded-[48%_52%_45%_55%] bg-gradient-to-br from-[#5b9c86] to-[#2f6b5e] border-4 border-[#a8a196]" />;
+    case 'firePit':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full" aria-hidden>
+          <circle cx="50" cy="50" r="46" fill="#3a3530" />
+          <circle cx="50" cy="50" r="30" fill="#ff7a1a" />
+          <circle cx="50" cy="50" r="16" fill="#ffd27a" />
+        </svg>
+      );
+    case 'torch':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible" aria-hidden>
+          <circle cx="50" cy="50" r="48" fill="rgba(255,154,60,0.35)" />
+          <circle cx="50" cy="50" r="22" fill="#ff9a3c" />
+        </svg>
+      );
+    case 'fence':
+      return <div className="w-full h-full min-h-[3px] bg-[repeating-linear-gradient(90deg,#b08a5a_0_5px,#8a6a43_5px_7px)] rounded-sm" />;
+    case 'boulder':
+      return (
+        <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible" aria-hidden>
+          <path d="M20 60 L30 30 L55 22 L72 40 L66 66 L38 74 Z" fill="#8a857c" stroke="#5f5b54" strokeWidth="2" />
+          <path d="M62 70 L74 52 L90 60 L84 80 L68 82 Z" fill="#9c968c" stroke="#5f5b54" strokeWidth="2" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
 
 function InstrumentPlanGlyph({ style }: { style: InstrumentStyle }) {
   if (style === 'piano') {
@@ -991,6 +1067,22 @@ export default function FixtureRenderer({
           </div>
           {/* Lunette arrière */}
           <div className="w-3/4 h-1.5 rounded-b-md bg-sky-200/80 border border-teal-300" />
+        </div>
+      </div>
+    );
+  }
+
+  if (fixture.kind === 'landscape') {
+    const style: LandscapeStyle = fixture.landscapeStyle ?? 'oak';
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div className="relative w-full h-full flex items-center justify-center">
+          <LandscapePlanGlyph style={style} />
+          {showLabel && style !== 'fence' && style !== 'hedge' ? (
+            <span className="absolute bottom-0 translate-y-1/2 z-10 text-[7px] font-black uppercase text-emerald-950 bg-white/85 px-1 rounded shadow-xs whitespace-nowrap">
+              {fixture.label || LANDSCAPE_STYLE_META[style].label}
+            </span>
+          ) : null}
         </div>
       </div>
     );
