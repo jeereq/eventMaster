@@ -422,6 +422,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
           chairImageUrl: table.chairImageUrl,
           tableColor: table.tableColor,
           tableImageUrl: table.tableImageUrl,
+          seatingSide: table.seatingSide,
         }));
 
         if (Array.isArray(plan.fixtures)) {

@@ -31,6 +31,7 @@ export type PlanTable = {
   chairType?: string;
   hiddenSeatIndices?: number[];
   pmrSeatIndices?: number[];
+  seatingSide?: 'around' | 'oneSide';
 };
 
 export type SeatInventoryItem = {
@@ -49,6 +50,7 @@ export type SeatInventoryItem = {
   chairMeta?: SeatChairMeta;
   isPmr?: boolean;
   seatCode?: string;
+  seatingSide?: 'around' | 'oneSide';
 };
 
 export function planTables(tablePlan: unknown): PlanTable[] {
@@ -121,6 +123,7 @@ export function buildSeatInventoryItems(
         ...(table.chairMeta ? { chairMeta: table.chairMeta } : {}),
         isPmr: isPmrSeat(table, i),
         seatCode: table.rowMeta?.seatCodes?.[i],
+        ...(table.seatingSide === 'oneSide' ? { seatingSide: 'oneSide' as const } : {}),
       });
     }
   }

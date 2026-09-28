@@ -1,5 +1,23 @@
 export type TableShape = 'round' | 'rectangular' | 'square' | 'oval' | 'cocktail' | 'highTop' | 'arc';
 
+/**
+ * Disposition des chaises : tout autour (défaut) ou d’un seul côté, face à la salle
+ * (table d’honneur, table des mariés, jury, panel).
+ */
+export type TableSeatingSide = 'around' | 'oneSide';
+
+/** Formes qui acceptent l’option « chaises d’un seul côté ». */
+export function supportsOneSideSeating(shape: TableShape | string | undefined): boolean {
+  return shape === 'rectangular' || shape === 'oval' || shape === 'square';
+}
+
+export function isOneSideSeating(shape: TableShape | string | undefined, seatingSide?: TableSeatingSide | null): boolean {
+  return seatingSide === 'oneSide' && supportsOneSideSeating(shape);
+}
+
+/** Largeur de couvert confortable (m) : 60 cm par convive, standard traiteur. */
+export const COVER_WIDTH_M = 0.6;
+
 import type React from 'react';
 import type { TableSurfaceStyle } from '@/lib/roomLayoutUtils';
 
@@ -232,7 +250,16 @@ export function getSeatCoordinates(
   capacity: number,
   seatIndex: number,
   radius = 45,
+  seatingSide?: TableSeatingSide | null,
 ) {
+  if (isOneSideSeating(shape, seatingSide)) {
+    // Tous les convives du même côté (haut), face à la salle.
+    const n = Math.max(1, capacity);
+    const width = shape === 'square' ? 80 : 100;
+    const step = width / n;
+    return { x: -width / 2 + step * (seatIndex + 0.5), y: shape === 'square' ? -40 : -35, rotationDeg: 0 };
+  }
+
   if (shape === 'arc') {
     const n = Math.max(1, capacity);
     const t = n === 1 ? 0.5 : seatIndex / (n - 1);
@@ -288,7 +315,9 @@ export function tablePlateSizeMeters(
     customDepthM?: number;
     customRadiusM?: number;
   },
+  seatingSide?: TableSeatingSide | null,
 ): [number, number] {
+  const auto = defaultTablePlateSize(shape, capacity, seatingSide);
   if (customDims) {
     if (shape === 'round' || shape === 'cocktail' || shape === 'highTop') {
       if (typeof customDims.customRadiusM === 'number' && customDims.customRadiusM > 0) {
@@ -299,8 +328,7 @@ export function tablePlateSizeMeters(
         return [customDims.customWidthM, customDims.customWidthM];
       }
     } else if (shape === 'oval') {
-      const defaultW = 1.7;
-      const defaultD = 1.0;
+      const [defaultW, defaultD] = auto;
       const w = typeof customDims.customWidthM === 'number' && customDims.customWidthM > 0
         ? customDims.customWidthM
         : typeof customDims.customRadiusM === 'number' && customDims.customRadiusM > 0
@@ -311,7 +339,7 @@ export function tablePlateSizeMeters(
         : defaultD;
       return [w, d];
     } else if (shape === 'square') {
-      const defaultSide = 1.2;
+      const defaultSide = auto[0];
       const side = typeof customDims.customWidthM === 'number' && customDims.customWidthM > 0
         ? customDims.customWidthM
         : typeof customDims.customDepthM === 'number' && customDims.customDepthM > 0
@@ -321,8 +349,7 @@ export function tablePlateSizeMeters(
             : defaultSide;
       return [side, side];
     } else if (shape === 'rectangular' || shape === 'arc') {
-      const defaultW = shape === 'arc' ? 3.6 : capacity >= 14 ? 4.4 : capacity >= 10 ? 3.2 : 1.8;
-      const defaultD = shape === 'arc' ? 1.8 : capacity >= 14 ? 0.95 : capacity >= 10 ? 0.92 : 0.9;
+      const [defaultW, defaultD] = auto;
       const w = typeof customDims.customWidthM === 'number' && customDims.customWidthM > 0
         ? customDims.customWidthM
         : defaultW;
@@ -333,17 +360,44 @@ export function tablePlateSizeMeters(
     }
   }
 
-  if (shape === 'rectangular') {
-    if (capacity >= 14) return [4.4, 0.95];
-    if (capacity >= 10) return [3.2, 0.92];
-    return [1.8, 0.9];
+  return auto;
+}
+
+const clampM = (min: number, max: number, v: number) => Math.round(Math.min(max, Math.max(min, v)) * 100) / 100;
+
+/**
+ * Taille de plateau déduite de la capacité : 60 cm de couvert par convive,
+ * comme les tables traiteur (ronde Ø152 pour 8–10, banquet 2,44 m pour 8…).
+ */
+function defaultTablePlateSize(
+  shape: TableShape,
+  capacity: number,
+  seatingSide?: TableSeatingSide | null,
+): [number, number] {
+  const n = Math.max(1, Math.round(capacity) || 1);
+  if (isOneSideSeating(shape, seatingSide)) {
+    const length = clampM(1.2, 14, n * COVER_WIDTH_M + 0.3);
+    if (shape === 'square') return [length, length];
+    return [length, shape === 'oval' ? 0.9 : 0.76];
   }
-  if (shape === 'oval') return [1.7, 1.0];
-  if (shape === 'square') return [1.2, 1.2];
+  if (shape === 'rectangular') {
+    const perSide = Math.ceil(n / 2);
+    return [clampM(1.2, 12, perSide * COVER_WIDTH_M + 0.1), n >= 14 ? 0.95 : 0.9];
+  }
+  if (shape === 'oval') {
+    const w = clampM(1.7, 5, n * 0.21);
+    return [w, clampM(1, 1.4, w * 0.55)];
+  }
+  if (shape === 'square') {
+    const side = clampM(0.9, 3, Math.ceil(n / 4) * COVER_WIDTH_M + 0.2);
+    return [Math.max(1.2, side), Math.max(1.2, side)];
+  }
   if (shape === 'cocktail') return [0.7, 0.7];
   if (shape === 'highTop') return [0.75, 0.75];
   if (shape === 'arc') return [3.6, 1.8];
-  return [1.35, 1.35];
+  // Ronde : périmètre ≈ n × 52 cm au bord du plateau (Ø1,32 m pour 8, Ø1,66 m pour 10).
+  const diam = clampM(0.9, 2.4, (n * 0.52) / Math.PI);
+  return [diam, diam];
 }
 
 /**
@@ -355,10 +409,18 @@ export function getTableSeatPlacement3D(
   capacity: number,
   seatIndex: number,
   tableSize: [number, number],
+  seatingSide?: TableSeatingSide | null,
 ): { x: number; z: number; rotationY: number } {
   const [tw, td] = tableSize;
   const gap = 0.48;
   const n = Math.max(1, capacity);
+
+  if (isOneSideSeating(shape, seatingSide)) {
+    // Convives alignés derrière le plateau (côté -Z), tournés vers la salle (+Z).
+    const span = Math.max(0.5, tw - 0.3);
+    const step = span / n;
+    return { x: -span / 2 + step * (seatIndex + 0.5), z: -(td / 2 + gap), rotationY: 0 };
+  }
 
   if (shape === 'arc') {
     const radius = Math.max(1.4, tw / 2) + 0.5;
@@ -396,9 +458,10 @@ export function getTableSeatPlacement3D(
   const seatsPerSide = Math.ceil(n / 2);
   const isTop = seatIndex < seatsPerSide;
   const sideIndex = isTop ? seatIndex : seatIndex - seatsPerSide;
-  const span = tw * 0.85;
-  const step = span / (seatsPerSide + 1);
-  const x = -span / 2 + step * (sideIndex + 1);
+  // Chaises centrées sur leur couvert, sans déborder aux bouts du plateau.
+  const span = Math.max(0.5, tw - 0.2);
+  const step = span / seatsPerSide;
+  const x = -span / 2 + step * (sideIndex + 0.5);
   const z = isTop ? -(td / 2 + gap) : td / 2 + gap;
   return { x, z, rotationY: isTop ? 0 : Math.PI };
 }

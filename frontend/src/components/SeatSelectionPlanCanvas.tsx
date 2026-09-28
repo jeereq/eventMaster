@@ -8,7 +8,7 @@ import { PlanSceneControls, PlanZoomControls, usePlanFullscreen } from '@/compon
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import { resolveFloorStyle } from '@/lib/roomFloorUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
-import { getSeatCoordinates, getTableVisualStyle, type TableShape } from '@/lib/tablePlanUtils';
+import { getSeatCoordinates, getTableVisualStyle, type TableSeatingSide, type TableShape } from '@/lib/tablePlanUtils';
 import { getRowSeatCoordinates2D } from '@/lib/roomAmphitheaterGeom';
 import {
   checkoutPlanShape,
@@ -39,6 +39,7 @@ export type SeatSelectionSeat = {
   chairMeta?: SeatChairMeta | null;
   isPmr?: boolean;
   seatCode?: string | null;
+  seatingSide?: TableSeatingSide | null;
 };
 
 type PlanFixture = {
@@ -94,6 +95,7 @@ type PlanTable = {
   pricingZoneId?: string | null;
   rowMeta?: SeatRowMeta | null;
   chairMeta?: SeatChairMeta | null;
+  seatingSide?: TableSeatingSide | null;
 };
 
 export default function SeatSelectionPlanCanvas({
@@ -160,6 +162,7 @@ export default function SeatSelectionPlanCanvas({
           pricingZoneId: s.pricingZoneId ?? null,
           rowMeta: s.rowMeta ?? null,
           chairMeta: s.chairMeta ?? null,
+          seatingSide: s.seatingSide ?? null,
         });
       }
     }
@@ -372,7 +375,7 @@ export default function SeatSelectionPlanCanvas({
                       ? { x: 0, y: 0, rotationDeg: table.chairMeta?.rotation ?? 0 }
                       : isTheaterRowPlan(table.shape, table.rowMeta)
                         ? getRowSeatCoordinates2D(table.capacity, seat.seatIndex, table.rowMeta)
-                        : getSeatCoordinates(table.shape, table.capacity, seat.seatIndex);
+                        : getSeatCoordinates(table.shape, table.capacity, seat.seatIndex, undefined, table.seatingSide);
                     const isSelected = isSeatSelected(seat.tableId, seat.seatIndex);
                     const badge = getSeatBadge(seat.tableId, seat.seatIndex);
                     const seatZoneColor = seat.pricingZoneId ? zoneColorById?.get(seat.pricingZoneId) : zoneColor;

@@ -1,5 +1,7 @@
 import { LANDSCAPE_STYLE_META, landscapeFootprintPct, type LandscapeStyle } from '@/lib/roomOutdoorUtils';
-import { rowSeatCode, seatsGrownForTier } from '@/lib/roomAmphitheaterGeom';
+import { concentricRowCurvePercent, rowSeatCode, seatsGrownForTier } from '@/lib/roomAmphitheaterGeom';
+import { getTableSeatPlacement3D, tablePlateSizeMeters, type TableSeatingSide } from '@/lib/tablePlanUtils';
+export type { TableSeatingSide } from '@/lib/tablePlanUtils';
 import { enforceRealLayoutClearances } from './roomLayoutClearance';
 
 export { estimateAmphitheaterSeats, rowCurveFactor, rowCurvePercent, rowSeatCode } from '@/lib/roomAmphitheaterGeom';
@@ -603,6 +605,11 @@ export interface RoomLayoutBlueprint {
         attachedChairs?: boolean;
         /** Sièges autour de la table retirés (après détachement unitaire). */
         hiddenSeatIndices?: number[];
+        /**
+         * Chaises tout autour (défaut) ou d’un seul côté, face à la salle
+         * (table d’honneur, mariés, jury). Rectangulaire, ovale ou carrée.
+         */
+        seatingSide?: TableSeatingSide;
         /** Sièges réservés ou adaptés PMR (accès personne à mobilité réduite / fauteuil). */
         pmrSeatIndices?: number[];
         /** Table identifiée avec accès direct et prioritaire PMR. */
@@ -1144,6 +1151,38 @@ export function createBlueprintChair(
   };
 }
 
+type BlueprintTableItem = Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'table' }>;
+
+/** Nombre de chaises réellement dessinées autour d’une table (aligné sur la vue 3D). */
+export const MAX_ATTACHED_TABLE_CHAIRS = 40;
+
+/**
+ * Position (en % du canevas) et orientation d’un siège de table, identiques à la vue 3D :
+ * une chaise détachée reste exactement là où elle était dessinée.
+ */
+export function tableSeatCanvasPose(
+  table: BlueprintTableItem,
+  seatIndex: number,
+  canvas: RoomLayoutBlueprint['canvas'],
+): { x: number; y: number; rotation: number } {
+  const size = tablePlateSizeMeters(table.shape, table.capacity, {
+    customWidthM: table.customWidthM,
+    customDepthM: table.customDepthM,
+    customRadiusM: table.customRadiusM,
+  }, table.seatingSide);
+  const seat = getTableSeatPlacement3D(table.shape, table.capacity, seatIndex, size, table.seatingSide);
+  const theta = ((table.rotation ?? 0) * Math.PI) / 180;
+  const wx = seat.x * Math.cos(theta) + seat.z * Math.sin(theta);
+  const wz = -seat.x * Math.sin(theta) + seat.z * Math.cos(theta);
+  const widthM = Math.max(1, canvas.widthM);
+  const heightM = Math.max(1, canvas.heightM);
+  return {
+    x: Math.max(2, Math.min(98, table.x + (wx / widthM) * 100)),
+    y: Math.max(2, Math.min(98, table.y + (wz / heightM) * 100)),
+    rotation: Math.round(((seat.rotationY * 180) / Math.PI + (table.rotation ?? 0)) * 10) / 10,
+  };
+}
+
 /** Détache une seule chaise attachée : elle devient un siège libre, le reste reste autour de la table. */
 export function detachOneTableChair(
   blueprint: RoomLayoutBlueprint,
@@ -1152,20 +1191,17 @@ export function detachOneTableChair(
 ): RoomLayoutBlueprint {
   const table = blueprint.furniture.find((f) => f.kind === 'table' && f.id === tableId);
   if (!table || table.kind !== 'table') return blueprint;
-  const capacity = Math.min(table.capacity, 14);
+  const capacity = Math.min(table.capacity, MAX_ATTACHED_TABLE_CHAIRS);
   if (seatIndex < 0 || seatIndex >= capacity) return blueprint;
   const hidden = new Set(table.hiddenSeatIndices ?? []);
   if (hidden.has(seatIndex)) return blueprint;
   hidden.add(seatIndex);
-  const a = (seatIndex / Math.max(capacity, 1)) * Math.PI * 2 - Math.PI / 2;
-  const radiusPct = 7;
+  const pose = tableSeatCanvasPose(table, seatIndex, blueprint.canvas);
   const chair = createBlueprintChair(seatIndex + 1, {
     chairType: table.chairType,
     chairStyle: table.chairStyle,
     seatMaterial: table.seatMaterial,
-    x: Math.max(2, Math.min(98, table.x + Math.cos(a) * radiusPct)),
-    y: Math.max(2, Math.min(98, table.y + Math.sin(a) * radiusPct)),
-    rotation: (Math.atan2(-Math.cos(a), -Math.sin(a)) * 180) / Math.PI,
+    ...pose,
   });
   const remaining = capacity - hidden.size;
   return {
@@ -1192,20 +1228,18 @@ export function detachTableChairs(
 ): RoomLayoutBlueprint {
   const table = blueprint.furniture.find((f) => f.kind === 'table' && f.id === tableId);
   if (!table || table.kind !== 'table') return blueprint;
-  const capacity = Math.min(table.capacity, 14);
-  const chairs = Array.from({ length: capacity }).map((_, i) => {
-    const a = (i / capacity) * Math.PI * 2 - Math.PI / 2;
-    const radiusPct = 7;
-    return createBlueprintChair(i + 1, {
+  const capacity = Math.min(table.capacity, MAX_ATTACHED_TABLE_CHAIRS);
+  const hidden = new Set(table.hiddenSeatIndices ?? []);
+  const chairs = Array.from({ length: capacity })
+    .map((_, i) => i)
+    .filter((i) => !hidden.has(i))
+    .map((i) => createBlueprintChair(i + 1, {
       chairType: table.chairType,
       chairStyle: table.chairStyle,
       seatMaterial: table.seatMaterial,
-      x: Math.max(2, Math.min(98, table.x + Math.cos(a) * radiusPct)),
-      y: Math.max(2, Math.min(98, table.y + Math.sin(a) * radiusPct)),
-      // Face vers la table : angle vers le centre
-      rotation: ((Math.atan2(-Math.cos(a), -Math.sin(a)) * 180) / Math.PI),
-    });
-  });
+      // Même position et orientation que la chaise attachée (face au plateau).
+      ...tableSeatCanvasPose(table, i, blueprint.canvas),
+    }));
   return {
     ...blueprint,
     furniture: [
@@ -1409,7 +1443,9 @@ export function estimateTableFootprint(
     customDepthM?: number;
     customRadiusM?: number;
   },
+  seatingSide?: TableSeatingSide,
 ): { w: number; h: number } {
+  const oneSide = seatingSide === 'oneSide' && (shape === 'rectangular' || shape === 'oval' || shape === 'square');
   if (customDims) {
     if (typeof customDims.customRadiusM === 'number' && customDims.customRadiusM > 0) {
       const span = Math.max(4, Math.min(30, customDims.customRadiusM * 2 * 6.5));
@@ -1427,11 +1463,15 @@ export function estimateTableFootprint(
     }
   }
   if (shape === 'cocktail' || shape === 'highTop') return { w: 5, h: 5 };
-  if (shape === 'rectangular' || shape === 'arc') {
-    const w = capacity >= 14 ? 16 : capacity >= 10 ? 13 : 10;
-    return { w, h: 7 };
+  const n = Math.max(1, Math.round(capacity) || 1);
+  // Chaises d’un seul côté : table longue et peu profonde (≈ 60 cm par convive).
+  if (oneSide) return { w: Math.max(8, Math.min(60, 4 + n * 1.7)), h: 5.5 };
+  if (shape === 'arc') return { w: 16, h: 7 };
+  if (shape === 'rectangular') {
+    // Longueur proportionnelle aux convives par côté (identique aux anciennes tailles pour 8, 10 et 14).
+    return { w: Math.max(8, Math.min(40, 4 + Math.ceil(n / 2) * 1.7)), h: 7 };
   }
-  const span = Math.max(6, Math.min(14, 5 + capacity * 0.55));
+  const span = Math.max(6, Math.min(16, 5 + n * 0.55));
   return { w: span, h: span };
 }
 
@@ -1445,7 +1485,7 @@ function furnitureLayoutBox(item: RoomLayoutBlueprint['furniture'][number]): Lay
       customWidthM: item.customWidthM,
       customDepthM: item.customDepthM,
       customRadiusM: item.customRadiusM,
-    });
+    }, item.seatingSide);
     return { x: item.x - size.w / 2, y: item.y - size.h / 2, w: size.w, h: size.h };
   }
   if (item.kind === 'row') {
@@ -1634,6 +1674,8 @@ export function generateAmphitheaterRows(options: {
   radiusStep?: number;
   aisleSplit?: boolean;
   groupId?: string;
+  /** Profondeur du canevas en mètres (conversion des rayons % → m pour la courbure). */
+  depthM?: number;
 }): Array<Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'row' }>> {
   const {
     style = 'modernFan',
@@ -1649,11 +1691,12 @@ export function generateAmphitheaterRows(options: {
     groupId = makeLayoutId('amphi'),
   } = options;
 
-  const spanCurve =
-    style === 'romanSemiCircle' ? 72 :
-    style === 'horseshoeU' ? 58 :
-    style === 'modernFan' ? 42 :
+  const concentricity =
+    style === 'romanSemiCircle' ? 1 :
+    style === 'horseshoeU' ? 0.85 :
+    style === 'modernFan' ? 0.72 :
     0;
+  const depthM = options.depthM ?? 18;
   const radiusStart = options.radiusStart ?? (style === 'romanSemiCircle' ? 20 : 23);
   const radiusStep = options.radiusStep ?? (style === 'tieredSteps' ? 9 : 8.2);
   const risePerTierM = style === 'tieredSteps' ? 0.32 : 0.26;
@@ -1701,8 +1744,13 @@ export function generateAmphitheaterRows(options: {
     const radius = radiusStart + t * radiusStep;
     const elevationM = Number(((t + 1) * risePerTierM).toFixed(2));
     const seats = seatsGrownForTier(style, seatsPerRow, t);
-    const curve = spanCurve > 0 ? Math.max(12, spanCurve - t * 3) : 0;
-    const y = Math.min(92, focusY + radius);
+    // Rangées concentriques au foyer : la courbure dépend du rayon réel en mètres.
+    const curve = concentricity > 0
+      ? Math.max(8, concentricRowCurvePercent((radius / 100) * depthM, 0.55, concentricity))
+      : 0;
+    // Au-delà du fond de la salle, on n’empile pas plusieurs rangées au même endroit.
+    if (focusY + radius > 94) break;
+    const y = focusY + radius;
 
     if (style === 'horseshoeU') {
       const wingSeats = Math.max(4, Math.round(seats * 0.45));
@@ -1878,13 +1926,15 @@ export function outlinePolygonPoints(
     case 'stadium': {
       const pts: Array<{ x: number; y: number }> = [];
       const n = 20;
+      // Capsule horizontale : deux bords droits reliés par deux demi-cercles.
+      const rx = 24;
       for (let i = 0; i <= n; i += 1) {
         const a = -Math.PI / 2 + (i / n) * Math.PI;
-        pts.push(map(50 + Math.cos(a) * 46, 12 + Math.sin(a) * 8));
+        pts.push(map(100 - rx + Math.cos(a) * rx, 50 + Math.sin(a) * 50));
       }
       for (let i = 0; i <= n; i += 1) {
         const a = Math.PI / 2 + (i / n) * Math.PI;
-        pts.push(map(50 + Math.cos(a) * 46, 88 + Math.sin(a) * 8));
+        pts.push(map(rx + Math.cos(a) * rx, 50 + Math.sin(a) * 50));
       }
       return pts;
     }
@@ -3100,13 +3150,29 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
         kind: 'table',
         name: 'Table d’honneur',
         shape: 'rectangular',
-        capacity: Math.max(8, p?.seatsPerTable ?? 12),
+        // Les convives d’honneur sont tous du même côté, face à la salle.
+        seatingSide: 'oneSide',
+        capacity: Math.max(4, Math.min(14, p?.seatsPerTable ?? 10)),
         chairType: p?.chairType ?? 'ARMCHAIR',
+        tableSurface: 'linen',
+        tableColor: '#faf7f2',
+        hasCouverts: true,
+        couvertStyle: 'gold',
+        hasCenterpiece: true,
+        centerpieceStyle: 'greeneryRunner',
         x: 50,
-        y: 18,
+        y: 19,
         locked: true,
       };
-      return refreshBlueprintMetadata({ ...next, furniture: [honor, ...next.furniture] });
+      // Les tables d’invités qui mordraient sur la table d’honneur (ou ses chaises) sont retirées.
+      const honorW = (tablePlateSizeMeters('rectangular', honor.capacity, undefined, 'oneSide')[0] / next.canvas.widthM) * 50 + 6;
+      const honorH = 9;
+      const guests = next.furniture.filter((item) => {
+        if (item.kind !== 'table') return true;
+        const fp = estimateTableFootprint(item.shape, item.capacity);
+        return Math.abs(item.x - honor.x) > honorW + fp.w / 2 || Math.abs(item.y - honor.y) > honorH / 2 + fp.h / 2;
+      });
+      return refreshBlueprintMetadata({ ...next, furniture: [honor, ...guests] });
     },
   },
   {
@@ -3910,17 +3976,20 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     build: (p) => {
       const rows = generateAmphitheaterRows({
         style: 'romanSemiCircle',
-        tierCount: p?.rowCount ?? 6,
-        seatsPerRow: p?.seatsPerRow ?? 16,
+        // 5 gradins : le 6ᵉ, trop large, heurtait le mur circulaire et était repoussé vers la scène.
+        tierCount: p?.rowCount ?? 5,
+        seatsPerRow: p?.seatsPerRow ?? 10,
         chairType: 'THEATER',
         chairStyle: 'modern',
         seatMaterial: 'wood',
         aisleSplit: true,
         centerX: 50,
         focusX: 50,
-        focusY: 50,
+        // Scène ronde dans la moitié nord, gradins en demi-cercle concentrique au sud.
+        focusY: 30,
         radiusStart: 17,
-        radiusStep: 6.8,
+        radiusStep: 6.4,
+        depthM: 24,
       });
       return refreshBlueprintMetadata({
         version: 1,
@@ -3930,9 +3999,9 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
         roomOutline: defaultRoomOutline('circle'),
         furniture: [
           ...rows,
-          { ...createBlueprintZone('Scène ronde', 1, { zoneKind: 'custom', material: 'concrete', w: 22, h: 22 }), x: 39, y: 40 },
+          { ...createBlueprintZone('Scène ronde', 1, { zoneKind: 'custom', material: 'concrete', w: 22, h: 22 }), x: 39, y: 19 },
         ],
-        fixtures: [{ ...createBlueprintFixture('stage'), id: makeLayoutId('stage'), x: 40, y: 42, w: 20, h: 16, material: 'concrete', color: '#cbd5e1', heightM: 0.12 }],
+        fixtures: [{ ...createBlueprintFixture('stage'), id: makeLayoutId('stage'), x: 40, y: 22, w: 20, h: 16, material: 'concrete', color: '#cbd5e1', heightM: 0.12 }],
         metadata: {
           totalSeats: rows.reduce((sum, row) => sum + row.seatCount, 0),
           floorType: 'beton',
@@ -3973,7 +4042,8 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
         metadata: {
           totalSeats: rows.reduce((sum, row) => sum + row.seatCount, 0),
           floorType: 'moquette',
-          floorColor: '#64748b',
+          // Teinte légère : la texture velours assombrit déjà la couleur.
+          floorColor: '#a3adbd',
           lightingPreset: 'conference',
           roofStyle: 'coffered',
           showRoof: true,
@@ -6221,7 +6291,9 @@ function generateAmphitheaterBlueprint(params: LayoutParams, chairType: ChairTyp
   const rowsPerTier = Math.max(1, params.rowsPerTier ?? 2);
   const baseSeats = Math.max(6, params.seatsPerRow ?? 12);
   const furniture: RoomLayoutBlueprint['furniture'] = [];
-  const risePerTierM = 0.38;
+  // Pente continue : chaque rangée monte d’une marche (≈ 30 cm), comme un vrai gradin.
+  const risePerRowM = 0.3;
+  const depthM = params.canvasHeightM ?? 18;
   const stageFocus = { x: 50, y: 10 };
   let rowIndex = 0;
   let totalSeats = 0;
@@ -6233,8 +6305,9 @@ function generateAmphitheaterBlueprint(params: LayoutParams, chairType: ChairTyp
       const progress = rowDepth / Math.max(1, tierCount * rowsPerTier - 1);
       const y = 28 + progress * 58;
       const seats = baseSeats + tier * 2;
-      const curve = Math.round(38 + progress * 22);
-      const elevationM = tier * risePerTierM + r * (risePerTierM * 0.35);
+      // Rangées concentriques à la scène : plus on s’éloigne, plus l’arc s’ouvre.
+      const curve = concentricRowCurvePercent(((y - stageFocus.y) / 100) * depthM, 0.55, 0.8);
+      const elevationM = Number((rowDepth * risePerRowM).toFixed(2));
       furniture.push({
         id: uid('row'),
         kind: 'row',
@@ -7299,7 +7372,7 @@ export function autoArrangeTables(
   const bounds = usableTableBounds(blueprint, density);
   const avg = movable.reduce(
     (acc, table) => {
-      const size = estimateTableFootprint(table.shape, table.capacity);
+      const size = estimateTableFootprint(table.shape, table.capacity, undefined, table.seatingSide);
       return { w: acc.w + size.w, h: acc.h + size.h };
     },
     { w: 0, h: 0 },

@@ -17,7 +17,7 @@ import { cn } from '@/lib/cn';
 import { PlanViewToggle, type PlanViewMode } from '@/components/PlanViewChrome';
 import { api } from '@/lib/api';
 import { ChairType, type RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
-import type { TableShape } from '@/lib/tablePlanUtils';
+import type { TableSeatingSide, TableShape } from '@/lib/tablePlanUtils';
 import type { PricingZone } from '@/lib/ticketPricing';
 import type { GuestTicketPlacement } from '@/app/rsvp/guestRsvpTypes';
 
@@ -78,6 +78,7 @@ export interface GuestTablePlanOverviewItem {
   chairImageUrl?: string;
   tableColor?: string;
   tableImageUrl?: string;
+  seatingSide?: TableSeatingSide;
 }
 
 export interface GuestPlanFixture {

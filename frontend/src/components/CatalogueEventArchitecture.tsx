@@ -117,14 +117,28 @@ export function AmphitheaterRiser({
     carpet.dispose();
   }, [volume, carpet]);
 
-  const nosing = useMemo(() => {
-    const pts: Array<[number, number, number]> = [];
-    for (let i = 0; i <= 12; i += 1) {
-      const x = x0 + ((x1 - x0) * i) / 12;
-      pts.push([x, h + 0.015, zFront(x) + 0.015]);
-    }
-    return pts;
+  // Profilés continus qui épousent l’arc du gradin (nez de marche, LED, liseré).
+  const { nosingGeo, ledGeo, kickGeo } = useMemo(() => {
+    const along = (y: number, dz: number) => {
+      const pts: THREE.Vector3[] = [];
+      for (let i = 0; i <= RISER_ARC_SEGMENTS; i += 1) {
+        const x = x0 + ((x1 - x0) * i) / RISER_ARC_SEGMENTS;
+        pts.push(new THREE.Vector3(x, y, zFront(x) + dz));
+      }
+      return new THREE.CatmullRomCurve3(pts);
+    };
+    return {
+      nosingGeo: new THREE.TubeGeometry(along(h + 0.012, 0.012), 48, 0.016, 6, false),
+      ledGeo: new THREE.TubeGeometry(along(h - 0.03, -0.004), 48, 0.008, 5, false),
+      kickGeo: h >= 0.22 ? new THREE.TubeGeometry(along(h * 0.45, -0.004), 48, 0.009, 5, false) : null,
+    };
   }, [x0, x1, zFront, h]);
+
+  useEffect(() => () => {
+    nosingGeo.dispose();
+    ledGeo.dispose();
+    kickGeo?.dispose();
+  }, [nosingGeo, ledGeo, kickGeo]);
 
   const aisleGap = aisleSplit && seatCount >= 4
     ? spacing * (0.55 + Math.min(30, Math.max(5, aisleWidthPct)) / 20)
@@ -151,41 +165,29 @@ export function AmphitheaterRiser({
       </mesh>
 
       {/* Nez de marche laiton / or brossé le long du bord avant */}
-      {nosing.map((pos, i) => (
-        <mesh key={`nose-${i}`} position={pos} castShadow>
-          <boxGeometry args={[Math.max(0.18, (x1 - x0) / 13), 0.02, 0.04]} />
-          <meshStandardMaterial color="#c4a35a" metalness={0.65} roughness={0.32} />
-        </mesh>
-      ))}
+      <mesh geometry={nosingGeo} castShadow>
+        <meshStandardMaterial color="#c4a35a" metalness={0.65} roughness={0.32} />
+      </mesh>
 
       {/* Éclairage LED architectural encastré sous le nez de marche */}
-      {Array.from({ length: 9 }).map((_, i) => {
-        const x = x0 + 0.2 + ((x1 - x0 - 0.4) * i) / 8;
-        const z = zFront(x) - 0.012;
-        return (
-          <mesh key={`led-${i}`} position={[x, h - 0.02, z]}>
-            <boxGeometry args={[Math.max(0.18, (x1 - x0) / 10), 0.016, 0.018]} />
-            <meshStandardMaterial
-              color="#fef3c7"
-              emissive="#f59e0b"
-              emissiveIntensity={0.65}
-              roughness={0.3}
-            />
-          </mesh>
-        );
-      })}
+      <mesh geometry={ledGeo}>
+        <meshStandardMaterial color="#fef3c7" emissive="#f59e0b" emissiveIntensity={0.65} roughness={0.3} />
+      </mesh>
 
       {/* Liseré décoratif sur la contremarche avant */}
-      {h >= 0.22 && Array.from({ length: 9 }).map((_, i) => {
-        const x = x0 + 0.2 + ((x1 - x0 - 0.4) * i) / 8;
-        const z = zFront(x) - 0.008;
-        return (
-          <mesh key={`kick-${i}`} position={[x, h * 0.45, z]} castShadow>
-            <boxGeometry args={[Math.max(0.18, (x1 - x0) / 10), 0.02, 0.01]} />
-            <meshStandardMaterial color="#b8934a" metalness={0.6} roughness={0.35} />
-          </mesh>
-        );
-      })}
+      {kickGeo && (
+        <mesh geometry={kickGeo}>
+          <meshStandardMaterial color="#b8934a" metalness={0.6} roughness={0.35} />
+        </mesh>
+      )}
+
+      {/* Marche intermédiaire dans l’allée : deux hauteurs de 15 cm au lieu d’une de 30 */}
+      {aisleGap > 0 && h > 0.2 && (
+        <mesh position={[0, (h - 0.15) / 2, zFront(0) - 0.15]} receiveShadow castShadow>
+          <boxGeometry args={[aisleGap * 0.94, h - 0.15, 0.3]} />
+          <meshStandardMaterial color={selectedTint ?? '#5c4e43'} map={wood} roughness={0.72} />
+        </mesh>
+      )}
 
       {/* Allée centrale de circulation avec bande de moquette et bordures laiton */}
       {aisleGap > 0 && (
@@ -282,7 +284,6 @@ export function EventStage({
 }) {
   const stepCount = Math.max(1, Math.min(4, steps));
   const isStage = kind === 'stage';
-  const radius = Math.max(w, d) * 0.5;
   const style = podiumStyle ?? 'speaker';
   const isCircular = kind === 'podium' && style === 'circular';
   const isCouple = kind === 'podium' && style === 'couple';
@@ -346,10 +347,12 @@ export function EventStage({
   }
 
   if (shape === 'semiCircle') {
+    // Demi-ellipse inscrite dans l’emprise : bord droit au fond (-Z), arrondi vers le public (+Z).
+    const half = w / 2;
     return (
-      <group>
-        <mesh position={[0, height / 2, 0]} rotation={[0, Math.PI, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[radius, radius, height, 32, 1, false, 0, Math.PI]} />
+      <group position={[0, 0, -d / 2]} scale={[1, 1, d / Math.max(0.01, half)]}>
+        <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[half, half, height, 48, 1, false, -Math.PI / 2, Math.PI]} />
           <meshStandardMaterial
             color={selected ? '#c7d2fe' : map ? '#ffffff' : baseColor}
             map={map ?? undefined}
@@ -358,7 +361,7 @@ export function EventStage({
           />
         </mesh>
         <mesh position={[0, height + 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-          <circleGeometry args={[radius * 0.98, 32, 0, Math.PI]} />
+          <circleGeometry args={[half * 0.98, 48, Math.PI, Math.PI]} />
           <meshStandardMaterial color={selected ? '#e0e7ff' : '#f8fafc'} roughness={0.55} />
         </mesh>
       </group>

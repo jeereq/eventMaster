@@ -280,9 +280,9 @@ function ThumbPreview({
                 )}
               </div>
               {item.attachedChairs !== false && item.shape !== 'cocktail' && item.shape !== 'highTop'
-                ? Array.from({ length: Math.min(item.capacity, 12) }).map((_, seatIndex) => {
+                ? Array.from({ length: Math.min(item.capacity, 24) }).map((_, seatIndex) => {
                     if (item.hiddenSeatIndices?.includes(seatIndex)) return null;
-                    const coords = getSeatCoordinates(item.shape, item.capacity, seatIndex, 36);
+                    const coords = getSeatCoordinates(item.shape, item.capacity, seatIndex, 36, item.seatingSide);
                     return (
                       <span
                         key={seatIndex}
@@ -446,7 +446,7 @@ function FlatShowcasePreview({
               >
                 {Array.from({ length: count }).map((_, i) => {
                   const offset = half > 0 ? (i - half) / half : 0;
-                  const arcY = Math.abs(curveVal) * (offset * offset) * 28;
+                  const arcY = -Math.abs(curveVal) * (offset * offset) * 28;
                   const chairRot = 180 - curveVal * offset * 36;
 
                   return (
@@ -528,9 +528,9 @@ function FlatShowcasePreview({
                   )}
                 </div>
                 {item.attachedChairs !== false && item.shape !== 'cocktail' && item.shape !== 'highTop'
-                  ? Array.from({ length: Math.min(item.capacity, 14) }).map((_, seatIndex) => {
+                  ? Array.from({ length: Math.min(item.capacity, 24) }).map((_, seatIndex) => {
                       if (item.hiddenSeatIndices?.includes(seatIndex)) return null;
-                      const coords = getSeatCoordinates(item.shape, item.capacity, seatIndex, 44);
+                      const coords = getSeatCoordinates(item.shape, item.capacity, seatIndex, 44, item.seatingSide);
                       return (
                         <span
                           key={seatIndex}

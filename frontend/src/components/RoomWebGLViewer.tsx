@@ -96,6 +96,7 @@ import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
 import RoomShowcasePostProcessing from '@/components/RoomShowcasePostProcessing';
 import { LocalRoomEnvironment } from '@/components/room/LocalRoomEnvironment';
 import { LandscapeMesh, OutdoorSurroundingsScene, seedFromId } from '@/components/room/OutdoorLandscapeMeshes';
+import { VenueEquipmentMesh, isVenueEquipmentKind, venueEquipmentHeight } from '@/components/room/VenueEquipmentMeshes';
 import { resolveOutdoorSurroundings, type LandscapeStyle } from '@/lib/roomOutdoorUtils';
 import {
   resolveLightingPreset,
@@ -1916,6 +1917,12 @@ function RealisticChair(props: {
   return <CatalogueChair {...props} />;
 }
 
+const PLACE_SETTING_SCALE = 1.9;
+/** Distance siège → centre du couvert (m) : 48 cm de dégagement chaise + 20 cm sur le plateau. */
+const PLACE_SETTING_REACH_M = 0.68;
+/** Au-delà, on arrête de dessiner des chaises (tables géantes de 40+ convives). */
+const MAX_TABLE_CHAIRS = 40;
+
 function PlaceSetting({
   style = 'classic',
   position,
@@ -1931,7 +1938,8 @@ function PlaceSetting({
   const glass = style === 'festive' ? '#fce7f3' : '#f8fafc';
 
   return (
-    <group position={position} rotation={[0, rotationY, 0]}>
+    // Modèle dessiné à mi-échelle : ×1,9 donne une sous-assiette de Ø31 cm et des couverts de 23 cm.
+    <group position={position} rotation={[0, rotationY, 0]} scale={PLACE_SETTING_SCALE}>
       {/* 1. Sous-assiette (Charger plate) biseautée */}
       <mesh castShadow receiveShadow>
         <cylinderGeometry args={[0.076, 0.082, 0.007, 24]} />
@@ -1974,13 +1982,13 @@ function PlaceSetting({
         <meshStandardMaterial color={metal} metalness={0.92} roughness={0.14} />
       </mesh>
       {/* 5. Couverts réfléchissants */}
-      {/* Couteau à droite */}
-      <mesh position={[0.092, 0.005, 0.004]} rotation={[0, 0, 0.06]} castShadow>
+      {/* Couteau à droite du convive (convive en -Z, regard vers +Z : sa droite est en -X) */}
+      <mesh position={[-0.092, 0.005, 0.004]} rotation={[0, 0, -0.06]} castShadow>
         <boxGeometry args={[0.009, 0.003, 0.125]} />
         <meshStandardMaterial color={metal} metalness={0.96} roughness={0.08} />
       </mesh>
       {/* Fourchette à gauche */}
-      <mesh position={[-0.092, 0.005, 0.004]} rotation={[0, 0, -0.06]} castShadow>
+      <mesh position={[0.092, 0.005, 0.004]} rotation={[0, 0, 0.06]} castShadow>
         <boxGeometry args={[0.01, 0.003, 0.12]} />
         <meshStandardMaterial color={metal} metalness={0.96} roughness={0.08} />
       </mesh>
@@ -1990,7 +1998,7 @@ function PlaceSetting({
         <meshStandardMaterial color={metal} metalness={0.96} roughness={0.08} />
       </mesh>
       {/* 6. Duo de verres à pied en cristal transparent */}
-      <group position={[0.055, 0.004, 0.082]}>
+      <group position={[-0.055, 0.004, 0.082]}>
         <mesh position={[0, 0.002, 0]}>
           <cylinderGeometry args={[0.013, 0.014, 0.0025, 12]} />
           <meshStandardMaterial color={glass} transparent opacity={0.45} roughness={0.06} metalness={0.12} />
@@ -2004,7 +2012,7 @@ function PlaceSetting({
           <meshStandardMaterial color={glass} transparent opacity={0.45} roughness={0.06} metalness={0.12} />
         </mesh>
       </group>
-      <group position={[0.08, 0.004, 0.062]}>
+      <group position={[-0.08, 0.004, 0.062]}>
         <mesh position={[0, 0.002, 0]}>
           <cylinderGeometry args={[0.011, 0.012, 0.002, 12]} />
           <meshStandardMaterial color={glass} transparent opacity={0.45} roughness={0.06} metalness={0.12} />
@@ -2054,6 +2062,7 @@ function TableMesh({
   customDepthM,
   customRadiusM,
   cornerRadiusM,
+  seatingSide,
   onSelect,
   onDragStart,
   readOnly,
@@ -2089,6 +2098,7 @@ function TableMesh({
   customDepthM?: number;
   customRadiusM?: number;
   cornerRadiusM?: number;
+  seatingSide?: import('@/lib/tablePlanUtils').TableSeatingSide;
   onSelect: (mods?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean; seatIndex?: number }) => void;
   onDragStart?: (e: ThreeEvent<PointerEvent>) => void;
   readOnly?: boolean;
@@ -2102,7 +2112,7 @@ function TableMesh({
     [shape, color, tableImageUrl, tableSurface],
   );
 
-  const size = tablePlateSizeMeters(shape, capacity, { customWidthM, customDepthM, customRadiusM });
+  const size = tablePlateSizeMeters(shape, capacity, { customWidthM, customDepthM, customRadiusM }, seatingSide);
   const topY = shape === 'highTop' ? 1.05 : shape === 'cocktail' ? 0.55 : 0.72;
   const isRound = shape === 'round' || shape === 'oval' || shape === 'cocktail' || shape === 'highTop';
   const seatPicked = selectedSeatIndices.length > 0;
@@ -2153,15 +2163,18 @@ function TableMesh({
         />
       </group>
       {(hasCouverts || dressAllTables || (selected && showcaseTableware && shape !== 'cocktail' && shape !== 'highTop' && capacity <= 10)) &&
-        Array.from({ length: Math.min(capacity, 8) }).map((_, i) => {
-          const a = (i / Math.max(capacity, 1)) * Math.PI * 2;
-          const r = Math.max(size[0], size[1]) * 0.28;
+        Array.from({ length: Math.min(capacity, MAX_TABLE_CHAIRS) }).map((_, i) => {
+          if (hidden.has(i)) return null;
+          // Un couvert devant chaque convive, orienté vers lui, sur le bord du plateau.
+          const seat = getTableSeatPlacement3D(shape, capacity, i, size, seatingSide);
+          const fx = Math.sin(seat.rotationY);
+          const fz = Math.cos(seat.rotationY);
           return (
             <PlaceSetting
               key={`c-${i}`}
               style={couvertStyle}
-              position={[Math.cos(a) * r, topY + 0.055, Math.sin(a) * r]}
-              rotationY={-a}
+              position={[seat.x + fx * PLACE_SETTING_REACH_M, topY + 0.055, seat.z + fz * PLACE_SETTING_REACH_M]}
+              rotationY={seat.rotationY}
             />
           );
         })}
@@ -2176,9 +2189,9 @@ function TableMesh({
           )}
         </group>
       )}
-      {attachedChairs !== false && shape !== 'cocktail' && shape !== 'highTop' && Array.from({ length: Math.min(capacity, 14) }).map((_, i) => {
+      {attachedChairs !== false && shape !== 'cocktail' && shape !== 'highTop' && Array.from({ length: Math.min(capacity, MAX_TABLE_CHAIRS) }).map((_, i) => {
         if (hidden.has(i)) return null;
-        const seat = getTableSeatPlacement3D(shape, capacity, i, size);
+        const seat = getTableSeatPlacement3D(shape, capacity, i, size, seatingSide);
         const chairSelected = selectedSeatIndices.includes(i);
         const taken = blocked.has(i);
         return (
@@ -2657,6 +2670,7 @@ function FixtureMesh({
     kind === 'decal' ? 0.02 :
     kind === 'carpet' ? 0.06 :
     kind === 'buffet' ? 0.9 :
+    isVenueEquipmentKind(kind) ? venueEquipmentHeight(kind) :
     0.35;
   const stairSteps = Math.max(3, Math.min(24, steps ?? (kind === 'stairs' ? 6 : 1)));
 
@@ -2765,6 +2779,8 @@ function FixtureMesh({
           seed={seedFromId(fixtureId ?? label ?? 'landscape')}
           selected={selected}
         />
+      ) : isVenueEquipmentKind(kind) ? (
+        <VenueEquipmentMesh kind={kind} w={w} d={d} color={color} selected={selected} />
       ) : kind === 'instrument' ? (
         <ConcertInstrumentMesh style={instrumentStyle ?? 'piano'} w={w} d={d} selected={selected} />
       ) : kind === 'bar' ? (
@@ -3810,6 +3826,7 @@ function SceneContent({
             customDepthM={item.customDepthM}
             customRadiusM={item.customRadiusM}
             cornerRadiusM={item.cornerRadiusM}
+            seatingSide={item.seatingSide}
             onSelect={(e) =>
               onSelect(
                 { kind: 'table', id: item.id, seatIndex: e?.seatIndex },

@@ -1,4 +1,4 @@
-import type { RoomLayoutBlueprint, TableShape } from '@/lib/roomLayoutUtils';
+import type { RoomLayoutBlueprint } from '@/lib/roomLayoutUtils';
 import {
   estimateTableFootprint,
   findClearLayoutSlot,
@@ -122,11 +122,11 @@ export function getSelectionBounds(
 
   if (furn.kind === 'table' || furn.kind === 'chair' || furn.kind === 'row') {
     const size = furn.kind === 'table'
-      ? tableFootprint(furn.shape, furn.capacity, {
+      ? estimateTableFootprint(furn.shape, furn.capacity, {
           customWidthM: furn.customWidthM,
           customDepthM: furn.customDepthM,
           customRadiusM: furn.customRadiusM,
-        })
+        }, furn.seatingSide)
       : furn.kind === 'row'
         ? rowFootprint(furn.seatCount)
         : { w: 3, h: 3 };
@@ -143,40 +143,6 @@ export function getSelectionBounds(
   }
 
   return null;
-}
-
-function tableFootprint(
-  shape: TableShape | undefined,
-  capacity: number,
-  customDims?: {
-    customWidthM?: number;
-    customDepthM?: number;
-    customRadiusM?: number;
-  },
-): { w: number; h: number } {
-  if (customDims) {
-    if (typeof customDims.customRadiusM === 'number' && customDims.customRadiusM > 0) {
-      const span = Math.max(4, Math.min(30, customDims.customRadiusM * 2 * 6.5));
-      return { w: span, h: span };
-    }
-    const w = typeof customDims.customWidthM === 'number' && customDims.customWidthM > 0
-      ? Math.max(4, Math.min(35, customDims.customWidthM * 5.8))
-      : undefined;
-    const h = typeof customDims.customDepthM === 'number' && customDims.customDepthM > 0
-      ? Math.max(4, Math.min(30, customDims.customDepthM * 5.8))
-      : undefined;
-    if (w !== undefined || h !== undefined) {
-      const def = shape === 'square' ? { w: 8, h: 8 } : { w: 10, h: 7 };
-      return { w: w ?? def.w, h: h ?? def.h };
-    }
-  }
-  if (shape === 'cocktail' || shape === 'highTop') return { w: 5, h: 5 };
-  if (shape === 'rectangular' || shape === 'arc') {
-    const w = capacity >= 14 ? 16 : capacity >= 10 ? 13 : 10;
-    return { w, h: 7 };
-  }
-  const span = Math.max(6, Math.min(14, 5 + capacity * 0.55));
-  return { w: span, h: span };
 }
 
 function rowFootprint(seatCount: number): { w: number; h: number } {
@@ -522,7 +488,7 @@ export function duplicateLayoutSelection(
             locked: false,
             groupId: newGroupId,
           },
-          estimateTableFootprint(source.shape, source.capacity),
+          estimateTableFootprint(source.shape, source.capacity, undefined, source.seatingSide),
           'table',
         ),
       );

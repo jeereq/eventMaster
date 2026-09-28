@@ -67,6 +67,8 @@ interface Table {
  tableColor?: string;
  rotation?: number;
  pricingZoneId?: string;
+ /** Chaises d’un seul côté (table d’honneur), hérité du plan de salle. */
+ seatingSide?: 'around' | 'oneSide';
 }
 
 interface TablePlannerProps {
@@ -1636,7 +1638,7 @@ export default function TablePlanner({
  )}
 
  {Array.from({ length: table.capacity }).map((_, index) => {
- const coords = getSeatCoordinates(table.shape, table.capacity, index);
+ const coords = getSeatCoordinates(table.shape, table.capacity, index, undefined, table.seatingSide);
                         const assignedGuestId = table.seats?.[index] ?? null;
  const guest = guests.find((g) => g.id === assignedGuestId);
                         const isRsvpAccepted = guest?.rsvp === 'ACCEPTED';
