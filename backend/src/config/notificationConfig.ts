@@ -17,6 +17,15 @@ export function isUltraMsgConfigured(credentials = getNotificationCredentials())
   return !!(credentials.ultramsgInstanceId && credentials.ultramsgToken);
 }
 
+function isHttpsUrl(value: string | undefined): boolean {
+  try {
+    const url = new URL(value || '');
+    return url.protocol === 'https:' && Boolean(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
 export function isSmsConfigured(credentials = getNotificationCredentials()): boolean {
   const provider = (credentials.smsProvider || 'dream-digital').toLowerCase();
   if (provider === 'twilio') {
@@ -25,7 +34,12 @@ export function isSmsConfigured(credentials = getNotificationCredentials()): boo
   if (provider === 'custom') {
     return Boolean(credentials.customSmsUrl?.trim());
   }
-  return Boolean(credentials.dreamDigitalApiId?.trim() && credentials.dreamDigitalApiPassword?.trim());
+  return Boolean(
+    isHttpsUrl(credentials.dreamDigitalBaseUrl) &&
+      credentials.dreamDigitalApiId?.trim() &&
+      credentials.dreamDigitalApiPassword?.trim() &&
+      credentials.dreamDigitalSenderId?.trim(),
+  );
 }
 
 export function assertSendGridConfigured(): void {

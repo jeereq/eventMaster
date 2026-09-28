@@ -33,31 +33,17 @@ export function setSmsRuntimeCredentials(creds: Partial<SmsGatewayCredentials> |
 }
 
 /**
- * Récupère les identifiants SMS actuels (réglages d'exécution ou variables d'environnement).
+ * Récupère les identifiants SMS actuels.
+ * La configuration Dream Digital provient exclusivement des réglages Super Admin
+ * synchronisés à l'exécution par platformSettingsService.
  */
 export function getSmsGatewayCredentials(): SmsGatewayCredentials {
   return {
-    smsProvider: runtimeCredentials?.smsProvider || process.env.SMS_PROVIDER || 'dream-digital',
-    dreamDigitalBaseUrl:
-      runtimeCredentials?.dreamDigitalBaseUrl ||
-      process.env.DREAM_DIGITAL_BASE_URL ||
-      process.env.SMS_API_URL ||
-      'https://api2.dream-digital.info',
-    dreamDigitalApiId:
-      runtimeCredentials?.dreamDigitalApiId ||
-      process.env.DREAM_DIGITAL_API_ID ||
-      process.env.SMS_API_ID ||
-      'API1633619985',
-    dreamDigitalApiPassword:
-      runtimeCredentials?.dreamDigitalApiPassword ||
-      process.env.DREAM_DIGITAL_API_PASSWORD ||
-      process.env.SMS_API_PASSWORD ||
-      '',
-    dreamDigitalSenderId:
-      runtimeCredentials?.dreamDigitalSenderId ||
-      process.env.DREAM_DIGITAL_SENDER_ID ||
-      process.env.SMS_SENDER_ID ||
-      'EVENTMASTER',
+    smsProvider: runtimeCredentials?.smsProvider || 'dream-digital',
+    dreamDigitalBaseUrl: runtimeCredentials?.dreamDigitalBaseUrl || '',
+    dreamDigitalApiId: runtimeCredentials?.dreamDigitalApiId || '',
+    dreamDigitalApiPassword: runtimeCredentials?.dreamDigitalApiPassword || '',
+    dreamDigitalSenderId: runtimeCredentials?.dreamDigitalSenderId || '',
     twilioSid: runtimeCredentials?.twilioSid || process.env.TWILIO_ACCOUNT_SID || '',
     twilioAuthToken: runtimeCredentials?.twilioAuthToken || process.env.TWILIO_AUTH_TOKEN || '',
     twilioPhone: runtimeCredentials?.twilioPhone || process.env.TWILIO_PHONE_NUMBER || '',

@@ -9,24 +9,42 @@ import type {
   SmsSendResult,
 } from './types.ts';
 
+const DREAM_DIGITAL_SEND_PATH = '/api/SendSms';
+const DREAM_DIGITAL_TIMEOUT_MS = 10_000;
+const GSM_7_BASIC_CHARACTERS =
+  '@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&\'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà';
+const GSM_7_EXTENSION_CHARACTERS = '\f^{}\\[~]|€';
+const GSM_7_CHARACTERS = new Set(
+  Array.from(`${GSM_7_BASIC_CHARACTERS}${GSM_7_EXTENSION_CHARACTERS}`),
+);
+
 /**
  * Normalise un numéro pour aSMSC (Dream Digital) :
  * L'API aSMSC impose un format indicatif pays + numéro sans le préfixe '+' (ex: 243812345678).
  */
 export function formatPhoneForAsmsc(raw: string): string {
   const e164 = formatPhoneE164(raw);
-  return e164.replace(/[^\d]/g, '');
+  const digits = e164.replace(/^\+/, '');
+  return /^\d{7,15}$/.test(digits) ? digits : '';
 }
 
 /**
  * Détermine l'encodage selon le contenu :
- * - 'T' : texte GSM-7 / ASCII standard (160 car./SMS)
- * - 'U' : Unicode pour caractères spéciaux, accents ou emojis (70 car./SMS)
+ * - 'T' : alphabet GSM-7, y compris sa table d'extension
+ * - 'U' : Unicode pour les caractères hors GSM-7, notamment les emojis
  */
 export function detectAsmscEncoding(text: string): SmsEncoding {
-  // Détecte si des caractères dépassent l'ASCII imprimable basique
-  const isPlainGsm = /^[\x20-\x7E\r\n]*$/.test(text);
+  const isPlainGsm = Array.from(text).every((character) => GSM_7_CHARACTERS.has(character));
   return isPlainGsm ? 'T' : 'U';
+}
+
+function isValidApiBaseUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && Boolean(url.hostname);
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -38,16 +56,16 @@ export class DreamDigitalSmsProvider implements SmsProvider {
 
   private getCredentials() {
     const creds = getSmsGatewayCredentials();
-    const baseUrl = (creds.dreamDigitalBaseUrl || 'https://sms.dreamdigital.cd').replace(/\/+$/, '');
+    const baseUrl = (creds.dreamDigitalBaseUrl || '').trim().replace(/\/+$/, '');
     const apiId = (creds.dreamDigitalApiId || '').trim();
     const apiPassword = (creds.dreamDigitalApiPassword || '').trim();
-    const senderId = (creds.dreamDigitalSenderId || 'EVENTMASTER').trim();
+    const senderId = (creds.dreamDigitalSenderId || '').trim();
     return { baseUrl, apiId, apiPassword, senderId };
   }
 
   isConfigured(): boolean {
-    const { apiId, apiPassword } = this.getCredentials();
-    return Boolean(apiId && apiPassword);
+    const { baseUrl, apiId, apiPassword, senderId } = this.getCredentials();
+    return Boolean(isValidApiBaseUrl(baseUrl) && apiId && apiPassword && senderId);
   }
 
   async sendSms(options: SmsSendOptions): Promise<SmsSendResult> {
@@ -68,16 +86,24 @@ export class DreamDigitalSmsProvider implements SmsProvider {
       };
     }
 
-    const isMulti = formattedNumbers.length > 1;
     const phoneParam = formattedNumbers.join(',');
-    const resolvedSenderId = options.senderId?.trim() || senderId || 'EVENTMASTER';
+    const resolvedSenderId = options.senderId?.trim() || senderId;
     const encoding = options.encoding || detectAsmscEncoding(options.text);
     const smsType = options.smsType || 'T';
 
-    // Simulation si identifiants manquants (mode démo / environnement de dev)
+    // Simulation uniquement hors production lorsque la configuration Super Admin est incomplète.
     if (!this.isConfigured()) {
+      if (process.env.NODE_ENV === 'production') {
+        return {
+          success: false,
+          simulated: false,
+          provider: this.name,
+          error:
+            'Configuration Dream Digital incomplète. Le Super Admin doit définir un hôte HTTPS, un API ID, un mot de passe et un Sender ID.',
+        };
+      }
       console.log(
-        `[Simulation] Dream Digital SMS (aSMSC) vers ${phoneParam} (expéditeur: ${resolvedSenderId}, type: ${smsType}, encodage: ${encoding}):\nMessage: ${options.text}\n`,
+        `[Simulation] Dream Digital SMS (aSMSC) vers ${phoneParam} (expéditeur: ${resolvedSenderId || 'non configuré'}, type: ${smsType}, encodage: ${encoding}):\nMessage: ${options.text}\n`,
       );
       return {
         success: true,
@@ -88,37 +114,22 @@ export class DreamDigitalSmsProvider implements SmsProvider {
       };
     }
 
-    const endpoint = isMulti ? `${baseUrl}/api/SendSMSMulti` : `${baseUrl}/api/SendSMS`;
-
-    const payload: Record<string, unknown> = {
+    const endpoint = new URL(`${baseUrl}${DREAM_DIGITAL_SEND_PATH}`);
+    endpoint.search = new URLSearchParams({
       api_id: apiId,
       api_password: apiPassword,
       sms_type: smsType,
       encoding,
       sender_id: resolvedSenderId,
       phonenumber: phoneParam,
-      templateid: null,
       textmessage: options.text,
-      V1: null,
-      V2: null,
-      V3: null,
-      V4: null,
-      V5: null,
-      ValidityPeriodInSeconds: options.validitySeconds || 172800,
-      uid: options.uid || null,
-      callback_url: options.callbackUrl || null,
-      pe_id: null,
-      template_id: null,
-    };
+    }).toString();
 
     try {
       const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify(payload),
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(DREAM_DIGITAL_TIMEOUT_MS),
       });
 
       const rawText = await response.text();
@@ -133,7 +144,7 @@ export class DreamDigitalSmsProvider implements SmsProvider {
       const statusUpper = String(data?.status || '').toUpperCase();
       const isSuccess = statusUpper === 'S';
 
-      if (isSuccess || (response.ok && data?.message_id)) {
+      if (response.ok && (isSuccess || data?.message_id)) {
         const messageId = String(data?.message_id || data?.messageId || data?.id || 'dd-sent');
         console.log(
           `[SMS Service] Dream Digital SMS transmis avec succès à ${phoneParam}. ID message: ${messageId}`,
@@ -163,12 +174,16 @@ export class DreamDigitalSmsProvider implements SmsProvider {
         raw: data,
       };
     } catch (error: any) {
-      console.error(`[SMS Service] Exception lors de l'appel Dream Digital vers ${phoneParam}:`, error);
+      const errorMessage =
+        error?.name === 'TimeoutError'
+          ? 'Délai de 10 secondes dépassé lors de l’appel Dream Digital.'
+          : 'La requête vers Dream Digital a échoué.';
+      console.error(`[SMS Service] Exception lors de l'appel Dream Digital vers ${phoneParam}: ${errorMessage}`);
       return {
         success: false,
         simulated: false,
         provider: this.name,
-        error: error.message || String(error),
+        error: errorMessage,
       };
     }
   }

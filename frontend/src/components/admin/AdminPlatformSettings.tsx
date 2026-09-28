@@ -1385,7 +1385,7 @@ export default function AdminPlatformSettings({
                 <div className="pt-2 border-t border-border/70 space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-foreground">Paramètres Dream Digital (aSMSC)</span>
-                    <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-primary/10 text-primary">POST /api/SendSMS</span>
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-primary/10 text-primary">GET /api/SendSms</span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5 md:col-span-2">
@@ -1395,9 +1395,9 @@ export default function AdminPlatformSettings({
                         value={value.dreamDigitalBaseUrl || ''}
                         onChange={(e) => patch({ dreamDigitalBaseUrl: e.target.value })}
                         className={cn(fieldClass, 'font-mono')}
-                        placeholder="https://sms.dreamdigital.cd"
+                        placeholder="https://hote-fourni-par-dream-digital.example"
                       />
-                      <p className="text-[11px] text-muted">URL du portail aSMSC (ex: https://sms.dreamdigital.cd ou http://my.asmsc.com).</p>
+                      <p className="text-[11px] text-muted">Hôte HTTPS fourni par Dream Digital et défini par le Super Admin.</p>
                     </div>
                     <div className="space-y-1.5">
                       <label className={labelClass}>API ID</label>
@@ -1427,7 +1427,7 @@ export default function AdminPlatformSettings({
                         value={value.dreamDigitalSenderId || ''}
                         onChange={(e) => patch({ dreamDigitalSenderId: e.target.value })}
                         className={cn(fieldClass, 'font-mono')}
-                        placeholder="EVENTMASTER"
+                        placeholder="Sender ID fourni par Dream Digital"
                       />
                       <p className="text-[11px] text-muted">Nom d’expéditeur enregistré dans votre panneau Dream Digital aSMSC.</p>
                     </div>
