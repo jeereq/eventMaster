@@ -489,11 +489,11 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   twilioAccountSid: process.env.TWILIO_ACCOUNT_SID || '',
   twilioAuthToken: process.env.TWILIO_AUTH_TOKEN || '',
   twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER || '',
-  smsProvider: process.env.SMS_PROVIDER || 'dream-digital',
-  dreamDigitalBaseUrl: process.env.DREAM_DIGITAL_BASE_URL || process.env.SMS_API_URL || 'https://sms.dreamdigital.cd',
-  dreamDigitalApiId: process.env.DREAM_DIGITAL_API_ID || process.env.SMS_API_ID || '',
-  dreamDigitalApiPassword: process.env.DREAM_DIGITAL_API_PASSWORD || process.env.SMS_API_PASSWORD || '',
-  dreamDigitalSenderId: process.env.DREAM_DIGITAL_SENDER_ID || process.env.SMS_SENDER_ID || 'EVENTMASTER',
+  smsProvider: 'dream-digital',
+  dreamDigitalBaseUrl: '',
+  dreamDigitalApiId: '',
+  dreamDigitalApiPassword: '',
+  dreamDigitalSenderId: '',
   customSmsUrl: process.env.CUSTOM_SMS_URL || '',
   customSmsApiKey: process.env.CUSTOM_SMS_API_KEY || '',
   customSmsSenderId: process.env.CUSTOM_SMS_SENDER_ID || '',
@@ -981,13 +981,26 @@ export function maskSecretsForAdmin(settings: PlatformSettings): PlatformSetting
   smsConfigured: boolean;
 } {
   const mask = (v: string) => (v && v.length > 8 ? `${v.slice(0, 4)}…${v.slice(-4)}` : v ? '••••••••' : '');
+  const hasValidDreamDigitalUrl = (() => {
+    try {
+      const url = new URL(settings.dreamDigitalBaseUrl || '');
+      return url.protocol === 'https:' && Boolean(url.hostname);
+    } catch {
+      return false;
+    }
+  })();
   const activeSmsProvider = (settings.smsProvider || 'dream-digital').toLowerCase();
   const smsConfigured =
     activeSmsProvider === 'twilio'
       ? Boolean(settings.twilioAccountSid?.trim() && settings.twilioAuthToken?.trim() && settings.twilioPhoneNumber?.trim())
       : activeSmsProvider === 'custom'
         ? Boolean(settings.customSmsUrl?.trim())
-        : Boolean(settings.dreamDigitalApiId?.trim() && settings.dreamDigitalApiPassword?.trim());
+        : Boolean(
+            hasValidDreamDigitalUrl &&
+              settings.dreamDigitalApiId?.trim() &&
+              settings.dreamDigitalApiPassword?.trim() &&
+              settings.dreamDigitalSenderId?.trim(),
+          );
 
   return {
     ...settings,
@@ -1066,11 +1079,11 @@ export function getNotificationCredentials(
     twilioPhone: pick(settings.twilioPhoneNumber, 'TWILIO_PHONE_NUMBER'),
     ultramsgInstanceId: pick(settings.ultramsgInstanceId, 'ULTRAMSG_INSTANCE_ID'),
     ultramsgToken: pick(settings.ultramsgToken, 'ULTRAMSG_TOKEN'),
-    smsProvider: pick(settings.smsProvider, 'SMS_PROVIDER', 'dream-digital'),
-    dreamDigitalBaseUrl: pick(settings.dreamDigitalBaseUrl, 'DREAM_DIGITAL_BASE_URL', pick(settings.dreamDigitalBaseUrl, 'SMS_API_URL', 'https://sms.dreamdigital.cd')),
-    dreamDigitalApiId: pick(settings.dreamDigitalApiId, 'DREAM_DIGITAL_API_ID', pick(settings.dreamDigitalApiId, 'SMS_API_ID')),
-    dreamDigitalApiPassword: pick(settings.dreamDigitalApiPassword, 'DREAM_DIGITAL_API_PASSWORD', pick(settings.dreamDigitalApiPassword, 'SMS_API_PASSWORD')),
-    dreamDigitalSenderId: pick(settings.dreamDigitalSenderId, 'DREAM_DIGITAL_SENDER_ID', pick(settings.dreamDigitalSenderId, 'SMS_SENDER_ID', 'EVENTMASTER')),
+    smsProvider: settings.smsProvider?.trim() || 'dream-digital',
+    dreamDigitalBaseUrl: settings.dreamDigitalBaseUrl?.trim() || '',
+    dreamDigitalApiId: settings.dreamDigitalApiId?.trim() || '',
+    dreamDigitalApiPassword: settings.dreamDigitalApiPassword?.trim() || '',
+    dreamDigitalSenderId: settings.dreamDigitalSenderId?.trim() || '',
     customSmsUrl: pick(settings.customSmsUrl, 'CUSTOM_SMS_URL'),
     customSmsApiKey: pick(settings.customSmsApiKey, 'CUSTOM_SMS_API_KEY'),
     customSmsSenderId: pick(settings.customSmsSenderId, 'CUSTOM_SMS_SENDER_ID'),
