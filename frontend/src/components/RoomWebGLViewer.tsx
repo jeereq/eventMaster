@@ -5,6 +5,7 @@ import { Canvas, ThreeEvent, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Html, ContactShadows, Environment, Sky, Stars } from '@react-three/drei';
 import { Compass, Sparkles, Crown, DoorOpen, RotateCcw } from 'lucide-react';
 import * as THREE from 'three';
+import { SurfaceMat } from '@/components/room/SurfaceMaterial';
 import {
   RoomLayoutBlueprint,
   RoomWallSegment,
@@ -88,6 +89,7 @@ import {
   LaptopMesh,
   DesktopPcMesh,
   GabledStageRoof,
+  arcTablePoint,
 } from '@/components/roomCelebrationMeshes';
 import { ConcertInstrumentMesh, EventBarMesh } from '@/components/CataloguePodiumBarMeshes';
 import { clampRowSeatCount } from '@/lib/roomAmphitheaterGeom';
@@ -275,16 +277,42 @@ function ScenicLights({
       ) : null}
 
       {isNight ? (
-        <NightLedStrip
-          ledY={ledY}
-          ledZ={ledZ}
-          ledTarget={ledTarget}
-          ledSpan={ledSpan}
-          heightM={heightM}
-          shadowMapSize={shadowMapSize}
-          ambient={lighting.ambient}
-          hemiIntensity={lighting.hemiIntensity}
-        />
+        <>
+          <NightLedStrip
+            ledY={ledY}
+            ledZ={ledZ}
+            ledTarget={ledTarget}
+            ledSpan={ledSpan}
+            heightM={heightM}
+            shadowMapSize={shadowMapSize}
+            ambient={lighting.ambient}
+            hemiIntensity={lighting.hemiIntensity * 0.3}
+          />
+          {/* Clair de lune froid : on devine tables et allées sans casser l’ambiance nocturne. */}
+          <directionalLight
+            position={[sx, sy, sz]}
+            intensity={lighting.keyIntensity}
+            color={lighting.keyColor}
+            castShadow={lighting.keyIntensity > 0.05}
+            shadow-mapSize-width={shadowMapSize}
+            shadow-mapSize-height={shadowMapSize}
+            shadow-bias={-0.00018}
+            shadow-normalBias={0.04}
+            shadow-camera-far={140}
+            shadow-camera-left={-extent * 1.2}
+            shadow-camera-right={extent * 1.2}
+            shadow-camera-top={extent * 1.2}
+            shadow-camera-bottom={-extent * 1.2}
+          />
+          <hemisphereLight args={[lighting.hemiSky, lighting.hemiGround, lighting.hemiIntensity]} />
+          {lighting.warmPoint > 0 ? (
+            // Lueur chaude diffuse (guirlandes, bougies, lustres) au-dessus des convives.
+            <>
+              <pointLight position={[widthM * 0.22, 3.2, heightM * 0.18]} intensity={lighting.warmPoint * lighting.interiorBoost * 4} color="#ffc978" distance={extent * 1.1} decay={1.6} />
+              <pointLight position={[-widthM * 0.22, 3.2, -heightM * 0.14]} intensity={lighting.warmPoint * lighting.interiorBoost * 3.2} color="#ffd9a0" distance={extent * 1.1} decay={1.6} />
+            </>
+          ) : null}
+        </>
       ) : (
         <>
           <ambientLight intensity={lighting.ambient} color={isDusk ? '#ffc9a8' : '#ffffff'} />
@@ -1923,6 +1951,99 @@ const PLACE_SETTING_REACH_M = 0.68;
 /** Au-delà, on arrête de dessiner des chaises (tables géantes de 40+ convives). */
 const MAX_TABLE_CHAIRS = 40;
 
+/**
+ * Périmètre de sécurité / zone délimitée : potelets chromés et cordons en velours
+ * sur le contour (et non une dalle pleine qui masque le sol).
+ */
+function PerimeterBarrierMesh({ w, d, color, selected }: { w: number; d: number; color?: string; selected: boolean }) {
+  const rope = selected ? '#818cf8' : color && color !== '#78716c' ? color : '#7f1d1d';
+  const posts = useMemo(() => {
+    const pts: Array<[number, number]> = [];
+    const perSide = (len: number) => Math.max(1, Math.round(len / 1.8));
+    const nx = perSide(w);
+    const nz = perSide(d);
+    for (let i = 0; i < nx; i += 1) pts.push([-w / 2 + (w * i) / nx, -d / 2]);
+    for (let i = 0; i < nz; i += 1) pts.push([w / 2, -d / 2 + (d * i) / nz]);
+    for (let i = 0; i < nx; i += 1) pts.push([w / 2 - (w * i) / nx, d / 2]);
+    for (let i = 0; i < nz; i += 1) pts.push([-w / 2, d / 2 - (d * i) / nz]);
+    return pts;
+  }, [w, d]);
+  return (
+    <group>
+      {posts.map(([x, z], i) => {
+        const [nx, nz] = posts[(i + 1) % posts.length];
+        const len = Math.hypot(nx - x, nz - z);
+        const ang = Math.atan2(nz - z, nx - x);
+        return (
+          <group key={i}>
+            <group position={[x, 0, z]}>
+              <mesh position={[0, 0.015, 0]} castShadow>
+                <cylinderGeometry args={[0.15, 0.16, 0.03, 20]} />
+                <SurfaceMat color="#d4d4d8" finish="chrome" />
+              </mesh>
+              <mesh position={[0, 0.48, 0]} castShadow>
+                <cylinderGeometry args={[0.025, 0.025, 0.95, 12]} />
+                <SurfaceMat color="#d4d4d8" finish="chrome" />
+              </mesh>
+              <mesh position={[0, 0.97, 0]} castShadow>
+                <sphereGeometry args={[0.04, 12, 10]} />
+                <SurfaceMat color="#d4d4d8" finish="chrome" />
+              </mesh>
+            </group>
+            {/* Cordon qui fléchit entre deux potelets */}
+            <group position={[(x + nx) / 2, 0.93, (z + nz) / 2]} rotation={[0, -ang, 0]}>
+              <mesh>
+                <tubeGeometry
+                  args={[
+                    new THREE.QuadraticBezierCurve3(
+                      new THREE.Vector3(-len / 2, 0, 0),
+                      new THREE.Vector3(0, -Math.min(0.32, len * 0.12), 0),
+                      new THREE.Vector3(len / 2, 0, 0),
+                    ),
+                    16,
+                    0.018,
+                    6,
+                    false,
+                  ]}
+                />
+                <SurfaceMat color={rope} finish="velvet" />
+              </mesh>
+            </group>
+          </group>
+        );
+      })}
+    </group>
+  );
+}
+
+/** Flûte + serviette cocktail pour mange-debout (au lieu d’un couvert d’assiette). */
+function StandingTableGlass({ position }: { position: [number, number, number] }) {
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.002, 0]} rotation={[-Math.PI / 2, 0, 0.4]} receiveShadow>
+        <planeGeometry args={[0.12, 0.12]} />
+        <meshStandardMaterial color="#fafaf9" roughness={0.9} />
+      </mesh>
+      <mesh position={[0, 0.006, 0]}>
+        <cylinderGeometry args={[0.03, 0.032, 0.004, 16]} />
+        <SurfaceMat color="#f8fafc" finish="glass" opacity={0.5} />
+      </mesh>
+      <mesh position={[0, 0.06, 0]}>
+        <cylinderGeometry args={[0.004, 0.004, 0.1, 8]} />
+        <SurfaceMat color="#f8fafc" finish="glass" opacity={0.5} />
+      </mesh>
+      <mesh position={[0, 0.16, 0]}>
+        <cylinderGeometry args={[0.026, 0.018, 0.12, 14, 1, true]} />
+        <SurfaceMat color="#f8fafc" finish="glass" opacity={0.42} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh position={[0, 0.14, 0]}>
+        <cylinderGeometry args={[0.022, 0.017, 0.07, 14]} />
+        <meshStandardMaterial color="#f3d98b" roughness={0.2} transparent opacity={0.8} />
+      </mesh>
+    </group>
+  );
+}
+
 function PlaceSetting({
   style = 'classic',
   position,
@@ -2165,6 +2286,14 @@ function TableMesh({
       {(hasCouverts || dressAllTables || (selected && showcaseTableware && shape !== 'cocktail' && shape !== 'highTop' && capacity <= 10)) &&
         Array.from({ length: Math.min(capacity, MAX_TABLE_CHAIRS) }).map((_, i) => {
           if (hidden.has(i)) return null;
+          if (shape === 'cocktail' || shape === 'highTop') {
+            // Table debout : pas d’assiettes, une flûte et une serviette cocktail par invité.
+            const n = Math.min(capacity, 8);
+            if (i >= n) return null;
+            const a = (i / n) * Math.PI * 2 + Math.PI / 4;
+            const rr = Math.min(size[0], size[1]) * 0.3;
+            return <StandingTableGlass key={`g-${i}`} position={[Math.sin(a) * rr, topY + 0.03, Math.cos(a) * rr]} />;
+          }
           // Un couvert devant chaque convive, orienté vers lui, sur le bord du plateau.
           const seat = getTableSeatPlacement3D(shape, capacity, i, size, seatingSide);
           const fx = Math.sin(seat.rotationY);
@@ -2178,7 +2307,23 @@ function TableMesh({
             />
           );
         })}
-      {(hasCenterpiece || (dressAllTables && shape !== 'cocktail' && shape !== 'highTop' && capacity >= 4) || (selected && showcaseTableware && shape !== 'cocktail' && shape !== 'highTop' && capacity >= 4)) && (
+      {(hasCenterpiece || (dressAllTables && shape !== 'cocktail' && shape !== 'highTop' && capacity >= 4) || (selected && showcaseTableware && shape !== 'cocktail' && shape !== 'highTop' && capacity >= 4)) && shape === 'arc' ? (
+        // Table en arc : le centre géométrique est dans le vide — on pose trois compositions sur le plateau.
+        [0.2, 0.5, 0.8].map((t) => {
+          const [px, pz] = arcTablePoint(size, t);
+          return (
+            <group key={`arc-cp-${t}`} position={[px, topY, pz]}>
+              {centerpieceStyle === 'floral' || !centerpieceStyle ? (
+                <group scale={0.62}>
+                  <TallCenterpiece selected={selected} />
+                </group>
+              ) : (
+                <CandleClusterMesh selected={selected} />
+              )}
+            </group>
+          );
+        })
+      ) : (hasCenterpiece || (dressAllTables && shape !== 'cocktail' && shape !== 'highTop' && capacity >= 4) || (selected && showcaseTableware && shape !== 'cocktail' && shape !== 'highTop' && capacity >= 4)) && (
         <group position={[0, topY, 0]}>
           {centerpieceStyle === 'greeneryRunner' ? (
             <GreeneryRunnerMesh length={Math.max(size[0], size[1]) * 0.72} selected={selected} />
@@ -2572,6 +2717,7 @@ function FixtureMesh({
   instrumentStyle,
   barStyle,
   landscapeStyle,
+  flowerType,
   fixtureId,
   screenKind,
   screenRatio,
@@ -2629,6 +2775,7 @@ function FixtureMesh({
   instrumentStyle?: InstrumentStyle;
   barStyle?: BarStyle;
   landscapeStyle?: LandscapeStyle;
+  flowerType?: string;
   fixtureId?: string;
   screenKind?: import('@/lib/roomLayoutUtils').ScreenKind;
   screenRatio?: import('@/lib/roomLayoutUtils').ScreenRatio;
@@ -2749,6 +2896,7 @@ function FixtureMesh({
           color={baseColor}
           selected={selected}
           map={map}
+          flowerType={flowerType}
         />
       ) : kind === 'arch' ? (
         <FloralArchMesh w={w} d={d} color={baseColor} selected={selected} />
@@ -2767,7 +2915,7 @@ function FixtureMesh({
       ) : kind === 'stringLight' ? (
         <EdisonStringLightMesh w={w} d={d} heightM={height} selected={selected} />
       ) : kind === 'fountain' ? (
-        <FountainMesh color={baseColor} selected={selected} />
+        <FountainMesh w={w} d={d} color={color} selected={selected} />
       ) : kind === 'gazebo' ? (
         <GazeboMesh w={w} d={d} heightM={height} selected={selected} />
       ) : kind === 'landscape' ? (
@@ -2843,6 +2991,8 @@ function FixtureMesh({
             kind={kind === 'podium' ? 'podium' : 'stage'}
             shape={stageShape ?? 'rect'}
             podiumStyle={podiumStyle}
+            material={material ?? 'wood'}
+            skirtColor={color && color !== '#b45309' ? color : undefined}
           />
           {stageRoof === 'gabled' ? (
             <GabledStageRoof w={w} d={d} heightM={Math.max(2.2, height + 2)} selected={selected} />
@@ -2886,7 +3036,7 @@ function FixtureMesh({
           doorSwing={doorSwing ?? 'double'}
           hasMat={hasMat ?? true}
           matColor={matColor}
-          color={baseColor}
+          color={color}
           openingMaterial={openingMaterial}
           frameColor={frameColor}
           selected={selected}
@@ -2909,6 +3059,8 @@ function FixtureMesh({
           hasPetals={hasPetals ?? false}
           selected={selected}
         />
+      ) : kind === 'perimeter' ? (
+        <PerimeterBarrierMesh w={w} d={d} color={color} selected={selected} />
       ) : kind === 'corridor' ? (
         <group>
           <mesh position={[0, 0.02, 0]} receiveShadow>
@@ -2968,6 +3120,7 @@ function FixtureMesh({
     </group>
   );
 }
+
 
 type CameraPresetKey = 'overview' | 'stage' | 'vip' | 'entrance';
 
@@ -3603,6 +3756,7 @@ function SceneContent({
             instrumentStyle={f.instrumentStyle}
             barStyle={f.barStyle}
             landscapeStyle={f.landscapeStyle}
+            flowerType={f.flowerType}
             fixtureId={f.id}
             screenKind={f.screenKind}
             screenRatio={f.screenRatio}

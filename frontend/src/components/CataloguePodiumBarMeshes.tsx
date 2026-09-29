@@ -205,21 +205,37 @@ function BarStool({ x, z }: { x: number; z: number }) {
   );
 }
 
-export function EventBarMesh({
-  w,
-  d,
-  height = 1.15,
-  style = 'cocktail',
-  color,
-  selected = false,
-}: {
+type EventBarMeshProps = {
   w: number;
   d: number;
   height?: number;
   style?: BarStyle;
   color?: string;
   selected?: boolean;
-}) {
+};
+
+export function EventBarMesh(props: EventBarMeshProps) {
+  // Emprise « en longueur » dans le sens de la profondeur (bar dessiné verticalement sur le plan) :
+  // on oriente le comptoir sur le grand côté au lieu d’écraser un bar de 6 m en 1,8 m de façade.
+  const { w, d, style = 'cocktail' } = props;
+  if (style !== 'island' && d > w * 1.25) {
+    return (
+      <group rotation={[0, Math.PI / 2, 0]}>
+        <EventBarBody {...props} w={d} d={w} />
+      </group>
+    );
+  }
+  return <EventBarBody {...props} />;
+}
+
+function EventBarBody({
+  w,
+  d,
+  height = 1.15,
+  style = 'cocktail',
+  color,
+  selected = false,
+}: EventBarMeshProps) {
   const body = selected ? '#c7d2fe' : color ?? '#292524';
   const topY = height;
   const bottles = BOTTLE_COLORS[style] ?? BOTTLE_COLORS.cocktail;
@@ -229,73 +245,147 @@ export function EventBarMesh({
   const isIsland = style === 'island';
   const isL = style === 'lShaped';
   const tallBottles = style === 'wine' || style === 'champagne' || style === 'whiskey';
-  const slatCount = Math.max(6, Math.min(24, Math.round(w * 5)));
 
-  return (
-    <group>
-      {/* Caisson principal du bar */}
+  // Implantation réaliste : comptoir client à l’avant (≈ 70 cm), allée barman, arrière-bar
+  // posé sur un meuble bas contre le fond — et non un bloc plein de toute la profondeur.
+  const counterD = Math.min(0.75, Math.max(0.5, d * 0.42));
+  const counterZ = d / 2 - counterD / 2;
+  const backD = Math.min(0.5, Math.max(0.35, d * 0.28));
+  const backZ = -d / 2 + backD / 2;
+  const baseH = 0.9;
+  const frontZ = d / 2;
+  // Plateau de travail (props de style) posé sur le comptoir.
+  const propZ = counterZ;
+  const propY = topY + 0.05;
+
+  const counter = (cw: number, cd: number) => (
+    <>
       <mesh position={[0, height * 0.45, 0]} castShadow receiveShadow>
-        <boxGeometry args={[w, height * 0.88, d]} />
-        <Mat color={body} finish="wood" roughness={0.5} repeat={[Math.max(1, w / 1.2), 1]} />
+        <boxGeometry args={[cw, height * 0.88, cd]} />
+        <Mat color={body} finish="wood" roughness={0.5} repeat={[Math.max(1, cw / 1.2), 1]} />
       </mesh>
-
-      {/* Façade architecturale à tasseaux de bois verticaux (slat wall design) */}
-      {Array.from({ length: slatCount }).map((_, si) => {
-        const sx = ((si + 0.5) / slatCount - 0.5) * (w * 0.94);
+      {/* Façade à tasseaux verticaux */}
+      {Array.from({ length: Math.max(6, Math.min(24, Math.round(cw * 5))) }).map((_, si, arr) => {
+        const sx = ((si + 0.5) / arr.length - 0.5) * (cw * 0.94);
         return (
-          <mesh key={`slat-${si}`} position={[sx, height * 0.45, d * 0.51]} castShadow>
-            <boxGeometry args={[Math.max(0.015, (w * 0.8) / (slatCount * 1.6)), height * 0.82, 0.02]} />
-            <SurfaceMat color="#8a4a1c" finish="wood" roughness={0.5} repeat={[1, 0.3]} vertical />
+          <mesh key={`slat-${si}`} position={[sx, height * 0.45, cd * 0.5 + 0.01]} castShadow>
+            <boxGeometry args={[Math.max(0.015, (cw * 0.8) / (arr.length * 1.6)), height * 0.82, 0.02]} />
+            <SurfaceMat color="#6b4a2e" finish="wood" roughness={0.55} repeat={[1, 0.3]} vertical />
           </mesh>
         );
       })}
-
-      {/* Plinthe en retrait noire mate */}
-      <mesh position={[0, 0.04, d * 0.47]} castShadow>
-        <boxGeometry args={[w * 0.98, 0.08, 0.05]} />
+      <mesh position={[0, 0.04, cd * 0.47]} castShadow>
+        <boxGeometry args={[cw * 0.98, 0.08, 0.05]} />
         <Mat color="#09090b" roughness={0.7} />
       </mesh>
-
-      {/* Repose-pieds tubulaire en laiton brossé ou inox */}
-      <group position={[0, 0.18, d * 0.56]}>
+      {/* Plateau marbre avec surplomb côté clients */}
+      <mesh position={[0, topY + 0.025, 0.08]} receiveShadow castShadow>
+        <boxGeometry args={[cw + 0.06, 0.05, cd + 0.16]} />
+        <BarMarbleTop w={cw} d={cd} />
+      </mesh>
+      <mesh position={[0, topY - 0.01, cd / 2 + 0.15]}>
+        <boxGeometry args={[cw, 0.012, 0.02]} />
+        <meshStandardMaterial color="#fef3c7" emissive="#fbbf24" emissiveIntensity={0.65} roughness={0.1} />
+      </mesh>
+      {/* Repose-pieds laiton */}
+      <group position={[0, 0.18, cd / 2 + 0.08]}>
         <mesh rotation={[0, 0, Math.PI / 2]} castShadow>
-          <cylinderGeometry args={[0.018, 0.018, w * 0.92, 12]} />
+          <cylinderGeometry args={[0.018, 0.018, cw * 0.92, 12]} />
           <SurfaceMat color="#d4af37" finish="brass" metalness={0.95} roughness={0.22} repeat={[1, 6]} />
         </mesh>
-        {/* Supports au sol du repose-pieds */}
-        {[-w * 0.38, 0, w * 0.38].map((spX, spi) => (
+        {[-cw * 0.38, 0, cw * 0.38].map((spX, spi) => (
           <mesh key={spi} position={[spX, -0.09, -0.03]} rotation={[0.4, 0, 0]} castShadow>
             <cylinderGeometry args={[0.012, 0.012, 0.18, 8]} />
             <SurfaceMat color="#d4af37" finish="brass" metalness={0.95} roughness={0.22} />
           </mesh>
         ))}
       </group>
-
-      {/* Plateau de bar en marbre noble biseauté avec surplomb ergonomique */}
-      <mesh position={[0, topY + 0.025, d * 0.06]} receiveShadow castShadow>
-        <boxGeometry args={[w * 1.06, 0.055, d * 1.15]} />
-        <BarMarbleTop w={w} d={d} />
-      </mesh>
-
-      {/* Ruban LED blanc chaud encastré sous le surplomb du comptoir */}
-      <mesh position={[0, topY - 0.01, d * 0.54]}>
-        <boxGeometry args={[w * 1.02, 0.015, 0.02]} />
-        <meshStandardMaterial
-          color="#fef3c7"
-          emissive="#fbbf24"
-          emissiveIntensity={0.65}
-          roughness={0.1}
-        />
-      </mesh>
-
-      {/* Rail égouttoir inox barman encastré sur le dessus */}
-      <mesh position={[0, topY + 0.054, d * 0.38]}>
-        <boxGeometry args={[w * 0.88, 0.005, 0.12]} />
+      {/* Rail égouttoir côté barman */}
+      <mesh position={[0, topY + 0.052, -cd * 0.3]}>
+        <boxGeometry args={[cw * 0.88, 0.005, 0.1]} />
         <SurfaceMat color="#c4c4c8" finish="metal" metalness={0.95} roughness={0.24} />
       </mesh>
+    </>
+  );
 
-      {/* Shaker de barman en inox poli sur le comptoir */}
-      <group position={[w * 0.32, topY + 0.14, d * 0.18]}>
+  return (
+    <group>
+      {isIsland ? (
+        <>
+          {/* Îlot : comptoir sur les 4 côtés, barman au centre, tour à bouteilles */}
+          <group position={[0, 0, d / 2 - counterD / 2]}>{counter(w, counterD)}</group>
+          <group position={[0, 0, -d / 2 + counterD / 2]} rotation={[0, Math.PI, 0]}>{counter(w, counterD)}</group>
+          <group position={[w / 2 - counterD / 2, 0, 0]} rotation={[0, Math.PI / 2, 0]}>{counter(Math.max(0.4, d - counterD * 2), counterD)}</group>
+          <group position={[-w / 2 + counterD / 2, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>{counter(Math.max(0.4, d - counterD * 2), counterD)}</group>
+          <group>
+            <mesh position={[0, 1.2, 0]} castShadow>
+              <cylinderGeometry args={[0.05, 0.05, 2.4, 12]} />
+              <SurfaceMat color="#1c1917" finish="metal" roughness={0.35} />
+            </mesh>
+            {[1.25, 1.6, 1.95].map((y, k) => (
+              <group key={k} position={[0, y, 0]}>
+                <mesh>
+                  <cylinderGeometry args={[0.42, 0.42, 0.02, 32]} />
+                  <SurfaceMat color="#e2f0ee" finish="glass" opacity={0.55} />
+                </mesh>
+                {Array.from({ length: 8 }).map((_, i) => {
+                  const ang = (i / 8) * Math.PI * 2 + k * 0.3;
+                  return <BarBottle key={i} x={Math.cos(ang) * 0.32} z={Math.sin(ang) * 0.32} y={0.01} color={bottles[(i + k) % bottles.length]} tall={tallBottles} />;
+                })}
+              </group>
+            ))}
+          </group>
+        </>
+      ) : (
+        <>
+          <group position={[0, 0, counterZ]}>{counter(w, counterD)}</group>
+          {isL ? (
+            // Retour d’angle sur le côté gauche, jusqu’à l’arrière-bar.
+            <group position={[-w / 2 + counterD / 2, 0, (counterZ - counterD / 2 + backZ + backD / 2) / 2]} rotation={[0, -Math.PI / 2, 0]}>
+              {counter(Math.max(0.4, counterZ - counterD / 2 - (backZ + backD / 2)), counterD)}
+            </group>
+          ) : null}
+          {/* Arrière-bar : meuble bas + miroir + étagères verre fixées au fond */}
+          <group position={[0, 0, backZ]}>
+            <mesh position={[0, baseH / 2, 0]} castShadow receiveShadow>
+              <boxGeometry args={[w * 0.96, baseH, backD]} />
+              <Mat color="#2a1d14" finish="wood" roughness={0.55} repeat={[Math.max(1, w / 1.2), 1]} />
+            </mesh>
+            <mesh position={[0, baseH + 0.015, 0]} castShadow>
+              <boxGeometry args={[w * 0.97, 0.03, backD + 0.02]} />
+              <SurfaceMat color="#3f3f46" finish="stone" roughness={0.35} />
+            </mesh>
+            <mesh position={[0, baseH + 0.62, -backD / 2 + 0.03]} castShadow>
+              <boxGeometry args={[w * 0.96, 1.24, 0.05]} />
+              <SurfaceMat color="#3a2618" finish="wood" roughness={0.5} repeat={[Math.max(1, w / 1.2), 1]} />
+            </mesh>
+            <mesh position={[0, baseH + 0.62, -backD / 2 + 0.06]}>
+              <boxGeometry args={[w * 0.9, 1.1, 0.01]} />
+              <meshPhysicalMaterial color="#cbd5e1" roughness={0.06} metalness={0.9} clearcoat={0.9} />
+            </mesh>
+            <mesh position={[0, baseH + 1.22, -backD / 2 + 0.1]}>
+              <boxGeometry args={[w * 0.9, 0.025, 0.04]} />
+              <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={0.65} />
+            </mesh>
+            {Array.from({ length: BAR_SHELF_COUNT }).map((_, shelf) => (
+              <mesh key={shelf} position={[0, baseH + 0.3 + shelf * 0.32, -backD / 2 + 0.16]} receiveShadow>
+                <boxGeometry args={[w * 0.88, 0.02, 0.2]} />
+                <SurfaceMat color="#e2f0ee" finish="glass" opacity={0.55} />
+              </mesh>
+            ))}
+            {Array.from({ length: bottleCount }).map((_, i) => {
+              const x = ((i + 0.5) / bottleCount - 0.5) * w * 0.82;
+              const shelf = i % (BAR_SHELF_COUNT + 1);
+              // Rangée 0 = sur le meuble bas, rangées suivantes = étagères.
+              const y = shelf === 0 ? baseH + 0.03 : baseH + 0.31 + (shelf - 1) * 0.32;
+              return <BarBottle key={`b-${i}`} x={x} z={-backD / 2 + 0.16} y={y} color={bottles[i % bottles.length]} tall={tallBottles} />;
+            })}
+          </group>
+        </>
+      )}
+
+      {/* Shaker inox sur le comptoir */}
+      <group position={[w * 0.32, topY + 0.14, propZ - counterD * 0.2]}>
         <mesh castShadow>
           <cylinderGeometry args={[0.045, 0.035, 0.18, 14]} />
           <SurfaceMat color="#e5e7eb" finish="chrome" metalness={1} roughness={0.08} />
@@ -306,69 +396,10 @@ export function EventBarMesh({
         </mesh>
       </group>
 
-      {!isIsland ? (
-        <>
-          {/* Arrière-bar avec panneau miroir et structure d'étagères */}
-          <mesh position={[0, height * 1.38, -d * 0.44]} castShadow>
-            <boxGeometry args={[w * 0.94, height * 0.92, 0.07]} />
-            <SurfaceMat color="#3a2618" finish="wood" roughness={0.5} repeat={[Math.max(1, w / 1.2), 1]} />
-          </mesh>
-          {/* Miroir de fond réfléchissant */}
-          <mesh position={[0, height * 1.38, -d * 0.4]}>
-            <boxGeometry args={[w * 0.9, height * 0.85, 0.01]} />
-            <meshPhysicalMaterial
-              color="#e2e8f0"
-              roughness={0.08}
-              metalness={0.85}
-              clearcoat={0.9}
-            />
-          </mesh>
-          {/* Bande lumineuse supérieure d'arrière-bar */}
-          <mesh position={[0, height * 1.84, -d * 0.38]}>
-            <boxGeometry args={[w * 0.92, 0.025, 0.04]} />
-            <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={0.65} />
-          </mesh>
-          {Array.from({ length: BAR_SHELF_COUNT }).map((_, shelf) => (
-            <mesh key={shelf} position={[0, height * (0.92 + shelf * 0.32), -d * 0.34]} receiveShadow>
-              <boxGeometry args={[w * 0.88, 0.02, 0.18]} />
-              <SurfaceMat color="#e2f0ee" finish="glass" opacity={0.55} />
-            </mesh>
-          ))}
-        </>
-      ) : (
-        <mesh position={[0, topY + 0.18, 0]} castShadow>
-          <cylinderGeometry args={[Math.min(w, d) * 0.18, Math.min(w, d) * 0.2, 0.28, 16]} />
-          <Mat color="#3a2618" finish="wood" roughness={0.5} />
-        </mesh>
-      )}
-      {isL ? (
-        <group position={[-w * 0.42, 0, -d * 0.55]}>
-          <mesh position={[0, height * 0.42, 0]} castShadow receiveShadow>
-            <boxGeometry args={[d * 0.95, height * 0.82, d * 0.85]} />
-            <Mat color={body} finish="wood" roughness={0.48} />
-          </mesh>
-          <mesh position={[0, topY + 0.025, 0]} receiveShadow>
-            <boxGeometry args={[d * 1.02, 0.055, d * 0.92]} />
-            <BarMarbleTop w={d} d={d} />
-          </mesh>
-        </group>
-      ) : null}
-      {Array.from({ length: bottleCount }).map((_, i) => {
-        const x = ((i + 0.5) / bottleCount - 0.5) * w * 0.82;
-        const shelf = isIsland ? 0 : i % BAR_SHELF_COUNT;
-        return (
-          <BarBottle
-            key={`b-${i}`}
-            x={x}
-            z={isIsland ? 0 : -d * 0.34}
-            y={isIsland ? topY + 0.32 : height * (0.94 + shelf * 0.32)}
-            color={bottles[i % bottles.length]}
-            tall={tallBottles}
-          />
-        );
-      })}
+      {/* Accessoires propres au style, posés sur le comptoir */}
+      <group position={[0, 0, propZ]}>
       {style === 'champagne' ? (
-        <group position={[-w * 0.28, topY + 0.08, d * 0.12]}>
+        <group position={[-w * 0.28, propY - 0.05 + 0.08, d * 0.12]}>
           <mesh castShadow>
             <cylinderGeometry args={[0.1, 0.08, 0.16, 14]} />
             <Mat color="#94a3b8" metalness={0.65} roughness={0.25} />
@@ -381,7 +412,7 @@ export function EventBarMesh({
       ) : null}
       {style === 'beer' ? (
         ([-0.18, 0, 0.18] as const).map((side) => (
-          <group key={side} position={[side * w * 0.55, topY + 0.22, -d * 0.05]}>
+          <group key={side} position={[side * w * 0.55, propY - 0.05 + 0.22, -d * 0.05]}>
             <mesh castShadow>
               <cylinderGeometry args={[0.03, 0.03, 0.22, 8]} />
               <Mat color="#d4d4d8" metalness={0.7} roughness={0.22} />
@@ -394,7 +425,7 @@ export function EventBarMesh({
         ))
       ) : null}
       {style === 'coffee' ? (
-        <group position={[w * 0.28, topY + 0.16, 0]}>
+        <group position={[w * 0.28, propY - 0.05 + 0.16, 0]}>
           <mesh castShadow>
             <boxGeometry args={[0.32, 0.28, 0.22]} />
             <Mat color="#171717" roughness={0.4} metalness={0.25} />
@@ -406,13 +437,13 @@ export function EventBarMesh({
         </group>
       ) : null}
       {style === 'whiskey' ? (
-        <mesh position={[w * 0.22, topY + 0.12, 0.05]} castShadow>
+        <mesh position={[w * 0.22, propY - 0.05 + 0.12, 0.05]} castShadow>
           <cylinderGeometry args={[0.05, 0.055, 0.18, 8]} />
           <Mat color="#9a3412" roughness={0.15} metalness={0.2} />
         </mesh>
       ) : null}
       {style === 'juice' ? (
-        <group position={[w * 0.22, topY + 0.12, 0]}>
+        <group position={[w * 0.22, propY - 0.05 + 0.12, 0]}>
           <mesh castShadow>
             <cylinderGeometry args={[0.07, 0.08, 0.18, 12]} />
             <SurfaceMat color="#fb923c" finish="glass" opacity={0.5} />
@@ -425,14 +456,14 @@ export function EventBarMesh({
       ) : null}
       {style === 'tapas' ? (
         Array.from({ length: 3 }).map((_, i) => (
-          <mesh key={i} position={[((i + 0.5) / 3 - 0.5) * w * 0.5, topY + 0.06, 0]} castShadow>
+          <mesh key={i} position={[((i + 0.5) / 3 - 0.5) * w * 0.5, propY - 0.05 + 0.06, 0]} castShadow>
             <cylinderGeometry args={[0.08, 0.08, 0.015, 16]} />
             <Mat color="#f8fafc" finish="ceramic" roughness={0.3} />
           </mesh>
         ))
       ) : null}
       {style === 'tea' ? (
-        <group position={[w * 0.2, topY + 0.1, 0]}>
+        <group position={[w * 0.2, propY - 0.05 + 0.1, 0]}>
           <mesh castShadow>
             <cylinderGeometry args={[0.07, 0.08, 0.12, 14]} />
             <Mat color="#f8fafc" finish="ceramic" roughness={0.3} />
@@ -443,13 +474,14 @@ export function EventBarMesh({
           </mesh>
         </group>
       ) : null}
+      </group>
       {Array.from({ length: glassCount }).map((_, i) => {
         const x = ((i + 0.5) / glassCount - 0.5) * w * 0.7;
-        return <BarGlass key={`g-${i}`} x={x} z={d * 0.18} y={topY + 0.06} style={style} />;
+        return <BarGlass key={`g-${i}`} x={x} z={propZ + counterD * 0.25} y={topY + 0.06} style={style} />;
       })}
-      {Array.from({ length: stoolCount }).map((_, i) => {
+      {!isIsland && Array.from({ length: stoolCount }).map((_, i) => {
         const x = ((i + 0.5) / stoolCount - 0.5) * w * 0.82;
-        return <BarStool key={`s-${i}`} x={x} z={d * 0.72} />;
+        return <BarStool key={`s-${i}`} x={x} z={frontZ + 0.42} />;
       })}
     </group>
   );

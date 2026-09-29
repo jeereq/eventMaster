@@ -113,6 +113,7 @@ import {
   instrumentStyleLabels,
   instrumentStyleHints,
   instrumentStylePresets,
+  realFixtureFootprintPct,
   barStyleLabels,
   barStyleHints,
   barStylePresets,
@@ -1623,7 +1624,7 @@ export default function RoomLayoutEditor({
 
   const addChandelierFixture = (style: ChandelierFixtureStyle = quickChandelierStyle) => {
     const fixture = placeFixtureWithClearance(blueprint, {
-      ...createBlueprintFixture('chandelier'),
+      ...createBlueprintFixture('chandelier', blueprint.canvas),
       chandelierStyle: style,
       label: chandelierFixtureStyleLabels[style],
       storyId: resolveActiveStoryId(blueprint),
@@ -1639,7 +1640,7 @@ export default function RoomLayoutEditor({
   const addDoorFixture = (style: DoorStyle = quickDoorStyle) => {
     const isGrand = style === 'grandPortal';
     const fixture = placeFixtureWithClearance(blueprint, {
-      ...createBlueprintFixture(isGrand ? 'entrance' : 'door'),
+      ...createBlueprintFixture(isGrand ? 'entrance' : 'door', blueprint.canvas),
       doorStyle: style,
       label: doorStyleLabels[style],
       storyId: resolveActiveStoryId(blueprint),
@@ -1674,8 +1675,9 @@ export default function RoomLayoutEditor({
     }
     const preset = podiumStylePresets[style];
     const fixture = placeFixtureWithClearance(blueprint, {
-      ...createBlueprintFixture('podium'),
+      ...createBlueprintFixture('podium', blueprint.canvas),
       ...preset,
+      ...realFixtureFootprintPct('podium', blueprint.canvas, { podiumStyle: style }),
       podiumStyle: style,
       label: podiumStyleLabels[style],
       storyId: resolveActiveStoryId(blueprint),
@@ -1695,8 +1697,9 @@ export default function RoomLayoutEditor({
     }
     const preset = instrumentStylePresets[style];
     const fixture = placeFixtureWithClearance(blueprint, {
-      ...createBlueprintFixture('instrument'),
+      ...createBlueprintFixture('instrument', blueprint.canvas),
       ...preset,
+      ...realFixtureFootprintPct('instrument', blueprint.canvas, { instrumentStyle: style }),
       instrumentStyle: style,
       storyId: resolveActiveStoryId(blueprint),
     });
@@ -1751,8 +1754,9 @@ export default function RoomLayoutEditor({
     }
     const preset = barStylePresets[style];
     const fixture = placeFixtureWithClearance(blueprint, {
-      ...createBlueprintFixture('bar'),
+      ...createBlueprintFixture('bar', blueprint.canvas),
       ...preset,
+      ...realFixtureFootprintPct('bar', blueprint.canvas, { barStyle: style }),
       barStyle: style,
       storyId: resolveActiveStoryId(blueprint),
     });
@@ -1770,7 +1774,7 @@ export default function RoomLayoutEditor({
       return;
     }
     const fixture = placeFixtureWithClearance(blueprint, {
-      ...createBlueprintFixture(kind),
+      ...createBlueprintFixture(kind, blueprint.canvas),
       storyId: resolveActiveStoryId(blueprint),
     });
     updateBlueprint({ ...blueprint, fixtures: [...blueprint.fixtures, fixture] }, { message: `${fixture.label || kind} ajouté`, kind: 'add' });
@@ -1782,7 +1786,7 @@ export default function RoomLayoutEditor({
       log('Les écrans ne sont pas inclus dans votre forfait', 'info');
       return;
     }
-    const base = createBlueprintFixture('screen');
+    const base = createBlueprintFixture('screen', blueprint.canvas);
     const sizeDefaults: Record<ScreenKind, { w: number; h: number; elev: number; tilt: number }> = {
       stageLedWall: { w: 24, h: 6, elev: 0, tilt: 0 },
       wallTv: { w: 10, h: 3, elev: 1.6, tilt: 4 },
@@ -1791,11 +1795,12 @@ export default function RoomLayoutEditor({
       desktopPc: { w: 5, h: 4, elev: 0.76, tilt: 4 },
     };
     const def = sizeDefaults[screenKind];
+    const realSize = realFixtureFootprintPct('screen', blueprint.canvas, { screenKind }) ?? def;
     const fixture = placeFixtureWithClearance(blueprint, {
       ...base,
       screenKind,
-      w: def.w,
-      h: def.h,
+      w: realSize.w,
+      h: realSize.h,
       screenElevationM: def.elev,
       screenTiltDeg: def.tilt,
       label: screenKindLabels[screenKind],
@@ -5543,6 +5548,7 @@ export default function RoomLayoutEditor({
                       updateFixture(selectedFixture.id, {
                         podiumStyle: style,
                         ...preset,
+                        ...realFixtureFootprintPct('podium', blueprint.canvas, { podiumStyle: style }),
                         label: nextOwnedLabel(selectedFixture.label, podiumStyleLabels[prev], podiumStyleLabels[style]),
                       }, `Podium : ${podiumStyleLabels[style]}`);
                     }}
@@ -5593,10 +5599,11 @@ export default function RoomLayoutEditor({
                     const style = e.target.value as InstrumentStyle;
                     const prev = selectedFixture.instrumentStyle ?? 'piano';
                     const preset = instrumentStylePresets[style];
+                    const size = realFixtureFootprintPct('instrument', blueprint.canvas, { instrumentStyle: style }) ?? preset;
                     updateFixture(selectedFixture.id, {
                       instrumentStyle: style,
-                      w: preset.w,
-                      h: preset.h,
+                      w: size.w,
+                      h: size.h,
                       label: nextOwnedLabel(selectedFixture.label, instrumentStylePresets[prev].label, preset.label),
                     }, instrumentStyleLabels[style]);
                   }}
@@ -5623,10 +5630,11 @@ export default function RoomLayoutEditor({
                     const preset = barStylePresets[style];
                     const prevPreset = barStylePresets[prev];
                     const keepColor = selectedFixture.color && selectedFixture.color !== prevPreset.color;
+                    const size = realFixtureFootprintPct('bar', blueprint.canvas, { barStyle: style }) ?? preset;
                     updateFixture(selectedFixture.id, {
                       barStyle: style,
-                      w: preset.w,
-                      h: preset.h,
+                      w: size.w,
+                      h: size.h,
                       label: nextOwnedLabel(selectedFixture.label, prevPreset.label, preset.label),
                       color: keepColor ? selectedFixture.color : preset.color,
                     }, barStyleLabels[style]);

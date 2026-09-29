@@ -7,9 +7,11 @@
  * la face « client » regarde +Z.
  */
 
+import { useMemo } from 'react';
 import { RoundedBox } from '@react-three/drei';
 import * as THREE from 'three';
 import { SurfaceMat } from '@/components/room/SurfaceMaterial';
+import { loadTiledTexture } from '@/lib/roomWebGLMaterials';
 
 export type VenueEquipmentKind =
   | 'orderCounter'
@@ -229,6 +231,8 @@ function PizzaOven({ w, d, selected }: Props) {
   const r = Math.min(w, d) * 0.46;
   const baseH = 0.95;
   const brick = tint('#9a3412', selected);
+  const brickMap = useMemo(() => loadTiledTexture('/floors/gen/wall-brick.jpg', 5, 1.4), []);
+  const brickNormal = useMemo(() => loadTiledTexture('/floors/gen/wall-brick-normal.jpg', 5, 1.4, true), []);
   return (
     <group>
       {/* socle maçonné */}
@@ -240,10 +244,10 @@ function PizzaOven({ w, d, selected }: Props) {
         <boxGeometry args={[Math.min(w, r * 2.4), 0.08, Math.min(d, r * 2.4)]} />
         <SurfaceMat color="#d6d3d1" finish="stone" roughness={0.6} />
       </mesh>
-      {/* coupole en briques / terre cuite */}
-      <mesh position={[0, baseH + 0.08, 0]} castShadow receiveShadow>
-        <sphereGeometry args={[r, 28, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <SurfaceMat color={brick} finish="ceramic" roughness={0.85} />
+      {/* coupole en briques réfractaires, enduit chaux mat (pas de vernis brillant) */}
+      <mesh position={[0, baseH + 0.08, 0]} scale={[1, 0.78, 1]} castShadow receiveShadow>
+        <sphereGeometry args={[r, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <SurfaceMat color={selected ? brick : '#ffffff'} finish="plain" map={brickMap} normalMap={brickNormal} roughness={0.92} metalness={0} />
       </mesh>
       {/* voûte d’entrée */}
       <group position={[0, baseH + 0.08, r * 0.82]}>

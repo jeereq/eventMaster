@@ -1251,8 +1251,78 @@ export function detachTableChairs(
   };
 }
 
+/**
+ * Taille réelle (m) des éléments « objets » : largeur (axe X du plan) × profondeur (axe Y).
+ * Les éléments liés à la pièce (scène, allée, moquette, couloir, périmètre, guirlandes, balcon)
+ * restent proportionnels au plan ; tout le reste garde sa taille réelle quelle que soit la salle.
+ */
+export const FIXTURE_REAL_SIZE_M: Partial<Record<RoomFixtureKind, { w: number; d: number }>> = {
+  podium: { w: 2.8, d: 1.6 },
+  door: { w: 1.8, d: 0.8 },
+  chandelier: { w: 1.2, d: 1.2 },
+  entrance: { w: 3.2, d: 1 },
+  pillar: { w: 0.6, d: 0.6 },
+  column: { w: 0.5, d: 0.5 },
+  flower: { w: 0.6, d: 0.6 },
+  buffet: { w: 4.8, d: 1.1 },
+  stairs: { w: 1.4, d: 3.8 },
+  arch: { w: 3, d: 1.2 },
+  partition: { w: 4, d: 1.4 },
+  decal: { w: 2.4, d: 2.4 },
+  pedestal: { w: 0.6, d: 0.6 },
+  fountain: { w: 3, d: 3 },
+  gazebo: { w: 4.5, d: 4.5 },
+  djBooth: { w: 2.2, d: 0.9 },
+  screen: { w: 4.8, d: 0.6 },
+  instrument: { w: 1.55, d: 2 },
+  bar: { w: 4.8, d: 1.6 },
+  orderCounter: { w: 3.6, d: 0.9 },
+  pickupCounter: { w: 2.4, d: 0.8 },
+  pizzaOven: { w: 1.8, d: 1.8 },
+  kitchenLine: { w: 4.2, d: 1.1 },
+  displayCase: { w: 2.4, d: 0.9 },
+  stylingStation: { w: 1.6, d: 1.6 },
+  washBasin: { w: 1.2, d: 1.6 },
+  condimentStation: { w: 1.4, d: 0.7 },
+  loungeSofa: { w: 2.6, d: 0.95 },
+  car: { w: 1.9, d: 4.6 },
+  parasol: { w: 2.8, d: 2.8 },
+};
+
+/** Convertit une empreinte en mètres en % du plan (bornée pour rester sélectionnable). */
+export function metricFootprintPct(
+  wM: number,
+  dM: number,
+  canvas: { widthM: number; heightM: number } | undefined,
+): { w: number; h: number } {
+  const widthM = Math.max(1, canvas?.widthM ?? 20);
+  const heightM = Math.max(1, canvas?.heightM ?? 16);
+  const clamp = (v: number) => Math.round(Math.max(1, Math.min(95, v)) * 10) / 10;
+  return { w: clamp((wM / widthM) * 100), h: clamp((dM / heightM) * 100) };
+}
+
+/**
+ * Empreinte réaliste d’un élément (et de sa variante) pour la salle donnée.
+ * `null` = élément proportionnel à la pièce (on garde les % par défaut).
+ */
+export function realFixtureFootprintPct(
+  kind: RoomFixtureKind,
+  canvas: { widthM: number; heightM: number } | undefined,
+  variant?: { podiumStyle?: PodiumStyle; instrumentStyle?: InstrumentStyle; barStyle?: BarStyle; screenKind?: ScreenKind },
+): { w: number; h: number } | null {
+  let size = FIXTURE_REAL_SIZE_M[kind];
+  if (kind === 'podium' && variant?.podiumStyle) size = podiumStyleSizeM[variant.podiumStyle];
+  if (kind === 'instrument' && variant?.instrumentStyle) size = instrumentStyleSizeM[variant.instrumentStyle];
+  if (kind === 'bar' && variant?.barStyle) size = barStyleSizeM[variant.barStyle];
+  if (kind === 'screen' && variant?.screenKind) size = screenKindSizeM[variant.screenKind];
+  if (!size) return null;
+  return metricFootprintPct(size.w, size.d, canvas);
+}
+
 export function createBlueprintFixture(
   kind: RoomLayoutBlueprint['fixtures'][number]['kind'],
+  /** Plan cible : si fourni, les objets gardent leur taille réelle (m) au lieu d’un % de la salle. */
+  canvas?: { widthM: number; heightM: number },
 ): RoomLayoutBlueprint['fixtures'][number] {
   const defaults: Record<string, { x: number; y: number; w: number; h: number; label: string }> = {
     stage: { x: 25, y: 4, w: 50, h: 8, label: 'Scène' },
@@ -1294,7 +1364,18 @@ export function createBlueprintFixture(
     parasol: { x: 50, y: 50, w: 12, h: 12, label: 'Parasol terrasse' },
     landscape: { x: 44, y: 44, w: 12, h: 12, label: LANDSCAPE_STYLE_META.oak.label },
   };
-  const d = defaults[kind] ?? { x: 40, y: 40, w: 20, h: 10, label: kind };
+  const base = defaults[kind] ?? { x: 40, y: 40, w: 20, h: 10, label: kind };
+  const real = canvas ? realFixtureFootprintPct(kind, canvas) : null;
+  // Même centre que l’emplacement par défaut, empreinte à l’échelle réelle.
+  const d = real
+    ? {
+        ...base,
+        w: real.w,
+        h: real.h,
+        x: Math.max(0, Math.min(100 - real.w, base.x + base.w / 2 - real.w / 2)),
+        y: Math.max(0, Math.min(100 - real.h, base.y + base.h / 2 - real.h / 2)),
+      }
+    : base;
   return {
     id: makeLayoutId('fixture'),
     kind,
@@ -7072,6 +7153,65 @@ export const barStylePresets: Record<BarStyle, { w: number; h: number; label: st
   mocktail: { w: 24, h: 10, label: 'Bar mocktails', color: '#3a3048' },
   tapas: { w: 26, h: 10, label: 'Bar tapas', color: '#4a3020' },
   tea: { w: 22, h: 9, label: 'Salon de thé', color: '#4a4034' },
+};
+
+/** Tailles réelles (m) des podiums : largeur × profondeur. */
+export const podiumStyleSizeM: Record<PodiumStyle, { w: number; d: number }> = {
+  speaker: { w: 2.8, d: 1.6 },
+  lectern: { w: 1.6, d: 1 },
+  couple: { w: 2.8, d: 2.8 },
+  circular: { w: 3, d: 3 },
+  runway: { w: 2.2, d: 8 },
+  bandRiser: { w: 6, d: 2.6 },
+  honor: { w: 6, d: 1.8 },
+  steps: { w: 4, d: 2 },
+};
+
+/** Tailles réelles (m) des instruments (le rendu 3D garde les proportions de chaque modèle). */
+export const instrumentStyleSizeM: Record<InstrumentStyle, { w: number; d: number }> = {
+  piano: { w: 1.55, d: 2 },
+  upright: { w: 1.5, d: 0.75 },
+  keyboard: { w: 1.3, d: 0.6 },
+  drums: { w: 2, d: 1.6 },
+  guitar: { w: 0.6, d: 0.6 },
+  bass: { w: 0.6, d: 0.6 },
+  doubleBass: { w: 0.8, d: 0.8 },
+  cello: { w: 0.7, d: 0.7 },
+  harp: { w: 1, d: 1.1 },
+  micStand: { w: 0.6, d: 0.6 },
+  sax: { w: 0.5, d: 0.5 },
+  trumpet: { w: 0.5, d: 0.5 },
+  violin: { w: 0.5, d: 0.5 },
+  conga: { w: 1, d: 0.7 },
+  cajon: { w: 0.5, d: 0.5 },
+  mixer: { w: 1.4, d: 0.8 },
+  amp: { w: 0.7, d: 0.5 },
+  speaker: { w: 0.6, d: 0.6 },
+};
+
+/** Tailles réelles (m) des bars : comptoir + arrière-bar. */
+export const barStyleSizeM: Record<BarStyle, { w: number; d: number }> = {
+  cocktail: { w: 4.8, d: 1.7 },
+  wine: { w: 4.4, d: 1.7 },
+  champagne: { w: 4.2, d: 1.7 },
+  beer: { w: 4.6, d: 1.7 },
+  coffee: { w: 3.8, d: 1.5 },
+  whiskey: { w: 4.2, d: 1.7 },
+  island: { w: 3.4, d: 2.6 },
+  lShaped: { w: 5.2, d: 2.8 },
+  juice: { w: 3.6, d: 1.5 },
+  mocktail: { w: 4, d: 1.6 },
+  tapas: { w: 4.4, d: 1.6 },
+  tea: { w: 3.6, d: 1.5 },
+};
+
+/** Tailles réelles (m) des écrans et appareils. */
+export const screenKindSizeM: Record<ScreenKind, { w: number; d: number }> = {
+  stageLedWall: { w: 4.8, d: 0.6 },
+  wallTv: { w: 1.6, d: 0.3 },
+  tableMonitor: { w: 0.8, d: 0.4 },
+  laptop: { w: 0.4, d: 0.35 },
+  desktopPc: { w: 0.6, d: 0.4 },
 };
 
 /** Conserve un libellé perso ; n’écrase que s’il vaut encore le défaut précédent. */

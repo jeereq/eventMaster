@@ -29,6 +29,7 @@ type MatProps = {
   transmission?: number;
   ior?: number;
   finish?: SurfaceFinish;
+  side?: THREE.Side;
 };
 
 /** Teintes « bois » (brun orangé, pas trop clair) : les montants reçoivent alors un vrai veinage. */
@@ -68,6 +69,7 @@ function Mat({
   clearcoatRoughness,
   transmission,
   finish,
+  side,
 }: MatProps) {
   const gold = color === '#c9a227' || color === '#d4af37' || color === '#d97706';
   const hasTransmission = typeof transmission === 'number' && transmission > 0;
@@ -97,6 +99,7 @@ function Mat({
       envMapIntensity={gold ? 1.3 : undefined}
       transparent={transparent}
       opacity={opacity}
+      side={side}
     />
   );
 }
@@ -597,14 +600,37 @@ function CatalogueChairMesh({
             <boxGeometry args={[sw * 0.9, 0.04, sd * 0.88]} />
             <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={0.7} />
           </mesh>
-          <mesh position={[0, seatH + backH * 0.48, -sd * 0.4]} castShadow>
-            <boxGeometry args={[sw * 0.55, backH * 0.85, 0.06]} />
-            <Mat finish={frameFinish} color={visual.frameColor} roughness={0.4} metalness={0.12} />
-          </mesh>
-          <mesh position={[0, seatH + backH * 0.62, -sd * 0.36]} rotation={[0.08, 0, 0]} castShadow>
-            <sphereGeometry args={[sw * 0.28, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.72]} />
-            <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={0.65} />
-          </mesh>
+          {/* Dossier médaillon : cadre ovale mouluré + garniture capitonnée plate (pas de boule) */}
+          {(() => {
+            const ovalR = sw * 0.3;
+            const ovalScaleY = style === 'phoenix' ? 1.55 : 1.3;
+            const cy = seatH + 0.06 + ovalR * ovalScaleY;
+            return (
+              <group position={[0, cy, -sd * 0.42]} rotation={[-0.1, 0, 0]}>
+                {/* Pieds arrière prolongés jusqu’au médaillon */}
+                {([-1, 1] as const).map((side) => (
+                  <mesh key={side} position={[side * ovalR * 0.92, -ovalR * ovalScaleY * 0.62, 0]} castShadow>
+                    <boxGeometry args={[0.03, ovalR * ovalScaleY * 0.9, 0.03]} />
+                    <Mat finish={frameFinish} color={visual.frameColor} roughness={0.4} metalness={0.12} />
+                  </mesh>
+                ))}
+                <mesh scale={[1, ovalScaleY, 1]} castShadow>
+                  <torusGeometry args={[ovalR, 0.02, 10, 36]} />
+                  <Mat finish={frameFinish} color={visual.frameColor} roughness={0.4} metalness={0.12} />
+                </mesh>
+                <mesh scale={[1, ovalScaleY, 1]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+                  <cylinderGeometry args={[ovalR * 0.96, ovalR * 0.96, 0.045, 36]} />
+                  <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={0.65} />
+                </mesh>
+                {style === 'phoenix' ? (
+                  <mesh position={[0, ovalR * ovalScaleY + 0.03, 0]} rotation={[0, 0, Math.PI / 4]} castShadow>
+                    <boxGeometry args={[0.05, 0.05, 0.03]} />
+                    <Mat finish={frameFinish} color={visual.frameColor} roughness={0.35} metalness={0.2} />
+                  </mesh>
+                ) : null}
+              </group>
+            );
+          })()}
         </>
       ) : isChiavari ? (
         <>
@@ -634,10 +660,28 @@ function CatalogueChairMesh({
             <Mat color="#f8fafc" roughness={0.7} />
           </mesh>
           {style === 'tiffany' && (
-            <mesh position={[0, seatH + backH * 0.55, -sd * 0.38]} rotation={[0.1, 0, 0.4]} castShadow>
-              <boxGeometry args={[0.06, backH * 0.7, 0.012]} />
-              <Mat color="#be185d" roughness={0.65} />
-            </mesh>
+            <>
+              {/* Barreaux verticaux du dossier Tiffany */}
+              {[-0.18, -0.06, 0.06, 0.18].map((t) => (
+                <mesh key={t} position={[t * sw, seatH + backH * 0.55, -sd * 0.42]} castShadow>
+                  <cylinderGeometry args={[0.007, 0.007, backH * 0.6, 6]} />
+                  <Mat finish={frameFinish} color={visual.frameColor} metalness={0.85} roughness={0.2} />
+                </mesh>
+              ))}
+              {/* Nœud en organza au dos */}
+              {([-1, 1] as const).map((side) => (
+                <mesh key={side} position={[side * 0.05, seatH + backH * 0.62, -sd * 0.46]} rotation={[0, 0, side * 0.5]} scale={[1, 0.55, 0.3]} castShadow>
+                  <sphereGeometry args={[0.05, 10, 8]} />
+                  <Mat color="#f5d0dc" finish="linen" roughness={0.75} />
+                </mesh>
+              ))}
+              {([-1, 1] as const).map((side) => (
+                <mesh key={`tail-${side}`} position={[side * 0.03, seatH + backH * 0.42, -sd * 0.465]} rotation={[0, 0, side * 0.18]} castShadow>
+                  <boxGeometry args={[0.035, backH * 0.32, 0.004]} />
+                  <Mat color="#f5d0dc" finish="linen" roughness={0.75} />
+                </mesh>
+              ))}
+            </>
           )}
         </>
       ) : isArmchair ? (
@@ -650,10 +694,33 @@ function CatalogueChairMesh({
             <boxGeometry args={[sw, sh * 1.35, sd * 0.92]} />
             <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={fabric.roughness} metalness={fabric.metalness} />
           </mesh>
-          <mesh position={[0, seatH + backH * 0.48, -sd * 0.4]} castShadow>
-            <boxGeometry args={[sw * 1.05, backH, 0.14]} />
-            <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={fabric.roughness} metalness={fabric.metalness} />
-          </mesh>
+          {style === 'club' ? (
+            // Club : dossier bas enveloppant, arrondi (demi-tonneau).
+            <mesh position={[0, seatH + backH * 0.34, -sd * 0.08]} rotation={[0, Math.PI, 0]} castShadow>
+              <cylinderGeometry args={[sw * 0.58, sw * 0.58, backH * 0.72, 24, 1, true, -Math.PI / 2, Math.PI]} />
+              <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={fabric.roughness} metalness={fabric.metalness} side={THREE.DoubleSide} />
+            </mesh>
+          ) : (
+            <mesh
+              position={[0, seatH + backH * 0.48, -sd * (style === 'lounge' ? 0.46 : 0.4)]}
+              rotation={[style === 'lounge' ? -0.26 : style === 'modern' ? -0.1 : 0, 0, 0]}
+              castShadow
+            >
+              <boxGeometry args={[sw * 1.05, style === 'lounge' ? backH * 0.9 : backH, style === 'modern' ? 0.08 : 0.14]} />
+              <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={fabric.roughness} metalness={fabric.metalness} />
+            </mesh>
+          )}
+          {style === 'classic' && (
+            // Classique : galon capitonné (boutons) sur le dossier.
+            <>
+              {[-0.25, 0, 0.25].flatMap((bx) => [0.35, 0.65].map((by) => (
+                <mesh key={`${bx}-${by}`} position={[bx * sw, seatH + backH * by, -sd * 0.4 + 0.072]} castShadow>
+                  <sphereGeometry args={[0.012, 8, 6]} />
+                  <Mat color={visual.frameColor} roughness={0.5} />
+                </mesh>
+              )))}
+            </>
+          )}
           {style === 'bergere' && (
             <mesh position={[0, seatH + backH * 0.85, -sd * 0.32]} castShadow>
               <torusGeometry args={[sw * 0.35, 0.025, 8, 16, Math.PI]} />
@@ -661,9 +728,9 @@ function CatalogueChairMesh({
             </mesh>
           )}
           {([-1, 1] as const).map((side) => (
-            <group key={side} position={[side * sw * 0.52, seatH + 0.14, -0.02]}>
+            <group key={side} position={[side * sw * (style === 'club' ? 0.56 : 0.52), seatH + (style === 'club' ? 0.1 : 0.14), -0.02]}>
               <mesh castShadow>
-                <boxGeometry args={[0.11, 0.14 * visual.scale, sd * 0.82]} />
+                <boxGeometry args={[style === 'club' ? 0.17 : style === 'modern' ? 0.05 : 0.11, (style === 'club' ? 0.26 : 0.14) * visual.scale, sd * 0.82]} />
                 <Mat color={seatTint} map={map} normalMap={seatNormal} normalScale={fabric.normalScale} roughness={fabric.roughness} metalness={fabric.metalness} />
               </mesh>
               <mesh position={[0, -0.12, sd * 0.2]} castShadow>
@@ -1100,59 +1167,122 @@ export function CatalogueColumn({
   );
 }
 
+/** Pseudo-aléatoire stable pour disposer les fleurs sans « clignoter » à chaque rendu. */
+function flowerRand(i: number, k: number) {
+  const x = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+/**
+ * Composition florale en pot : vasque céramique, feuillage et fleurs selon l’espèce
+ * (roses, tulipes, orchidées, tournesols, lavande ou bouquet mixte) et la couleur choisies.
+ */
 export function CatalogueFlower({
   w,
   d,
   height,
   color,
   selected,
-  map,
+  flowerType = 'boquet',
 }: {
   w: number;
   d: number;
   height: number;
   color: string;
   selected: boolean;
-  map: THREE.Texture | null;
+  map?: THREE.Texture | null;
+  flowerType?: string;
 }) {
-  const bloom = Math.min(w, d) * 0.32;
+  // Taille réelle bornée : une jardinière reste entre 35 cm et 1,2 m de diamètre.
+  const span = Math.max(0.35, Math.min(1.2, Math.min(w, d)));
+  const potR = span * 0.32;
+  const potH = Math.max(0.28, Math.min(0.6, height * 0.5));
+  const crownY = potH + Math.max(0.12, span * 0.22);
+  const tint = selected ? '#fda4af' : color;
+  const type = flowerType;
+  const bloomCount = type === 'orchidee' ? 9 : type === 'tournesol' ? 5 : type === 'lavande' ? 16 : 14;
+  const mixed = ['#fdf2f8', tint, '#fffbeb', '#f9a8d4', tint];
+
   return (
     <group>
-      <mesh position={[0, 0.04, 0]} castShadow>
-        <cylinderGeometry args={[0.12, 0.14, 0.08, 16]} />
-        <Mat color="#78716c" roughness={0.7} />
+      {/* Vasque céramique évasée */}
+      <mesh position={[0, potH / 2, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[potR, potR * 0.72, potH, 28]} />
+        <SurfaceMat color="#ece7df" finish="ceramic" roughness={0.35} />
       </mesh>
-      <mesh position={[0, height * 0.28, 0]} castShadow>
-        <cylinderGeometry args={[0.045, 0.07, height * 0.45, 10]} />
-        <Mat color="#166534" roughness={0.85} />
+      <mesh position={[0, potH, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[potR, 0.012, 8, 32]} />
+        <SurfaceMat color="#e2dccf" finish="ceramic" roughness={0.3} />
       </mesh>
-      {/* Feuillage */}
-      {([-0.6, 0, 0.6] as const).map((a, i) => (
-        <mesh
-          key={i}
-          position={[Math.sin(a) * bloom * 0.4, height * 0.42, Math.cos(a) * bloom * 0.3]}
-          rotation={[0.4, a, 0.2]}
-          castShadow
-        >
-          <sphereGeometry args={[bloom * 0.35, 10, 10]} />
-          <Mat color="#15803d" roughness={0.9} />
-        </mesh>
-      ))}
-      <mesh position={[0, height * 0.62, 0]} castShadow>
-        <sphereGeometry args={[bloom, 14, 14]} />
-        <Mat color={selected ? '#fda4af' : color} map={map} roughness={0.65} />
+      <mesh position={[0, potH - 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[potR * 0.97, 24]} />
+        <meshStandardMaterial color="#3f2d20" roughness={1} />
       </mesh>
-      {[0, 1, 2, 3, 4].map((i) => {
-        const a = (i / 5) * Math.PI * 2;
+      {/* Feuillage en couronne */}
+      {Array.from({ length: 9 }).map((_, i) => {
+        const a = (i / 9) * Math.PI * 2 + flowerRand(i, 1);
+        const r = potR * (0.55 + flowerRand(i, 2) * 0.45);
         return (
           <mesh
-            key={i}
-            position={[Math.cos(a) * bloom * 0.55, height * 0.68, Math.sin(a) * bloom * 0.55]}
+            key={`leaf-${i}`}
+            position={[Math.cos(a) * r, potH + 0.05 + flowerRand(i, 3) * 0.06, Math.sin(a) * r]}
+            rotation={[flowerRand(i, 4) * 0.8, -a, 0.6]}
+            scale={[1.6, 0.35, 0.8]}
             castShadow
           >
-            <sphereGeometry args={[bloom * 0.28, 10, 10]} />
-            <Mat color={selected ? '#fecdd3' : color} roughness={0.7} />
+            <sphereGeometry args={[span * 0.1, 8, 6]} />
+            <Mat color={i % 2 ? '#3f6b3f' : '#4f7d46'} roughness={0.85} />
           </mesh>
+        );
+      })}
+      {Array.from({ length: bloomCount }).map((_, i) => {
+        const a = (i / bloomCount) * Math.PI * 2 + flowerRand(i, 5) * 0.6;
+        const r = potR * (type === 'lavande' ? 0.2 + flowerRand(i, 6) * 0.6 : 0.1 + flowerRand(i, 6) * 0.75);
+        const y = crownY + flowerRand(i, 7) * span * (type === 'orchidee' ? 0.45 : 0.14);
+        const x = Math.cos(a) * r;
+        const z = Math.sin(a) * r;
+        const stemH = y - potH;
+        const bloomColor = type === 'boquet' ? mixed[i % mixed.length] : type === 'tournesol' ? '#facc15' : tint;
+        return (
+          <group key={`b-${i}`}>
+            <mesh position={[x * 0.6, potH + stemH / 2, z * 0.6]} rotation={[z * 0.6, 0, -x * 0.6]}>
+              <cylinderGeometry args={[0.005, 0.006, stemH, 5]} />
+              <meshStandardMaterial color="#4d7c3a" roughness={0.8} />
+            </mesh>
+            {type === 'lavande' ? (
+              <mesh position={[x, y + 0.05, z]} castShadow>
+                <capsuleGeometry args={[0.012, 0.12, 4, 8]} />
+                <meshStandardMaterial color={tint} roughness={0.9} />
+              </mesh>
+            ) : type === 'tulipe' ? (
+              <mesh position={[x, y, z]} castShadow>
+                <sphereGeometry args={[span * 0.045, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.62]} />
+                <meshStandardMaterial color={bloomColor} roughness={0.55} side={THREE.DoubleSide} />
+              </mesh>
+            ) : type === 'tournesol' ? (
+              <group position={[x, y, z]} rotation={[-0.9 + flowerRand(i, 8) * 0.4, a, 0]}>
+                <mesh castShadow>
+                  <cylinderGeometry args={[span * 0.075, span * 0.075, 0.012, 16]} />
+                  <meshStandardMaterial color="#facc15" roughness={0.7} />
+                </mesh>
+                <mesh position={[0, 0.008, 0]}>
+                  <cylinderGeometry args={[span * 0.035, span * 0.035, 0.014, 14]} />
+                  <meshStandardMaterial color="#4a2c16" roughness={0.9} />
+                </mesh>
+              </group>
+            ) : type === 'orchidee' ? (
+              <mesh position={[x, y, z]} rotation={[0.3, a, 0.2]} scale={[1.2, 0.5, 1]} castShadow>
+                <sphereGeometry args={[span * 0.035, 10, 8]} />
+                <meshStandardMaterial color={bloomColor} roughness={0.5} />
+              </mesh>
+            ) : (
+              // Rose / bouquet : tête pleine légèrement aplatie
+              <mesh position={[x, y, z]} scale={[1, 0.8, 1]} castShadow>
+                <sphereGeometry args={[span * 0.05, 12, 10]} />
+                <meshStandardMaterial color={bloomColor} roughness={0.7} />
+              </mesh>
+            )}
+          </group>
         );
       })}
     </group>
@@ -1176,58 +1306,81 @@ export function CatalogueBuffet({
   selected: boolean;
   hasCouverts?: boolean;
 }) {
+  // Buffet traiteur réaliste : table nappée jusqu’au sol, réchauds (chafing dishes), piles d’assiettes.
+  void map;
+  const topY = Math.max(0.76, Math.min(0.95, height));
+  const clothColor = selected ? '#c7d2fe' : '#f7f3ea';
+  const skirtColor = selected ? '#c7d2fe' : baseColor && baseColor !== '#8b6914' ? baseColor : '#e9e1d2';
+  const usable = Math.max(0.6, w - 0.5);
+  const chafers = Math.max(1, Math.min(8, Math.floor(usable / 0.62)));
   return (
     <group>
-      {/* Corps */}
-      <mesh position={[0, height * 0.4, 0]} castShadow receiveShadow>
-        <boxGeometry args={[w, height * 0.8, d]} />
-        <Mat color={selected ? '#c7d2fe' : map ? '#ffffff' : baseColor} map={map} roughness={0.5} metalness={0.06} />
+      {/* Plateau nappé */}
+      <mesh position={[0, topY - 0.02, 0]} castShadow receiveShadow>
+        <boxGeometry args={[w, 0.04, d]} />
+        <Mat color={clothColor} finish="linen" roughness={0.85} />
       </mesh>
-      {/* Portes / panneaux */}
-      {([-0.28, 0.28] as const).map((x) => (
-        <mesh key={x} position={[x * w, height * 0.4, d * 0.501]} castShadow>
-          <boxGeometry args={[w * 0.4, height * 0.65, 0.02]} />
-          <Mat color="#5c4030" finish="wood" roughness={0.5} />
+      {/* Juponnage plissé jusqu’au sol */}
+      <mesh position={[0, (topY - 0.04) / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[w * 0.995, topY - 0.04, d * 0.99]} />
+        <Mat color={skirtColor} finish="velvet" roughness={0.9} />
+      </mesh>
+      {Array.from({ length: Math.max(4, Math.round(w / 0.18)) }).map((_, i, arr) => (
+        <mesh key={`pli-${i}`} position={[(-0.5 + (i + 0.5) / arr.length) * w, (topY - 0.04) / 2, d * 0.5]} castShadow>
+          <cylinderGeometry args={[0.018, 0.024, topY - 0.06, 6]} />
+          <Mat color={skirtColor} finish="velvet" roughness={0.9} />
         </mesh>
       ))}
-      {([-0.28, 0.28] as const).map((x) => (
-        <mesh key={`h-${x}`} position={[x * w + w * 0.12, height * 0.4, d * 0.52]} castShadow>
-          <sphereGeometry args={[0.025, 10, 10]} />
-          <Mat color="#d4af37" metalness={0.85} roughness={0.2} />
-        </mesh>
-      ))}
-      {/* Plateau */}
-      <mesh position={[0, height + 0.02, 0]} receiveShadow castShadow>
-        <boxGeometry args={[w * 1.04, 0.05, d * 1.04]} />
-        <Mat color="#f5f0e8" roughness={0.35} metalness={0.08} />
+      {/* Runner doré */}
+      <mesh position={[0, topY + 0.003, 0]} receiveShadow>
+        <boxGeometry args={[w * 0.98, 0.004, Math.min(0.36, d * 0.4)]} />
+        <Mat color="#d6c08a" finish="linen" roughness={0.6} />
       </mesh>
-      {/* Nappe / runner */}
-      <mesh position={[0, height + 0.05, 0]} receiveShadow>
-        <boxGeometry args={[w * 0.35, 0.01, d * 1.02]} />
-        <Mat color="#fef3c7" roughness={0.85} />
-      </mesh>
-      {hasCouverts !== false && Array.from({ length: Math.max(3, Math.round(w * 2)) }).map((_, i) => {
-        const n = Math.max(3, Math.round(w * 2));
-        const x = ((i + 0.5) / n - 0.5) * w * 0.85;
-        return (
-          <group key={i} position={[x, height + 0.09, 0]}>
-            <mesh>
-              <cylinderGeometry args={[0.07, 0.07, 0.015, 16]} />
-              <Mat color="#f8fafc" metalness={0.15} roughness={0.35} />
-            </mesh>
-            <mesh position={[0, 0.04, 0]}>
-              <cylinderGeometry args={[0.03, 0.025, 0.07, 12]} />
-              <meshStandardMaterial color="#e0f2fe" transparent opacity={0.45} roughness={0.05} metalness={0.3} />
-            </mesh>
-            <mesh position={[0.08, 0.02, 0]} rotation={[0, 0, 0.2]}>
-              <boxGeometry args={[0.1, 0.004, 0.012]} />
-              <Mat color="#94a3b8" metalness={0.8} roughness={0.2} />
-            </mesh>
+      {hasCouverts !== false && (
+        <>
+          {/* Réchauds inox : cuve, couvercle bombé, pieds */}
+          {Array.from({ length: chafers }).map((_, i) => {
+            const x = ((i + 0.5) / chafers - 0.5) * usable - 0.2;
+            return (
+              <group key={`ch-${i}`} position={[x, topY, 0]}>
+                {([-1, 1] as const).flatMap((sx) => ([-1, 1] as const).map((sz) => (
+                  <mesh key={`${sx}${sz}`} position={[sx * 0.22, 0.05, sz * 0.14]}>
+                    <cylinderGeometry args={[0.008, 0.008, 0.1, 6]} />
+                    <Mat color="#cbd5e1" finish="chrome" roughness={0.1} metalness={0.95} />
+                  </mesh>
+                )))}
+                <mesh position={[0, 0.12, 0]} castShadow>
+                  <boxGeometry args={[0.5, 0.07, 0.32]} />
+                  <Mat color="#d4d4d8" finish="chrome" roughness={0.12} metalness={0.95} />
+                </mesh>
+                <mesh position={[0, 0.16, 0]} scale={[1, 0.28, 0.64]} castShadow>
+                  <sphereGeometry args={[0.25, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2]} />
+                  <Mat color="#e4e4e7" finish="chrome" roughness={0.08} metalness={0.95} />
+                </mesh>
+                <mesh position={[0, 0.235, 0]}>
+                  <boxGeometry args={[0.1, 0.018, 0.02]} />
+                  <Mat color="#18181b" roughness={0.4} />
+                </mesh>
+              </group>
+            );
+          })}
+          {/* Pile d’assiettes + couverts roulés en bout de buffet */}
+          <group position={[w / 2 - 0.2, topY, 0]}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <mesh key={i} position={[0, 0.008 + i * 0.012, 0]} castShadow>
+                <cylinderGeometry args={[0.13, 0.12, 0.01, 24]} />
+                <Mat color="#fafaf9" finish="ceramic" roughness={0.25} />
+              </mesh>
+            ))}
+            {[-0.06, 0, 0.06].map((z) => (
+              <mesh key={z} position={[0, 0.02, 0.2 + z * 0.4]} rotation={[0, 0, Math.PI / 2]} castShadow>
+                <cylinderGeometry args={[0.018, 0.018, 0.2, 8]} />
+                <Mat color="#f5f5f4" finish="linen" roughness={0.85} />
+              </mesh>
+            ))}
           </group>
-        );
-      })}
+        </>
+      )}
     </group>
   );
 }
-
-export { resolveTableMaterial };
