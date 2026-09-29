@@ -21,6 +21,11 @@ import {
   createOrgAmbience,
   deleteOrgAmbience,
 } from '../controllers/roomAmbienceController';
+import {
+  listSavedElements,
+  createSavedElement,
+  deleteSavedElement,
+} from '../controllers/roomElementController';
 import { upsertRoomListing } from '../controllers/marketplaceController';
 
 const router = Router();
@@ -36,6 +41,9 @@ router.get('/ambiences', listSavedAmbiences);
 router.post('/ambiences/sync', syncSavedAmbiences);
 router.post('/ambiences', createSavedAmbience);
 router.delete('/ambiences/:ambienceId', deleteSavedAmbience);
+router.get('/elements', listSavedElements);
+router.post('/elements', createSavedElement);
+router.delete('/elements/:elementId', deleteSavedElement);
 router.post('/preview-layout', previewRoomLayout);
 router.get('/ai/history', listAiRoomPlanComposes);
 router.post('/ai/from-photo', analyzeRoomPlanFromPhoto);

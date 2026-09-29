@@ -1,4 +1,10 @@
 import type { RoomType } from '@/lib/roomLayoutUtils';
+import {
+  mixHex,
+  sunAnglesFromPosition,
+  sunPositionFromAngles,
+  type EnvironmentSettings,
+} from '@/lib/roomOutdoorUtils';
 
 /** Qualité de rendu WebGL. */
 export type RenderQuality = 'draft' | 'standard' | 'showcase';
@@ -107,6 +113,8 @@ export type ScenicLightSettings = {
   showStars: boolean;
   /** Couleur brouillard atmosphérique. */
   fogColor: string;
+  /** Brouillard réglé à la main (0 → 1) : remplace le brouillard de la qualité de rendu. */
+  fogStrength?: number;
 };
 
 
@@ -429,6 +437,41 @@ export function resolveLightingPreset(
 ): ScenicLightSettings {
   const key = !preset || preset === 'auto' ? lightingFromRoomType(roomType) : preset;
   return LIGHTING[key] ?? LIGHTING.neutral;
+}
+
+/**
+ * Applique les réglages libres de l’environnement (soleil, température, ciel, brouillard)
+ * par-dessus le préréglage d’éclairage choisi.
+ */
+export function applyEnvironmentLighting(
+  lighting: ScenicLightSettings,
+  env: EnvironmentSettings | null | undefined,
+): ScenicLightSettings {
+  if (!env || Object.keys(env).length === 0) return lighting;
+  const next: ScenicLightSettings = { ...lighting };
+  if (env.sunElevation !== undefined || env.sunAzimuth !== undefined) {
+    const current = sunAnglesFromPosition(lighting.sunPosition);
+    const dist = Math.max(20, Math.hypot(...lighting.sunPosition));
+    next.sunPosition = sunPositionFromAngles(env.sunElevation ?? current.elevation, env.sunAzimuth ?? current.azimuth, dist);
+  }
+  if (env.sunIntensity !== undefined) {
+    next.keyIntensity = lighting.keyIntensity * env.sunIntensity;
+    next.fillIntensity = lighting.fillIntensity * (0.5 + env.sunIntensity * 0.5);
+  }
+  if (env.warmth) {
+    const t = Math.abs(env.warmth);
+    const target = env.warmth > 0 ? '#ffb066' : '#9fc0ff';
+    next.keyColor = mixHex(lighting.keyColor, target, t * 0.65);
+    next.hemiSky = mixHex(lighting.hemiSky, target, t * 0.35);
+    next.bounceColor = mixHex(lighting.bounceColor, target, t * 0.3);
+  }
+  if (env.exposure !== undefined) next.exposure = lighting.exposure * env.exposure;
+  if (env.haze !== undefined) {
+    next.skyTurbidity = lighting.skyTurbidity + (14 - lighting.skyTurbidity) * env.haze;
+    next.skyMie = lighting.skyMie + (0.03 - lighting.skyMie) * env.haze;
+  }
+  if (env.fog !== undefined) next.fogStrength = env.fog;
+  return next;
 }
 
 /** Alias pour le programme événement (day/dusk/night…). */

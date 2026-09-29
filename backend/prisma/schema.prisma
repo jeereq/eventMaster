@@ -235,6 +235,7 @@ model User {
   savedEventPacks       SavedEventPack[]
   savedEventBriefs      SavedEventBrief[]
   savedRoomAmbiences    SavedRoomAmbience[]
+  savedRoomElements     SavedRoomElement[]
   orgRoomAmbiences      OrgRoomAmbience[]
   ticketOrders          TicketOrder[]
   aiTokenOrders         AiTokenOrder[]
@@ -982,6 +983,19 @@ model SavedRoomAmbience {
   preset    Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+/// Élément de salle personnalisé créé à partir d’une image ou d’une vidéo (bibliothèque « Mes éléments »).
+model SavedRoomElement {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  definition Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([userId])
 }

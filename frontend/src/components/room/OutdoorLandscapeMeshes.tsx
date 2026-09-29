@@ -13,13 +13,16 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { RoundedBox } from '@react-three/drei';
-import { loadTiledTexture } from '@/lib/roomWebGLMaterials';
+import { loadTiledTexture, normalMapUrlFor } from '@/lib/roomWebGLMaterials';
 import {
   LANDSCAPE_STYLE_META,
   OUTDOOR_SURROUNDINGS_META,
+  resolveEnvironmentSettings,
   seededRandom,
+  type EnvironmentSettings,
   type LandscapeStyle,
   type OutdoorSurroundings,
+  type SurroundingSpecies,
 } from '@/lib/roomOutdoorUtils';
 
 // ───────────────────────── matières partagées ─────────────────────────
@@ -38,7 +41,9 @@ function texturedMat(
   if (cached) return cached as THREE.MeshStandardMaterial;
   const { normalScale = 1, ...rest } = opts;
   const map = loadTiledTexture(url, rx, ry);
-  const normalMap = loadTiledTexture(url.replace(/\.jpg$/, '-normal.jpg'), rx, ry, true);
+  // Pas de carte de normales pour une image importée (seules les textures générées en ont une).
+  const normalUrl = normalMapUrlFor(url);
+  const normalMap = normalUrl ? loadTiledTexture(normalUrl, rx, ry, true) : null;
   const mat = new THREE.MeshStandardMaterial({
     map,
     normalMap,
@@ -714,7 +719,18 @@ export function seedFromId(id: string): number {
 
 // ───────────────────────── abords de la salle ─────────────────────────
 
-type Prop = { style: LandscapeStyle | 'fir' | 'vines' | 'wall'; x: number; z: number; w: number; d: number; h: number; rot?: number; seed: number };
+type Prop = {
+  style: LandscapeStyle | 'fir' | 'vines' | 'wall';
+  x: number;
+  z: number;
+  w: number;
+  d: number;
+  h: number;
+  rot?: number;
+  seed: number;
+  /** Ajouté à la main dans les réglages d’environnement. */
+  extra?: boolean;
+};
 
 /** Point au hasard dans l'anneau autour du plan (hors salle + marge). */
 function ringPoint(rand: () => number, halfW: number, halfD: number, margin: number, spread: number) {
@@ -730,19 +746,34 @@ function ringPoint(rand: () => number, halfW: number, halfD: number, margin: num
   return { x: halfW + margin + spread * rand(), z: -halfD * rand() };
 }
 
-function buildSurroundings(kind: Exclude<OutdoorSurroundings, 'none'>, widthM: number, depthM: number, lite: boolean): Prop[] {
-  const rand = seededRandom(kind.length * 1009 + Math.round(widthM * 7 + depthM * 13));
+function buildSurroundings(
+  kind: Exclude<OutdoorSurroundings, 'none'>,
+  widthM: number,
+  depthM: number,
+  lite: boolean,
+  env: EnvironmentSettings = {},
+): Prop[] {
+  const rand = seededRandom(kind.length * 1009 + Math.round(widthM * 7 + depthM * 13) + Math.round(env.seed ?? 0) * 7919);
   const hw = widthM / 2;
   const hd = depthM / 2;
   const extent = Math.max(widthM, depthM);
-  const k = lite ? 0.5 : 1;
+  const k = (lite ? 0.5 : 1) * (env.density ?? 1);
+  const spreadK = env.spread ?? 1;
   const props: Prop[] = [];
   let s = 1;
-  const scatter = (style: Prop['style'], count: number, margin: number, spread: number, size: () => [number, number, number]) => {
-    for (let i = 0; i < Math.round(count * k); i += 1) {
-      const { x, z } = ringPoint(rand, hw, hd, margin, spread);
+  const scatter = (
+    style: Prop['style'],
+    count: number,
+    margin: number,
+    spread: number,
+    size: () => [number, number, number],
+    density = k,
+    extra = false,
+  ) => {
+    for (let i = 0; i < Math.round(count * density); i += 1) {
+      const { x, z } = ringPoint(rand, hw, hd, margin * Math.min(1.6, spreadK), spread * spreadK);
       const [w, d, h] = size();
-      props.push({ style, x, z, w, d, h, rot: rand() * Math.PI * 2, seed: s++ });
+      props.push({ style, x, z, w, d, h, rot: rand() * Math.PI * 2, seed: s++, extra });
     }
   };
   const tree = (): [number, number, number] => { const r = 4 + rand() * 3; return [r, r, 6 + rand() * 4]; };
@@ -808,7 +839,34 @@ function buildSurroundings(kind: Exclude<OutdoorSurroundings, 'none'>, widthM: n
     }
     props.push({ style: 'pond', x: ox, z: oz, w: 7, d: 5, h: 0.5, seed: s++ });
   }
-  return props;
+
+  // Espèces ajoutées à la main (quantité exacte, indépendante de la densité).
+  const lite2 = lite ? 0.5 : 1;
+  const extraSize: Record<SurroundingSpecies, () => [number, number, number]> = {
+    oak: tree,
+    fir,
+    palm,
+    olive: () => [3.2, 3.2, 4 + rand()],
+    cypress: () => [1.2, 1.2, 6.5 + rand() * 1.5],
+    shrub: () => [2.4, 1.6, 0.9],
+    boulder: () => { const r = 1.2 + rand() * 1.8; return [r, r * 0.8, r * 0.6]; },
+    planter: () => [1.6, 0.6, 0.9],
+    torch: () => [0.4, 0.4, 1.7],
+  };
+  for (const [species, count] of Object.entries(env.extraSpecies ?? {}) as [SurroundingSpecies, number][]) {
+    const near = species === 'torch' || species === 'planter' || species === 'shrub';
+    scatter(species, count, near ? 1.8 : 4, near ? 7 : extent * 0.8 + 12, extraSize[species], lite2, true);
+  }
+
+  const hiddenSpecies = new Set<string>(env.hiddenSpecies ?? []);
+  const hideStructures = env.hiddenFeatures?.includes('structures');
+  const hideWater = env.hiddenFeatures?.includes('water');
+  return props.filter((p) => {
+    if (!p.extra && hiddenSpecies.has(p.style)) return false;
+    if (hideStructures && (p.style === 'hedge' || p.style === 'wall' || p.style === 'vines')) return false;
+    if (hideWater && p.style === 'pond') return false;
+    return true;
+  });
 }
 
 function Vines({ d, h, seed }: { d: number; h: number; seed: number }) {
@@ -883,48 +941,69 @@ function Sea({ depthM, radius }: { depthM: number; radius: number }) {
   );
 }
 
+const SCALABLE_STYLES = new Set<string>(['oak', 'palm', 'olive', 'cypress', 'fir', 'shrub', 'boulder', 'hedge', 'vines']);
+
 export function OutdoorSurroundingsScene({
   kind,
+  settings,
   widthM,
   depthM,
   lite = false,
 }: {
   kind: OutdoorSurroundings;
+  /** Réglages libres (`metadata.environment`) : terrain, densité, espèces, relief… */
+  settings?: EnvironmentSettings | null;
   widthM: number;
   depthM: number;
   lite?: boolean;
 }) {
   const meta = kind === 'none' ? null : OUTDOOR_SURROUNDINGS_META[kind];
-  const radius = Math.max(70, Math.max(widthM, depthM) * 4);
+  const env = useMemo(() => resolveEnvironmentSettings(settings), [settings]);
+  const radius = Math.max(70, Math.max(widthM, depthM) * 4 * Math.max(1, env.spread ?? 1));
+  const groundUrl = env.groundUrl ?? meta?.groundUrl;
+  const groundTileM = env.groundTileM ?? (env.groundUrl ? 2.5 : meta?.groundTileM ?? 2.5);
   const groundMat = useMemo(() => {
-    if (!meta) return null;
-    return texturedMat('ground', meta.groundUrl, Math.round((radius * 2) / meta.groundTileM), { roughness: 0.95, normalScale: 0.9 });
-  }, [meta, radius]);
+    if (!groundUrl) return null;
+    return texturedMat('ground', groundUrl, Math.round((radius * 2) / groundTileM), {
+      roughness: 0.95,
+      normalScale: 0.9,
+      ...(env.groundTint ? { color: env.groundTint } : {}),
+    });
+  }, [groundUrl, groundTileM, radius, env.groundTint]);
   const props = useMemo(
-    () => (kind === 'none' ? [] : buildSurroundings(kind, widthM, depthM, lite)),
-    [kind, widthM, depthM, lite],
+    () => (kind === 'none' ? [] : buildSurroundings(kind, widthM, depthM, lite, env)),
+    [kind, widthM, depthM, lite, env],
   );
   if (!meta || !groundMat) return null;
+  const scale = env.vegetationScale ?? 1;
+  const showRelief = !env.hiddenFeatures?.includes('relief');
+  const showWater = !env.hiddenFeatures?.includes('water');
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.03, 0]} material={groundMat} receiveShadow>
         <circleGeometry args={[radius, 64]} />
       </mesh>
-      {kind === 'desert' ? <Dunes radius={radius} inner={Math.max(widthM, depthM) * 0.9 + 6} /> : null}
-      {kind === 'beach' ? <Sea depthM={depthM} radius={radius} /> : null}
-      {props.map((p, i) => (
-        <group key={i} position={[p.x, 0, p.z]} rotation={[0, p.style === 'hedge' || p.style === 'wall' || p.style === 'vines' ? 0 : p.rot ?? 0, 0]}>
-          {p.style === 'fir' ? (
-            <Cypress w={p.w} d={p.d} h={p.h} seed={p.seed} conifer />
-          ) : p.style === 'vines' ? (
-            <Vines d={p.d} h={p.h} seed={p.seed} />
-          ) : p.style === 'wall' ? (
-            <LowStoneWall w={p.w} d={p.d} h={p.h} />
-          ) : (
-            <LandscapeMesh style={p.style} w={p.w} d={p.d} heightM={p.h} seed={p.seed + 500} />
-          )}
-        </group>
-      ))}
+      {kind === 'desert' && showRelief ? <Dunes radius={radius} inner={Math.max(widthM, depthM) * 0.9 + 6} /> : null}
+      {kind === 'beach' && showWater ? <Sea depthM={depthM} radius={radius} /> : null}
+      {props.map((p, i) => {
+        const k = SCALABLE_STYLES.has(p.style) ? scale : 1;
+        const w = p.w * k;
+        const d = p.style === 'hedge' || p.style === 'vines' ? p.d : p.d * k;
+        const h = p.h * k;
+        return (
+          <group key={i} position={[p.x, 0, p.z]} rotation={[0, p.style === 'hedge' || p.style === 'wall' || p.style === 'vines' ? 0 : p.rot ?? 0, 0]}>
+            {p.style === 'fir' ? (
+              <Cypress w={w} d={d} h={h} seed={p.seed} conifer />
+            ) : p.style === 'vines' ? (
+              <Vines d={p.d} h={h} seed={p.seed} />
+            ) : p.style === 'wall' ? (
+              <LowStoneWall w={p.w} d={p.d} h={p.h} />
+            ) : (
+              <LandscapeMesh style={p.style} w={p.style === 'hedge' ? p.w : w} d={d} heightM={h} seed={p.seed + 500} />
+            )}
+          </group>
+        );
+      })}
     </group>
   );
 }

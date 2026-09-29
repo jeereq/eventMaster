@@ -98,9 +98,12 @@ import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
 import RoomShowcasePostProcessing from '@/components/RoomShowcasePostProcessing';
 import { LocalRoomEnvironment } from '@/components/room/LocalRoomEnvironment';
 import { LandscapeMesh, OutdoorSurroundingsScene, seedFromId } from '@/components/room/OutdoorLandscapeMeshes';
+import { CustomElementMesh } from '@/components/room/CustomElementMesh';
+import type { CustomElementDefinition } from '@/lib/roomCustomElements';
 import { VenueEquipmentMesh, isVenueEquipmentKind, venueEquipmentHeight } from '@/components/room/VenueEquipmentMeshes';
-import { resolveOutdoorSurroundings, type LandscapeStyle } from '@/lib/roomOutdoorUtils';
+import { resolveEnvironmentSettings, resolveOutdoorSurroundings, type LandscapeStyle } from '@/lib/roomOutdoorUtils';
 import {
+  applyEnvironmentLighting,
   resolveLightingPreset,
   resolveRenderQuality,
   type LightingPreset,
@@ -206,6 +209,12 @@ function ShadowHardness({ hard, softPreferred }: { hard: boolean; softPreferred:
   return null;
 }
 
+function sunDiscPosition(x: number, y: number, z: number): [number, number, number] {
+  const len = Math.hypot(x, y, z) || 1;
+  const dist = 95;
+  return [(x / len) * dist, (y / len) * dist, (z / len) * dist];
+}
+
 function ScenicLights({
   widthM,
   heightM,
@@ -258,7 +267,8 @@ function ScenicLights({
       ) : null}
 
       {lighting.showSky && !isNight ? (
-        <group position={[sx * 0.88, sy * 0.88, sz * 0.88]}>
+        // Disque solaire loin sur la direction du soleil : taille apparente réaliste, même si on le monte haut.
+        <group position={sunDiscPosition(sx, sy, sz)}>
           <mesh>
             <sphereGeometry args={[isDusk ? 2.4 : 1.15, 24, 24]} />
             <meshBasicMaterial color={isDusk ? '#ff7a3d' : '#fff4a8'} fog={false} />
@@ -2717,6 +2727,7 @@ function FixtureMesh({
   instrumentStyle,
   barStyle,
   landscapeStyle,
+  customElement,
   flowerType,
   fixtureId,
   screenKind,
@@ -2775,6 +2786,7 @@ function FixtureMesh({
   instrumentStyle?: InstrumentStyle;
   barStyle?: BarStyle;
   landscapeStyle?: LandscapeStyle;
+  customElement?: CustomElementDefinition;
   flowerType?: string;
   fixtureId?: string;
   screenKind?: import('@/lib/roomLayoutUtils').ScreenKind;
@@ -2918,6 +2930,8 @@ function FixtureMesh({
         <FountainMesh w={w} d={d} color={color} selected={selected} />
       ) : kind === 'gazebo' ? (
         <GazeboMesh w={w} d={d} heightM={height} selected={selected} />
+      ) : kind === 'customElement' && customElement ? (
+        <CustomElementMesh def={customElement} w={w} d={d} selected={selected} />
       ) : kind === 'landscape' ? (
         <LandscapeMesh
           style={landscapeStyle ?? 'oak'}
@@ -3513,7 +3527,19 @@ function SceneContent({
       <LightingExposure exposure={lighting.exposure * (qualitySettings.exposure / 1.16)} />
       <ShadowHardness hard={lighting.preset === 'day'} softPreferred={qualitySettings.softShadows} />
 
-      {qualitySettings.fog ? (
+      {lighting.fogStrength !== undefined ? (
+        lighting.fogStrength > 0.01 ? (
+          // Brouillard réglé à la main : de très lointain (0) à épais autour de la salle (1).
+          <fog
+            attach="fog"
+            args={[
+              lighting.fogColor,
+              Math.max(widthM, heightM) * (0.4 + (1 - lighting.fogStrength) * 4),
+              Math.max(widthM, heightM) * (1.6 + (1 - lighting.fogStrength) * 12),
+            ]}
+          />
+        ) : null
+      ) : qualitySettings.fog ? (
         <fog
           attach="fog"
           args={[
@@ -3598,6 +3624,7 @@ function SceneContent({
       {!stackView && outdoorSurroundings !== 'none' ? (
         <OutdoorSurroundingsScene
           kind={outdoorSurroundings}
+          settings={blueprint.metadata.environment}
           widthM={widthM}
           depthM={heightM}
           lite={qualitySettings.quality === 'draft'}
@@ -3756,6 +3783,7 @@ function SceneContent({
             instrumentStyle={f.instrumentStyle}
             barStyle={f.barStyle}
             landscapeStyle={f.landscapeStyle}
+            customElement={f.customElement}
             flowerType={f.flowerType}
             fixtureId={f.id}
             screenKind={f.screenKind}
@@ -4089,11 +4117,14 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
     [renderQualityProp, blueprint.metadata.renderQuality, previewMode],
   );
   const lighting = useMemo(
-    () => resolveLightingPreset(
-      lightingPresetProp ?? blueprint.metadata.lightingPreset,
-      blueprint.roomType,
+    () => applyEnvironmentLighting(
+      resolveLightingPreset(
+        lightingPresetProp ?? blueprint.metadata.lightingPreset,
+        blueprint.roomType,
+      ),
+      resolveEnvironmentSettings(blueprint.metadata.environment),
     ),
-    [lightingPresetProp, blueprint.metadata.lightingPreset, blueprint.roomType],
+    [lightingPresetProp, blueprint.metadata.lightingPreset, blueprint.roomType, blueprint.metadata.environment],
   );
   const captureApiRef = useRef<RoomWebGLCaptureApi | null>(null);
   const viewerRootRef = useRef<HTMLDivElement | null>(null);

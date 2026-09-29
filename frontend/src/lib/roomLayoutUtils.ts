@@ -182,7 +182,8 @@ export type RoomFixtureKind =
   | 'loungeSofa'
   | 'car'
   | 'parasol'
-  | 'landscape';
+  | 'landscape'
+  | 'customElement';
 export type FloorDecalKind = 'rose' | 'butterfly' | 'custom' | 'path';
 export type PedestalStyle = 'squareWhite' | 'columnGold';
 export type CenterpieceStyle = 'floral' | 'greeneryRunner' | 'candleCluster';
@@ -499,6 +500,8 @@ export interface RoomLayoutBlueprint {
     barStyle?: BarStyle;
     /** Aménagement extérieur (arbre, haie, piscine, brasero…). */
     landscapeStyle?: import('@/lib/roomOutdoorUtils').LandscapeStyle;
+    /** Élément créé à partir d’une image ou d’une vidéo (découpe 3D, panneau, bloc, écran…). */
+    customElement?: import('@/lib/roomCustomElements').CustomElementDefinition;
     /** Podium / escalier : nombre de marches. */
     steps?: number;
     /** Buffet : afficher assiettes / couverts. */
@@ -742,6 +745,8 @@ export interface RoomLayoutBlueprint {
     showDecorPlants?: boolean;
     /** Terrain et décor autour du plan en 3D (jardin, plage, forêt…). */
     outdoorSurroundings?: import('@/lib/roomOutdoorUtils').OutdoorSurroundings;
+    /** Réglages libres de l’environnement : terrain, décor, soleil, ciel, brouillard. */
+    environment?: import('@/lib/roomOutdoorUtils').EnvironmentSettings;
     /** Mode présentation (orbit auto, labels masqués). */
     presentationMode?: boolean;
     /** Modèle de structure multi-étages appliqué. */
