@@ -21,9 +21,12 @@ import {
   seededRandom,
   type EnvironmentSettings,
   type LandscapeStyle,
+  poolOutline,
   type OutdoorSurroundings,
+  type PoolShape,
   type SurroundingSpecies,
 } from '@/lib/roomOutdoorUtils';
+import { offsetRing } from '@/lib/roomRoofGeometry';
 
 // ───────────────────────── matières partagées ─────────────────────────
 
@@ -418,41 +421,173 @@ function useWaterMaterial(color: string, repeat: number, opacity = 1) {
   return mat;
 }
 
-function Pool({ w, d }: { w: number; d: number }) {
-  const coping = 0.35;
-  const water = useWaterMaterial('#36b3d3', Math.max(1, Math.round(Math.max(w, d) / 3)));
-  const iw = Math.max(0.5, w - coping * 2);
-  const id = Math.max(0.5, d - coping * 2);
+const POOL_COPING = 0.35;
+
+/** Masque de profondeur : blanc au centre (eau profonde, opaque), plus clair près des parois (on voit le fond). */
+function poolDepthAlpha(outline: Array<[number, number]>, w: number, d: number): THREE.Texture | null {
+  if (typeof document === 'undefined') return null;
+  const size = 256;
+  const shape = document.createElement('canvas');
+  shape.width = shape.height = size;
+  const sctx = shape.getContext('2d');
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!sctx || !ctx) return null;
+  sctx.fillStyle = '#000';
+  sctx.fillRect(0, 0, size, size);
+  sctx.fillStyle = '#fff';
+  sctx.beginPath();
+  outline.forEach(([x, z], i) => {
+    const px = (x / w + 0.5) * size;
+    const py = (z / d + 0.5) * size;
+    if (i === 0) sctx.moveTo(px, py);
+    else sctx.lineTo(px, py);
+  });
+  sctx.closePath();
+  sctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, size, size);
+  ctx.filter = `blur(${Math.round(size * 0.07)}px)`;
+  ctx.drawImage(shape, 0, 0);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.NoColorSpace;
+  return tex;
+}
+
+/** Contour → géométrie plane horizontale ; UV en mètres (u) ou recalés sur l’emprise (bbox). */
+function outlineGeometry(outline: Array<[number, number]>, y: number, uvMode: 'meters' | 'bbox', w: number, d: number, holes: Array<Array<[number, number]>> = []) {
+  const shape = new THREE.Shape(outline.map(([x, z]) => new THREE.Vector2(x, -z)));
+  holes.forEach((h) => shape.holes.push(new THREE.Path(h.map(([x, z]) => new THREE.Vector2(x, -z)))));
+  const g = new THREE.ShapeGeometry(shape, 12);
+  if (uvMode === 'bbox') {
+    const uv = g.getAttribute('uv') as THREE.BufferAttribute;
+    for (let i = 0; i < uv.count; i += 1) uv.setXY(i, uv.getX(i) / w + 0.5, uv.getY(i) / d + 0.5);
+  }
+  g.rotateX(-Math.PI / 2);
+  g.translate(0, y, 0);
+  return g;
+}
+
+function offsetOutline(outline: Array<[number, number]>, dist: number): Array<[number, number]> {
+  return offsetRing(outline.map(([x, z]) => ({ x, z })), dist).map((p) => [p.x, p.z]);
+}
+
+/**
+ * Piscine : margelles en pierre qui épousent la forme, frise de carreaux à la ligne d’eau, fond en
+ * mosaïque avec ligne de nage, marches romaines, eau animée dont la teinte fonce avec la profondeur.
+ */
+function Pool({ w, d, shape = 'rectangle' }: { w: number; d: number; shape?: PoolShape }) {
+  const iw = Math.max(0.8, w - POOL_COPING * 2);
+  const id = Math.max(0.8, d - POOL_COPING * 2);
+  const outline = useMemo(() => poolOutline(shape, iw, id), [shape, iw, id]);
+  const geos = useMemo(() => {
+    const outer = offsetOutline(outline, -POOL_COPING);
+    const band = offsetOutline(outline, 0.16);
+    const copingShape = new THREE.Shape(outer.map(([x, z]) => new THREE.Vector2(x, -z)));
+    copingShape.holes.push(new THREE.Path(outline.map(([x, z]) => new THREE.Vector2(x, -z))));
+    const coping = new THREE.ExtrudeGeometry(copingShape, { depth: 0.07, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 2, curveSegments: 12 });
+    coping.rotateX(-Math.PI / 2);
+    const cu = coping.getAttribute('uv') as THREE.BufferAttribute;
+    for (let i = 0; i < cu.count; i += 1) cu.setXY(i, cu.getX(i) / 1.2, cu.getY(i) / 1.2);
+    return {
+      coping,
+      floor: outlineGeometry(outline, 0.006, 'meters', iw, id),
+      band: outlineGeometry(outline, 0.01, 'meters', iw, id, [band]),
+      water: outlineGeometry(outline, 0.045, 'bbox', iw, id),
+    };
+  }, [outline, iw, id]);
+  const mosaic = useMemo(() => {
+    const map = loadTiledTexture('/floors/gen/pool-mosaic.jpg', 2, 2);
+    const normalMap = loadTiledTexture('/floors/gen/pool-mosaic-normal.jpg', 2, 2, true);
+    return {
+      floor: new THREE.MeshStandardMaterial({ map, normalMap, color: '#d8f1f7', roughness: 0.35 }),
+      band: new THREE.MeshStandardMaterial({ map, normalMap, color: '#2a5f8a', roughness: 0.3 }),
+    };
+  }, []);
+  const alpha = useMemo(() => poolDepthAlpha(outline, iw, id), [outline, iw, id]);
+  const water = usePoolWater(alpha, Math.max(1, Math.round(Math.max(iw, id) / 3)));
+  const straight = shape === 'rectangle' || shape === 'rounded';
+  const long = iw >= id;
+  const steps = straight ? 3 : 0;
   return (
     <group>
-      {/* Margelles en pierre. */}
-      {[
-        [0, -d / 2 + coping / 2, w, coping],
-        [0, d / 2 - coping / 2, w, coping],
-        [-w / 2 + coping / 2, 0, coping, id],
-        [w / 2 - coping / 2, 0, coping, id],
-      ].map(([x, z, bw, bd], i) => (
-        <mesh key={i} position={[x, 0.05, z]} castShadow receiveShadow material={stoneMat('#f3efe6', 1)}>
-          <boxGeometry args={[bw, 0.1, bd]} />
+      <mesh geometry={geos.coping} material={stoneMat('#f3efe6', 1)} castShadow receiveShadow />
+      <mesh geometry={geos.floor} material={mosaic.floor} receiveShadow />
+      <mesh geometry={geos.band} material={mosaic.band} />
+      {/* Ligne de nage au fond et marches d’accès, visibles à travers l’eau */}
+      {straight ? (
+        <mesh position={[0, 0.008, 0]} rotation={[-Math.PI / 2, 0, long ? 0 : Math.PI / 2]}>
+          <planeGeometry args={[(long ? iw : id) * 0.7, 0.22]} />
+          <meshStandardMaterial color="#12324f" roughness={0.4} />
+        </mesh>
+      ) : null}
+      {Array.from({ length: steps }).map((_, k) => {
+        const depthStep = 0.42;
+        const along = long ? -iw / 2 + depthStep * (k + 0.5) : 0;
+        const across = long ? 0 : -id / 2 + depthStep * (k + 0.5);
+        return (
+          <mesh key={k} position={[along, 0.012 + (steps - k) * 0.004, across]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={long ? [depthStep * 0.96, id * 0.9] : [iw * 0.9, depthStep * 0.96]} />
+            <meshStandardMaterial color={k === 0 ? '#f8fbfc' : k === 1 ? '#e2f1f5' : '#c9e6ee'} roughness={0.5} />
+          </mesh>
+        );
+      })}
+      <mesh geometry={geos.water} material={water} receiveShadow />
+      {/* Projecteurs immergés */}
+      {[-0.25, 0.25].map((t) => (
+        <mesh key={t} position={long ? [t * iw, 0.03, id / 2 - 0.12] : [iw / 2 - 0.12, 0.03, t * id]} rotation={[-Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[0.09, 16]} />
+          <meshStandardMaterial color="#e0f7ff" emissive="#9be7ff" emissiveIntensity={1.4} />
         </mesh>
       ))}
-      {/* Frise de carreaux à la ligne d'eau. */}
-      <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[iw, id]} />
-        <meshStandardMaterial color="#1f6f8c" roughness={0.3} />
-      </mesh>
-      <mesh position={[0, 0.035, 0]} rotation={[-Math.PI / 2, 0, 0]} material={water} receiveShadow>
-        <planeGeometry args={[iw - 0.08, id - 0.08]} />
-      </mesh>
-      {/* Échelle inox. */}
-      {[-0.22, 0.22].map((x, i) => (
-        <mesh key={i} position={[w / 2 - coping - 0.02 - 0.25, 0.45, -id / 2 + 0.6 + x]} rotation={[0, Math.PI / 2, 0]}>
-          <torusGeometry args={[0.25, 0.022, 8, 20, Math.PI]} />
-          <meshStandardMaterial color="#e5e7eb" metalness={1} roughness={0.15} />
-        </mesh>
-      ))}
+      {/* Échelle inox côté grand bain */}
+      {[-0.22, 0.22].map((x, i) => {
+        const [ex, ez] = outline.reduce((best, p) => (p[0] > best[0] ? p : best), outline[0]);
+        return (
+          <mesh key={i} position={[ex - 0.02, 0.45, ez * 0.3 + x]} rotation={[0, Math.PI / 2, 0]}>
+            <torusGeometry args={[0.25, 0.022, 8, 20, Math.PI]} />
+            <meshStandardMaterial color="#e5e7eb" metalness={1} roughness={0.15} />
+          </mesh>
+        );
+      })}
     </group>
   );
+}
+
+/** Eau de piscine : normales animées, teinte turquoise, opacité modulée par la profondeur. */
+function usePoolWater(alpha: THREE.Texture | null, repeat: number) {
+  const mat = useMemo(() => {
+    const normalMap = loadTiledTexture('/floors/gen/water-normal.jpg', repeat, repeat, true).clone();
+    normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
+    normalMap.repeat.set(repeat, repeat);
+    normalMap.needsUpdate = true;
+    return new THREE.MeshPhysicalMaterial({
+      color: '#1592b8',
+      roughness: 0.05,
+      metalness: 0,
+      clearcoat: 1,
+      clearcoatRoughness: 0.04,
+      normalMap,
+      normalScale: new THREE.Vector2(0.3, 0.3),
+      envMapIntensity: 0.9,
+      transparent: true,
+      opacity: 0.86,
+      alphaMap: alpha,
+      depthWrite: false,
+    });
+  }, [alpha, repeat]);
+  const ref = useRef<THREE.Texture | null>(null);
+  useEffect(() => {
+    ref.current = mat.normalMap;
+  }, [mat]);
+  useFrame((_, dt) => {
+    const tex = ref.current;
+    if (!tex) return;
+    tex.offset.x += dt * 0.012;
+    tex.offset.y += dt * 0.007;
+  });
+  return mat;
 }
 
 function Pond({ w, d, seed }: { w: number; d: number; seed: number }) {
@@ -673,8 +808,11 @@ export function LandscapeMesh({
   heightM,
   seed = 1,
   selected = false,
+  poolShape,
 }: {
   style: LandscapeStyle;
+  /** Piscine : forme du bassin. */
+  poolShape?: PoolShape;
   w: number;
   d: number;
   heightM?: number;
@@ -691,7 +829,7 @@ export function LandscapeMesh({
     case 'hedge': body = <Hedge w={w} d={d} h={h} />; break;
     case 'shrub': body = <Shrubs w={w} d={d} h={h} seed={seed} />; break;
     case 'planter': body = <Planter w={w} d={d} h={h} />; break;
-    case 'pool': body = <Pool w={w} d={d} />; break;
+    case 'pool': body = <Pool w={w} d={d} shape={poolShape} />; break;
     case 'pond': body = <Pond w={w} d={d} seed={seed} />; break;
     case 'firePit': body = <FirePit w={Math.min(w, d)} />; break;
     case 'torch': body = <Torch h={h} />; break;

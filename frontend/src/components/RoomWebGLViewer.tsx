@@ -60,6 +60,7 @@ import { CatalogueInterstoryStairs } from '@/components/CatalogueStairs';
 import { CatalogueBalcony } from '@/components/CatalogueBalcony';
 import {
   AmphitheaterRiser,
+  RISER_FRONT_OVERHANG_M,
   EventStage,
   EventZoneSurface,
 } from '@/components/CatalogueEventArchitecture';
@@ -74,7 +75,6 @@ import {
   FloralArchMesh,
   TallCenterpiece,
   CurvedPartitionMesh,
-  TentSwagRoof,
   FloorDecalMesh,
   SquarePedestalMesh,
   GreeneryRunnerMesh,
@@ -99,6 +99,8 @@ import RoomShowcasePostProcessing from '@/components/RoomShowcasePostProcessing'
 import { LocalRoomEnvironment } from '@/components/room/LocalRoomEnvironment';
 import { LandscapeMesh, OutdoorSurroundingsScene, seedFromId } from '@/components/room/OutdoorLandscapeMeshes';
 import { CustomElementMesh } from '@/components/room/CustomElementMesh';
+import { DomeRoof, RoofLantern, StyledRoof, TentSidewall } from '@/components/room/RoofMeshes';
+import { offsetRing, roofFootprint } from '@/lib/roomRoofGeometry';
 import type { CustomElementDefinition } from '@/lib/roomCustomElements';
 import { VenueEquipmentMesh, isVenueEquipmentKind, venueEquipmentHeight } from '@/components/room/VenueEquipmentMeshes';
 import { resolveEnvironmentSettings, resolveOutdoorSurroundings, type LandscapeStyle } from '@/lib/roomOutdoorUtils';
@@ -665,40 +667,23 @@ function RoofMesh({
       });
   }, [blueprint?.fixtures, widthM, heightM]);
 
-  const shapeGeo = useMemo(() => {
-    if (
-      roofStyle === 'tentSwag' ||
-      roofStyle === 'gabled' ||
-      roofStyle === 'pergola' ||
-      roofStyle === 'glassCanopy' ||
-      roofStyle === 'fabricStretch' ||
-      roofStyle === 'mansard'
-    )
-      return null;
-    const hasPolygon = outline && outline.shape !== 'rectangle';
-    const hasHoles = stairHoles.length > 0;
-    if (!hasPolygon && !hasHoles) return null;
+  const footprint = useMemo(() => {
+    const pts = outline
+      ? outlinePolygonPoints(outline).map((p) => {
+          const [wx, wz] = pctToWorld(p.x, p.y, widthM, heightM);
+          return { x: wx, z: wz };
+        })
+      : [
+          { x: -widthM / 2, z: -heightM / 2 },
+          { x: widthM / 2, z: -heightM / 2 },
+          { x: widthM / 2, z: heightM / 2 },
+          { x: -widthM / 2, z: heightM / 2 },
+        ];
+    return { pts, fp: roofFootprint(pts) };
+  }, [outline, widthM, heightM]);
 
-    const shape = new THREE.Shape();
-    if (hasPolygon) {
-      const pts = outlinePolygonPoints(outline);
-      if (pts.length < 3) return null;
-      pts.forEach((p, i) => {
-        const [wx, wz] = pctToWorld(p.x, p.y, widthM, heightM);
-        if (i === 0) shape.moveTo(wx, -wz);
-        else shape.lineTo(wx, -wz);
-      });
-      shape.closePath();
-    } else {
-      const halfW = widthM / 2;
-      const halfH = heightM / 2;
-      shape.moveTo(-halfW, halfH);
-      shape.lineTo(halfW, halfH);
-      shape.lineTo(halfW, -halfH);
-      shape.lineTo(-halfW, -halfH);
-      shape.closePath();
-    }
-
+  const roofShape = useMemo(() => {
+    const shape = new THREE.Shape(footprint.pts.map((p) => new THREE.Vector2(p.x, -p.z)));
     // Évidement complet du toit au-dessus de chaque escalier
     for (const h of stairHoles) {
       const hole = new THREE.Path();
@@ -709,275 +694,37 @@ function RoofMesh({
       hole.closePath();
       shape.holes.push(hole);
     }
+    return shape;
+  }, [footprint, stairHoles]);
 
-    const geo = new THREE.ShapeGeometry(shape);
+  const shapeGeo = useMemo(() => {
+    if (roofStyle !== 'coffered') return null;
+    const geo = new THREE.ShapeGeometry(roofShape);
     geo.rotateX(-Math.PI / 2);
     return geo;
-  }, [outline, widthM, heightM, roofStyle, stairHoles]);
+  }, [roofShape, roofStyle]);
 
-  if (roofStyle === 'tentSwag') {
-    return (
-      <TentSwagRoof
-        widthM={widthM}
-        heightM={heightM}
-        wallHeightM={wallHeightM}
-        color={color}
-        opacity={Math.max(0.72, opacity)}
-        baseElevationM={baseElevationM}
-      />
-    );
-  }
+  const roofTop = baseElevationM + wallHeightM;
+  const styledProps = {
+    footprint: footprint.fp,
+    y: roofTop,
+    wallHeightM,
+    color,
+    opacity,
+    withLegs: blueprint ? !isBlueprintWallsVisible(blueprint.metadata) : false,
+    wallColor: blueprint?.metadata.wallPaintColor,
+  };
 
-  if (roofStyle === 'gabled') {
-    return (
-      <group position={[0, y, 0]}>
-        <mesh rotation={[0, 0, 0.28]} position={[0, 0.35, 0]} castShadow>
-          <boxGeometry args={[widthM * 0.62, 0.08, heightM * 0.92]} />
-          <meshStandardMaterial color={color} roughness={0.55} transparent opacity={opacity} />
-        </mesh>
-        <mesh rotation={[0, 0, -0.28]} position={[0, 0.35, 0]} castShadow>
-          <boxGeometry args={[widthM * 0.62, 0.08, heightM * 0.92]} />
-          <meshStandardMaterial color={color} roughness={0.55} transparent opacity={opacity} />
-        </mesh>
-      </group>
-    );
-  }
-
-  if (roofStyle === 'glassCanopy') {
-    const gridX = Math.max(3, Math.round(widthM / 2.2));
-    const gridZ = Math.max(3, Math.round(heightM / 2.2));
-    return (
-      <group position={[0, y, 0]}>
-        {/* Panneau de verre translucide zénithal */}
-        <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-          <planeGeometry args={[widthM, heightM]} />
-          <meshPhysicalMaterial
-            color="#93c5fd"
-            roughness={0.06}
-            metalness={0.15}
-            transparent
-            opacity={Math.min(0.55, Math.max(0.25, opacity))}
-            clearcoat={1}
-            clearcoatRoughness={0.05}
-            side={THREE.DoubleSide}
-            depthWrite={false}
-          />
-        </mesh>
-        {/* Poutres maîtresses acier noir longitudinales */}
-        {Array.from({ length: gridX + 1 }).map((_, i) => {
-          const bx = (i / gridX - 0.5) * widthM;
-          return (
-            <mesh key={`glass-bx-${i}`} position={[bx, 0.04, 0]} castShadow>
-              <boxGeometry args={[0.08, 0.14, heightM]} />
-              <meshStandardMaterial color="#0f172a" metalness={0.85} roughness={0.25} />
-            </mesh>
-          );
-        })}
-        {/* Poutres acier transversales */}
-        {Array.from({ length: gridZ + 1 }).map((_, i) => {
-          const bz = (i / gridZ - 0.5) * heightM;
-          return (
-            <mesh key={`glass-bz-${i}`} position={[0, 0.04, bz]} castShadow>
-              <boxGeometry args={[widthM, 0.14, 0.08]} />
-              <meshStandardMaterial color="#0f172a" metalness={0.85} roughness={0.25} />
-            </mesh>
-          );
-        })}
-        {/* Éclairage zénithal naturel doux */}
-        <pointLight position={[0, 0.4, 0]} intensity={0.4} color="#e0f2fe" distance={Math.max(widthM, heightM) * 1.5} />
-      </group>
-    );
-  }
-
-  if (roofStyle === 'pergola') {
-    const louverCount = Math.max(12, Math.round(heightM * 2.8));
-    return (
-      <group position={[0, y, 0]}>
-        {/* Poutres d'appui latérales en bois / alu */}
-        {[-widthM / 2 + 0.1, widthM / 2 - 0.1].map((px, pi) => (
-          <mesh key={`pergola-support-${pi}`} position={[px, 0.06, 0]} castShadow>
-            <boxGeometry args={[0.16, 0.18, heightM]} />
-            <meshStandardMaterial color={color || '#334155'} roughness={0.45} metalness={0.2} />
-          </mesh>
-        ))}
-        {/* Lames bioclimatiques ajourées inclinées à 35° */}
-        {Array.from({ length: louverCount }).map((_, li) => {
-          const bz = (li / (louverCount - 1) - 0.5) * (heightM - 0.4);
-          const inStairZ = stairHoles.some((h) => bz >= h.minZ && bz <= h.maxZ);
-          if (inStairZ) return null;
-          return (
-            <mesh
-              key={`pergola-louver-${li}`}
-              position={[0, 0.08, bz]}
-              rotation={[0.62, 0, 0]}
-              castShadow
-            >
-              <boxGeometry args={[widthM - 0.1, 0.14, 0.025]} />
-              <meshStandardMaterial
-                color={color || '#1e293b'}
-                roughness={0.5}
-                metalness={0.15}
-                transparent
-                opacity={Math.max(0.85, opacity)}
-              />
-            </mesh>
-          );
-        })}
-      </group>
-    );
-  }
-
-  if (roofStyle === 'dome') {
-    const radius = Math.min(widthM, heightM) * 0.48;
-    return (
-      <group position={[0, y, 0]}>
-        {/* Plafond plat périmétrique avec découpe circulaire */}
-        <mesh geometry={shapeGeo ?? undefined} receiveShadow>
-          {!shapeGeo && (
-            <mesh rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[widthM, heightM]} />
-            </mesh>
-          )}
-          <meshStandardMaterial color="#1e293b" roughness={0.7} transparent opacity={opacity} side={THREE.DoubleSide} />
-        </mesh>
-        {/* Coupole hémisphérique surélevée */}
-        <mesh position={[0, 0.1, 0]} rotation={[0, 0, 0]} castShadow receiveShadow>
-          <sphereGeometry args={[radius, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.38]} />
-          <meshStandardMaterial
-            color={color || '#f1f5f9'}
-            roughness={0.35}
-            metalness={0.1}
-            side={THREE.DoubleSide}
-            transparent
-            opacity={Math.max(0.75, opacity)}
-          />
-        </mesh>
-        {/* Anneau et lanterneau central lumineux */}
-        <mesh position={[0, radius * 0.38 + 0.12, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[radius * 0.05, radius * 0.18, 24]} />
-          <meshStandardMaterial color="#fbbf24" emissive="#d97706" emissiveIntensity={0.65} side={THREE.DoubleSide} />
-        </mesh>
-        <pointLight position={[0, radius * 0.3, 0]} intensity={0.65} color="#fed7aa" distance={12} />
-      </group>
-    );
-  }
-
-  if (roofStyle === 'mansard') {
-    const slopeW = widthM * 0.14;
-    const slopeH = heightM * 0.14;
-    const deckW = widthM - slopeW * 2;
-    const deckH = heightM - slopeH * 2;
-    return (
-      <group position={[0, y, 0]}>
-        {/* Plateau plat supérieur en zinc / ardoise */}
-        <mesh position={[0, 0.42, 0]} rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
-          <planeGeometry args={[Math.max(1, deckW), Math.max(1, deckH)]} />
-          <meshStandardMaterial color="#334155" roughness={0.4} metalness={0.6} side={THREE.DoubleSide} />
-        </mesh>
-        {/* Pans brisés mansardés nord et sud */}
-        {[-heightM / 2 + slopeH / 2, heightM / 2 - slopeH / 2].map((pz, pi) => (
-          <mesh
-            key={`mansard-z-${pi}`}
-            position={[0, 0.21, pz]}
-            rotation={[pi === 0 ? 0.72 : -0.72, 0, 0]}
-            castShadow
-          >
-            <boxGeometry args={[widthM, 0.06, slopeH * 1.25]} />
-            <meshStandardMaterial color={color || '#475569'} roughness={0.45} metalness={0.5} />
-          </mesh>
-        ))}
-        {/* Pans brisés mansardés est et ouest */}
-        {[-widthM / 2 + slopeW / 2, widthM / 2 - slopeW / 2].map((px, pi) => (
-          <mesh
-            key={`mansard-x-${pi}`}
-            position={[px, 0.21, 0]}
-            rotation={[0, 0, pi === 0 ? -0.72 : 0.72]}
-            castShadow
-          >
-            <boxGeometry args={[slopeW * 1.25, 0.06, deckH]} />
-            <meshStandardMaterial color={color || '#475569'} roughness={0.45} metalness={0.5} />
-          </mesh>
-        ))}
-      </group>
-    );
-  }
-
-  if (roofStyle === 'skylight') {
-    const holeW = widthM * 0.26;
-    const holeH = heightM * 0.32;
-    return (
-      <group position={[0, y, 0]}>
-        {/* Plafond plein suspendu */}
-        <mesh geometry={shapeGeo ?? undefined} receiveShadow>
-          {!shapeGeo && (
-            <mesh rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[widthM, heightM]} />
-            </mesh>
-          )}
-          <meshStandardMaterial color={color || '#0f172a'} roughness={0.8} transparent opacity={opacity} side={THREE.DoubleSide} />
-        </mesh>
-        {/* 2 puits de lumière rectangulaires contemporains */}
-        {[-widthM * 0.22, widthM * 0.22].map((sx, si) => (
-          <group key={`skylight-${si}`} position={[sx, 0.04, 0]}>
-            {/* Cadre saillant en aluminium blanc */}
-            <mesh position={[0, 0.02, 0]} castShadow>
-              <boxGeometry args={[holeW + 0.1, 0.08, holeH + 0.1]} />
-              <meshStandardMaterial color="#f8fafc" roughness={0.3} metalness={0.2} />
-            </mesh>
-            {/* Vitrage diffusant lumineux */}
-            <mesh position={[0, 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[holeW, holeH]} />
-              <meshStandardMaterial
-                color="#f0f9ff"
-                emissive="#e0f2fe"
-                emissiveIntensity={0.65}
-                roughness={0.1}
-                side={THREE.DoubleSide}
-              />
-            </mesh>
-            <pointLight position={[0, 0.2, 0]} intensity={0.5} color="#bae6fd" distance={9} />
-          </group>
-        ))}
-      </group>
-    );
-  }
-
-  if (roofStyle === 'fabricStretch') {
-    return (
-      <group position={[0, y, 0]}>
-        {/* Mâts centraux de tension */}
-        {[-widthM * 0.2, widthM * 0.2].map((mx, mi) => (
-          <group key={`mast-${mi}`} position={[mx, 0, 0]}>
-            <mesh position={[0, 0.35, 0]} castShadow>
-              <cylinderGeometry args={[0.035, 0.045, 0.75, 12]} />
-              <meshStandardMaterial color="#cbd5e1" metalness={0.8} roughness={0.2} />
-            </mesh>
-            {/* Chapeau conique de tension du velum */}
-            <mesh position={[0, 0.72, 0]} castShadow>
-              <coneGeometry args={[widthM * 0.26, 0.45, 16, 1, true]} />
-              <meshStandardMaterial
-                color={color || '#f8fafc'}
-                roughness={0.7}
-                side={THREE.DoubleSide}
-                transparent
-                opacity={Math.max(0.8, opacity)}
-              />
-            </mesh>
-          </group>
-        ))}
-        {/* Voiles d'ombrage tendues périphériques */}
-        <mesh position={[0, 0.25, 0]} rotation={[-Math.PI / 2, 0, 0]} castShadow receiveShadow>
-          <planeGeometry args={[widthM * 0.88, heightM * 0.88]} />
-          <meshStandardMaterial
-            color={color || '#fdfcfb'}
-            roughness={0.65}
-            transparent
-            opacity={Math.max(0.78, opacity)}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-      </group>
-    );
+  if (
+    roofStyle === 'tentSwag' ||
+    roofStyle === 'pagoda' ||
+    roofStyle === 'gabled' ||
+    roofStyle === 'glassCanopy' ||
+    roofStyle === 'mansard' ||
+    roofStyle === 'pergola' ||
+    roofStyle === 'fabricStretch'
+  ) {
+    return <StyledRoof style={roofStyle} props={styledProps} />;
   }
 
   if (roofStyle === 'coffered') {
@@ -1019,25 +766,32 @@ function RoofMesh({
     );
   }
 
+  const bbox = footprint.pts.reduce(
+    (b, p) => ({ x0: Math.min(b.x0, p.x), x1: Math.max(b.x1, p.x), z0: Math.min(b.z0, p.z), z1: Math.max(b.z1, p.z) }),
+    { x0: Infinity, x1: -Infinity, z0: Infinity, z1: -Infinity },
+  );
+  const bw = bbox.x1 - bbox.x0;
+  const bd = bbox.z1 - bbox.z0;
+  const center = footprint.fp.kind === 'radial' ? footprint.fp.center : { x: (bbox.x0 + bbox.x1) / 2, z: (bbox.z0 + bbox.z1) / 2 };
+
   return (
     <group>
-      <mesh
-        geometry={shapeGeo ?? undefined}
-        position={[0, y, 0]}
-        rotation={shapeGeo ? [0, 0, 0] : [Math.PI / 2, 0, 0]}
-        receiveShadow
-      >
-        {!shapeGeo && <planeGeometry args={[widthM * 0.98, heightM * 0.98]} />}
-        <meshStandardMaterial
-          color={color}
-          transparent
-          opacity={opacity}
-          roughness={0.9}
-          metalness={0.02}
-          side={THREE.DoubleSide}
-          depthWrite={opacity > 0.85}
-        />
-      </mesh>
+      <FlatRoofSlab
+        shape={roofShape}
+        pts={footprint.pts}
+        y={y - 0.04}
+        color={color}
+        opacity={roofStyle === 'dome' || roofStyle === 'skylight' ? Math.max(0.85, opacity) : opacity}
+        parapetColor={blueprint?.metadata.wallPaintColor ?? '#ece7df'}
+      />
+      {roofStyle === 'dome' ? (
+        <DomeRoof center={center} radius={Math.max(1.2, Math.min(bw, bd) * 0.27)} props={{ ...styledProps, y: y + 0.21 }} />
+      ) : null}
+      {roofStyle === 'skylight'
+        ? [-1, 1].map((sx) => (
+            <RoofLantern key={sx} x={center.x + sx * bw * 0.22} z={center.z} w={Math.max(1.2, bw * 0.2)} d={Math.max(1, bd * 0.3)} y={y + 0.21} />
+          ))
+        : null}
       {/* Chevêtre / acrotère de bordure de trémie de toiture en aluminium */}
       {stairHoles.map((h, i) => {
         const hw = h.maxX - h.minX;
@@ -1045,7 +799,7 @@ function RoofMesh({
         const hcx = (h.minX + h.maxX) / 2;
         const hcz = (h.minZ + h.maxZ) / 2;
         return (
-          <group key={`roof-curb-${i}`} position={[0, y, 0]}>
+          <group key={`roof-curb-${i}`} position={[0, y + 0.21, 0]}>
             <mesh position={[hcx, 0.06, h.minZ]} castShadow>
               <boxGeometry args={[hw, 0.12, 0.05]} />
               <meshStandardMaterial color="#475569" metalness={0.7} roughness={0.3} />
@@ -1065,6 +819,61 @@ function RoofMesh({
           </group>
         );
       })}
+    </group>
+  );
+}
+
+/** Toiture-terrasse : dalle épaisse découpée au contour (trémies comprises) et acrotère périphérique. */
+function FlatRoofSlab({
+  shape,
+  pts,
+  y,
+  color,
+  opacity,
+  parapetColor,
+}: {
+  shape: THREE.Shape;
+  pts: Array<{ x: number; z: number }>;
+  y: number;
+  color: string;
+  opacity: number;
+  parapetColor: string;
+}) {
+  const slab = useMemo(() => {
+    const g = new THREE.ExtrudeGeometry(shape, { depth: 0.25, bevelEnabled: false });
+    g.rotateX(-Math.PI / 2);
+    return g;
+  }, [shape]);
+  const parapet = useMemo(() => {
+    const outer = new THREE.Shape(pts.map((p) => new THREE.Vector2(p.x, -p.z)));
+    const inner = offsetRing(pts, 0.22);
+    outer.holes.push(new THREE.Path(inner.map((p) => new THREE.Vector2(p.x, -p.z))));
+    const g = new THREE.ExtrudeGeometry(outer, { depth: 0.5, bevelEnabled: false });
+    g.rotateX(-Math.PI / 2);
+    return g;
+  }, [pts]);
+  const transparent = opacity < 0.97;
+  return (
+    <group position={[0, y, 0]}>
+      <mesh geometry={slab} receiveShadow castShadow={!transparent}>
+        <meshStandardMaterial
+          color={color}
+          roughness={0.92}
+          metalness={0.02}
+          transparent={transparent}
+          opacity={transparent ? opacity : 1}
+          depthWrite={!transparent}
+        />
+      </mesh>
+      <mesh geometry={parapet} castShadow receiveShadow>
+        <meshStandardMaterial
+          color={parapetColor}
+          roughness={0.9}
+          transparent={transparent}
+          opacity={transparent ? Math.min(1, opacity + 0.2) : 1}
+          depthWrite={!transparent}
+        />
+      </mesh>
     </group>
   );
 }
@@ -1851,6 +1660,7 @@ function WallMesh({
   selected,
   onSelect,
   paintColor,
+  fabric = false,
 }: {
   wall: RoomWallSegment;
   widthM: number;
@@ -1858,6 +1668,8 @@ function WallMesh({
   selected: boolean;
   onSelect: (mods?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean }) => void;
   paintColor?: string;
+  /** Tente : paroi en toile PVC au lieu d’une maçonnerie. */
+  fabric?: boolean;
 }) {
   const [sx, sz] = pctToWorld(wall.start.x, wall.start.y, widthM, heightM);
   const [ex, ez] = pctToWorld(wall.end.x, wall.end.y, widthM, heightM);
@@ -1882,6 +1694,36 @@ function WallMesh({
   );
 
   if (length < 0.05) return null;
+
+  if (fabric) {
+    const holes = openings.map((op) => {
+      const sill = op.sillM ?? (op.kind === 'door' ? 0 : 0.9);
+      const h = Math.min(op.heightM, Math.max(0.3, wallH - sill - 0.05));
+      const w = Math.min(op.widthM, length * 0.85);
+      const cx = (op.t - 0.5) * length;
+      return { kind: op.kind, x0: Math.max(-length / 2, cx - w / 2), x1: Math.min(length / 2, cx + w / 2), y0: Math.max(0, sill), y1: Math.min(wallH, sill + h) };
+    });
+    return (
+      <group
+        position={[midX, wallH / 2, midZ]}
+        rotation={[0, -angle, 0]}
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelect({ shiftKey: e.shiftKey, metaKey: e.metaKey, ctrlKey: e.ctrlKey });
+        }}
+      >
+        <TentSidewall
+          length={length}
+          height={wallH}
+          panels={bricks}
+          holes={holes.filter((h) => h.kind === 'door')}
+          color={wall.color ?? '#f7f5f0'}
+          selected={selected}
+        />
+        <TentSidewall length={length} height={wallH} panels={[]} holes={holes.filter((h) => h.kind === 'window')} selected={selected} />
+      </group>
+    );
+  }
 
   return (
     <group
@@ -2716,6 +2558,7 @@ function FixtureMesh({
   hasSideLanterns,
   hasPetals,
   chandelierStyle,
+  ceilingM = 3,
   lightWarmth,
   lightIntensity,
   lightRadius,
@@ -2727,6 +2570,7 @@ function FixtureMesh({
   instrumentStyle,
   barStyle,
   landscapeStyle,
+  poolShape,
   customElement,
   flowerType,
   fixtureId,
@@ -2775,6 +2619,8 @@ function FixtureMesh({
   hasSideLanterns?: boolean;
   hasPetals?: boolean;
   chandelierStyle?: ChandelierFixtureStyle;
+  /** Hauteur sous plafond (lustres suspendus). */
+  ceilingM?: number;
   lightWarmth?: 'warm' | 'candle' | 'neutral' | 'gold' | 'rose' | 'night' | 'golden' | 'cool';
   lightIntensity?: number;
   lightRadius?: number;
@@ -2786,6 +2632,7 @@ function FixtureMesh({
   instrumentStyle?: InstrumentStyle;
   barStyle?: BarStyle;
   landscapeStyle?: LandscapeStyle;
+  poolShape?: import('@/lib/roomOutdoorUtils').PoolShape;
   customElement?: CustomElementDefinition;
   flowerType?: string;
   fixtureId?: string;
@@ -2939,6 +2786,7 @@ function FixtureMesh({
           d={d}
           heightM={podiumHeightM}
           seed={seedFromId(fixtureId ?? label ?? 'landscape')}
+          poolShape={poolShape}
           selected={selected}
         />
       ) : isVenueEquipmentKind(kind) ? (
@@ -3009,7 +2857,7 @@ function FixtureMesh({
             skirtColor={color && color !== '#b45309' ? color : undefined}
           />
           {stageRoof === 'gabled' ? (
-            <GabledStageRoof w={w} d={d} heightM={Math.max(2.2, height + 2)} selected={selected} />
+            <GabledStageRoof w={w} d={d} heightM={height + 4.2} selected={selected} />
           ) : null}
         </group>
       ) : kind === 'stairs' ? (
@@ -3058,6 +2906,7 @@ function FixtureMesh({
       ) : kind === 'chandelier' ? (
         <CatalogueChandelierFixture
           style={chandelierStyle ?? 'crystalCascade'}
+          ceilingM={ceilingM}
           lightWarmth={lightWarmth ?? 'warm'}
           lightIntensity={lightIntensity ?? 1.5}
           lightRadius={lightRadius ?? 8}
@@ -3502,6 +3351,28 @@ function SceneContent({
     [heightM, orbitControlsRef, widthM],
   );
 
+  // Marche de chaque gradin prolongée jusqu’à la rangée qui la surplombe (même bloc de gradins).
+  const riserTreadById = useMemo(() => {
+    const rows = blueprint.furniture.filter(
+      (f): f is Extract<typeof f, { kind: 'row' }> => f.kind === 'row',
+    );
+    const map = new Map<string, number>();
+    for (const row of rows) {
+      const elev = row.elevationM ?? (row.tier > 0 ? row.tier * 0.38 : 0);
+      let best = Infinity;
+      for (const other of rows) {
+        if (other.id === row.id || other.storyId !== row.storyId) continue;
+        const otherElev = other.elevationM ?? (other.tier > 0 ? other.tier * 0.38 : 0);
+        if (otherElev <= elev + 0.02 || Math.abs(other.x - row.x) > 8 || (other.rotation ?? 0) !== (row.rotation ?? 0)) continue;
+        const dy = ((other.y - row.y) / 100) * heightM;
+        if (dy > 0.3 && dy < best) best = dy;
+      }
+      if (Number.isFinite(best) && best < 3) map.set(row.id, Math.max(0.5, best - RISER_FRONT_OVERHANG_M + 0.02));
+    }
+    return map;
+  }, [blueprint.furniture, heightM]);
+  const riserFinish = blueprint.metadata.showWalls === false ? 'stone' : 'wood';
+
   const blockedByTable = useMemo(() => {
     const map = new Map<string, number[]>();
     for (const seat of blockedSeats) {
@@ -3712,6 +3583,7 @@ function SceneContent({
             widthM={widthM}
             heightM={heightM}
             paintColor={blueprint.metadata.wallPaintColor}
+            fabric={blueprint.roomType === 'TENT'}
             selected={selected.some((s) => s.kind === 'wall' && s.id === wall.id)}
             onSelect={(e) => onSelect({ kind: 'wall', id: wall.id }, { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) })}
           />
@@ -3772,6 +3644,7 @@ function SceneContent({
             hasSideLanterns={f.hasSideLanterns}
             hasPetals={f.hasPetals}
             chandelierStyle={f.chandelierStyle}
+            ceilingM={wallHeightM}
             lightWarmth={f.lightWarmth}
             lightIntensity={f.lightIntensity}
             lightRadius={f.lightRadius}
@@ -3783,6 +3656,7 @@ function SceneContent({
             instrumentStyle={f.instrumentStyle}
             barStyle={f.barStyle}
             landscapeStyle={f.landscapeStyle}
+            poolShape={f.poolShape}
             customElement={f.customElement}
             flowerType={f.flowerType}
             fixtureId={f.id}
@@ -3917,6 +3791,8 @@ function SceneContent({
                   aisleSplit={item.aisleSplit === true}
                   aisleWidthPct={item.aisleWidthPct}
                   selected={selected.some((s) => s.kind === 'row' && s.id === item.id)}
+                  treadBackM={riserTreadById.get(item.id)}
+                  finish={riserFinish}
                 />
               ) : null}
               {(() => {

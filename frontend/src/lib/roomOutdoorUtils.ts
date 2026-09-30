@@ -297,3 +297,106 @@ export function seededRandom(seed: number) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+
+// ───────────────────────── formes de piscine ─────────────────────────
+
+export type PoolShape = 'rectangle' | 'rounded' | 'oval' | 'round' | 'kidney' | 'lShape' | 'freeform';
+
+export const POOL_SHAPE_LABELS: Record<PoolShape, string> = {
+  rectangle: 'Rectangulaire',
+  rounded: 'Angles arrondis',
+  oval: 'Ovale',
+  round: 'Ronde',
+  kidney: 'Haricot',
+  lShape: 'En L',
+  freeform: 'Lagon (forme libre)',
+};
+
+export const POOL_SHAPE_ORDER: PoolShape[] = ['rectangle', 'rounded', 'oval', 'round', 'kidney', 'lShape', 'freeform'];
+
+export function isPoolShape(value: unknown): value is PoolShape {
+  return typeof value === 'string' && value in POOL_SHAPE_LABELS;
+}
+
+/**
+ * Contour du bassin (intérieur des margelles), centré, en mètres : [x, z] dans le sens trigonométrique
+ * (x vers la droite, z vers le bas du plan). `w` × `d` = emprise du bassin.
+ */
+export function poolOutline(shape: PoolShape, w: number, d: number): Array<[number, number]> {
+  const hw = w / 2;
+  const hd = d / 2;
+  const pts: Array<[number, number]> = [];
+  const ellipse = (n: number, f: (t: number) => [number, number]) => {
+    for (let i = 0; i < n; i += 1) pts.push(f((i / n) * Math.PI * 2));
+  };
+  switch (shape) {
+    case 'rounded': {
+      const r = Math.min(hw, hd) * 0.45;
+      const corners: Array<[number, number, number]> = [
+        [hw - r, hd - r, 0],
+        [-hw + r, hd - r, Math.PI / 2],
+        [-hw + r, -hd + r, Math.PI],
+        [hw - r, -hd + r, (3 * Math.PI) / 2],
+      ];
+      for (const [cx, cz, a0] of corners) {
+        for (let k = 0; k <= 6; k += 1) {
+          const a = a0 + (k / 6) * (Math.PI / 2);
+          pts.push([cx + Math.cos(a) * r, cz + Math.sin(a) * r]);
+        }
+      }
+      break;
+    }
+    case 'oval':
+      ellipse(48, (t) => [Math.cos(t) * hw, Math.sin(t) * hd]);
+      break;
+    case 'round': {
+      const r = Math.min(hw, hd);
+      ellipse(48, (t) => [Math.cos(t) * r, Math.sin(t) * r]);
+      break;
+    }
+    case 'kidney':
+      // Ellipse creusée au milieu d’un grand côté : la forme « haricot » des piscines des années 50.
+      ellipse(56, (t) => {
+        const notch = 0.36 * hd * Math.exp(-(Math.cos(t) ** 2) / 0.2) * Math.max(0, Math.sin(t)) ** 2;
+        const bulge = 1 + 0.08 * Math.cos(t);
+        return [Math.cos(t) * hw, (Math.sin(t) * hd - notch) * bulge];
+      });
+      break;
+    case 'lShape': {
+      const cw = w * 0.45;
+      const cd = d * 0.5;
+      pts.push([hw, -hd], [hw, hd], [-hw, hd], [-hw, -hd + cd], [-hw + cw, -hd + cd], [-hw + cw, -hd]);
+      break;
+    }
+    case 'freeform':
+      ellipse(64, (t) => {
+        const k = 1 + 0.1 * Math.sin(2 * t + 0.9) + 0.07 * Math.sin(3 * t + 2.1) - 0.04 * Math.cos(5 * t);
+        return [Math.cos(t) * hw * k, Math.sin(t) * hd * k];
+      });
+      break;
+    case 'rectangle':
+    default:
+      pts.push([hw, -hd], [hw, hd], [-hw, hd], [-hw, -hd]);
+  }
+  // Formes organiques : on recale sur l’emprise pour que le bassin remplisse exactement l’élément.
+  if (shape === 'kidney' || shape === 'freeform') {
+    const xs = pts.map((p) => p[0]);
+    const zs = pts.map((p) => p[1]);
+    const cx = (Math.max(...xs) + Math.min(...xs)) / 2;
+    const cz = (Math.max(...zs) + Math.min(...zs)) / 2;
+    const sx = hw / Math.max(1e-6, (Math.max(...xs) - Math.min(...xs)) / 2);
+    const sz = hd / Math.max(1e-6, (Math.max(...zs) - Math.min(...zs)) / 2);
+    return pts.map(([x, z]) => [(x - cx) * sx, (z - cz) * sz]);
+  }
+  return pts;
+}
+
+/** Tracé SVG (viewBox 0 0 100 100) du contour, pour l’aperçu 2D du plan. */
+export function poolOutlineSvgPath(shape: PoolShape, inset = 0): string {
+  const s = 100 - inset * 2;
+  return (
+    poolOutline(shape, s, s)
+      .map(([x, z], i) => `${i === 0 ? 'M' : 'L'}${(x + 50).toFixed(1)} ${(z + 50).toFixed(1)}`)
+      .join(' ') + ' Z'
+  );
+}

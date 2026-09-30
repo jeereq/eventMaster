@@ -15,7 +15,7 @@ import {
   podiumStyleLabels,
 } from '@/lib/roomLayoutUtils';
 import { ZONE_MATERIAL_COLORS } from '@/lib/roomWebGLMaterials';
-import { LANDSCAPE_STYLE_META, type LandscapeStyle } from '@/lib/roomOutdoorUtils';
+import { LANDSCAPE_STYLE_META, poolOutlineSvgPath, type LandscapeStyle, type PoolShape } from '@/lib/roomOutdoorUtils';
 import { getCroppedBackgroundStyle } from '@/lib/imageCropUtils';
 import FlowerRenderer from '@/components/FlowerRenderer';
 import { Sparkles, DoorOpen, ShieldAlert } from 'lucide-react';
@@ -23,7 +23,7 @@ import { Sparkles, DoorOpen, ShieldAlert } from 'lucide-react';
 type Fixture = RoomLayoutBlueprint['fixtures'][number];
 
 /** Vue de dessus des aménagements extérieurs (arbres, eau, feu…). */
-function LandscapePlanGlyph({ style }: { style: LandscapeStyle }) {
+function LandscapePlanGlyph({ style, poolShape = 'rectangle' }: { style: LandscapeStyle; poolShape?: PoolShape }) {
   switch (style) {
     case 'oak':
     case 'olive':
@@ -62,9 +62,16 @@ function LandscapePlanGlyph({ style }: { style: LandscapeStyle }) {
       return <div className="w-full h-full rounded-sm bg-[#7a5334] border-2 border-[#5a3a22] p-[8%]"><div className="w-full h-full rounded-sm bg-[#7f9a4c]" /></div>;
     case 'pool':
       return (
-        <div className="w-full h-full rounded-md bg-[#e9e3d6] p-[5%] shadow-sm">
-          <div className="w-full h-full rounded-sm border border-[#1f6f8c] bg-gradient-to-br from-[#5fd0e6] to-[#1f8fb3]" />
-        </div>
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full drop-shadow-sm" aria-hidden>
+          <defs>
+            <linearGradient id="pool-water" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stopColor="#5fd0e6" />
+              <stop offset="1" stopColor="#1f8fb3" />
+            </linearGradient>
+          </defs>
+          <path d={poolOutlineSvgPath(poolShape, 0)} fill="#e9e3d6" />
+          <path d={poolOutlineSvgPath(poolShape, 6)} fill="url(#pool-water)" stroke="#1f6f8c" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+        </svg>
       );
     case 'pond':
       return <div className="w-full h-full rounded-[48%_52%_45%_55%] bg-gradient-to-br from-[#5b9c86] to-[#2f6b5e] border-4 border-[#a8a196]" />;
@@ -1100,7 +1107,7 @@ export default function FixtureRenderer({
     return (
       <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
         <div className="relative w-full h-full flex items-center justify-center">
-          <LandscapePlanGlyph style={style} />
+          <LandscapePlanGlyph style={style} poolShape={fixture.poolShape} />
           {showLabel && style !== 'fence' && style !== 'hedge' ? (
             <span className="absolute bottom-0 translate-y-1/2 z-10 text-[7px] font-black uppercase text-emerald-950 bg-white/85 px-1 rounded shadow-xs whitespace-nowrap">
               {fixture.label || LANDSCAPE_STYLE_META[style].label}

@@ -3,6 +3,7 @@
 import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { loadTiledTexture } from '@/lib/roomWebGLMaterials';
 
 const GOLD = '#c9a227';
 const CREAM = '#f5f0e8';
@@ -1192,10 +1193,14 @@ export function DesktopPcMesh({
 }
 
 /** Toit à pignon au-dessus d’une scène. */
+/**
+ * Toit de scène à deux pans (charpente bois) : faîtage dans l’axe public → fond de scène,
+ * poteaux aux angles, sablières, entraits, pignon arrière fermé et couverture en tuiles.
+ */
 export function GabledStageRoof({
   w,
   d,
-  heightM = 2.6,
+  heightM = 4.6,
   selected = false,
 }: {
   w: number;
@@ -1203,25 +1208,83 @@ export function GabledStageRoof({
   heightM?: number;
   selected?: boolean;
 }) {
-  const h = Math.max(1.8, heightM);
-  const wood = selected ? '#c7d2fe' : '#b45309';
-  const stone = '#78716c';
+  const h = Math.max(3.2, heightM);
+  const pitch = (24 * Math.PI) / 180;
+  const overhang = 0.35;
+  const halfSpan = w / 2 + overhang;
+  const slopeLen = halfSpan / Math.cos(pitch);
+  const rise = halfSpan * Math.tan(pitch);
+  const roofD = d + overhang * 2;
+  const timber = selected ? '#c7d2fe' : '#7c5230';
+  const tiles = useMemo(() => loadTiledTexture('/floors/gen/roof-tiles.jpg', slopeLen / 1.2, roofD / 1.2), [slopeLen, roofD]);
+  const px = w / 2 - 0.12;
+  const pz = d / 2 - 0.12;
+  const gable = useMemo(() => {
+    const shape = new THREE.Shape();
+    shape.moveTo(-w / 2, 0);
+    shape.lineTo(w / 2, 0);
+    shape.lineTo(0, (w / 2) * Math.tan(pitch));
+    shape.closePath();
+    const g = new THREE.ExtrudeGeometry(shape, { depth: 0.05, bevelEnabled: false });
+    return g;
+  }, [w, pitch]);
   return (
     <group>
-      {([-1, 1] as const).map((side) => (
-        <mesh key={side} position={[side * w * 0.38, h * 0.42, 0]} castShadow>
-          <boxGeometry args={[0.28, h * 0.84, 0.28]} />
-          <meshStandardMaterial color={stone} roughness={0.7} />
+      {/* Poteaux d’angle et intermédiaires sur les grandes portées */}
+      {[-1, 1].flatMap((sx) =>
+        [-1, 1].map((sz) => (
+          <mesh key={`post-${sx}-${sz}`} position={[sx * px, h / 2, sz * pz]} castShadow receiveShadow>
+            <boxGeometry args={[0.2, h, 0.2]} />
+            <meshStandardMaterial color={timber} roughness={0.7} />
+          </mesh>
+        )),
+      )}
+      {/* Sablières (le long des rives) et entraits (avant / arrière) */}
+      {[-1, 1].map((sx) => (
+        <mesh key={`plate-${sx}`} position={[sx * px, h - 0.1, 0]} castShadow>
+          <boxGeometry args={[0.18, 0.2, d]} />
+          <meshStandardMaterial color={timber} roughness={0.7} />
         </mesh>
       ))}
-      <mesh position={[0, h * 0.92, 0]} rotation={[0, 0, 0.32]} castShadow>
-        <boxGeometry args={[w * 0.55, 0.08, d * 0.7]} />
-        <meshStandardMaterial color={wood} roughness={0.55} />
+      {[-1, 1].map((sz) => (
+        <mesh key={`tie-${sz}`} position={[0, h - 0.12, sz * pz]} castShadow>
+          <boxGeometry args={[w, 0.22, 0.16]} />
+          <meshStandardMaterial color={timber} roughness={0.7} />
+        </mesh>
+      ))}
+      {/* Poinçon et arbalétriers du pignon avant (ouvert côté public) */}
+      <mesh position={[0, h + rise / 2 - 0.1, pz]} castShadow>
+        <boxGeometry args={[0.14, rise, 0.14]} />
+        <meshStandardMaterial color={timber} roughness={0.7} />
       </mesh>
-      <mesh position={[0, h * 0.92, 0]} rotation={[0, 0, -0.32]} castShadow>
-        <boxGeometry args={[w * 0.55, 0.08, d * 0.7]} />
-        <meshStandardMaterial color={wood} roughness={0.55} />
+      {[-1, 1].map((sx) => (
+        <mesh key={`rafter-${sx}`} position={[(sx * w) / 4, h + rise / 2 - 0.12, pz]} rotation={[0, 0, -sx * pitch]} castShadow>
+          <boxGeometry args={[w / 2 / Math.cos(pitch), 0.16, 0.14]} />
+          <meshStandardMaterial color={timber} roughness={0.7} />
+        </mesh>
+      ))}
+      {/* Pignon arrière fermé (bardage bois) */}
+      <mesh geometry={gable} position={[0, h, -pz - 0.05]} castShadow receiveShadow>
+        <meshStandardMaterial color={selected ? '#c7d2fe' : '#9a6b43'} roughness={0.8} side={THREE.DoubleSide} />
       </mesh>
+      {/* Faîtage */}
+      <mesh position={[0, h + rise + 0.02, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <cylinderGeometry args={[0.07, 0.07, roofD, 10]} />
+        <meshStandardMaterial color="#8a3b24" roughness={0.75} />
+      </mesh>
+      {/* Deux pans couverts de tuiles */}
+      {[-1, 1].map((sx) => (
+        <mesh
+          key={`pan-${sx}`}
+          position={[(sx * halfSpan) / 2, h + rise / 2 + 0.05, 0]}
+          rotation={[0, 0, -sx * pitch]}
+          castShadow
+          receiveShadow
+        >
+          <boxGeometry args={[slopeLen, 0.07, roofD]} />
+          <meshStandardMaterial color={selected ? '#c7d2fe' : '#ffffff'} map={tiles} roughness={0.8} />
+        </mesh>
+      ))}
     </group>
   );
 }

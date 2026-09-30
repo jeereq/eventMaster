@@ -9,6 +9,9 @@ import {
   LANDSCAPE_GROUP_LABELS,
   LANDSCAPE_STYLE_META,
   LANDSCAPE_STYLE_ORDER,
+  POOL_SHAPE_LABELS,
+  POOL_SHAPE_ORDER,
+  type PoolShape,
   OUTDOOR_SURROUNDINGS_META,
   resolveEnvironmentSettings,
   sunAnglesFromPosition,
@@ -5872,6 +5875,23 @@ export default function RoomLayoutEditor({
                     </select>
                     <span className="text-xs text-muted">{meta.hint}</span>
                   </label>
+                  {style === 'pool' ? (
+                    <label className="block text-xs space-y-1">
+                      <span className="font-semibold text-muted">Forme du bassin</span>
+                      <select
+                        value={selectedFixture.poolShape ?? 'rectangle'}
+                        onChange={(e) => {
+                          const next = e.target.value as PoolShape;
+                          updateFixture(selectedFixture.id, { poolShape: next }, `Piscine : ${POOL_SHAPE_LABELS[next]}`);
+                        }}
+                        className={EDITOR_FIELD}
+                      >
+                        {POOL_SHAPE_ORDER.map((id) => (
+                          <option key={id} value={id}>{POOL_SHAPE_LABELS[id]}</option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
                   {style !== 'pool' && style !== 'pond' && style !== 'firePit' ? (
                     <label className="block text-xs space-y-1">
                       <span className="font-semibold text-muted">Hauteur (m)</span>

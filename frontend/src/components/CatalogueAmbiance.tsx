@@ -10,35 +10,18 @@ import {
 import type { DoorStyle, AisleStyle, ChandelierFixtureStyle, OpeningMaterial } from '@/lib/roomLayoutUtils';
 import { getDoorMaterialProps } from '@/lib/roomWebGLMaterials';
 import { SurfaceMat } from '@/components/room/SurfaceMaterial';
+import { CandelabraChandelier, ChandelierModel, CrystalChandelier, chandelierLightY } from '@/components/room/ChandelierMeshes';
 
 function ChandelierClassic({ pointLights }: { pointLights: boolean }) {
   return (
     <group>
-      <mesh position={[0, 0.25, 0]}>
-        <cylinderGeometry args={[0.008, 0.008, 0.5, 6]} />
-        <SurfaceMat color="#a8a29e" metalness={0.7} roughness={0.3} />
+      <mesh position={[0, 0.1, 0]}>
+        <cylinderGeometry args={[0.005, 0.005, 0.2, 6]} />
+        <SurfaceMat color="#57534e" metalness={0.7} roughness={0.3} />
       </mesh>
-      <mesh position={[0, -0.05, 0]} castShadow>
-        <sphereGeometry args={[0.14, 16, 16]} />
-        <meshStandardMaterial color="#fef3c7" emissive="#fbbf24" emissiveIntensity={0.55} roughness={0.25} metalness={0.2} />
-      </mesh>
-      {[0, 1, 2, 3, 4, 5].map((a) => {
-        const ang = (a / 6) * Math.PI * 2;
-        return (
-          <group key={a} rotation={[0, ang, 0]}>
-            <mesh position={[0.22, -0.08, 0]} rotation={[0, 0, 0.4]} castShadow>
-              <cylinderGeometry args={[0.012, 0.012, 0.28, 6]} />
-              <SurfaceMat color="#d4af37" metalness={0.8} roughness={0.25} />
-            </mesh>
-            <mesh position={[0.34, -0.18, 0]} castShadow>
-              <sphereGeometry args={[0.05, 10, 10]} />
-              <meshStandardMaterial color="#fff7ed" emissive="#fde68a" emissiveIntensity={0.7} roughness={0.2} />
-            </mesh>
-          </group>
-        );
-      })}
+      <CandelabraChandelier scale={0.62} />
       {pointLights ? (
-        <pointLight position={[0, -0.2, 0]} intensity={0.55} color="#fef3c7" distance={10} decay={2} />
+        <pointLight position={[0, -0.4, 0]} intensity={0.55} color="#fef3c7" distance={10} decay={2} />
       ) : null}
     </group>
   );
@@ -47,32 +30,13 @@ function ChandelierClassic({ pointLights }: { pointLights: boolean }) {
 function ChandelierCrystal({ pointLights }: { pointLights: boolean }) {
   return (
     <group>
-      <mesh position={[0, 0.28, 0]}>
-        <cylinderGeometry args={[0.006, 0.006, 0.45, 6]} />
-        <SurfaceMat color="#cbd5e1" metalness={0.85} roughness={0.2} />
+      <mesh position={[0, 0.1, 0]}>
+        <cylinderGeometry args={[0.005, 0.005, 0.2, 6]} />
+        <SurfaceMat color="#a8a29e" metalness={0.85} roughness={0.2} />
       </mesh>
-      <mesh position={[0, 0.02, 0]} castShadow>
-        <octahedronGeometry args={[0.1, 0]} />
-        <SurfaceMat color="#f5fbff" finish="crystal" opacity={0.7} />
-      </mesh>
-      {[0, 1, 2, 3, 4, 5, 6, 7].map((a) => {
-        const ang = (a / 8) * Math.PI * 2;
-        const r = 0.2 + (a % 2) * 0.06;
-        return (
-          <group key={a} rotation={[0, ang, 0]}>
-            <mesh position={[r, -0.12, 0]} castShadow>
-              <octahedronGeometry args={[0.045, 0]} />
-              <SurfaceMat color="#f0f9ff" finish="crystal" />
-            </mesh>
-            <mesh position={[r * 0.7, -0.28, 0]} castShadow>
-              <octahedronGeometry args={[0.03, 0]} />
-              <SurfaceMat color="#f0f9ff" finish="crystal" emissive="#fef3c7" emissiveIntensity={0.25} />
-            </mesh>
-          </group>
-        );
-      })}
+      <CrystalChandelier scale={0.72} />
       {pointLights ? (
-        <pointLight position={[0, -0.15, 0]} intensity={0.78} color="#fef3c7" distance={11} decay={2} />
+        <pointLight position={[0, -0.45, 0]} intensity={0.78} color="#fef3c7" distance={11} decay={2} />
       ) : null}
     </group>
   );
@@ -970,8 +934,11 @@ export function CatalogueChandelierFixture({
   lightIntensity = 1.6,
   lightRadius = 8,
   selected = false,
+  ceilingM = 3.4,
 }: {
   style?: ChandelierFixtureStyle;
+  /** Hauteur sous plafond (m) : le lustre y est suspendu. */
+  ceilingM?: number;
   lightWarmth?: 'warm' | 'candle' | 'neutral' | 'gold' | 'rose' | 'night' | 'golden' | 'cool';
   lightIntensity?: number;
   lightRadius?: number;
@@ -990,306 +957,13 @@ export function CatalogueChandelierFixture({
               ? '#f8fafc'
               : '#fef3c7';
 
+  const hangStyle = style ?? 'crystalCascade';
   return (
-    <group position={[0, 2.5, 0]}>
-      {/* Câble / tige de suspension du plafond */}
-      <mesh position={[0, 0.45, 0]}>
-        <cylinderGeometry args={[0.006, 0.006, 0.9, 6]} />
-        <SurfaceMat color="#475569" metalness={0.8} roughness={0.2} />
-      </mesh>
-
-      {/* 1. CASCADE DE CRISTAL ROYAL */}
-      {style === 'crystalCascade' && (
-        <group>
-          {/* Couronne supérieure dorée */}
-          <mesh position={[0, 0.05, 0]} castShadow>
-            <cylinderGeometry args={[0.35, 0.38, 0.08, 24]} />
-            <SurfaceMat color={selected ? '#c7d2fe' : '#d4af37'} metalness={0.85} roughness={0.2} />
-          </mesh>
-          {/* Cascades de pampilles en cristal transparent */}
-          {[0, 1, 2].map((tier) => {
-            const r = 0.3 - tier * 0.08;
-            const y = -tier * 0.15;
-            return (
-              <group key={tier} position={[0, y, 0]}>
-                {Array.from({ length: 12 - tier * 2 }).map((_, idx) => {
-                  const ang = (idx / (12 - tier * 2)) * Math.PI * 2;
-                  return (
-                    <mesh
-                      key={idx}
-                      position={[Math.cos(ang) * r, -0.08, Math.sin(ang) * r]}
-                      rotation={[0, ang, 0]}
-                      castShadow
-                    >
-                      <octahedronGeometry args={[0.035, 0]} />
-                      <SurfaceMat
-                        color="#f8fafc"
-                        finish="crystal"
-                        emissive={lightColor}
-                        emissiveIntensity={0.18 * Math.max(0.4, lightIntensity)}
-                      />
-                    </mesh>
-                  );
-                })}
-              </group>
-            );
-          })}
-        </group>
-      )}
-
-      {/* 2. HALOS & ANNEAUX DE LAITON BROSSÉ */}
-      {style === 'brassRings' && (
-        <group>
-          {[0.42, 0.28, 0.16].map((ringR, idx) => (
-            <mesh
-              key={idx}
-              position={[0, -idx * 0.12, 0]}
-              rotation={[0.15 * (idx % 2 === 0 ? 1 : -1), 0.3 * idx, 0.1 * idx]}
-              castShadow
-            >
-              <torusGeometry args={[ringR, 0.015, 12, 36]} />
-              <SurfaceMat
-                color={selected ? '#c7d2fe' : '#d4af37'}
-                finish="brass"
-                metalness={0.95}
-                roughness={0.25}
-                repeat={[8, 1]}
-                emissive="#fde68a"
-                emissiveIntensity={0.12}
-              />
-            </mesh>
-          ))}
-        </group>
-      )}
-
-      {/* 3. BOHÈME ROTIN & FEUILLES DE PAMPA */}
-      {style === 'bohoPampas' && (
-        <group>
-          {/* Abat-jour rotin tressé */}
-          <mesh position={[0, 0, 0]} castShadow>
-            <cylinderGeometry args={[0.2, 0.38, 0.3, 16, 1, true]} />
-            <SurfaceMat color="#c8914a" finish="rattan" roughness={0.8} repeat={[4, 1.5]} side={THREE.DoubleSide} />
-          </mesh>
-          {/* Éventail d'herbes de pampa autour */}
-          {Array.from({ length: 10 }).map((_, i) => {
-            const ang = (i / 10) * Math.PI * 2;
-            return (
-              <mesh
-                key={i}
-                position={[Math.cos(ang) * 0.35, -0.05, Math.sin(ang) * 0.35]}
-                rotation={[0.4, ang, 0]}
-                castShadow
-              >
-                <coneGeometry args={[0.06, 0.35, 6]} />
-                <meshStandardMaterial color="#fef3c7" roughness={0.95} />
-              </mesh>
-            );
-          })}
-        </group>
-      )}
-
-      {/* 4. COURONNE BOTANIQUE FLORALE */}
-      {style === 'botanicalHalo' && (
-        <group>
-          {/* Anneau végétal eucalyptus */}
-          {/* Cercle laiton fin, habillé de grappes de feuillage eucalyptus */}
-          <mesh position={[0, 0, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
-            <torusGeometry args={[0.4, 0.008, 8, 48]} />
-            <SurfaceMat color="#c9a227" finish="brass" />
-          </mesh>
-          {Array.from({ length: 36 }).map((_, i) => {
-            const ang = (i / 36) * Math.PI * 2 + (i % 3) * 0.05;
-            const rr = 0.4 + ((i * 37) % 7 - 3) * 0.008;
-            return (
-              <mesh
-                key={`leaf-${i}`}
-                position={[Math.cos(ang) * rr, ((i * 13) % 5 - 2) * 0.012, Math.sin(ang) * rr]}
-                rotation={[((i * 7) % 5) * 0.4, -ang, ((i * 11) % 4) * 0.5]}
-                scale={[1, 0.35, 0.6]}
-                castShadow
-              >
-                <sphereGeometry args={[0.05, 7, 5]} />
-                <meshStandardMaterial color={i % 4 === 0 ? '#6b8f71' : i % 3 === 0 ? '#4f7a5a' : '#7fa38a'} roughness={0.85} />
-              </mesh>
-            );
-          })}
-          {/* Brins retombants */}
-          {Array.from({ length: 8 }).map((_, i) => {
-            const ang = (i / 8) * Math.PI * 2 + 0.2;
-            return (
-              <mesh key={`trail-${i}`} position={[Math.cos(ang) * 0.4, -0.12, Math.sin(ang) * 0.4]} scale={[0.4, 1, 0.4]}>
-                <sphereGeometry args={[0.06, 6, 6]} />
-                <meshStandardMaterial color="#5d8466" roughness={0.9} />
-              </mesh>
-            );
-          })}
-          {/* Boutons floraux roses et ivoires */}
-          {Array.from({ length: 12 }).map((_, i) => {
-            const ang = (i / 12) * Math.PI * 2;
-            return (
-              <mesh
-                key={i}
-                position={[Math.cos(ang) * 0.4, (i % 2 === 0 ? 0.03 : -0.03), Math.sin(ang) * 0.4]}
-                castShadow
-              >
-                <sphereGeometry args={[0.04, 10, 8]} />
-                <meshStandardMaterial color={i % 3 === 0 ? '#f4c2c2' : '#fffbeb'} roughness={0.7} />
-              </mesh>
-            );
-          })}
-        </group>
-      )}
-
-      {/* 5. CANDÉLABRE DE CHÂTEAU GRAND SIÈCLE */}
-      {style === 'candleCandelabra' && (
-        <group>
-          {/* Tige centrale or */}
-          <mesh position={[0, 0, 0]} castShadow>
-            <cylinderGeometry args={[0.03, 0.05, 0.4, 12]} />
-            <SurfaceMat color="#d4af37" metalness={0.8} roughness={0.25} />
-          </mesh>
-          {/* 6 bras recourbés avec bougies */}
-          {Array.from({ length: 6 }).map((_, i) => {
-            const ang = (i / 6) * Math.PI * 2;
-            const bx = Math.cos(ang) * 0.32;
-            const bz = Math.sin(ang) * 0.32;
-            return (
-              <group key={i}>
-                <mesh position={[bx * 0.6, -0.06, bz * 0.6]} rotation={[0, ang, 0.5]} castShadow>
-                  <cylinderGeometry args={[0.012, 0.012, 0.28, 8]} />
-                  <SurfaceMat color="#d4af37" metalness={0.8} roughness={0.25} />
-                </mesh>
-                {/* Bougie cire */}
-                <mesh position={[bx, 0.06, bz]} castShadow>
-                  <cylinderGeometry args={[0.015, 0.015, 0.14, 10]} />
-                  <meshStandardMaterial color="#fffbeb" roughness={0.4} />
-                </mesh>
-                {/* Flamme scintillante */}
-                <mesh position={[bx, 0.15, bz]}>
-                  <sphereGeometry args={[0.016, 8, 8]} />
-                  <meshStandardMaterial color="#fbbf24" emissive="#f59e0b" emissiveIntensity={1.2} />
-                </mesh>
-              </group>
-            );
-          })}
-        </group>
-      )}
-
-      {/* 6. CIEL ÉTOILÉ FAIRY CANOPY */}
-      {style === 'fairyCanopy' && (
-        <group>
-          {Array.from({ length: 16 }).map((_, i) => {
-            const ang = (i / 16) * Math.PI * 2;
-            const r = 0.15 + (i % 3) * 0.12;
-            const dropY = -0.1 - (i % 4) * 0.1;
-            return (
-              <group key={i} position={[Math.cos(ang) * r, 0, Math.sin(ang) * r]}>
-                <mesh position={[0, dropY / 2, 0]}>
-                  <cylinderGeometry args={[0.002, 0.002, Math.abs(dropY), 4]} />
-                  <meshStandardMaterial color="#94a3b8" />
-                </mesh>
-                <mesh position={[0, dropY, 0]}>
-                  <sphereGeometry args={[0.018, 8, 8]} />
-                  <meshStandardMaterial color="#fef08a" emissive="#fde047" emissiveIntensity={1.2} />
-                </mesh>
-              </group>
-            );
-          })}
-        </group>
-      )}
-
-      {/* 7. CYLINDRE ÉPURÉ ARCHITECTURAL — trio de suspensions tubulaires */}
-      {style === 'modernMinimal' && (
-        <group>
-          {/* Patère plafond */}
-          <mesh position={[0, 0.88, 0]} castShadow>
-            <cylinderGeometry args={[0.09, 0.09, 0.03, 24]} />
-            <SurfaceMat color="#1c1917" finish="metal" roughness={0.4} />
-          </mesh>
-          {([[-0.2, 0.08], [0.2, 0.08], [0, -0.22]] as const).map(([px, pz], i) => {
-            const drop = i === 2 ? 0.12 : 0;
-            return (
-              <group key={i} position={[px, -drop, pz]}>
-                <mesh position={[0, 0.45, 0]}>
-                  <cylinderGeometry args={[0.003, 0.003, 0.9 + drop * 2, 4]} />
-                  <meshStandardMaterial color="#27272a" />
-                </mesh>
-                <mesh castShadow>
-                  <cylinderGeometry args={[0.07, 0.07, 0.34, 24, 1, true]} />
-                  <SurfaceMat color={selected ? '#c7d2fe' : '#18181b'} finish="metal" roughness={0.35} side={THREE.DoubleSide} />
-                </mesh>
-                {/* Liseré laiton + diffuseur opale au bas du tube */}
-                <mesh position={[0, -0.168, 0]} rotation={[Math.PI / 2, 0, 0]}>
-                  <torusGeometry args={[0.07, 0.006, 8, 24]} />
-                  <SurfaceMat color="#c9a227" finish="brass" />
-                </mesh>
-                <mesh position={[0, -0.15, 0]} rotation={[Math.PI / 2, 0, 0]}>
-                  <circleGeometry args={[0.064, 24]} />
-                  <meshStandardMaterial color="#fffbeb" emissive={lightColor} emissiveIntensity={1.4} side={THREE.DoubleSide} />
-                </mesh>
-              </group>
-            );
-          })}
-        </group>
-      )}
-
-      {/* 8. LANTERNE SUSPENDUE FER FORGÉ */}
-      {style === 'lantern' && (
-        <group position={[0, -0.05, 0]}>
-          {/* Chaîne */}
-          {Array.from({ length: 6 }).map((_, i) => (
-            <mesh key={i} position={[0, 0.4 + i * 0.07, 0]} rotation={[0, (i % 2) * (Math.PI / 2), 0]}>
-              <torusGeometry args={[0.022, 0.005, 6, 12]} />
-              <SurfaceMat color="#1c1917" finish="metal" roughness={0.5} />
-            </mesh>
-          ))}
-          {/* Anneau + chapeau pyramidal */}
-          <mesh position={[0, 0.34, 0]}>
-            <torusGeometry args={[0.035, 0.008, 8, 16]} />
-            <SurfaceMat color="#1c1917" finish="metal" roughness={0.5} />
-          </mesh>
-          <mesh position={[0, 0.25, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
-            <coneGeometry args={[0.24, 0.14, 4]} />
-            <SurfaceMat color={selected ? '#c7d2fe' : '#1c1917'} finish="metal" roughness={0.45} />
-          </mesh>
-          {/* Cage : 4 montants + cadres haut / bas */}
-          {([[-1, -1], [1, -1], [1, 1], [-1, 1]] as const).map(([sx, sz], i) => (
-            <mesh key={i} position={[sx * 0.14, 0, sz * 0.14]} castShadow>
-              <boxGeometry args={[0.018, 0.42, 0.018]} />
-              <SurfaceMat color="#1c1917" finish="metal" roughness={0.45} />
-            </mesh>
-          ))}
-          {[0.2, -0.2].map((y) => (
-            <mesh key={y} position={[0, y, 0]} castShadow>
-              <boxGeometry args={[0.3, 0.025, 0.3]} />
-              <SurfaceMat color="#1c1917" finish="metal" roughness={0.45} />
-            </mesh>
-          ))}
-          {/* Vitres */}
-          <mesh>
-            <boxGeometry args={[0.27, 0.38, 0.27]} />
-            <SurfaceMat color="#fef3c7" finish="glass" opacity={0.28} />
-          </mesh>
-          {/* Bougie / ampoule flamme */}
-          <mesh position={[0, -0.1, 0]}>
-            <cylinderGeometry args={[0.03, 0.03, 0.14, 12]} />
-            <meshStandardMaterial color="#fffbeb" roughness={0.5} />
-          </mesh>
-          <mesh position={[0, 0.0, 0]}>
-            <sphereGeometry args={[0.028, 10, 10]} />
-            <meshStandardMaterial color="#fde68a" emissive={lightColor} emissiveIntensity={2} />
-          </mesh>
-          {/* Culot */}
-          <mesh position={[0, -0.25, 0]} rotation={[Math.PI, Math.PI / 4, 0]}>
-            <coneGeometry args={[0.1, 0.08, 4]} />
-            <SurfaceMat color="#1c1917" finish="metal" roughness={0.45} />
-          </mesh>
-        </group>
-      )}
-
+    <group>
+      <ChandelierModel style={hangStyle} ceilingM={ceilingM} lightColor={lightColor} selected={selected} />
       {/* Source de lumière ponctuelle scénique */}
       <pointLight
-        position={[0, -0.25, 0]}
+        position={[0, chandelierLightY(hangStyle, ceilingM), 0]}
         intensity={lightIntensity * 0.85}
         color={lightColor}
         distance={lightRadius}

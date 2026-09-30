@@ -116,6 +116,7 @@ export type BarStyle =
 export type RoofStyle =
   | 'flat'
   | 'tentSwag'
+  | 'pagoda'
   | 'gabled'
   | 'coffered'
   | 'glassCanopy'
@@ -500,6 +501,8 @@ export interface RoomLayoutBlueprint {
     barStyle?: BarStyle;
     /** Aménagement extérieur (arbre, haie, piscine, brasero…). */
     landscapeStyle?: import('@/lib/roomOutdoorUtils').LandscapeStyle;
+    /** Piscine : forme du bassin (rectangulaire, haricot, ovale, en L…). */
+    poolShape?: import('@/lib/roomOutdoorUtils').PoolShape;
     /** Élément créé à partir d’une image ou d’une vidéo (découpe 3D, panneau, bloc, écran…). */
     customElement?: import('@/lib/roomCustomElements').CustomElementDefinition;
     /** Podium / escalier : nombre de marches. */
@@ -1280,7 +1283,7 @@ export const FIXTURE_REAL_SIZE_M: Partial<Record<RoomFixtureKind, { w: number; d
   djBooth: { w: 2.2, d: 0.9 },
   screen: { w: 4.8, d: 0.6 },
   instrument: { w: 1.55, d: 2 },
-  bar: { w: 4.8, d: 1.6 },
+  bar: { w: 4.8, d: 2.2 },
   orderCounter: { w: 3.6, d: 0.9 },
   pickupCounter: { w: 2.4, d: 0.8 },
   pizzaOven: { w: 1.8, d: 1.8 },
@@ -3117,7 +3120,14 @@ const TEMPLATE_DRESSINGS: Record<string, (bp: RoomLayoutBlueprint) => TemplateDr
     ],
   }),
   'tent-garden': () => ({
-    metadata: { floorType: 'pelouse', outdoorSurroundings: 'park' },
+    metadata: {
+      floorType: 'pelouse',
+      outdoorSurroundings: 'park',
+      showRoof: true,
+      roofStyle: 'tentSwag',
+      roofColor: '#f7f5f0',
+      roofOpacity: 0.78,
+    },
     landscape: [
       { style: 'olive', x: 5, y: 5 },
       { style: 'olive', x: 95, y: 5 },
@@ -3163,7 +3173,8 @@ const TEMPLATE_DRESSINGS: Record<string, (bp: RoomLayoutBlueprint) => TemplateDr
     ],
   }),
   'stone-amphitheater-backyard': () => ({
-    metadata: { showWalls: false, outdoorSurroundings: 'park' },
+    // Gradins de pierre à ciel ouvert : seule la scène garde son toit à pignon.
+    metadata: { showWalls: false, showRoof: false, outdoorSurroundings: 'park' },
     landscape: [
       { style: 'oak', x: 6, y: 90 },
       { style: 'boulder', x: 92, y: 88 },
@@ -6388,8 +6399,9 @@ function generateAmphitheaterBlueprint(params: LayoutParams, chairType: ChairTyp
   for (let tier = 0; tier < tierCount; tier++) {
     for (let r = 0; r < rowsPerTier; r++) {
       const rowDepth = tier * rowsPerTier + r;
-      const progress = rowDepth / Math.max(1, tierCount * rowsPerTier - 1);
-      const y = 28 + progress * 58;
+      // Pas de rangée réel (≈ 1,1 m dos à dos) : on n’étire plus quelques rangées sur toute la salle.
+      const rowPitchPct = Math.min(58 / Math.max(1, tierCount * rowsPerTier - 1), (1.1 / depthM) * 100);
+      const y = 28 + rowDepth * rowPitchPct;
       const seats = baseSeats + tier * 2;
       // Rangées concentriques à la scène : plus on s’éloigne, plus l’arc s’ouvre.
       const curve = concentricRowCurvePercent(((y - stageFocus.y) / 100) * depthM, 0.55, 0.8);
@@ -6808,7 +6820,8 @@ function generateTentBlueprint(params: LayoutParams, chairType: ChairType): Room
     canvas: { widthM: widthM, heightM: lengthM },
     fixtures,
     furniture,
-    metadata: { tableCount: tableCount || undefined, totalSeats },
+    // Une tente se lit par sa toile : faîtage et parois PVC (murs en toile côté 3D).
+    metadata: { tableCount: tableCount || undefined, totalSeats, showRoof: true, roofStyle: 'tentSwag', roofColor: '#f7f5f0', roofOpacity: 0.78 },
   };
 }
 
@@ -7196,18 +7209,19 @@ export const instrumentStyleSizeM: Record<InstrumentStyle, { w: number; d: numbe
 
 /** Tailles réelles (m) des bars : comptoir + arrière-bar. */
 export const barStyleSizeM: Record<BarStyle, { w: number; d: number }> = {
-  cocktail: { w: 4.8, d: 1.7 },
-  wine: { w: 4.4, d: 1.7 },
-  champagne: { w: 4.2, d: 1.7 },
-  beer: { w: 4.6, d: 1.7 },
-  coffee: { w: 3.8, d: 1.5 },
-  whiskey: { w: 4.2, d: 1.7 },
-  island: { w: 3.4, d: 2.6 },
-  lShaped: { w: 5.2, d: 2.8 },
-  juice: { w: 3.6, d: 1.5 },
-  mocktail: { w: 4, d: 1.6 },
-  tapas: { w: 4.4, d: 1.6 },
-  tea: { w: 3.6, d: 1.5 },
+  // Comptoir ≈ 0,65 m + allée barman ≈ 0,9 m + arrière-bar ≈ 0,5 m (tabourets hors emprise).
+  cocktail: { w: 4.8, d: 2.2 },
+  wine: { w: 4.4, d: 2.2 },
+  champagne: { w: 4.2, d: 2.2 },
+  beer: { w: 4.6, d: 2.2 },
+  coffee: { w: 3.8, d: 2 },
+  whiskey: { w: 4.2, d: 2.2 },
+  island: { w: 3.6, d: 3 },
+  lShaped: { w: 5.2, d: 3 },
+  juice: { w: 3.6, d: 2 },
+  mocktail: { w: 4, d: 2.1 },
+  tapas: { w: 4.4, d: 2.1 },
+  tea: { w: 3.6, d: 2 },
 };
 
 /** Tailles réelles (m) des écrans et appareils. */
@@ -7232,7 +7246,8 @@ export function nextOwnedLabel(
 
 export const roofStyleLabels: Record<RoofStyle, string> = {
   flat: 'Plafond plat',
-  tentSwag: 'Tente drapée (Voilage)',
+  tentSwag: 'Tente de réception (toile & voilage)',
+  pagoda: 'Tente pagode (pointes)',
   gabled: 'Toit à pignon (Jardin)',
   coffered: 'Plafond à caissons',
   glassCanopy: 'Verrière zénithale (Atelier)',

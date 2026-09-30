@@ -459,7 +459,15 @@ type MutableItem = {
   zoneKind?: string;
   shape?: string;
   capacity?: number;
+  /** Rangée de gradin (surélevée) : l’écartement se mesure en pas de rangée, pas en allée. */
+  tiered?: boolean;
 };
+
+/**
+ * Pas minimal entre deux rangées de gradin (dos à dos). Les sièges de théâtre rabattables
+ * se posent à ≈ 0,90–1,00 m ; la contremarche fait le reste, pas besoin d’une allée pleine.
+ */
+export const TIERED_ROW_PITCH_M = 0.92;
 
 type MutableFixture = {
   id: string;
@@ -908,6 +916,7 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
         radiusM: sz.radiusM,
         effectiveRadiusM: sz.radiusM,
         storyId: f.storyId,
+        tiered: (f.elevationM ?? 0) > 0.05 || (f.tier ?? 0) > 0 || Boolean(f.amphitheaterStyle),
       };
     }
 
@@ -1144,7 +1153,9 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
         const overlapX = Math.abs(r1.cxM - r2.cxM) < r1.halfWM + r2.halfWM;
         if (overlapX) {
           const dy = Math.abs(r2.cyM - r1.cyM);
-          const targetY = r1.halfHM + r2.halfHM + clearances.rowToRow;
+          const targetY = r1.tiered && r2.tiered
+            ? TIERED_ROW_PITCH_M
+            : r1.halfHM + r2.halfHM + clearances.rowToRow;
           if (dy < targetY) {
             const overlap = targetY - dy;
             const sign = r2.cyM >= r1.cyM ? 1 : -1;
@@ -1217,6 +1228,18 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
         if (!sameStory(item.storyId, door.storyId)) continue;
         const dx = item.cxM - door.cxM;
         const dy = item.cyM - door.cyM;
+        if (item.kind === 'row') {
+          // Rangée : dégagement mesuré depuis le bord de la bande (et non depuis un cercle
+          // englobant de plusieurs mètres), en reculant la rangée dans l’axe de la porte.
+          const gapX = Math.max(0, Math.abs(dx) - item.halfWM);
+          const gapY = Math.max(0, Math.abs(dy) - item.halfHM);
+          if (Math.hypot(gapX, gapY) < clearances.doorClearance && gapX < clearances.doorClearance) {
+            const needY = Math.sqrt(Math.max(0, clearances.doorClearance ** 2 - gapX ** 2));
+            const sign = dy >= 0 ? 1 : -1;
+            item.cyM = door.cyM + sign * (item.halfHM + needY);
+          }
+          continue;
+        }
         const dist = Math.hypot(dx, dy);
         const target = clearances.doorClearance + item.radiusM;
 
@@ -1304,7 +1327,12 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
           ny = -ny;
         }
 
-        const requiredWallDist = item.effectiveRadiusM + wall.thicknessM / 2 + 0.12;
+        // Une rangée est une bande longue et fine : son encombrement vers le mur dépend de la
+        // direction (demi-largeur le long du mur latéral, demi-profondeur face au mur du fond).
+        const reachM = item.kind === 'row'
+          ? Math.abs(nx) * item.halfWM + Math.abs(ny) * item.halfHM
+          : item.effectiveRadiusM;
+        const requiredWallDist = reachM + wall.thicknessM / 2 + 0.12;
         if (distM < requiredWallDist) {
           const pushM = requiredWallDist - distM;
           item.cxM += nx * pushM;

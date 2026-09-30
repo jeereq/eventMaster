@@ -866,6 +866,105 @@ def veined_marble():
 
 LAWN = ['#3d7a2c', '#4a8a33', '#356b27', '#5a9a3c', '#2e5f22', '#6aa446']
 
+# ───────────────────────── toitures, toile, mosaïque ─────────────────────────
+
+def roof_tiles(seed: int = 801, courses: int = 6, per_row: int = 6):
+    """Tuiles canal / romanes : rangs bombés qui se recouvrent, ombre portée sous chaque rang, teintes flammées."""
+    size = SIZE
+    rng = np.random.default_rng(seed)
+    yy, xx = np.mgrid[0:size, 0:size].astype(np.float64)
+    th = size / courses
+    tw = size / per_row
+    row = np.floor(yy / th)
+    xs = (xx + np.where(row % 2 == 1, tw / 2, 0)) % size
+    col = np.floor(xs / tw)
+    u = (xs % tw) / tw
+    v = (yy % th) / th  # 0 = haut du rang (sous le rang supérieur), 1 = nez de la tuile
+    tid = (row * per_row + col).astype(int)
+    n = courses * per_row
+    palette = np.array([rgb(c) for c in ('#b5562f', '#a84b2a', '#c0643a', '#9c4527', '#b85f36', '#8f3f24', '#c8703f')])
+    tone = palette[rng.integers(0, len(palette), n)] * rng.uniform(0.86, 1.1, (n, 1))
+    albedo = tone[tid]
+    barrel = np.sin(np.pi * u) ** 0.7
+    # Nez de tuile légèrement arrondi, ombre dans le creux entre deux tuiles.
+    height = 0.35 + 0.55 * barrel * (0.85 + 0.15 * v)
+    shade = 0.62 + 0.38 * barrel
+    # Ombre portée par le rang du dessus.
+    cast = smoothstep(0.0, 0.22, v)
+    shade *= 0.55 + 0.45 * cast
+    grain = spectral_noise(size, seed + 1, beta=1.3)
+    lichen = smoothstep(0.78, 0.93, spectral_noise(size, seed + 2, beta=2.8)) * 0.35
+    albedo = albedo * (shade * (0.85 + 0.25 * grain))[..., None]
+    albedo = mix(albedo, rgb('#6d6a4a'), lichen * (1 - barrel * 0.5))
+    edge_dark = 1 - 0.35 * (1 - smoothstep(0.9, 1.0, 1 - v))
+    albedo *= edge_dark[..., None]
+    return np.clip(albedo, 0, 1), np.clip(height * (0.7 + 0.3 * cast), 0, 1)
+
+
+def roof_slate(seed: int = 811, courses: int = 10, per_row: int = 5):
+    """Ardoises naturelles : pose à pureau décalé, bords légèrement irréguliers, reflets bleutés."""
+    size = SIZE
+    rng = np.random.default_rng(seed)
+    yy, xx = np.mgrid[0:size, 0:size].astype(np.float64)
+    th = size / courses
+    tw = size / per_row
+    row = np.floor(yy / th)
+    xs = (xx + np.where(row % 2 == 1, tw / 2, 0)) % size
+    col = np.floor(xs / tw)
+    jit = (spectral_noise(size, seed + 1, beta=2.2) - 0.5) * 6
+    u = (xs % tw) + jit
+    v = (yy % th) / th
+    tid = (row * per_row + col).astype(int)
+    n = courses * per_row
+    palette = np.array([rgb(c) for c in ('#3b4048', '#454a53', '#343840', '#4d525a', '#3f444e')])
+    albedo = palette[rng.integers(0, len(palette), n)][tid] * rng.uniform(0.9, 1.1, (n, 1))[tid]
+    gap = 1 - smoothstep(1.5, 3.5, np.minimum(u, tw - u))
+    cast = smoothstep(0.0, 0.25, v)
+    cleave = band_noise(size, seed + 2, 60, 300)
+    albedo *= (0.7 + 0.3 * cast)[..., None] * (0.88 + 0.2 * cleave)[..., None]
+    albedo = mix(albedo, rgb('#1d2026'), gap * 0.9)
+    height = 0.4 + 0.35 * v + 0.1 * cleave - 0.35 * gap
+    return np.clip(albedo, 0, 1), np.clip(height, 0, 1)
+
+
+def tent_pvc(seed: int = 821):
+    """Toile de tente PVC : armature polyester tissée visible en lumière rasante, soudure de lé, légères salissures."""
+    size = SIZE
+    yy, xx = np.mgrid[0:size, 0:size].astype(np.float64)
+    weave = 0.5 + 0.25 * np.sin(xx * np.pi / 3) * np.sin(yy * np.pi / 3) + 0.25 * np.sin((xx + yy) * np.pi / 6)
+    mottle = spectral_noise(size, seed, beta=2.4)
+    seam = np.exp(-((yy - size / 2) ** 2) / (2 * 6.0 ** 2))
+    seam_edge = np.exp(-((np.abs(yy - size / 2) - 14) ** 2) / (2 * 1.6 ** 2))
+    base = 0.93 + 0.03 * mottle - 0.012 * weave
+    dirt = smoothstep(0.75, 0.95, spectral_noise(size, seed + 1, beta=3.0)) * 0.03
+    lum = base - dirt - 0.035 * seam_edge + 0.01 * seam
+    albedo = np.stack([lum * 0.995, lum * 0.99, lum * 0.975], -1)
+    height = 0.5 + 0.04 * weave + 0.25 * seam - 0.15 * seam_edge
+    return np.clip(albedo, 0, 1), np.clip(height, 0, 1)
+
+
+def pool_mosaic(seed: int = 831, n: int = 20):
+    """Mosaïque de pâte de verre 2,5 cm : carreaux bleus nuancés, joint clair, léger bombé."""
+    size = SIZE
+    rng = np.random.default_rng(seed)
+    yy, xx = np.mgrid[0:size, 0:size].astype(np.float64)
+    t = size / n
+    col = np.floor(xx / t)
+    row = np.floor(yy / t)
+    u = xx % t
+    v = yy % t
+    edge = np.minimum.reduce([u, t - u, v, t - v])
+    tid = (row * n + col).astype(int)
+    palette = np.array([rgb(c) for c in ('#5fb8d6', '#4aa7c9', '#76c6de', '#3d93b8', '#8fd3e6', '#52aecf', '#2f86ad')])
+    albedo = palette[rng.integers(0, len(palette), n * n)][tid] * rng.uniform(0.92, 1.08, (n * n, 1))[tid]
+    g = 1 - smoothstep(1.5, 3.0, edge)
+    dome = smoothstep(2.0, t * 0.5, edge)
+    albedo *= (0.9 + 0.12 * dome)[..., None]
+    albedo = mix(albedo, rgb('#dfe6e8'), g)
+    height = 0.45 + 0.4 * dome - 0.3 * g
+    return np.clip(albedo, 0, 1), np.clip(height, 0, 1)
+
+
 JOBS = {
     # Gazons & végétal
     'grass-lawn': lambda: (grass(501, LAWN, '#2a2a16', 170000, dry=0.12), 7),
@@ -911,6 +1010,11 @@ JOBS = {
     'wall-plaster': lambda: (plaster(741), 2.5),
     'wall-limewash': lambda: (plaster(751, ('#e2ddd4', '#efebe4', '#faf8f3'), trowel=0.9, mottle=0.55), 2),
     'wall-metro': lambda: (metro_tile(), 5),
+    # Toitures, toiles de tente, bassins
+    'roof-tiles': lambda: (roof_tiles(), 8),
+    'roof-slate': lambda: (roof_slate(), 6),
+    'tent-pvc': lambda: (tent_pvc(), 2),
+    'pool-mosaic': lambda: (pool_mosaic(), 3),
 }
 
 
