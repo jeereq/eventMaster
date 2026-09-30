@@ -11,6 +11,30 @@ import {
 } from './roomLayoutClearance.ts';
 
 describe('enforceRealLayoutClearances', () => {
+  it('garde l’ordre des rangées de gradin, même près du mur du fond et de la porte', () => {
+    const rows = Array.from({ length: 10 }, (_, i) => ({
+      id: `r${i}`,
+      kind: 'row',
+      x: 50,
+      y: 28 + i * 6.44,
+      seatCount: 14 + Math.floor(i / 2) * 2,
+      tier: Math.floor(i / 2),
+      elevationM: i * 0.3,
+      amphitheaterStyle: 'modernFan',
+    }));
+    const blueprint = {
+      canvas: { widthM: 24, heightM: 18 },
+      furniture: rows,
+      fixtures: [{ id: 'door', kind: 'door', x: 47, y: 96, w: 6, h: 2 }],
+    };
+    const result = enforceRealLayoutClearances(blueprint);
+    const ys = rows.map((r) => result.furniture.find((f) => f.id === r.id)!.y);
+    for (let i = 1; i < ys.length; i += 1) {
+      assert.ok(ys[i] > ys[i - 1], `rangée ${i} (${ys[i]}) devant la rangée ${i - 1} (${ys[i - 1]})`);
+      assert.ok(((ys[i] - ys[i - 1]) / 100) * 18 >= 0.85, `pas trop serré entre ${i - 1} et ${i}`);
+    }
+  });
+
   it('dés-empile des chaises placées exactement au même endroit', () => {
     const blueprint = {
       canvas: { widthM: 20, heightM: 16 },

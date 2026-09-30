@@ -4,11 +4,12 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { PodiumStyle, ZoneKind, ZoneMaterial } from '@/lib/roomLayoutUtils';
-import { deckUsesSkirt, getStairWoodMap, resolveDeckSurface, resolveZoneMaterialMap } from '@/lib/roomWebGLMaterials';
+import { deckUsesSkirt, getStairWoodMap, loadTiledTexture, resolveDeckSurface, resolveZoneMaterialMap } from '@/lib/roomWebGLMaterials';
 import { rowArcZ, rowCurveFactor, rowSeatLocalX } from '@/lib/roomAmphitheaterGeom';
 
-const RISER_TREAD_M = 1.18;
-const RISER_FRONT_OVERHANG_M = 0.32;
+/** Profondeur de marche derrière le siège quand aucune rangée ne suit (dos + passage). */
+const RISER_TREAD_M = 0.78;
+export const RISER_FRONT_OVERHANG_M = 0.32;
 const RISER_ARC_SEGMENTS = 18;
 
 function buildRiserFootprint(
@@ -18,6 +19,7 @@ function buildRiserFootprint(
   aisleSplit: boolean,
   aisleWidthPct: number,
   inset = 0,
+  treadBackM = RISER_TREAD_M,
 ) {
   const firstX = rowSeatLocalX(0, seatCount, spacing, aisleSplit, aisleWidthPct);
   const lastX = rowSeatLocalX(seatCount - 1, seatCount, spacing, aisleSplit, aisleWidthPct);
@@ -30,7 +32,7 @@ function buildRiserFootprint(
   // zFront(x) est en avant des sièges (vers la scène, en Z négatif)
   // zBack(x) est en arrière des sièges (vers le fond, en Z positif)
   const zFront = (x: number) => rowArcZ(x, spacing, curveFactor) - (RISER_FRONT_OVERHANG_M - inset);
-  const zBack = (x: number) => rowArcZ(x, spacing, curveFactor) + (RISER_TREAD_M - inset);
+  const zBack = (x: number) => rowArcZ(x, spacing, curveFactor) + (treadBackM - inset);
 
   // Avec ExtrudeGeometry puis volume.rotateX(-Math.PI / 2) :
   // new_Z = -shape_Y. Pour que new_Z corresponde à nos coordonnées 3D :
@@ -53,7 +55,24 @@ function buildRiserFootprint(
   return { shape, x0, x1, zFront, zBack };
 }
 
-/** Gradin amphithéâtre : dalle cintrée qui suit l’arc des sièges. */
+export type RiserFinish = 'wood' | 'stone';
+
+/** Pierre calcaire des gradins à ciel ouvert (UV de l’extrusion en mètres). */
+function useStoneRiserMaps() {
+  return useMemo(
+    () => ({
+      map: loadTiledTexture('/floors/gen/travertine.jpg', 0.7, 0.7),
+      normalMap: loadTiledTexture('/floors/gen/travertine-normal.jpg', 0.7, 0.7, true),
+    }),
+    [],
+  );
+}
+
+/**
+ * Gradin amphithéâtre : dalle cintrée qui suit l’arc des sièges.
+ * `treadBackM` prolonge la marche jusqu’à la rangée suivante : les gradins forment un escalier
+ * continu au lieu de plots séparés par des vides.
+ */
 export function AmphitheaterRiser({
   seatCount,
   spacing,
@@ -62,6 +81,8 @@ export function AmphitheaterRiser({
   aisleSplit = false,
   aisleWidthPct = 14,
   selected = false,
+  treadBackM = RISER_TREAD_M,
+  finish = 'wood',
 }: {
   seatCount: number;
   spacing: number;
@@ -70,15 +91,19 @@ export function AmphitheaterRiser({
   aisleSplit?: boolean;
   aisleWidthPct?: number;
   selected?: boolean;
+  treadBackM?: number;
+  finish?: RiserFinish;
 }) {
   const wood = useMemo(() => getStairWoodMap(), []);
+  const stone = useStoneRiserMaps();
+  const isStone = finish === 'stone';
   const h = Math.max(elevation, 0.14);
   const curveF = rowCurveFactor(curve);
   const selectedTint = selected ? '#c7d2fe' : undefined;
 
   const { volume, carpet, x0, x1, zFront, zBack } = useMemo(() => {
     // Structure porteuse bois / béton
-    const footprint = buildRiserFootprint(seatCount, spacing, curveF, aisleSplit, aisleWidthPct, 0);
+    const footprint = buildRiserFootprint(seatCount, spacing, curveF, aisleSplit, aisleWidthPct, 0, treadBackM);
     const volume = new THREE.ExtrudeGeometry(footprint.shape, {
       depth: h,
       bevelEnabled: true,
@@ -90,7 +115,7 @@ export function AmphitheaterRiser({
     volume.computeVertexNormals();
 
     // Moquette velours avec léger retrait pour révéler le nez et le pourtour en bois verni
-    const carpetFootprint = buildRiserFootprint(seatCount, spacing, curveF, aisleSplit, aisleWidthPct, 0.035);
+    const carpetFootprint = buildRiserFootprint(seatCount, spacing, curveF, aisleSplit, aisleWidthPct, 0.035, treadBackM);
     const carpet = new THREE.ExtrudeGeometry(carpetFootprint.shape, {
       depth: 0.025,
       bevelEnabled: true,
@@ -110,7 +135,7 @@ export function AmphitheaterRiser({
       zFront: footprint.zFront,
       zBack: footprint.zBack,
     };
-  }, [seatCount, spacing, curveF, aisleSplit, aisleWidthPct, h]);
+  }, [seatCount, spacing, curveF, aisleSplit, aisleWidthPct, h, treadBackM]);
 
   useEffect(() => () => {
     volume.dispose();
@@ -128,11 +153,11 @@ export function AmphitheaterRiser({
       return new THREE.CatmullRomCurve3(pts);
     };
     return {
-      nosingGeo: new THREE.TubeGeometry(along(h + 0.012, 0.012), 48, 0.016, 6, false),
+      nosingGeo: new THREE.TubeGeometry(along(h + 0.012, 0.012), 48, isStone ? 0.03 : 0.016, 6, false),
       ledGeo: new THREE.TubeGeometry(along(h - 0.03, -0.004), 48, 0.008, 5, false),
       kickGeo: h >= 0.22 ? new THREE.TubeGeometry(along(h * 0.45, -0.004), 48, 0.009, 5, false) : null,
     };
-  }, [x0, x1, zFront, h]);
+  }, [x0, x1, zFront, h, isStone]);
 
   useEffect(() => () => {
     nosingGeo.dispose();
@@ -144,53 +169,72 @@ export function AmphitheaterRiser({
     ? spacing * (0.55 + Math.min(30, Math.max(5, aisleWidthPct)) / 20)
     : 0;
 
-  const aisleCenterZ = rowArcZ(0, spacing, curveF) + (RISER_TREAD_M - RISER_FRONT_OVERHANG_M) / 2;
-  const aisleDepth = RISER_FRONT_OVERHANG_M + RISER_TREAD_M - 0.04;
+  const aisleCenterZ = rowArcZ(0, spacing, curveF) + (treadBackM - RISER_FRONT_OVERHANG_M) / 2;
+  const aisleDepth = RISER_FRONT_OVERHANG_M + treadBackM - 0.04;
 
   return (
     <group>
-      {/* Structure du gradin : bois sombre / chêne verni */}
+      {/* Structure du gradin : bois sombre / chêne verni, ou pierre calcaire à ciel ouvert */}
       <mesh geometry={volume} receiveShadow castShadow>
-        <meshStandardMaterial
-          color={selectedTint ?? '#5c4e43'}
-          map={wood}
-          roughness={0.72}
-          metalness={0.06}
-        />
+        {isStone ? (
+          <meshStandardMaterial
+            color={selectedTint ?? '#e6d6bc'}
+            map={stone.map}
+            normalMap={stone.normalMap}
+            normalScale={new THREE.Vector2(0.6, 0.6)}
+            roughness={0.9}
+            metalness={0}
+          />
+        ) : (
+          <meshStandardMaterial color={selectedTint ?? '#5c4e43'} map={wood} roughness={0.72} metalness={0.06} />
+        )}
       </mesh>
 
-      {/* Moquette cintrée de gradin */}
-      <mesh geometry={carpet} receiveShadow>
-        <meshStandardMaterial color={selectedTint ?? '#3b1220'} roughness={0.97} metalness={0} />
-      </mesh>
-
-      {/* Nez de marche laiton / or brossé le long du bord avant */}
-      <mesh geometry={nosingGeo} castShadow>
-        <meshStandardMaterial color="#c4a35a" metalness={0.65} roughness={0.32} />
-      </mesh>
-
-      {/* Éclairage LED architectural encastré sous le nez de marche */}
-      <mesh geometry={ledGeo}>
-        <meshStandardMaterial color="#fef3c7" emissive="#f59e0b" emissiveIntensity={0.65} roughness={0.3} />
-      </mesh>
-
-      {/* Liseré décoratif sur la contremarche avant */}
-      {kickGeo && (
-        <mesh geometry={kickGeo}>
-          <meshStandardMaterial color="#b8934a" metalness={0.6} roughness={0.35} />
+      {isStone ? (
+        /* Nez de marche en pierre légèrement débordant (arête adoucie) */
+        <mesh geometry={nosingGeo} castShadow receiveShadow>
+          <meshStandardMaterial color="#e2d6c1" map={stone.map} roughness={0.85} />
         </mesh>
+      ) : (
+        <>
+          {/* Moquette cintrée de gradin */}
+          <mesh geometry={carpet} receiveShadow>
+            <meshStandardMaterial color={selectedTint ?? '#3b1220'} roughness={0.97} metalness={0} />
+          </mesh>
+
+          {/* Nez de marche laiton / or brossé le long du bord avant */}
+          <mesh geometry={nosingGeo} castShadow>
+            <meshStandardMaterial color="#c4a35a" metalness={0.65} roughness={0.32} />
+          </mesh>
+
+          {/* Éclairage LED architectural encastré sous le nez de marche */}
+          <mesh geometry={ledGeo}>
+            <meshStandardMaterial color="#fef3c7" emissive="#f59e0b" emissiveIntensity={0.65} roughness={0.3} />
+          </mesh>
+
+          {/* Liseré décoratif sur la contremarche avant */}
+          {kickGeo && (
+            <mesh geometry={kickGeo}>
+              <meshStandardMaterial color="#b8934a" metalness={0.6} roughness={0.35} />
+            </mesh>
+          )}
+        </>
       )}
 
       {/* Marche intermédiaire dans l’allée : deux hauteurs de 15 cm au lieu d’une de 30 */}
       {aisleGap > 0 && h > 0.2 && (
         <mesh position={[0, (h - 0.15) / 2, zFront(0) - 0.15]} receiveShadow castShadow>
           <boxGeometry args={[aisleGap * 0.94, h - 0.15, 0.3]} />
-          <meshStandardMaterial color={selectedTint ?? '#5c4e43'} map={wood} roughness={0.72} />
+          {isStone ? (
+            <meshStandardMaterial color={selectedTint ?? '#e6d6bc'} map={stone.map} roughness={0.9} />
+          ) : (
+            <meshStandardMaterial color={selectedTint ?? '#5c4e43'} map={wood} roughness={0.72} />
+          )}
         </mesh>
       )}
 
       {/* Allée centrale de circulation avec bande de moquette et bordures laiton */}
-      {aisleGap > 0 && (
+      {aisleGap > 0 && !isStone && (
         <group position={[0, 0, aisleCenterZ]}>
           <mesh position={[0, h + 0.03, 0]} receiveShadow>
             <boxGeometry args={[aisleGap * 0.94, 0.02, aisleDepth]} />

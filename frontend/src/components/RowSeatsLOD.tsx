@@ -8,6 +8,7 @@ import { resolveChairVisual } from '@/lib/roomWebGLMaterials';
 import { CatalogueChair, ChairSelectionHalo } from '@/components/CatalogueFurnitureMeshes';
 import type { RenderQualitySettings } from '@/lib/roomRenderQuality';
 import { computeRowSeatPose, rowSeatCode } from '@/lib/roomAmphitheaterGeom';
+import { TheaterSeatRow, type SeatPose } from '@/components/room/TheaterSeatRow';
 
 type Lod = RenderQualitySettings['rowChairLod'];
 
@@ -142,6 +143,44 @@ export function RowSeatsLOD({
       </span>
     </Html>
   ) : null;
+
+  // Fauteuils de salle : modèle capitonné instancié (joues partagées, coque, accoudoirs bois)
+  // dès que la qualité n’impose pas le modèle détaillé siège par siège.
+  const upholsteredRow = (chairType === 'THEATER' || chairType === 'ARMCHAIR') && lod !== 'full';
+  const poses = useMemo<SeatPose[]>(
+    () =>
+      upholsteredRow
+        ? Array.from({ length: count }, (_, i) =>
+            computeRowSeatPose(i, count, spacing, curve, elevation, focusLocal, aisleSplit, aisleWidthPct),
+          )
+        : [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [upholsteredRow, count, spacing, curve, elevation, focusLocal.x, focusLocal.z, aisleSplit, aisleWidthPct],
+  );
+
+  if (upholsteredRow) {
+    return (
+      <group>
+        <TheaterSeatRow
+          poses={poses}
+          spacing={spacing}
+          seatColor={color}
+          frameColor={frame}
+          variant={chairType === 'ARMCHAIR' ? 'lounge' : 'theater'}
+          picked={picked}
+          blocked={blocked}
+          castShadow={castShadow}
+          onSeat={(i, e) => emitSeat(i, e)}
+        />
+        {picked.map((i) => (
+          <group key={`sel-${i}`} position={[poses[i]?.localX ?? 0, poses[i]?.y ?? 0, poses[i]?.localZ ?? 0]}>
+            <ChairSelectionHalo selected />
+          </group>
+        ))}
+        {numbers}
+      </group>
+    );
+  }
 
   if (lod === 'full') {
     return (
