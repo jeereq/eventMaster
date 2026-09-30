@@ -1,4 +1,10 @@
 import type { RoomType } from '@/lib/roomLayoutUtils';
+import {
+  mixHex,
+  sunAnglesFromPosition,
+  sunPositionFromAngles,
+  type EnvironmentSettings,
+} from '@/lib/roomOutdoorUtils';
 
 /** Qualité de rendu WebGL. */
 export type RenderQuality = 'draft' | 'standard' | 'showcase';
@@ -107,6 +113,8 @@ export type ScenicLightSettings = {
   showStars: boolean;
   /** Couleur brouillard atmosphérique. */
   fogColor: string;
+  /** Brouillard réglé à la main (0 → 1) : remplace le brouillard de la qualité de rendu. */
+  fogStrength?: number;
 };
 
 
@@ -247,32 +255,33 @@ const LIGHTING: Record<Exclude<LightingPreset, 'auto'>, ScenicLightSettings> = {
     showStars: false,
     fogColor: '#7c3a4a',
   },
-  // 3. Nuit — ciel étoilé ; seule source = réglette LED (faisceau ciblé)
+  // 3. Nuit — ciel étoilé, clair de lune froid et lueur chaude des guirlandes / lustres.
+  // Assez de lune pour lire le plan (tables, allées), sans perdre l’ambiance nocturne.
   night: {
     preset: 'night',
-    ambient: 0.015,
-    keyIntensity: 0,
-    keyColor: '#94a3b8',
-    fillIntensity: 0,
-    fillColor: '#0f172a',
-    hemiSky: '#020617',
-    hemiGround: '#010309',
-    hemiIntensity: 0.04,
-    spotIntensity: 0,
-    spotColor: '#f8fafc',
-    warmPoint: 0,
+    ambient: 0.07,
+    keyIntensity: 0.42,
+    keyColor: '#9fb4d9',
+    fillIntensity: 0.12,
+    fillColor: '#1e293b',
+    hemiSky: '#1e2a4a',
+    hemiGround: '#1a1410',
+    hemiIntensity: 0.34,
+    spotIntensity: 0.25,
+    spotColor: '#ffd9a0',
+    warmPoint: 0.35,
     coolPoint: 0,
     background: '#01040c',
-    sunPosition: [0, 40, 0],
+    sunPosition: [-18, 30, -12],
     showSky: true,
     skyTop: '#010309',
     skyHorizon: '#0b1220',
-    interiorBoost: 0,
-    exposure: 0.72,
-    environmentIntensity: 0.04,
+    interiorBoost: 0.55,
+    exposure: 0.95,
+    environmentIntensity: 0.12,
     environmentPreset: 'night',
-    bounceIntensity: 0,
-    bounceColor: '#111827',
+    bounceIntensity: 0.18,
+    bounceColor: '#f59e0b',
     skyTurbidity: 1,
     skyRayleigh: 0.2,
     skyMie: 0.001,
@@ -428,6 +437,41 @@ export function resolveLightingPreset(
 ): ScenicLightSettings {
   const key = !preset || preset === 'auto' ? lightingFromRoomType(roomType) : preset;
   return LIGHTING[key] ?? LIGHTING.neutral;
+}
+
+/**
+ * Applique les réglages libres de l’environnement (soleil, température, ciel, brouillard)
+ * par-dessus le préréglage d’éclairage choisi.
+ */
+export function applyEnvironmentLighting(
+  lighting: ScenicLightSettings,
+  env: EnvironmentSettings | null | undefined,
+): ScenicLightSettings {
+  if (!env || Object.keys(env).length === 0) return lighting;
+  const next: ScenicLightSettings = { ...lighting };
+  if (env.sunElevation !== undefined || env.sunAzimuth !== undefined) {
+    const current = sunAnglesFromPosition(lighting.sunPosition);
+    const dist = Math.max(20, Math.hypot(...lighting.sunPosition));
+    next.sunPosition = sunPositionFromAngles(env.sunElevation ?? current.elevation, env.sunAzimuth ?? current.azimuth, dist);
+  }
+  if (env.sunIntensity !== undefined) {
+    next.keyIntensity = lighting.keyIntensity * env.sunIntensity;
+    next.fillIntensity = lighting.fillIntensity * (0.5 + env.sunIntensity * 0.5);
+  }
+  if (env.warmth) {
+    const t = Math.abs(env.warmth);
+    const target = env.warmth > 0 ? '#ffb066' : '#9fc0ff';
+    next.keyColor = mixHex(lighting.keyColor, target, t * 0.65);
+    next.hemiSky = mixHex(lighting.hemiSky, target, t * 0.35);
+    next.bounceColor = mixHex(lighting.bounceColor, target, t * 0.3);
+  }
+  if (env.exposure !== undefined) next.exposure = lighting.exposure * env.exposure;
+  if (env.haze !== undefined) {
+    next.skyTurbidity = lighting.skyTurbidity + (14 - lighting.skyTurbidity) * env.haze;
+    next.skyMie = lighting.skyMie + (0.03 - lighting.skyMie) * env.haze;
+  }
+  if (env.fog !== undefined) next.fogStrength = env.fog;
+  return next;
 }
 
 /** Alias pour le programme événement (day/dusk/night…). */

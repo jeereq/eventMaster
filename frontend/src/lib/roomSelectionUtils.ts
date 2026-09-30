@@ -179,6 +179,7 @@ const FLOOR_FIXTURE_KINDS = new Set<RoomLayoutBlueprint['fixtures'][number]['kin
   'car',
   'parasol',
   'landscape',
+  'customElement',
 ]);
 
 function applyPosition(

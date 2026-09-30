@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import type { PodiumStyle, ZoneKind, ZoneMaterial } from '@/lib/roomLayoutUtils';
-import { getStairWoodMap, resolveZoneMaterialMap } from '@/lib/roomWebGLMaterials';
+import { deckUsesSkirt, getStairWoodMap, resolveDeckSurface, resolveZoneMaterialMap } from '@/lib/roomWebGLMaterials';
 import { rowArcZ, rowCurveFactor, rowSeatLocalX } from '@/lib/roomAmphitheaterGeom';
 
 const RISER_TREAD_M = 1.18;
@@ -259,6 +259,118 @@ export function AmphitheaterRiser({
 }
 
 /** Scène / podium avec jupe, bande LED et spots. */
+const STAGE_SKIRT = '#1c1a19';
+
+/**
+ * Matériaux d’un bloc d’estrade : plateau texturé à l’échelle réelle sur chaque face,
+ * ou jupe de scène sombre sur les flancs pour les plateaux bois / moquette.
+ */
+function DeckMaterials({
+  w,
+  h,
+  d,
+  material,
+  selected,
+  skirtColor = STAGE_SKIRT,
+}: {
+  w: number;
+  h: number;
+  d: number;
+  material?: ZoneMaterial;
+  selected: boolean;
+  skirtColor?: string;
+}) {
+  const top = useMemo(() => resolveDeckSurface(material, w, d), [material, w, d]);
+  const sideX = useMemo(() => resolveDeckSurface(material, d, h), [material, d, h]);
+  const sideZ = useMemo(() => resolveDeckSurface(material, w, h), [material, w, h]);
+  const skirt = deckUsesSkirt(material);
+  // Ordre des faces BoxGeometry : +X, -X, +Y, -Y, +Z, -Z.
+  const faces = [sideX, sideX, top, top, sideZ, sideZ];
+  return (
+    <>
+      {faces.map((m, i) => {
+        const isTop = i === 2 || i === 3;
+        if (skirt && !isTop) {
+          return (
+            <meshStandardMaterial
+              key={i}
+              attach={`material-${i}`}
+              color={selected ? '#c7d2fe' : skirtColor}
+              roughness={0.93}
+              metalness={0}
+            />
+          );
+        }
+        return (
+          <meshStandardMaterial
+            key={i}
+            attach={`material-${i}`}
+            color={selected ? '#c7d2fe' : m.color}
+            map={m.map ?? undefined}
+            normalMap={m.normalMap ?? undefined}
+            roughness={m.roughness}
+            metalness={m.metalness}
+            emissive={m.emissive}
+            emissiveIntensity={m.emissiveIntensity}
+          />
+        );
+      })}
+    </>
+  );
+}
+
+/** Plateau d’un cylindre (podium rond, demi-lune) : texture à l’échelle réelle. */
+function DeckTopMaterial({
+  attach,
+  material,
+  size,
+  selected,
+}: {
+  attach: string;
+  material?: ZoneMaterial;
+  size: number;
+  selected: boolean;
+}) {
+  const top = useMemo(() => resolveDeckSurface(material, size, size), [material, size]);
+  return (
+    <meshStandardMaterial
+      attach={attach}
+      color={selected ? '#c7d2fe' : top.color}
+      map={top.map ?? undefined}
+      normalMap={top.normalMap ?? undefined}
+      roughness={top.roughness}
+      metalness={top.metalness}
+    />
+  );
+}
+
+/** Petite composition florale basse (bord d’estrade, podium des mariés). */
+function StageFlowerCluster({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
+  const blooms: Array<[number, number, number, string]> = [
+    [0, 0.1, 0, '#fdf2f8'],
+    [0.09, 0.07, 0.03, '#f9d5e0'],
+    [-0.09, 0.07, 0.02, '#fffbeb'],
+    [0.04, 0.06, -0.08, '#fdf2f8'],
+    [-0.05, 0.05, 0.08, '#f4c2c2'],
+  ];
+  return (
+    <group position={position} scale={scale}>
+      {[[-0.12, 0.03, 0.05], [0.13, 0.03, -0.02], [0, 0.02, 0.12], [0.02, 0.03, -0.12]].map(([x, y, z], i) => (
+        <mesh key={`l-${i}`} position={[x, y, z]} scale={[1.4, 0.4, 0.8]} rotation={[0, i * 0.8, 0]} castShadow>
+          <sphereGeometry args={[0.06, 7, 5]} />
+          <meshStandardMaterial color="#5f7f5f" roughness={0.85} />
+        </mesh>
+      ))}
+      {blooms.map(([x, y, z, c], i) => (
+        <mesh key={i} position={[x, y, z]} castShadow>
+          <sphereGeometry args={[0.065, 12, 10]} />
+          <meshStandardMaterial color={c} roughness={0.75} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 export function EventStage({
   w,
   d,
@@ -270,6 +382,8 @@ export function EventStage({
   kind,
   shape = 'rect',
   podiumStyle,
+  material,
+  skirtColor,
 }: {
   w: number;
   d: number;
@@ -281,6 +395,10 @@ export function EventStage({
   kind: 'stage' | 'podium';
   shape?: 'rect' | 'semiCircle';
   podiumStyle?: PodiumStyle;
+  /** Matière du plateau (texture à l’échelle réelle). */
+  material?: ZoneMaterial;
+  /** Couleur de la jupe de scène (flancs) ; défaut anthracite. */
+  skirtColor?: string;
 }) {
   const stepCount = Math.max(1, Math.min(4, steps));
   const isStage = kind === 'stage';
@@ -290,32 +408,34 @@ export function EventStage({
   const isRunway = kind === 'podium' && style === 'runway';
   const isBand = kind === 'podium' && style === 'bandRiser';
   const showLectern = kind === 'podium' && (style === 'speaker' || style === 'lectern');
-  const wood = selected ? '#c7d2fe' : map ? '#ffffff' : baseColor;
+
 
   if (isCircular || isCouple) {
     const r = Math.min(w, d) * 0.5;
     return (
       <group>
         <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[r, r * 1.02, height, 36]} />
-          <meshStandardMaterial color={wood} map={map ?? undefined} roughness={0.45} metalness={0.06} />
+          <cylinderGeometry args={[r, r * 1.02, height, 48]} />
+          <meshStandardMaterial attach="material-0" color={selected ? '#c7d2fe' : skirtColor ?? STAGE_SKIRT} roughness={0.93} />
+          <DeckTopMaterial attach="material-1" material={material} size={r * 2} selected={selected} />
+          <meshStandardMaterial attach="material-2" color="#111" />
         </mesh>
-        <mesh position={[0, height + 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-          <circleGeometry args={[r * 0.96, 36]} />
-          <meshStandardMaterial color={selected ? '#e0e7ff' : '#f8fafc'} roughness={0.5} />
+        {/* Liseré laiton sur le nez de marche */}
+        <mesh position={[0, height, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[r * 1.005, 0.012, 8, 64]} />
+          <meshStandardMaterial color="#c9a227" metalness={0.85} roughness={0.25} />
         </mesh>
         {isCouple ? (
           <>
-            {([-0.22, 0.22] as const).map((side) => (
-              <mesh key={side} position={[side * r, height + 0.08, r * 0.15]} castShadow>
-                <sphereGeometry args={[0.08, 10, 10]} />
-                <meshStandardMaterial color="#f4a4b8" roughness={0.65} />
-              </mesh>
-            ))}
-            <mesh position={[0, height + 0.06, 0]} castShadow>
-              <torusGeometry args={[0.16, 0.018, 8, 20]} />
-              <meshStandardMaterial color="#d4af37" metalness={0.7} roughness={0.25} />
+            {/* Tapis ivoire rond + couronne florale sur l’arrière pour les mariés */}
+            <mesh position={[0, height + 0.008, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+              <circleGeometry args={[r * 0.8, 48]} />
+              <meshStandardMaterial color={selected ? '#e0e7ff' : '#f5f0e6'} roughness={0.9} />
             </mesh>
+            {Array.from({ length: 7 }).map((_, i) => {
+              const a = Math.PI * (0.62 + (i / 6) * 0.76);
+              return <StageFlowerCluster key={i} position={[Math.cos(a) * r * 0.9, height, Math.sin(a) * r * 0.9 * -1]} scale={1.1} />;
+            })}
           </>
         ) : null}
         <mesh position={[0, 0.05, r + 0.03]}>
@@ -334,7 +454,7 @@ export function EventStage({
           return (
             <mesh key={side} position={[side * w * 0.34, riserH / 2, 0]} castShadow receiveShadow>
               <boxGeometry args={[w * 0.3, riserH, d * (0.72 + i * 0.08)]} />
-              <meshStandardMaterial color={wood} map={map ?? undefined} roughness={0.5} metalness={0.08} />
+              <DeckMaterials w={w * 0.3} h={riserH} d={d * (0.72 + i * 0.08)} material={material} selected={selected} skirtColor={skirtColor} />
             </mesh>
           );
         })}
@@ -354,15 +474,14 @@ export function EventStage({
         <mesh position={[0, height / 2, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[half, half, height, 48, 1, false, -Math.PI / 2, Math.PI]} />
           <meshStandardMaterial
-            color={selected ? '#c7d2fe' : map ? '#ffffff' : baseColor}
-            map={map ?? undefined}
-            roughness={0.45}
-            metalness={0.06}
+            attach="material-0"
+            color={selected ? '#c7d2fe' : deckUsesSkirt(material) ? skirtColor ?? STAGE_SKIRT : map ? '#ffffff' : baseColor}
+            map={deckUsesSkirt(material) ? undefined : map ?? undefined}
+            roughness={0.8}
           />
-        </mesh>
-        <mesh position={[0, height + 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-          <circleGeometry args={[half * 0.98, 48, Math.PI, Math.PI]} />
-          <meshStandardMaterial color={selected ? '#e0e7ff' : '#f8fafc'} roughness={0.55} />
+          <DeckTopMaterial attach="material-1" material={material} size={half * 2} selected={selected} />
+          <meshStandardMaterial attach="material-2" color="#111" />
+          <meshStandardMaterial attach="material-3" color={selected ? '#c7d2fe' : skirtColor ?? STAGE_SKIRT} roughness={0.9} />
         </mesh>
       </group>
     );
@@ -377,29 +496,16 @@ export function EventStage({
           <group key={i} position={[0, stepH * i, (1 - shrink) * d * 0.1]}>
             <mesh position={[0, stepH / 2, 0]} castShadow receiveShadow>
               <boxGeometry args={[w * shrink, stepH * 0.92, d * shrink]} />
-              <meshStandardMaterial
-                color={selected ? '#c7d2fe' : map ? '#ffffff' : baseColor}
-                map={map ?? undefined}
-                roughness={0.5}
-                metalness={0.08}
-              />
+              <DeckMaterials w={w * shrink} h={stepH * 0.92} d={d * shrink} material={material} selected={selected} skirtColor={skirtColor} />
             </mesh>
-            <mesh position={[0, stepH + 0.012, d * shrink * 0.45]} castShadow>
-              <boxGeometry args={[w * shrink * 0.98, 0.022, 0.045]} />
-              <meshStandardMaterial color="#1c1917" roughness={0.9} />
+            {/* Nez de marche aluminium (sécurité) */}
+            <mesh position={[0, stepH * 0.92 + 0.004, d * shrink * 0.5 - 0.02]} castShadow>
+              <boxGeometry args={[w * shrink * 0.995, 0.012, 0.04]} />
+              <meshStandardMaterial color="#a8a29e" metalness={0.7} roughness={0.35} />
             </mesh>
           </group>
         );
       })}
-      {/* Jupe de scène */}
-      <mesh position={[0, height * 0.35, d * 0.5 + 0.02]} castShadow>
-        <boxGeometry args={[w * 0.98, height * 0.7, 0.04]} />
-        <meshStandardMaterial
-          color={isStage ? '#7f1d1d' : '#44403c'}
-          roughness={0.75}
-          metalness={0.05}
-        />
-      </mesh>
       {/* Bande LED avant */}
       <mesh position={[0, 0.06, d * 0.5 + 0.05]}>
         <boxGeometry args={[w * 0.9, 0.03, 0.03]} />
@@ -516,10 +622,16 @@ export function EventStage({
         </group>
       )}
       {kind === 'podium' && style === 'honor' ? (
-        <mesh position={[0, height + 0.38, 0]} castShadow receiveShadow>
-          <boxGeometry args={[w * 0.72, 0.72, d * 0.42]} />
-          <meshStandardMaterial color="#f5f0e8" roughness={0.4} />
-        </mesh>
+        // Estrade de la table d’honneur : guirlande florale au nez de l’estrade (la table se pose dessus).
+        <group>
+          {Array.from({ length: Math.max(4, Math.round(w / 0.45)) }).map((_, i, arr) => (
+            <StageFlowerCluster
+              key={i}
+              position={[(-0.5 + (i + 0.5) / arr.length) * w * 0.94, height * 0.55, d * 0.5 + 0.08]}
+              scale={0.9}
+            />
+          ))}
+        </group>
       ) : null}
     </group>
   );
@@ -545,7 +657,13 @@ export function EventZoneSurface({
   selected: boolean;
   pickable: boolean;
 }) {
-  const mat = useMemo(() => resolveZoneMaterialMap(material), [material]);
+  // Matières « réelles » (bois, marbre, béton, pelouse…) : texture à l’échelle métrique, sans teinte
+  // multipliée qui salit le rendu ; moquette / vinyle / LED gardent leur rendu procédural teinté.
+  const metric = material !== undefined && material !== 'carpet' && material !== 'vinyl' && material !== 'led';
+  const mat = useMemo(
+    () => (metric ? resolveDeckSurface(material, w, h) : { ...resolveZoneMaterialMap(material), normalMap: null }),
+    [metric, material, w, h],
+  );
   const isDance = material === 'vinyl' || material === 'led' || zoneKind === 'dance';
   const isCarpet = material === 'carpet' || zoneKind === 'carpet';
   const isVip = zoneKind === 'vip';
@@ -570,11 +688,12 @@ export function EventZoneSurface({
           color={
             selected
               ? '#c7d2fe'
-              : isDance && material !== 'led'
+              : (isDance && material !== 'led') || metric
                 ? '#ffffff'
                 : (color ?? mat.color)
           }
           map={mat.map ?? undefined}
+          normalMap={mat.normalMap ?? undefined}
           roughness={mat.roughness}
           metalness={mat.metalness}
           emissive={mat.emissive ?? '#000000'}

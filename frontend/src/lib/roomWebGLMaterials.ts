@@ -1567,7 +1567,8 @@ export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
   }
   if (mat === 'parquet' || mat === 'wood') {
     return {
-      map: loadTiledTexture('/floors/gen/wood-amber.jpg', 1.8, 1.8),
+      // Lames réalistes (l’ancien « bois ambré » saturé donnait un grain orange géant).
+      map: loadTiledTexture(mat === 'wood' ? '/floors/gen/deck-ipe.jpg' : '/floors/gen/oak-planks.jpg', 1, 1),
       color: '#ffffff',
       roughness: 0.42,
       metalness: 0.06,
@@ -1637,6 +1638,58 @@ export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
     emissive: '#b45309',
     emissiveIntensity: 0.35,
     thicknessM: 0.035,
+  };
+}
+
+/** Textures de plateau (scène, podium, estrade) et taille d’un motif en mètres réels. */
+const DECK_SURFACES: Partial<Record<ZoneMaterial, { url: string; tileM: number; roughness: number; metalness: number }>> = {
+  wood: { url: '/floors/gen/deck-ipe.jpg', tileM: 1.8, roughness: 0.5, metalness: 0.02 },
+  parquet: { url: '/floors/gen/oak-planks.jpg', tileM: 1.8, roughness: 0.45, metalness: 0.02 },
+  marble: { url: '/floors/gen/marble-veined.jpg', tileM: 1.4, roughness: 0.2, metalness: 0.05 },
+  concrete: { url: '/floors/gen/concrete-polished.jpg', tileM: 2.4, roughness: 0.7, metalness: 0.02 },
+  epoxy: { url: '/floors/gen/epoxy-grey.jpg', tileM: 2.4, roughness: 0.2, metalness: 0.1 },
+  grass: { url: '/floors/gen/turf-synthetic.jpg', tileM: 1.5, roughness: 0.95, metalness: 0 },
+  gravel: { url: '/floors/gen/gravel-light.jpg', tileM: 1.2, roughness: 0.92, metalness: 0 },
+  brick: { url: '/floors/gen/brick-pavers.jpg', tileM: 1.4, roughness: 0.8, metalness: 0 },
+  carpet: { url: '/floors/gen/carpet-navy.jpg', tileM: 1.2, roughness: 0.95, metalness: 0 },
+};
+
+/** Matériaux « textiles / bois » : les flancs d’une estrade sont une jupe de scène, pas la même matière. */
+export function deckUsesSkirt(material: ZoneMaterial | undefined): boolean {
+  const mat = material ?? 'wood';
+  return mat === 'wood' || mat === 'parquet' || mat === 'carpet' || mat === 'vinyl' || mat === 'led';
+}
+
+/**
+ * Surface d’un plateau de `wM` × `dM` mètres : la texture est répétée à l’échelle réelle
+ * (une lame de scène garde sa largeur, qu’il s’agisse d’un pupitre ou d’une scène de 12 m).
+ */
+export function resolveDeckSurface(material: ZoneMaterial | undefined, wM: number, dM: number): {
+  map: THREE.Texture | null;
+  normalMap: THREE.Texture | null;
+  color: string;
+  roughness: number;
+  metalness: number;
+  emissive?: string;
+  emissiveIntensity?: number;
+} {
+  const mat = material ?? 'wood';
+  const spec = DECK_SURFACES[mat];
+  if (!spec) {
+    const z = resolveZoneMaterialMap(mat);
+    return { map: z.map, normalMap: null, color: z.color, roughness: z.roughness, metalness: z.metalness, emissive: z.emissive, emissiveIntensity: z.emissiveIntensity };
+  }
+  // Répétition arrondie au quart pour partager les textures en cache.
+  const q = (v: number) => Math.max(0.25, Math.round((v / spec.tileM) * 4) / 4);
+  const rx = q(Math.max(0.1, wM));
+  const ry = q(Math.max(0.1, dM));
+  const normalUrl = normalMapUrlFor(spec.url);
+  return {
+    map: loadTiledTexture(spec.url, rx, ry),
+    normalMap: normalUrl ? loadTiledTexture(normalUrl, rx, ry, true) : null,
+    color: '#ffffff',
+    roughness: spec.roughness,
+    metalness: spec.metalness,
   };
 }
 

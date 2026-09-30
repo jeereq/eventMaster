@@ -1072,6 +1072,29 @@ export default function FixtureRenderer({
     );
   }
 
+  if (fixture.kind === 'customElement') {
+    const def = fixture.customElement;
+    const round = def?.mode === 'cylinder';
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div
+          className={`relative w-full h-full border-2 border-indigo-500/80 bg-indigo-50/80 shadow-md overflow-hidden flex items-center justify-center ${round ? 'rounded-full' : 'rounded-md'}`}
+        >
+          {def?.imageUrl ? (
+            // Vignette de l’image source (vue de dessus schématique).
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={def.imageUrl} alt="" className="w-full h-full object-contain pointer-events-none" draggable={false} />
+          ) : null}
+          {showLabel ? (
+            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 z-10 text-[7px] font-black uppercase text-indigo-950 bg-white/85 px-1 rounded shadow-xs whitespace-nowrap">
+              {fixture.label || def?.name || 'Élément'}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   if (fixture.kind === 'landscape') {
     const style: LandscapeStyle = fixture.landscapeStyle ?? 'oak';
     return (

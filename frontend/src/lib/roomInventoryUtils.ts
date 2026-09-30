@@ -73,6 +73,7 @@ const FIXTURE_LABELS: Partial<Record<RoomFixtureKind, string>> = {
   car: 'Véhicule d’honneur / Exposition',
   parasol: 'Grand parasol de terrasse',
   landscape: 'Aménagement extérieur (arbre, haie, eau…)',
+  customElement: 'Élément personnalisé (image / vidéo)',
 };
 
 export function computeRoomInventory(blueprint: RoomLayoutBlueprint): RoomInventoryReport {

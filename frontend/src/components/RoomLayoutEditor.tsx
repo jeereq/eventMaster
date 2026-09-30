@@ -10,6 +10,9 @@ import {
   LANDSCAPE_STYLE_META,
   LANDSCAPE_STYLE_ORDER,
   OUTDOOR_SURROUNDINGS_META,
+  resolveEnvironmentSettings,
+  sunAnglesFromPosition,
+  type EnvironmentSettings,
   OUTDOOR_SURROUNDINGS_ORDER,
   landscapeFootprintPct,
   resolveOutdoorSurroundings,
@@ -23,6 +26,7 @@ import ImageCropModal from '@/components/ImageCropModal';
 import Room2DScaleCompass from '@/components/Room2DScaleCompass';
 import type { RoomWebGLCaptureApi } from '@/components/RoomWebGLViewer';
 
+const CustomElementCreator = dynamic(() => import('@/components/room/CustomElementCreator'), { ssr: false });
 const RoomWebGLViewer = dynamic(() => import('@/components/RoomWebGLViewer'), {
   ssr: false,
   loading: () => (
@@ -113,6 +117,7 @@ import {
   instrumentStyleLabels,
   instrumentStyleHints,
   instrumentStylePresets,
+  realFixtureFootprintPct,
   barStyleLabels,
   barStyleHints,
   barStylePresets,
@@ -184,6 +189,7 @@ import {
   lightingPresetGroups,
   lightingPresetLabels,
   renderQualityLabels,
+  resolveLightingPreset,
   type LightingPreset,
   type RenderQuality,
 } from '@/lib/roomRenderQuality';
@@ -218,7 +224,15 @@ import {
   type ClearancePreset,
 } from '@/lib/roomLayoutClearance';
 import { readImageFile } from '@/lib/imageCropUtils';
-import { uploadImageFile } from '@/lib/cloudinaryUpload';
+import { uploadImageFile, uploadVideoFile } from '@/lib/cloudinaryUpload';
+import { RoomEnvironmentPanel } from '@/components/room/RoomEnvironmentPanel';
+import {
+  CUSTOM_ELEMENT_MODES,
+  CUSTOM_ELEMENT_MODE_META,
+  customElementFootprintM,
+  type CustomElementDefinition,
+} from '@/lib/roomCustomElements';
+import { loadElementLibrary, removeElementFromLibrary, saveElementToLibrary } from '@/lib/roomElementLibrary';
 import type { PlanCreationPathId } from '@/components/PlanCreationPath';
 import RoomPlanAiStudioModal from '@/components/RoomPlanAiStudioModal';
 import { scrollToElementId } from '@/lib/prefersReducedMotion';
@@ -339,7 +353,7 @@ function DiscloseChevron({ open }: { open: boolean }) {
   );
 }
 
-type EditorToolGroupId = 'display' | 'view' | 'light' | 'furniture' | 'zones' | 'building' | 'scene' | 'hospitality' | 'outdoor';
+type EditorToolGroupId = 'display' | 'view' | 'light' | 'furniture' | 'zones' | 'building' | 'scene' | 'hospitality' | 'outdoor' | 'custom';
 
 function ToolbarCluster({
   label,
@@ -839,7 +853,10 @@ export default function RoomLayoutEditor({
   const [lockOrbit, setLockOrbit] = useState(true);
   const [walkthroughActive, setWalkthroughActive] = useState(false);
   const [walkthroughLabel, setWalkthroughLabel] = useState('');
-  const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs' | 'stairs' | 'balconies' | 'amphitheater' | 'chandeliers' | 'doors' | 'podiums' | 'instruments' | 'bars' | 'hospitality'>(null);
+  const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs' | 'stairs' | 'balconies' | 'amphitheater' | 'chandeliers' | 'doors' | 'podiums' | 'instruments' | 'bars' | 'hospitality' | 'environment' | 'elements'>(null);
+  const [elementCreatorOpen, setElementCreatorOpen] = useState(false);
+  const [elementLibrary, setElementLibrary] = useState<CustomElementDefinition[] | null>(null);
+  const envCoalesceRef = useRef<{ key: string; at: number } | null>(null);
   const [aisleCount, setAisleCount] = useState(2);
   const [chairGroups, setChairGroups] = useState(2);
   const [rowsPerGroup, setRowsPerGroup] = useState(4);
@@ -1623,7 +1640,7 @@ export default function RoomLayoutEditor({
 
   const addChandelierFixture = (style: ChandelierFixtureStyle = quickChandelierStyle) => {
     const fixture = placeFixtureWithClearance(blueprint, {
-      ...createBlueprintFixture('chandelier'),
+      ...createBlueprintFixture('chandelier', blueprint.canvas),
       chandelierStyle: style,
       label: chandelierFixtureStyleLabels[style],
       storyId: resolveActiveStoryId(blueprint),
@@ -1639,7 +1656,7 @@ export default function RoomLayoutEditor({
   const addDoorFixture = (style: DoorStyle = quickDoorStyle) => {
     const isGrand = style === 'grandPortal';
     const fixture = placeFixtureWithClearance(blueprint, {
-      ...createBlueprintFixture(isGrand ? 'entrance' : 'door'),
+      ...createBlueprintFixture(isGrand ? 'entrance' : 'door', blueprint.canvas),
       doorStyle: style,
       label: doorStyleLabels[style],
       storyId: resolveActiveStoryId(blueprint),
@@ -1674,8 +1691,9 @@ export default function RoomLayoutEditor({
     }
     const preset = podiumStylePresets[style];
     const fixture = placeFixtureWithClearance(blueprint, {
-      ...createBlueprintFixture('podium'),
+      ...createBlueprintFixture('podium', blueprint.canvas),
       ...preset,
+      ...realFixtureFootprintPct('podium', blueprint.canvas, { podiumStyle: style }),
       podiumStyle: style,
       label: podiumStyleLabels[style],
       storyId: resolveActiveStoryId(blueprint),
@@ -1695,8 +1713,9 @@ export default function RoomLayoutEditor({
     }
     const preset = instrumentStylePresets[style];
     const fixture = placeFixtureWithClearance(blueprint, {
-      ...createBlueprintFixture('instrument'),
+      ...createBlueprintFixture('instrument', blueprint.canvas),
       ...preset,
+      ...realFixtureFootprintPct('instrument', blueprint.canvas, { instrumentStyle: style }),
       instrumentStyle: style,
       storyId: resolveActiveStoryId(blueprint),
     });
@@ -1744,6 +1763,94 @@ export default function RoomLayoutEditor({
     );
   };
 
+  const environmentSettings = useMemo(
+    () => resolveEnvironmentSettings(blueprint.metadata.environment),
+    [blueprint.metadata.environment],
+  );
+  /** Les mouvements successifs d’un même curseur forment une seule étape d’annulation. */
+  const setEnvironmentSettings = (next: EnvironmentSettings, label: string, coalesceKey?: string) => {
+    const now = Date.now();
+    const last = envCoalesceRef.current;
+    const coalesce = !!coalesceKey && last?.key === coalesceKey && now - last.at < 900;
+    envCoalesceRef.current = coalesceKey ? { key: coalesceKey, at: now } : null;
+    const current = latestBlueprintRef.current;
+    const nextBlueprint = {
+      ...current,
+      metadata: { ...current.metadata, environment: Object.keys(next).length ? next : undefined },
+    };
+    if (coalesce) {
+      skipHistoryRef.current = true;
+      emitBlueprint(nextBlueprint);
+      skipHistoryRef.current = false;
+    } else {
+      updateBlueprint(nextBlueprint, { message: label, kind: 'settings' });
+    }
+  };
+
+  const canCustomElements = caps.canFixtures && caps.fixtureKinds.includes('customElement');
+
+  const addCustomElementFixture = (def: CustomElementDefinition) => {
+    if (!canCustomElements) {
+      log('Les éléments personnalisés ne sont pas inclus dans votre forfait', 'info');
+      return;
+    }
+    const current = latestBlueprintRef.current;
+    const fp = customElementFootprintM(def);
+    const widthM = current.canvas?.widthM ?? 20;
+    const depthM = current.canvas?.heightM ?? 16;
+    const w = Math.max(0.4, Math.min(95, (fp.w / widthM) * 100));
+    const h = Math.max(0.4, Math.min(95, (fp.d / depthM) * 100));
+    const fixture = placeFixtureWithClearance(current, {
+      ...createBlueprintFixture('customElement'),
+      w,
+      h,
+      x: 50 - w / 2,
+      y: 50 - h / 2,
+      label: def.name,
+      color: def.edgeColor ?? '#6366f1',
+      heightM: def.heightM,
+      customElement: def,
+      storyId: resolveActiveStoryId(current),
+    });
+    updateBlueprint(
+      { ...current, fixtures: [...current.fixtures, fixture] },
+      { message: `${def.name} ajouté`, kind: 'add' },
+    );
+    setSelection([{ kind: 'fixture', id: fixture.id }]);
+  };
+
+  const openElementLibrary = () => {
+    setQuickCreate(quickCreate === 'elements' ? null : 'elements');
+    if (elementLibrary === null) {
+      void loadElementLibrary().then(setElementLibrary);
+    }
+  };
+
+  const handleElementCreated = (def: CustomElementDefinition, opts: { saveToLibrary: boolean }) => {
+    addCustomElementFixture(def);
+    if (opts.saveToLibrary) {
+      void saveElementToLibrary(def).then((saved) => {
+        setElementLibrary((prev) => [saved, ...(prev ?? []).filter((d) => d.id !== saved.id)]);
+      });
+    }
+  };
+
+  const uploadElementImage = async (file: File): Promise<string> => {
+    try {
+      const uploaded = await uploadImageFile(file);
+      if (uploaded?.url) return uploaded.url;
+    } catch {
+      /* image intégrée en secours si l’envoi cloud n’est pas disponible */
+    }
+    return readImageFile(file);
+  };
+
+  const uploadElementVideo = async (file: File): Promise<string> => {
+    const uploaded = await uploadVideoFile(file);
+    if (!uploaded?.url) throw new Error('upload');
+    return uploaded.url;
+  };
+
   const addBarFixture = (style: BarStyle) => {
     if (!caps.canFixtures || !caps.fixtureKinds.includes('bar')) {
       log('Les bars ne sont pas inclus dans votre forfait', 'info');
@@ -1751,8 +1858,9 @@ export default function RoomLayoutEditor({
     }
     const preset = barStylePresets[style];
     const fixture = placeFixtureWithClearance(blueprint, {
-      ...createBlueprintFixture('bar'),
+      ...createBlueprintFixture('bar', blueprint.canvas),
       ...preset,
+      ...realFixtureFootprintPct('bar', blueprint.canvas, { barStyle: style }),
       barStyle: style,
       storyId: resolveActiveStoryId(blueprint),
     });
@@ -1770,7 +1878,7 @@ export default function RoomLayoutEditor({
       return;
     }
     const fixture = placeFixtureWithClearance(blueprint, {
-      ...createBlueprintFixture(kind),
+      ...createBlueprintFixture(kind, blueprint.canvas),
       storyId: resolveActiveStoryId(blueprint),
     });
     updateBlueprint({ ...blueprint, fixtures: [...blueprint.fixtures, fixture] }, { message: `${fixture.label || kind} ajouté`, kind: 'add' });
@@ -1782,7 +1890,7 @@ export default function RoomLayoutEditor({
       log('Les écrans ne sont pas inclus dans votre forfait', 'info');
       return;
     }
-    const base = createBlueprintFixture('screen');
+    const base = createBlueprintFixture('screen', blueprint.canvas);
     const sizeDefaults: Record<ScreenKind, { w: number; h: number; elev: number; tilt: number }> = {
       stageLedWall: { w: 24, h: 6, elev: 0, tilt: 0 },
       wallTv: { w: 10, h: 3, elev: 1.6, tilt: 4 },
@@ -1791,11 +1899,12 @@ export default function RoomLayoutEditor({
       desktopPc: { w: 5, h: 4, elev: 0.76, tilt: 4 },
     };
     const def = sizeDefaults[screenKind];
+    const realSize = realFixtureFootprintPct('screen', blueprint.canvas, { screenKind }) ?? def;
     const fixture = placeFixtureWithClearance(blueprint, {
       ...base,
       screenKind,
-      w: def.w,
-      h: def.h,
+      w: realSize.w,
+      h: realSize.h,
       screenElevationM: def.elev,
       screenTiltDeg: def.tilt,
       label: screenKindLabels[screenKind],
@@ -5004,7 +5113,9 @@ export default function RoomLayoutEditor({
                                     ? 'Colonne / Poteau'
                                     : isStage
                                       ? 'Scène'
-                                      : `Fixe — ${selectedFixture.kind}`}
+                                      : selectedFixture.kind === 'customElement'
+                                        ? 'Élément personnalisé'
+                                        : `Fixe — ${selectedFixture.kind}`}
             </p>
             <label className="block text-xs space-y-1">
               <span className="font-semibold text-muted">Libellé</span>
@@ -5543,6 +5654,7 @@ export default function RoomLayoutEditor({
                       updateFixture(selectedFixture.id, {
                         podiumStyle: style,
                         ...preset,
+                        ...realFixtureFootprintPct('podium', blueprint.canvas, { podiumStyle: style }),
                         label: nextOwnedLabel(selectedFixture.label, podiumStyleLabels[prev], podiumStyleLabels[style]),
                       }, `Podium : ${podiumStyleLabels[style]}`);
                     }}
@@ -5593,10 +5705,11 @@ export default function RoomLayoutEditor({
                     const style = e.target.value as InstrumentStyle;
                     const prev = selectedFixture.instrumentStyle ?? 'piano';
                     const preset = instrumentStylePresets[style];
+                    const size = realFixtureFootprintPct('instrument', blueprint.canvas, { instrumentStyle: style }) ?? preset;
                     updateFixture(selectedFixture.id, {
                       instrumentStyle: style,
-                      w: preset.w,
-                      h: preset.h,
+                      w: size.w,
+                      h: size.h,
                       label: nextOwnedLabel(selectedFixture.label, instrumentStylePresets[prev].label, preset.label),
                     }, instrumentStyleLabels[style]);
                   }}
@@ -5623,10 +5736,11 @@ export default function RoomLayoutEditor({
                     const preset = barStylePresets[style];
                     const prevPreset = barStylePresets[prev];
                     const keepColor = selectedFixture.color && selectedFixture.color !== prevPreset.color;
+                    const size = realFixtureFootprintPct('bar', blueprint.canvas, { barStyle: style }) ?? preset;
                     updateFixture(selectedFixture.id, {
                       barStyle: style,
-                      w: preset.w,
-                      h: preset.h,
+                      w: size.w,
+                      h: size.h,
                       label: nextOwnedLabel(selectedFixture.label, prevPreset.label, preset.label),
                       color: keepColor ? selectedFixture.color : preset.color,
                     }, barStyleLabels[style]);
@@ -5640,6 +5754,94 @@ export default function RoomLayoutEditor({
                 <span className="text-xs text-muted">{barStyleHints[(selectedFixture.barStyle ?? 'cocktail') as BarStyle]}</span>
               </label>
             )}
+
+            {selectedFixture.kind === 'customElement' && selectedFixture.customElement ? (() => {
+              const def = selectedFixture.customElement;
+              const patchDef = (patch: Partial<CustomElementDefinition>, label: string) => {
+                const nextDef = { ...def, ...patch };
+                const fp = customElementFootprintM(nextDef);
+                const widthM = blueprint.canvas?.widthM ?? 20;
+                const depthM = blueprint.canvas?.heightM ?? 16;
+                const w = Math.max(0.4, Math.min(95, (fp.w / widthM) * 100));
+                const h = Math.max(0.4, Math.min(95, (fp.d / depthM) * 100));
+                updateFixture(
+                  selectedFixture.id,
+                  {
+                    customElement: nextDef,
+                    heightM: nextDef.heightM,
+                    w,
+                    h,
+                    x: selectedFixture.x + selectedFixture.w / 2 - w / 2,
+                    y: selectedFixture.y + selectedFixture.h / 2 - h / 2,
+                  },
+                  label,
+                );
+              };
+              const num = (label: string, value: number, key: 'widthM' | 'heightM' | 'depthM' | 'elevationM', min: number, max: number) => (
+                <label className="text-xs space-y-1">
+                  <span className="font-semibold text-muted">{label}</span>
+                  <input
+                    type="number"
+                    min={min}
+                    max={max}
+                    step={0.05}
+                    value={Math.round(value * 100) / 100}
+                    onChange={(e) => {
+                      const v = Number(e.target.value);
+                      if (!Number.isFinite(v)) return;
+                      const clamped = Math.max(min, Math.min(max, v));
+                      // Largeur et hauteur restent proportionnelles à l’image.
+                      if (key === 'heightM') patchDef({ heightM: clamped, widthM: Math.round(clamped * def.aspect * 100) / 100 }, 'Hauteur de l’élément');
+                      else if (key === 'widthM') patchDef({ widthM: clamped, heightM: Math.round((clamped / def.aspect) * 100) / 100 }, 'Largeur de l’élément');
+                      else patchDef({ [key]: clamped }, label);
+                    }}
+                    className={EDITOR_FIELD}
+                  />
+                </label>
+              );
+              return (
+                <div className="space-y-3 pt-2 border-t border-border">
+                  <p className={EDITOR_HEADING}>
+                    <ImagePlus className="w-3.5 h-3.5 text-primary" /> Taille réelle & rendu
+                  </p>
+                  <label className="block text-xs space-y-1">
+                    <span className="font-semibold text-muted">Rendu 3D</span>
+                    <select
+                      value={def.mode}
+                      onChange={(e) => {
+                        const mode = e.target.value as CustomElementDefinition['mode'];
+                        patchDef({ mode, depthM: mode === 'cylinder' ? def.widthM : CUSTOM_ELEMENT_MODE_META[mode].defaultDepthM }, `Rendu : ${CUSTOM_ELEMENT_MODE_META[mode].label}`);
+                      }}
+                      className={EDITOR_FIELD}
+                    >
+                      {CUSTOM_ELEMENT_MODES.filter((m) => m !== 'video' || !!def.videoUrl).map((m) => (
+                        <option key={m} value={m}>{CUSTOM_ELEMENT_MODE_META[m].label}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {num('Hauteur (m)', def.heightM, 'heightM', 0.05, 20)}
+                    {num('Largeur (m)', def.widthM, 'widthM', 0.05, 40)}
+                    {def.mode !== 'cylinder' ? num(def.mode === 'box' ? 'Profondeur (m)' : 'Épaisseur (m)', def.depthM, 'depthM', 0.005, 20) : null}
+                    {num('Hauteur de pose (m)', def.elevationM ?? 0, 'elevationM', 0, 15)}
+                  </div>
+                  {canCustomElements ? (
+                    <button
+                      type="button"
+                      className={cn(EDITOR_PANEL_BTN, 'border-border bg-surface text-foreground hover:bg-surface-muted')}
+                      onClick={() => {
+                        void saveElementToLibrary(def).then((saved) => {
+                          setElementLibrary((prev) => [saved, ...(prev ?? []).filter((d) => d.id !== saved.id)]);
+                          log(`${def.name} enregistré dans « Mes éléments »`, 'info');
+                        });
+                      }}
+                    >
+                      <BookmarkPlus className="w-3.5 h-3.5" aria-hidden /> Enregistrer dans « Mes éléments »
+                    </button>
+                  ) : null}
+                </div>
+              );
+            })() : null}
 
             {isLandscape && (() => {
               const style = (selectedFixture.landscapeStyle ?? 'oak') as LandscapeStyle;
@@ -7878,6 +8080,17 @@ export default function RoomLayoutEditor({
           </select>
         </label>
       ) : null}
+      {caps.canFixtures ? (
+        <button
+          type="button"
+          onClick={() => setQuickCreate(quickCreate === 'environment' ? null : 'environment')}
+          className={cn(EDITOR_TOOL, quickCreate === 'environment' ? EDITOR_TOOL_ON : EDITOR_TOOL_PRIMARY)}
+          aria-expanded={quickCreate === 'environment'}
+          title="Terrain, végétation, soleil, ciel et brouillard"
+        >
+          <SlidersHorizontal className="w-3.5 h-3.5" aria-hidden /> Environnement sur mesure
+        </button>
+      ) : null}
       {caps.fixtureKinds.includes('landscape')
         ? (['vegetation', 'water', 'ambiance'] as LandscapeGroup[]).map((group) => (
           <React.Fragment key={group}>
@@ -7912,6 +8125,32 @@ export default function RoomLayoutEditor({
         </button>
       ) : null}
       </EditorToolGroup>
+      {canCustomElements ? (
+        <EditorToolGroup
+          id="custom"
+          label="Importer"
+          icon={<ImagePlus className="w-3.5 h-3.5" aria-hidden />}
+          openId={toolbarGroup}
+          onToggle={toggleToolbarGroup}
+        >
+          <button
+            type="button"
+            onClick={() => setElementCreatorOpen(true)}
+            className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}
+            title="Créer un élément 3D à partir d’une photo, d’un PNG détouré ou d’une vidéo"
+          >
+            <ImagePlus className="w-3.5 h-3.5" aria-hidden /> Depuis une image ou vidéo
+          </button>
+          <button
+            type="button"
+            onClick={openElementLibrary}
+            className={cn(EDITOR_TOOL, quickCreate === 'elements' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
+            aria-expanded={quickCreate === 'elements'}
+          >
+            <BookmarkPlus className="w-3.5 h-3.5" aria-hidden /> Mes éléments
+          </button>
+        </EditorToolGroup>
+      ) : null}
       </ToolbarCluster>
       <ToolbarCluster label="Vue" labelClassName="lg:sr-only">
       <EditorToolGroup
@@ -8141,6 +8380,16 @@ export default function RoomLayoutEditor({
       >
         <Moon className="w-3.5 h-3.5" aria-hidden />
         Nuit LED
+      </button>
+      <button
+        type="button"
+        onClick={() => setQuickCreate(quickCreate === 'environment' ? null : 'environment')}
+        title="Hauteur et orientation du soleil, température, luminosité, voile et brouillard"
+        className={cn(EDITOR_TOOL, quickCreate === 'environment' ? EDITOR_TOOL_ON : EDITOR_TOOL_MUTED)}
+        aria-expanded={quickCreate === 'environment'}
+      >
+        <SlidersHorizontal className="w-3.5 h-3.5" aria-hidden />
+        Réglages fins
       </button>
       </EditorToolGroup>
       </ToolbarCluster>
@@ -8505,6 +8754,82 @@ export default function RoomLayoutEditor({
         </div>
       )}
 
+      {quickCreate === 'environment' && (
+        <RoomEnvironmentPanel
+          titleId="editor-quick-environment-title"
+          surroundings={outdoorSurroundings}
+          onSurroundingsChange={setOutdoorSurroundings}
+          env={environmentSettings}
+          onChange={setEnvironmentSettings}
+          baseSun={sunAnglesFromPosition(resolveLightingPreset(lightingPreset, blueprint.roomType).sunPosition)}
+          onUploadGround={resolvePlanImageUrl}
+          onClose={() => setQuickCreate(null)}
+        />
+      )}
+      {quickCreate === 'elements' && (
+        <div id="editor-quick-elements" role="region" aria-labelledby="editor-quick-elements-title" className="w-full space-y-3">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div>
+              <h4 id="editor-quick-elements-title" className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <ImagePlus className="w-4 h-4 text-primary" aria-hidden />
+                Mes éléments
+              </h4>
+              <p className="text-xs text-muted">Vos éléments créés à partir d’images ou de vidéos, réutilisables dans toutes vos salles.</p>
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setElementCreatorOpen(true)} className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}>
+                <Plus className="w-3.5 h-3.5" aria-hidden /> Créer
+              </button>
+              <button type="button" onClick={() => setQuickCreate(null)} className={cn(EDITOR_TOOL, EDITOR_TOOL_MUTED)}>
+                Fermer
+              </button>
+            </div>
+          </div>
+          {elementLibrary === null ? (
+            <p className="text-xs text-muted">Chargement…</p>
+          ) : elementLibrary.length === 0 ? (
+            <p className="text-xs text-muted">
+              Aucun élément pour l’instant. Créez-en un depuis une photo (un objet sur fond uni), un PNG détouré ou une vidéo.
+            </p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              {elementLibrary.map((def) => (
+                <div key={def.id ?? def.imageUrl} className={cn(EDITOR_PICK, 'gap-2')}>
+                  <div className="h-20 rounded bg-surface-muted flex items-center justify-center overflow-hidden">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={def.imageUrl} alt="" className="max-h-full max-w-full object-contain" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-foreground line-clamp-1">{def.name}</p>
+                    <p className="text-xs text-muted">
+                      {CUSTOM_ELEMENT_MODE_META[def.mode].label} · {def.widthM.toFixed(2)} × {def.heightM.toFixed(2)} m
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <button type="button" onClick={() => addCustomElementFixture(def)} className="text-xs font-bold text-primary hover:underline">
+                      + Installer
+                    </button>
+                    {def.id ? (
+                      <button
+                        type="button"
+                        aria-label={`Supprimer ${def.name}`}
+                        onClick={() => {
+                          const id = def.id!;
+                          setElementLibrary((prev) => (prev ?? []).filter((d) => d.id !== id));
+                          void removeElementFromLibrary(id).catch(() => log('Suppression impossible pour le moment', 'info'));
+                        }}
+                        className="text-muted hover:text-rose-600"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" aria-hidden />
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       {quickCreate === 'bars' && (
         <div
           id={QUICK_PANEL.bars.id}
@@ -9451,11 +9776,22 @@ export default function RoomLayoutEditor({
     </div>
   ) : null;
 
+  const elementCreatorModal = elementCreatorOpen ? (
+    <CustomElementCreator
+      open={elementCreatorOpen}
+      onClose={() => setElementCreatorOpen(false)}
+      uploadImage={uploadElementImage}
+      uploadVideo={uploadElementVideo}
+      onCreate={handleElementCreated}
+    />
+  ) : null;
+
   if (isExpanded || fillHost) {
     return (
       <>
         {aiPlanFileInput}
         {ambiencePreviewModal}
+        {elementCreatorModal}
         <ImageCropModal
           open={Boolean(cropTarget)}
           onClose={() => setCropTarget(null)}
@@ -9537,6 +9873,7 @@ export default function RoomLayoutEditor({
     <>
       {aiPlanFileInput}
       {ambiencePreviewModal}
+      {elementCreatorModal}
       <ImageCropModal
         open={Boolean(cropTarget)}
         onClose={() => setCropTarget(null)}

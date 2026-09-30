@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo, useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
 const GOLD = '#c9a227';
@@ -221,6 +222,13 @@ export function TentSwagRoof({
 
 const ARC_SWEEP = Math.PI * 0.95;
 const ARC_START = -ARC_SWEEP / 2;
+
+/** Points (x, z) le long du plateau en arc, t ∈ [0, 1] d’un bout à l’autre. */
+export function arcTablePoint(size: [number, number], t: number): [number, number] {
+  const a = ARC_START + t * ARC_SWEEP;
+  const r = arcTableRadius(size);
+  return [Math.sin(a) * r, Math.cos(a) * r];
+}
 
 export function arcTableRadius(size: [number, number]): number {
   return Math.max(1.4, size[0] / 2);
@@ -547,40 +555,80 @@ export function EdisonStringLightMesh({
 
 /** Fontaine à vasques. */
 export function FountainMesh({
+  w = 3,
+  d = 3,
   color = '#94a3b8',
   selected = false,
 }: {
+  w?: number;
+  d?: number;
   color?: string;
   selected?: boolean;
 }) {
-  const stone = selected ? '#c7d2fe' : color;
+  // Fontaine à vasques en pierre, calée sur l’emprise ; eau animée (nappe + chute en voile).
+  const R = Math.max(0.6, Math.min(w, d) / 2);
+  const stone = selected ? '#c7d2fe' : color === '#94a3b8' ? '#e7e2d8' : color;
+  const waterRef = useRef<THREE.MeshStandardMaterial>(null);
+  const veilRef = useRef<THREE.MeshStandardMaterial>(null);
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    if (waterRef.current?.map) waterRef.current.map.offset.set(Math.sin(t * 0.2) * 0.05, t * 0.02);
+    if (veilRef.current) veilRef.current.opacity = 0.34 + Math.sin(t * 3) * 0.04;
+  });
+  const waterMap = useMemo(() => {
+    const tex = new THREE.TextureLoader().load('/floors/gen/water.jpg');
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(R, R);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, [R]);
   return (
     <group>
-      <mesh position={[0, 0.12, 0]} receiveShadow>
-        <cylinderGeometry args={[0.95, 1.05, 0.24, 24]} />
-        <meshStandardMaterial color={stone} roughness={0.55} />
+      {/* Bassin : margelle moulurée + eau */}
+      <mesh position={[0, 0.22, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[R, R * 1.03, 0.44, 48, 1, true]} />
+        <meshStandardMaterial color={stone} roughness={0.7} side={THREE.DoubleSide} />
       </mesh>
-      <mesh position={[0, 0.16, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.78, 24]} />
-        <meshStandardMaterial color="#7dd3fc" roughness={0.12} metalness={0.35} />
+      <mesh position={[0, 0.45, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+        <torusGeometry args={[R, 0.06, 10, 64]} />
+        <meshStandardMaterial color={stone} roughness={0.65} />
       </mesh>
-      <mesh position={[0, 0.55, 0]} castShadow>
-        <cylinderGeometry args={[0.42, 0.5, 0.18, 20]} />
-        <meshStandardMaterial color={stone} roughness={0.5} />
+      <mesh position={[0, 0.34, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[R * 0.99, 48]} />
+        <meshStandardMaterial ref={waterRef} color="#8fc7d6" map={waterMap} roughness={0.08} metalness={0.2} transparent opacity={0.92} />
       </mesh>
-      <mesh position={[0, 0.92, 0]} castShadow>
-        <cylinderGeometry args={[0.16, 0.2, 0.14, 16]} />
-        <meshStandardMaterial color={stone} roughness={0.48} />
+      {/* Fût central + vasque haute */}
+      <mesh position={[0, 0.75, 0]} castShadow>
+        <cylinderGeometry args={[R * 0.1, R * 0.16, 0.9, 20]} />
+        <meshStandardMaterial color={stone} roughness={0.62} />
       </mesh>
-      <mesh position={[0, 1.08, 0]}>
-        <sphereGeometry args={[0.06, 10, 10]} />
-        <meshStandardMaterial color="#e0f2fe" roughness={0.15} metalness={0.2} />
+      <mesh position={[0, 1.22, 0]} castShadow receiveShadow>
+        <cylinderGeometry args={[R * 0.46, R * 0.18, 0.16, 32]} />
+        <meshStandardMaterial color={stone} roughness={0.6} />
+      </mesh>
+      <mesh position={[0, 1.301, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[R * 0.43, 32]} />
+        <meshStandardMaterial color="#8fc7d6" map={waterMap} roughness={0.08} metalness={0.2} />
+      </mesh>
+      {/* Voile d’eau qui retombe de la vasque */}
+      <mesh position={[0, 0.83, 0]}>
+        <cylinderGeometry args={[R * 0.47, R * 0.56, 0.95, 40, 1, true]} />
+        <meshStandardMaterial ref={veilRef} color="#dbeef5" transparent opacity={0.34} roughness={0.1} depthWrite={false} side={THREE.DoubleSide} />
+      </mesh>
+      {/* Pinacle + jet */}
+      <mesh position={[0, 1.42, 0]} castShadow>
+        <cylinderGeometry args={[R * 0.05, R * 0.08, 0.22, 12]} />
+        <meshStandardMaterial color={stone} roughness={0.6} />
+      </mesh>
+      <mesh position={[0, 1.62, 0]}>
+        <cylinderGeometry args={[0.012, 0.03, 0.22, 8]} />
+        <meshStandardMaterial color="#e0f2fe" transparent opacity={0.6} roughness={0.05} />
       </mesh>
     </group>
   );
 }
 
-/** Gloriette / pergola à treillis. */
+/** Gloriette : colonnes, garde-corps bas, plancher et toit pavillon en tuiles. */
 export function GazeboMesh({
   w,
   d,
@@ -594,41 +642,72 @@ export function GazeboMesh({
 }) {
   const h = Math.max(2.4, heightM);
   const frame = selected ? '#c7d2fe' : IVORY;
-  const posts: Array<[number, number]> = [
-    [-w * 0.4, -d * 0.4],
-    [w * 0.4, -d * 0.4],
-    [-w * 0.4, d * 0.4],
-    [w * 0.4, d * 0.4],
-  ];
+  const side = Math.min(w, d) * 0.9;
+  const R = side / 2;
+  const postH = h * 0.78;
+  const n = 8;
+  const posts = Array.from({ length: n }).map((_, i) => {
+    const a = (i / n) * Math.PI * 2 + Math.PI / n;
+    return [Math.cos(a) * R * 0.92, Math.sin(a) * R * 0.92] as [number, number];
+  });
   return (
     <group>
-      {posts.map(([x, z], i) => (
-        <mesh key={i} position={[x, h * 0.45, z]} castShadow>
-          <boxGeometry args={[0.12, h * 0.9, 0.12]} />
-          <meshStandardMaterial color={frame} roughness={0.45} />
-        </mesh>
-      ))}
-      <mesh position={[0, h * 0.92, 0]} castShadow>
-        <boxGeometry args={[w * 0.86, 0.08, d * 0.86]} />
-        <meshStandardMaterial color={frame} roughness={0.4} />
+      {/* Plancher octogonal surélevé */}
+      <mesh position={[0, 0.08, 0]} castShadow receiveShadow rotation={[0, Math.PI / n, 0]}>
+        <cylinderGeometry args={[R, R * 1.02, 0.16, n]} />
+        <meshStandardMaterial color="#d6cfc2" roughness={0.75} />
       </mesh>
-      {[-0.25, 0, 0.25].map((off) => (
-        <mesh key={`x-${off}`} position={[0, h * 0.92, off * d]} rotation={[0, 0, 0]}>
-          <boxGeometry args={[w * 0.82, 0.03, 0.03]} />
-          <meshStandardMaterial color="#e7e5e4" roughness={0.5} />
-        </mesh>
+      {posts.map(([x, z], i) => (
+        <group key={i} position={[x, 0, z]}>
+          <mesh position={[0, 0.16 + postH / 2, 0]} castShadow>
+            <cylinderGeometry args={[0.06, 0.07, postH, 12]} />
+            <meshStandardMaterial color={frame} roughness={0.45} />
+          </mesh>
+          <mesh position={[0, 0.16 + postH, 0]} castShadow>
+            <boxGeometry args={[0.18, 0.08, 0.18]} />
+            <meshStandardMaterial color={frame} roughness={0.45} />
+          </mesh>
+        </group>
       ))}
-      {[-0.25, 0, 0.25].map((off) => (
-        <mesh key={`z-${off}`} position={[off * w, h * 0.92, 0]}>
-          <boxGeometry args={[0.03, 0.03, d * 0.82]} />
-          <meshStandardMaterial color="#e7e5e4" roughness={0.5} />
-        </mesh>
-      ))}
+      {/* Garde-corps bas entre colonnes (ouvert à l’avant) */}
+      {posts.map(([x, z], i) => {
+        if (i === 1 || i === 2) return null;
+        const [nx, nz] = posts[(i + 1) % n];
+        const len = Math.hypot(nx - x, nz - z);
+        const ang = Math.atan2(nz - z, nx - x);
+        return (
+          <group key={`rail-${i}`} position={[(x + nx) / 2, 0, (z + nz) / 2]} rotation={[0, -ang, 0]}>
+            <mesh position={[0, 0.95, 0]} castShadow>
+              <boxGeometry args={[len, 0.05, 0.06]} />
+              <meshStandardMaterial color={frame} roughness={0.45} />
+            </mesh>
+            {Array.from({ length: Math.max(3, Math.round(len / 0.14)) }).map((_, k, arr) => (
+              <mesh key={k} position={[(-0.5 + (k + 0.5) / arr.length) * len, 0.56, 0]}>
+                <cylinderGeometry args={[0.012, 0.012, 0.78, 6]} />
+                <meshStandardMaterial color={frame} roughness={0.45} />
+              </mesh>
+            ))}
+          </group>
+        );
+      })}
+      {/* Ceinture + toit pavillon */}
+      <mesh position={[0, 0.2 + postH + 0.06, 0]} rotation={[0, Math.PI / n, 0]} castShadow>
+        <cylinderGeometry args={[R * 1.02, R * 1.02, 0.14, n, 1, true]} />
+        <meshStandardMaterial color={frame} roughness={0.45} side={THREE.DoubleSide} />
+      </mesh>
+      <mesh position={[0, 0.2 + postH + 0.13 + R * 0.28, 0]} rotation={[0, Math.PI / n, 0]} castShadow receiveShadow>
+        <coneGeometry args={[R * 1.12, R * 0.56, n]} />
+        <meshStandardMaterial color={selected ? '#c7d2fe' : '#5b6b73'} roughness={0.6} metalness={0.15} />
+      </mesh>
+      <mesh position={[0, 0.2 + postH + 0.13 + R * 0.56 + 0.12, 0]} castShadow>
+        <sphereGeometry args={[0.07, 12, 10]} />
+        <meshStandardMaterial color="#c9a227" metalness={0.85} roughness={0.25} />
+      </mesh>
     </group>
   );
 }
 
-/** Régie DJ / bar technique. */
+/** Régie DJ : meuble façade lumineuse, platines, table de mixage, enceintes sur pied. */
 export function DjBoothMesh({
   w,
   d,
@@ -641,21 +720,74 @@ export function DjBoothMesh({
   selected?: boolean;
 }) {
   const body = selected ? '#c7d2fe' : color;
+  const deskW = Math.min(w, 2.4);
+  const deskD = Math.min(d, 0.8);
   return (
     <group>
-      <mesh position={[0, 0.55, 0]} castShadow receiveShadow>
-        <boxGeometry args={[w, 1.05, d]} />
+      <mesh position={[0, 0.5, 0]} castShadow receiveShadow>
+        <boxGeometry args={[deskW, 1, deskD]} />
         <meshStandardMaterial color={body} roughness={0.55} />
       </mesh>
-      <mesh position={[0, 1.12, 0]} receiveShadow>
-        <boxGeometry args={[w * 0.92, 0.06, d * 0.7]} />
-        <meshStandardMaterial color="#e7e5e4" roughness={0.25} metalness={0.2} />
+      {/* Façade lumineuse */}
+      <mesh position={[0, 0.52, deskD / 2 + 0.005]}>
+        <boxGeometry args={[deskW * 0.9, 0.7, 0.01]} />
+        <meshStandardMaterial color="#1e1b4b" emissive="#7c3aed" emissiveIntensity={0.55} roughness={0.3} />
       </mesh>
-      {([-0.32, 0.32] as const).map((side) => (
-        <group key={side} position={[side * w * 0.55, 1.35, -d * 0.15]}>
+      <mesh position={[0, 1.015, 0]} receiveShadow>
+        <boxGeometry args={[deskW * 1.02, 0.03, deskD * 1.02]} />
+        <meshStandardMaterial color="#27272a" roughness={0.4} metalness={0.3} />
+      </mesh>
+      {/* Platines + mixeur */}
+      {([-0.3, 0.3] as const).map((sx) => (
+        <group key={sx} position={[sx * deskW, 1.05, 0]}>
           <mesh castShadow>
-            <boxGeometry args={[0.22, 0.55, 0.18]} />
-            <meshStandardMaterial color="#171717" roughness={0.6} />
+            <boxGeometry args={[0.45, 0.06, 0.36]} />
+            <meshStandardMaterial color="#18181b" roughness={0.35} metalness={0.4} />
+          </mesh>
+          <mesh position={[-0.03, 0.04, 0]}>
+            <cylinderGeometry args={[0.15, 0.15, 0.012, 32]} />
+            <meshStandardMaterial color="#0a0a0a" roughness={0.25} metalness={0.3} />
+          </mesh>
+          <mesh position={[-0.03, 0.048, 0]}>
+            <cylinderGeometry args={[0.04, 0.04, 0.004, 16]} />
+            <meshStandardMaterial color="#dc2626" roughness={0.5} />
+          </mesh>
+        </group>
+      ))}
+      <mesh position={[0, 1.07, 0]} castShadow>
+        <boxGeometry args={[0.32, 0.08, 0.34]} />
+        <meshStandardMaterial color="#27272a" roughness={0.35} metalness={0.4} />
+      </mesh>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <mesh key={i} position={[-0.1 + (i % 3) * 0.1, 1.115, -0.08 + Math.floor(i / 3) * 0.14]}>
+          <cylinderGeometry args={[0.012, 0.012, 0.02, 8]} />
+          <meshStandardMaterial color="#22d3ee" emissive="#06b6d4" emissiveIntensity={0.8} />
+        </mesh>
+      ))}
+      {/* Enceintes sur pied de part et d’autre */}
+      {([-1, 1] as const).map((side) => (
+        <group key={side} position={[side * (deskW / 2 + 0.45), 0, -0.05]}>
+          <mesh position={[0, 0.7, 0]} castShadow>
+            <cylinderGeometry args={[0.018, 0.018, 1.4, 8]} />
+            <meshStandardMaterial color="#27272a" metalness={0.7} roughness={0.3} />
+          </mesh>
+          {[0, 1, 2].map((k) => (
+            <mesh key={k} position={[Math.cos((k / 3) * Math.PI * 2) * 0.3, 0.12, Math.sin((k / 3) * Math.PI * 2) * 0.3]} rotation={[0, -(k / 3) * Math.PI * 2, 0.9]}>
+              <cylinderGeometry args={[0.012, 0.012, 0.4, 6]} />
+              <meshStandardMaterial color="#27272a" metalness={0.7} roughness={0.3} />
+            </mesh>
+          ))}
+          <mesh position={[0, 1.65, 0]} castShadow>
+            <boxGeometry args={[0.36, 0.56, 0.32]} />
+            <meshStandardMaterial color="#111" roughness={0.6} />
+          </mesh>
+          <mesh position={[0, 1.58, 0.161]}>
+            <circleGeometry args={[0.13, 24]} />
+            <meshStandardMaterial color="#27272a" roughness={0.8} />
+          </mesh>
+          <mesh position={[0, 1.83, 0.161]}>
+            <circleGeometry args={[0.05, 16]} />
+            <meshStandardMaterial color="#3f3f46" roughness={0.6} />
           </mesh>
         </group>
       ))}
