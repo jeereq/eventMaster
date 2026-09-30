@@ -658,6 +658,20 @@ export function isB2cPlanKey(planKey: string): boolean {
   return B2C_PLAN_KEYS.includes(normalized);
 }
 
+/**
+ * Organisation particulier (B2C) : forfait Particulier actif, ou essai gratuit ouvert pour un
+ * forfait Particulier. Ces comptes organisent des fêtes privées : pas d’événement public.
+ */
+export function isB2cTenant(plan?: string | null, pendingPlan?: string | null): boolean {
+  const current = normalizePlanKey(plan || 'FREE');
+  if (isB2cPlanKey(current)) return true;
+  return current === 'FREE' && Boolean(pendingPlan) && isB2cPlanKey(String(pendingPlan));
+}
+
+export function tenantCanPublishEvents(plan?: string | null, pendingPlan?: string | null): boolean {
+  return !isB2cTenant(plan, pendingPlan);
+}
+
 /** Durée de licence / facture : trimestre B2C, mois sinon — ou durée demandée (ex. annuel 365 j, −10 %). */
 export function resolveDurationDaysForPlan(planKey: string, requested?: number | null): number {
   if (requested != null && Number.isFinite(requested) && requested > 0) return requested;

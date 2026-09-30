@@ -94,6 +94,7 @@ import {
 import { findRdcCommune } from '@/lib/rdcCities';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { useAuth } from '@/context/AuthContext';
+import { isB2cPlanId } from '@/config/landingPricing';
 import {
   resolveDonationsAccess,
   DEFAULT_DONATIONS_ACCESS,
@@ -243,7 +244,13 @@ export default function EventConfigForm({
   const complete = mode === 'complete';
   const kinds = complete ? EVENT_KINDS_PRO : EVENT_KINDS_SIMPLE;
   const { site } = usePlatformSite();
-  const { tenant } = useAuth();
+  const { tenant, planFeatures } = useAuth();
+  /** Forfaits Particulier (B2C) : événements privés uniquement. */
+  const canPublishEvents = !(
+    isB2cPlanId(tenant?.plan || '') ||
+    planFeatures?.audience === 'B2C' ||
+    (tenant?.plan === 'FREE' && isB2cPlanId(tenant?.pendingPlan || ''))
+  );
   const onlinePaymentsEnabled = site.onlinePaymentsEnabled !== false;
 
   const [donationsEnabled, setDonationsEnabled] = useState(false);
@@ -361,7 +368,7 @@ export default function EventConfigForm({
     setReminderFrequency(initialEvent.reminderFrequency || 'NONE');
     setLatitude(initialEvent.latitude != null ? String(initialEvent.latitude) : '');
     setLongitude(initialEvent.longitude != null ? String(initialEvent.longitude) : '');
-    setIsPublic(Boolean(initialEvent.isPublic));
+    setIsPublic(canPublishEvents && Boolean(initialEvent.isPublic));
     setTicketing(Boolean(initialEvent.ticketingEnabled));
     setTicketPrice(
       initialEvent.ticketPriceFc != null && initialEvent.ticketPriceFc > 0
@@ -757,7 +764,7 @@ export default function EventConfigForm({
   };
 
   const buildPayload = (): EventConfigPayload => {
-    const publicEvent = complete ? isPublic : Boolean(initialEvent?.isPublic);
+    const publicEvent = canPublishEvents && (complete ? isPublic : Boolean(initialEvent?.isPublic));
     const paid = complete ? publicEvent && ticketing : Boolean(initialEvent?.ticketingEnabled);
 
     const neighborSharingPolicy: NeighborSharingPolicy = {
@@ -1708,7 +1715,9 @@ export default function EventConfigForm({
 
                     <button
                       type="button"
+                      disabled={!canPublishEvents}
                       onClick={() => {
+                        if (!canPublishEvents) return;
                         if (onlinePaymentsEnabled) {
                           requestEnableCollection('public-ticketing');
                           return;
@@ -1717,7 +1726,9 @@ export default function EventConfigForm({
                       }}
                       className={cn(
                         'p-3.5 rounded-2xl border text-left transition-all relative flex flex-col justify-between gap-2 min-h-11',
-                        isPublic
+                        !canPublishEvents
+                          ? 'border-border bg-surface-muted opacity-60 cursor-not-allowed'
+                          : isPublic
                           ? 'border-primary bg-primary/5 ring-2 ring-primary/30 shadow-xs'
                           : 'border-border bg-surface hover:bg-surface-muted'
                       )}
@@ -1730,7 +1741,9 @@ export default function EventConfigForm({
                         {isPublic && <Check className="w-4 h-4 text-primary" />}
                       </div>
                       <p className="text-[11px] text-muted leading-relaxed">
-                        Fiche marketplace ouverte, billetterie multi-zones 3D, paiements Mobile Money &amp; Carte.
+                        {canPublishEvents
+                          ? 'Fiche marketplace ouverte, billetterie multi-zones 3D, paiements Mobile Money & Carte.'
+                          : 'Réservé aux forfaits organisation. Les forfaits Particulier restent sur invitation.'}
                       </p>
                     </button>
                   </div>
