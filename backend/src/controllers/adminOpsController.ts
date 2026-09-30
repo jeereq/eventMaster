@@ -516,6 +516,7 @@ export async function impersonateTenant(req: AuthenticatedRequest, res: Response
         userId: target.id,
         tenantId: target.tenantId,
         role: target.role,
+        tv: target.tokenVersion,
         impersonatedBy: req.user.id,
       },
       '2h',

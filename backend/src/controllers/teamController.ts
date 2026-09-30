@@ -1,7 +1,8 @@
 import { Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../db';
-import { AuthenticatedRequest } from '../middleware/auth';
+import { AuthenticatedRequest, invalidateSessionCache } from '../middleware/auth';
+import { passwordPolicyError } from '../utils/passwordPolicy';
 import { isValidOrgRole, resolveOrgAccess, invalidateOrgAccessCache } from '../services/permissionsService';
 import { assertOrgManagerQuota, assertPlanFeature, PlanFeatureError } from '../services/planFeaturesService';
 import {
@@ -152,8 +153,9 @@ export async function createTeamMember(req: AuthenticatedRequest, res: Response)
       }
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères.' });
+    const memberPasswordError = passwordPolicyError(password);
+    if (memberPasswordError) {
+      return res.status(400).json({ error: memberPasswordError });
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -532,6 +534,7 @@ export async function deleteTeamMember(req: AuthenticatedRequest, res: Response)
     }
 
     await prisma.user.delete({ where: { id: memberId } });
+    invalidateSessionCache(memberId);
 
     return res.json({ message: 'Utilisateur supprimé de l\'organisation.' });
   } catch (error: any) {

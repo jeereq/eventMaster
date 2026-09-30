@@ -4,6 +4,7 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/lib/api';
+import { setAuthToken } from '@/lib/authSession';
 import { useAuth } from '@/context/AuthContext';
 import {
   User, Mail, Lock, Building, Loader2,
@@ -29,6 +30,7 @@ function ProfilePageContent() {
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [tenantName, setTenantName] = useState('');
   const [accountKind, setAccountKind] = useState<TenantAccountKind>('ORGANIZER');
+  const [currentPassword, setCurrentPassword] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [brandPrimary, setBrandPrimary] = useState('#059669');
@@ -158,6 +160,16 @@ function ProfilePageContent() {
       setLoading(false);
       return;
     }
+    if (password && password.length < 8) {
+      setError('Le nouveau mot de passe doit contenir au moins 8 caractères.');
+      setLoading(false);
+      return;
+    }
+    if (password && !currentPassword) {
+      setError('Saisissez votre mot de passe actuel pour le changer.');
+      setLoading(false);
+      return;
+    }
 
     try {
       const data = await api.put('/auth/profile', {
@@ -168,12 +180,16 @@ function ProfilePageContent() {
         nationalNumber: phoneNational,
         avatarUrl,
         password: password || undefined,
+        currentPassword: password ? currentPassword : undefined,
         tenantName: canEditTenantName ? tenantName : undefined,
       });
 
+      // Changer le mot de passe déconnecte les autres sessions : on garde celle-ci avec le nouveau jeton.
+      if (data.token) setAuthToken(data.token);
       updateUserAndTenant(data.user, data.tenant);
       await refreshProfile();
       setSuccess(data.message || 'Profil mis à jour avec succès !');
+      setCurrentPassword('');
       setPassword('');
       setConfirmPassword('');
     } catch (err: any) {
@@ -342,10 +358,11 @@ function ProfilePageContent() {
                   Sécurité
                 </h2>
                 <div className="space-y-3">
-                  <Input label="Nouveau mot de passe" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Laisser vide pour ne pas modifier" minLength={6} />
-                  <Input label="Confirmer" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Laisser vide pour ne pas modifier" minLength={6} />
+                  <Input label="Mot de passe actuel" type="password" autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Requis pour changer le mot de passe" />
+                  <Input label="Nouveau mot de passe" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Laisser vide pour ne pas modifier" minLength={8} />
+                  <Input label="Confirmer" type="password" autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Laisser vide pour ne pas modifier" minLength={8} />
                   <p className="text-xs text-muted bg-surface-muted border border-border rounded-[var(--radius-button)] p-3">
-                    Minimum 6 caractères. Laissez vide si vous ne souhaitez pas changer le mot de passe.
+                    Minimum 8 caractères. Changer le mot de passe déconnecte vos autres appareils. Laissez vide si vous ne souhaitez pas le changer.
                   </p>
                 </div>
               </div>

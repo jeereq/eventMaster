@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs';
+import { passwordPolicyError } from '../utils/passwordPolicy';
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
@@ -115,8 +116,9 @@ export async function createCommercialOrganization(req: AuthenticatedRequest, re
       });
     }
 
-    if (managerPassword.length < 6) {
-      return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 6 caractères.' });
+    const managerPasswordError = passwordPolicyError(managerPassword);
+    if (managerPasswordError) {
+      return res.status(400).json({ error: managerPasswordError });
     }
 
     const existingUser = await prisma.user.findUnique({ where: { email: managerEmail } });

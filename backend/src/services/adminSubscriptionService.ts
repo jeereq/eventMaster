@@ -1,4 +1,5 @@
 import { prisma } from '../db';
+import { invalidateSessionCache } from '../middleware/auth';
 import {
   PLAN_KEYS,
   B2C_PLAN_KEYS,
@@ -437,6 +438,7 @@ export async function manageSubscriptionTarget(params: ManageSubscriptionParams)
         where: { id: user.id },
         data: { tenantId: newTenant.id, orgRole: 'MANAGER' },
       });
+      invalidateSessionCache(user.id);
       tenantId = newTenant.id;
     } else {
       // Met à jour le tenant existant

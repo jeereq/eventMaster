@@ -3,6 +3,8 @@ import type { CorsOptions } from 'cors';
 const DEFAULT_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const DEFAULT_GLOBAL_RATE_LIMIT_MAX = 300;
 const DEFAULT_AUTH_RATE_LIMIT_MAX = 20;
+/** Générations IA publiques par IP et par 24 h pour les visiteurs sans compte. */
+const DEFAULT_ANONYMOUS_AI_DAILY_MAX = 20;
 
 function positiveInteger(value: string | undefined, fallback: number): number {
   const parsed = Number.parseInt(value || '', 10);
@@ -29,6 +31,7 @@ export function getRateLimitConfig(env: NodeJS.ProcessEnv = process.env) {
     windowMs: positiveInteger(env.RATE_LIMIT_WINDOW_MS, DEFAULT_RATE_LIMIT_WINDOW_MS),
     globalMax: positiveInteger(env.RATE_LIMIT_MAX, DEFAULT_GLOBAL_RATE_LIMIT_MAX),
     authMax: positiveInteger(env.AUTH_RATE_LIMIT_MAX, DEFAULT_AUTH_RATE_LIMIT_MAX),
+    anonymousAiDailyMax: positiveInteger(env.ANONYMOUS_AI_DAILY_MAX, DEFAULT_ANONYMOUS_AI_DAILY_MAX),
   };
 }
 

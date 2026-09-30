@@ -447,7 +447,7 @@ export default function TeamManagement() {
               required={verificationMethod === 'WHATSAPP' || verificationMethod === 'SMS'}
               hint={phoneFieldHint(authChannels, verificationMethod)}
             />
-            <Input label="Mot de passe temporaire" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} hint="Minimum 6 caractères" />
+            <Input label="Mot de passe temporaire" type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} hint="Minimum 8 caractères" />
           </div>
 
           <div>

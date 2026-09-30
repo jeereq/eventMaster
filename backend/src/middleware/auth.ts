@@ -3,6 +3,11 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 import { prisma } from '../db';
 import { createTtlCache } from '../utils/ttlCache';
 import { getJwtSecret } from '../config/security';
+import {
+  parseSessionClaims,
+  resolveSessionUser,
+  type SessionUserState,
+} from '../services/sessionPolicy';
 
 const LICENSE_CACHE_TTL_MS = 60_000;
 const licenseCache = createTtlCache<{
@@ -19,6 +24,8 @@ export interface AuthTokenPayload {
   userId: string;
   tenantId: string | null;
   role: 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER';
+  /** Version des sessions de l'utilisateur au moment de la signature (voir User.tokenVersion). */
+  tv: number;
   impersonatedBy?: string;
 }
 
@@ -35,45 +42,70 @@ export function signUserToken(payload: AuthTokenPayload, expiresIn: string = '24
   return jwt.sign(payload, getJwtSecret(), { expiresIn: expiresIn as SignOptions['expiresIn'] });
 }
 
-function userFromPayload(payload: AuthTokenPayload) {
-  return {
-    id: payload.userId,
-    tenantId: payload.tenantId,
-    role: payload.role,
-    impersonatedBy: payload.impersonatedBy || undefined,
-  };
+const SESSION_STATE_TTL_MS = 30_000;
+const sessionStateCache = createTtlCache<SessionUserState | null>(SESSION_STATE_TTL_MS);
+
+/** À appeler après tout changement de rôle, d'organisation ou de tokenVersion d'un utilisateur. */
+export function invalidateSessionCache(userId: string) {
+  sessionStateCache.delete(userId);
 }
 
-export function optionalAuth(req: AuthenticatedRequest, _res: Response, next: NextFunction) {
+async function loadSessionState(userId: string): Promise<SessionUserState | null> {
+  const cached = sessionStateCache.get(userId);
+  if (cached !== undefined) return cached;
+  const row = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true, tenantId: true, tokenVersion: true },
+  });
+  const state = row ? { role: row.role, tenantId: row.tenantId, tokenVersion: row.tokenVersion } : null;
+  sessionStateCache.set(userId, state);
+  return state;
+}
+
+/** Utilisateur authentifié par l'en-tête Bearer, ou null (absent, invalide, expiré ou révoqué). */
+async function authenticateRequest(req: Request): Promise<AuthenticatedRequest['user'] | null> {
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    return next();
-  }
+  if (!authHeader?.startsWith('Bearer ')) return null;
   const token = authHeader.split(' ')[1];
+  let payload: unknown;
   try {
-    const payload = jwt.verify(token, getJwtSecret()) as AuthTokenPayload;
-    req.user = userFromPayload(payload);
+    payload = jwt.verify(token, getJwtSecret());
   } catch {
+    return null;
+  }
+  const claims = parseSessionClaims(payload);
+  if (!claims) return null;
+  return resolveSessionUser(claims, await loadSessionState(claims.userId));
+}
+
+export async function optionalAuth(req: AuthenticatedRequest, _res: Response, next: NextFunction) {
+  try {
+    const user = await authenticateRequest(req);
+    if (user) req.user = user;
+  } catch (error) {
     /* ignore invalid token on public routes */
+    console.warn('[Auth Middleware] Session optionnelle ignorée:', error);
   }
   next();
 }
 
-export function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+export async function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (!req.headers.authorization?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Accès non autorisé. Token manquant ou invalide.' });
   }
 
-  const token = authHeader.split(' ')[1];
+  let user: AuthenticatedRequest['user'] | null;
   try {
-    const payload = jwt.verify(token, getJwtSecret()) as AuthTokenPayload;
-    req.user = userFromPayload(payload);
-    next();
+    user = await authenticateRequest(req);
   } catch (error) {
+    console.error('[Auth Middleware] Erreur lors de la vérification de la session:', error);
+    return res.status(500).json({ error: 'Erreur interne lors de la vérification de la session.' });
+  }
+  if (!user) {
     return res.status(401).json({ error: 'Token invalide ou expiré.' });
   }
+  req.user = user;
+  next();
 }
 
 export function requireRole(roles: ('SUPER_ADMIN' | 'COMMERCIAL' | 'USER')[]) {

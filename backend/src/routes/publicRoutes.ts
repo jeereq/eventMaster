@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { rateLimit } from 'express-rate-limit';
 import { prisma } from '../db';
 import { sendRealEmail, sendRealWhatsApp } from '../services/notificationService';
 import { getPlansConfiguration } from '../config/plansConfig';
@@ -9,7 +10,8 @@ import {
   getContactDestinations,
   loadPlatformSettings,
 } from '../services/platformSettingsService';
-import { optionalAuth, requireAuth } from '../middleware/auth';
+import { optionalAuth, requireAuth, type AuthenticatedRequest } from '../middleware/auth';
+import { getRateLimitConfig } from '../config/security';
 import { resolveContactReason } from '../config/contactReasons';
 import {
   listPublicVenues,
@@ -77,6 +79,23 @@ import {
 } from '../controllers/invitationTemplateFavoriteController';
 
 const router = Router();
+
+/**
+ * Les générations IA publiques coûtent des appels LLM et l'identifiant d'appareil est choisi par
+ * le client : sans plafond par IP, changer de deviceId donnerait des essais gratuits illimités.
+ * Les visiteurs connectés passent par leur portefeuille de jetons et ne sont pas concernés.
+ */
+const anonymousAiLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000,
+  limit: getRateLimitConfig().anonymousAiDailyMax,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  skip: (req) => Boolean((req as AuthenticatedRequest).user),
+  message: {
+    error: 'Limite quotidienne de générations sans compte atteinte. Créez un compte gratuit pour continuer.',
+    code: 'ANONYMOUS_AI_LIMIT',
+  },
+});
 
 /** GET /api/public/site — identité & contact (sans secrets) */
 router.get('/site', (_req: Request, res: Response) => {
@@ -195,9 +214,9 @@ router.get('/events/:slug/seats', listPublicEventSeats);
 router.post('/events/:slug/check-seats', optionalAuth, checkEventSeatsAvailability);
 router.post('/events/:slug/checkout', requireAuth, checkoutPublicEvent);
 router.get('/ticket-orders/session/:sessionId', getTicketOrderBySession);
-router.post('/event-plan-ai', optionalAuth, publicPlanEventAi);
-router.post('/templates/ai/compose', optionalAuth, publicComposeTemplateWithAi);
-router.post('/rooms/ai/compose', optionalAuth, publicComposeRoomPlan);
+router.post('/event-plan-ai', optionalAuth, anonymousAiLimiter, publicPlanEventAi);
+router.post('/templates/ai/compose', optionalAuth, anonymousAiLimiter, publicComposeTemplateWithAi);
+router.post('/rooms/ai/compose', optionalAuth, anonymousAiLimiter, publicComposeRoomPlan);
 router.get('/studio/jobs', optionalAuth, listPublicStudioJobs);
 router.get('/studio/jobs/:jobId', optionalAuth, getPublicStudioJob);
 router.get('/rooms/ai/history', optionalAuth, listPublicAiRoomPlanComposes);

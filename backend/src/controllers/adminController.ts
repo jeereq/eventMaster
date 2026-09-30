@@ -1,5 +1,6 @@
 import { Response } from 'express';
-import { AuthenticatedRequest, invalidateLicenseCache } from '../middleware/auth';
+import { passwordPolicyError } from '../utils/passwordPolicy';
+import { AuthenticatedRequest, invalidateLicenseCache, invalidateSessionCache } from '../middleware/auth';
 import { prisma } from '../db';
 import { PlanType, Role, TenantAccountKind } from '@prisma/client';
 import bcrypt from 'bcryptjs';
@@ -879,6 +880,11 @@ export async function createUser(req: AuthenticatedRequest, res: Response) {
       (verificationMethod as VerificationMethod) || (phoneFields.phone ? 'WHATSAPP' : 'EMAIL');
     const shouldVerify = isEmailVerified !== undefined ? Boolean(isEmailVerified) : false;
 
+    const createPasswordError = passwordPolicyError(password);
+    if (createPasswordError) {
+      return res.status(400).json({ error: createPasswordError });
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
     const resolvedRole = (role as Role) || 'USER';
     let resolvedTenantId = resolvedRole === 'COMMERCIAL' ? null : (tenantId || null);
@@ -1130,13 +1136,19 @@ export async function updateUserRoleOrStatus(req: AuthenticatedRequest, res: Res
     }
 
     if (password) {
+      const updatePasswordError = passwordPolicyError(password);
+      if (updatePasswordError) {
+        return res.status(400).json({ error: updatePasswordError });
+      }
       updateData.passwordHash = await bcrypt.hash(password, 10);
+      updateData.tokenVersion = { increment: 1 };
     }
 
     const updatedUser = await prisma.user.update({
       where: { id },
       data: updateData,
     });
+    invalidateSessionCache(updatedUser.id);
 
     if (updatedUser.role === 'COMMERCIAL') {
       await ensureCommercialReferralCode(updatedUser.id);
@@ -1188,6 +1200,7 @@ export async function updateUserRoleOrStatus(req: AuthenticatedRequest, res: Res
             orgRole: 'MANAGER',
           },
         });
+        invalidateSessionCache(updatedUser.id);
         updatedUser.tenantId = newTenant.id;
       }
     }
@@ -1244,6 +1257,7 @@ export async function deleteUser(req: AuthenticatedRequest, res: Response) {
     await prisma.user.delete({
       where: { id },
     });
+    invalidateSessionCache(id);
 
     if (existingUser.role === 'COMMERCIAL') {
       await removeCommercialPermissions(id);
