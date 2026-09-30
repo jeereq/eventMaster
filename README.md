@@ -132,8 +132,9 @@ eventmaster/
    `JWT_SECRET` est obligatoire (32 caractères minimum). En production, configurez les origines CORS explicitement et laissez la vérification TLS PostgreSQL active.
 3. Appliquez les migrations Prisma de votre schéma à la base PostgreSQL :
    ```bash
-   npx prisma db push
+   npm run migrate:deploy
    ```
+   En production, `npm start` applique automatiquement les migrations en attente (`prisma migrate deploy`) avant de lancer l'API : l'hébergeur doit exécuter `npm run build` puis `npm start`, avec `DATABASE_URL` défini. Si le démarrage échoue avec l'erreur `P3005` (base créée avec `db push`, sans historique de migrations), marquez une fois les migrations déjà présentes comme appliquées avec `npx prisma migrate resolve --applied <nom_du_dossier>` pour chacune, sauf les nouvelles.
 4. Lancez le serveur de développement :
    ```bash
    npm run dev
