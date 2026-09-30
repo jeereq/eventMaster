@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
 import { prisma } from '../db';
 import { AuthenticatedRequest } from '../middleware/auth';
-import { canManageEvent } from '../services/permissionsService';
+import { canAccessEvent, canManageEvent } from '../services/permissionsService';
 import { resolveFeedActor, type FeedIdentityDependencies } from '../services/feedIdentityService';
+import { decideFeedReadAccess, type FeedReadDependencies } from '../services/feedReadPolicy';
 
 const feedIdentityDependencies: FeedIdentityDependencies = {
   findUser: (id) => prisma.user.findUnique({
@@ -19,6 +20,33 @@ const feedIdentityDependencies: FeedIdentityDependencies = {
 function guestTokenFromRequest(req: Request): string | undefined {
   const value = req.headers['x-guest-token'];
   return Array.isArray(value) ? value[0] : value;
+}
+
+const feedReadDependencies: FeedReadDependencies = {
+  findEvent: (id) => prisma.event.findUnique({ where: { id }, select: { isPublic: true } }),
+  canAccessEvent,
+  guestBelongsToEvent: async (id, eventId) =>
+    (await prisma.guest.count({ where: { id, eventId } })) > 0,
+};
+
+/** Événement privé : fil et livre d'or réservés aux invités munis de leur lien et à l'organisation. */
+async function ensureFeedReadable(req: Request, res: Response, eventId: string): Promise<boolean> {
+  const user = (req as AuthenticatedRequest).user;
+  const decision = await decideFeedReadAccess(
+    {
+      eventId,
+      user: user ? { id: user.id, tenantId: user.tenantId ?? null } : undefined,
+      guestToken: guestTokenFromRequest(req),
+    },
+    feedReadDependencies,
+  );
+  if (decision === 'allowed') return true;
+  if (decision === 'not_found') {
+    res.status(404).json({ error: 'Événement introuvable.' });
+  } else {
+    res.status(403).json({ error: 'Ouvrez votre lien d’invitation personnel pour voir ce contenu.' });
+  }
+  return false;
 }
 
 // 1. Submit Guest Share (Public - Guest réponse à l’invitation page)
@@ -99,6 +127,7 @@ export async function getEventShares(req: AuthenticatedRequest, res: Response) {
 export async function getPublicEventShares(req: Request, res: Response) {
   try {
     const eventId = req.params.eventId as string;
+    if (!(await ensureFeedReadable(req, res, eventId))) return;
 
     const shares = await prisma.guestShare.findMany({
       where: { eventId },
@@ -124,6 +153,7 @@ export async function getPublicEventShares(req: Request, res: Response) {
 export async function getEventFeed(req: Request, res: Response) {
   try {
     const eventId = req.params.eventId as string;
+    if (!(await ensureFeedReadable(req, res, eventId))) return;
 
     const limitRaw = req.query.limit;
     const hasLimit = limitRaw != null && String(limitRaw) !== '';

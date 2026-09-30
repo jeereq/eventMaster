@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
-import { getPlanLimitsForTenant } from '../config/plansConfig';
+import { getPlanLimitsForTenant, tenantCanPublishEvents } from '../config/plansConfig';
 import {
   canAccessEvent,
   canManageEvent,
@@ -38,6 +38,27 @@ function rejectPaidTicketingIfDisabled(body: Record<string, unknown>, res: Respo
   if (wantsPublic && wantsPaid && !isOnlinePaymentsEnabled()) {
     res.status(403).json({
       error: 'Les paiements en ligne sont désactivés par la plateforme. Utilisez l’inscription gratuite.',
+    });
+    return true;
+  }
+  return false;
+}
+
+/** Les organisations particulier (B2C) n’organisent que des événements privés. */
+async function rejectPublicEventForB2c(
+  tenantId: string,
+  body: Record<string, unknown>,
+  res: Response,
+): Promise<boolean> {
+  const wantsPublic = body.isPublic === true || body.isPublic === 'true';
+  if (!wantsPublic) return false;
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { plan: true, pendingPlan: true },
+  });
+  if (tenant && !tenantCanPublishEvents(tenant.plan, tenant.pendingPlan)) {
+    res.status(403).json({
+      error: 'Les forfaits Particulier sont réservés aux événements privés. Passez à un forfait organisation pour publier un événement.',
     });
     return true;
   }
@@ -299,6 +320,7 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
     }
 
     if (rejectPaidTicketingIfDisabled(req.body, res)) return;
+    if (await rejectPublicEventForB2c(tenantId, req.body, res)) return;
 
     const visibility = await eventVisibilityData(title, req.body);
     const willDonationsEnabled = Boolean(
@@ -481,6 +503,7 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
     }
 
     if (rejectPaidTicketingIfDisabled(req.body, res)) return;
+    if (await rejectPublicEventForB2c(tenantId, req.body, res)) return;
 
     const visibility =
       req.body.isPublic !== undefined
