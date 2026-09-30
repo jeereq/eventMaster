@@ -717,6 +717,11 @@ export interface RoomLayoutBlueprint {
     roofColor?: string;
     /** Toit plat ou faîte de tente drapée. */
     roofStyle?: RoofStyle;
+    /**
+     * Tente reconnue à l’import IA dans une salle d’un autre type : parois en toile et
+     * éclairage de tente tant que le toit reste une tente (voir `isTentVenue`).
+     */
+    tentVenue?: boolean;
     /** Style de lustre / suspension. */
     chandelierType?: import('@/lib/roomCeilingUtils').ChandelierType;
     /** Nombre de lustres (1–5, plafonné par la qualité de rendu). */
@@ -847,6 +852,13 @@ export function refreshBlueprintMetadata(blueprint: RoomLayoutBlueprint): RoomLa
       hasPmrAccess: blueprint.metadata.hasPmrAccess ?? (totalPmrSeats > 0 ? true : undefined),
     },
   };
+}
+
+/** Salle rendue comme une tente : type « Tente », ou tente vue par l’IA sous un toit de tente. */
+export function isTentVenue(blueprint: Pick<RoomLayoutBlueprint, 'roomType' | 'metadata'>): boolean {
+  if (blueprint.roomType === 'TENT') return true;
+  const roof = blueprint.metadata?.roofStyle;
+  return blueprint.metadata?.tentVenue === true && (roof === 'tentSwag' || roof === 'pagoda');
 }
 
 export function createBlueprintTable(

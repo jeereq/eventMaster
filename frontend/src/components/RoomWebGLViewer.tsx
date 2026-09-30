@@ -30,6 +30,7 @@ import {
   type PodiumStyle,
   type InstrumentStyle,
   type BarStyle,
+  isTentVenue,
 } from '@/lib/roomLayoutUtils';
 import type { StairStyle } from '@/lib/roomStairsUtils';
 import { resolveDepthAmount } from '@/lib/roomFloorUtils';
@@ -3583,7 +3584,7 @@ function SceneContent({
             widthM={widthM}
             heightM={heightM}
             paintColor={blueprint.metadata.wallPaintColor}
-            fabric={blueprint.roomType === 'TENT'}
+            fabric={isTentVenue(blueprint)}
             selected={selected.some((s) => s.kind === 'wall' && s.id === wall.id)}
             onSelect={(e) => onSelect({ kind: 'wall', id: wall.id }, { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) })}
           />
@@ -3992,15 +3993,16 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
     ),
     [renderQualityProp, blueprint.metadata.renderQuality, previewMode],
   );
+  const tentVenue = isTentVenue(blueprint);
   const lighting = useMemo(
     () => applyEnvironmentLighting(
       resolveLightingPreset(
         lightingPresetProp ?? blueprint.metadata.lightingPreset,
-        blueprint.roomType,
+        tentVenue ? 'TENT' : blueprint.roomType,
       ),
       resolveEnvironmentSettings(blueprint.metadata.environment),
     ),
-    [lightingPresetProp, blueprint.metadata.lightingPreset, blueprint.roomType, blueprint.metadata.environment],
+    [lightingPresetProp, blueprint.metadata.lightingPreset, blueprint.roomType, tentVenue, blueprint.metadata.environment],
   );
   const captureApiRef = useRef<RoomWebGLCaptureApi | null>(null);
   const viewerRootRef = useRef<HTMLDivElement | null>(null);

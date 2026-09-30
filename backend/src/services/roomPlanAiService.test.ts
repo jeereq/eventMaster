@@ -83,7 +83,8 @@ describe('parseRoomPlanVisionDraft', () => {
     ]);
     assert.equal(draft.items[0]?.shape, 'round');
     assert.equal(draft.items[0]?.seats, 8);
-    assert.equal(draft.items[1]?.seats, 12);
+    // 28 % de 22 m = 6,2 m de rangée → 11 sièges au pas de 0,55 m.
+    assert.equal(draft.items[1]?.seats, 11);
     assert.equal(draft.items[2]?.kind, 'chair');
     assert.equal(draft.items[3]?.zoneKind, 'dance');
   });
@@ -189,6 +190,31 @@ describe('parseRoomPlanVisionDraft', () => {
     assert.equal(draft.appearance.imageRole, 'photo');
   });
 
+  it('garde les styles du rendu 3D : toit, bar, lustre, piscine et marches de gradin', () => {
+    const draft = parseRoomPlanVisionDraft({
+      view: 'top',
+      canvas: { widthM: 30, heightM: 20 },
+      outline: { shape: 'rectangle', x: 4, y: 4, w: 92, h: 92 },
+      appearance: { imageRole: 'plan', roofStyle: 'pagoda' },
+      items: [
+        { kind: 'bar', x: 10, y: 10, w: 20, h: 8, barStyle: 'island' },
+        { kind: 'chandelier', x: 50, y: 50, chandelierStyle: 'candleCandelabra' },
+        { kind: 'piscine', x: 60, y: 60, w: 20, h: 12, label: 'Piscine', poolShape: 'kidney' },
+        { kind: 'row', x: 30, y: 40, w: 30, h: 4, seats: 14, tier: 2 },
+        { kind: 'bar', x: 70, y: 10, barStyle: 'spaceship' },
+      ],
+      walls: [],
+      confidence: 0.7,
+    }, { widthM: 30, heightM: 20 });
+    assert.equal(draft.appearance.roofStyle, 'pagoda');
+    assert.equal(draft.items[0].barStyle, 'island');
+    assert.equal(draft.items[1].chandelierStyle, 'candleCandelabra');
+    assert.equal(draft.items[2].kind, 'landscape');
+    assert.equal(draft.items[2].poolShape, 'kidney');
+    assert.equal(draft.items[3].tier, 2);
+    assert.equal(draft.items[4].barStyle, undefined);
+  });
+
   it('plafonne le nombre d’objets', () => {
     const items = Array.from({ length: ROOM_PLAN_VISION_ITEM_MAX + 5 }, (_, i) => ({
       kind: 'table',
@@ -270,6 +296,48 @@ describe('parseRoomPlanVisionDraft', () => {
     assert.equal(draft.items[1]?.y, 5);
     assert.equal(draft.items[1]?.w, 50);
     assert.equal(draft.items[1]?.h, 10);
+  });
+
+  it('garde le contour en % quand les objets arrivent en box_2d 0-1000', () => {
+    const draft = parseRoomPlanVisionDraft({
+      view: 'top',
+      outline: { shape: 'rectangle', x: 2, y: 2, w: 96, h: 96 },
+      items: [
+        { kind: 'table', box_2d: [200, 100, 290, 160] },
+        { kind: 'bar', box_2d: [900, 100, 960, 400] },
+      ],
+      walls: [{ start: { x: 2, y: 2 }, end: { x: 98, y: 2 }, doors: [0.5] }],
+    }, { widthM: 30, heightM: 20 });
+
+    assert.deepEqual(draft.outline, { shape: 'rectangle', x: 2, y: 2, w: 96, h: 96 });
+    assert.equal(draft.walls[0]?.end.x, 98);
+    assert.equal(draft.items[1]?.x, 10);
+    assert.equal(draft.items[1]?.w, 30);
+  });
+
+  it('estime les sièges en mètres réels, selon la taille de la salle', () => {
+    const rows = (widthM: number) => parseRoomPlanVisionDraft({
+      view: 'top',
+      items: [{ kind: 'row', x: 10, y: 50, w: 50, h: 3 }],
+    }, { widthM, heightM: 20 }).items[0]?.seats;
+    // 50 % de 11 m = 5,5 m → 10 sièges ; 50 % de 44 m = 22 m → 40 sièges.
+    assert.equal(rows(11), 10);
+    assert.equal(rows(44), 40);
+
+    const vertical = parseRoomPlanVisionDraft({
+      view: 'top',
+      items: [{ kind: 'row', x: 60, y: 30, w: 3, h: 40 }],
+    }, { widthM: 30, heightM: 20 });
+    // Rangée dessinée de haut en bas : 40 % de 20 m = 8 m → 15 sièges.
+    assert.equal(vertical.items[0]?.seats, 15);
+  });
+
+  it('laisse l’éditeur orienter une porte sans rotation', () => {
+    const draft = parseRoomPlanVisionDraft({
+      view: 'top',
+      items: [{ kind: 'door', x: 96, y: 40, w: 2, h: 8 }],
+    }, { widthM: 24, heightM: 18 });
+    assert.equal(draft.items[0]?.rotation, undefined);
   });
 
   it('collecte les objets répartis entre items, fixtures, tables et doors', () => {

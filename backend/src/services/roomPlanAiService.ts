@@ -108,7 +108,25 @@ const ITEM_KINDS = new Set([
   'loungeSofa',
   'car',
   'parasol',
+  'landscape',
 ]);
+
+/** Styles reconnus pour les éléments du rendu 3D (valeurs inconnues ignorées). */
+const ROOF_STYLES = new Set([
+  'flat', 'tentSwag', 'pagoda', 'gabled', 'coffered', 'glassCanopy', 'dome', 'pergola', 'mansard', 'skylight', 'fabricStretch',
+]);
+const BAR_STYLES = new Set([
+  'cocktail', 'wine', 'champagne', 'beer', 'coffee', 'whiskey', 'island', 'lShaped', 'juice', 'mocktail', 'tapas', 'tea',
+]);
+const PODIUM_STYLES = new Set(['speaker', 'lectern', 'couple', 'circular', 'runway', 'bandRiser', 'honor', 'steps']);
+const INSTRUMENT_STYLES = new Set([
+  'piano', 'upright', 'keyboard', 'drums', 'guitar', 'bass', 'doubleBass', 'cello', 'harp',
+  'micStand', 'sax', 'trumpet', 'violin', 'conga', 'cajon', 'mixer', 'amp', 'speaker',
+]);
+const CHANDELIER_STYLES = new Set([
+  'crystalCascade', 'brassRings', 'bohoPampas', 'botanicalHalo', 'fairyCanopy', 'candleCandelabra', 'modernMinimal', 'lantern',
+]);
+const POOL_SHAPES = new Set(['rectangle', 'rounded', 'oval', 'round', 'kidney', 'lShape', 'freeform']);
 
 /** Vocabulaire courant renvoyé par les modèles vision → kind EventMaster. */
 const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
@@ -161,6 +179,20 @@ const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   theaterseats: 'row',
   rangee: 'row',
   rangees: 'row',
+  // Aménagements extérieurs (style déduit du libellé côté éditeur)
+  landscape: 'landscape',
+  pool: 'landscape',
+  swimmingpool: 'landscape',
+  piscine: 'landscape',
+  bassin: 'landscape',
+  pond: 'landscape',
+  tree: 'landscape',
+  arbre: 'landscape',
+  palm: 'landscape',
+  palmier: 'landscape',
+  shrub: 'landscape',
+  planter: 'landscape',
+  jardiniere: 'landscape',
   gradin: 'row',
   gradins: 'row',
   amphitheater: 'row',
@@ -503,19 +535,24 @@ function resolveZoneKind(raw: unknown, kindHint?: string): string | undefined {
   return ZONE_KIND_ALIASES[normalizeAliasKey(kindHint)];
 }
 
-function inferTableSeats(w?: number, h?: number, shape?: string): number {
+/** Plateau de table en mètres (empreinte vue sur le plan) → couverts. */
+function inferTableSeats(spanM: number | undefined, shape?: string): number {
   if (shape === 'cocktail' || shape === 'highTop') return 2;
-  const span = Math.max(w ?? 10, h ?? 10);
-  if (span <= 5.5) return 2;
-  if (span <= 8.5) return 4;
-  if (span <= 11) return 8;
-  if (span <= 14) return 10;
+  const span = spanM ?? 2;
+  if (shape === 'rectangular' || shape === 'arc') {
+    return Math.round(clamp(Math.floor(span / 0.6) * 2, 4, 16));
+  }
+  if (span <= 1.1) return 2;
+  if (span <= 1.7) return 4;
+  if (span <= 2.2) return 8;
+  if (span <= 2.8) return 10;
   return 12;
 }
 
-function inferRowSeats(w?: number): number {
-  if (w == null) return 10;
-  return Math.round(clamp(w / 2.4, 4, 40));
+/** Longueur de rangée en mètres → sièges (pas de 0,55 m, comme la vue 3D). */
+function inferRowSeats(spanM: number | undefined): number {
+  if (spanM == null) return 10;
+  return Math.round(clamp(spanM / 0.55, 4, 40));
 }
 
 export type RoomPlanVisionView = 'top' | 'perspective' | 'unclear';
@@ -560,7 +597,8 @@ export type RoomPlanVisionItemKind =
   | 'condimentStation'
   | 'loungeSofa'
   | 'car'
-  | 'parasol';
+  | 'parasol'
+  | 'landscape';
 
 export interface RoomPlanVisionItem {
   kind: RoomPlanVisionItemKind;
@@ -589,6 +627,11 @@ export interface RoomPlanVisionItem {
   podiumStyle?: string;
   instrumentStyle?: string;
   barStyle?: string;
+  chandelierStyle?: string;
+  /** Forme du bassin (kind="landscape" piscine). */
+  poolShape?: string;
+  /** Rangée de gradin : 0 = premier rang au niveau de la scène, puis +1 par marche. */
+  tier?: number;
   anchor?: 'box' | 'center';
 }
 
@@ -752,17 +795,21 @@ function collectVisionItemRows(source: Record<string, unknown>): unknown[] {
   return rows;
 }
 
-function readItemGeometry(row: Record<string, unknown>): { x: unknown; y: unknown; w: unknown; h: unknown; anchor?: 'box' | 'center' } {
-  // 1. Google Gemini standard vision 2D bounding box [ymin, xmin, ymax, xmax]
+type ItemGeometry = { x: unknown; y: unknown; w: unknown; h: unknown; anchor?: 'box' | 'center'; pct?: boolean };
+
+function readItemGeometry(row: Record<string, unknown>): ItemGeometry {
+  // 1. Boîte native Gemini [ymin, xmin, ymax, xmax], toujours en 0–1000 : convertie ici en %,
+  //    pour ne pas fausser l’échelle du contour et des murs renvoyés en %.
   const box2d = row.box_2d || row.box2d;
   if (Array.isArray(box2d) && box2d.length >= 4) {
     const [ymin, xmin, ymax, xmax] = box2d.map((v) => Number(v) || 0);
     return {
-      x: xmin,
-      y: ymin,
-      w: Math.max(0.1, xmax - xmin),
-      h: Math.max(0.1, ymax - ymin),
+      x: xmin / 10,
+      y: ymin / 10,
+      w: Math.max(0.01, (xmax - xmin) / 10),
+      h: Math.max(0.01, (ymax - ymin) / 10),
       anchor: 'box',
+      pct: true,
     };
   }
 
@@ -874,7 +921,7 @@ function clampPctMaybeUnit(value: unknown, fallback: number, scaleModeOrScale01:
     if (scaleModeOrScale01 && n <= 1.5) pct = n * 100;
   } else if (scaleModeOrScale01 === 'unit01' && n <= 1.5) {
     pct = n * 100;
-  } else if (scaleModeOrScale01 === 'unit1000' && n > 1) {
+  } else if (scaleModeOrScale01 === 'unit1000') {
     pct = n / 10;
   }
   return clampPct(pct, fallback);
@@ -926,9 +973,8 @@ function parseAppearance(raw: unknown, view: RoomPlanVisionView): RoomPlanVision
   if (tableSurface) appearance.tableSurface = tableSurface;
   const tableColor = parseHexColor(source.tableColor);
   if (tableColor) appearance.tableColor = tableColor;
-  if (source.roofStyle === 'tentSwag' || source.roofStyle === 'flat' || source.roofStyle === 'gabled' || source.roofStyle === 'coffered') {
-    appearance.roofStyle = source.roofStyle;
-  }
+  const roofStyle = asKnown(source.roofStyle, ROOF_STYLES);
+  if (roofStyle) appearance.roofStyle = roofStyle;
   const curtainColor = parseHexColor(source.curtainColor);
   if (curtainColor) appearance.curtainColor = curtainColor;
   return appearance;
@@ -962,12 +1008,16 @@ export function parseRoomPlanVisionDraft(
       .slice(0, 8)
     : [];
 
+  const canvas = {
+    widthM: clampMeters(canvasRaw.widthM, known.widthM),
+    heightM: clampMeters(canvasRaw.heightM, known.heightM),
+  };
   const itemsRaw = collectVisionItemRows(source);
-  const geometryByIndex = itemsRaw.map((entry) => (
+  const geometryByIndex: ItemGeometry[] = itemsRaw.map((entry) => (
     entry && typeof entry === 'object' ? readItemGeometry(entry as Record<string, unknown>) : { x: undefined, y: undefined, w: undefined, h: undefined }
   ));
   const scaleMode = detectUnitScaleMode(takeFiniteNumbers([
-    ...geometryByIndex.flatMap((geo) => [geo.x, geo.y, geo.w, geo.h]),
+    ...geometryByIndex.filter((geo) => !geo.pct).flatMap((geo) => [geo.x, geo.y, geo.w, geo.h]),
     outlineRaw.x,
     outlineRaw.y,
     outlineRaw.w,
@@ -984,13 +1034,14 @@ export function parseRoomPlanVisionDraft(
     const kindRaw = normalizeRoomPlanVisionKind(row.kind ?? row.type ?? row.category ?? row.object);
     if (!kindRaw) continue;
     const geo = geometryByIndex[index] ?? readItemGeometry(row);
-    const w = geo.w != null ? clampPctMaybeUnit(geo.w, 10, scaleMode) : undefined;
-    const h = geo.h != null ? clampPctMaybeUnit(geo.h, 8, scaleMode) : undefined;
+    const itemScale: UnitScaleMode = geo.pct ? 'pct' : scaleMode;
+    const w = geo.w != null ? clampPctMaybeUnit(geo.w, 10, itemScale) : undefined;
+    const h = geo.h != null ? clampPctMaybeUnit(geo.h, 8, itemScale) : undefined;
     const kind = refineSeatKindFromFootprint(kindRaw, w, h);
     const item: RoomPlanVisionItem = {
       kind,
-      x: clampPctMaybeUnit(geo.x, 50, scaleMode),
-      y: clampPctMaybeUnit(geo.y, 50, scaleMode),
+      x: clampPctMaybeUnit(geo.x, 50, itemScale),
+      y: clampPctMaybeUnit(geo.y, 50, itemScale),
     };
     if (w != null) item.w = w;
     if (h != null) item.h = h;
@@ -999,8 +1050,6 @@ export function parseRoomPlanVisionDraft(
       item.rotation = (kind === 'door' || kind === 'entrance')
         ? ((Math.round(rawRot / 90) * 90) % 360 + 360) % 360
         : Math.round(rawRot);
-    } else if (kind === 'door' || kind === 'entrance') {
-      item.rotation = 0;
     }
     const shape = resolveTableShape(row.shape)
       ?? (kind === 'table' && typeof row.kind === 'string' ? resolveTableShape(row.kind) : undefined)
@@ -1011,12 +1060,15 @@ export function parseRoomPlanVisionDraft(
       if (ratio > 1.45 || ratio < 0.7) item.shape = 'rectangular';
       else if (Math.abs(ratio - 1) < 0.25 && (item.w <= 8 || item.h <= 8)) item.shape = 'square';
     }
+    const spanM = item.w != null && item.h != null
+      ? Math.max((item.w / 100) * canvas.widthM, (item.h / 100) * canvas.heightM)
+      : item.w != null ? (item.w / 100) * canvas.widthM : undefined;
     if (row.seats != null) {
       item.seats = Math.round(clamp(asNumber(row.seats, kind === 'row' ? 10 : 8), 2, kind === 'row' ? 40 : 16));
     } else if (kind === 'table') {
-      item.seats = inferTableSeats(item.w, item.h, item.shape);
+      item.seats = inferTableSeats(spanM, item.shape);
     } else if (kind === 'row') {
-      item.seats = inferRowSeats(item.w);
+      item.seats = inferRowSeats(spanM);
     }
     const label = asString(row.label, 40) ?? asString(row.name, 40);
     if (label) item.label = label;
@@ -1046,6 +1098,20 @@ export function parseRoomPlanVisionDraft(
     }
     if (row.pedestalStyle === 'squareWhite' || row.pedestalStyle === 'columnGold') {
       item.pedestalStyle = row.pedestalStyle;
+    }
+    const podiumStyle = kind === 'podium' ? asKnown(row.podiumStyle, PODIUM_STYLES) : undefined;
+    if (podiumStyle) item.podiumStyle = podiumStyle;
+    const instrumentStyle = kind === 'instrument' ? asKnown(row.instrumentStyle, INSTRUMENT_STYLES) : undefined;
+    if (instrumentStyle) item.instrumentStyle = instrumentStyle;
+    const barStyle = kind === 'bar' ? asKnown(row.barStyle, BAR_STYLES) : undefined;
+    if (barStyle) item.barStyle = barStyle;
+    const chandelierStyle = kind === 'chandelier' ? asKnown(row.chandelierStyle, CHANDELIER_STYLES) : undefined;
+    if (chandelierStyle) item.chandelierStyle = chandelierStyle;
+    const poolShape = kind === 'landscape' ? asKnown(row.poolShape, POOL_SHAPES) : undefined;
+    if (poolShape) item.poolShape = poolShape;
+    if (kind === 'row' && row.tier != null) {
+      const tier = Math.round(asNumber(row.tier, 0));
+      if (Number.isFinite(tier) && tier >= 0) item.tier = Math.min(30, tier);
     }
     if (geo.anchor === 'center' || geo.anchor === 'box') item.anchor = geo.anchor;
     else if (row.anchor === 'center' || row.anchor === 'box') item.anchor = row.anchor;
@@ -1082,10 +1148,7 @@ export function parseRoomPlanVisionDraft(
 
   return {
     view,
-    canvas: {
-      widthM: clampMeters(canvasRaw.widthM, known.widthM),
-      heightM: clampMeters(canvasRaw.heightM, known.heightM),
-    },
+    canvas,
     outline: {
       shape: outlineShape,
       x: clampPctMaybeUnit(outlineRaw.x, 5, scaleMode),
@@ -1115,7 +1178,9 @@ Mission:
 
 Coordinate frame:
 - The room rectangle = 0–100% (origin top-left, y downward), like a 2D top plan.
-- For EACH item: x,y = TOP-LEFT corner of the floor footprint; w and h = width and height in % (anchor="box").
+- For EACH item: x,y = TOP-LEFT corner of the floor footprint; w = % of canvas WIDTH, h = % of canvas LENGTH (anchor="box").
+- Convert real sizes with the canvas meters: w% = meters / widthM × 100, h% = meters / heightM × 100 (a 1.8 m round table in a 30 m × 20 m room → w≈6, h≈9).
+- x,y,w,h always describe the footprint as drawn on the plan (axis-aligned). A bar, counter, stage, bench row or door running top-to-bottom simply has h > w: do not add rotation for that. rotation only for truly oblique items.
 - Vertical photo / scan / PDF: view="top", appearance.imageRole="plan".
 - Perspective photo: view="perspective", appearance.imageRole="photo", lower confidence. Still project furniture onto the floor (near = high y, far = low y).
 - Photo of bare parquet / tile with no furniture: appearance.imageRole="texture".
@@ -1127,17 +1192,17 @@ Required JSON fields:
   "outline": { "shape": "rectangle"|"square"|"circle"|"ellipse"|"lShape"|"uShape"|"hexagon"|"octagon"|"trapezoid"|"stadium", "x":0-100, "y":0-100, "w":0-100, "h":0-100 },
   "appearance": {
     "imageRole": "plan"|"photo"|"texture",
-    "floorType": "parquet"|"marbre"|"moquette"|"carrelage"|"beton"|"herbe"|"damier"|"terrazzo"|"sable"|"brique"|"bois"|"pierre"|"epoxy",
+    "floorType": "parquet"|"chevron"|"marbre"|"marbreCalacatta"|"moquette"|"carrelage"|"beton"|"herbe"|"pelouse"|"gravier"|"gravierFonce"|"damier"|"terrazzo"|"sable"|"brique"|"bois"|"pierre"|"epoxy",
     "floorColor": "#rrggbb",
     "wallTexture": "plaster"|"brick"|"wood"|"concrete"|"wallpaper"|"stone"|"tadelakt"|"travertine"|"metroTile"|"woodPanel",
     "wallColor": "#rrggbb",
     "tableSurface": "wood"|"linen"|"walnut"|"marble"|"darkWood"|"whiteLacquer"|"glass",
     "tableColor": "#rrggbb",
-    "roofStyle": "flat"|"tentSwag"|"gabled"|"coffered",
+    "roofStyle": "flat"|"tentSwag"|"pagoda"|"gabled"|"coffered"|"glassCanopy"|"dome"|"pergola"|"mansard"|"skylight"|"fabricStretch",
     "curtainColor": "#rrggbb"
   },
   "items": [{
-    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"corridor"|"perimeter"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen"|"instrument"|"bar"|"orderCounter"|"pickupCounter"|"pizzaOven"|"kitchenLine"|"displayCase"|"stylingStation"|"washBasin"|"condimentStation"|"loungeSofa"|"car"|"parasol",
+    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"corridor"|"perimeter"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen"|"instrument"|"bar"|"orderCounter"|"pickupCounter"|"pizzaOven"|"kitchenLine"|"displayCase"|"stylingStation"|"washBasin"|"condimentStation"|"loungeSofa"|"car"|"parasol"|"landscape",
     "x":0-100, "y":0-100, "w":0-100, "h":0-100, "anchor":"box",
     "rotation":-180-180, "seats":number,
     "shape": "round"|"rectangular"|"square"|"oval"|"cocktail"|"highTop"|"arc",
@@ -1155,7 +1220,10 @@ Required JSON fields:
     "pedestalStyle": "squareWhite"|"columnGold",
     "podiumStyle": "speaker"|"lectern"|"couple"|"circular"|"runway"|"bandRiser"|"honor"|"steps",
     "instrumentStyle": "piano"|"keyboard"|"drums"|"guitar"|"bass"|"micStand"|"sax"|"violin"|"amp"|"speaker",
-    "barStyle": "cocktail"|"wine"|"champagne"|"beer"|"coffee"|"whiskey"
+    "barStyle": "cocktail"|"wine"|"champagne"|"beer"|"coffee"|"whiskey"|"island"|"lShaped"|"juice"|"mocktail"|"tapas"|"tea",
+    "chandelierStyle": "crystalCascade"|"brassRings"|"bohoPampas"|"botanicalHalo"|"fairyCanopy"|"candleCandelabra"|"modernMinimal"|"lantern",
+    "poolShape": "rectangle"|"rounded"|"oval"|"round"|"kidney"|"lShape"|"freeform",
+    "tier": 0-30
   }],
   "walls": [{ "start": {"x","y"}, "end": {"x","y"}, "doors": [0-1], "windows": [0-1] }],
   "confidence": 0-1,
@@ -1166,9 +1234,13 @@ Appearance rules:
 - floorType / floorColor / wallTexture / wallColor / curtainColor: only when clearly visible.
 - Colors as hex (#rrggbb) from the observed tint — not an EventMaster theme color.
 - tableSurface = visible cloth / top (linen if fabric cloth, wood if bare wood, marble if marble).
-- roofStyle = tentSwag for draped marquee/tent, gabled for pitched roof, coffered for coffers, flat for flat ceiling. A tent is NOT a gazebo item: set canvas.widthM/heightM to the real tent size.
-- Chandeliers: one chandelier item per visible ceiling fixture. Do not invent crystal or gold.
-- Table w/h = real floor footprint in % (small cocktail ≈ 5–6, round 8 seats ≈ 10, long ≈ 12–16).
+- roofStyle = tentSwag for a framed marquee/reception tent with draped lining, pagoda for peaked pagoda/pointed tents, fabricStretch for stretch/sail canopies, gabled for a pitched tiled roof, mansard for a mansard roof, pergola for a louvred pergola, glassCanopy for a glass-roofed hall/greenhouse, dome for a dome, skylight for a flat roof with a roof lantern, coffered for coffers, flat for a flat ceiling. A tent is NOT a gazebo item: set canvas.widthM/heightM to the real tent size.
+- Chandeliers: one chandelier item per visible ceiling fixture. chandelierStyle only when recognizable: crystalCascade (crystal drops), candleCandelabra (candle arms), brassRings (metal rings/halos), bohoPampas (pampas/rattan), botanicalHalo (flowers/greenery ring), fairyCanopy (string-light canopy), lantern (lantern), modernMinimal (plain pendants). Do not invent crystal or gold.
+- bar: barStyle when the counter type is recognizable (island = counter open on all sides, lShaped = L counter, beer = tap tower, coffee = espresso machine, wine/champagne/whiskey = bottle display).
+- landscape = outdoor tree, hedge, planter, pond or swimming pool; label says which ("Piscine", "Palmier", "Haie"). For a pool, poolShape follows the visible outline (kidney = bean shape, freeform = organic).
+- Stepped / raked seating (amphitheater, gradins, auditorium): one "row" item per step with tier = 0 for the row nearest the stage, then +1 per step going up.
+- Table w/h = real floor footprint converted to % (cocktail ≈ 0.8 m, round 8 seats ≈ 1.8 m, long banquet ≈ 2.4–3.6 m × 0.9 m).
+- Walls: return every wall of the room outline when you can see them (a closed perimeter), with doors/windows as 0–1 positions along each segment.
 
 Item rules (inference allowed):
 - ZERO OVERLAP / ZERO STACKING: Never place multiple chairs or tables at the same or overlapping coordinates. Each chair must have its own distinct physical floor location. Maintain realistic real-world clearances: minimum 0.7m center-to-center between chairs, minimum 1.4m edge-to-edge between tables for pulled-back chairs, minimum 1.2m along perimeter walls.
@@ -1224,8 +1296,10 @@ Counting mission:
 - Respect room type and meters for canvas.widthM / heightM.
 - Gold, petals, red aisle, crystal chandelier: only if the brief or event type (wedding, gala) justifies them.
 - view="top", appearance.imageRole="plan".
-- Tent: roofStyle="tentSwag", canvas = real size. No gazebo item for the tent itself.
-- w/h = real floor footprint (round 8 seats ≈ 9–11, cocktail ≈ 5–6, long ≈ 12–16).
+- Tent: roofStyle="tentSwag" (or "pagoda" for peaked tents), canvas = real size. No gazebo item for the tent itself.
+- Amphitheater / auditorium: rows curved toward the stage, tier = 0 nearest the stage then +1 per step. Chandeliers carry chandelierStyle from the mood; a pool (kind="landscape", label="Piscine") carries poolShape.
+- w/h = real floor footprint in % of canvas width / length: w% = meters / widthM × 100, h% = meters / heightM × 100 (round 8 seats ≈ 1.8 m, cocktail ≈ 0.8 m, long banquet ≈ 2.4–3.6 m × 0.9 m).
+- x,y,w,h describe the footprint as drawn (axis-aligned): a bar, stage or door along a left/right wall has h > w; rotation only for oblique items.
 
 JSON schema:
 {
@@ -1234,17 +1308,17 @@ JSON schema:
   "outline": { "shape": "rectangle"|"square"|"circle"|"ellipse"|"lShape"|"uShape"|"hexagon"|"octagon"|"trapezoid"|"stadium", "x":0-100, "y":0-100, "w":0-100, "h":0-100 },
   "appearance": {
     "imageRole": "plan",
-    "floorType": "parquet"|"marbre"|"moquette"|"carrelage"|"beton"|"herbe"|"damier"|"terrazzo"|"sable"|"brique"|"bois"|"pierre"|"epoxy",
+    "floorType": "parquet"|"chevron"|"marbre"|"marbreCalacatta"|"moquette"|"carrelage"|"beton"|"herbe"|"pelouse"|"gravier"|"gravierFonce"|"damier"|"terrazzo"|"sable"|"brique"|"bois"|"pierre"|"epoxy",
     "floorColor": "#rrggbb",
     "wallTexture": "plaster"|"brick"|"wood"|"concrete"|"wallpaper"|"stone"|"tadelakt"|"travertine"|"metroTile"|"woodPanel",
     "wallColor": "#rrggbb",
     "tableSurface": "wood"|"linen"|"walnut"|"marble"|"darkWood"|"whiteLacquer"|"glass",
     "tableColor": "#rrggbb",
-    "roofStyle": "flat"|"tentSwag"|"gabled"|"coffered",
+    "roofStyle": "flat"|"tentSwag"|"pagoda"|"gabled"|"coffered"|"glassCanopy"|"dome"|"pergola"|"mansard"|"skylight"|"fabricStretch",
     "curtainColor": "#rrggbb"
   },
   "items": [{
-    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"corridor"|"perimeter"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen"|"instrument"|"bar"|"orderCounter"|"pickupCounter"|"pizzaOven"|"kitchenLine"|"displayCase"|"stylingStation"|"washBasin"|"condimentStation"|"loungeSofa"|"car"|"parasol",
+    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"corridor"|"perimeter"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen"|"instrument"|"bar"|"orderCounter"|"pickupCounter"|"pizzaOven"|"kitchenLine"|"displayCase"|"stylingStation"|"washBasin"|"condimentStation"|"loungeSofa"|"car"|"parasol"|"landscape",
     "x":0-100, "y":0-100, "w":0-100, "h":0-100, "anchor":"box",
     "rotation":-180-180, "seats":number,
     "shape": "round"|"rectangular"|"square"|"oval"|"cocktail"|"highTop"|"arc",
@@ -1258,7 +1332,10 @@ JSON schema:
     "aisleStyle": "royalRed"|"whiteMirror"|"botanicalRunner"|"rusticWood"|"damaskGold"|"ledRunway"|"blackVelvet",
     "podiumStyle": "speaker"|"lectern"|"couple"|"circular"|"runway"|"bandRiser"|"honor"|"steps",
     "instrumentStyle": "piano"|"keyboard"|"drums"|"guitar"|"bass"|"micStand"|"sax"|"violin"|"amp"|"speaker",
-    "barStyle": "cocktail"|"wine"|"champagne"|"beer"|"coffee"|"whiskey"
+    "barStyle": "cocktail"|"wine"|"champagne"|"beer"|"coffee"|"whiskey"|"island"|"lShaped"|"juice"|"mocktail"|"tapas"|"tea",
+    "chandelierStyle": "crystalCascade"|"brassRings"|"bohoPampas"|"botanicalHalo"|"fairyCanopy"|"candleCandelabra"|"modernMinimal"|"lantern",
+    "poolShape": "rectangle"|"rounded"|"oval"|"round"|"kidney"|"lShape"|"freeform",
+    "tier": 0-30
   }],
   "walls": [{ "start": {"x","y"}, "end": {"x","y"}, "doors": [0-1], "windows": [0-1] }],
   "confidence": 0-1,

@@ -1,4 +1,4 @@
-import { LANDSCAPE_STYLE_META, type LandscapeStyle } from '@/lib/roomOutdoorUtils';
+import { LANDSCAPE_STYLE_META, isPoolShape, type LandscapeStyle, type PoolShape } from '@/lib/roomOutdoorUtils';
 import { api } from '@/lib/api';
 import { isStudioJobAccepted, type StudioJobAccepted } from '@/lib/studioJobs';
 import { applyServerAllowance, getOrCreateDeviceId, AI_ROOM_PLAN_TOKEN_COST, type AiAllowance } from '@/lib/aiTokens';
@@ -21,6 +21,8 @@ import {
   type AisleStyle,
   type ChairStyle,
   type ChairType,
+  type ChandelierFixtureStyle,
+  type RoofStyle,
   type RoomLayoutBlueprint,
   type RoomOutlineShape,
   type SeatMaterial,
@@ -33,6 +35,8 @@ import {
 
 export { AI_ROOM_PLAN_TOKEN_COST };
 export const AI_ROOM_IMPORT_GROUP_ID = 'ai-import';
+/** Hauteur d’une marche de gradin importée (m), comme les amphithéâtres générés. */
+const IMPORTED_TIER_RISE_M = 0.3;
 export const AI_ROOM_PLAN_DRAFT_KEY = 'em_ai_room_plan_draft';
 export const ROOM_PLAN_BRIEF_MIN = 8;
 
@@ -125,6 +129,10 @@ export interface RoomPlanVisionItem {
   podiumStyle?: string;
   instrumentStyle?: string;
   barStyle?: string;
+  chandelierStyle?: string;
+  poolShape?: string;
+  /** Rangée de gradin : 0 au pied de la scène, +1 par marche. */
+  tier?: number;
   anchor?: 'box' | 'center';
 }
 
@@ -755,10 +763,11 @@ function inferTableCapacity(item: RoomPlanVisionItem, shape: TableShape): number
   return Math.max(4, Math.min(16, fromSpan || 8));
 }
 
-function inferRowSeatCount(item: RoomPlanVisionItem): number {
+function inferRowSeatCount(item: RoomPlanVisionItem, canvas: RoomLayoutBlueprint['canvas']): number {
   if (item.seats != null) return Math.max(2, Math.min(40, Math.round(item.seats)));
   if (item.w == null) return 10;
-  return Math.max(4, Math.min(40, Math.round(item.w / 2.2)));
+  const spanM = Math.max((item.w / 100) * canvas.widthM, ((item.h ?? 0) / 100) * canvas.heightM);
+  return Math.max(4, Math.min(40, Math.round(spanM / 0.55)));
 }
 
 function inferTableShape(item: RoomPlanVisionItem, allowed: TableShape[]): TableShape {
@@ -840,6 +849,67 @@ function looksRed(color?: string): boolean {
   return r > 110 && r > g + 30 && r > b + 30;
 }
 
+/** Éléments dont le long côté est la largeur locale et dont la face avant regarde +y local. */
+const FRONT_FACING_FIXTURES = new Set<RoomPlanVisionItemKind>([
+  'door', 'entrance', 'bar', 'buffet', 'stage', 'podium', 'screen', 'djBooth', 'loungeSofa',
+  'orderCounter', 'pickupCounter', 'kitchenLine', 'displayCase', 'condimentStation', 'stylingStation', 'pizzaOven',
+]);
+
+function quarterTurn(rotation: number | undefined): number | null {
+  if (rotation == null || !Number.isFinite(rotation)) return null;
+  const snapped = Math.round(rotation / 90) * 90;
+  if (Math.abs(rotation - snapped) > 5) return null;
+  return ((snapped % 360) + 360) % 360;
+}
+
+/**
+ * L’IA décrit l’empreinte telle qu’elle est dessinée (boîte alignée sur le plan).
+ * Un comptoir, une scène ou une porte le long d’un mur gauche/droit arrive donc avec h > w :
+ * on le tourne d’un quart de tour (dimensions locales échangées) et on tourne sa face avant
+ * vers l’intérieur de la salle. Les rotations obliques de l’IA sont conservées telles quelles.
+ */
+export function orientImportedBox(
+  kind: RoomPlanVisionItemKind,
+  box: { x: number; y: number; cx: number; cy: number; w: number; h: number },
+  rotation: number | undefined,
+  canvas: RoomLayoutBlueprint['canvas'],
+  center: { x: number; y: number } = { x: 50, y: 50 },
+): { x: number; y: number; w: number; h: number; rotation: number | undefined } {
+  const turn = quarterTurn(rotation);
+  if (!FRONT_FACING_FIXTURES.has(kind) || (turn == null && rotation != null)) {
+    return { x: box.x, y: box.y, w: box.w, h: box.h, rotation };
+  }
+  const wM = (box.w / 100) * canvas.widthM;
+  const hM = (box.h / 100) * canvas.heightM;
+  if (hM <= wM * 1.2) {
+    // Une rotation 90/270 avec une boîte horizontale = dimensions déjà locales : on respecte l’IA.
+    if (turn === 90 || turn === 270) return { x: box.x, y: box.y, w: box.w, h: box.h, rotation: turn };
+    // Déjà à plat : face avant vers le centre (un bar en bas de salle regarde vers le haut).
+    const next = box.cy > center.y + 5 ? 180 : 0;
+    return { x: box.x, y: box.y, w: box.w, h: box.h, rotation: next || undefined };
+  }
+  const next = box.cx < center.x ? 90 : 270;
+  // Largeur locale = étendue verticale du dessin, profondeur locale = étendue horizontale.
+  const w = clampPct((hM / canvas.widthM) * 100);
+  const h = clampPct((wM / canvas.heightM) * 100);
+  return { x: box.cx - w / 2, y: box.cy - h / 2, w, h, rotation: next };
+}
+
+/** Table longue ou rangée dessinée de haut en bas : quart de tour (les sièges suivent). */
+function seatingRotation(
+  item: RoomPlanVisionItem,
+  canvas: RoomLayoutBlueprint['canvas'],
+  elongated: boolean,
+): number | undefined {
+  const turn = quarterTurn(item.rotation);
+  if (!elongated || item.w == null || item.h == null) return item.rotation;
+  if (item.rotation != null && turn == null) return item.rotation;
+  const wM = (item.w / 100) * canvas.widthM;
+  const hM = (item.h / 100) * canvas.heightM;
+  if (hM > wM * 1.3 && turn !== 90 && turn !== 270) return 90;
+  return item.rotation;
+}
+
 /** Empreinte : l’IA envoie le coin haut-gauche (box), l’éditeur tables/chaises/rangées utilise le centre. */
 export function itemFootprint(
   item: Pick<RoomPlanVisionItem, 'x' | 'y' | 'w' | 'h' | 'anchor'>,
@@ -910,6 +980,62 @@ function isTentStructureItem(
   return kind === 'gazebo' && area >= 2400;
 }
 
+/**
+ * Amphithéâtre importé sans marches renseignées : on étage les rangées depuis la scène
+ * (rang le plus proche = pied de gradin), pour obtenir des gradins au lieu de rangées à plat.
+ */
+function assignImportedTiers(
+  furniture: RoomLayoutBlueprint['furniture'],
+  fixtures: RoomLayoutBlueprint['fixtures'],
+  roomType: RoomLayoutBlueprint['roomType'],
+): void {
+  const rows = furniture.filter((f): f is Extract<typeof f, { kind: 'row' }> => f.kind === 'row');
+  if (roomType !== 'AMPHITHEATER' || rows.length < 2 || rows.some((r) => (r.tier ?? 0) > 0)) return;
+  const stage = fixtures.find((f) => f.kind === 'stage') ?? fixtures.find((f) => f.kind === 'podium');
+  const focus = stage
+    ? { x: stage.x + stage.w / 2, y: stage.y + stage.h / 2 }
+    : { x: 50, y: Math.min(...rows.map((r) => r.y)) - 10 };
+  const ordered = [...rows].sort(
+    (a, b) => Math.hypot(a.x - focus.x, a.y - focus.y) - Math.hypot(b.x - focus.x, b.y - focus.y),
+  );
+  let tier = 0;
+  let lastDist = -Infinity;
+  for (const row of ordered) {
+    const dist = Math.hypot(row.x - focus.x, row.y - focus.y);
+    // Deux rangées à la même distance (de part et d’autre d’une allée) partagent la marche.
+    if (dist - lastDist > 3) {
+      if (lastDist > -Infinity) tier += 1;
+      lastDist = dist;
+    }
+    row.tier = tier;
+    row.elevationM = Number((tier * IMPORTED_TIER_RISE_M).toFixed(2));
+    row.focusX = focus.x;
+    row.focusY = focus.y;
+  }
+}
+
+/** Toitures que le rendu 3D sait construire (tout style reconnu par l’IA est conservé). */
+const IMPORTED_ROOF_STYLES = new Set<RoofStyle>([
+  'tentSwag', 'pagoda', 'gabled', 'coffered', 'glassCanopy', 'dome', 'pergola', 'mansard', 'skylight', 'fabricStretch',
+]);
+
+const IMPORTED_CHANDELIER_STYLES = new Set<ChandelierFixtureStyle>([
+  'crystalCascade', 'brassRings', 'bohoPampas', 'botanicalHalo', 'fairyCanopy', 'candleCandelabra', 'modernMinimal', 'lantern',
+]);
+
+/** Forme de piscine : valeur de l’IA, sinon déduite du libellé (« Piscine haricot »…). */
+function inferPoolShape(item: RoomPlanVisionItem): PoolShape {
+  if (item.poolShape && isPoolShape(item.poolShape)) return item.poolShape;
+  const t = (item.label ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (/haricot|kidney|rein/.test(t)) return 'kidney';
+  if (/ovale|oval/.test(t)) return 'oval';
+  if (/ronde|round|circul/.test(t)) return 'round';
+  if (/\bl\b|en l|l-shape|lshape/.test(t)) return 'lShape';
+  if (/libre|freeform|organi|lagon|lagoon/.test(t)) return 'freeform';
+  if (/arrondi|rounded/.test(t)) return 'rounded';
+  return 'rectangle';
+}
+
 function resolveImportedRoof(
   appearance: RoomPlanVisionAppearance | undefined,
   current: RoomLayoutBlueprint,
@@ -919,8 +1045,8 @@ function resolveImportedRoof(
   if (style === 'flat') {
     return { roofStyle: 'flat', showRoof: false };
   }
-  if (style === 'tentSwag' || style === 'gabled' || style === 'coffered') {
-    return { roofStyle: style, showRoof: true };
+  if (style && IMPORTED_ROOF_STYLES.has(style as RoofStyle)) {
+    return { roofStyle: style as RoofStyle, showRoof: true };
   }
   return { roofStyle: current.metadata.roofStyle, showRoof: current.metadata.showRoof };
 }
@@ -1016,6 +1142,9 @@ function applyFixtureLook(
       next = { ...next, barStyle: item.barStyle as typeof allowed[number] };
     }
   }
+  if (item.kind === 'chandelier' && item.chandelierStyle && IMPORTED_CHANDELIER_STYLES.has(item.chandelierStyle as ChandelierFixtureStyle)) {
+    next = { ...next, chandelierStyle: item.chandelierStyle as ChandelierFixtureStyle, lightWarmth: 'warm' };
+  }
   if (item.kind === 'chandelier' && item.color && !looksGold(item.color)) {
     next = { ...next, lightWarmth: 'neutral', color: item.color };
   }
@@ -1023,6 +1152,52 @@ function applyFixtureLook(
     next = { ...next, hasMat: false, matColor: undefined };
   }
   return next;
+}
+
+type ImportedWall = RoomPlanVisionDraft['walls'][number];
+
+/** Reporte les ouvertures de murs partiels sur le mur du contour le plus proche et parallèle. */
+function mergeOpeningsOntoOutlineWalls(
+  outlineWalls: RoomLayoutBlueprint['walls'],
+  partial: ImportedWall[],
+): NonNullable<RoomLayoutBlueprint['walls']> {
+  const result = (outlineWalls ?? []).map((wall) => ({ ...wall, openings: [...(wall.openings ?? [])] }));
+  for (const wall of partial) {
+    const dx = wall.end.x - wall.start.x;
+    const dy = wall.end.y - wall.start.y;
+    const len = Math.hypot(dx, dy);
+    if (len < 0.5) continue;
+    let best: { index: number; score: number } | null = null;
+    result.forEach((target, index) => {
+      const tx = target.end.x - target.start.x;
+      const ty = target.end.y - target.start.y;
+      const tLen = Math.hypot(tx, ty);
+      if (tLen < 0.5) return;
+      const parallel = Math.abs((dx * tx + dy * ty) / (len * tLen));
+      if (parallel < 0.9) return;
+      const mx = (wall.start.x + wall.end.x) / 2;
+      const my = (wall.start.y + wall.end.y) / 2;
+      // Distance du milieu du mur importé à la droite du mur de contour.
+      const dist = Math.abs((mx - target.start.x) * ty - (my - target.start.y) * tx) / tLen;
+      if (!best || dist < best.score) best = { index, score: dist };
+    });
+    if (!best) continue;
+    const target = result[(best as { index: number }).index];
+    const tx = target.end.x - target.start.x;
+    const ty = target.end.y - target.start.y;
+    const tLen2 = tx * tx + ty * ty;
+    const project = (t: number) => {
+      const px = wall.start.x + dx * t;
+      const py = wall.start.y + dy * t;
+      const u = ((px - target.start.x) * tx + (py - target.start.y) * ty) / tLen2;
+      return Math.round(Math.min(0.92, Math.max(0.08, u)) * 100) / 100;
+    };
+    target.openings.push(
+      ...wall.doors.map((t) => createWallOpening('door', { t: project(t), style: 'single' })),
+      ...wall.windows.map((t) => createWallOpening('window', { t: project(t) })),
+    );
+  }
+  return result;
 }
 
 export async function analyzeRoomPlanFromPhoto(input: {
@@ -1192,7 +1367,12 @@ export function applyRoomPlanVisionDraft(
   let zoneCount = 0;
   let chairCount = 0;
 
-  let tentSeen = appearance?.roofStyle === 'tentSwag';
+  let tentSeen = appearance?.roofStyle === 'tentSwag' || appearance?.roofStyle === 'pagoda';
+  const canvas = applyDraftCanvas(current.canvas, draft);
+  const roomCenter = {
+    x: (scaledDraft.outline?.x ?? 5) + (scaledDraft.outline?.w ?? 90) / 2,
+    y: (scaledDraft.outline?.y ?? 5) + (scaledDraft.outline?.h ?? 90) / 2,
+  };
 
   for (const rawItem of scaledDraft.items) {
     const kind = resolveImportedKind(rawItem);
@@ -1240,12 +1420,12 @@ export function applyRoomPlanVisionDraft(
         const style = inferLandscapeStyle(item.label);
         const meta = LANDSCAPE_STYLE_META[style];
         created = { ...created, landscapeStyle: style, label: meta.label, heightM: meta.heightM, color: item.color ?? meta.color };
+        if (style === 'pool') created = { ...created, poolShape: inferPoolShape(item) };
       }
-      const box = itemFootprint(item, { w: created.w, h: created.h });
-      const rawRot = item.rotation;
+      const box = orientImportedBox(kind, itemFootprint(item, { w: created.w, h: created.h }), item.rotation, canvas, roomCenter);
       const rot = (fixtureKind === 'door' || fixtureKind === 'entrance')
-        ? normalizeDoorOrthogonal(rawRot ?? 0)
-        : rawRot;
+        ? normalizeDoorOrthogonal(box.rotation ?? 0)
+        : box.rotation;
       const fixture = {
         ...created,
         x: box.x,
@@ -1280,7 +1460,7 @@ export function applyRoomPlanVisionDraft(
         name: item.label || `Table ${tableCount}`,
         x: box.cx,
         y: box.cy,
-        rotation: item.rotation,
+        rotation: seatingRotation(item, canvas, shape === 'rectangular' || shape === 'oval' || shape === 'arc'),
         tableColor: item.color ?? defaultTableColor,
         tableSurface: asTableSurface(item.surface) ?? defaultSurface,
         ...(asChairStyle(item.chairStyle) ? { chairStyle: asChairStyle(item.chairStyle) } : {}),
@@ -1305,16 +1485,19 @@ export function applyRoomPlanVisionDraft(
       const box = itemFootprint(item, DEFAULT_FOOTPRINT.row);
       const row = {
         ...createBlueprintRow(rowCount, {
-          seatCount: inferRowSeatCount(item),
+          seatCount: inferRowSeatCount(item, canvas),
           chairType,
           x: box.cx,
           y: box.cy,
           label: item.label,
           groupId: `${AI_ROOM_IMPORT_GROUP_ID}-row`,
         }),
-        rotation: item.rotation,
+        rotation: seatingRotation(item, canvas, true),
         ...(asChairStyle(item.chairStyle) ? { chairStyle: asChairStyle(item.chairStyle) } : {}),
         ...(asSeatMaterial(item.seatMaterial) ? { seatMaterial: asSeatMaterial(item.seatMaterial) } : {}),
+        ...(typeof item.tier === 'number' && item.tier > 0
+          ? { tier: item.tier, elevationM: Number((item.tier * IMPORTED_TIER_RISE_M).toFixed(2)) }
+          : {}),
         storyId,
       };
       furniture.push(row);
@@ -1404,7 +1587,18 @@ export function applyRoomPlanVisionDraft(
   const wallColor = appearance?.wallColor;
   const existingWalls = current.walls ?? [];
   let walls = existingWalls;
-  if (scaledDraft.walls && scaledDraft.walls.length > 0) {
+  if (scaledDraft.walls && scaledDraft.walls.length > 0 && scaledDraft.walls.length < 3) {
+    // Un ou deux murs seulement (« only VISIBLE walls ») : on ferme la salle avec le contour
+    // et on reporte leurs portes et fenêtres sur le mur du contour correspondant.
+    walls = mergeOpeningsOntoOutlineWalls(
+      wallsFromRoomOutline(outline, {
+        withEntrance: false,
+        texture: wallTexture ?? existingWalls[0]?.texture ?? 'plaster',
+      }),
+      scaledDraft.walls,
+    ).map((wall) => ({ ...wall, color: wallColor, storyId }));
+    walls.forEach((wall) => selection.push({ kind: 'wall', id: wall.id }));
+  } else if (scaledDraft.walls && scaledDraft.walls.length > 0) {
     walls = scaledDraft.walls.map((wall) => {
       const segment = createWallSegment({
         start: wall.start,
@@ -1429,6 +1623,8 @@ export function applyRoomPlanVisionDraft(
     }
   }
 
+  assignImportedTiers(furniture, fixtures, current.roomType);
+
   const imageRole = resolveImageRole(draft);
   const observedFloor = asFloorType(appearance?.floorType);
   const importedImage = options.imageUrl;
@@ -1440,8 +1636,10 @@ export function applyRoomPlanVisionDraft(
     warnings.push('Photo en perspective : le sol reprend la matière et la couleur vues, sans poser l’image en fond.');
   }
 
-  const canvas = applyDraftCanvas(current.canvas, draft);
   const roof = resolveImportedRoof(appearance, current, tentSeen);
+  if (current.roomType !== 'TENT' && roof.showRoof && (roof.roofStyle === 'tentSwag' || roof.roofStyle === 'pagoda')) {
+    warnings.push('Tente reconnue : parois en toile et éclairage de tente appliqués.');
+  }
   const chandelierFixtures = fixtures.filter((fixture) => fixture.kind === 'chandelier');
 
   const aligned = tidyImportedFloorLayout(ensureBlueprintDefaults({
@@ -1462,13 +1660,16 @@ export function applyRoomPlanVisionDraft(
       floorImageFit: keepExistingFloor ? current.metadata.floorImageFit : undefined,
       roofStyle: roof.roofStyle,
       showRoof: roof.showRoof,
+      // Tente vue par l’IA : parois en toile et éclairage de tente, sans changer le type de salle.
+      tentVenue: current.roomType !== 'TENT'
+        && roof.showRoof === true
+        && (roof.roofStyle === 'tentSwag' || roof.roofStyle === 'pagoda')
+        ? true
+        : undefined,
       curtainColor: appearance?.curtainColor ?? current.metadata.curtainColor,
       showCurtains: appearance?.curtainColor ? true : current.metadata.showCurtains,
-      showChandeliers: chandelierFixtures.length > 0,
-      chandelierCount: chandelierFixtures.length > 0
-        ? Math.max(1, Math.min(5, chandelierFixtures.length))
-        : current.metadata.chandelierCount,
-      chandelierType: chandelierFixtures.length > 0 ? 'modern' : current.metadata.chandelierType,
+      // Les lustres importés sont dessinés à leur place : pas de jeu d’ambiance en double par-dessus.
+      showChandeliers: chandelierFixtures.length > 0 ? false : current.metadata.showChandeliers,
     },
   }));
 

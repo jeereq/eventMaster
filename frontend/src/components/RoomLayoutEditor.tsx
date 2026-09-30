@@ -159,6 +159,7 @@ import {
   type StageRoofStyle,
   type OpeningMaterial,
   openingMaterialLabels,
+  isTentVenue,
 } from '@/lib/roomLayoutUtils';
 import {
   copyAmbienceShareLink,
@@ -8781,7 +8782,7 @@ export default function RoomLayoutEditor({
           onSurroundingsChange={setOutdoorSurroundings}
           env={environmentSettings}
           onChange={setEnvironmentSettings}
-          baseSun={sunAnglesFromPosition(resolveLightingPreset(lightingPreset, blueprint.roomType).sunPosition)}
+          baseSun={sunAnglesFromPosition(resolveLightingPreset(lightingPreset, isTentVenue(blueprint) ? 'TENT' : blueprint.roomType).sunPosition)}
           onUploadGround={resolvePlanImageUrl}
           onClose={() => setQuickCreate(null)}
         />
