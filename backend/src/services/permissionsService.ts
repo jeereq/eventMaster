@@ -2,6 +2,7 @@ import { OrgRole, StaffRole } from '@prisma/client';
 import { prisma } from '../db';
 import { isTenantManager } from '../utils/tenantAccess';
 import { createTtlCache } from '../utils/ttlCache';
+import { decideEventAccess, type EventAccessLookups } from './eventAccessPolicy';
 
 const ORG_ACCESS_TTL_MS = 90_000;
 const orgAccessCache = createTtlCache<OrgAccess>(ORG_ACCESS_TTL_MS);
@@ -238,71 +239,73 @@ export async function getProtocolEventIds(userId: string, tenantId: string): Pro
   return Array.from(ids);
 }
 
+const eventAccessLookups: EventAccessLookups = {
+  async findEventInTenant(eventId, tenantId) {
+    return prisma.event.findFirst({
+      where: { id: eventId, tenantId },
+      select: { roomId: true },
+    });
+  },
+  async findEventStaffRole(eventId, userId) {
+    const staff = await prisma.eventStaff.findFirst({
+      where: { eventId, userId },
+      select: { staffRole: true },
+    });
+    return staff?.staffRole ?? null;
+  },
+  async findRoomStaffRole(roomId, userId) {
+    const staff = await prisma.roomStaff.findFirst({
+      where: { roomId, userId },
+      select: { staffRole: true },
+    });
+    return staff?.staffRole ?? null;
+  },
+};
+
 export async function canManageEvent(userId: string, tenantId: string, eventId: string): Promise<boolean> {
   const access = await resolveOrgAccess(userId, tenantId);
-  if (access.canManageAllEvents) return true;
-
-  const direct = await prisma.eventStaff.findFirst({
-    where: { eventId, userId, staffRole: 'MANAGER' },
-  });
-  if (direct) return true;
-
-  const event = await prisma.event.findFirst({
-    where: { id: eventId, tenantId },
-    select: { roomId: true },
-  });
-  if (!event?.roomId) return false;
-
-  const roomManager = await prisma.roomStaff.findFirst({
-    where: { roomId: event.roomId, userId, staffRole: 'MANAGER' },
-  });
-  return Boolean(roomManager);
+  return decideEventAccess(access, { userId, tenantId, eventId, mode: 'manage' }, eventAccessLookups);
 }
 
 export async function canAccessEvent(userId: string, tenantId: string, eventId: string): Promise<boolean> {
-  if (await canManageEvent(userId, tenantId, eventId)) return true;
-  if (await canProtocolGuests(userId, tenantId, eventId)) return true;
-  return false;
+  return canProtocolGuests(userId, tenantId, eventId);
 }
 
 export async function canProtocolGuests(userId: string, tenantId: string, eventId: string): Promise<boolean> {
   const access = await resolveOrgAccess(userId, tenantId);
-  if (access.canProtocolAllEvents || access.canManageAllEvents) return true;
-
-  const eventStaff = await prisma.eventStaff.findFirst({ where: { eventId, userId } });
-  if (eventStaff) return true;
-
-  const event = await prisma.event.findFirst({
-    where: { id: eventId, tenantId },
-    select: { roomId: true },
-  });
-  if (!event?.roomId) return false;
-
-  const roomStaff = await prisma.roomStaff.findFirst({ where: { roomId: event.roomId, userId } });
-  return Boolean(roomStaff);
+  return decideEventAccess(access, { userId, tenantId, eventId, mode: 'protocol' }, eventAccessLookups);
 }
 
 export async function canManageGuests(userId: string, tenantId: string, eventId: string): Promise<boolean> {
   return canManageEvent(userId, tenantId, eventId);
 }
 
+async function roomBelongsToTenant(roomId: string, tenantId: string): Promise<boolean> {
+  if (!roomId || !tenantId) return false;
+  const room = await prisma.organizationRoom.findFirst({
+    where: { id: roomId, tenantId },
+    select: { id: true },
+  });
+  return Boolean(room);
+}
+
 export async function canManageRoom(userId: string, tenantId: string, roomId: string): Promise<boolean> {
+  if (!(await roomBelongsToTenant(roomId, tenantId))) return false;
   const access = await resolveOrgAccess(userId, tenantId);
   if (access.canManageRooms) return true;
 
   const roomManager = await prisma.roomStaff.findFirst({
-    where: { roomId, userId, staffRole: 'MANAGER', room: { tenantId } },
+    where: { roomId, userId, staffRole: 'MANAGER' },
   });
   return Boolean(roomManager);
 }
 
 export async function canAccessRoom(userId: string, tenantId: string, roomId: string): Promise<boolean> {
+  if (!(await roomBelongsToTenant(roomId, tenantId))) return false;
   const access = await resolveOrgAccess(userId, tenantId);
   if (access.canManageRooms) return true;
 
-  const staff = await prisma.roomStaff.findFirst({
-    where: { roomId, userId, room: { tenantId } },
-  });
+  const staff = await prisma.roomStaff.findFirst({ where: { roomId, userId } });
   return Boolean(staff);
 }
 
