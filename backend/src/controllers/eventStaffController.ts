@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
-import { canManageEvent, canAccessEvent, resolveOrgAccess } from '../services/permissionsService';
+import { canManageEvent, canAccessEvent } from '../services/permissionsService';
 import { verifyEventBelongsToTenant } from '../utils/tenantAccess';
 
 export async function getEventStaff(req: AuthenticatedRequest, res: Response) {
@@ -29,10 +29,9 @@ export async function getEventStaff(req: AuthenticatedRequest, res: Response) {
       orderBy: { createdAt: 'asc' },
     });
 
-    const access = await resolveOrgAccess(userId, tenantId);
     return res.json({
       staff,
-      canManage: access.canManageAllEvents || (await canManageEvent(userId, tenantId, eventId)),
+      canManage: await canManageEvent(userId, tenantId, eventId),
     });
   } catch (error) {
     console.error('Erreur getEventStaff:', error);
@@ -57,8 +56,7 @@ export async function assignEventStaff(req: AuthenticatedRequest, res: Response)
     const event = await verifyEventBelongsToTenant(eventId, tenantId);
     if (!event) return res.status(404).json({ error: 'Événement introuvable.' });
 
-    const access = await resolveOrgAccess(userId, tenantId);
-    if (!access.canManageAllEvents && !(await canManageEvent(userId, tenantId, eventId))) {
+    if (!(await canManageEvent(userId, tenantId, eventId))) {
       return res.status(403).json({ error: 'Accès refusé pour gérer l\'équipe de cet événement.' });
     }
 
@@ -97,8 +95,7 @@ export async function removeEventStaff(req: AuthenticatedRequest, res: Response)
       return res.status(403).json({ error: 'Organisation non identifiée.' });
     }
 
-    const access = await resolveOrgAccess(userId, tenantId);
-    if (!access.canManageAllEvents && !(await canManageEvent(userId, tenantId, eventId))) {
+    if (!(await canManageEvent(userId, tenantId, eventId))) {
       return res.status(403).json({ error: 'Accès refusé.' });
     }
 

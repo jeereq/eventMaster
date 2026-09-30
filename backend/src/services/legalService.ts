@@ -213,11 +213,20 @@ export async function recordUserLegalAcceptance(params: {
   return getUserLegalStatus(params.userId);
 }
 
-export async function findGuestsByIdentity(guest: {
-  email: string;
-  phone?: string | null;
-  preferences?: unknown;
-}) {
+/**
+ * Fiches invité partageant l'e-mail ou le téléphone de `guest`, limitées à une organisation.
+ * Le lien invité ne prouve pas la possession du contact : sans cette limite, n'importe quel
+ * organisateur pourrait créer une fiche avec le contact d'une personne et récupérer ses
+ * invitations (et QR d'entrée) dans les autres organisations.
+ */
+export async function findGuestsByIdentity(
+  guest: {
+    email: string;
+    phone?: string | null;
+    preferences?: unknown;
+  },
+  tenantId: string,
+) {
   const normalizedEmail = extractGuestEmail(guest);
   const normalizedPhone = extractGuestPhone(guest);
   const orClauses = buildGuestIdentityOrClauses(normalizedEmail, normalizedPhone);
@@ -227,7 +236,7 @@ export async function findGuestsByIdentity(guest: {
   }
 
   const matched = await prisma.guest.findMany({
-    where: { OR: orClauses as any },
+    where: { OR: orClauses as any, event: { tenantId } },
     include: {
       event: {
         select: {

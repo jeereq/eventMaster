@@ -4,3 +4,8 @@ node_modules
 
 /src/generated/prisma
 /src/config/*.json
+
+# Build TypeScript : produit par `npm run build`, jamais versionné
+/dist
+# Journaux d’erreurs git collés par erreur
+git-error-*

@@ -2,7 +2,9 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../db';
-import { AuthenticatedRequest, signUserToken } from '../middleware/auth';
+import { AuthenticatedRequest, invalidateSessionCache, signUserToken } from '../middleware/auth';
+import { passwordPolicyError } from '../utils/passwordPolicy';
+import { OTP_MAX_ATTEMPTS } from '../services/otpService';
 import { formatTenantResponse, parseAccountKind } from '../utils/tenantAccess';
 import { grantWelcomeAiTokens } from '../services/welcomeAiTokens';
 import { isPlanAllowedForAccountKind, resolvePendingSignupPlan } from '../config/plansConfig';
@@ -50,6 +52,7 @@ async function issueAndSendOtp(params: {
     data: {
       otpHash,
       otpExpiresAt,
+      otpAttempts: 0,
       verificationMethod: params.method,
       verificationToken: null,
       isEmailVerified: false,
@@ -95,7 +98,7 @@ function publicUser(user: {
 }
 
 function buildAuthToken(
-  user: { id: string; tenantId: string | null; role: string },
+  user: { id: string; tenantId: string | null; role: string; tokenVersion: number },
   options?: { impersonatedBy?: string; expiresIn?: string },
 ) {
   return signUserToken(
@@ -103,9 +106,11 @@ function buildAuthToken(
       userId: user.id,
       tenantId: user.tenantId,
       role: user.role as 'SUPER_ADMIN' | 'COMMERCIAL' | 'USER',
+      tv: user.tokenVersion,
       impersonatedBy: options?.impersonatedBy,
     },
-    options?.expiresIn || '24h',
+    // Une session support reste courte même quand elle est rafraîchie.
+    options?.expiresIn || (options?.impersonatedBy ? '2h' : '24h'),
   );
 }
 
@@ -128,6 +133,11 @@ export async function register(req: Request, res: Response) {
 
     if (!email || !password || !name) {
       return res.status(400).json({ error: 'Tous les champs sont obligatoires (email, password, name)' });
+    }
+
+    const registerPasswordError = passwordPolicyError(password);
+    if (registerPasswordError) {
+      return res.status(400).json({ error: registerPasswordError });
     }
 
     if (!acceptTerms || !acceptPrivacy) {
@@ -302,8 +312,29 @@ export async function verifyOtp(req: Request, res: Response) {
       return res.status(400).json({ error: 'Le code OTP a expiré. Demandez un nouveau code.', expired: true });
     }
 
+    if (user.otpAttempts >= OTP_MAX_ATTEMPTS) {
+      return res.status(400).json({
+        error: 'Trop de tentatives. Demandez un nouveau code.',
+        expired: true,
+      });
+    }
+
     const valid = await verifyOtpCode(String(otp).trim(), user.otpHash);
     if (!valid) {
+      const attempts = user.otpAttempts + 1;
+      const exhausted = attempts >= OTP_MAX_ATTEMPTS;
+      await prisma.user.update({
+        where: { id: user.id },
+        data: exhausted
+          ? { otpAttempts: attempts, otpHash: null, otpExpiresAt: null }
+          : { otpAttempts: attempts },
+      });
+      if (exhausted) {
+        return res.status(400).json({
+          error: 'Trop de tentatives. Demandez un nouveau code.',
+          expired: true,
+        });
+      }
       return res.status(400).json({ error: 'Code OTP incorrect.' });
     }
 
@@ -313,6 +344,7 @@ export async function verifyOtp(req: Request, res: Response) {
         isEmailVerified: true,
         otpHash: null,
         otpExpiresAt: null,
+        otpAttempts: 0,
         verificationToken: null,
       },
     });
@@ -554,7 +586,7 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
       return res.status(401).json({ error: 'Non authentifié.' });
     }
 
-    const { name, phone, phoneCountryCode, nationalNumber, avatarUrl, password, tenantName, accountKind } = req.body;
+    const { name, phone, phoneCountryCode, nationalNumber, avatarUrl, password, currentPassword, tenantName, accountKind } = req.body;
 
     if (accountKind !== undefined && accountKind !== null && String(accountKind).trim() !== '') {
       return res.status(403).json({ error: ACCOUNT_KIND_SUPERADMIN_ONLY });
@@ -577,8 +609,27 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
       updateData.avatarUrl = null;
     }
 
-    if (password && password.trim() !== '') {
+    const changesPassword = typeof password === 'string' && password.trim() !== '';
+    if (changesPassword) {
+      const newPasswordError = passwordPolicyError(password);
+      if (newPasswordError) {
+        return res.status(400).json({ error: newPasswordError });
+      }
+      const current = await prisma.user.findUnique({
+        where: { id: req.user.id },
+        select: { passwordHash: true },
+      });
+      const currentOk =
+        typeof currentPassword === 'string' &&
+        currentPassword.length > 0 &&
+        Boolean(current) &&
+        (await bcrypt.compare(currentPassword, current!.passwordHash));
+      if (!currentOk) {
+        return res.status(403).json({ error: 'Mot de passe actuel incorrect.', field: 'currentPassword' });
+      }
       updateData.passwordHash = await bcrypt.hash(password, 10);
+      // Déconnecte toutes les autres sessions ; un nouveau jeton est renvoyé à celle-ci.
+      updateData.tokenVersion = { increment: 1 };
     }
 
     const profileAccess = req.user.tenantId
@@ -610,10 +661,15 @@ export async function updateProfile(req: AuthenticatedRequest, res: Response) {
       return { user: updatedUser, tenant: updatedTenant };
     });
 
+    if (changesPassword) invalidateSessionCache(result.user.id);
+
     return res.json({
       message: 'Profil mis à jour avec succès !',
       user: publicUser(result.user),
       tenant: result.tenant ? formatTenantResponse(result.tenant) : null,
+      ...(changesPassword
+        ? { token: buildAuthToken(result.user, { impersonatedBy: req.user.impersonatedBy }) }
+        : {}),
     });
   } catch (error: any) {
     console.error('Erreur lors de la mise à jour du profil:', error);
@@ -625,7 +681,8 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 export async function forgotPassword(req: Request, res: Response) {
   try {
-    const { email, method = 'EMAIL' } = req.body;
+    const { method = 'EMAIL' } = req.body;
+    const email = typeof req.body?.email === 'string' ? req.body.email.trim() : '';
 
     if (!email) {
       return res.status(400).json({ error: 'Veuillez saisir votre adresse e-mail ou numéro de téléphone' });
@@ -648,7 +705,7 @@ export async function forgotPassword(req: Request, res: Response) {
     const resolvedMethod = methodCheck.method;
 
     const resetToken = jwt.sign(
-      { userId: user.id, purpose: 'password-reset' },
+      { userId: user.id, purpose: 'password-reset', tv: user.tokenVersion },
       getJwtSecret(),
       { expiresIn: '1h' },
     );
@@ -721,13 +778,30 @@ export async function resetPassword(req: Request, res: Response) {
       return res.status(400).json({ error: 'Le jeton de réinitialisation est invalide.' });
     }
 
+    const resetPasswordError = passwordPolicyError(password);
+    if (resetPasswordError) {
+      return res.status(400).json({ error: resetPasswordError });
+    }
+
     const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
     if (!user) {
       return res.status(404).json({ error: 'Utilisateur non trouvé.' });
     }
 
+    // Un lien ne sert qu'une fois : il porte la version de session du moment de la demande.
+    if ((decoded.tv ?? 0) !== user.tokenVersion) {
+      return res.status(400).json({ error: 'Ce lien de réinitialisation a déjà été utilisé ou n’est plus valide.' });
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
-    await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+    const updated = await prisma.user.updateMany({
+      where: { id: user.id, tokenVersion: user.tokenVersion },
+      data: { passwordHash, tokenVersion: { increment: 1 } },
+    });
+    if (updated.count === 0) {
+      return res.status(400).json({ error: 'Ce lien de réinitialisation a déjà été utilisé ou n’est plus valide.' });
+    }
+    invalidateSessionCache(user.id);
 
     return res.json({ message: 'Votre mot de passe a été réinitialisé avec succès ! Vous pouvez maintenant vous connecter.' });
   } catch (error: any) {

@@ -12,12 +12,15 @@ import {
   getPublicApiBaseUrl,
   isFlexPayCardConfigured,
   parseFlexPayCallbackPayload,
-  type FlexPayCallbackParsed,
   type FlexPayCheckResult,
   type FlexPayMetadataUpdate,
 } from '../services/flexPayCardService';
 import { parseFlexPayChargeCurrency, resolveFlexPayCharge } from '../services/flexPayChargeCurrency';
 import { finalizeCommercialFlexPayPayout } from '../services/commercialFlexPayPayoutService';
+import {
+  decideFlexPayCallbackOutcome,
+  type FlexPayCallbackOutcome,
+} from '../services/flexPayCallbackVerification';
 import { isOnlinePaymentsEnabled, loadPlatformSettings } from '../services/platformSettingsService';
 import { buildGuestRsvpUrl } from '../services/guestAccessService';
 import {
@@ -70,14 +73,6 @@ async function findSubscriptionRequestForFlexPay(opts: { reference?: string; ord
   return null;
 }
 
-function metadataFromCallback(parsed: FlexPayCallbackParsed): FlexPayMetadataUpdate {
-  return buildFlexPayMetadataUpdate({
-    channel: parsed.channel,
-    amountCustomer: parsed.amountCustomer,
-    providerReference: parsed.providerReference,
-  });
-}
-
 function metadataFromCheck(checked: FlexPayCheckResult): FlexPayMetadataUpdate {
   return buildFlexPayMetadataUpdate({
     channel: checked.channel,
@@ -86,26 +81,25 @@ function metadataFromCheck(checked: FlexPayCheckResult): FlexPayMetadataUpdate {
   });
 }
 
-function mergeMetadata(...parts: FlexPayMetadataUpdate[]): FlexPayMetadataUpdate {
-  return Object.assign({}, ...parts.filter((p) => Object.keys(p).length > 0));
+/**
+ * Vérifie auprès de FlexPay la transaction enregistrée sur notre commande.
+ * Le statut transmis dans le callback n'est jamais utilisé (voir flexPayCallbackVerification).
+ */
+async function verifyRecordedFlexPayOrder(
+  orderNumber: string | null | undefined,
+): Promise<{ outcome: FlexPayCallbackOutcome; checkMeta: FlexPayMetadataUpdate }> {
+  if (!orderNumber) return { outcome: 'unverified', checkMeta: {} };
+  try {
+    const checked = await checkFlexPayCardOrder(orderNumber);
+    return { outcome: decideFlexPayCallbackOutcome(checked), checkMeta: metadataFromCheck(checked) };
+  } catch (err) {
+    console.warn('[FlexPay] check échoué:', err);
+    return { outcome: 'unverified', checkMeta: {} };
+  }
 }
 
-async function confirmFlexPaySuccess(
-  orderNumber: string | null | undefined,
-  parsedSuccess: boolean,
-): Promise<{ success: boolean; checkMeta: FlexPayMetadataUpdate }> {
-  let success = parsedSuccess;
-  let checkMeta: FlexPayMetadataUpdate = {};
-  if (orderNumber) {
-    try {
-      const checked = await checkFlexPayCardOrder(orderNumber);
-      checkMeta = metadataFromCheck(checked);
-      if (checked.found) success = checked.status === 'success';
-    } catch (err) {
-      console.warn('[FlexPay] check échoué:', err);
-    }
-  }
-  return { success, checkMeta };
+function withMeta<T extends object>(data: T, meta: FlexPayMetadataUpdate): T & FlexPayMetadataUpdate {
+  return { ...data, ...meta };
 }
 
 /** Callback serveur FlexPay — POST/GET /api/public/payments/flexpay/callback */
@@ -115,7 +109,6 @@ export async function flexPayCardCallback(req: Request, res: Response) {
       (req.body || {}) as Record<string, unknown>,
       (req.query || {}) as Record<string, unknown>,
     );
-    const callbackMeta = metadataFromCallback(parsed);
 
     // 1) Billet événement
     const order = await findTicketOrderForFlexPay({
@@ -125,22 +118,19 @@ export async function flexPayCardCallback(req: Request, res: Response) {
 
     if (order) {
       if (order.status === 'PAID') {
-        const meta = mergeMetadata(callbackMeta);
-        if (Object.keys(meta).length) {
-          await prisma.ticketOrder.update({ where: { id: order.id }, data: meta });
-        }
         return res.json({ ok: true, alreadyPaid: true, kind: 'ticket', orderId: order.id });
       }
 
-      const orderNumber = order.flexPayOrderNumber || parsed.orderNumber;
-      const { success, checkMeta } = await confirmFlexPaySuccess(orderNumber, parsed.success);
-      const meta = mergeMetadata(callbackMeta, checkMeta);
+      const { outcome, checkMeta } = await verifyRecordedFlexPayOrder(order.flexPayOrderNumber);
+      if (outcome === 'unverified') {
+        return res.status(202).json({ ok: true, pending: true, kind: 'ticket', orderId: order.id });
+      }
 
-      if (!success) {
+      if (outcome === 'failed') {
         const wasPending = order.status === 'PENDING';
         await prisma.ticketOrder.update({
           where: { id: order.id },
-          data: { status: 'CANCELLED', ...meta },
+          data: withMeta({ status: 'CANCELLED' as const }, checkMeta),
         });
         if (wasPending) {
           void notifyTicketPaymentFailed({
@@ -158,12 +148,12 @@ export async function flexPayCardCallback(req: Request, res: Response) {
         return res.json({ ok: true, paid: false, kind: 'ticket', orderId: order.id });
       }
 
-      if (Object.keys(meta).length) {
-        await prisma.ticketOrder.update({ where: { id: order.id }, data: meta });
+      if (Object.keys(checkMeta).length) {
+        await prisma.ticketOrder.update({ where: { id: order.id }, data: checkMeta });
       }
       await fulfillTicketOrder(order.id, {
-        id: orderNumber || order.id,
-        payment_intent: orderNumber || null,
+        id: order.flexPayOrderNumber || order.id,
+        payment_intent: order.flexPayOrderNumber || null,
       });
       return res.json({ ok: true, paid: true, kind: 'ticket', orderId: order.id });
     }
@@ -176,27 +166,24 @@ export async function flexPayCardCallback(req: Request, res: Response) {
 
     if (sub) {
       if (sub.status === 'APPROVED') {
-        const meta = mergeMetadata(callbackMeta);
-        if (Object.keys(meta).length) {
-          await prisma.subscriptionRequest.update({ where: { id: sub.id }, data: meta });
-        }
         return res.json({ ok: true, alreadyPaid: true, kind: 'subscription', requestId: sub.id });
       }
 
-      const orderNumber = sub.flexPayOrderNumber || parsed.orderNumber;
-      const { success, checkMeta } = await confirmFlexPaySuccess(orderNumber, parsed.success);
-      const meta = mergeMetadata(callbackMeta, checkMeta);
+      const { outcome, checkMeta } = await verifyRecordedFlexPayOrder(sub.flexPayOrderNumber);
+      if (outcome === 'unverified') {
+        return res.status(202).json({ ok: true, pending: true, kind: 'subscription', requestId: sub.id });
+      }
 
-      if (!success) {
+      if (outcome === 'failed') {
         await prisma.subscriptionRequest.update({
           where: { id: sub.id },
-          data: { status: statusAfterFailedQuotedPayment(sub.status), ...meta },
+          data: withMeta({ status: statusAfterFailedQuotedPayment(sub.status) }, checkMeta),
         });
         return res.json({ ok: true, paid: false, kind: 'subscription', requestId: sub.id });
       }
 
-      if (Object.keys(meta).length) {
-        await prisma.subscriptionRequest.update({ where: { id: sub.id }, data: meta });
+      if (Object.keys(checkMeta).length) {
+        await prisma.subscriptionRequest.update({ where: { id: sub.id }, data: checkMeta });
       }
       await activateSubscriptionRequest(sub.id, {
         approvedAmount: sub.approvedAmount ?? undefined,
@@ -216,15 +203,16 @@ export async function flexPayCardCallback(req: Request, res: Response) {
         return res.json({ ok: true, alreadyPaid: true, kind: 'ai_tokens', orderId: aiOrder.id });
       }
 
-      const orderNumber = aiOrder.flexPayOrderNumber || parsed.orderNumber;
-      const { success, checkMeta } = await confirmFlexPaySuccess(orderNumber, parsed.success);
-      const meta = mergeMetadata(callbackMeta, checkMeta);
+      const { outcome, checkMeta } = await verifyRecordedFlexPayOrder(aiOrder.flexPayOrderNumber);
+      if (outcome === 'unverified') {
+        return res.status(202).json({ ok: true, pending: true, kind: 'ai_tokens', orderId: aiOrder.id });
+      }
 
-      if (!success) {
+      if (outcome === 'failed') {
         try {
           await (prisma as any).aiTokenOrder.update({
             where: { id: aiOrder.id },
-            data: { status: 'FAILED', ...meta },
+            data: { status: 'FAILED', ...checkMeta },
           });
         } catch {
           /* fallback */
@@ -235,7 +223,7 @@ export async function flexPayCardCallback(req: Request, res: Response) {
       try {
         await (prisma as any).aiTokenOrder.update({
           where: { id: aiOrder.id },
-          data: { status: 'PAID', paidAt: new Date(), ...meta },
+          data: { status: 'PAID', paidAt: new Date(), ...checkMeta },
         });
       } catch {
         /* fallback */
@@ -255,56 +243,59 @@ export async function flexPayCardCallback(req: Request, res: Response) {
       });
     }
 
-    console.warn('[FlexPay] callback sans commande / demande', parsed);
+    // 4) Pay Out commissions
+    const transferWhere = [
+      parsed.orderNumber ? { flexPayOrderNumber: parsed.orderNumber } : null,
+      parsed.reference ? { flexPayReference: parsed.reference } : null,
+    ].filter((clause): clause is NonNullable<typeof clause> => clause !== null);
+    const transfer = transferWhere.length
+      ? await prisma.commercialPayoutTransfer.findFirst({ where: { OR: transferWhere } })
+      : null;
 
-    // 3) Pay Out commissions
-    const payout = await finalizeCommercialFlexPayPayout({
-      reference: parsed.reference || null,
-      orderNumber: parsed.orderNumber || null,
-      success: parsed.success,
-      channel: parsed.channel,
-      providerReference: parsed.providerReference,
-      amountCustomer: parsed.amountCustomer,
-    });
-    if (payout.handled) {
+    if (transfer) {
+      if (transfer.status === 'SUCCESS') {
+        return res.json({ ok: true, kind: 'payout', paid: true, alreadyPaid: true, transferId: transfer.id });
+      }
+      if (!transfer.flexPayOrderNumber) {
+        return res.status(202).json({ ok: true, pending: true, kind: 'payout', transferId: transfer.id });
+      }
+
+      let checked: FlexPayCheckResult | null = null;
+      try {
+        checked = await checkFlexPayCardOrder(transfer.flexPayOrderNumber);
+      } catch (err) {
+        console.warn('[FlexPay] check payout échoué:', err);
+      }
+      const outcome = decideFlexPayCallbackOutcome(checked);
+      if (!checked || outcome === 'unverified') {
+        return res.status(202).json({ ok: true, pending: true, kind: 'payout', transferId: transfer.id });
+      }
+
+      const payout = await finalizeCommercialFlexPayPayout({
+        reference: transfer.flexPayReference,
+        orderNumber: transfer.flexPayOrderNumber,
+        success: outcome === 'paid',
+        channel: checked.channel,
+        providerReference: checked.providerReference,
+        amountCustomer: checked.amountCustomer,
+      });
       return res.json({
         ok: true,
         kind: 'payout',
-        paid: Boolean(payout.paid),
-        transferId: payout.transferId,
-        alreadyPaid: Boolean(payout.alreadyPaid),
+        paid: Boolean(payout.handled && payout.paid),
+        transferId: transfer.id,
+        alreadyPaid: Boolean(payout.handled && payout.alreadyPaid),
       });
     }
 
-    // Si succès callback sans match : tenter check via orderNumber pour payout
-    if (parsed.orderNumber) {
-      try {
-        const checked = await checkFlexPayCardOrder(parsed.orderNumber);
-        const payout2 = await finalizeCommercialFlexPayPayout({
-          reference: parsed.reference || checked.reference,
-          orderNumber: parsed.orderNumber,
-          success: checked.status === 'success' || parsed.success,
-          channel: checked.channel || parsed.channel,
-          providerReference: checked.providerReference || parsed.providerReference,
-          amountCustomer: checked.amountCustomer ?? parsed.amountCustomer,
-        });
-        if (payout2.handled) {
-          return res.json({
-            ok: true,
-            kind: 'payout',
-            paid: Boolean(payout2.paid),
-            transferId: payout2.transferId,
-          });
-        }
-      } catch {
-        /* ignore */
-      }
-    }
-
+    console.warn('[FlexPay] callback sans commande / demande', {
+      reference: parsed.reference,
+      orderNumber: parsed.orderNumber,
+    });
     return res.status(404).json({ error: 'Commande, demande ou versement introuvable.' });
   } catch (error: any) {
     console.error('[FlexPay] callback', error);
-    return res.status(500).json({ error: error?.message || 'Callback FlexPay impossible.' });
+    return res.status(500).json({ error: 'Callback FlexPay impossible.' });
   }
 }
 

@@ -5,6 +5,7 @@ import {
   createCorsOptions,
   getJwtSecret,
   getPostgresSslConfig,
+  getRateLimitConfig,
 } from './security.ts';
 
 describe('security configuration', () => {
@@ -32,5 +33,11 @@ describe('security configuration', () => {
       getPostgresSslConfig({ NODE_ENV: 'production', DATABASE_URL: 'postgresql://db.example/app' }),
       { rejectUnauthorized: true },
     );
+  });
+
+  it('plafonne les générations IA publiques sans compte', () => {
+    assert.equal(getRateLimitConfig({}).anonymousAiDailyMax, 20);
+    assert.equal(getRateLimitConfig({ ANONYMOUS_AI_DAILY_MAX: '5' }).anonymousAiDailyMax, 5);
+    assert.equal(getRateLimitConfig({ ANONYMOUS_AI_DAILY_MAX: '0' }).anonymousAiDailyMax, 20);
   });
 });

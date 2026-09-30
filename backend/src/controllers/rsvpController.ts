@@ -872,14 +872,22 @@ export async function getGuestAllInvitations(req: Request, res: Response) {
 
     const anchorGuest = await prisma.guest.findUnique({
       where: { id: guestId },
-      select: { id: true, firstName: true, lastName: true, email: true, phone: true, preferences: true },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        preferences: true,
+        event: { select: { tenantId: true } },
+      },
     });
 
     if (!anchorGuest) {
       return res.status(404).json({ error: 'Invité non trouvé ou lien invalide.' });
     }
 
-    const guestRecords = await findGuestsByIdentity(anchorGuest);
+    const guestRecords = await findGuestsByIdentity(anchorGuest, anchorGuest.event.tenantId);
     const identityEmail = extractGuestEmail(anchorGuest);
     const identityPhone = extractGuestPhone(anchorGuest);
 

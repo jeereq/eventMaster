@@ -698,12 +698,12 @@ function RegisterPageContent() {
                 id="password"
                 autoComplete="new-password"
                 required
-                minLength={6}
+                minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 leftIcon={<Lock className="w-4 h-4" aria-hidden />}
-                hint="Au moins 6 caractères."
+                hint="Au moins 8 caractères."
               />
 
               <RegisterReferralGate

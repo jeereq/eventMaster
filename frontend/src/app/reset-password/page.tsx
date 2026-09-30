@@ -37,8 +37,8 @@ function ResetPasswordForm() {
  setError('Le jeton de réinitialisation est manquant ou invalide.');
  return;
  }
- if (password.length < 6) {
- setError('Le mot de passe doit contenir au moins 6 caractères.');
+ if (password.length < 8) {
+ setError('Le mot de passe doit contenir au moins 8 caractères.');
  return;
  }
  if (password !== confirmPassword) {
@@ -93,19 +93,19 @@ function ResetPasswordForm() {
  id="password"
  autoComplete="new-password"
  required
- minLength={6}
+ minLength={8}
  value={password}
  onChange={(e) => setPassword(e.target.value)}
  placeholder="••••••••"
  leftIcon={<Lock className="w-4 h-4" />}
- hint="Au moins 6 caractères."
+ hint="Au moins 8 caractères."
  />
  <PasswordInput
  label="Confirmer le mot de passe"
  id="confirmPassword"
  autoComplete="new-password"
  required
- minLength={6}
+ minLength={8}
  value={confirmPassword}
  onChange={(e) => setConfirmPassword(e.target.value)}
  placeholder="••••••••"

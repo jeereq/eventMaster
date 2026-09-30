@@ -199,6 +199,10 @@ model User {
   verificationToken String?
   otpHash           String?
   otpExpiresAt      DateTime?
+  /// Échecs de saisie du code OTP en cours ; le code est invalidé au-delà du plafond.
+  otpAttempts       Int       @default(0)
+  /// Incrémenté pour révoquer toutes les sessions (reset, changement de mot de passe ou de rôle).
+  tokenVersion      Int       @default(0)
   verificationMethod String?  // EMAIL | WHATSAPP
   termsAcceptedAt   DateTime?
   privacyAcceptedAt DateTime?
