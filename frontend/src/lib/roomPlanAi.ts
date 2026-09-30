@@ -1367,7 +1367,7 @@ export function applyRoomPlanVisionDraft(
   let zoneCount = 0;
   let chairCount = 0;
 
-  let tentSeen = appearance?.roofStyle === 'tentSwag';
+  let tentSeen = appearance?.roofStyle === 'tentSwag' || appearance?.roofStyle === 'pagoda';
   const canvas = applyDraftCanvas(current.canvas, draft);
   const roomCenter = {
     x: (scaledDraft.outline?.x ?? 5) + (scaledDraft.outline?.w ?? 90) / 2,
@@ -1637,6 +1637,9 @@ export function applyRoomPlanVisionDraft(
   }
 
   const roof = resolveImportedRoof(appearance, current, tentSeen);
+  if (current.roomType !== 'TENT' && roof.showRoof && (roof.roofStyle === 'tentSwag' || roof.roofStyle === 'pagoda')) {
+    warnings.push('Tente reconnue : parois en toile et éclairage de tente appliqués.');
+  }
   const chandelierFixtures = fixtures.filter((fixture) => fixture.kind === 'chandelier');
 
   const aligned = tidyImportedFloorLayout(ensureBlueprintDefaults({
@@ -1657,6 +1660,12 @@ export function applyRoomPlanVisionDraft(
       floorImageFit: keepExistingFloor ? current.metadata.floorImageFit : undefined,
       roofStyle: roof.roofStyle,
       showRoof: roof.showRoof,
+      // Tente vue par l’IA : parois en toile et éclairage de tente, sans changer le type de salle.
+      tentVenue: current.roomType !== 'TENT'
+        && roof.showRoof === true
+        && (roof.roofStyle === 'tentSwag' || roof.roofStyle === 'pagoda')
+        ? true
+        : undefined,
       curtainColor: appearance?.curtainColor ?? current.metadata.curtainColor,
       showCurtains: appearance?.curtainColor ? true : current.metadata.showCurtains,
       // Les lustres importés sont dessinés à leur place : pas de jeu d’ambiance en double par-dessus.
