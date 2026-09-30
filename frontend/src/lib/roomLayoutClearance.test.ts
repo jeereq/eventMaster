@@ -35,6 +35,22 @@ describe('enforceRealLayoutClearances', () => {
     }
   });
 
+  it('prend l’empreinte au sol d’un comptoir tourné d’un quart de tour', () => {
+    // Bar de 8 m le long du mur gauche, stocké en repère local (w = longueur) avec rotation 90°.
+    const blueprint = {
+      canvas: { widthM: 30, heightM: 20 },
+      furniture: [{ id: 'c1', kind: 'chair', x: 6, y: 35, chairType: 'BANQUET' }],
+      fixtures: [{ id: 'bar', kind: 'bar', x: -7.8, y: 44.8, w: 26.7, h: 10.5, rotation: 90 }],
+    };
+    const result = enforceRealLayoutClearances(blueprint);
+    const bar = result.fixtures.find((f) => f.id === 'bar')!;
+    assert.ok(Math.abs(bar.x + bar.w / 2 - 5.55) < 0.6, `bar recentré (${bar.x + bar.w / 2})`);
+    assert.ok(Math.abs(bar.y + bar.h / 2 - 50.05) < 0.6, `bar recentré (${bar.y + bar.h / 2})`);
+    const chair = result.furniture.find((f) => f.id === 'c1')!;
+    const insideBar = chair.x > 2 && chair.x < 9 && chair.y > 30 && chair.y < 70;
+    assert.ok(!insideBar, `chaise sortie de l’emprise du bar (${chair.x}, ${chair.y})`);
+  });
+
   it('dés-empile des chaises placées exactement au même endroit', () => {
     const blueprint = {
       canvas: { widthM: 20, heightM: 16 },

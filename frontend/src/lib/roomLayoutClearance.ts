@@ -477,6 +477,9 @@ type MutableFixture = {
   yM: number;
   wM: number;
   hM: number;
+  /** Décalage coin local → coin monde (quart de tour : largeur et profondeur échangées au sol). */
+  offsetXM: number;
+  offsetYM: number;
   isSolid: boolean;
   storyId?: string;
 };
@@ -937,14 +940,25 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
     };
   });
 
-  const mutableFixtures: MutableFixture[] = (blueprint.fixtures || []).map((fx) => ({
+  const mutableFixtures: MutableFixture[] = (blueprint.fixtures || []).map((fx) => {
+    // Empreinte réelle au sol : un élément tourné d’un quart de tour occupe h × w.
+    const localW = pctToM_X(fx.w);
+    const localH = pctToM_Y(fx.h);
+    const turned = Math.abs(Math.round((fx.rotation ?? 0) / 90)) % 2 === 1;
+    const wM = turned ? localH : localW;
+    const hM = turned ? localW : localH;
+    const offsetXM = (localW - wM) / 2;
+    const offsetYM = (localH - hM) / 2;
+    return {
     id: fx.id,
     kind: fx.kind,
     label: fx.label,
-    xM: pctToM_X(fx.x),
-    yM: pctToM_Y(fx.y),
-    wM: pctToM_X(fx.w),
-    hM: pctToM_Y(fx.h),
+    xM: pctToM_X(fx.x) + offsetXM,
+    yM: pctToM_Y(fx.y) + offsetYM,
+    wM,
+    hM,
+    offsetXM,
+    offsetYM,
     isSolid:
       SOLID_FIXTURE_KINDS.has(fx.kind) &&
       !(
@@ -955,7 +969,8 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
           fx.screenKind === 'desktopPc')
       ),
     storyId: fx.storyId,
-  }));
+    };
+  });
 
   // Extraire les portes des murs et fixtures
   const doorZones: DoorZone[] = [];
@@ -965,7 +980,7 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
         id: fx.id,
         cxM: fx.xM + fx.wM / 2,
         cyM: fx.yM + fx.hM / 2,
-        widthM: Math.max(1.0, fx.wM),
+        widthM: Math.max(1.0, fx.wM, fx.hM),
         storyId: fx.storyId,
       });
     }
@@ -1414,8 +1429,9 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
     if (!mutable) return { ...fx, rotation };
     return {
       ...fx,
-      x: clampPct(snapPct(mToPct_X(mutable.xM), IMPORT_SNAP_STEP), 0, 99),
-      y: clampPct(snapPct(mToPct_Y(mutable.yM), IMPORT_SNAP_STEP), 0, 99),
+      // Le bornage porte sur l’empreinte au sol ; le coin local peut sortir du canevas.
+      x: Number((clampPct(snapPct(mToPct_X(mutable.xM), IMPORT_SNAP_STEP), 0, 99) - mToPct_X(mutable.offsetXM)).toFixed(2)),
+      y: Number((clampPct(snapPct(mToPct_Y(mutable.yM), IMPORT_SNAP_STEP), 0, 99) - mToPct_Y(mutable.offsetYM)).toFixed(2)),
       rotation,
     };
   });
