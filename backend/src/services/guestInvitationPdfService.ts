@@ -1,9 +1,16 @@
 import puppeteer, { type Browser } from 'puppeteer';
 import { buildSeatingInvitationPdf, type SeatingInvitationPdfInput } from './invitationPdfService';
+import { createConcurrencyLimiter } from '../utils/concurrencyLimiter';
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 let browserInstance: Browser | null = null;
+
+/**
+ * Le PDF invité est public : sans plafond, chaque requête ouvre une page Chromium (jusqu'à 2 min).
+ * Au-delà, on bascule directement sur le rendu PDFKit, beaucoup moins coûteux.
+ */
+const printPageLimiter = createConcurrencyLimiter(2, 4);
 
 async function getBrowser(): Promise<Browser> {
   if (browserInstance?.connected) return browserInstance;
@@ -23,7 +30,7 @@ async function getBrowser(): Promise<Browser> {
 
 /** Génère un PDF à partir de la page d'invitation imprimable du portail invité. */
 export async function buildGuestInvitationPdfFromPrintPage(guestId: string): Promise<Buffer> {
-  const printUrl = `${FRONTEND_URL}/rsvp/${guestId}/print`;
+  const printUrl = `${FRONTEND_URL}/rsvp/${encodeURIComponent(guestId)}/print`;
   let page;
 
   try {
@@ -64,7 +71,7 @@ export async function buildGuestInvitationPdfWithFallback(
   fallbackInput: SeatingInvitationPdfInput,
 ): Promise<Buffer> {
   try {
-    return await buildGuestInvitationPdfFromPrintPage(guestId);
+    return await printPageLimiter.run(() => buildGuestInvitationPdfFromPrintPage(guestId));
   } catch (error) {
     console.warn('[Guest PDF] Fallback PDFKit après échec Puppeteer:', error);
     return buildSeatingInvitationPdf(fallbackInput);

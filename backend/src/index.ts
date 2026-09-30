@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { rateLimit } from 'express-rate-limit';
@@ -28,6 +28,7 @@ import { hydratePlatformSettingsFromDb } from './services/platformSettingsServic
 import { isSendGridConfigured, logNotificationConfigStatus } from './config/notificationConfig';
 import { maintenanceGuard } from './middleware/maintenanceGuard';
 import { createCorsOptions, getJwtSecret, getRateLimitConfig } from './config/security';
+import { bodyLimitFor, DEFAULT_BODY_LIMIT, LARGE_BODY_LIMIT } from './config/bodyLimits';
 
 // Load environment variables
 dotenv.config();
@@ -42,14 +43,34 @@ getJwtSecret();
 // Global Middlewares
 app.set('trust proxy', 1);
 app.use(cors(createCorsOptions()));
+app.use((_req: Request, res: Response, next: NextFunction) => {
+  // API JSON uniquement : pas d'interprétation de type MIME ni d'affichage en iframe.
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+app.disable('x-powered-by');
 app.use(rateLimit({
   windowMs: rateLimits.windowMs,
   limit: rateLimits.globalMax,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
 }));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+const bodyParsers = new Map(
+  [DEFAULT_BODY_LIMIT, LARGE_BODY_LIMIT].map((limit) => [
+    limit,
+    [express.json({ limit }), express.urlencoded({ limit, extended: true })] as const,
+  ]),
+);
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const limit = bodyLimitFor(req.path, Boolean(req.headers.authorization?.startsWith('Bearer ')));
+  const [json, urlencoded] = bodyParsers.get(limit)!;
+  json(req, res, (err?: unknown) => (err ? next(err) : urlencoded(req, res, next)));
+});
 
 // Basic Route for Health Check
 app.get('/health', async (req: Request, res: Response) => {
@@ -58,7 +79,8 @@ app.get('/health', async (req: Request, res: Response) => {
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: 'OK', database: 'Connected', message: 'EventMaster API is running' });
   } catch (error: any) {
-    res.status(500).json({ status: 'ERROR', database: 'Disconnected', error: error.message });
+    console.error('[Health] Base de données injoignable:', error);
+    res.status(500).json({ status: 'ERROR', database: 'Disconnected' });
   }
 });
 
@@ -67,7 +89,8 @@ app.get('/api/health', async (req: Request, res: Response) => {
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: 'OK', database: 'Connected', message: 'EventMaster API is running' });
   } catch (error: any) {
-    res.status(500).json({ status: 'ERROR', database: 'Disconnected', error: error.message });
+    console.error('[Health] Base de données injoignable:', error);
+    res.status(500).json({ status: 'ERROR', database: 'Disconnected' });
   }
 });
 

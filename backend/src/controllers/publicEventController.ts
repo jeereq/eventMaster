@@ -864,7 +864,7 @@ export async function getTicketOrderBySession(req: Request, res: Response) {
 
     const order = await prisma.ticketOrder.findFirst({
       where: {
-        OR: [{ stripeCheckoutSessionId: sessionId }, { id: sessionId }, { flexPayOrderNumber: sessionId }],
+        OR: [{ stripeCheckoutSessionId: sessionId }, { id: sessionId }],
       },
       include: {
         event: { select: { title: true, slug: true, date: true, location: true } },
