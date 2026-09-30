@@ -1,4 +1,4 @@
-import { LANDSCAPE_STYLE_META, type LandscapeStyle } from '@/lib/roomOutdoorUtils';
+import { LANDSCAPE_STYLE_META, isPoolShape, type LandscapeStyle, type PoolShape } from '@/lib/roomOutdoorUtils';
 import { api } from '@/lib/api';
 import { isStudioJobAccepted, type StudioJobAccepted } from '@/lib/studioJobs';
 import { applyServerAllowance, getOrCreateDeviceId, AI_ROOM_PLAN_TOKEN_COST, type AiAllowance } from '@/lib/aiTokens';
@@ -21,6 +21,8 @@ import {
   type AisleStyle,
   type ChairStyle,
   type ChairType,
+  type ChandelierFixtureStyle,
+  type RoofStyle,
   type RoomLayoutBlueprint,
   type RoomOutlineShape,
   type SeatMaterial,
@@ -33,6 +35,8 @@ import {
 
 export { AI_ROOM_PLAN_TOKEN_COST };
 export const AI_ROOM_IMPORT_GROUP_ID = 'ai-import';
+/** Hauteur d’une marche de gradin importée (m), comme les amphithéâtres générés. */
+const IMPORTED_TIER_RISE_M = 0.3;
 export const AI_ROOM_PLAN_DRAFT_KEY = 'em_ai_room_plan_draft';
 export const ROOM_PLAN_BRIEF_MIN = 8;
 
@@ -125,6 +129,10 @@ export interface RoomPlanVisionItem {
   podiumStyle?: string;
   instrumentStyle?: string;
   barStyle?: string;
+  chandelierStyle?: string;
+  poolShape?: string;
+  /** Rangée de gradin : 0 au pied de la scène, +1 par marche. */
+  tier?: number;
   anchor?: 'box' | 'center';
 }
 
@@ -910,6 +918,62 @@ function isTentStructureItem(
   return kind === 'gazebo' && area >= 2400;
 }
 
+/**
+ * Amphithéâtre importé sans marches renseignées : on étage les rangées depuis la scène
+ * (rang le plus proche = pied de gradin), pour obtenir des gradins au lieu de rangées à plat.
+ */
+function assignImportedTiers(
+  furniture: RoomLayoutBlueprint['furniture'],
+  fixtures: RoomLayoutBlueprint['fixtures'],
+  roomType: RoomLayoutBlueprint['roomType'],
+): void {
+  const rows = furniture.filter((f): f is Extract<typeof f, { kind: 'row' }> => f.kind === 'row');
+  if (roomType !== 'AMPHITHEATER' || rows.length < 2 || rows.some((r) => (r.tier ?? 0) > 0)) return;
+  const stage = fixtures.find((f) => f.kind === 'stage') ?? fixtures.find((f) => f.kind === 'podium');
+  const focus = stage
+    ? { x: stage.x + stage.w / 2, y: stage.y + stage.h / 2 }
+    : { x: 50, y: Math.min(...rows.map((r) => r.y)) - 10 };
+  const ordered = [...rows].sort(
+    (a, b) => Math.hypot(a.x - focus.x, a.y - focus.y) - Math.hypot(b.x - focus.x, b.y - focus.y),
+  );
+  let tier = 0;
+  let lastDist = -Infinity;
+  for (const row of ordered) {
+    const dist = Math.hypot(row.x - focus.x, row.y - focus.y);
+    // Deux rangées à la même distance (de part et d’autre d’une allée) partagent la marche.
+    if (dist - lastDist > 3) {
+      if (lastDist > -Infinity) tier += 1;
+      lastDist = dist;
+    }
+    row.tier = tier;
+    row.elevationM = Number((tier * IMPORTED_TIER_RISE_M).toFixed(2));
+    row.focusX = focus.x;
+    row.focusY = focus.y;
+  }
+}
+
+/** Toitures que le rendu 3D sait construire (tout style reconnu par l’IA est conservé). */
+const IMPORTED_ROOF_STYLES = new Set<RoofStyle>([
+  'tentSwag', 'pagoda', 'gabled', 'coffered', 'glassCanopy', 'dome', 'pergola', 'mansard', 'skylight', 'fabricStretch',
+]);
+
+const IMPORTED_CHANDELIER_STYLES = new Set<ChandelierFixtureStyle>([
+  'crystalCascade', 'brassRings', 'bohoPampas', 'botanicalHalo', 'fairyCanopy', 'candleCandelabra', 'modernMinimal', 'lantern',
+]);
+
+/** Forme de piscine : valeur de l’IA, sinon déduite du libellé (« Piscine haricot »…). */
+function inferPoolShape(item: RoomPlanVisionItem): PoolShape {
+  if (item.poolShape && isPoolShape(item.poolShape)) return item.poolShape;
+  const t = (item.label ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (/haricot|kidney|rein/.test(t)) return 'kidney';
+  if (/ovale|oval/.test(t)) return 'oval';
+  if (/ronde|round|circul/.test(t)) return 'round';
+  if (/\bl\b|en l|l-shape|lshape/.test(t)) return 'lShape';
+  if (/libre|freeform|organi|lagon|lagoon/.test(t)) return 'freeform';
+  if (/arrondi|rounded/.test(t)) return 'rounded';
+  return 'rectangle';
+}
+
 function resolveImportedRoof(
   appearance: RoomPlanVisionAppearance | undefined,
   current: RoomLayoutBlueprint,
@@ -919,8 +983,8 @@ function resolveImportedRoof(
   if (style === 'flat') {
     return { roofStyle: 'flat', showRoof: false };
   }
-  if (style === 'tentSwag' || style === 'gabled' || style === 'coffered') {
-    return { roofStyle: style, showRoof: true };
+  if (style && IMPORTED_ROOF_STYLES.has(style as RoofStyle)) {
+    return { roofStyle: style as RoofStyle, showRoof: true };
   }
   return { roofStyle: current.metadata.roofStyle, showRoof: current.metadata.showRoof };
 }
@@ -1015,6 +1079,9 @@ function applyFixtureLook(
     if (allowed.includes(item.barStyle as typeof allowed[number])) {
       next = { ...next, barStyle: item.barStyle as typeof allowed[number] };
     }
+  }
+  if (item.kind === 'chandelier' && item.chandelierStyle && IMPORTED_CHANDELIER_STYLES.has(item.chandelierStyle as ChandelierFixtureStyle)) {
+    next = { ...next, chandelierStyle: item.chandelierStyle as ChandelierFixtureStyle, lightWarmth: 'warm' };
   }
   if (item.kind === 'chandelier' && item.color && !looksGold(item.color)) {
     next = { ...next, lightWarmth: 'neutral', color: item.color };
@@ -1240,6 +1307,7 @@ export function applyRoomPlanVisionDraft(
         const style = inferLandscapeStyle(item.label);
         const meta = LANDSCAPE_STYLE_META[style];
         created = { ...created, landscapeStyle: style, label: meta.label, heightM: meta.heightM, color: item.color ?? meta.color };
+        if (style === 'pool') created = { ...created, poolShape: inferPoolShape(item) };
       }
       const box = itemFootprint(item, { w: created.w, h: created.h });
       const rawRot = item.rotation;
@@ -1315,6 +1383,9 @@ export function applyRoomPlanVisionDraft(
         rotation: item.rotation,
         ...(asChairStyle(item.chairStyle) ? { chairStyle: asChairStyle(item.chairStyle) } : {}),
         ...(asSeatMaterial(item.seatMaterial) ? { seatMaterial: asSeatMaterial(item.seatMaterial) } : {}),
+        ...(typeof item.tier === 'number' && item.tier > 0
+          ? { tier: item.tier, elevationM: Number((item.tier * IMPORTED_TIER_RISE_M).toFixed(2)) }
+          : {}),
         storyId,
       };
       furniture.push(row);
@@ -1428,6 +1499,8 @@ export function applyRoomPlanVisionDraft(
       warnings.push('Contour généré automatiquement d’après l’analyse IA.');
     }
   }
+
+  assignImportedTiers(furniture, fixtures, current.roomType);
 
   const imageRole = resolveImageRole(draft);
   const observedFloor = asFloorType(appearance?.floorType);

@@ -108,7 +108,25 @@ const ITEM_KINDS = new Set([
   'loungeSofa',
   'car',
   'parasol',
+  'landscape',
 ]);
+
+/** Styles reconnus pour les éléments du rendu 3D (valeurs inconnues ignorées). */
+const ROOF_STYLES = new Set([
+  'flat', 'tentSwag', 'pagoda', 'gabled', 'coffered', 'glassCanopy', 'dome', 'pergola', 'mansard', 'skylight', 'fabricStretch',
+]);
+const BAR_STYLES = new Set([
+  'cocktail', 'wine', 'champagne', 'beer', 'coffee', 'whiskey', 'island', 'lShaped', 'juice', 'mocktail', 'tapas', 'tea',
+]);
+const PODIUM_STYLES = new Set(['speaker', 'lectern', 'couple', 'circular', 'runway', 'bandRiser', 'honor', 'steps']);
+const INSTRUMENT_STYLES = new Set([
+  'piano', 'upright', 'keyboard', 'drums', 'guitar', 'bass', 'doubleBass', 'cello', 'harp',
+  'micStand', 'sax', 'trumpet', 'violin', 'conga', 'cajon', 'mixer', 'amp', 'speaker',
+]);
+const CHANDELIER_STYLES = new Set([
+  'crystalCascade', 'brassRings', 'bohoPampas', 'botanicalHalo', 'fairyCanopy', 'candleCandelabra', 'modernMinimal', 'lantern',
+]);
+const POOL_SHAPES = new Set(['rectangle', 'rounded', 'oval', 'round', 'kidney', 'lShape', 'freeform']);
 
 /** Vocabulaire courant renvoyé par les modèles vision → kind EventMaster. */
 const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
@@ -161,6 +179,20 @@ const KIND_ALIASES: Record<string, RoomPlanVisionItemKind> = {
   theaterseats: 'row',
   rangee: 'row',
   rangees: 'row',
+  // Aménagements extérieurs (style déduit du libellé côté éditeur)
+  landscape: 'landscape',
+  pool: 'landscape',
+  swimmingpool: 'landscape',
+  piscine: 'landscape',
+  bassin: 'landscape',
+  pond: 'landscape',
+  tree: 'landscape',
+  arbre: 'landscape',
+  palm: 'landscape',
+  palmier: 'landscape',
+  shrub: 'landscape',
+  planter: 'landscape',
+  jardiniere: 'landscape',
   gradin: 'row',
   gradins: 'row',
   amphitheater: 'row',
@@ -560,7 +592,8 @@ export type RoomPlanVisionItemKind =
   | 'condimentStation'
   | 'loungeSofa'
   | 'car'
-  | 'parasol';
+  | 'parasol'
+  | 'landscape';
 
 export interface RoomPlanVisionItem {
   kind: RoomPlanVisionItemKind;
@@ -589,6 +622,11 @@ export interface RoomPlanVisionItem {
   podiumStyle?: string;
   instrumentStyle?: string;
   barStyle?: string;
+  chandelierStyle?: string;
+  /** Forme du bassin (kind="landscape" piscine). */
+  poolShape?: string;
+  /** Rangée de gradin : 0 = premier rang au niveau de la scène, puis +1 par marche. */
+  tier?: number;
   anchor?: 'box' | 'center';
 }
 
@@ -926,9 +964,8 @@ function parseAppearance(raw: unknown, view: RoomPlanVisionView): RoomPlanVision
   if (tableSurface) appearance.tableSurface = tableSurface;
   const tableColor = parseHexColor(source.tableColor);
   if (tableColor) appearance.tableColor = tableColor;
-  if (source.roofStyle === 'tentSwag' || source.roofStyle === 'flat' || source.roofStyle === 'gabled' || source.roofStyle === 'coffered') {
-    appearance.roofStyle = source.roofStyle;
-  }
+  const roofStyle = asKnown(source.roofStyle, ROOF_STYLES);
+  if (roofStyle) appearance.roofStyle = roofStyle;
   const curtainColor = parseHexColor(source.curtainColor);
   if (curtainColor) appearance.curtainColor = curtainColor;
   return appearance;
@@ -1047,6 +1084,20 @@ export function parseRoomPlanVisionDraft(
     if (row.pedestalStyle === 'squareWhite' || row.pedestalStyle === 'columnGold') {
       item.pedestalStyle = row.pedestalStyle;
     }
+    const podiumStyle = kind === 'podium' ? asKnown(row.podiumStyle, PODIUM_STYLES) : undefined;
+    if (podiumStyle) item.podiumStyle = podiumStyle;
+    const instrumentStyle = kind === 'instrument' ? asKnown(row.instrumentStyle, INSTRUMENT_STYLES) : undefined;
+    if (instrumentStyle) item.instrumentStyle = instrumentStyle;
+    const barStyle = kind === 'bar' ? asKnown(row.barStyle, BAR_STYLES) : undefined;
+    if (barStyle) item.barStyle = barStyle;
+    const chandelierStyle = kind === 'chandelier' ? asKnown(row.chandelierStyle, CHANDELIER_STYLES) : undefined;
+    if (chandelierStyle) item.chandelierStyle = chandelierStyle;
+    const poolShape = kind === 'landscape' ? asKnown(row.poolShape, POOL_SHAPES) : undefined;
+    if (poolShape) item.poolShape = poolShape;
+    if (kind === 'row' && row.tier != null) {
+      const tier = Math.round(asNumber(row.tier, 0));
+      if (Number.isFinite(tier) && tier >= 0) item.tier = Math.min(30, tier);
+    }
     if (geo.anchor === 'center' || geo.anchor === 'box') item.anchor = geo.anchor;
     else if (row.anchor === 'center' || row.anchor === 'box') item.anchor = row.anchor;
     else item.anchor = 'box';
@@ -1133,11 +1184,11 @@ Required JSON fields:
     "wallColor": "#rrggbb",
     "tableSurface": "wood"|"linen"|"walnut"|"marble"|"darkWood"|"whiteLacquer"|"glass",
     "tableColor": "#rrggbb",
-    "roofStyle": "flat"|"tentSwag"|"gabled"|"coffered",
+    "roofStyle": "flat"|"tentSwag"|"pagoda"|"gabled"|"coffered"|"glassCanopy"|"dome"|"pergola"|"mansard"|"skylight"|"fabricStretch",
     "curtainColor": "#rrggbb"
   },
   "items": [{
-    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"corridor"|"perimeter"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen"|"instrument"|"bar"|"orderCounter"|"pickupCounter"|"pizzaOven"|"kitchenLine"|"displayCase"|"stylingStation"|"washBasin"|"condimentStation"|"loungeSofa"|"car"|"parasol",
+    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"corridor"|"perimeter"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen"|"instrument"|"bar"|"orderCounter"|"pickupCounter"|"pizzaOven"|"kitchenLine"|"displayCase"|"stylingStation"|"washBasin"|"condimentStation"|"loungeSofa"|"car"|"parasol"|"landscape",
     "x":0-100, "y":0-100, "w":0-100, "h":0-100, "anchor":"box",
     "rotation":-180-180, "seats":number,
     "shape": "round"|"rectangular"|"square"|"oval"|"cocktail"|"highTop"|"arc",
@@ -1155,7 +1206,10 @@ Required JSON fields:
     "pedestalStyle": "squareWhite"|"columnGold",
     "podiumStyle": "speaker"|"lectern"|"couple"|"circular"|"runway"|"bandRiser"|"honor"|"steps",
     "instrumentStyle": "piano"|"keyboard"|"drums"|"guitar"|"bass"|"micStand"|"sax"|"violin"|"amp"|"speaker",
-    "barStyle": "cocktail"|"wine"|"champagne"|"beer"|"coffee"|"whiskey"
+    "barStyle": "cocktail"|"wine"|"champagne"|"beer"|"coffee"|"whiskey"|"island"|"lShaped"|"juice"|"mocktail"|"tapas"|"tea",
+    "chandelierStyle": "crystalCascade"|"brassRings"|"bohoPampas"|"botanicalHalo"|"fairyCanopy"|"candleCandelabra"|"modernMinimal"|"lantern",
+    "poolShape": "rectangle"|"rounded"|"oval"|"round"|"kidney"|"lShape"|"freeform",
+    "tier": 0-30
   }],
   "walls": [{ "start": {"x","y"}, "end": {"x","y"}, "doors": [0-1], "windows": [0-1] }],
   "confidence": 0-1,
@@ -1166,8 +1220,11 @@ Appearance rules:
 - floorType / floorColor / wallTexture / wallColor / curtainColor: only when clearly visible.
 - Colors as hex (#rrggbb) from the observed tint — not an EventMaster theme color.
 - tableSurface = visible cloth / top (linen if fabric cloth, wood if bare wood, marble if marble).
-- roofStyle = tentSwag for draped marquee/tent, gabled for pitched roof, coffered for coffers, flat for flat ceiling. A tent is NOT a gazebo item: set canvas.widthM/heightM to the real tent size.
-- Chandeliers: one chandelier item per visible ceiling fixture. Do not invent crystal or gold.
+- roofStyle = tentSwag for a framed marquee/reception tent with draped lining, pagoda for peaked pagoda/pointed tents, fabricStretch for stretch/sail canopies, gabled for a pitched tiled roof, mansard for a mansard roof, pergola for a louvred pergola, glassCanopy for a glass-roofed hall/greenhouse, dome for a dome, skylight for a flat roof with a roof lantern, coffered for coffers, flat for a flat ceiling. A tent is NOT a gazebo item: set canvas.widthM/heightM to the real tent size.
+- Chandeliers: one chandelier item per visible ceiling fixture. chandelierStyle only when recognizable: crystalCascade (crystal drops), candleCandelabra (candle arms), brassRings (metal rings/halos), bohoPampas (pampas/rattan), botanicalHalo (flowers/greenery ring), fairyCanopy (string-light canopy), lantern (lantern), modernMinimal (plain pendants). Do not invent crystal or gold.
+- bar: barStyle when the counter type is recognizable (island = counter open on all sides, lShaped = L counter, beer = tap tower, coffee = espresso machine, wine/champagne/whiskey = bottle display).
+- landscape = outdoor tree, hedge, planter, pond or swimming pool; label says which ("Piscine", "Palmier", "Haie"). For a pool, poolShape follows the visible outline (kidney = bean shape, freeform = organic).
+- Stepped / raked seating (amphitheater, gradins, auditorium): one "row" item per step with tier = 0 for the row nearest the stage, then +1 per step going up.
 - Table w/h = real floor footprint in % (small cocktail ≈ 5–6, round 8 seats ≈ 10, long ≈ 12–16).
 
 Item rules (inference allowed):
@@ -1224,7 +1281,8 @@ Counting mission:
 - Respect room type and meters for canvas.widthM / heightM.
 - Gold, petals, red aisle, crystal chandelier: only if the brief or event type (wedding, gala) justifies them.
 - view="top", appearance.imageRole="plan".
-- Tent: roofStyle="tentSwag", canvas = real size. No gazebo item for the tent itself.
+- Tent: roofStyle="tentSwag" (or "pagoda" for peaked tents), canvas = real size. No gazebo item for the tent itself.
+- Amphitheater / auditorium: rows curved toward the stage, tier = 0 nearest the stage then +1 per step. Chandeliers carry chandelierStyle from the mood; a pool (kind="landscape", label="Piscine") carries poolShape.
 - w/h = real floor footprint (round 8 seats ≈ 9–11, cocktail ≈ 5–6, long ≈ 12–16).
 
 JSON schema:
@@ -1240,11 +1298,11 @@ JSON schema:
     "wallColor": "#rrggbb",
     "tableSurface": "wood"|"linen"|"walnut"|"marble"|"darkWood"|"whiteLacquer"|"glass",
     "tableColor": "#rrggbb",
-    "roofStyle": "flat"|"tentSwag"|"gabled"|"coffered",
+    "roofStyle": "flat"|"tentSwag"|"pagoda"|"gabled"|"coffered"|"glassCanopy"|"dome"|"pergola"|"mansard"|"skylight"|"fabricStretch",
     "curtainColor": "#rrggbb"
   },
   "items": [{
-    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"corridor"|"perimeter"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen"|"instrument"|"bar"|"orderCounter"|"pickupCounter"|"pizzaOven"|"kitchenLine"|"displayCase"|"stylingStation"|"washBasin"|"condimentStation"|"loungeSofa"|"car"|"parasol",
+    "kind": "table"|"row"|"chair"|"zone"|"stage"|"podium"|"aisle"|"corridor"|"perimeter"|"door"|"entrance"|"carpet"|"buffet"|"column"|"stairs"|"balcony"|"chandelier"|"flower"|"arch"|"partition"|"decal"|"pedestal"|"stringLight"|"fountain"|"gazebo"|"djBooth"|"screen"|"instrument"|"bar"|"orderCounter"|"pickupCounter"|"pizzaOven"|"kitchenLine"|"displayCase"|"stylingStation"|"washBasin"|"condimentStation"|"loungeSofa"|"car"|"parasol"|"landscape",
     "x":0-100, "y":0-100, "w":0-100, "h":0-100, "anchor":"box",
     "rotation":-180-180, "seats":number,
     "shape": "round"|"rectangular"|"square"|"oval"|"cocktail"|"highTop"|"arc",
@@ -1258,7 +1316,10 @@ JSON schema:
     "aisleStyle": "royalRed"|"whiteMirror"|"botanicalRunner"|"rusticWood"|"damaskGold"|"ledRunway"|"blackVelvet",
     "podiumStyle": "speaker"|"lectern"|"couple"|"circular"|"runway"|"bandRiser"|"honor"|"steps",
     "instrumentStyle": "piano"|"keyboard"|"drums"|"guitar"|"bass"|"micStand"|"sax"|"violin"|"amp"|"speaker",
-    "barStyle": "cocktail"|"wine"|"champagne"|"beer"|"coffee"|"whiskey"
+    "barStyle": "cocktail"|"wine"|"champagne"|"beer"|"coffee"|"whiskey"|"island"|"lShaped"|"juice"|"mocktail"|"tapas"|"tea",
+    "chandelierStyle": "crystalCascade"|"brassRings"|"bohoPampas"|"botanicalHalo"|"fairyCanopy"|"candleCandelabra"|"modernMinimal"|"lantern",
+    "poolShape": "rectangle"|"rounded"|"oval"|"round"|"kidney"|"lShape"|"freeform",
+    "tier": 0-30
   }],
   "walls": [{ "start": {"x","y"}, "end": {"x","y"}, "doors": [0-1], "windows": [0-1] }],
   "confidence": 0-1,

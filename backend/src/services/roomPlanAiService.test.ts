@@ -189,6 +189,31 @@ describe('parseRoomPlanVisionDraft', () => {
     assert.equal(draft.appearance.imageRole, 'photo');
   });
 
+  it('garde les styles du rendu 3D : toit, bar, lustre, piscine et marches de gradin', () => {
+    const draft = parseRoomPlanVisionDraft({
+      view: 'top',
+      canvas: { widthM: 30, heightM: 20 },
+      outline: { shape: 'rectangle', x: 4, y: 4, w: 92, h: 92 },
+      appearance: { imageRole: 'plan', roofStyle: 'pagoda' },
+      items: [
+        { kind: 'bar', x: 10, y: 10, w: 20, h: 8, barStyle: 'island' },
+        { kind: 'chandelier', x: 50, y: 50, chandelierStyle: 'candleCandelabra' },
+        { kind: 'piscine', x: 60, y: 60, w: 20, h: 12, label: 'Piscine', poolShape: 'kidney' },
+        { kind: 'row', x: 30, y: 40, w: 30, h: 4, seats: 14, tier: 2 },
+        { kind: 'bar', x: 70, y: 10, barStyle: 'spaceship' },
+      ],
+      walls: [],
+      confidence: 0.7,
+    }, { widthM: 30, heightM: 20 });
+    assert.equal(draft.appearance.roofStyle, 'pagoda');
+    assert.equal(draft.items[0].barStyle, 'island');
+    assert.equal(draft.items[1].chandelierStyle, 'candleCandelabra');
+    assert.equal(draft.items[2].kind, 'landscape');
+    assert.equal(draft.items[2].poolShape, 'kidney');
+    assert.equal(draft.items[3].tier, 2);
+    assert.equal(draft.items[4].barStyle, undefined);
+  });
+
   it('plafonne le nombre d’objets', () => {
     const items = Array.from({ length: ROOM_PLAN_VISION_ITEM_MAX + 5 }, (_, i) => ({
       kind: 'table',
