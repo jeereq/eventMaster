@@ -254,8 +254,19 @@ function escapeContactHtml(value: string): string {
     .replaceAll('"', '&quot;');
 }
 
+/** Le formulaire de contact envoie des e-mails et un WhatsApp à l'équipe : on limite les envois par IP. */
+const contactLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'Trop de messages envoyés. Réessayez dans une heure.' },
+});
+
+const CONTACT_FIELD_MAX = { name: 120, email: 254, subject: 200, message: 5000 } as const;
+
 // POST /api/public/contact
-router.post('/contact', async (req: Request, res: Response) => {
+router.post('/contact', contactLimiter, async (req: Request, res: Response) => {
   try {
     const settings = loadPlatformSettings();
     if (settings.maintenanceMode) {
@@ -272,6 +283,17 @@ router.post('/contact', async (req: Request, res: Response) => {
       return res
         .status(400)
         .json({ error: 'Tous les champs sont requis (raison, nom, email, sujet, message).' });
+    }
+
+    const fields = { name, email, subject, message };
+    for (const [key, max] of Object.entries(CONTACT_FIELD_MAX)) {
+      const value = fields[key as keyof typeof fields];
+      if (typeof value !== 'string' || value.trim().length > max) {
+        return res.status(400).json({ error: `Le champ « ${key} » est invalide ou trop long (${max} caractères max).` });
+      }
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return res.status(400).json({ error: 'Adresse e-mail invalide.' });
     }
 
     const {
@@ -364,7 +386,6 @@ router.post('/contact', async (req: Request, res: Response) => {
       message:
         'Votre message a été transmis avec succès ! Notre équipe vous répondra dans les plus brefs délais.',
       channels,
-      recipients: recipientEmails,
       emailSimulated: anyEmailSimulated,
       whatsappSimulated: whatsappResult.simulated,
     });
