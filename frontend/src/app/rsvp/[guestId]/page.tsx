@@ -231,7 +231,9 @@ export default function RsvpPage() {
     if (!guest?.event?.id) return;
     if (!silent) setLoadingFeed(true);
     try {
-      const data = await api.get(`/rsvp/event/${guest.event.id}/feed`);
+      const data = await api.get(`/rsvp/event/${guest.event.id}/feed`, {
+        headers: { 'X-Guest-Token': guestAccessToken },
+      });
       setFeedPosts(data);
     } catch (err) {
       console.error('Error loading guest feed:', err);
@@ -244,7 +246,9 @@ export default function RsvpPage() {
     if (!guest?.event?.id) return;
     if (!silent) setLoadingGuestbook(true);
     try {
-      const data = await api.get(`/rsvp/event/${guest.event.id}/shares`);
+      const data = await api.get(`/rsvp/event/${guest.event.id}/shares`, {
+        headers: { 'X-Guest-Token': guestAccessToken },
+      });
       setGuestbookShares(data);
     } catch (err) {
       console.error('Error loading guestbook shares:', err);

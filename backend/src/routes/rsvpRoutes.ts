@@ -24,8 +24,8 @@ router.post('/:guestId/donations', submitGuestDonation);
 
 // Guest feed and sharing routes
 router.post('/:guestId/share', submitGuestShare);
-router.get('/event/:eventId/feed', getEventFeed);
-router.get('/event/:eventId/shares', getPublicEventShares);
+router.get('/event/:eventId/feed', optionalAuth, getEventFeed);
+router.get('/event/:eventId/shares', optionalAuth, getPublicEventShares);
 router.post('/feed/post/:postId/comment', optionalAuth, createEventComment);
 router.post('/feed/post/:postId/like', optionalAuth, toggleLikeEventPost);
 
