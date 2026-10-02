@@ -17,6 +17,7 @@ export default function TarifsPage() {
   const { site } = usePlatformSite();
   const cityLabel = formatCityList(enabledPublicCities(site));
   const [dbPlans, setDbPlans] = useState<any>(null);
+  const [plansLoading, setPlansLoading] = useState(true);
 
   useEffect(() => {
     async function fetchPlans() {
@@ -25,6 +26,8 @@ export default function TarifsPage() {
         if (plansData) setDbPlans(plansData);
       } catch {
         /* offline — tarifs fallback configurés dans landingPricing.ts */
+      } finally {
+        setPlansLoading(false);
       }
     }
     void fetchPlans();
@@ -61,6 +64,7 @@ export default function TarifsPage() {
       <div className="space-y-12">
         <LandingPricingSection
           dbPlans={dbPlans}
+          plansLoading={plansLoading}
           defaultAudience="B2C"
           lead="Trois parcours : client (recherche gratuite), organisateur (événements — catalogue inclus dès Business), pro (salle ou métier sans événements)."
         />

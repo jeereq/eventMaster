@@ -1189,7 +1189,10 @@ export interface PlanCapabilityBadge {
   tone: 'indigo' | 'violet' | 'emerald' | 'amber' | 'rose';
 }
 
-export function getPlanCapabilityBadges(planId: PlanId): PlanCapabilityBadge[] {
+export function getPlanCapabilityBadges(
+  planId: PlanId,
+  db?: { roomEditorLevel?: string; customTemplates?: boolean; mockupOcr?: boolean } | null,
+): PlanCapabilityBadge[] {
   const badges: PlanCapabilityBadge[] = [];
 
   if (planId === 'FREE') badges.push({ id: 'starter', label: 'Gratuit', tone: 'emerald' });
@@ -1198,8 +1201,9 @@ export function getPlanCapabilityBadges(planId: PlanId): PlanCapabilityBadge[] {
   if (planId === 'SERVICE') badges.push({ id: 'service', label: 'Prestas illimitées', tone: 'indigo' });
   if (planId === 'CATALOG') badges.push({ id: 'catalog', label: 'Salles & prestas ∞', tone: 'violet' });
 
-  if (
-    [
+  const editorLevel =
+    db?.roomEditorLevel ??
+    ([
       'PERSONAL_50',
       'PERSONAL_100',
       'PERSONAL_200',
@@ -1210,17 +1214,23 @@ export function getPlanCapabilityBadges(planId: PlanId): PlanCapabilityBadge[] {
       'VENUE',
       'CATALOG',
     ].includes(planId)
-  ) {
+      ? 'complete'
+      : ['PREMIUM_1', 'PREMIUM_2'].includes(planId)
+        ? 'advanced'
+        : planId === 'STANDARD'
+          ? 'standard'
+          : 'basic');
+  if (editorLevel === 'complete') {
     badges.push({ id: 'editorComplete', label: 'Éditeur complet', tone: 'indigo' });
-  } else if (['PREMIUM_1', 'PREMIUM_2'].includes(planId)) {
+  } else if (editorLevel === 'advanced') {
     badges.push({ id: 'editorAdvanced', label: 'Éditeur avancé', tone: 'indigo' });
-  } else if (planId === 'STANDARD') {
+  } else if (editorLevel === 'standard') {
     badges.push({ id: 'editorStandard', label: 'Éditeur Business', tone: 'indigo' });
   }
 
-  const custom = FEATURE_COMPARISON.find((r) => r.label === 'Modèles personnalisés')?.values[planId];
+  const custom = db?.customTemplates ?? FEATURE_COMPARISON.find((r) => r.label === 'Modèles personnalisés')?.values[planId];
   const mockup = FEATURE_COMPARISON.find((r) => r.label === 'Import maquette (image + palette)')?.values[planId];
-  const ocr = FEATURE_COMPARISON.find((r) => r.label === 'OCR texte sur maquette')?.values[planId];
+  const ocr = db?.mockupOcr ?? FEATURE_COMPARISON.find((r) => r.label === 'OCR texte sur maquette')?.values[planId];
   const rsvpAnalytics = FEATURE_COMPARISON.find((r) => r.label === 'Formulaires de réponse à l’invitation analytiques (export CSV)')?.values[planId];
 
   if (custom && !B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'custom', label: 'Modèles custom', tone: 'violet' });
