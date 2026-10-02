@@ -124,16 +124,49 @@ export async function seedDefaultSubscriptionPlans(): Promise<void> {
  */
 export async function loadSubscriptionPlansFromDb(): Promise<PlansConfiguration> {
   await seedDefaultSubscriptionPlans();
+  const config = await reloadSubscriptionPlansCache();
+  console.log('[SubscriptionPlan] Forfaits chargés depuis la base.');
+  return config;
+}
 
+export const PLANS_CACHE_MAX_AGE_MS = 30_000;
+
+let lastCacheReloadAt = 0;
+
+/** Relit les forfaits en base et remplace le cache (sans créer de forfait). */
+export async function reloadSubscriptionPlansCache(): Promise<PlansConfiguration> {
   const rows = await prisma.subscriptionPlan.findMany({
     orderBy: { sortOrder: 'asc' },
   });
-
   const config = rowsToConfiguration(rows);
   setPlansCache(config);
-  console.log(`[SubscriptionPlan] ${rows.length} forfait(s) chargés depuis la base.`);
+  lastCacheReloadAt = Date.now();
   return config;
 }
+
+/**
+ * Le cache est propre à chaque instance de l'API : une modification admin traitée par une
+ * instance doit être visible des autres. On relit la base au-delà de `maxAgeMs`.
+ */
+let pendingReload: Promise<void> | null = null;
+
+export async function refreshSubscriptionPlansCacheIfStale(maxAgeMs = PLANS_CACHE_MAX_AGE_MS): Promise<void> {
+  if (Date.now() - lastCacheReloadAt < maxAgeMs) return;
+  if (!pendingReload) {
+    pendingReload = reloadSubscriptionPlansCache()
+      .then(() => undefined)
+      .catch((error) => {
+        // Base indisponible : on garde le cache et on ne réessaie qu'au prochain délai.
+        lastCacheReloadAt = Date.now();
+        console.error('[SubscriptionPlan] Rechargement du catalogue impossible, cache conservé.', error);
+      })
+      .finally(() => {
+        pendingReload = null;
+      });
+  }
+  await pendingReload;
+}
+
 
 /** Persiste un catalogue complet (admin) et rafraîchit le cache. */
 export async function saveSubscriptionPlansToDb(
@@ -158,5 +191,6 @@ export async function saveSubscriptionPlansToDb(
   }
 
   setPlansCache(merged);
+  lastCacheReloadAt = Date.now();
   return merged;
 }
