@@ -9,16 +9,16 @@ export type PlanCatalog = Record<string, DbPlanCatalogEntry>;
 let cached: PlanCatalog | null = null;
 let pending: Promise<PlanCatalog | null> | null = null;
 
-function loadCatalog(): Promise<PlanCatalog | null> {
-  if (cached) return Promise.resolve(cached);
+/** Relit toujours la base (requête partagée entre écrans montés en même temps). */
+function fetchCatalog(): Promise<PlanCatalog | null> {
   if (!pending) {
     pending = api
       .get('/public/plans')
       .then((data: PlanCatalog) => {
-        cached = data && typeof data === 'object' ? data : null;
+        if (data && typeof data === 'object') cached = data;
         return cached;
       })
-      .catch(() => null)
+      .catch(() => cached)
       .finally(() => {
         pending = null;
       });
@@ -28,7 +28,9 @@ function loadCatalog(): Promise<PlanCatalog | null> {
 
 /**
  * Catalogue des forfaits tel qu'il est en base (`GET /public/plans`), partagé entre écrans.
- * `loading` reste vrai tant que la base n'a pas répondu : afficher un squelette plutôt
+ * Chaque écran relit la base à l'ouverture (la dernière valeur connue s'affiche en attendant),
+ * pour que les changements faits dans l'admin apparaissent sans recharger l'application.
+ * `loading` reste vrai tant qu'aucune réponse n'est connue : afficher un squelette plutôt
  * que des valeurs codées en dur.
  */
 export function usePlanCatalog(): { plans: PlanCatalog | null; loading: boolean } {
@@ -36,9 +38,8 @@ export function usePlanCatalog(): { plans: PlanCatalog | null; loading: boolean 
   const [loading, setLoading] = useState(!cached);
 
   useEffect(() => {
-    if (cached) return;
     let active = true;
-    void loadCatalog().then((data) => {
+    void fetchCatalog().then((data) => {
       if (!active) return;
       setPlans(data);
       setLoading(false);

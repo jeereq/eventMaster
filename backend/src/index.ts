@@ -23,7 +23,7 @@ import { prisma } from './db';
 import { startReminderWorker } from './services/reminderService';
 import { startSubscriptionExpiryWorker } from './services/subscriptionExpiryService';
 import { startCommercialPayoutWorker } from './services/commercialPayoutWorker';
-import { loadSubscriptionPlansFromDb } from './services/subscriptionPlanCatalogService';
+import { loadSubscriptionPlansFromDb, refreshSubscriptionPlansCacheIfStale } from './services/subscriptionPlanCatalogService';
 import { hydratePlatformSettingsFromDb } from './services/platformSettingsService';
 import { isSendGridConfigured, logNotificationConfigStatus } from './config/notificationConfig';
 import { maintenanceGuard } from './middleware/maintenanceGuard';
@@ -95,6 +95,12 @@ app.get('/api/health', async (req: Request, res: Response) => {
 });
 
 app.use(maintenanceGuard);
+
+// Forfaits : chaque instance relit la base au plus toutes les 30 s, pour que les changements
+// faits dans l'admin (sur une autre instance) s'appliquent partout sans redémarrage.
+app.use('/api', (_req, _res, next) => {
+  void refreshSubscriptionPlansCacheIfStale().finally(() => next());
+});
 
 // Mount Routes
 app.use('/api/auth', rateLimit({

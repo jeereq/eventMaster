@@ -145,6 +145,8 @@ router.post('/beverage-vendors/:slug/book', requireAuth, createVendorBeverageBoo
 
 // GET /api/public/plans — cache (hydraté au démarrage, mis à jour à la sauvegarde admin)
 router.get('/plans', async (_req: Request, res: Response) => {
+  // Catalogue modifiable à tout moment depuis l'admin : jamais mis en cache côté navigateur/CDN.
+  res.setHeader('Cache-Control', 'no-store');
   try {
     return res.json(getPlansConfiguration());
   } catch (error: any) {
