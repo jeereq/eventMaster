@@ -48,6 +48,7 @@ import {
   isB2cPlanId,
 } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
+import { highlightsFromDb } from '@/lib/planCatalogDb';
 
 interface UpgradePlanConfig {
   id: PlanId;
@@ -70,6 +71,9 @@ export interface DynamicPlanRow {
   promoPrice?: string;
   promoMonthlyPriceFc?: number | null;
   promoLabel?: string;
+  maxEvents?: number;
+  maxGuests?: number;
+  maxRooms?: number;
   [key: string]: unknown;
 }
 
@@ -1252,7 +1256,7 @@ export default function ClientDashboardHome() {
                         </div>
 
                         <div className="space-y-1 pt-2 border-t border-border/60 text-xs text-muted">
-                          {plan.highlights.map((h, idx) => (
+                          {highlightsFromDb(plan.id, plan.highlights, dynamicPlans?.[plan.id]).map((h, idx) => (
                             <div key={idx} className="flex items-center gap-1.5">
                               <Check className="w-3 h-3 text-primary shrink-0" />
                               <span className="truncate">{h}</span>
@@ -1328,7 +1332,7 @@ export default function ClientDashboardHome() {
                           </div>
 
                           <div className="space-y-1 pt-2 border-t border-border/60 text-xs text-muted">
-                            {plan.highlights.map((h, idx) => (
+                            {highlightsFromDb(plan.id, plan.highlights, dynamicPlans?.[plan.id]).map((h, idx) => (
                               <div key={idx} className="flex items-center gap-1.5">
                                 <Check className="w-3 h-3 text-primary shrink-0" />
                                 <span className="truncate">{h}</span>
@@ -1400,7 +1404,7 @@ export default function ClientDashboardHome() {
                               </p>
                             </div>
                             <div className="space-y-1 pt-2 border-t border-border/60 text-xs text-muted">
-                              {plan.highlights.map((h, idx) => (
+                              {highlightsFromDb(plan.id, plan.highlights, dynamicPlans?.[plan.id]).map((h, idx) => (
                                 <div key={idx} className="flex items-center gap-1.5">
                                   <Check className="w-3 h-3 text-primary shrink-0" />
                                   <span className="truncate">{h}</span>

@@ -27,26 +27,9 @@ import {
 import { PlanQuotaLimits } from '@/components/QuotaUsagePanel';
 import { cn } from '@/lib/cn';
 import { useAuth } from '@/context/AuthContext';
+import { comparisonValueFromDb, highlightsFromDb, type DbPlanCatalogEntry } from '@/lib/planCatalogDb';
 
-interface DbPlan {
- name?: string;
- price?: string;
- monthlyPriceFc?: number;
- promoActive?: boolean;
- promoPrice?: string;
- promoMonthlyPriceFc?: number;
- promoLabel?: string;
- description?: string;
- maxEvents?: number;
- maxGuests?: number;
- maxTemplates?: number;
- maxRooms?: number;
- maxServices?: number;
- maxOrgManagers?: number;
- customTemplates?: boolean;
- mockupOcr?: boolean;
- commercialNetwork?: boolean;
-}
+type DbPlan = DbPlanCatalogEntry;
 
 function parseComparisonQuota(planId: PlanId, label: string): number {
  const row = FEATURE_COMPARISON.find((r) => r.label === label);
@@ -58,6 +41,8 @@ function parseComparisonQuota(planId: PlanId, label: string): number {
 
 interface LandingPricingSectionProps {
  dbPlans: Record<string, DbPlan> | null;
+ /** Catalogue en cours de chargement : les prix ne sont pas encore ceux de la base. */
+ plansLoading?: boolean;
  defaultAudience?: 'B2B' | 'B2C' | 'VENDOR';
  lead?: string;
 }
@@ -93,6 +78,7 @@ const TIER_ACCENT: Record<string, string> = {
 
 export default function LandingPricingSection({
  dbPlans,
+ plansLoading = false,
  defaultAudience = 'B2B',
  lead,
 }: LandingPricingSectionProps) {
@@ -130,7 +116,7 @@ export default function LandingPricingSection({
    ? computePromoSavingsPercent(displayedCatalogFc, displayedPromoFc)
    : null;
 
- const badges = getPlanCapabilityBadges(plan.id);
+ const badges = getPlanCapabilityBadges(plan.id, db);
 
  return {
  ...plan,
@@ -142,6 +128,7 @@ export default function LandingPricingSection({
  promoLabel: db?.promoLabel || 'Offre promotionnelle',
  promoSavingsPercent,
  description: db?.description || plan.tagline,
+ highlights: highlightsFromDb(plan.id, plan.highlights, db),
  badges,
  limits: {
  events: db?.maxEvents ?? parseComparisonQuota(plan.id, 'Événements actifs'),
@@ -435,7 +422,11 @@ export default function LandingPricingSection({
  : 'text-foreground dark:text-foreground'
  }`}
  >
- {plan.price}
+ {plansLoading ? (
+  <span className="inline-block h-8 w-28 rounded-lg bg-surface-muted animate-pulse align-middle" aria-label="Chargement du prix" />
+ ) : (
+  plan.price
+ )}
  </span>
  {plan.id !== 'FREE' && (
  <span className="text-sm font-medium text-muted">{planPricePeriodSuffix(plan.id, billing)}</span>
@@ -570,7 +561,7 @@ export default function LandingPricingSection({
  </td>
  {comparisonIds.map((id) => (
  <td key={id} className="py-2.5 px-2 text-center">
- <FeatureCell value={row.values[id]} />
+ <FeatureCell value={comparisonValueFromDb(row.label, id, row.values[id], dbPlans?.[id])} />
  </td>
  ))}
  </tr>
