@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { api } from '../lib/api';
 import type { PlanId } from '@/config/landingPricing';
 import { applyBrandToDocument, type TenantBranding } from '@/lib/brandTheme';
@@ -231,6 +231,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [supportSession, setSupportSession] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const onExpired = () => setSessionExpired(true);
@@ -490,7 +491,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const refreshPlanFeatures = async () => {
+  const planFeaturesRequest = useRef<Promise<void> | null>(null);
+
+  // Une seule requête à la fois, partagée par les écrans qui la demandent en même temps.
+  const refreshPlanFeatures = () => {
+    if (!planFeaturesRequest.current) {
+      planFeaturesRequest.current = loadPlanFeatures().finally(() => {
+        planFeaturesRequest.current = null;
+      });
+    }
+    return planFeaturesRequest.current;
+  };
+
+  const loadPlanFeatures = async () => {
     try {
       const data = await api.get('/billing/plan-features');
       setPlanName(typeof data.planName === 'string' && data.planName ? data.planName : null);
@@ -520,9 +533,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
     } catch {
-      setPlanFeatures(null);
-      setPlanQuota(null);
-      setPlanName(null);
+      // Erreur passagère : on garde les dernières valeurs connues plutôt que de tout verrouiller.
     }
   };
 
@@ -530,11 +541,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAiTokenSessionUnlimited(user?.role === 'SUPER_ADMIN' || supportSession);
   }, [user?.role, supportSession]);
 
+  const hasPlanQuota = Boolean(
+    token && tenant?.id && user?.role === 'USER' && tenant.accountKind !== 'CLIENT',
+  );
+
+  // Les quotas et options du forfait se modifient dans l'admin : on les relit à chaque écran
+  // ouvert et au retour sur l'onglet, sans attendre une reconnexion.
   useEffect(() => {
-    if (token && tenant?.id && user?.role === 'USER' && tenant.accountKind !== 'CLIENT') {
+    if (hasPlanQuota) {
       refreshPlanFeatures();
     }
-  }, [token, tenant?.id, tenant?.accountKind, user?.role]);
+  }, [hasPlanQuota, token, tenant?.id, tenant?.accountKind, pathname]);
+
+  useEffect(() => {
+    if (!hasPlanQuota) return;
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refreshPlanFeatures();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [hasPlanQuota]);
 
   useEffect(() => {
     if (tenant?.branding) {

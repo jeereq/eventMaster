@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { AppState } from 'react-native';
 import { api, setToken, hasStoredToken } from '../lib/api';
 import type {
   AuthLoginResponse,
@@ -79,6 +80,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setPlanName(null);
     }
   }, []);
+
+  // Les options du forfait se modifient dans l'admin : on les relit au retour dans l'application.
+  useEffect(() => {
+    if (!user) return;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void refreshPlanFeatures();
+    });
+    return () => sub.remove();
+  }, [user, refreshPlanFeatures]);
 
   const refreshProfile = useCallback(async () => {
     const data = await api.get<ProfileResponse>('/auth/profile');
