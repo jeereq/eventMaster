@@ -4,6 +4,8 @@ import {
   comparisonValueFromDb,
   editorBadgeFromDb,
   formatQuota,
+  guestsBadgeFromDb,
+  planDisplayName,
   guestQuotaLabel,
   highlightsFromDb,
 } from './planCatalogDb.ts';
@@ -61,5 +63,21 @@ describe('plan catalog from database', () => {
     assert.equal(editorBadgeFromDb({ roomEditorLevel: 'complete' }), 'editorComplete');
     assert.equal(editorBadgeFromDb({ roomEditorLevel: 'basic' }), null);
     assert.equal(editorBadgeFromDb(null), null);
+  });
+
+  it('rewrites capitalised event bullets too', () => {
+    assert.deepEqual(highlightsFromDb('PERSONAL_PLUS', ['Événements illimités · +200 invités'], { maxEvents: 3, maxGuests: 99999 }), [
+      '3 événements · invités illimités',
+    ]);
+  });
+
+  it('names plans and guest badges from the database', () => {
+    assert.equal(planDisplayName('PREMIUM_1', { name: 'Premium' }, 'X'), 'Premium');
+    assert.equal(planDisplayName('PREMIUM_1', null, 'Premium (secours)'), 'Premium (secours)');
+    assert.equal(planDisplayName('PREMIUM_1', null), 'PREMIUM_1');
+    assert.equal(guestsBadgeFromDb('PERSONAL_50', { maxGuests: 50 }), '50 invités / trim.');
+    assert.equal(guestsBadgeFromDb('PERSONAL_PLUS', { maxGuests: 99999 }), 'Invités illimités');
+    assert.equal(guestsBadgeFromDb('VENUE', { maxGuests: 0 }), null);
+    assert.equal(guestsBadgeFromDb('STANDARD', null), null);
   });
 });

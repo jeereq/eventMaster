@@ -369,7 +369,9 @@ function ParamNumber({
 
 export default function RoomsManagement() {
   const aiDraftConsumed = useRef(false);
-  const { planFeatures, planQuota, tenant, refreshProfile, refreshPlanFeatures } = useAuth();
+  const { planFeatures, planQuota, tenant, planName, refreshProfile, refreshPlanFeatures } = useAuth();
+  /** Nom commercial du forfait (base) ; l'identifiant brut seulement si le nom n'est pas chargé. */
+  const planLabel = planName || tenant?.plan || null;
   const { site } = usePlatformSite();
   const marketplaceCities = enabledMarketplaceCities(site);
   const canCatalogPublish = canPublishVenueCatalog(planFeatures, planQuota, tenant?.plan);
@@ -562,7 +564,7 @@ export default function RoomsManagement() {
 
   const openWizard = () => {
     if (roomsAtLimit) {
-      setError(getQuotaActionMessage('rooms', planQuota, tenant?.plan));
+      setError(getQuotaActionMessage('rooms', planQuota, planLabel));
       return;
     }
     setError('');
@@ -597,7 +599,7 @@ export default function RoomsManagement() {
     if (typeof window === 'undefined' || new URLSearchParams(window.location.search).get('aiDraft') !== '1') return;
     if (!planFeatures) return;
     if (roomsAtLimit) {
-      setError(getQuotaActionMessage('rooms', planQuota, tenant?.plan));
+      setError(getQuotaActionMessage('rooms', planQuota, planLabel));
       return;
     }
     const stored = loadRoomPlanAiDraft();
@@ -639,7 +641,7 @@ export default function RoomsManagement() {
     );
     clearRoomPlanAiDraft();
     window.history.replaceState({}, '', '/dashboard/rooms');
-  }, [allowedRoomTypes, roomsAtLimit, planFeatures, planQuota, tenant?.plan]);
+  }, [allowedRoomTypes, roomsAtLimit, planFeatures, planQuota, planLabel]);
 
   const goToStep = (step: number) => {
     if (step > 1 && !name.trim()) {
@@ -834,7 +836,7 @@ export default function RoomsManagement() {
       return;
     }
     if (!allowedRoomTypes.includes(roomType)) {
-      setError(getRoomTypeLockMessage(roomType, tenant?.plan));
+      setError(getRoomTypeLockMessage(roomType, planLabel));
       return;
     }
     if (canCatalogPublish && wizardListingDraft.isPublic) {
@@ -1465,7 +1467,7 @@ export default function RoomsManagement() {
       )}
 
       {roomsAtLimit && (
-        <PlanLimitCallout kind="rooms" planQuota={planQuota} planName={tenant?.plan} />
+        <PlanLimitCallout kind="rooms" planQuota={planQuota} planName={planLabel} />
       )}
 
       {rooms.length > 0 && (() => {

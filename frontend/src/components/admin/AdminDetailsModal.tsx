@@ -266,7 +266,7 @@ export default function AdminDetailsModal({
                   label: 'Invités (période)',
                   value:
                     data.guestsPeriodCount != null
-                      ? `${data.guestsPeriodCount} / ${data.maxGuests >= 9999 ? '∞' : (data.maxGuests ?? 50)}`
+                      ? `${data.guestsPeriodCount} / ${data.maxGuests >= 9999 ? '∞' : (data.maxGuests ?? '—')}`
                       : '—',
                 },
                 {
@@ -301,7 +301,7 @@ export default function AdminDetailsModal({
               <DetailRow label="Expiration">{formatDate(data.licenseExpiresAt, true)}</DetailRow>
               <DetailRow label="Quota invités période">
                 <span className="font-semibold text-foreground">
-                  {data.guestsPeriodCount ?? 0} / {data.maxGuests >= 9999 ? 'Illimité' : (data.maxGuests ?? 50)}
+                  {data.guestsPeriodCount ?? 0} / {data.maxGuests >= 9999 ? 'Illimité' : (data.maxGuests ?? '—')}
                 </span>
                 <span className="text-muted ml-2">
                   ({data.guestsTotalCount ?? 0} au total dans l’historique)

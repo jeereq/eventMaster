@@ -15,7 +15,7 @@ interface GuideTourPanelProps {
 }
 
 export default function GuideTourPanel({ guideId }: GuideTourPanelProps) {
-  const { access, tenant, planQuota, planFeatures } = useAuth();
+  const { access, tenant, planQuota, planFeatures, planName } = useAuth();
   const { startTour, isActive } = useTour();
   const tourOpts = useMemo<NavTourOptions>(
     () =>
@@ -25,8 +25,9 @@ export default function GuideTourPanel({ guideId }: GuideTourPanelProps) {
         planQuota,
         planFeatures,
         planId: tenant?.plan,
+        planName,
       }),
-    [access, tenant?.accountKind, tenant?.plan, planQuota, planFeatures],
+    [access, tenant?.accountKind, tenant?.plan, planQuota, planFeatures, planName],
   );
   const steps = getProductTour(guideId, access, tourOpts);
   const tabSteps = steps.filter((s) => s.target);

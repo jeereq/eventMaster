@@ -4,6 +4,7 @@ import { FINISH_STEP, NAV_TOUR_META, WELCOME_STEP } from '@/config/navTourMeta';
 import type { ProductTourStep } from '@/config/productTours';
 import { getWorkspaceModules, type WorkspaceModules } from '@/lib/planAccess';
 import { LANDING_PLANS } from '@/config/landingPricing';
+import { planDisplayName } from '@/lib/planCatalogDb';
 import { interpolateRates } from '@/lib/platformRates';
 
 function tabStep(tourId: string, routeOverride?: string): ProductTourStep | null {
@@ -116,8 +117,12 @@ export function buildNavTourOptions(input: {
   planQuota?: PlanQuotaInfo | null;
   planFeatures?: PlanCapabilities | null;
   planId?: string | null;
+  /** Nom du forfait en base (useAuth().planName) ; libellé marketing en secours. */
+  planName?: string | null;
 }): NavTourOptions {
-  const landingName = LANDING_PLANS.find((p) => p.id === input.planId)?.ms365Name;
+  const ms365Name = LANDING_PLANS.find((p) => p.id === input.planId)?.ms365Name;
+  const landingName =
+    input.planName || (ms365Name ? planDisplayName(input.planId, null, ms365Name) : null);
   return {
     workspace: getWorkspaceModules({
       accountKind: input.accountKind,

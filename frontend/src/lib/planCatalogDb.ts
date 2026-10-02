@@ -22,6 +22,7 @@ export type DbPlanCatalogEntry = {
   protocolQr?: boolean;
   seatNotifications?: boolean;
   adminReports?: boolean;
+  roomThemesFixtures?: boolean;
   roomEditorLevel?: string;
   supportLevel?: string;
   promoActive?: boolean;
@@ -52,14 +53,14 @@ export function guestQuotaLabel(planId: string, maxGuests: number | undefined | 
   return `${base} / ${isB2cId(planId) ? 'trim.' : 'mois'}`;
 }
 
-const EDITOR_LEVEL_LABELS: Record<string, string> = {
+export const EDITOR_LEVEL_LABELS: Record<string, string> = {
   basic: 'Basique',
   standard: 'Standard',
   advanced: 'Avancé',
   complete: 'Complet',
 };
 
-const SUPPORT_LEVEL_LABELS: Record<string, string> = {
+export const SUPPORT_LEVEL_LABELS: Record<string, string> = {
   community: 'Communauté',
   email: 'E-mail',
   priority: 'Prioritaire',
@@ -86,6 +87,7 @@ const COMPARISON_RESOLVERS: Record<
   'Champs de réponse à l’invitation personnalisables (genre, allergies, boissons, menu)': (_id, db) =>
     db.customRsvpFields ?? null,
   'Export revenus & commissions (admin)': (_id, db) => db.adminReports ?? null,
+  'Thèmes d’ambiance & éclairage (12 presets)': (_id, db) => db.roomThemesFixtures ?? null,
   'Éditeur de salle 2D / 3D': (_id, db) => {
     if (db.maxRooms != null && db.maxRooms <= 0) return '—';
     return db.roomEditorLevel ? EDITOR_LEVEL_LABELS[db.roomEditorLevel] ?? null : null;
@@ -120,7 +122,7 @@ export function highlightsFromDb(
   const maxRooms = typeof db?.maxRooms === 'number' ? db.maxRooms : undefined;
   if (!db) return highlights;
   return highlights.map((line, index) => {
-    if (index === 0 && /événements/.test(line) && maxEvents != null && maxGuests != null) {
+    if (index === 0 && /événements/i.test(line) && maxEvents != null && maxGuests != null) {
       const events = formatQuota(maxEvents);
       const eventsPart = events === 'Illimité' ? 'Événements illimités' : `${events} événements`;
       const guests = formatQuota(maxGuests);
@@ -153,4 +155,36 @@ export function editorBadgeFromDb(db?: DbPlanCatalogEntry | null): 'editorComple
     default:
       return null;
   }
+}
+
+/** Nom commercial du forfait : celui de la base, sinon le libellé de secours fourni. */
+export function planDisplayName(
+  planId: string | null | undefined,
+  db?: { name?: string } | null,
+  fallback?: string,
+): string {
+  const name = db?.name?.replace(/^Plan /, '').trim();
+  if (name) return name;
+  return fallback || planId || '';
+}
+
+/** Badge « N invités » d'une carte, d'après le quota en base. */
+export function guestsBadgeFromDb(
+  planId: string,
+  db?: { maxGuests?: unknown } | null,
+): string | null {
+  const maxGuests = typeof db?.maxGuests === 'number' ? db.maxGuests : undefined;
+  if (maxGuests == null) return null;
+  const guests = formatQuota(maxGuests);
+  if (guests === '—') return null;
+  if (guests === 'Illimité') return 'Invités illimités';
+  return `${guests} invités${isB2cId(planId) ? ' / trim.' : planId === 'FREE' ? '' : ' / mois'}`;
+}
+
+export function editorLevelLabel(level?: string | null): string | null {
+  return level ? EDITOR_LEVEL_LABELS[level] ?? null : null;
+}
+
+export function supportLevelLabel(level?: string | null): string | null {
+  return level ? SUPPORT_LEVEL_LABELS[level] ?? null : null;
 }

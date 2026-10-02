@@ -39,6 +39,7 @@ import { useListingFavorites } from '@/lib/listingFavorites';
 import { Modal, Button } from '@/components/ui';
 import SubscriptionFlexPayModal from '@/components/SubscriptionFlexPayModal';
 import {
+  ANNUAL_DISCOUNT_PERCENT,
   formatFc,
   type BillingCycle,
   type PlanId,
@@ -48,16 +49,26 @@ import {
   isB2cPlanId,
 } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
-import { highlightsFromDb } from '@/lib/planCatalogDb';
+import {
+  editorLevelLabel,
+  guestsBadgeFromDb,
+  highlightsFromDb,
+  planDisplayName,
+  supportLevelLabel,
+} from '@/lib/planCatalogDb';
 
+/**
+ * Textes de présentation des forfaits. Prix, quotas, niveau d'éditeur et de support
+ * viennent du catalogue en base (`GET /subscriptions/plans`) : aucun montant ici.
+ * Dans les puces, `{editor}` / `{support}` sont remplacés par les niveaux en base
+ * (ligne masquée tant que la base n'a pas répondu).
+ */
 interface UpgradePlanConfig {
   id: PlanId;
   name: string;
   badge?: string;
   popular?: boolean;
-  basePriceFc: number;
   periodLabel: string;
-  guestsMax: number;
   description: string;
   highlights: string[];
 }
@@ -74,7 +85,37 @@ export interface DynamicPlanRow {
   maxEvents?: number;
   maxGuests?: number;
   maxRooms?: number;
+  roomEditorLevel?: string;
+  supportLevel?: string;
   [key: string]: unknown;
+}
+
+/** Puces d'une carte : quotas et niveaux `{editor}` / `{support}` résolus depuis la base. */
+function planHighlights(planId: PlanId, highlights: string[], db?: DynamicPlanRow | null): string[] {
+  const editor = editorLevelLabel(db?.roomEditorLevel);
+  const support = supportLevelLabel(db?.supportLevel);
+  return highlightsFromDb(planId, highlights, db).flatMap((line) => {
+    if (line.includes('{editor}')) return editor ? [line.replace('{editor}', editor)] : [];
+    if (line.includes('{support}')) return support ? [line.replace('{support}', support)] : [];
+    return [line];
+  });
+}
+
+/** Badge d'une carte : un badge de quota (« N invités ») vient de la base, masqué sans elle. */
+function planBadge(planId: PlanId, badge: string | undefined, db?: DynamicPlanRow | null): string | null {
+  if (!badge) return null;
+  if (!/invités/i.test(badge)) return badge;
+  return db ? guestsBadgeFromDb(planId, db) : null;
+}
+
+/** Montant en cours de chargement depuis le catalogue en base. */
+function PriceSkeleton({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn('inline-block h-4 w-16 rounded bg-border/70 animate-pulse align-middle', className)}
+      aria-label="Chargement du prix"
+    />
+  );
 }
 
 const UPGRADE_B2C_PLANS: UpgradePlanConfig[] = [
@@ -82,9 +123,7 @@ const UPGRADE_B2C_PLANS: UpgradePlanConfig[] = [
     id: 'PERSONAL_50',
     name: 'Particulier 50',
     badge: '50 invités',
-    basePriceFc: 60000,
     periodLabel: '90 jours (trimestre)',
-    guestsMax: 50,
     description: 'Petite célébration ou fête intime.',
     highlights: ['3 événements · 50 invités', 'Invitations et réponses WhatsApp', 'Éditeur de salle 2D/3D', 'Scan QR smartphone Jour J'],
   },
@@ -92,9 +131,7 @@ const UPGRADE_B2C_PLANS: UpgradePlanConfig[] = [
     id: 'PERSONAL_100',
     name: 'Particulier 100',
     badge: '100 invités',
-    basePriceFc: 90000,
     periodLabel: '90 jours (trimestre)',
-    guestsMax: 100,
     description: 'Anniversaire, baptême ou fiançailles.',
     highlights: ['3 événements · 100 invités', 'Invitations nominatives WhatsApp', 'Plans de table 2D/3D', 'Contrôle d’accès Jour J'],
   },
@@ -103,33 +140,25 @@ const UPGRADE_B2C_PLANS: UpgradePlanConfig[] = [
     name: 'Particulier 200',
     badge: 'Recommandé Mariage',
     popular: true,
-    basePriceFc: 120000,
     periodLabel: '90 jours (trimestre)',
-    guestsMax: 200,
     description: 'Formule préférée pour mariages et réceptions.',
-    highlights: ['3 événements · 200 invités', 'Faire-part et réponses en direct', 'Placement 2D/3D jusqu’à 80 tables', 'Émargement QR en direct'],
+    highlights: ['3 événements · 200 invités', 'Faire-part et réponses en direct', 'Éditeur 2D/3D : {editor}', 'Émargement QR en direct'],
   },
   {
     id: 'PERSONAL_PLUS',
     name: 'Particulier +200',
     badge: 'Grandes célébrations',
-    basePriceFc: 180000,
     periodLabel: '90 jours (trimestre)',
-    guestsMax: 500,
     description: 'Mariages d’envergure et fêtes communautaires.',
     highlights: ['Événements illimités · +200 invités', 'Pass d’accès QR individuels', 'Plan 2D/3D multi-tables', 'Scan smartphone rapide'],
   },
 ];
 
-const UPGRADE_B2B_PLANS: Array<Omit<UpgradePlanConfig, 'basePriceFc' | 'periodLabel'> & {
-  monthlyPriceFc: number;
-}> = [
+const UPGRADE_B2B_PLANS: Array<Omit<UpgradePlanConfig, 'periodLabel'>> = [
   {
     id: 'STANDARD',
     name: 'Business Standard',
     badge: 'Lancement Pro',
-    monthlyPriceFc: 30000,
-    guestsMax: 150,
     description: 'Organisateurs réguliers, associations et PME.',
     highlights: ['8 événements · 150 invités/évt', 'Billetterie & encaissements', 'Invitations & scan QR', 'Tableau de bord financier'],
   },
@@ -138,8 +167,6 @@ const UPGRADE_B2B_PLANS: Array<Omit<UpgradePlanConfig, 'basePriceFc' | 'periodLa
     name: 'Business Premium',
     badge: 'Recommandé Pro',
     popular: true,
-    monthlyPriceFc: 55000,
-    guestsMax: 500,
     description: 'Agences événementielles, galas et séminaires.',
     highlights: ['Multi-événements · 500 invités/évt', 'Billetterie & dons solidaires', 'Gestion d’équipe (Managers)', 'Scan QR anti-doublon illimité'],
   },
@@ -147,31 +174,23 @@ const UPGRADE_B2B_PLANS: Array<Omit<UpgradePlanConfig, 'basePriceFc' | 'periodLa
     id: 'PREMIUM_2',
     name: 'Business Premium Plus',
     badge: 'Grand Public',
-    monthlyPriceFc: 85000,
-    guestsMax: 1000,
     description: 'Grands rassemblements, galas et concerts.',
-    highlights: ['Multi-événements · 1 000 invités/évt', 'Multi-salles & plans avancés', 'Support prioritaire dédié', 'Rapports d’émargement complets'],
+    highlights: ['Multi-événements · 1 000 invités/évt', 'Multi-salles & plans avancés', 'Support : {support}', 'Rapports d’émargement complets'],
   },
   {
     id: 'ENTERPRISE_1',
     name: 'Enterprise Galas',
     badge: 'Grand Volume',
-    monthlyPriceFc: 350000,
-    guestsMax: 3500,
     description: 'Concerts, festivals, salons et foires d’envergure.',
-    highlights: ['3 500 invités · Multi-agences', 'Multi-opérateurs de scan Jour J', 'SLA & assistance sur site', 'Export comptable & analytics'],
+    highlights: ['Multi-événements · 3 500 invités', 'Multi-opérateurs de scan Jour J', 'Support : {support}', 'Export comptable & analytics'],
   },
 ];
 
-const UPGRADE_VENDOR_PLANS: Array<Omit<UpgradePlanConfig, 'basePriceFc' | 'periodLabel'> & {
-  monthlyPriceFc: number;
-}> = [
+const UPGRADE_VENDOR_PLANS: Array<Omit<UpgradePlanConfig, 'periodLabel'>> = [
   {
     id: 'VENUE',
     name: 'Salle',
     badge: 'Salles',
-    monthlyPriceFc: 14900,
-    guestsMax: 0,
     description: 'Publiez vos salles avec éditeur 2D/3D — sans événements.',
     highlights: ['Salles illimitées · éditeur complet', '4 essais IA · recharge de jetons', 'Sans événements ni invités'],
   },
@@ -179,8 +198,6 @@ const UPGRADE_VENDOR_PLANS: Array<Omit<UpgradePlanConfig, 'basePriceFc' | 'perio
     id: 'SERVICE',
     name: 'Prestataire',
     badge: 'Métiers',
-    monthlyPriceFc: 9900,
-    guestsMax: 0,
     description: 'Prestations et Matériel & Équipements illimités — sans salles ni événements.',
     highlights: ['Prestations + matériel illimités', '4 essais IA · recharge de jetons', 'Sans salles ni événements'],
   },
@@ -189,8 +206,6 @@ const UPGRADE_VENDOR_PLANS: Array<Omit<UpgradePlanConfig, 'basePriceFc' | 'perio
     name: 'Salle & presta',
     badge: 'Salle + métiers',
     popular: true,
-    monthlyPriceFc: 19900,
-    guestsMax: 0,
     description: 'Salles et métiers illimités (éditeur complet) — sans événements.',
     highlights: ['Salles ∞ + prestations / matériel ∞', 'Éditeur 2D/3D complet', '4 essais IA · recharge de jetons'],
   },
@@ -325,7 +340,8 @@ function UpgradePathCard({
   title: string;
   detail: string;
   features?: string[];
-  options: Array<{ id: UpgradeCategory; label: string; hint: string; price: string }>;
+  /** `null` : catalogue en cours de chargement (squelette). */
+  options: Array<{ id: UpgradeCategory; label: string; hint: string; price: string | null }>;
   onChoose: (category: UpgradeCategory) => void;
 }) {
   return (
@@ -359,7 +375,11 @@ function UpgradePathCard({
               <span className="block text-sm font-semibold text-foreground group-hover:text-primary transition">{option.label}</span>
               <span className="block text-xs text-muted truncate">{option.hint}</span>
             </span>
-            <span className="text-xs font-bold text-foreground tabular-nums shrink-0">{option.price}</span>
+            {option.price == null ? (
+              <PriceSkeleton className="shrink-0" />
+            ) : (
+              <span className="text-xs font-bold text-foreground tabular-nums shrink-0">{option.price}</span>
+            )}
             <ChevronRight className="w-4 h-4 text-muted group-hover:text-primary group-hover:translate-x-0.5 transition shrink-0" aria-hidden />
           </button>
         ))}
@@ -405,6 +425,7 @@ export default function ClientDashboardHome() {
   const [flexPayOpen, setFlexPayOpen] = useState(false);
   const [upgradeSuccess, setUpgradeSuccess] = useState(false);
   const [dynamicPlans, setDynamicPlans] = useState<Record<string, DynamicPlanRow> | null>(null);
+  const [plansLoading, setPlansLoading] = useState(true);
 
   useEffect(() => {
     if (tenant?.name) setOrgName(tenant.name);
@@ -429,7 +450,10 @@ export default function ClientDashboardHome() {
         }
       })
       .catch(() => {
-        // Fallback silencieux sur les prix par défaut en cas d'erreur
+        // Catalogue indisponible : les prix restent affichés « — » (aucun montant codé en dur)
+      })
+      .finally(() => {
+        if (mounted) setPlansLoading(false);
       });
 
     return () => {
@@ -443,50 +467,54 @@ export default function ClientDashboardHome() {
     setUpgradeModalOpen(true);
   };
 
-  /** Résolution du prix effectif, des promotions et de l'économie sur un forfait donné */
+  /** Résolution du prix effectif (base uniquement), des promotions et de l'économie sur un forfait donné */
   const resolvePlanPricing = useCallback(
-    (planId: PlanId, defaultMonthlyFc: number, cycle: BillingCycle) => {
+    (planId: PlanId, cycle: BillingCycle) => {
       const db = dynamicPlans?.[planId];
-      const promoActive = Boolean(db?.promoActive && db?.promoMonthlyPriceFc != null && planId !== 'FREE');
-      const promoFc = promoActive ? Number(db?.promoMonthlyPriceFc) : null;
       const catalogMonthlyFc =
         db?.monthlyPriceFc != null && Number.isFinite(db.monthlyPriceFc) && db.monthlyPriceFc > 0
           ? db.monthlyPriceFc
-          : defaultMonthlyFc;
+          : null;
+      const promoActive = Boolean(
+        catalogMonthlyFc != null && db?.promoActive && db?.promoMonthlyPriceFc != null && planId !== 'FREE',
+      );
+      const promoFc = promoActive ? Number(db?.promoMonthlyPriceFc) : null;
 
       const isB2c = isB2cPlanId(planId);
       const effectiveCycle = isB2c ? 'monthly' : cycle;
 
-      let catalogPriceFc: number;
-      let effectivePriceFc: number;
+      let catalogPriceFc: number | null = null;
+      let effectivePriceFc: number | null = null;
 
-      if (effectiveCycle === 'annual') {
-        catalogPriceFc = annualPayableFromPeriod(catalogMonthlyFc, planId);
-        effectivePriceFc =
-          promoFc != null
-            ? annualPromoPayableFromPeriod(catalogMonthlyFc, promoFc, planId)
-            : catalogPriceFc;
-      } else {
-        catalogPriceFc = catalogMonthlyFc;
-        effectivePriceFc = promoFc != null ? promoFc : catalogMonthlyFc;
+      if (catalogMonthlyFc != null) {
+        if (effectiveCycle === 'annual') {
+          catalogPriceFc = annualPayableFromPeriod(catalogMonthlyFc, planId);
+          effectivePriceFc =
+            promoFc != null
+              ? annualPromoPayableFromPeriod(catalogMonthlyFc, promoFc, planId)
+              : catalogPriceFc;
+        } else {
+          catalogPriceFc = catalogMonthlyFc;
+          effectivePriceFc = promoFc != null ? promoFc : catalogMonthlyFc;
+        }
       }
 
       const promoSavingsPercent =
-        promoActive && promoFc != null
+        promoActive && promoFc != null && catalogPriceFc != null && effectivePriceFc != null
           ? computePromoSavingsPercent(catalogPriceFc, effectivePriceFc)
           : effectiveCycle === 'annual'
-            ? 10
+            ? ANNUAL_DISCOUNT_PERCENT
             : null;
 
       return {
         catalogPriceFc,
         effectivePriceFc,
-        priceLabel: formatFc(effectivePriceFc),
-        catalogPriceLabel: formatFc(catalogPriceFc),
+        priceLabel: effectivePriceFc != null ? formatFc(effectivePriceFc) : '—',
+        catalogPriceLabel: catalogPriceFc != null ? formatFc(catalogPriceFc) : '—',
         promoActive,
         promoLabel: db?.promoLabel || 'Offre promotionnelle',
         promoSavingsPercent,
-        displayName: db?.name?.replace('Plan ', '') || undefined,
+        displayName: db?.name ? planDisplayName(planId, db) : undefined,
         description: db?.description || undefined,
       };
     },
@@ -496,7 +524,7 @@ export default function ClientDashboardHome() {
   const activePlanDetails = useMemo(() => {
     if (upgradeCategory === 'b2c') {
       const plan = UPGRADE_B2C_PLANS.find((p) => p.id === selectedPlanId) || UPGRADE_B2C_PLANS[2];
-      const pricing = resolvePlanPricing(plan.id, plan.basePriceFc, 'monthly');
+      const pricing = resolvePlanPricing(plan.id, 'monthly');
       return {
         id: plan.id,
         name: pricing.displayName || plan.name,
@@ -512,7 +540,7 @@ export default function ClientDashboardHome() {
     }
     if (upgradeCategory === 'b2b') {
       const plan = UPGRADE_B2B_PLANS.find((p) => p.id === selectedPlanId) || UPGRADE_B2B_PLANS[1];
-      const pricing = resolvePlanPricing(plan.id, plan.monthlyPriceFc, b2bBillingCycle);
+      const pricing = resolvePlanPricing(plan.id, b2bBillingCycle);
       return {
         id: plan.id,
         name: pricing.displayName || plan.name,
@@ -524,7 +552,7 @@ export default function ClientDashboardHome() {
         promoSavingsPercent: pricing.promoSavingsPercent,
         durationLabel:
           b2bBillingCycle === 'annual'
-            ? '365 jours (annuel · −10 %)'
+            ? `365 jours (annuel · −${ANNUAL_DISCOUNT_PERCENT} %)`
             : '30 jours (mensuel)',
         description: pricing.description || plan.description,
       };
@@ -533,7 +561,7 @@ export default function ClientDashboardHome() {
       UPGRADE_VENDOR_PLANS.find((p) => p.id === selectedPlanId) ||
       UPGRADE_VENDOR_PLANS.find((p) => p.id === defaultPlanForCategory(upgradeCategory)) ||
       UPGRADE_VENDOR_PLANS[0];
-    const pricing = resolvePlanPricing(vendorPlan.id, vendorPlan.monthlyPriceFc, b2bBillingCycle);
+    const pricing = resolvePlanPricing(vendorPlan.id, b2bBillingCycle);
     return {
       id: vendorPlan.id,
       name: pricing.displayName || vendorPlan.name,
@@ -545,7 +573,7 @@ export default function ClientDashboardHome() {
       promoSavingsPercent: pricing.promoSavingsPercent,
       durationLabel:
         b2bBillingCycle === 'annual'
-          ? '365 jours (annuel · −10 %)'
+          ? `365 jours (annuel · −${ANNUAL_DISCOUNT_PERCENT} %)`
           : '30 jours (mensuel)',
       description: pricing.description || vendorPlan.description,
     };
@@ -659,20 +687,23 @@ export default function ClientDashboardHome() {
     || followUp.pendingPayments.length > 0
     || Boolean(followUp.nextTicket);
 
-  /** Prix d'appel affichés sur les cartes d'évolution (tarifs dynamiques si disponibles). */
+  /** Prix d'appel affichés sur les cartes d'évolution : le moins cher de chaque famille, d'après la base. */
   const upgradeFromPrices = useMemo(() => {
-    const vendorPrice = (id: PlanId) => {
-      const plan = UPGRADE_VENDOR_PLANS.find((p) => p.id === id);
-      return plan ? resolvePlanPricing(plan.id, plan.monthlyPriceFc, 'monthly').priceLabel : '';
+    const fromPrice = (ids: PlanId[]): string | null => {
+      if (plansLoading) return null;
+      const amounts = ids
+        .map((id) => resolvePlanPricing(id, 'monthly').effectivePriceFc)
+        .filter((amount): amount is number => amount != null && amount > 0);
+      return amounts.length ? formatFc(Math.min(...amounts)) : '—';
     };
     return {
-      b2c: resolvePlanPricing(UPGRADE_B2C_PLANS[0].id, UPGRADE_B2C_PLANS[0].basePriceFc, 'monthly').priceLabel,
-      b2b: resolvePlanPricing(UPGRADE_B2B_PLANS[0].id, UPGRADE_B2B_PLANS[0].monthlyPriceFc, 'monthly').priceLabel,
-      venue: vendorPrice('VENUE'),
-      service: vendorPrice('SERVICE'),
-      catalog: vendorPrice('CATALOG'),
+      b2c: fromPrice(UPGRADE_B2C_PLANS.map((p) => p.id)),
+      b2b: fromPrice(UPGRADE_B2B_PLANS.map((p) => p.id)),
+      venue: fromPrice(['VENUE']),
+      service: fromPrice(['SERVICE']),
+      catalog: fromPrice(['CATALOG']),
     };
-  }, [resolvePlanPricing]);
+  }, [resolvePlanPricing, plansLoading]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1026,13 +1057,13 @@ export default function ClientDashboardHome() {
                 id: 'b2c',
                 label: 'Particulier',
                 hint: 'Mariage, anniversaire, fête privée',
-                price: `Dès ${upgradeFromPrices.b2c} / 90 j`,
+                price: upgradeFromPrices.b2c && `Dès ${upgradeFromPrices.b2c} / 90 j`,
               },
               {
                 id: 'b2b',
                 label: 'Entreprise',
                 hint: 'Galas, conférences, billetterie',
-                price: `Dès ${upgradeFromPrices.b2b} / mois`,
+                price: upgradeFromPrices.b2b && `Dès ${upgradeFromPrices.b2b} / mois`,
               },
             ]}
             onChoose={handleOpenUpgrade}
@@ -1042,9 +1073,9 @@ export default function ClientDashboardHome() {
             title="Publier au catalogue"
             detail="Recevez des demandes de devis et des réservations, sans organiser d’événement."
             options={[
-              { id: 'venue', label: 'Salle', hint: 'Salles illimitées, éditeur 2D/3D', price: `${upgradeFromPrices.venue} / mois` },
-              { id: 'service', label: 'Prestataire', hint: 'Prestations et matériel illimités', price: `${upgradeFromPrices.service} / mois` },
-              { id: 'catalog', label: 'Salle & presta', hint: 'Les deux, un seul forfait', price: `${upgradeFromPrices.catalog} / mois` },
+              { id: 'venue', label: 'Salle', hint: 'Salles illimitées, éditeur 2D/3D', price: upgradeFromPrices.venue && `${upgradeFromPrices.venue} / mois` },
+              { id: 'service', label: 'Prestataire', hint: 'Prestations et matériel illimités', price: upgradeFromPrices.service && `${upgradeFromPrices.service} / mois` },
+              { id: 'catalog', label: 'Salle & presta', hint: 'Les deux, un seul forfait', price: upgradeFromPrices.catalog && `${upgradeFromPrices.catalog} / mois` },
             ]}
             onChoose={handleOpenUpgrade}
           />
@@ -1147,7 +1178,7 @@ export default function ClientDashboardHome() {
                   )}
                 >
                   <span>Annuel</span>
-                  <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500 text-white font-black">−10%</span>
+                  <span className="text-xs px-1.5 py-0.5 rounded bg-emerald-500 text-white font-black">−{ANNUAL_DISCOUNT_PERCENT}%</span>
                 </button>
               </div>
             </div>
@@ -1195,7 +1226,7 @@ export default function ClientDashboardHome() {
               {upgradeCategory === 'b2c'
                 ? UPGRADE_B2C_PLANS.map((plan) => {
                     const isSelected = selectedPlanId === plan.id;
-                    const pricing = resolvePlanPricing(plan.id, plan.basePriceFc, 'monthly');
+                    const pricing = resolvePlanPricing(plan.id, 'monthly');
                     return (
                       <div
                         key={plan.id}
@@ -1236,12 +1267,12 @@ export default function ClientDashboardHome() {
                               {pricing.displayName || plan.name}
                             </span>
                             <span className="text-xs font-semibold text-primary">
-                              {plan.badge}
+                              {planBadge(plan.id, plan.badge, dynamicPlans?.[plan.id])}
                             </span>
                           </div>
                           <div className="flex items-baseline gap-1.5 flex-wrap">
                             <span className="text-lg font-black text-foreground">
-                              {pricing.priceLabel}
+                              {plansLoading ? <PriceSkeleton className="h-5" /> : pricing.priceLabel}
                             </span>
                             {pricing.promoActive && (
                               <span className="text-xs line-through text-muted font-normal">
@@ -1256,7 +1287,7 @@ export default function ClientDashboardHome() {
                         </div>
 
                         <div className="space-y-1 pt-2 border-t border-border/60 text-xs text-muted">
-                          {highlightsFromDb(plan.id, plan.highlights, dynamicPlans?.[plan.id]).map((h, idx) => (
+                          {planHighlights(plan.id, plan.highlights, dynamicPlans?.[plan.id]).map((h, idx) => (
                             <div key={idx} className="flex items-center gap-1.5">
                               <Check className="w-3 h-3 text-primary shrink-0" />
                               <span className="truncate">{h}</span>
@@ -1269,7 +1300,7 @@ export default function ClientDashboardHome() {
                 : upgradeCategory === 'b2b'
                   ? UPGRADE_B2B_PLANS.map((plan) => {
                       const isSelected = selectedPlanId === plan.id;
-                      const pricing = resolvePlanPricing(plan.id, plan.monthlyPriceFc, b2bBillingCycle);
+                      const pricing = resolvePlanPricing(plan.id, b2bBillingCycle);
                       return (
                         <div
                           key={plan.id}
@@ -1310,12 +1341,12 @@ export default function ClientDashboardHome() {
                                 {pricing.displayName || plan.name}
                               </span>
                               <span className="text-xs font-semibold text-primary">
-                                {plan.badge}
+                                {planBadge(plan.id, plan.badge, dynamicPlans?.[plan.id])}
                               </span>
                             </div>
                             <div className="flex items-baseline gap-1.5 flex-wrap">
                               <span className="text-lg font-black text-foreground">
-                                {pricing.priceLabel}
+                                {plansLoading ? <PriceSkeleton className="h-5" /> : pricing.priceLabel}
                               </span>
                               {pricing.promoActive && (
                                 <span className="text-xs line-through text-muted font-normal">
@@ -1332,7 +1363,7 @@ export default function ClientDashboardHome() {
                           </div>
 
                           <div className="space-y-1 pt-2 border-t border-border/60 text-xs text-muted">
-                            {highlightsFromDb(plan.id, plan.highlights, dynamicPlans?.[plan.id]).map((h, idx) => (
+                            {planHighlights(plan.id, plan.highlights, dynamicPlans?.[plan.id]).map((h, idx) => (
                               <div key={idx} className="flex items-center gap-1.5">
                                 <Check className="w-3 h-3 text-primary shrink-0" />
                                 <span className="truncate">{h}</span>
@@ -1345,7 +1376,7 @@ export default function ClientDashboardHome() {
                   : UPGRADE_VENDOR_PLANS.filter((p) => p.id === defaultPlanForCategory(upgradeCategory)).map(
                       (plan) => {
                         const isSelected = selectedPlanId === plan.id;
-                        const pricing = resolvePlanPricing(plan.id, plan.monthlyPriceFc, b2bBillingCycle);
+                        const pricing = resolvePlanPricing(plan.id, b2bBillingCycle);
                         return (
                           <div
                             key={plan.id}
@@ -1384,11 +1415,13 @@ export default function ClientDashboardHome() {
                                 <span className="text-sm font-bold text-foreground">
                                   {pricing.displayName || plan.name}
                                 </span>
-                                <span className="text-xs font-semibold text-primary">{plan.badge}</span>
+                                <span className="text-xs font-semibold text-primary">
+                                  {planBadge(plan.id, plan.badge, dynamicPlans?.[plan.id])}
+                                </span>
                               </div>
                               <div className="flex items-baseline gap-1.5 flex-wrap">
                                 <span className="text-lg font-black text-foreground">
-                                  {pricing.priceLabel}
+                                  {plansLoading ? <PriceSkeleton className="h-5" /> : pricing.priceLabel}
                                 </span>
                                 {pricing.promoActive && (
                                   <span className="text-xs line-through text-muted font-normal">
@@ -1404,7 +1437,7 @@ export default function ClientDashboardHome() {
                               </p>
                             </div>
                             <div className="space-y-1 pt-2 border-t border-border/60 text-xs text-muted">
-                              {highlightsFromDb(plan.id, plan.highlights, dynamicPlans?.[plan.id]).map((h, idx) => (
+                              {planHighlights(plan.id, plan.highlights, dynamicPlans?.[plan.id]).map((h, idx) => (
                                 <div key={idx} className="flex items-center gap-1.5">
                                   <Check className="w-3 h-3 text-primary shrink-0" />
                                   <span className="truncate">{h}</span>
@@ -1455,7 +1488,9 @@ export default function ClientDashboardHome() {
                       {activePlanDetails.catalogPriceLabel}
                     </span>
                   )}
-                  <span className="text-lg font-black text-foreground">{activePlanDetails.priceLabel}</span>
+                  <span className="text-lg font-black text-foreground">
+                    {plansLoading ? <PriceSkeleton className="h-5" /> : activePlanDetails.priceLabel}
+                  </span>
                 </div>
               </div>
             </div>
@@ -1464,7 +1499,7 @@ export default function ClientDashboardHome() {
               variant="primary"
               size="lg"
               fullWidth
-              disabled={savingOrgName}
+              disabled={savingOrgName || activePlanDetails.priceFc == null}
               onClick={handleProceedToPayment}
               leftIcon={savingOrgName ? <Loader2 className="w-4 h-4 animate-spin" /> : <CreditCard className="w-4 h-4" />}
               rightIcon={<ArrowRight className="w-4 h-4" />}
@@ -1472,7 +1507,11 @@ export default function ClientDashboardHome() {
             >
               {savingOrgName
                 ? 'Préparation…'
-                : `Payer l’abonnement (${activePlanDetails.priceLabel}) & Activer`}
+                : activePlanDetails.priceFc == null
+                  ? plansLoading
+                    ? 'Chargement du tarif…'
+                    : 'Tarif indisponible'
+                  : `Payer l’abonnement (${activePlanDetails.priceLabel}) & Activer`}
             </Button>
 
             <div className="flex items-center justify-center gap-2 text-xs text-muted text-center pt-1">

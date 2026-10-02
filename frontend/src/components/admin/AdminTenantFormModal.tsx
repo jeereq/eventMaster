@@ -15,12 +15,14 @@ import {
   type PlanId,
 } from '@/config/landingPricing';
 import { ACCOUNT_KIND_LABELS, type TenantAccountKind } from '@/lib/marketplace';
+import { usePlanCatalog, type PlanCatalog } from '@/hooks/usePlanCatalog';
+import { planDisplayName } from '@/lib/planCatalogDb';
 
 export type AdminTenantBillingAction = 'AUTO' | 'RENEWAL' | 'PLAN_CHANGE' | 'ACTIVATION';
 
-function planOptionLabel(id: PlanId): string {
-  const name = LANDING_PLANS.find((plan) => plan.id === id)?.ms365Name;
-  return name ? `${name} · ${id}` : id;
+function planOptionLabel(id: PlanId, catalog: PlanCatalog | null): string {
+  const name = planDisplayName(id, catalog?.[id], LANDING_PLANS.find((plan) => plan.id === id)?.ms365Name);
+  return name && name !== id ? `${name} · ${id}` : id;
 }
 
 function generateLicenseKey(): string {
@@ -101,6 +103,7 @@ export default function AdminTenantFormModal({
   setApprovedAmount: (value: string) => void;
 }) {
   const formId = useId();
+  const { plans: planCatalog } = usePlanCatalog();
   const [formError, setFormError] = useState('');
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -180,7 +183,7 @@ export default function AdminTenantFormModal({
           >
             {PLAN_IDS.map((id) => (
               <option key={id} value={id}>
-                {planOptionLabel(id)}
+                {planOptionLabel(id, planCatalog)}
               </option>
             ))}
           </select>

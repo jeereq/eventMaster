@@ -17,7 +17,7 @@ import type { EventItem } from '../../../src/types/event';
 import { colors } from '../../../src/theme/colors';
 
 export default function HomeTab() {
-  const { user, tenant, access, logout } = useAuth();
+  const { user, tenant, access, planName, logout } = useAuth();
   const [events, setEvents] = useState<EventItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -95,7 +95,7 @@ export default function HomeTab() {
         {tenant ? (
           <View style={styles.tenantBadge}>
             <Text style={styles.tenantName}>{tenant.name}</Text>
-            <Text style={styles.tenantPlan}>Forfait {tenant.plan}</Text>
+            <Text style={styles.tenantPlan}>Forfait {planName || tenant.plan}</Text>
           </View>
         ) : null}
       </View>

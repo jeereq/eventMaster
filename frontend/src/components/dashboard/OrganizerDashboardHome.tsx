@@ -76,9 +76,17 @@ import {
   LANDING_PLANS,
   planPricePeriodSuffix,
   formatFc,
+  resolvePlanMonthlyFc,
 } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
-import { canSellOnMarketplace } from '@/lib/planAccess';
+import { canSellOnMarketplace, isUnlimitedQuota } from '@/lib/planAccess';
+import { usePlanCatalog } from '@/hooks/usePlanCatalog';
+import {
+  editorLevelLabel,
+  formatQuota as formatPlanQuota,
+  planDisplayName,
+  type DbPlanCatalogEntry,
+} from '@/lib/planCatalogDb';
 
 export interface OrganizerEventItem {
   id: string;
@@ -162,7 +170,8 @@ export default function OrganizerDashboardHome({
   homeEventsPageSize,
   setHomeEventsPageSize,
 }: OrganizerDashboardHomeProps) {
-  const { user, tenant, planQuota, access, planFeatures } = useAuth();
+  const { user, tenant, planQuota, access, planFeatures, planName } = useAuth();
+  const { plans: planCatalog, loading: planCatalogLoading } = usePlanCatalog();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -375,11 +384,64 @@ export default function OrganizerDashboardHome({
     return LANDING_PLANS.find((p) => p.id === rawPlan);
   }, [tenant?.plan, billing?.plan]);
 
-  const currentPlanDisplayName = currentPlanMeta?.ms365Name || tenant?.plan || billing?.plan || 'Forfait';
+  const currentPlanId = tenant?.plan || billing?.plan;
+  const currentPlanDisplayName =
+    planName ||
+    planDisplayName(currentPlanId, currentPlanId ? planCatalog?.[currentPlanId] : null, currentPlanMeta?.ms365Name) ||
+    'Forfait';
+
+  /** Prix d'un forfait d'après la base (promo incluse) ; null tant que la base n'a pas répondu. */
+  const upsellPlanFc = (id: PlanId): number | null => {
+    const db = planCatalog?.[id];
+    const landing = LANDING_PLANS.find((p) => p.id === id);
+    if (db) {
+      if (db.promoActive && db.promoMonthlyPriceFc != null) return db.promoMonthlyPriceFc;
+      if (landing) return resolvePlanMonthlyFc(landing, db);
+      return db.monthlyPriceFc ?? null;
+    }
+    // Repli marketing uniquement si l'API a échoué.
+    return planCatalogLoading ? null : landing?.monthlyPriceFc ?? null;
+  };
+  const upsellPrice = (id: PlanId) => {
+    const fc = upsellPlanFc(id);
+    return fc == null ? '—' : formatFc(fc);
+  };
+  const upsellFromPrice = (ids: PlanId[]) => {
+    const prices = ids.map(upsellPlanFc).filter((fc): fc is number => fc != null);
+    return prices.length ? `Dès ${formatFc(Math.min(...prices))}` : '—';
+  };
+  const upsellName = (id: PlanId, fallback: string) => planDisplayName(id, planCatalog?.[id], fallback);
+  /** Quota invités (et événements) du forfait en base, ex. « 8 évts · 150 invités ». */
+  const upsellQuota = (id: PlanId, withEvents = false) => {
+    const db = planCatalog?.[id];
+    if (!db) return '';
+    const parts: string[] = [];
+    if (withEvents && db.maxEvents != null) {
+      const ev = formatPlanQuota(db.maxEvents);
+      parts.push(ev === 'Illimité' ? 'évts illimités' : `${ev} évts`);
+    }
+    if (db.maxGuests != null) {
+      const guests = formatPlanQuota(db.maxGuests);
+      parts.push(guests === 'Illimité' ? 'invités illimités' : `${guests} invités`);
+    }
+    return parts.length ? ` (${parts.join(' · ')})` : '';
+  };
+  /** Ligne de quota d'un forfait vendeur, ex. « Salles illimitées » ; texte de secours si l'API a échoué. */
+  const upsellVendorLine = (id: PlanId, render: (db: DbPlanCatalogEntry) => string, fallback: string) => {
+    const db = planCatalog?.[id];
+    if (db) return render(db);
+    return planCatalogLoading ? '—' : fallback;
+  };
+  const countLabel = (value: number | undefined, singular: string, plural: string, unlimited: string) => {
+    const q = formatPlanQuota(value);
+    if (q === 'Illimité') return unlimited;
+    if (q === '—') return `0 ${singular}`;
+    return `${q} ${(value ?? 0) > 1 ? plural : singular}`;
+  };
 
   const formatQuota = (used: number | undefined, max: number | undefined) => {
     if (used == null) return '0';
-    if (max == null || max < 0) return String(used);
+    if (max == null || max < 0 || isUnlimitedQuota(max)) return String(used);
     return `${used} / ${max}`;
   };
 
@@ -3546,9 +3608,9 @@ export default function OrganizerDashboardHome({
                             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
                           )}
                         </div>
-                        <p className="text-lg font-black text-foreground">9 900 FC <span className="text-xs font-normal text-muted">/ mois</span></p>
+                        <p className="text-lg font-black text-foreground">{upsellPrice('SERVICE')} <span className="text-xs font-normal text-muted">/ mois</span></p>
                         <div className="space-y-1 text-xs text-muted pt-1">
-                          <p>• <strong>Offres</strong> : Prestations illimitées</p>
+                          <p>• <strong>Offres</strong> : {upsellVendorLine('SERVICE', (db) => countLabel(db.maxServices, 'prestation', 'prestations', 'Prestations illimitées'), 'Prestations illimitées')}</p>
                           <p>• <strong>Visibilité</strong> : Traiteur, DJ, Déco, Photo, etc.</p>
                           <p>• <strong>Outils</strong> : Devis directs & gestion planning</p>
                           <p>• <strong>Inclus</strong> : Portfolio et réalisations en ligne</p>
@@ -3571,10 +3633,10 @@ export default function OrganizerDashboardHome({
                             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
                           )}
                         </div>
-                        <p className="text-lg font-black text-foreground">14 900 FC <span className="text-xs font-normal text-muted">/ mois</span></p>
+                        <p className="text-lg font-black text-foreground">{upsellPrice('VENUE')} <span className="text-xs font-normal text-muted">/ mois</span></p>
                         <div className="space-y-1 text-xs text-muted pt-1">
-                          <p>• <strong>Espaces</strong> : Salles illimitées au catalogue</p>
-                          <p>• <strong>Plans</strong> : Éditeur 2D/3D complet (80 tables)</p>
+                          <p>• <strong>Espaces</strong> : {upsellVendorLine('VENUE', (db) => countLabel(db.maxRooms, 'salle', 'salles', 'Salles illimitées'), 'Salles illimitées')} au catalogue</p>
+                          <p>• <strong>Plans</strong> : Éditeur 2D/3D {upsellVendorLine('VENUE', (db) => (editorLevelLabel(db.roomEditorLevel) ?? 'Complet').toLowerCase(), 'complet')}</p>
                           <p>• <strong>Réservations</strong> : Dates bloquées et acomptes</p>
                           <p>• <strong>Inclus</strong> : Simulateur IA et vitrine 3D</p>
                         </div>
@@ -3596,9 +3658,9 @@ export default function OrganizerDashboardHome({
                             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
                           )}
                         </div>
-                        <p className="text-lg font-black text-foreground">19 900 FC <span className="text-xs font-normal text-muted">/ mois</span></p>
+                        <p className="text-lg font-black text-foreground">{upsellPrice('CATALOG')} <span className="text-xs font-normal text-muted">/ mois</span></p>
                         <div className="space-y-1 text-xs text-muted pt-1">
-                          <p>• <strong>Salle & presta</strong> : Salles ∞ + Prestations ∞</p>
+                          <p>• <strong>Salle & presta</strong> : {upsellVendorLine('CATALOG', (db) => `${countLabel(db.maxRooms, 'salle', 'salles', 'Salles ∞')} + ${countLabel(db.maxServices, 'prestation', 'prestations', 'Prestations ∞')}`, 'Salles ∞ + Prestations ∞')}</p>
                           <p>• <strong>Complet</strong> : Plans 3D + Gestion de matériel</p>
                           <p>• <strong>Devis</strong> : Centralisation complète des demandes</p>
                           <p>• <strong>Inclus</strong> : Visibilité maximale catalogue</p>
@@ -3630,12 +3692,12 @@ export default function OrganizerDashboardHome({
                             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
                           )}
                         </div>
-                        <p className="text-lg font-black text-foreground">Dès 60 000 FC <span className="text-xs font-normal text-muted">/ trimestre</span></p>
+                        <p className="text-lg font-black text-foreground">{upsellFromPrice(['PERSONAL_50', 'PERSONAL_100', 'PERSONAL_200', 'PERSONAL_PLUS'])} <span className="text-xs font-normal text-muted">/ trimestre</span></p>
                         <div className="space-y-1 text-xs text-muted pt-1">
-                          <p>• <strong>Particulier 50</strong> : 60 000 FC (50 invités)</p>
-                          <p>• <strong>Particulier 100</strong> : 90 000 FC (100 invités)</p>
-                          <p>• <strong>Particulier 200</strong> : 120 000 FC (200 invités)</p>
-                          <p>• <strong>Particulier +200</strong> : 180 000 FC (invités ∞)</p>
+                          <p>• <strong>{upsellName('PERSONAL_50', 'Particulier 50')}</strong> : {upsellPrice('PERSONAL_50')}{upsellQuota('PERSONAL_50')}</p>
+                          <p>• <strong>{upsellName('PERSONAL_100', 'Particulier 100')}</strong> : {upsellPrice('PERSONAL_100')}{upsellQuota('PERSONAL_100')}</p>
+                          <p>• <strong>{upsellName('PERSONAL_200', 'Particulier 200')}</strong> : {upsellPrice('PERSONAL_200')}{upsellQuota('PERSONAL_200')}</p>
+                          <p>• <strong>{upsellName('PERSONAL_PLUS', 'Particulier +200')}</strong> : {upsellPrice('PERSONAL_PLUS')}{upsellQuota('PERSONAL_PLUS')}</p>
                           <p>• <strong>Inclus</strong> : WhatsApp nominatif, QR & Plans 2D/3D</p>
                         </div>
                       </div>
@@ -3658,11 +3720,11 @@ export default function OrganizerDashboardHome({
                             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
                           )}
                         </div>
-                        <p className="text-lg font-black text-foreground">Dès 30 000 FC <span className="text-xs font-normal text-muted">/ mois</span></p>
+                        <p className="text-lg font-black text-foreground">{upsellFromPrice(['STANDARD', 'PREMIUM_1', 'PREMIUM_2'])} <span className="text-xs font-normal text-muted">/ mois</span></p>
                         <div className="space-y-1 text-xs text-muted pt-1">
-                          <p>• <strong>Business</strong> : 30 000 FC (8 évts · 150 invités)</p>
-                          <p>• <strong>Premium</strong> : 55 000 FC (12 évts · 500 invités)</p>
-                          <p>• <strong>Premium Plus</strong> : 85 000 FC (20 évts · 1 000 invités)</p>
+                          <p>• <strong>{upsellName('STANDARD', 'Business')}</strong> : {upsellPrice('STANDARD')}{upsellQuota('STANDARD', true)}</p>
+                          <p>• <strong>{upsellName('PREMIUM_1', 'Premium')}</strong> : {upsellPrice('PREMIUM_1')}{upsellQuota('PREMIUM_1', true)}</p>
+                          <p>• <strong>{upsellName('PREMIUM_2', 'Premium Plus')}</strong> : {upsellPrice('PREMIUM_2')}{upsellQuota('PREMIUM_2', true)}</p>
                           <p>• <strong>Inclus</strong> : Catalogue salle + presta, équipe & billetterie</p>
                         </div>
                       </div>
@@ -3685,11 +3747,11 @@ export default function OrganizerDashboardHome({
                             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary-solid text-primary-foreground">Actuel</span>
                           )}
                         </div>
-                        <p className="text-lg font-black text-foreground">Dès 350 000 FC <span className="text-xs font-normal text-muted">/ mois</span></p>
+                        <p className="text-lg font-black text-foreground">{upsellFromPrice(['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3'])} <span className="text-xs font-normal text-muted">/ mois</span></p>
                         <div className="space-y-1 text-xs text-muted pt-1">
-                          <p>• <strong>Enterprise</strong> : 350 000 FC (3 500 invités)</p>
-                          <p>• <strong>Enterprise Pro</strong> : 525 000 FC (5 000 invités)</p>
-                          <p>• <strong>Unlimited</strong> : 700 000 FC (Quotas illimités)</p>
+                          <p>• <strong>{upsellName('ENTERPRISE_1', 'Enterprise')}</strong> : {upsellPrice('ENTERPRISE_1')}{upsellQuota('ENTERPRISE_1')}</p>
+                          <p>• <strong>{upsellName('ENTERPRISE_2', 'Enterprise Pro')}</strong> : {upsellPrice('ENTERPRISE_2')}{upsellQuota('ENTERPRISE_2')}</p>
+                          <p>• <strong>{upsellName('ENTERPRISE_3', 'Unlimited')}</strong> : {upsellPrice('ENTERPRISE_3')}{upsellQuota('ENTERPRISE_3')}</p>
                           <p>• <strong>Inclus</strong> : SLA 24/7, catalogue salle + presta & support dédié</p>
                         </div>
                       </div>

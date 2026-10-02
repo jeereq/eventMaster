@@ -27,7 +27,12 @@ import {
 import { PlanQuotaLimits } from '@/components/QuotaUsagePanel';
 import { cn } from '@/lib/cn';
 import { useAuth } from '@/context/AuthContext';
-import { comparisonValueFromDb, highlightsFromDb, type DbPlanCatalogEntry } from '@/lib/planCatalogDb';
+import {
+ comparisonValueFromDb,
+ guestsBadgeFromDb,
+ highlightsFromDb,
+ type DbPlanCatalogEntry,
+} from '@/lib/planCatalogDb';
 
 type DbPlan = DbPlanCatalogEntry;
 
@@ -117,9 +122,19 @@ export default function LandingPricingSection({
    : null;
 
  const badges = getPlanCapabilityBadges(plan.id, db);
+ // Badge « N invités » : quota de la base ; masqué pendant le chargement, landing seulement si l'API a échoué.
+ const isGuestsBadge = Boolean(plan.badge && /invités/i.test(plan.badge));
+ const badge = isGuestsBadge
+  ? db
+   ? guestsBadgeFromDb(plan.id, db) ?? undefined
+   : plansLoading
+    ? undefined
+    : plan.badge
+  : plan.badge;
 
  return {
  ...plan,
+ badge,
  displayName: db?.name?.replace('Plan ', '') || plan.ms365Name,
  tierLabel: planTierLabel(plan.tier),
  price: promoActive && promoPriceLabel ? promoPriceLabel : catalogPrice,
@@ -141,7 +156,7 @@ export default function LandingPricingSection({
  },
  };
  });
- }, [dbPlans, billing]);
+ }, [dbPlans, billing, plansLoading]);
 
  const activePromos = useMemo(
  () => plans.filter((p) => p.promoActive && p.id !== 'FREE'),

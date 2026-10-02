@@ -94,7 +94,9 @@ function deskAskingPrice(item: ServiceItem): string | null {
 
 export default function MarketplaceDeskPage() {
   useRememberListReturn();
-  const { access, refreshProfile, planQuota, tenant } = useAuth();
+  const { access, refreshProfile, planQuota, tenant, planName } = useAuth();
+  /** Nom commercial du forfait (base) ; l'identifiant brut seulement si le nom n'est pas chargé. */
+  const planLabel = planName || tenant?.plan || null;
   const { site } = usePlatformSite();
   const router = useRouter();
   const canManage = Boolean(access?.canManageRooms);
@@ -204,7 +206,7 @@ export default function MarketplaceDeskPage() {
   const openCreate = (mode: 'trade' | 'rental' = 'trade') => {
     const lock = getQuotaLockMessage('services', planQuota);
     if (lock) {
-      setError(getQuotaActionMessage('services', planQuota, tenant?.plan));
+      setError(getQuotaActionMessage('services', planQuota, planLabel));
       return;
     }
     const category: ServiceCategory = mode === 'rental' ? 'RENTAL_EQUIPMENT' : 'CATERING';
@@ -478,7 +480,7 @@ export default function MarketplaceDeskPage() {
         </p>
       )}
       {servicesAtLimit && (
-        <PlanLimitCallout kind="services" planQuota={planQuota} planName={tenant?.plan} />
+        <PlanLimitCallout kind="services" planQuota={planQuota} planName={planLabel} />
       )}
 
       <div className="flex gap-1.5">
