@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { Percent, UserCheck, Loader2, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
-import { LANDING_PLANS, ANNUAL_DISCOUNT_PERCENT, getPlanBaseAmountFc, annualPeriodCountForPlan, annualPromoPayableFromPeriod, invoiceCatalogLabel, isAnnualDurationDays } from '@/config/landingPricing';
+import { ANNUAL_DISCOUNT_PERCENT, getPlanBaseAmountFc, annualPeriodCountForPlan, annualPromoPayableFromPeriod, invoiceCatalogLabel, isAnnualDurationDays } from '@/config/landingPricing';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 
@@ -43,9 +43,9 @@ interface SubscriptionApprovalModalProps {
   promoByPlan?: Record<string, { price: number; label?: string }>;
 }
 
-function getPlanPriceFc(planId: string, catalogPrices?: Record<string, number>): number {
-  if (catalogPrices?.[planId] != null) return catalogPrices[planId];
-  return LANDING_PLANS.find((p) => p.id === planId)?.monthlyPriceFc ?? 0;
+/** Prix catalogue en base ; null s'il manque (pas de repli sur un tarif codé en dur). */
+function getPlanPriceFc(planId: string, catalogPrices?: Record<string, number>): number | null {
+  return catalogPrices?.[planId] ?? null;
 }
 
 function formatExpiry(iso?: string | null): string | null {
@@ -71,15 +71,15 @@ export default function SubscriptionApprovalModal({
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const periodFc = useMemo(
-    () => (request ? getPlanPriceFc(request.requestedPlan, catalogPrices) : 0),
+    () => (request ? getPlanPriceFc(request.requestedPlan, catalogPrices) : null),
     [request, catalogPrices],
   );
 
   const baseAmount = useMemo(
     () =>
-      request
+      request && periodFc != null
         ? getPlanBaseAmountFc(periodFc, request.requestedPlan, request.durationDays)
-        : 0,
+        : null,
     [request, periodFc],
   );
 
@@ -100,9 +100,10 @@ export default function SubscriptionApprovalModal({
       setDiscountMode('percent');
       setDiscountPercent(String(request.requestedDiscountPercent));
       setApprovedAmount('');
-    } else if (activePromo?.price != null) {
+    } else if (activePromo?.price != null && (period != null || !isAnnualDurationDays(request.durationDays))) {
+      // Annuel : montant promo dérivé du prix catalogue en base, donc seulement s'il est connu.
       setDiscountMode('amount');
-      const payable = isAnnualDurationDays(request.durationDays)
+      const payable = isAnnualDurationDays(request.durationDays) && period != null
         ? annualPromoPayableFromPeriod(period, activePromo.price, request.requestedPlan)
         : activePromo.price;
       setApprovedAmount(String(payable));
@@ -118,15 +119,18 @@ export default function SubscriptionApprovalModal({
     }
   }, [request?.id, request?.durationDays, request?.requestedPlan, activePromo?.price, catalogPrices]);
 
-  const pricing = useMemo(() => {
+  // Prix catalogue absent : « — » et aucun montant suggéré ; le montant saisi fait foi.
+  const pricing = useMemo((): { discountAmount: number; finalAmount: number | null; discountPercent: number } => {
     if (!request) return { discountAmount: 0, finalAmount: 0, discountPercent: 0 };
     if (discountMode === 'amount' && approvedAmount !== '') {
       const final = Math.max(0, Math.round(parseFloat(approvedAmount) || 0));
+      if (baseAmount == null) return { discountAmount: 0, finalAmount: final, discountPercent: 0 };
       const discountAmount = Math.max(0, baseAmount - final);
       const pct = baseAmount > 0 ? Math.round((discountAmount / baseAmount) * 1000) / 10 : 0;
       return { discountAmount, finalAmount: final, discountPercent: pct };
     }
     const pct = Math.min(100, Math.max(0, parseFloat(discountPercent) || 0));
+    if (baseAmount == null) return { discountAmount: 0, finalAmount: null, discountPercent: pct };
     const discountAmount = Math.round(baseAmount * (pct / 100));
     return { discountAmount, finalAmount: Math.max(0, baseAmount - discountAmount), discountPercent: pct };
   }, [request, baseAmount, discountMode, discountPercent, approvedAmount]);
@@ -160,7 +164,7 @@ export default function SubscriptionApprovalModal({
         request.id,
         {
           discountPercent: pricing.discountPercent,
-          approvedAmount: discountMode === 'amount' ? pricing.finalAmount : undefined,
+          approvedAmount: discountMode === 'amount' ? pricing.finalAmount ?? undefined : undefined,
         },
         action,
       );
@@ -269,13 +273,13 @@ export default function SubscriptionApprovalModal({
             </p>
             <p className="text-muted">
               Prix catalogue ({invoiceCatalogLabel(request.requestedPlan, request.durationDays)}) :{' '}
-              <span className="font-bold">{baseAmount.toLocaleString('fr-FR')} FC</span>
+              <span className="font-bold">{baseAmount != null ? `${baseAmount.toLocaleString('fr-FR')} FC` : '—'}</span>
             </p>
             {activePromo && (
               <p className="text-amber-700 dark:text-amber-400 text-xs font-semibold">
                 Promotion « {activePromo.label || 'active'} » :{' '}
                 {isAnnualDurationDays(request.durationDays)
-                  ? `${annualPromoPayableFromPeriod(periodFc, activePromo.price, request.requestedPlan).toLocaleString('fr-FR')} FC (min. promo × ${annualPeriodCountForPlan(request.requestedPlan)} vs annuel −${ANNUAL_DISCOUNT_PERCENT} %)`
+                  ? `${periodFc != null ? `${annualPromoPayableFromPeriod(periodFc, activePromo.price, request.requestedPlan).toLocaleString('fr-FR')} FC` : '—'} (min. promo × ${annualPeriodCountForPlan(request.requestedPlan)} vs annuel −${ANNUAL_DISCOUNT_PERCENT} %)`
                   : `${activePromo.price.toLocaleString('fr-FR')} FC pré-rempli`}
               </p>
             )}
@@ -335,7 +339,7 @@ export default function SubscriptionApprovalModal({
                 value={approvedAmount}
                 onChange={(e) => setApprovedAmount(e.target.value)}
                 disabled={submitting || feedback?.type === 'success'}
-                placeholder={`Ex: ${baseAmount}`}
+                placeholder={baseAmount != null ? `Ex: ${baseAmount}` : undefined}
                 className="w-full px-3 py-2 border border-border rounded-xl text-sm bg-surface-muted dark:bg-background"
               />
             )}
@@ -348,7 +352,7 @@ export default function SubscriptionApprovalModal({
               )}
               <p className="text-foreground ">
                 Montant facturé :{' '}
-                <span className="font-bold text-primary">{pricing.finalAmount.toLocaleString('fr-FR')} FC</span>
+                <span className="font-bold text-primary">{pricing.finalAmount != null ? `${pricing.finalAmount.toLocaleString('fr-FR')} FC` : '—'}</span>
               </p>
             </div>
           </div>

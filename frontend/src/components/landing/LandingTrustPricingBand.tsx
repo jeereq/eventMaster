@@ -1,19 +1,16 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Mail, MessageCircle, MessageSquare, ShieldCheck, Wallet } from 'lucide-react';
-import { api } from '@/lib/api';
 import { FLEXPAY_MOBILE_OPERATORS } from '@/lib/flexPayOperators';
+import { usePlanCatalog, type PlanCatalog } from '@/hooks/usePlanCatalog';
 import {
   LANDING_PLANS,
   formatFc,
   resolvePlanMonthlyFc,
-  type LandingPlan,
   type PlanAudience,
 } from '@/config/landingPricing';
-
-type DbPlanPrice = { price?: string | null; monthlyPriceFc?: number | null };
 
 const PAYMENT_METHODS: string[] = [...FLEXPAY_MOBILE_OPERATORS, 'Visa', 'Mastercard'];
 
@@ -23,17 +20,26 @@ const INVITATION_CHANNELS = [
   { label: 'E-mail', icon: Mail },
 ];
 
-/** Prix d’entrée d’une famille de forfaits : le moins cher des forfaits payants (BD en priorité). */
-function entryPrice(
-  audiences: PlanAudience[],
-  dbPlans: Record<string, DbPlanPrice> | null,
-): { plan: LandingPlan; amountFc: number } | null {
-  let best: { plan: LandingPlan; amountFc: number } | null = null;
-  for (const plan of LANDING_PLANS) {
-    if (plan.id === 'FREE' || !audiences.includes(plan.audience)) continue;
-    const amountFc = resolvePlanMonthlyFc(plan, dbPlans?.[plan.id]);
-    if (amountFc <= 0) continue;
-    if (!best || amountFc < best.amountFc) best = { plan, amountFc };
+/**
+ * Prix d’entrée d’une famille de forfaits : le moins cher des forfaits payants.
+ * Prix et audience viennent de la base ; landingPricing.ts sert uniquement si l’API a échoué.
+ */
+function entryPrice(audiences: PlanAudience[], dbPlans: PlanCatalog | null): number | null {
+  const candidates: Array<{ audience?: string; amountFc: number }> = dbPlans
+    ? Object.entries(dbPlans)
+        .filter(([id]) => id !== 'FREE')
+        .map(([id, db]) => ({
+          audience: db.audience ?? LANDING_PLANS.find((plan) => plan.id === id)?.audience,
+          amountFc: resolvePlanMonthlyFc({ monthlyPriceFc: 0 }, db),
+        }))
+    : LANDING_PLANS.filter((plan) => plan.id !== 'FREE').map((plan) => ({
+        audience: plan.audience,
+        amountFc: plan.monthlyPriceFc,
+      }));
+  let best: number | null = null;
+  for (const { audience, amountFc } of candidates) {
+    if (!audience || !audiences.includes(audience as PlanAudience) || amountFc <= 0) continue;
+    if (best == null || amountFc < best) best = amountFc;
   }
   return best;
 }
@@ -44,35 +50,28 @@ function entryPrice(
  * « combien ça coûte ? » et « comment je paie / j’invite ? ».
  */
 export default function LandingTrustPricingBand() {
-  const [dbPlans, setDbPlans] = useState<Record<string, DbPlanPrice> | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    api
-      .get('/public/plans')
-      .then((data) => {
-        if (!cancelled && data && typeof data === 'object') setDbPlans(data as Record<string, DbPlanPrice>);
-      })
-      .catch(() => {
-        /* hors ligne : prix de référence de landingPricing.ts */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { plans: dbPlans, loading } = usePlanCatalog();
 
   const offers = useMemo(() => {
-    const rows: Array<{ label: string; price: string; note: string }> = [
+    const rows: Array<{ label: string; price: string | null; note: string }> = [
       { label: 'Découverte', price: 'Gratuit', note: 'sans carte bancaire' },
     ];
-    const personal = entryPrice(['B2C'], dbPlans);
-    if (personal) rows.push({ label: 'Particulier', price: `dès ${formatFc(personal.amountFc)}`, note: 'par trimestre' });
-    const business = entryPrice(['B2B'], dbPlans);
-    if (business) rows.push({ label: 'Business', price: `dès ${formatFc(business.amountFc)}`, note: 'par mois' });
-    const vendor = entryPrice(['VENUE', 'SERVICE', 'CATALOG'], dbPlans);
-    if (vendor) rows.push({ label: 'Salle ou métier', price: `dès ${formatFc(vendor.amountFc)}`, note: 'par mois' });
+    const families: Array<{ label: string; audiences: PlanAudience[]; note: string }> = [
+      { label: 'Particulier', audiences: ['B2C'], note: 'par trimestre' },
+      { label: 'Business', audiences: ['B2B'], note: 'par mois' },
+      { label: 'Salle ou métier', audiences: ['VENUE', 'SERVICE', 'CATALOG'], note: 'par mois' },
+    ];
+    for (const family of families) {
+      // Catalogue en cours de chargement : squelette plutôt que des prix codés en dur.
+      if (loading) {
+        rows.push({ label: family.label, price: null, note: family.note });
+        continue;
+      }
+      const amountFc = entryPrice(family.audiences, dbPlans);
+      if (amountFc != null) rows.push({ label: family.label, price: `dès ${formatFc(amountFc)}`, note: family.note });
+    }
     return rows;
-  }, [dbPlans]);
+  }, [dbPlans, loading]);
 
   return (
     <section
@@ -104,7 +103,11 @@ export default function LandingTrustPricingBand() {
                 className="rounded-[var(--radius-card)] border border-border bg-background p-3.5 space-y-1"
               >
                 <p className="text-xs font-semibold text-primary">{offer.label}</p>
-                <p className="text-base font-bold text-foreground tabular-nums leading-tight">{offer.price}</p>
+                {offer.price == null ? (
+                  <span className="block h-5 w-24 rounded bg-border/60 animate-pulse" aria-label="Chargement du prix" />
+                ) : (
+                  <p className="text-base font-bold text-foreground tabular-nums leading-tight">{offer.price}</p>
+                )}
                 <p className="text-xs text-muted">{offer.note}</p>
               </li>
             ))}

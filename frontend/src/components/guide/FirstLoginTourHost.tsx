@@ -21,7 +21,7 @@ import { readRegisterVendorIntent } from '@/lib/registerVendorIntent';
 import FirstLoginOnboardingModal from './FirstLoginOnboardingModal';
 
 export default function FirstLoginTourHost() {
-  const { user, access, tenant, planQuota, planFeatures, supportSession } = useAuth();
+  const { user, access, tenant, planQuota, planFeatures, planName, supportSession } = useAuth();
   const { startTour, isActive } = useTour();
   const router = useRouter();
   const pathname = usePathname();
@@ -43,10 +43,11 @@ export default function FirstLoginTourHost() {
         planQuota,
         planFeatures,
         planId: tenant?.plan,
+        planName,
       }),
       variant: 'first-login' as const,
     }),
-    [access, tenant?.accountKind, tenant?.plan, planQuota, planFeatures],
+    [access, tenant?.accountKind, tenant?.plan, planQuota, planFeatures, planName],
   );
 
   const welcome = useMemo(

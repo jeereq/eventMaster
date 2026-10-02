@@ -37,6 +37,7 @@ import {
   type MarketplaceInquiryItem,
 } from '@/lib/marketplace';
 import { LANDING_PLANS, formatFc } from '@/config/landingPricing';
+import { planDisplayName } from '@/lib/planCatalogDb';
 import GettingStartedChecklist from '@/components/GettingStartedChecklist';
 import UserAvatar from '@/components/UserAvatar';
 import { StatusPill, type StatusPillTone } from '@/components/ui';
@@ -232,7 +233,7 @@ function EmptyRow({ icon: Icon, title, hint }: { icon: React.ComponentType<{ cla
 }
 
 export default function VendorDashboardHome() {
-  const { user, tenant, access, planQuota } = useAuth();
+  const { user, tenant, access, planQuota, planName: activePlanName } = useAuth();
   const { site } = usePlatformSite();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -372,7 +373,7 @@ export default function VendorDashboardHome() {
 
   // ── Abonnement ───────────────────────────────────────────────────────────
   const planMeta = LANDING_PLANS.find((p) => p.id === tenant?.plan);
-  const planName = planMeta?.ms365Name || tenant?.plan || 'Forfait';
+  const planName = activePlanName || planDisplayName(tenant?.plan, null, planMeta?.ms365Name) || 'Forfait';
   const licenseExpiresAt = tenant?.licenseExpiresAt;
   const daysUntilExpiry = useMemo(() => {
     const expires = licenseExpiresAt ? new Date(licenseExpiresAt).getTime() : NaN;

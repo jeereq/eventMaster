@@ -17,6 +17,7 @@ import {
   type PlanId,
 } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
+import { guestsBadgeFromDb, highlightsFromDb, planDisplayName } from '@/lib/planCatalogDb';
 
 export default function PWARestrictedScreen() {
   const { tenant, logout, refreshProfile } = useAuth();
@@ -60,19 +61,34 @@ export default function PWARestrictedScreen() {
     [tenant?.accountKind, tenant?.plan, tenant?.pendingPlan],
   );
 
+  // Tant que la base n'a pas répondu : « — » plutôt que les prix marketing (repli seulement si l'API échoue).
+  const plansLoading = !dynamicPlans && loadingRequests;
+
   const plans = useMemo(() => {
     return LANDING_PLANS.filter((plan) => allowedPlanIds.includes(plan.id)).map((plan) => {
       const db = dynamicPlans?.[plan.id];
+      const promoFc =
+        db?.promoActive && db?.promoMonthlyPriceFc != null ? Number(db.promoMonthlyPriceFc) : null;
+      const isGuestsBadge = Boolean(plan.badge && /invités/i.test(plan.badge));
       return {
         id: plan.id,
-        name: db?.name?.replace('Plan ', '') || plan.ms365Name,
-        price: getPlanDisplayPrice(plan, 'monthly', db?.price, db?.monthlyPriceFc),
-        highlights: plan.highlights,
+        name: planDisplayName(plan.id, db, plan.ms365Name),
+        price:
+          !db && plansLoading
+            ? '—'
+            : getPlanDisplayPrice(plan, 'monthly', db?.price, db?.monthlyPriceFc, promoFc),
+        highlights: highlightsFromDb(plan.id, plan.highlights, db),
         highlighted: plan.highlighted,
-        badge: plan.badge,
+        badge: isGuestsBadge
+          ? db
+            ? guestsBadgeFromDb(plan.id, db) ?? undefined
+            : plansLoading
+              ? undefined
+              : plan.badge
+          : plan.badge,
       };
     });
-  }, [dynamicPlans, allowedPlanIds]);
+  }, [dynamicPlans, allowedPlanIds, plansLoading]);
 
   useEffect(() => {
     if (plans.length && !plans.some((p) => p.id === requestedPlan)) {
@@ -253,7 +269,7 @@ export default function PWARestrictedScreen() {
                 <span className="text-sm font-extrabold text-primary">
                   {selectedPlan
                     ? `${selectedPlan.name} — ${selectedPlan.price} ${planPricePeriodSuffix(selectedPlan.id)}`
-                    : getPlanDisplayPrice(LANDING_PLANS[1], 'monthly')}
+                    : '—'}
                 </span>
               </div>
 
@@ -314,7 +330,11 @@ export default function PWARestrictedScreen() {
                   <div key={req.id} className="bg-surface-muted/60 border border-border rounded-xl p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-foreground">
-                        {LANDING_PLANS.find((p) => p.id === req.requestedPlan)?.ms365Name || req.requestedPlan}
+                        {planDisplayName(
+                          req.requestedPlan,
+                          dynamicPlans?.[req.requestedPlan],
+                          LANDING_PLANS.find((p) => p.id === req.requestedPlan)?.ms365Name,
+                        )}
                       </span>
                       <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                         req.status === 'APPROVED' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' :

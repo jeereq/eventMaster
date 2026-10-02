@@ -29,6 +29,8 @@ import { useAuth, type PlanCapabilities } from '@/context/AuthContext';
 import UserAvatar from '@/components/UserAvatar';
 import NextEventCard, { pickNextEvent } from '@/components/dashboard/NextEventCard';
 import { LANDING_PLANS, isB2cPlanId } from '@/config/landingPricing';
+import { isUnlimitedQuota } from '@/lib/planAccess';
+import { planDisplayName } from '@/lib/planCatalogDb';
 import { eventDashboardHref } from '@/lib/eventRoutes';
 import { cn } from '@/lib/cn';
 
@@ -50,13 +52,11 @@ interface WorkspaceStats {
   upcoming: { id: string; guests: number; checkedIn: number }[];
 }
 
-/** Au-delà de ce seuil, le quota est affiché comme illimité (forfait Particulier +200). */
-const UNLIMITED_THRESHOLD = 100_000;
-
 const OCCASIONS = ['Mariage', 'Dot', 'Anniversaire', 'Baptême', 'Fête privée'];
 
 function isUnlimited(max?: number | null) {
-  return max == null || max < 0 || max >= UNLIMITED_THRESHOLD;
+  // La base stocke 99999 pour « illimité » (forfait Particulier +200) : seuil partagé 9999.
+  return max == null || max < 0 || isUnlimitedQuota(max);
 }
 
 function shortDate(iso: string) {
@@ -92,7 +92,7 @@ interface JourneyStep {
  * Les outils avancés (billetterie, statistiques…) restent accessibles depuis le menu.
  */
 export default function PersonalOrganizerHome({ events }: { events: PersonalOrganizerEvent[] }) {
-  const { user, tenant, planQuota, access } = useAuth();
+  const { user, tenant, planQuota, access, planName: activePlanName } = useAuth();
   const [stats, setStats] = useState<WorkspaceStats | null>(null);
 
   useEffect(() => {
@@ -116,7 +116,7 @@ export default function PersonalOrganizerHome({ events }: { events: PersonalOrga
   );
 
   const planMeta = LANDING_PLANS.find((p) => p.id === tenant?.plan);
-  const planName = planMeta?.ms365Name || 'Particulier';
+  const planName = activePlanName || planDisplayName(tenant?.plan, null, planMeta?.ms365Name) || 'Particulier';
   const isOwner = Boolean(access?.isOwner) || (Boolean(user?.id) && user?.id === tenant?.managerId);
   const canCreate = access?.canCreateEvents !== false;
   const daysUntilExpiry = tenant?.licenseExpiresAt ? daysUntil(tenant.licenseExpiresAt) : null;

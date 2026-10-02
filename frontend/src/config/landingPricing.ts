@@ -1191,15 +1191,35 @@ export interface PlanCapabilityBadge {
 
 export function getPlanCapabilityBadges(
   planId: PlanId,
-  db?: { roomEditorLevel?: string; customTemplates?: boolean; mockupOcr?: boolean } | null,
+  db?: {
+    roomEditorLevel?: string;
+    customTemplates?: boolean;
+    mockupOcr?: boolean;
+    maxEvents?: number;
+    maxRooms?: number;
+    maxServices?: number;
+  } | null,
 ): PlanCapabilityBadge[] {
   const badges: PlanCapabilityBadge[] = [];
 
   if (planId === 'FREE') badges.push({ id: 'starter', label: 'Gratuit', tone: 'emerald' });
   if (B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'b2c', label: 'Particulier', tone: 'amber' });
-  if (planId === 'VENUE') badges.push({ id: 'venue', label: 'Salles illimitées', tone: 'emerald' });
-  if (planId === 'SERVICE') badges.push({ id: 'service', label: 'Prestas illimitées', tone: 'indigo' });
-  if (planId === 'CATALOG') badges.push({ id: 'catalog', label: 'Salles & prestas ∞', tone: 'violet' });
+
+  // Quotas illimités (>= 9999) : d'après la base quand elle a répondu, sinon d'après l'id.
+  // Les badges salles / prestations ne concernent que les forfaits marketplace (sans événements).
+  const unlimited = (value?: number) => value != null && value >= 9999;
+  const marketplaceOnly = db?.maxEvents != null ? db.maxEvents <= 0 : false;
+  const unlimitedRooms = db ? marketplaceOnly && unlimited(db.maxRooms) : planId === 'VENUE' || planId === 'CATALOG';
+  const unlimitedServices = db
+    ? marketplaceOnly && unlimited(db.maxServices)
+    : planId === 'SERVICE' || planId === 'CATALOG';
+  if (unlimitedRooms && unlimitedServices) {
+    badges.push({ id: 'catalog', label: 'Salles & prestas ∞', tone: 'violet' });
+  } else if (unlimitedRooms) {
+    badges.push({ id: 'venue', label: 'Salles illimitées', tone: 'emerald' });
+  } else if (unlimitedServices) {
+    badges.push({ id: 'service', label: 'Prestas illimitées', tone: 'indigo' });
+  }
 
   const editorLevel =
     db?.roomEditorLevel ??
@@ -1237,7 +1257,9 @@ export function getPlanCapabilityBadges(
   if (mockup && !B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'mockup', label: 'Import maquette', tone: 'violet' });
   if (ocr && !B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'ocr', label: 'OCR maquette', tone: 'violet' });
   if (rsvpAnalytics && !B2C_PLAN_IDS.includes(planId)) badges.push({ id: 'rsvp', label: 'Réponses analytiques', tone: 'emerald' });
-  if (planId.startsWith('ENTERPRISE_3')) badges.push({ id: 'unlimited', label: 'Volume illimité', tone: 'rose' });
+  if (db ? unlimited(db.maxEvents) : planId.startsWith('ENTERPRISE_3')) {
+    badges.push({ id: 'unlimited', label: 'Volume illimité', tone: 'rose' });
+  }
 
   return badges;
 }

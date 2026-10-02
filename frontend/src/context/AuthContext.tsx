@@ -119,6 +119,8 @@ interface AuthContextType {
   access: OrgAccess | null;
   planFeatures: PlanCapabilities | null;
   planQuota: PlanQuotaInfo | null;
+  /** Nom commercial du forfait actif, tel qu'il est en base. */
+  planName: string | null;
   token: string | null;
   loading: boolean;
   supportSession: boolean;
@@ -222,6 +224,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [access, setAccess] = useState<OrgAccess | null>(null);
   const [planFeatures, setPlanFeatures] = useState<PlanCapabilities | null>(null);
+  const [planName, setPlanName] = useState<string | null>(null);
   const [planQuota, setPlanQuota] = useState<PlanQuotaInfo | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -477,6 +480,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAccess(null);
     setPlanFeatures(null);
     setPlanQuota(null);
+    setPlanName(null);
     setSupportSession(false);
     setSessionExpired(false);
     if (typeof window !== 'undefined') {
@@ -489,6 +493,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshPlanFeatures = async () => {
     try {
       const data = await api.get('/billing/plan-features');
+      setPlanName(typeof data.planName === 'string' && data.planName ? data.planName : null);
       setPlanFeatures(
         data.capabilities
           ? { ...data.capabilities, audience: data.audience ?? data.capabilities.audience }
@@ -517,6 +522,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       setPlanFeatures(null);
       setPlanQuota(null);
+      setPlanName(null);
     }
   };
 
@@ -634,7 +640,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, tenant, access, planFeatures, planQuota, token, loading, supportSession, sessionExpired,
+      user, tenant, access, planFeatures, planQuota, planName, token, loading, supportSession, sessionExpired,
       login, register, verifyOtp, resendOtp,
       logout, refreshBilling, refreshPlanFeatures, refreshProfile, updateUserAndTenant, updateBranding,
       enterSupportSession, exitSupportSession,

@@ -34,7 +34,8 @@ function rsvpLabel(rsvp: string): string {
 
 export default function ProtocolScreen() {
   const { eventId } = useLocalSearchParams<{ eventId: string }>();
-  const { planFeatures, tenant } = useAuth();
+  const { planFeatures, planName, tenant } = useAuth();
+  const planLabel = planName || tenant?.plan || null;
   const [guests, setGuests] = useState<ProtocolGuest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -195,10 +196,10 @@ export default function ProtocolScreen() {
           <Text style={styles.upgradeEmoji}>📱</Text>
           <Text style={styles.upgradeTitle}>Protocole QR non inclus</Text>
           <Text style={styles.upgradeText}>
-            Le scan QR, la confirmation de présence et la vérification des sièges nécessitent le forfait{' '}
-            <Text style={styles.upgradeBold}>Business</Text> ou supérieur.
+            Le scan QR, la confirmation de présence et la vérification des sièges nécessitent un forfait{' '}
+            <Text style={styles.upgradeBold}>incluant le protocole QR</Text>.
           </Text>
-          <Text style={styles.upgradePlan}>Forfait actuel : {tenant?.plan || 'FREE'}</Text>
+          {planLabel ? <Text style={styles.upgradePlan}>Forfait actuel : {planLabel}</Text> : null}
         </View>
       </>
     );

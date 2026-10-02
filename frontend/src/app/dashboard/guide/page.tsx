@@ -17,7 +17,7 @@ import { cn } from '@/lib/cn';
 type GuideViewTab = 'doc' | 'tour';
 
 function DashboardGuidePageContent() {
-  const { user, access, tenant, planQuota, planFeatures, loading } = useAuth();
+  const { user, access, tenant, planQuota, planFeatures, planName, loading } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
   const { startTour, isActive } = useTour();
@@ -48,8 +48,9 @@ function DashboardGuidePageContent() {
         planQuota,
         planFeatures,
         planId: tenant?.plan,
+        planName,
       }),
-    [access, tenant?.accountKind, tenant?.plan, planQuota, planFeatures],
+    [access, tenant?.accountKind, tenant?.plan, planQuota, planFeatures, planName],
   );
 
   const setTab = (tab: GuideViewTab) => {

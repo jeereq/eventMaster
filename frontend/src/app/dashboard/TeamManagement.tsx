@@ -74,7 +74,9 @@ const ROLE_OPTIONS = [
 ];
 
 export default function TeamManagement() {
-  const { user, tenant, planQuota, planFeatures, access } = useAuth();
+  const { user, tenant, planQuota, planFeatures, access, planName } = useAuth();
+  /** Nom commercial du forfait (base) ; l'identifiant brut seulement si le nom n'est pas chargé. */
+  const planLabel = planName || tenant?.plan || null;
   const { site } = usePlatformSite();
   const authChannels = site.authOtpChannels;
   const canChooseOtpChannel = allowsAuthOtpChoice(authChannels);
@@ -182,7 +184,7 @@ export default function TeamManagement() {
       return;
     }
     if (orgRole === 'MANAGER' && managersAtLimit) {
-      setError(getQuotaActionMessage('orgManagers', planQuota, tenant?.plan));
+      setError(getQuotaActionMessage('orgManagers', planQuota, planLabel));
       setSubmitting(false);
       return;
     }
@@ -341,7 +343,7 @@ export default function TeamManagement() {
       )}
 
       {managersAtLimit && (
-        <PlanLimitCallout kind="orgManagers" planQuota={planQuota} planName={tenant?.plan} />
+        <PlanLimitCallout kind="orgManagers" planQuota={planQuota} planName={planLabel} />
       )}
 
       {hasCommercialNetwork && canManageTeam && (
@@ -549,7 +551,7 @@ export default function TeamManagement() {
           )}
 
           {orgRole === 'MANAGER' && managersAtLimit && (
-            <PlanLimitCallout kind="orgManagers" planQuota={planQuota} planName={tenant?.plan} compact />
+            <PlanLimitCallout kind="orgManagers" planQuota={planQuota} planName={planLabel} compact />
           )}
         </form>
       </Modal>

@@ -16,6 +16,8 @@ interface AuthContextValue {
   tenant: Tenant | null;
   access: OrgAccess | null;
   planFeatures: PlanCapabilities | null;
+  /** Nom commercial du forfait actif, tel qu'il est en base. */
+  planName: string | null;
   loading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -56,6 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [access, setAccess] = useState<OrgAccess | null>(null);
   const [planFeatures, setPlanFeatures] = useState<PlanCapabilities | null>(null);
+  const [planName, setPlanName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const setters = useMemo(
@@ -65,10 +68,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshPlanFeatures = useCallback(async () => {
     try {
-      const data = await api.get<PlanCapabilities>('/billing/plan-features');
-      setPlanFeatures(data);
+      // Les options du forfait sont sous `capabilities` ; le nom commercial sous `planName`.
+      const data = await api.get<{ planName?: string | null; capabilities?: PlanCapabilities | null }>(
+        '/billing/plan-features',
+      );
+      setPlanFeatures(data.capabilities ?? null);
+      setPlanName(typeof data.planName === 'string' && data.planName ? data.planName : null);
     } catch {
       setPlanFeatures(null);
+      setPlanName(null);
     }
   }, []);
 
@@ -92,6 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setTenant(null);
         setAccess(null);
         setPlanFeatures(null);
+        setPlanName(null);
       } finally {
         setLoading(false);
       }
@@ -165,6 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setTenant(null);
     setAccess(null);
     setPlanFeatures(null);
+    setPlanName(null);
   }, []);
 
   const value = useMemo<AuthContextValue>(
@@ -173,6 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       tenant,
       access,
       planFeatures,
+      planName,
       loading,
       isAuthenticated: Boolean(user),
       login,
@@ -182,7 +193,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout,
       refreshProfile,
     }),
-    [user, tenant, access, planFeatures, loading, login, register, verifyOtp, resendOtp, logout, refreshProfile],
+    [user, tenant, access, planFeatures, planName, loading, login, register, verifyOtp, resendOtp, logout, refreshProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

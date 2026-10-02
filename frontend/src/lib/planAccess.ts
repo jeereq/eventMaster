@@ -295,14 +295,18 @@ export function getWorkspaceModules(opts: {
     };
   }
 
-  const maxEvents = opts.planQuota?.limits.maxEvents ?? 3;
-  const maxRooms = opts.planQuota?.limits.maxRooms ?? 1;
-  const maxTemplates = opts.planQuota?.limits.maxTemplates ?? 2;
-  const maxServices = opts.planQuota?.limits.maxServices ?? 0;
+  // Quotas pas encore chargés (ou indisponibles) : pas de quotas FREE inventés. Les modules
+  // restent visibles (le backend applique les quotas) ; « Mes offres » ne dépend alors que de l'audience.
+  const limits = opts.planQuota?.limits;
+  const includes = (limit: number | undefined) => (limits ? (limit ?? 0) > 0 : true);
+  const hasEvents = includes(limits?.maxEvents);
+  const hasRooms = includes(limits?.maxRooms);
+  const hasTemplates = includes(limits?.maxTemplates);
+  const hasServices = (limits?.maxServices ?? 0) > 0;
 
-  const showEvents = maxEvents > 0 || protocolOnly;
-  const showRooms = canRooms && maxRooms > 0;
-  const showMarketplace = (maxServices > 0 || isCatalogOrVenue) && !protocolOnly;
+  const showEvents = hasEvents || protocolOnly;
+  const showRooms = canRooms && hasRooms;
+  const showMarketplace = (hasServices || isCatalogOrVenue) && !protocolOnly;
   /** Tout compte (organisation, vendeur, protocole) peut explorer le catalogue acheteur. */
   const showBrowseCatalogue = true;
 
@@ -311,12 +315,12 @@ export function getWorkspaceModules(opts: {
     showRooms,
     showMarketplace,
     showBrowseCatalogue,
-    showTemplates: maxEvents > 0 && maxTemplates > 0 && !protocolOnly,
+    showTemplates: hasEvents && hasTemplates && !protocolOnly,
     showAnalytics: showEvents || isCatalogOrVenue,
     showProtocol:
       protocolOnly
       || (
-        maxEvents > 0
+        hasEvents
         && Boolean(opts.access?.canProtocolAllEvents || opts.access?.level === 'staff')
         && opts.planFeatures?.protocolQr !== false
       ),

@@ -681,7 +681,9 @@ export default function EventsPage() {
 }
 
 function EventsPageInner() {
-  const { user, access, planFeatures, planQuota, tenant } = useAuth();
+  const { user, access, planFeatures, planQuota, tenant, planName } = useAuth();
+  /** Nom commercial du forfait (base) ; l'identifiant brut seulement si le nom n'est pas chargé. */
+  const planLabel = planName || tenant?.plan || null;
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -710,7 +712,7 @@ function EventsPageInner() {
   const seatNotificationsLocked = isPlanFeatureLocked(planFeatures, 'seatNotifications');
   const eventsQuotaMsg = getQuotaLockMessage('events', planQuota);
   const guestsQuotaMsg = getQuotaLockMessage('guests', planQuota);
-  const protocolLockMsg = getFeatureLockMessage('protocolQr', tenant?.plan);
+  const protocolLockMsg = getFeatureLockMessage('protocolQr', planLabel);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingEventDetail, setLoadingEventDetail] = useState(false);
@@ -1103,7 +1105,7 @@ function EventsPageInner() {
 
   const openCreateEventModal = () => {
     if (eventsAtLimit) {
-      setError(getQuotaActionMessage('events', planQuota, tenant?.plan));
+      setError(getQuotaActionMessage('events', planQuota, planLabel));
       return;
     }
     setEventFormTarget(null);
@@ -1173,7 +1175,7 @@ Merci de confirmer votre présence :
 
   const openAddGuestModal = () => {
     if (guestsAtLimit && !editingGuestId) {
-      setError(getQuotaActionMessage('guests', planQuota, tenant?.plan));
+      setError(getQuotaActionMessage('guests', planQuota, planLabel));
       return;
     }
     setEditingGuestId(null);
@@ -2221,7 +2223,7 @@ Merci de confirmer votre présence :
             }
           />
           {eventsAtLimit && listView === 'events' && (
-            <PlanLimitCallout kind="events" planQuota={planQuota} planName={tenant?.plan} />
+            <PlanLimitCallout kind="events" planQuota={planQuota} planName={planLabel} />
           )}
 
           <div className="inline-flex rounded-xl border border-border bg-surface-muted p-1 w-fit">
@@ -2739,7 +2741,7 @@ Merci de confirmer votre présence :
               {deskTab === 'protocol' && (
                 <>
                   {protocolLocked ? (
-                    <PlanLimitCallout feature="protocolQr" planName={tenant?.plan} />
+                    <PlanLimitCallout feature="protocolQr" planName={planLabel} />
                   ) : (
                     <GuestProtocolPanel eventId={selectedEvent.id} />
                   )}
@@ -2809,7 +2811,7 @@ Merci de confirmer votre présence :
                       <Button
                         onClick={() => {
                           if (guestsAtLimit) {
-                            setError(getQuotaActionMessage('guests', planQuota, tenant?.plan));
+                            setError(getQuotaActionMessage('guests', planQuota, planLabel));
                             return;
                           }
                           setShowImportModal(true);
@@ -2845,7 +2847,7 @@ Merci de confirmer votre présence :
                     </div>
                   </div>
                   {guestsAtLimit && (
-                    <PlanLimitCallout kind="guests" planQuota={planQuota} planName={tenant?.plan} />
+                    <PlanLimitCallout kind="guests" planQuota={planQuota} planName={planLabel} />
                   )}
 
                   {/* Insights / Vue d'ensemble */}
@@ -3069,7 +3071,7 @@ Merci de confirmer votre présence :
                           variant="secondary"
                           onClick={() => {
                             if (guestsAtLimit) {
-                              setError(getQuotaActionMessage('guests', planQuota, tenant?.plan));
+                              setError(getQuotaActionMessage('guests', planQuota, planLabel));
                               return;
                             }
                             setShowImportModal(true);
@@ -3081,7 +3083,7 @@ Merci de confirmer votre présence :
                         </Button>
                       </div>
                       {guestsAtLimit && (
-                        <PlanLimitCallout kind="guests" planQuota={planQuota} planName={tenant?.plan} className="mt-3" />
+                        <PlanLimitCallout kind="guests" planQuota={planQuota} planName={planLabel} className="mt-3" />
                       )}
                     </div>
                   ) : filteredGuests.length === 0 ? (
@@ -3480,7 +3482,7 @@ Merci de confirmer votre présence :
                       <p className="font-semibold text-foreground">Notifications PDF / GPS non incluses</p>
                       <p className="text-xs mt-1 text-muted">
                         Vous pouvez placer les invités. L’envoi automatique du PDF, du plan et du GPS dès acceptation Répondez s’il vous plaît
-                        n’est pas dans votre forfait actuel ({tenant?.plan || 'FREE'}).
+                        n’est pas dans votre forfait actuel{planLabel ? ` (${planLabel})` : ''}.
                       </p>
                       <Link href="/dashboard/billing" className="inline-block mt-2 text-xs font-medium text-primary hover:underline">
                         Voir les forfaits →

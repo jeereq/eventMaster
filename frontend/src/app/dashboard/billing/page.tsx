@@ -39,6 +39,15 @@ import {
   type BillingCycle,
   type PlanId,
 } from '@/config/landingPricing';
+import {
+  comparisonValueFromDb,
+  editorLevelLabel,
+  guestsBadgeFromDb,
+  highlightsFromDb,
+  planDisplayName,
+  supportLevelLabel,
+  type DbPlanCatalogEntry,
+} from '@/lib/planCatalogDb';
 
 interface BillingStatus {
   plan: PlanId;
@@ -67,21 +76,8 @@ interface BillingStatus {
   };
 }
 
-type DynamicPlanRow = {
-  name?: string;
-  description?: string;
-  price?: string;
-  monthlyPriceFc?: number;
-  promoActive?: boolean;
-  promoMonthlyPriceFc?: number | null;
-  promoLabel?: string;
-  maxEvents?: number;
-  maxGuests?: number;
-  maxTemplates?: number;
-  maxRooms?: number;
-  maxServices?: number;
-  maxOrgManagers?: number;
-};
+/** Ligne du catalogue en base (`GET /subscriptions/plans`). */
+type DynamicPlanRow = DbPlanCatalogEntry;
 
 type PlansCatalogResponse = {
   saasPaymentMode?: 'manual' | 'flexpay';
@@ -494,9 +490,13 @@ function BillingPageInner() {
         db?.monthlyPriceFc,
         promoFc,
       );
+      // Badge « N invités » : quota de la base (landing seulement si l'API a échoué).
+      const isGuestsBadge = Boolean(plan.badge && /invités/i.test(plan.badge));
       return {
         ...plan,
-        displayName: db?.name?.replace('Plan ', '') || plan.ms365Name,
+        displayName: planDisplayName(plan.id, db, plan.ms365Name),
+        badge: isGuestsBadge && db ? guestsBadgeFromDb(plan.id, db) ?? undefined : plan.badge,
+        highlights: highlightsFromDb(plan.id, plan.highlights, db),
         price,
         catalogPrice: promoActive ? catalogPrice : null,
         promoActive,
@@ -786,9 +786,13 @@ function BillingPageInner() {
                   })}
                   <div className="flex items-center gap-2 text-xs text-muted sm:col-span-2 lg:col-span-3">
                     <ShieldCheck className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
-                    Éditeur salles : <strong className="ml-1 capitalize">{billing.capabilities.roomEditorLevel}</strong>
+                    Éditeur salles : <strong className="ml-1 capitalize">
+                      {editorLevelLabel(billing.capabilities.roomEditorLevel) ?? billing.capabilities.roomEditorLevel}
+                    </strong>
                     {' · '}
-                    Support : <strong className="ml-1 capitalize">{billing.capabilities.supportLevel}</strong>
+                    Support : <strong className="ml-1 capitalize">
+                      {supportLevelLabel(billing.capabilities.supportLevel) ?? billing.capabilities.supportLevel}
+                    </strong>
                   </div>
                 </div>
               )}
@@ -1025,10 +1029,10 @@ function BillingPageInner() {
                         {comparisonIds.map((id) => (
                           <li key={id} className="flex items-center justify-between gap-3 text-xs">
                             <span className="text-muted min-w-0 truncate">
-                              {LANDING_PLANS.find((p) => p.id === id)?.ms365Name || id}
+                              {planDisplayName(id, dynamicPlans?.[id], LANDING_PLANS.find((p) => p.id === id)?.ms365Name)}
                             </span>
                             <span className="shrink-0">
-                              <FeatureCell value={row.values[id]} />
+                              <FeatureCell value={comparisonValueFromDb(row.label, id, row.values[id], dynamicPlans?.[id])} />
                             </span>
                           </li>
                         ))}
@@ -1045,7 +1049,7 @@ function BillingPageInner() {
                         </th>
                         {comparisonIds.map((id) => (
                           <th key={id} className="px-2 py-2 text-xs text-center text-muted whitespace-nowrap">
-                            {LANDING_PLANS.find((p) => p.id === id)?.ms365Name}
+                            {planDisplayName(id, dynamicPlans?.[id], LANDING_PLANS.find((p) => p.id === id)?.ms365Name)}
                           </th>
                         ))}
                       </tr>
@@ -1058,7 +1062,7 @@ function BillingPageInner() {
                           </td>
                           {comparisonIds.map((id) => (
                             <td key={id} className="py-2 text-center">
-                              <FeatureCell value={row.values[id]} />
+                              <FeatureCell value={comparisonValueFromDb(row.label, id, row.values[id], dynamicPlans?.[id])} />
                             </td>
                           ))}
                         </tr>

@@ -2767,7 +2767,7 @@ function DashboardPageContent() {
  }
  value={
  tenantsViewMode === 'list'
-                                  ? `${t.eventsCount} évén. · ${t.guestsPeriodCount ?? 0}/${(t.maxGuests && t.maxGuests >= 9999) ? '∞' : (t.maxGuests ?? 50)} inv.`
+                                  ? `${t.eventsCount} évén. · ${t.guestsPeriodCount ?? 0}/${(t.maxGuests && t.maxGuests >= 9999) ? '∞' : (t.maxGuests ?? '—')} inv.`
  : undefined
  }
  valueMeta={
@@ -2791,7 +2791,7 @@ function DashboardPageContent() {
  footer={
  tenantsViewMode === 'grid' ? (
                                   <span className="text-xs text-muted">
-                                    {t.usersCount} membre{t.usersCount !== 1 ? 's' : ''} · {t.eventsCount} événement{t.eventsCount !== 1 ? 's' : ''} · {t.guestsPeriodCount ?? 0}/{(t.maxGuests && t.maxGuests >= 9999) ? '∞' : (t.maxGuests ?? 50)} inv. (période)
+                                    {t.usersCount} membre{t.usersCount !== 1 ? 's' : ''} · {t.eventsCount} événement{t.eventsCount !== 1 ? 's' : ''} · {t.guestsPeriodCount ?? 0}/{(t.maxGuests && t.maxGuests >= 9999) ? '∞' : (t.maxGuests ?? '—')} inv. (période)
  </span>
  ) : undefined
  }

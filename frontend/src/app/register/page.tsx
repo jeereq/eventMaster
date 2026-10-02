@@ -52,6 +52,8 @@ import {
 } from '@/lib/registerAccountKinds';
 import { safeAppPath, isClientReturnPath } from '@/lib/safeAppPath';
 import { LANDING_PLANS } from '@/config/landingPricing';
+import { usePlanCatalog } from '@/hooks/usePlanCatalog';
+import { planDisplayName } from '@/lib/planCatalogDb';
 import RegisterAccountKindPicker from '@/components/register/RegisterAccountKindPicker';
 import RegisterReferralGate from '@/components/register/RegisterReferralGate';
 import RegisterVendorTrackPicker from '@/components/register/RegisterVendorTrackPicker';
@@ -204,6 +206,7 @@ function applyRegisterError(
 
 function RegisterPageContent() {
  const { register } = useAuth();
+ const { plans: planCatalog } = usePlanCatalog();
  const { site, ready } = usePlatformSite();
   const authChannels = site.authOtpChannels;
   const canChooseOtpChannel = allowsAuthOtpChoice(authChannels);
@@ -613,7 +616,10 @@ function RegisterPageContent() {
               </div>
               {matchedPlan && matchedPlan.id !== 'FREE' && (
                 <p className="text-xs text-muted">
-                  Forfait choisi : <span className="font-semibold text-foreground">{matchedPlan.ms365Name}</span>
+                  Forfait choisi :{' '}
+                  <span className="font-semibold text-foreground">
+                    {planDisplayName(matchedPlan.id, planCatalog?.[matchedPlan.id], matchedPlan.ms365Name)}
+                  </span>
                   {' — vous pourrez le valider après confirmation.'}
                 </p>
               )}

@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Percent } from 'lucide-react';
-import { LANDING_PLANS, getPlanBaseAmountFc, invoiceCatalogLabel, type PlanId } from '@/config/landingPricing';
+import { getPlanBaseAmountFc, invoiceCatalogLabel, type PlanId } from '@/config/landingPricing';
 
 interface BillingDiscountFieldsProps {
   planId: string;
@@ -17,8 +17,14 @@ interface BillingDiscountFieldsProps {
   compact?: boolean;
 }
 
-function getPlanPriceFc(planId: string): number {
-  return LANDING_PLANS.find((p) => p.id === planId)?.monthlyPriceFc ?? 0;
+/** Montant catalogue (base) pour la durée facturée ; null tant que le prix en base est inconnu. */
+function getCatalogBaseFc(
+  catalogPriceFc: number | undefined,
+  planId: string,
+  durationDays?: number | null,
+): number | null {
+  if (catalogPriceFc == null) return null;
+  return getPlanBaseAmountFc(catalogPriceFc, planId, durationDays);
 }
 
 export default function BillingDiscountFields({
@@ -34,26 +40,29 @@ export default function BillingDiscountFields({
   compact = false,
 }: BillingDiscountFieldsProps) {
   const baseAmount = useMemo(
-    () => getPlanBaseAmountFc(catalogPriceFc ?? getPlanPriceFc(planId), planId, durationDays),
+    () => getCatalogBaseFc(catalogPriceFc, planId, durationDays),
     [planId, catalogPriceFc, durationDays],
   );
 
-  const pricing = useMemo(() => {
-    if (planId === 'FREE' || baseAmount <= 0) {
+  // Prix catalogue absent : pas de tarif codé en dur, on affiche « — » et le montant saisi tel quel.
+  const pricing = useMemo((): { discountAmount: number; finalAmount: number | null; discountPercent: number } => {
+    if (planId === 'FREE' || (baseAmount != null && baseAmount <= 0)) {
       return { discountAmount: 0, finalAmount: 0, discountPercent: 0 };
     }
     if (discountMode === 'amount' && approvedAmount !== '') {
       const final = Math.max(0, Math.round(parseFloat(approvedAmount) || 0));
+      if (baseAmount == null) return { discountAmount: 0, finalAmount: final, discountPercent: 0 };
       const discountAmount = Math.max(0, baseAmount - final);
       const pct = baseAmount > 0 ? Math.round((discountAmount / baseAmount) * 1000) / 10 : 0;
       return { discountAmount, finalAmount: final, discountPercent: pct };
     }
     const pct = Math.min(100, Math.max(0, parseFloat(discountPercent) || 0));
+    if (baseAmount == null) return { discountAmount: 0, finalAmount: null, discountPercent: pct };
     const discountAmount = Math.round(baseAmount * (pct / 100));
     return { discountAmount, finalAmount: Math.max(0, baseAmount - discountAmount), discountPercent: pct };
   }, [planId, baseAmount, discountMode, discountPercent, approvedAmount]);
 
-  if (planId === 'FREE' || baseAmount <= 0) return null;
+  if (planId === 'FREE' || (baseAmount != null && baseAmount <= 0)) return null;
 
   return (
     <div className={`space-y-3 ${compact ? '' : 'pt-1'}`}>
@@ -105,14 +114,14 @@ export default function BillingDiscountFields({
           step={1000}
           value={approvedAmount}
           onChange={(e) => onApprovedAmountChange(e.target.value)}
-          placeholder={`Ex: ${baseAmount}`}
+          placeholder={baseAmount != null ? `Ex: ${baseAmount}` : undefined}
           className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] text-sm bg-surface-muted text-foreground"
         />
       )}
       <div className="bg-surface-muted rounded-[var(--radius-card)] p-3 text-xs space-y-1 border border-border">
         <p className="text-muted">
           Catalogue ({invoiceCatalogLabel(planId, durationDays)}) :{' '}
-          <span className="font-bold text-foreground">{baseAmount.toLocaleString('fr-FR')} FC</span>
+          <span className="font-bold text-foreground">{baseAmount != null ? `${baseAmount.toLocaleString('fr-FR')} FC` : '—'}</span>
         </p>
         {pricing.discountAmount > 0 && (
           <p className="text-emerald-600 font-semibold">
@@ -120,7 +129,7 @@ export default function BillingDiscountFields({
           </p>
         )}
         <p className="text-foreground">
-          Facturé : <span className="font-bold text-primary">{pricing.finalAmount.toLocaleString('fr-FR')} FC</span>
+          Facturé : <span className="font-bold text-primary">{pricing.finalAmount != null ? `${pricing.finalAmount.toLocaleString('fr-FR')} FC` : '—'}</span>
         </p>
       </div>
     </div>
@@ -135,9 +144,11 @@ export function getBillingPricingFromFields(
   catalogPriceFc?: number,
   durationDays?: number | null,
 ) {
-  const baseAmount = getPlanBaseAmountFc(catalogPriceFc ?? getPlanPriceFc(planId), planId, durationDays);
+  const baseAmount = getCatalogBaseFc(catalogPriceFc, planId, durationDays);
   if (discountMode === 'amount' && approvedAmount !== '') {
     const final = Math.max(0, Math.round(parseFloat(approvedAmount) || 0));
+    // Sans prix catalogue, le montant final saisi fait foi (le backend recalcule depuis la base).
+    if (baseAmount == null) return { discountPercent: 0, approvedAmount: final, baseAmount };
     const discountAmount = Math.max(0, baseAmount - final);
     const pct = baseAmount > 0 ? Math.round((discountAmount / baseAmount) * 1000) / 10 : 0;
     return { discountPercent: pct, approvedAmount: final, baseAmount };

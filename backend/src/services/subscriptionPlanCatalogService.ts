@@ -118,44 +118,12 @@ export async function seedDefaultSubscriptionPlans(): Promise<void> {
 }
 
 /**
- * Aligne les quotas / flags produit depuis le code sans écraser prix & promos admin.
- * Appelé au démarrage après seed des forfaits manquants.
+ * Charge le catalogue depuis la BD et met à jour le cache. La base est la seule source de vérité :
+ * les valeurs du code ne servent qu'à créer un forfait absent, jamais à écraser un forfait existant
+ * (prix, quotas, options et textes se modifient depuis l'admin ou par migration).
  */
-export async function syncSubscriptionPlanPolicyFromCode(): Promise<void> {
-  const defaults = getDefaultPlans();
-  for (const key of PLAN_KEYS) {
-    const d = defaults[key];
-    await prisma.subscriptionPlan.updateMany({
-      where: { id: key as PlanType },
-      data: {
-        name: d.name,
-        description: d.description,
-        maxEvents: d.maxEvents,
-        maxGuests: d.maxGuests,
-        maxTemplates: d.maxTemplates,
-        maxRooms: d.maxRooms,
-        maxServices: d.maxServices,
-        maxOrgManagers: d.maxOrgManagers,
-        customTemplates: d.customTemplates,
-        customRsvpFields: d.customRsvpFields,
-        mockupOcr: d.mockupOcr,
-        protocolQr: d.protocolQr,
-        seatNotifications: d.seatNotifications,
-        roomThemesFixtures: d.roomThemesFixtures,
-        adminReports: d.adminReports,
-        roomEditorLevel: d.roomEditorLevel,
-        commercialNetwork: d.commercialNetwork,
-        supportLevel: d.supportLevel,
-        sortOrder: PLAN_SORT_ORDER[key],
-      },
-    });
-  }
-}
-
-/** Charge le catalogue depuis la BD (crée les forfaits manquants) et met à jour le cache. */
 export async function loadSubscriptionPlansFromDb(): Promise<PlansConfiguration> {
   await seedDefaultSubscriptionPlans();
-  await syncSubscriptionPlanPolicyFromCode();
 
   const rows = await prisma.subscriptionPlan.findMany({
     orderBy: { sortOrder: 'asc' },

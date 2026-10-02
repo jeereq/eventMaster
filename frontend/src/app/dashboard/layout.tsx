@@ -39,6 +39,7 @@ import { Tooltip } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { LANDING_PLANS, isB2cPlanId } from '@/config/landingPricing';
+import { planDisplayName } from '@/lib/planCatalogDb';
 import { TourProvider } from '@/context/TourContext';
 import ProductTourOverlay from '@/components/guide/ProductTourOverlay';
 import FirstLoginTourHost from '@/components/guide/FirstLoginTourHost';
@@ -838,7 +839,13 @@ function DashboardMobileTitle() {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
- const { user, tenant, token, loading, logout, access, planFeatures, planQuota, supportSession } = useAuth();
+ const { user, tenant, token, loading, logout, access, planFeatures, planQuota, planName, supportSession } = useAuth();
+ /** Nom commercial du forfait actif (base) ; libellé marketing seulement en secours. */
+ const tenantPlanLabel = planDisplayName(
+  tenant?.plan,
+  planName ? { name: planName } : null,
+  LANDING_PLANS.find((p) => p.id === tenant?.plan)?.ms365Name,
+ );
  const { site } = usePlatformSite();
  const visibility = site?.studioVisibility ?? { budget: true, invite: true, room: true };
  const allStudiosBlocked = !visibility.budget && !visibility.invite && !visibility.room;
@@ -1216,7 +1223,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       <ShieldCheck className="w-3.5 h-3.5" />
                       {isClientAccount
                         ? 'Client'
-                        : `Plan ${LANDING_PLANS.find((p) => p.id === tenant.plan)?.ms365Name || tenant.plan}`}
+                        : `Plan ${tenantPlanLabel}`}
                     </div>
                   </div>
                 ) : null}
@@ -1348,7 +1355,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <ShieldCheck className="w-3.5 h-3.5" />
                 {isClientAccount
                   ? 'Client'
-                  : `Plan ${LANDING_PLANS.find((p) => p.id === tenant.plan)?.ms365Name || tenant.plan}`}
+                  : `Plan ${tenantPlanLabel}`}
               </div>
             </div>
           ) : null}

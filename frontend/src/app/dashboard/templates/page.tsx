@@ -239,7 +239,9 @@ const ELEMENT_TYPE_META: Record<CanvasElement['type'], { label: string; icon: ty
 };
 
 export default function TemplatesPage() {
- const { user, planFeatures, planQuota, tenant, access } = useAuth();
+ const { user, planFeatures, planQuota, tenant, access, planName } = useAuth();
+ /** Nom commercial du forfait (base) ; l'identifiant brut seulement si le nom n'est pas chargé. */
+ const planLabel = planName || tenant?.plan || null;
  const { trackJob } = useStudioJobs();
  const { runningJob: invitationStudioJob, isHidden: invitationLoaderHidden, hideOverlay: hideInvitationLoader, showOverlay: showInvitationLoader } = useStudioLoaderOverlay('invitation');
  const { site } = usePlatformSite();
@@ -1012,7 +1014,7 @@ export default function TemplatesPage() {
 
  if (useOcr) {
  if (!canUseMockupOcr) {
- setError(getFeatureLockMessage('mockupOcr', tenant?.plan) + ' Passez à Business Premium 2 ou plus pour détecter le texte automatiquement.');
+ setError(getFeatureLockMessage('mockupOcr', planLabel) + ' Passez à un forfait qui inclut l’OCR pour détecter le texte automatiquement.');
  return;
  }
  setOcrProgress(0);
@@ -3066,7 +3068,7 @@ const studioModelPhotos = useMemo(
  <p className="text-xs text-muted leading-relaxed">
  {!canUseCustomTemplates
  ? "La création et l'enregistrement de faire-part personnalisés sont réservés aux offres professionnelles et supérieures. Votre modèle a bien été sauvegardé sur cet appareil pour que vous ne perdiez pas votre travail."
- : `Vous avez atteint la limite de ${planQuota?.limits.maxTemplates ?? 1} modèle(s) d'invitation de votre formule actuelle (${tenant?.plan || 'actuel'}). Pour enregistrer ce nouveau modèle sans supprimer les précédents, activez une formule supérieure.`}
+ : `Vous avez atteint la limite de ${planQuota ? `${planQuota.limits.maxTemplates} ` : ''}modèle(s) d'invitation de votre formule actuelle${planLabel ? ` (${planLabel})` : ''}. Pour enregistrer ce nouveau modèle sans supprimer les précédents, activez une formule supérieure.`}
  </p>
  </div>
 
@@ -6083,7 +6085,7 @@ const studioModelPhotos = useMemo(
  />
 
  {(!canUseCustomTemplates || templatesAtLimit) && user?.role === 'USER' && (
- <PlanLimitCallout kind="templates" planQuota={planQuota} planName={tenant?.plan} />
+ <PlanLimitCallout kind="templates" planQuota={planQuota} planName={planLabel} />
  )}
  {isSuperAdmin && (
  <div className="rounded-[var(--radius-card)] border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-foreground space-y-1">
@@ -6099,10 +6101,10 @@ const studioModelPhotos = useMemo(
  )}
 
  {!canUseCustomTemplates && user?.role === 'USER' && (
- <PlanLimitCallout feature="customTemplates" planName={tenant?.plan} />
+ <PlanLimitCallout feature="customTemplates" planName={planLabel} />
  )}
  {canUseCustomTemplates && !canUseMockupOcr && user?.role === 'USER' && (
- <PlanLimitCallout feature="mockupOcr" planName={tenant?.plan} />
+ <PlanLimitCallout feature="mockupOcr" planName={planLabel} />
  )}
 
  {error && <Alert variant="error">{error}</Alert>}
@@ -6330,7 +6332,7 @@ const studioModelPhotos = useMemo(
  <p className="text-xs text-muted leading-relaxed">
  {!canUseCustomTemplates
  ? "La création et l'enregistrement de faire-part personnalisés sont réservés aux offres professionnelles et supérieures. Votre modèle a bien été sauvegardé sur cet appareil pour que vous ne perdiez pas votre travail."
- : `Vous avez atteint la limite de ${planQuota?.limits.maxTemplates ?? 1} modèle(s) d'invitation de votre formule actuelle (${tenant?.plan || 'actuel'}). Pour enregistrer ce nouveau modèle sans supprimer les précédents, activez une formule supérieure.`}
+ : `Vous avez atteint la limite de ${planQuota ? `${planQuota.limits.maxTemplates} ` : ''}modèle(s) d'invitation de votre formule actuelle${planLabel ? ` (${planLabel})` : ''}. Pour enregistrer ce nouveau modèle sans supprimer les précédents, activez une formule supérieure.`}
  </p>
  </div>
 
