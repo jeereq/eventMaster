@@ -10,6 +10,16 @@ interface QrCameraScannerProps {
  onError?: (message: string) => void;
 }
 
+/** html5-qrcode lève une erreur synchrone si le scanner n’a jamais démarré (caméra absente ou refusée). */
+function stopScannerSafely(scanner: { stop: () => Promise<void> } | null) {
+ if (!scanner) return;
+ try {
+ stopScannerSafely(scanner);
+ } catch {
+ // déjà arrêté
+ }
+}
+
 export default function QrCameraScanner({ active, onScan, onError }: QrCameraScannerProps) {
  const regionId = useId().replace(/:/g, '');
  const scannerRef = useRef<{ stop: () => Promise<void> } | null>(null);
@@ -22,7 +32,7 @@ export default function QrCameraScanner({ active, onScan, onError }: QrCameraSca
  handledRef.current = false;
  setCameraError(null);
  if (scannerRef.current) {
- scannerRef.current.stop().catch(() => undefined);
+ stopScannerSafely(scannerRef.current);
  scannerRef.current = null;
  }
  return;
@@ -56,7 +66,7 @@ export default function QrCameraScanner({ active, onScan, onError }: QrCameraSca
  if (handledRef.current) return;
  handledRef.current = true;
  onScan(decodedText);
- scanner.stop().catch(() => undefined);
+ stopScannerSafely(scanner);
  scannerRef.current = null;
  },
  () => {
@@ -64,6 +74,7 @@ export default function QrCameraScanner({ active, onScan, onError }: QrCameraSca
  },
  );
  } catch (err) {
+ scannerRef.current = null;
  const msg =
  err instanceof Error
  ? err.message.includes('NotAllowed')
@@ -84,7 +95,7 @@ export default function QrCameraScanner({ active, onScan, onError }: QrCameraSca
  return () => {
  cancelled = true;
  if (scannerRef.current) {
- scannerRef.current.stop().catch(() => undefined);
+ stopScannerSafely(scannerRef.current);
  scannerRef.current = null;
  }
  };
