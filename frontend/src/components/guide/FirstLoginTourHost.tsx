@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Map, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { api } from '@/lib/api';
 import { useTour } from '@/context/TourContext';
 import { Modal, Button } from '@/components/ui';
 import { resolveUserGuideRole } from '@/lib/resolveUserGuideRole';
@@ -83,9 +84,26 @@ export default function FirstLoginTourHost() {
     const onboardingDone = getVendorOnboardingStatus(user.id);
 
     if (isVendor && !onboardingDone) {
-      setOnboardingOpen(true);
       if (fromOtp) stripTourParam();
-      return;
+      // Vitrine déjà remplie (autre appareil, ancien compte) : on ne redemande pas la configuration.
+      let cancelled = false;
+      const userId = user.id;
+      void Promise.all([
+        api.get('/rooms').catch(() => null),
+        api.get('/marketplace/services').catch(() => null),
+      ]).then(([roomsData, servicesData]) => {
+        if (cancelled) return;
+        const rooms = (roomsData as { rooms?: unknown[] } | null)?.rooms ?? [];
+        const services = (servicesData as { services?: unknown[] } | null)?.services ?? [];
+        if (rooms.length > 0 || services.length > 0) {
+          setVendorOnboardingStatus(userId, true);
+          return;
+        }
+        setOnboardingOpen(true);
+      });
+      return () => {
+        cancelled = true;
+      };
     }
 
     if (status === 'seen' || status === 'skipped') {

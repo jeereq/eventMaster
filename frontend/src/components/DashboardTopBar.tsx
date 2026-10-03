@@ -33,7 +33,7 @@ export function useDashboardTitle(): { title: string; subtitle?: string } {
     if (pathname.startsWith('/dashboard/invoices')) return { title: 'Factures', subtitle: 'Historique des paiements' };
     if (pathname.startsWith('/dashboard/rooms')) return { title: 'Salles', subtitle: 'Plans 2D et fiches' };
     if (pathname.startsWith('/dashboard/team')) return { title: 'Équipe', subtitle: 'Membres et rôles' };
-    if (pathname.startsWith('/dashboard/marketplace')) return { title: 'Marketplace', subtitle: 'Offres, matériel & réservations' };
+    if (pathname.startsWith('/dashboard/marketplace')) return { title: 'Mes offres', subtitle: 'Prestations, matériel et boissons' };
     if (pathname.startsWith('/dashboard/bookings')) return { title: 'Devis & Réservations', subtitle: 'Échanges et dates confirmées' };
     if (pathname.startsWith('/dashboard/profile')) return { title: 'Mon compte', subtitle: 'Profil et sécurité' };
     if (pathname.startsWith('/dashboard/notifications')) return { title: 'Notifications', subtitle: 'Alertes de votre compte' };

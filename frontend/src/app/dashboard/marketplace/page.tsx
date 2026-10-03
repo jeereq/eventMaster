@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { getQuotaLockMessage, getQuotaActionMessage } from '@/lib/planAccess';
+import { getQuotaLockMessage, getQuotaActionMessage, isUnlimitedQuota } from '@/lib/planAccess';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
 import {
   PageHeader, Button, Breadcrumbs, Alert, Modal, EmptyState, StatusPill,
@@ -100,7 +100,12 @@ export default function MarketplaceDeskPage() {
   const { site } = usePlatformSite();
   const router = useRouter();
   const canManage = Boolean(access?.canManageRooms);
-  const [tab, setTab] = useState<DeskTab>('services');
+  const servicesNotIncluded = Boolean(
+    planQuota && !isUnlimitedQuota(planQuota.limits.maxServices ?? 0) && (planQuota.limits.maxServices ?? 0) <= 0,
+  );
+  const [tabChoice, setTab] = useState<DeskTab | null>(null);
+  // Forfait Salle sans fiches : ouvrir sur les demandes plutôt que sur un onglet verrouillé.
+  const tab: DeskTab = tabChoice ?? (servicesNotIncluded ? 'inquiries' : 'services');
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [inquiries, setInquiries] = useState<MarketplaceInquiryItem[]>([]);
   const [bookings, setBookings] = useState<MarketplaceBookingItem[]>([]);
@@ -202,6 +207,7 @@ export default function MarketplaceDeskPage() {
     Array.isArray(item.photos) ? item.photos.filter((p): p is string => typeof p === 'string') : [];
 
   const servicesAtLimit = Boolean(getQuotaLockMessage('services', planQuota));
+
 
   const openCreate = (mode: 'trade' | 'rental' = 'trade') => {
     const lock = getQuotaLockMessage('services', planQuota);
@@ -396,6 +402,18 @@ export default function MarketplaceDeskPage() {
 
   const newCount = inquiries.filter((i) => i.status === 'NEW').length;
 
+  const deskTabs: Array<{ id: DeskTab; label: string; locked?: boolean }> = [
+    { id: 'services', label: 'Prestations', locked: servicesNotIncluded },
+    { id: 'rentals', label: 'Matériel & Équipements', locked: servicesNotIncluded },
+    { id: 'inquiries', label: `Demandes${newCount > 0 ? ` (${newCount})` : ''}` },
+    { id: 'bookings', label: `Réservations${bookings.length > 0 ? ` (${bookings.length})` : ''}` },
+    { id: 'beverages', label: 'Boissons' },
+  ];
+  // Forfait Salle sans fiches : ne pas ouvrir sur un onglet verrouillé.
+  const orderedDeskTabs = servicesNotIncluded
+    ? [...deskTabs.filter((item) => !item.locked), ...deskTabs.filter((item) => item.locked)]
+    : deskTabs;
+
   const listingTab = tab === 'services' || tab === 'rentals';
   const listingIsRental = tab === 'rentals';
   const listingPool = services.filter((item) => (
@@ -443,10 +461,10 @@ export default function MarketplaceDeskPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Marketplace"
-        description={`Prestations, devis, dates. Commission ${commissionPercent(site)} %.`}
+        title="Mes offres"
+        description={`Prestations, matériel, demandes et boissons. Commission ${commissionPercent(site)} %.`}
         breadcrumbs={
-          <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Marketplace' }]} />
+          <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Mes offres' }]} />
         }
         action={
           listingTab ? (
@@ -473,67 +491,35 @@ export default function MarketplaceDeskPage() {
         }
       />
 
-      {planQuota && listingTab && (
+      {planQuota && listingTab && !servicesNotIncluded && (
         <p className="text-xs text-muted">
           Fiches : {planQuota.usage.services ?? 0} /{' '}
           {(planQuota.limits.maxServices ?? 0) >= 9999 ? '∞' : planQuota.limits.maxServices}
         </p>
       )}
-      {servicesAtLimit && (
+      {servicesAtLimit && listingTab && (
         <PlanLimitCallout kind="services" planQuota={planQuota} planName={planLabel} />
       )}
 
-      <div className="flex gap-1.5">
-        <button
-          type="button"
-          onClick={() => setTab('services')}
-          className={cn(
-            'min-h-11 px-3 py-2 rounded-full text-xs font-semibold border',
-            tab === 'services' ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted',
-          )}
-        >
-          Prestations
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('rentals')}
-          className={cn(
-            'min-h-11 px-3 py-2 rounded-full text-xs font-semibold border',
-            tab === 'rentals' ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted',
-          )}
-        >
-          Matériel & Équipements
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('inquiries')}
-          className={cn(
-            'min-h-11 px-3 py-2 rounded-full text-xs font-semibold border',
-            tab === 'inquiries' ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted',
-          )}
-        >
-          Demandes{newCount > 0 ? ` (${newCount})` : ''}
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('bookings')}
-          className={cn(
-            'min-h-11 px-3 py-2 rounded-full text-xs font-semibold border',
-            tab === 'bookings' ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted',
-          )}
-        >
-          Réservations{bookings.length > 0 ? ` (${bookings.length})` : ''}
-        </button>
-        <button
-          type="button"
-          onClick={() => setTab('beverages')}
-          className={cn(
-            'min-h-11 px-3 py-2 rounded-full text-xs font-semibold border',
-            tab === 'beverages' ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted',
-          )}
-        >
-          Boissons
-        </button>
+      <div role="tablist" aria-label="Mes offres" className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1 pb-1">
+        {orderedDeskTabs.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === item.id}
+            onClick={() => setTab(item.id)}
+            title={item.locked ? 'Non inclus dans votre forfait' : undefined}
+            className={cn(
+              'inline-flex items-center gap-1.5 shrink-0 min-h-11 px-3 py-2 rounded-full text-xs font-semibold border whitespace-nowrap touch-manipulation',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+              tab === item.id ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted hover:text-foreground',
+            )}
+          >
+            {item.locked ? <KeyRound className="w-3.5 h-3.5" aria-hidden /> : null}
+            {item.label}
+          </button>
+        ))}
       </div>
 
       {error && !editorOpen ? <Alert variant="error">{error}</Alert> : null}

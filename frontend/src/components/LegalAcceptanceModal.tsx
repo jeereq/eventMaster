@@ -15,6 +15,9 @@ interface LegalAcceptanceModalProps {
   submitting?: boolean;
   error?: string;
   onAccept: (acceptTerms: boolean, acceptPrivacy: boolean) => void;
+  /** Invité : une seule case couvre les trois documents (moins de friction avant l’invitation). */
+  combined?: boolean;
+  submitLabel?: string;
 }
 
 export default function LegalAcceptanceModal({
@@ -24,7 +27,10 @@ export default function LegalAcceptanceModal({
   submitting = false,
   error = '',
   onAccept,
+  combined = false,
+  submitLabel = 'Continuer',
 }: LegalAcceptanceModalProps) {
+  const [acceptAll, setAcceptAll] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [acceptPrivacy, setAcceptPrivacy] = useState(false);
   const [acceptRefund, setAcceptRefund] = useState(false);
@@ -34,6 +40,7 @@ export default function LegalAcceptanceModal({
       setAcceptTerms(false);
       setAcceptPrivacy(false);
       setAcceptRefund(false);
+      setAcceptAll(false);
     }
   }, [open]);
 
@@ -56,65 +63,91 @@ export default function LegalAcceptanceModal({
       footer={
         <Button
           fullWidth
-          disabled={!acceptTerms || !acceptPrivacy || !acceptRefund}
+          disabled={combined ? !acceptAll : !acceptTerms || !acceptPrivacy || !acceptRefund}
           loading={submitting}
-          onClick={() => onAccept(acceptTerms, acceptPrivacy)}
+          onClick={() => (combined ? onAccept(true, true) : onAccept(acceptTerms, acceptPrivacy))}
         >
-          Continuer
+          {submitLabel}
         </Button>
       }
     >
       {error && <Alert variant="error" className="mb-4">{error}</Alert>}
 
-      <div className="space-y-3">
+      {combined ? (
         <label className="flex items-start gap-3 p-3 rounded-[var(--radius-card)] border border-border cursor-pointer hover:bg-surface-muted transition">
           <input
             type="checkbox"
-            checked={acceptTerms}
-            onChange={(e) => setAcceptTerms(e.target.checked)}
+            checked={acceptAll}
+            onChange={(e) => setAcceptAll(e.target.checked)}
             className="mt-0.5 rounded border-border text-primary focus:ring-primary"
           />
-          <span className="text-sm text-foreground">
+          <span className="text-sm text-foreground leading-relaxed">
             J&apos;accepte les{' '}
             <Link href="/terms" target="_blank" className="text-primary font-semibold hover:underline">
               conditions d&apos;utilisation
             </Link>{' '}
-            (version {TERMS_VERSION}).
-          </span>
-        </label>
-
-        <label className="flex items-start gap-3 p-3 rounded-[var(--radius-card)] border border-border cursor-pointer hover:bg-surface-muted transition">
-          <input
-            type="checkbox"
-            checked={acceptPrivacy}
-            onChange={(e) => setAcceptPrivacy(e.target.checked)}
-            className="mt-0.5 rounded border-border text-primary focus:ring-primary"
-          />
-          <span className="text-sm text-foreground">
-            J&apos;accepte la{' '}
+            (v{TERMS_VERSION}), la{' '}
             <Link href="/privacy" target="_blank" className="text-primary font-semibold hover:underline">
               politique de confidentialité
             </Link>{' '}
-            (version {PRIVACY_VERSION}).
-          </span>
-        </label>
-
-        <label className="flex items-start gap-3 p-3 rounded-[var(--radius-card)] border border-border cursor-pointer hover:bg-surface-muted transition">
-          <input
-            type="checkbox"
-            checked={acceptRefund}
-            onChange={(e) => setAcceptRefund(e.target.checked)}
-            className="mt-0.5 rounded border-border text-primary focus:ring-primary"
-          />
-          <span className="text-sm text-foreground">
-            J&apos;accepte la{' '}
+            (v{PRIVACY_VERSION}) et la{' '}
             <Link href="/refund" target="_blank" className="text-primary font-semibold hover:underline">
               politique de remboursement
             </Link>{' '}
-            (version {REFUND_VERSION}).
+            (v{REFUND_VERSION}).
           </span>
         </label>
-      </div>
+      ) : (
+        <div className="space-y-3">
+          <label className="flex items-start gap-3 p-3 rounded-[var(--radius-card)] border border-border cursor-pointer hover:bg-surface-muted transition">
+            <input
+              type="checkbox"
+              checked={acceptTerms}
+              onChange={(e) => setAcceptTerms(e.target.checked)}
+              className="mt-0.5 rounded border-border text-primary focus:ring-primary"
+            />
+            <span className="text-sm text-foreground">
+              J&apos;accepte les{' '}
+              <Link href="/terms" target="_blank" className="text-primary font-semibold hover:underline">
+                conditions d&apos;utilisation
+              </Link>{' '}
+              (version {TERMS_VERSION}).
+            </span>
+          </label>
+
+          <label className="flex items-start gap-3 p-3 rounded-[var(--radius-card)] border border-border cursor-pointer hover:bg-surface-muted transition">
+            <input
+              type="checkbox"
+              checked={acceptPrivacy}
+              onChange={(e) => setAcceptPrivacy(e.target.checked)}
+              className="mt-0.5 rounded border-border text-primary focus:ring-primary"
+            />
+            <span className="text-sm text-foreground">
+              J&apos;accepte la{' '}
+              <Link href="/privacy" target="_blank" className="text-primary font-semibold hover:underline">
+                politique de confidentialité
+              </Link>{' '}
+              (version {PRIVACY_VERSION}).
+            </span>
+          </label>
+
+          <label className="flex items-start gap-3 p-3 rounded-[var(--radius-card)] border border-border cursor-pointer hover:bg-surface-muted transition">
+            <input
+              type="checkbox"
+              checked={acceptRefund}
+              onChange={(e) => setAcceptRefund(e.target.checked)}
+              className="mt-0.5 rounded border-border text-primary focus:ring-primary"
+            />
+            <span className="text-sm text-foreground">
+              J&apos;accepte la{' '}
+              <Link href="/refund" target="_blank" className="text-primary font-semibold hover:underline">
+                politique de remboursement
+              </Link>{' '}
+              (version {REFUND_VERSION}).
+            </span>
+          </label>
+        </div>
+      )}
     </Modal>
   );
 }
