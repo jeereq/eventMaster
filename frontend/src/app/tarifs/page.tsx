@@ -40,7 +40,7 @@ export default function TarifsPage() {
     >
       <PublicPageHero
         title="Des forfaits clairs selon votre usage"
-        description="Client gratuit · Organisation Business+ (catalogue inclus) · Pro salle ou métier. Paiement Mobile Money ou carte en Francs Congolais (FC)."
+        description="Choisissez votre profil, comparez en francs congolais et payez par Mobile Money ou carte. La recherche de salles et de prestataires reste gratuite."
         compact
       >
         <div className="pt-1 flex flex-wrap items-center gap-2.5">
@@ -56,7 +56,7 @@ export default function TarifsPage() {
             className="inline-flex items-center gap-1.5 min-h-11 px-4 py-2 rounded-full bg-surface border border-border text-xs font-semibold text-muted hover:text-foreground hover:bg-surface-muted transition shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             <MessageSquare className="w-3.5 h-3.5" />
-            <span>Besoin d'un accompagnement sur-mesure ?</span>
+            <span>Besoin d’un conseil ?</span>
           </Link>
         </div>
       </PublicPageHero>
@@ -66,14 +66,13 @@ export default function TarifsPage() {
           dbPlans={dbPlans}
           plansLoading={plansLoading}
           defaultAudience="B2C"
-          lead="Trois parcours : client (recherche gratuite), organisateur (événements — catalogue inclus dès Business), pro (salle ou métier sans événements)."
         />
 
         <div className="page-container py-4">
           <FaqSection
             id="faq"
             title="Questions fréquentes sur les tarifs"
-            subtitle="Modalités de paiement, activation immédiate et conditions de résiliation."
+            subtitle="Paiement, activation et changement de forfait."
             itemIds={['plans-quotas', 'guest-quota-period', 'free-trial', 'b2c-annual', 'upgrade', 'support']}
           />
         </div>

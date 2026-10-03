@@ -16,7 +16,7 @@ import {
 } from '@/config/contactReasons';
 import { cn } from '@/lib/cn';
 import {
-  Mail, Phone, MapPin, Send, MessageSquare, CheckCircle2, Clock, ArrowRight,
+  Mail, Phone, MapPin, Send, MessageSquare, MessageCircle, CheckCircle2, Clock, ArrowRight,
 } from 'lucide-react';
 
 export default function ContactPage() {
@@ -99,6 +99,9 @@ export default function ContactPage() {
     }
   };
 
+  const whatsappDigits = site.supportPhone.replace(/\D/g, '');
+  const whatsappHref = whatsappDigits.length >= 8 ? `https://wa.me/${whatsappDigits}` : '';
+
   const fieldClass =
     'w-full px-3.5 py-2.5 bg-surface-muted border border-border rounded-[var(--radius-button)] text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary transition disabled:opacity-60';
 
@@ -106,7 +109,7 @@ export default function ContactPage() {
     <PublicPageShell faqHref="/contact#faq">
       <PublicPageHero
         title="Parlons de votre événement"
-        description={`Démonstration, forfaits, support ou remboursement — réponse sous 24–48 h (${site.supportHours}).`}
+        description={`Démonstration, forfaits, support ou remboursement : réponse sous 24 à 48 h (${site.supportHours}).`}
       />
 
       <div className="flex-1">
@@ -121,10 +124,31 @@ export default function ContactPage() {
                       Nos coordonnées
                     </h2>
                     <p className="text-sm text-muted leading-relaxed">
-                      Commercial, facturation ou technique — joignez-nous directement ou via le
+                      Commercial, facturation ou technique : joignez-nous directement ou via le
                       formulaire.
                     </p>
                   </div>
+
+                  {whatsappHref ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <a
+                        href={whatsappHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-2 min-h-11 px-3 rounded-[var(--radius-button)] bg-[#128c7e] text-white text-sm font-semibold hover:bg-[#0f7569] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                      >
+                        <MessageCircle className="w-4 h-4" aria-hidden />
+                        WhatsApp
+                      </a>
+                      <a
+                        href={site.supportPhoneHref}
+                        className="inline-flex items-center justify-center gap-2 min-h-11 px-3 rounded-[var(--radius-button)] border border-border bg-surface text-sm font-semibold text-foreground hover:bg-surface-muted transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                      >
+                        <Phone className="w-4 h-4" aria-hidden />
+                        Appeler
+                      </a>
+                    </div>
+                  ) : null}
 
                   <ul className="space-y-4">
                     <li className="flex items-start gap-3">
@@ -373,8 +397,11 @@ export default function ContactPage() {
         <FaqSection
           id="faq"
           title="Questions fréquentes"
-          subtitle="Réponses courantes avant de nous écrire — forfaits, sécurité, protocole QR."
+          subtitle="Les réponses les plus demandées avant de nous écrire."
+          itemIds={['free-trial', 'plans-quotas', 'upgrade', 'invoices', 'protocol-qr', 'security']}
+          moreHref="/faq"
           showContactLink={false}
+          split
         />
 
         <PublicCtaBand

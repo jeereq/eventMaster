@@ -8,6 +8,15 @@ import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { interpolateRates } from '@/lib/platformRates';
 
+type FaqSite = ReturnType<typeof usePlatformSite>['site'];
+
+/** Réponse affichée : coordonnées du support et taux de la plateforme injectés. */
+export function resolveFaqAnswer(item: (typeof FAQ_ITEMS)[number], site: FaqSite): string {
+  return item.id === 'support'
+    ? `Utilisez le formulaire de contact, écrivez à ${site.supportEmail} ou appelez le ${site.supportPhone} (${site.whatsappNote}). Notre équipe répond aux questions commerciales, techniques et de facturation.`
+    : interpolateRates(item.answer, site);
+}
+
 interface FaqSectionProps {
   id?: string;
   title?: string;
@@ -46,13 +55,7 @@ export default function FaqSection({
     setOpenId(null);
   }, [source]);
 
-  const items = source.map((item) => ({
-    ...item,
-    answer:
-      item.id === 'support'
-        ? `Utilisez le formulaire de contact, écrivez à ${site.supportEmail} ou appelez le ${site.supportPhone} (${site.whatsappNote}). Notre équipe répond aux questions commerciales, techniques et de facturation.`
-        : interpolateRates(item.answer, site),
-  }));
+  const items = source.map((item) => ({ ...item, answer: resolveFaqAnswer(item, site) }));
 
   const links = (
     <>

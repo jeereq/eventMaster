@@ -1,7 +1,8 @@
 /**
  * Pages publiques où le bouton flottant des studios IA n'a pas sa place :
- * espace invité, impression, connexion, pages légales et fiches qui ont déjà
- * leur propre barre d'action (prix, devis, réservation).
+ * espace invité, impression, connexion, contact (le bouton couvrait l'envoi du
+ * formulaire), pages légales et fiches qui ont déjà leur propre barre d'action
+ * (prix, devis, réservation).
  */
 const HIDDEN_PREFIXES = [
   '/rsvp/',
@@ -13,6 +14,7 @@ const HIDDEN_PREFIXES = [
   '/reset-password',
   '/verify-email',
   '/verify-otp',
+  '/contact',
   '/privacy',
   '/terms',
   '/refund',

@@ -87,12 +87,14 @@ function VerifyEmailContent() {
           </div>
           <h2 className="text-2xl font-semibold text-foreground">Échec de la vérification</h2>
           <Alert variant="error">{message}</Alert>
+          <p className="text-sm text-muted leading-relaxed">
+            Le lien a peut-être déjà servi ou expiré. Connectez-vous : si votre compte n’est pas encore
+            activé, un nouveau code vous est envoyé.
+          </p>
           <div className="space-y-3 pt-1">
-            <Link href="/register">
-              <Button fullWidth>Créer un nouveau compte</Button>
-            </Link>
-            <Link href="/login" className="block text-sm font-semibold text-primary hover:underline">
-              Retour à la connexion
+            <Button href="/login" fullWidth>Me connecter</Button>
+            <Link href="/register" className="block text-sm font-semibold text-primary hover:underline">
+              Je n’ai pas encore de compte
             </Link>
           </div>
         </div>

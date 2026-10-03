@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import type { ReactNode } from 'react';
 import { ArrowRight, Box, MessageCircle, QrCode, Sparkles, Ticket, Globe } from 'lucide-react';
 
@@ -11,7 +12,7 @@ const STEPS = [
 const TILES = [
   { href: '/simulateur', icon: Sparkles, title: 'Simulateur de budget', text: 'Une estimation en quelques questions.' },
   { href: '/modeles', icon: MessageCircle, title: 'Invitations WhatsApp', text: 'Envoyées là où vos invités lisent.' },
-  { href: '/faq', icon: QrCode, title: 'Contrôle d’accès', text: 'QR code scanné à l’entrée.' },
+  { href: '/faq#protocol-qr', icon: QrCode, title: 'Contrôle d’accès', text: 'QR code scanné à l’entrée.' },
   { href: '/marketplace/evenements', icon: Ticket, title: 'Billetterie', text: 'Vendez vos places en ligne.' },
 ];
 
@@ -72,15 +73,22 @@ export default function LandingStepsBento({ stepsAction }: { stepsAction?: React
           <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:grid-rows-2">
             <Link
               href="/plans-3d"
-              className="group relative col-span-2 overflow-hidden rounded-[1.75rem] bg-[#064e3b] p-6 sm:p-7 text-white lg:row-span-2 min-h-[13rem] sm:min-h-[16rem] flex flex-col justify-end focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="group relative col-span-2 overflow-hidden rounded-[1.75rem] bg-[#064e3b] p-6 sm:p-7 text-white lg:row-span-2 min-h-[16rem] sm:min-h-[20rem] flex flex-col justify-end focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
+              <Image
+                src="/images/landing/salle-3d-mariage.webp"
+                alt=""
+                fill
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="object-cover opacity-90 transition-transform duration-700 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+              />
               <span
                 aria-hidden
-                className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-[4rem] border-[2.5rem] border-[#065f46]"
+                className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#022c22] via-[#022c22]/70 to-[#022c22]/0"
               />
               <Box className="relative h-8 w-8 text-[#6ee7b7]" aria-hidden />
               <h3 className="font-display relative mt-4 text-2xl sm:text-3xl font-bold">Votre salle en 3D</h3>
-              <p className="relative mt-2 max-w-sm text-[#d1fae5]">Placez tables et scène avant le jour J.</p>
+              <p className="relative mt-2 max-w-sm text-[#d1fae5]">Placez tables, scène et allée avant le jour J, puis faites visiter la salle à vos proches.</p>
               <span className="relative mt-5 inline-flex items-center gap-2 font-semibold text-[#6ee7b7] group-hover:gap-3 transition-all">
                 Essayer le plan 3D <ArrowRight className="h-4 w-4" aria-hidden />
               </span>

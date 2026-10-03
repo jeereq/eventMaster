@@ -1,18 +1,14 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { api } from '@/lib/api';
-import {
-  Calendar, MessageSquare, Table, Sparkles,
-} from 'lucide-react';
+import { KeyRound, Mail, MessageSquare } from 'lucide-react';
 import { AuthSplitLayout } from '@/components/AuthSplitLayout';
 import { Button, Alert, Card, IdentifierInput, identifierValue } from '@/components/ui';
 import type { IdentifierMode } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
-  allowsAuthOtpChoice,
   authOtpMethodOptions,
   defaultAuthOtpMethod,
   defaultPhoneAuthOtpMethod,
@@ -21,11 +17,10 @@ import {
   type PhoneAuthOtpMethod,
 } from '@/lib/authOtpChannels';
 
-const FEATURES = [
-  { icon: Calendar, title: "Gestion d'événements et réponses à l’invitation", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
-  { icon: Table, title: 'Planificateur de table', desc: 'Placement intuitif par glisser-déposer sur un plan 2D.' },
-  { icon: MessageSquare, title: "Fil d'actualité & livre d'or", desc: 'Photos, vidéos et commentaires dans un espace privé.' },
-  { icon: Sparkles, title: 'Statistiques & analyses', desc: 'Régimes alimentaires, réponses et exports en un clic.' },
+const STEPS = [
+  { icon: Mail, title: 'Indiquez votre identifiant', desc: 'L’e-mail ou le numéro utilisé pour créer votre compte.' },
+  { icon: MessageSquare, title: 'Ouvrez le lien reçu', desc: 'Il arrive par e-mail, WhatsApp ou SMS selon votre choix.' },
+  { icon: KeyRound, title: 'Choisissez un nouveau mot de passe', desc: 'Vous êtes reconnecté aussitôt, vos événements sont intacts.' },
 ];
 
 export default function AskResetPasswordPage() {
@@ -93,9 +88,9 @@ export default function AskResetPasswordPage() {
 
   return (
     <AuthSplitLayout
-      title="Récupérez l'accès à votre compte en toute sécurité."
-      description="Recevez un lien de réinitialisation sur le même canal que votre identifiant (e-mail, WhatsApp ou SMS)."
-      features={FEATURES}
+      title="Mot de passe oublié ? Ça arrive."
+      description="Trois étapes et vous retrouvez votre compte, sans perdre aucune donnée."
+      features={STEPS}
       backHref="/login"
       backLabel="Retour à la connexion"
     >
@@ -103,7 +98,7 @@ export default function AskResetPasswordPage() {
         <div className="mb-6">
           <h2 className="text-2xl font-semibold text-foreground tracking-tight">Mot de passe oublié</h2>
           <p className="mt-2 text-sm text-muted">
-            Choisissez e-mail ou téléphone : le lien part sur ce même moyen.
+            Le lien de réinitialisation part sur le moyen choisi ci-dessous.
           </p>
         </div>
 
@@ -112,9 +107,14 @@ export default function AskResetPasswordPage() {
         {success ? (
           <div className="space-y-4">
             <Alert variant="success" title="Demande envoyée !">{success}</Alert>
-            <Link href="/login">
-              <Button fullWidth>Retourner à la connexion</Button>
-            </Link>
+            <p className="text-sm text-muted">
+              Rien reçu après quelques minutes ? Vérifiez les courriers indésirables ou{' '}
+              <button type="button" onClick={() => setSuccess('')} className="font-semibold text-primary hover:underline">
+                renvoyez le lien
+              </button>
+              .
+            </p>
+            <Button href="/login" fullWidth variant="secondary">Retourner à la connexion</Button>
           </div>
         ) : (
           <form className="space-y-5" onSubmit={handleSubmit}>
@@ -131,16 +131,8 @@ export default function AskResetPasswordPage() {
               selectedPhoneMethod={method === 'SMS' ? 'SMS' : 'WHATSAPP'}
               onPhoneMethodChange={(next) => setMethod(next)}
               showPhoneMethodSelector={true}
+              label="Mon compte utilise"
             />
-
-            <p className="text-xs text-muted">
-              Lien envoyé {method === 'WHATSAPP' ? 'sur WhatsApp' : method === 'SMS' ? 'par SMS' : 'par e-mail'}
-              {allowsAuthOtpChoice(authChannels)
-                ? mode === 'phone'
-                  ? ` (numéro choisi via ${method === 'SMS' ? 'SMS' : 'WhatsApp'}).`
-                  : ' (adresse e-mail choisie).'
-                : ' (réglage plateforme).'}
-            </p>
 
             <Button type="submit" fullWidth size="lg" loading={loading}>
               {method === 'WHATSAPP'

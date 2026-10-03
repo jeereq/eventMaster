@@ -615,6 +615,13 @@ body[data-em-sheet-open] .em-ai-fab {
   display: none;
 }
 
+/* Sur mobile, la barre du bas a déjà son bouton « Simulateur » : pas de second bouton flottant par-dessus le contenu. */
+@media (max-width: 767px) {
+  body[data-em-site-bottom-bar] .em-ai-fab {
+    display: none;
+  }
+}
+
 .em-public-bottom-pad {
   padding-bottom: calc(var(--em-site-bottom-nav) + var(--em-site-install-bar) + 0.5rem);
 }
