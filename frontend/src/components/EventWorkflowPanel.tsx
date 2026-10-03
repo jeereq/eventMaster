@@ -29,6 +29,8 @@ interface EventWorkflowPanelProps {
   compact?: boolean;
   /** Mode protocole : pas d’onglets support (infos, feed, staff…). */
   protocolDesk?: boolean;
+  /** Particulier (B2C) : pas de billetterie, équipe = co-organisateurs. */
+  personal?: boolean;
 }
 
 const SUPPORT_TABS: Array<{ id: EventWorkflowTab; label: string; icon: LucideIcon }> = [
@@ -130,9 +132,15 @@ export default function EventWorkflowPanel({
   onAction,
   compact = false,
   protocolDesk = false,
+  personal = false,
 }: EventWorkflowPanelProps) {
   const mainSteps = workflow.steps.filter((s) => s.tab);
   const showSupport = !compact && !protocolDesk;
+  const supportTabs = personal
+    ? SUPPORT_TABS.filter((tab) => tab.id !== 'ticketing').map((tab) =>
+        tab.id === 'staff' ? { ...tab, label: 'Co-organisateurs' } : tab,
+      )
+    : SUPPORT_TABS;
 
   const activeIndex = mainSteps.findIndex((s) => s.tab === activeTab);
   const activeStep = activeIndex >= 0 ? mainSteps[activeIndex] : null;
@@ -162,38 +170,9 @@ export default function EventWorkflowPanel({
 
   return (
     <div className="space-y-3.5">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-1">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-foreground truncate">
-            {activeStep ? activeStep.title : 'Vue active'}
-          </p>
-          {activeStep?.detail ? (
-            <p className="text-xs text-muted truncate max-w-md">{activeStep.detail}</p>
-          ) : null}
-        </div>
-        <div className="flex items-center gap-2.5 shrink-0">
-          <div
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={workflow.progressPercent}
-            aria-label="Progression de l’événement"
-            className="w-24 sm:w-32 h-1.5 bg-surface-muted rounded-full overflow-hidden border border-border/40"
-          >
-            <div
-              className="h-full bg-primary rounded-full transition-all duration-300 motion-reduce:transition-none"
-              style={{ width: `${workflow.progressPercent}%` }}
-            />
-          </div>
-          <span className="text-xs font-semibold text-muted tabular-nums">
-            {workflow.completedCount}/{workflow.totalCount} terminées ({workflow.progressPercent}%)
-          </span>
-        </div>
-      </div>
-
       {!compact && currentStep ? (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-surface px-3.5 py-3">
-          <div className="min-w-0 space-y-0.5">
+          <div className="min-w-0 space-y-0.5 flex-1">
             <p className="text-sm font-semibold text-foreground">
               {allDone ? 'Parcours prêt pour le jour J' : `À faire : ${currentStep.title}`}
             </p>
@@ -202,6 +181,24 @@ export default function EventWorkflowPanel({
                 ? 'Invitations, places et accueil sont en place. Le jour J, ouvrez Protocole pour scanner les QR.'
                 : currentStep.description}
             </p>
+          </div>
+          <div className="flex items-center gap-2.5 shrink-0">
+            <div
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={workflow.progressPercent}
+              aria-label="Progression de l’événement"
+              className="w-20 sm:w-28 h-1.5 bg-surface-muted rounded-full overflow-hidden border border-border/40"
+            >
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-300 motion-reduce:transition-none"
+                style={{ width: `${workflow.progressPercent}%` }}
+              />
+            </div>
+            <span className="text-xs font-semibold text-muted tabular-nums whitespace-nowrap">
+              {workflow.progressPercent} %
+            </span>
           </div>
           {allDone ? (
             currentStep.tab && currentStep.tab !== activeTab ? (
@@ -227,7 +224,7 @@ export default function EventWorkflowPanel({
         aria-label="Parcours de l’événement"
         className="bg-surface rounded-2xl border border-border shadow-2xs p-3.5 sm:p-4 overflow-x-auto scroll-smooth scrollbar-hide relative"
       >
-        <div className="flex items-center justify-between gap-2 min-w-max">
+        <div className="flex items-center justify-between gap-2 min-w-max lg:min-w-0">
           {mainSteps.map((step, index) => {
             const isLast = index === mainSteps.length - 1;
             const isActive = step.tab === activeTab;
@@ -242,7 +239,7 @@ export default function EventWorkflowPanel({
                   onClick={() => step.tab && onNavigateTab(step.tab)}
                   aria-current={isActive ? 'step' : undefined}
                   className={cn(
-                    'flex flex-col items-center gap-2 relative group p-2 rounded-xl transition-all min-h-11 min-w-[76px] touch-manipulation',
+                    'flex flex-col items-center gap-2 relative group p-2 rounded-xl transition-all min-h-11 min-w-[76px] lg:min-w-0 lg:flex-1 lg:basis-0 touch-manipulation',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                     isActive ? 'bg-primary/10 ring-1 ring-primary/30' : 'hover:bg-surface-muted',
                   )}
@@ -266,16 +263,16 @@ export default function EventWorkflowPanel({
                     )}
                   </div>
 
-                  <div className="text-center">
+                  <div className="text-center min-w-0 max-w-full">
                     <p
                       className={cn(
-                        'text-xs font-semibold transition-colors',
+                        'text-xs font-semibold transition-colors lg:whitespace-nowrap',
                         isActive ? 'text-primary' : isCompleted ? 'text-foreground' : 'text-muted',
                       )}
                     >
                       {step.title}
                     </p>
-                    <p className="text-xs text-muted mt-0.5 max-w-[140px] line-clamp-1">
+                    <p className="text-xs text-muted mt-0.5 max-w-[140px] lg:max-w-full line-clamp-1">
                       {step.detail}
                     </p>
                   </div>
@@ -284,7 +281,7 @@ export default function EventWorkflowPanel({
                 {!isLast && (
                   <div
                     className={cn(
-                      'flex-1 h-0.5 min-w-[2rem] mx-2 rounded-full',
+                      'flex-1 h-0.5 min-w-[2rem] mx-2 lg:min-w-3 lg:max-w-12 lg:mx-0 rounded-full',
                       isCompleted ? 'bg-primary' : 'bg-border',
                     )}
                     aria-hidden
@@ -301,9 +298,9 @@ export default function EventWorkflowPanel({
           role="tablist"
           aria-label="Onglets complémentaires"
           className="flex flex-wrap gap-2 items-center pt-1"
-          onKeyDown={(event) => onTabListKeyDown(event, SUPPORT_TABS, activeTab, onNavigateTab)}
+          onKeyDown={(event) => onTabListKeyDown(event, supportTabs, activeTab, onNavigateTab)}
         >
-          {SUPPORT_TABS.map((tab) => (
+          {supportTabs.map((tab) => (
             <WorkflowTabChip
               key={tab.id}
               {...tab}

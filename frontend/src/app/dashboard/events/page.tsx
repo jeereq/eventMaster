@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useEffect, useState, useMemo, useCallback } from 'react';
+import React, { Suspense, useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -1014,6 +1014,96 @@ function EventsPageInner() {
     }
   }, [eventIdFromRoute, protocolDesk, router]);
 
+  /** Particulier (B2C) : événements privés uniquement, donc jamais de billetterie. */
+  const isPersonalOrganizer =
+    isB2cPlanId(tenant?.plan || '') || isB2cPlanId(tenant?.pendingPlan || '') || planFeatures?.audience === 'B2C';
+  const ticketingRelevant = Boolean(
+    !isPersonalOrganizer && (selectedEvent?.isPublic || selectedEvent?.ticketingEnabled),
+  );
+
+  const eventKpis = useMemo(() => {
+    if (!selectedEvent) return [];
+    const accepted = guests.filter((g) => g.rsvp === 'ACCEPTED').length;
+    const declined = guests.filter((g) => g.rsvp === 'DECLINED').length;
+    const pending = guests.length - accepted - declined;
+    const kpis: Array<{
+      id: string;
+      label: string;
+      value: string;
+      hint?: string;
+      hintTone?: 'warn';
+      tab: EventWorkflowTab;
+      tone?: 'rose';
+    }> = [
+      {
+        id: 'guests',
+        label: 'Invités',
+        value: String(guests.length),
+        hint: guests.length
+          ? `${accepted} présent${accepted > 1 ? 's' : ''} · ${pending} en attente`
+          : 'Ajoutez votre liste',
+        hintTone: guests.length ? undefined : 'warn',
+        tab: 'guests',
+      },
+      {
+        id: 'invitations',
+        label: 'Invitation',
+        value: invitations.length ? `${invitations.length} prête${invitations.length > 1 ? 's' : ''}` : 'À rédiger',
+        hint: invitations.length ? 'Envoi WhatsApp ou e-mail' : 'Message et lien de réponse',
+        hintTone: invitations.length ? undefined : 'warn',
+        tab: 'invitations',
+      },
+      {
+        id: 'tablePlan',
+        label: 'Plan de table',
+        value: selectedEvent.room ? selectedEvent.room.name : 'Aucune salle',
+        hint: selectedEvent.room ? 'Placer les invités' : 'Choisir une salle',
+        hintTone: selectedEvent.room ? undefined : 'warn',
+        tab: 'tablePlan',
+      },
+    ];
+    if (ticketingRelevant) {
+      kpis.push({
+        id: 'ticketing',
+        label: 'Billetterie',
+        value: selectedEvent.ticketingEnabled
+          ? `${selectedEvent.ticketsSold ?? 0}${selectedEvent.ticketsTotal ? ` / ${selectedEvent.ticketsTotal}` : ''}`
+          : 'Non activée',
+        hint: selectedEvent.ticketingEnabled ? 'billets vendus' : 'Entrée libre',
+        tab: 'ticketing',
+      });
+    } else {
+      const timing = eventTimingLabel(selectedEvent.date);
+      kpis.push({
+        id: 'dayJ',
+        label: 'Jour J',
+        value: timing || '—',
+        hint: timing === 'Terminé' ? 'Bilan et souvenirs' : 'Accueil par QR à l’entrée',
+        tab: 'protocol',
+      });
+    }
+    if (protocolDesk) {
+      // Desk d’accueil : seules les infos utiles à l’entrée, sans alerte de préparation.
+      return kpis
+        .filter((kpi) => kpi.id !== 'invitations' && kpi.id !== 'tablePlan')
+        .map((kpi) => ({ ...kpi, hintTone: undefined }));
+    }
+    if (selectedEvent.donations?.enabled) {
+      kpis.push({ id: 'donations', label: 'Dons', value: 'Rapport', hint: 'Contributions reçues', tab: 'donations', tone: 'rose' });
+    }
+    return kpis;
+  }, [selectedEvent, guests, invitations, ticketingRelevant, protocolDesk]);
+
+  /** Sans onglet demandé dans l’URL, l’événement s’ouvre sur l’étape à faire (pas sur la préparation optionnelle). */
+  const autoTabEventIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (protocolDesk || isProtocolOnly || tabParam || !selectedEvent || loadingEventDetail) return;
+    if (autoTabEventIdRef.current === selectedEvent.id) return;
+    autoTabEventIdRef.current = selectedEvent.id;
+    const step = eventWorkflow.steps.find((s) => s.id === eventWorkflow.currentStepId);
+    if (step?.tab && isEventWorkspaceTab(step.tab)) setActiveTab(step.tab);
+  }, [protocolDesk, isProtocolOnly, tabParam, selectedEvent, loadingEventDetail, eventWorkflow]);
+
   const handleWorkflowAction = useCallback((stepId: string) => {
     switch (stepId) {
       case 'event':
@@ -1283,7 +1373,7 @@ Merci de confirmer votre présence :
           importedPlan
             ? 'Événement créé et plan de table importé depuis la salle.'
             : form.formTemplateId
-              ? 'Événement créé avec le formulaire Répondez s’il vous plaît.'
+              ? 'Événement créé avec le formulaire de réponse.'
               : 'Événement créé avec succès !'
         );
         if (form.openTablePlanAfterSave) {
@@ -1296,7 +1386,7 @@ Merci de confirmer votre présence :
         resetEventForm();
         setShowEventModal(false);
         loadEvents();
-        router.push(eventDashboardHref(savedEvent.id, { tab: protocolDesk ? 'protocol' : 'prep', protocol: protocolDesk }));
+        router.push(eventDashboardHref(savedEvent.id, { tab: protocolDesk ? 'protocol' : undefined, protocol: protocolDesk }));
         return;
       }
 
@@ -1529,9 +1619,9 @@ Merci de confirmer votre présence :
       setSelectedEvent((prev) => (prev ? { ...prev, ...updatedEvent } : prev));
       setEvents((prev) => prev.map((e) => (e.id === selectedEvent.id ? { ...e, ...updatedEvent } : e)));
       setEventRsvpFields(fields);
-      setSuccess('Formulaire Répondez s’il vous plaît enregistré.');
+      setSuccess('Formulaire de réponse enregistré.');
     } catch (err: any) {
-      setError(err.message || 'Erreur lors de l\'enregistrement du formulaire Répondez s’il vous plaît.');
+      setError(err.message || 'Erreur lors de l\'enregistrement du formulaire de réponse.');
     } finally {
       setSavingRsvpForm(false);
     }
@@ -1653,7 +1743,7 @@ Merci de confirmer votre présence :
       return;
     }
 
-    const headers = ["Prénom", "Nom", "Email", "Téléphone", "Catégorie", "Statut Répondez s’il vous plaît", "Régime", "Allergies", "Notes"];
+    const headers = ["Prénom", "Nom", "Email", "Téléphone", "Catégorie", "Réponse", "Régime", "Allergies", "Notes"];
     const rows = guests.map(g => {
       const phone = g.phone || g.preferences?.phone || g.preferences?.telephone || "";
       const notes = g.preferences?.notes || "";
@@ -2422,55 +2512,6 @@ Merci de confirmer votre présence :
                 )}
               </div>
 
-              {/* Synthèse ergonomique de l'événement */}
-              <div className={cn('grid grid-cols-2 gap-2 pt-1', selectedEvent.donations?.enabled ? 'sm:grid-cols-5' : 'sm:grid-cols-4')}>
-                <div className="rounded-xl border border-border bg-surface px-3 py-2 text-center">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-muted">Invités</div>
-                  <div className="text-base font-bold text-foreground mt-0.5">
-                    {guests.length}{' '}
-                    <span className="text-xs font-normal text-emerald-600 dark:text-emerald-400">
-                      ({guests.filter((g) => g.rsvp === 'ACCEPTED').length} Répondez s’il vous plaît)
-                    </span>
-                  </div>
-                </div>
-                <div className="rounded-xl border border-border bg-surface px-3 py-2 text-center">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-muted">Invitations</div>
-                  <div className="text-base font-bold text-foreground mt-0.5">
-                    {invitations.length}
-                  </div>
-                </div>
-                <div className="rounded-xl border border-border bg-surface px-3 py-2 text-center">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-muted">Billetterie</div>
-                  <div className="text-base font-bold text-foreground mt-0.5 truncate">
-                    {selectedEvent.ticketingEnabled
-                      ? `${selectedEvent.ticketsSold ?? 0}${selectedEvent.ticketsTotal ? ` / ${selectedEvent.ticketsTotal}` : ''}`
-                      : 'Non activée'}
-                  </div>
-                </div>
-                {selectedEvent.donations?.enabled && (
-                  <button
-                    type="button"
-                    onClick={() => handleWorkflowNavigate('donations')}
-                    className="rounded-xl border border-rose-500/25 bg-rose-500/5 hover:bg-rose-500/10 transition px-3 py-2 text-center touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50"
-                    title="Voir le reporting des dons solidaires"
-                    aria-label="Voir le reporting des dons solidaires de l’événement"
-                  >
-                    <div className="text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-300 flex items-center justify-center gap-1">
-                      <Heart className="w-3 h-3 fill-rose-500/30" />
-                      Dons
-                    </div>
-                    <div className="text-base font-bold text-rose-700 dark:text-rose-300 mt-0.5 truncate">
-                      Rapport
-                    </div>
-                  </button>
-                )}
-                <div className="rounded-xl border border-border bg-surface px-3 py-2 text-center">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-muted">Plan de table</div>
-                  <div className="text-base font-bold text-foreground mt-0.5 truncate">
-                    {selectedEvent.room ? selectedEvent.room.name : 'Non assigné'}
-                  </div>
-                </div>
-              </div>
             </div>
             <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0 w-full sm:w-auto">
               {protocolDesk && !isProtocolOnly ? (
@@ -2520,6 +2561,42 @@ Merci de confirmer votre présence :
                 </Button>
               )}
             </div>
+          </div>
+          {/* Synthèse : chaque carte ouvre l’étape concernée */}
+          <div
+            className={cn(
+              'grid grid-cols-2 gap-2',
+              eventKpis.length > 4 ? 'sm:grid-cols-5' : eventKpis.length === 4 ? 'sm:grid-cols-4' : 'sm:grid-cols-3',
+            )}
+          >
+            {eventKpis.map((kpi) => (
+              <button
+                key={kpi.id}
+                type="button"
+                onClick={() => handleWorkflowNavigate(kpi.tab)}
+                disabled={protocolDesk && kpi.tab !== 'protocol' && kpi.tab !== 'ticketing' && kpi.tab !== 'tasks'}
+                aria-label={`${kpi.label} : ${kpi.value}${kpi.hint ? `, ${kpi.hint}` : ''}`}
+                className={cn(
+                  'group rounded-xl border px-3 py-2.5 text-left transition touch-manipulation min-h-11 disabled:cursor-default',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                  deskTab === kpi.tab
+                    ? 'border-primary/40 bg-primary/5'
+                    : kpi.tone === 'rose'
+                      ? 'border-rose-500/25 bg-rose-500/5 hover:bg-rose-500/10'
+                      : 'border-border bg-surface hover:bg-surface-muted enabled:hover:border-primary/30',
+                )}
+              >
+                <span className={cn('block text-xs font-semibold', kpi.tone === 'rose' ? 'text-rose-700 dark:text-rose-300' : 'text-muted')}>
+                  {kpi.label}
+                </span>
+                <span className="block text-base font-bold text-foreground mt-0.5 truncate tabular-nums">{kpi.value}</span>
+                {kpi.hint ? (
+                  <span className={cn('block text-xs mt-0.5 truncate', kpi.hintTone === 'warn' ? 'text-amber-700 dark:text-amber-400' : 'text-muted')}>
+                    {kpi.hint}
+                  </span>
+                ) : null}
+              </button>
+            ))}
           </div>
         </div>
       )}
@@ -2640,7 +2717,7 @@ Merci de confirmer votre présence :
                   {eventsViewMode === 'list' && (
                     <button
                       type="button"
-                      onClick={() => router.push(eventDashboardHref(event.id, { tab: protocolDesk ? 'protocol' : 'prep', protocol: protocolDesk }))}
+                      onClick={() => router.push(eventDashboardHref(event.id, { tab: protocolDesk ? 'protocol' : undefined, protocol: protocolDesk }))}
                       className="min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-muted hover:text-foreground hover:bg-surface-muted transition touch-manipulation"
                       title={protocolDesk ? 'Ouvrir le protocole' : 'Voir détails'}
                       aria-label={protocolDesk ? `Ouvrir le protocole pour ${event.title}` : `Voir les détails de l'événement ${event.title}`}
@@ -2702,7 +2779,7 @@ Merci de confirmer votre présence :
                       ? event.description
                       : undefined
                   }
-                  onClick={() => router.push(eventDashboardHref(event.id, { tab: protocolDesk ? 'protocol' : 'prep', protocol: protocolDesk }))}
+                  onClick={() => router.push(eventDashboardHref(event.id, { tab: protocolDesk ? 'protocol' : undefined, protocol: protocolDesk }))}
                   actions={actions}
                 />
               );
@@ -2732,6 +2809,7 @@ Merci de confirmer votre présence :
             onAction={handleWorkflowAction}
             compact={false}
             protocolDesk={protocolDesk}
+            personal={isPersonalOrganizer}
           />
 
           {loadingEventDetail && GUEST_DATA_TABS.has(deskTab) ? (
@@ -2858,7 +2936,7 @@ Merci de confirmer votre présence :
                         <dd className="text-lg font-semibold text-foreground tabular-nums">{guests.length}</dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="text-xs text-muted">Présents (Répondez s’il vous plaît)</dt>
+                        <dt className="text-xs text-muted">Présences confirmées</dt>
                         <dd className="text-lg font-semibold text-foreground tabular-nums">
                           {guests.filter(g => g.rsvp === 'ACCEPTED').length}
                           <span className="text-xs font-medium text-muted ml-1.5">
@@ -2899,7 +2977,7 @@ Merci de confirmer votre présence :
                         </div>
 
                         <div className="w-full lg:w-44">
-                          <label htmlFor="guest-filter-rsvp" className="block text-xs font-semibold text-muted mb-1.5">Statut Répondez s’il vous plaît</label>
+                          <label htmlFor="guest-filter-rsvp" className="block text-xs font-semibold text-muted mb-1.5">Statut de réponse</label>
                           <select
                             id="guest-filter-rsvp"
                             value={rsvpFilter}
@@ -3302,7 +3380,7 @@ Merci de confirmer votre présence :
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div className="space-y-1">
                       <h2 className="text-lg font-semibold text-foreground tracking-tight">Invitations</h2>
-                      <p className="text-sm text-muted">Envoi par WhatsApp ou e-mail avec lien Répondez s’il vous plaît personnel.</p>
+                      <p className="text-sm text-muted">Envoi par WhatsApp ou e-mail avec un lien de réponse personnel.</p>
                     </div>
                     <div className="flex flex-col items-stretch sm:items-end gap-1.5 shrink-0">
                       <Button
@@ -3342,7 +3420,7 @@ Merci de confirmer votre présence :
                         </dd>
                       </div>
                       <div className="min-w-0">
-                        <dt className="text-xs text-muted">Réponses Répondez s’il vous plaît</dt>
+                        <dt className="text-xs text-muted">Réponses reçues</dt>
                         <dd className="text-lg font-semibold text-foreground tabular-nums">
                           {guests.filter(g => g.rsvp !== 'PENDING').length}
                           <span className="text-xs font-medium text-muted ml-1.5">
@@ -3360,7 +3438,7 @@ Merci de confirmer votre présence :
                       title={
                         <span className="inline-flex items-center gap-2">
                           <ClipboardList className="w-4 h-4 text-primary" />
-                          Formulaire Répondez s’il vous plaît
+                          Formulaire de réponse
                         </span>
                       }
                       description="Genre, allergies, boissons, menu."
@@ -3458,7 +3536,7 @@ Merci de confirmer votre présence :
                 <div className="space-y-4 animate-fade-in">
                   <div className="space-y-1">
                     <h2 className="text-lg font-semibold text-foreground tracking-tight">Infos invités</h2>
-                    <p className="text-sm text-muted">Dress code, avantages (parking, cadeaux, extras) et notes visibles sur le portail Répondez s’il vous plaît et dans l’invitation.</p>
+                    <p className="text-sm text-muted">Dress code, avantages (parking, cadeaux, extras) et notes visibles sur le portail invité et dans l’invitation.</p>
                   </div>
                   <EventGuestGuidelinesEditor
                     value={guestGuidelines}
@@ -3481,7 +3559,7 @@ Merci de confirmer votre présence :
                     <div className="rounded-xl border border-border bg-surface px-4 py-3 text-sm text-foreground shadow-2xs">
                       <p className="font-semibold text-foreground">Notifications PDF / GPS non incluses</p>
                       <p className="text-xs mt-1 text-muted">
-                        Vous pouvez placer les invités. L’envoi automatique du PDF, du plan et du GPS dès acceptation Répondez s’il vous plaît
+                        Vous pouvez placer les invités. L’envoi automatique du PDF, du plan et du GPS dès que l’invité confirme
                         n’est pas dans votre forfait actuel{planLabel ? ` (${planLabel})` : ''}.
                       </p>
                       <Link href="/dashboard/billing" className="inline-block mt-2 text-xs font-medium text-primary hover:underline">
@@ -3592,7 +3670,7 @@ Merci de confirmer votre présence :
             const isTicket = Boolean(g?.preferences?.ticketOrderId || g?.category === 'Billet');
             return isTicket
               ? `⚠️ ATTENTION : Cet invité est lié à un billet acheté (${g?.firstName} ${g?.lastName}). Sa suppression annulera son pass d'accès payé, son QR code et sa place attribuée.`
-              : 'L’invité sera retiré de la liste. Ses réponses Répondez s’il vous plaît et sa place seront perdues.';
+              : 'L’invité sera retiré de la liste. Sa réponse et sa place seront perdues.';
           })()
         }
         confirmLabel="Supprimer"
@@ -3808,7 +3886,7 @@ Merci de confirmer votre présence :
               </select>
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-muted uppercase tracking-wider">Répondez s’il vous plaît</label>
+              <label className="text-xs font-bold text-muted uppercase tracking-wider">Réponse</label>
               <select
                 value={guestRsvp}
                 onChange={(e) => setGuestRsvp(e.target.value as 'PENDING' | 'ACCEPTED' | 'DECLINED')}
@@ -4126,7 +4204,7 @@ Merci de confirmer votre présence :
             <form onSubmit={handleBulkSendInvitation} className="space-y-4">
               <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl">
                 <p className="text-xs text-primary font-semibold leading-relaxed">
-                  Envoi à <strong className="text-primary font-extrabold">{selectedGuestIds.length} invité{selectedGuestIds.length > 1 ? 's' : ''}</strong> — lien Répondez s’il vous plaît uniquement, pas le PDF de table.
+                  Envoi à <strong className="text-primary font-extrabold">{selectedGuestIds.length} invité{selectedGuestIds.length > 1 ? 's' : ''}</strong> — lien de réponse uniquement, pas le PDF de table.
                 </p>
               </div>
 
@@ -4224,7 +4302,7 @@ Merci de confirmer votre présence :
             ? 'Vérifiez les contacts avant d’envoyer. Le PDF de table part après confirmation, pas maintenant.'
             : broadcastWizardStep === 2
               ? 'Voici ce que Marie Kabeya verrait. Rien n’est encore parti.'
-              : 'Dernière étape : le lien Répondez s’il vous plaît part à tous les destinataires prêts.'
+              : 'Dernière étape : le lien de réponse part à tous les destinataires prêts.'
         }
         size="md"
         footer={
@@ -4334,7 +4412,7 @@ Merci de confirmer votre présence :
                 <span className="font-semibold">{broadcastAudience?.reachable ?? 0}</span> destinataire{(broadcastAudience?.reachable ?? 0) > 1 ? 's' : ''} prêt{(broadcastAudience?.reachable ?? 0) > 1 ? 's' : ''} · {getChannelLabel(broadcastConfirmInvite?.channel || 'EMAIL')}
               </p>
               <p className="text-xs text-muted">
-                Lien Répondez s’il vous plaît seulement. Le PDF de table part après confirmation, si une place est attribuée.
+                Lien de réponse seulement. Le PDF de table part après confirmation, si une place est attribuée.
               </p>
             </div>
           ) : null}
@@ -4844,7 +4922,7 @@ Merci de confirmer votre présence :
 
               <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between gap-2 p-3.5 bg-surface border border-border rounded-[var(--radius-card)]">
                 <span className="text-xs font-semibold text-muted uppercase tracking-wider">
-                  Répondez s’il vous plaît
+                  Réponse
                 </span>
                 <StatusPill
                   tone={

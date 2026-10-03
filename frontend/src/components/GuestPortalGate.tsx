@@ -137,12 +137,14 @@ export default function GuestPortalGate({ children }: { children: React.ReactNod
       <GuestBrandSync branding={legalStatus?.branding} />
       <LegalAcceptanceModal
         open={requiresAcceptance}
-        title="Bienvenue dans votre espace invité"
+        title="Vous êtes invité(e) !"
         subtitle={
           legalStatus?.organizationName
-            ? `Pour accéder aux invitations de ${legalStatus.organizationName}, acceptez les conditions d’utilisation et la politique de confidentialité.`
-            : `Pour accéder à vos invitations sur ${site.platformName}, acceptez les conditions d’utilisation et la politique de confidentialité.`
+            ? `${legalStatus.organizationName} vous attend. Une seule confirmation et votre invitation s’ouvre.`
+            : `Une seule confirmation et votre invitation ${site.platformName} s’ouvre.`
         }
+        combined
+        submitLabel="Voir mon invitation"
         submitting={submitting}
         error={error}
         onAccept={handleAccept}

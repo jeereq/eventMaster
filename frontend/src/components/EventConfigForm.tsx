@@ -1709,7 +1709,7 @@ export default function EventConfigForm({
                         {!isPublic && <Check className="w-4 h-4 text-primary" />}
                       </div>
                       <p className="text-[11px] text-muted leading-relaxed">
-                        Sur invitation nominative. Lien Répondez s’il vous plaît unique par convive, placement sur plan de table privé.
+                        Sur invitation nominative. Lien de réponse unique par convive, placement sur plan de table privé.
                       </p>
                     </button>
 
@@ -2130,7 +2130,7 @@ export default function EventConfigForm({
                   )}
                 >
                   <Clock className="w-3.5 h-3.5 text-primary" />
-                  <span>Ambiance &amp; Répondez s’il vous plaît</span>
+                  <span>Ambiance &amp; réponses</span>
                   {formTemplateId && <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
                 </button>
               </div>
@@ -2184,7 +2184,7 @@ export default function EventConfigForm({
                             <span>Validation automatique de présence &amp; Billets partagés</span>
                           </div>
                           <ul className="text-[11px] text-muted space-y-1 pl-4 list-disc leading-relaxed">
-                            <li><strong>Présence validée automatiquement :</strong> Dès qu’un participant paie son billet, son statut passe directement à Présent (Répondez s’il vous plaît validé).</li>
+                            <li><strong>Présence validée automatiquement :</strong> Dès qu’un participant paie son billet, son statut passe directement à Présent (réponse validée).</li>
                             <li><strong>Billets partagés personnalisables :</strong> Les bénéficiaires d’un lot de billets peuvent chacun personnaliser leur nom, prénom et téléphone sur leur pass d’accès.</li>
                           </ul>
                         </div>
@@ -2643,13 +2643,13 @@ export default function EventConfigForm({
                         onClick={() => setAccessSubTab('program')}
                         rightIcon={<ChevronRight className="w-4 h-4" />}
                       >
-                        Suivant : Ambiance &amp; Répondez s’il vous plaît
+                        Suivant : Ambiance &amp; réponses
                       </Button>
                     </div>
                   </div>
                 )}
 
-                {/* SOUS-ONGLET 4 : Ambiance & Répondez s’il vous plaît */}
+                {/* SOUS-ONGLET 4 : Ambiance & réponses */}
                 {accessSubTab === 'program' && (
                   <div className="space-y-4">
                     <div className="space-y-2 p-3.5 rounded-2xl border border-border bg-surface">
@@ -2723,7 +2723,7 @@ export default function EventConfigForm({
                     </div>
 
                     <label className="block space-y-1.5">
-                      <span className="block text-xs font-semibold text-muted">Rappels Répondez s’il vous plaît</span>
+                      <span className="block text-xs font-semibold text-muted">Rappels de réponse</span>
                       <select
                         value={reminderFrequency}
                         onChange={(e) => setReminderFrequency(e.target.value)}
@@ -2744,7 +2744,7 @@ export default function EventConfigForm({
                         Modèle de réponses d’invitation
                       </span>
                       <p className="text-[11px] text-muted">
-                        Choisissez le visuel Répondez s’il vous plaît que vos invités verront. Aperçu en direct.
+                        Choisissez le visuel de réponse que vos invités verront. Aperçu en direct.
                       </p>
                       <div className="grid grid-cols-2 gap-2">
                         <button
@@ -2850,7 +2850,7 @@ export default function EventConfigForm({
               <div className="space-y-4">
                 {!complete && (
                   <p className="text-xs text-muted leading-relaxed">
-                    Événement privé par défaut. Les rappels et le formulaire Répondez s’il vous plaît peuvent attendre.
+                    Événement privé par défaut. Les rappels et le formulaire de réponse peuvent attendre.
                   </p>
                 )}
 
@@ -2927,7 +2927,7 @@ export default function EventConfigForm({
                 )}
 
                 <label className="block space-y-1.5">
-                  <span className="block text-xs font-semibold text-muted">Rappels Répondez s’il vous plaît</span>
+                  <span className="block text-xs font-semibold text-muted">Rappels de réponse</span>
                   <select
                     value={reminderFrequency}
                     onChange={(e) => setReminderFrequency(e.target.value)}
@@ -2948,7 +2948,7 @@ export default function EventConfigForm({
                     Modèle de réponses d’invitation
                   </span>
                   <p className="text-[11px] text-muted">
-                    Choisissez le visuel Répondez s’il vous plaît que vos invités verront. Aperçu en direct.
+                    Choisissez le visuel de réponse que vos invités verront. Aperçu en direct.
                   </p>
                   <div className="grid grid-cols-2 gap-2">
                     <button
@@ -3046,7 +3046,7 @@ export default function EventConfigForm({
                 <div className="space-y-3 pt-1 border-t border-border">
                   <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted pt-3">Infos invités</h4>
                   <p className="text-[11px] text-muted leading-relaxed">
-                    Dress code, avantages et notes pratiques. Ils apparaissent sur le portail Répondez s’il vous plaît.
+                    Dress code, avantages et notes pratiques. Ils apparaissent sur le portail invité.
                   </p>
                   <EventGuestGuidelinesEditor value={guestGuidelines} onChange={setGuestGuidelines} compact />
                 </div>

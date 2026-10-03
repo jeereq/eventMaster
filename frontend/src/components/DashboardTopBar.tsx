@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { isB2cPlanId } from '@/config/landingPricing';
 import { useTheme } from '@/context/ThemeContext';
 import { NotificationBell } from '@/components/CommercialNotifications';
 import UserAvatar from '@/components/UserAvatar';
@@ -15,18 +16,24 @@ import { Sun, Moon, User, PanelLeft, PanelLeftClose, LogOut } from 'lucide-react
 export function useDashboardTitle(): { title: string; subtitle?: string } {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { user, access, tenant } = useAuth();
+  const { user, access, tenant, planFeatures } = useAuth();
   const tab = searchParams.get('tab');
+  const isPersonal =
+    isB2cPlanId(tenant?.plan || '') || isB2cPlanId(tenant?.pendingPlan || '') || planFeatures?.audience === 'B2C';
 
   return useMemo(() => {
-    if (pathname.startsWith('/dashboard/events')) return { title: 'Événements', subtitle: 'Vos réceptions et invités' };
+    if (pathname.startsWith('/dashboard/events')) {
+      if (searchParams.get('mode') === 'protocol') return { title: 'Accueil jour J', subtitle: 'Scan des QR et placement' };
+      if (isPersonal) return { title: 'Mes fêtes', subtitle: 'Invités, faire-part et plan de table' };
+      return { title: 'Événements', subtitle: 'Vos réceptions et invités' };
+    }
     if (pathname.startsWith('/dashboard/templates')) return { title: 'Modèles', subtitle: 'Faire-part et invitations' };
     if (pathname.startsWith('/dashboard/analytics')) return { title: 'Statistiques', subtitle: 'Réponses à l’invitation et présences' };
     if (pathname.startsWith('/dashboard/billing')) return { title: 'Abonnement', subtitle: 'Formule et quotas' };
     if (pathname.startsWith('/dashboard/invoices')) return { title: 'Factures', subtitle: 'Historique des paiements' };
     if (pathname.startsWith('/dashboard/rooms')) return { title: 'Salles', subtitle: 'Plans 2D et fiches' };
     if (pathname.startsWith('/dashboard/team')) return { title: 'Équipe', subtitle: 'Membres et rôles' };
-    if (pathname.startsWith('/dashboard/marketplace')) return { title: 'Marketplace', subtitle: 'Offres, matériel & réservations' };
+    if (pathname.startsWith('/dashboard/marketplace')) return { title: 'Mes offres', subtitle: 'Prestations, matériel et boissons' };
     if (pathname.startsWith('/dashboard/bookings')) return { title: 'Devis & Réservations', subtitle: 'Échanges et dates confirmées' };
     if (pathname.startsWith('/dashboard/profile')) return { title: 'Mon compte', subtitle: 'Profil et sécurité' };
     if (pathname.startsWith('/dashboard/notifications')) return { title: 'Notifications', subtitle: 'Alertes de votre compte' };
@@ -91,7 +98,7 @@ export function useDashboardTitle(): { title: string; subtitle?: string } {
     }
 
     return { title: 'EventMaster', subtitle: undefined };
-  }, [pathname, tab, user?.role, access?.level, access?.isOwner, tenant?.accountKind]);
+  }, [pathname, tab, searchParams, isPersonal, user?.role, access?.level, access?.isOwner, tenant?.accountKind]);
 }
 
 export default function DashboardTopBar({
