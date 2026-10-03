@@ -277,7 +277,8 @@ export function studioActionBarClass(inline: boolean) {
     'sticky z-30 mt-auto -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 border-t border-border',
     'bg-surface shadow-[0_-10px_28px_-16px_rgba(0,0,0,0.2)]',
     inline
-      ? 'bottom-[calc(var(--em-site-bottom-nav)+var(--em-site-install-bar))] md:bottom-0'
+      // pb-5 : l’aide sous le bouton reste lisible au-dessus du bouton central bombé de la barre mobile.
+      ? 'bottom-[calc(var(--em-site-bottom-nav)+var(--em-site-install-bar))] md:bottom-0 pb-5 md:pb-3'
       : 'bottom-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
   );
 }

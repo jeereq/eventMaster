@@ -1756,9 +1756,8 @@ export default function LandingInvitationAiGenerator({
 
           {protocolLocked ? <Alert variant="info">{PROTOCOL_CREATIVE_DENIED}</Alert> : null}
 
-          <div className="space-y-4">
-
-              <div className={studioActionBarClass(inline)}>
+          {/* Directement dans la colonne : la barre reste visible pendant toute la saisie. */}
+          <div className={studioActionBarClass(inline)}>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
                   <Button
                     type="button"
@@ -1786,7 +1785,6 @@ export default function LandingInvitationAiGenerator({
                     {composeBlockedReason}
                   </p>
                 ) : null}
-              </div>
               </div>
               </>
               ) : null}
@@ -2320,7 +2318,7 @@ export default function LandingInvitationAiGenerator({
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 px-2 py-4">
+            <div className="flex-1 xl:flex-none xl:sticky xl:top-28 flex flex-col items-center justify-center text-center gap-4 px-2 py-4">
               {/* Silhouette interactive 9:16 prévisualisant la future carte */}
               <div
                 className="w-full max-w-[15rem] aspect-[9/16] rounded-2xl border-2 border-dashed border-primary/30 bg-surface/80 p-4 flex flex-col justify-between items-center relative overflow-hidden shadow-sm group hover:border-primary/60 transition-colors"

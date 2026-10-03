@@ -8,6 +8,9 @@ import PublicCtaBand from '@/components/PublicCtaBand';
 import { Alert, Button } from '@/components/ui';
 import { api } from '@/lib/api';
 import {
+  AI_INVITATION_COMPOSE_TOKEN_COST,
+  AI_ROOM_PLAN_TOKEN_COST,
+  AI_SIMULATION_TOKEN_COST,
   claimAiTokenCheckoutReturn,
   getAiSimulationAllowance,
   createEmptyAiAllowance,
@@ -17,6 +20,7 @@ import {
 } from '@/lib/aiTokens';
 import { formatFc } from '@/config/landingPricing';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { useAuth } from '@/context/AuthContext';
 import { resolveUsdExchangeRateCdf, enabledMarketplaceCities } from '@/lib/platformCities';
 import type { ListingEventTypeId } from '@/lib/listingDetails';
 import type { EventPrepAiDefaults } from '@/components/EventPrepAiSimulator';
@@ -29,11 +33,14 @@ import {
   Mail,
   Box,
   Clock,
+  Coins,
+  LayoutGrid,
+  QrCode,
+  Share2,
   X,
   type LucideIcon,
 } from 'lucide-react';
 import AiSimulationCounter, { isAiSimulationThresholdReached } from '@/components/AiSimulationCounter';
-import AiTokenBuyButton from '@/components/AiTokenBuyButton';
 import { cn } from '@/lib/cn';
 
 const EventPrepAiSimulator = dynamic(() => import('@/components/EventPrepAiSimulator'), {
@@ -106,11 +113,76 @@ const STUDIOS: Array<{
   title: string;
   shortTitle: string;
   text: string;
+  cost: string;
 }> = [
-  { id: 'budget', icon: Wallet, title: 'Budget', shortTitle: 'Budget', text: '3 formules chiffrées en 1 clic' },
-  { id: 'invite', icon: Mail, title: 'Invitation', shortTitle: 'Invitation', text: 'Carte 9:16 prête pour WhatsApp' },
-  { id: 'room', icon: Box, title: 'Plan de salle', shortTitle: 'Plan 3D', text: 'Tables et décor en 2D / 3D' },
+  {
+    id: 'budget',
+    icon: Wallet,
+    title: 'Budget',
+    shortTitle: 'Budget',
+    text: '3 formules chiffrées en 1 clic',
+    cost: `${AI_SIMULATION_TOKEN_COST} jeton`,
+  },
+  {
+    id: 'invite',
+    icon: Mail,
+    title: 'Invitation',
+    shortTitle: 'Invitation',
+    text: 'Carte 9:16 prête pour WhatsApp',
+    cost: `dès ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons`,
+  },
+  {
+    id: 'room',
+    icon: Box,
+    title: 'Plan de salle',
+    shortTitle: 'Plan 3D',
+    text: 'Tables et décor en 2D / 3D',
+    cost: `${AI_ROOM_PLAN_TOKEN_COST} jetons`,
+  },
 ];
+
+/** Bandeau de fin de page : la suite logique du studio ouvert, pas un message unique pour les trois. */
+const STUDIO_NEXT_STEP: Record<SimulatorStudioTab, (isLoggedIn: boolean) => React.ComponentProps<typeof PublicCtaBand>> = {
+  budget: (isLoggedIn) => ({
+    title: 'Retenez un pack, puis demandez vos devis',
+    description: 'Enregistrez vos formules et contactez directement les professionnels.',
+    highlights: [
+      { icon: Sparkles, label: '3 formules chiffrées en FC & USD' },
+      { icon: Store, label: 'Salles, métiers et matériel certifiés' },
+      { icon: Wallet, label: 'Jetons rechargeables en Mobile Money' },
+    ],
+    primaryHref: isLoggedIn ? '/dashboard/catalogue' : '/register?kind=CLIENT&intent=seeker&action=ai_simulator',
+    primaryLabel: isLoggedIn ? 'Voir mes packs' : 'Créer un compte client',
+    secondaryHref: '/marketplace',
+    secondaryLabel: 'Voir le marketplace',
+  }),
+  invite: (isLoggedIn) => ({
+    title: 'Envoyez votre carte et suivez les réponses',
+    description: 'Partagez l’invitation par WhatsApp, SMS ou e-mail et voyez qui vient, en direct.',
+    highlights: [
+      { icon: Share2, label: 'WhatsApp, SMS et e-mail' },
+      { icon: Users, label: 'Réponses des invités en direct' },
+      { icon: QrCode, label: 'Pass QR à l’entrée' },
+    ],
+    primaryHref: isLoggedIn ? '/dashboard' : '/register?kind=ORGANIZER&intent=personal&action=template',
+    primaryLabel: isLoggedIn ? 'Aller à mon espace' : 'Créer mon compte',
+    secondaryHref: '/modeles',
+    secondaryLabel: 'Voir les modèles',
+  }),
+  room: (isLoggedIn) => ({
+    title: 'Placez vos invités sur le plan',
+    description: 'Retouchez le plan dans l’éditeur, puis attribuez une table à chaque invité.',
+    highlights: [
+      { icon: LayoutGrid, label: 'Éditeur 2D et visite 3D' },
+      { icon: Users, label: 'Placement des invités par table' },
+      { icon: Box, label: 'Plans témoins à adapter' },
+    ],
+    primaryHref: isLoggedIn ? '/dashboard' : '/register?kind=ORGANIZER&intent=personal&action=room_editor',
+    primaryLabel: isLoggedIn ? 'Aller à mon espace' : 'Créer mon compte',
+    secondaryHref: '/plans-3d',
+    secondaryLabel: 'Voir les plans 3D',
+  }),
+};
 
 type ScenarioBrief = {
   id: string;
@@ -178,6 +250,8 @@ function scenarioToDefaults(scenario: ScenarioBrief, rate = 2800): EventPrepAiDe
 
 export default function SimulateurPageClient() {
   const { site } = usePlatformSite();
+  const { user } = useAuth();
+  const isLoggedIn = Boolean(user);
   const exchangeRate = resolveUsdExchangeRateCdf(site?.usdExchangeRateCdf);
   const marketplaceCities = enabledMarketplaceCities(site);
 
@@ -197,6 +271,7 @@ export default function SimulateurPageClient() {
     tab === 'budget' ? isBudgetBlocked : tab === 'invite' ? isInviteBlocked : isRoomBlocked;
 
   const isCurrentStudioBlocked = isStudioBlocked(activeStudio);
+  const tokensLow = !allowance.unlimited && isAiSimulationThresholdReached(allowance);
 
   const visibleScenarios = useMemo(() => {
     const filtered = SCENARIOS.filter((item) =>
@@ -291,48 +366,49 @@ export default function SimulateurPageClient() {
   return (
     <PublicPageShell faqHref="/faq" mobileFooterPad>
       <section className="relative em-landing-hero">
-        <div className="page-container relative z-10 pt-5 pb-4 md:pt-10 md:pb-6">
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-            <div className="max-w-2xl space-y-2">
-              <p className="text-xs font-bold tracking-[0.08em] uppercase text-primary-solid">Studios IA</p>
+        <div className="page-container relative z-10 pt-4 pb-4 md:pt-10 md:pb-6">
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3 lg:gap-4">
+            <div className="max-w-2xl space-y-1.5 md:space-y-2">
+              <p className="hidden sm:block text-xs font-bold tracking-[0.08em] uppercase text-primary-solid">Studios IA</p>
               <h1 className="em-landing-heading text-2xl md:text-3xl lg:text-[2.5rem] text-foreground">
                 Préparez votre fête, étape par étape
               </h1>
               <p className="text-sm md:text-base text-muted">
-                Estimez le budget, créez l’invitation, dessinez la salle.
+                Estimez le budget, créez l’invitation, dessinez la salle. Sans compte pour essayer.
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface border border-border text-xs font-semibold text-foreground tabular-nums">
-                <span className="w-2 h-2 rounded-full bg-brand-accent" aria-hidden />
-                1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
-              </span>
-              {!allowance.unlimited ? (
-                <>
-                  {/* Le studio budget affiche déjà son propre bouton d’achat. */}
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary-solid tabular-nums">
-                    <Sparkles className="w-3.5 h-3.5" aria-hidden />
-                    {allowance.totalRemaining} jeton{allowance.totalRemaining > 1 ? 's' : ''} IA
-                  </span>
-                  {activeStudio !== 'budget' || isBudgetBlocked ? (
-                    <AiTokenBuyButton
-                      compact
-                      variant="secondary"
-                      onClick={() => setPurchaseModalOpen(true)}
-                      className="text-xs min-h-11 py-2 px-3.5"
-                    />
-                  ) : null}
-                </>
-              ) : null}
-            </div>
+            {!allowance.unlimited ? (
+              /* Un seul endroit pour le solde et la recharge, commun aux trois studios. */
+              <button
+                type="button"
+                onClick={() => setPurchaseModalOpen(true)}
+                className={cn(
+                  'self-start lg:self-auto inline-flex items-center gap-2 min-h-11 pl-2 pr-3.5 rounded-full border text-xs font-semibold tabular-nums transition touch-manipulation',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                  tokensLow
+                    ? 'bg-festive-accent-soft border-festive-accent/40 text-foreground hover:border-festive-accent'
+                    : 'bg-surface border-border text-foreground hover:border-primary/40',
+                )}
+                aria-label={`${allowance.totalRemaining} jeton${allowance.totalRemaining > 1 ? 's' : ''} IA restant${allowance.totalRemaining > 1 ? 's' : ''}. Recharger`}
+              >
+                <span className="w-7 h-7 rounded-full bg-primary/10 text-primary-solid inline-flex items-center justify-center">
+                  <Coins className="w-3.5 h-3.5" aria-hidden />
+                </span>
+                <span>
+                  {allowance.totalRemaining} jeton{allowance.totalRemaining > 1 ? 's' : ''} IA
+                </span>
+                <span aria-hidden className="w-px h-4 bg-border" />
+                <span className="text-primary-solid">Recharger</span>
+              </button>
+            ) : null}
           </div>
 
           {/* ─── CHOIX DU STUDIO ─── */}
           <div
             role="tablist"
             aria-label="Choix du studio"
-            className="mt-5 md:mt-7 grid grid-cols-3 gap-2 sm:gap-3"
+            className="mt-4 md:mt-7 grid grid-cols-3 gap-2 sm:gap-3"
           >
             {STUDIOS.map((studio) => {
               const Icon = studio.icon;
@@ -351,7 +427,7 @@ export default function SimulateurPageClient() {
                   onKeyDown={(e) => handleTabKeyDown(e, studio.id)}
                   className={cn(
                     'group relative overflow-hidden text-left rounded-[var(--radius-card)] border transition-colors cursor-pointer touch-manipulation',
-                    'p-3 sm:p-4 min-h-11 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3',
+                    'px-2.5 py-2.5 sm:p-4 min-h-11 flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-3',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
                     selected
                       ? 'bg-[#064e3b] border-[#064e3b] text-white shadow-[0_12px_32px_-18px_rgba(2,44,34,0.8)]'
@@ -366,13 +442,13 @@ export default function SimulateurPageClient() {
                   ) : null}
                   <span
                     className={cn(
-                      'relative w-9 h-9 sm:w-11 sm:h-11 rounded-xl inline-flex items-center justify-center shrink-0',
+                      'relative w-8 h-8 sm:w-11 sm:h-11 rounded-xl inline-flex items-center justify-center shrink-0',
                       selected ? 'bg-white/10 text-[#6ee7b7]' : 'bg-[#d1fae5] text-primary-solid dark:bg-primary/15',
                     )}
                   >
-                    <Icon className="w-[18px] h-[18px] sm:w-5 sm:h-5" aria-hidden />
+                    <Icon className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden />
                   </span>
-                  <span className="relative min-w-0">
+                  <span className="relative min-w-0 flex-1 text-center sm:text-left">
                     <span className="font-display block text-sm sm:text-lg font-semibold leading-tight">
                       <span className="sm:hidden">{studio.shortTitle}</span>
                       <span className="hidden sm:inline">{studio.title}</span>
@@ -385,18 +461,28 @@ export default function SimulateurPageClient() {
                     >
                       {blocked ? 'Bientôt disponible' : studio.text}
                     </span>
-                    {blocked ? (
-                      <span
-                        className={cn(
-                          'sm:hidden mt-1 inline-flex items-center gap-1 text-[11px] font-semibold',
-                          selected ? 'text-[#fcd34d]' : 'text-amber-700 dark:text-amber-300',
-                        )}
-                      >
-                        <Clock className="w-3 h-3" aria-hidden />
-                        À venir
-                      </span>
-                    ) : null}
+                    <span
+                      className={cn(
+                        'mt-0.5 sm:hidden block text-[11px] font-semibold leading-tight',
+                        blocked
+                          ? (selected ? 'text-[#fcd34d]' : 'text-amber-700 dark:text-amber-300')
+                          : (selected ? 'text-[#a7f3d0]' : 'text-muted'),
+                      )}
+                    >
+                      {blocked ? 'À venir' : studio.cost}
+                    </span>
                   </span>
+                  {!blocked ? (
+                    <span
+                      className={cn(
+                        'relative hidden lg:inline-flex items-center gap-1 shrink-0 px-2 py-1 rounded-full text-[11px] font-semibold tabular-nums',
+                        selected ? 'bg-white/10 text-[#d1fae5]' : 'bg-surface-muted text-muted border border-border',
+                      )}
+                    >
+                      <Coins className="w-3 h-3" aria-hidden />
+                      {studio.cost}
+                    </span>
+                  ) : null}
                 </button>
               );
             })}
@@ -516,7 +602,7 @@ export default function SimulateurPageClient() {
                 <section
                   id="simulateur"
                   aria-label="Simulateur de budget"
-                  className="scroll-mt-24 sm:rounded-[1.25rem] sm:border sm:border-border sm:bg-surface sm:p-6"
+                  className="scroll-mt-24"
                 >
                   <EventPrepAiSimulator
                     embedded
@@ -589,19 +675,7 @@ export default function SimulateurPageClient() {
         )}
       </div>
 
-      <PublicCtaBand
-        title="Retenez un pack, puis demandez vos devis"
-        description="Enregistrez vos formules et contactez directement les professionnels."
-        highlights={[
-          { icon: Sparkles, label: '3 formules chiffrées en FC & USD' },
-          { icon: Store, label: 'Salles, métiers et matériel certifiés' },
-          { icon: Wallet, label: 'Jetons rechargeables en Mobile Money' },
-        ]}
-        primaryHref="/register?kind=CLIENT&intent=seeker&action=ai_simulator"
-        primaryLabel="Créer un compte client"
-        secondaryHref="/marketplace"
-        secondaryLabel="Voir le marketplace"
-      />
+      <PublicCtaBand {...STUDIO_NEXT_STEP[activeStudio](isLoggedIn)} />
 
       {purchaseModalOpen ? (
         <AiTokenPurchaseModal

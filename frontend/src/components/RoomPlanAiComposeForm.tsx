@@ -92,8 +92,8 @@ export default function RoomPlanAiComposeForm({
 
       <div role="radiogroup" aria-label="Point de départ" className="grid grid-cols-2 gap-1 p-1 rounded-[var(--radius-card)] bg-surface-muted border border-border">
         {([
-          { id: 'brief', label: 'Décrire l’événement', hint: 'Quelques mots suffisent', icon: PenLine },
-          { id: 'photo', label: 'Partir d’une photo', hint: 'Photo ou plan de la salle', icon: ImagePlus },
+          { id: 'brief', label: 'Décrire l’événement', shortLabel: 'Décrire', hint: 'Quelques mots suffisent', icon: PenLine },
+          { id: 'photo', label: 'Partir d’une photo', shortLabel: 'Photo', hint: 'Photo ou plan de la salle', icon: ImagePlus },
         ] as const).map((option) => {
           const active = intent === option.id;
           const Icon = option.icon;
@@ -112,7 +112,10 @@ export default function RoomPlanAiComposeForm({
             >
               <Icon className={cn('w-4 h-4 shrink-0', active ? 'text-primary-solid' : '')} aria-hidden />
               <span className="min-w-0">
-                <span className="block text-sm font-semibold truncate">{option.label}</span>
+                <span className="block text-sm font-semibold truncate">
+                  <span className="sm:hidden">{option.shortLabel}</span>
+                  <span className="hidden sm:inline">{option.label}</span>
+                </span>
                 <span className="hidden sm:block text-xs text-muted truncate">{option.hint}</span>
               </span>
             </button>
