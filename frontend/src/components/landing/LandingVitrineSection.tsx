@@ -35,7 +35,7 @@ import {
 } from '@/lib/catalogueEntityFilters';
 import { fetchPublicServicesForCatalogue } from '@/lib/catalogueFetch';
 import { ArrowRight, Building2, Calendar, KeyRound, RefreshCw, Sparkles, Wine } from 'lucide-react';
-import { useCatalogueGridCols, type CatalogueGridCols } from '@/components/CatalogueViewToggle';
+import type { CatalogueGridCols } from '@/components/CatalogueViewToggle';
 import { marketplaceSectionUrl } from '@/lib/share';
 import { useLandingReveal } from '@/components/landing/useLandingReveal';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -62,8 +62,8 @@ export default function LandingVitrineSection() {
   const [filterError, setFilterError] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('landing-vitrine', 8);
-  const { gridCols, setGridCols } = useCatalogueGridCols();
-  const vitrineCols: CatalogueGridCols = gridCols === 5 ? 4 : gridCols === 2 || gridCols === 3 || gridCols === 4 ? gridCols : 3;
+  // Aperçu de l’accueil : grille fixe, les réglages d’affichage restent sur le marketplace.
+  const vitrineCols: CatalogueGridCols = 4;
 
   const entity = tab === 'venues' ? 'venue' : tab === 'services' ? 'service' : tab === 'rentals' ? 'rental' : 'event';
 
@@ -203,8 +203,24 @@ export default function LandingVitrineSection() {
   const pagedServices = usePaginateItems(serviceItems, page, pageSize);
   const pagedRentals = usePaginateItems(rentalItems, page, pageSize);
   const pagedEvents = usePaginateItems(eventItems, page, pageSize);
-  const chips = catalogueGeoChips(applied, catalogueEntityExtraChips({ ...applied, kind: entity }));
+  // Le type (salles, prestataires…) est déjà choisi par les onglets : pas de puce « Type » ni de filtre compté d’office.
+  const chips = catalogueGeoChips(applied, catalogueEntityExtraChips({ ...applied, kind: entity })).filter(
+    (chip) => chip.id !== 'kind',
+  );
   const hasFilterOrSearch = Boolean(query.trim() || chips.length > 0);
+
+
+  const browseAllAction = (
+    <Button href="/marketplace" size="sm" variant="secondary" rightIcon={<ArrowRight className="w-3.5 h-3.5" />}>
+      Voir tout le marketplace
+    </Button>
+  );
+  const publishAction = (label: string, href: string) =>
+    site.allowRegistration ? (
+      <Button href={href} size="sm">
+        {label}
+      </Button>
+    ) : null;
 
   const catalogFilters = (
     <CatalogueFilterBar
@@ -222,9 +238,7 @@ export default function LandingVitrineSection() {
       view="grid"
       onViewChange={() => undefined}
       hideViewToggle
-      gridCols={vitrineCols}
-      onGridColsChange={(cols) => setGridCols(cols === 5 ? 4 : cols)}
-      gridColOptions={[2, 3, 4]}
+      hideShare
       shareUrl={marketplaceSectionUrl(tab === 'venues' ? 'venues' : tab === 'services' ? 'services' : tab === 'rentals' ? 'rentals' : 'events', query)}
       shareTitle={
         tab === 'venues'
@@ -385,12 +399,18 @@ export default function LandingVitrineSection() {
                   items={pagedVenues}
                   mode="grid"
                   gridCols={vitrineCols}
-                  emptyTitle={hasFilterOrSearch ? 'Aucune salle trouvée' : 'Aucune salle publiée'}
+                  emptyTitle={hasFilterOrSearch ? 'Aucune salle trouvée' : 'Les premières salles arrivent'}
                   emptyDescription={
                     hasFilterOrSearch
                       ? 'Élargissez la ville ou le prix.'
-                      : 'Les salles publiées apparaîtront ici.'
+                      : 'Vous gérez une salle ? Publiez-la gratuitement et recevez vos premières demandes de devis.'
                   }
+                  emptyAction={hasFilterOrSearch ? browseAllAction : (
+                    <>
+                      {publishAction('Publier ma salle', '/register?kind=VENDOR&intent=vendor')}
+                      {browseAllAction}
+                    </>
+                  )}
                 />
                 <Pagination
                   page={page}
@@ -423,12 +443,18 @@ export default function LandingVitrineSection() {
                   items={pagedServices}
                   mode="grid"
                   gridCols={vitrineCols}
-                  emptyTitle={hasFilterOrSearch ? 'Aucun prestataire trouvé' : 'Aucun prestataire publié'}
+                  emptyTitle={hasFilterOrSearch ? 'Aucun prestataire trouvé' : 'Les premiers prestataires arrivent'}
                   emptyDescription={
                     hasFilterOrSearch
                       ? 'Élargissez la ville ou le métier.'
-                      : 'Les prestataires publiés apparaîtront ici.'
+                      : 'Traiteur, DJ, photographe, décoratrice ? Référencez votre activité et recevez des demandes.'
                   }
+                  emptyAction={hasFilterOrSearch ? browseAllAction : (
+                    <>
+                      {publishAction('Référencer mon activité', '/register?kind=VENDOR&intent=vendor')}
+                      {browseAllAction}
+                    </>
+                  )}
                 />
                 <Pagination
                   page={page}
@@ -461,12 +487,18 @@ export default function LandingVitrineSection() {
                   items={pagedRentals}
                   mode="grid"
                   gridCols={vitrineCols}
-                  emptyTitle={hasFilterOrSearch ? 'Aucun matériel trouvé' : 'Aucune offre de matériel ou équipement'}
+                  emptyTitle={hasFilterOrSearch ? 'Aucun matériel trouvé' : 'Le matériel arrive bientôt'}
                   emptyDescription={
                     hasFilterOrSearch
                       ? 'Élargissez la ville ou le type.'
-                      : 'Le matériel publié apparaîtra ici.'
+                      : 'Chaises, tentes, sono ou véhicules : louez votre matériel aux organisateurs de la plateforme.'
                   }
+                  emptyAction={hasFilterOrSearch ? browseAllAction : (
+                    <>
+                      {publishAction('Proposer mon matériel', '/register?kind=VENDOR&intent=vendor')}
+                      {browseAllAction}
+                    </>
+                  )}
                 />
                 <Pagination
                   page={page}
@@ -499,12 +531,18 @@ export default function LandingVitrineSection() {
                   items={pagedEvents}
                   mode="grid"
                   gridCols={vitrineCols}
-                  emptyTitle={hasFilterOrSearch ? 'Aucun événement trouvé' : 'Aucun événement public'}
+                  emptyTitle={hasFilterOrSearch ? 'Aucun événement trouvé' : 'Aucun événement public en ce moment'}
                   emptyDescription={
                     hasFilterOrSearch
                       ? 'Élargissez la ville ou la date.'
-                      : 'Les événements publiés apparaîtront ici.'
+                      : 'Concert, conférence ou gala ? Vendez vos billets ici, payés par Mobile Money.'
                   }
+                  emptyAction={hasFilterOrSearch ? browseAllAction : (
+                    <>
+                      {publishAction('Créer ma billetterie', '/register?kind=ORGANIZER&intent=pro&action=ticketing')}
+                      {browseAllAction}
+                    </>
+                  )}
                 />
                 <Pagination
                   page={page}

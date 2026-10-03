@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { ArrowRight, Check, LayoutDashboard, MessageCircle, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui';
@@ -22,27 +23,35 @@ const PAGE_SECTIONS = [
   { id: 'faq', label: 'FAQ' },
 ];
 
-/** Textes courts des cartes « Quel est votre projet ? ». */
-const PROFILE_CARDS: Record<LandingProfileId, { eyebrow: string; title: string; desc: string }> = {
+/** Textes courts et photo des cartes « Quel est votre projet ? » (photos locales, pas de dépendance externe). */
+const PROFILE_CARDS: Record<LandingProfileId, { eyebrow: string; title: string; desc: string; image: string; alt: string }> = {
   personal: {
     eyebrow: 'Particulier',
     title: 'Mariage, anniversaire, réception',
     desc: 'Invitations WhatsApp, plan de table 3D, suivi des réponses.',
+    image: '/images/landing/card-media-souvenirs.jpg',
+    alt: 'Cortège de mariage avec la mariée et ses demoiselles d’honneur',
   },
   pro: {
     eyebrow: 'Pro & billetterie',
     title: 'Concerts, conférences, galas',
     desc: 'Billets payés par Mobile Money, contrôle d’accès par QR.',
+    image: '/images/landing/card-billetterie-pro.jpg',
+    alt: 'Public d’un concert, mains levées devant la scène',
   },
   seeker: {
     eyebrow: 'Recherche & devis',
     title: 'Trouver une salle ou un talent',
     desc: 'Visitez les salles en 3D et demandez des devis en un clic.',
+    image: '/images/landing/card-trouver-lieu-talent.jpg',
+    alt: 'Photographe en plein reportage pendant un événement',
   },
   vendor: {
     eyebrow: 'Prestataire & salle',
     title: 'Référencer mon activité',
     desc: 'Recevez des demandes de devis de clients qualifiés.',
+    image: '/images/landing/card-referencer-activite.jpg',
+    alt: 'Traiteur, DJ et sonorisation pendant une réception',
   },
 };
 
@@ -208,6 +217,18 @@ function HeroPhoneMock() {
         </span>
       </div>
 
+      {/* Bulle WhatsApp : l’invitation telle que l’invité la reçoit */}
+      <div className="absolute left-12 xl:left-16 top-[214px] xl:top-[252px] w-[200px] xl:w-[214px] flex lg:hidden xl:flex flex-col gap-1.5">
+        <span className="em-light-island self-start rounded-[14px] rounded-tl-[4px] bg-[#dcf8c6] text-[#0f1f1a] px-3 py-2 shadow-[0_10px_28px_rgba(2,44,34,0.3)]">
+          <span className="block text-[10px] font-bold text-[#075e54]">Invitation · Grâce &amp; Patrick</span>
+          <span className="block text-[11px] leading-snug">Vous êtes invité(e) samedi 14 déc. Confirmez ici 👉 lien</span>
+          <span className="block text-right text-[9px] text-[#4b5c56]">10:42 ✓✓</span>
+        </span>
+        <span className="em-light-island self-end rounded-[14px] rounded-tr-[4px] bg-[#ffffff] text-[#0f1f1a] px-3 py-1.5 text-[11px] font-semibold shadow-[0_10px_28px_rgba(2,44,34,0.3)]">
+          Je serai là ! 🎉
+        </span>
+      </div>
+
       {/* Carte scan à l’entrée */}
       <div className={cn(cardClass, 'absolute left-5 lg:left-4 xl:left-8 bottom-10 lg:bottom-14 w-[208px] lg:w-[192px] xl:w-[228px] p-3.5 flex items-center gap-3')}>
         <span className="w-11 h-11 rounded-full bg-primary-solid text-white flex items-center justify-center shrink-0">
@@ -343,53 +364,47 @@ export default function LandingHeroStreamlined() {
             </p>
           </div>
 
-          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5" role="list">
+          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5" role="list">
             {LANDING_PROFILES.map((profile, index) => {
               const card = PROFILE_CARDS[profile.id];
               const target = isLoggedIn ? LOGGED_IN_TARGETS[profile.id] : profile.cta;
-              const featured = index === 0;
               const Icon = profile.icon;
               return (
                 <li key={profile.id}>
                   <Link
                     href={target.href}
-                    className={cn(
-                      'group h-full sm:min-h-[300px] rounded-3xl p-5 sm:p-7 flex flex-col gap-3 sm:gap-4 transition duration-200 hover:-translate-y-[3px] hover:shadow-[0_14px_32px_rgba(15,31,26,0.12)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                      featured
-                        ? 'bg-[#064e3b] text-white'
-                        : 'bg-surface text-foreground border border-border',
-                    )}
+                    className="group h-full overflow-hidden rounded-3xl bg-surface text-foreground border border-border flex sm:flex-col transition duration-200 hover:-translate-y-[3px] hover:border-primary/30 hover:shadow-[0_14px_32px_rgba(15,31,26,0.12)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
-                    <span className="flex items-center gap-2.5">
+                    <span className="relative w-28 min-[420px]:w-32 sm:w-full shrink-0 sm:aspect-[4/3] overflow-hidden bg-[#064e3b]">
+                      <Image
+                        src={card.image}
+                        alt={card.alt}
+                        fill
+                        sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 128px"
+                        priority={index < 2}
+                        className="object-cover transition-transform duration-500 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                      />
                       <span
-                        className={cn(
-                          'w-9 h-9 rounded-xl flex items-center justify-center shrink-0',
-                          featured ? 'bg-white/10 text-[#6ee7b7]' : 'bg-primary/10 text-primary',
-                        )}
-                      >
-                        <Icon className="w-[18px] h-[18px]" aria-hidden />
-                      </span>
-                      <span
-                        className={cn(
-                          'text-xs sm:text-[13px] font-bold tracking-[0.05em] uppercase',
-                          featured ? 'text-[#6ee7b7]' : 'text-primary',
-                        )}
-                      >
+                        aria-hidden
+                        className="hidden sm:block absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/45 to-transparent"
+                      />
+                      <span className="hidden sm:inline-flex absolute left-4 bottom-4 items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full bg-white/95 text-[#065f46] text-xs font-bold tracking-[0.04em] uppercase">
+                        <span className="w-6 h-6 rounded-full bg-[#ecfdf5] flex items-center justify-center">
+                          <Icon className="w-3.5 h-3.5" aria-hidden />
+                        </span>
                         {card.eyebrow}
                       </span>
                     </span>
-                    <span className="font-display text-[22px] sm:text-[26px] font-semibold leading-[1.15]">{card.title}</span>
-                    <span className={cn('text-[15px] leading-relaxed', featured ? 'text-[#d1fae5]' : 'text-muted')}>
-                      {card.desc}
-                    </span>
-                    <span
-                      className={cn(
-                        'mt-auto pt-2 inline-flex items-center gap-2 font-semibold',
-                        featured ? 'text-white' : 'text-primary',
-                      )}
-                    >
-                      {target.label}
-                      <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+                    <span className="min-w-0 flex-1 p-4 sm:p-6 flex flex-col gap-1.5 sm:gap-3">
+                      <span className="sm:hidden text-[11px] font-bold tracking-[0.05em] uppercase text-primary">
+                        {card.eyebrow}
+                      </span>
+                      <span className="font-display text-lg sm:text-[22px] font-semibold leading-[1.2]">{card.title}</span>
+                      <span className="text-sm sm:text-[15px] leading-relaxed text-muted">{card.desc}</span>
+                      <span className="mt-auto pt-1 sm:pt-2 inline-flex items-center gap-2 text-sm sm:text-base font-semibold text-primary">
+                        {target.label}
+                        <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                      </span>
                     </span>
                   </Link>
                 </li>

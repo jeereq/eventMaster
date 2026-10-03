@@ -1,6 +1,6 @@
 'use client';
 
-import FaqSection from '@/components/landing/FaqSection';
+import FaqExplorer from '@/components/landing/FaqExplorer';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
 
@@ -9,16 +9,11 @@ export default function FaqPageClient() {
     <PublicPageShell faqHref="/faq">
       <PublicPageHero
         title="Questions fréquentes"
-        description="Forfaits (annuel −10 % y compris Particulier), protocole QR web, marketplace et facturation."
+        description="Cherchez un mot ou choisissez un thème : invitations, jour J, billetterie, salles, forfaits et sécurité."
       />
 
       <div className="flex-1">
-        <FaqSection
-          id="faq"
-          className="border-t-0"
-          title="Tout savoir sur la plateforme"
-          subtitle="Retrouvez les réponses aux questions les plus courantes. Besoin d’un détail précis ? Écrivez-nous."
-        />
+        <FaqExplorer />
 
         <PublicCtaBand
           title="Toujours une question ?"

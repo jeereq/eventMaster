@@ -310,6 +310,7 @@ export default function CatalogueResults({
   mode,
   emptyTitle,
   emptyDescription,
+  emptyAction,
   gridCols = 4,
   groupByKind = false,
   isFavorite,
@@ -320,6 +321,8 @@ export default function CatalogueResults({
   mode: Exclude<CatalogueViewMode, 'map' | 'focus'>;
   emptyTitle: string;
   emptyDescription: string;
+  /** Boutons sous l’état vide (ex. publier, voir tout le marketplace). */
+  emptyAction?: React.ReactNode;
   gridCols?: CatalogueGridCols;
   groupByKind?: boolean;
   isFavorite?: (item: CatalogueItem) => boolean;
@@ -339,6 +342,7 @@ export default function CatalogueResults({
         <Building2 className="w-10 h-10 text-muted mx-auto mb-3" />
         <h2 className="font-semibold text-foreground">{emptyTitle}</h2>
         <p className="text-sm text-muted mt-2 max-w-md mx-auto leading-relaxed">{emptyDescription}</p>
+        {emptyAction ? <div className="mt-5 flex flex-wrap justify-center gap-2">{emptyAction}</div> : null}
       </div>
     );
   }

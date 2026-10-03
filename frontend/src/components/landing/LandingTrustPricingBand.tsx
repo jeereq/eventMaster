@@ -68,7 +68,12 @@ export default function LandingTrustPricingBand() {
         continue;
       }
       const amountFc = entryPrice(family.audiences, dbPlans);
-      if (amountFc != null) rows.push({ label: family.label, price: `dès ${formatFc(amountFc)}`, note: family.note });
+      if (amountFc == null) continue;
+      // Forfaits Particulier facturés au trimestre : on donne aussi l’équivalent mensuel pour comparer avec les autres.
+      const note = family.audiences.includes('B2C')
+        ? `par trimestre, soit ${formatFc(Math.round(amountFc / 3))}/mois`
+        : family.note;
+      rows.push({ label: family.label, price: `dès ${formatFc(amountFc)}`, note });
     }
     return rows;
   }, [dbPlans, loading]);

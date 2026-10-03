@@ -37,7 +37,7 @@ export default function IdentifierInput({
   onCountryCodeChange,
   onNationalChange,
   required = true,
-  label = 'Moyen d’identification',
+  label = 'Se connecter avec',
   authChannels,
   selectedPhoneMethod,
   onPhoneMethodChange,
@@ -74,28 +74,51 @@ export default function IdentifierInput({
     customPhoneHint ||
     phoneFieldHint(authChannels, selectedPhoneMethod);
 
+  const phoneModeLabel =
+    allowedPhoneMethods.length === 1 && allowedPhoneMethods[0] === 'SMS'
+      ? 'Téléphone (SMS)'
+      : allowedPhoneMethods.length === 1 && allowedPhoneMethods[0] === 'WHATSAPP'
+        ? 'WhatsApp'
+        : 'Téléphone';
+
   return (
     <div className="space-y-3">
       {allowsEmail && allowsPhone && (
-        <label className="block space-y-1.5">
-          <span className="text-xs font-semibold text-muted">{label}</span>
-          <select
-            value={mode}
-            onChange={(e) => onModeChange(e.target.value as IdentifierMode)}
-            className="w-full min-h-11 px-3 rounded-[var(--radius-button)] border border-border bg-surface-muted text-base sm:text-sm font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary"
+        <div className="space-y-1.5">
+          <span id="identifier-mode-label" className="text-xs font-semibold text-muted">{label}</span>
+          {/* Deux choix seulement : un sélecteur segmenté, visible d’un coup d’œil, plutôt qu’une liste déroulante. */}
+          <div
+            role="radiogroup"
+            aria-labelledby="identifier-mode-label"
+            className="grid grid-cols-2 gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border"
           >
-            <option value="email">E-mail</option>
-            <option value="phone">
-              {allowedPhoneMethods.length === 2
-                ? 'Téléphone (WhatsApp ou SMS)'
-                : allowedPhoneMethods.length === 1 && allowedPhoneMethods[0] === 'SMS'
-                  ? 'Téléphone (SMS)'
-                  : allowedPhoneMethods.length === 1 && allowedPhoneMethods[0] === 'WHATSAPP'
-                    ? 'Téléphone (WhatsApp)'
-                    : 'Téléphone'}
-            </option>
-          </select>
-        </label>
+            {([
+              { value: 'email' as const, label: 'E-mail', icon: Mail },
+              { value: 'phone' as const, label: phoneModeLabel, icon: Smartphone },
+            ]).map((option) => {
+              const active = mode === option.value;
+              const Icon = option.icon;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => onModeChange(option.value)}
+                  className={cn(
+                    'min-h-10 px-2 rounded-[calc(var(--radius-button)-2px)] text-sm font-semibold inline-flex items-center justify-center gap-2 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                    active
+                      ? 'bg-surface text-foreground shadow-sm'
+                      : 'text-muted hover:text-foreground',
+                  )}
+                >
+                  <Icon className={cn('w-4 h-4 shrink-0', active ? 'text-primary' : '')} aria-hidden />
+                  <span className="truncate">{option.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {mode === 'email' ? (

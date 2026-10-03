@@ -169,7 +169,7 @@ export default function LandingPricingSection({
           {
             label: 'Particuliers',
             ids: [...B2C_PLAN_IDS],
-            description: 'La tranquillité absolue pour votre fête avec éditeur 2D/3D complet inclus, facturation sur 90 jours ou annuel (−10 %).',
+            description: 'Pour une fête privée : mariage, anniversaire, baptême. Choisissez selon votre nombre d’invités.',
           },
         ]
       : audience === 'VENDOR'
@@ -177,29 +177,29 @@ export default function LandingPricingSection({
             {
               label: 'Essai gratuit',
               ids: ['FREE'],
-              description: '1 salle ou 1 prestation / matériel pour tester sans engagement',
+              description: 'Pour tester votre vitrine sans engagement',
             },
             {
               label: 'Salles, métiers & matériel',
               ids: [...VENDOR_PLAN_IDS],
-              description: 'Salle, prestations ou Matériel & Équipements — éditeur complet, sans événements',
+              description: 'Salle, prestations ou matériel : vitrine et éditeur complet, sans gestion d’événements',
             },
           ]
         : [
             {
               label: 'Essentiel & Business',
               ids: ['FREE', 'STANDARD'],
-              description: 'Démarrage gratuit ou 150 invités — dès Business : catalogue salle + prestations inclus',
+              description: 'Pour démarrer : dès Business, la vitrine salle et prestations est incluse',
             },
             {
               label: 'Premium & Premium Plus',
               ids: ['PREMIUM_1', 'PREMIUM_2'],
-              description: 'Éditeur avancé, modèles sur-mesure, OCR — catalogue marketplace toujours inclus',
+              description: 'Éditeur avancé, modèles sur mesure et lecture de listes (OCR), vitrine incluse',
             },
             {
               label: 'Enterprise',
               ids: ['ENTERPRISE_1', 'ENTERPRISE_2', 'ENTERPRISE_3'],
-              description: 'Volume élevé, éditeur complet, multi-salles, catalogue inclus et accompagnement',
+              description: 'Gros volumes, plusieurs salles et accompagnement dédié, vitrine incluse',
             },
           ];
 
@@ -221,16 +221,16 @@ export default function LandingPricingSection({
             {audience === 'B2C'
               ? 'Forfaits Particuliers'
               : audience === 'VENDOR'
-                ? 'Forfaits Salle, métier & matériel'
+                ? 'Forfaits Salles & prestataires'
                 : 'Forfaits Organisations'}
           </h2>
           <p className="text-sm text-muted leading-relaxed">
             {lead ||
               (audience === 'B2C'
-                ? `Forfaits clairs selon votre nombre d'invités. Éditeur de salle complet inclus. −${ANNUAL_DISCOUNT_PERCENT} % en annuel.`
+                ? `Pour une fête privée : mariage, anniversaire, baptême. Choisissez selon votre nombre d’invités, éditeur de salle inclus. −${ANNUAL_DISCOUNT_PERCENT} % en annuel.`
                 : audience === 'VENDOR'
-                  ? `Publiez une salle, un métier ou du Matériel & Équipements — sans événements. −${ANNUAL_DISCOUNT_PERCENT} % en annuel.`
-                  : `Billetterie, protocole QR, multi-événements — et dès Business : vitrine salles + prestations incluses. −${ANNUAL_DISCOUNT_PERCENT} % en annuel.`)}
+                  ? `Vous louez une salle, proposez un service ou du matériel, sans organiser d’événements. −${ANNUAL_DISCOUNT_PERCENT} % en annuel.`
+                  : `Entreprises et organisateurs : billetterie, protocole QR et plusieurs événements. Dès Business, la vitrine salle et prestations est incluse. −${ANNUAL_DISCOUNT_PERCENT} % en annuel.`)}
           </p>
         </div>
 
@@ -254,20 +254,6 @@ export default function LandingPricingSection({
  <button
  type="button"
  role="tab"
- aria-selected={audience === 'B2B'}
- onClick={() => setAudience('B2B')}
- className={cn(
-   'min-h-11 px-3 sm:px-4 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary inline-flex items-center justify-center touch-manipulation',
-   audience === 'B2B'
-     ? 'bg-primary text-primary-foreground shadow-xs'
-     : 'text-muted hover:text-foreground',
- )}
- >
- Organisations (B2B)
- </button>
- <button
- type="button"
- role="tab"
  aria-selected={audience === 'B2C'}
  onClick={() => setAudience('B2C')}
  className={cn(
@@ -277,7 +263,21 @@ export default function LandingPricingSection({
      : 'text-muted hover:text-foreground',
  )}
  >
- Particuliers (B2C)
+ Particuliers
+ </button>
+ <button
+ type="button"
+ role="tab"
+ aria-selected={audience === 'B2B'}
+ onClick={() => setAudience('B2B')}
+ className={cn(
+   'min-h-11 px-3 sm:px-4 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary inline-flex items-center justify-center touch-manipulation',
+   audience === 'B2B'
+     ? 'bg-primary text-primary-foreground shadow-xs'
+     : 'text-muted hover:text-foreground',
+ )}
+ >
+ Organisations
  </button>
  <button
  type="button"
@@ -291,7 +291,7 @@ export default function LandingPricingSection({
      : 'text-muted hover:text-foreground',
  )}
  >
- Salles, métiers & matériel
+ Salles & prestataires
  </button>
  </div>
 
@@ -343,12 +343,14 @@ export default function LandingPricingSection({
 
  {tiers.map(({ label, ids, description }) => (
  <div key={label} className="mb-16 last:mb-10">
+ {tiers.length > 1 ? (
  <div className="text-center mb-6 space-y-1">
  <h3 className="text-sm font-bold uppercase tracking-widest text-muted">{label}</h3>
  {description && (
  <p className="text-xs text-muted dark:text-muted max-w-xl mx-auto">{description}</p>
  )}
  </div>
+ ) : null}
  <div
  className={`flex sm:grid gap-5 items-stretch overflow-x-auto pb-4 sm:pb-0 no-scrollbar snap-x snap-mandatory ${
  ids.length === 1
@@ -367,7 +369,7 @@ export default function LandingPricingSection({
  key={plan.id}
  className={`relative flex flex-col rounded-[var(--radius-card)] overflow-hidden transition-all duration-300 min-w-[17.5rem] sm:min-w-0 shrink-0 snap-start flex-1 ${
  plan.highlighted
- ? 'border-2 border-primary bg-surface dark:bg-surface shadow-xs ring-2 ring-primary/30 sm:scale-[1.02] z-10'
+ ? 'border-2 border-primary bg-surface dark:bg-surface shadow-lg shadow-primary/10 z-10'
  : plan.promoActive
  ? 'border border-danger/40 bg-surface dark:bg-surface shadow-md'
  : 'em-hud-card border-border'
@@ -375,24 +377,24 @@ export default function LandingPricingSection({
  >
  <div className={`h-1.5 w-full ${plan.highlighted ? 'bg-gradient-to-r from-primary via-brand-accent to-festive-accent' : TIER_ACCENT[plan.tier]}`} />
 
- {plan.highlighted && (
- <div className="em-ribbon-badge">
- Recommandé
- </div>
- )}
-
- {plan.badge && !plan.highlighted && (
- <div className="absolute top-4 right-4 bg-primary-solid text-primary-foreground text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 shadow-xs">
+ {plan.highlighted ? (
+ <div className="absolute top-4 right-4 bg-festive-accent text-white text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1 shadow-xs">
  <Sparkles className="w-3 h-3" />
+ Le plus choisi
+ </div>
+ ) : plan.badge ? (
+ <div className="absolute top-4 right-4 bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full flex items-center gap-1">
  {plan.badge}
  </div>
- )}
+ ) : null}
 
  <div className="p-6 sm:p-7 flex-1 flex flex-col">
  <div className="space-y-1 pr-16">
+ {tiers.length > 1 || audience !== 'B2C' ? (
  <span className="text-xs font-bold uppercase tracking-wider text-muted">
  {plan.tierLabel}
  </span>
+ ) : null}
  <h3 className="text-xl font-bold text-foreground dark:text-foreground">{plan.displayName}</h3>
  </div>
 
@@ -400,9 +402,9 @@ export default function LandingPricingSection({
  {plan.description}
  </p>
 
- {plan.badges.length > 0 && (
+ {plan.badges.some((badge) => badge.label.toLowerCase() !== plan.tierLabel.toLowerCase()) && (
  <div className="flex flex-wrap gap-1.5 mt-4">
- {plan.badges.slice(0, 4).map((badge) => (
+ {plan.badges.filter((badge) => badge.label.toLowerCase() !== plan.tierLabel.toLowerCase()).slice(0, 4).map((badge) => (
  <span
  key={badge.id}
  className={`inline-flex text-xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${BADGE_TONE[badge.tone]}`}
@@ -447,7 +449,11 @@ export default function LandingPricingSection({
  <span className="text-sm font-medium text-muted">{planPricePeriodSuffix(plan.id, billing)}</span>
  )}
  </div>
- <p className="text-xs text-muted mt-1.5">{plan.monthlyNote}</p>
+ <p className="text-xs text-muted mt-1.5">
+ {isB2cPlanId(plan.id) && billing === 'monthly' && !plansLoading && resolvePlanMonthlyFc(plan, dbPlans?.[plan.id]) > 0
+  ? `soit ${Math.round(resolvePlanMonthlyFc(plan, dbPlans?.[plan.id]) / 3).toLocaleString('fr-FR')} FC par mois`
+  : plan.monthlyNote}
+ </p>
  {billing === 'annual' && plan.id !== 'FREE' && (
  <p className="text-xs text-primary-solid font-semibold mt-1">
  Facturé {isB2cPlanId(plan.id) ? '4 trimestres' : '12 mois'} d’un coup · {ANNUAL_DISCOUNT_PERCENT} % d&apos;économie vs {isB2cPlanId(plan.id) ? 'trimestre' : 'mois'}
@@ -489,7 +495,7 @@ export default function LandingPricingSection({
  plan.ctaVariant === 'outline' || plan.ctaVariant === 'contact'
  ? 'border border-border text-foreground hover:bg-surface-muted'
  : plan.highlighted
- ? 'bg-foreground hover:opacity-90 text-background'
+ ? 'bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground font-semibold'
  : 'bg-surface-muted hover:bg-border text-foreground border border-border'
  }`}
  >
@@ -619,16 +625,15 @@ export default function LandingPricingSection({
  <div className="mt-8 max-w-2xl mx-auto rounded-xl border border-primary/25 bg-primary/5 p-4 text-center sm:text-left flex flex-col sm:flex-row items-center sm:items-start gap-3">
  <Info className="w-5 h-5 text-primary shrink-0 mt-0.5" />
  <div className="space-y-1">
- <p className="text-xs font-bold text-primary">Nuance de décompte : invitations par période payée</p>
+ <p className="text-xs font-bold text-primary">Le quota d’invités repart à zéro à chaque période</p>
  <p className="text-xs text-foreground leading-relaxed">
- Pour tous nos forfaits payants, le quota d’invités est comptabilisé <strong>exclusivement sur la période payée en cours</strong> (chaque mois pour les formules Business, Premium et Enterprise ; chaque trimestre de 90 jours pour les forfaits Particulier) et <strong>non sur la totalité de l’histoire de votre compte</strong>. À chaque renouvellement, votre quota se renouvelle pour accueillir vos nouveaux événements sans blocage lié aux invités passés.
+ Les invités sont comptés <strong>sur la période payée en cours</strong> (le mois pour les organisations, le trimestre pour les particuliers), pas sur tout l’historique du compte. Vos invités passés ne bloquent jamais un nouvel événement.
  </p>
  </div>
  </div>
 
  <p className="text-center text-xs text-muted mt-6 max-w-2xl mx-auto leading-relaxed">
- Réduction annuelle de {ANNUAL_DISCOUNT_PERCENT} % sur le total (12 mois ou 4 trimestres). Promotions configurables
- par l&apos;administrateur. Tous les forfaits incluent l&apos;isolation multi-tenant et le portail de réponse à l’invitation invité.
+ Réduction annuelle de {ANNUAL_DISCOUNT_PERCENT} % sur le total (12 mois ou 4 trimestres). Tous les forfaits incluent des données séparées des autres organisations et l’espace invité pour répondre aux invitations.
  </p>
  </div>
  </section>

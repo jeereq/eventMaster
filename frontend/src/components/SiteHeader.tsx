@@ -177,7 +177,8 @@ export default function SiteHeader({
         {/* Actions à droite : Palette de couleurs, Thème Nuit/Jour, Auth */}
         <div className="flex items-center gap-1.5 shrink-0">
           {/* Masqué de xl à 2xl pour laisser la place aux liens de navigation. */}
-          <div className="flex xl:hidden 2xl:flex items-center">
+          {/* Sur mobile, l’installation et le thème sont dans le menu « Plus » de la barre du bas. */}
+          <div className="hidden sm:flex xl:hidden 2xl:flex items-center">
             <PWAInstallCta variant="header" />
           </div>
           <div className="hidden sm:flex items-center">
@@ -187,7 +188,7 @@ export default function SiteHeader({
           <button
             type="button"
             onClick={toggleTheme}
-            className={iconBtn}
+            className={cn(iconBtn, variant !== 'minimal' && 'max-sm:hidden')}
             aria-pressed={theme === 'dark'}
             aria-label={theme === 'light' ? 'Activer le mode sombre' : 'Activer le mode clair'}
             title={theme === 'light' ? 'Activer le mode sombre' : 'Activer le mode clair'}
@@ -217,7 +218,7 @@ export default function SiteHeader({
             <div className="flex items-center gap-1 sm:gap-1.5 ml-1">
               <Link
                 href="/login"
-                className="hidden min-[420px]:inline-flex items-center min-h-11 text-sm md:text-[15px] font-semibold text-foreground hover:text-primary px-2 sm:px-4 rounded-md transition"
+                className="inline-flex items-center min-h-11 text-sm md:text-[15px] font-semibold text-foreground hover:text-primary px-2 sm:px-4 rounded-md transition"
               >
                 Connexion
               </Link>
@@ -227,7 +228,8 @@ export default function SiteHeader({
                   size="md"
                   className="inline-flex text-sm md:text-[15px] px-3 sm:px-5 font-semibold"
                 >
-                  Créer un compte
+                  <span className="min-[420px]:hidden">S’inscrire</span>
+                  <span className="hidden min-[420px]:inline">Créer un compte</span>
                 </Button>
               ) : null}
             </div>

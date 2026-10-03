@@ -5,10 +5,9 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import {
-  Calendar, Lock, Sparkles, Table, MessageSquare, Ticket,
+  Calendar, Lock, Sparkles, Table, MessageSquare, Ticket, QrCode,
 } from 'lucide-react';
 import { AuthSplitLayout } from '@/components/AuthSplitLayout';
-import SiteBrandMark from '@/components/SiteBrandMark';
 import { Button, Alert, PasswordInput, Card, IdentifierInput, identifierValue } from '@/components/ui';
 import type { IdentifierMode } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
@@ -17,17 +16,17 @@ import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { authOtpMethodOptions } from '@/lib/authOtpChannels';
 
 const FEATURES = [
-  { icon: Calendar, title: "Gestion d'événements et réponses à l’invitation", desc: 'Invitations par e-mail ou WhatsApp, suivi des réponses en temps réel.' },
-  { icon: Table, title: 'Planificateur de table', desc: 'Placement intuitif par glisser-déposer sur un plan 2D.' },
-  { icon: MessageSquare, title: "Fil d'actualité & livre d'or", desc: 'Photos, vidéos et commentaires dans un espace privé.' },
-  { icon: Sparkles, title: 'Statistiques & analyses', desc: 'Régimes alimentaires, réponses et exports en un clic.' },
+  { icon: MessageSquare, title: 'Réponses en temps réel', desc: 'Voyez qui a confirmé, relancez les autres sur WhatsApp en un clic.' },
+  { icon: Table, title: 'Plan de salle 2D et 3D', desc: 'Placez vos invités à table et partagez la salle avant le jour J.' },
+  { icon: QrCode, title: 'Accueil par QR code', desc: 'Votre équipe scanne les invitations à l’entrée, même sur un simple téléphone.' },
+  { icon: Calendar, title: 'Tout au même endroit', desc: 'Budget, prestataires, billets et invités : votre événement vous attend.' },
 ];
 
 const CLIENT_FEATURES = [
   { icon: Ticket, title: 'Billets et inscriptions', desc: 'Retrouvez vos places et votre badge QR dans Mes billets.' },
   { icon: Calendar, title: 'Devis et réservations', desc: 'Envoyez un devis salle ou presta, puis suivez vos demandes.' },
   { icon: Table, title: 'Marketplace', desc: 'Salles, prestataires, matériel & équipements et événements publics — grille, liste ou carte.' },
-  { icon: Sparkles, title: 'Compte client', desc: 'Sans abonnement SaaS — devis, billets et favoris.' },
+  { icon: Sparkles, title: 'Compte client', desc: 'Sans abonnement : devis, billets et favoris.' },
 ];
 
 export default function LoginPage() {
@@ -90,23 +89,21 @@ function LoginPageContent() {
       description={
         isClientFlow
           ? 'Après connexion, vous revenez à la fiche. Un compte est requis pour un devis, une réservation ou un billet.'
-          : 'Retrouvez votre centre de commande et continuez à organiser vos événements en toute sérénité.'
+          : 'Vos invités, votre salle et vos billets vous attendent là où vous les avez laissés.'
       }
       features={isClientFlow ? CLIENT_FEATURES : FEATURES}
+      featureStyle="list"
       backHref="/"
       backLabel="Retour au site"
       hideMobileTitle
     >
       <Card padding="lg" className="border-border shadow-sm">
-        <div className="text-center lg:text-left mb-6">
-          <div className="inline-flex lg:hidden justify-center mb-4">
-            <SiteBrandMark href={null} size="lg" showLabel={false} />
-          </div>
+        <div className="mb-6">
           <h1 className="text-2xl font-semibold text-foreground tracking-tight">Connexion</h1>
           <p className="mt-2 text-sm text-muted">
             Nouveau ici ?{' '}
             <Link href={registerHref} className="font-semibold text-primary hover:underline">
-              Commencer l'aventure
+              Créer un compte gratuit
             </Link>
           </p>
         </div>

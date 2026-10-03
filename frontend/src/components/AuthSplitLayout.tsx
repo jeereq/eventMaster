@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useTheme } from '@/context/ThemeContext';
 import { PartyPopper, Sun, Moon, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -26,6 +27,8 @@ interface AuthSplitLayoutProps {
   backLabel?: string;
   maxWidthClassName?: string;
   hideMobileTitle?: boolean;
+  /** « steps » numérote un parcours ; « list » affiche l’icône de chaque atout (pas d’ordre à suivre). */
+  featureStyle?: 'steps' | 'list';
   children: React.ReactNode;
 }
 
@@ -37,6 +40,7 @@ export function AuthSplitLayout({
   backLabel = 'Retour au site',
   maxWidthClassName,
   hideMobileTitle = false,
+  featureStyle = 'steps',
   children,
 }: AuthSplitLayoutProps) {
   const { theme, toggleTheme } = useTheme();
@@ -47,9 +51,18 @@ export function AuthSplitLayout({
       <CelebrateMood />
       {/* Panneau marketing — couleurs via --auth-* / --primary */}
       <div className="hidden lg:flex lg:w-[46%] xl:w-1/2 bg-[#064e3b] text-white p-10 xl:p-14 flex-col justify-between relative overflow-hidden">
+        {/* Photo de fête en fond, très atténuée : le panneau reste lisible mais plus chaleureux. */}
+        <Image
+          src="/images/landing/card-son-ambiance.jpg"
+          alt=""
+          fill
+          sizes="50vw"
+          className="object-cover opacity-[0.16] mix-blend-luminosity pointer-events-none"
+        />
+        <span aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#064e3b]/40 via-[#064e3b]/70 to-[#064e3b]" />
         <span
           aria-hidden
-          className="pointer-events-none absolute -right-24 -top-24 h-[22rem] w-[22rem] rounded-[5rem] border-[3.5rem] border-[#065f46]"
+          className="pointer-events-none absolute -right-24 -top-24 h-[22rem] w-[22rem] rounded-[5rem] border-[3.5rem] border-[#065f46]/80"
         />
         <span
           aria-hidden
@@ -65,18 +78,25 @@ export function AuthSplitLayout({
           </div>
 
           {features.length > 0 && (
-            <ol className="space-y-2.5">
+            <ol className="space-y-2.5" {...(featureStyle === 'list' ? { role: 'list' } : {})}>
               {features.map((feat, index) => {
                 const step = feat.step ?? index + 1;
+                const Icon = feat.icon;
                 return (
                   <li
                     key={feat.title}
                     className="flex gap-3.5 items-start bg-white/[0.06] border border-white/10 p-4 rounded-[var(--radius-card)]"
                     style={{ animationDelay: `${index * 70}ms` }}
                   >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-button)] bg-[#10b981] text-[#022c22] text-sm font-bold tabular-nums font-display">
-                      {step}
-                    </span>
+                    {featureStyle === 'list' ? (
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-button)] bg-white/10 text-[#6ee7b7]">
+                        <Icon className="w-4 h-4" />
+                      </span>
+                    ) : (
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-button)] bg-[#10b981] text-[#022c22] text-sm font-bold tabular-nums font-display">
+                        {step}
+                      </span>
+                    )}
                     <div className="min-w-0">
                       <h3 className="font-semibold text-sm text-white">{feat.title}</h3>
                       <p className="text-sm text-[#a7f3d0] leading-relaxed mt-0.5">{feat.desc}</p>

@@ -185,6 +185,14 @@ export default function SiteMobileBottomBar({
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
+  // Signale la barre du bas : sur mobile, elle porte déjà « Simulateur », le bouton flottant IA se masque (voir globals.css).
+  useEffect(() => {
+    document.body.dataset.emSiteBottomBar = 'true';
+    return () => {
+      delete document.body.dataset.emSiteBottomBar;
+    };
+  }, []);
+
   // Fermer la bottom sheet au changement de page
   useEffect(() => {
     setSheetOpen(false);

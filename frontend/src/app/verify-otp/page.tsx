@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, Mail, MessageSquare, RefreshCw, Smartphone } from 'lucide-react';
+import { Loader2, Mail, MessageSquare, RefreshCw, ShieldCheck, Smartphone } from 'lucide-react';
 import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
 import { Button, Alert, Card } from '@/components/ui';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -116,19 +116,28 @@ function VerifyOtpForm() {
 
  if (!email) {
  return (
- <div className="min-h-screen flex items-center justify-center p-6 bg-surface-muted dark:bg-background">
- <Card padding="lg" className="max-w-md w-full text-center space-y-4">
- <Alert variant="error">Aucune adresse e-mail fournie.</Alert>
- <div className="flex flex-col gap-2 text-sm">
- <Link href="/login" className="text-primary font-semibold hover:underline">
- Se connecter pour valider mon compte
- </Link>
- <Link href="/register" className="text-muted hover:underline">
- Créer un nouveau compte organisation
+ <AuthSplitLayout
+ title="Confirmez votre identité"
+ description="Le code de vérification se demande depuis la connexion ou l’inscription."
+ backHref="/login"
+ backLabel="Retour à la connexion"
+ >
+ <Card padding="lg" className="border-border shadow-sm text-center space-y-4">
+ <div className="inline-flex p-3 rounded-2xl bg-primary/10 text-primary">
+ <ShieldCheck className="w-8 h-8" />
+ </div>
+ <h2 className="text-xl font-semibold text-foreground">Ce lien de vérification est incomplet</h2>
+ <p className="text-sm text-muted leading-relaxed">
+ Connectez-vous avec votre e-mail ou votre numéro : si votre compte attend encore sa validation, un nouveau code vous est envoyé.
+ </p>
+ <div className="flex flex-col gap-3 pt-1">
+ <Button href="/login" fullWidth>Me connecter</Button>
+ <Link href="/register" className="text-sm font-semibold text-primary hover:underline">
+ Je n’ai pas encore de compte
  </Link>
  </div>
  </Card>
- </div>
+ </AuthSplitLayout>
  );
  }
 
