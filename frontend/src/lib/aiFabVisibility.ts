@@ -2,7 +2,7 @@
  * Pages publiques où le bouton flottant des studios IA n'a pas sa place :
  * espace invité, impression, connexion, contact (le bouton couvrait l'envoi du
  * formulaire), pages légales et fiches qui ont déjà leur propre barre d'action
- * (prix, devis, réservation).
+ * (prix, devis, réservation), dont le simulateur lui-même.
  */
 const HIDDEN_PREFIXES = [
   '/rsvp/',
@@ -18,6 +18,8 @@ const HIDDEN_PREFIXES = [
   '/privacy',
   '/terms',
   '/refund',
+  // Le simulateur affiche déjà le solde et les trois studios : le bouton flottant ferait doublon.
+  '/simulateur',
 ];
 
 const LISTING_DETAIL =

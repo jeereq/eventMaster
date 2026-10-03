@@ -22,7 +22,7 @@ import {
   consumeAiSimulation,
   getAiSimulationAllowance,
   createEmptyAiAllowance,
-  aiTokenBalanceLabel,
+  AI_SIMULATION_TOKEN_COST,
   syncDeviceAiTokensWithBackend,
   type AiAllowance,
 } from '@/lib/aiTokens';
@@ -50,7 +50,14 @@ import {
   type AiMomentId,
   type AiSettingId,
 } from '@/lib/aiSimulationCriteria';
-import { StudioAiTabs, StudioStepper, studioAiTabPanelId, type StudioAiTabId } from '@/components/StudioAiTabs';
+import {
+  StudioAiTabs,
+  StudioStepper,
+  StudioToolbar,
+  studioActionBarClass,
+  studioAiTabPanelId,
+  type StudioAiTabId,
+} from '@/components/StudioAiTabs';
 import { EVENT_PREP_PROMPT_MODELS } from '@/config/eventPrepPromptModels';
 import { playAiGenerationCompleteSound, unlockAudioNotifications } from '@/lib/audioNotifications';
 import { getAuthToken } from '@/lib/authSession';
@@ -85,6 +92,7 @@ export type EventPrepAiDefaults = {
   keepServiceSlugs?: string[];
 };
 
+const STUDIO_STEPS = ['Votre brief', 'Calcul IA', '3 formules'];
 const GUEST_PRESETS = [50, 100, 150, 250, 500];
 const BUDGET_PRESETS_USD = [800, 1500, 3000, 5000, 10000];
 const BUDGET_PRESETS_CDF = [2500000, 5000000, 8500000, 15000000, 30000000];
@@ -578,6 +586,43 @@ export default function EventPrepAiSimulator({
   };
 
   const isBudgetBlocked = site?.studioVisibility?.budget === false;
+  const currentStep = loading ? 1 : result?.packages.length ? 2 : 0;
+  const launchLabel = allowance.unlimited
+    ? 'Lancer la simulation'
+    : `Lancer la simulation · ${AI_SIMULATION_TOKEN_COST} jeton${AI_SIMULATION_TOKEN_COST > 1 ? 's' : ''}`;
+  const briefHint = budgetScope === 'drinks'
+    ? (wantedDrinkLines.length > 0
+      ? 'La commande précise remplace le calcul par invité. Vous pouvez lancer.'
+      : Number(guestCount) > 0
+        ? 'Les quantités suivront les invités. Passez en commande précise seulement si vous voulez un nombre exact.'
+        : 'Indiquez les invités, ou ouvrez Affiner et choisissez Commande précise.')
+    : !city.trim()
+      ? 'Commencez par la ville : le catalogue local en dépend.'
+      : budgetMaxFcCalculated <= 0
+        ? 'Indiquez un budget maximum pour situer les trois formules.'
+        : Number(guestCount) > 0
+          ? 'Le brief est prêt. Affiner les marques ou les métiers reste facultatif.'
+          : 'Ajoutez le nombre d’invités pour dimensionner la salle, les chaises et les boissons.';
+
+  const errorAlert = error ? (
+    <Alert variant="error">
+      <div className="space-y-2">
+        <p>{error}</p>
+        {error.toLowerCase().includes('aucune salle') || error.toLowerCase().includes('élargir') ? (
+          <p className="text-xs opacity-90">
+            Essayez une autre commune, toute la ville, ou un budget plus large.
+          </p>
+        ) : null}
+        {!allowance.unlimited && /jeton|simulation|recharge/i.test(error) ? (
+          <AiTokenBuyButton
+            variant="primary"
+            size="sm"
+            onClick={() => setPurchaseModalOpen(true)}
+          />
+        ) : null}
+      </div>
+    </Alert>
+  ) : null;
 
   if (isBudgetBlocked) {
     return (
@@ -629,10 +674,19 @@ export default function EventPrepAiSimulator({
   return (
     <section className={cn(
       embedded
-        ? 'space-y-3'
+        ? 'rounded-[var(--radius-card)] border border-border bg-surface overflow-clip'
         : 'rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3',
       className,
     )}>
+      {embedded ? (
+        <StudioToolbar
+          steps={STUDIO_STEPS}
+          current={currentStep}
+          allowance={allowance}
+          sticky={false}
+        />
+      ) : null}
+      <div className={cn(embedded ? 'p-4 sm:p-6 space-y-3' : 'contents')}>
       {!embedded ? (
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="space-y-1 min-w-0">
@@ -680,15 +734,8 @@ export default function EventPrepAiSimulator({
           className="w-full sm:w-auto sm:min-w-[22rem]"
         />
 
-        {(embedded && !allowance.unlimited) || (activeTab === 'history' && history.length > 0) ? (
+        {activeTab === 'history' && history.length > 0 ? (
           <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
-            {embedded && !allowance.unlimited ? (
-              <AiTokenBuyButton
-                compact
-                variant={allowance.canSimulate ? 'secondary' : 'primary'}
-                onClick={() => setPurchaseModalOpen(true)}
-              />
-            ) : null}
             {activeTab === 'history' && history.length > 0 ? (
               <button
                 type="button"
@@ -800,31 +847,16 @@ export default function EventPrepAiSimulator({
           aria-labelledby={`${tabsId}-tab-create`}
           className="space-y-3"
         >
-          <StudioStepper
-            steps={['Votre brief', 'Calcul IA', '3 formules']}
-            current={loading ? 1 : result?.packages.length ? 2 : 0}
-          />
+          {!embedded ? <StudioStepper steps={STUDIO_STEPS} current={currentStep} /> : null}
           {open ? (
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(18rem,0.95fr)] lg:gap-x-6 lg:items-start">
         <div className="order-1 lg:col-start-1 lg:row-start-1 space-y-3 min-w-0">
-          <p className="flex items-start gap-2 text-xs text-foreground leading-relaxed rounded-[var(--radius-card)] bg-primary/5 border border-primary/15 px-3 py-2.5" aria-live="polite">
-            <Lightbulb className="w-4 h-4 text-primary-solid shrink-0 mt-px" aria-hidden />
-            <span>
-            {budgetScope === 'drinks'
-              ? (wantedDrinkLines.length > 0
-                ? 'La commande précise remplace le calcul par invité. Vous pouvez lancer.'
-                : Number(guestCount) > 0
-                  ? 'Les quantités suivront les invités. Passez en commande précise seulement si vous voulez un nombre exact.'
-                  : 'Indiquez les invités, ou ouvrez Affiner et choisissez Commande précise.')
-              : !city.trim()
-                ? 'Commencez par la ville : le catalogue local en dépend.'
-                : budgetMaxFcCalculated <= 0
-                  ? 'Indiquez un budget maximum pour situer les trois formules.'
-                  : Number(guestCount) > 0
-                    ? 'Le brief est prêt. Affiner les marques ou les métiers reste facultatif.'
-                    : 'Ajoutez le nombre d’invités pour dimensionner la salle, les chaises et les boissons.'}
-            </span>
-          </p>
+          {!embedded ? (
+            <p className="flex items-start gap-2 text-xs text-foreground leading-relaxed rounded-[var(--radius-card)] bg-primary/5 border border-primary/15 px-3 py-2.5" aria-live="polite">
+              <Lightbulb className="w-4 h-4 text-primary-solid shrink-0 mt-px" aria-hidden />
+              <span>{briefHint}</span>
+            </p>
+          ) : null}
           <BudgetFormGroup step={1} title="Votre événement">
             <BudgetSimulationScopePicker value={budgetScope} onChange={applyBudgetScope} />
             <div className="space-y-1.5">
@@ -1193,7 +1225,7 @@ export default function EventPrepAiSimulator({
           ) : null}
         </div>
 
-        <aside className="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 mt-3 lg:mt-0 min-w-0 lg:sticky lg:top-0 lg:max-h-[calc(100dvh-9rem)] lg:overflow-y-auto lg:pr-1">
+        <aside className="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 mt-3 lg:mt-0 min-w-0 lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
           <button
             type="button"
             className="lg:hidden w-full min-h-11 px-3 py-2 mb-3 rounded-[var(--radius-card)] border border-border bg-surface text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
@@ -1336,6 +1368,37 @@ export default function EventPrepAiSimulator({
           </div>
         </aside>
 
+          {embedded ? (
+            <div className={cn('order-3 lg:col-start-1 lg:row-start-2 mt-3', studioActionBarClass(true))}>
+              {/* L’erreur s’affiche ici, à côté du bouton : plus bas dans la page, personne ne la voyait. */}
+              {errorAlert ? <div className="mb-2.5 max-h-40 overflow-y-auto">{errorAlert}</div> : null}
+              {allowance.canSimulate || loading ? (
+                <Button
+                  onClick={() => void run()}
+                  loading={loading}
+                  leftIcon={<Sparkles className="w-4 h-4" />}
+                  className="w-full min-h-11"
+                >
+                  {launchLabel}
+                </Button>
+              ) : (
+                <AiTokenBuyButton
+                  variant="primary"
+                  size="md"
+                  className="w-full min-h-11"
+                  onClick={() => setPurchaseModalOpen(true)}
+                />
+              )}
+              <p className="mt-1.5 flex items-start justify-center gap-1.5 text-xs text-muted text-center" aria-live="polite">
+                <Lightbulb className="w-3.5 h-3.5 text-primary-solid shrink-0 mt-px" aria-hidden />
+                <span>
+                  {allowance.canSimulate || loading
+                    ? briefHint
+                    : 'Plus de jetons : rechargez pour lancer une nouvelle simulation.'}
+                </span>
+              </p>
+            </div>
+          ) : (
           <div className="order-3 lg:col-start-1 lg:row-start-2 mt-3 flex flex-col sm:flex-row gap-2">
             <Button
               onClick={() => void run()}
@@ -1344,9 +1407,7 @@ export default function EventPrepAiSimulator({
               disabled={!allowance.canSimulate && !loading}
               className="w-full sm:w-auto"
             >
-              {allowance.canSimulate
-                ? `Lancer la simulation (${allowance.unlimited ? 'illimité' : `${aiTokenBalanceLabel(allowance)} restante${allowance.totalRemaining > 1 ? 's' : ''}`})`
-                : 'Lancer la simulation (0 jeton)'}
+              {launchLabel}
             </Button>
             {!allowance.unlimited && !allowance.canSimulate ? (
               <AiTokenBuyButton
@@ -1356,28 +1417,11 @@ export default function EventPrepAiSimulator({
               />
             ) : null}
           </div>
+          )}
         </div>
       ) : null}
 
-      {error ? (
-        <Alert variant="error">
-          <div className="space-y-2">
-            <p>{error}</p>
-            {error.toLowerCase().includes('aucune salle') || error.toLowerCase().includes('élargir') ? (
-              <p className="text-xs opacity-90">
-                Essayez une autre commune, toute la ville, ou un budget plus large.
-              </p>
-            ) : null}
-            {!allowance.unlimited && /jeton|simulation|recharge/i.test(error) ? (
-              <AiTokenBuyButton
-                variant="primary"
-                size="sm"
-                onClick={() => setPurchaseModalOpen(true)}
-              />
-            ) : null}
-          </div>
-        </Alert>
-      ) : null}
+      {error && !embedded ? errorAlert : null}
 
       <AiBudgetFullscreenLoader
         active={loading}
@@ -1480,6 +1524,8 @@ export default function EventPrepAiSimulator({
       ) : null}
         </div>
       )}
+
+      </div>
 
       <AiSimulationPackModal
         open={packModalOpen}
