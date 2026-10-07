@@ -62,6 +62,10 @@ import {
   getAdminEventPayoutsReport,
   exportAdminEventPayoutsReport,
   settleAdminEventPayout,
+  initiateAdminEventFlexPayPayout,
+  verifyAdminEventFlexPayPayout,
+  abandonAdminEventFlexPayPayout,
+  getAdminFlexPayPayoutBalance,
 } from '../controllers/eventPayoutController';
 import { getRevenueReport, exportRevenueReport, notifyRevenuePayouts, markRevenuePayoutPaid } from '../controllers/revenueReportController';
 import {
@@ -164,6 +168,18 @@ router.post('/subscriptions/manage', requireRole(['SUPER_ADMIN']), manageAdminSu
 router.get('/reports/event-payouts', requireRole(['SUPER_ADMIN']), getAdminEventPayoutsReport);
 router.get('/reports/event-payouts/export', requireRole(['SUPER_ADMIN']), exportAdminEventPayoutsReport);
 router.post('/reports/event-payouts/:eventId/settle', requireRole(['SUPER_ADMIN']), settleAdminEventPayout);
+router.post('/reports/event-payouts/:eventId/flexpay', requireRole(['SUPER_ADMIN']), initiateAdminEventFlexPayPayout);
+router.get(
+  '/reports/event-payouts/transfers/:transferId/verify',
+  requireRole(['SUPER_ADMIN']),
+  verifyAdminEventFlexPayPayout,
+);
+router.post(
+  '/reports/event-payouts/transfers/:transferId/abandon',
+  requireRole(['SUPER_ADMIN']),
+  abandonAdminEventFlexPayPayout,
+);
+router.get('/payouts/flexpay/balance', requireRole(['SUPER_ADMIN']), getAdminFlexPayPayoutBalance);
 router.get('/donations/report', requireRole(['SUPER_ADMIN']), getAdminDonationsReport);
 router.get('/donations/export', requireRole(['SUPER_ADMIN']), exportAdminDonationsReport);
 router.get('/payouts', requireRole(['SUPER_ADMIN']), listAdminSaasPayouts);

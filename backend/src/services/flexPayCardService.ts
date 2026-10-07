@@ -170,7 +170,6 @@ export function getFlexPayCardConfig() {
   const checkUrlBase = envOrSetting('FLEXPAY_CARD_CHECK_URL', settings.flexPayCardCheckUrl);
   const mobilePayUrl = envOrSetting('FLEXPAY_MOBILE_PAY_URL', settings.flexPayMobilePayUrl);
   const mobileCheckUrl = envOrSetting('FLEXPAY_MOBILE_CHECK_URL', settings.flexPayMobileCheckUrl);
-  const payoutUrl = envOrSetting('FLEXPAY_PAYOUT_URL', '');
 
   return {
     token,
@@ -179,7 +178,6 @@ export function getFlexPayCardConfig() {
     checkUrlBase: checkUrlBase || 'https://cardpayment.flexpay.cd/api/rest/v1/check',
     mobilePayUrl: mobilePayUrl || 'https://backend.flexpay.cd/api/rest/v1/paymentService',
     mobileCheckUrlBase: mobileCheckUrl || 'https://backend.flexpay.cd/api/rest/v1/check',
-    payoutUrl: payoutUrl || 'https://backend.flexpay.cd/api/rest/v1/merchantPayOutService',
   };
 }
 
@@ -301,57 +299,6 @@ export async function createFlexPayMobileCheckout(
   const orderNumber = String(raw.orderNumber || raw.order_number || '');
   if (!orderNumber) {
     throw new Error('Réponse FlexPay Mobile Money incomplète (orderNumber manquant).');
-  }
-
-  return { orderNumber, redirectUrl: null, raw };
-}
-
-/**
- * Décaissement marchand → Mobile Money (Pay Out).
- * Doc API Paiement v1.5 : POST …/merchantPayOutService
- */
-export async function createFlexPayMobilePayout(
-  input: FlexPayMobilePayRequest,
-): Promise<FlexPayPayResult> {
-  assertFlexPayConfigured();
-  const cfg = getFlexPayCardConfig();
-
-  const phone = normalizeFlexPayPhone(input.phone);
-  if (!phone) {
-    throw new Error('Numéro Mobile Money invalide. Utilisez le format 243XXXXXXXXX.');
-  }
-
-  const body = {
-    merchant: cfg.merchant,
-    type: '1',
-    phone,
-    reference: input.reference,
-    amount: String(Math.max(1, Math.round(input.amount))),
-    currency: input.currency || 'CDF',
-    callbackUrl: input.callbackUrl,
-  };
-
-  const res = await fetch(cfg.payoutUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      Authorization: authHeader(cfg.token),
-    },
-    body: JSON.stringify(body),
-  });
-
-  const raw = (await res.json().catch(() => ({}))) as Record<string, unknown>;
-  const code = String(raw.code ?? '');
-  if (!res.ok || (code !== '0' && code !== '0.0')) {
-    throw new Error(
-      String(raw.message || `FlexPay Pay Out a refusé le versement (HTTP ${res.status}).`),
-    );
-  }
-
-  const orderNumber = String(raw.orderNumber || raw.order_number || '');
-  if (!orderNumber) {
-    throw new Error('Réponse FlexPay Pay Out incomplète (orderNumber manquant).');
   }
 
   return { orderNumber, redirectUrl: null, raw };

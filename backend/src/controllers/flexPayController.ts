@@ -16,7 +16,7 @@ import {
   type FlexPayMetadataUpdate,
 } from '../services/flexPayCardService';
 import { parseFlexPayChargeCurrency, resolveFlexPayCharge } from '../services/flexPayChargeCurrency';
-import { finalizeCommercialFlexPayPayout } from '../services/commercialFlexPayPayoutService';
+import { processFlexPayPayoutNotification } from '../services/flexPayPayoutCallbackService';
 import {
   decideFlexPayCallbackOutcome,
   type FlexPayCallbackOutcome,
@@ -243,49 +243,13 @@ export async function flexPayCardCallback(req: Request, res: Response) {
       });
     }
 
-    // 4) Pay Out commissions
-    const transferWhere = [
-      parsed.orderNumber ? { flexPayOrderNumber: parsed.orderNumber } : null,
-      parsed.reference ? { flexPayReference: parsed.reference } : null,
-    ].filter((clause): clause is NonNullable<typeof clause> => clause !== null);
-    const transfer = transferWhere.length
-      ? await prisma.commercialPayoutTransfer.findFirst({ where: { OR: transferWhere } })
-      : null;
-
-    if (transfer) {
-      if (transfer.status === 'SUCCESS') {
-        return res.json({ ok: true, kind: 'payout', paid: true, alreadyPaid: true, transferId: transfer.id });
-      }
-      if (!transfer.flexPayOrderNumber) {
-        return res.status(202).json({ ok: true, pending: true, kind: 'payout', transferId: transfer.id });
-      }
-
-      let checked: FlexPayCheckResult | null = null;
-      try {
-        checked = await checkFlexPayCardOrder(transfer.flexPayOrderNumber);
-      } catch (err) {
-        console.warn('[FlexPay] check payout échoué:', err);
-      }
-      const outcome = decideFlexPayCallbackOutcome(checked);
-      if (!checked || outcome === 'unverified') {
-        return res.status(202).json({ ok: true, pending: true, kind: 'payout', transferId: transfer.id });
-      }
-
-      const payout = await finalizeCommercialFlexPayPayout({
-        reference: transfer.flexPayReference,
-        orderNumber: transfer.flexPayOrderNumber,
-        success: outcome === 'paid',
-        channel: checked.channel,
-        providerReference: checked.providerReference,
-        amountCustomer: checked.amountCustomer,
-      });
-      return res.json({
-        ok: true,
-        kind: 'payout',
-        paid: Boolean(payout.handled && payout.paid),
-        transferId: transfer.id,
-        alreadyPaid: Boolean(payout.handled && payout.alreadyPaid),
-      });
+    // 4) Pay Out (versements envoyés avant la route de callback dédiée)
+    const payout = await processFlexPayPayoutNotification({
+      reference: parsed.reference || null,
+      orderNumber: parsed.orderNumber || null,
+    });
+    if (payout) {
+      return res.status(payout.status === 'PENDING' ? 202 : 200).json({ ok: true, ...payout });
     }
 
     console.warn('[FlexPay] callback sans commande / demande', {
@@ -296,6 +260,33 @@ export async function flexPayCardCallback(req: Request, res: Response) {
   } catch (error: any) {
     console.error('[FlexPay] callback', error);
     return res.status(500).json({ error: 'Callback FlexPay impossible.' });
+  }
+}
+
+/**
+ * Callback FlexPay Payout — POST /api/public/payments/flexpay/payout/callback
+ * Le statut transporté n'est jamais cru : on revérifie auprès de FlexPay.
+ */
+export async function flexPayPayoutCallback(req: Request, res: Response) {
+  try {
+    const src = { ...(req.query || {}), ...((req.body || {}) as Record<string, unknown>) } as Record<
+      string,
+      unknown
+    >;
+    const reference = String(src.reference ?? '').trim().slice(0, 64);
+    const orderNumber = String(src.orderNumber ?? src.order_number ?? '').trim().slice(0, 64);
+    if (!reference && !orderNumber) {
+      return res.status(400).json({ error: 'reference ou orderNumber requis.' });
+    }
+    const payout = await processFlexPayPayoutNotification({ reference, orderNumber });
+    if (!payout) {
+      console.warn('[FlexPay Payout] callback sans versement', { reference, orderNumber });
+      return res.status(404).json({ error: 'Versement introuvable.' });
+    }
+    return res.status(payout.status === 'PENDING' ? 202 : 200).json({ ok: true, ...payout });
+  } catch (error) {
+    console.error('[FlexPay Payout] callback', error);
+    return res.status(500).json({ error: 'Callback FlexPay Payout impossible.' });
   }
 }
 
