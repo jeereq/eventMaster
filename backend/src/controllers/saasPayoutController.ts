@@ -219,6 +219,17 @@ export async function initiateAdminSaasFlexPayPayout(req: AuthenticatedRequest, 
         error: 'EventMaster ne verse que les commerciaux plateforme via FlexPay.',
       });
     }
+    if (result.error === 'NOT_CONFIGURED') {
+      return res.status(503).json({
+        error: 'FlexPay Payout n’est pas encore configuré sur le serveur (identifiants Payout manquants).',
+      });
+    }
+    if (result.error === 'ORG_FLEXPAY_DISABLED') {
+      return res.status(403).json({
+        error:
+          'Les commissions de vos commerciaux sont réglées par votre organisation, hors EventMaster. Versez-les puis marquez-les comme versées.',
+      });
+    }
     if (result.error === 'NOT_FOUND') {
       return res.status(404).json({ error: 'Commercial introuvable.' });
     }

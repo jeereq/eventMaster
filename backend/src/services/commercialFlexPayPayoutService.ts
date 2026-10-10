@@ -1,16 +1,14 @@
 import { randomUUID } from 'crypto';
 import { prisma } from '../db';
+import { buildFlexPayMetadataUpdate, normalizeFlexPayPhone } from './flexPayCardService';
 import {
-  assertFlexPayConfigured,
-  buildFlexPayMetadataUpdate,
-  checkFlexPayCardOrder,
-  createFlexPayMobilePayout,
-  getPublicApiBaseUrl,
-  normalizeFlexPayPhone,
-} from './flexPayCardService';
+  FlexPayPayoutError,
+  getFlexPayPayoutClient,
+  isFlexPayPayoutConfigured,
+} from './flexPayPayoutClient';
+import { flexPayPayoutCallbackUrl } from './eventFlexPayPayoutService';
 import {
   formatBillingPeriodLabel,
-  isOrgCommercialAccount,
   isPlatformCommercialAccount,
   listMonthlyPayouts,
   listOrgSaaSPayouts,
@@ -61,7 +59,14 @@ export async function initiateCommercialFlexPayPayout(params: {
   phone?: string | null;
   tenantId?: string | null;
 }) {
-  assertFlexPayConfigured();
+  if (!isFlexPayPayoutConfigured()) {
+    return { error: 'NOT_CONFIGURED' as const };
+  }
+  // Les commissions des commerciaux d'une organisation sont dues par l'organisation :
+  // elles ne doivent pas être payées depuis le compte marchand FlexPay d'EventMaster.
+  if (params.kind === 'org') {
+    return { error: 'ORG_FLEXPAY_DISABLED' as const };
+  }
 
   const commercial = await prisma.user.findUnique({
     where: { id: params.commercialId },
@@ -79,14 +84,8 @@ export async function initiateCommercialFlexPayPayout(params: {
     return { error: 'NOT_FOUND' as const };
   }
 
-  if (params.kind === 'platform' && !isPlatformCommercialAccount(commercial)) {
+  if (!isPlatformCommercialAccount(commercial)) {
     return { error: 'NOT_PLATFORM' as const };
-  }
-  if (params.kind === 'org') {
-    if (!params.tenantId) return { error: 'TENANT_REQUIRED' as const };
-    if (!isOrgCommercialAccount(commercial) || commercial.tenantId !== params.tenantId) {
-      return { error: 'NOT_ORG' as const };
-    }
   }
 
   const existingPending = await prisma.commercialPayoutTransfer.findFirst({
@@ -95,7 +94,6 @@ export async function initiateCommercialFlexPayPayout(params: {
       commercialId: params.commercialId,
       billingPeriod: params.period,
       status: 'PENDING',
-      ...(params.kind === 'org' ? { tenantId: params.tenantId! } : {}),
     },
   });
   if (existingPending) {
@@ -126,7 +124,7 @@ export async function initiateCommercialFlexPayPayout(params: {
     data: {
       kind: params.kind,
       commercialId: params.commercialId,
-      tenantId: params.kind === 'org' ? params.tenantId! : null,
+      tenantId: null,
       billingPeriod: params.period,
       amountFc,
       phone,
@@ -136,31 +134,41 @@ export async function initiateCommercialFlexPayPayout(params: {
     },
   });
 
-  const callbackUrl = `${getPublicApiBaseUrl()}/api/public/payments/flexpay/callback`;
-
+  let sent;
   try {
-    const flex = await createFlexPayMobilePayout({
+    sent = await getFlexPayPayoutClient().sendMobileMoney({
       reference,
       amount: amountFc,
       currency: 'CDF',
-      phone,
-      callbackUrl,
+      customer: phone,
+      description: `Commission EventMaster ${formatBillingPeriodLabel(params.period)}`,
+      callbackUrl: flexPayPayoutCallbackUrl(),
     });
-    const updated = await prisma.commercialPayoutTransfer.update({
-      where: { id: transfer.id },
-      data: { flexPayOrderNumber: flex.orderNumber },
-    });
-    return {
-      transfer: updated,
-      message: `Versement FlexPay initié (${formatBillingPeriodLabel(params.period)} · ${amountFc.toLocaleString('fr-FR')} FC). Confirmez sur le téléphone du commercial.`,
-    };
   } catch (err) {
+    if (err instanceof FlexPayPayoutError && !err.definitive) {
+      // FlexPay a peut-être reçu la demande : on garde le versement en attente
+      // pour ne jamais renvoyer deux fois la même commission.
+      return {
+        transfer,
+        message: `${err.message} Le versement reste en attente : vérifiez dans FlexPay avant toute nouvelle tentative.`,
+      };
+    }
     await prisma.commercialPayoutTransfer.update({
       where: { id: transfer.id },
       data: { status: 'FAILED' },
     });
     throw err;
   }
+
+  // FlexPay a accepté : une erreur ici laisse le versement en attente (jamais en échec).
+  const updated = await prisma.commercialPayoutTransfer.update({
+    where: { id: transfer.id },
+    data: { flexPayOrderNumber: sent.orderNumber },
+  });
+  return {
+    transfer: updated,
+    message: `Versement FlexPay envoyé (${formatBillingPeriodLabel(params.period)} · ${amountFc.toLocaleString('fr-FR')} FC). La commission sera marquée versée dès que FlexPay confirme.`,
+  };
 }
 
 export async function finalizeCommercialFlexPayPayout(opts: {
@@ -196,8 +204,8 @@ export async function finalizeCommercialFlexPayPayout(opts: {
   });
 
   if (!opts.success) {
-    await prisma.commercialPayoutTransfer.update({
-      where: { id: transfer.id },
+    await prisma.commercialPayoutTransfer.updateMany({
+      where: { id: transfer.id, status: 'PENDING' },
       data: {
         status: 'FAILED',
         flexPayChannel: meta.flexPayChannel,
@@ -205,6 +213,15 @@ export async function finalizeCommercialFlexPayPayout(opts: {
       },
     });
     return { handled: true as const, paid: false, transferId: transfer.id };
+  }
+
+  // Revendique le passage PENDING → SUCCESS une seule fois (callback et vérification simultanés).
+  const claimed = await prisma.commercialPayoutTransfer.updateMany({
+    where: { id: transfer.id, status: { not: 'SUCCESS' } },
+    data: { status: 'SUCCESS' },
+  });
+  if (claimed.count === 0) {
+    return { handled: true as const, alreadyPaid: true, transferId: transfer.id };
   }
 
   const proofUrl = `flexpay:${transfer.flexPayOrderNumber || transfer.flexPayReference}`;
@@ -262,35 +279,30 @@ export async function verifyCommercialFlexPayPayout(transferId: string) {
     return { paid: true, status: 'SUCCESS' as const, transfer };
   }
   if (!transfer.flexPayOrderNumber) {
-    return { paid: false, status: transfer.status, transfer, canRetry: true };
+    return { paid: false, status: transfer.status, transfer, canRetry: transfer.status === 'FAILED' };
   }
 
-  const checked = await checkFlexPayCardOrder(transfer.flexPayOrderNumber);
-  if (checked.status === 'success') {
+  const checked = await getFlexPayPayoutClient().checkTransaction(
+    transfer.flexPayOrderNumber,
+    transfer.flexPayReference,
+  );
+  if (checked.found && checked.status === 'success') {
     const result = await finalizeCommercialFlexPayPayout({
       reference: transfer.flexPayReference,
       orderNumber: transfer.flexPayOrderNumber,
       success: true,
-      channel: checked.channel,
       providerReference: checked.providerReference,
-      amountCustomer: checked.amountCustomer,
     });
     return { paid: Boolean(result.paid), status: 'SUCCESS' as const, transferId: transfer.id };
   }
-  if (checked.status === 'failed') {
+  if (checked.found && checked.status === 'failed') {
     await finalizeCommercialFlexPayPayout({
       reference: transfer.flexPayReference,
       orderNumber: transfer.flexPayOrderNumber,
       success: false,
-      channel: checked.channel,
       providerReference: checked.providerReference,
     });
     return { paid: false, status: 'FAILED' as const, canRetry: true, transferId: transfer.id };
   }
-  return {
-    paid: false,
-    status: 'PENDING' as const,
-    transfer,
-    channel: checked.channel,
-  };
+  return { paid: false, status: 'PENDING' as const, transfer };
 }

@@ -487,6 +487,34 @@ model CommercialPayoutTransfer {
   @@index([status])
 }
 
+/**
+ * Reversement FlexPay Pay Out du net d'un événement (billetterie + dons) vers l'organisation.
+ * Pas de relation Prisma : l'historique financier survit à la suppression de l'événement.
+ */
+model EventPayoutTransfer {
+  id                       String    @id @default(uuid())
+  eventId                  String
+  tenantId                 String
+  eventTitle               String
+  amountFc                 Int
+  phone                    String
+  /** PENDING | SUCCESS | FAILED */
+  status                   String    @default("PENDING")
+  flexPayReference         String    @unique
+  flexPayOrderNumber       String?   @unique
+  flexPayProviderReference String?
+  /** Dernier message FlexPay (refus, erreur réseau…). */
+  lastMessage              String?
+  initiatedByUserId        String
+  settledAt                DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  @@index([eventId])
+  @@index([tenantId])
+  @@index([status])
+}
+
 enum InvoiceType {
   SUBSCRIPTION_APPROVAL
   RENEWAL

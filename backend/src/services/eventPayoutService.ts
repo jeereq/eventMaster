@@ -1,6 +1,9 @@
 import { prisma } from '../db';
 import { loadPlatformSettings } from './platformSettingsService';
 import { auditReq } from './adminAuditService';
+import { computeEventPayoutAmounts } from './eventPayoutAmounts';
+
+export { computeEventPayoutAmounts };
 
 export interface EventPayoutSummary {
   eventId: string;
@@ -40,6 +43,20 @@ export interface EventPayoutSummary {
   proofUrl: string | null;
   notes: string | null;
   paymentMethod: string | null;
+
+  /** Net encore à reverser (net − déjà versé). */
+  remainingFc: number;
+  /** Versement FlexPay Pay Out en cours, s'il y en a un. */
+  pendingTransfer: {
+    id: string;
+    amountFc: number;
+    phone: string;
+    orderNumber: string | null;
+    createdAt: string;
+    lastMessage: string | null;
+  } | null;
+  /** Dernier versement FlexPay échoué (message affiché à l'admin). */
+  lastFailedTransfer: { id: string; amountFc: number; lastMessage: string | null; createdAt: string } | null;
 }
 
 export interface AdminEventPayoutsReport {
@@ -56,14 +73,20 @@ export interface AdminEventPayoutsReport {
   events: EventPayoutSummary[];
 }
 
+export function eventPayoutRates() {
+  const settings = loadPlatformSettings();
+  return {
+    ticketRate: settings.eventTicketingRetentionRate || 0.05,
+    donationRate: settings.eventDonationsRetentionRate || 0.04,
+  };
+}
+
 export async function buildAdminEventPayoutsReport(filters?: {
   tenantId?: string;
   status?: string;
   q?: string;
 }): Promise<AdminEventPayoutsReport> {
-  const settings = loadPlatformSettings();
-  const ticketRate = settings.eventTicketingRetentionRate || 0.05;
-  const donationRate = settings.eventDonationsRetentionRate || 0.04;
+  const { ticketRate, donationRate } = eventPayoutRates();
   const ticketPct = Math.round(ticketRate * 100);
   const donationPct = Math.round(donationRate * 100);
 
@@ -118,36 +141,28 @@ export async function buildAdminEventPayoutsReport(filters?: {
 
   const summaries: EventPayoutSummary[] = [];
 
+  const pendingTransfers = events.length
+    ? await prisma.eventPayoutTransfer.findMany({
+        where: { eventId: { in: events.map((e) => e.id) }, status: { in: ['PENDING', 'FAILED'] } },
+        orderBy: { createdAt: 'desc' },
+      })
+    : [];
+
   for (const ev of events) {
-    const orders = ev.ticketOrders;
-    let tGross = 0;
-    let tCount = 0;
-    let dGross = 0;
-    let dCount = 0;
-
-    for (const ord of orders) {
-      if (ord.pricingZoneId === 'donation') {
-        dGross += ord.amountFc;
-        dCount += 1;
-      } else {
-        tGross += ord.amountFc;
-        tCount += 1;
-      }
-    }
-
-    const tRetention = Math.round(tGross * ticketRate);
-    const tNet = tGross - tRetention;
-
-    const dRetention = Math.round(dGross * donationRate);
-    const dNet = dGross - dRetention;
-
-    const evGross = tGross + dGross;
-    const evRetention = tRetention + dRetention;
-    const evNet = evGross - evRetention;
-
-    // Métadonnées de versement stockées dans eventPrep.payout
-    const prep = ev.eventPrep && typeof ev.eventPrep === 'object' ? (ev.eventPrep as Record<string, unknown>) : {};
-    const payoutMeta = prep.payout && typeof prep.payout === 'object' ? (prep.payout as Record<string, unknown>) : null;
+    const amounts = computeEventPayoutAmounts({
+      orders: ev.ticketOrders,
+      eventPrep: ev.eventPrep,
+      ticketRate,
+      donationRate,
+    });
+    const {
+      tGross, tCount, tRetention, tNet,
+      dGross, dCount, dRetention, dNet,
+      payoutMeta,
+    } = amounts;
+    const evGross = amounts.gross;
+    const evRetention = amounts.retention;
+    const evNet = amounts.net;
 
     let payoutStatus: EventPayoutSummary['payoutStatus'] = 'DUE';
     if (evGross === 0) {
@@ -159,6 +174,10 @@ export async function buildAdminEventPayoutsReport(filters?: {
     } else {
       payoutStatus = 'DUE';
     }
+
+    const pending = pendingTransfers.find((t) => t.eventId === ev.id && t.status === 'PENDING');
+    const lastTransfer = pendingTransfers.find((t) => t.eventId === ev.id);
+    const lastFailed = lastTransfer && lastTransfer.status === 'FAILED' ? lastTransfer : null;
 
     // Filtre sur le statut si demandé
     if (filters?.status && filters.status !== 'all' && filters.status.toUpperCase() !== payoutStatus) {
@@ -210,6 +229,26 @@ export async function buildAdminEventPayoutsReport(filters?: {
       proofUrl: typeof payoutMeta?.proofUrl === 'string' ? payoutMeta.proofUrl : null,
       notes: typeof payoutMeta?.notes === 'string' ? payoutMeta.notes : null,
       paymentMethod: typeof payoutMeta?.paymentMethod === 'string' ? payoutMeta.paymentMethod : null,
+
+      remainingFc: amounts.remainingFc,
+      pendingTransfer: pending
+        ? {
+            id: pending.id,
+            amountFc: pending.amountFc,
+            phone: pending.phone,
+            orderNumber: pending.flexPayOrderNumber,
+            createdAt: pending.createdAt.toISOString(),
+            lastMessage: pending.lastMessage,
+          }
+        : null,
+      lastFailedTransfer: lastFailed
+        ? {
+            id: lastFailed.id,
+            amountFc: lastFailed.amountFc,
+            lastMessage: lastFailed.lastMessage,
+            createdAt: lastFailed.createdAt.toISOString(),
+          }
+        : null,
     });
   }
 

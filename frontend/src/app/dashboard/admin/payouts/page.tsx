@@ -55,6 +55,23 @@ interface EventPayoutRow {
   proofUrl: string | null;
   notes: string | null;
   paymentMethod: string | null;
+
+  remainingFc: number;
+  pendingTransfer: {
+    id: string;
+    amountFc: number;
+    phone: string;
+    orderNumber: string | null;
+    createdAt: string;
+    lastMessage: string | null;
+  } | null;
+  lastFailedTransfer: { id: string; amountFc: number; lastMessage: string | null; createdAt: string } | null;
+}
+
+interface FlexPayBalanceResponse {
+  configured: boolean;
+  balances?: { currency: string; amount: number }[];
+  error?: string;
 }
 
 interface EventPayoutsResponse {
@@ -151,6 +168,12 @@ export default function AdminSaasPayoutsPage() {
   const [settlePaymentMethod, setSettlePaymentMethod] = useState('Virement Bancaire');
   const [settlingEvent, setSettlingEvent] = useState(false);
   const [eventProofUploading, setEventProofUploading] = useState(false);
+  const [flexEventModal, setFlexEventModal] = useState<EventPayoutRow | null>(null);
+  const [flexEventPhone, setFlexEventPhone] = useState('');
+  const [flexEventAmount, setFlexEventAmount] = useState('');
+  const [flexEventError, setFlexEventError] = useState<string | null>(null);
+  const [flexEventBusy, setFlexEventBusy] = useState<string | null>(null);
+  const [flexBalance, setFlexBalance] = useState<FlexPayBalanceResponse | null>(null);
 
   const loadEventPayouts = useCallback(async () => {
     if (user?.role !== 'SUPER_ADMIN') return;
@@ -173,6 +196,87 @@ export default function AdminSaasPayoutsPage() {
       void loadEventPayouts();
     }
   }, [payoutTab, loadEventPayouts]);
+
+  const loadFlexBalance = useCallback(async () => {
+    if (user?.role !== 'SUPER_ADMIN') return;
+    try {
+      setFlexBalance(await api.get('/admin/payouts/flexpay/balance'));
+    } catch (err: unknown) {
+      setFlexBalance({ configured: true, error: err instanceof Error ? err.message : 'Solde indisponible.' });
+    }
+  }, [user?.role]);
+
+  useEffect(() => {
+    if (payoutTab === 'events') void loadFlexBalance();
+  }, [payoutTab, loadFlexBalance]);
+
+  const openFlexEvent = (ev: EventPayoutRow) => {
+    setFlexEventModal(ev);
+    setFlexEventPhone(ev.managerPhone || '');
+    setFlexEventAmount(String(ev.remainingFc));
+    setFlexEventError(null);
+  };
+
+  const submitFlexEvent = async () => {
+    if (!flexEventModal) return;
+    const amount = parseInt(flexEventAmount, 10);
+    if (!Number.isFinite(amount) || amount <= 0 || amount > flexEventModal.remainingFc) {
+      setFlexEventError(`Montant entre 1 et ${formatFc(flexEventModal.remainingFc)}.`);
+      return;
+    }
+    if (!flexEventPhone.trim()) {
+      setFlexEventError('Numéro Mobile Money requis (243…).');
+      return;
+    }
+    setFlexEventBusy('send');
+    setFlexEventError(null);
+    try {
+      const data = await api.post(`/admin/reports/event-payouts/${flexEventModal.eventId}/flexpay`, {
+        phone: flexEventPhone.trim(),
+        amountFc: amount,
+      });
+      setFlexEventModal(null);
+      alert(data.message || 'Versement FlexPay envoyé.');
+      await Promise.all([loadEventPayouts(), loadFlexBalance()]);
+    } catch (err: unknown) {
+      setFlexEventError(err instanceof Error ? err.message : 'Versement FlexPay impossible.');
+      await loadEventPayouts();
+    } finally {
+      setFlexEventBusy(null);
+    }
+  };
+
+  const verifyFlexEvent = async (transferId: string) => {
+    setFlexEventBusy(`verify:${transferId}`);
+    try {
+      const res = await api.get(`/admin/reports/event-payouts/transfers/${transferId}/verify`);
+      if (res.status === 'SUCCESS') alert('Versement confirmé par FlexPay.');
+      else if (res.status === 'FAILED') alert(`Le versement a échoué${res.lastMessage ? ` : ${res.lastMessage}` : ''}.`);
+      else if (res.canAbandon) alert('FlexPay n’a jamais confirmé la réception de cette demande. Vérifiez dans le back-office FlexPay, puis abandonnez-la si rien n’est parti.');
+      else alert('Toujours en attente de confirmation FlexPay.');
+      await Promise.all([loadEventPayouts(), loadFlexBalance()]);
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Vérification impossible.');
+    } finally {
+      setFlexEventBusy(null);
+    }
+  };
+
+  const abandonFlexEvent = async (transferId: string) => {
+    const reason = window.prompt(
+      'Vous avez vérifié dans FlexPay qu’aucun argent n’est parti ? Indiquez pourquoi vous abandonnez ce versement :',
+    );
+    if (!reason || reason.trim().length < 5) return;
+    setFlexEventBusy(`abandon:${transferId}`);
+    try {
+      await api.post(`/admin/reports/event-payouts/transfers/${transferId}/abandon`, { reason: reason.trim() });
+      await loadEventPayouts();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Abandon impossible.');
+    } finally {
+      setFlexEventBusy(null);
+    }
+  };
 
   const exportEventPayoutsCsv = async () => {
     const params = new URLSearchParams();
@@ -850,6 +954,24 @@ export default function AdminSaasPayoutsPage() {
             </div>
           </div>
 
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted bg-surface p-3 rounded-xl border border-border">
+            <Wallet className="w-4 h-4 text-primary shrink-0" aria-hidden="true" />
+            <span className="font-semibold text-foreground">Solde FlexPay Payout</span>
+            {!flexBalance ? (
+              <span>Chargement…</span>
+            ) : !flexBalance.configured ? (
+              <span>Non configuré sur le serveur : les versements FlexPay sont indisponibles.</span>
+            ) : flexBalance.error ? (
+              <span className="text-rose-600">{flexBalance.error}</span>
+            ) : (
+              <span className="text-foreground">
+                {(flexBalance.balances || [])
+                  .map((b) => (b.currency === 'CDF' ? formatFc(b.amount) : `${b.amount.toLocaleString('fr-FR')} ${b.currency}`))
+                  .join(' · ') || 'Aucun solde'}
+              </span>
+            )}
+          </div>
+
           {/* Barre de filtres */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-surface p-3 rounded-xl border border-border">
             <input
@@ -921,6 +1043,9 @@ export default function AdminSaasPayoutsPage() {
             <div className="space-y-4">
               {eventPayoutsData.events.map((ev) => {
                 const isPaid = ev.payoutStatus === 'PAID';
+                const isPartial = ev.payoutStatus === 'PARTIAL';
+                const pending = ev.pendingTransfer;
+                const flexProof = ev.proofUrl?.startsWith('flexpay:') ? ev.proofUrl.slice('flexpay:'.length) : null;
                 return (
                   <div
                     key={ev.eventId}
@@ -931,8 +1056,9 @@ export default function AdminSaasPayoutsPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="text-base font-bold text-foreground">{ev.eventTitle}</h4>
                           <StatusPill tone={isPaid ? 'emerald' : 'amber'}>
-                            {isPaid ? 'Reversé' : 'À reverser'}
+                            {isPaid ? 'Reversé' : isPartial ? 'Reversé en partie' : 'À reverser'}
                           </StatusPill>
+                          {pending && <StatusPill tone="sky">FlexPay en cours</StatusPill>}
                         </div>
                         <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
                           <span className="flex items-center gap-1">
@@ -954,6 +1080,11 @@ export default function AdminSaasPayoutsPage() {
                         <span className="text-lg sm:text-xl font-extrabold text-primary block">
                           {formatFc(ev.totalNetPayoutFc)}
                         </span>
+                        {ev.remainingFc > 0 && ev.remainingFc < ev.totalNetPayoutFc && (
+                          <span className="text-xs text-amber-700 dark:text-amber-300 block">
+                            Reste {formatFc(ev.remainingFc)}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -1010,6 +1141,46 @@ export default function AdminSaasPayoutsPage() {
                       </div>
                     </div>
 
+                    {pending && (
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl border border-sky-200 dark:border-sky-900/50 bg-sky-50 dark:bg-sky-950/30 text-xs">
+                        <span className="flex items-start gap-1.5 text-foreground">
+                          <Clock className="w-4 h-4 text-sky-600 shrink-0" aria-hidden="true" />
+                          <span>
+                            Versement FlexPay de <strong>{formatFc(pending.amountFc)}</strong> vers {pending.phone}, envoyé le {pending.createdAt.slice(0, 10)}.
+                            {pending.orderNumber ? ` N° FlexPay ${pending.orderNumber}.` : ' FlexPay n’a pas encore confirmé la réception.'}
+                            {pending.lastMessage && !pending.orderNumber ? ` ${pending.lastMessage}` : ''}
+                          </span>
+                        </span>
+                        <div className="flex gap-2 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            loading={flexEventBusy === `verify:${pending.id}`}
+                            onClick={() => void verifyFlexEvent(pending.id)}
+                            className="min-h-11 sm:min-h-9"
+                          >
+                            Vérifier
+                          </Button>
+                          {!pending.orderNumber && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              loading={flexEventBusy === `abandon:${pending.id}`}
+                              onClick={() => void abandonFlexEvent(pending.id)}
+                              className="min-h-11 sm:min-h-9"
+                            >
+                              Abandonner
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {!pending && ev.lastFailedTransfer && ev.remainingFc > 0 && (
+                      <p className="text-xs text-rose-600">
+                        Dernier versement FlexPay échoué ({formatFc(ev.lastFailedTransfer.amountFc)}) : {ev.lastFailedTransfer.lastMessage || 'refusé par FlexPay'}.
+                      </p>
+                    )}
+
                     {/* Récapitulatif et Actions */}
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 text-xs text-muted">
                       <div className="flex items-center gap-4 flex-wrap">
@@ -1021,7 +1192,13 @@ export default function AdminSaasPayoutsPage() {
                             Versé le {ev.settledAt.slice(0, 10)} via {ev.paymentMethod || 'Virement'}
                           </span>
                         )}
-                        {ev.proofUrl && (
+                        {flexProof && (
+                          <span className="flex items-center gap-1">
+                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" aria-hidden="true" />
+                            FlexPay n° {flexProof}
+                          </span>
+                        )}
+                        {ev.proofUrl && !flexProof && (
                           <a
                             href={ev.proofUrl}
                             target="_blank"
@@ -1034,11 +1211,24 @@ export default function AdminSaasPayoutsPage() {
                         )}
                       </div>
 
-                      <div>
-                        {!isPaid ? (
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        {ev.remainingFc > 0 && !pending && (
                           <Button
                             size="sm"
                             variant="primary"
+                            onClick={() => openFlexEvent(ev)}
+                            disabled={flexBalance?.configured === false}
+                            className="min-h-11 sm:min-h-10"
+                            aria-label={`Verser via FlexPay pour l'événement ${ev.eventTitle}`}
+                          >
+                            Verser via FlexPay
+                          </Button>
+                        )}
+                        {!isPaid ? (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={Boolean(pending)}
                             onClick={() => {
                               setSettleEventModal(ev);
                               setSettleAmountFc(String(ev.totalNetPayoutFc));
@@ -1077,6 +1267,74 @@ export default function AdminSaasPayoutsPage() {
           )}
         </div>
       )}
+
+      {/* Modale Pay Out FlexPay d'événement */}
+      <Modal
+        open={Boolean(flexEventModal)}
+        onClose={() => setFlexEventModal(null)}
+        title={`Verser via FlexPay : ${flexEventModal?.eventTitle ?? ''}`}
+        description="L’argent part du compte FlexPay d’EventMaster vers le Mobile Money de l’organisation. Le reversement n’est marqué versé qu’après confirmation de FlexPay."
+        footer={
+          <div className="flex flex-col-reverse sm:flex-row w-full justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={() => setFlexEventModal(null)} className="w-full sm:w-auto min-h-11">
+              Annuler
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void submitFlexEvent()}
+              loading={flexEventBusy === 'send'}
+              className="w-full sm:w-auto min-h-11"
+            >
+              Envoyer {flexEventAmount && Number(flexEventAmount) > 0 ? formatFc(Number(flexEventAmount)) : ''}
+            </Button>
+          </div>
+        }
+      >
+        {flexEventModal && (
+          <div className="space-y-4">
+            <div className="p-3 bg-surface-muted rounded-xl border border-border text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="text-muted">Organisation :</span>
+                <span className="font-semibold">{flexEventModal.tenantName}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted">Net calculé :</span>
+                <span className="font-semibold">{formatFc(flexEventModal.totalNetPayoutFc)}</span>
+              </div>
+              <div className="flex justify-between pt-1 border-t border-border font-bold text-foreground text-sm">
+                <span>Reste à verser :</span>
+                <span className="text-primary">{formatFc(flexEventModal.remainingFc)}</span>
+              </div>
+            </div>
+            <label className="block space-y-1">
+              <span className="text-xs font-semibold text-muted">Montant (FC)</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={flexEventModal.remainingFc}
+                value={flexEventAmount}
+                onChange={(e) => setFlexEventAmount(e.target.value)}
+                className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2.5 text-sm min-h-11"
+              />
+            </label>
+            <label className="block space-y-1">
+              <span className="text-xs font-semibold text-muted">Mobile Money du bénéficiaire</span>
+              <input
+                value={flexEventPhone}
+                onChange={(e) => setFlexEventPhone(e.target.value)}
+                placeholder="243XXXXXXXXX"
+                inputMode="tel"
+                className="w-full bg-surface-muted border border-border rounded-xl px-3 py-2.5 text-sm min-h-11"
+              />
+              <span className="text-xs text-muted">
+                Prérempli avec le téléphone du responsable{flexEventModal.managerName ? ` (${flexEventModal.managerName})` : ''}. Vérifiez-le : un versement envoyé ne peut pas être annulé.
+              </span>
+            </label>
+            {flexEventError && <Alert variant="error">{flexEventError}</Alert>}
+          </div>
+        )}
+      </Modal>
 
       {/* Modale de versement d'événement */}
       <Modal

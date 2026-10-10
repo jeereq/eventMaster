@@ -63,6 +63,7 @@ import { getPublicShowcasePlans } from '../controllers/showcasePlanController';
 import { listBeverageBrands, listPublicBeverageOffers, listVendorDrinkPage } from '../services/beverageBrandService';
 import {
   flexPayCardCallback,
+  flexPayPayoutCallback,
   flexPayCardReturn,
   verifyFlexPayCardOrder,
   retryFlexPayTicketOrder,
@@ -243,6 +244,7 @@ router.post('/invitation-favorites/claim', requireAuth, claimInvitationTemplateF
 
 router.post('/payments/flexpay/callback', flexPayCardCallback);
 router.get('/payments/flexpay/callback', flexPayCardCallback);
+router.post('/payments/flexpay/payout/callback', flexPayPayoutCallback);
 router.get('/payments/flexpay/return', flexPayCardReturn);
 router.get('/payments/flexpay/orders/:orderId/verify', verifyFlexPayCardOrder);
 router.post('/payments/flexpay/orders/:orderId/retry', requireAuth, retryFlexPayTicketOrder);
