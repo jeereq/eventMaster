@@ -22,7 +22,7 @@ import { formatFc } from '@/config/landingPricing';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { useAuth } from '@/context/AuthContext';
 import { resolveUsdExchangeRateCdf, enabledMarketplaceCities } from '@/lib/platformCities';
-import type { ListingEventTypeId } from '@/lib/listingDetails';
+import { LISTING_EVENT_TYPES, type ListingEventTypeId } from '@/lib/listingDetails';
 import type { EventPrepAiDefaults } from '@/components/EventPrepAiSimulator';
 import {
   Store,
@@ -314,11 +314,22 @@ export default function SimulateurPageClient() {
     setActiveStudio(nextStudio);
 
     const paramScenario = params.get('scenario');
-    if (paramScenario) {
-      const match = SCENARIOS.find((s) => s.id === paramScenario);
-      if (match) {
-        setSelectedScenarioId(match.id);
-        setLiveDefaults(scenarioToDefaults(match, exchangeRate));
+    const scenarioMatch = paramScenario ? SCENARIOS.find((s) => s.id === paramScenario) : undefined;
+    if (scenarioMatch) {
+      setSelectedScenarioId(scenarioMatch.id);
+      setLiveDefaults(scenarioToDefaults(scenarioMatch, exchangeRate));
+      setPreferDefaults(true);
+    } else {
+      // Brief prérempli depuis le formulaire de l'accueil (?type=wedding&guests=150&date=2026-12-14).
+      const typeParam = params.get('type');
+      const guestsParam = Number(params.get('guests'));
+      const dateParam = params.get('date');
+      const seed: EventPrepAiDefaults = {};
+      if (typeParam && LISTING_EVENT_TYPES.some((t) => t.id === typeParam)) seed.eventType = typeParam as ListingEventTypeId;
+      if (Number.isFinite(guestsParam) && guestsParam > 0 && guestsParam <= 100000) seed.guestCount = Math.round(guestsParam);
+      if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) seed.eventDate = dateParam;
+      if (Object.keys(seed).length > 0) {
+        setLiveDefaults(seed);
         setPreferDefaults(true);
       }
     }

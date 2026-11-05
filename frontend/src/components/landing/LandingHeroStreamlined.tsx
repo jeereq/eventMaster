@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowRight, Check, LayoutDashboard, MessageCircle, Sparkles } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { ArrowRight, CalendarDays, Check, ChevronLeft, LayoutDashboard, Mic, PartyPopper, QrCode, Users, Video } from 'lucide-react';
+import { LISTING_EVENT_TYPES, type ListingEventTypeId } from '@/lib/listingDetails';
 import { cn } from '@/lib/cn';
 import { LANDING_PROFILES, type LandingProfileId } from '@/lib/landingProfiles';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
@@ -62,26 +63,6 @@ const LOGGED_IN_TARGETS: Record<LandingProfileId, { href: string; label: string 
   vendor: { href: '/dashboard/catalogue', label: 'Mon catalogue' },
 };
 
-const DEMO_GUESTS = [
-  { initials: 'JK', name: 'Jean-Marc K.', detail: 'Table 3 · 2 places', status: 'Confirmé', pending: false },
-  { initials: 'SM', name: 'Sarah M.', detail: 'Table 5 · 1 place', status: 'Confirmé', pending: false },
-  { initials: 'DL', name: 'Didier L.', detail: 'Relancé hier', status: 'En attente', pending: true },
-  { initials: 'EI', name: 'Esther I.', detail: 'Table 1 · 4 places', status: 'Confirmé', pending: false },
-];
-
-/** Exemple chiffré du hero : 120 invités, budget moyen à Kinshasa (taux 1 $ = 2 800 FC). */
-const DEMO_BUDGET = {
-  total: '4 200 000 FC',
-  usd: '≈ 1 500 $',
-  guests: 120,
-  lines: [
-    { label: 'Salle', share: 35, tone: 'bg-[#065f46]' },
-    { label: 'Traiteur', share: 30, tone: 'bg-brand-accent' },
-    { label: 'Déco', share: 20, tone: 'bg-[#6ee7b7]' },
-    { label: 'Photo & DJ', share: 15, tone: 'bg-[#c7d6cf]' },
-  ],
-};
-
 /**
  * Les sections du bas se montent à la demande et changent de hauteur en chargeant :
  * on recale la cible quelques fois, sauf si le visiteur a repris la main entre-temps.
@@ -108,139 +89,183 @@ function formatCitySentence(cities: string[]): string {
   return `${cities.slice(0, -1).join(', ')} et ${cities[cities.length - 1]}`;
 }
 
-/** Maquette décorative : suivi des invités, budget IA et scan à l’entrée (exemple, pas de données réelles). */
-function HeroPhoneMock() {
-  const cardClass =
-    'em-light-island bg-[#ffffff] text-[#0f1f1a] rounded-[18px] shadow-[0_16px_40px_rgba(2,44,34,0.35)]';
+/** Maquette décorative : l’invitation telle qu’elle arrive sur WhatsApp (exemple, pas de données réelles). */
+function HeroWhatsAppMock() {
+  const bubble = 'shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]';
   return (
-    <div
-      aria-hidden
-      className="relative h-[460px] lg:h-[540px] rounded-[2rem] bg-[#064e3b] overflow-hidden select-none"
-    >
-      <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full border-[48px] border-brand-accent opacity-20" />
-      <div className="absolute -left-24 -bottom-28 w-72 h-72 rounded-full border-[40px] border-[#065f46]" />
+    <div aria-hidden className="relative flex justify-center select-none py-2 lg:pl-16">
+      <span className="absolute left-1/2 top-1/2 w-[420px] h-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.28)_0,rgba(16,185,129,0.12)_45%,transparent_70%)]" />
 
-      {/* Téléphone : liste des invités */}
-      <div className="absolute right-5 lg:right-4 xl:right-8 top-8 w-[236px] xl:w-[252px] h-[400px] lg:h-[476px] rounded-[2.25rem] bg-[#0b1512] p-2.5 shadow-[0_24px_60px_rgba(2,44,34,0.45)]">
-        <div className="em-light-island w-full h-full rounded-[1.75rem] bg-[#f4f7f5] text-[#0f1f1a] px-3.5 pt-3 pb-3.5 flex flex-col gap-2.5 overflow-hidden">
-          <div className="mx-auto w-16 h-1.5 rounded-full bg-[#dfe8e3]" />
-          <div className="flex flex-col">
-            <span className="text-[9px] font-bold tracking-[0.06em] text-primary-solid">MARIAGE · SAM. 14 DÉC.</span>
-            <span className="font-display text-[15px] font-semibold leading-tight">Grâce &amp; Patrick</span>
-            <span className="text-[10px] text-[#4b5c56]">Salle Le Palmier · Kinshasa</span>
-          </div>
-          <div className="bg-[#ffffff] rounded-[10px] p-2.5 flex flex-col gap-1.5">
-            <span className="flex items-baseline justify-between text-[10px] text-[#4b5c56]">
-              <span className="font-semibold text-[#0f1f1a]">Réponses</span>
-              <span>
-                <span className="font-semibold text-[#0f1f1a]">108</span> / {DEMO_BUDGET.guests}
+      <div className="relative w-[284px] h-[560px] rounded-[46px] bg-[#0d1512] p-2 shadow-[inset_0_0_0_1.5px_#2b3a35,0_40px_80px_rgba(2,30,22,0.55)]">
+        <div className="em-light-island relative h-full rounded-[38px] overflow-hidden bg-[#efeae2] text-[#111b21] flex flex-col text-[12px] leading-[1.35]">
+          <span className="absolute left-1/2 top-2 w-[84px] h-[22px] -translate-x-1/2 rounded-full bg-[#0d1512] z-10" />
+          <div className="shrink-0 bg-[#ffffff] pb-2 shadow-[0_1px_0_#e9edef]">
+            <div className="h-9 flex items-center justify-between px-6 pt-1 text-[11px] font-semibold">
+              <span>18:42</span>
+              <span className="inline-flex items-end gap-[3px]">
+                <span className="w-[3px] h-[5px] rounded-[1px] bg-[#111b21]" />
+                <span className="w-[3px] h-[7px] rounded-[1px] bg-[#111b21]" />
+                <span className="w-[3px] h-[9px] rounded-[1px] bg-[#111b21]" />
+                <span className="ml-1 w-[17px] h-2 rounded-[3px] border border-[#111b21] p-px">
+                  <span className="block w-[70%] h-full rounded-[1px] bg-[#111b21]" />
+                </span>
               </span>
-            </span>
-            <span className="flex h-1.5 rounded-full overflow-hidden bg-[#edf2ef]">
-              <span className="w-[72%] bg-primary-solid" />
-              <span className="w-[18%] bg-amber-400" />
-            </span>
-            <span className="grid grid-cols-3 gap-1 pt-0.5">
-              {[
-                ['86', 'Confirmés', 'text-primary-solid'],
-                ['12', 'En attente', 'text-amber-700'],
-                ['10', 'Déclinés', 'text-[#4b5c56]'],
-              ].map(([value, label, tone]) => (
-                <span key={label} className="flex flex-col">
-                  <span className={cn('font-display text-[15px] font-semibold leading-none', tone)}>{value}</span>
-                  <span className="text-[8.5px] text-[#4b5c56]">{label}</span>
-                </span>
-              ))}
-            </span>
+            </div>
+            <div className="flex items-center gap-2.5 px-3 pt-0.5">
+              <ChevronLeft className="w-4 h-4" strokeWidth={2.4} />
+              <span className="w-[34px] h-[34px] shrink-0 rounded-full bg-[radial-gradient(circle_at_50%_30%,#6b1f53,#3b0d2e)] text-[#f5d48a] flex items-center justify-center font-display italic font-semibold text-[13px]">
+                G&amp;P
+              </span>
+              <span className="flex-1 min-w-0 flex flex-col">
+                <b className="text-[14px]">Grâce &amp; Patrick</b>
+                <span className="text-[11px] text-[#667781]">en ligne</span>
+              </span>
+              <Video className="w-4 h-4" />
+            </div>
           </div>
-          <div className="bg-[#ffffff] rounded-xl flex flex-col">
-            {DEMO_GUESTS.map((guest, index) => (
-              <div
-                key={guest.initials}
-                className={cn(
-                  'flex items-center gap-2 px-2.5 py-[7px]',
-                  index < DEMO_GUESTS.length - 1 && 'border-b border-[#edf2ef]',
-                )}
-              >
-                <span className="w-[26px] h-[26px] shrink-0 rounded-full bg-[#ecfdf5] text-[10px] font-semibold text-[#065f46] flex items-center justify-center">
-                  {guest.initials}
-                </span>
-                <span className="grow min-w-0 flex flex-col">
-                  <span className="text-[11px] font-semibold leading-tight truncate">{guest.name}</span>
-                  <span className="text-[9px] text-[#4b5c56] leading-tight truncate">{guest.detail}</span>
-                </span>
-                <span
-                  className={cn(
-                    'shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full',
-                    guest.pending ? 'text-amber-800 bg-amber-100' : 'text-[#065f46] bg-[#d1fae5]',
-                  )}
-                >
-                  {guest.status}
-                </span>
+
+          <div className="flex-1 min-h-0 px-2.5 pt-2.5 pb-2 flex flex-col gap-[7px] bg-[radial-gradient(circle,rgba(17,27,33,0.05)_1.2px,transparent_1.6px)] [background-size:16px_16px]">
+            <span className={cn('self-center bg-[#ffffff] text-[#54656f] text-[10px] font-semibold px-2.5 py-0.5 rounded-[7px]', bubble)}>
+              AUJOURD’HUI
+            </span>
+            <div className="self-start w-[88%] flex flex-col gap-0.5">
+              <div className={cn('bg-[#ffffff] rounded-[4px_10px_10px_10px] p-1', bubble)}>
+                <div className="rounded-[7px] p-1.5 bg-[radial-gradient(circle_at_50%_15%,#6b1f53_0,#3b0d2e_65%)]">
+                  <div className="border border-[rgba(245,212,138,0.6)] rounded px-2 pt-3.5 pb-3 text-center text-[#f5d48a] flex flex-col items-center gap-1">
+                    <span className="text-[8px] font-semibold tracking-[0.3em]">MARIAGE</span>
+                    <span className="font-display italic font-semibold text-[26px] leading-none">Grâce &amp; Patrick</span>
+                    <span className="flex items-center gap-1.5 w-[64%]">
+                      <span className="flex-1 h-px bg-[rgba(245,212,138,0.5)]" />
+                      <span className="w-[5px] h-[5px] bg-[#f5d48a] rotate-45" />
+                      <span className="flex-1 h-px bg-[rgba(245,212,138,0.5)]" />
+                    </span>
+                    <span className="text-[10px] text-[#f7e9c8]">Sam. 14 déc. · 18:00 · Kinshasa</span>
+                  </div>
+                </div>
+                <div className="px-1.5 pt-1.5">Chère Esther, vous êtes invitée ! Répondez en un geste.</div>
+                <div className="text-right text-[10px] text-[#667781] px-1">18:40</div>
               </div>
-            ))}
+              {['Oui, je viens', 'Je ne pourrai pas'].map((label) => (
+                <div key={label} className={cn('bg-[#ffffff] rounded-lg text-[#027eb5] font-semibold text-center py-[7px]', bubble)}>
+                  {label}
+                </div>
+              ))}
+            </div>
+            <div className={cn('self-end bg-[#d9fdd3] rounded-[10px_4px_10px_10px] px-2 pt-1.5 pb-1 flex items-end gap-2', bubble)}>
+              <span>Oui, je viens !</span>
+              <span className="text-[10px] text-[#667781] whitespace-nowrap">
+                18:41 <span className="text-[#53bdeb]">✓✓</span>
+              </span>
+            </div>
+            <div className={cn('self-start w-[80%] bg-[#ffffff] rounded-[4px_10px_10px_10px] px-2 pt-[7px] pb-1 flex gap-2 items-center', bubble)}>
+              <span className="w-10 h-10 shrink-0 rounded-md border border-[#e9edef] flex items-center justify-center">
+                <QrCode className="w-7 h-7 text-[#111b21]" strokeWidth={1.6} />
+              </span>
+              <span className="flex-1 min-w-0 flex flex-col">
+                <b className="text-[#047857]">Votre badge QR est prêt</b>
+                <span className="text-[#54656f]">Table 3 · 2 places</span>
+                <span className="self-end text-[10px] text-[#667781]">18:42</span>
+              </span>
+            </div>
           </div>
-          <div className="mt-auto h-10 shrink-0 rounded-[10px] bg-primary-solid text-white text-[11px] font-semibold flex items-center justify-center gap-1.5">
-            <MessageCircle className="w-3.5 h-3.5" />
-            Relancer 12 invités
+
+          <div className="shrink-0 flex items-center gap-[7px] px-2 pt-1.5 pb-3.5">
+            <span className={cn('flex-1 h-[34px] rounded-full bg-[#ffffff] text-[#8696a0] flex items-center px-3.5', bubble)}>Message</span>
+            <span className="w-[34px] h-[34px] rounded-full bg-[#00a884] flex items-center justify-center">
+              <Mic className="w-4 h-4 text-[#ffffff]" />
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Carte budget IA */}
-      <div className={cn(cardClass, 'absolute left-5 lg:left-4 xl:left-8 top-10 lg:top-12 w-[208px] lg:w-[192px] xl:w-[228px] p-4 flex flex-col gap-2.5')}>
-        <span className="flex items-center justify-between text-[10px] font-bold tracking-[0.05em] text-primary-solid">
-          <span className="inline-flex items-center gap-1">
-            <Sparkles className="w-3 h-3" />
-            BUDGET IA
+      <div className="em-light-island absolute left-0 bottom-12 hidden lg:flex w-[214px] bg-[#ffffff] text-[#1e1f21] rounded-[18px] p-4 flex-col gap-2.5 shadow-[0_24px_48px_rgba(2,30,22,0.45)]">
+        <div className="flex justify-between items-baseline">
+          <span className="text-xs font-semibold text-[#5d5f62]">Réponses</span>
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#047857]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#047857]" />
+            En direct
           </span>
-          <span className="text-[#4b5c56] font-semibold tracking-normal">{DEMO_BUDGET.guests} invités</span>
+        </div>
+        <span className="font-display font-semibold text-[30px] leading-none tracking-[-0.02em]">
+          86 <span className="text-[15px] font-medium text-[#5d5f62]">confirmés sur 120</span>
         </span>
-        <span className="flex flex-col">
-          <span className="font-display text-[24px] lg:text-[22px] xl:text-[26px] font-semibold leading-none tabular-nums">
-            {DEMO_BUDGET.total}
-          </span>
-          <span className="mt-1 text-[11px] text-[#4b5c56]">{DEMO_BUDGET.usd} · formule Équilibre</span>
+        <span className="h-2 rounded-full bg-[#ededee] overflow-hidden">
+          <span className="block w-[72%] h-full rounded-full bg-[#047857]" />
         </span>
-        <span className="flex h-2 rounded overflow-hidden gap-0.5">
-          {DEMO_BUDGET.lines.map((line) => (
-            <span key={line.label} className={line.tone} style={{ width: `${line.share}%` }} />
-          ))}
-        </span>
-        <span className="grid grid-cols-2 gap-x-2 gap-y-1">
-          {DEMO_BUDGET.lines.map((line) => (
-            <span key={line.label} className="inline-flex items-center gap-1.5 text-[10px] text-[#4b5c56]">
-              <span className={cn('w-2 h-2 rounded-full shrink-0', line.tone)} />
-              {line.label}
-            </span>
-          ))}
-        </span>
-      </div>
-
-      {/* Bulle WhatsApp : l’invitation telle que l’invité la reçoit */}
-      <div className="absolute left-12 xl:left-16 top-[214px] xl:top-[252px] w-[200px] xl:w-[214px] flex lg:hidden xl:flex flex-col gap-1.5">
-        <span className="em-light-island self-start rounded-[14px] rounded-tl-[4px] bg-[#dcf8c6] text-[#0f1f1a] px-3 py-2 shadow-[0_10px_28px_rgba(2,44,34,0.3)]">
-          <span className="block text-[10px] font-bold text-[#075e54]">Invitation · Grâce &amp; Patrick</span>
-          <span className="block text-[11px] leading-snug">Vous êtes invité(e) samedi 14 déc. Confirmez ici 👉 lien</span>
-          <span className="block text-right text-[9px] text-[#4b5c56]">10:42 ✓✓</span>
-        </span>
-        <span className="em-light-island self-end rounded-[14px] rounded-tr-[4px] bg-[#ffffff] text-[#0f1f1a] px-3 py-1.5 text-[11px] font-semibold shadow-[0_10px_28px_rgba(2,44,34,0.3)]">
-          Je serai là ! 🎉
-        </span>
-      </div>
-
-      {/* Carte scan à l’entrée */}
-      <div className={cn(cardClass, 'absolute left-5 lg:left-4 xl:left-8 bottom-10 lg:bottom-14 w-[208px] lg:w-[192px] xl:w-[228px] p-3.5 flex items-center gap-3')}>
-        <span className="w-11 h-11 rounded-full bg-primary-solid text-white flex items-center justify-center shrink-0">
-          <Check className="w-5 h-5" strokeWidth={2.6} />
-        </span>
-        <span className="flex flex-col gap-0.5 min-w-0">
-          <span className="text-[10px] font-bold text-primary-solid tracking-[0.04em]">QR SCANNÉ · ENTRÉE</span>
-          <span className="text-sm font-semibold">Jean-Marc K.</span>
-          <span className="text-[11px] text-[#4b5c56]">Table 3 · 2 places</span>
-        </span>
+        <span className="text-[13px] text-[#5d5f62]">12 en attente · relance en un clic</span>
       </div>
     </div>
+  );
+}
+
+/** Formulaire du haut de page : pré-remplit le simulateur budget avec le type, les invités et la date. */
+function HeroBriefForm() {
+  const router = useRouter();
+  const [eventType, setEventType] = useState<ListingEventTypeId>('wedding');
+  const [guests, setGuests] = useState('150');
+  const [date, setDate] = useState('');
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const params = new URLSearchParams({ studio: 'budget', type: eventType });
+    const count = Number(guests);
+    if (Number.isFinite(count) && count > 0) params.set('guests', String(Math.round(count)));
+    if (date) params.set('date', date);
+    router.push(`/simulateur?${params.toString()}`);
+  };
+
+  const field = 'flex-1 basis-[130px] min-w-0 flex items-center gap-2.5 px-3.5 py-1.5';
+  const control =
+    'w-full min-w-0 min-h-6 p-0 border-0 bg-transparent text-base font-semibold text-[#1e1f21] focus:outline-none';
+
+  return (
+    <form
+      onSubmit={submit}
+      aria-label="Estimer le budget de mon événement"
+      className="em-light-island max-w-[680px] bg-[#ffffff] text-[#1e1f21] rounded-[18px] p-1.5 flex flex-wrap gap-1 shadow-[0_20px_40px_rgba(2,30,22,0.35)]"
+    >
+      <div className={cn(field, 'sm:border-r sm:border-[#eeeff0]')}>
+        <PartyPopper className="w-5 h-5 shrink-0 text-[#047857]" aria-hidden />
+        <span className="flex flex-col min-w-0 flex-1">
+          <label htmlFor="hero-type" className="text-xs font-semibold text-[#5d5f62]">Je prépare</label>
+          <select id="hero-type" value={eventType} onChange={(e) => setEventType(e.target.value as ListingEventTypeId)} className={control}>
+            {LISTING_EVENT_TYPES.map((t) => (
+              <option key={t.id} value={t.id}>{t.label}</option>
+            ))}
+          </select>
+        </span>
+      </div>
+      <div className={cn(field, 'basis-[110px] sm:border-r sm:border-[#eeeff0]')}>
+        <Users className="w-5 h-5 shrink-0 text-[#047857]" aria-hidden />
+        <span className="flex flex-col min-w-0 flex-1">
+          <label htmlFor="hero-guests" className="text-xs font-semibold text-[#5d5f62]">Invités</label>
+          <input
+            id="hero-guests"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={100000}
+            value={guests}
+            onChange={(e) => setGuests(e.target.value)}
+            className={control}
+          />
+        </span>
+      </div>
+      <div className={cn(field, 'basis-[160px]')}>
+        <CalendarDays className="w-5 h-5 shrink-0 text-[#047857]" aria-hidden />
+        <span className="flex flex-col min-w-0 flex-1">
+          <label htmlFor="hero-date" className="text-xs font-semibold text-[#5d5f62]">Date</label>
+          <input id="hero-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className={control} />
+        </span>
+      </div>
+      <button
+        type="submit"
+        className="flex-1 basis-[200px] whitespace-nowrap min-h-14 px-5 rounded-[13px] bg-[#fbbf24] text-[#171614] text-base font-semibold inline-flex items-center justify-center gap-2 hover:bg-[#f59e0b] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#047857] focus-visible:ring-offset-2"
+      >
+        Estimer mon budget
+        <ArrowRight className="w-[18px] h-[18px]" aria-hidden />
+      </button>
+    </form>
   );
 }
 
@@ -253,76 +278,52 @@ export default function LandingHeroStreamlined() {
 
   return (
     <>
-      <section className="bg-surface">
-        <div className="page-container grid lg:grid-cols-2 gap-10 lg:gap-16 items-center pt-8 pb-12 sm:pt-14 sm:pb-20 lg:pt-[72px] lg:pb-24">
-          <div className="flex flex-col gap-5 sm:gap-7 min-w-0">
+      <section className="bg-[#064e3b] text-[#ffffff]">
+        <div className="page-container grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-10 lg:gap-12 items-center pt-10 pb-12 sm:pt-16 sm:pb-16 lg:py-16">
+          <div className="flex flex-col gap-5 sm:gap-6 min-w-0">
             {citySentence ? (
-              <span className="self-start inline-flex items-center gap-2 pl-2 pr-3.5 py-1.5 rounded-full bg-[#ecfdf5] dark:bg-primary/15 text-[#065f46] dark:text-brand-accent text-xs sm:text-sm font-semibold">
-                <span className="w-2 h-2 rounded-full bg-brand-accent ml-1.5" />
+              <span className="self-start inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0b5e48] text-[#d1fae5] text-xs sm:text-sm font-semibold">
+                <span className="w-2 h-2 rounded-full bg-[#fbbf24]" />
                 Disponible à {citySentence}
               </span>
             ) : null}
-            <h1 className="em-landing-heading text-4xl min-[400px]:text-[2.6rem] sm:text-6xl lg:text-5xl xl:text-[4rem] leading-[1.04] text-foreground text-balance">
-              Votre événement, de A à Z, parfaitement orchestré.
+            <h1 className="em-landing-heading text-[2.5rem] min-[400px]:text-[2.75rem] sm:text-[3.4rem] xl:text-[3.6rem] leading-[1.05] text-balance max-w-[620px]">
+              Votre fête, de l’invitation jusqu’à l’entrée.
             </h1>
-            <p className="text-base sm:text-[19px] leading-relaxed text-muted max-w-[540px]">
-              Trouvez la salle, estimez le budget, invitez sur WhatsApp et contrôlez les entrées par QR code.
-              Tout se fait dans le navigateur, et on paie par Mobile Money.
+            <p className="text-base sm:text-lg leading-relaxed text-[#d1fae5] max-w-[520px]">
+              Salle, budget, invitations WhatsApp et contrôle des entrées, au même endroit. Payé par Mobile Money.
             </p>
 
-            {isLoggedIn ? (
-              <div className="flex flex-col min-[420px]:flex-row min-[420px]:flex-wrap gap-3">
-                <Button
-                  href="/dashboard"
-                  size="lg"
-                  className="min-h-14 px-7 text-base sm:text-[17px] justify-center whitespace-nowrap"
-                  rightIcon={<ArrowRight className="w-5 h-5" />}
-                >
-                  Ouvrir mon espace
-                </Button>
+            <HeroBriefForm />
+
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              {isLoggedIn ? (
                 <Link
                   href="/dashboard"
-                  className="inline-flex items-center justify-center gap-2 min-h-14 px-5 rounded-[14px] border border-primary/25 bg-primary/10 text-sm text-primary font-semibold hover:bg-primary/15 transition max-w-full"
+                  className="inline-flex items-center gap-2 min-h-11 px-4 rounded-xl border border-[#0f6b52] text-[#ffffff] font-semibold hover:bg-[#0b5e48] transition max-w-full"
                 >
                   <LayoutDashboard className="w-4 h-4 shrink-0" />
-                  <span className="min-w-0 truncate">Connecté · {user?.name || user?.email}</span>
+                  <span className="min-w-0 truncate">Ouvrir mon espace · {user?.name || user?.email}</span>
                 </Link>
-              </div>
-            ) : (
-              <div className="flex flex-col min-[420px]:flex-row min-[420px]:flex-wrap gap-3">
-                {site.allowRegistration ? (
-                  <Button
-                    href="/register?kind=ORGANIZER&intent=personal&action=event"
-                    size="lg"
-                    className="min-h-14 px-7 text-base sm:text-[17px] justify-center whitespace-nowrap"
-                    rightIcon={<ArrowRight className="w-5 h-5" />}
-                  >
-                    Créer mon compte gratuit
-                  </Button>
-                ) : null}
-                <Button
-                  href="/marketplace/salles"
-                  size="lg"
-                  variant="secondary"
-                  className="min-h-14 px-6 text-base sm:text-[17px] justify-center whitespace-nowrap border-[1.5px] border-[#c9d6d0] dark:border-border"
+              ) : site.allowRegistration ? (
+                <Link
+                  href="/register?kind=ORGANIZER&intent=personal&action=event"
+                  className="inline-flex items-center min-h-11 px-4 rounded-xl border border-[#0f6b52] text-[#ffffff] font-semibold hover:bg-[#0b5e48] transition"
                 >
-                  Voir les salles
-                </Button>
-              </div>
-            )}
-
-            <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted">
-              {['Sans carte bancaire', 'Aucune appli à installer', 'Compte prêt en 1 minute'].map((item) => (
-                <li key={item} className="inline-flex items-center gap-1.5">
-                  <Check className="w-4 h-4 text-primary shrink-0" strokeWidth={2.5} />
+                  Créer mon compte gratuit
+                </Link>
+              ) : null}
+              {['Sans carte bancaire', 'Aucune appli à installer'].map((item) => (
+                <span key={item} className="inline-flex items-center gap-1.5 text-sm text-[#a7f3d0]">
+                  <Check className="w-4 h-4 text-[#fbbf24] shrink-0" strokeWidth={2.6} />
                   {item}
-                </li>
+                </span>
               ))}
-            </ul>
+            </div>
           </div>
 
           <div className="hidden sm:block">
-            <HeroPhoneMock />
+            <HeroWhatsAppMock />
           </div>
         </div>
       </section>
