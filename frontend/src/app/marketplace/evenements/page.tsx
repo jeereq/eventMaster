@@ -22,12 +22,75 @@ import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import CatalogueSearchLayout from '@/components/CatalogueSearchLayout';
 import MarketplaceCatalogueSkeleton from '@/components/MarketplaceCatalogueSkeleton';
 import { usePageSize } from '@/components/ui';
+import EventTicketCard from '@/components/marketplace/EventTicketCard';
+import { cn } from '@/lib/cn';
+import { CreditCard } from 'lucide-react';
+import type { CatalogueItem } from '@/lib/marketplace';
 import CatalogueFilterBar, {
   CatalogueEntityFilterFields,
   type CatalogueFilterChip,
 } from '@/components/CatalogueFilterBar';
 
 type EventFilters = CatalogueGeoState & { entry: '' | 'paid' | 'free' };
+
+/** Raccourcis de date au-dessus des résultats. */
+type WhenFilter = '' | 'tonight' | 'weekend' | 'month';
+const WHEN_OPTIONS: Array<{ id: Exclude<WhenFilter, ''>; label: string }> = [
+  { id: 'tonight', label: 'Ce soir' },
+  { id: 'weekend', label: 'Ce week-end' },
+  { id: 'month', label: 'Ce mois-ci' },
+];
+
+const QUICK_CHIP_CLASS =
+  'shrink-0 min-h-11 px-4 rounded-full border-[1.5px] text-sm font-semibold transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+
+function quickChipTone(active: boolean) {
+  return active
+    ? 'border-primary-solid bg-[#e3f3ec] text-[#065f46] dark:bg-primary/15 dark:text-primary'
+    : 'border-border bg-surface text-foreground hover:border-primary/40';
+}
+
+function startOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function matchesWhen(iso: string | null | undefined, when: WhenFilter, now: Date) {
+  if (!when) return true;
+  if (!iso) return false;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return false;
+  const today = startOfDay(now);
+  if (when === 'tonight') return startOfDay(d).getTime() === today.getTime();
+  if (when === 'month') return d >= today && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  // Week-end : du vendredi au dimanche qui viennent (ou en cours).
+  const day = now.getDay();
+  const friday = new Date(today);
+  friday.setDate(today.getDate() + (day === 0 ? -2 : day === 6 ? -1 : 5 - day));
+  const mondayAfter = new Date(friday);
+  mondayAfter.setDate(friday.getDate() + 3);
+  return d >= (friday < today ? today : friday) && d < mondayAfter;
+}
+
+/** Regroupe par période : « Cette semaine », puis par mois. */
+function groupByPeriod(items: CatalogueItem[], now: Date) {
+  const weekEnd = startOfDay(now);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+  const groups: Array<{ title: string; items: CatalogueItem[] }> = [];
+  for (const item of items) {
+    const d = item.eventDate ? new Date(item.eventDate) : null;
+    const title = !d || Number.isNaN(d.getTime())
+      ? 'Date à venir'
+      : d < startOfDay(now)
+        ? 'Déjà passés'
+        : d < weekEnd
+        ? 'Cette semaine'
+        : d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }).replace(/^./, (c) => c.toUpperCase());
+    const last = groups[groups.length - 1];
+    if (last && last.title === title) last.items.push(item);
+    else groups.push({ title, items: [item] });
+  }
+  return groups;
+}
 
 const emptyFilters: EventFilters = {
   ...EMPTY_CATALOGUE_GEO,
@@ -52,6 +115,7 @@ function MarketplaceEventsPageInner() {
   const [error, setError] = useState('');
   const [filterError, setFilterError] = useState('');
   const [pageSize, setPageSize] = usePageSize('marketplace-events', 8);
+  const [when, setWhen] = useState<WhenFilter>('');
 
   const load = useCallback(async (filters: EventFilters, search: string) => {
     setLoading(true);
@@ -83,10 +147,13 @@ function MarketplaceEventsPageInner() {
             return true;
           })
           .map((item) => withCatalogueDistance(item, applied.lat, applied.lng))
-          .filter((item) => catalogueItemMatchesGeo(item, applied)),
+          .filter((item) => catalogueItemMatchesGeo(item, applied))
+          .filter((item) => matchesWhen(item.eventDate, when, new Date())),
       ),
-    [events, applied],
+    [events, applied, when],
   );
+
+  const eventsBySlug = useMemo(() => new Map(events.map((event) => [event.slug, event])), [events]);
 
   const markers = useMemo(
     () =>
@@ -114,8 +181,63 @@ function MarketplaceEventsPageInner() {
   return (
     <CatalogueSearchLayout
       activeNav="events"
-      heroTitle="Événements publics"
-      heroDescription="Places pour concerts et conférences."
+      heroTitle="Sortir près de chez vous"
+      heroDescription="Concerts, conférences et galas. Payez en Mobile Money et présentez votre pass QR à l’entrée."
+      heroTone="deep"
+      heroAside={(
+        <span className="inline-flex items-center gap-2 rounded-full bg-[#0b5e48] px-3.5 py-2 text-sm text-white">
+          <CreditCard className="w-4 h-4 text-[#6ee7b7]" aria-hidden />
+          M-Pesa, Orange, Airtel, carte
+        </span>
+      )}
+      aboveResults={mode === 'grid' || mode === 'list' ? (
+        <div role="group" aria-label="Quand" className="flex gap-2 overflow-x-auto scrollbar-none -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap">
+          {WHEN_OPTIONS.map((option) => {
+            const active = when === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                aria-pressed={active}
+                onClick={() => {
+                  setWhen(active ? '' : option.id);
+                  setPage(1);
+                }}
+                className={cn(QUICK_CHIP_CLASS, quickChipTone(active))}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            aria-pressed={applied.entry === 'free'}
+            onClick={() => applyFilters({ ...applied, entry: applied.entry === 'free' ? '' : 'free' })}
+            className={cn(QUICK_CHIP_CLASS, quickChipTone(applied.entry === 'free'))}
+          >
+            Gratuit
+          </button>
+        </div>
+      ) : null}
+      renderGrid={(visible) => (
+        <div className="space-y-8">
+          {groupByPeriod(visible, new Date()).map((group) => (
+            <section key={group.title} className="space-y-3 sm:space-y-4" aria-label={group.title}>
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 className="font-display text-xl sm:text-2xl font-semibold tracking-[-0.01em] text-foreground">{group.title}</h2>
+                <span className="text-sm text-muted">
+                  {group.items.length} événement{group.items.length > 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-5">
+                {group.items.map((item, index) => (
+                  <EventTicketCard key={item.id} item={item} event={eventsBySlug.get(item.slug)} eager={index < 2} />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
       mode={mode}
       onViewChange={setView}
       gridCols={gridCols}
@@ -124,7 +246,7 @@ function MarketplaceEventsPageInner() {
       loading={loading}
       error={error}
       emptyTitle="Aucun événement"
-      emptyDescription="Élargissez la ville ou la date."
+      emptyDescription={when ? 'Rien sur cette période. Essayez une autre date.' : 'Élargissez la ville ou la date.'}
       page={page}
       pageSize={pageSize}
       onPageChange={setPage}

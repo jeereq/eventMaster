@@ -147,6 +147,18 @@ function MarketplaceEventDetailInner() {
       })
     : '';
   const heroSubtitle = [formattedEventDate, event?.location].filter(Boolean).join(' · ');
+  // Date complète au-dessus du titre, à la même heure que la tuile « Date & horaire ».
+  const heroEyebrow = event?.date
+    ? `${new Date(event.date).toLocaleDateString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      })} · ${new Date(event.date).toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      })}`
+    : undefined;
 
   return (
     <PublicPageShell faqHref="/faq" mobileFooterPad>
@@ -160,9 +172,10 @@ function MarketplaceEventDetailInner() {
         onRetry={() => setReloadNonce((n) => n + 1)}
         heroUrl={heroUrl}
         fallbackIcon={<Ticket className="w-12 h-12" />}
-        chip={event?.orgName || 'Événement'}
+        chip={event?.orgName ? `Organisé par ${event.orgName}` : 'Événement'}
         title={event?.title || ''}
-        subtitle={heroSubtitle}
+        eyebrow={heroEyebrow}
+        subtitle={event?.location || heroSubtitle}
         shareKind="event"
         shareSlug={event?.slug ?? undefined}
         photos={photos}

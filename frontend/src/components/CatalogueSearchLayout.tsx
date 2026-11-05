@@ -167,6 +167,10 @@ export default function CatalogueSearchLayout({
   searchOriginLabel,
   showKindLegend = false,
   gridCols = 4,
+  heroTone = 'default',
+  heroAside,
+  aboveResults,
+  renderGrid,
 }: {
   activeNav: MarketplaceNavId;
   heroTitle: string;
@@ -199,6 +203,12 @@ export default function CatalogueSearchLayout({
   searchOriginLabel?: string;
   showKindLegend?: boolean;
   gridCols?: CatalogueGridCols;
+  heroTone?: 'default' | 'deep';
+  heroAside?: React.ReactNode;
+  /** Raccourcis posés entre les filtres et les résultats (ex. « Ce week-end »). */
+  aboveResults?: React.ReactNode;
+  /** Rendu propre de la vue grille (la page de la liste garde liste, carte et pagination). */
+  renderGrid?: (items: CatalogueItem[]) => React.ReactNode;
 }) {
   const isMobile = useIsMobile();
   const visibleItems = usePaginateItems(items, page, pageSize);
@@ -276,7 +286,7 @@ export default function CatalogueSearchLayout({
 
   return (
     <PublicPageShell faqHref="/faq">
-      <PublicPageHero compact title={heroTitle} description={heroDescription}>
+      <PublicPageHero compact title={heroTitle} description={heroDescription} tone={heroTone} aside={heroAside}>
         <div className="flex flex-wrap items-center gap-2">
           <MarketplacePublicNav active={activeNav} />
         </div>
@@ -286,6 +296,7 @@ export default function CatalogueSearchLayout({
         <div className="sticky top-[var(--em-site-header)] z-20 -mx-1 px-1 py-0 md:py-1 bg-background/90 backdrop-blur-md">
           {renderFilters('card')}
         </div>
+        {aboveResults}
         {error ? <p className="text-sm text-danger" role="alert">{error}</p> : null}
 
         {mapMode ? (
@@ -334,13 +345,17 @@ export default function CatalogueSearchLayout({
           <CatalogueResultsSkeleton mode={mode} count={pageSize} gridCols={gridCols} />
         ) : error && items.length === 0 ? null : (
           <>
-            <CatalogueResults
-              items={visibleItems}
-              mode={mode === 'list' ? 'list' : 'grid'}
-              gridCols={gridCols}
-              emptyTitle={emptyTitle}
-              emptyDescription={emptyDescription}
-            />
+            {renderGrid && mode !== 'list' && visibleItems.length > 0 ? (
+              renderGrid(visibleItems)
+            ) : (
+              <CatalogueResults
+                items={visibleItems}
+                mode={mode === 'list' ? 'list' : 'grid'}
+                gridCols={gridCols}
+                emptyTitle={emptyTitle}
+                emptyDescription={emptyDescription}
+              />
+            )}
             <Pagination
               page={page}
               pageSize={pageSize}
