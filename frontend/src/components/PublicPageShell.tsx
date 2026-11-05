@@ -42,34 +42,51 @@ export function PublicPageHero({
   description,
   children,
   compact = false,
+  tone = 'default',
+  aside,
 }: {
   title: string;
   description?: string;
   children?: React.ReactNode;
   compact?: boolean;
+  /** `deep` : bandeau vert profond de la maquette (texte clair). */
+  tone?: 'default' | 'deep';
+  /** Contenu court à droite du titre (badge, moyens de paiement…). */
+  aside?: React.ReactNode;
 }) {
+  const deep = tone === 'deep';
   return (
-    <section className="relative em-landing-hero">
+    <section className={cn('relative', deep ? 'bg-[#064e3b] text-white overflow-hidden' : 'em-landing-hero')}>
+      {deep ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -right-36 -top-36 w-96 h-96 rounded-[60px] border-[60px] border-[#0b5e48] hidden md:block"
+        />
+      ) : null}
       <div className={cn(
         'page-container relative z-10',
         compact ? 'pt-6 pb-4 md:py-8 lg:py-10' : 'pt-7 pb-5 md:py-12 lg:py-14',
       )}>
+        <div className={cn(aside ? 'flex flex-col md:flex-row md:items-end md:justify-between gap-3 md:gap-6' : undefined)}>
         <div className="max-w-3xl space-y-1.5 md:space-y-3.5">
           <h1 className={cn(
-            'em-landing-heading text-foreground',
+            deep ? 'font-display font-semibold tracking-[-0.02em] text-white' : 'em-landing-heading text-foreground',
             compact
-              ? 'text-xl md:text-2xl lg:text-3xl'
+              ? (deep ? 'text-2xl md:text-[2.5rem] leading-tight' : 'text-xl md:text-2xl lg:text-3xl')
               : 'text-xl md:text-3xl lg:text-[2.5rem]',
           )}>
             {title}
           </h1>
           {description ? (
-            <p className="text-sm md:text-base text-muted leading-relaxed max-w-2xl">
+            <p className={cn('text-sm md:text-base leading-relaxed max-w-2xl', deep ? 'text-[#d1fae5]' : 'text-muted')}>
               {description}
             </p>
           ) : null}
-          {children}
+          {aside ? null : children}
         </div>
+        {aside ? <div className="shrink-0">{aside}</div> : null}
+        </div>
+        {aside && children ? <div className="mt-3 md:mt-5">{children}</div> : null}
       </div>
     </section>
   );

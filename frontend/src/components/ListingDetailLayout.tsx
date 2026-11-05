@@ -83,6 +83,7 @@ export default function ListingDetailLayout({
   chip,
   title,
   subtitle,
+  eyebrow,
   photos,
   photoIndex,
   onPhotoIndex,
@@ -129,6 +130,8 @@ export default function ListingDetailLayout({
   chip: string;
   title: string;
   subtitle: string;
+  /** Ligne courte au-dessus du titre (ex. date et heure d’un événement). */
+  eyebrow?: string;
   photos: string[];
   photoIndex: number;
   onPhotoIndex: (index: number) => void;
@@ -627,6 +630,9 @@ export default function ListingDetailLayout({
                 </div>
               ) : null}
               <div className="pointer-events-none absolute inset-x-0 bottom-0 px-4 pb-5 pt-16 sm:px-7 sm:pb-8 sm:pt-24 text-stage-foreground [text-shadow:0_1px_2px_rgba(0,0,0,0.85)]">
+                {eyebrow ? (
+                  <p className="mb-1.5 sm:mb-2 text-sm sm:text-base font-semibold text-[#fcd34d] first-letter:uppercase">{eyebrow}</p>
+                ) : null}
                 <h1 className="font-display text-2xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.1] break-words line-clamp-3">
                   {title}
                 </h1>
