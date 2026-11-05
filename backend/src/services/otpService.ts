@@ -55,7 +55,7 @@ export async function sendRegistrationOtp(params: {
   invitedByAdmin?: boolean;
   /** Mot de passe temporaire pour rappel d'accès si fourni. */
   initialPassword?: string;
-}): Promise<{ sentVia: VerificationMethod }> {
+}): Promise<{ sentVia: VerificationMethod; fallbackFrom?: 'WHATSAPP' | 'SMS' }> {
   const { name, email, phone, code, method, invitedToTeam, invitedByCommercial, invitedByAdmin, initialPassword } = params;
   const expiryMinutes = OTP_TTL_MS / 60000;
   const loginHint =
@@ -71,17 +71,25 @@ export async function sendRegistrationOtp(params: {
         ? 'Votre organisation vous a ajouté sur *EventMaster*.\n\n'
         : '';
 
+  // Si WhatsApp ou SMS échoue (solde épuisé, Sender ID refusé, numéro invalide…),
+  // le code part par e-mail pour que l'utilisateur ne reste pas bloqué.
+  let fallbackFrom: 'WHATSAPP' | 'SMS' | undefined;
+
   if (method === 'WHATSAPP' && phone) {
     const body = `Bonjour *${name}*,\n\n${inviteIntroWhatsapp}Votre code de validation *EventMaster* est :\n\n🔐 *${code}*\n\nCe code expire dans ${expiryMinutes} minutes.\n\nNe partagez ce code avec personne.${loginHint}\n\nL'équipe EventMaster ✨`;
-    await sendRealWhatsApp(phone, body);
-    return { sentVia: 'WHATSAPP' };
+    const result = await sendRealWhatsApp(phone, body);
+    if (result.success) return { sentVia: 'WHATSAPP' };
+    console.warn(`[OTP] Échec de l'envoi WhatsApp, repli sur l'e-mail : ${result.error || 'erreur inconnue'}`);
+    fallbackFrom = 'WHATSAPP';
   }
 
   if (method === 'SMS' && phone) {
     const adminHint = invitedByAdmin ? 'Votre compte EventMaster a été créé. ' : '';
     const body = `EventMaster : Bonjour ${name}, ${adminHint}votre code de validation est ${code}. Valable ${expiryMinutes} min. Ne le partagez pas.${loginHint}`;
-    await sendRealSms(phone, body);
-    return { sentVia: 'SMS' };
+    const result = await sendRealSms(phone, body);
+    if (result.success) return { sentVia: 'SMS' };
+    console.warn(`[OTP] Échec de l'envoi SMS (${result.provider}), repli sur l'e-mail : ${result.error || 'erreur inconnue'}`);
+    fallbackFrom = 'SMS';
   }
 
   const subject = invitedByAdmin
@@ -139,7 +147,7 @@ export async function sendRegistrationOtp(params: {
     footerNote: 'Si vous n’attendiez pas ce message, ignorez-le.',
   });
   await sendRealEmail(email, subject, text, html);
-  return { sentVia: 'EMAIL' };
+  return fallbackFrom ? { sentVia: 'EMAIL', fallbackFrom } : { sentVia: 'EMAIL' };
 }
 
 /** Envoie un e-mail de confirmation / bienvenue avec identifiants quand le compte est validé directement */
