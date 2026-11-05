@@ -244,12 +244,15 @@ export function StudioToolbar({
   current,
   allowance,
   sticky = true,
+  showTokens = true,
   children,
 }: {
   steps: string[];
   current: number;
   allowance: Pick<AiAllowance, 'totalRemaining' | 'unlimited'>;
   sticky?: boolean;
+  /** Masqué quand la page affiche déjà le solde (en-tête des studios). */
+  showTokens?: boolean;
   children?: React.ReactNode;
 }) {
   return (
@@ -261,7 +264,7 @@ export function StudioToolbar({
     >
       <StudioStepper steps={steps} current={current} />
       <div className="flex items-center gap-2 shrink-0">
-        <StudioTokenPill allowance={allowance} />
+        {showTokens ? <StudioTokenPill allowance={allowance} /> : null}
         {children}
       </div>
     </div>

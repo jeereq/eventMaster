@@ -12,12 +12,56 @@ const SCOPE_NOTE: Partial<Record<BudgetSimulationScope, string>> = {
 export default function BudgetSimulationScopePicker({
   value,
   onChange,
+  compact = false,
 }: {
   value: BudgetSimulationScope;
   onChange: (next: BudgetSimulationScope) => void;
+  /** Interrupteur sur une ligne, pour l’en-tête de la carte du simulateur. */
+  compact?: boolean;
 }) {
   const [complete, ...specialized] = BUDGET_SCOPE_OPTIONS;
   const note = SCOPE_NOTE[value];
+
+  if (compact) {
+    return (
+      <div className="min-w-0 space-y-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+        <span className="text-sm font-semibold text-muted">À chiffrer</span>
+        <div
+          role="radiogroup"
+          aria-label="À chiffrer"
+          className="flex max-w-full overflow-x-auto scrollbar-none gap-0.5 rounded-[10px] bg-surface-muted p-[3px]"
+        >
+          {BUDGET_SCOPE_OPTIONS.map((option) => {
+            const selected = value === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                title={option.hint}
+                onClick={() => onChange(option.id)}
+                className={cn(
+                  'shrink-0 whitespace-nowrap min-h-11 sm:min-h-9 px-3 rounded-lg text-sm font-semibold transition-colors touch-manipulation',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+                  selected
+                    ? 'bg-surface text-foreground shadow-[0_1px_3px_rgba(23,22,20,0.12)]'
+                    : 'text-muted hover:text-foreground',
+                )}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+        </div>
+        <p className="text-xs text-muted leading-relaxed">
+          {note || complete.hint}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">

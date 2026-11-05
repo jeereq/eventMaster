@@ -178,9 +178,10 @@ export function MethodToggle<T extends string>({ value, onChange, options, label
       {...(label ? {} : { 'aria-label': 'Choix de méthode' })}
     >
       {label ? (
-        <legend className="text-xs font-semibold text-muted">{label}</legend>
+        <legend className="text-sm font-semibold text-foreground mb-1.5">{label}</legend>
       ) : null}
-      <div className={cn('grid gap-2', options.length === 2 ? 'grid-cols-2' : 'grid-cols-1')}>
+      {/* Interrupteur segmenté, comme sur la connexion : une option par canal ouvert. */}
+      <div className="flex gap-0.5 rounded-xl bg-surface-muted p-1">
         {options.map((opt) => (
           <button
             key={opt.value}
@@ -189,11 +190,11 @@ export function MethodToggle<T extends string>({ value, onChange, options, label
             aria-checked={value === opt.value}
             onClick={() => onChange(opt.value)}
             className={cn(
-              'min-h-11 py-2.5 px-3 rounded-[var(--radius-button)] border text-xs font-semibold transition flex items-center justify-center gap-2',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+              'flex-1 min-w-0 min-h-11 px-2 rounded-[9px] text-sm font-semibold transition flex items-center justify-center gap-1.5',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
               value === opt.value
-                ? 'bg-primary/10 border-primary/30 text-primary'
-                : 'bg-surface border-border text-muted hover:bg-surface-muted hover:text-foreground',
+                ? 'bg-surface text-foreground shadow-[0_1px_3px_rgba(0,0,0,0.08)]'
+                : 'text-muted hover:text-foreground',
             )}
           >
             {opt.icon}

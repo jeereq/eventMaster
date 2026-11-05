@@ -1599,6 +1599,7 @@ export default function LandingInvitationAiGenerator({
                 current={currentStep}
                 allowance={allowance}
                 sticky={!inline}
+                showTokens={!inline}
               >
                 {!canAffordAiAction(allowance, composeTokenCost) ? (
                   <Button type="button" size="sm" variant="secondary" onClick={() => setTokenModalOpen(true)}>

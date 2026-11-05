@@ -419,6 +419,7 @@ export default function LandingRoomPlanAiStudio({
                 current={currentStep}
                 allowance={allowance}
                 sticky={!inline}
+                showTokens={!inline}
               />
             </>
           )}
