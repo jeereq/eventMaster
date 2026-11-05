@@ -280,13 +280,16 @@ router.post('/contact', contactLimiter, async (req: Request, res: Response) => {
       });
     }
 
-    const { name, email, subject, message, reason: rawReason } = req.body;
+    const { name, subject, message, reason: rawReason } = req.body;
     const reason = resolveContactReason(rawReason);
+    // Le visiteur choisit d'être recontacté par e-mail ou par téléphone (WhatsApp de préférence).
+    const email = typeof req.body.email === 'string' ? req.body.email.trim() : '';
+    const phone = typeof req.body.phone === 'string' ? req.body.phone.replace(/[\s.-]/g, '') : '';
 
-    if (!name || !email || !subject || !message || !reason) {
+    if (!name || (!email && !phone) || !subject || !message || !reason) {
       return res
         .status(400)
-        .json({ error: 'Tous les champs sont requis (raison, nom, email, sujet, message).' });
+        .json({ error: 'Tous les champs sont requis (raison, nom, e-mail ou téléphone, sujet, message).' });
     }
 
     const fields = { name, email, subject, message };
@@ -296,9 +299,13 @@ router.post('/contact', contactLimiter, async (req: Request, res: Response) => {
         return res.status(400).json({ error: `Le champ « ${key} » est invalide ou trop long (${max} caractères max).` });
       }
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ error: 'Adresse e-mail invalide.' });
     }
+    if (!email && !/^\+\d{8,15}$/.test(phone)) {
+      return res.status(400).json({ error: 'Numéro de téléphone invalide (indicatif pays, puis le numéro).' });
+    }
+    const replyTo = email ? `Email : ${email}` : `Téléphone : ${phone}`;
 
     const {
       email: adminEmail,
@@ -323,13 +330,17 @@ router.post('/contact', contactLimiter, async (req: Request, res: Response) => {
 
     const composedSubject = `[${reason.label}] ${subject}`;
     const emailSubject = `[${platformName} Contact] ${composedSubject}`;
-    const emailText = `Nouveau message de contact ${platformName}\n\nRaison : ${reason.label}\nNom : ${name}\nEmail : ${email}\nSujet : ${subject}\n\nMessage :\n${message}`;
+    const emailText = `Nouveau message de contact ${platformName}\n\nRaison : ${reason.label}\nNom : ${name}\n${replyTo}\nSujet : ${subject}\n\nMessage :\n${message}`;
     const emailHtml = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
         <h2 style="color: #312e81; margin-top: 0;">Nouveau message de contact</h2>
         <p><strong>Raison :</strong> ${escapeContactHtml(reason.label)}</p>
         <p><strong>Nom :</strong> ${escapeContactHtml(String(name))}</p>
-        <p><strong>Email :</strong> <a href="mailto:${escapeContactHtml(String(email))}">${escapeContactHtml(String(email))}</a></p>
+        ${
+          email
+            ? `<p><strong>Email :</strong> <a href="mailto:${escapeContactHtml(email)}">${escapeContactHtml(email)}</a></p>`
+            : `<p><strong>Téléphone :</strong> <a href="https://wa.me/${escapeContactHtml(phone.replace('+', ''))}">${escapeContactHtml(phone)}</a></p>`
+        }
         <p><strong>Sujet :</strong> ${escapeContactHtml(String(subject))}</p>
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-top: 16px;">
           <p style="margin: 0; white-space: pre-line; color: #334155;">${escapeContactHtml(String(message))}</p>
@@ -339,10 +350,9 @@ router.post('/contact', contactLimiter, async (req: Request, res: Response) => {
     `;
 
     // Envoi simultané aux adresses e-mail administratives cibles
-    const userEmail = String(email).trim();
     const emailResults = await Promise.allSettled(
       recipientEmails.map((destEmail) =>
-        sendRealEmail(destEmail, emailSubject, emailText, emailHtml, undefined, userEmail),
+        sendRealEmail(destEmail, emailSubject, emailText, emailHtml, undefined, email || undefined),
       ),
     );
 
@@ -364,7 +374,7 @@ router.post('/contact', contactLimiter, async (req: Request, res: Response) => {
 
     const whatsappRendered = await renderGuestMessage('CONTACT_ADMIN_WHATSAPP', {
       name: String(name),
-      email: String(email),
+      email: email || `${phone} (téléphone)`,
       subject: composedSubject,
       reason: reason.label,
       message: String(message),

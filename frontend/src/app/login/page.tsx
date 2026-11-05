@@ -13,7 +13,7 @@ import type { IdentifierMode } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
 import { safeAppPath, isClientReturnPath } from '@/lib/safeAppPath';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
-import { authOtpMethodOptions } from '@/lib/authOtpChannels';
+import { authOtpMethodOptions, defaultPhoneAuthOtpMethod, type PhoneAuthOtpMethod } from '@/lib/authOtpChannels';
 
 const FEATURES = [
   { icon: MessageSquare, title: 'Réponses en temps réel', desc: 'Voyez qui a confirmé, relancez les autres sur WhatsApp en un clic.' },
@@ -59,6 +59,7 @@ function LoginPageContent() {
   const defaultMode: IdentifierMode =
     !authOtpMethodOptions(authChannels).includes('EMAIL') ? 'phone' : 'email';
   const [mode, setMode] = useState<IdentifierMode>(defaultMode);
+  const [phoneMethod, setPhoneMethod] = useState<PhoneAuthOtpMethod>(() => defaultPhoneAuthOtpMethod(authChannels));
   const [email, setEmail] = useState('');
   const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
   const [phoneNational, setPhoneNational] = useState('');
@@ -121,6 +122,11 @@ function LoginPageContent() {
             onCountryCodeChange={setPhoneCountryCode}
             onNationalChange={setPhoneNational}
             authChannels={authChannels}
+            channelModes
+            selectedPhoneMethod={phoneMethod}
+            onPhoneMethodChange={setPhoneMethod}
+            customPhoneLabel={phoneMethod === 'WHATSAPP' ? 'Numéro WhatsApp' : 'Numéro de téléphone'}
+            customPhoneHint="Le numéro de votre compte : indicatif pays, puis le numéro sans le 0."
           />
 
           <PasswordInput

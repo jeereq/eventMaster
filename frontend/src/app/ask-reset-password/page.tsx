@@ -130,8 +130,8 @@ export default function AskResetPasswordPage() {
               authChannels={authChannels}
               selectedPhoneMethod={method === 'SMS' ? 'SMS' : 'WHATSAPP'}
               onPhoneMethodChange={(next) => setMethod(next)}
-              showPhoneMethodSelector={true}
-              label="Mon compte utilise"
+              channelModes
+              label="Recevoir le lien par"
             />
 
             <Button type="submit" fullWidth size="lg" loading={loading}>

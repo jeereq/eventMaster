@@ -44,6 +44,7 @@ export default function IdentifierInput({
   showPhoneMethodSelector = false,
   customPhoneLabel,
   customPhoneHint,
+  channelModes = false,
 }: {
   mode: IdentifierMode;
   onModeChange: (mode: IdentifierMode) => void;
@@ -61,6 +62,11 @@ export default function IdentifierInput({
   showPhoneMethodSelector?: boolean;
   customPhoneLabel?: string;
   customPhoneHint?: string;
+  /**
+   * Un choix par canal ouvert sur la plateforme (E-mail, WhatsApp, SMS) au lieu de « E-mail / Téléphone ».
+   * Choisir WhatsApp ou SMS passe en mode téléphone et règle `selectedPhoneMethod`.
+   */
+  channelModes?: boolean;
 }) {
   const allowedPhoneMethods = phoneAuthOtpMethods(authChannels);
   const allowsEmail = !authChannels || authOtpMethodOptions(authChannels).includes('EMAIL');
@@ -81,9 +87,62 @@ export default function IdentifierInput({
         ? 'WhatsApp'
         : 'Téléphone';
 
+  const channelOptions = [
+    ...(allowsEmail ? [{ key: 'EMAIL' as const, label: 'E-mail', icon: Mail }] : []),
+    ...allowedPhoneMethods.map((m) => ({
+      key: m,
+      label: m === 'WHATSAPP' ? 'WhatsApp' : 'SMS',
+      icon: m === 'WHATSAPP' ? MessageSquare : Smartphone,
+    })),
+  ];
+  const activeChannel =
+    mode === 'email' ? 'EMAIL' : selectedPhoneMethod && allowedPhoneMethods.includes(selectedPhoneMethod) ? selectedPhoneMethod : allowedPhoneMethods[0];
+  const useChannelModes = channelModes && channelOptions.length > 1;
+
   return (
     <div className="space-y-3">
-      {allowsEmail && allowsPhone && (
+      {useChannelModes ? (
+        <div className="space-y-1.5">
+          <span id="identifier-mode-label" className="text-xs font-semibold text-muted">{label}</span>
+          <div
+            role="radiogroup"
+            aria-labelledby="identifier-mode-label"
+            className={cn(
+              'grid gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border',
+              channelOptions.length === 3 ? 'grid-cols-3' : 'grid-cols-2',
+            )}
+          >
+            {channelOptions.map((option) => {
+              const active = activeChannel === option.key;
+              const Icon = option.icon;
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => {
+                    if (option.key === 'EMAIL') {
+                      onModeChange('email');
+                    } else {
+                      onModeChange('phone');
+                      onPhoneMethodChange?.(option.key);
+                    }
+                  }}
+                  className={cn(
+                    'min-h-10 px-2 rounded-[calc(var(--radius-button)-2px)] text-sm font-semibold inline-flex items-center justify-center gap-2 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                    active ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground',
+                  )}
+                >
+                  <Icon className={cn('w-4 h-4 shrink-0', active ? 'text-primary' : '')} aria-hidden />
+                  <span className="truncate">{option.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+      {!useChannelModes && allowsEmail && allowsPhone && (
         <div className="space-y-1.5">
           <span id="identifier-mode-label" className="text-xs font-semibold text-muted">{label}</span>
           {/* Deux choix seulement : un sélecteur segmenté, visible d’un coup d’œil, plutôt qu’une liste déroulante. */}
@@ -135,7 +194,7 @@ export default function IdentifierInput({
         />
       ) : (
         <div className="space-y-3">
-          {showPhoneMethodSelector && allowedPhoneMethods.length > 1 && onPhoneMethodChange && (
+          {showPhoneMethodSelector && !useChannelModes && allowedPhoneMethods.length > 1 && onPhoneMethodChange && (
             <div className="space-y-1.5">
               <span className="text-xs font-semibold text-muted">
                 Canal pour votre téléphone

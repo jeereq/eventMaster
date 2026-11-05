@@ -6,7 +6,8 @@ import { api } from '@/lib/api';
 import FaqSection from '@/components/landing/FaqSection';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
-import { Alert, Button, Input } from '@/components/ui';
+import { Alert, Button, Input, PhoneInput } from '@/components/ui';
+import { composeE164, DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
   CONTACT_REASONS,
@@ -23,6 +24,9 @@ export default function ContactPage() {
   const { site } = usePlatformSite();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [replyBy, setReplyBy] = useState<'email' | 'phone'>('email');
+  const [phoneCountryCode, setPhoneCountryCode] = useState(DEFAULT_PHONE_COUNTRY_CODE);
+  const [phoneNational, setPhoneNational] = useState('');
   const [reason, setReason] = useState<ContactReasonId | ''>('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
@@ -64,10 +68,17 @@ export default function ContactPage() {
       return;
     }
 
+    const phone = replyBy === 'phone' ? composeE164(phoneCountryCode, phoneNational) || '' : '';
+    if (replyBy === 'phone' && !phone) {
+      setError('Saisissez votre numéro de téléphone.');
+      setSubmitting(false);
+      return;
+    }
+
     try {
       const response = await api.post('/public/contact', {
         name,
-        email,
+        ...(replyBy === 'email' ? { email } : { phone }),
         reason,
         subject,
         message,
@@ -85,6 +96,7 @@ export default function ContactPage() {
       );
       setName('');
       setEmail('');
+      setPhoneNational('');
       setReason('');
       setSubject('');
       setMessage('');
@@ -328,16 +340,65 @@ export default function ContactPage() {
                         disabled={submitting}
                         className="rounded-[var(--radius-button)] bg-surface-muted border-border"
                       />
-                      <Input
-                        label="Adresse e-mail"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Ex. jean@organisation.com"
-                        required
-                        disabled={submitting}
-                        className="rounded-[var(--radius-button)] bg-surface-muted border-border"
-                      />
+<div className="space-y-1.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span id="contact-reply-label" className="text-xs font-semibold text-muted">Me répondre par</span>
+                          <div
+                            role="radiogroup"
+                            aria-labelledby="contact-reply-label"
+                            className="inline-grid grid-cols-2 gap-1 p-0.5 rounded-[var(--radius-button)] bg-surface-muted border border-border"
+                          >
+                            {([
+                              { value: 'email' as const, label: 'E-mail', icon: Mail },
+                              { value: 'phone' as const, label: 'Téléphone', icon: Phone },
+                            ]).map((option) => {
+                              const active = replyBy === option.value;
+                              const Icon = option.icon;
+                              return (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  role="radio"
+                                  aria-checked={active}
+                                  disabled={submitting}
+                                  onClick={() => setReplyBy(option.value)}
+                                  className={cn(
+                                    'min-h-8 px-2.5 rounded-[calc(var(--radius-button)-2px)] text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+                                    active ? 'bg-surface text-foreground shadow-sm' : 'text-muted hover:text-foreground',
+                                  )}
+                                >
+                                  <Icon className={cn('w-3.5 h-3.5', active ? 'text-primary' : '')} aria-hidden />
+                                  {option.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        {replyBy === 'email' ? (
+                          <Input
+                            label="Adresse e-mail"
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="Ex. jean@organisation.com"
+                            required
+                            disabled={submitting}
+                            className="rounded-[var(--radius-button)] bg-surface-muted border-border"
+                          />
+                        ) : (
+                          <PhoneInput
+                            id="contact-phone"
+                            label="Numéro de téléphone"
+                            countryCode={phoneCountryCode}
+                            national={phoneNational}
+                            onCountryCodeChange={setPhoneCountryCode}
+                            onNationalChange={setPhoneNational}
+                            required
+                            disabled={submitting}
+                            hint="Numéro WhatsApp de préférence."
+                          />
+                        )}
+                      </div>
                     </div>
 
                     <div className="space-y-1.5">
