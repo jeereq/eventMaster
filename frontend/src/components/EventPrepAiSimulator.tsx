@@ -132,6 +132,10 @@ export default function EventPrepAiSimulator({
   const [activeTab, setActiveTab] = useState<StudioAiTabId>('create');
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [refineOpen, setRefineOpen] = useState(false);
+  // Mobile : une question par écran, puis l’écran des formules.
+  const [mobileStep, setMobileStep] = useState(0);
+  const [mobileReview, setMobileReview] = useState(false);
+  const briefCardRef = useRef<HTMLDivElement>(null);
   const [packModalOpen, setPackModalOpen] = useState(false);
   const { site } = usePlatformSite();
   const exchangeRate = resolveUsdExchangeRateCdf(site?.usdExchangeRateCdf);
@@ -448,6 +452,8 @@ export default function EventPrepAiSimulator({
     if (budgetScope === 'drinks') {
       if (!(Number(guestCount) > 0) && wantedDrinkLines.length === 0) {
         setGuestError('Indiquez le nombre d’invités pour chiffrer les boissons.');
+        setMobileStep(1);
+        setMobileReview(false);
         setCityError('');
         setError('');
         setActiveTab('create');
@@ -455,6 +461,8 @@ export default function EventPrepAiSimulator({
       }
     } else if (!city.trim()) {
       setCityError('Choisissez une ville pour composer les packs du catalogue local.');
+      setMobileStep(1);
+      setMobileReview(false);
       setGuestError('');
       setError('');
       setActiveTab('create');
@@ -505,6 +513,7 @@ export default function EventPrepAiSimulator({
       setResult(nextResult);
       setSelectedId(nextSelected);
       setPackModalOpen(true);
+      setMobileReview(packages.length > 0);
       if (data.allowance) {
         publishAllowance(applyServerAllowance(data.allowance));
       } else {
@@ -591,6 +600,28 @@ export default function EventPrepAiSimulator({
   const launchLabel = allowance.unlimited
     ? 'Lancer la simulation'
     : `Lancer la simulation · ${AI_SIMULATION_TOKEN_COST} jeton${AI_SIMULATION_TOKEN_COST > 1 ? 's' : ''}`;
+  const wizardKeys = budgetScope === 'drinks'
+    ? (['type', 'guests'] as const)
+    : (['type', 'place', 'guests', 'wishes'] as const);
+  const wizardStep = Math.min(mobileStep, wizardKeys.length - 1);
+  const wizardLast = wizardStep === wizardKeys.length - 1;
+  const showMobileReview = embedded && mobileReview && Boolean(result?.packages.length);
+  /** Masque sur mobile les blocs qui ne sont pas la question en cours (l’ordinateur garde tout le formulaire). */
+  const mobileHidden = (key: (typeof wizardKeys)[number]) =>
+    embedded && (showMobileReview || wizardKeys[wizardStep] !== key) ? 'max-lg:hidden' : undefined;
+  const goToWizardStep = (next: number) => {
+    setMobileStep(next);
+    const top = briefCardRef.current?.getBoundingClientRect().top;
+    if (top != null && top < 80) briefCardRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  };
+  const goWizardNext = () => {
+    if (wizardKeys[wizardStep] === 'place' && !city.trim()) {
+      setCityError('Choisissez une ville pour composer les packs du catalogue local.');
+      citySelectRef.current?.focus();
+      return;
+    }
+    goToWizardStep(wizardStep + 1);
+  };
   const recalcLabel = allowance.unlimited
     ? 'Recalculer'
     : `Recalculer · ${AI_SIMULATION_TOKEN_COST} jeton${AI_SIMULATION_TOKEN_COST > 1 ? 's' : ''}`;
@@ -871,7 +902,7 @@ export default function EventPrepAiSimulator({
           className="space-y-3"
         >
           {!embedded ? <StudioStepper steps={STUDIO_STEPS} current={currentStep} /> : null}
-          {open && embedded && examples ? <div className="lg:hidden">{examples}</div> : null}
+          {open && embedded && examples && wizardStep === 0 && !showMobileReview ? <div className="lg:hidden">{examples}</div> : null}
           {open ? (
         <div className={cn(
           'grid grid-cols-1 lg:items-start',
@@ -879,14 +910,32 @@ export default function EventPrepAiSimulator({
             ? 'lg:grid-cols-[minmax(0,1fr)_minmax(19rem,22rem)] lg:gap-x-6'
             : 'lg:grid-cols-[minmax(0,1.05fr)_minmax(18rem,0.95fr)] lg:gap-x-6',
         )}>
-        <div className={cn(
-          'order-1 lg:col-start-1 lg:row-start-1 min-w-0',
-          embedded
-            ? 'rounded-[18px] border border-border bg-surface divide-y divide-border/70 overflow-hidden'
-            : 'space-y-3',
-        )}>
+        <div
+          ref={briefCardRef}
+          className={cn(
+            'order-1 lg:col-start-1 lg:row-start-1 min-w-0',
+            embedded
+              ? 'scroll-mt-24 rounded-[18px] border border-border bg-surface divide-y divide-border/70 overflow-hidden'
+              : 'space-y-3',
+            showMobileReview && 'max-lg:hidden',
+          )}
+        >
           {embedded ? (
-            <div className="px-4 sm:px-6 py-3.5">
+            <div className="lg:hidden px-4 pt-4 pb-3 space-y-2">
+              <div className="flex justify-between gap-2 text-[13px] text-muted tabular-nums">
+                <span>Question {wizardStep + 1} sur {wizardKeys.length}</span>
+                <span>{allowance.unlimited ? '' : `${AI_SIMULATION_TOKEN_COST} jeton · `}1 $ = {exchangeRate.toLocaleString('fr-FR')} FC</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-surface-muted overflow-hidden" aria-hidden>
+                <span
+                  className="block h-full rounded-full bg-primary-solid transition-[width] duration-300"
+                  style={{ width: `${Math.round(((wizardStep + 1) / wizardKeys.length) * 100)}%` }}
+                />
+              </div>
+            </div>
+          ) : null}
+          {embedded ? (
+            <div className={cn('px-4 sm:px-6 py-3.5', wizardStep !== 0 && 'max-lg:hidden')}>
               <BudgetSimulationScopePicker compact value={budgetScope} onChange={applyBudgetScope} />
             </div>
           ) : null}
@@ -896,7 +945,7 @@ export default function EventPrepAiSimulator({
               <span>{briefHint}</span>
             </p>
           ) : null}
-          <BudgetFormGroup step={1} title={embedded ? 'Quel événement ?' : 'Votre événement'} flat={embedded} done={embedded}>
+          <BudgetFormGroup step={1} title={embedded ? 'Quel événement ?' : 'Votre événement'} flat={embedded} done={embedded} className={mobileHidden('type')}>
             {!embedded ? <BudgetSimulationScopePicker value={budgetScope} onChange={applyBudgetScope} /> : null}
             <div className="space-y-1.5">
               <p className={cn(FIELD_LABEL, embedded && 'sr-only')}>Type d’événement</p>
@@ -922,7 +971,7 @@ export default function EventPrepAiSimulator({
           </BudgetFormGroup>
 
           {budgetScope !== 'drinks' ? (
-          <BudgetFormGroup step={2} title={embedded ? 'Où ?' : 'Le lieu'} flat={embedded} done={Boolean(city)}>
+          <BudgetFormGroup step={2} title={embedded ? 'Où ?' : 'Le lieu'} flat={embedded} done={Boolean(city)} className={mobileHidden('place')}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <label className="space-y-1">
               <span className={FIELD_LABEL}>Ville</span>
@@ -1039,7 +1088,7 @@ export default function EventPrepAiSimulator({
           </BudgetFormGroup>
           ) : null}
 
-          <BudgetFormGroup step={budgetScope === 'drinks' ? 2 : 3} title="Invités, date et budget" flat={embedded} done={Number(guestCount) > 0}>
+          <BudgetFormGroup step={budgetScope === 'drinks' ? 2 : 3} title="Invités, date et budget" flat={embedded} done={Number(guestCount) > 0} className={mobileHidden('guests')}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div className="space-y-1.5">
               <Input
@@ -1219,7 +1268,7 @@ export default function EventPrepAiSimulator({
           </BudgetFormGroup>
 
           {budgetScope !== 'drinks' ? (
-          <BudgetFormGroup step={4} title="Vos envies" flat={embedded} done={Boolean(prompt.trim())}>
+          <BudgetFormGroup step={4} title="Vos envies" flat={embedded} done={Boolean(prompt.trim())} className={mobileHidden('wishes')}>
             {budgetScope === 'complete' ? (
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-foreground">
               <label className="inline-flex items-center gap-2 min-h-11">
@@ -1262,9 +1311,21 @@ export default function EventPrepAiSimulator({
             </label>
           </BudgetFormGroup>
           ) : null}
+          {embedded && recapRows.some((row) => !row.empty) ? (
+            <p className="lg:hidden px-4 py-3 flex flex-wrap gap-x-3 gap-y-1 text-[13px] text-muted">
+              {recapRows.filter((row) => !row.empty).map((row) => (
+                <span key={row.label}>
+                  {row.label} : <b className="font-semibold text-foreground">{row.value}</b>
+                </span>
+              ))}
+            </p>
+          ) : null}
         </div>
 
-        <aside className="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 mt-3 lg:mt-0 min-w-0 lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
+        <aside className={cn(
+          embedded && (!wizardLast || showMobileReview) && 'max-lg:hidden',
+          'order-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 mt-3 lg:mt-0 min-w-0 lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7rem)] lg:overflow-y-auto lg:overscroll-contain lg:pr-1',
+        )}>
           <button
             type="button"
             className="lg:hidden w-full min-h-11 px-3 py-2 mb-3 rounded-[var(--radius-card)] border border-border bg-surface text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
@@ -1468,31 +1529,73 @@ export default function EventPrepAiSimulator({
             >
               {/* L’erreur s’affiche ici, à côté du bouton : plus bas dans la page, personne ne la voyait. */}
               {errorAlert ? <div className="mb-2.5 max-h-40 overflow-y-auto">{errorAlert}</div> : null}
-              {allowance.canSimulate || loading ? (
-                <Button
-                  onClick={() => void run()}
-                  loading={loading}
-                  leftIcon={<Sparkles className="w-4 h-4" />}
-                  className="w-full min-h-[52px] text-base"
-                >
-                  {result?.packages.length && !loading ? recalcLabel : launchLabel}
-                </Button>
+              {showMobileReview ? (
+                <div className="flex gap-2.5">
+                  <Button
+                    variant="secondary"
+                    className="min-h-[52px] px-4"
+                    onClick={() => {
+                      setMobileReview(false);
+                      goToWizardStep(0);
+                    }}
+                  >
+                    Modifier
+                  </Button>
+                  <Button
+                    className="flex-1 min-h-[52px] text-base"
+                    onClick={() => {
+                      const packs = result?.packages || [];
+                      const pick = packs.find((pack) => pack.id.includes('equilibre')) || packs[1] || packs[0];
+                      if (pick) setSelectedId(pick.id);
+                      setPackModalOpen(true);
+                    }}
+                  >
+                    Voir la formule conseillée
+                  </Button>
+                </div>
               ) : (
-                <AiTokenBuyButton
-                  variant="primary"
-                  size="md"
-                  className="w-full min-h-11"
-                  onClick={() => setPurchaseModalOpen(true)}
-                />
+                <div className="flex gap-2.5">
+                  <Button
+                    variant="secondary"
+                    className="min-h-[52px] px-4"
+                    disabled={wizardStep === 0 || loading}
+                    onClick={() => goToWizardStep(wizardStep - 1)}
+                  >
+                    Retour
+                  </Button>
+                  {!wizardLast ? (
+                    <Button className="flex-1 min-h-[52px] text-base" onClick={goWizardNext}>
+                      Suivant
+                    </Button>
+                  ) : allowance.canSimulate || loading ? (
+                    <Button
+                      onClick={() => void run()}
+                      loading={loading}
+                      leftIcon={<Sparkles className="w-4 h-4" />}
+                      className="flex-1 min-h-[52px] text-base"
+                    >
+                      {result?.packages.length && !loading ? recalcLabel : launchLabel}
+                    </Button>
+                  ) : (
+                    <AiTokenBuyButton
+                      variant="primary"
+                      size="md"
+                      className="flex-1 min-h-[52px]"
+                      onClick={() => setPurchaseModalOpen(true)}
+                    />
+                  )}
+                </div>
               )}
-              <p className="mt-1.5 flex items-start justify-center gap-1.5 text-xs text-muted text-center" aria-live="polite">
-                <Lightbulb className="w-3.5 h-3.5 text-primary-solid shrink-0 mt-px" aria-hidden />
-                <span>
-                  {allowance.canSimulate || loading
-                    ? briefHint
-                    : 'Plus de jetons : rechargez pour lancer une nouvelle simulation.'}
-                </span>
-              </p>
+              {wizardLast && !showMobileReview ? (
+                <p className="mt-1.5 flex items-start justify-center gap-1.5 text-xs text-muted text-center" aria-live="polite">
+                  <Lightbulb className="w-3.5 h-3.5 text-primary-solid shrink-0 mt-px" aria-hidden />
+                  <span>
+                    {allowance.canSimulate || loading
+                      ? briefHint
+                      : 'Plus de jetons : rechargez pour lancer une nouvelle simulation.'}
+                  </span>
+                </p>
+              ) : null}
             </div>
           ) : (
           <div className="order-3 lg:col-start-1 lg:row-start-2 mt-3 flex flex-col sm:flex-row gap-2">
@@ -1661,17 +1764,19 @@ function BudgetFormGroup({
   title,
   flat = false,
   done = false,
+  className,
   children,
 }: {
   step: number;
   title: string;
   flat?: boolean;
   done?: boolean;
+  className?: string;
   children: React.ReactNode;
 }) {
   if (flat) {
     return (
-      <fieldset className="px-4 sm:px-6 py-5 space-y-3 min-w-0">
+      <fieldset className={cn('px-4 sm:px-6 py-5 space-y-3 min-w-0', className)}>
         <legend className="sr-only">{title}</legend>
         <p aria-hidden className="flex items-center gap-3">
           <span
@@ -1689,7 +1794,7 @@ function BudgetFormGroup({
     );
   }
   return (
-    <fieldset className="space-y-2.5 rounded-[var(--radius-card)] border border-border bg-surface p-3.5 sm:p-4 min-w-0">
+    <fieldset className={cn('space-y-2.5 rounded-[var(--radius-card)] border border-border bg-surface p-3.5 sm:p-4 min-w-0', className)}>
       <legend className="sr-only">{title}</legend>
       <p aria-hidden className="flex items-center gap-2">
         <span className="font-display w-6 h-6 rounded-full bg-primary/15 text-primary-solid text-xs font-semibold inline-flex items-center justify-center shrink-0">

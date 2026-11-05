@@ -464,9 +464,9 @@ export default function LandingRoomPlanAiStudio({
                 onRecharge={() => setTokenModalOpen(true)}
                 onShowExamples={() => setStudioTab('prompts')}
                 beforeBrief={(
-                <div className="space-y-1.5">
-                  <p className="text-xs font-semibold text-foreground">Type de salle</p>
-                  <div className="flex flex-wrap gap-1.5" role="group" aria-label="Type de salle">
+                <div className="space-y-2.5">
+                  <p className="font-display text-lg font-semibold text-foreground">Type de salle</p>
+                  <div className="flex flex-wrap gap-2" role="group" aria-label="Type de salle">
                     {PICKABLE_ROOM_TYPES.map((type) => {
                       const selected = roomType === type;
                       return (
@@ -477,10 +477,10 @@ export default function LandingRoomPlanAiStudio({
                           disabled={busy}
                           onClick={() => setRoomType(type)}
                           className={cn(
-                            'min-h-11 px-3.5 rounded-full border text-xs font-semibold transition touch-manipulation',
+                            'min-h-11 px-4 rounded-xl border-[1.5px] text-sm font-medium transition touch-manipulation',
                             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                             selected
-                              ? 'border-primary-solid bg-primary-solid text-primary-foreground'
+                              ? 'border-primary-solid bg-[#e3f3ec] text-[#065f46] dark:bg-primary/15 dark:text-primary'
                               : 'border-border bg-surface text-foreground hover:border-primary/50',
                           )}
                         >

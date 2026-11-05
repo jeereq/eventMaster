@@ -26,6 +26,7 @@ import type { InvitationContextSource } from '@/lib/invitationContextSource';
 import type { InvitationModelPhoto } from '@/lib/invitationModelPhoto';
 import type { AiSpeedMode } from '@/lib/templateAiCompose';
 import { cn } from '@/lib/cn';
+import { StudioStepHeading } from '@/components/StudioAiTabs';
 
 const InvitationContextSourcePicker = dynamic(() => import('@/components/InvitationContextSourcePicker'), { ssr: false });
 const InvitationArtStylePicker = dynamic(() => import('@/components/InvitationArtStylePicker'), { ssr: false });
@@ -274,11 +275,12 @@ export default function InvitationAiComposeForm({
  <div className={columns === 2 ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-10 xl:gap-12 lg:items-start space-y-6 lg:space-y-0' : 'space-y-6'}>
  <div className="space-y-6">
  <div>
- <p className="text-sm font-semibold text-foreground mb-2">1. {sectionTitles[0]}</p>
+ <StudioStepHeading step={1} title={sectionTitles[0]} done className="mb-3" />
+ {/* Interrupteur segmenté : un seul type de création à la fois, l’explication suit en dessous. */}
  <div
    role="radiogroup"
    aria-label="Type de création"
-   className="grid grid-cols-1 sm:grid-cols-3 gap-2.5"
+   className="grid grid-cols-3 gap-0.5 rounded-[10px] bg-surface-muted p-[3px]"
  >
    {INVITATION_COMPOSE_MODES.map((option) => {
      const active = mode === option.id;
@@ -292,31 +294,26 @@ export default function InvitationAiComposeForm({
          disabled={busy}
          onClick={() => { if (option.id !== mode) onModeChange(option.id); }}
          className={cn(
-           'min-h-14 px-3 py-3 rounded-[var(--radius-button)] border text-left transition flex sm:flex-col items-start gap-2.5 sm:gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60',
+           'min-w-0 min-h-11 px-2 py-1.5 rounded-lg text-[13px] leading-tight font-semibold text-center transition inline-flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-60',
            active
-             ? 'border-primary bg-primary/10 shadow-xs'
-             : 'border-border bg-surface hover:border-primary/40',
+             ? 'bg-surface text-foreground shadow-[0_1px_3px_rgba(23,22,20,0.12)]'
+             : 'text-muted hover:text-foreground',
          )}
        >
-         <span className={cn(
-           'w-8 h-8 shrink-0 rounded-lg flex items-center justify-center',
-           active ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted text-muted',
-         )}>
-           <ModeIcon className="w-4 h-4" aria-hidden />
-         </span>
-         <span className="min-w-0">
-           <span className="block text-sm font-bold text-foreground">{option.label}</span>
-           <span className="block text-xs text-muted mt-0.5 leading-snug">{option.hint}</span>
-         </span>
+         <ModeIcon className="hidden sm:block w-4 h-4 shrink-0" aria-hidden />
+         <span className="min-w-0">{option.label}</span>
        </button>
      );
    })}
  </div>
+ <p className="mt-2 text-xs text-muted leading-relaxed">
+   {INVITATION_COMPOSE_MODES.find((option) => option.id === mode)?.hint}
+ </p>
  </div>
 
  {isFaces ? (
  <div className="space-y-3">
-   <p className="text-sm font-semibold text-foreground">2. {sectionTitles[1]}</p>
+   <StudioStepHeading step={2} title={sectionTitles[1]} />
    <div>
      <label htmlFor={`${idPrefix}-incoming`} className="text-sm font-semibold text-muted">Carte à modifier</label>
      <input
@@ -463,7 +460,7 @@ export default function InvitationAiComposeForm({
  </div>
  ) : (
  <div className="space-y-3">
- <p className="text-sm font-semibold text-foreground">2. {sectionTitles[1]}</p>
+ <StudioStepHeading step={2} title={sectionTitles[1]} done={mode === 'modify' ? Boolean(modelPhoto || incomingFile || currentCardUrl) : files.length > 0} />
  {mode === 'modify' ? (
    <>
      {currentCardUrl && !modelPhoto && files.length === 0 ? (
@@ -563,9 +560,7 @@ export default function InvitationAiComposeForm({
 
  <div className="space-y-4">
  <div>
- <p className="text-sm font-semibold text-foreground mb-2">
-   3. {sectionTitles[2]}
- </p>
+ <StudioStepHeading step={3} title={sectionTitles[2]} done={hasTexts || Boolean(prompt.trim())} aside="Modifiables après la création" className="mb-3" />
 
  <div
    className="flex items-center gap-1.5 p-1 bg-surface-muted rounded-lg border border-border mb-3"

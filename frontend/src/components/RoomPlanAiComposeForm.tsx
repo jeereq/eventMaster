@@ -181,7 +181,7 @@ export default function RoomPlanAiComposeForm({
 
       <label className="block space-y-1.5" htmlFor={`${idPrefix}-brief`}>
         <span className="flex items-center justify-between gap-2">
-          <span className="text-sm font-semibold text-foreground">
+          <span className="font-display text-lg font-semibold text-foreground">
             {intent === 'photo' ? 'Précisions (facultatif)' : 'Votre événement'}
           </span>
           <span className="text-xs text-muted tabular-nums">{prompt.length}/1500</span>
