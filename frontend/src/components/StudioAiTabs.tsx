@@ -285,3 +285,36 @@ export function studioActionBarClass(inline: boolean) {
       : 'bottom-0 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
   );
 }
+
+/** Titre d’étape des studios : pastille numérotée (cochée une fois l’étape remplie) et titre, comme sur la maquette. */
+export function StudioStepHeading({
+  step,
+  title,
+  done = false,
+  aside,
+  className,
+}: {
+  step: number;
+  title: string;
+  done?: boolean;
+  aside?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn('flex items-center justify-between gap-3', className)}>
+      <p className="flex items-center gap-3 min-w-0">
+        <span
+          aria-hidden
+          className={cn(
+            'w-7 h-7 rounded-full text-[13px] font-semibold inline-flex items-center justify-center shrink-0 transition-colors',
+            done ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted text-muted',
+          )}
+        >
+          {done ? '✓' : step}
+        </span>
+        <span className="font-display text-lg font-semibold text-foreground">{title}</span>
+      </p>
+      {aside ? <span className="text-[13px] text-muted shrink-0">{aside}</span> : null}
+    </div>
+  );
+}
