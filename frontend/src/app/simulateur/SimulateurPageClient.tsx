@@ -18,7 +18,6 @@ import {
   type AiAllowance,
   AI_ALLOWANCE_CHANGED,
 } from '@/lib/aiTokens';
-import { formatFc } from '@/config/landingPricing';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { useAuth } from '@/context/AuthContext';
 import { resolveUsdExchangeRateCdf, enabledMarketplaceCities } from '@/lib/platformCities';
@@ -29,16 +28,12 @@ import {
   Sparkles,
   Wallet,
   Users,
-  MapPin,
-  Mail,
   Box,
   Clock,
-  Coins,
   LayoutGrid,
   QrCode,
   Share2,
   X,
-  type LucideIcon,
 } from 'lucide-react';
 import AiSimulationCounter, { isAiSimulationThresholdReached } from '@/components/AiSimulationCounter';
 import { cn } from '@/lib/cn';
@@ -109,37 +104,29 @@ export type SimulatorStudioTab = 'budget' | 'invite' | 'room';
 
 const STUDIOS: Array<{
   id: SimulatorStudioTab;
-  icon: LucideIcon;
   title: string;
-  shortTitle: string;
-  text: string;
   cost: string;
 }> = [
-  {
-    id: 'budget',
-    icon: Wallet,
-    title: 'Budget',
-    shortTitle: 'Budget',
-    text: '3 formules chiffrées en 1 clic',
-    cost: `${AI_SIMULATION_TOKEN_COST} jeton`,
-  },
-  {
-    id: 'invite',
-    icon: Mail,
-    title: 'Invitation',
-    shortTitle: 'Invitation',
-    text: 'Carte 9:16 prête pour WhatsApp',
-    cost: `dès ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons`,
-  },
-  {
-    id: 'room',
-    icon: Box,
-    title: 'Plan de salle',
-    shortTitle: 'Plan 3D',
-    text: 'Tables et décor en 2D / 3D',
-    cost: `${AI_ROOM_PLAN_TOKEN_COST} jetons`,
-  },
+  { id: 'budget', title: 'Budget', cost: `${AI_SIMULATION_TOKEN_COST} jeton${AI_SIMULATION_TOKEN_COST > 1 ? 's' : ''}` },
+  { id: 'invite', title: 'Invitation', cost: `dès ${AI_INVITATION_COMPOSE_TOKEN_COST} jetons` },
+  { id: 'room', title: 'Plan de salle', cost: `${AI_ROOM_PLAN_TOKEN_COST} jetons` },
 ];
+
+/** Titre de l’en-tête : il change avec le studio ouvert. */
+const STUDIO_HEADINGS: Record<SimulatorStudioTab, { title: string; text: string }> = {
+  budget: {
+    title: 'Combien coûte votre fête ?',
+    text: 'Quelques questions, puis 3 formules chiffrées. Sans compte pour essayer.',
+  },
+  invite: {
+    title: 'Créez votre invitation',
+    text: 'Une carte 9:16 prête pour WhatsApp, avec le lien de réponse de chaque invité.',
+  },
+  room: {
+    title: 'Dessinez votre salle',
+    text: 'Décrivez la fête ou déposez une photo de la salle. Le plan s’ouvre en 2D et en 3D.',
+  },
+};
 
 /** Bandeau de fin de page : la suite logique du studio ouvert, pas un message unique pour les trois. */
 const STUDIO_NEXT_STEP: Record<SimulatorStudioTab, (isLoggedIn: boolean) => React.ComponentProps<typeof PublicCtaBand>> = {
@@ -374,19 +361,72 @@ export default function SimulateurPageClient() {
     setPreferDefaults(false);
   };
 
+  /* Exemples prêts à l’emploi : colonne de droite sur ordinateur, bandeau défilant sur mobile. */
+  const examplesNode = (
+    <section aria-labelledby="scenarios-heading" className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <h2 id="scenarios-heading" className="text-sm font-semibold text-muted">
+          Pas d’idée ? Partez d’un exemple
+        </h2>
+        {selectedScenarioId ? (
+          <button
+            type="button"
+            onClick={handleClearScenario}
+            className="min-h-11 px-2 inline-flex items-center gap-1 text-xs font-semibold text-muted hover:text-foreground rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            <X className="w-3.5 h-3.5" aria-hidden />
+            Effacer
+          </button>
+        ) : null}
+      </div>
+      <div
+        className="flex gap-2 overflow-x-auto -mx-3 px-3 pb-1 sm:mx-0 sm:px-0 lg:flex-col lg:overflow-visible scrollbar-none touch-pan-x"
+        role="group"
+        aria-label="Exemples de projets"
+      >
+        {visibleScenarios.map((scenario) => {
+          const isSelected = scenario.id === selectedScenarioId;
+          return (
+            <button
+              key={scenario.id}
+              type="button"
+              aria-pressed={isSelected}
+              onClick={() => handleSelectScenario(scenario)}
+              className={cn(
+                'min-w-[16rem] lg:min-w-0 shrink-0 flex items-center justify-between gap-3 rounded-[14px] border px-3.5 py-3 text-left transition-colors cursor-pointer touch-manipulation',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                isSelected
+                  ? 'border-primary-solid bg-[#e3f3ec] dark:bg-primary/15'
+                  : 'border-border bg-surface hover:border-primary/40',
+              )}
+            >
+              <span className="min-w-0 flex flex-col">
+                <b className="text-sm font-semibold text-foreground truncate">{scenario.type}</b>
+                <span className="text-[13px] text-muted tabular-nums">
+                  {scenario.guests} invités · {scenario.city}
+                </span>
+              </span>
+              <span className="shrink-0 text-sm font-semibold text-primary-solid whitespace-nowrap">
+                {isSelected ? 'Choisi ✓' : 'Utiliser →'}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+
   return (
     <PublicPageShell faqHref="/faq" mobileFooterPad>
-      <section className="relative em-landing-hero">
-        <div className="page-container relative z-10 pt-4 pb-4 md:pt-10 md:pb-6">
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3 lg:gap-4">
-            <div className="max-w-2xl space-y-1.5 md:space-y-2">
-              <p className="hidden sm:block text-xs font-bold tracking-[0.08em] uppercase text-primary-solid">Studios IA</p>
-              <h1 className="em-landing-heading text-2xl md:text-3xl lg:text-[2.5rem] text-foreground">
-                Préparez votre fête, étape par étape
+      {/* ─── EN-TÊTE DES STUDIOS : titre du studio ouvert, solde, onglets en languettes ─── */}
+      <section className="bg-[#064e3b] text-white">
+        <div className="page-container pt-4 md:pt-8">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="min-w-0 space-y-1">
+              <h1 className="font-display text-2xl md:text-[2.125rem] font-semibold leading-tight tracking-[-0.02em]">
+                {STUDIO_HEADINGS[activeStudio].title}
               </h1>
-              <p className="text-sm md:text-base text-muted">
-                Estimez le budget, créez l’invitation, dessinez la salle. Sans compte pour essayer.
-              </p>
+              <p className="text-sm md:text-[15px] text-[#d1fae5]">{STUDIO_HEADINGS[activeStudio].text}</p>
             </div>
 
             {!allowance.unlimited ? (
@@ -395,22 +435,16 @@ export default function SimulateurPageClient() {
                 type="button"
                 onClick={() => setPurchaseModalOpen(true)}
                 className={cn(
-                  'self-start lg:self-auto inline-flex items-center gap-2 min-h-11 pl-2 pr-3.5 rounded-full border text-xs font-semibold tabular-nums transition touch-manipulation',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                  tokensLow
-                    ? 'bg-festive-accent-soft border-festive-accent/40 text-foreground hover:border-festive-accent'
-                    : 'bg-surface border-border text-foreground hover:border-primary/40',
+                  'shrink-0 inline-flex items-center gap-2.5 min-h-11 pl-3.5 pr-1.5 py-1.5 rounded-full bg-[#0b5e48] text-sm text-white tabular-nums transition touch-manipulation',
+                  'hover:bg-[#0f6b52] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fbbf24] focus-visible:ring-offset-2 focus-visible:ring-offset-[#064e3b]',
+                  tokensLow && 'ring-1 ring-[#fbbf24]/70',
                 )}
                 aria-label={`${allowance.totalRemaining} jeton${allowance.totalRemaining > 1 ? 's' : ''} IA restant${allowance.totalRemaining > 1 ? 's' : ''}. Recharger`}
               >
-                <span className="w-7 h-7 rounded-full bg-primary/10 text-primary-solid inline-flex items-center justify-center">
-                  <Coins className="w-3.5 h-3.5" aria-hidden />
-                </span>
                 <span>
-                  {allowance.totalRemaining} jeton{allowance.totalRemaining > 1 ? 's' : ''} IA
+                  <b className="font-semibold">{allowance.totalRemaining}</b> jeton{allowance.totalRemaining > 1 ? 's' : ''}
                 </span>
-                <span aria-hidden className="w-px h-4 bg-border" />
-                <span className="text-primary-solid">Recharger</span>
+                <span className="rounded-full bg-[#fbbf24] px-3 py-1.5 font-semibold text-[#171614]">Recharger</span>
               </button>
             ) : null}
           </div>
@@ -419,10 +453,9 @@ export default function SimulateurPageClient() {
           <div
             role="tablist"
             aria-label="Choix du studio"
-            className="mt-4 md:mt-7 grid grid-cols-3 gap-2 sm:gap-3"
+            className="mt-4 md:mt-6 flex gap-1"
           >
             {STUDIOS.map((studio) => {
-              const Icon = studio.icon;
               const selected = activeStudio === studio.id;
               const blocked = isStudioBlocked(studio.id);
               return (
@@ -437,63 +470,22 @@ export default function SimulateurPageClient() {
                   onClick={() => handleSwitchStudio(studio.id)}
                   onKeyDown={(e) => handleTabKeyDown(e, studio.id)}
                   className={cn(
-                    'group relative overflow-hidden text-left rounded-[var(--radius-card)] border transition-colors cursor-pointer touch-manipulation',
-                    'px-2.5 py-2.5 sm:p-4 min-h-11 flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-3',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                    selected
-                      ? 'bg-[#064e3b] border-[#064e3b] text-white shadow-[0_12px_32px_-18px_rgba(2,44,34,0.8)]'
-                      : 'bg-surface border-border text-foreground hover:border-primary/40 hover:bg-card-hover',
+                    'flex-1 sm:flex-none inline-flex items-center justify-center gap-2.5 min-h-12 px-2 sm:px-5 rounded-t-xl font-semibold text-sm sm:text-[15px] transition-colors cursor-pointer touch-manipulation',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#fbbf24]',
+                    selected ? 'bg-background text-foreground' : 'text-[#d1fae5] hover:bg-white/10 hover:text-white',
                   )}
                 >
-                  {selected ? (
-                    <span
-                      aria-hidden
-                      className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-[2rem] border-[1.25rem] border-[#065f46]"
-                    />
-                  ) : null}
+                  {studio.title}
                   <span
                     className={cn(
-                      'relative w-8 h-8 sm:w-11 sm:h-11 rounded-xl inline-flex items-center justify-center shrink-0',
-                      selected ? 'bg-white/10 text-[#6ee7b7]' : 'bg-[#d1fae5] text-primary-solid dark:bg-primary/15',
+                      'hidden sm:inline text-xs font-medium tabular-nums',
+                      blocked
+                        ? (selected ? 'text-amber-700 dark:text-amber-300' : 'text-[#fcd34d]')
+                        : (selected ? 'text-primary-solid' : 'text-[#a7f3d0]'),
                     )}
                   >
-                    <Icon className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden />
+                    {blocked ? 'Bientôt' : studio.cost}
                   </span>
-                  <span className="relative min-w-0 flex-1 text-center sm:text-left">
-                    <span className="font-display block text-sm sm:text-lg font-semibold leading-tight">
-                      <span className="sm:hidden">{studio.shortTitle}</span>
-                      <span className="hidden sm:inline">{studio.title}</span>
-                    </span>
-                    <span
-                      className={cn(
-                        'hidden sm:block text-xs mt-0.5 truncate',
-                        selected ? 'text-[#d1fae5]' : 'text-muted',
-                      )}
-                    >
-                      {blocked ? 'Bientôt disponible' : studio.text}
-                    </span>
-                    <span
-                      className={cn(
-                        'mt-0.5 sm:hidden block text-[11px] font-semibold leading-tight',
-                        blocked
-                          ? (selected ? 'text-[#fcd34d]' : 'text-amber-700 dark:text-amber-300')
-                          : (selected ? 'text-[#a7f3d0]' : 'text-muted'),
-                      )}
-                    >
-                      {blocked ? 'À venir' : studio.cost}
-                    </span>
-                  </span>
-                  {!blocked ? (
-                    <span
-                      className={cn(
-                        'relative hidden lg:inline-flex items-center gap-1 shrink-0 px-2 py-1 rounded-full text-[11px] font-semibold tabular-nums',
-                        selected ? 'bg-white/10 text-[#d1fae5]' : 'bg-surface-muted text-muted border border-border',
-                      )}
-                    >
-                      <Coins className="w-3 h-3" aria-hidden />
-                      {studio.cost}
-                    </span>
-                  ) : null}
                 </button>
               );
             })}
@@ -539,77 +531,6 @@ export default function SimulateurPageClient() {
               />
             ) : (
               <>
-                <section aria-labelledby="scenarios-heading" className="space-y-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <h2 id="scenarios-heading" className="font-display text-sm sm:text-base font-semibold text-foreground">
-                      Partir d’un exemple
-                      <span className="ml-2 text-xs font-normal text-muted">ou remplissez le brief librement</span>
-                    </h2>
-                    {selectedScenarioId ? (
-                      <button
-                        type="button"
-                        onClick={handleClearScenario}
-                        className="min-h-11 px-2 inline-flex items-center gap-1 text-xs font-semibold text-muted hover:text-foreground rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                      >
-                        <X className="w-3.5 h-3.5" aria-hidden />
-                        Effacer
-                      </button>
-                    ) : null}
-                  </div>
-                  <div
-                    className="flex gap-2.5 overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 pb-1 sm:grid sm:grid-cols-3 sm:overflow-visible scrollbar-none touch-pan-x"
-                    role="group"
-                    aria-label="Exemples de projets"
-                  >
-                    {visibleScenarios.map((scenario) => {
-                      const isSelected = scenario.id === selectedScenarioId;
-                      const usdEst = Math.round(scenario.budgetTargetFc / exchangeRate);
-                      return (
-                        <button
-                          key={scenario.id}
-                          type="button"
-                          aria-pressed={isSelected}
-                          onClick={() => handleSelectScenario(scenario)}
-                          className={cn(
-                            'min-w-[15rem] sm:min-w-0 shrink-0 p-3.5 rounded-[var(--radius-card)] border text-left transition-colors cursor-pointer touch-manipulation',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                            isSelected
-                              ? 'border-primary-solid bg-primary/10 ring-1 ring-primary/30'
-                              : 'border-border bg-surface hover:border-primary/40 hover:bg-card-hover',
-                          )}
-                        >
-                          <span className="flex items-center justify-between gap-2">
-                            <span className="text-sm font-semibold text-foreground truncate">{scenario.type}</span>
-                            <span
-                              aria-hidden
-                              className={cn(
-                                'w-4 h-4 rounded-full border-2 shrink-0',
-                                isSelected ? 'border-primary-solid bg-primary-solid shadow-[inset_0_0_0_2px_var(--surface)]' : 'border-border',
-                              )}
-                            />
-                          </span>
-                          <span className="mt-1 flex flex-wrap items-center gap-x-2 text-xs text-muted">
-                            <span className="inline-flex items-center gap-1">
-                              <Users className="w-3 h-3" aria-hidden />
-                              {scenario.guests} invités
-                            </span>
-                            <span className="inline-flex items-center gap-1">
-                              <MapPin className="w-3 h-3" aria-hidden />
-                              {scenario.city}
-                            </span>
-                          </span>
-                          <span className="mt-2 flex items-baseline justify-between gap-2 text-xs">
-                            <span className="font-display text-sm font-semibold text-foreground tabular-nums">
-                              {formatFc(scenario.budgetTargetFc)}
-                            </span>
-                            <span className="text-muted tabular-nums">≈ {usdEst.toLocaleString('fr-FR')} $</span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-
                 <section
                   id="simulateur"
                   aria-label="Simulateur de budget"
@@ -620,6 +541,7 @@ export default function SimulateurPageClient() {
                     defaultOpen
                     defaults={liveDefaults}
                     preferDefaults={preferDefaults}
+                    examples={examplesNode}
                   />
                 </section>
               </>

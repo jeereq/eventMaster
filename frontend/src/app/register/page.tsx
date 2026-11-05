@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import {
   Calendar,
+  Compass,
   Mail,
   Lock,
   User,
@@ -46,7 +47,6 @@ import {
   type TenantAccountKind,
 } from '@/lib/marketplace';
 import {
-  registerAccountFormTitle,
   registerAccountShortLabel,
   registerAccountSummary,
 } from '@/lib/registerAccountKinds';
@@ -577,17 +577,29 @@ function RegisterPageContent() {
             {showAccountForm && (
             <>
             <div className="text-left mb-3 space-y-1.5">
-              <h2 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight">
-                {registerAccountFormTitle(accountKind, vendorTrack)}
-              </h2>
+              {/* En-tête de l’étape : l’usage choisi, et où l’on en est. */}
+              <div className="flex items-center gap-3 pb-1">
+                <span
+                  aria-hidden
+                  className="w-10 h-10 shrink-0 rounded-[10px] bg-[#e3f3ec] text-[#065f46] dark:bg-primary/15 dark:text-primary inline-flex items-center justify-center"
+                >
+                  {accountKind === 'CLIENT' ? (
+                    <Compass className="w-5 h-5" />
+                  ) : accountKind === 'VENDOR' ? (
+                    <Store className="w-5 h-5" />
+                  ) : (
+                    <Calendar className="w-5 h-5" />
+                  )}
+                </span>
+                <span className="min-w-0 flex flex-col">
+                  <span className="text-[13px] text-muted">Étape 2 sur 3 · Vos coordonnées</span>
+                  <h2 className="font-display text-lg sm:text-xl font-semibold text-foreground tracking-tight leading-tight">
+                    {registerAccountShortLabel(accountKind, vendorTrack)}
+                  </h2>
+                </span>
+              </div>
               <p className="text-sm text-muted leading-relaxed">
                 {registerAccountSummary(accountKind, vendorTrack)}
-              </p>
-              <p className="text-xs text-muted leading-relaxed">
-                Compte :{' '}
-                <span className="font-semibold text-foreground">
-                  {registerAccountShortLabel(accountKind, vendorTrack)}
-                </span>
               </p>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
                 {!kindFromUrl ? (
@@ -732,18 +744,18 @@ function RegisterPageContent() {
               {/* ─── CHOIX DE MÉTHODE DE VALIDATION OTP ─── */}
               {canChooseOtpChannel ? (
  <MethodToggle
-                  label="Réception du code de confirmation"
+                  label="Recevoir le code de confirmation"
  value={verificationMethod}
  onChange={setVerificationMethod}
  options={[
                     ...(authOtpMethodOptions(authChannels).includes('EMAIL')
-                      ? [{ value: 'EMAIL' as const, label: 'Par e-mail', icon: <Mail className="w-3.5 h-3.5" aria-hidden /> }]
+                      ? [{ value: 'EMAIL' as const, label: 'E-mail', icon: <Mail className="w-3.5 h-3.5" aria-hidden /> }]
                       : []),
                     ...(authOtpMethodOptions(authChannels).includes('WHATSAPP')
-                      ? [{ value: 'WHATSAPP' as const, label: 'Par WhatsApp', icon: <MessageSquare className="w-3.5 h-3.5" aria-hidden /> }]
+                      ? [{ value: 'WHATSAPP' as const, label: 'WhatsApp', icon: <MessageSquare className="w-3.5 h-3.5" aria-hidden /> }]
                       : []),
                     ...(authOtpMethodOptions(authChannels).includes('SMS')
-                      ? [{ value: 'SMS' as const, label: 'Par SMS', icon: <Smartphone className="w-3.5 h-3.5" aria-hidden /> }]
+                      ? [{ value: 'SMS' as const, label: 'SMS', icon: <Smartphone className="w-3.5 h-3.5" aria-hidden /> }]
                       : []),
                   ]}
                 />

@@ -53,8 +53,6 @@ import {
 import {
   StudioAiTabs,
   StudioStepper,
-  StudioToolbar,
-  studioActionBarClass,
   studioAiTabPanelId,
   type StudioAiTabId,
 } from '@/components/StudioAiTabs';
@@ -70,12 +68,12 @@ const FIELD_LABEL = 'text-xs font-semibold text-muted';
 const NATIVE_FIELD =
   'w-full min-h-11 rounded-[var(--radius-button)] border border-border bg-surface-muted dark:bg-background px-3.5 py-2.5 text-base sm:text-sm text-foreground placeholder:text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:border-primary';
 const CHIP =
-  'inline-flex items-center justify-center min-h-11 px-3 rounded-[var(--radius-button)] text-xs font-semibold border transition whitespace-nowrap shrink-0 sm:shrink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+  'inline-flex items-center justify-center min-h-11 px-4 rounded-xl text-sm font-medium border-[1.5px] transition whitespace-nowrap shrink-0 sm:shrink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
 
 function chipTone(active: boolean) {
   return active
-    ? 'bg-primary-solid text-primary-foreground border-primary-solid'
-    : 'border-border text-muted hover:text-foreground';
+    ? 'border-primary-solid bg-[#e3f3ec] text-[#065f46] dark:bg-primary/15 dark:text-primary'
+    : 'border-border bg-surface text-foreground hover:border-primary/50';
 }
 
 export type EventPrepAiDefaults = {
@@ -109,6 +107,7 @@ export default function EventPrepAiSimulator({
   openPurchaseOnMount = false,
   className,
   onAllowanceChange,
+  examples,
 }: {
   defaults?: EventPrepAiDefaults;
   applyLabel?: string;
@@ -121,6 +120,8 @@ export default function EventPrepAiSimulator({
   openPurchaseOnMount?: boolean;
   className?: string;
   onAllowanceChange?: (allowance: AiAllowance) => void;
+  /** Exemples de projets posés par la page : en haut sur mobile, dans la colonne de droite sur ordinateur. */
+  examples?: React.ReactNode;
 }) {
   const { user, access } = useAuth();
   const isLoggedIn = Boolean(user);
@@ -590,6 +591,36 @@ export default function EventPrepAiSimulator({
   const launchLabel = allowance.unlimited
     ? 'Lancer la simulation'
     : `Lancer la simulation · ${AI_SIMULATION_TOKEN_COST} jeton${AI_SIMULATION_TOKEN_COST > 1 ? 's' : ''}`;
+  const recalcLabel = allowance.unlimited
+    ? 'Recalculer'
+    : `Recalculer · ${AI_SIMULATION_TOKEN_COST} jeton${AI_SIMULATION_TOKEN_COST > 1 ? 's' : ''}`;
+  // Étapes du brief réellement affichées (la ville ne compte pas pour les boissons).
+  const briefSteps = budgetScope === 'drinks'
+    ? [true, Number(guestCount) > 0]
+    : [true, Boolean(city), Number(guestCount) > 0, Boolean(prompt.trim())];
+  const briefDone = briefSteps.filter(Boolean).length;
+  const placeLabel = [neighborhood, commune, city].filter(Boolean).join(', ');
+  const recapRows: Array<{ label: string; value: string; empty: boolean }> = [
+    {
+      label: 'Événement',
+      value: LISTING_EVENT_TYPES.find((item) => item.id === eventType)?.label || 'À choisir',
+      empty: false,
+    },
+    ...(budgetScope === 'drinks'
+      ? []
+      : [{ label: 'Lieu', value: placeLabel || 'À choisir', empty: !placeLabel }]),
+    { label: 'Invités', value: Number(guestCount) > 0 ? guestCount : 'À choisir', empty: !(Number(guestCount) > 0) },
+    {
+      label: 'Date',
+      value: eventDate ? new Date(`${eventDate}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Facultatif',
+      empty: !eventDate,
+    },
+    {
+      label: 'Budget max',
+      value: budgetMaxUsdCalculated > 0 ? `${budgetMaxUsdCalculated.toLocaleString('fr-FR')} $` : 'Facultatif',
+      empty: !(budgetMaxUsdCalculated > 0),
+    },
+  ];
   const briefHint = budgetScope === 'drinks'
     ? (wantedDrinkLines.length > 0
       ? 'La commande précise remplace le calcul par invité. Vous pouvez lancer.'
@@ -674,19 +705,11 @@ export default function EventPrepAiSimulator({
   return (
     <section className={cn(
       embedded
-        ? 'rounded-[var(--radius-card)] border border-border bg-surface overflow-clip'
+        ? 'min-w-0'
         : 'rounded-[var(--radius-card)] border border-border bg-surface p-4 space-y-3',
       className,
     )}>
-      {embedded ? (
-        <StudioToolbar
-          steps={STUDIO_STEPS}
-          current={currentStep}
-          allowance={allowance}
-          sticky={false}
-        />
-      ) : null}
-      <div className={cn(embedded ? 'p-4 sm:p-6 space-y-3' : 'contents')}>
+      <div className={cn(embedded ? 'space-y-4' : 'contents')}>
       {!embedded ? (
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="space-y-1 min-w-0">
@@ -848,19 +871,35 @@ export default function EventPrepAiSimulator({
           className="space-y-3"
         >
           {!embedded ? <StudioStepper steps={STUDIO_STEPS} current={currentStep} /> : null}
+          {open && embedded && examples ? <div className="lg:hidden">{examples}</div> : null}
           {open ? (
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.05fr)_minmax(18rem,0.95fr)] lg:gap-x-6 lg:items-start">
-        <div className="order-1 lg:col-start-1 lg:row-start-1 space-y-3 min-w-0">
+        <div className={cn(
+          'grid grid-cols-1 lg:items-start',
+          embedded
+            ? 'lg:grid-cols-[minmax(0,1fr)_minmax(19rem,22rem)] lg:gap-x-6'
+            : 'lg:grid-cols-[minmax(0,1.05fr)_minmax(18rem,0.95fr)] lg:gap-x-6',
+        )}>
+        <div className={cn(
+          'order-1 lg:col-start-1 lg:row-start-1 min-w-0',
+          embedded
+            ? 'rounded-[18px] border border-border bg-surface divide-y divide-border/70 overflow-hidden'
+            : 'space-y-3',
+        )}>
+          {embedded ? (
+            <div className="px-4 sm:px-6 py-3.5">
+              <BudgetSimulationScopePicker compact value={budgetScope} onChange={applyBudgetScope} />
+            </div>
+          ) : null}
           {!embedded ? (
             <p className="flex items-start gap-2 text-xs text-foreground leading-relaxed rounded-[var(--radius-card)] bg-primary/5 border border-primary/15 px-3 py-2.5" aria-live="polite">
               <Lightbulb className="w-4 h-4 text-primary-solid shrink-0 mt-px" aria-hidden />
               <span>{briefHint}</span>
             </p>
           ) : null}
-          <BudgetFormGroup step={1} title="Votre événement">
-            <BudgetSimulationScopePicker value={budgetScope} onChange={applyBudgetScope} />
+          <BudgetFormGroup step={1} title={embedded ? 'Quel événement ?' : 'Votre événement'} flat={embedded} done={embedded}>
+            {!embedded ? <BudgetSimulationScopePicker value={budgetScope} onChange={applyBudgetScope} /> : null}
             <div className="space-y-1.5">
-              <p className={FIELD_LABEL}>Type d’événement</p>
+              <p className={cn(FIELD_LABEL, embedded && 'sr-only')}>Type d’événement</p>
               <div
                 className="flex flex-wrap gap-1.5"
                 role="group"
@@ -883,7 +922,7 @@ export default function EventPrepAiSimulator({
           </BudgetFormGroup>
 
           {budgetScope !== 'drinks' ? (
-          <BudgetFormGroup step={2} title="Le lieu">
+          <BudgetFormGroup step={2} title={embedded ? 'Où ?' : 'Le lieu'} flat={embedded} done={Boolean(city)}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <label className="space-y-1">
               <span className={FIELD_LABEL}>Ville</span>
@@ -1000,7 +1039,7 @@ export default function EventPrepAiSimulator({
           </BudgetFormGroup>
           ) : null}
 
-          <BudgetFormGroup step={budgetScope === 'drinks' ? 2 : 3} title="Invités, date et budget">
+          <BudgetFormGroup step={budgetScope === 'drinks' ? 2 : 3} title="Invités, date et budget" flat={embedded} done={Number(guestCount) > 0}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div className="space-y-1.5">
               <Input
@@ -1180,7 +1219,7 @@ export default function EventPrepAiSimulator({
           </BudgetFormGroup>
 
           {budgetScope !== 'drinks' ? (
-          <BudgetFormGroup step={4} title="Vos envies">
+          <BudgetFormGroup step={4} title="Vos envies" flat={embedded} done={Boolean(prompt.trim())}>
             {budgetScope === 'complete' ? (
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs font-medium text-foreground">
               <label className="inline-flex items-center gap-2 min-h-11">
@@ -1238,6 +1277,57 @@ export default function EventPrepAiSimulator({
             </span>
             <span className="block text-xs text-muted mt-0.5">Marques, quantités, métiers ou matériel. Facultatif.</span>
           </button>
+          {embedded ? (
+            <div className="hidden lg:flex flex-col gap-4 mb-4">
+              <div className="rounded-[18px] border border-border bg-surface p-5 flex flex-col gap-3.5">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="font-display text-lg font-semibold text-foreground">Récapitulatif</span>
+                  <span className="text-[13px] text-muted tabular-nums">{briefDone} sur {briefSteps.length}</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-surface-muted overflow-hidden" aria-hidden>
+                  <span
+                    className="block h-full rounded-full bg-primary-solid transition-[width] duration-300"
+                    style={{ width: `${Math.round((briefDone / briefSteps.length) * 100)}%` }}
+                  />
+                </div>
+                <dl className="text-sm">
+                  {recapRows.map((row) => (
+                    <div key={row.label} className="flex justify-between gap-3 py-2 border-b border-border/70">
+                      <dt className="text-muted">{row.label}</dt>
+                      <dd className={cn('text-right font-semibold', row.empty ? 'text-muted/70' : 'text-foreground')}>{row.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+                {errorAlert ? <div className="max-h-40 overflow-y-auto">{errorAlert}</div> : null}
+                {allowance.canSimulate || loading ? (
+                  <Button
+                    onClick={() => void run()}
+                    loading={loading}
+                    leftIcon={<Sparkles className="w-4 h-4" />}
+                    className="w-full min-h-[52px] text-base"
+                  >
+                    {result?.packages.length && !loading ? recalcLabel : launchLabel}
+                  </Button>
+                ) : (
+                  <AiTokenBuyButton
+                    variant="primary"
+                    size="md"
+                    className="w-full min-h-[52px]"
+                    onClick={() => setPurchaseModalOpen(true)}
+                  />
+                )}
+                <p className="text-[13px] text-muted text-center" aria-live="polite">
+                  {allowance.canSimulate || loading
+                    ? briefHint
+                    : 'Plus de jetons : rechargez pour lancer une nouvelle simulation.'}
+                </p>
+                <p className="text-xs text-muted text-center tabular-nums">
+                  {allowance.unlimited ? '' : `${AI_SIMULATION_TOKEN_COST} jeton par calcul · `}1 $ = {exchangeRate.toLocaleString('fr-FR')} FC
+                </p>
+              </div>
+              {examples}
+            </div>
+          ) : null}
           <div className={cn('space-y-3', !refineOpen && 'max-lg:hidden')}>
           <p className="hidden lg:block text-xs font-semibold text-muted">Précisions facultatives</p>
           <BudgetSimulationCriteria
@@ -1369,7 +1459,13 @@ export default function EventPrepAiSimulator({
         </aside>
 
           {embedded ? (
-            <div className={cn('order-3 lg:col-start-1 lg:row-start-2 mt-3', studioActionBarClass(true))}>
+            <div
+              className={cn(
+                'order-3 lg:hidden mt-3 sticky z-30 bottom-[calc(var(--em-site-bottom-nav)+var(--em-site-install-bar))] md:bottom-0',
+                '-mx-3 sm:mx-0 px-3 sm:px-4 py-3 pb-5 md:pb-3 border-t sm:border border-border bg-surface sm:rounded-xl',
+                'shadow-[0_-10px_28px_-16px_rgba(0,0,0,0.2)]',
+              )}
+            >
               {/* L’erreur s’affiche ici, à côté du bouton : plus bas dans la page, personne ne la voyait. */}
               {errorAlert ? <div className="mb-2.5 max-h-40 overflow-y-auto">{errorAlert}</div> : null}
               {allowance.canSimulate || loading ? (
@@ -1377,9 +1473,9 @@ export default function EventPrepAiSimulator({
                   onClick={() => void run()}
                   loading={loading}
                   leftIcon={<Sparkles className="w-4 h-4" />}
-                  className="w-full min-h-11"
+                  className="w-full min-h-[52px] text-base"
                 >
-                  {launchLabel}
+                  {result?.packages.length && !loading ? recalcLabel : launchLabel}
                 </Button>
               ) : (
                 <AiTokenBuyButton
@@ -1433,13 +1529,10 @@ export default function EventPrepAiSimulator({
       />
 
       {result?.packages.length ? (
-        <div className="space-y-4 pt-2 border-t border-border">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
-            <span className="font-bold text-foreground flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-primary-solid" />
-              3 formules — touchez-en une pour voir les éléments
-            </span>
-            <span className="text-xs text-muted">
+        <div className={cn('space-y-4', embedded ? 'pt-4' : 'pt-2 border-t border-border')}>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <h2 className="font-display text-xl sm:text-2xl font-semibold text-foreground">Vos 3 formules</h2>
+            <span className="text-sm text-muted">
               {result.catalog.venues} salles · {result.catalog.trades} prestataires · {result.catalog.rentals} matériels
             </span>
           </div>
@@ -1450,77 +1543,71 @@ export default function EventPrepAiSimulator({
             </Alert>
           ) : null}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
             {result.packages.map((pack) => {
-              const active = (selected?.id || result.packages[0]?.id) === pack.id;
+              const recommended = pack.id.includes('equilibre');
               const packLeftover = budgetValue > 0 ? budgetValue - pack.estimatedTotalFc : null;
               return (
                 <button
                   key={pack.id}
                   type="button"
-                  aria-pressed={active}
+                  aria-pressed={selected?.id === pack.id}
                   onClick={() => {
                     setSelectedId(pack.id);
                     setPackModalOpen(true);
                   }}
                   className={cn(
-                    'text-left rounded-[var(--radius-card)] border p-4 space-y-2 transition flex flex-col justify-between h-full gap-2 cursor-pointer touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                    active
-                      ? 'border-primary bg-primary/10 shadow-md ring-2 ring-primary/30'
-                      : 'border-border bg-surface hover:border-primary/40 opacity-85 hover:opacity-100',
+                    'group text-left rounded-[18px] bg-surface p-4 sm:p-5 flex flex-col gap-2.5 h-full transition cursor-pointer touch-manipulation',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                    recommended ? 'border-2 border-primary-solid' : 'border border-border hover:border-primary/40',
                   )}
                 >
-                  <div className="space-y-1 w-full">
-                    <div className="flex items-center justify-between gap-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-surface border border-border text-foreground">
-                          {pack.label}
-                        </span>
-                        {pack.id.includes('equilibre') ? (
-                          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary-solid border border-primary/25">
-                            Recommandé
-                          </span>
-                        ) : null}
-                      </div>
-                      <span className="text-xs font-semibold text-primary-solid">Détails</span>
-                    </div>
-                    {pack.summary ? (
-                      <p className="text-xs font-bold text-foreground leading-snug mt-1">{pack.summary}</p>
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="font-display text-lg font-semibold text-foreground">{pack.label}</span>
+                    {recommended ? (
+                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#e3f3ec] text-[#065f46] dark:bg-primary/15 dark:text-primary">
+                        Conseillée
+                      </span>
                     ) : null}
-                    {pack.blurb ? (
-                      <p className="text-xs text-muted leading-relaxed line-clamp-2">{pack.blurb}</p>
-                    ) : null}
-                  </div>
-
-                  <div className="pt-2 border-t border-border/60 w-full mt-auto space-y-1">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <p className="text-base font-black text-foreground tabular-nums">
-                        {formatFc(pack.estimatedTotalFc)}
-                      </p>
-                      <p className="text-xs font-semibold text-muted tabular-nums">
-                        ≈ {Math.round(pack.estimatedTotalFc / exchangeRate).toLocaleString('fr-FR')} $
-                      </p>
-                    </div>
-                    <p className="text-xs text-muted">
-                      {pack.venue ? '1 salle' : 'Sans salle'} + {pack.services.length} prestataire{pack.services.length > 1 ? 's' : ''}
-                    </p>
-                    {packLeftover != null ? (
-                      <p className={cn('text-xs font-semibold mt-0.5', packLeftover >= 0 ? 'text-primary-solid' : 'text-festive-accent')}>
-                        {packLeftover >= 0
-                          ? `Reste ${formatFc(packLeftover)} vs budget`
-                          : `Dépassement ${formatFc(Math.abs(packLeftover))}`}
-                      </p>
-                    ) : null}
-                    <div className="pt-1 flex items-center justify-between text-xs font-semibold text-primary-solid">
-                      <span>Explorer la formule</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </div>
-                  </div>
+                  </span>
+                  <span className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="font-display text-2xl sm:text-[1.75rem] leading-tight font-semibold text-foreground tabular-nums">
+                      {formatFc(pack.estimatedTotalFc)}
+                    </span>
+                    <span className="text-sm text-muted tabular-nums">
+                      ≈ {Math.round(pack.estimatedTotalFc / exchangeRate).toLocaleString('fr-FR')} $
+                    </span>
+                  </span>
+                  <span className="text-sm text-muted leading-relaxed line-clamp-3">
+                    {pack.summary || pack.blurb || `${pack.venue ? '1 salle' : 'Sans salle'} + ${pack.services.length} prestataire${pack.services.length > 1 ? 's' : ''}`}
+                  </span>
+                  {packLeftover != null ? (
+                    <span className={cn('text-xs font-semibold', packLeftover >= 0 ? 'text-primary-solid' : 'text-amber-700 dark:text-amber-300')}>
+                      {packLeftover >= 0
+                        ? `Reste ${formatFc(packLeftover)} sur le budget`
+                        : `Dépasse le budget de ${formatFc(Math.abs(packLeftover))}`}
+                    </span>
+                  ) : null}
+                  <span
+                    className={cn(
+                      'mt-auto min-h-11 rounded-[10px] inline-flex items-center justify-center gap-1.5 text-sm font-semibold transition',
+                      recommended
+                        ? 'bg-primary-solid text-primary-foreground group-hover:brightness-110'
+                        : 'border border-border text-foreground group-hover:border-primary/40',
+                    )}
+                  >
+                    Voir la formule
+                    <ArrowRight className="w-4 h-4" aria-hidden />
+                  </span>
                 </button>
               );
             })}
           </div>
         </div>
+      ) : embedded && open && !loading ? (
+        <p className="mt-4 rounded-[18px] border-[1.5px] border-dashed border-border px-5 py-7 text-center text-sm text-muted">
+          Vos 3 formules s’afficheront ici après le calcul.
+        </p>
       ) : null}
         </div>
       )}
@@ -1568,16 +1655,39 @@ export default function EventPrepAiSimulator({
   );
 }
 
-/** Bloc numéroté du formulaire : guide la saisie étape par étape. */
+/** Bloc numéroté du formulaire : guide la saisie étape par étape. `flat` le pose dans la carte unique du studio. */
 function BudgetFormGroup({
   step,
   title,
+  flat = false,
+  done = false,
   children,
 }: {
   step: number;
   title: string;
+  flat?: boolean;
+  done?: boolean;
   children: React.ReactNode;
 }) {
+  if (flat) {
+    return (
+      <fieldset className="px-4 sm:px-6 py-5 space-y-3 min-w-0">
+        <legend className="sr-only">{title}</legend>
+        <p aria-hidden className="flex items-center gap-3">
+          <span
+            className={cn(
+              'w-7 h-7 rounded-full text-[13px] font-semibold inline-flex items-center justify-center shrink-0 transition-colors',
+              done ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted text-muted',
+            )}
+          >
+            {done ? <Check className="w-3.5 h-3.5" strokeWidth={3} /> : step}
+          </span>
+          <span className="font-display text-lg font-semibold text-foreground">{title}</span>
+        </p>
+        <div className="space-y-3 sm:pl-10">{children}</div>
+      </fieldset>
+    );
+  }
   return (
     <fieldset className="space-y-2.5 rounded-[var(--radius-card)] border border-border bg-surface p-3.5 sm:p-4 min-w-0">
       <legend className="sr-only">{title}</legend>
