@@ -71,7 +71,25 @@ async function issueAndSendOtp(params: {
     initialPassword: params.initialPassword,
   });
 
+  // Repli sur l'e-mail : on aligne la méthode enregistrée sur le canal réellement utilisé.
+  if (sentVia !== params.method) {
+    await prisma.user.update({
+      where: { id: params.userId },
+      data: { verificationMethod: sentVia },
+    });
+  }
+
   return sentVia;
+}
+
+function otpChannelLabel(method: VerificationMethod): string {
+  return method === 'WHATSAPP' ? 'WhatsApp' : method === 'SMS' ? 'SMS' : 'e-mail';
+}
+
+/** Phrase ajoutée au message quand le code n'a pas pu partir par le canal demandé. */
+function otpFallbackNotice(requested: VerificationMethod, sentVia: VerificationMethod): string {
+  if (requested === sentVia) return '';
+  return ` L'envoi par ${otpChannelLabel(requested)} a échoué : le code vous a été envoyé par e-mail à la place.`;
 }
 
 function publicUser(user: {
@@ -265,15 +283,18 @@ export async function register(req: Request, res: Response) {
     });
 
     const destination =
-      sentVia === 'WHATSAPP' && phoneFields.phone
+      (sentVia === 'WHATSAPP' || sentVia === 'SMS') && phoneFields.phone
         ? maskPhone(phoneFields.phone)
         : maskEmail(email);
 
     return res.status(201).json({
       message:
-        sentVia === 'WHATSAPP'
+        (sentVia === 'WHATSAPP'
           ? `Compte créé ! Un code OTP a été envoyé sur WhatsApp (${destination}). Saisissez-le pour activer votre compte.`
-          : `Compte créé ! Un code OTP a été envoyé par e-mail (${destination}). Saisissez-le pour activer votre compte.`,
+          : sentVia === 'SMS'
+            ? `Compte créé ! Un code OTP a été envoyé par SMS (${destination}). Saisissez-le pour activer votre compte.`
+            : `Compte créé ! Un code OTP a été envoyé par e-mail (${destination}). Saisissez-le pour activer votre compte.`)
+        + otpFallbackNotice(method, sentVia),
       requiresVerification: true,
       verificationMethod: sentVia,
       email: result.user.email,
@@ -418,7 +439,7 @@ export async function resendOtp(req: Request, res: Response) {
           ? `Un nouveau code OTP a été envoyé sur WhatsApp (${destination}).`
           : sentVia === 'SMS'
             ? `Un nouveau code OTP a été envoyé par SMS (${destination}).`
-            : `Un nouveau code OTP a été envoyé par e-mail (${destination}).`,
+            : `Un nouveau code OTP a été envoyé par e-mail (${destination}).${otpFallbackNotice(method, sentVia)}`,
       verificationMethod: sentVia,
     });
   } catch (error: any) {
@@ -712,6 +733,9 @@ export async function forgotPassword(req: Request, res: Response) {
 
     const resetLink = `${FRONTEND_URL}/reset-password?token=${resetToken}`;
 
+    // Passe à true quand le lien est parti par WhatsApp ou SMS ; sinon, repli sur l'e-mail.
+    let sentByPhone = false;
+
     if (resolvedMethod === 'WHATSAPP') {
       if (!user.phone) {
         return res.status(400).json({
@@ -720,7 +744,11 @@ export async function forgotPassword(req: Request, res: Response) {
       }
       const { sendRealWhatsApp } = await import('../services/notificationService');
       const whatsappBody = `Bonjour *${user.name || 'Utilisateur'}*,\n\nVous avez demandé la réinitialisation de votre mot de passe sur *EventMaster*.\n\nVeuillez cliquer sur le lien suivant pour définir un nouveau mot de passe (valable 1 heure) :\n👉 ${resetLink}\n\nSi vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer ce message.\n\nL'équipe EventMaster ✨`;
-      await sendRealWhatsApp(user.phone, whatsappBody);
+      const waResult = await sendRealWhatsApp(user.phone, whatsappBody);
+      sentByPhone = waResult.success;
+      if (!waResult.success) {
+        console.warn(`[forgotPassword] Échec de l'envoi WhatsApp, repli sur l'e-mail : ${waResult.error || 'erreur inconnue'}`);
+      }
     } else if (resolvedMethod === 'SMS') {
       if (!user.phone) {
         return res.status(400).json({
@@ -729,8 +757,14 @@ export async function forgotPassword(req: Request, res: Response) {
       }
       const { sendRealSms } = await import('../services/notificationService');
       const smsBody = `EventMaster : réinitialisation de votre mot de passe (valable 1h) : ${resetLink}`;
-      await sendRealSms(user.phone, smsBody);
-    } else {
+      const smsResult = await sendRealSms(user.phone, smsBody);
+      sentByPhone = smsResult.success;
+      if (!smsResult.success) {
+        console.warn(`[forgotPassword] Échec de l'envoi SMS (${smsResult.provider}), repli sur l'e-mail : ${smsResult.error || 'erreur inconnue'}`);
+      }
+    }
+
+    if (!sentByPhone) {
       const { sendRealEmail } = await import('../services/notificationService');
       const brand = getPlatformBrand();
       const { platformName } = getContactDestinations();
