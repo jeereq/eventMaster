@@ -100,6 +100,12 @@ import {
   toggleOfferingBlock,
 } from '../controllers/adminCatalogController';
 import {
+  listAdminReviews,
+  setAdminReviewVisibility,
+  listAdminDeposits,
+  retryAdminDeposit,
+} from '../controllers/adminMarketplaceModerationController';
+import {
   deleteAdminBeverageBrand,
   getAdminBeverageBrands,
   postAdminBeverageBrand,
@@ -210,6 +216,10 @@ router.get('/catalog/inquiries', requireAdminOrCommercialPerm('canManageCatalog'
 router.get('/catalog/bookings', requireAdminOrCommercialPerm('canManageCatalog'), listAdminBookings);
 router.get('/catalog/commissions', requireAdminOrCommercialPerm('canManageCatalog'), listAdminCommissions);
 router.patch('/catalog/bookings/:id/commission', requireAdminOrCommercialPerm('canManageCatalog'), settleMarketplaceCommission);
+router.get('/catalog/reviews', requireAdminOrCommercialPerm('canManageCatalog'), listAdminReviews);
+router.patch('/catalog/reviews/:id/visibility', requireAdminOrCommercialPerm('canManageCatalog'), setAdminReviewVisibility);
+router.get('/catalog/deposits', requireAdminOrCommercialPerm('canManageCatalog'), listAdminDeposits);
+router.post('/catalog/deposits/:id/retry', requireAdminOrCommercialPerm('canManageCatalog'), retryAdminDeposit);
 router.patch('/catalog/venues/:id/visibility', requireAdminOrCommercialPerm('canManageCatalog'), setVenueListingVisibility);
 router.patch('/catalog/offerings/:id/visibility', requireAdminOrCommercialPerm('canManageCatalog'), setServiceOfferingVisibility);
 router.patch('/catalog/venues/:id/unpublish', requireAdminOrCommercialPerm('canManageCatalog'), unpublishVenueListing);
