@@ -468,7 +468,7 @@ export default function SiteMobileBottomBar({
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-2 pt-1">
+                <div className="grid grid-cols-1 gap-2 pt-1">
                   <Button
                     href="/login"
                     size="sm"
@@ -498,7 +498,7 @@ export default function SiteMobileBottomBar({
               <span className="text-xs font-bold text-muted uppercase tracking-wider px-1">
                 Préférences
               </span>
-              <div className="grid grid-cols-2 gap-2 pt-1">
+              <div className="grid grid-cols-1 gap-2 pt-1">
                 <button
                   type="button"
                   onClick={toggleTheme}
