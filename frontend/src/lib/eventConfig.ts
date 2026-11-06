@@ -79,6 +79,7 @@ export type EventConfigSource = {
   tenantId?: string | null;
   donations?: import('@/lib/donationsAccess').EventDonationsConfig | null;
   collectionTerms?: import('@/lib/collectionTerms').CollectionTermsAcceptance | null;
+  payoutAccount?: { phone: string; holderName: string | null } | null;
 };
 
 export type EventConfigPayload = {
@@ -118,6 +119,9 @@ export type EventConfigPayload = {
   tablePlan?: unknown;
   donations?: import('@/lib/donationsAccess').EventDonationsConfig | null;
   acceptCollectionTerms?: boolean;
+  /** Numéro Mobile Money de reversement (obligatoire si billetterie payante ou dons). */
+  payoutPhone?: string | null;
+  payoutHolderName?: string | null;
 };
 
 export type NeighborSharingMode = 'full' | 'first_name' | 'hidden';

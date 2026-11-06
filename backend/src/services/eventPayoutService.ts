@@ -2,6 +2,7 @@ import { prisma } from '../db';
 import { loadPlatformSettings } from './platformSettingsService';
 import { auditReq } from './adminAuditService';
 import { computeEventPayoutAmounts } from './eventPayoutAmounts';
+import { extractEventPayoutAccount } from './eventPayoutAccount';
 
 export { computeEventPayoutAmounts };
 
@@ -46,6 +47,15 @@ export interface EventPayoutSummary {
 
   /** Net encore à reverser (net − déjà versé). */
   remainingFc: number;
+  /** Montant déjà versé (FlexPay + manuel). */
+  alreadySettledFc: number;
+  /** Versé en trop après annulation de paiements (déduit des prochains encaissements). */
+  overpaidFc: number;
+  /** Numéro Mobile Money de reversement renseigné par l'organisateur. */
+  payoutPhone: string | null;
+  payoutHolderName: string | null;
+  /** L'événement est passé (éligible au reversement automatique « après l'événement »). */
+  eventEnded: boolean;
   /** Versement FlexPay Pay Out en cours, s'il y en a un. */
   pendingTransfer: {
     id: string;
@@ -71,6 +81,12 @@ export interface AdminEventPayoutsReport {
     eventsPaidCount: number;
   };
   events: EventPayoutSummary[];
+}
+
+/** Un événement est terminé quand sa fin (ou, à défaut, son début) est passée. */
+export function isEventEnded(ev: { date: Date; endsAt?: Date | null }, now: Date): boolean {
+  const end = ev.endsAt && ev.endsAt.getTime() >= ev.date.getTime() ? ev.endsAt : ev.date;
+  return end.getTime() <= now.getTime();
 }
 
 export function eventPayoutRates() {
@@ -102,13 +118,26 @@ export async function buildAdminEventPayoutsReport(filters?: {
     ];
   }
 
-  // Chercher tous les événements ayant des commandes payées
+  // Événements ayant des commandes payées, ou déjà reversés (pour voir un trop-versé
+  // même si toutes les commandes ont été annulées depuis).
+  const settledEventIds = (
+    await prisma.eventPayoutTransfer.findMany({
+      where: { status: 'SUCCESS' },
+      select: { eventId: true },
+      distinct: ['eventId'],
+    })
+  ).map((t) => t.eventId);
   const events = await prisma.event.findMany({
     where: {
       ...whereEvent,
-      ticketOrders: {
-        some: { status: 'PAID' },
-      },
+      AND: [
+        {
+          OR: [
+            { ticketOrders: { some: { status: 'PAID' } } },
+            ...(settledEventIds.length ? [{ id: { in: settledEventIds } }] : []),
+          ],
+        },
+      ],
     },
     include: {
       tenant: {
@@ -164,16 +193,8 @@ export async function buildAdminEventPayoutsReport(filters?: {
     const evRetention = amounts.retention;
     const evNet = amounts.net;
 
-    let payoutStatus: EventPayoutSummary['payoutStatus'] = 'DUE';
-    if (evGross === 0) {
-      payoutStatus = 'NONE';
-    } else if (payoutMeta?.status === 'PAID') {
-      payoutStatus = 'PAID';
-    } else if (payoutMeta?.status === 'PARTIAL') {
-      payoutStatus = 'PARTIAL';
-    } else {
-      payoutStatus = 'DUE';
-    }
+    const payoutStatus: EventPayoutSummary['payoutStatus'] = amounts.payoutStatus;
+    const payoutAccount = extractEventPayoutAccount(ev.eventPrep);
 
     const pending = pendingTransfers.find((t) => t.eventId === ev.id && t.status === 'PENDING');
     const lastTransfer = pendingTransfers.find((t) => t.eventId === ev.id);
@@ -187,12 +208,12 @@ export async function buildAdminEventPayoutsReport(filters?: {
     totalGross += evGross;
     totalRetention += evRetention;
 
+    totalNetPaid += Math.min(amounts.alreadySettledFc, evNet);
+    totalNetDue += amounts.remainingFc;
     if (payoutStatus === 'PAID') {
       paidCount += 1;
-      totalNetPaid += evNet;
     } else {
       dueCount += 1;
-      totalNetDue += evNet;
     }
 
     summaries.push({
@@ -231,6 +252,11 @@ export async function buildAdminEventPayoutsReport(filters?: {
       paymentMethod: typeof payoutMeta?.paymentMethod === 'string' ? payoutMeta.paymentMethod : null,
 
       remainingFc: amounts.remainingFc,
+      alreadySettledFc: amounts.alreadySettledFc,
+      overpaidFc: amounts.overpaidFc,
+      payoutPhone: payoutAccount?.phone ?? null,
+      payoutHolderName: payoutAccount?.holderName ?? null,
+      eventEnded: isEventEnded(ev, new Date()),
       pendingTransfer: pending
         ? {
             id: pending.id,
@@ -291,6 +317,10 @@ export function buildEventPayoutsCsv(report: AdminEventPayoutsReport): string {
     'Total Brut Encaissé (FC)',
     'Total Retenue Plateforme (FC)',
     'Total Net à Reverser (FC)',
+    'Déjà Versé (FC)',
+    'Reste à Verser (FC)',
+    'Trop-versé (FC)',
+    'Numéro de Reversement',
     'Statut Reversement',
     'Date Versement',
     'Méthode',
@@ -315,6 +345,10 @@ export function buildEventPayoutsCsv(report: AdminEventPayoutsReport): string {
     e.totalGrossFc,
     e.totalRetentionFc,
     e.totalNetPayoutFc,
+    e.alreadySettledFc,
+    e.remainingFc,
+    e.overpaidFc,
+    csvEscape(e.payoutPhone || ''),
     csvEscape(e.payoutStatus),
     csvEscape(e.settledAt ? e.settledAt.slice(0, 10) : ''),
     csvEscape(e.paymentMethod || ''),
@@ -371,6 +405,8 @@ export async function settleEventPayoutRecord(params: {
   return {
     success: true,
     eventId: event.id,
+    eventTitle: event.title,
+    tenantId: event.tenantId,
     payout: nextPayout,
   };
 }

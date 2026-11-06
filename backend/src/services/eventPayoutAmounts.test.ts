@@ -72,3 +72,35 @@ describe('reversement FlexPay confirmé', () => {
     assert.match(String(second.notes), /O1[\s\S]*O2/);
   });
 });
+
+describe('trop-versé et statut déduit', () => {
+  it('signale un trop-versé quand des paiements sont annulés après reversement', () => {
+    const a = computeEventPayoutAmounts({
+      orders: [{ amountFc: 10000, pricingZoneId: null }],
+      eventPrep: { payout: { status: 'PAID', settledAmountFc: 23800 } },
+      ticketRate: 0.05,
+      donationRate: 0.04,
+    });
+    assert.equal(a.net, 9500);
+    assert.equal(a.remainingFc, 0);
+    assert.equal(a.overpaidFc, 14300);
+    assert.equal(a.payoutStatus, 'PAID');
+  });
+
+  it('de nouvelles ventes après un reversement complet repassent en partiel', () => {
+    const a = computeEventPayoutAmounts({
+      orders,
+      eventPrep: { payout: { status: 'PAID', settledAmountFc: 10000 } },
+      ticketRate: 0.05,
+      donationRate: 0.04,
+    });
+    assert.equal(a.remainingFc, 13800);
+    assert.equal(a.overpaidFc, 0);
+    assert.equal(a.payoutStatus, 'PARTIAL');
+  });
+
+  it('rien de versé : dû', () => {
+    const a = computeEventPayoutAmounts({ orders, eventPrep: {}, ticketRate: 0.05, donationRate: 0.04 });
+    assert.equal(a.payoutStatus, 'DUE');
+  });
+});

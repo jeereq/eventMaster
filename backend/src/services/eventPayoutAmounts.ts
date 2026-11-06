@@ -40,6 +40,13 @@ export function computeEventPayoutAmounts(params: {
   const alreadySettledFc =
     recordedSettled ?? (payoutMeta?.status === 'PAID' ? net : 0);
   const remainingFc = Math.max(0, Math.round(net - alreadySettledFc));
+  /**
+   * Trop-versé : des paiements ont été annulés après un reversement, le net est passé sous
+   * ce qui a déjà été versé. Rien n'est versé tant que les nouveaux encaissements n'ont pas
+   * comblé cet écart (le reste à verser vaut 0).
+   */
+  const overpaidFc = Math.max(0, Math.round(alreadySettledFc - net));
+  const payoutStatus = derivePayoutStatus({ gross, alreadySettledFc, remainingFc });
 
   return {
     tGross,
@@ -56,7 +63,23 @@ export function computeEventPayoutAmounts(params: {
     payoutMeta,
     alreadySettledFc,
     remainingFc,
+    overpaidFc,
+    payoutStatus,
   };
+}
+
+/**
+ * Statut affiché d'un événement, déduit des montants (et non du dernier statut enregistré) :
+ * de nouvelles ventes après un reversement complet repassent l'événement en « Partiel ».
+ */
+export function derivePayoutStatus(params: {
+  gross: number;
+  alreadySettledFc: number;
+  remainingFc: number;
+}): 'NONE' | 'DUE' | 'PARTIAL' | 'PAID' {
+  if (params.gross <= 0 && params.alreadySettledFc <= 0) return 'NONE';
+  if (params.remainingFc <= 0) return params.alreadySettledFc > 0 || params.gross > 0 ? 'PAID' : 'NONE';
+  return params.alreadySettledFc > 0 ? 'PARTIAL' : 'DUE';
 }
 
 /**

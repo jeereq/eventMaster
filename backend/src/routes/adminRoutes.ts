@@ -66,6 +66,7 @@ import {
   verifyAdminEventFlexPayPayout,
   abandonAdminEventFlexPayPayout,
   getAdminFlexPayPayoutBalance,
+  runAdminEventAutoPayouts,
 } from '../controllers/eventPayoutController';
 import { getRevenueReport, exportRevenueReport, notifyRevenuePayouts, markRevenuePayoutPaid } from '../controllers/revenueReportController';
 import {
@@ -167,6 +168,7 @@ router.get('/reports/subscriptions/export', requireRole(['SUPER_ADMIN', 'COMMERC
 router.post('/subscriptions/manage', requireRole(['SUPER_ADMIN']), manageAdminSubscription);
 router.get('/reports/event-payouts', requireRole(['SUPER_ADMIN']), getAdminEventPayoutsReport);
 router.get('/reports/event-payouts/export', requireRole(['SUPER_ADMIN']), exportAdminEventPayoutsReport);
+router.post('/reports/event-payouts/auto-run', requireRole(['SUPER_ADMIN']), runAdminEventAutoPayouts);
 router.post('/reports/event-payouts/:eventId/settle', requireRole(['SUPER_ADMIN']), settleAdminEventPayout);
 router.post('/reports/event-payouts/:eventId/flexpay', requireRole(['SUPER_ADMIN']), initiateAdminEventFlexPayPayout);
 router.get(

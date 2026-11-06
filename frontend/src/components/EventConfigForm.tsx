@@ -33,6 +33,7 @@ import {
   Sliders,
   X,
   Heart,
+  Wallet,
   Briefcase,
   Users,
   AlertTriangle,
@@ -234,6 +235,9 @@ export default function EventConfigForm({
   const [contactName, setContactName] = useState('');
   const [contactCc, setContactCc] = useState(DEFAULT_PHONE_COUNTRY_CODE);
   const [contactNational, setContactNational] = useState('');
+  const [payoutCc, setPayoutCc] = useState(DEFAULT_PHONE_COUNTRY_CODE);
+  const [payoutNational, setPayoutNational] = useState('');
+  const [payoutHolderName, setPayoutHolderName] = useState('');
   const [searchingLocation, setSearchingLocation] = useState(false);
   const [searchError, setSearchError] = useState('');
   const [formError, setFormError] = useState('');
@@ -342,6 +346,9 @@ export default function EventConfigForm({
       setContactName('');
       setContactCc(DEFAULT_PHONE_COUNTRY_CODE);
       setContactNational('');
+      setPayoutCc(DEFAULT_PHONE_COUNTRY_CODE);
+      setPayoutNational('');
+      setPayoutHolderName('');
       setDonationsEnabled(false);
       setDonationTargetFc('');
       setDonationMinAmountFc('1000');
@@ -421,6 +428,12 @@ export default function EventConfigForm({
     const phone = parseStoredPhone(initialEvent.dayOfContactPhone);
     setContactCc(phone.countryCode);
     setContactNational(phone.national);
+    const payoutPhone = parseStoredPhone(
+      initialEvent.payoutAccount?.phone ? `+${initialEvent.payoutAccount.phone.replace(/^\+/, '')}` : null,
+    );
+    setPayoutCc(payoutPhone.countryCode);
+    setPayoutNational(payoutPhone.national);
+    setPayoutHolderName(initialEvent.payoutAccount?.holderName || '');
 
     const dConfig = initialEvent.donations;
     setDonationsEnabled(Boolean(dConfig?.enabled));
@@ -869,8 +882,14 @@ export default function EventConfigForm({
             donorAttendancePass: true,
           },
       acceptCollectionTerms: collectionTermsAccepted,
+      payoutPhone: composeE164(payoutCc, payoutNational) || null,
+      payoutHolderName: payoutHolderName.trim() || null,
     };
   };
+
+  /** Billetterie payante ou dons actifs : un numéro de reversement est obligatoire. */
+  const collectsMoney =
+    (complete ? isPublic && ticketing : Boolean(initialEvent?.ticketingEnabled)) || donationsEnabled;
 
   const missingTab = firstInvalidEventConfigTab({ title, date, location, commune, neighborhood });
 
@@ -1014,8 +1033,14 @@ export default function EventConfigForm({
       }
     }
 
-    const willCollect =
-      (complete ? isPublic && ticketing : Boolean(initialEvent?.ticketingEnabled)) || donationsEnabled;
+    const willCollect = collectsMoney;
+    if (willCollect && !composeE164(payoutCc, payoutNational)) {
+      setTab('access');
+      setFormError(
+        'Indiquez le numéro Mobile Money sur lequel EventMaster vous reversera l’argent collecté (billetterie ou dons).',
+      );
+      return;
+    }
     if (willCollect && !collectionTermsAccepted) {
       setTab('access');
       setPendingCollectionEnable('save');
@@ -1173,6 +1198,7 @@ export default function EventConfigForm({
     title, partnerFirst, partnerSecond, description, date, endsAt, location, city, commune, neighborhood,
     eventKind, clientName, estimatedGuests, isPublic, ticketing, ticketPrice, ticketsTotal, photos,
     roomId, contactName, contactNational, donationsEnabled, donationCause, donationTargetFc,
+    payoutNational, payoutHolderName,
   ]);
 
   // Relevé au rendu qui suit la réinitialisation, une fois les valeurs chargées.
@@ -2137,6 +2163,35 @@ export default function EventConfigForm({
                   <span>Ambiance &amp; réponses</span>
                   {formTemplateId && <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
                 </button>
+              </div>
+            )}
+
+            {collectsMoney && (
+              <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-3.5 sm:p-4 space-y-3">
+                <div className="flex items-start gap-2.5">
+                  <Wallet className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Numéro de reversement (obligatoire)</p>
+                    <p className="text-[11px] text-muted leading-relaxed">
+                      EventMaster vous reverse sur ce numéro Mobile Money le montant net collecté (billets et dons,
+                      après commission), automatiquement à minuit (heure de Kinshasa) dès que le montant peut être reversé.
+                      Les responsables de l’organisation sont prévenus à chaque reversement et à chaque changement de numéro.
+                    </p>
+                  </div>
+                </div>
+                <PhoneInput
+                  label="Numéro Mobile Money"
+                  countryCode={payoutCc}
+                  national={payoutNational}
+                  onCountryCodeChange={setPayoutCc}
+                  onNationalChange={setPayoutNational}
+                />
+                <Input
+                  label="Titulaire du compte (facultatif)"
+                  value={payoutHolderName}
+                  onChange={(e) => setPayoutHolderName(e.target.value)}
+                  placeholder="ex. Association Les Amis"
+                />
               </div>
             )}
 

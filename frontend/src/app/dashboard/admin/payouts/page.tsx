@@ -57,6 +57,11 @@ interface EventPayoutRow {
   paymentMethod: string | null;
 
   remainingFc: number;
+  alreadySettledFc?: number;
+  overpaidFc?: number;
+  payoutPhone?: string | null;
+  payoutHolderName?: string | null;
+  eventEnded?: boolean;
   pendingTransfer: {
     id: string;
     amountFc: number;
@@ -86,6 +91,26 @@ interface EventPayoutsResponse {
     eventsPaidCount: number;
   };
   events: EventPayoutRow[];
+  autoPayout?: AutoPayoutStatus;
+}
+
+interface AutoPayoutStatus {
+  enabled: boolean;
+  timing: 'after_event' | 'daily';
+  minFc: number;
+  flexPayConfigured: boolean;
+  nextRunAt: string | null;
+  lastRun: {
+    runDate: string;
+    finishedAt: string;
+    skipped?: string;
+    sentCount: number;
+    sentAmountFc: number;
+    failedCount: number;
+    uncertainCount: number;
+    missingPhoneCount: number;
+    overpaidCount: number;
+  } | null;
 }
 
 interface PayoutRow {
@@ -210,9 +235,49 @@ export default function AdminSaasPayoutsPage() {
     if (payoutTab === 'events') void loadFlexBalance();
   }, [payoutTab, loadFlexBalance]);
 
+  const [autoPayoutBusy, setAutoPayoutBusy] = useState<string | null>(null);
+  const [autoPayoutMessage, setAutoPayoutMessage] = useState<string | null>(null);
+
+  const saveAutoPayoutSettings = async (patch: {
+    eventAutoPayoutEnabled?: boolean;
+    eventAutoPayoutTiming?: 'after_event' | 'daily';
+    eventAutoPayoutMinFc?: number;
+  }) => {
+    setAutoPayoutBusy('settings');
+    setAutoPayoutMessage(null);
+    try {
+      await api.put('/admin/settings', patch);
+      await loadEventPayouts();
+    } catch (err: unknown) {
+      setAutoPayoutMessage(err instanceof Error ? err.message : 'Enregistrement impossible.');
+    } finally {
+      setAutoPayoutBusy(null);
+    }
+  };
+
+  const runAutoPayoutNow = async () => {
+    if (!window.confirm('Lancer maintenant le reversement automatique de tous les événements éligibles ?')) return;
+    setAutoPayoutBusy('run');
+    setAutoPayoutMessage(null);
+    try {
+      const res = await api.post('/admin/reports/event-payouts/auto-run', {});
+      const r = res?.result;
+      setAutoPayoutMessage(
+        r
+          ? `${r.sentCount} reversement(s) envoyé(s) pour ${formatFc(r.sentAmountFc)} · ${r.failedCount} refusé(s) · ${r.missingPhoneCount} sans numéro.`
+          : 'Passage terminé.',
+      );
+      await loadEventPayouts();
+    } catch (err: unknown) {
+      setAutoPayoutMessage(err instanceof Error ? err.message : 'Passage automatique impossible.');
+    } finally {
+      setAutoPayoutBusy(null);
+    }
+  };
+
   const openFlexEvent = (ev: EventPayoutRow) => {
     setFlexEventModal(ev);
-    setFlexEventPhone(ev.managerPhone || '');
+    setFlexEventPhone(ev.payoutPhone || ev.managerPhone || '');
     setFlexEventAmount(String(ev.remainingFc));
     setFlexEventError(null);
   };
@@ -972,6 +1037,68 @@ export default function AdminSaasPayoutsPage() {
             )}
           </div>
 
+          {eventPayoutsData?.autoPayout && (() => {
+            const ap = eventPayoutsData.autoPayout;
+            return (
+              <div className="bg-surface p-3.5 sm:p-4 rounded-xl border border-border space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Reversement automatique à 0h00 (Kinshasa)</p>
+                    <p className="text-xs text-muted">
+                      {!ap.flexPayConfigured
+                        ? 'FlexPay Payout n’est pas configuré : aucun reversement automatique ne peut partir.'
+                        : ap.enabled
+                          ? `Actif · prochain passage ${ap.nextRunAt ? new Date(ap.nextRunAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}`
+                          : 'Désactivé : les reversements se font uniquement à la main.'}
+                      {ap.lastRun && !ap.lastRun.skipped
+                        ? ` · dernier passage ${ap.lastRun.runDate} : ${ap.lastRun.sentCount} envoyé(s), ${formatFc(ap.lastRun.sentAmountFc)}, ${ap.lastRun.failedCount} refusé(s), ${ap.lastRun.missingPhoneCount} sans numéro`
+                        : ''}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className="flex items-center gap-2 text-xs font-semibold">
+                      <input
+                        type="checkbox"
+                        checked={ap.enabled}
+                        disabled={autoPayoutBusy !== null}
+                        onChange={(e) => void saveAutoPayoutSettings({ eventAutoPayoutEnabled: e.target.checked })}
+                      />
+                      Activé
+                    </label>
+                    <select
+                      value={ap.timing}
+                      disabled={autoPayoutBusy !== null}
+                      onChange={(e) =>
+                        void saveAutoPayoutSettings({ eventAutoPayoutTiming: e.target.value as 'after_event' | 'daily' })
+                      }
+                      className="text-xs rounded-lg border border-border bg-surface px-2 py-1.5"
+                      aria-label="Quand reverser"
+                    >
+                      <option value="after_event">Après la fin de l’événement</option>
+                      <option value="daily">Chaque nuit, dès qu’un montant est dû</option>
+                    </select>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={autoPayoutBusy !== null || !ap.flexPayConfigured}
+                      onClick={() => void runAutoPayoutNow()}
+                    >
+                      {autoPayoutBusy === 'run' ? 'Passage en cours…' : 'Lancer maintenant'}
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted">
+                  Minimum {formatFc(ap.minFc)} par reversement. Seul le numéro de reversement saisi par l’organisateur est
+                  utilisé ; un événement bloqué, sans numéro ou dont le dernier versement a été refusé sur le même numéro
+                  attend une action manuelle. En cas d’annulation de paiements après un reversement, le trop-versé est
+                  affiché ici et déduit des encaissements suivants de l’événement.
+                </p>
+                {autoPayoutMessage && <p className="text-xs text-foreground">{autoPayoutMessage}</p>}
+              </div>
+            );
+          })()}
+
           {/* Barre de filtres */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-surface p-3 rounded-xl border border-border">
             <input
@@ -1072,6 +1199,11 @@ export default function AdminSaasPayoutsPage() {
                           {ev.managerEmail && (
                             <span>Contact : {ev.managerEmail} {ev.managerPhone ? `(${ev.managerPhone})` : ''}</span>
                           )}
+                          <span className={ev.payoutPhone ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-600'}>
+                            {ev.payoutPhone
+                              ? `Reversement : ${ev.payoutPhone}${ev.payoutHolderName ? ` (${ev.payoutHolderName})` : ''}`
+                              : 'Aucun numéro de reversement'}
+                          </span>
                         </div>
                       </div>
 
@@ -1083,6 +1215,14 @@ export default function AdminSaasPayoutsPage() {
                         {ev.remainingFc > 0 && ev.remainingFc < ev.totalNetPayoutFc && (
                           <span className="text-xs text-amber-700 dark:text-amber-300 block">
                             Reste {formatFc(ev.remainingFc)}
+                          </span>
+                        )}
+                        {(ev.overpaidFc ?? 0) > 0 && (
+                          <span
+                            className="text-xs font-semibold text-rose-600 block"
+                            title="Des paiements ont été annulés après le reversement : ce montant sera déduit des prochains encaissements de l’événement."
+                          >
+                            Trop-versé {formatFc(ev.overpaidFc ?? 0)}
                           </span>
                         )}
                       </div>
