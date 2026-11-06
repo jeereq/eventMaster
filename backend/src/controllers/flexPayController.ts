@@ -31,6 +31,7 @@ import { notifyAiTokenPayment, notifyTicketPaymentFailed } from '../services/pay
 import { creditPaidAiTokenOrder } from '../services/aiSimulationWalletService';
 import type { AuthenticatedRequest } from '../middleware/auth';
 import { findDepositPaymentForFlexPay, verifyDepositPayment } from '../services/marketplaceDepositService';
+import { findCommissionPaymentForFlexPay, verifyCommissionPayment } from '../services/marketplaceCommissionPaymentService';
 
 function frontendBaseUrl(): string {
   return (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/$/, '');
@@ -256,7 +257,19 @@ export async function flexPayCardCallback(req: Request, res: Response) {
       return res.json({ ok: true, paid: result.status === 'PAID', kind, paymentId: deposit.id });
     }
 
-    // 5) Pay Out (versements envoyés avant la route de callback dédiée)
+    // 5) Commission marketplace réglée en ligne par le prestataire
+    const commission = await findCommissionPaymentForFlexPay({
+      reference: parsed.reference || null,
+      orderNumber: parsed.orderNumber || null,
+    });
+    if (commission) {
+      const result = await verifyCommissionPayment(commission.id);
+      const kind = 'marketplace_commission';
+      if (result.status === 'PENDING') return res.status(202).json({ ok: true, pending: true, kind, paymentId: commission.id });
+      return res.json({ ok: true, paid: result.status === 'PAID', kind, paymentId: commission.id });
+    }
+
+    // 6) Pay Out (versements envoyés avant la route de callback dédiée)
     const payout = await processFlexPayPayoutNotification({
       reference: parsed.reference || null,
       orderNumber: parsed.orderNumber || null,
@@ -341,6 +354,17 @@ export async function flexPayCardReturn(req: Request, res: Response) {
 
       return res.redirect(
         `${FRONTEND_URL}/dashboard/billing?flexpay=return&requestId=${encodeURIComponent(requestId)}`,
+      );
+    }
+
+    if (kind === 'marketplace_commission') {
+      const paymentId = String(req.query.paymentId || '');
+      if (result === 'approve' && paymentId) {
+        await verifyCommissionPayment(paymentId).catch((err) => console.warn('[FlexPay] verify commission on return:', err));
+      }
+      const state = result === 'approve' ? 'return' : 'canceled';
+      return res.redirect(
+        `${FRONTEND_URL}/dashboard/bookings?tab=bookings&role=vendor&commission=${state}&paymentId=${encodeURIComponent(paymentId)}`,
       );
     }
 

@@ -85,6 +85,7 @@ function OrganizerDemandesPage() {
   );
   const [bookings, setBookings] = useState<MarketplaceBookingItem[]>([]);
   const [commissionDueFc, setCommissionDueFc] = useState(0);
+  const [onlinePaymentAvailable, setOnlinePaymentAvailable] = useState(false);
   const [vendorBlockedDates, setVendorBlockedDates] = useState<string[]>([]);
   const [inquiries, setInquiries] = useState<MarketplaceInquiryItem[]>([]);
   const [packs, setPacks] = useState<SavedEventPack[]>([]);
@@ -113,6 +114,7 @@ function OrganizerDemandesPage() {
       ]);
       setBookings(bookingData.bookings || []);
       setCommissionDueFc(bookingData.commissionDueFc || 0);
+      setOnlinePaymentAvailable(Boolean(bookingData.onlinePaymentAvailable));
       setVendorBlockedDates(Array.isArray(bookingData.blockedDates) ? bookingData.blockedDates : []);
       setInquiries(inquiryData.inquiries || []);
       setPacks(Array.isArray(packData.packs) ? packData.packs : []);
@@ -402,6 +404,7 @@ function OrganizerDemandesPage() {
         <MarketplaceBookingsPanel
           bookings={visibleBookings}
           commissionDueFc={role === 'vendor' ? commissionDueFc : 0}
+          onlinePaymentAvailable={role === 'vendor' && onlinePaymentAvailable}
           onChanged={load}
           organizerView={role === 'organizer'}
           highlightBookingId={highlightBookingId}

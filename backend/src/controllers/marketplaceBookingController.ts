@@ -499,6 +499,7 @@ export async function listBookings(req: AuthenticatedRequest, res: Response) {
       blockedDates: vendorBlockedDates,
       /** Commission encore à régler (hors commissions déjà marquées payées). */
       commissionDueFc: dueAgg?._sum.commissionFc ?? 0,
+      onlinePaymentAvailable: isOnlineDepositAvailable(),
       commissionPaidFc: paidAgg?._sum.commissionFc ?? 0,
       confirmedRevenueFc: revenueAgg?._sum.amountFc ?? 0,
       confirmedCount: revenueAgg?._count._all ?? 0,

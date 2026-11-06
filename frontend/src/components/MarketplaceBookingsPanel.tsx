@@ -55,6 +55,7 @@ import { useAuth } from '@/context/AuthContext';
 import { ReviewStars, ReviewStarsInput } from '@/components/marketplace/ReviewStars';
 import { commissionPercent, depositPercent } from '@/lib/platformRates';
 import OnlineDepositSettings from '@/components/marketplace/OnlineDepositSettings';
+import CommissionPayButton from '@/components/marketplace/CommissionPayButton';
 import { segmentedItem, SEGMENTED_TRACK } from '@/components/ui/segmented';
 import type { MarketplaceDepositPayment } from '@/lib/marketplace';
 
@@ -211,6 +212,7 @@ function BookingStepper({ item }: { item: MarketplaceBookingItem }) {
 export default function MarketplaceBookingsPanel({
   bookings,
   commissionDueFc,
+  onlinePaymentAvailable = false,
   onChanged,
   organizerView = false,
   highlightBookingId,
@@ -218,6 +220,8 @@ export default function MarketplaceBookingsPanel({
 }: {
   bookings: MarketplaceBookingItem[];
   commissionDueFc: number;
+  /** Le paiement en ligne est ouvert (commission réglable par FlexPay). */
+  onlinePaymentAvailable?: boolean;
   onChanged: () => Promise<void> | void;
   organizerView?: boolean;
   highlightBookingId?: string | null;
@@ -509,7 +513,12 @@ export default function MarketplaceBookingsPanel({
               {commissionPct} % des réservations confirmées, hors commissions déjà payées ou retenues sur un acompte en ligne
             </p>
           </div>
-          <p className="text-lg font-semibold tabular-nums">{formatFc(commissionDueFc)}</p>
+          <div className="flex items-center gap-3">
+            <p className="text-lg font-semibold tabular-nums">{formatFc(commissionDueFc)}</p>
+            {canHandleAsVendor && onlinePaymentAvailable ? (
+              <CommissionPayButton commissionDueFc={commissionDueFc} onPaid={onChanged} />
+            ) : null}
+          </div>
         </div>
       )}
       {!organizerView && canHandleAsVendor ? (
