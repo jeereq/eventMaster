@@ -4,6 +4,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { resolveOrgAccess } from '../services/permissionsService';
 import { getMarketplaceBillingRates } from '../config/marketplaceBilling';
 import { completePastMarketplaceBookings } from '../services/marketplaceBookingCompletion';
+import { ratingSummary } from './marketplaceReviewController';
 
 const MONTHS = 12;
 
@@ -31,7 +32,7 @@ export async function getVendorStats(req: AuthenticatedRequest, res: Response) {
     const now = new Date();
     const since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - (MONTHS - 1), 1));
 
-    const [inquiries, bookings, listings, offerings] = await Promise.all([
+    const [inquiries, bookings, listings, offerings, viewDays, rating] = await Promise.all([
       prisma.marketplaceInquiry.findMany({
         where: {
           createdAt: { gte: since },
@@ -65,7 +66,13 @@ export async function getVendorStats(req: AuthenticatedRequest, res: Response) {
         where: { tenantId },
         select: { id: true, title: true, isPublic: true, isBlockedByAdmin: true },
       }),
+      prisma.listingViewDay.findMany({
+        where: { tenantId, day: { gte: since } },
+        select: { listingId: true, offeringId: true, day: true, views: true },
+      }),
+      ratingSummary({ vendorTenantId: tenantId }),
     ]);
+    const vendorProfile = await prisma.vendorProfile.findUnique({ where: { tenantId }, select: { slug: true, isBlockedByAdmin: true } });
 
     const billable = (status: string) => status === 'CONFIRMED' || status === 'COMPLETED';
 
@@ -102,13 +109,17 @@ export async function getVendorStats(req: AuthenticatedRequest, res: Response) {
     }
 
     // ── Évolution sur 12 mois ────────────────────────────────────────────
-    const months: Array<{ month: string; inquiries: number; confirmedBookings: number; revenueFc: number }> = [];
+    const months: Array<{ month: string; views: number; inquiries: number; confirmedBookings: number; revenueFc: number }> = [];
     const byMonth = new Map<string, (typeof months)[number]>();
     for (let i = 0; i < MONTHS; i += 1) {
       const d = new Date(Date.UTC(since.getUTCFullYear(), since.getUTCMonth() + i, 1));
-      const row = { month: monthKey(d), inquiries: 0, confirmedBookings: 0, revenueFc: 0 };
+      const row = { month: monthKey(d), views: 0, inquiries: 0, confirmedBookings: 0, revenueFc: 0 };
       months.push(row);
       byMonth.set(row.month, row);
+    }
+    for (const v of viewDays) {
+      const row = byMonth.get(monthKey(v.day));
+      if (row) row.views += v.views;
     }
     for (const i of inquiries) {
       const row = byMonth.get(monthKey(i.createdAt));
@@ -123,16 +134,21 @@ export async function getVendorStats(req: AuthenticatedRequest, res: Response) {
     }
 
     // ── Fiches les plus demandées ────────────────────────────────────────
-    type OfferRow = { id: string; kind: 'venue' | 'service'; title: string; isPublic: boolean; inquiries: number; confirmedBookings: number; revenueFc: number };
+    type OfferRow = { id: string; kind: 'venue' | 'service'; title: string; isPublic: boolean; views: number; inquiries: number; confirmedBookings: number; revenueFc: number };
     const offers = new Map<string, OfferRow>();
     for (const l of listings) {
-      offers.set(`l:${l.id}`, { id: l.id, kind: 'venue', title: l.headline || l.room.name, isPublic: l.isPublic, inquiries: 0, confirmedBookings: 0, revenueFc: 0 });
+      offers.set(`l:${l.id}`, { id: l.id, kind: 'venue', title: l.headline || l.room.name, isPublic: l.isPublic, views: 0, inquiries: 0, confirmedBookings: 0, revenueFc: 0 });
     }
     for (const o of offerings) {
-      offers.set(`o:${o.id}`, { id: o.id, kind: 'service', title: o.title, isPublic: o.isPublic && !o.isBlockedByAdmin, inquiries: 0, confirmedBookings: 0, revenueFc: 0 });
+      offers.set(`o:${o.id}`, { id: o.id, kind: 'service', title: o.title, isPublic: o.isPublic && !o.isBlockedByAdmin, views: 0, inquiries: 0, confirmedBookings: 0, revenueFc: 0 });
     }
     const offerKey = (row: { listingId: string | null; offeringId: string | null }) =>
       row.listingId ? `l:${row.listingId}` : row.offeringId ? `o:${row.offeringId}` : null;
+    for (const v of viewDays) {
+      const key = offerKey(v);
+      const row = key ? offers.get(key) : null;
+      if (row) row.views += v.views;
+    }
     for (const i of inquiries) {
       const key = offerKey(i);
       const row = key ? offers.get(key) : null;
@@ -147,11 +163,14 @@ export async function getVendorStats(req: AuthenticatedRequest, res: Response) {
       row.revenueFc += b.amountFc;
     }
     const topOffers = [...offers.values()]
-      .sort((a, b) => b.revenueFc - a.revenueFc || b.inquiries - a.inquiries)
+      .sort((a, b) => b.revenueFc - a.revenueFc || b.inquiries - a.inquiries || b.views - a.views)
       .slice(0, 8);
 
     return res.json({
       periodStart: since,
+      vendorSlug: vendorProfile && !vendorProfile.isBlockedByAdmin ? vendorProfile.slug : null,
+      views: { total: viewDays.reduce((sum, v) => sum + v.views, 0) },
+      rating,
       inquiries: {
         total: inquiries.length,
         answered: answered.length,

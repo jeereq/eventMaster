@@ -305,3 +305,35 @@ export async function beverageVendorMetadata(slug: string): Promise<Metadata> {
     image: shareImageUrl(firstPhoto, null),
   });
 }
+
+/* ------------------------------------------------------------------ */
+/* Vitrine d'un prestataire                                            */
+/* ------------------------------------------------------------------ */
+
+type VendorShare = {
+  displayName: string;
+  city?: string | null;
+  bio?: string | null;
+  services?: Array<{ coverUrl?: string | null; photos?: string[]; categoryLabel?: string | null }>;
+  venues?: Array<{ coverUrl?: string | null; photos?: string[] }>;
+};
+
+/** Aperçu de partage de la vitrine : nom, ville, métiers et première photo. */
+export async function vendorMetadata(slug: string): Promise<Metadata> {
+  const path = `/marketplace/vitrine/${slug}`;
+  const vendor = await fetchPublicJson<VendorShare>(`/public/vendors/${encodeURIComponent(slug)}`);
+  if (!vendor?.displayName) return notFoundMetadata('Prestataire', path);
+  const trades = Array.from(new Set((vendor.services || []).map((s) => s.categoryLabel).filter(Boolean))).slice(0, 3);
+  const facts = locationLine([
+    trades.length ? trades.join(', ') : null,
+    (vendor.venues || []).length ? `${vendor.venues!.length} salle${vendor.venues!.length > 1 ? 's' : ''}` : null,
+    vendor.city,
+  ]);
+  const first = vendor.venues?.[0] || vendor.services?.[0];
+  return buildListingMetadata({
+    title: vendor.displayName,
+    description: [facts, clip(vendor.bio, 110)].filter(Boolean).join('. '),
+    path,
+    image: shareImageUrl(first?.coverUrl, first?.photos),
+  });
+}

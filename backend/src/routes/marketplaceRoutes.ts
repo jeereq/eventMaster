@@ -50,6 +50,7 @@ import {
   listMyFeedPosts,
 } from '../controllers/marketplaceFeedController';
 import { getVendorStats } from '../controllers/marketplaceVendorStatsController';
+import { createBookingReview, listReceivedReviews, replyToReview } from '../controllers/marketplaceReviewController';
 import {
   getMyBeverageCatalog,
   putMyBeveragePrices,
@@ -76,6 +77,9 @@ router.post('/inquiries/:id/book', convertInquiryToBooking);
 router.post('/inquiries/:id/accept', acceptInquiryQuote);
 router.get('/bookings', listBookings);
 router.get('/vendor-stats', getVendorStats);
+router.post('/bookings/:id/review', createBookingReview);
+router.get('/reviews/received', listReceivedReviews);
+router.post('/reviews/:id/reply', replyToReview);
 router.post('/bookings', createBooking);
 router.patch('/bookings/:id', updateBooking);
 router.get('/listing-relation', getListingRelation);

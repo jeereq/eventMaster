@@ -610,6 +610,8 @@ export interface MarketplaceBookingItem {
   commissionFc: number;
   /** Date à laquelle EventMaster a marqué la commission comme payée. */
   commissionSettledAt?: string | null;
+  /** Avis laissé par le client après la date (réservation terminée). */
+  review?: import('./marketplaceReviews').BookingReviewSnippet | null;
   status: MarketplaceBookingStatus;
   depositMarkedAt: string | null;
   declineReason?: string | null;

@@ -2,13 +2,17 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Briefcase, Building2, CalendarCheck, Clock, Inbox, RefreshCw, Wallet } from 'lucide-react';
+import { Briefcase, Building2, CalendarCheck, Clock, Eye, Inbox, RefreshCw, Star, Store, Wallet } from 'lucide-react';
+import { ratingLabel } from '@/lib/marketplaceReviews';
 import { api } from '@/lib/api';
 import { formatFc } from '@/config/landingPricing';
 import { Alert, Button, EmptyState, SkeletonStatsRow } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
 type VendorStats = {
+  vendorSlug?: string | null;
+  views?: { total: number };
+  rating?: { count: number; average: number | null };
   inquiries: {
     total: number;
     answered: number;
@@ -28,12 +32,13 @@ type VendorStats = {
     commissionPaidFc: number;
     commissionRate: number;
   };
-  months: Array<{ month: string; inquiries: number; confirmedBookings: number; revenueFc: number }>;
+  months: Array<{ month: string; views?: number; inquiries: number; confirmedBookings: number; revenueFc: number }>;
   topOffers: Array<{
     id: string;
     kind: 'venue' | 'service';
     title: string;
     isPublic: boolean;
+    views?: number;
     inquiries: number;
     confirmedBookings: number;
     revenueFc: number;
@@ -188,12 +193,18 @@ export default function VendorStatsView({ isVenue }: { isVenue: boolean }) {
 
   const { inquiries, bookings, months, topOffers } = stats;
   const commissionPct = Math.round(bookings.commissionRate * 100);
-  const nothingYet = inquiries.total === 0 && bookings.total === 0;
+  const nothingYet = inquiries.total === 0 && bookings.total === 0 && !(stats.views?.total);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-muted">Demandes des 12 derniers mois · chiffre et commission depuis le début.</p>
+        <p className="text-xs text-muted">Vues et demandes des 12 derniers mois · chiffre, commission et avis depuis le début.</p>
+        <div className="flex flex-wrap items-center gap-2">
+        {stats.vendorSlug ? (
+          <Button variant="ghost" size="sm" href={`/marketplace/vitrine/${encodeURIComponent(stats.vendorSlug)}`} leftIcon={<Store className="h-4 w-4" />}>
+            Ma vitrine publique
+          </Button>
+        ) : null}
         <Button
           variant="secondary"
           size="sm"
@@ -203,9 +214,18 @@ export default function VendorStatsView({ isVenue }: { isVenue: boolean }) {
         >
           Rafraîchir
         </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <Tile
+          icon={Eye}
+          label="Vues des fiches"
+          value={String(stats.views?.total ?? 0)}
+          hint={inquiries.total > 0 && (stats.views?.total ?? 0) > 0
+            ? `${Math.round((inquiries.total / (stats.views?.total || 1)) * 100)} % des visites demandent un devis`
+            : '12 derniers mois'}
+        />
         <Tile
           icon={Inbox}
           label="Demandes de devis"
@@ -231,6 +251,12 @@ export default function VendorStatsView({ isVenue }: { isVenue: boolean }) {
           label="Chiffre confirmé"
           value={formatFc(bookings.revenueFc)}
           hint={bookings.pipelineFc > 0 ? `${formatFc(bookings.pipelineFc)} encore en attente` : `${(bookings.byStatus.CONFIRMED ?? 0) + (bookings.byStatus.COMPLETED ?? 0)} réservations`}
+        />
+        <Tile
+          icon={Star}
+          label="Note des clients"
+          value={stats.rating?.average != null ? `${stats.rating.average.toLocaleString('fr-FR')}/5` : '—'}
+          hint={ratingLabel(stats.rating)}
         />
       </div>
 
@@ -264,6 +290,7 @@ export default function VendorStatsView({ isVenue }: { isVenue: boolean }) {
                   <thead className="text-xs text-muted">
                     <tr>
                       <th className="py-2 pr-3 font-semibold">Mois</th>
+                      <th className="py-2 pr-3 font-semibold text-right">Vues</th>
                       <th className="py-2 pr-3 font-semibold text-right">Demandes</th>
                       <th className="py-2 pr-3 font-semibold text-right">Réservations</th>
                       <th className="py-2 font-semibold text-right">Chiffre</th>
@@ -273,6 +300,7 @@ export default function VendorStatsView({ isVenue }: { isVenue: boolean }) {
                     {months.map((m) => (
                       <tr key={m.month} className="border-t border-border">
                         <td className="py-2 pr-3">{monthLabel(m.month, true)}</td>
+                        <td className="py-2 pr-3 text-right tabular-nums">{m.views ?? 0}</td>
                         <td className="py-2 pr-3 text-right tabular-nums">{m.inquiries}</td>
                         <td className="py-2 pr-3 text-right tabular-nums">{m.confirmedBookings}</td>
                         <td className="py-2 text-right tabular-nums">{formatFc(m.revenueFc)}</td>
@@ -333,6 +361,7 @@ export default function VendorStatsView({ isVenue }: { isVenue: boolean }) {
                   <thead className="text-xs text-muted">
                     <tr>
                       <th className="py-2 pr-3 font-semibold">Fiche</th>
+                      <th className="py-2 pr-3 font-semibold text-right">Vues</th>
                       <th className="py-2 pr-3 font-semibold text-right">Demandes</th>
                       <th className="py-2 pr-3 font-semibold text-right">Réservations</th>
                       <th className="py-2 font-semibold text-right">Chiffre</th>
@@ -345,6 +374,7 @@ export default function VendorStatsView({ isVenue }: { isVenue: boolean }) {
                           <span className="font-medium text-foreground">{offer.title}</span>
                           {!offer.isPublic ? <span className="ml-2 text-xs text-muted">(hors ligne)</span> : null}
                         </td>
+                        <td className="py-2 pr-3 text-right tabular-nums">{offer.views ?? 0}</td>
                         <td className="py-2 pr-3 text-right tabular-nums">{offer.inquiries}</td>
                         <td className="py-2 pr-3 text-right tabular-nums">{offer.confirmedBookings}</td>
                         <td className="py-2 text-right tabular-nums">{formatFc(offer.revenueFc)}</td>

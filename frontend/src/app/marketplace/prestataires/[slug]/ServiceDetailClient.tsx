@@ -25,6 +25,8 @@ import {
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import { Sparkles, KeyRound } from 'lucide-react';
 import MarketplaceActivityFeed from '@/components/marketplace/MarketplaceActivityFeed';
+import ListingReviews from '@/components/marketplace/ListingReviews';
+import { trackListingView } from '@/lib/marketplaceReviews';
 
 export default function MarketplaceServiceDetailPage() {
   const params = useParams();
@@ -49,7 +51,10 @@ export default function MarketplaceServiceDetailPage() {
       setError('');
       try {
         const data = await api.get(`/public/services/${encodeURIComponent(slug)}`);
-        if (!cancelled) setService(data);
+        if (!cancelled) {
+          setService(data);
+          trackListingView('service', data?.slug);
+        }
       } catch (err: unknown) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Prestation introuvable.');
       } finally {
@@ -117,6 +122,7 @@ export default function MarketplaceServiceDetailPage() {
               onItinerary={service.latitude != null && service.longitude != null ? () => startRoute(item.id) : undefined}
             />
             <ListingPublicDetails details={service.details} kind={isRental ? 'rental' : 'service'} />
+            <ListingReviews kind="service" slug={service.slug} vendorSlug={service.orgSlug} vendorName={service.orgName} />
           </div>
         ) : null}
         availability={service ? (

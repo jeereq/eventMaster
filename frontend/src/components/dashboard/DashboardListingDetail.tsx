@@ -9,6 +9,8 @@ import { catalogueReturnBackLabel, getCatalogueReturn } from '@/lib/catalogueQue
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import type { MarketplaceMapHandle } from '@/components/MarketplaceLocationsMap';
 import ListingPublicDetails from '@/components/ListingPublicDetails';
+import ListingReviews from '@/components/marketplace/ListingReviews';
+import { trackListingView } from '@/lib/marketplaceReviews';
 import ListingDetailLayout from '@/components/ListingDetailLayout';
 import ListingDetailIntro from '@/components/ListingDetailIntro';
 import ListingMapPanel from '@/components/ListingMapPanel';
@@ -70,12 +72,14 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
           if (!cancelled) {
             setVenue(data);
             setService(null);
+            trackListingView('venue', data?.slug);
           }
         } else {
           const data = await api.get(`/public/services/${encodeURIComponent(slug)}`);
           if (!cancelled) {
             setService(data);
             setVenue(null);
+            trackListingView('service', data?.slug);
           }
         }
       } catch (err: unknown) {
@@ -210,6 +214,13 @@ export default function DashboardListingDetail({ kind }: { kind: 'venue' | 'serv
             ) : null}
           </ListingDetailIntro>
           <ListingPublicDetails details={venue?.details || service?.details} kind={listingKind} />
+          {(venue?.slug || service?.slug) && isPublic && !isBlockedByAdmin ? (
+            <ListingReviews
+              kind={venue ? 'venue' : 'service'}
+              slug={(venue?.slug || service?.slug) as string}
+              vendorName={venue?.orgName || service?.orgName}
+            />
+          ) : null}
           {venue?.layoutPreview ? (
             <div>
               <h2 className="text-sm font-semibold mb-2">Plan de la salle</h2>
