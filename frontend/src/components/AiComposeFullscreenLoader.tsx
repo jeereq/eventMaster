@@ -1,18 +1,10 @@
 'use client';
-import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import {
-  Check,
-  ChevronRight,
-  Compass,
-  Lightbulb,
-  Sparkles,
-  Volume2,
-  VolumeX,
-} from 'lucide-react';
+import { Check, ChevronRight, Volume2, VolumeX } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { BrandLogoIcon } from '@/components/SiteBrandMark';
 import {
   isLocalAudioMuted,
   setLocalAudioMuted,
@@ -102,405 +94,39 @@ function cycleLoaderFocus(root: HTMLElement, event: KeyboardEvent) {
   (wrapStart ? items[items.length - 1] : items[0]).focus();
 }
 
-const STUDIO_GAME_TIPS: Record<AiLoaderVariant, Array<{ tip: string; tag: string }>> = {
-  invitation: [
-    {
-      tag: 'Rotation',
-      tip: 'Glissez la carte pour la faire tourner. La génération continue pendant ce temps.',
-    },
-    {
-      tag: 'WhatsApp',
-      tip: 'Le format 9:16 est pensé pour le partage sur WhatsApp, sans recadrage.',
-    },
-    {
-      tag: 'Textes',
-      tip: 'Les textes restent éditables dans le studio une fois la carte posée.',
-    },
-    {
-      tag: 'Arrière-plan',
-      tip: 'Quittez cet écran : la tâche continue et le résultat arrive tout seul.',
-    },
-  ],
-  room: [
-    {
-      tag: 'Vues',
-      tip: 'Passez en 2D coté ou en 3D dès que le plan est posé.',
-    },
-    {
-      tag: 'Service',
-      tip: 'Les allées sont pensées pour le passage du service entre les tables.',
-    },
-    {
-      tag: 'Invités',
-      tip: 'Placez ensuite les convives confirmés sur les chaises.',
-    },
-    {
-      tag: 'Arrière-plan',
-      tip: 'Vous pouvez continuer ailleurs : le plan s’applique à la fin.',
-    },
-  ],
-  budget: [
-    {
-      tag: 'Catalogue',
-      tip: 'Les montants s’appuient sur les salles et prestataires de votre ville.',
-    },
-    {
-      tag: 'Formules',
-      tip: 'Trois propositions à comparer, du plus sobre au plus ample.',
-    },
-    {
-      tag: 'Suite',
-      tip: 'Reprenez le détail dans le simulateur dès que le calcul est prêt.',
-    },
-  ],
-};
+function formatElapsed(seconds: number): string {
+  if (seconds < 60) return `${seconds} s`;
+  return `${Math.floor(seconds / 60)} min ${String(seconds % 60).padStart(2, '0')} s`;
+}
 
-/* ─────────────────────────────────────────────────────────────
-   OBJET 3D HOLOGRAPHIQUE INTERACTIF — INVITATION (CARTE 9:16)
-───────────────────────────────────────────────────────────── */
-function Game3DInvitationArtifact({
-  progress,
-  stepIndex,
-  isDragging,
-  dragRot,
-}: {
-  progress: number;
-  stepIndex: number;
-  isDragging: boolean;
-  dragRot: { x: number; y: number };
-}) {
+/** Logo du site entouré d’un fin anneau qui tourne : signe d’activité sobre, sans décor. */
+function LoaderBrandSpinner() {
   return (
-    <div className="relative w-48 h-64 flex items-center justify-center select-none" style={{ perspective: '1200px' }}>
-      {/* Anneaux gyroscopiques 3D en rotation orbitale émeraude */}
-      <div
-        className="em-gyro-ring-1 absolute w-52 h-52 rounded-full border border-emerald-400/25 pointer-events-none"
-        style={{ transformStyle: 'preserve-3d' }}
-      >
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#4cce98]" />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-emerald-400/50" />
-      </div>
-
-      <div
-        className="em-gyro-ring-2 absolute w-44 h-44 rounded-full border border-emerald-300/20 border-dashed pointer-events-none"
-        style={{ transformStyle: 'preserve-3d' }}
-      >
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-emerald-300 shadow-[0_0_8px_rgba(76,206,152,0.5)]" />
-      </div>
-
-      <div
-        className="em-gyro-ring-3 absolute w-60 h-60 rounded-full border border-emerald-400/10 pointer-events-none"
-        style={{ transformStyle: 'preserve-3d' }}
-      />
-
-      {/* Particules flottantes émeraudes */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden>
-        {[
-          { left: '20%', top: '25%', delay: '0s', size: 'w-1 h-1' },
-          { left: '80%', top: '35%', delay: '1.2s', size: 'w-1.5 h-1.5' },
-          { left: '30%', top: '75%', delay: '0.6s', size: 'w-1 h-1' },
-          { left: '70%', top: '70%', delay: '1.8s', size: 'w-1 h-1' },
-        ].map((pt, i) => (
-          <span
-            key={i}
-            className={cn('absolute rounded-full bg-emerald-300 shadow-[0_0_8px_#6ee6b6] animate-pulse', pt.size)}
-            style={{ left: pt.left, top: pt.top, animationDelay: pt.delay }}
-          />
-        ))}
-      </div>
-
-      {/* Carte d'invitation 3D orientable et interactive */}
-      <div
-        className={cn(
-          'relative w-28 h-44 rounded-2xl cursor-grab active:cursor-grabbing',
-          isDragging ? 'em-studio-idle-invite is-manual' : 'em-studio-idle-invite',
-        )}
-        style={
-          isDragging
-            ? {
-                transformStyle: 'preserve-3d',
-                transform: `rotateX(${dragRot.x}deg) rotateY(${dragRot.y}deg)`,
-              }
-            : undefined
-        }
-      >
-        {/* Face avant 3D de la carte */}
-        <div
-          className="absolute inset-0 rounded-2xl border-2 border-emerald-400/60 bg-gradient-to-b from-slate-900/95 via-slate-950/90 to-black/95 p-2.5 flex flex-col justify-between overflow-hidden shadow-[0_0_35px_rgba(52,173,122,0.35),inset_0_0_20px_rgba(52,173,122,0.15)]"
-          style={{ transform: 'translateZ(12px)', backfaceVisibility: 'hidden' }}
-        >
-          {/* Laser Scanner 3D */}
-          <div className="em-laser-scanner-3d absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-300 to-transparent shadow-[0_0_15px_#34ad7a,0_0_30px_#2c8f62] pointer-events-none z-20" />
-
-          {/* Grille holographique filigrane */}
-          <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:8px_8px] pointer-events-none" />
-
-          {/* Remplissage de synthèse progressif */}
-          <div
-            className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-emerald-500/25 via-emerald-400/15 to-transparent transition-[height] duration-500 pointer-events-none"
-            style={{ height: `${Math.max(15, progress)}%` }}
-          />
-
-          {/* En-tête de carte 3D */}
-          <div className="relative z-10 flex items-center justify-between">
-            <span className="text-[10px] font-mono tracking-widest text-emerald-400/80 uppercase">9:16</span>
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34ad7a]" />
-          </div>
-
-          {/* Monogramme / Emblème royal central */}
-          <div className="relative z-10 my-auto text-center space-y-1">
-            <div className="w-9 h-9 mx-auto rounded-full border border-emerald-400/50 flex items-center justify-center bg-emerald-400/10 shadow-[0_0_12px_rgba(52,173,122,0.25)]">
-              <Sparkles className="w-4 h-4 text-emerald-300 animate-spin [animation-duration:8s]" />
-            </div>
-            <div className="space-y-0.5">
-              <div
-                className={cn(
-                  'h-1 mx-auto rounded-full transition-all duration-500',
-                  stepIndex >= 1 ? 'w-12 bg-emerald-200/80 shadow-[0_0_6px_#b0eed5]' : 'w-6 bg-slate-700',
-                )}
-              />
-              <div
-                className={cn(
-                  'h-0.5 mx-auto rounded-full transition-all duration-500',
-                  stepIndex >= 2 ? 'w-16 bg-emerald-200/60' : 'w-8 bg-slate-800',
-                )}
-              />
-              <div
-                className={cn(
-                  'h-0.5 mx-auto rounded-full transition-all duration-500',
-                  stepIndex >= 3 ? 'w-10 bg-emerald-200/40' : 'w-4 bg-slate-800',
-                )}
-              />
-            </div>
-          </div>
-
-          {/* Pied de carte avec dorures émeraudes */}
-          <div className="relative z-10 pt-1 border-t border-emerald-400/30 flex items-center justify-between text-[10px] font-mono text-emerald-300/80">
-            <span>EVENTMASTER</span>
-            <span>ATELIER</span>
-          </div>
-        </div>
-
-        {/* Tranche / épaisseur 3D latérale */}
-        <div
-          className="absolute inset-0 rounded-2xl bg-emerald-500/20 border border-emerald-400/30"
-          style={{ transform: 'translateZ(6px)', backfaceVisibility: 'hidden' }}
+    <div className="relative w-20 h-20 mx-auto" aria-hidden>
+      <svg viewBox="0 0 80 80" className="absolute inset-0 w-full h-full">
+        <circle cx="40" cy="40" r="36" fill="none" strokeWidth="3" className="stroke-stage-foreground/10" />
+        <circle
+          cx="40"
+          cy="40"
+          r="36"
+          fill="none"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray="60 167"
+          className="stroke-emerald-300 origin-center motion-safe:animate-spin [animation-duration:1.4s]"
         />
-
-        {/* Face arrière 3D de la carte */}
-        <div
-          className="absolute inset-0 rounded-2xl border-2 border-emerald-400/30 bg-slate-950 p-3 flex flex-col items-center justify-center text-center shadow-[0_0_25px_rgba(52,173,122,0.2)]"
-          style={{ transform: 'rotateY(180deg) translateZ(12px)', backfaceVisibility: 'hidden' }}
-        >
-          <Sparkles className="w-6 h-6 text-emerald-400 mb-1" />
-          <span className="text-[10px] font-mono tracking-wider text-emerald-300 uppercase">Atelier EventMaster</span>
-          <span className="text-[10px] text-stage-foreground/70 font-mono mt-0.5">Invitation</span>
-        </div>
-      </div>
+      </svg>
+      <span className="absolute inset-3 rounded-2xl bg-black flex items-center justify-center">
+        <BrandLogoIcon className="w-9 h-9" />
+      </span>
     </div>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────
-   OBJET 3D HOLOGRAPHIQUE INTERACTIF — PLAN DE SALLE
-───────────────────────────────────────────────────────────── */
-function Game3DRoomPlanArtifact({
-  progress,
-  isDragging,
-  dragRot,
-}: {
-  progress: number;
-  isDragging: boolean;
-  dragRot: { x: number; y: number };
-}) {
-  const tables = [
-    { x: '25%', y: '25%', z: 8, label: 'T01', show: progress > 20 },
-    { x: '75%', y: '25%', z: 12, label: 'T02', show: progress > 38 },
-    { x: '50%', y: '50%', z: 16, label: 'VIP', show: progress > 52 },
-    { x: '25%', y: '75%', z: 8, label: 'T03', show: progress > 68 },
-    { x: '75%', y: '75%', z: 10, label: 'T04', show: progress > 82 },
-  ];
-
-  return (
-    <div className="relative w-48 h-64 flex items-center justify-center select-none" style={{ perspective: '1000px' }}>
-      {/* Anneau radar de balayage émeraude */}
-      <div className="absolute w-52 h-52 rounded-full border border-emerald-400/20 pointer-events-none">
-        <div className="em-radar-sweep absolute inset-0 rounded-full border-t border-emerald-400/70 bg-gradient-to-b from-emerald-500/10 to-transparent" />
-      </div>
-
-      <div
-        className={cn(
-          'relative w-40 h-40 rounded-xl cursor-grab active:cursor-grabbing',
-          isDragging ? 'em-studio-idle-room is-manual' : 'em-studio-idle-room',
-        )}
-        style={
-          isDragging
-            ? {
-                transformStyle: 'preserve-3d',
-                transform: `rotateX(${dragRot.x + 35}deg) rotateZ(${dragRot.y - 25}deg)`,
-              }
-            : undefined
-        }
-      >
-        {/* Sol isométrique maillé */}
-        <div
-          className="absolute inset-0 rounded-xl border-2 border-emerald-400/40 bg-slate-950/90 shadow-[0_0_25px_rgba(52,173,122,0.2)] overflow-hidden"
-          style={{ transform: 'translateZ(0px)' }}
-        >
-          {/* Lignes de quadrillage architectural */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(76,206,152,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(76,206,152,0.08)_1px,transparent_1px)] bg-[size:16px_16px]" />
-
-          {/* Scanner LiDAR */}
-          <div className="em-laser-scanner-3d absolute inset-x-0 h-0.5 bg-emerald-300 shadow-[0_0_12px_#34ad7a]" />
-
-          {/* Tables 3D en lévitation */}
-          {tables.map((t, i) => (
-            <div
-              key={i}
-              className={cn(
-                'absolute -translate-x-1/2 -translate-y-1/2 rounded-full flex items-center justify-center transition-all duration-500',
-                t.show ? 'opacity-100 scale-100' : 'opacity-0 scale-50',
-                t.label === 'VIP'
-                  ? 'w-8 h-8 bg-emerald-400/35 border border-emerald-300 shadow-[0_0_15px_#34ad7a]'
-                  : 'w-6 h-6 bg-emerald-400/15 border border-emerald-400/50 shadow-[0_0_8px_rgba(52,173,122,0.25)]',
-              )}
-              style={{
-                left: t.x,
-                top: t.y,
-                transform: `translateZ(${t.z}px)`,
-              }}
-            >
-              <span className="text-[10px] font-mono font-bold text-emerald-200">{t.label}</span>
-            </div>
-          ))}
-
-          {/* Estrade / Scène en fond */}
-          <div
-            className="absolute top-1 inset-x-8 h-3 rounded border border-emerald-400/50 bg-emerald-400/20 flex items-center justify-center"
-            style={{ transform: 'translateZ(14px)' }}
-          >
-            <span className="text-[10px] font-mono font-bold text-emerald-300 uppercase">Estrade</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────
-   OBJET 3D HOLOGRAPHIQUE INTERACTIF — BUDGET SIMULATEUR
-───────────────────────────────────────────────────────────── */
-function Game3DBudgetArtifact({
-  stepIndex,
-  isDragging,
-  dragRot,
-}: {
-  stepIndex: number;
-  isDragging: boolean;
-  dragRot: { x: number; y: number };
-}) {
-  const bars = [
-    { height: 45, label: 'SALLE', show: stepIndex >= 1 },
-    { height: 75, label: 'TRAITEUR', show: stepIndex >= 2 },
-    { height: 60, label: 'DÉCOR', show: stepIndex >= 3 },
-    { height: 90, label: 'TECH', show: stepIndex >= 4 },
-  ];
-
-  return (
-    <div className="relative w-48 h-64 flex items-center justify-center select-none" style={{ perspective: '1000px' }}>
-      {/* Orbite émeraude extérieure */}
-      <div className="em-gyro-ring-1 absolute w-48 h-48 rounded-full border border-emerald-400/25 pointer-events-none" />
-
-      <div
-        className={cn(
-          'relative w-36 h-36 flex items-end justify-center gap-2.5 p-2 rounded-xl border border-emerald-400/40 bg-slate-950/80 shadow-[0_0_25px_rgba(52,173,122,0.25)]',
-          isDragging ? 'em-studio-idle-budget is-manual' : 'em-studio-idle-budget',
-        )}
-        style={
-          isDragging
-            ? {
-                transformStyle: 'preserve-3d',
-                transform: `rotateX(${dragRot.x + 25}deg) rotateY(${dragRot.y - 15}deg)`,
-              }
-            : undefined
-        }
-      >
-        {bars.map((bar, i) => (
-          <div key={i} className="flex flex-col items-center gap-1">
-            <div
-              className={cn(
-                'w-5 rounded-t-md border transition-all duration-700 shadow-lg',
-                bar.show
-                  ? 'border-emerald-300 bg-gradient-to-t from-emerald-600/40 via-emerald-400/40 to-emerald-300 shadow-[0_0_12px_rgba(52,173,122,0.4)]'
-                  : 'border-slate-700 bg-slate-800/40',
-              )}
-              style={{
-                height: `${bar.show ? bar.height : 15}%`,
-                transform: `translateZ(${10 + i * 4}px)`,
-              }}
-            />
-            <span className="text-[10px] font-mono text-emerald-200/80">{bar.label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────
-   CARROUSEL D'ASTUCES FAÇON JEU VIDÉO (GAME TIPS & LORE)
-───────────────────────────────────────────────────────────── */
-function GameTipsCarousel({ variant }: { variant: AiLoaderVariant }) {
-  const messaging = useMessagingChannels();
-  const tips = STUDIO_GAME_TIPS[variant] || STUDIO_GAME_TIPS.invitation;
-  const [tipIndex, setTipIndex] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTipIndex((prev) => (prev + 1) % tips.length);
-    }, 5500);
-    return () => clearInterval(timer);
-  }, [tips.length]);
-
-  const current = tips[tipIndex];
-
-  return (
-    <div className="relative overflow-hidden rounded-xl border border-stage-foreground/15 bg-stage-elevated/90 backdrop-blur-md p-3.5 text-left shadow-2xl transition">
-      <div className="flex items-center justify-between gap-2 mb-1.5">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <Lightbulb className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-          <span className="text-xs font-semibold tracking-wide text-emerald-300 truncate">
-            Astuce {tipIndex + 1}/{tips.length} · {current.tag === 'WhatsApp' && !messaging.whatsapp ? 'Partage' : current.tag}
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={() => setTipIndex((prev) => (prev + 1) % tips.length)}
-          aria-label="Afficher l’astuce suivante"
-          className="text-xs font-semibold text-emerald-300 hover:text-emerald-200 inline-flex items-center justify-center gap-1 min-h-11 px-3 rounded-lg hover:bg-emerald-400/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/50"
-        >
-          <span>Suivante</span>
-          <ChevronRight className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      <p className="text-xs text-stage-foreground/85 leading-relaxed font-sans min-h-[2.25rem]">
-        {messaging.adapt(current.tip)}
-      </p>
-
-      {/* Barre de temps de l'astuce */}
-      <div className="mt-2 h-0.5 w-full bg-stage-foreground/10 rounded-full overflow-hidden">
-        <div
-          key={tipIndex}
-          className="h-full bg-emerald-400/80 rounded-full transition-all duration-[5500ms] ease-linear"
-          style={{ width: '100%' }}
-        />
-      </div>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────
-   COMPOSANT MAÎTRE DU LOADER 3D GAME
+   ÉCRAN DE CHARGEMENT DES STUDIOS IA (budget, invitation, plan de salle)
+   Une carte centrée : logo, titre, étape en cours, barre de progression,
+   liste courte des étapes et une sortie claire (« Continuer en arrière-plan »).
 ───────────────────────────────────────────────────────────── */
 export function AiProcessFullscreenLoader({
   active,
@@ -527,17 +153,12 @@ export function AiProcessFullscreenLoader({
   const rootRef = useRef<HTMLDivElement>(null);
   const prevStepIndexRef = useRef(0);
 
-  // Contrôles 3D interactifs (glisser-déposer pour orbiter comme un jeu 3D)
-  const [dragRot, setDragRot] = useState({ x: -8, y: 12 });
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef({ x: 0, y: 0, rotX: -8, rotY: 12 });
-
   useEffect(() => {
     setMounted(true);
     setMuted(isLocalAudioMuted());
   }, []);
 
-  // Déclenchement sonore à chaque étape franchie
+  // Petit son à chaque étape franchie (coupable depuis l’écran).
   useEffect(() => {
     if (active && stepIndex > prevStepIndexRef.current) {
       playStudioStepSound();
@@ -551,12 +172,15 @@ export function AiProcessFullscreenLoader({
       setStepIndex(0);
       setProgress(0);
       setElapsed(0);
-      setDragRot({ x: -8, y: 12 });
       return;
     }
 
     setProgress(PROGRESS_START);
     setElapsed(0);
+
+    const elapsedTimer = window.setInterval(() => {
+      setElapsed((value) => value + 1);
+    }, 1000);
 
     const reduced =
       typeof window !== 'undefined' &&
@@ -565,7 +189,7 @@ export function AiProcessFullscreenLoader({
     if (reduced) {
       setStepIndex(Math.max(0, steps.length - 1));
       setProgress(PROGRESS_CAP);
-      return;
+      return () => window.clearInterval(elapsedTimer);
     }
 
     const stepTimer = window.setInterval(() => {
@@ -575,10 +199,6 @@ export function AiProcessFullscreenLoader({
     const progressTimer = window.setInterval(() => {
       setProgress((value) => nextAiLoaderProgress(value));
     }, PROGRESS_TICK_MS);
-
-    const elapsedTimer = window.setInterval(() => {
-      setElapsed((value) => value + 1);
-    }, 1000);
 
     return () => {
       window.clearInterval(stepTimer);
@@ -629,270 +249,150 @@ export function AiProcessFullscreenLoader({
     };
   }, [active, onContinueInBackground]);
 
-  // Gestion des événements Pointer pour manipuler l'artefact 3D
-  const handlePointerDown = (e: React.PointerEvent) => {
-    setIsDragging(true);
-    dragStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      rotX: dragRot.x,
-      rotY: dragRot.y,
-    };
-    try {
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    } catch {
-      // ignore
-    }
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging) return;
-    const deltaX = e.clientX - dragStartRef.current.x;
-    const deltaY = e.clientY - dragStartRef.current.y;
-    setDragRot({
-      x: Math.max(-55, Math.min(55, dragStartRef.current.rotX - deltaY * 0.45)),
-      y: (dragStartRef.current.rotY + deltaX * 0.5) % 360,
-    });
-  };
-
-  const handlePointerUp = (e: React.PointerEvent) => {
-    setIsDragging(false);
-    try {
-      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch {
-      // ignore
-    }
-  };
-
   if (!active || !mounted) return null;
 
   const current = steps[stepIndex] || steps[0];
   const shownProgress = Math.round(progress);
-  const elapsedLabel = elapsed < 60 ? `${elapsed}s` : `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`;
+  const meta = LOADER_VARIANT_META[variant];
 
   return createPortal(
     <div
       ref={rootRef}
       tabIndex={-1}
-      className="em-stage em-stage-overlay flex flex-col justify-between p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))] relative select-none"
+      className="em-stage em-stage-overlay flex items-center justify-center p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))] focus:outline-none"
       role="alertdialog"
       aria-modal="true"
       aria-busy="true"
       aria-labelledby="ai-process-loader-title"
       aria-describedby="ai-process-loader-desc"
     >
-      {/* ─── 1. SOL EN PERSPECTIVE 3D (CYBERSPACE / GAME ENGINE HORIZON) ─── */}
-      <div
-        className="em-3d-grid-floor absolute inset-x-0 bottom-0 h-2/5 pointer-events-none opacity-40"
-        style={{
-          transform: 'perspective(600px) rotateX(68deg)',
-          transformOrigin: 'bottom center',
-        }}
-        aria-hidden
-      />
-
-      {/* Halos volumétriques d'arrière-plan (ambiance unifiée émeraude prestigieuse & ardoise pure) */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[38rem] h-[38rem] rounded-full bg-emerald-500/[0.12] blur-[120px] motion-safe:animate-pulse" />
-        <div className="absolute bottom-0 inset-x-0 h-96 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-      </div>
-
-      <header className="relative z-30 flex items-center justify-between gap-3 w-full max-w-5xl mx-auto">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="inline-flex items-center gap-2 min-h-11 px-3 rounded-full bg-stage-elevated/90 border border-stage-foreground/20">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 motion-safe:animate-pulse" aria-hidden />
-            <span className="text-xs font-semibold text-stage-foreground">Studio en cours</span>
-          </div>
-          <span className="hidden sm:inline text-xs text-stage-foreground/75 truncate">
-            {LOADER_VARIANT_META[variant].badge}
+      <div className="relative w-full max-w-md rounded-2xl border border-stage-foreground/15 bg-stage-elevated/85 backdrop-blur-md p-5 sm:p-7 shadow-2xl">
+        <div className="flex items-center justify-between gap-3">
+          <span className="inline-flex items-center gap-2 min-h-8 px-3 rounded-full bg-stage-foreground/[0.06] border border-stage-foreground/15 text-xs font-semibold text-stage-foreground">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 motion-safe:animate-pulse" aria-hidden />
+            {meta.badge}
           </span>
+          <div className="flex items-center gap-1">
+            <span className="text-xs tabular-nums text-stage-foreground/70" aria-label={`Temps écoulé : ${formatElapsed(elapsed)}`}>
+              {formatElapsed(elapsed)}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                unlockAudioNotifications();
+                const next = !muted;
+                setMuted(next);
+                setLocalAudioMuted(next);
+              }}
+              aria-label={muted ? 'Activer le son du studio' : 'Couper le son du studio'}
+              aria-pressed={!muted}
+              className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-full text-stage-foreground/70 hover:text-stage-foreground hover:bg-stage-foreground/10 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60"
+            >
+              {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4 text-emerald-300" />}
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <p className="hidden sm:inline text-xs tabular-nums text-[var(--festive-on-stage)]">
-            {elapsedLabel}
+        <div className="mt-4 text-center">
+          <LoaderBrandSpinner />
+          <h2
+            id="ai-process-loader-title"
+            className="mt-4 font-display text-xl sm:text-2xl font-bold tracking-tight text-stage-foreground"
+          >
+            {title}
+          </h2>
+          <p
+            id="ai-process-loader-desc"
+            className="mt-1.5 text-sm font-medium text-emerald-300 min-h-5"
+            aria-live="polite"
+          >
+            {stageHint || current?.label}
           </p>
-
-          <button
-            type="button"
-            onClick={() => {
-              unlockAudioNotifications();
-              const next = !muted;
-              setMuted(next);
-              setLocalAudioMuted(next);
-            }}
-            aria-label={muted ? 'Activer le son du studio' : 'Couper le son du studio'}
-            className="inline-flex items-center justify-center gap-2 min-h-11 min-w-11 px-3 rounded-full bg-stage-elevated/90 hover:bg-stage-elevated border border-stage-foreground/20 text-xs font-semibold text-stage-foreground transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
-          >
-            {muted ? (
-              <>
-                <VolumeX className="w-3.5 h-3.5 text-stage-foreground/50 shrink-0" />
-                <span className="hidden sm:inline text-stage-foreground/75">Son coupé</span>
-              </>
-            ) : (
-              <>
-                <Volume2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 motion-safe:animate-pulse" />
-                <span className="hidden sm:inline text-emerald-300">Son actif</span>
-              </>
-            )}
-          </button>
         </div>
-      </header>
 
-      {/* ─── 3. ZONE CENTRALE : OBJET HOLOGRAPHIQUE 3D & QUEST HUD ─── */}
-      <main className="relative z-20 w-full max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-center gap-5 md:gap-8 py-3 my-auto">
-        <div className="flex flex-col items-center scale-90 sm:scale-100 origin-center" aria-hidden>
+        <div className="mt-5 space-y-1.5">
           <div
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
-            className="relative cursor-grab active:cursor-grabbing p-4 rounded-3xl touch-none"
-            title="Glissez pour faire tourner"
+            className="h-2 overflow-hidden rounded-full bg-stage-foreground/10"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={shownProgress}
+            aria-label={meta.progressLabel}
           >
-            {/* Viseur de ciblage HUD d'angle émeraude */}
-            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-emerald-400/60" />
-            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-emerald-400/60" />
-            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-emerald-400/60" />
-            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-emerald-400/60" />
-
-            {/* Rendu 3D selon la variante */}
-            {variant === 'invitation' ? (
-              <Game3DInvitationArtifact
-                progress={shownProgress}
-                stepIndex={stepIndex}
-                isDragging={isDragging}
-                dragRot={dragRot}
-              />
-            ) : variant === 'room' ? (
-              <Game3DRoomPlanArtifact
-                progress={shownProgress}
-                isDragging={isDragging}
-                dragRot={dragRot}
-              />
-            ) : (
-              <Game3DBudgetArtifact
-                stepIndex={stepIndex}
-                isDragging={isDragging}
-                dragRot={dragRot}
-              />
-            )}
-          </div>
-
-          {/* Badge interactif sous l'artefact */}
-          <div className="mt-1 inline-flex items-center gap-1.5 px-3 min-h-8 rounded-full bg-stage-elevated/80 border border-stage-foreground/15 text-xs text-stage-foreground/75">
-            <Compass className="w-3.5 h-3.5 text-emerald-400" />
-            {isDragging ? (
-              <span className="text-emerald-300 font-semibold">Rotation manuelle</span>
-            ) : (
-              <span>Glissez pour tourner</span>
-            )}
-          </div>
-        </div>
-
-        <div className="w-full max-w-md text-left space-y-3">
-          <div>
-            <h2
-              id="ai-process-loader-title"
-              className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-stage-foreground"
-            >
-              {title}
-            </h2>
-
-            <p id="ai-process-loader-desc" className="text-sm text-stage-foreground/80 mt-2" aria-live="polite">
-              {stageHint || current.label}
-            </p>
-            {footnote ? (
-              <p className="text-xs text-stage-foreground/70 mt-1">{footnote}</p>
-            ) : null}
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-stage-foreground/75">
-                {LOADER_VARIANT_META[variant].progressLabel} · {stepIndex + 1}/{steps.length}
-              </span>
-              <span className="font-semibold text-emerald-300 tabular-nums">
-                {shownProgress} %
-              </span>
-            </div>
-
             <div
-              className="h-2.5 overflow-hidden rounded-full bg-stage-elevated border border-stage-foreground/20 p-0.5 relative"
-              role="progressbar"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={shownProgress}
-              aria-label={LOADER_VARIANT_META[variant].progressLabel}
-            >
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-emerald-600 via-emerald-400 to-emerald-200 transition-[width] duration-350 ease-out shadow-[0_0_12px_rgba(52,173,122,0.5)]"
-                style={{ width: `${shownProgress}%` }}
-              />
-            </div>
+              className="h-full rounded-full bg-emerald-300 transition-[width] duration-300 ease-out"
+              style={{ width: `${shownProgress}%` }}
+            />
           </div>
-
-          {/* CHECKLIST DE QUÊTES / SOUS-ROUTINES */}
-          <ol className="space-y-1.5 text-xs max-h-[28vh] md:max-h-none overflow-y-auto pr-1" aria-label="Étapes en cours">
-            {steps.map((step, index) => {
-              const isCurrent = index === stepIndex;
-              const isDone = index < stepIndex;
-
-              return (
-                <li
-                  key={step.id}
-                  className={cn(
-                    'flex items-center gap-2.5 rounded-lg border px-3 py-2',
-                    isCurrent
-                      ? 'border-emerald-400/60 bg-emerald-400/10 text-emerald-200 font-semibold'
-                      : isDone
-                        ? 'border-stage-foreground/10 bg-stage-foreground/5 text-stage-foreground/80'
-                        : 'border-stage-foreground/10 bg-stage-foreground/[0.03] text-stage-foreground/70',
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'w-6 h-6 rounded-md inline-flex items-center justify-center text-xs font-bold shrink-0',
-                      isCurrent
-                        ? 'bg-emerald-400 text-emerald-950'
-                        : isDone
-                          ? 'bg-emerald-400/20 text-emerald-300 border border-emerald-400/40'
-                          : 'bg-stage-foreground/10 text-stage-foreground/70',
-                    )}
-                  >
-                    {isDone ? <Check className="w-3.5 h-3.5" /> : index + 1}
-                  </span>
-
-                  <span className="font-sans text-xs flex-1 truncate">{step.label}</span>
-
-                  {isCurrent ? (
-                    <span className="text-xs text-emerald-300 shrink-0">En cours</span>
-                  ) : isDone ? (
-                    <span className="text-xs text-emerald-300/90 shrink-0">Fait</span>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ol>
+          <div className="flex items-center justify-between text-xs text-stage-foreground/70 tabular-nums">
+            <span>
+              Étape {Math.min(stepIndex + 1, steps.length)} sur {steps.length}
+            </span>
+            <span className="font-semibold text-stage-foreground">{shownProgress} %</span>
+          </div>
         </div>
-      </main>
 
-      {/* ─── 4. PIED DE PAGE : CARROUSEL D'ASTUCES STYLE LORE DE JEU ─── */}
-      <footer className="relative z-30 w-full max-w-2xl mx-auto mt-2 space-y-3">
-        <GameTipsCarousel variant={variant} />
+        <ol className="mt-4 space-y-1" aria-label="Étapes">
+          {steps.map((step, index) => {
+            const isCurrent = index === stepIndex;
+            const isDone = index < stepIndex;
+            return (
+              <li
+                key={step.id}
+                className={cn(
+                  'flex items-center gap-2.5 min-h-8 text-sm',
+                  isCurrent
+                    ? 'text-stage-foreground font-semibold'
+                    : isDone
+                      ? 'text-stage-foreground/70'
+                      : 'text-stage-foreground/50',
+                )}
+                aria-current={isCurrent ? 'step' : undefined}
+              >
+                <span
+                  className={cn(
+                    'w-5 h-5 rounded-full inline-flex items-center justify-center shrink-0',
+                    isDone
+                      ? 'bg-emerald-300 text-emerald-900'
+                      : isCurrent
+                        ? 'border-2 border-emerald-300'
+                        : 'border border-stage-foreground/25',
+                  )}
+                  aria-hidden
+                >
+                  {isDone ? (
+                    <Check className="w-3 h-3" strokeWidth={3} />
+                  ) : isCurrent ? (
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 motion-safe:animate-pulse" />
+                  ) : null}
+                </span>
+                <span className="flex-1 truncate">{step.label}</span>
+                <span className="sr-only">{isDone ? ' (fait)' : isCurrent ? ' (en cours)' : ''}</span>
+              </li>
+            );
+          })}
+        </ol>
+
+        {footnote ? (
+          <p className="mt-4 text-xs text-stage-foreground/65 text-center leading-relaxed">{footnote}</p>
+        ) : null}
+
         {onContinueInBackground ? (
-          <div className="flex justify-center">
+          <div className="mt-5 space-y-1.5">
             <button
               type="button"
               onClick={onContinueInBackground}
-              className="inline-flex items-center justify-center gap-2 min-h-11 px-5 rounded-lg bg-primary-solid text-primary-foreground text-sm font-semibold hover:bg-primary-solid-hover transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--stage)]"
+              className="w-full inline-flex items-center justify-center gap-2 min-h-11 px-5 rounded-lg bg-primary-solid text-primary-foreground text-sm font-semibold hover:bg-primary-solid-hover transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--stage)]"
             >
               Continuer en arrière-plan
               <ChevronRight className="w-4 h-4" aria-hidden />
             </button>
+            <p className="text-xs text-stage-foreground/60 text-center">
+              Le travail continue, le résultat s’affichera tout seul.
+            </p>
           </div>
         ) : null}
-      </footer>
+      </div>
     </div>,
     document.body,
   );
@@ -906,7 +406,7 @@ export default function AiComposeFullscreenLoader({
   embedText = false,
   hasReferences = false,
   stageHint,
-  title = 'Synthèse 3D de l’invitation',
+  title = 'Création de votre invitation',
   footnote,
   onContinueInBackground,
 }: {
@@ -940,7 +440,7 @@ export default function AiComposeFullscreenLoader({
         footnote ||
         (hasReferences
           ? 'Les regards, sourires et volumes faciaux restent fidèles aux photos de référence.'
-          : 'Modèle 9:16 sculpté fidèlement à partir de votre brief.')
+          : 'Une carte 9:16 composée à partir de votre brief.')
       }
     />
   );
@@ -957,10 +457,10 @@ export function AiBudgetFullscreenLoader({
     <AiProcessFullscreenLoader
       active={active}
       variant="budget"
-      title="Calcul immersif du budget"
+      title="Calcul de votre budget"
       stageHint={stageHint}
       steps={BUDGET_STEPS}
-      footnote="Tarifs réels indexés sur les salles et prestataires de votre région."
+      footnote="Prix tirés des salles et prestataires de votre ville."
     />
   );
 }
@@ -984,14 +484,14 @@ export function AiRoomPlanFullscreenLoader({
     <AiProcessFullscreenLoader
       active={active}
       variant="room"
-      title="Architecture spatiale 3D"
+      title="Création de votre plan de salle"
       stageHint={stageHint}
       steps={steps}
       onContinueInBackground={onContinueInBackground}
       footnote={
         hasPhoto
-          ? 'Analyse volumétrique LiDAR de la photo de votre salle.'
-          : 'Plan isométrique et calcul des flux de circulation.'
+          ? 'Le plan suit la forme de la salle sur votre photo.'
+          : 'Tables, allées et scène placées pour une circulation fluide.'
       }
     />
   );

@@ -3,6 +3,7 @@ import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React from 'react';
 import dynamic from 'next/dynamic';
+import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import {
   Building2,
   Mail,
@@ -42,19 +43,7 @@ const LandingRoomPlanAiStudio = dynamic(
 );
 
 function StudioPaneFallback({ label }: { label: string }) {
-  return (
-    <div
-      className="min-h-[16rem] rounded-[var(--radius-card)] border border-border bg-surface-muted/40 animate-pulse motion-reduce:animate-none flex items-center justify-center"
-      role="status"
-      aria-live="polite"
-      aria-label={label}
-    >
-      <div className="flex items-center gap-2.5 text-xs text-muted">
-        <Sparkles className="w-4 h-4 animate-spin motion-reduce:animate-none text-primary" />
-        <span>{label}</span>
-      </div>
-    </div>
-  );
+  return <StudioLoadingPanel className="min-h-[16rem]" label={label.replace(/…$/, '')} />;
 }
 
 const DASHBOARD_STUDIO_PREFIX = 'dashboard-ai-studio';

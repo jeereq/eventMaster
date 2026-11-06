@@ -3,6 +3,7 @@ import { ChannelText } from '@/components/ChannelText';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import Link from 'next/link';
 import PublicPageShell from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
@@ -42,17 +43,11 @@ import { cn } from '@/lib/cn';
 const EventPrepAiSimulator = dynamic(() => import('@/components/EventPrepAiSimulator'), {
   ssr: false,
   loading: () => (
-    <div
-      className="min-h-[28rem] rounded-[var(--radius-card)] border border-border bg-surface-muted/40 animate-pulse motion-reduce:animate-none flex items-center justify-center p-8 text-center"
-      aria-busy="true"
-      aria-label="Chargement du simulateur budget IA"
-    >
-      <div className="space-y-2 max-w-sm">
-        <Sparkles className="w-8 h-8 text-primary mx-auto animate-pulse motion-reduce:animate-none" />
-        <p className="text-sm font-semibold text-foreground">Chargement du simulateur budget IA…</p>
-        <p className="text-xs text-muted">Préparation du moteur de calcul des formules catalogue.</p>
-      </div>
-    </div>
+    <StudioLoadingPanel
+      className="min-h-[28rem]"
+      label="Chargement du simulateur de budget"
+      hint="Préparation des formules à partir du catalogue."
+    />
   ),
 });
 
@@ -61,17 +56,11 @@ const LandingInvitationAiGenerator = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div
-        className="min-h-[28rem] rounded-[var(--radius-card)] border border-border bg-surface-muted/40 animate-pulse motion-reduce:animate-none flex items-center justify-center p-8 text-center"
-        aria-busy="true"
-        aria-label="Chargement du studio d’invitations IA"
-      >
-        <div className="space-y-2 max-w-sm">
-          <Sparkles className="w-8 h-8 text-festive-accent mx-auto animate-pulse motion-reduce:animate-none" />
-          <p className="text-sm font-semibold text-foreground">Chargement du studio d’invitations IA…</p>
-          <p className="text-xs text-muted"><ChannelText text="Préparation du moteur graphique de composition 9:16 WhatsApp." /></p>
-        </div>
-      </div>
+      <StudioLoadingPanel
+        className="min-h-[28rem]"
+        label="Chargement du studio d’invitations"
+        hint="Préparation de la carte 9:16 à partager."
+      />
     ),
   },
 );
@@ -81,17 +70,11 @@ const LandingRoomPlanAiStudio = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div
-        className="min-h-[28rem] rounded-[var(--radius-card)] border border-border bg-surface-muted/40 animate-pulse motion-reduce:animate-none flex items-center justify-center p-8 text-center"
-        aria-busy="true"
-        aria-label="Chargement du studio de plans 3D IA"
-      >
-        <div className="space-y-2 max-w-sm">
-          <Sparkles className="w-8 h-8 text-primary mx-auto animate-pulse motion-reduce:animate-none" />
-          <p className="text-sm font-semibold text-foreground">Chargement du studio de plans 3D IA…</p>
-          <p className="text-xs text-muted">Initialisation de l’environnement spatial et de la visite 3D.</p>
-        </div>
-      </div>
+      <StudioLoadingPanel
+        className="min-h-[28rem]"
+        label="Chargement du studio plan de salle"
+        hint="Préparation de l’éditeur 2D et de la vue 3D."
+      />
     ),
   },
 );

@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import {
   Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees,
 } from 'lucide-react';
@@ -33,11 +34,7 @@ const CustomElementCreator = dynamic(() => import('@/components/room/CustomEleme
 const RoomWebGLViewer = dynamic(() => import('@/components/RoomWebGLViewer'), {
   ssr: false,
   loading: () => (
-    <div
-      className="flex-1 min-h-24 w-full rounded-[var(--radius-card)] border border-border bg-surface-muted"
-      role="status"
-      aria-label="Chargement de la vue 3D"
-    />
+    <StudioLoadingPanel compact className="flex-1 min-h-24 w-full" label="Chargement de la vue 3D" />
   ),
 });
 import RoomWallEditorPanel from '@/components/RoomWallEditorPanel';

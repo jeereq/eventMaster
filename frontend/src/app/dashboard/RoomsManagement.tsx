@@ -2,6 +2,7 @@
 
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import Link from 'next/link';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
@@ -83,12 +84,10 @@ const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview')
 const RoomLayoutEditor = dynamic(() => import('@/components/RoomLayoutEditor'), {
   ssr: false,
   loading: () => (
-    <div
-      className="rounded-[var(--radius-card)] border border-border bg-surface-muted/50 px-4 py-10 text-center text-sm text-muted"
-      role="status"
-    >
-      Chargement de l’éditeur 3D…
-    </div>
+    <StudioLoadingPanel
+      label="Chargement de l’éditeur de salle"
+      hint="Plan 2D et vue 3D arrivent dans un instant."
+    />
   ),
 });
 
