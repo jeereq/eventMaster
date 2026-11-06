@@ -44,8 +44,10 @@ import { useCatalogueView } from '@/components/CatalogueViewToggle';
 import MarketplaceLocationsMap from '@/components/MarketplaceLocationsMap';
 import { useRememberListReturn } from '@/lib/catalogueQuery';
 import AdminBeverageBrands from '@/components/admin/AdminBeverageBrands';
+import AdminMarketplaceReviews from '@/components/admin/AdminMarketplaceReviews';
+import AdminMarketplaceDeposits from '@/components/admin/AdminMarketplaceDeposits';
 
-type CatalogTab = 'venues' | 'offerings' | 'rentals' | 'inquiries' | 'bookings' | 'commissions' | 'brands';
+type CatalogTab = 'venues' | 'offerings' | 'rentals' | 'inquiries' | 'bookings' | 'commissions' | 'deposits' | 'reviews' | 'brands';
 
 interface Overview {
   venues: { total: number; publicCount: number };
@@ -357,7 +359,7 @@ export default function AdminCataloguePage() {
 
   const load = useCallback(async () => {
     if (!canAccess) return;
-    if (tab === 'brands') {
+    if (tab === 'brands' || tab === 'reviews' || tab === 'deposits') {
       setLoading(false);
       return;
     }
@@ -515,6 +517,8 @@ export default function AdminCataloguePage() {
     { id: 'inquiries', label: 'Demandes', count: overview?.inquiries.total },
     { id: 'bookings', label: 'Réservations', count: overview?.bookings.total },
     { id: 'commissions', label: `Commissions ${commissionPct} %`, count: overview?.commissions?.dueCount },
+    ...(user?.role === 'SUPER_ADMIN' ? [{ id: 'deposits' as const, label: 'Acomptes en ligne' }] : []),
+    { id: 'reviews', label: 'Avis' },
     { id: 'brands', label: 'Marques' },
   ];
 
@@ -711,7 +715,7 @@ export default function AdminCataloguePage() {
         aria-labelledby={`catalog-tab-${tab}`}
         className="space-y-6"
       >
-      {tab === 'brands' ? <AdminBeverageBrands /> : <>
+      {tab === 'brands' ? <AdminBeverageBrands /> : tab === 'reviews' ? <AdminMarketplaceReviews /> : tab === 'deposits' ? <AdminMarketplaceDeposits /> : <>
       <CatalogueFilterBar
         search={qInput}
         onSearchChange={setQInput}
