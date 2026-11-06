@@ -9,6 +9,19 @@ import {
 } from './flexPayPayoutClient';
 import { applyFlexPaySettlement, computeEventPayoutAmounts } from './eventPayoutAmounts';
 import { eventPayoutRates } from './eventPayoutService';
+import { extractEventPayoutAccount } from './eventPayoutAccount';
+import {
+  notifyEventPayoutFailed,
+  notifyEventPayoutPaid,
+  notifyEventPayoutSent,
+} from './eventPayoutNotifications';
+
+/** Auteur enregistré pour les reversements lancés par le passage automatique de minuit. */
+export const AUTO_PAYOUT_ACTOR_ID = 'system:auto-payout';
+
+export function isAutomaticTransfer(transfer: { initiatedByUserId: string }): boolean {
+  return transfer.initiatedByUserId === AUTO_PAYOUT_ACTOR_ID;
+}
 
 type EventPayoutTransfer = NonNullable<
   Awaited<ReturnType<typeof prisma.eventPayoutTransfer.findUnique>>
@@ -54,6 +67,8 @@ export async function initiateEventFlexPayPayout(params: {
   initiatedByUserId: string;
   phone?: string | null;
   amountFc?: number | null;
+  /** Reversement automatique : seul le numéro de reversement de l'événement est utilisé. */
+  automatic?: boolean;
 }) {
   if (!isFlexPayPayoutConfigured()) {
     return { error: 'NOT_CONFIGURED' as const };
@@ -80,7 +95,14 @@ export async function initiateEventFlexPayPayout(params: {
     amountFc = requested;
   }
 
-  const phone = normalizeFlexPayPhone(params.phone?.trim() || event.tenant?.manager?.phone || '');
+  // Ordre : numéro saisi par l'admin → numéro de reversement de l'événement → téléphone du
+  // responsable (anciens événements). Le passage automatique n'utilise que le numéro de l'événement.
+  const payoutAccount = extractEventPayoutAccount(event.eventPrep);
+  const phone = params.automatic
+    ? payoutAccount?.phone ?? null
+    : normalizeFlexPayPhone(
+        params.phone?.trim() || payoutAccount?.phone || event.tenant?.manager?.phone || '',
+      );
   if (!phone) return { error: 'PHONE_REQUIRED' as const };
 
   let transfer: EventPayoutTransfer;
@@ -124,6 +146,7 @@ export async function initiateEventFlexPayPayout(params: {
         where: { id: transfer.id },
         data: { status: 'FAILED', lastMessage: message.slice(0, 500) },
       });
+      void notifyEventPayoutFailed(failed, { automatic: Boolean(params.automatic) });
       return { error: 'FLEXPAY_REFUSED' as const, message, transfer: failed };
     }
     // Issue inconnue (réseau, délai) : FlexPay a peut-être reçu la demande. On garde le
@@ -140,6 +163,7 @@ export async function initiateEventFlexPayPayout(params: {
     where: { id: transfer.id },
     data: { flexPayOrderNumber: sent.orderNumber, lastMessage: sent.message || null },
   });
+  void notifyEventPayoutSent(updated, { automatic: Boolean(params.automatic) });
   return { transfer: updated };
 }
 
@@ -154,18 +178,24 @@ async function applyCheckedTransfer(transfer: EventPayoutTransfer, checked: Flex
   }
 
   if (checked.status === 'failed') {
-    await prisma.eventPayoutTransfer.updateMany({
+    const lastMessage = (checked.message || 'Versement refusé par FlexPay.').slice(0, 500);
+    const marked = await prisma.eventPayoutTransfer.updateMany({
       where: { id: transfer.id, status: 'PENDING' },
       data: {
         status: 'FAILED',
-        lastMessage: (checked.message || 'Versement refusé par FlexPay.').slice(0, 500),
+        lastMessage,
         flexPayProviderReference: checked.providerReference,
       },
     });
+    if (marked.count === 1) {
+      void notifyEventPayoutFailed({ ...transfer, lastMessage }, { automatic: isAutomaticTransfer(transfer) });
+    }
     return { status: 'FAILED' as const, transferId: transfer.id };
   }
 
   const now = new Date();
+  let remainingAfterFc = 0;
+  let fullyPaid = false;
   const applied = await prisma.$transaction(async (tx) => {
     const claimed = await tx.eventPayoutTransfer.updateMany({
       where: { id: transfer.id, status: 'PENDING' },
@@ -205,6 +235,8 @@ async function applyCheckedTransfer(transfer: EventPayoutTransfer, checked: Flex
       actorId: transfer.initiatedByUserId,
       now,
     });
+    remainingAfterFc = Math.max(0, Math.round(amounts.net - (nextPayout.settledAmountFc as number)));
+    fullyPaid = nextPayout.status === 'PAID';
     const prep =
       event.eventPrep && typeof event.eventPrep === 'object'
         ? (event.eventPrep as Record<string, unknown>)
@@ -216,6 +248,9 @@ async function applyCheckedTransfer(transfer: EventPayoutTransfer, checked: Flex
     return true;
   });
 
+  if (applied) {
+    void notifyEventPayoutPaid(transfer, { fullyPaid, remainingFc: remainingAfterFc });
+  }
   return { status: 'SUCCESS' as const, transferId: transfer.id, alreadyApplied: !applied };
 }
 

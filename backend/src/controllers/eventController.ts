@@ -31,6 +31,24 @@ import {
   hasValidCollectionTermsAcceptance,
   requiresCollectionTermsAcceptance,
 } from '../services/collectionTerms';
+import {
+  extractEventPayoutAccount,
+  preserveServerOwnedEventPrep,
+  resolvePayoutAccountUpdate,
+  type PayoutAccountResolution,
+} from '../services/eventPayoutAccount';
+import { notifyEventPayoutAccountChanged } from '../services/eventPayoutNotifications';
+
+const PAYOUT_PHONE_MISSING_ERROR =
+  'Indiquez le numéro Mobile Money sur lequel EventMaster vous reversera l’argent collecté (billetterie ou dons).';
+const PAYOUT_PHONE_INVALID_ERROR =
+  'Numéro Mobile Money de reversement invalide : utilisez un numéro de RDC (ex. 0812345678 ou 243812345678).';
+
+function payoutAccountError(resolution: PayoutAccountResolution): string | null {
+  if (resolution.kind === 'missing') return PAYOUT_PHONE_MISSING_ERROR;
+  if (resolution.kind === 'invalid') return PAYOUT_PHONE_INVALID_ERROR;
+  return null;
+}
 
 function rejectPaidTicketingIfDisabled(body: Record<string, unknown>, res: Response): boolean {
   const wantsPublic = body.isPublic === true || body.isPublic === 'true';
@@ -90,6 +108,10 @@ function serializeEvent<T extends {
       ? { ...donationsConfig, allowedByPlatform }
       : { enabled: false, targetAmountFc: null, minAmountFc: donationsAccess.minAmountFc, cause: null, suggestedAmountsFc: donationsAccess.defaultSuggestedAmountsFc, donorAttendancePass: true, allowedByPlatform },
     collectionTerms: extractCollectionTermsAcceptance(event.eventPrep),
+    payoutAccount: (() => {
+      const account = extractEventPayoutAccount(event.eventPrep);
+      return account ? { phone: account.phone, holderName: account.holderName } : null;
+    })(),
   };
 }
 
@@ -394,8 +416,23 @@ export async function createEvent(req: AuthenticatedRequest, res: Response) {
       }
       donationsConfig = sanitizeEventDonationsConfig(req.body.donations, donationsAccess);
     }
+    const payoutResolution = resolvePayoutAccountUpdate({
+      body: req.body,
+      existingEventPrep: null,
+      willCollect: Boolean(visibility.ticketingEnabled || donationsConfig?.enabled),
+      userId,
+    });
+    const payoutError = payoutAccountError(payoutResolution);
+    if (payoutError) {
+      return res.status(400).json({ error: payoutError, field: 'payoutPhone' });
+    }
+
     const initialEventPrep: Record<string, unknown> = {
-      ...(req.body.eventPrep && typeof req.body.eventPrep === 'object' ? (req.body.eventPrep as Record<string, unknown>) : {}),
+      ...preserveServerOwnedEventPrep(
+        req.body.eventPrep && typeof req.body.eventPrep === 'object' ? (req.body.eventPrep as Record<string, unknown>) : {},
+        null,
+      ),
+      ...(payoutResolution.kind === 'set' ? { payoutAccount: payoutResolution.account } : {}),
       ...(donationsConfig ? { donations: donationsConfig } : {}),
       ...((visibility.ticketingEnabled || donationsConfig?.enabled) &&
       (req.body.acceptCollectionTerms === true || hasValidCollectionTermsAcceptance(req.body.eventPrep))
@@ -571,6 +608,29 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
       };
     }
 
+    // Le reversement (`payout`) et le compte de reversement ne s'écrivent jamais via `eventPrep`.
+    updatedEventPrep = preserveServerOwnedEventPrep(updatedEventPrep, existingEvent.eventPrep);
+
+    // Numéro de reversement obligatoire dès qu'on enregistre les réglages de collecte
+    // (formulaire complet). Les sauvegardes partielles (plan de table…) ne sont pas bloquées.
+    const touchesCollectionSettings =
+      req.body.isPublic !== undefined || req.body.donations !== undefined || req.body.payoutPhone !== undefined;
+    const payoutResolution = touchesCollectionSettings
+      ? resolvePayoutAccountUpdate({
+          body: req.body,
+          existingEventPrep: existingEvent.eventPrep,
+          willCollect: willTicketingEnabled || willDonationsEnabled,
+          userId,
+        })
+      : ({ kind: 'unchanged', account: null } as PayoutAccountResolution);
+    const payoutError = payoutAccountError(payoutResolution);
+    if (payoutError) {
+      return res.status(400).json({ error: payoutError, field: 'payoutPhone' });
+    }
+    if (payoutResolution.kind === 'set') {
+      updatedEventPrep = { ...updatedEventPrep, payoutAccount: payoutResolution.account };
+    }
+
     if (
       (willTicketingEnabled || willDonationsEnabled) &&
       req.body.acceptCollectionTerms === true &&
@@ -611,6 +671,17 @@ export async function updateEvent(req: AuthenticatedRequest, res: Response) {
         _count: { select: { posts: true } },
       },
     });
+
+    if (payoutResolution.kind === 'set' && payoutResolution.previousPhone) {
+      void notifyEventPayoutAccountChanged({
+        eventId: id,
+        eventTitle: updatedEvent.title,
+        tenantId,
+        previousPhone: payoutResolution.previousPhone,
+        newPhone: payoutResolution.account.phone,
+        changedByUserId: userId,
+      }).catch((err) => console.error('[Event] notification changement numéro reversement:', err));
+    }
 
     let assignmentNotifications = null;
     const eventForResponse = updatedEvent;

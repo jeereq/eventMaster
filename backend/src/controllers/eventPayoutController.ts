@@ -13,6 +13,8 @@ import {
   verifyEventFlexPayPayout,
 } from '../services/eventFlexPayPayoutService';
 import { getFlexPayPayoutClient, isFlexPayPayoutConfigured } from '../services/flexPayPayoutClient';
+import { notifyEventPayoutSettledManually } from '../services/eventPayoutNotifications';
+import { getEventAutoPayoutStatus, runEventAutoPayouts } from '../services/eventAutoPayoutWorker';
 
 export async function getAdminEventPayoutsReport(req: AuthenticatedRequest, res: Response) {
   try {
@@ -27,7 +29,7 @@ export async function getAdminEventPayoutsReport(req: AuthenticatedRequest, res:
       q: typeof q === 'string' ? q : undefined,
     });
 
-    return res.json(report);
+    return res.json({ ...report, autoPayout: getEventAutoPayoutStatus() });
   } catch (error: any) {
     console.error('[EventPayoutController] Erreur récupération rapport:', error);
     return res.status(500).json({ error: 'Impossible de charger le rapport de reversement des événements.' });
@@ -98,6 +100,15 @@ export async function settleAdminEventPayout(req: AuthenticatedRequest, res: Res
       targetId: eventId,
       summary: `Reversement événement ${eventId} marqué (${status}) — Montant: ${settledAmountFc || 'non spécifié'} FC`,
       metadata: { eventId, status, settledAmountFc, proofUrl },
+    });
+
+    void notifyEventPayoutSettledManually({
+      eventId,
+      eventTitle: result.eventTitle,
+      tenantId: result.tenantId,
+      status: result.payout.status,
+      settledAmountFc: typeof settledAmountFc === 'number' ? settledAmountFc : undefined,
+      paymentMethod: result.payout.paymentMethod,
     });
 
     return res.json({
@@ -260,5 +271,32 @@ export async function getAdminFlexPayPayoutBalance(req: AuthenticatedRequest, re
   } catch (error: any) {
     console.error('[EventPayoutController] solde FlexPay:', error);
     return res.status(502).json({ configured: true, error: error?.message || 'Solde FlexPay indisponible.' });
+  }
+}
+
+/** POST /api/admin/reports/event-payouts/auto-run — lance tout de suite le passage de minuit. */
+export async function runAdminEventAutoPayouts(req: AuthenticatedRequest, res: Response) {
+  try {
+    if (req.user?.role !== 'SUPER_ADMIN') {
+      return res.status(403).json({ error: 'Accès refusé.' });
+    }
+    const result = await runEventAutoPayouts({ force: true });
+    await auditReq(req, {
+      action: 'EVENT_AUTO_PAYOUT_RUN',
+      targetType: 'event_payout',
+      targetId: result.runDate,
+      summary: `Reversement automatique lancé à la main — ${result.sentCount} envoyé(s), ${result.sentAmountFc} FC`,
+      metadata: { ...result },
+    });
+    if (result.skipped === 'NOT_CONFIGURED') {
+      return res.status(503).json({ error: 'FlexPay Payout n’est pas configuré sur le serveur.', result });
+    }
+    if (result.skipped === 'ALREADY_RUNNING') {
+      return res.status(409).json({ error: 'Un passage automatique est déjà en cours.', result });
+    }
+    return res.json({ result, status: getEventAutoPayoutStatus() });
+  } catch (error: any) {
+    console.error('[EventPayoutController] auto-run:', error);
+    return res.status(500).json({ error: error?.message || 'Passage automatique impossible.' });
   }
 }

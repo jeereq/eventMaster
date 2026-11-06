@@ -428,6 +428,12 @@ export interface PlatformSettings {
   eventTicketingRetentionRate: number;
   /** Retenue / commission plateforme sur les dons solidaires d'événement (0.04 = 4 %). */
   eventDonationsRetentionRate: number;
+  /** Reversement automatique FlexPay des événements, chaque nuit à 0h00 (heure de Kinshasa). */
+  eventAutoPayoutEnabled: boolean;
+  /** after_event = seulement une fois l'événement terminé · daily = chaque nuit dès qu'un montant est dû. */
+  eventAutoPayoutTiming: EventAutoPayoutTiming;
+  /** Montant minimum (FC) pour qu'un reversement automatique parte. */
+  eventAutoPayoutMinFc: number;
   /** Commission commerciale plateforme au premier paiement (0.3 = 30 %). */
   commercialFirstCommissionRate: number;
   /** Commission commerciale plateforme sur les paiements suivants (0.2 = 20 %). */
@@ -566,6 +572,9 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   marketplaceDepositRate: 0.3,
   eventTicketingRetentionRate: 0.05,
   eventDonationsRetentionRate: 0.04,
+  eventAutoPayoutEnabled: true,
+  eventAutoPayoutTiming: 'after_event',
+  eventAutoPayoutMinFc: 1000,
   commercialFirstCommissionRate: 0.3,
   commercialRenewalCommissionRate: 0.2,
   usdExchangeRateCdf: 2800,
@@ -593,6 +602,21 @@ export const PLATFORM_CITY_CATALOG = [
   'Matadi',
   'Kolwezi',
 ] as const;
+
+export type EventAutoPayoutTiming = 'after_event' | 'daily';
+
+export function sanitizeEventAutoPayoutSettings(raw: {
+  eventAutoPayoutEnabled?: unknown;
+  eventAutoPayoutTiming?: unknown;
+  eventAutoPayoutMinFc?: unknown;
+}): { eventAutoPayoutEnabled: boolean; eventAutoPayoutTiming: EventAutoPayoutTiming; eventAutoPayoutMinFc: number } {
+  const min = Math.round(Number(raw.eventAutoPayoutMinFc));
+  return {
+    eventAutoPayoutEnabled: raw.eventAutoPayoutEnabled !== false && raw.eventAutoPayoutEnabled !== 'false',
+    eventAutoPayoutTiming: raw.eventAutoPayoutTiming === 'daily' ? 'daily' : 'after_event',
+    eventAutoPayoutMinFc: Number.isFinite(min) && min >= 100 ? Math.min(min, 10_000_000) : 1000,
+  };
+}
 
 export function sanitizeEnabledCities(value: unknown): string[] {
   const allowed = new Set<string>(PLATFORM_CITY_CATALOG);
@@ -822,6 +846,7 @@ function normalizeStoredRates(settings: PlatformSettings): PlatformSettings {
     marketplaceDepositRate: parseRateInput(settings.marketplaceDepositRate, 0.3, 0.05, 0.9),
     eventTicketingRetentionRate: parseRateInput(settings.eventTicketingRetentionRate, 0.05, 0.01, 0.2),
     eventDonationsRetentionRate: parseRateInput(settings.eventDonationsRetentionRate, 0.04, 0.01, 0.2),
+    ...sanitizeEventAutoPayoutSettings(settings),
     commercialFirstCommissionRate: parseRateInput(settings.commercialFirstCommissionRate, 0.3, 0, 1),
     commercialRenewalCommissionRate: parseRateInput(settings.commercialRenewalCommissionRate, 0.2, 0, 1),
     usdExchangeRateCdf: Number.isFinite(parsedUsdRate) && parsedUsdRate > 0 ? Math.round(parsedUsdRate) : 2800,
@@ -861,6 +886,7 @@ function buildNextSettings(
   next.marketplaceDepositRate = parseRateInput(next.marketplaceDepositRate, 0.3, 0.05, 0.9);
   next.eventTicketingRetentionRate = parseRateInput(next.eventTicketingRetentionRate, 0.05, 0.01, 0.2);
   next.eventDonationsRetentionRate = parseRateInput(next.eventDonationsRetentionRate, 0.04, 0.01, 0.2);
+  Object.assign(next, sanitizeEventAutoPayoutSettings(next));
   next.commercialFirstCommissionRate = parseRateInput(next.commercialFirstCommissionRate, 0.3, 0, 1);
   next.commercialRenewalCommissionRate = parseRateInput(next.commercialRenewalCommissionRate, 0.2, 0, 1);
   const parsedUsdRate = Number(next.usdExchangeRateCdf);

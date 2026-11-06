@@ -185,6 +185,7 @@ interface EventItem {
   tenantId?: string | null;
   donations?: import('@/lib/donationsAccess').EventDonationsConfig | null;
   collectionTerms?: import('@/lib/collectionTerms').CollectionTermsAcceptance | null;
+  payoutAccount?: { phone: string; holderName: string | null } | null;
   assignmentNotifications?: {
     notified?: number;
     skipped?: number;
@@ -1361,6 +1362,8 @@ Merci de confirmer votre présence :
         dayOfContactPhone: form.dayOfContactPhone,
         donations: form.donations,
         acceptCollectionTerms: form.acceptCollectionTerms,
+        payoutPhone: form.payoutPhone,
+        payoutHolderName: form.payoutHolderName,
       };
 
       if (editingEventId) {
