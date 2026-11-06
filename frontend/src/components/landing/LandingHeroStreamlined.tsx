@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
-import { ArrowRight, CalendarDays, Check, ChevronLeft, LayoutDashboard, Mic, PartyPopper, QrCode, Users, Video } from 'lucide-react';
+import { ArrowRight, CalendarDays, Check, ChevronLeft, LayoutDashboard, Mic, PartyPopper, QrCode, Users } from 'lucide-react';
 import { LISTING_EVENT_TYPES, type ListingEventTypeId } from '@/lib/listingDetails';
 import { cn } from '@/lib/cn';
 import { LANDING_PROFILES, type LandingProfileId } from '@/lib/landingProfiles';
@@ -90,96 +90,131 @@ function formatCitySentence(cities: string[]): string {
   return `${cities.slice(0, -1).join(', ')} et ${cities[cities.length - 1]}`;
 }
 
-/** Maquette décorative : l’invitation telle qu’elle arrive sur WhatsApp (exemple, pas de données réelles). */
-function HeroWhatsAppMock() {
-  const bubble = 'shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]';
+/** Maquette décorative : l’invitation telle que l’invité la reçoit sur son téléphone (exemple, pas de données réelles). */
+function HeroInvitationMock() {
+  const bubble = 'shadow-[0_1px_2px_rgba(16,40,28,0.08),0_4px_12px_rgba(16,40,28,0.06)]';
   return (
-    <div aria-hidden className="relative flex justify-center select-none py-2 lg:pl-16">
-      <span className="absolute left-1/2 top-1/2 w-[420px] h-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.28)_0,rgba(52,173,122,0.12)_45%,transparent_70%)]" />
+    <div aria-hidden className="relative flex justify-center select-none py-6 lg:pl-16">
+      <span className="absolute left-1/2 top-1/2 w-[460px] h-[460px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(110,230,182,0.32)_0,rgba(49,113,76,0.16)_45%,transparent_70%)] blur-[2px]" />
 
-      <div className="relative w-[284px] h-[560px] rounded-[46px] bg-[#0d1512] p-2 shadow-[inset_0_0_0_1.5px_#2b3a35,0_40px_80px_rgba(2,30,22,0.55)]">
-        <div className="em-light-island relative h-full rounded-[38px] overflow-hidden bg-[#efeae2] text-[#111b21] flex flex-col text-[12px] leading-[1.35]">
-          <span className="absolute left-1/2 top-2 w-[84px] h-[22px] -translate-x-1/2 rounded-full bg-[#0d1512] z-10" />
-          <div className="shrink-0 bg-[#ffffff] pb-2 shadow-[0_1px_0_#e9edef]">
-            <div className="h-9 flex items-center justify-between px-6 pt-1 text-[11px] font-semibold">
+      {/* Coque : bord métal, boutons latéraux, reflet. */}
+      <div className="relative w-[288px] h-[580px] rounded-[50px] bg-[linear-gradient(145deg,#3a4a43_0%,#121a16_35%,#0b110e_70%,#2c3833_100%)] p-[9px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12),0_50px_90px_rgba(2,24,16,0.6),0_12px_24px_rgba(2,24,16,0.35)]">
+        <span className="absolute -left-[3px] top-[118px] w-[3px] h-9 rounded-l bg-[#26322d]" />
+        <span className="absolute -left-[3px] top-[166px] w-[3px] h-14 rounded-l bg-[#26322d]" />
+        <span className="absolute -right-[3px] top-[150px] w-[3px] h-[72px] rounded-r bg-[#26322d]" />
+
+        <div className="em-light-island relative h-full rounded-[41px] overflow-hidden bg-[#f2f6f3] text-[#13201a] flex flex-col text-[12px] leading-[1.38]">
+          <span className="absolute left-1/2 top-2.5 w-[88px] h-[24px] -translate-x-1/2 rounded-full bg-[#0b110e] z-20" />
+          <span className="pointer-events-none absolute inset-0 z-10 rounded-[41px] bg-[linear-gradient(120deg,rgba(255,255,255,0.22)_0%,transparent_28%)]" />
+
+          {/* En-tête de conversation */}
+          <div className="shrink-0 bg-[#ffffff]/95 backdrop-blur pb-2.5 border-b border-[#e3ebe6]">
+            <div className="h-10 flex items-center justify-between px-7 pt-1.5 text-[11px] font-semibold">
               <span>18:42</span>
               <span className="inline-flex items-end gap-[3px]">
-                <span className="w-[3px] h-[5px] rounded-[1px] bg-[#111b21]" />
-                <span className="w-[3px] h-[7px] rounded-[1px] bg-[#111b21]" />
-                <span className="w-[3px] h-[9px] rounded-[1px] bg-[#111b21]" />
-                <span className="ml-1 w-[17px] h-2 rounded-[3px] border border-[#111b21] p-px">
-                  <span className="block w-[70%] h-full rounded-[1px] bg-[#111b21]" />
+                <span className="w-[3px] h-[5px] rounded-[1px] bg-[#13201a]" />
+                <span className="w-[3px] h-[7px] rounded-[1px] bg-[#13201a]" />
+                <span className="w-[3px] h-[9px] rounded-[1px] bg-[#13201a]" />
+                <span className="ml-1 w-[18px] h-[9px] rounded-[3px] border border-[#13201a] p-px">
+                  <span className="block w-[70%] h-full rounded-[1px] bg-[#13201a]" />
                 </span>
               </span>
             </div>
-            <div className="flex items-center gap-2.5 px-3 pt-0.5">
-              <ChevronLeft className="w-4 h-4" strokeWidth={2.4} />
-              <span className="w-[34px] h-[34px] shrink-0 rounded-full bg-[radial-gradient(circle_at_50%_30%,#6b1f53,#3b0d2e)] text-[#f5d48a] flex items-center justify-center font-display italic font-semibold text-[13px]">
+            <div className="flex items-center gap-2.5 px-3.5">
+              <ChevronLeft className="w-4 h-4 text-[#31714c]" strokeWidth={2.4} />
+              <span className="relative w-9 h-9 shrink-0 rounded-full bg-[linear-gradient(140deg,#31714c,#1f4a33)] text-[#f5d48a] flex items-center justify-center font-display italic font-semibold text-[12px] ring-2 ring-[#6ee6b6]/50">
                 G&amp;P
+                <span className="absolute -right-0.5 -bottom-0.5 w-3 h-3 rounded-full bg-[#6ee6b6] border-2 border-[#ffffff]" />
               </span>
               <span className="flex-1 min-w-0 flex flex-col">
-                <b className="text-[14px]">Grâce &amp; Patrick</b>
-                <span className="text-[11px] text-[#667781]">en ligne</span>
+                <b className="text-[14px] leading-tight">Grâce &amp; Patrick</b>
+                <span className="text-[11px] text-[#31714c] font-medium">Invitation officielle</span>
               </span>
-              <Video className="w-4 h-4" />
+              <span className="w-7 h-7 rounded-full bg-[#eef6f1] flex items-center justify-center">
+                <CalendarDays className="w-3.5 h-3.5 text-[#31714c]" />
+              </span>
             </div>
           </div>
 
-          <div className="flex-1 min-h-0 px-2.5 pt-2.5 pb-2 flex flex-col gap-[7px] bg-[radial-gradient(circle,rgba(17,27,33,0.05)_1.2px,transparent_1.6px)] [background-size:16px_16px]">
-            <span className={cn('self-center bg-[#ffffff] text-[#54656f] text-[10px] font-semibold px-2.5 py-0.5 rounded-[7px]', bubble)}>
+          {/* Fil de messages */}
+          <div className="flex-1 min-h-0 px-3 pt-3 pb-2 flex flex-col gap-2 bg-[radial-gradient(circle,rgba(49,113,76,0.07)_1.2px,transparent_1.6px)] [background-size:16px_16px]">
+            <span className="self-center bg-[#e3ede7] text-[#4a6356] text-[9.5px] font-bold tracking-[0.08em] px-2.5 py-0.5 rounded-full">
               AUJOURD’HUI
             </span>
-            <div className="self-start w-[88%] flex flex-col gap-0.5">
-              <div className={cn('bg-[#ffffff] rounded-[4px_10px_10px_10px] p-1', bubble)}>
-                <div className="rounded-[7px] p-1.5 bg-[radial-gradient(circle_at_50%_15%,#6b1f53_0,#3b0d2e_65%)]">
-                  <div className="border border-[rgba(245,212,138,0.6)] rounded px-2 pt-3.5 pb-3 text-center text-[#f5d48a] flex flex-col items-center gap-1">
-                    <span className="text-[8px] font-semibold tracking-[0.3em]">MARIAGE</span>
-                    <span className="font-display italic font-semibold text-[26px] leading-none">Grâce &amp; Patrick</span>
-                    <span className="flex items-center gap-1.5 w-[64%]">
-                      <span className="flex-1 h-px bg-[rgba(245,212,138,0.5)]" />
-                      <span className="w-[5px] h-[5px] bg-[#f5d48a] rotate-45" />
-                      <span className="flex-1 h-px bg-[rgba(245,212,138,0.5)]" />
-                    </span>
-                    <span className="text-[10px] text-[#f7e9c8]">Sam. 14 déc. · 18:00 · Kinshasa</span>
-                  </div>
-                </div>
-                <div className="px-1.5 pt-1.5">Chère Esther, vous êtes invitée ! Répondez en un geste.</div>
-                <div className="text-right text-[10px] text-[#667781] px-1">18:40</div>
+
+            <div className={cn('self-start w-[90%] bg-[#ffffff] rounded-[6px_16px_16px_16px] p-1.5', bubble)}>
+              <div className="relative h-[128px] rounded-[11px] overflow-hidden">
+                <Image
+                  src="/images/landing/card-media-souvenirs.jpg"
+                  alt=""
+                  fill
+                  sizes="240px"
+                  className="object-cover object-[50%_28%]"
+                />
+                <span className="absolute inset-0 bg-[linear-gradient(180deg,rgba(31,74,51,0.1)_0%,rgba(31,74,51,0.55)_45%,rgba(16,40,28,0.92)_100%)]" />
+                <span className="absolute inset-1.5 rounded-[8px] border border-[rgba(245,212,138,0.55)]" />
+                <span className="absolute inset-x-0 bottom-2.5 flex flex-col items-center gap-0.5 text-center text-[#f5d48a]">
+                  <span className="text-[7.5px] font-bold tracking-[0.32em]">MARIAGE</span>
+                  <span className="font-display italic font-semibold text-[23px] leading-none drop-shadow-[0_1px_6px_rgba(0,0,0,0.35)]">
+                    Grâce &amp; Patrick
+                  </span>
+                  <span className="mt-0.5 text-[9.5px] text-[#f7ecd2]">Sam. 14 déc. · 18:00 · Kinshasa</span>
+                </span>
               </div>
-              {['Oui, je viens', 'Je ne pourrai pas'].map((label) => (
-                <div key={label} className={cn('bg-[#ffffff] rounded-lg text-[#027eb5] font-semibold text-center py-[7px]', bubble)}>
-                  {label}
-                </div>
-              ))}
+              <div className="px-1.5 pt-2">Chère Esther, vous êtes invitée ! Répondez en un geste.</div>
+              <div className="flex gap-1.5 px-1 pt-2 pb-0.5 text-[11px] whitespace-nowrap">
+                <span className="flex-1 rounded-full bg-[#31714c] text-[#ffffff] font-semibold text-center py-[6px]">Oui, je viens</span>
+                <span className="flex-1 rounded-full border border-[#cfe0d6] text-[#31714c] font-semibold text-center py-[5px]">
+                  Je ne pourrai pas
+                </span>
+              </div>
+              <div className="text-right text-[9.5px] text-[#7d8f86] px-1 pt-1">18:40</div>
             </div>
-            <div className={cn('self-end bg-[#d9fdd3] rounded-[10px_4px_10px_10px] px-2 pt-1.5 pb-1 flex items-end gap-2', bubble)}>
+
+            <div className={cn('self-end bg-[linear-gradient(135deg,#31714c,#285e3f)] text-[#ffffff] rounded-[16px_6px_16px_16px] px-3 pt-1.5 pb-1 flex items-end gap-2', bubble)}>
               <span>Oui, je viens !</span>
-              <span className="text-[10px] text-[#667781] whitespace-nowrap">
-                18:41 <span className="text-[#53bdeb]">✓✓</span>
+              <span className="text-[9.5px] text-[#c7f3df] whitespace-nowrap inline-flex items-center gap-0.5">
+                18:41 <Check className="w-3 h-3 text-[#6ee6b6]" strokeWidth={3} />
               </span>
             </div>
-            <div className={cn('self-start w-[80%] bg-[#ffffff] rounded-[4px_10px_10px_10px] px-2 pt-[7px] pb-1 flex gap-2 items-center', bubble)}>
-              <span className="w-10 h-10 shrink-0 rounded-md border border-[#e9edef] flex items-center justify-center">
-                <QrCode className="w-7 h-7 text-[#111b21]" strokeWidth={1.6} />
+
+            <div className={cn('self-start w-[84%] bg-[#ffffff] rounded-[6px_16px_16px_16px] overflow-hidden flex', bubble)}>
+              <span className="w-[54px] shrink-0 bg-[#eef6f1] flex items-center justify-center border-r border-dashed border-[#c5d9cd]">
+                <span className="w-9 h-9 rounded-lg bg-[#ffffff] border border-[#d8e6dd] flex items-center justify-center">
+                  <QrCode className="w-6 h-6 text-[#1f4a33]" strokeWidth={1.7} />
+                </span>
               </span>
-              <span className="flex-1 min-w-0 flex flex-col">
-                <b className="text-[#31714c]">Votre badge QR est prêt</b>
-                <span className="text-[#54656f]">Table 3 · 2 places</span>
-                <span className="self-end text-[10px] text-[#667781]">18:42</span>
+              <span className="flex-1 min-w-0 flex flex-col px-2.5 py-2">
+                <b className="text-[#1f4a33]">Votre badge QR est prêt</b>
+                <span className="text-[#5b6f65]">Table 3 · 2 places</span>
+                <span className="self-end text-[9.5px] text-[#7d8f86]">18:42</span>
               </span>
             </div>
           </div>
 
-          <div className="shrink-0 flex items-center gap-[7px] px-2 pt-1.5 pb-3.5">
-            <span className={cn('flex-1 h-[34px] rounded-full bg-[#ffffff] text-[#8696a0] flex items-center px-3.5', bubble)}>Message</span>
-            <span className="w-[34px] h-[34px] rounded-full bg-[#00a884] flex items-center justify-center">
+          {/* Barre de saisie */}
+          <div className="shrink-0 flex items-center gap-2 px-2.5 pt-1.5 pb-4 bg-[#f2f6f3]">
+            <span className="flex-1 h-[34px] rounded-full bg-[#ffffff] border border-[#e0e9e3] text-[#8a9b92] flex items-center px-3.5">Message</span>
+            <span className="w-[34px] h-[34px] rounded-full bg-[#31714c] flex items-center justify-center shadow-[0_4px_10px_rgba(49,113,76,0.35)]">
               <Mic className="w-4 h-4 text-[#ffffff]" />
             </span>
           </div>
+          <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-[96px] h-1 rounded-full bg-[#13201a]/80" />
         </div>
       </div>
 
-      <div className="em-light-island absolute left-0 bottom-12 hidden lg:flex w-[214px] bg-[#ffffff] text-[#1e1f21] rounded-[18px] p-4 flex-col gap-2.5 shadow-[0_24px_48px_rgba(2,30,22,0.45)]">
+      {/* Pastille : entrée validée le jour J */}
+      <div className="em-light-island absolute -right-2 top-0 hidden xl:flex items-center gap-2.5 bg-[#ffffff] text-[#13201a] rounded-2xl pl-2 pr-3.5 py-2 shadow-[0_18px_36px_rgba(2,30,22,0.4)]">
+        <span className="w-8 h-8 rounded-xl bg-[#6ee6b6] flex items-center justify-center">
+          <Check className="w-4 h-4 text-[#1f4a33]" strokeWidth={3} />
+        </span>
+        <span className="flex flex-col leading-tight">
+          <b className="text-[13px]">Entrée validée</b>
+          <span className="text-[11px] text-[#5d5f62]">Esther · Table 3 · 19:02</span>
+        </span>
+      </div>
+
+      <div className="em-light-island absolute left-0 bottom-0 hidden lg:flex w-[214px] bg-[#ffffff] text-[#1e1f21] rounded-[18px] p-4 flex-col gap-2.5 shadow-[0_24px_48px_rgba(2,30,22,0.45)]">
         <div className="flex justify-between items-baseline">
           <span className="text-xs font-semibold text-[#5d5f62]">Réponses</span>
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#31714c]">
@@ -191,7 +226,7 @@ function HeroWhatsAppMock() {
           86 <span className="text-[15px] font-medium text-[#5d5f62]">confirmés sur 120</span>
         </span>
         <span className="h-2 rounded-full bg-[#ededee] overflow-hidden">
-          <span className="block w-[72%] h-full rounded-full bg-[#31714c]" />
+          <span className="block w-[72%] h-full rounded-full bg-[linear-gradient(90deg,#31714c,#6ee6b6)]" />
         </span>
         <span className="text-[13px] text-[#5d5f62]">12 en attente · relance en un clic</span>
       </div>
@@ -344,7 +379,7 @@ export default function LandingHeroStreamlined() {
           </div>
 
           <div className="hidden sm:block">
-            <HeroWhatsAppMock />
+            <HeroInvitationMock />
           </div>
         </div>
       </section>
