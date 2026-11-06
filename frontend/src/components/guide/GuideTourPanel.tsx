@@ -1,4 +1,5 @@
 'use client';
+import { ChannelText } from '@/components/ChannelText';
 
 import React, { useMemo } from 'react';
 import { Play, RotateCcw, ListOrdered, LayoutGrid } from 'lucide-react';
@@ -93,7 +94,7 @@ export default function GuideTourPanel({ guideId }: GuideTourPanelProps) {
                   <LayoutGrid className="w-3.5 h-3.5 text-primary shrink-0" />
                   <span className="font-semibold text-foreground">{step.title}</span>
                 </div>
-                <p className="text-xs text-muted leading-relaxed">{step.description}</p>
+                <p className="text-xs text-muted leading-relaxed"><ChannelText text={step.description} /></p>
               </div>
             </li>
           ))}

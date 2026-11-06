@@ -1,4 +1,5 @@
 'use client';
+import { ChannelText, IfChannel } from '@/components/ChannelText';
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
@@ -257,7 +258,7 @@ export default function LegalTermsPreviewModal({
                 </h3>
                 <p className="text-muted">
                   <strong>EventMaster</strong> est une plateforme SaaS complète éditée par le{' '}
-                  <strong>Groupe Tekango</strong>, exploitée conformément au Code du numérique de la RDC. Elle réunit la gestion d’événements, les invitations interactives WhatsApp/e-mail,
+                  <strong>Groupe Tekango</strong>, exploitée conformément au Code du numérique de la RDC. Elle réunit la gestion d’événements, les <ChannelText text="invitations interactives WhatsApp/e-mail" />,
                   les plans 2D/3D photoréalistes, le <strong>Simulateur unifié multi-ateliers (/simulateur)</strong>, la <strong>billetterie en ligne multi-zones et paliers tarifaires avec présence auto-validée</strong>, les <strong>dons solidaires</strong> et les <strong>paiements sécurisés FlexPay</strong> (Cartes bancaires &amp; Mobile Money).
                 </p>
               </div>
@@ -392,7 +393,7 @@ export default function LegalTermsPreviewModal({
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">1. Cadre légal RDC &amp; Données traitées</h4>
                 <p className="text-muted">
-                  Traitements conformes au Code du numérique de la RDC (Loi n° 23/010). Coordonnées des acheteurs, paliers tarifaires, vérification renforcée OTP (e-mail ou WhatsApp), donateurs (option de don anonyme ou nominatif), statut de présence auto-confirmé, personnalisation des billets partagés, identifiants FlexPay et horodatages de scan QR. Les données bancaires sensibles sont traitées directement par FlexPay.
+                  Traitements conformes au Code du numérique de la RDC (Loi n° 23/010). Coordonnées des acheteurs, paliers tarifaires, vérification renforcée OTP (<ChannelText text="e-mail ou WhatsApp" />), donateurs (option de don anonyme ou nominatif), statut de présence auto-confirmé, personnalisation des billets partagés, identifiants FlexPay et horodatages de scan QR. Les données bancaires sensibles sont traitées directement par FlexPay.
                 </p>
               </section>
 
@@ -413,7 +414,7 @@ export default function LegalTermsPreviewModal({
               <section className="space-y-1.5">
                 <h4 className="font-bold text-foreground">4. Sous-traitants agréés</h4>
                 <p className="text-muted">
-                  Google Cloud / Google Gemini API &amp; Google Imagen (intelligence artificielle sans réentraînement public), FlexPay (paiement et Mobile Money), SendGrid (e-mails transactionnels et OTP), UltraMsg (WhatsApp OTP) et Cloudinary (médias), soumis à des engagements stricts de sécurité.
+                  Google Cloud / Google Gemini API &amp; Google Imagen (intelligence artificielle sans réentraînement public), FlexPay (paiement et Mobile Money), SendGrid (e-mails transactionnels et OTP)<IfChannel channel="WHATSAPP">, UltraMsg (WhatsApp OTP)</IfChannel> et Cloudinary (médias), soumis à des engagements stricts de sécurité.
                 </p>
               </section>
 

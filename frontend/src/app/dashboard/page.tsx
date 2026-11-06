@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useState, useRef, Suspense, useMemo, useCallback } from 'react';
 import Link from 'next/link';
@@ -514,6 +515,7 @@ function filterAdminDashboardGuests<T extends {
 }
 
 function DashboardPageContent() {
+  const messaging = useMessagingChannels();
  const { user, tenant, access, planQuota, planFeatures, enterSupportSession } = useAuth();
  const { site } = usePlatformSite();
  const commercialPct = commercialPercent(site);
@@ -2143,9 +2145,11 @@ function DashboardPageContent() {
  'subscription-requests': { description: 'Approuvez ou refusez les demandes de vos organisations parrainées.' },
  invoices: { description: 'Factures de vos organisations parrainées et commissions associées.' },
  };
- const panelDescription = isCommercialPlatform && commercialOverrides[activeTab as AdminTabId]
+ const panelDescription = messaging.adapt(
+ isCommercialPlatform && commercialOverrides[activeTab as AdminTabId]
  ? commercialOverrides[activeTab as AdminTabId]!.description
- : tabMeta.description;
+ : tabMeta.description,
+ );
 
  const statCardClass = 'bg-surface border border-border rounded-[var(--radius-card)] p-4 sm:p-5 space-y-3';
 

@@ -1,3 +1,4 @@
+import { ChannelText } from '@/components/ChannelText';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { ReactNode } from 'react';
@@ -100,7 +101,7 @@ export default function LandingStepsBento({ stepsAction }: { stepsAction?: React
                 className="group flex flex-col rounded-[var(--radius-card)] border border-border bg-background p-4 sm:p-5 transition-colors hover:border-primary/40 hover:bg-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 <t.icon className="h-6 w-6 text-primary" aria-hidden />
-                <h3 className="font-display mt-3 text-base sm:text-lg font-semibold text-foreground">{t.title}</h3>
+                <h3 className="font-display mt-3 text-base sm:text-lg font-semibold text-foreground"><ChannelText text={t.title} /></h3>
                 <p className="mt-1 text-sm text-muted">{t.text}</p>
                 <span className="mt-auto pt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary">
                   Découvrir

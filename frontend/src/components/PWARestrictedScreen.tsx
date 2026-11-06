@@ -1,4 +1,5 @@
 'use client';
+import { ChannelText } from '@/components/ChannelText';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -352,7 +353,7 @@ export default function PWARestrictedScreen() {
                     {plan.highlights.slice(0, 3).map((feat) => (
                       <li key={feat} className="flex items-center gap-1.5 text-[10px] text-foreground">
                         <Check className="w-3 h-3 text-primary flex-shrink-0" />
-                        <span className="truncate">{feat}</span>
+                        <span className="truncate"><ChannelText text={feat} /></span>
                       </li>
                     ))}
                   </ul>

@@ -1,4 +1,5 @@
 'use client';
+import { ChannelText } from '@/components/ChannelText';
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -446,7 +447,7 @@ export default function LandingPricingSection({
  {plan.highlights.map((h) => (
  <li key={h} className="flex gap-2.5">
  <Check className="w-4 h-4 text-primary-solid shrink-0 mt-0.5" />
- <span className="leading-relaxed">{h}</span>
+ <span className="leading-relaxed"><ChannelText text={h} /></span>
  </li>
  ))}
  </ul>
@@ -554,7 +555,7 @@ export default function LandingPricingSection({
  )}
  <tr className="border-b border-border-subtle dark:border-border/80 hover:bg-surface-muted/50 dark:hover:bg-surface-muted/20">
  <td className="py-2.5 px-4 text-xs text-foreground sticky left-0 bg-surface">
- {row.label}
+ <ChannelText text={row.label} />
  </td>
  {comparisonIds.map((id) => (
  <td key={id} className="py-2.5 px-2 text-center">

@@ -1204,6 +1204,9 @@ export default function AdminPlatformSettings({
                   <p className="text-xs text-muted -mt-2 leading-relaxed">
                     Contrôlez les canaux de transmission autorisés sur toute la plateforme (invitations, réponses, billetterie, dons, rappels, tâches, commissions et facturation). Vous pouvez choisir 1 seul canal, n’importe quelle paire (2 sur 4), n’importe quel trio (3 sur 4) ou les 4 ensemble avec le Push.
                   </p>
+                  <p className="text-xs text-muted -mt-1 leading-relaxed">
+                    Un canal désactivé disparaît de tous les textes et formulaires de la plateforme (site, forfaits, inscription, tableau de bord, application) et n’envoie plus aucun message, codes de validation compris.
+                  </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                     {notifChannelsList.map((ch) => {

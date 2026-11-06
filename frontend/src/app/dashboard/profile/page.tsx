@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -18,6 +19,7 @@ import { ACCOUNT_KIND_DESCRIPTIONS, ACCOUNT_KIND_LABELS, type TenantAccountKind 
 import { isProtocolUser } from '@/lib/protocolAccess';
 
 function ProfilePageContent() {
+  const messaging = useMessagingChannels();
   const { user, tenant, updateUserAndTenant, updateBranding, access, refreshProfile, logout } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -302,15 +304,15 @@ function ProfilePageContent() {
                   />
                   <PhoneInput
                     id="profile-phone"
-                    label="Téléphone (WhatsApp)"
+                    label={messaging.whatsapp ? 'Téléphone (WhatsApp)' : 'Téléphone'}
                     countryCode={phoneCountryCode}
                     national={phoneNational}
                     onCountryCodeChange={setPhoneCountryCode}
                     onNationalChange={setPhoneNational}
-                    hint="Indicatif + numéro, pour WhatsApp."
+                    hint={messaging.phone ? `Indicatif + numéro, pour ${messaging.phoneList()}.` : 'Indicatif + numéro.'}
                   />
                   <p className="text-xs text-muted">
-                    Canaux e-mail / WhatsApp / push :{' '}
+                    {messaging.adapt('Canaux e-mail / WhatsApp / push :')}{' '}
                     <Link href="/dashboard/notifications" className="text-primary font-medium hover:underline">
                       Notifications
                     </Link>

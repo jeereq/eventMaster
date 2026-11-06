@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -289,6 +290,7 @@ export default function LandingInvitationAiGenerator({
   inline?: boolean;
   preselectedModelPhoto?: InvitationModelPhoto | null;
 }) {
+  const messaging = useMessagingChannels();
   const { user, tenant, access } = useAuth();
   const { site } = usePlatformSite();
   const isInviteBlocked = site?.studioVisibility?.invite === false;
@@ -1467,7 +1469,7 @@ export default function LandingInvitationAiGenerator({
           <ul className="text-xs text-muted space-y-1.5 list-disc list-inside">
             <li>Génération de visuels artistiques purs adaptés à votre thème de réception</li>
             <li>Incrustation de variables dynamiques : date, lieu, nom des mariés ou hôtes</li>
-            <li>Partage direct en format WhatsApp 9:16 avec lien de réponse invité</li>
+            <li>{messaging.adapt('Partage direct en format WhatsApp 9:16 avec lien de réponse invité')}</li>
           </ul>
         </div>
 

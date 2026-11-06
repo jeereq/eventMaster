@@ -1,4 +1,5 @@
 'use client';
+import { ChannelText } from '@/components/ChannelText';
 
 import React, { useEffect } from 'react';
 import { useTour } from '@/context/TourContext';
@@ -106,7 +107,7 @@ export default function ProductTourOverlay() {
         </div>
 
         <p id="tour-desc" className="text-xs text-muted leading-relaxed">
-          {currentStep.description}
+          <ChannelText text={currentStep.description} />
         </p>
 
         <div className="h-1.5 bg-surface-muted rounded-full overflow-hidden">

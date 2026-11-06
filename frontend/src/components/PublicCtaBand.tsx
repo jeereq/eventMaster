@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React from 'react';
 import type { LucideIcon } from 'lucide-react';
@@ -31,6 +32,7 @@ export default function PublicCtaBand({
   highlights?: PublicCtaHighlight[];
   actions?: React.ReactNode;
 }) {
+  const messaging = useMessagingChannels();
   return (
     <section className="em-landing-defer relative overflow-hidden bg-[#064e3b] text-white py-14 sm:py-24">
       <div
@@ -41,10 +43,10 @@ export default function PublicCtaBand({
         <div className="flex flex-col items-center text-center gap-6 sm:gap-8">
             <div className="max-w-2xl space-y-3 sm:space-y-4">
               <h2 className="em-landing-heading text-3xl sm:text-5xl text-white">
-                {title}
+                {messaging.adapt(title)}
               </h2>
               <p className="text-base sm:text-lg text-[#d1fae5] leading-relaxed">
-                {description}
+                {messaging.adapt(description)}
               </p>
               {highlights?.length ? (
                 <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 pt-1 text-sm text-[#d1fae5] font-medium">
@@ -53,7 +55,7 @@ export default function PublicCtaBand({
                     return (
                       <div key={item.label} className="flex items-center gap-1.5">
                         <Icon className={`w-4 h-4 shrink-0 ${HIGHLIGHT_ICON_TONE}`} />
-                        <span>{item.label}</span>
+                        <span>{messaging.adapt(item.label)}</span>
                       </div>
                     );
                   })}

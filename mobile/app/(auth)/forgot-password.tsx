@@ -8,8 +8,11 @@ import { Input } from '../../src/components/ui/Input';
 import { Button } from '../../src/components/ui/Button';
 import { Alert } from '../../src/components/ui/Alert';
 import { colors } from '../../src/theme/colors';
+import { usePlatformChannels } from '../../src/lib/platformChannels';
 
 export default function ForgotPasswordScreen() {
+  const channels = usePlatformChannels();
+  const methods = channels.otpMethods;
   const [identifier, setIdentifier] = useState('');
   const [method, setMethod] = useState<VerificationMethod>('EMAIL');
   const [error, setError] = useState('');
@@ -18,7 +21,7 @@ export default function ForgotPasswordScreen() {
 
   const handleSubmit = async () => {
     if (!identifier.trim()) {
-      setError('Saisissez votre e-mail ou numéro WhatsApp.');
+      setError(channels.whatsapp ? 'Saisissez votre e-mail ou numéro WhatsApp.' : 'Saisissez votre e-mail ou numéro de téléphone.');
       return;
     }
 
@@ -28,7 +31,7 @@ export default function ForgotPasswordScreen() {
     try {
       const data = await api.post<{ message: string }>('/auth/forgot-password', {
         email: identifier.trim(),
-        method,
+        method: methods.includes(method) ? method : methods[0],
       });
       setSuccess(data.message || 'Si le compte existe, un lien de réinitialisation a été envoyé.');
     } catch (err) {
@@ -41,7 +44,11 @@ export default function ForgotPasswordScreen() {
   return (
     <Screen
       title="Mot de passe oublié"
-      subtitle="Recevez un lien de réinitialisation par e-mail ou WhatsApp."
+      subtitle={
+        methods.includes('WHATSAPP')
+          ? 'Recevez un lien de réinitialisation par e-mail ou WhatsApp.'
+          : 'Recevez un lien de réinitialisation par e-mail.'
+      }
     >
       {error ? <Alert variant="error" message={error} /> : null}
       {success ? <Alert variant="success" message={success} /> : null}
@@ -49,17 +56,18 @@ export default function ForgotPasswordScreen() {
       {!success ? (
         <View style={styles.form}>
           <Input
-            label="Email ou WhatsApp"
+            label={channels.whatsapp ? 'Email ou WhatsApp' : 'E-mail ou téléphone'}
             value={identifier}
             onChangeText={setIdentifier}
             autoCapitalize="none"
             placeholder="nom@exemple.com ou +243…"
           />
 
+          {methods.length > 1 ? (
           <View style={styles.methodRow}>
             <Text style={styles.methodLabel}>Canal d'envoi</Text>
             <View style={styles.methodToggle}>
-              {(['EMAIL', 'WHATSAPP'] as VerificationMethod[]).map((m) => (
+              {methods.map((m) => (
                 <Pressable
                   key={m}
                   onPress={() => setMethod(m)}
@@ -72,6 +80,7 @@ export default function ForgotPasswordScreen() {
               ))}
             </View>
           </View>
+          ) : null}
 
           <Button title="Envoyer le lien" onPress={handleSubmit} loading={loading} />
         </View>

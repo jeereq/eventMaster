@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -270,6 +271,7 @@ function HeroBriefForm() {
 }
 
 export default function LandingHeroStreamlined() {
+  const messaging = useMessagingChannels();
   const { user } = useAuth();
   const { site } = usePlatformSite();
   const cities = enabledPublicCities(site);
@@ -291,7 +293,7 @@ export default function LandingHeroStreamlined() {
               Votre fête, de l’invitation jusqu’à l’entrée.
             </h1>
             <p className="text-base sm:text-lg leading-relaxed text-[#d1fae5] max-w-[520px]">
-              Salle, budget, invitations WhatsApp et contrôle des entrées, au même endroit. Payé par Mobile Money.
+              {messaging.adapt('Salle, budget, invitations WhatsApp et contrôle des entrées, au même endroit. Payé par Mobile Money.')}
             </p>
 
             <HeroBriefForm />
@@ -401,7 +403,7 @@ export default function LandingHeroStreamlined() {
                         {card.eyebrow}
                       </span>
                       <span className="font-display text-lg sm:text-[22px] font-semibold leading-[1.2]">{card.title}</span>
-                      <span className="text-sm sm:text-[15px] leading-relaxed text-muted">{card.desc}</span>
+                      <span className="text-sm sm:text-[15px] leading-relaxed text-muted">{messaging.adapt(card.desc)}</span>
                       <span className="mt-auto pt-1 sm:pt-2 inline-flex items-center gap-2 text-sm sm:text-base font-semibold text-primary">
                         {target.label}
                         <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" aria-hidden />

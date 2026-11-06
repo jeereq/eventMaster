@@ -1,4 +1,5 @@
 'use client';
+import { ChannelText } from '@/components/ChannelText';
 
 import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/lib/api';
@@ -925,7 +926,7 @@ function BillingPageInner() {
                         <ul className="space-y-1.5 text-xs text-muted flex-1 border-t border-border pt-3">
                           {plan.highlights.map((h) => (
                             <li key={h} className="flex gap-2">
-                              <Check className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden /> {h}
+                              <Check className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden /> <ChannelText text={h} />
                             </li>
                           ))}
                         </ul>
@@ -1021,7 +1022,7 @@ function BillingPageInner() {
                   {FEATURE_COMPARISON.map((row) => (
                     <details key={row.label} className="group">
                       <summary className="min-h-11 px-4 py-2.5 text-sm font-semibold text-foreground cursor-pointer list-none flex items-center justify-between gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50 [&::-webkit-details-marker]:hidden">
-                        {row.label}
+                        <ChannelText text={row.label} />
                         <span className="text-xs font-medium text-muted group-open:hidden">Voir</span>
                         <span className="text-xs font-medium text-muted hidden group-open:inline">Masquer</span>
                       </summary>
@@ -1058,7 +1059,7 @@ function BillingPageInner() {
                       {FEATURE_COMPARISON.map((row) => (
                         <tr key={row.label} className="border-t border-border">
                           <td className="sticky left-0 z-10 bg-surface px-4 py-2 text-xs text-foreground min-w-[11rem] shadow-[2px_0_8px_rgba(0,0,0,0.06)]">
-                            {row.label}
+                            <ChannelText text={row.label} />
                           </td>
                           {comparisonIds.map((id) => (
                             <td key={id} className="py-2 text-center">

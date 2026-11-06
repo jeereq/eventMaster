@@ -84,10 +84,12 @@ export function defaultPhoneAuthOtpMethod(channels: AuthOtpChannels = 'BOTH'): P
   return 'WHATSAPP';
 }
 
-export function phoneFieldLabel(channels: AuthOtpChannels = 'BOTH', method?: AuthOtpMethod): string {
+export function phoneFieldLabel(channels: AuthOtpChannels = 'BOTH', requested?: AuthOtpMethod): string {
+  const phoneMethods = phoneAuthOtpMethods(channels);
+  // Un canal non autorisé n’est jamais nommé, même s’il est demandé.
+  const method = requested && phoneMethods.includes(requested as PhoneAuthOtpMethod) ? requested : undefined;
   if (method === 'WHATSAPP') return 'Téléphone WhatsApp';
   if (method === 'SMS') return 'Téléphone SMS';
-  const phoneMethods = phoneAuthOtpMethods(channels);
   if (phoneMethods.length === 1) {
     return phoneMethods[0] === 'WHATSAPP' ? 'Téléphone WhatsApp' : 'Téléphone SMS';
   }
@@ -97,7 +99,9 @@ export function phoneFieldLabel(channels: AuthOtpChannels = 'BOTH', method?: Aut
   return 'Téléphone';
 }
 
-export function phoneFieldHint(channels: AuthOtpChannels = 'BOTH', method?: AuthOtpMethod): string {
+export function phoneFieldHint(channels: AuthOtpChannels = 'BOTH', requested?: AuthOtpMethod): string {
+  const allowedPhone = phoneAuthOtpMethods(channels);
+  const method = requested && allowedPhone.includes(requested as PhoneAuthOtpMethod) ? requested : undefined;
   if (method === 'WHATSAPP') {
     return 'Indicatif pays + numéro national (sans le 0). Code / lien envoyé sur WhatsApp.';
   }

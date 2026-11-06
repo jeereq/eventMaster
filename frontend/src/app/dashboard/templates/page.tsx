@@ -1,4 +1,5 @@
 'use client';
+import { ChannelText } from '@/components/ChannelText';
 
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
@@ -3107,7 +3108,7 @@ const studioModelPhotos = useMemo(
  >
    Continuer vers un événement
  </Link>
- <p className="text-xs text-muted text-center">Depuis l’événement, vous pourrez l’envoyer sur WhatsApp.</p>
+ <p className="text-xs text-muted text-center"><ChannelText text="Depuis l’événement, vous pourrez l’envoyer sur WhatsApp." /></p>
  <div className="flex flex-col sm:flex-row gap-2.5">
  <button 
  type="button"
@@ -6431,7 +6432,7 @@ const studioModelPhotos = useMemo(
  >
    Continuer vers un événement
  </Link>
- <p className="text-xs text-muted text-center">Depuis l’événement, vous pourrez l’envoyer sur WhatsApp.</p>
+ <p className="text-xs text-muted text-center"><ChannelText text="Depuis l’événement, vous pourrez l’envoyer sur WhatsApp." /></p>
  <div className="flex flex-col sm:flex-row gap-2.5">
  <button
  type="button"

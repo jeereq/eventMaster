@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useId, useState } from 'react';
 import { CreditCard, Mail, Shield, Users } from 'lucide-react';
@@ -125,6 +126,7 @@ export default function AdminUserFormModal({
   setExpiresAt: (value: string) => void;
   setComplimentary: (value: boolean) => void;
 }) {
+  const messaging = useMessagingChannels();
   const formId = useId();
   const [formError, setFormError] = useState('');
 
@@ -200,12 +202,12 @@ export default function AdminUserFormModal({
         {setPhone ? (
           <PhoneInput
             id={`${formId}-phone`}
-            label="Téléphone (WhatsApp / SMS - optionnel)"
+            label={messaging.phone ? messaging.adapt('Téléphone (WhatsApp / SMS - optionnel)') : 'Téléphone (optionnel)'}
             countryCode={phoneCountryCode || '+243'}
             national={phone || ''}
             onCountryCodeChange={(code) => setPhoneCountryCode?.(code)}
             onNationalChange={(nat) => setPhone?.(nat)}
-            hint="Permet d’envoyer le code ou les alertes sur WhatsApp ou SMS en plus de l’e-mail."
+            hint={messaging.phone ? messaging.adapt('Permet d’envoyer le code ou les alertes par WhatsApp ou SMS en plus de l’e-mail.') : undefined}
           />
         ) : null}
 
@@ -292,7 +294,7 @@ export default function AdminUserFormModal({
                     />
                     <span>
                       <span className="block text-sm font-semibold text-foreground">{right.label}</span>
-                      <span className="block text-xs text-muted">{right.hint}</span>
+                      <span className="block text-xs text-muted">{messaging.adapt(right.hint)}</span>
                     </span>
                   </label>
                 ))}

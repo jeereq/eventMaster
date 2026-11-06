@@ -1,4 +1,5 @@
 'use client';
+import { ChannelText } from '@/components/ChannelText';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
@@ -358,7 +359,7 @@ function UpgradePathCard({
           {features.map((feature) => (
             <li key={feature} className="flex items-center gap-2">
               <Check className="w-4 h-4 text-primary shrink-0" aria-hidden />
-              <span>{feature}</span>
+              <span><ChannelText text={feature} /></span>
             </li>
           ))}
         </ul>
@@ -1015,7 +1016,7 @@ export default function ClientDashboardHome() {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-bold text-foreground group-hover:text-primary transition">{studio.title}</span>
-                  <span className="block text-xs text-muted leading-relaxed">{studio.detail}</span>
+                  <span className="block text-xs text-muted leading-relaxed"><ChannelText text={studio.detail} /></span>
                 </span>
                 <span className="text-xs font-bold text-primary shrink-0 inline-flex items-center gap-1">
                   {studio.action}
@@ -1290,7 +1291,7 @@ export default function ClientDashboardHome() {
                           {planHighlights(plan.id, plan.highlights, dynamicPlans?.[plan.id]).map((h, idx) => (
                             <div key={idx} className="flex items-center gap-1.5">
                               <Check className="w-3 h-3 text-primary shrink-0" />
-                              <span className="truncate">{h}</span>
+                              <span className="truncate"><ChannelText text={h} /></span>
                             </div>
                           ))}
                         </div>
@@ -1366,7 +1367,7 @@ export default function ClientDashboardHome() {
                             {planHighlights(plan.id, plan.highlights, dynamicPlans?.[plan.id]).map((h, idx) => (
                               <div key={idx} className="flex items-center gap-1.5">
                                 <Check className="w-3 h-3 text-primary shrink-0" />
-                                <span className="truncate">{h}</span>
+                                <span className="truncate"><ChannelText text={h} /></span>
                               </div>
                             ))}
                           </div>
@@ -1440,7 +1441,7 @@ export default function ClientDashboardHome() {
                               {planHighlights(plan.id, plan.highlights, dynamicPlans?.[plan.id]).map((h, idx) => (
                                 <div key={idx} className="flex items-center gap-1.5">
                                   <Check className="w-3 h-3 text-primary shrink-0" />
-                                  <span className="truncate">{h}</span>
+                                  <span className="truncate"><ChannelText text={h} /></span>
                                 </div>
                               ))}
                             </div>

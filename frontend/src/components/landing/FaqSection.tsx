@@ -7,6 +7,7 @@ import { FAQ_ITEMS } from '@/config/siteContent';
 import { cn } from '@/lib/cn';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { interpolateRates } from '@/lib/platformRates';
+import { buildMessagingChannels } from '@/lib/messagingChannels';
 
 type FaqSite = ReturnType<typeof usePlatformSite>['site'];
 
@@ -14,7 +15,7 @@ type FaqSite = ReturnType<typeof usePlatformSite>['site'];
 export function resolveFaqAnswer(item: (typeof FAQ_ITEMS)[number], site: FaqSite): string {
   return item.id === 'support'
     ? `Utilisez le formulaire de contact, écrivez à ${site.supportEmail} ou appelez le ${site.supportPhone} (${site.whatsappNote}). Notre équipe répond aux questions commerciales, techniques et de facturation.`
-    : interpolateRates(item.answer, site);
+    : buildMessagingChannels(site.notificationChannels).adapt(interpolateRates(item.answer, site));
 }
 
 interface FaqSectionProps {

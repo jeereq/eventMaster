@@ -1,4 +1,5 @@
 'use client';
+import { ChannelText } from '@/components/ChannelText';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
@@ -68,7 +69,7 @@ const LandingInvitationAiGenerator = dynamic(
         <div className="space-y-2 max-w-sm">
           <Sparkles className="w-8 h-8 text-festive-accent mx-auto animate-pulse motion-reduce:animate-none" />
           <p className="text-sm font-semibold text-foreground">Chargement du studio d’invitations IA…</p>
-          <p className="text-xs text-muted">Préparation du moteur graphique de composition 9:16 WhatsApp.</p>
+          <p className="text-xs text-muted"><ChannelText text="Préparation du moteur graphique de composition 9:16 WhatsApp." /></p>
         </div>
       </div>
     ),
@@ -426,7 +427,7 @@ export default function SimulateurPageClient() {
               <h1 className="font-display text-2xl md:text-[2.125rem] font-semibold leading-tight tracking-[-0.02em]">
                 {STUDIO_HEADINGS[activeStudio].title}
               </h1>
-              <p className="text-sm md:text-[15px] text-[#d1fae5]">{STUDIO_HEADINGS[activeStudio].text}</p>
+              <p className="text-sm md:text-[15px] text-[#d1fae5]"><ChannelText text={STUDIO_HEADINGS[activeStudio].text} /></p>
             </div>
 
             {!allowance.unlimited ? (

@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -71,6 +72,7 @@ function categoryChipLabel(id: CategoryFilter) {
 }
 
 export default function ModelesPage() {
+  const messaging = useMessagingChannels();
   const { user, access } = useAuth();
   const { site } = usePlatformSite();
   const { isFavorite, toggleFavorite, count: favoritesCount, hydrated: favoritesHydrated } =
@@ -476,7 +478,7 @@ export default function ModelesPage() {
             <div className="space-y-1.5">
               <div className="inline-flex items-center gap-1.5 text-xs font-bold text-primary">
                 <CheckCircle2 className="w-4 h-4 text-primary" aria-hidden />
-                Partage WhatsApp en 1 clic
+                {messaging.adapt('Partage WhatsApp en 1 clic')}
               </div>
               <p className="text-xs text-muted leading-relaxed">
                 Envoyez un lien personnalisé et élégant sans gaspillage de papier ni frais d'impression.
@@ -606,7 +608,7 @@ export default function ModelesPage() {
                 </li>
                 <li className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />
-                  Partage WhatsApp &amp; suivi des réponses
+                  {messaging.adapt('Partage WhatsApp & suivi des réponses')}
                 </li>
                 <li className="flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" aria-hidden />

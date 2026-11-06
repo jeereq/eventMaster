@@ -664,8 +664,30 @@ export function sanitizeAuthOtpChannels(value: unknown): AuthOtpChannels {
   return 'BOTH';
 }
 
+/**
+ * Canaux OTP effectifs : ceux choisis pour la validation, restreints aux canaux
+ * activés sur la plateforme (un canal désactivé n’est jamais proposé ni utilisé).
+ * Si plus aucun canal ne reste, l’e-mail sert de repli pour ne bloquer personne.
+ */
+export function effectiveAuthOtpChannels(
+  authOtpChannels: unknown,
+  notificationChannels: unknown,
+): AuthOtpChannels {
+  const enabled = new Set<string>(sanitizeNotificationChannels(notificationChannels));
+  const kept = authOtpMethodOptions(sanitizeAuthOtpChannels(authOtpChannels)).filter((m) => enabled.has(m));
+  return kept.length > 0 ? methodsToAuthOtpChannels(kept) : 'EMAIL';
+}
+
+/** Canal activé par le superadmin (« Canaux de notification plateforme autorisés »). */
+export function isPlatformChannelEnabled(
+  channel: PlatformNotificationChannel,
+  settings = loadPlatformSettings(),
+): boolean {
+  return sanitizeNotificationChannels(settings.notificationChannels).includes(channel);
+}
+
 export function getAuthOtpChannels(settings = loadPlatformSettings()): AuthOtpChannels {
-  return sanitizeAuthOtpChannels(settings.authOtpChannels);
+  return effectiveAuthOtpChannels(settings.authOtpChannels, settings.notificationChannels);
 }
 
 export type PhoneAuthOtpMethod = 'WHATSAPP' | 'SMS';
@@ -971,7 +993,7 @@ export function getPublicSiteConfig(settings = loadPlatformSettings()): PublicSi
     ),
     usdExchangeRateCdf: Number(settings.usdExchangeRateCdf) > 0 ? Math.round(Number(settings.usdExchangeRateCdf)) : 2800,
     enabledCities: sanitizeEnabledCities(settings.enabledCities),
-    authOtpChannels: sanitizeAuthOtpChannels(settings.authOtpChannels),
+    authOtpChannels: getAuthOtpChannels(settings),
     notificationChannels: sanitizeNotificationChannels(settings.notificationChannels),
     aiTokenPriceCdf: sanitizeAiTokenPriceCdf(settings.aiTokenPriceCdf),
     aiTokenMinPurchaseCdf: sanitizeAiTokenMinPurchaseCdf(

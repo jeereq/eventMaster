@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -43,7 +44,10 @@ function familyChannels(data: PreferencesResponse, family: NotificationPrefFamil
 
 export default function NotificationPreferencesCard() {
   const { site } = usePlatformSite();
-  const platformNotifChannels = site.notificationChannels || ['EMAIL', 'WHATSAPP', 'SMS', 'PUSH'];
+  const platformNotifChannels = site.notificationChannels || ['EMAIL', 'PUSH'];
+  const messaging = useMessagingChannels();
+  // Un canal désactivé par le superadmin n’apparaît pas du tout.
+  const visibleChannels = CHANNELS.filter((channel) => platformNotifChannels.includes(channel.key.toUpperCase() as never));
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -113,7 +117,7 @@ export default function NotificationPreferencesCard() {
             Canaux d’alerte
           </span>
         }
-        description="L’inbox du tableau de bord reste toujours active. Choisissez, pour chaque famille, si e-mail, WhatsApp, SMS et push vous suivent."
+        description={messaging.adapt('L’inbox du tableau de bord reste toujours active. Choisissez, pour chaque famille, si e-mail, WhatsApp, SMS et push vous suivent.')}
         action={
           <Button
             size="sm"
@@ -138,13 +142,13 @@ export default function NotificationPreferencesCard() {
         </div>
       ) : data ? (
         <div className="space-y-4">
-          {!data.hasPhone && (
+          {!data.hasPhone && messaging.phone && (
             <p className="text-sm text-muted leading-relaxed">
               Ajoutez un numéro de téléphone dans{' '}
               <Link href="/dashboard/profile" className="text-primary font-medium hover:underline">
                 Mon profil
               </Link>{' '}
-              pour recevoir les alertes WhatsApp et SMS.
+              {messaging.adapt('pour recevoir les alertes WhatsApp et SMS.')}
             </p>
           )}
 
@@ -163,7 +167,7 @@ export default function NotificationPreferencesCard() {
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2" role="group" aria-label={`Canaux ${NOTIFICATION_FAMILY_LABELS[family]}`}>
-                    {CHANNELS.map((channel) => {
+                    {visibleChannels.map((channel) => {
                       const isPlatformDisabled = !platformNotifChannels.includes(channel.key.toUpperCase() as any);
                       const disabled = isPlatformDisabled || ((channel.key === 'whatsapp' || channel.key === 'sms') && !data.hasPhone);
                       const checked = channels[channel.key] && !isPlatformDisabled;

@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -101,6 +102,7 @@ function InvitationRow({ item }: { item: GuestInvitationItem }) {
 }
 
 export default function GuestHomePage() {
+  const messaging = useMessagingChannels();
   const params = useParams();
   const guestId = params.guestId as string;
   const { site } = usePlatformSite();
@@ -269,7 +271,7 @@ export default function GuestHomePage() {
           </span>
           <p className="font-display text-lg font-semibold text-foreground">Aucune invitation ici</p>
           <p className="text-sm text-muted max-w-xs mx-auto">
-            Ouvrez le lien reçu par WhatsApp, ou demandez-le à l’organisateur.
+            {messaging.adapt('Ouvrez le lien reçu par WhatsApp, ou demandez-le à l’organisateur.')}
           </p>
         </div>
       )}

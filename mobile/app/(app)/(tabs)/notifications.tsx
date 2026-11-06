@@ -24,6 +24,7 @@ import { setBadgeCount } from '../../../src/lib/pushNotifications';
 import type { PlatformNotification } from '../../../src/types/event';
 import { Button } from '../../../src/components/ui/Button';
 import { useTheme } from '../../../src/theme/ThemeContext';
+import { usePlatformChannels } from '../../../src/lib/platformChannels';
 
 const FAMILY_LABELS: Record<NotificationPrefFamily, string> = {
   events: 'Événements',
@@ -37,6 +38,7 @@ const FAMILIES: NotificationPrefFamily[] = ['events', 'billing', 'commissions', 
 
 export default function NotificationsTab() {
   const { colors } = useTheme();
+  const channels = usePlatformChannels();
   const [items, setItems] = useState<PlatformNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -219,12 +221,14 @@ export default function NotificationsTab() {
         <View style={styles.card}>
           <Text style={styles.prefsTitle}>Canaux d'alerte</Text>
           <Text style={styles.prefsHint}>
-            L'inbox reste active. WhatsApp nécessite un numéro sur le profil. Les invitations
-            envoyées aux invités ne sont pas concernées.
+            {channels.whatsapp
+              ? "L'inbox reste active. WhatsApp nécessite un numéro sur le profil. Les invitations envoyées aux invités ne sont pas concernées."
+              : "L'inbox reste active. Les invitations envoyées aux invités ne sont pas concernées."}
           </Text>
           {FAMILIES.map((family) => (
             <View key={family} style={styles.familyBlock}>
               <Text style={styles.familyLabel}>{FAMILY_LABELS[family]}</Text>
+              {channels.email ? (
               <View style={styles.switchRow}>
                 <Text style={styles.switchLabel}>E-mail</Text>
                 <Switch
@@ -233,6 +237,8 @@ export default function NotificationsTab() {
                   trackColor={{ true: colors.primary }}
                 />
               </View>
+              ) : null}
+              {channels.whatsapp ? (
               <View style={styles.switchRow}>
                 <Text style={styles.switchLabel}>WhatsApp</Text>
                 <Switch
@@ -242,6 +248,7 @@ export default function NotificationsTab() {
                   trackColor={{ true: colors.primary }}
                 />
               </View>
+              ) : null}
               <View style={styles.switchRow}>
                 <Text style={styles.switchLabel}>Push</Text>
                 <Switch

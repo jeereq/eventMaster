@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -92,6 +93,7 @@ interface JourneyStep {
  * Les outils avancés (billetterie, statistiques…) restent accessibles depuis le menu.
  */
 export default function PersonalOrganizerHome({ events }: { events: PersonalOrganizerEvent[] }) {
+  const messaging = useMessagingChannels();
   const { user, tenant, planQuota, access, planName: activePlanName } = useAuth();
   const [stats, setStats] = useState<WorkspaceStats | null>(null);
 
@@ -169,7 +171,7 @@ export default function PersonalOrganizerHome({ events }: { events: PersonalOrga
         {
           id: 'invite',
           title: 'Envoyer les invitations',
-          hint: 'Faire-part WhatsApp avec réponse en ligne',
+          hint: messaging.adapt('Faire-part WhatsApp avec réponse en ligne'),
           done: focusGuests > 0 && answered > 0,
           href: eventDashboardHref(focusEvent.id, { tab: 'invitations' }),
           cta: 'Envoyer',
@@ -636,10 +638,11 @@ function GuestResponsesCard({
 }
 
 function EmptyHero({ canCreate }: { canCreate: boolean }) {
+  const messaging = useMessagingChannels();
   const steps = [
     { icon: Calendar, title: 'Créez la fête', hint: 'Nom, date, lieu' },
     { icon: LayoutGrid, title: 'Dessinez la salle', hint: 'Tables en 2D / 3D' },
-    { icon: Send, title: 'Invitez sur WhatsApp', hint: 'Réponses en direct' },
+    { icon: Send, title: messaging.adapt('Invitez sur WhatsApp'), hint: 'Réponses en direct' },
     { icon: Heart, title: 'Accueillez le jour J', hint: 'Scan du QR à l’entrée' },
   ];
   return (

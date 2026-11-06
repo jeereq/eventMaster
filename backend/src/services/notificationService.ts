@@ -8,6 +8,8 @@ import {
 logNotificationConfigStatus();
 
 import { formatPhoneE164 } from '../utils/phone';
+import { isPlatformChannelEnabled } from './platformSettingsService';
+import { sendRealSms as sendSmsViaGateway } from './sms/smsService.ts';
 import {
   claimSimilarOutbound,
   isPlatformBrandedEmailSubject,
@@ -15,6 +17,17 @@ import {
 } from './notificationDedup';
 
 export { formatPhoneE164 };
+
+const WHATSAPP_DISABLED = {
+  success: false,
+  simulated: false,
+  error: 'Canal WhatsApp désactivé sur la plateforme.',
+} as const;
+
+/** Un canal désactivé par le superadmin n’envoie jamais rien, quel que soit l’appelant. */
+function whatsappDisabled(): boolean {
+  return !isPlatformChannelEnabled('WHATSAPP');
+}
 
 /**
  * Envoie un e-mail via SendGrid uniquement (aucune simulation).
@@ -134,6 +147,7 @@ async function sendUltraMsgRequest(
  * Send a real WhatsApp message using UltraMsg or fall back to simulation
  */
 export async function sendRealWhatsApp(to: string, body: string): Promise<{ success: boolean; simulated: boolean; messageSid?: string; error?: string }> {
+  if (whatsappDisabled()) return { ...WHATSAPP_DISABLED };
   const formattedTo = formatPhoneE164(to);
   const { ultramsgInstanceId, ultramsgToken } = getNotificationCredentials();
 
@@ -157,6 +171,7 @@ export async function sendRealWhatsAppLocation(
   lat: number,
   lng: number
 ): Promise<{ success: boolean; simulated: boolean; messageSid?: string; error?: string }> {
+  if (whatsappDisabled()) return { ...WHATSAPP_DISABLED };
   const formattedTo = formatPhoneE164(to);
   const { ultramsgInstanceId, ultramsgToken } = getNotificationCredentials();
 
@@ -181,6 +196,7 @@ export async function sendRealWhatsAppImage(
   imageUrl: string,
   caption: string
 ): Promise<{ success: boolean; simulated: boolean; messageSid?: string; error?: string }> {
+  if (whatsappDisabled()) return { ...WHATSAPP_DISABLED };
   const formattedTo = formatPhoneE164(to);
   const { ultramsgInstanceId, ultramsgToken } = getNotificationCredentials();
 
@@ -205,6 +221,7 @@ export async function sendRealWhatsAppDocument(
   filename: string,
   caption?: string,
 ): Promise<{ success: boolean; simulated: boolean; messageSid?: string; error?: string }> {
+  if (whatsappDisabled()) return { ...WHATSAPP_DISABLED };
   const formattedTo = formatPhoneE164(to);
   const { ultramsgInstanceId, ultramsgToken } = getNotificationCredentials();
 
@@ -223,6 +240,16 @@ export async function sendRealWhatsAppDocument(
   return sendUltraMsgRequest('document', formattedTo, params);
 }
 
-export { sendRealSms, checkActiveSmsBalance, getSmsDeliveryStatus, listAvailableSmsProviders } from './sms/smsService.ts';
+export { checkActiveSmsBalance, getSmsDeliveryStatus, listAvailableSmsProviders } from './sms/smsService.ts';
+
+/** Envoi SMS, bloqué si le canal SMS est désactivé par le superadmin. */
+export async function sendRealSms(
+  ...args: Parameters<typeof sendSmsViaGateway>
+): ReturnType<typeof sendSmsViaGateway> {
+  if (!isPlatformChannelEnabled('SMS')) {
+    return { success: false, simulated: false, provider: 'disabled', error: 'Canal SMS désactivé sur la plateforme.' };
+  }
+  return sendSmsViaGateway(...args);
+}
 export type { SmsSendResult, SmsSendOptions, SmsBalanceResult, SmsDeliveryStatusResult } from './sms/types.ts';
 

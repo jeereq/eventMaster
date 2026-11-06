@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useId, useState } from 'react';
 import { Users } from 'lucide-react';
@@ -54,6 +55,7 @@ export default function AdminGuestFormModal({
   setPhoneCountryCode: (value: string) => void;
   setPhoneNational: (value: string) => void;
 }) {
+  const messaging = useMessagingChannels();
   const formId = useId();
   const [formError, setFormError] = useState('');
 
@@ -149,7 +151,7 @@ export default function AdminGuestFormModal({
         />
 
         <PhoneInput
-          label="Téléphone (WhatsApp)"
+          label={messaging.whatsapp ? 'Téléphone (WhatsApp)' : 'Téléphone'}
           countryCode={phoneCountryCode}
           national={phoneNational}
           onCountryCodeChange={setPhoneCountryCode}

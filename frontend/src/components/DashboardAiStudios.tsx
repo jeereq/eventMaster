@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React from 'react';
 import dynamic from 'next/dynamic';
@@ -79,6 +80,7 @@ export default function DashboardAiStudios({
   onChange: (id: DashboardAiStudioId) => void;
   budget: React.ReactNode;
 }) {
+  const messaging = useMessagingChannels();
   const { access } = useAuth();
   const { site } = usePlatformSite();
   const visibility = site?.studioVisibility ?? { budget: true, invite: true, room: true };
@@ -108,13 +110,15 @@ export default function DashboardAiStudios({
           {
             id: 'invite' as DashboardAiStudioId,
             title: 'Studio Invitations',
-            subtitle: 'Cartes 9:16 WhatsApp et réponse à l’invitation',
-            description: 'Cartons d’invitation personnalisés 9:16 pour WhatsApp avec confirmation de présence invité.',
+            subtitle: messaging.adapt('Cartes 9:16 WhatsApp et réponse à l’invitation'),
+            description: messaging.whatsapp
+              ? 'Cartons d’invitation personnalisés 9:16 pour WhatsApp avec confirmation de présence invité.'
+              : 'Cartons d’invitation personnalisés 9:16 avec confirmation de présence invité.',
             icon: Mail,
-            badge: 'Format WhatsApp 9:16',
+            badge: messaging.adapt('Format WhatsApp 9:16'),
             pillColor: 'text-pink-700 bg-pink-500/15 border-pink-500/30 dark:text-pink-300',
             iconBg: 'bg-pink-500/10 text-pink-600 dark:text-pink-400',
-            features: ['Format 9:16 mobile', 'Partage WhatsApp', 'Lien de réponse à l’invitation invité'],
+            features: ['Format 9:16 mobile', messaging.adapt('Partage WhatsApp'), 'Lien de réponse à l’invitation invité'],
           },
         ]
       : []),

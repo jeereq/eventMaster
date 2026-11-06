@@ -1,3 +1,4 @@
+import { ChannelText, IfChannel } from '@/components/ChannelText';
 import { LegalPageShell, Section } from '@/components/LegalPageShell';
 import LegalSupportEmail from '@/components/LegalSupportEmail';
 import {
@@ -49,7 +50,7 @@ export default function PrivacyPage() {
           <strong>responsable de traitement</strong>. EventMaster intervient en qualité de{' '}
           <strong>sous-traitant technique</strong>, traitant ces données uniquement pour exécuter les services sollicités
           (émission des e-billets multi-zones, enregistrement des dons solidaires, contrôle d&apos;accès QR, routage des
-          invitations WhatsApp/e-mail, plans de salle 2D/3D).
+          invitations <ChannelText text="WhatsApp/e-mail" />, plans de salle 2D/3D).
         </p>
         <p>
           Contact DPO / Support légal :{' '}
@@ -61,7 +62,7 @@ export default function PrivacyPage() {
         <p>Selon votre utilisation d&apos;EventMaster, nous sommes amenés à collecter et traiter les catégories de données suivantes :</p>
         <ul className="list-disc pl-5 space-y-1.5">
           <li>
-            <strong>Comptes utilisateurs, Profils &amp; Vérification OTP :</strong> Nom, prénom, adresse e-mail, numéro de téléphone WhatsApp (indicatif international au format normalisé E.164), mot de passe chiffré (hachage robuste bcrypt avec sel), rôle d&apos;accès (propriétaire, manager, protocole, commercial), nom d&apos;organisation ou raison sociale, adresse professionnelle, et traces d&apos;émission/validation des codes de vérification OTP (e-mail ou WhatsApp).
+            <strong>Comptes utilisateurs, Profils &amp; Vérification OTP :</strong> Nom, prénom, adresse e-mail, numéro de téléphone <IfChannel channel="WHATSAPP">WhatsApp </IfChannel>(indicatif international au format normalisé E.164), mot de passe chiffré (hachage robuste bcrypt avec sel), rôle d&apos;accès (propriétaire, manager, protocole, commercial), nom d&apos;organisation ou raison sociale, adresse professionnelle, et traces d&apos;émission/validation des codes de vérification OTP (<ChannelText text="e-mail ou WhatsApp" />).
           </li>
           <li>
             <strong>Billetterie, Paliers Tarifaires &amp; Commandes de billets :</strong> Nom et prénom de l&apos;acheteur, adresse e-mail de délivrance du billet, numéro de téléphone, intitulé de l&apos;événement, quantité de billets, palier tarifaire sélectionné (prévente, standard, tardif), zone tarifaire choisie (VIP, Carré d&apos;Or, Standard, etc.), tarif payé en Francs Congolais (CDF) ou USD, siège ou table attribué le cas échéant, référence unique de commande, statut de présence automatiquement confirmé (Répondez s’il vous plaît « accepté ») et QR Code d&apos;accès cryptographique unique.
@@ -95,7 +96,7 @@ export default function PrivacyPage() {
             <strong>Contrôle d&apos;accès &amp; Scan le jour J (Protocole) :</strong> Horodatage précis du scan d&apos;entrée, statut de validation du billet ou du pass donateur (présence confirmée, scan unique enregistré, tentative de doublon détectée), identifiant de l&apos;agent protocole ou du dispositif de scan ayant validé l&apos;accès.
           </li>
           <li>
-            <strong>Invités, Confirmations Répondez s’il vous plaît &amp; Personnalisation des accès partagés :</strong> Nom, prénom, numéro de téléphone WhatsApp (format international E.164), adresse e-mail, catégorie d&apos;invité, statut de réponse Répondez s’il vous plaît (accepté, décliné), besoins spécifiques d&apos;accessibilité (fauteuil roulant PMR), faculté offerte à chaque porteur de billet ou invité de rectifier lui-même ses coordonnées et préférences alimentaires (allergies, régime végétarien, notes pratiques), messages déposés sur le livre d&apos;or et photos partagées dans le fil d&apos;actualité.
+            <strong>Invités, Confirmations Répondez s’il vous plaît &amp; Personnalisation des accès partagés :</strong> Nom, prénom, numéro de téléphone <IfChannel channel="WHATSAPP">WhatsApp </IfChannel>(format international E.164), adresse e-mail, catégorie d&apos;invité, statut de réponse Répondez s’il vous plaît (accepté, décliné), besoins spécifiques d&apos;accessibilité (fauteuil roulant PMR), faculté offerte à chaque porteur de billet ou invité de rectifier lui-même ses coordonnées et préférences alimentaires (allergies, régime végétarien, notes pratiques), messages déposés sur le livre d&apos;or et photos partagées dans le fil d&apos;actualité.
           </li>
           <li>
             <strong>Marketplace, Prestations &amp; Locations :</strong> Fiches de salles, de services ou de matériels en location (descriptifs, tarifs indicatifs, photos et vidéos hébergées via Cloudinary, géolocalisation et calendrier de disponibilité).
@@ -109,7 +110,7 @@ export default function PrivacyPage() {
       <Section title="3. Finalités du traitement des données">
         <p>Les données collectées sont utilisées pour les finalités explicites suivantes :</p>
         <ul className="list-disc pl-5 space-y-1">
-          <li><strong>Création et gestion des comptes :</strong> authentification sécurisée, vérification d&apos;identité renforcée par code OTP (e-mail ou WhatsApp), gestion des privilèges d&apos;équipe et administration multi-tenant ;</li>
+          <li><strong>Création et gestion des comptes :</strong> authentification sécurisée, vérification d&apos;identité renforcée par code OTP (<ChannelText text="e-mail ou WhatsApp" />), gestion des privilèges d&apos;équipe et administration multi-tenant ;</li>
           <li><strong>Modélisation spatiale assistée par IA :</strong> analyse visuelle des photos de salle et génération assistée de plans de salle 2D zénithaux et 3D WebGL via des modèles d&apos;intelligence artificielle (Google Gemini) sélectionnés par la plateforme ;</li>
           <li><strong>Création d&apos;invitations multilingues &amp; modèles publics :</strong> rédaction, reformulation et adaptation culturelle des messages d&apos;invitation en Français et dans les 4 langues nationales de la RDC (Lingala, Swahili, Kikongo, Tshiluba), composition graphique du carton d&apos;arrière-plan, application des variables dynamiques et, le cas échéant, remplacement d&apos;identité des visages (expressions conservées depuis le carton) ;</li>
           <li><strong>Simulation unifiée multi-ateliers (/simulateur) :</strong> estimation de packs budgétaires (Éco, Équilibré, Confort) en FC et USD, exploration guidée des modèles de faire-part et simulation d&apos;aménagement 2D/3D basés sur les capacités et les tarifs réels du catalogue ;</li>
@@ -132,7 +133,7 @@ export default function PrivacyPage() {
         <ul className="list-disc pl-5 space-y-1">
           <li><strong>Exécution d&apos;un contrat ou de mesures précontractuelles :</strong> fourniture du service SaaS, traitement des achats de billets, enregistrement des dons, analyse IA des plans à la demande de l&apos;utilisateur, exécution des forfaits d&apos;abonnement et gestion des réservations marketplace ;</li>
           <li><strong>Respect d&apos;obligations légales et fiscales :</strong> émission des pièces comptables, facturation, conservation des traces de transactions financières et fiscales relatives à la billetterie et aux collectes de fonds ;</li>
-          <li><strong>Consentement :</strong> acceptation de la présente politique, souscription aux communications WhatsApp/e-mail, téléversement de photographies et autorisation de géolocalisation sur l&apos;appareil ;</li>
+          <li><strong>Consentement :</strong> acceptation de la présente politique, souscription aux communications <ChannelText text="WhatsApp/e-mail" />, téléversement de photographies et autorisation de géolocalisation sur l&apos;appareil ;</li>
           <li><strong>Intérêt légitime :</strong> sécurité des infrastructures, prévention de la fraude aux billets et aux dons (anti-doublon QR Code), journalisation d&apos;intégrité collaborative et amélioration continue des fonctionnalités.</li>
         </ul>
       </Section>
@@ -151,7 +152,7 @@ export default function PrivacyPage() {
         <ul className="list-disc pl-5 space-y-1">
           <li>Chiffrement systématique des flux de données en transit via TLS / HTTPS (chiffrement 256 bits) ;</li>
           <li>Stockage sécurisé des mots de passe avec algorithmes de hachage robuste (bcrypt avec sel) ;</li>
-          <li>Vérification d&apos;identité par mot de passe à usage unique (OTP) acheminé par e-mail ou WhatsApp ;</li>
+          <li>Vérification d&apos;identité par mot de passe à usage unique (OTP) acheminé <ChannelText text="par e-mail ou WhatsApp" /> ;</li>
           <li>Génération cryptographique des identifiants et clés de validation des QR Codes de billetterie et pass donateurs ;</li>
           <li>Moteur de calcul géométrique et d&apos;espacement s&apos;exécutant de manière sécurisée sans fuite de données vers des régies tierces ;</li>
           <li>Surveillance continue, traçabilité des opérations de paiement et sauvegardes régulières des bases de données.</li>
@@ -177,9 +178,11 @@ export default function PrivacyPage() {
           <li>
             <strong>SendGrid :</strong> Acheminement sécurisé des e-mails transactionnels (codes de vérification OTP, confirmations de commande, reçus de billetterie et e-billets PDF) ;
           </li>
-          <li>
-            <strong>UltraMsg :</strong> Acheminement sécurisé des messages, faire-part interactifs, confirmations Répondez s’il vous plaît et codes OTP par WhatsApp ;
-          </li>
+          <IfChannel channel="WHATSAPP">
+            <li>
+              <strong>UltraMsg :</strong> Acheminement sécurisé des messages, faire-part interactifs, confirmations Répondez s’il vous plaît et codes OTP par WhatsApp ;
+            </li>
+          </IfChannel>
           <li>
             <strong>Fournisseurs d&apos;hébergement Cloud :</strong> Serveurs d&apos;application et bases de données managées conformes aux standards de sécurité internationaux.
           </li>

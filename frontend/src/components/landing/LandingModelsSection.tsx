@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -24,6 +25,7 @@ export default function LandingModelsSection({
   loading: boolean;
   onPreview: (template: LandingTemplate) => void;
 }) {
+  const messaging = useMessagingChannels();
   const revealRef = useLandingReveal<HTMLElement>();
   const { site } = usePlatformSite();
   const isInviteBlocked = site?.studioVisibility?.invite === false;
@@ -48,7 +50,9 @@ export default function LandingModelsSection({
               Modèles d’invitation prêts à l’emploi
             </h2>
             <p className="text-sm text-muted leading-relaxed">
-              Choisissez un design élégant, personnalisez les détails et partagez le lien d’invitation WhatsApp en 1 clic.
+              {messaging.whatsapp
+                ? 'Choisissez un design élégant, personnalisez les détails et partagez le lien d’invitation WhatsApp en 1 clic.'
+                : 'Choisissez un design élégant, personnalisez les détails et partagez le lien d’invitation en 1 clic.'}
             </p>
           </div>
 

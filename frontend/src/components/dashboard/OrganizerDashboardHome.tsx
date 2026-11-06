@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
@@ -170,6 +171,7 @@ export default function OrganizerDashboardHome({
   homeEventsPageSize,
   setHomeEventsPageSize,
 }: OrganizerDashboardHomeProps) {
+  const messaging = useMessagingChannels();
   const { user, tenant, planQuota, access, planFeatures, planName } = useAuth();
   const { plans: planCatalog, loading: planCatalogLoading } = usePlanCatalog();
   const router = useRouter();
@@ -826,7 +828,7 @@ export default function OrganizerDashboardHome({
                 <p className="text-xs opacity-90 mt-0.5">
                   {daysUntilExpiry <= 0
                     ? 'Renouvelez votre formule pour réactiver vos services et quotas.'
-                    : 'Renouvelez pour maintenir les invitations WhatsApp et le contrôle d’accès.'}
+                    : messaging.adapt('Renouvelez pour maintenir les invitations WhatsApp et le contrôle d’accès.')}
                 </p>
               </div>
             </div>
@@ -1823,7 +1825,7 @@ export default function OrganizerDashboardHome({
                   Invités & Protocole
                 </h4>
                 <p className="text-xs text-muted leading-relaxed">
-                  Faire-part WhatsApp, suivi des réponses et scan smartphone jour J.
+                  {messaging.adapt('Faire-part WhatsApp, suivi des réponses et scan smartphone jour J.')}
                 </p>
               </div>
               <span className="text-xs font-bold text-primary inline-flex items-center gap-1">
@@ -2158,7 +2160,7 @@ export default function OrganizerDashboardHome({
                 <h2 className="text-lg font-bold text-foreground">Invités & Accueil Jour J</h2>
               </div>
               <p className="text-xs text-muted mt-0.5">
-                Invitations WhatsApp, confirmations de présence et émargement par scan QR.
+                {messaging.adapt('Invitations WhatsApp, confirmations de présence et émargement par scan QR.')}
               </p>
             </div>
             <Link
@@ -2188,14 +2190,14 @@ export default function OrganizerDashboardHome({
                     Invitations & Faire-part
                   </h3>
                   <p className="text-xs text-muted leading-relaxed mt-1">
-                    Faire-part personnalisés, envois nominatifs WhatsApp et suivi des confirmations en direct.
+                    {messaging.adapt('Faire-part personnalisés, envois nominatifs WhatsApp et suivi des confirmations en direct.')}
                   </p>
                 </div>
 
                 <div className="space-y-1.5 pt-1">
                   <div className="flex items-center gap-2 text-xs text-muted">
                     <Check className="w-3.5 h-3.5 text-primary shrink-0" />
-                    <span>Envois individuels WhatsApp et e-mail</span>
+                    <span>{messaging.any ? `Envois individuels ${messaging.via({ conj: 'et' })}` : 'Envois individuels par lien'}</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted">
                     <Check className="w-3.5 h-3.5 text-primary shrink-0" />
@@ -2539,7 +2541,7 @@ export default function OrganizerDashboardHome({
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Check className="w-3.5 h-3.5 text-primary shrink-0" />
-                        <span>Partage direct sur WhatsApp</span>
+                        <span>{messaging.whatsapp ? 'Partage direct sur WhatsApp' : 'Partage direct du lien'}</span>
                       </div>
                     </div>
                   </div>
@@ -3388,7 +3390,9 @@ export default function OrganizerDashboardHome({
                 <div className="p-3 rounded-xl bg-surface-muted/60 border border-border/60">
                   <p className="font-bold text-foreground">Réactivité sous 24h</p>
                   <p className="text-muted mt-0.5">
-                    Une réponse rapide par message ou WhatsApp multiplie par 3 les chances de conversion en réservation ferme.
+                    {messaging.whatsapp
+                      ? 'Une réponse rapide par message ou WhatsApp multiplie par 3 les chances de conversion en réservation ferme.'
+                      : 'Une réponse rapide par message multiplie par 3 les chances de conversion en réservation ferme.'}
                   </p>
                 </div>
                 <div className="p-3 rounded-xl bg-surface-muted/60 border border-border/60">
@@ -3698,7 +3702,7 @@ export default function OrganizerDashboardHome({
                           <p>• <strong>{upsellName('PERSONAL_100', 'Particulier 100')}</strong> : {upsellPrice('PERSONAL_100')}{upsellQuota('PERSONAL_100')}</p>
                           <p>• <strong>{upsellName('PERSONAL_200', 'Particulier 200')}</strong> : {upsellPrice('PERSONAL_200')}{upsellQuota('PERSONAL_200')}</p>
                           <p>• <strong>{upsellName('PERSONAL_PLUS', 'Particulier +200')}</strong> : {upsellPrice('PERSONAL_PLUS')}{upsellQuota('PERSONAL_PLUS')}</p>
-                          <p>• <strong>Inclus</strong> : WhatsApp nominatif, QR & Plans 2D/3D</p>
+                          <p>• <strong>Inclus</strong> : {messaging.whatsapp ? 'WhatsApp nominatif' : 'Invitations nominatives'}, QR & Plans 2D/3D</p>
                         </div>
                       </div>
                       <Link
