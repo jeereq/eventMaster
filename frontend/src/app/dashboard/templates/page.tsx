@@ -87,6 +87,12 @@ import PlanLimitCallout from '@/components/PlanLimitCallout';
 import RsvpFieldTypeEditor from '@/components/RsvpFieldTypeEditor';
 import { getFeatureLockMessage, getQuotaActionMessage } from '@/lib/planAccess';
 import TemplateCardGrid from '@/components/templates/TemplateCardGrid';
+import CatalogueFilterBar, {
+ CatalogueChoicePills,
+ CatalogueFilterField,
+ type CatalogueFilterChip,
+} from '@/components/CatalogueFilterBar';
+import { normalizeLandingCategory } from '@/config/landingTemplates';
 import TemplatePreviewModal from '@/components/templates/TemplatePreviewModal';
 import {
  type RsvpField,
@@ -253,6 +259,55 @@ export default function TemplatesPage() {
  type StudioOrigin = 'admin' | 'studio';
  type TemplatesListTab = 'mine' | 'library';
 
+/** Filtres de la liste, sur le modèle des catalogues marketplace. */
+type TemplateCategoryFilter = 'all' | 'private' | 'corporate' | 'casual';
+type TemplateSortMode = 'recent' | 'name' | 'category';
+type TemplateScopeFilter = 'all' | 'global' | 'org';
+type TemplateLandingFilter = 'all' | 'landing' | 'hidden';
+
+const TEMPLATE_CATEGORY_OPTIONS: Array<{ id: TemplateCategoryFilter; label: string }> = [
+ { id: 'all', label: 'Toutes' },
+ { id: 'private', label: 'Célébrations' },
+ { id: 'corporate', label: 'Professionnel' },
+ { id: 'casual', label: 'Soirées' },
+];
+
+const TEMPLATE_SORT_OPTIONS: Array<{ id: TemplateSortMode; label: string }> = [
+ { id: 'recent', label: 'Plus récents' },
+ { id: 'name', label: 'Nom A → Z' },
+ { id: 'category', label: 'Par catégorie' },
+];
+
+const TEMPLATE_SCOPE_OPTIONS: Array<{ id: TemplateScopeFilter; label: string }> = [
+ { id: 'all', label: 'Tous' },
+ { id: 'global', label: 'Globaux' },
+ { id: 'org', label: 'Organisations' },
+];
+
+const TEMPLATE_LANDING_OPTIONS: Array<{ id: TemplateLandingFilter; label: string }> = [
+ { id: 'all', label: 'Tous' },
+ { id: 'landing', label: 'En vitrine' },
+ { id: 'hidden', label: 'Hors vitrine' },
+];
+
+function optionLabel<T extends string>(options: Array<{ id: T; label: string }>, id: T) {
+ return options.find((o) => o.id === id)?.label ?? id;
+}
+
+/** Catégorie d’un modèle, lue comme sur /modeles (content.global.landingCategory). */
+function templateCategoryOf(content: unknown): Exclude<TemplateCategoryFilter, 'all'> {
+ let parsed: unknown = content;
+ if (typeof content === 'string') {
+ try {
+ parsed = JSON.parse(content);
+ } catch {
+ parsed = null;
+ }
+ }
+ const global = parsed && typeof parsed === 'object' ? (parsed as { global?: { landingCategory?: string } }).global : undefined;
+ return normalizeLandingCategory(global?.landingCategory);
+}
+
 const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  const [studioOrigin, setStudioOrigin] = useState<StudioOrigin>('studio');
  const isPlatformTemplateAdmin = Boolean(
@@ -289,6 +344,11 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  /** Onglets de la liste : modèles de l’organisation ou bibliothèque EventMaster. */
  const [listTab, setListTab] = useState<TemplatesListTab>('mine');
  const [ownTemplatesPage, setOwnTemplatesPage] = useState(1);
+ const [templateSearch, setTemplateSearch] = useState('');
+ const [templateCategory, setTemplateCategory] = useState<TemplateCategoryFilter>('all');
+ const [templateSort, setTemplateSort] = useState<TemplateSortMode>('recent');
+ const [templateScope, setTemplateScope] = useState<TemplateScopeFilter>('all');
+ const [templateLanding, setTemplateLanding] = useState<TemplateLandingFilter>('all');
  const [templatesPageSize, setTemplatesPageSize] = usePageSize('templates', 9);
  const [previewTemplate, setPreviewTemplate] = useState<TemplateItem | null>(null);
  const [saveUpgradeModalOpen, setSaveUpgradeModalOpen] = useState(false);
@@ -2804,10 +2864,73 @@ const studioModelPhotos = useMemo(
 );
  const canDuplicateAny = isSuperAdmin || catalogTemplates.length > 0 || canUseCustomTemplates;
  const listTemplates = isSuperAdmin ? templates : ownTemplates;
- const paginatedCatalog = usePaginateItems(catalogTemplates, catalogPage, templatesPageSize);
- const paginatedOwn = usePaginateItems(listTemplates, ownTemplatesPage, templatesPageSize);
+ const filterTemplates = (items: TemplateItem[]) => {
+ const q = templateSearch.trim().toLowerCase();
+ const rows = items
+ .map((t) => ({ t, category: templateCategoryOf(t.content) }))
+ .filter(({ t, category }) => {
+ if (templateCategory !== 'all' && category !== templateCategory) return false;
+ if (isSuperAdmin) {
+ const global = t.isGlobal ?? !t.tenantId;
+ if (templateScope === 'global' && !global) return false;
+ if (templateScope === 'org' && global) return false;
+ if (templateLanding === 'landing' && !t.showOnLanding) return false;
+ if (templateLanding === 'hidden' && t.showOnLanding) return false;
+ }
+ if (!q) return true;
+ return [t.name, t.tenant?.name || ''].some((v) => v.toLowerCase().includes(q));
+ });
+ rows.sort((a, b) => {
+ if (templateSort === 'name') return a.t.name.localeCompare(b.t.name, 'fr');
+ if (templateSort === 'category') {
+ const byCat = optionLabel(TEMPLATE_CATEGORY_OPTIONS, a.category).localeCompare(optionLabel(TEMPLATE_CATEGORY_OPTIONS, b.category), 'fr');
+ return byCat || a.t.name.localeCompare(b.t.name, 'fr');
+ }
+ return (Date.parse(b.t.createdAt || '') || 0) - (Date.parse(a.t.createdAt || '') || 0);
+ });
+ return rows.map((r) => r.t);
+ };
+ const filteredCatalog = filterTemplates(catalogTemplates);
+ const filteredList = filterTemplates(listTemplates);
+ const paginatedCatalog = usePaginateItems(filteredCatalog, catalogPage, templatesPageSize);
+ const paginatedOwn = usePaginateItems(filteredList, ownTemplatesPage, templatesPageSize);
  const activeListTab: TemplatesListTab =
  listTab === 'library' && !isSuperAdmin && catalogTemplates.length > 0 ? 'library' : 'mine';
+ const resetTemplateFilters = () => {
+ setTemplateSearch('');
+ setTemplateCategory('all');
+ setTemplateSort('recent');
+ setTemplateScope('all');
+ setTemplateLanding('all');
+ setCatalogPage(1);
+ setOwnTemplatesPage(1);
+ };
+ /** Chaque filtre ramène les deux listes en page 1. */
+ const withPageReset = <T,>(setter: (v: T) => void) => (v: T) => {
+ setter(v);
+ setCatalogPage(1);
+ setOwnTemplatesPage(1);
+ };
+ const templateFilterChips: CatalogueFilterChip[] = [
+ ...(templateCategory !== 'all'
+ ? [{ id: 'category', label: 'Catégorie', value: optionLabel(TEMPLATE_CATEGORY_OPTIONS, templateCategory) }]
+ : []),
+ ...(templateSort !== 'recent'
+ ? [{ id: 'sort', label: 'Tri', value: optionLabel(TEMPLATE_SORT_OPTIONS, templateSort) }]
+ : []),
+ ...(isSuperAdmin && templateScope !== 'all'
+ ? [{ id: 'scope', label: 'Portée', value: optionLabel(TEMPLATE_SCOPE_OPTIONS, templateScope) }]
+ : []),
+ ...(isSuperAdmin && templateLanding !== 'all'
+ ? [{ id: 'landing', label: 'Vitrine', value: optionLabel(TEMPLATE_LANDING_OPTIONS, templateLanding) }]
+ : []),
+ ];
+ const removeTemplateFilterChip = (id: string) => {
+ if (id === 'category') withPageReset(setTemplateCategory)('all');
+ if (id === 'sort') setTemplateSort('recent');
+ if (id === 'scope') withPageReset(setTemplateScope)('all');
+ if (id === 'landing') withPageReset(setTemplateLanding)('all');
+ };
 
  // Helper to get background style
  const getBackgroundStyle = (type: string, color: string, url: string, pattern: string) => {
@@ -6165,7 +6288,6 @@ const studioModelPhotos = useMemo(
  window.requestAnimationFrame(() => document.getElementById(`templates-tab-${next}`)?.focus());
  };
  return (
- <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
  <div
  role="tablist"
  aria-label="Sections des modèles"
@@ -6200,6 +6322,37 @@ const studioModelPhotos = useMemo(
  );
  })}
  </div>
+ );
+ })()}
+
+ {(() => {
+ const shownCount = activeListTab === 'library' ? filteredCatalog.length : filteredList.length;
+ const categoryPills = (
+ <CatalogueChoicePills
+ ariaLabel="Catégorie de modèle"
+ options={TEMPLATE_CATEGORY_OPTIONS}
+ value={templateCategory}
+ onChange={(id) => withPageReset(setTemplateCategory)((id || 'all') as TemplateCategoryFilter)}
+ />
+ );
+ return (
+ <CatalogueFilterBar
+ search={templateSearch}
+ onSearchChange={withPageReset(setTemplateSearch)}
+ searchPlaceholder={isSuperAdmin ? 'Nom du modèle, organisation…' : 'Rechercher un modèle…'}
+ searchLabel="Rechercher un modèle"
+ hideViewToggle
+ hideMap
+ hideShare
+ chips={templateFilterChips}
+ onRemoveChip={removeTemplateFilterChip}
+ onClearChips={resetTemplateFilters}
+ resultLabel={`${shownCount} modèle${shownCount > 1 ? 's' : ''}`}
+ modalTitle="Filtrer les modèles"
+ modalDescription="Choisissez une catégorie et un tri. Cliquez une seconde fois sur un choix pour le retirer."
+ topSlotClassName="hidden sm:block"
+ topSlot={categoryPills}
+ actions={
  <ViewModeToggle
  storageKey="em-view-templates"
  value={templatesViewMode}
@@ -6208,7 +6361,38 @@ const studioModelPhotos = useMemo(
  onColumnsChange={setTemplatesColumns}
  defaultMode="grid"
  />
+ }
+ filters={
+ <div className="space-y-5">
+ <CatalogueFilterField label="Catégorie">{categoryPills}</CatalogueFilterField>
+ <CatalogueFilterField label="Tri">
+ <CatalogueChoicePills
+ options={TEMPLATE_SORT_OPTIONS}
+ value={templateSort}
+ onChange={(id) => setTemplateSort((id || 'recent') as TemplateSortMode)}
+ />
+ </CatalogueFilterField>
+ {isSuperAdmin ? (
+ <>
+ <CatalogueFilterField label="Portée">
+ <CatalogueChoicePills
+ options={TEMPLATE_SCOPE_OPTIONS}
+ value={templateScope}
+ onChange={(id) => withPageReset(setTemplateScope)((id || 'all') as TemplateScopeFilter)}
+ />
+ </CatalogueFilterField>
+ <CatalogueFilterField label="Vitrine landing">
+ <CatalogueChoicePills
+ options={TEMPLATE_LANDING_OPTIONS}
+ value={templateLanding}
+ onChange={(id) => withPageReset(setTemplateLanding)((id || 'all') as TemplateLandingFilter)}
+ />
+ </CatalogueFilterField>
+ </>
+ ) : null}
  </div>
+ }
+ />
  );
  })()}
 
@@ -6225,6 +6409,12 @@ const studioModelPhotos = useMemo(
  <TemplateCardGrid
  templates={paginatedCatalog}
  isSuperAdmin={false}
+ emptyMessage="Aucun modèle de la bibliothèque ne correspond à ces filtres."
+ emptyAction={
+ <Button type="button" variant="secondary" onClick={resetTemplateFilters}>
+ Réinitialiser les filtres
+ </Button>
+ }
  layout={templatesViewMode}
  columns={templatesColumns}
  onViewDetails={(t) => setPreviewTemplate(t as TemplateItem)}
@@ -6238,7 +6428,7 @@ const studioModelPhotos = useMemo(
  <Pagination
  page={catalogPage}
  pageSize={templatesPageSize}
- total={catalogTemplates.length}
+ total={filteredCatalog.length}
  onPageChange={setCatalogPage}
  onPageSizeChange={setTemplatesPageSize}
  itemLabel="modèles"
@@ -6267,11 +6457,18 @@ const studioModelPhotos = useMemo(
  onViewDetails={(t) => setPreviewTemplate(t as TemplateItem)}
  onUseInStudio={(t) => void startAiComposeFromModel(t)}
  emptyMessage={
- isSuperAdmin
+ listTemplates.length > 0
+ ? 'Aucun modèle ne correspond à ces filtres.'
+ : isSuperAdmin
  ? "Aucun modèle. Créez un modèle global ou pour une organisation."
  : "Votre premier carton n’est pas encore là. En 2 minutes : décrivez la fête, voyez le faire-part, envoyez-le."
  }
  emptyAction={
+ listTemplates.length > 0 ? (
+ <Button type="button" variant="secondary" onClick={resetTemplateFilters}>
+ Réinitialiser les filtres
+ </Button>
+ ) : (
  <div className="flex flex-col gap-3 items-center">
  <button
  type="button"
@@ -6309,6 +6506,7 @@ const studioModelPhotos = useMemo(
  </div>
  </details>
  </div>
+ )
  }
  onEdit={(t) => handleEditTemplateClick(t as TemplateItem)}
  onDuplicate={
@@ -6321,7 +6519,7 @@ const studioModelPhotos = useMemo(
  <Pagination
  page={ownTemplatesPage}
  pageSize={templatesPageSize}
- total={listTemplates.length}
+ total={filteredList.length}
  onPageChange={setOwnTemplatesPage}
  onPageSizeChange={setTemplatesPageSize}
  itemLabel="modèles"
