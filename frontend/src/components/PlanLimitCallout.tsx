@@ -1,4 +1,5 @@
 'use client';
+import { ChannelText } from '@/components/ChannelText';
 
 import React from 'react';
 import Link from 'next/link';
@@ -192,7 +193,7 @@ export default function PlanLimitCallout({
           <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-muted" aria-hidden />
           <span>{guide.what}</span>
         </p>
-        <p className="pl-5 text-muted/90">{guide.why}</p>
+        <p className="pl-5 text-muted/90"><ChannelText text={guide.why} /></p>
       </div>
 
       {/* Action concrète et incitation d'upgrade */}

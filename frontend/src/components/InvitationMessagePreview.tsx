@@ -4,6 +4,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { wrapBrandedWhatsApp } from '@/lib/whatsappTone';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
+import { clampInvitationChannel } from '@/lib/invitationChannels';
 
 type PreviewTab = 'email' | 'whatsapp' | 'sms';
 
@@ -83,7 +85,7 @@ export default function InvitationMessagePreview({
   subject,
   body,
   whatsappBody,
-  channel,
+  channel: rawChannel,
   orgName,
   primary = '#059669',
   accent = '#10b981',
@@ -98,6 +100,9 @@ export default function InvitationMessagePreview({
   accent?: string;
   guidelinesBlock?: string | null;
 }) {
+  const messaging = useMessagingChannels();
+  // Un canal désactivé par le superadmin n’est jamais prévisualisé.
+  const channel = clampInvitationChannel(rawChannel, messaging.channels) || 'EMAIL';
   const showEmail =
     channel === 'EMAIL' ||
     channel === 'EMAIL_AND_WHATSAPP' ||

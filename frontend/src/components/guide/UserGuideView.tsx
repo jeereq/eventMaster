@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -35,6 +36,7 @@ function parseSteps(content: string): string[] {
 }
 
 export default function UserGuideView({ guideId, showHeader = true, onStartTour }: UserGuideViewProps) {
+  const messaging = useMessagingChannels();
   const guide = getUserGuide(guideId);
   const { site } = usePlatformSite();
   const [openWorkflowId, setOpenWorkflowId] = useState<string | null>(null);
@@ -80,7 +82,7 @@ export default function UserGuideView({ guideId, showHeader = true, onStartTour 
               <h2 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
                 {guide.title}
               </h2>
-              <p className="text-sm text-muted leading-relaxed max-w-2xl">{interpolateRates(guide.summary, site)}</p>
+              <p className="text-sm text-muted leading-relaxed max-w-2xl">{messaging.adapt(interpolateRates(guide.summary, site))}</p>
             </div>
             {onStartTour && (
               <Button size="sm" onClick={onStartTour} leftIcon={<Play className="w-3.5 h-3.5" />}>
@@ -101,7 +103,7 @@ export default function UserGuideView({ guideId, showHeader = true, onStartTour 
             {guide.canDo.map((item) => (
               <li key={item} className="text-sm text-foreground/80 flex gap-2 leading-relaxed">
                 <span className="text-primary shrink-0 mt-1.5 w-1 h-1 rounded-full bg-primary" />
-                {interpolateRates(item, site)}
+                {messaging.adapt(interpolateRates(item, site))}
               </li>
             ))}
           </ul>
@@ -116,7 +118,7 @@ export default function UserGuideView({ guideId, showHeader = true, onStartTour 
             {guide.cannotDo.map((item) => (
               <li key={item} className="text-sm text-foreground/80 flex gap-2 leading-relaxed">
                 <span className="text-muted shrink-0 mt-1.5 w-1 h-1 rounded-full bg-muted" />
-                {interpolateRates(item, site)}
+                {messaging.adapt(interpolateRates(item, site))}
               </li>
             ))}
           </ul>
@@ -175,7 +177,7 @@ export default function UserGuideView({ guideId, showHeader = true, onStartTour 
           <div className="space-y-2">
             {filteredWorkflows.map((wf, index) => {
               const open = effectiveOpen === wf.id;
-              const steps = parseSteps(interpolateRates(wf.content, site));
+              const steps = parseSteps(messaging.adapt(interpolateRates(wf.content, site)));
               return (
                 <div
                   key={wf.id}
@@ -197,7 +199,7 @@ export default function UserGuideView({ guideId, showHeader = true, onStartTour 
                       <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">
                         {index + 1}
                       </span>
-                      <span className="font-semibold text-sm text-foreground truncate">{interpolateRates(wf.title, site)}</span>
+                      <span className="font-semibold text-sm text-foreground truncate">{messaging.adapt(interpolateRates(wf.title, site))}</span>
                     </span>
                     <ChevronDown
                       className={cn(
@@ -249,7 +251,7 @@ export default function UserGuideView({ guideId, showHeader = true, onStartTour 
           {guide.tips.map((tip) => (
             <li key={tip} className="text-sm text-foreground/80 flex gap-2.5 leading-relaxed">
               <Lightbulb className="w-4 h-4 text-muted shrink-0 mt-0.5" />
-              {interpolateRates(tip, site)}
+              {messaging.adapt(interpolateRates(tip, site))}
             </li>
           ))}
         </ul>

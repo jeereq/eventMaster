@@ -10,6 +10,7 @@ import PWAInstallCta from '@/components/PWAInstallCta';
 import SiteBrandMark from '@/components/SiteBrandMark';
 import CelebrateMood from '@/components/CelebrateMood';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 interface AuthFeature {
   icon: React.ComponentType<{ className?: string }>;
@@ -44,6 +45,7 @@ export function AuthSplitLayout({
 }: AuthSplitLayoutProps) {
   const { theme, toggleTheme } = useTheme();
   const { site } = usePlatformSite();
+  const messaging = useMessagingChannels();
 
   return (
     <div className="min-h-screen flex bg-background text-foreground">
@@ -72,8 +74,8 @@ export function AuthSplitLayout({
 
         <div className="space-y-8 my-auto relative z-10 max-w-md">
           <div className="space-y-3">
-            <h1 className="text-4xl xl:text-5xl font-display font-bold leading-[1.05]">{title}</h1>
-            <p className="text-[#d1fae5] text-base leading-relaxed">{description}</p>
+            <h1 className="text-4xl xl:text-5xl font-display font-bold leading-[1.05]">{messaging.adapt(title)}</h1>
+            <p className="text-[#d1fae5] text-base leading-relaxed">{messaging.adapt(description)}</p>
           </div>
 
           {features.length > 0 && (
@@ -97,8 +99,8 @@ export function AuthSplitLayout({
                       </span>
                     )}
                     <div className="min-w-0">
-                      <h3 className="font-semibold text-sm text-white">{feat.title}</h3>
-                      <p className="text-sm text-[#a7f3d0] leading-relaxed mt-0.5">{feat.desc}</p>
+                      <h3 className="font-semibold text-sm text-white">{messaging.adapt(feat.title)}</h3>
+                      <p className="text-sm text-[#a7f3d0] leading-relaxed mt-0.5">{messaging.adapt(feat.desc)}</p>
                     </div>
                   </li>
                 );
@@ -149,7 +151,7 @@ export function AuthSplitLayout({
 
         <main id="main-content" className={cn(maxWidthClassName || 'max-w-md', 'w-full mx-auto space-y-4 pt-16 sm:pt-14 lg:pt-12')}>
           {hideMobileTitle ? null : (
-            <h1 className="lg:hidden font-display text-2xl font-bold text-foreground">{title}</h1>
+            <h1 className="lg:hidden font-display text-2xl font-bold text-foreground">{messaging.adapt(title)}</h1>
           )}
           {children}
           <p className="text-center text-xs text-muted lg:hidden">© {new Date().getFullYear()} {site.platformName}</p>

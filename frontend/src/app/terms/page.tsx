@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ChannelText, IfChannel } from '@/components/ChannelText';
 import { LegalPageShell, Section } from '@/components/LegalPageShell';
 import LegalSupportEmail from '@/components/LegalSupportEmail';
 import TermsMarketplaceRates from '@/components/TermsMarketplaceRates';
@@ -39,7 +40,7 @@ export default function TermsPage() {
           d&apos;événements privés et professionnels :
           création d&apos;invitations interactives multilingues avec ancrage d&apos;identité des hôtes, substitution éventuelle de visages sur carton, sélection des modèles d&apos;intelligence artificielle (Google Gemini et Imagen) et contextualisation IA
           (Français et langues nationales de la RDC : Lingala, Swahili, Kikongo, Tshiluba), routage et confirmations
-          Répondez s’il vous plaît instantanées sur WhatsApp, <strong>Simulateur unifié multi-ateliers (/simulateur)</strong> intégrant le chiffrage budgétaire en Francs Congolais (CDF) et
+          <ChannelText text="Répondez s’il vous plaît instantanées sur WhatsApp" />, <strong>Simulateur unifié multi-ateliers (/simulateur)</strong> intégrant le chiffrage budgétaire en Francs Congolais (CDF) et
           Dollars ($), l&apos;atelier de faire-part IA et la prévisualisation de salle 2D/3D (avec affichage dynamique des statuts actif ou à venir), <strong>Studio d&apos;Aménagement IA</strong> avec modélisation 2D zénithale cotée et rendu 3D
           WebGL photoréaliste de salles (matériaux PBR, caméras cinématiques), moteur d&apos;espacement et de
           dégagement physique réel, plans de table avec sélection interactive de place et accessibilité PMR, protocole
@@ -83,7 +84,7 @@ export default function TermsPage() {
           privilèges d&apos;accès, ainsi que de la confidentialité des identifiants associés.
         </p>
         <p className="mt-2">
-          <strong>Vérification d&apos;identité, canaux OTP et sécurité des comptes :</strong> Toute création de compte ou modification sensible de coordonnées requiert la validation d&apos;un code à usage unique (OTP) acheminé par e-mail ou WhatsApp vers le numéro de téléphone international vérifié de l&apos;utilisateur. Une fonction de renvoi sécurisé est mise à disposition, protégée par des délais d&apos;attente techniques afin d&apos;éviter les sollicitations abusives et de prévenir l&apos;usurpation d&apos;identité.
+          <strong>Vérification d&apos;identité, canaux OTP et sécurité des comptes :</strong> Toute création de compte ou modification sensible de coordonnées requiert la validation d&apos;un code à usage unique (OTP) acheminé <ChannelText text="par e-mail ou WhatsApp" /> vers le numéro de téléphone international vérifié de l&apos;utilisateur. Une fonction de renvoi sécurisé est mise à disposition, protégée par des délais d&apos;attente techniques afin d&apos;éviter les sollicitations abusives et de prévenir l&apos;usurpation d&apos;identité.
         </p>
         <p className="mt-2">
           <strong>Gestion administrative centralisée des abonnements &amp; Reporting :</strong> L&apos;administration de la plateforme (Super Admin)
@@ -164,7 +165,7 @@ export default function TermsPage() {
             <strong>Personnalisation des billets partagés :</strong> Lorsqu&apos;un acheteur commande plusieurs billets
             pour des tiers ou qu&apos;un lien d&apos;invitation est transmis à un convive, chaque bénéficiaire a la
             faculté de compléter ou mettre à jour ses coordonnées personnelles (prénom, nom, numéro de téléphone
-            WhatsApp normalisé E.164) et ses préférences d&apos;accueil (contraintes alimentaires, allergies, requêtes
+            <IfChannel channel="WHATSAPP">WhatsApp </IfChannel>normalisé E.164) et ses préférences d&apos;accueil (contraintes alimentaires, allergies, requêtes
             particulières) directement depuis son portail invité. Cette mise à jour réactualise immédiatement le badge QR
             nominatif et le registre d&apos;émargement de l&apos;organisateur.
           </li>
@@ -536,10 +537,13 @@ export default function TermsPage() {
           <li>L&apos;organisateur est seul responsable de l&apos;exactitude des informations rédigées et de la bienséance des textes et images d&apos;invitation partagés.</li>
         </ul>
         <p>
-          <strong>7.2 Acheminement WhatsApp & Consentement préalable (Opt-in).</strong>
+          <strong>
+            <IfChannel channel="WHATSAPP">7.2 Acheminement WhatsApp & Consentement préalable (Opt-in).</IfChannel>
+            <IfChannel channel="WHATSAPP" not>7.2 Acheminement des messages & Consentement préalable (Opt-in).</IfChannel>
+          </strong>
         </p>
         <p>
-          L&apos;organisateur s&apos;engage formellement à ne transmettre d&apos;invitations ou de notifications par WhatsApp qu&apos;à des personnes ayant préalablement consenti à être contactées dans le cadre de l&apos;événement concerné. L&apos;utilisation des outils EventMaster à des fins de prospection massive non sollicitée (spam) est strictement prohibée et entraîne la suspension immédiate du compte.
+          L&apos;organisateur s&apos;engage formellement à ne transmettre d&apos;invitations ou de notifications <ChannelText text="par WhatsApp" /> qu&apos;à des personnes ayant préalablement consenti à être contactées dans le cadre de l&apos;événement concerné. L&apos;utilisation des outils EventMaster à des fins de prospection massive non sollicitée (spam) est strictement prohibée et entraîne la suspension immédiate du compte.
         </p>
       </Section>
 
@@ -559,7 +563,7 @@ export default function TermsPage() {
         <p>
           <strong>9.1 Responsabilité de traitement.</strong> L&apos;organisation agit en qualité de <strong>responsable de traitement</strong> pour les données de ses membres,
           de ses listes d&apos;invités, des participants à ses événements, des donateurs et des acheteurs de billets. L&apos;organisation s&apos;engage à respecter les lois relatives à la protection
-          des données personnelles (notamment le Code du numérique de la RDC) et à disposer des consentements requis avant d&apos;émettre des communications (e-mail, WhatsApp).
+          des données personnelles (notamment le Code du numérique de la RDC) et à disposer des consentements requis avant d&apos;émettre des communications (<ChannelText text="e-mail, WhatsApp" />).
         </p>
         <p>
           <strong>9.2 Rôle d&apos;EventMaster.</strong> EventMaster agit en qualité de <strong>sous-traitant technique</strong>, traitant ces données uniquement
@@ -575,7 +579,7 @@ export default function TermsPage() {
         <ul className="list-disc pl-5 space-y-1">
           <li>Chiffrement systématique de toutes les communications via HTTPS / TLS (256 bits) ;</li>
           <li>Mots de passe stockés sous forme hautement sécurisée (hachage bcrypt avec sel) ;</li>
-          <li>Authentification double facteur / vérification d&apos;identité par code OTP (e-mail ou WhatsApp) ;</li>
+          <li>Authentification double facteur / vérification d&apos;identité par code OTP (<ChannelText text="e-mail ou WhatsApp" />) ;</li>
           <li>Isolation multi-tenant étanche garantissant la confidentialité absolue entre organisations ;</li>
           <li>Traçabilité et journalisation des transactions financières et des opérations d&apos;administration sensible ;</li>
           <li>Génération cryptographique des QR Codes de billetterie et des pass donateurs prévenant toute duplication ou contrefaçon.</li>
@@ -585,7 +589,7 @@ export default function TermsPage() {
       <Section title="11. Utilisation acceptable & Règles de conduite">
         <p>Il est expressément interdit d&apos;utiliser EventMaster pour :</p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>Diffuser des communications non sollicitées, intrusives ou constituant du spam (par e-mail ou WhatsApp) ;</li>
+          <li>Diffuser des communications non sollicitées, intrusives ou constituant du spam (<ChannelText text="par e-mail ou WhatsApp" />) ;</li>
           <li>Organiser des événements frauduleux, fictifs, trompeurs ou contraires à l&apos;ordre public et aux lois en vigueur ;</li>
           <li>Lancer des collectes de dons fictives ou détourner des contributions solidaires de leur objet annoncé ;</li>
           <li>Commercialiser des billets sans disposer de l&apos;autorisation légale ou des droits sur l&apos;événement concerné ;</li>

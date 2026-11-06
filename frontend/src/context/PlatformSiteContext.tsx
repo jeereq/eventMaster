@@ -4,7 +4,12 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { SITE_CONTACT } from '@/config/siteContent';
 import { applyBrandToDocument } from '@/lib/brandTheme';
 import { resolveUsdExchangeRateCdf, sanitizeEnabledCities } from '@/lib/platformCities';
-import { sanitizeAuthOtpChannels, type AuthOtpChannels } from '@/lib/authOtpChannels';
+import {
+  authOtpMethodOptions,
+  methodsToAuthOtpChannels,
+  sanitizeAuthOtpChannels,
+  type AuthOtpChannels,
+} from '@/lib/authOtpChannels';
 import {
   DEFAULT_WELCOME_AI_GRANTS,
   sanitizeWelcomeAiGrants,
@@ -107,8 +112,10 @@ export const DEFAULT_PUBLIC_SITE: PublicSiteConfig = {
   commercialRenewalCommissionPercent: 20,
   usdExchangeRateCdf: 2800,
   enabledCities: ['Kinshasa', 'Lubumbashi', 'Goma'],
-  authOtpChannels: 'BOTH',
-  notificationChannels: ['EMAIL', 'WHATSAPP', 'SMS', 'PUSH'],
+  authOtpChannels: 'EMAIL',
+  // Prudence tant que les réglages ne sont pas chargés : aucun canal téléphone n’est annoncé
+  // avant confirmation par le serveur (un canal désactivé ne doit jamais être mis en avant).
+  notificationChannels: ['EMAIL', 'PUSH'],
   aiTokenPriceCdf: 416,
   aiTokenMinPurchaseCdf: 2500,
   welcomeAiGrants: DEFAULT_WELCOME_AI_GRANTS,
@@ -147,15 +154,22 @@ export function PlatformSiteProvider({ children }: { children: React.ReactNode }
       const res = await fetch(`${apiBase()}/public/site`, { cache: 'no-store' });
       if (!res.ok) throw new Error('site fetch failed');
       const data = (await res.json()) as Partial<PublicSiteConfig>;
+      const notificationChannels =
+        Array.isArray(data.notificationChannels) && data.notificationChannels.length > 0
+          ? (data.notificationChannels as Array<'EMAIL' | 'WHATSAPP' | 'SMS' | 'PUSH'>)
+          : DEFAULT_PUBLIC_SITE.notificationChannels;
+      const enabledChannels = new Set<string>(notificationChannels);
+      const otpMethods = authOtpMethodOptions(sanitizeAuthOtpChannels(data.authOtpChannels)).filter((m) =>
+        enabledChannels.has(m),
+      );
       const next: PublicSiteConfig = {
         ...DEFAULT_PUBLIC_SITE,
         ...data,
         usdExchangeRateCdf: resolveUsdExchangeRateCdf(data.usdExchangeRateCdf, DEFAULT_PUBLIC_SITE.usdExchangeRateCdf),
         enabledCities: sanitizeEnabledCities(data.enabledCities),
-        authOtpChannels: sanitizeAuthOtpChannels(data.authOtpChannels),
-        notificationChannels: Array.isArray(data.notificationChannels) && data.notificationChannels.length > 0
-          ? (data.notificationChannels as Array<'EMAIL' | 'WHATSAPP' | 'SMS' | 'PUSH'>)
-          : DEFAULT_PUBLIC_SITE.notificationChannels,
+        // Un canal désactivé sur la plateforme n’est jamais proposé pour les codes de validation.
+        authOtpChannels: otpMethods.length > 0 ? methodsToAuthOtpChannels(otpMethods) : 'EMAIL',
+        notificationChannels,
         aiTokenPriceCdf: Number(data.aiTokenPriceCdf) > 0
           ? Math.round(Number(data.aiTokenPriceCdf))
           : DEFAULT_PUBLIC_SITE.aiTokenPriceCdf,

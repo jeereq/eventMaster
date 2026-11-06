@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
@@ -698,6 +699,7 @@ function SidebarNav({
  fallbackTab?: string;
  variant?: 'rail' | 'sheet';
 }) {
+  const messaging = useMessagingChannels();
  const searchParams = useSearchParams();
  const currentTab = searchParams.get('tab') || fallbackTab;
  const { unreadCount } = useNotificationInbox();
@@ -732,7 +734,7 @@ function SidebarNav({
  <span className="flex flex-col gap-0.5 text-left">
  <span className="font-semibold">{item.name}</span>
  <span className="font-normal opacity-80 max-w-[12rem] whitespace-normal leading-snug">
- {item.description}
+ {messaging.adapt(item.description)}
  </span>
  {unreadLabel ? <span className="font-semibold text-danger">{unreadLabel}</span> : null}
  </span>
@@ -807,7 +809,7 @@ function SidebarNav({
  <span className="min-w-0 flex-1 text-left">
   <span className="block truncate text-sm leading-snug">{item.name}</span>
   {isSheet && item.description ? (
-    <span className="mt-0.5 block text-xs font-normal text-muted leading-snug line-clamp-2">{item.description}</span>
+    <span className="mt-0.5 block text-xs font-normal text-muted leading-snug line-clamp-2">{messaging.adapt(item.description)}</span>
   ) : null}
  </span>
  )}

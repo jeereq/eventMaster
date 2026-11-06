@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import SiteBrandMark from '@/components/SiteBrandMark';
+import { ChannelText } from '@/components/ChannelText';
 import PWAInstallCta from '@/components/PWAInstallCta';
 
 interface LegalPageShellProps {
@@ -61,7 +62,9 @@ export function LegalPageShell({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+      <h2 className="text-lg font-semibold text-foreground">
+        <ChannelText text={title} />
+      </h2>
       <div className="space-y-2">{children}</div>
     </section>
   );

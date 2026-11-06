@@ -60,6 +60,12 @@ import {
 import InvitationMessagePreview from '@/components/InvitationMessagePreview';
 import InvitationEditorModal, { type InvitationFormData } from '@/components/InvitationEditorModal';
 import { resolveWhatsAppInvitationBody, toWhatsAppTone } from '@/lib/whatsappTone';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
+import {
+  clampInvitationChannel,
+  defaultInvitationChannel,
+  visibleInvitationChannelPresets,
+} from '@/lib/invitationChannels';
 import {
   extractRsvpFieldsFromTemplateContent,
   supplementFieldsFromGuestPreferences,
@@ -357,8 +363,10 @@ function summarizeSendAudience(guestList: GuestItem[], channel: string) {
 
 function SendAudienceStats({
   stats,
+  missingPhoneLabel = 'Sans téléphone',
 }: {
   stats: ReturnType<typeof summarizeSendAudience>;
+  missingPhoneLabel?: string;
 }) {
   return (
     <div className="grid grid-cols-2 gap-2 text-xs">
@@ -384,7 +392,7 @@ function SendAudienceStats({
       )}
       {stats.missingPhone > 0 && (
         <div className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2">
-          <p className="text-xs font-semibold uppercase tracking-wider text-rose-700">Sans WhatsApp</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-rose-700">{missingPhoneLabel}</p>
           <p className="text-sm font-bold text-rose-800 mt-0.5">{stats.missingPhone}</p>
         </div>
       )}
@@ -682,6 +690,16 @@ export default function EventsPage() {
 
 function EventsPageInner() {
   const { user, access, planFeatures, planQuota, tenant, planName } = useAuth();
+  const messaging = useMessagingChannels();
+  const allowedInviteMethods = messaging.channels;
+  /** Canal effectivement utilisé : les canaux désactivés par le superadmin sont retirés. */
+  const effectiveInviteChannel = (channel: string | null | undefined) =>
+    clampInvitationChannel(channel, allowedInviteMethods) || defaultInvitationChannel(allowedInviteMethods) || 'EMAIL';
+  const missingPhoneLabel = messaging.whatsapp ? 'Sans WhatsApp' : 'Sans téléphone';
+  const guestPhoneLabel = messaging.whatsapp ? 'Téléphone (WhatsApp)' : 'Téléphone';
+  const guestContactRule = messaging.phone
+    ? `E-mail ou ${messaging.whatsapp ? 'WhatsApp' : 'téléphone'} : au moins un des deux.`
+    : 'E-mail ou téléphone : au moins un des deux.';
   /** Nom commercial du forfait (base) ; l'identifiant brut seulement si le nom n'est pas chargé. */
   const planLabel = planName || tenant?.plan || null;
   const router = useRouter();
@@ -994,15 +1012,17 @@ function EventsPageInner() {
 
   const broadcastConfirmInvite = invitations.find((invite) => invite.id === broadcastConfirmInviteId) || null;
   const broadcastAudience = useMemo(
-    () => (broadcastConfirmInvite ? summarizeSendAudience(guests, broadcastConfirmInvite.channel) : null),
-    [broadcastConfirmInvite, guests],
+    () => (broadcastConfirmInvite ? summarizeSendAudience(guests, effectiveInviteChannel(broadcastConfirmInvite.channel)) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [broadcastConfirmInvite, guests, allowedInviteMethods],
   );
   const bulkAudience = useMemo(
     () => summarizeSendAudience(
       guests.filter((guest) => selectedGuestIds.includes(guest.id)),
-      bulkSelectedChannel,
+      effectiveInviteChannel(bulkSelectedChannel),
     ),
-    [guests, selectedGuestIds, bulkSelectedChannel],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [guests, selectedGuestIds, bulkSelectedChannel, allowedInviteMethods],
   );
 
   const handleWorkflowNavigate = useCallback((tab: EventWorkflowTab) => {
@@ -1049,7 +1069,7 @@ function EventsPageInner() {
         id: 'invitations',
         label: 'Invitation',
         value: invitations.length ? `${invitations.length} prête${invitations.length > 1 ? 's' : ''}` : 'À rédiger',
-        hint: invitations.length ? 'Envoi WhatsApp ou e-mail' : 'Message et lien de réponse',
+        hint: invitations.length && messaging.any ? `Envoi ${messaging.via()}` : 'Message et lien de réponse',
         hintTone: invitations.length ? undefined : 'warn',
         tab: 'invitations',
       },
@@ -1640,8 +1660,8 @@ Merci de confirmer votre présence :
       const resolvedEmail = resolveGuestFormEmail(guestEmail, e164);
       if (!resolvedEmail) {
         setGuestModalError(guestEmail.trim()
-          ? 'Adresse e-mail invalide. Laissez vide si vous n’avez que le WhatsApp.'
-          : 'Indiquez un e-mail ou un numéro WhatsApp.');
+          ? `Adresse e-mail invalide. Laissez vide si vous n’avez que le ${messaging.whatsapp ? 'WhatsApp' : 'téléphone'}.`
+          : `Indiquez un e-mail ou un numéro ${messaging.whatsapp ? 'WhatsApp' : 'de téléphone'}.`);
         setSavingGuest(false);
         return;
       }
@@ -2058,7 +2078,7 @@ Merci de confirmer votre présence :
     setInviteBody('');
     setInviteWhatsAppBody('');
     setSelectedTemplateId('');
-    setInviteChannel('EMAIL_AND_WHATSAPP');
+    setInviteChannel(defaultInvitationChannel(allowedInviteMethods) || 'EMAIL');
     setShowInviteModal(true);
   };
 
@@ -2140,7 +2160,7 @@ Merci de confirmer votre présence :
     try {
       const response = await api.post(`/events/${selectedEvent.id}/invitations/${bulkSelectedInviteId}/broadcast`, {
         guestIds: selectedGuestIds,
-        channel: bulkSelectedChannel,
+        channel: effectiveInviteChannel(bulkSelectedChannel),
       });
       setBroadcastResults(response.results || []);
       setBroadcastMessage(response.message || '');
@@ -3277,7 +3297,7 @@ Merci de confirmer votre présence :
                                 type="button"
                                 onClick={() => setSharingGuest(g)}
                                 className="min-h-11 min-w-11 p-2 inline-flex items-center justify-center text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition touch-manipulation"
-                                title="Partager l'invitation (WhatsApp, X, Instagram)"
+                                title={messaging.whatsapp ? "Partager l'invitation (WhatsApp, X, Instagram)" : "Partager l'invitation (X, Instagram)"}
                                 aria-label="Partager l'invitation"
                               >
                                 <Share2 className="w-4 h-4" />
@@ -3330,7 +3350,7 @@ Merci de confirmer votre présence :
                                 onClick={() => setSelectedGuestDetails(g)}
                                 meta={
                                   guestsViewMode === 'list' ? (
-                                    <span className="truncate">{displayGuestEmail(g.email) || g.phone || 'WhatsApp / e-mail manquant'}</span>
+                                    <span className="truncate">{displayGuestEmail(g.email) || g.phone || (messaging.whatsapp ? 'WhatsApp / e-mail manquant' : 'Téléphone / e-mail manquant')}</span>
                                   ) : (
                                     <div className="space-y-1.5">
                                       <p className="truncate text-xs">{displayGuestEmail(g.email) || g.phone || 'Sans e-mail'}</p>
@@ -3380,7 +3400,11 @@ Merci de confirmer votre présence :
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div className="space-y-1">
                       <h2 className="text-lg font-semibold text-foreground tracking-tight">Invitations</h2>
-                      <p className="text-sm text-muted">Envoi par WhatsApp ou e-mail avec un lien de réponse personnel.</p>
+                      <p className="text-sm text-muted">
+                        {messaging.any
+                          ? `Envoi ${messaging.via()} avec un lien de réponse personnel.`
+                          : 'Chaque invité reçoit un lien de réponse personnel.'}
+                      </p>
                     </div>
                     <div className="flex flex-col items-stretch sm:items-end gap-1.5 shrink-0">
                       <Button
@@ -3477,7 +3501,7 @@ Merci de confirmer votre présence :
                                       : 'primary'
                                 }
                               >
-                                {getChannelLabel(invite.channel)}
+                                {getChannelLabel(effectiveInviteChannel(invite.channel))}
                               </StatusPill>
                               <span className="text-xs font-semibold uppercase tracking-wider text-muted truncate">
                                 {invite.template?.name || 'Sans modèle'}
@@ -3788,7 +3812,7 @@ Merci de confirmer votre présence :
           setGuestModalError('');
         }}
         title={editingGuestId ? "Modifier l'invité" : 'Ajouter un invité'}
-        description="E-mail ou WhatsApp : au moins un des deux. Les boutons restent visibles en bas de l’écran."
+        description={`${guestContactRule} Les boutons restent visibles en bas de l’écran.`}
         size="md"
         footer={
           <div className="flex w-full gap-2">
@@ -3859,10 +3883,10 @@ Merci de confirmer votre présence :
                 autoComplete="email"
                 className="w-full min-h-11 px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
               />
-              <p className="text-xs text-muted">E-mail ou WhatsApp : au moins un des deux.</p>
+              <p className="text-xs text-muted">{guestContactRule}</p>
             </div>
             <PhoneInput
-              label="Téléphone (WhatsApp)"
+              label={guestPhoneLabel}
               countryCode={guestPhoneCountryCode}
               national={guestPhoneNational}
               onCountryCodeChange={setGuestPhoneCountryCode}
@@ -4216,7 +4240,7 @@ Merci de confirmer votre présence :
                     const id = e.target.value;
                     setBulkSelectedInviteId(id);
                     const invite = invitations.find((item) => item.id === id);
-                    if (invite?.channel) setBulkSelectedChannel(invite.channel);
+                    if (invite?.channel) setBulkSelectedChannel(effectiveInviteChannel(invite.channel));
                   }}
                   className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
                   required
@@ -4231,21 +4255,19 @@ Merci de confirmer votre présence :
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-muted uppercase tracking-wider">Moyen de diffusion (Canal)</label>
                 <select
-                  value={bulkSelectedChannel}
+                  value={effectiveInviteChannel(bulkSelectedChannel)}
                   onChange={(e) => setBulkSelectedChannel(e.target.value)}
                   className="w-full px-4 py-2.5 bg-surface-muted border border-border rounded-xl text-sm focus:outline-none focus:border-primary transition"
                 >
-                  <option value="EMAIL">E-mail uniquement</option>
-                  <option value="WHATSAPP">WhatsApp uniquement</option>
-                  <option value="SMS">SMS uniquement</option>
-                  <option value="EMAIL_AND_WHATSAPP">E-mail et WhatsApp</option>
-                  <option value="EMAIL_AND_SMS">E-mail et SMS</option>
-                  <option value="WHATSAPP_AND_SMS">WhatsApp et SMS</option>
-                  <option value="ALL_CHANNELS">Tous les trois (E-mail, WhatsApp, SMS)</option>
+                  {visibleInvitationChannelPresets(allowedInviteMethods).map((preset) => (
+                    <option key={preset.id} value={preset.id}>
+                      {getChannelLabel(preset.id)}
+                    </option>
+                  ))}
                 </select>
               </div>
 
-              <SendAudienceStats stats={bulkAudience} />
+              <SendAudienceStats stats={bulkAudience} missingPhoneLabel={missingPhoneLabel} />
               {bulkAudience.reachable === 0 && (
                 <p className="text-xs text-rose-600 font-medium">
                   Aucun invité n’a le contact nécessaire pour ce canal.
@@ -4366,10 +4388,10 @@ Merci de confirmer votre présence :
           {broadcastWizardStep === 1 ? (
             <div className="space-y-3">
               <p className="text-sm text-muted">
-                Canal : <span className="font-semibold text-foreground">{getChannelLabel(broadcastConfirmInvite?.channel || 'EMAIL')}</span>
+                Canal : <span className="font-semibold text-foreground">{getChannelLabel(effectiveInviteChannel(broadcastConfirmInvite?.channel))}</span>
                 {broadcastConfirmInvite?.subject ? ` · ${broadcastConfirmInvite.subject}` : ''}
               </p>
-              {broadcastAudience ? <SendAudienceStats stats={broadcastAudience} /> : null}
+              {broadcastAudience ? <SendAudienceStats stats={broadcastAudience} missingPhoneLabel={missingPhoneLabel} /> : null}
               {broadcastAudience && broadcastAudience.reachable === 0 ? (
                 <p className="text-xs text-rose-600 font-medium">
                   {broadcastAudience.total === 0
@@ -4409,7 +4431,7 @@ Merci de confirmer votre présence :
           {broadcastWizardStep === 3 ? (
             <div className="space-y-2 rounded-xl border border-border bg-surface-muted/50 px-4 py-3">
               <p className="text-sm text-foreground">
-                <span className="font-semibold">{broadcastAudience?.reachable ?? 0}</span> destinataire{(broadcastAudience?.reachable ?? 0) > 1 ? 's' : ''} prêt{(broadcastAudience?.reachable ?? 0) > 1 ? 's' : ''} · {getChannelLabel(broadcastConfirmInvite?.channel || 'EMAIL')}
+                <span className="font-semibold">{broadcastAudience?.reachable ?? 0}</span> destinataire{(broadcastAudience?.reachable ?? 0) > 1 ? 's' : ''} prêt{(broadcastAudience?.reachable ?? 0) > 1 ? 's' : ''} · {getChannelLabel(effectiveInviteChannel(broadcastConfirmInvite?.channel))}
               </p>
               <p className="text-xs text-muted">
                 Lien de réponse seulement. Le PDF de table part après confirmation, si une place est attribuée.
@@ -4526,7 +4548,7 @@ Merci de confirmer votre présence :
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     {(broadcastSummary.failureReasons.noPhone || 0) > 0 && (
                       <span className="px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/30 border border-rose-100 dark:border-rose-900/40 text-rose-700 dark:text-rose-300 font-semibold">
-                        {broadcastSummary.failureReasons.noPhone} sans WhatsApp
+                        {broadcastSummary.failureReasons.noPhone} {missingPhoneLabel.toLowerCase()}
                       </span>
                     )}
                     {(broadcastSummary.failureReasons.noEmail || 0) > 0 && (
@@ -4557,7 +4579,17 @@ Merci de confirmer votre présence :
 
             <div className="space-y-4">
               <p className="text-sm text-muted leading-relaxed">
-                Détail par invité ci-dessous. Les envois réels passent par SendGrid (e-mail) et UltraMsg (WhatsApp), configurables dans le panneau Super Admin ou via les variables d&apos;environnement du serveur.
+                Détail par invité ci-dessous.
+                {messaging.any
+                  ? ` Les envois réels passent par ${[
+                      messaging.email ? 'SendGrid (e-mail)' : '',
+                      messaging.whatsapp ? 'UltraMsg (WhatsApp)' : '',
+                      messaging.sms ? 'la passerelle SMS' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(', ')
+                      .replace(/, ([^,]*)$/, ' et $1')}, configurables dans le panneau Super Admin ou via les variables d’environnement du serveur.`
+                  : ''}
               </p>
               <div className="p-4 bg-surface-muted border border-border rounded-2xl space-y-3 max-h-96 overflow-y-auto">
                 <div className="text-xs font-bold text-muted uppercase tracking-wider border-b border-border pb-2 mb-2">
@@ -4646,6 +4678,7 @@ Merci de confirmer votre présence :
                         </button>
 
                         {/* WhatsApp */}
+                        {messaging.whatsapp && (
                         <a
                           href={getWhatsAppShareUrl(res.guestName, publicRsvpLink(res.rsvpLink, res.guestId), res.phone, res.whatsappBody || res.body)}
                           target="_blank"
@@ -4658,6 +4691,7 @@ Merci de confirmer votre présence :
                           </svg>
                           WhatsApp
                         </a>
+                        )}
 
                         {/* X (Twitter) */}
                         <a
@@ -4776,6 +4810,7 @@ Merci de confirmer votre présence :
                   </button>
 
                   {/* WhatsApp */}
+                  {messaging.whatsapp && (
                   <a
                     href={getWhatsAppShareUrl(`${sharingGuest.firstName} ${sharingGuest.lastName}`, getGuestRsvpLink(sharingGuest.id), sharingGuest.preferences && typeof sharingGuest.preferences === 'object' ? (sharingGuest.preferences as any).phone : null, getRenderedInvitationBody(sharingGuest, true))}
                     target="_blank"
@@ -4787,6 +4822,7 @@ Merci de confirmer votre présence :
                     </svg>
                     WhatsApp
                   </a>
+                  )}
 
                   {/* X (Twitter) */}
                   <a
@@ -4913,7 +4949,7 @@ Merci de confirmer votre présence :
                   </p>
                 </div>
                 <div className="min-[420px]:col-span-2">
-                  <p className="text-xs font-semibold text-muted uppercase tracking-wider">WhatsApp / téléphone</p>
+                  <p className="text-xs font-semibold text-muted uppercase tracking-wider">{messaging.whatsapp ? 'WhatsApp / téléphone' : 'Téléphone'}</p>
                   <p className="font-semibold text-foreground text-sm mt-0.5 break-all">
                     {guestPhone || <span className="italic text-muted font-medium">Non renseigné</span>}
                   </p>

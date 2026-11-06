@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React from 'react';
 import Link from 'next/link';
@@ -116,6 +117,7 @@ const EDITOR_LEVELS_SUMMARY = [
 ];
 
 export default function LandingRoomEditorShowcase() {
+  const messaging = useMessagingChannels();
   const { user } = useAuth();
   const isLoggedIn = Boolean(user);
   const roomEditorUrl = isLoggedIn
@@ -133,7 +135,7 @@ export default function LandingRoomEditorShowcase() {
             </h2>
 
             <p className="text-sm sm:text-base text-muted leading-relaxed">
-              Un outil intuitif de conception spatiale dans votre navigateur : agencement précis au millimètre, visite 3D fluide et synchronisation automatique avec les invitations WhatsApp et le scan QR.
+              {messaging.adapt('Un outil intuitif de conception spatiale dans votre navigateur : agencement précis au millimètre, visite 3D fluide et synchronisation automatique avec les invitations WhatsApp et le scan QR.')}
             </p>
           </div>
 
@@ -173,7 +175,7 @@ export default function LandingRoomEditorShowcase() {
                       </div>
                       <div>
                         <h3 className="text-base sm:text-lg font-bold text-foreground group-hover:text-primary transition-colors">
-                          {feat.title}
+                          {messaging.adapt(feat.title)}
                         </h3>
                         <span className="text-xs font-bold uppercase tracking-wider text-muted">
                           {feat.badge}
@@ -192,7 +194,7 @@ export default function LandingRoomEditorShowcase() {
                     {feat.highlights.map((item) => (
                       <div key={item} className="flex items-start gap-2.5 text-xs text-foreground/90">
                         <CheckCircle2 className="w-3.5 h-3.5 text-primary-solid shrink-0 mt-0.5" />
-                        <span className="leading-snug">{item}</span>
+                        <span className="leading-snug">{messaging.adapt(item)}</span>
                       </div>
                     ))}
                   </div>

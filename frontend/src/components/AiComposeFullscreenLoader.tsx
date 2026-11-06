@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -449,6 +450,7 @@ function Game3DBudgetArtifact({
    CARROUSEL D'ASTUCES FAÇON JEU VIDÉO (GAME TIPS & LORE)
 ───────────────────────────────────────────────────────────── */
 function GameTipsCarousel({ variant }: { variant: AiLoaderVariant }) {
+  const messaging = useMessagingChannels();
   const tips = STUDIO_GAME_TIPS[variant] || STUDIO_GAME_TIPS.invitation;
   const [tipIndex, setTipIndex] = useState(0);
 
@@ -467,7 +469,7 @@ function GameTipsCarousel({ variant }: { variant: AiLoaderVariant }) {
         <div className="flex items-center gap-1.5 min-w-0">
           <Lightbulb className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
           <span className="text-xs font-semibold tracking-wide text-emerald-300 truncate">
-            Astuce {tipIndex + 1}/{tips.length} · {current.tag}
+            Astuce {tipIndex + 1}/{tips.length} · {current.tag === 'WhatsApp' && !messaging.whatsapp ? 'Partage' : current.tag}
           </span>
         </div>
         <button
@@ -482,7 +484,7 @@ function GameTipsCarousel({ variant }: { variant: AiLoaderVariant }) {
       </div>
 
       <p className="text-xs text-stage-foreground/85 leading-relaxed font-sans min-h-[2.25rem]">
-        {current.tip}
+        {messaging.adapt(current.tip)}
       </p>
 
       {/* Barre de temps de l'astuce */}

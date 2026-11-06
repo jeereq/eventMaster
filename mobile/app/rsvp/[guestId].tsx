@@ -20,6 +20,7 @@ import { RsvpTablePanel } from '../../src/components/rsvp/RsvpTablePanel';
 import { Button } from '../../src/components/ui/Button';
 import { env } from '../../src/config/env';
 import { extractRsvpFieldsFromTemplateContent } from '../../src/lib/rsvpFormFields';
+import { usePlatformChannels } from '../../src/lib/platformChannels';
 import {
   fetchGuestInvitations,
   fetchGuestRsvp,
@@ -33,6 +34,7 @@ import { colors } from '../../src/theme/colors';
 
 export default function RsvpGuestScreen() {
   const { guestId } = useLocalSearchParams<{ guestId: string }>();
+  const channels = usePlatformChannels();
   const [guest, setGuest] = useState<GuestRsvpData | null>(null);
   const [otherInvites, setOtherInvites] = useState<GuestInvitationListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,8 +109,9 @@ export default function RsvpGuestScreen() {
         <Text style={styles.errorTitle}>Invitation introuvable</Text>
         <Text style={styles.errorText}>{error || 'Ce lien de réponse à l’invitation est invalide ou expiré.'}</Text>
         <Text style={styles.errorHint}>
-          Vérifiez le lien reçu par e-mail ou WhatsApp, ou contactez l&apos;organisateur. Aucun
-          compte n&apos;est requis pour les invités.
+          {channels.whatsapp
+            ? 'Vérifiez le lien reçu par e-mail ou WhatsApp, ou contactez l’organisateur. Aucun compte n’est requis pour les invités.'
+            : 'Vérifiez le lien reçu, ou contactez l’organisateur. Aucun compte n’est requis pour les invités.'}
         </Text>
         <Button title="Réessayer" onPress={onRefresh} variant="secondary" />
       </View>

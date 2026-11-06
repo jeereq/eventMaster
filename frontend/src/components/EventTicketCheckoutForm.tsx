@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -80,6 +81,7 @@ export default function EventTicketCheckoutForm({
   event: PublicEventCard;
   onPaymentActivityChange?: (active: boolean) => void;
 }) {
+  const messaging = useMessagingChannels();
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
@@ -337,7 +339,7 @@ export default function EventTicketCheckoutForm({
         return;
       }
       if (!cleanBuyerPhone) {
-        setError('Veuillez renseigner votre numéro de téléphone ou WhatsApp.');
+        setError(messaging.whatsapp ? 'Veuillez renseigner votre numéro de téléphone ou WhatsApp.' : 'Veuillez renseigner votre numéro de téléphone.');
         setBusy(false);
         return;
       }
@@ -417,7 +419,7 @@ export default function EventTicketCheckoutForm({
         return;
       }
       if (!cleanBuyerPhone) {
-        setError('Veuillez renseigner votre numéro de téléphone ou WhatsApp.');
+        setError(messaging.whatsapp ? 'Veuillez renseigner votre numéro de téléphone ou WhatsApp.' : 'Veuillez renseigner votre numéro de téléphone.');
         setBusy(false);
         return;
       }
@@ -819,7 +821,7 @@ export default function EventTicketCheckoutForm({
               )}
 
               <Input
-                label="Numéro de téléphone ou WhatsApp (pour le reçu de paiement)"
+                label={messaging.whatsapp ? 'Numéro de téléphone ou WhatsApp (pour le reçu de paiement)' : 'Numéro de téléphone (pour le reçu de paiement)'}
                 value={buyerPhone}
                 onChange={(e) => setBuyerPhone(e.target.value)}
                 required

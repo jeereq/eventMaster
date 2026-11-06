@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
@@ -18,6 +19,7 @@ export default function LandingProfileGate({
   selectedId: LandingProfileId;
   onSelect: (id: LandingProfileId) => void;
 }) {
+  const messaging = useMessagingChannels();
   const { user } = useAuth();
   const isLoggedIn = Boolean(user);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -199,7 +201,7 @@ export default function LandingProfileGate({
                   </span>
 
                   <p className="text-xs text-muted leading-relaxed line-clamp-2 mb-4">
-                    {profile.intro}
+                    {messaging.adapt(profile.intro)}
                   </p>
                 </div>
 
@@ -252,7 +254,7 @@ export default function LandingProfileGate({
               {activeProfile.title}
             </h3>
             <p className="text-sm text-muted leading-relaxed">
-              {activeProfile.intro}
+              {messaging.adapt(activeProfile.intro)}
             </p>
           </div>
 
@@ -272,7 +274,7 @@ export default function LandingProfileGate({
                     <span className="w-7 h-7 rounded-lg em-glow-icon-box flex items-center justify-center shrink-0">
                       <ResIcon className="w-3.5 h-3.5" />
                     </span>
-                    <span>{res.label}</span>
+                    <span>{messaging.adapt(res.label)}</span>
                   </div>
                 );
               })}

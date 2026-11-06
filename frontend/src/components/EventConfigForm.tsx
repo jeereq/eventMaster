@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
@@ -189,6 +190,7 @@ export default function EventConfigForm({
   onSave,
   onOpenTablePlan,
 }: EventConfigFormProps) {
+  const messaging = useMessagingChannels();
   const editingId = initialEvent?.id ?? null;
   const [mode, setMode] = useState<EventConfigMode>(defaultMode);
   const [tab, setTab] = useState<EventConfigTab>('essentials');
@@ -2000,7 +2002,9 @@ export default function EventConfigForm({
                             Coordonnées actives ({latitude}, {longitude})
                           </span>
                         ) : (
-                          'Optionnel — pour le pin WhatsApp et l’itinéraire GPS'
+                          messaging.whatsapp
+                            ? 'Optionnel — pour le pin WhatsApp et l’itinéraire GPS'
+                            : 'Optionnel — pour l’itinéraire GPS'
                         )}
                       </p>
                     </div>

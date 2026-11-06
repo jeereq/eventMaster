@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useState } from 'react';
 import { cn } from '@/lib/cn';
@@ -135,6 +136,7 @@ export default function GuestPendingInvitationView({
   onSubmit: (e: React.FormEvent) => void;
   submitError?: string;
 }) {
+  const messaging = useMessagingChannels();
   const { site } = usePlatformSite();
   const [showAnswerShortcut, setShowAnswerShortcut] = useState(false);
 
@@ -465,7 +467,7 @@ export default function GuestPendingInvitationView({
       </div>
       <div>
         <label htmlFor={`${idPrefix}-phone`} className={fieldLabelClass}>
-          WhatsApp
+          {messaging.whatsapp ? 'WhatsApp' : 'Téléphone'}
         </label>
         <input
           id={`${idPrefix}-phone`}

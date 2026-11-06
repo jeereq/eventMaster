@@ -8,9 +8,11 @@ import { Input } from '../../src/components/ui/Input';
 import { Button } from '../../src/components/ui/Button';
 import { Alert } from '../../src/components/ui/Alert';
 import { colors } from '../../src/theme/colors';
+import { usePlatformChannels } from '../../src/lib/platformChannels';
 
 export default function LoginScreen() {
   const { login } = useAuth();
+  const channels = usePlatformChannels();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -54,13 +56,17 @@ export default function LoginScreen() {
 
       <View style={styles.form}>
         <Input
-          label="Email ou WhatsApp"
+          label={channels.whatsapp ? 'Email ou WhatsApp' : 'E-mail ou téléphone'}
           value={identifier}
           onChangeText={setIdentifier}
           autoCapitalize="none"
           keyboardType="email-address"
           placeholder="nom@exemple.com ou +243…"
-          hint="Utilisez votre e-mail d'inscription ou votre numéro WhatsApp."
+          hint={
+            channels.whatsapp
+              ? "Utilisez votre e-mail d'inscription ou votre numéro WhatsApp."
+              : "Utilisez votre e-mail d'inscription ou votre numéro de téléphone."
+          }
         />
 
         <Input

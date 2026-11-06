@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
@@ -126,6 +127,7 @@ const SCENARIOS: ScenarioBrief[] = [
 ];
 
 export default function LandingAiSimulationShowcase() {
+  const messaging = useMessagingChannels();
   const revealRef = useLandingReveal<HTMLElement>();
 
   const { site } = usePlatformSite();
@@ -204,7 +206,7 @@ export default function LandingAiSimulationShowcase() {
     if (hasI) {
       return {
         mobile: <>Cartes &amp; <span className="text-primary">invitations</span></>,
-        desktop: <>Atelier IA : <span className="text-primary">Studio d’invitations WhatsApp</span></>,
+        desktop: <>Atelier IA : <span className="text-primary">{messaging.whatsapp ? 'Studio d’invitations WhatsApp' : 'Studio d’invitations'}</span></>,
       };
     }
     return {
@@ -466,7 +468,7 @@ export default function LandingAiSimulationShowcase() {
                 <div className="space-y-1.5">
                   <h3 className="text-base sm:text-lg font-bold text-foreground">Studio Invitations</h3>
                   <p className="text-sm text-muted leading-relaxed">
-                    Créez une carte 9:16 WhatsApp à partir d’un brief ou d’une photo à cloner, puis suivez les réponses.
+                    {messaging.adapt('Créez une carte 9:16 WhatsApp à partir d’un brief ou d’une photo à cloner, puis suivez les réponses.')}
                   </p>
                 </div>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 pt-1">

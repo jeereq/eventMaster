@@ -1,3 +1,5 @@
+import { buildMessagingChannels } from '@/lib/messagingChannels';
+
 const DEFAULT_NAME = 'EventMaster';
 const DEFAULT_TAGLINE = 'Préparez votre événement en un clic.';
 const DEFAULT_PRIMARY = '#059669';
@@ -7,11 +9,20 @@ const DEFAULT_DESCRIPTION =
 
 export type PublicSiteSnapshot = {
   platformName: string;
+  /** Canaux activés par le superadmin (prudence : e-mail seul si la plateforme ne répond pas). */
+  notificationChannels: string[];
   platformTagline: string;
   description: string;
   brandPrimary: string;
   brandAccent: string;
 };
+
+const FALLBACK_CHANNELS = ['EMAIL'];
+
+/** Texte adapté aux canaux activés : aucune mention d’un canal désactivé dans les aperçus de partage. */
+export function adaptDescription(text: string, channels: readonly string[]): string {
+  return buildMessagingChannels(channels).adapt(text);
+}
 
 export function safeBrandHex(value: string | undefined, fallback: string): string {
   const v = (value || '').trim();
@@ -64,42 +75,42 @@ function clip(value: string, max: number): string {
 }
 
 export async function fetchPublicSiteSnapshot(): Promise<PublicSiteSnapshot> {
+  const fallback: PublicSiteSnapshot = {
+    platformName: DEFAULT_NAME,
+    platformTagline: DEFAULT_TAGLINE,
+    notificationChannels: FALLBACK_CHANNELS,
+    description: adaptDescription(DEFAULT_DESCRIPTION, FALLBACK_CHANNELS),
+    brandPrimary: DEFAULT_PRIMARY,
+    brandAccent: DEFAULT_ACCENT,
+  };
   try {
     const res = await fetch(`${apiBaseUrl()}/public/site`, {
       cache: 'no-store',
       signal: AbortSignal.timeout(4000),
     });
-    if (!res.ok) {
-      return {
-        platformName: DEFAULT_NAME,
-        platformTagline: DEFAULT_TAGLINE,
-        description: DEFAULT_DESCRIPTION,
-        brandPrimary: DEFAULT_PRIMARY,
-        brandAccent: DEFAULT_ACCENT,
-      };
-    }
+    if (!res.ok) return fallback;
     const data = (await res.json()) as {
       platformName?: string;
       platformTagline?: string;
       brandPrimary?: string;
       brandAccent?: string;
+      notificationChannels?: string[];
     };
     const platformName = clip(data.platformName || DEFAULT_NAME, 60);
     const platformTagline = clip(data.platformTagline || DEFAULT_TAGLINE, 120);
+    const notificationChannels =
+      Array.isArray(data.notificationChannels) && data.notificationChannels.length > 0
+        ? data.notificationChannels.map(String)
+        : FALLBACK_CHANNELS;
     return {
       platformName,
       platformTagline,
-      description: DEFAULT_DESCRIPTION,
+      notificationChannels,
+      description: adaptDescription(DEFAULT_DESCRIPTION, notificationChannels),
       brandPrimary: safeBrandHex(data.brandPrimary, DEFAULT_PRIMARY),
       brandAccent: safeBrandHex(data.brandAccent || data.brandPrimary, DEFAULT_ACCENT),
     };
   } catch {
-    return {
-      platformName: DEFAULT_NAME,
-      platformTagline: DEFAULT_TAGLINE,
-      description: DEFAULT_DESCRIPTION,
-      brandPrimary: DEFAULT_PRIMARY,
-      brandAccent: DEFAULT_ACCENT,
-    };
+    return fallback;
   }
 }

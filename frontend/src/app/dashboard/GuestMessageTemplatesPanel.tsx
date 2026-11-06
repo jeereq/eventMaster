@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
@@ -28,7 +29,12 @@ const TEMPLATE_VARIABLES = [
 ];
 
 export default function GuestMessageTemplatesPanel() {
+  const messaging = useMessagingChannels();
   const [templates, setTemplates] = useState<GuestMessageTemplateItem[]>([]);
+  // Les modèles d’un canal désactivé par le superadmin ne sont pas proposés.
+  const visibleTemplates = templates.filter(
+    (t) => !['EMAIL', 'WHATSAPP', 'SMS'].includes(t.channel) || messaging.has(t.channel as 'EMAIL' | 'WHATSAPP' | 'SMS'),
+  );
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<GuestMessageTemplateItem | null>(null);
   const [saving, setSaving] = useState(false);
@@ -100,12 +106,18 @@ export default function GuestMessageTemplatesPanel() {
         <p className="text-xs leading-relaxed">
           Textes sont les messages système envoyés aux invités (invitation, rappel, confirmation de présence, contact).
           Variables : {TEMPLATE_VARIABLES.slice(0, 6).join(' · ')}…
-          Sur WhatsApp, utilisez *texte* pour le gras.
+          {messaging.whatsapp ? ' Sur WhatsApp, utilisez *texte* pour le gras.' : ''}
         </p>
       </Alert>
 
+      {visibleTemplates.length === 0 && templates.length > 0 && (
+        <p className="text-sm text-muted">
+          Aucun modèle pour les canaux actuellement activés sur la plateforme.
+        </p>
+      )}
+
       <div className="grid gap-3">
-        {templates.map((t) => (
+        {visibleTemplates.map((t) => (
           <div
             key={t.id}
             className="bg-surface border border-border rounded-[var(--radius-card)] p-4 space-y-3"

@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import Link from 'next/link';
 import { Mail, MapPin, Phone, ShieldCheck } from 'lucide-react';
@@ -20,6 +21,7 @@ interface SiteFooterProps {
 }
 
 export default function SiteFooter({ faqHref = '/#faq', className }: SiteFooterProps) {
+  const messaging = useMessagingChannels();
   const { site } = usePlatformSite();
   const isBudgetBlocked = site?.studioVisibility?.budget === false;
   const product = FOOTER_PRODUCT.map((item) =>
@@ -37,13 +39,13 @@ export default function SiteFooter({ faqHref = '/#faq', className }: SiteFooterP
           <div className="min-[440px]:col-span-2 lg:col-span-4 space-y-4">
             <SiteBrandMark tone="onDark" />
             <p className="text-xs sm:text-sm text-[#a3b8b0] leading-relaxed max-w-sm">
-              {FOOTER_BRAND_DESCRIPTION}
+              {messaging.adapt(FOOTER_BRAND_DESCRIPTION)}
             </p>
             <PWAInstallCta variant="footer" />
             <ul className="space-y-1.5 pt-1">
               {FOOTER_FEATURES.slice(0, 4).map((feature) => (
                 <li key={feature} className="text-xs text-[#a3b8b0]/90 leading-snug">
-                  {feature}
+                  {messaging.adapt(feature)}
                 </li>
               ))}
             </ul>

@@ -13,7 +13,7 @@ import type { IdentifierMode } from '@/components/ui';
 import { DEFAULT_PHONE_COUNTRY_CODE } from '@/lib/phone';
 import { safeAppPath, isClientReturnPath } from '@/lib/safeAppPath';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
-import { authOtpMethodOptions, defaultPhoneAuthOtpMethod, type PhoneAuthOtpMethod } from '@/lib/authOtpChannels';
+import { authOtpMethodOptions, defaultPhoneAuthOtpMethod, phoneAuthOtpMethods, type PhoneAuthOtpMethod } from '@/lib/authOtpChannels';
 
 const FEATURES = [
   { icon: MessageSquare, title: 'Réponses en temps réel', desc: 'Voyez qui a confirmé, relancez les autres sur WhatsApp en un clic.' },
@@ -125,7 +125,7 @@ function LoginPageContent() {
             channelModes
             selectedPhoneMethod={phoneMethod}
             onPhoneMethodChange={setPhoneMethod}
-            customPhoneLabel={phoneMethod === 'WHATSAPP' ? 'Numéro WhatsApp' : 'Numéro de téléphone'}
+            customPhoneLabel={phoneMethod === 'WHATSAPP' && phoneAuthOtpMethods(authChannels).includes('WHATSAPP') ? 'Numéro WhatsApp' : 'Numéro de téléphone'}
             customPhoneHint="Le numéro de votre compte : indicatif pays, puis le numéro sans le 0."
           />
 

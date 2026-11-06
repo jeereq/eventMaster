@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React from 'react';
 import Link from 'next/link';
@@ -197,6 +198,7 @@ export default function LandingHeroPreview({
   profileId?: LandingProfileId;
   embedded?: boolean;
 } = {}) {
+  const messaging = useMessagingChannels();
   const { user } = useAuth();
   const { site } = usePlatformSite();
   const isBudgetBlocked = site?.studioVisibility?.budget === false;
@@ -253,7 +255,11 @@ export default function LandingHeroPreview({
               (isRoomAction && isRoomBlocked) ||
               (isInviteAction && isInviteBlocked);
 
-            const displayBadge = isUpcoming ? 'À venir' : act.badge;
+            const channelBadge =
+              act.badge === 'WhatsApp' && !messaging.whatsapp
+                ? messaging.list({ conj: '&', capitalize: true }) || 'En ligne'
+                : act.badge;
+            const displayBadge = isUpcoming ? 'À venir' : channelBadge;
             const displayCta = isUpcoming ? 'Bientôt disponible' : act.ctaLabel;
             const displayDesc = isUpcoming
               ? isSimulatorAction

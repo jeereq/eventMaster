@@ -12,6 +12,13 @@ import TemplatePreviewModal from '@/components/templates/TemplatePreviewModal';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import { templateContentToLandingPreview } from '@/lib/landingTemplateAdapter';
 import { toWhatsAppTone } from '@/lib/whatsappTone';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
+import {
+  clampInvitationChannel,
+  defaultInvitationChannel,
+  methodsOfInvitationChannel,
+} from '@/lib/invitationChannels';
+import { joinFr } from '@/lib/messagingChannels';
 import { formatGuestGuidelinesBlock, normalizeGuestGuidelines, type GuestGuidelines } from '@/lib/guestGuidelines';
 import { cn } from '@/lib/cn';
 
@@ -103,6 +110,8 @@ export default function InvitationEditorModal({
   onSave,
   onOpenStudio,
 }: InvitationEditorModalProps) {
+  const messaging = useMessagingChannels();
+  const allowedMethods = messaging.channels;
   const [data, setData] = useState<InvitationFormData>(initialData);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -135,7 +144,11 @@ export default function InvitationEditorModal({
     if (open) {
       const normalizedInitial: InvitationFormData = {
         templateId: initialData.templateId || '',
-        channel: initialData.channel || 'EMAIL_AND_WHATSAPP',
+        // Les canaux désactivés par le superadmin sont retirés du canal enregistré.
+        channel:
+          clampInvitationChannel(initialData.channel, allowedMethods) ||
+          defaultInvitationChannel(allowedMethods) ||
+          'EMAIL',
         subject: initialData.subject || (eventTitle ? `Invitation : ${eventTitle}` : ''),
         body: initialData.body || '',
         whatsappBody: initialData.whatsappBody || '',
@@ -156,7 +169,8 @@ export default function InvitationEditorModal({
         setActiveField('body');
       }
     }
-  }, [open, initialData, eventTitle]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialData, eventTitle, allowedMethods]);
 
   const pushToHistory = useCallback((nextData: InvitationFormData) => {
     setHistory((prev) => {
@@ -274,7 +288,7 @@ export default function InvitationEditorModal({
     pushToHistory(nextData);
 
     setFeedbackMessage({
-      text: `Modèle « ${mt.name} » appliqué pour l'E-mail et WhatsApp !`,
+      text: `Modèle « ${mt.name} » appliqué${appliedChannelsText ? ` pour ${appliedChannelsText}` : ''} !`,
       type: 'success',
     });
     setTimeout(() => setFeedbackMessage(null), 3500);
@@ -424,6 +438,7 @@ export default function InvitationEditorModal({
     data.channel === 'ALL_CHANNELS';
 
   const toggleChannel = (target: 'EMAIL' | 'WHATSAPP' | 'SMS') => {
+    if (!allowedMethods.includes(target)) return;
     let nextEmail = channelNeedsEmail;
     let nextWhatsApp = channelNeedsWhatsApp;
     let nextSms = channelNeedsSms;
@@ -452,6 +467,20 @@ export default function InvitationEditorModal({
       setChannel('SMS');
     }
   };
+  const appliedChannelsText = joinFr(
+    [channelNeedsEmail ? 'l’e-mail' : '', channelNeedsWhatsApp ? 'WhatsApp' : '', channelNeedsSms ? 'le SMS' : ''].filter(Boolean),
+  );
+  /** Le panneau « message court » sert à WhatsApp et/ou au SMS selon les canaux choisis. */
+  const shortMessageName = channelNeedsWhatsApp ? 'WhatsApp' : 'SMS';
+  const visibleChannelPresets = [
+    { id: 'ALL_CHANNELS', label: '⭐ Les trois (E-mail, WhatsApp & SMS)', desc: 'Portée maximale absolue' },
+    { id: 'EMAIL_AND_WHATSAPP', label: 'E-mail & WhatsApp', desc: 'Classique & Mobile' },
+    { id: 'EMAIL_AND_SMS', label: 'E-mail & SMS', desc: 'Direct & Lettre' },
+    { id: 'WHATSAPP_AND_SMS', label: 'WhatsApp & SMS', desc: '100% Smartphone' },
+    { id: 'EMAIL', label: 'E-mail seul', desc: 'Courriel' },
+    { id: 'WHATSAPP', label: 'WhatsApp seul', desc: 'Messagerie instantanée' },
+    { id: 'SMS', label: 'SMS seul', desc: 'Message texte direct' },
+  ].filter((preset) => methodsOfInvitationChannel(preset.id).every((m) => allowedMethods.includes(m)));
   const hasGuidelines = Boolean(
     guestGuidelines && (
       guestGuidelines.dressCode?.enabled ||
@@ -595,7 +624,13 @@ export default function InvitationEditorModal({
             {/* Sélecteur de canaux interactif & combinaisons */}
             <div className="space-y-3">
               {/* Toggles des 3 canaux fondamentaux */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div
+                className={cn(
+                  'grid grid-cols-1 gap-2.5',
+                  allowedMethods.length >= 3 ? 'sm:grid-cols-3' : allowedMethods.length === 2 ? 'sm:grid-cols-2' : '',
+                )}
+              >
+                {messaging.email && (
                 <button
                   type="button"
                   onClick={() => toggleChannel('EMAIL')}
@@ -620,7 +655,9 @@ export default function InvitationEditorModal({
                     {channelNeedsEmail && <Check className="w-3 h-3" />}
                   </span>
                 </button>
+                )}
 
+                {messaging.whatsapp && (
                 <button
                   type="button"
                   onClick={() => toggleChannel('WHATSAPP')}
@@ -645,7 +682,9 @@ export default function InvitationEditorModal({
                     {channelNeedsWhatsApp && <Check className="w-3 h-3" />}
                   </span>
                 </button>
+                )}
 
+                {messaging.sms && (
                 <button
                   type="button"
                   onClick={() => toggleChannel('SMS')}
@@ -670,23 +709,17 @@ export default function InvitationEditorModal({
                     {channelNeedsSms && <Check className="w-3 h-3" />}
                   </span>
                 </button>
+                )}
               </div>
 
               {/* Raccourcis de combinaisons rapides */}
+              {visibleChannelPresets.length > 1 && (
               <div className="space-y-1.5 pt-1">
                 <span className="text-[11px] font-semibold text-muted uppercase tracking-wider block">
                   Combinaisons directes à 1 clic :
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { id: 'ALL_CHANNELS', label: '⭐ Les trois (E-mail, WhatsApp & SMS)', desc: 'Portée maximale absolue' },
-                    { id: 'EMAIL_AND_WHATSAPP', label: 'E-mail & WhatsApp', desc: 'Classique & Mobile' },
-                    { id: 'EMAIL_AND_SMS', label: 'E-mail & SMS', desc: 'Direct & Lettre' },
-                    { id: 'WHATSAPP_AND_SMS', label: 'WhatsApp & SMS', desc: '100% Smartphone' },
-                    { id: 'EMAIL', label: 'E-mail seul', desc: 'Courriel' },
-                    { id: 'WHATSAPP', label: 'WhatsApp seul', desc: 'Messagerie instantanée' },
-                    { id: 'SMS', label: 'SMS seul', desc: 'Message texte direct' },
-                  ].map((preset) => {
+                  {visibleChannelPresets.map((preset) => {
                     const active = data.channel === preset.id;
                     return (
                       <button
@@ -706,6 +739,7 @@ export default function InvitationEditorModal({
                   })}
                 </div>
               </div>
+              )}
             </div>
 
             {/* Faire-part graphique & Page de réponse à l’invitation */}
@@ -791,7 +825,7 @@ export default function InvitationEditorModal({
                 Modèles de message pré-rédigés (cliquez pour appliquer) :
               </span>
               <span className="text-xs text-muted">
-                Remplit l'Objet, le message E-mail et WhatsApp instantanément
+                {appliedChannelsText ? `Remplit l’objet et le message pour ${appliedChannelsText} instantanément` : 'Remplit l’objet et le message instantanément'}
               </span>
             </div>
 
@@ -880,7 +914,7 @@ export default function InvitationEditorModal({
                   Variables magiques :
                 </span>
                 <span className="text-xs text-muted">
-                  S'insère dans : <strong className="text-primary">{activeField === 'whatsappBody' ? 'Message WhatsApp' : activeField === 'subject' ? 'Objet' : 'Message E-mail'}</strong>
+                  S'insère dans : <strong className="text-primary">{activeField === 'whatsappBody' ? `Message ${shortMessageName}` : activeField === 'subject' ? 'Objet' : 'Message E-mail'}</strong>
                 </span>
               </div>
 
@@ -1021,14 +1055,15 @@ export default function InvitationEditorModal({
                       value={data.subject}
                       onChange={(e) => updateField('subject', e.target.value)}
                       onFocus={() => setActiveField('subject')}
-                      placeholder="Ex : Invitation WhatsApp - Soirée Anniversaire"
+                      placeholder={`Ex : Invitation ${shortMessageName} - Soirée Anniversaire`}
                       className="w-full min-h-[44px] px-3.5 py-2.5 bg-surface border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/20 text-foreground"
                       required
                     />
                   </div>
                 )}
 
-                {/* Barre d'outils de formatage WhatsApp */}
+                {/* Barre d'outils de formatage WhatsApp (sans objet pour un SMS seul) */}
+                {channelNeedsWhatsApp && (
                 <div className="flex items-center gap-1.5 flex-wrap p-2 rounded-xl bg-surface border border-border text-xs">
                   <span className="text-xs text-muted font-bold px-1">Mise en forme :</span>
                   <button
@@ -1073,11 +1108,12 @@ export default function InvitationEditorModal({
                     </button>
                   ))}
                 </div>
+                )}
 
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <label htmlFor="invitation-whatsapp-input" className="text-xs font-semibold text-primary uppercase tracking-wider">
-                      Corps du message (WhatsApp)
+                      Corps du message ({shortMessageName})
                     </label>
                     <span className="text-xs text-muted font-mono">
                       {data.whatsappBody.length} car. · {whatsappWordCount} mot{whatsappWordCount > 1 ? 's' : ''}
@@ -1156,7 +1192,7 @@ export default function InvitationEditorModal({
               channel={data.channel}
               subject={data.subject || 'Sujet de l’invitation'}
               body={data.body || 'Le message de l’e-mail apparaîtra ici après rédaction ou choix d’un modèle...'}
-              whatsappBody={data.whatsappBody || 'Le message WhatsApp apparaîtra ici...'}
+              whatsappBody={data.whatsappBody || `Le message ${shortMessageName} apparaîtra ici...`}
               orgName={orgName}
               guidelinesBlock={GuidelinesText}
             />

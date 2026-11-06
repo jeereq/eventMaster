@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useMemo } from 'react';
 import Link from 'next/link';
@@ -15,9 +16,9 @@ import {
 const PAYMENT_METHODS: string[] = [...FLEXPAY_MOBILE_OPERATORS, 'Visa', 'Mastercard'];
 
 const INVITATION_CHANNELS = [
-  { label: 'WhatsApp', icon: MessageCircle },
-  { label: 'SMS', icon: MessageSquare },
-  { label: 'E-mail', icon: Mail },
+  { id: 'WHATSAPP' as const, label: 'WhatsApp', icon: MessageCircle },
+  { id: 'SMS' as const, label: 'SMS', icon: MessageSquare },
+  { id: 'EMAIL' as const, label: 'E-mail', icon: Mail },
 ];
 
 /**
@@ -50,6 +51,7 @@ function entryPrice(audiences: PlanAudience[], dbPlans: PlanCatalog | null): num
  * « combien ça coûte ? » et « comment je paie / j’invite ? ».
  */
 export default function LandingTrustPricingBand() {
+  const messaging = useMessagingChannels();
   const { plans: dbPlans, loading } = usePlanCatalog();
 
   const offers = useMemo(() => {
@@ -136,13 +138,14 @@ export default function LandingTrustPricingBand() {
               ))}
             </ul>
           </div>
+          {messaging.any && (
           <div className="space-y-2.5">
             <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <ShieldCheck className="w-4 h-4 text-primary shrink-0" aria-hidden />
               Invitations et billets envoyés par
             </p>
             <ul className="flex flex-wrap gap-2" role="list">
-              {INVITATION_CHANNELS.map(({ label, icon: Icon }) => (
+              {INVITATION_CHANNELS.filter(({ id }) => messaging.has(id)).map(({ label, icon: Icon }) => (
                 <li
                   key={label}
                   className="inline-flex items-center gap-1.5 min-h-8 px-2.5 rounded-full bg-primary/10 border border-primary/20 text-xs font-semibold text-primary"
@@ -153,6 +156,7 @@ export default function LandingTrustPricingBand() {
               ))}
             </ul>
           </div>
+          )}
         </div>
       </div>
     </section>

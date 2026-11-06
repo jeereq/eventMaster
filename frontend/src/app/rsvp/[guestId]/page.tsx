@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
@@ -65,6 +66,7 @@ const GuestVenueGuide = dynamic(() => import('@/components/GuestVenueGuide'), {
 });
 
 export default function RsvpPage() {
+  const messaging = useMessagingChannels();
   const params = useParams();
   const searchParams = useSearchParams();
   const guestId = params.guestId as string;
@@ -954,6 +956,7 @@ export default function RsvpPage() {
                                   Plein écran
                                 </button>
                               )}
+                              {messaging.whatsapp && (
                               <a
                                 href={`https://wa.me/?text=${encodeURIComponent(
                                   `Bonjour ! Voici ton pass d'accès personnel pour « ${guest.event.title} » (Table : ${pass.tableName || 'à l’accueil'}, Siège : ${pass.seatNumber ? `n°${pass.seatNumber}` : '—'}) :\n${pass.rsvpUrl}`
@@ -966,6 +969,7 @@ export default function RsvpPage() {
                               >
                                 <MessageCircle className="w-4 h-4" aria-hidden />
                               </a>
+                              )}
                               <button
                                 type="button"
                                 onClick={async () => {
@@ -1861,7 +1865,7 @@ export default function RsvpPage() {
 
                 <div className="space-y-1">
                   <label htmlFor="modal-phone" className="block text-xs font-semibold text-foreground">
-                    Numéro de téléphone / WhatsApp
+                    {messaging.whatsapp ? 'Numéro de téléphone / WhatsApp' : 'Numéro de téléphone'}
                   </label>
                   <input
                     id="modal-phone"

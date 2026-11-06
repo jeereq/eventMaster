@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react';
 
 export default function ContactPage() {
+  const messaging = useMessagingChannels();
   const { site } = usePlatformSite();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -395,7 +397,7 @@ export default function ContactPage() {
                             onNationalChange={setPhoneNational}
                             required
                             disabled={submitting}
-                            hint="Numéro WhatsApp de préférence."
+                            hint={messaging.whatsapp ? 'Numéro WhatsApp de préférence.' : undefined}
                           />
                         )}
                       </div>

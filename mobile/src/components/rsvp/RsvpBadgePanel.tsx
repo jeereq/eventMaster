@@ -1,6 +1,7 @@
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../../theme/colors';
+import { usePlatformChannels } from '../../lib/platformChannels';
 
 interface Props {
   qrUrl: string;
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function RsvpBadgePanel({ qrUrl, guestName }: Props) {
+  const channels = usePlatformChannels();
   return (
     <View style={styles.card}>
       <Text style={styles.title}>Badge de confirmation de présence</Text>
@@ -19,7 +21,11 @@ export function RsvpBadgePanel({ qrUrl, guestName }: Props) {
         <Image source={{ uri: qrUrl }} style={styles.qr} accessibilityLabel="QR code de confirmation de présence" />
       </View>
 
-      <Text style={styles.hint}>Conservez cet écran ou le lien reçu par e-mail / WhatsApp.</Text>
+      <Text style={styles.hint}>
+        {channels.whatsapp
+          ? 'Conservez cet écran ou le lien reçu par e-mail / WhatsApp.'
+          : 'Conservez cet écran ou le lien reçu.'}
+      </Text>
     </View>
   );
 }

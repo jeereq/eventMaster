@@ -1,4 +1,5 @@
 'use client';
+import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
@@ -82,6 +83,7 @@ export default function GettingStartedChecklist({
   canSell = false,
   onCreateEvent,
 }: GettingStartedProps) {
+  const messaging = useMessagingChannels();
   const [flow, setFlow] = useState<PersistedFlow>({});
   const [ready, setReady] = useState(false);
 
@@ -179,7 +181,7 @@ export default function GettingStartedChecklist({
       },
       {
         id: 'invite',
-        title: 'Envoyer vos invitations WhatsApp',
+        title: messaging.adapt('Envoyer vos invitations WhatsApp'),
         description: 'Partagez vos faire-part avec confirmation de présence en ligne.',
         href: inviteHref,
         done: (hasInvitations || Boolean(flow.inviteDone)) && hasEvents,
@@ -206,7 +208,7 @@ export default function GettingStartedChecklist({
         markOnClick: 'guideDone' as const,
       },
     ];
-  }, [variant, hasRooms, hasServices, preferServices, canSell, hasEvents, hasGuests, hasInvitations, firstEventId, flow.guestsDone, flow.inviteDone, flow.guideDone, flow.templateDone]);
+  }, [variant, hasRooms, hasServices, preferServices, canSell, hasEvents, hasGuests, hasInvitations, firstEventId, flow.guestsDone, flow.inviteDone, flow.guideDone, flow.templateDone, messaging]);
 
   const doneCount = steps.filter((s) => s.done).length;
   const allDone = doneCount === steps.length;

@@ -9,9 +9,11 @@ import { Button } from '../../src/components/ui/Button';
 import { Alert } from '../../src/components/ui/Alert';
 import { LegalLinksText } from '../../src/components/legal/LegalLinks';
 import { colors } from '../../src/theme/colors';
+import { usePlatformChannels } from '../../src/lib/platformChannels';
 
 export default function RegisterScreen() {
   const { register } = useAuth();
+  const { otpMethods } = usePlatformChannels();
   const [name, setName] = useState('');
   const [tenantName, setTenantName] = useState('');
   const [email, setEmail] = useState('');
@@ -45,7 +47,7 @@ export default function RegisterScreen() {
         name.trim(),
         tenantName.trim(),
         phone.trim() || undefined,
-        method,
+        otpMethods.includes(method) ? method : otpMethods[0],
         true,
         true,
       );
@@ -88,10 +90,11 @@ export default function RegisterScreen() {
           placeholder="nom@exemple.com"
         />
 
+        {otpMethods.length > 1 ? (
         <View style={styles.methodRow}>
           <Text style={styles.methodLabel}>Validation du compte</Text>
           <View style={styles.methodToggle}>
-            {(['EMAIL', 'WHATSAPP'] as VerificationMethod[]).map((m) => (
+            {otpMethods.map((m) => (
               <Pressable
                 key={m}
                 onPress={() => setMethod(m)}
@@ -104,8 +107,9 @@ export default function RegisterScreen() {
             ))}
           </View>
         </View>
+        ) : null}
 
-        {method === 'WHATSAPP' ? (
+        {method === 'WHATSAPP' && otpMethods.includes('WHATSAPP') ? (
           <Input
             label="Numéro WhatsApp"
             value={phone}
