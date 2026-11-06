@@ -208,6 +208,18 @@ export function buildFirstLoginTour(
       );
       return steps;
 
+    case 'vendor':
+      push('nav-dashboard', home);
+      push('nav-quotes');
+      push('nav-reservations');
+      if (!workspace || workspace.showRooms) push('nav-rooms');
+      if (access?.canManageRooms) push('nav-marketplace');
+      push('nav-analytics-org');
+      steps.push(
+        firstLoginFinish(home, 'Ensuite : complétez une fiche avec des photos et un prix pour recevoir vos premiers devis.'),
+      );
+      return steps;
+
     case 'org_commercial':
       push('nav-org-commercial');
       steps.push(firstLoginFinish(home, 'Ensuite : partagez votre lien de parrainage.'));
@@ -313,6 +325,7 @@ export function buildNavProductTour(
 
     case 'staff_scope':
     case 'owner':
+    case 'vendor':
     case 'org_manager':
       return buildSteps(buildOrgNavTourIds(opts?.workspace, access), copy);
 

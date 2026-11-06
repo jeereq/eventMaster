@@ -11,6 +11,9 @@ import {
 import Link from 'next/link';
 import { PageHeader, Alert, EmptyState, Button, SkeletonAnalyticsView, SkeletonStatsRow, Breadcrumbs } from '@/components/ui';
 import WorkspaceStatsOverview, { type WorkspaceStats } from '@/components/WorkspaceStatsOverview';
+import VendorStatsView from '@/components/dashboard/VendorStatsView';
+import { getWorkspaceModules } from '@/lib/planAccess';
+import { cn } from '@/lib/cn';
 // skeletons imported below
 import {
  extractRsvpFieldsFromTemplateContent,
@@ -60,7 +63,7 @@ interface InvitationItem {
  templateId?: string;
 }
 
-export default function AnalyticsPage() {
+function EventAnalyticsView() {
  const { user, planFeatures, access } = useAuth();
  const canExportReports = user?.role === 'SUPER_ADMIN' || planFeatures?.adminReports === true;
  const protocolView = Boolean(access?.isProtocolOnly);
@@ -597,6 +600,76 @@ export default function AnalyticsPage() {
  )}
  </div>
  </div>
+ )}
+ </div>
+ );
+}
+
+
+/**
+ * Statistiques : un prestataire (salle, prestations) voit ses demandes, réservations et
+ * revenus ; un compte « Salle & presta » qui organise aussi des événements passe d'une vue à l'autre.
+ */
+export default function AnalyticsPage() {
+ const { tenant, access, planQuota, planFeatures } = useAuth();
+ const accountKind = tenant?.accountKind;
+ const workspace = getWorkspaceModules({ accountKind, access, planQuota, planFeatures });
+ const vendorDesk = (accountKind === 'VENDOR' || accountKind === 'BOTH') && !access?.isProtocolOnly;
+ const hasEvents = accountKind !== 'VENDOR' && workspace.showEvents;
+ const [view, setView] = useState<'vendor' | 'events'>('vendor');
+
+ if (!vendorDesk) return <EventAnalyticsView />;
+
+ const vendorPanel = (
+ <VendorStatsView isVenue={workspace.showRooms} />
+ );
+
+ if (!hasEvents) {
+ return (
+ <div className="space-y-6 w-full">
+ <PageHeader
+ title="Statistiques & revenus"
+ description="Demandes de devis, réservations, chiffre et commission."
+ breadcrumbs={<Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Statistiques' }]} />}
+ />
+ {vendorPanel}
+ </div>
+ );
+ }
+
+ return (
+ <div className="space-y-6 w-full">
+ <div role="tablist" aria-label="Statistiques" className="flex gap-1.5">
+ {([
+ ['vendor', 'Ventes marketplace'],
+ ['events', 'Mes événements'],
+ ] as const).map(([id, label]) => (
+ <button
+ key={id}
+ type="button"
+ role="tab"
+ aria-selected={view === id}
+ onClick={() => setView(id)}
+ className={cn(
+ 'min-h-11 rounded-full border px-3 py-2 text-xs font-semibold touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+ view === id ? 'bg-primary-solid text-primary-foreground border-primary-solid' : 'border-border text-muted hover:text-foreground',
+ )}
+ >
+ {label}
+ </button>
+ ))}
+ </div>
+ {view === 'vendor' ? (
+ <div className="space-y-6">
+ <PageHeader
+ title="Ventes marketplace"
+ description="Demandes de devis, réservations, chiffre et commission."
+ breadcrumbs={<Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Statistiques' }]} />}
+ />
+ {vendorPanel}
+ </div>
+ ) : (
+ <EventAnalyticsView />
  )}
  </div>
  );

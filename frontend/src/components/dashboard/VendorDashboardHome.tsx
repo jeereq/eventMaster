@@ -71,6 +71,7 @@ interface VendorService {
   category?: string | null;
   city?: string | null;
   isPublic: boolean;
+  isBlockedByAdmin?: boolean;
   photos?: unknown;
   priceFromFc?: number | null;
 }
@@ -240,7 +241,10 @@ export default function VendorDashboardHome() {
 
   const limits = planQuota?.limits;
   const usage = planQuota?.usage;
-  const isVenue = Boolean(access?.canManageRooms) && (limits?.maxRooms ?? 0) > 0;
+  /** Fiches (salles, offres) : propriétaire et managers seulement. */
+  const canManageListings = Boolean(access?.canManageRooms);
+  // Salle ou prestataire selon le forfait, quel que soit le rôle du membre connecté.
+  const isVenue = (limits?.maxRooms ?? 0) > 0;
   const hasServices = (limits?.maxServices ?? 0) > 0 || (usage?.services ?? 0) > 0;
   const hasEvents = (limits?.maxEvents ?? 0) > 0;
   const isOwner = Boolean(access?.isOwner) || (Boolean(user?.id) && user?.id === tenant?.managerId);
@@ -259,6 +263,7 @@ export default function VendorDashboardHome() {
   const [inquiries, setInquiries] = useState<MarketplaceInquiryItem[]>([]);
   const [bookings, setBookings] = useState<MarketplaceBookingItem[]>([]);
   const [commissionDueFc, setCommissionDueFc] = useState(0);
+  const [serverRevenueFc, setServerRevenueFc] = useState<number | null>(null);
   const [rooms, setRooms] = useState<VendorRoom[]>([]);
   const [services, setServices] = useState<VendorService[]>([]);
   const [loading, setLoading] = useState(true);
@@ -276,17 +281,18 @@ export default function VendorDashboardHome() {
     const [iData, bData, rData, sData] = await Promise.all([
       api.get('/marketplace/inquiries?role=vendor').catch(fail({ inquiries: [] })),
       api.get('/marketplace/bookings?role=vendor').catch(fail({ bookings: [], commissionDueFc: 0 })),
-      isVenue ? api.get('/rooms').catch(fail([])) : Promise.resolve([]),
-      hasServices ? api.get('/marketplace/services').catch(fail([])) : Promise.resolve([]),
+      isVenue && canManageListings ? api.get('/rooms').catch(fail([])) : Promise.resolve([]),
+      hasServices && canManageListings ? api.get('/marketplace/services').catch(fail([])) : Promise.resolve([]),
     ]);
     setInquiries(Array.isArray(iData?.inquiries) ? iData.inquiries : []);
     setBookings(Array.isArray(bData?.bookings) ? bData.bookings : []);
     setCommissionDueFc(Number(bData?.commissionDueFc) || 0);
+    setServerRevenueFc(typeof bData?.confirmedRevenueFc === 'number' ? bData.confirmedRevenueFc : null);
     setRooms(Array.isArray(rData) ? rData : Array.isArray(rData?.rooms) ? rData.rooms : []);
     setServices(Array.isArray(sData) ? sData : Array.isArray(sData?.services) ? sData.services : []);
     setLoadError(failed);
     setLoading(false);
-  }, [tenant?.id, isVenue, hasServices]);
+  }, [tenant?.id, isVenue, hasServices, canManageListings]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- chargement initial des données
@@ -318,12 +324,14 @@ export default function VendorDashboardHome() {
       .sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime());
   }, [bookings]);
 
+  // Total calculé par le serveur sur toutes les réservations (repli : lignes chargées).
   const confirmedRevenueFc = useMemo(
     () =>
+      serverRevenueFc ??
       bookings
         .filter((b) => b.status === 'CONFIRMED' || b.status === 'COMPLETED')
         .reduce((sum, b) => sum + (Number(b.amountFc) || 0), 0),
-    [bookings],
+    [bookings, serverRevenueFc],
   );
   const pipelineFc = useMemo(
     () => bookingsToHandle.reduce((sum, b) => sum + (Number(b.amountFc) || 0), 0),
@@ -358,8 +366,8 @@ export default function VendorDashboardHome() {
         isPublic: svc.isPublic,
         hasListing: true,
         photoCount: photos.length,
-        blocked: false,
-        publicHref: svc.isPublic ? publicServiceHref(svc.slug, svc.category) : null,
+        blocked: Boolean(svc.isBlockedByAdmin),
+        publicHref: svc.isPublic && !svc.isBlockedByAdmin ? publicServiceHref(svc.slug, svc.category) : null,
         manageHref: '/dashboard/marketplace',
       };
     });
@@ -419,6 +427,7 @@ export default function VendorDashboardHome() {
       href: isVenue ? '/dashboard/rooms' : '/dashboard/marketplace',
       icon: isVenue ? Building2 : Briefcase,
       urgent: showcaseIssues.length > 0,
+      hidden: !canManageListings,
     },
     {
       id: 'revenue',
@@ -431,9 +440,11 @@ export default function VendorDashboardHome() {
     },
   ];
 
+  const visibleKpis = kpis.filter((kpi) => !('hidden' in kpi && kpi.hidden));
+
   const quickLinks = [
-    isVenue ? { href: '/dashboard/rooms', label: 'Mes salles', hint: 'Fiches, plans 2D/3D, staff', icon: Building2 } : null,
-    hasServices || !isVenue ? { href: '/dashboard/marketplace', label: 'Mes offres', hint: 'Prestations et locations', icon: Briefcase } : null,
+    isVenue && canManageListings ? { href: '/dashboard/rooms', label: 'Mes salles', hint: 'Fiches, plans 2D/3D, staff', icon: Building2 } : null,
+    canManageListings && (hasServices || !isVenue) ? { href: '/dashboard/marketplace', label: 'Mes offres', hint: 'Prestations et locations', icon: Briefcase } : null,
     { href: '/dashboard/publications', label: 'Réalisations', hint: 'Photos de vos derniers événements', icon: Rss },
     { href: '/dashboard/analytics', label: 'Statistiques', hint: 'Demandes, conversion, revenus', icon: BarChart3 },
     hasEvents ? { href: '/dashboard/events', label: 'Événements', hint: 'Vos propres réceptions', icon: Calendar } : null,
@@ -504,13 +515,15 @@ export default function VendorDashboardHome() {
               </span>
             )}
           </Link>
-          <Link
-            href={primaryCta.href}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-solid px-4 text-sm font-semibold text-primary-foreground hover:bg-primary-solid-hover transition"
-          >
-            <primaryCta.icon className="w-4 h-4" />
-            {primaryCta.label}
-          </Link>
+          {canManageListings ? (
+            <Link
+              href={primaryCta.href}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary-solid px-4 text-sm font-semibold text-primary-foreground hover:bg-primary-solid-hover transition"
+            >
+              <primaryCta.icon className="w-4 h-4" />
+              {primaryCta.label}
+            </Link>
+          ) : null}
         </div>
       </header>
 
@@ -574,8 +587,8 @@ export default function VendorDashboardHome() {
       </div>
 
       {/* Indicateurs cliquables */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {kpis.map((kpi) => (
+      <div className={cn("grid grid-cols-2 gap-3", visibleKpis.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4")}>
+        {visibleKpis.map((kpi) => (
           <Link
             key={kpi.id}
             href={kpi.href}
@@ -716,7 +729,8 @@ export default function VendorDashboardHome() {
         </SectionCard>
       </div>
 
-      {/* Vitrine */}
+      {/* Vitrine (propriétaire et managers) */}
+      {canManageListings ? (
       <SectionCard
         title={isVenue ? 'Ma vitrine : salles publiées' : 'Ma vitrine : offres publiées'}
         icon={Eye}
@@ -806,6 +820,7 @@ export default function VendorDashboardHome() {
           </p>
         )}
       </SectionCard>
+      ) : null}
 
       {/* Premiers pas (masquable) */}
       {user?.role === 'USER' && (

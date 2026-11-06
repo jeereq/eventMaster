@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { getQuotaLockMessage, getQuotaActionMessage, isUnlimitedQuota } from '@/lib/planAccess';
+import { getQuotaLockMessage, getQuotaActionMessage, getWorkspaceModules, isUnlimitedQuota } from '@/lib/planAccess';
 import PlanLimitCallout from '@/components/PlanLimitCallout';
 import {
   PageHeader, Button, Breadcrumbs, Alert, Modal, EmptyState, StatusPill,
@@ -24,7 +24,6 @@ import {
   parseBlockedDates,
   defaultUnitForServiceCategory,
   dashboardServiceHref,
-  type MarketplaceBookingItem,
   type MarketplaceInquiryItem,
   type ServiceCategory,
   type RentalDeliveryFilter,
@@ -37,7 +36,7 @@ import { commissionPercent } from '@/lib/platformRates';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import {
-  Globe, GlobeLock, KeyRound, Loader2, Plus, Sparkles, Trash2,
+  AlertTriangle, CalendarCheck, Globe, GlobeLock, Inbox, KeyRound, Loader2, Plus, Sparkles, Trash2,
 } from 'lucide-react';
 import { type MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import ServiceOfferingForm, {
@@ -47,8 +46,6 @@ import ServiceOfferingForm, {
   offeringPromoMessage,
   type ServiceOfferingDraft,
 } from '@/components/ServiceOfferingForm';
-import MarketplaceBookingsPanel from '@/components/MarketplaceBookingsPanel';
-import MarketplaceInquiriesPanel from '@/components/MarketplaceInquiriesPanel';
 import { useRememberListReturn } from '@/lib/catalogueQuery';
 import VendorBeveragePrices from '@/components/VendorBeveragePrices';
 
@@ -78,10 +75,20 @@ interface ServiceItem {
   blockedDates?: unknown;
   bookedDates?: string[];
   isPublic: boolean;
+  isBlockedByAdmin?: boolean;
+  adminBlockReason?: string | null;
   details?: unknown;
 }
 
-type DeskTab = 'services' | 'rentals' | 'inquiries' | 'bookings' | 'beverages';
+type DeskTab = 'services' | 'rentals' | 'beverages';
+
+/** Métiers qui vendent aussi des boissons (onglet Boissons). */
+const BEVERAGE_SELLER_CATEGORIES: ServiceCategory[] = ['CATERING', 'EVENT_PLANNER', 'OTHER'];
+
+function offeringStatus(item: ServiceItem): { tone: 'emerald' | 'slate' | 'rose'; label: string } {
+  if (item.isBlockedByAdmin) return { tone: 'rose', label: 'Suspendue' };
+  return item.isPublic ? { tone: 'emerald', label: 'Publiée' } : { tone: 'slate', label: 'Brouillon' };
+}
 
 function deskAskingPrice(item: ServiceItem): string | null {
   if (item.priceFromFc == null) return null;
@@ -94,7 +101,7 @@ function deskAskingPrice(item: ServiceItem): string | null {
 
 export default function MarketplaceDeskPage() {
   useRememberListReturn();
-  const { access, refreshProfile, planQuota, tenant, planName } = useAuth();
+  const { access, refreshProfile, planQuota, planFeatures, tenant, planName } = useAuth();
   /** Nom commercial du forfait (base) ; l'identifiant brut seulement si le nom n'est pas chargé. */
   const planLabel = planName || tenant?.plan || null;
   const { site } = usePlatformSite();
@@ -104,13 +111,17 @@ export default function MarketplaceDeskPage() {
     planQuota && !isUnlimitedQuota(planQuota.limits.maxServices ?? 0) && (planQuota.limits.maxServices ?? 0) <= 0,
   );
   const [tabChoice, setTab] = useState<DeskTab | null>(null);
-  // Forfait Salle sans fiches : ouvrir sur les demandes plutôt que sur un onglet verrouillé.
-  const tab: DeskTab = tabChoice ?? (servicesNotIncluded ? 'inquiries' : 'services');
   const [services, setServices] = useState<ServiceItem[]>([]);
   const [inquiries, setInquiries] = useState<MarketplaceInquiryItem[]>([]);
-  const [bookings, setBookings] = useState<MarketplaceBookingItem[]>([]);
-  const [commissionDueFc, setCommissionDueFc] = useState(0);
-  const [vendorBlockedDates, setVendorBlockedDates] = useState<string[]>([]);
+  const [sellsBeverages, setSellsBeverages] = useState(false);
+  const venueAccount = getWorkspaceModules({ accountKind: tenant?.accountKind, access, planQuota, planFeatures }).showRooms;
+  // Boissons : traiteurs, organisateurs, salles, ou vendeur qui a déjà des tarifs boissons.
+  const showBeverages = sellsBeverages
+    || venueAccount
+    || services.some((item) => BEVERAGE_SELLER_CATEGORIES.includes(item.category));
+  const tab: DeskTab = tabChoice === 'beverages' && !showBeverages
+    ? 'services'
+    : tabChoice ?? (servicesNotIncluded && showBeverages ? 'beverages' : 'services');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -163,19 +174,16 @@ export default function MarketplaceDeskPage() {
   const load = async () => {
     setLoading(true);
     try {
-      const [svc, leads, books] = await Promise.all([
+      const [svc, leads, drinks] = await Promise.all([
         api.get('/marketplace/services'),
-        api.get('/marketplace/inquiries').catch((err: unknown) => {
-          setError(err instanceof Error ? err.message : 'Impossible de charger les demandes.');
-          return { inquiries: [] };
-        }),
-        api.get('/marketplace/bookings'),
+        // Compteur des nouvelles demandes (le traitement se fait dans « Demandes de devis »).
+        api.get('/marketplace/inquiries?role=vendor').catch(() => ({ inquiries: [] })),
+        api.get('/marketplace/beverage-catalog').catch(() => ({ brands: [] })),
       ]);
       setServices(svc.services || []);
       setInquiries(leads.inquiries || []);
-      setBookings(books.bookings || []);
-      setCommissionDueFc(books.commissionDueFc || 0);
-      setVendorBlockedDates(Array.isArray(books.blockedDates) ? books.blockedDates : []);
+      const brands: Array<{ myPrices?: unknown[] }> = Array.isArray(drinks?.brands) ? drinks.brands : [];
+      setSellsBeverages(brands.some((brand) => Array.isArray(brand.myPrices) && brand.myPrices.length > 0));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Impossible de charger le marketplace.');
     } finally {
@@ -380,34 +388,12 @@ export default function MarketplaceDeskPage() {
     }
   };
 
-  const convertInquiry = async (id: string) => {
-    try {
-      const data = await api.post(`/marketplace/inquiries/${id}/book`);
-      setSuccess(data.message || 'Demande convertie en réservation.');
-      setTab('bookings');
-      await load();
-    } catch (err: any) {
-      setError(err.message || 'Conversion impossible.');
-    }
-  };
-
-  const markContacted = async (id: string) => {
-    try {
-      await api.patch(`/marketplace/inquiries/${id}`, { status: 'CONTACTED' });
-      setInquiries((prev) => prev.map((i) => (i.id === id ? { ...i, status: 'CONTACTED' } : i)));
-    } catch (err: any) {
-      setError(err.message || 'Mise à jour impossible.');
-    }
-  };
-
-  const newCount = inquiries.filter((i) => i.status === 'NEW').length;
+  const newCount = inquiries.filter((i) => i.status === 'NEW' && !i.closedAt).length;
 
   const deskTabs: Array<{ id: DeskTab; label: string; locked?: boolean }> = [
     { id: 'services', label: 'Prestations', locked: servicesNotIncluded },
     { id: 'rentals', label: 'Matériel & Équipements', locked: servicesNotIncluded },
-    { id: 'inquiries', label: `Demandes${newCount > 0 ? ` (${newCount})` : ''}` },
-    { id: 'bookings', label: `Réservations${bookings.length > 0 ? ` (${bookings.length})` : ''}` },
-    { id: 'beverages', label: 'Boissons' },
+    ...(showBeverages ? [{ id: 'beverages' as const, label: 'Boissons' }] : []),
   ];
   // Forfait Salle sans fiches : ne pas ouvrir sur un onglet verrouillé.
   const orderedDeskTabs = servicesNotIncluded
@@ -462,7 +448,7 @@ export default function MarketplaceDeskPage() {
     <div className="space-y-6">
       <PageHeader
         title="Mes offres"
-        description={`Prestations, matériel, demandes et boissons. Commission ${commissionPercent(site)} %.`}
+        description={`Vos fiches publiées au catalogue${showBeverages ? ' et vos tarifs boissons' : ''}. Commission ${commissionPercent(site)} %.`}
         breadcrumbs={
           <Breadcrumbs items={[{ label: 'Accueil', href: '/dashboard' }, { label: 'Mes offres' }]} />
         }
@@ -520,7 +506,31 @@ export default function MarketplaceDeskPage() {
             {item.label}
           </button>
         ))}
+        <span aria-hidden className="mx-1 w-px shrink-0 self-stretch bg-border" />
+        <Link
+          href="/dashboard/bookings?tab=quotes"
+          className="inline-flex items-center gap-1.5 shrink-0 min-h-11 px-3 py-2 rounded-full text-xs font-semibold border border-border text-muted hover:text-foreground whitespace-nowrap touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        >
+          <Inbox className="w-3.5 h-3.5" aria-hidden />
+          Demandes de devis{newCount > 0 ? ` (${newCount})` : ''}
+        </Link>
+        <Link
+          href="/dashboard/bookings?tab=bookings"
+          className="inline-flex items-center gap-1.5 shrink-0 min-h-11 px-3 py-2 rounded-full text-xs font-semibold border border-border text-muted hover:text-foreground whitespace-nowrap touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        >
+          <CalendarCheck className="w-3.5 h-3.5" aria-hidden />
+          Réservations
+        </Link>
       </div>
+
+      {services.some((item) => item.isBlockedByAdmin) ? (
+        <Alert variant="error">
+          {services.filter((item) => item.isBlockedByAdmin).length > 1
+            ? 'Certaines fiches sont suspendues par EventMaster et ne sont plus visibles au catalogue.'
+            : 'Une fiche est suspendue par EventMaster et n’est plus visible au catalogue.'}{' '}
+          Le motif est indiqué sur la fiche. Corrigez-la puis contactez le support pour la remettre en ligne.
+        </Alert>
+      ) : null}
 
       {error && !editorOpen ? <Alert variant="error">{error}</Alert> : null}
       {success && <Alert variant="success">{success}</Alert>}
@@ -614,22 +624,8 @@ export default function MarketplaceDeskPage() {
         <div className="flex justify-center py-16">
           <Loader2 className="w-7 h-7 animate-spin text-primary" />
         </div>
-      ) : tab === 'bookings' ? (
-        <MarketplaceBookingsPanel
-          bookings={bookings}
-          commissionDueFc={commissionDueFc}
-          onChanged={load}
-          vendorBlockedDates={vendorBlockedDates}
-        />
       ) : tab === 'beverages' ? (
         <VendorBeveragePrices />
-      ) : tab === 'inquiries' ? (
-        <MarketplaceInquiriesPanel
-          inquiries={inquiries}
-          onMarkContacted={markContacted}
-          onConvert={convertInquiry}
-          onChanged={load}
-        />
       ) : listingPool.length === 0 ? (
           <EmptyState
             icon={listingIsRental ? <KeyRound className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
@@ -713,9 +709,14 @@ export default function MarketplaceDeskPage() {
                         </p>
                         <h3 className="font-semibold text-foreground truncate">{item.title}</h3>
                         <p className="text-xs text-muted mt-0.5 truncate">{meta}</p>
+                        {item.isBlockedByAdmin ? (
+                          <p className="mt-0.5 text-xs text-danger truncate" title={item.adminBlockReason || undefined}>
+                            Suspendue par EventMaster{item.adminBlockReason ? ` : ${item.adminBlockReason}` : ''}
+                          </p>
+                        ) : null}
                       </div>
-                      <StatusPill tone={item.isPublic ? 'emerald' : 'slate'}>
-                        {item.isPublic ? 'Publiée' : 'Brouillon'}
+                      <StatusPill tone={offeringStatus(item).tone}>
+                        {offeringStatus(item).label}
                       </StatusPill>
                     </div>
                     {actions}
@@ -734,8 +735,8 @@ export default function MarketplaceDeskPage() {
                       </div>
                     )}
                     <div className="absolute top-2.5 right-2.5">
-                      <StatusPill tone={item.isPublic ? 'emerald' : 'slate'}>
-                        {item.isPublic ? 'Publiée' : 'Brouillon'}
+                      <StatusPill tone={offeringStatus(item).tone}>
+                        {offeringStatus(item).label}
                       </StatusPill>
                     </div>
                   </div>
@@ -746,6 +747,12 @@ export default function MarketplaceDeskPage() {
                       </p>
                       <h3 className="font-semibold text-foreground">{item.title}</h3>
                       <p className="text-xs text-muted mt-0.5">{meta}</p>
+                      {item.isBlockedByAdmin ? (
+                        <p className="mt-1.5 flex items-start gap-1.5 text-xs text-danger">
+                          <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" aria-hidden />
+                          Suspendue par EventMaster{item.adminBlockReason ? ` : ${item.adminBlockReason}` : '.'}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="pt-1 mt-auto">{actions}</div>
                   </div>

@@ -49,6 +49,7 @@ import {
   createLinkedFeedPost,
   listMyFeedPosts,
 } from '../controllers/marketplaceFeedController';
+import { getVendorStats } from '../controllers/marketplaceVendorStatsController';
 import {
   getMyBeverageCatalog,
   putMyBeveragePrices,
@@ -74,6 +75,7 @@ router.patch('/inquiries/:id', updateInquiryStatus);
 router.post('/inquiries/:id/book', convertInquiryToBooking);
 router.post('/inquiries/:id/accept', acceptInquiryQuote);
 router.get('/bookings', listBookings);
+router.get('/vendor-stats', getVendorStats);
 router.post('/bookings', createBooking);
 router.patch('/bookings/:id', updateBooking);
 router.get('/listing-relation', getListingRelation);

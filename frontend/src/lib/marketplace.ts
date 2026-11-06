@@ -608,6 +608,8 @@ export interface MarketplaceBookingItem {
   depositFc: number;
   commissionRate: number;
   commissionFc: number;
+  /** Date à laquelle EventMaster a marqué la commission comme payée. */
+  commissionSettledAt?: string | null;
   status: MarketplaceBookingStatus;
   depositMarkedAt: string | null;
   declineReason?: string | null;

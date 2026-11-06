@@ -272,7 +272,10 @@ function buildRoleMobileBottomItems({
       { id: 'bookings', name: 'Planning', href: '/dashboard/bookings?tab=bookings', icon: CalendarCheck },
       workspace.showRooms
         ? { id: 'rooms', name: 'Salles', href: '/dashboard/rooms', icon: Building2 }
-        : { id: 'offers', name: 'Offres', href: '/dashboard/marketplace', icon: Briefcase },
+        : access?.canManageRooms
+          ? { id: 'offers', name: 'Offres', href: '/dashboard/marketplace', icon: Briefcase }
+          // Membre sans droit de gestion des fiches : le catalogue plutôt qu'une page fermée.
+          : { id: 'catalogue', name: 'Explorer', href: '/dashboard/catalogue', icon: Store },
       { id: 'menu', name: 'Plus', href: '#menu', icon: Menu, isMenuTrigger: true },
     ];
   }
