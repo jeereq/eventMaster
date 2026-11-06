@@ -9,7 +9,6 @@ import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { Sun, Moon, LayoutDashboard, ArrowRight, Menu, X } from 'lucide-react';
-import PublicAccentPicker from '@/components/PublicAccentPicker';
 import SiteMobileBottomBar from '@/components/SiteMobileBottomBar';
 import SiteBrandMark from '@/components/SiteBrandMark';
 import PWAInstallCta from '@/components/PWAInstallCta';
@@ -174,15 +173,12 @@ export default function SiteHeader({
           })}
         </nav>
 
-        {/* Actions à droite : Palette de couleurs, Thème Nuit/Jour, Auth */}
+        {/* Actions à droite : Thème Nuit/Jour, Auth */}
         <div className="flex items-center gap-1.5 shrink-0">
           {/* Masqué de xl à 2xl pour laisser la place aux liens de navigation. */}
           {/* Sur mobile, l’installation et le thème sont dans le menu « Plus » de la barre du bas. */}
           <div className="hidden sm:flex xl:hidden 2xl:flex items-center">
             <PWAInstallCta variant="header" />
-          </div>
-          <div className="hidden sm:flex items-center">
-            <PublicAccentPicker />
           </div>
 
           <button
