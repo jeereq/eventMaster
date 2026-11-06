@@ -1,15 +1,17 @@
 import { ImageResponse } from 'next/og';
-import { fetchPublicSiteSnapshot } from '@/lib/publicSiteServer';
+import {
+  BRAND_LOGO_DARK,
+  BRAND_LOGO_MINT,
+  BRAND_LOGO_PATH_PETALS,
+  BRAND_LOGO_PATH_STAR,
+  BRAND_LOGO_TILE_BG,
+  BRAND_LOGO_VIEWBOX,
+} from '@/lib/brandLogo';
 
-export const dynamic = 'force-dynamic';
 export const size = { width: 180, height: 180 };
 export const contentType = 'image/png';
 
-export default async function AppleIcon() {
-  const site = await fetchPublicSiteSnapshot();
-  const primary = site.brandPrimary || '#059669';
-  const accent = site.brandAccent || '#10b981';
-
+export default function AppleIcon() {
   return new ImageResponse(
     (
       <div
@@ -19,25 +21,13 @@ export default async function AppleIcon() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: `linear-gradient(135deg, ${primary}, ${accent})`,
-          borderRadius: 44,
+          background: BRAND_LOGO_TILE_BG,
+          borderRadius: 0,
         }}
       >
-        <svg
-          width="118"
-          height="118"
-          viewBox="0 0 512 512"
-          style={{ display: 'flex' }}
-        >
-          <path
-            d="M256 0 C256 150 362 256 512 256 C362 256 256 362 256 512 C256 362 150 256 0 256 C150 256 256 150 256 0 Z"
-            fill="#fbbf24"
-          />
-          <path
-            d="M384 128 C384 180 437 224 512 224 C437 224 384 268 384 320 C384 268 331 224 256 224 C331 224 384 180 384 128 Z"
-            fill="#ffffff"
-            opacity="0.85"
-          />
+        <svg width="128" height="128" viewBox={BRAND_LOGO_VIEWBOX} style={{ display: 'flex' }}>
+          <path d={BRAND_LOGO_PATH_PETALS} fill={BRAND_LOGO_DARK} />
+          <path d={BRAND_LOGO_PATH_STAR} fill={BRAND_LOGO_MINT} />
         </svg>
       </div>
     ),

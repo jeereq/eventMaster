@@ -1,5 +1,13 @@
 import { ImageResponse } from 'next/og';
 import { fetchPublicSiteSnapshot } from '@/lib/publicSiteServer';
+import {
+  BRAND_LOGO_DARK,
+  BRAND_LOGO_MINT,
+  BRAND_LOGO_PATH_PETALS,
+  BRAND_LOGO_PATH_STAR,
+  BRAND_LOGO_TILE_BG,
+  BRAND_LOGO_VIEWBOX,
+} from '@/lib/brandLogo';
 
 export const dynamic = 'force-dynamic';
 export const alt = 'EventMaster';
@@ -31,28 +39,16 @@ export default async function OpenGraphImage() {
               width: 76,
               height: 76,
               borderRadius: 22,
-              background: `linear-gradient(135deg, ${primary}, ${accent})`,
+              background: BRAND_LOGO_TILE_BG,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
             }}
           >
-            <svg
-              width="50"
-              height="50"
-              viewBox="0 0 512 512"
-              style={{ display: 'flex' }}
-            >
-              <path
-                d="M256 0 C256 150 362 256 512 256 C362 256 256 362 256 512 C256 362 150 256 0 256 C150 256 256 150 256 0 Z"
-                fill="#fbbf24"
-              />
-              <path
-                d="M384 128 C384 180 437 224 512 224 C437 224 384 268 384 320 C384 268 331 224 256 224 C331 224 384 180 384 128 Z"
-                fill="#ffffff"
-                opacity="0.85"
-              />
+            <svg width="56" height="56" viewBox={BRAND_LOGO_VIEWBOX} style={{ display: 'flex' }}>
+              <path d={BRAND_LOGO_PATH_PETALS} fill={BRAND_LOGO_DARK} />
+              <path d={BRAND_LOGO_PATH_STAR} fill={BRAND_LOGO_MINT} />
             </svg>
           </div>
           <div style={{ fontSize: 32, fontWeight: 700, letterSpacing: -0.4 }}>{site.platformName}</div>
