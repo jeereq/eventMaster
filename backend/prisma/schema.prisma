@@ -175,6 +175,12 @@ model Tenant {
   vendorBookings MarketplaceBooking[] @relation("BookingVendor")
   organizerBookings MarketplaceBooking[] @relation("BookingOrganizer")
   receivedReviews MarketplaceReview[] @relation("ReviewVendor")
+  /** Le prestataire propose le paiement de l'acompte en ligne (FlexPay). Désactivé : acompte hors plateforme. */
+  marketplaceOnlineDeposit Boolean @default(false)
+  /** Numéro Mobile Money (243…) sur lequel EventMaster reverse les acomptes payés en ligne. */
+  marketplacePayoutPhone   String?
+  marketplacePayoutHolder  String?
+  depositPayments          MarketplaceDepositPayment[]
   orgRoomAmbiences OrgRoomAmbience[]
   marketplacePosts MarketplacePost[]
   beveragePrices VendorBeveragePrice[]
@@ -910,6 +916,7 @@ model MarketplaceBooking {
   createdAt          DateTime                  @default(now())
   updatedAt          DateTime                  @updatedAt
   review             MarketplaceReview?
+  depositPayments    MarketplaceDepositPayment[]
   beverageLines      MarketplaceBookingBeverageLine[]
 
   @@index([vendorTenantId, status])
@@ -1570,4 +1577,45 @@ model ListingViewDay {
   @@unique([listingId, day])
   @@unique([offeringId, day])
   @@index([tenantId, day])
+}
+
+/**
+ * Acompte d'une réservation marketplace payé en ligne (FlexPay). EventMaster encaisse,
+ * retient la commission, puis reverse le reste au Mobile Money du prestataire.
+ */
+model MarketplaceDepositPayment {
+  id                       String             @id @default(uuid())
+  bookingId                String
+  booking                  MarketplaceBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  vendorTenantId           String
+  vendorTenant             Tenant             @relation(fields: [vendorTenantId], references: [id], onDelete: Cascade)
+  payerUserId              String?
+  amountFc                 Int
+  /** Commission retenue sur l'acompte. */
+  commissionFc             Int                @default(0)
+  /** Montant reversé au prestataire (acompte - commission). */
+  payoutAmountFc           Int                @default(0)
+  currency                 String             @default("CDF")
+  status                   String             @default("PENDING") // PENDING | PAID | FAILED
+  paymentMethod            String             // mobile | card
+  phone                    String?
+  flexPayOrderNumber       String?            @unique
+  flexPayReference         String?            @unique
+  flexPayChannel           String?
+  flexPayAmountCustomer    Float?
+  flexPayProviderReference String?
+  paidAt                   DateTime?
+  payoutStatus             String             @default("NONE") // NONE | PENDING | SUCCESS | FAILED
+  payoutPhone              String?
+  payoutReference          String?            @unique
+  payoutOrderNumber        String?            @unique
+  payoutProviderReference  String?
+  payoutMessage            String?
+  payoutAt                 DateTime?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
+  @@index([bookingId, createdAt])
+  @@index([vendorTenantId, status])
+  @@index([status, payoutStatus])
 }

@@ -8,6 +8,7 @@ import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes'
 import { getPlanLimitsForTenant } from '../config/plansConfig';
 import { computeMarketplaceAmounts, billedMarketplaceAmount, getMarketplaceBillingRates } from '../config/marketplaceBilling';
 import { completePastMarketplaceBookings } from '../services/marketplaceBookingCompletion';
+import { isOnlineDepositAvailable, serializeDepositPayment } from '../services/marketplaceDepositService';
 import { rentalDeliverySurcharge } from '../services/eventBudgetCost';
 import { isServiceRentalCategory } from '../utils/publicVenue';
 import { parseListingDetails } from '../utils/listingDetails';
@@ -39,8 +40,13 @@ const bookingInclude = {
   beveragePrice: { select: { unitLabel: true, brand: { select: { name: true } } } },
   beverageLines: { select: { packCount: true, brandName: true, unitLabel: true } },
   event: { select: { id: true, title: true, date: true } },
-  vendorTenant: { select: { id: true, name: true, managerId: true, manager: { select: { phone: true, phoneCountryCode: true } }, vendorProfile: { select: { slug: true, displayName: true } } } },
+  vendorTenant: { select: { id: true, name: true, managerId: true, marketplaceOnlineDeposit: true, marketplacePayoutPhone: true, manager: { select: { phone: true, phoneCountryCode: true } }, vendorProfile: { select: { slug: true, displayName: true } } } },
   organizerTenant: { select: { id: true, name: true } },
+  depositPayments: {
+    orderBy: { createdAt: 'desc' as const },
+    take: 1,
+    select: { id: true, status: true, paymentMethod: true, amountFc: true, commissionFc: true, payoutAmountFc: true, paidAt: true, payoutStatus: true, payoutAt: true, createdAt: true },
+  },
   review: { select: { id: true, rating: true, comment: true, vendorReply: true, createdAt: true } },
 };
 
@@ -83,9 +89,10 @@ function serializeBooking(row: {
   listing?: { slug: string; headline: string | null; blockedDates?: unknown; room?: { name: string } | null } | null;
   offering?: { slug: string; title: string; category: string; blockedDates?: unknown } | null;
   event?: { id: string; title: string; date: Date } | null;
-  vendorTenant?: { name: string; manager?: { phone?: string | null; phoneCountryCode?: string | null } | null; vendorProfile?: { slug: string; displayName: string } | null } | null;
+  vendorTenant?: { name: string; marketplaceOnlineDeposit?: boolean; marketplacePayoutPhone?: string | null; manager?: { phone?: string | null; phoneCountryCode?: string | null } | null; vendorProfile?: { slug: string; displayName: string } | null } | null;
   organizerTenant?: { name: string } | null;
   review?: { id: string; rating: number; comment: string | null; vendorReply: string | null; createdAt: Date } | null;
+  depositPayments?: Parameters<typeof serializeDepositPayment>[0][];
 }) {
   const kind = row.beveragePriceId ? 'beverage' : row.offeringId ? 'service' : 'venue';
   const drinkTitle = beverageInquiryTitle({
@@ -124,6 +131,10 @@ function serializeBooking(row: {
     event: row.event,
     blockedDates: parseBlockedDates(row.listing?.blockedDates ?? row.offering?.blockedDates),
     review: row.review ?? null,
+    onlineDepositAvailable: Boolean(
+      row.vendorTenant?.marketplaceOnlineDeposit && row.vendorTenant?.marketplacePayoutPhone && isOnlineDepositAvailable(),
+    ),
+    depositPayment: serializeDepositPayment(row.depositPayments?.[0]),
   };
 }
 
@@ -564,6 +575,15 @@ export async function updateBooking(req: AuthenticatedRequest, res: Response) {
         return res.status(400).json({ error: 'Une réservation confirmée ne peut plus être annulée ici.' });
       }
       if (!isVendor && !isOrganizer) return res.status(403).json({ error: 'Accès refusé.' });
+      const paidOnline = await prisma.marketplaceDepositPayment.findFirst({
+        where: { bookingId: booking.id, status: 'PAID' },
+        select: { id: true },
+      });
+      if (paidOnline) {
+        return res.status(400).json({
+          error: 'L’acompte a été payé en ligne. Contactez le support EventMaster pour annuler et organiser le remboursement.',
+        });
+      }
       const declineReason = req.body?.reason ? String(req.body.reason).trim().slice(0, 500) : null;
       const updated = await prisma.marketplaceBooking.update({
         where: { id },

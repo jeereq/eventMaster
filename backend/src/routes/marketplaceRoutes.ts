@@ -19,6 +19,12 @@ import {
   acceptInquiryQuote,
 } from '../controllers/marketplaceBookingController';
 import {
+  getDepositSettings,
+  updateDepositSettings,
+  payBookingDeposit,
+  getBookingDepositPayment,
+} from '../controllers/marketplaceDepositController';
+import {
   listFavorites,
   addFavorite,
   removeFavorite,
@@ -78,6 +84,10 @@ router.post('/inquiries/:id/accept', acceptInquiryQuote);
 router.get('/bookings', listBookings);
 router.get('/vendor-stats', getVendorStats);
 router.post('/bookings/:id/review', createBookingReview);
+router.get('/deposit-settings', getDepositSettings);
+router.put('/deposit-settings', updateDepositSettings);
+router.post('/bookings/:id/deposit-payment', payBookingDeposit);
+router.get('/bookings/:id/deposit-payment/:paymentId', getBookingDepositPayment);
 router.get('/reviews/received', listReceivedReviews);
 router.post('/reviews/:id/reply', replyToReview);
 router.post('/bookings', createBooking);

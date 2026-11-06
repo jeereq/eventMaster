@@ -25,6 +25,7 @@ import { startSubscriptionExpiryWorker } from './services/subscriptionExpiryServ
 import { startCommercialPayoutWorker } from './services/commercialPayoutWorker';
 import { startEventAutoPayoutWorker } from './services/eventAutoPayoutWorker';
 import { startMarketplaceBookingCompletionWorker } from './services/marketplaceBookingCompletion';
+import { startMarketplaceDepositWorker } from './services/marketplaceDepositService';
 import { loadSubscriptionPlansFromDb, refreshSubscriptionPlansCacheIfStale } from './services/subscriptionPlanCatalogService';
 import { hydratePlatformSettingsFromDb } from './services/platformSettingsService';
 import { isSendGridConfigured, logNotificationConfigStatus } from './config/notificationConfig';
@@ -176,6 +177,7 @@ async function bootstrap() {
     startCommercialPayoutWorker();
     startEventAutoPayoutWorker();
     startMarketplaceBookingCompletionWorker();
+    startMarketplaceDepositWorker();
   });
 }
 
