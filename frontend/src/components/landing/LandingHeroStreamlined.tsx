@@ -280,7 +280,26 @@ export default function LandingHeroStreamlined() {
 
   return (
     <>
-      <section className="bg-[#064e3b] text-[#ffffff]">
+      <section className="relative isolate overflow-hidden bg-[#064e3b] text-[#ffffff]">
+        {/* Photo d’ambiance (réception sous guirlandes) teintée aux couleurs de la charte verte. */}
+        <Image
+          src="/images/landing/hero-reception-soiree.webp"
+          alt=""
+          aria-hidden
+          fill
+          priority
+          sizes="100vw"
+          className="-z-20 object-cover object-[60%_center]"
+        />
+        <span aria-hidden className="absolute inset-0 -z-10 bg-[#0b6b50]/45 mix-blend-color" />
+        <span
+          aria-hidden
+          className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(6,78,59,0.55)_0%,rgba(6,78,59,0.78)_38%,rgba(6,78,59,0.7)_70%,rgba(4,47,36,0.92)_100%)] lg:bg-[linear-gradient(90deg,rgba(4,47,36,0.95)_0%,rgba(6,78,59,0.85)_38%,rgba(6,78,59,0.35)_68%,rgba(6,78,59,0.15)_100%)]"
+        />
+        <span
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 h-24 -z-10 bg-gradient-to-t from-[#042f24]/70 to-transparent"
+        />
         <div className="page-container grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-10 lg:gap-12 items-center pt-10 pb-12 sm:pt-16 sm:pb-16 lg:py-16">
           <div className="flex flex-col gap-5 sm:gap-6 min-w-0">
             {citySentence ? (
