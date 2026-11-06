@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import {
   X,
   Save,
@@ -29,9 +30,11 @@ function getFallbackBlueprint(): RoomLayoutBlueprint {
 
 const RoomLayoutEditor = dynamic(() => import('@/components/RoomLayoutEditor'), {
   loading: () => (
-    <div className="flex-1 w-full min-h-[500px] flex items-center justify-center bg-surface-muted text-muted text-xs animate-pulse">
-      Chargement de l’éditeur spatial 2D / 3D…
-    </div>
+    <StudioLoadingPanel
+      className="flex-1 w-full min-h-[500px] rounded-none border-0"
+      label="Chargement de l’éditeur de salle"
+      hint="Plan 2D et vue 3D arrivent dans un instant."
+    />
   ),
   ssr: false,
 });

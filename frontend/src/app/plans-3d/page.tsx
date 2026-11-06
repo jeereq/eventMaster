@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import PublicCtaBand from '@/components/PublicCtaBand';
 import {
@@ -47,9 +48,11 @@ const ShowcasePlanSelectionModal = dynamic(
 
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
   loading: () => (
-    <div className="w-full aspect-[16/10] sm:aspect-[16/9] max-h-[560px] rounded-2xl bg-surface-muted/80 animate-pulse motion-reduce:animate-none flex items-center justify-center text-xs text-muted">
-      Chargement du rendu spatial 2D / 3D…
-    </div>
+    <StudioLoadingPanel
+      compact
+      className="w-full min-h-0 aspect-[16/10] sm:aspect-[16/9] max-h-[560px] rounded-2xl"
+      label="Chargement du plan 2D / 3D"
+    />
   ),
   ssr: false,
 });

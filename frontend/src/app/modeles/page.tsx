@@ -4,6 +4,7 @@ import { useMessagingChannels } from '@/hooks/useMessagingChannels';
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import PublicPageShell, { PublicPageHero } from '@/components/PublicPageShell';
 import LandingInvitationPreview from '@/components/landing/LandingInvitationPreview';
 import type { LandingTemplate } from '@/config/landingTemplates';
@@ -31,16 +32,10 @@ const LandingInvitationAiGenerator = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div
-        className="min-h-[28rem] flex items-center justify-center p-8 text-center"
-        aria-busy="true"
-        aria-label="Chargement du studio d’invitations IA"
-      >
-        <div className="space-y-2 max-w-sm">
-          <Sparkles className="w-8 h-8 text-festive-accent mx-auto animate-pulse motion-reduce:animate-none" />
-          <p className="text-sm font-semibold text-foreground">Chargement du studio d’invitations IA…</p>
-        </div>
-      </div>
+      <StudioLoadingPanel
+        className="min-h-[28rem] border-0 bg-transparent"
+        label="Chargement du studio d’invitations"
+      />
     ),
   },
 );
