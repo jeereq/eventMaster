@@ -41,6 +41,7 @@ const bookingInclude = {
   event: { select: { id: true, title: true, date: true } },
   vendorTenant: { select: { id: true, name: true, managerId: true, manager: { select: { phone: true, phoneCountryCode: true } }, vendorProfile: { select: { slug: true, displayName: true } } } },
   organizerTenant: { select: { id: true, name: true } },
+  review: { select: { id: true, rating: true, comment: true, vendorReply: true, createdAt: true } },
 };
 
 async function collectVendorBlockedDates(tenantId: string): Promise<string[]> {
@@ -84,6 +85,7 @@ function serializeBooking(row: {
   event?: { id: string; title: string; date: Date } | null;
   vendorTenant?: { name: string; manager?: { phone?: string | null; phoneCountryCode?: string | null } | null; vendorProfile?: { slug: string; displayName: string } | null } | null;
   organizerTenant?: { name: string } | null;
+  review?: { id: string; rating: number; comment: string | null; vendorReply: string | null; createdAt: Date } | null;
 }) {
   const kind = row.beveragePriceId ? 'beverage' : row.offeringId ? 'service' : 'venue';
   const drinkTitle = beverageInquiryTitle({
@@ -121,6 +123,7 @@ function serializeBooking(row: {
     createdAt: row.createdAt,
     event: row.event,
     blockedDates: parseBlockedDates(row.listing?.blockedDates ?? row.offering?.blockedDates),
+    review: row.review ?? null,
   };
 }
 

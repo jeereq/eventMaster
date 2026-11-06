@@ -11,6 +11,7 @@ import {
   loadPlatformSettings,
 } from '../services/platformSettingsService';
 import { optionalAuth, requireAuth, type AuthenticatedRequest } from '../middleware/auth';
+import { listPublicReviews, recordListingView } from '../controllers/marketplaceReviewController';
 import { getRateLimitConfig } from '../config/security';
 import { resolveContactReason } from '../config/contactReasons';
 import {
@@ -209,6 +210,16 @@ router.get('/services', listPublicServices);
 router.get('/services/:slug', optionalAuth, getPublicService);
 router.post('/services/:slug/inquire', requireAuth, createServiceInquiry);
 router.get('/vendors/:slug', getPublicVendor);
+router.get('/reviews', listPublicReviews);
+
+const listingViewLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 120,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'Trop de requêtes.' },
+});
+router.post('/views', listingViewLimiter, optionalAuth, recordListingView);
 router.get('/vendors/:slug/feed', getPublicVendorFeed);
 router.get('/activity', getPublicMarketplaceFeed);
 router.get('/events', listPublicEvents);

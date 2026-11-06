@@ -48,9 +48,10 @@ import {
 } from '@/lib/marketplace';
 import { eventDashboardHref } from '@/lib/eventRoutes';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
-import { Ban, Building2, CalendarCheck, CalendarDays, CheckCircle2, ChevronDown, Coins, CreditCard, KeyRound, MessageCircle, Phone, Sparkles, XCircle } from 'lucide-react';
+import { Ban, Building2, CalendarCheck, CalendarDays, CheckCircle2, ChevronDown, Coins, CreditCard, KeyRound, MessageCircle, MessageSquareQuote, Phone, Sparkles, Star, XCircle } from 'lucide-react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { useAuth } from '@/context/AuthContext';
+import { ReviewStars, ReviewStarsInput } from '@/components/marketplace/ReviewStars';
 import { commissionPercent, depositPercent } from '@/lib/platformRates';
 
 const KIND_OPTIONS = [
@@ -239,6 +240,45 @@ export default function MarketplaceBookingsPanel({
   const [cancelCustomReason, setCancelCustomReason] = useState('');
   const [cancelNotes, setCancelNotes] = useState('');
   const [cancelSubmitting, setCancelSubmitting] = useState(false);
+
+  // Avis client (après la date) et réponse du prestataire
+  const [reviewModal, setReviewModal] = useState<MarketplaceBookingItem | null>(null);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+  const [replyModal, setReplyModal] = useState<MarketplaceBookingItem | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+
+  const submitReview = async () => {
+    if (!reviewModal || reviewRating < 1) return;
+    setReviewSubmitting(true);
+    setReviewError('');
+    try {
+      await api.post(`/marketplace/bookings/${reviewModal.id}/review`, { rating: reviewRating, comment: reviewComment });
+      setReviewModal(null);
+      await onChanged();
+    } catch (err: unknown) {
+      setReviewError(err instanceof Error ? err.message : 'Impossible d’envoyer votre avis.');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
+  const submitReply = async () => {
+    if (!replyModal?.review) return;
+    setReviewSubmitting(true);
+    setReviewError('');
+    try {
+      await api.post(`/marketplace/reviews/${replyModal.review.id}/reply`, { reply: replyText });
+      setReplyModal(null);
+      await onChanged();
+    } catch (err: unknown) {
+      setReviewError(err instanceof Error ? err.message : 'Impossible d’enregistrer la réponse.');
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
 
   // Modale Déclaration / Validation d'acompte
   const [depositModal, setDepositModal] = useState<MarketplaceBookingItem | null>(null);
@@ -692,7 +732,22 @@ export default function MarketplaceBookingsPanel({
                   valueMeta={`Acompte ${formatFc(item.depositFc)}`}
                   highlight={Boolean(highlightBookingId && item.id === highlightBookingId)}
                   layout={mode}
-                  primaryActions={acceptButton || depositButton || confirmButton}
+                  primaryActions={acceptButton || depositButton || confirmButton || (
+                    !isVendor && item.status === 'COMPLETED' && !item.review ? (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setReviewModal(item);
+                          setReviewRating(0);
+                          setReviewComment('');
+                          setReviewError('');
+                        }}
+                        leftIcon={<Star className="w-3.5 h-3.5" />}
+                      >
+                        Laisser un avis
+                      </Button>
+                    ) : null
+                  )}
                   secondaryActions={(
                     <>
                       {waUrl && !isVendor ? (
@@ -773,6 +828,38 @@ export default function MarketplaceBookingsPanel({
                       onChange={(e) => setAcceptAmount((prev) => ({ ...prev, [item.id]: e.target.value }))}
                     />
                   ) : null}
+                  {item.review ? (
+                    <div className="rounded-xl border border-border bg-background/60 p-3 space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <ReviewStars rating={item.review.rating} />
+                        <span className="text-xs font-semibold text-foreground">
+                          {isVendor ? 'Avis du client' : 'Votre avis'}
+                        </span>
+                      </div>
+                      {item.review.comment ? (
+                        <p className="text-xs text-foreground/80 whitespace-pre-line">{item.review.comment}</p>
+                      ) : null}
+                      {item.review.vendorReply ? (
+                        <p className="flex gap-1.5 text-xs text-muted">
+                          <MessageSquareQuote className="w-3.5 h-3.5 shrink-0 mt-px text-primary" aria-hidden />
+                          <span className="whitespace-pre-line">{item.review.vendorReply}</span>
+                        </p>
+                      ) : null}
+                      {isVendor && canHandleAsVendor ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReplyModal(item);
+                            setReplyText(item.review?.vendorReply || '');
+                            setReviewError('');
+                          }}
+                          className="min-h-11 text-xs font-semibold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-[var(--radius-button)]"
+                        >
+                          {item.review.vendorReply ? 'Modifier ma réponse' : 'Répondre publiquement'}
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
                   {item.status === 'CANCELLED' && item.declineReason ? (
                     <DealDeclineBlock title="Réservation annulée" reason={item.declineReason} />
                   ) : null}
@@ -796,6 +883,83 @@ export default function MarketplaceBookingsPanel({
       )}
       </div>
       </div>
+
+      {/* MODALE AVIS CLIENT */}
+      <Modal
+        open={Boolean(reviewModal)}
+        onClose={() => {
+          if (!reviewSubmitting) setReviewModal(null);
+        }}
+        title="Laisser un avis"
+        description={reviewModal ? `Comment s’est passée votre expérience avec ${reviewModal.vendorName} pour « ${reviewModal.title} » ? Votre avis sera visible sur sa fiche, avec votre prénom et l’initiale de votre nom.` : undefined}
+        size="md"
+        footer={
+          <div className="flex w-full justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setReviewModal(null)} disabled={reviewSubmitting}>
+              Annuler
+            </Button>
+            <Button size="sm" onClick={() => void submitReview()} loading={reviewSubmitting} disabled={reviewRating < 1}>
+              Publier l’avis
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <ReviewStarsInput value={reviewRating} onChange={setReviewRating} />
+          <label className="block space-y-1.5">
+            <span className="text-xs font-semibold text-foreground">Votre commentaire (facultatif)</span>
+            <textarea
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value.slice(0, 1000))}
+              rows={4}
+              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+              placeholder="Qualité, ponctualité, accueil…"
+            />
+          </label>
+          {reviewError ? <Alert variant="error">{reviewError}</Alert> : null}
+        </div>
+      </Modal>
+
+      {/* MODALE RÉPONSE DU PRESTATAIRE */}
+      <Modal
+        open={Boolean(replyModal)}
+        onClose={() => {
+          if (!reviewSubmitting) setReplyModal(null);
+        }}
+        title="Répondre à l’avis"
+        description="Votre réponse s’affiche publiquement sous l’avis, sur votre fiche. Laissez vide pour la retirer."
+        size="md"
+        footer={
+          <div className="flex w-full justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setReplyModal(null)} disabled={reviewSubmitting}>
+              Annuler
+            </Button>
+            <Button size="sm" onClick={() => void submitReply()} loading={reviewSubmitting}>
+              Publier
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          {replyModal?.review ? (
+            <div className="flex items-center gap-2">
+              <ReviewStars rating={replyModal.review.rating} />
+              {replyModal.review.comment ? (
+                <p className="text-xs text-muted line-clamp-2">{replyModal.review.comment}</p>
+              ) : null}
+            </div>
+          ) : null}
+          <textarea
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value.slice(0, 1000))}
+            rows={4}
+            aria-label="Votre réponse"
+            className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+            placeholder="Merci pour votre confiance…"
+          />
+          {reviewError ? <Alert variant="error">{reviewError}</Alert> : null}
+        </div>
+      </Modal>
 
       {/* MODALE REFUS / ANNULATION RÉSERVATION */}
       <Modal

@@ -25,6 +25,8 @@ import { roomTypeLabels, type RoomLayoutBlueprint, type RoomType } from '@/lib/r
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import { Building2 } from 'lucide-react';
 import MarketplaceActivityFeed from '@/components/marketplace/MarketplaceActivityFeed';
+import ListingReviews from '@/components/marketplace/ListingReviews';
+import { trackListingView } from '@/lib/marketplaceReviews';
 
 const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
   loading: () => <div className="h-48 rounded-[var(--radius-card)] bg-surface-muted" aria-hidden />,
@@ -52,7 +54,10 @@ export default function MarketplaceVenueDetailPage() {
       setError('');
       try {
         const data = await api.get(`/public/venues/${encodeURIComponent(slug)}`);
-        if (!cancelled) setVenue(data);
+        if (!cancelled) {
+          setVenue(data);
+          trackListingView('venue', data?.slug);
+        }
       } catch (err: unknown) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Salle introuvable.');
       } finally {
@@ -115,6 +120,7 @@ export default function MarketplaceVenueDetailPage() {
               onItinerary={venue.latitude != null && venue.longitude != null ? () => startRoute(item.id) : undefined}
             />
             <ListingPublicDetails details={venue.details} kind="venue" />
+            <ListingReviews kind="venue" slug={venue.slug} vendorSlug={venue.orgSlug} vendorName={venue.orgName} />
             {venue.layoutPreview ? (
               <div>
                 <h2 className="text-sm font-semibold mb-2">Plan de la salle</h2>
