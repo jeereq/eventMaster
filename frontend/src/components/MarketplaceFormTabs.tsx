@@ -2,6 +2,7 @@
 
 import React, { useRef } from 'react';
 import { cn } from '@/lib/cn';
+import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 import { Images, Map, AlignLeft, Rss, Sparkles, Building2 } from 'lucide-react';
 
 export type MarketplaceFormTab = 'details' | 'services' | 'venues' | 'activity' | 'map' | 'medias';
@@ -47,7 +48,7 @@ export default function MarketplaceFormTabs({
   };
 
   return (
-    <div className="flex gap-1 p-1 rounded-[var(--radius-button)] bg-surface-muted border border-border" role="tablist" aria-label="Sections de la fiche">
+    <div className={cn('flex', SEGMENTED_TRACK)} role="tablist" aria-label="Sections de la fiche">
       {tabs.map((tab, index) => {
         const badge = badges?.[tab.id];
         const selected = value === tab.id;
@@ -79,13 +80,7 @@ export default function MarketplaceFormTabs({
                 moveFocus(tabs.length - 1);
               }
             }}
-            className={cn(
-              'flex-1 min-h-11 px-2 sm:px-3 rounded-[var(--radius-button)] text-xs font-semibold transition inline-flex items-center justify-center gap-1.5',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-              selected
-                ? 'bg-surface text-foreground shadow-[var(--shadow-soft)]'
-                : 'text-muted hover:text-foreground',
-            )}
+            className={segmentedItem(selected, 'flex-1 min-w-0 px-2 sm:px-3 text-xs sm:text-sm inline-flex items-center justify-center gap-1.5')}
           >
             {icons ? tab.icon : null}
             <span>{labels?.[tab.id] || tab.label}</span>
@@ -94,7 +89,7 @@ export default function MarketplaceFormTabs({
                 className={cn(
                   'px-1.5 py-0.5 rounded-full text-xs font-semibold tabular-nums',
                   selected
-                    ? 'bg-primary/15 text-primary'
+                    ? 'bg-[#e3f3ec] text-[#065f46] dark:bg-primary/15 dark:text-primary'
                     : 'bg-surface text-muted',
                 )}
               >

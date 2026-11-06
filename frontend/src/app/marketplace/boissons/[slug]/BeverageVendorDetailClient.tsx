@@ -188,10 +188,10 @@ function VendorDrinksPage() {
       <PublicPageHero
         compact
         title={page?.vendor.displayName || 'Boissons'}
+        tone="deep"
         description="Toutes les marques publiées par ce prestataire. Choisissez les quantités, puis demandez un devis ou réservez."
-      >
-        <MarketplacePublicNav active="drinks" />
-      </PublicPageHero>
+        tabs={<MarketplacePublicNav variant="tabs" active="drinks" />}
+      />
 
       <div className="page-container py-6 md:py-10 space-y-6">
         <BackToOffers />
@@ -340,9 +340,13 @@ export default function VendorDrinksRoute() {
   return (
     <Suspense fallback={(
       <PublicPageShell faqHref="/faq">
-        <PublicPageHero compact title="Boissons" description="Chargement des marques du prestataire.">
-          <MarketplacePublicNav active="drinks" />
-        </PublicPageHero>
+        <PublicPageHero
+          compact
+          tone="deep"
+          title="Boissons"
+          description="Chargement des marques du prestataire."
+          tabs={<MarketplacePublicNav variant="tabs" active="drinks" />}
+        />
         <div className="page-container py-6 md:py-10 space-y-6">
           <BackToOffers />
           <DrinkDetailSkeleton />

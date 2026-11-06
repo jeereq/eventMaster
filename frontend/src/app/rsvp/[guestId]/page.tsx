@@ -29,6 +29,7 @@ import ShareButton from '@/components/ShareButton';
 import { guestRsvpUrl } from '@/lib/share';
 import { getGuestQrImageUrl } from '@/lib/guestQr';
 import { cn } from '@/lib/cn';
+import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { collectInvitationFontFamilies, useInvitationFonts } from '@/lib/headStylesheet';
 import { useDialogFocusTrap } from '@/hooks/useDialogFocusTrap';
@@ -1702,7 +1703,7 @@ export default function RsvpPage() {
             >
                 {/* Sélecteur de billets si commande multiple */}
                 {guest.orderPasses && guest.orderPasses.passes.length > 1 && (
-                  <div className="flex items-center justify-center gap-1 p-1 rounded-full bg-surface-muted" role="tablist" aria-label="Choisir le pass à scanner">
+                  <div className={cn('flex items-center justify-center', SEGMENTED_TRACK)} role="tablist" aria-label="Choisir le pass à scanner">
                     {guest.orderPasses.passes.map((p) => {
                       const isSel = p.guestId === activeQrPass.guestId;
                       return (
@@ -1712,12 +1713,7 @@ export default function RsvpPage() {
                           role="tab"
                           aria-selected={isSel}
                           onClick={() => setSelectedQrGuestId(p.guestId)}
-                          className={cn(
-                            'flex-1 min-h-10 px-2 py-1.5 rounded-full text-xs font-semibold transition touch-manipulation truncate',
-                            isSel
-                              ? 'bg-primary text-primary-foreground shadow-xs'
-                              : 'text-muted hover:text-foreground hover:bg-surface'
-                          )}
+                          className={segmentedItem(isSel, 'flex-1 min-w-0 px-2 text-xs sm:text-sm truncate')}
                         >
                           {p.firstName || `Pass ${p.ticketNumber}`}
                         </button>

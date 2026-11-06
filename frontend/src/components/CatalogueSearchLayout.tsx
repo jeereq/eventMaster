@@ -167,7 +167,7 @@ export default function CatalogueSearchLayout({
   searchOriginLabel,
   showKindLegend = false,
   gridCols = 4,
-  heroTone = 'default',
+  heroTone = 'deep',
   heroAside,
   aboveResults,
   renderGrid,
@@ -286,11 +286,14 @@ export default function CatalogueSearchLayout({
 
   return (
     <PublicPageShell faqHref="/faq">
-      <PublicPageHero compact title={heroTitle} description={heroDescription} tone={heroTone} aside={heroAside}>
-        <div className="flex flex-wrap items-center gap-2">
-          <MarketplacePublicNav active={activeNav} />
-        </div>
-      </PublicPageHero>
+      <PublicPageHero
+        compact
+        title={heroTitle}
+        description={heroDescription}
+        tone={heroTone}
+        aside={heroAside}
+        tabs={<MarketplacePublicNav variant="tabs" active={activeNav} />}
+      />
 
       <div className="page-container py-3 md:py-10 flex-1 space-y-3 md:space-y-6">
         <div className="sticky top-[var(--em-site-header)] z-20 -mx-1 px-1 py-0 md:py-1 bg-background/90 backdrop-blur-md">

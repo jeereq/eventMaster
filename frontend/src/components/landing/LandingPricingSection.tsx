@@ -26,6 +26,7 @@ import {
 } from '@/config/landingPricing';
 import { PlanQuotaLimits } from '@/components/QuotaUsagePanel';
 import { cn } from '@/lib/cn';
+import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 import { useAuth } from '@/context/AuthContext';
 import {
  comparisonValueFromDb,
@@ -250,18 +251,13 @@ export default function LandingPricingSection({
 
  <div className="flex flex-col items-start gap-3 mb-10">
  <div className="flex flex-wrap items-center gap-3">
- <div className="inline-flex items-center p-1 rounded-full bg-surface-muted/80 dark:bg-surface border border-border" role="tablist" aria-label="Type de compte">
+ <div className={cn('inline-flex items-center', SEGMENTED_TRACK)} role="tablist" aria-label="Type de compte">
  <button
  type="button"
  role="tab"
  aria-selected={audience === 'B2C'}
  onClick={() => setAudience('B2C')}
- className={cn(
-   'min-h-11 px-3 sm:px-4 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary inline-flex items-center justify-center touch-manipulation',
-   audience === 'B2C'
-     ? 'bg-primary text-primary-foreground shadow-xs'
-     : 'text-muted hover:text-foreground',
- )}
+ className={segmentedItem(audience === 'B2C', 'sm:px-4 text-xs sm:text-sm inline-flex items-center justify-center')}
  >
  Particuliers
  </button>
@@ -270,12 +266,7 @@ export default function LandingPricingSection({
  role="tab"
  aria-selected={audience === 'B2B'}
  onClick={() => setAudience('B2B')}
- className={cn(
-   'min-h-11 px-3 sm:px-4 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary inline-flex items-center justify-center touch-manipulation',
-   audience === 'B2B'
-     ? 'bg-primary text-primary-foreground shadow-xs'
-     : 'text-muted hover:text-foreground',
- )}
+ className={segmentedItem(audience === 'B2B', 'sm:px-4 text-xs sm:text-sm inline-flex items-center justify-center')}
  >
  Organisations
  </button>
@@ -284,29 +275,19 @@ export default function LandingPricingSection({
  role="tab"
  aria-selected={audience === 'VENDOR'}
  onClick={() => setAudience('VENDOR')}
- className={cn(
-   'min-h-11 px-3 sm:px-4 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary inline-flex items-center justify-center touch-manipulation',
-   audience === 'VENDOR'
-     ? 'bg-primary text-primary-foreground shadow-xs'
-     : 'text-muted hover:text-foreground',
- )}
+ className={segmentedItem(audience === 'VENDOR', 'sm:px-4 text-xs sm:text-sm inline-flex items-center justify-center')}
  >
  Salles & prestataires
  </button>
  </div>
 
- <div className="inline-flex items-center p-1 rounded-full bg-surface-muted/80 dark:bg-surface border border-border" role="tablist" aria-label="Période de facturation">
+ <div className={cn('inline-flex items-center', SEGMENTED_TRACK)} role="tablist" aria-label="Période de facturation">
  <button
  type="button"
  role="tab"
  aria-selected={billing === 'monthly'}
  onClick={() => setBilling('monthly')}
- className={cn(
-   'min-h-11 px-3 sm:px-4 rounded-full text-xs font-semibold transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary inline-flex items-center justify-center touch-manipulation',
-   billing === 'monthly'
-     ? 'bg-surface text-foreground shadow-xs border border-border/80'
-     : 'text-muted hover:text-foreground',
- )}
+ className={segmentedItem(billing === 'monthly', 'sm:px-4 text-xs sm:text-sm inline-flex items-center justify-center')}
  >
  {audience === 'B2C' ? 'Trimestriel' : 'Mensuel'}
  </button>
@@ -315,12 +296,7 @@ export default function LandingPricingSection({
  role="tab"
  aria-selected={billing === 'annual'}
  onClick={() => setBilling('annual')}
- className={cn(
-   'min-h-11 px-3 sm:px-4 rounded-full text-xs font-semibold transition flex items-center justify-center gap-1.5 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary touch-manipulation',
-   billing === 'annual'
-     ? 'bg-surface text-foreground shadow-xs border border-border/80'
-     : 'text-muted hover:text-foreground',
- )}
+ className={segmentedItem(billing === 'annual', 'sm:px-4 text-xs sm:text-sm flex items-center justify-center gap-1.5')}
  >
  <span>Annuel</span>
  <span className="text-xs font-bold text-primary-solid bg-primary/10 px-1.5 py-0.2 rounded-full">
