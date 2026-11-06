@@ -6,7 +6,8 @@ import { resolveOrgAccess } from '../services/permissionsService';
 import { notifyTenantOperators, notifyUsers } from '../services/platformNotificationService';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 import { getPlanLimitsForTenant } from '../config/plansConfig';
-import { computeMarketplaceAmounts, billedMarketplaceAmount } from '../config/marketplaceBilling';
+import { computeMarketplaceAmounts, billedMarketplaceAmount, getMarketplaceBillingRates } from '../config/marketplaceBilling';
+import { completePastMarketplaceBookings } from '../services/marketplaceBookingCompletion';
 import { rentalDeliverySurcharge } from '../services/eventBudgetCost';
 import { isServiceRentalCategory } from '../utils/publicVenue';
 import { parseListingDetails } from '../utils/listingDetails';
@@ -67,6 +68,7 @@ function serializeBooking(row: {
   depositFc: number;
   commissionRate: number;
   commissionFc: number;
+  commissionSettledAt?: Date | null;
   status: MarketplaceBookingStatus;
   depositMarkedAt: Date | null;
   declineReason?: string | null;
@@ -110,6 +112,7 @@ function serializeBooking(row: {
     depositFc: row.depositFc,
     commissionRate: row.commissionRate,
     commissionFc: row.commissionFc,
+    commissionSettledAt: row.commissionSettledAt ?? null,
     status: row.status,
     depositMarkedAt: row.depositMarkedAt,
     declineReason: row.declineReason ?? null,
@@ -450,6 +453,11 @@ export async function listBookings(req: AuthenticatedRequest, res: Response) {
           ? { organizerTenantId: tenantId }
           : { OR: [{ vendorTenantId: tenantId }, { organizerTenantId: tenantId }] };
 
+    // Les réservations confirmées dont la date est passée deviennent « Terminées ».
+    await completePastMarketplaceBookings({ tenantId }).catch((error) => {
+      console.error('listBookings/complete:', error);
+    });
+
     const rows = await prisma.marketplaceBooking.findMany({
       where,
       include: bookingInclude,
@@ -457,9 +465,15 @@ export async function listBookings(req: AuthenticatedRequest, res: Response) {
       take: 100,
     });
 
-    const commissionDue = rows
-      .filter((b) => b.vendorTenantId === tenantId && (b.status === 'CONFIRMED' || b.status === 'COMPLETED'))
-      .reduce((sum, b) => sum + b.commissionFc, 0);
+    // Totaux calculés en base (pas seulement sur les 100 dernières lignes affichées).
+    const billable = { vendorTenantId: tenantId, status: { in: ['CONFIRMED', 'COMPLETED'] as MarketplaceBookingStatus[] } };
+    const [dueAgg, paidAgg, revenueAgg] = role === 'organizer'
+      ? [null, null, null]
+      : await Promise.all([
+        prisma.marketplaceBooking.aggregate({ where: { ...billable, commissionSettledAt: null }, _sum: { commissionFc: true } }),
+        prisma.marketplaceBooking.aggregate({ where: { ...billable, commissionSettledAt: { not: null } }, _sum: { commissionFc: true } }),
+        prisma.marketplaceBooking.aggregate({ where: billable, _sum: { amountFc: true }, _count: { _all: true } }),
+      ]);
 
     const vendorBlockedDates = role === 'organizer' ? [] : await collectVendorBlockedDates(tenantId);
 
@@ -469,8 +483,12 @@ export async function listBookings(req: AuthenticatedRequest, res: Response) {
         viewerRole: row.vendorTenantId === tenantId ? 'vendor' : 'organizer',
       })),
       blockedDates: vendorBlockedDates,
-      commissionDueFc: commissionDue,
-      commissionRate: 0.08,
+      /** Commission encore à régler (hors commissions déjà marquées payées). */
+      commissionDueFc: dueAgg?._sum.commissionFc ?? 0,
+      commissionPaidFc: paidAgg?._sum.commissionFc ?? 0,
+      confirmedRevenueFc: revenueAgg?._sum.amountFc ?? 0,
+      confirmedCount: revenueAgg?._count._all ?? 0,
+      commissionRate: getMarketplaceBillingRates().commissionRate,
     });
   } catch (error) {
     console.error('listBookings:', error);
@@ -499,6 +517,15 @@ export async function updateBooking(req: AuthenticatedRequest, res: Response) {
     const isVendor = booking.vendorTenantId === tenantId;
     const isOrganizer = booking.organizerTenantId === tenantId || (Boolean(booking.organizerUserId) && booking.organizerUserId === userId);
     const action = String(req.body?.action || '');
+
+    // Côté prestataire, seuls le propriétaire et les managers engagent l'organisation
+    // (montant, acompte, confirmation), comme pour le chiffrage des devis.
+    if (isVendor && !isOrganizer) {
+      const access = await resolveOrgAccess(userId, tenantId);
+      if (!access.canManageRooms) {
+        return res.status(403).json({ error: 'Seuls le propriétaire et les managers peuvent traiter les réservations.' });
+      }
+    }
 
     if (action === 'accept') {
       if (!isVendor) return res.status(403).json({ error: 'Seul le professionnel peut accepter.' });

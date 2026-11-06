@@ -43,7 +43,7 @@ export default function GuideTourPanel({ guideId }: GuideTourPanelProps) {
   }
 
   const heading =
-    guideId === 'owner' || guideId === 'org_manager' || guideId === 'staff_scope'
+    guideId === 'owner' || guideId === 'vendor' || guideId === 'org_manager' || guideId === 'staff_scope'
       ? `Parcours des onglets — espace ${spaceLabel}`
       : `Parcours des onglets — ${getGuideLabel(guideId)}`;
 

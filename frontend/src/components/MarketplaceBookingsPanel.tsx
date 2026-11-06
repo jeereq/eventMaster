@@ -50,6 +50,7 @@ import { eventDashboardHref } from '@/lib/eventRoutes';
 import AvailabilityCalendar from '@/components/AvailabilityCalendar';
 import { Ban, Building2, CalendarCheck, CalendarDays, CheckCircle2, ChevronDown, Coins, CreditCard, KeyRound, MessageCircle, Phone, Sparkles, XCircle } from 'lucide-react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
+import { useAuth } from '@/context/AuthContext';
 import { commissionPercent, depositPercent } from '@/lib/platformRates';
 
 const KIND_OPTIONS = [
@@ -218,6 +219,9 @@ export default function MarketplaceBookingsPanel({
   vendorBlockedDates?: string[];
 }) {
   const { site } = usePlatformSite();
+  const { access } = useAuth();
+  /** Côté prestataire, seuls le propriétaire et les managers traitent les réservations. */
+  const canHandleAsVendor = Boolean(access?.canManageRooms);
   const commissionPct = commissionPercent(site);
   const depositPct = depositPercent(site);
   const [filter, setFilter] = useState(organizerView ? 'sent' : '');
@@ -369,9 +373,9 @@ export default function MarketplaceBookingsPanel({
       {!organizerView && (
         <div className="flex flex-wrap items-center justify-between gap-3 border border-border rounded-[var(--radius-card)] bg-surface px-4 py-3">
           <div>
-            <p className="text-xs font-semibold text-foreground">Commission marketplace due</p>
+            <p className="text-xs font-semibold text-foreground">Commission marketplace à régler</p>
             <p className="text-[11px] text-muted mt-0.5">
-              {commissionPct} % sur les réservations confirmées · acompte {depositPct} % hors plateforme
+              {commissionPct} % des réservations confirmées, hors commissions déjà payées · acompte {depositPct} % hors plateforme
             </p>
           </div>
           <p className="text-lg font-semibold tabular-nums">{formatFc(commissionDueFc)}</p>
@@ -608,6 +612,7 @@ export default function MarketplaceBookingsPanel({
           <div className={mode === 'grid' ? gridClassName : listStackClass}>
             {pagedVisible.map((item) => {
               const isVendor = item.viewerRole === 'vendor';
+              const canAct = !isVendor || canHandleAsVendor;
               const busy = busyId === item.id;
               const amountDraft = acceptAmount[item.id] ?? String(item.amountFc);
               const next = bookingNextStep(item, depositPct);
@@ -637,9 +642,14 @@ export default function MarketplaceBookingsPanel({
               if (item.event?.title) facts.push({ label: 'Événement', value: item.event.title });
               facts.push({ label: 'Total', value: formatFc(item.amountFc) });
               facts.push({ label: 'Acompte', value: formatFc(item.depositFc) });
-              if (isVendor) facts.push({ label: 'Commission', value: formatFc(item.commissionFc) });
+              if (isVendor) {
+                facts.push({
+                  label: 'Commission',
+                  value: `${formatFc(item.commissionFc)}${item.commissionSettledAt ? ' · payée' : ''}`,
+                });
+              }
 
-              const acceptButton = isVendor && item.status === 'REQUESTED' ? (
+              const acceptButton = canAct && isVendor && item.status === 'REQUESTED' ? (
                 <Button
                   size="sm"
                   loading={busy}
@@ -649,7 +659,7 @@ export default function MarketplaceBookingsPanel({
                   Accepter
                 </Button>
               ) : null;
-              const depositButton = item.status === 'ACCEPTED' && !item.depositMarkedAt ? (
+              const depositButton = canAct && item.status === 'ACCEPTED' && !item.depositMarkedAt ? (
                 <Button
                   size="sm"
                   loading={busy}
@@ -663,7 +673,7 @@ export default function MarketplaceBookingsPanel({
                   {isVendor ? 'Acompte reçu' : 'J’ai versé'}
                 </Button>
               ) : null;
-              const confirmButton = isVendor && item.status === 'ACCEPTED' && item.depositMarkedAt ? (
+              const confirmButton = canAct && isVendor && item.status === 'ACCEPTED' && item.depositMarkedAt ? (
                 <Button size="sm" loading={busy} onClick={() => run(item.id, 'confirm')}>
                   Confirmer
                 </Button>
@@ -713,7 +723,7 @@ export default function MarketplaceBookingsPanel({
                           Événement
                         </Button>
                       ) : null}
-                      {isVendor && item.status === 'REQUESTED' ? (
+                      {canAct && isVendor && item.status === 'REQUESTED' ? (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -729,7 +739,7 @@ export default function MarketplaceBookingsPanel({
                           Refuser
                         </Button>
                       ) : null}
-                      {(item.status === 'ACCEPTED' || (item.status === 'REQUESTED' && !isVendor)) ? (
+                      {canAct && (item.status === 'ACCEPTED' || (item.status === 'REQUESTED' && !isVendor)) ? (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -749,7 +759,12 @@ export default function MarketplaceBookingsPanel({
                 >
                   <p className="text-xs text-foreground/80 leading-relaxed">{next.detail}</p>
                   <BookingStepper item={item} />
-                  {isVendor && item.status === 'REQUESTED' ? (
+                  {!canAct && (item.status === 'REQUESTED' || item.status === 'ACCEPTED') ? (
+                    <p className="text-xs text-muted">
+                      Le propriétaire ou un manager de l’organisation traite cette réservation.
+                    </p>
+                  ) : null}
+                  {canAct && isVendor && item.status === 'REQUESTED' ? (
                     <Input
                       label="Montant à confirmer (FC)"
                       type="number"

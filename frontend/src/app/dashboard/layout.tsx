@@ -282,13 +282,17 @@ function buildDashboardNav(opts: {
  commercialPermissions?: import('@/context/AuthContext').CommercialGrantedPermissions | null;
  allStudiosBlocked?: boolean;
  adminCounts?: AdminPendingCounts;
+ /** Le forfait inclut des salles (indépendamment des droits du membre connecté). */
+ venuePlan?: boolean;
 }): NavSection[] {
- const { role, access, workspace, accountKind, isClientAccount, tenantPlan, audience, commercialPermissions, allStudiosBlocked, adminCounts } = opts;
+ const { role, access, workspace, accountKind, isClientAccount, tenantPlan, audience, commercialPermissions, allStudiosBlocked, adminCounts, venuePlan } = opts;
  const vendorOnly = accountKind === 'VENDOR';
+ // Le type salle / prestataire dépend du forfait, pas des droits du membre : un membre
+ // d'un compte Salle sans droit de gestion reste dans un espace « salle ».
  const isServiceProvider =
   tenantPlan === 'SERVICE' ||
   audience === 'SERVICE' ||
-  (vendorOnly && !workspace.showRooms);
+  (vendorOnly && !venuePlan);
 
  if (role === 'SUPER_ADMIN') {
   return buildNavSections(
@@ -472,7 +476,7 @@ function buildDashboardNav(opts: {
 			...(venue
 				? [{ name: 'Mes salles', href: '/dashboard/rooms', tourId: 'nav-rooms', icon: Building2, description: 'Fiches catalogue, plans 2D/3D et staff de vos salles' }]
 				: []),
-			...(workspace.showMarketplace || isServiceProvider
+			...((workspace.showMarketplace || isServiceProvider) && access?.canManageRooms
 				? [{
 					name: venue ? 'Mes offres' : 'Mes prestations',
 					href: '/dashboard/marketplace',
@@ -1067,6 +1071,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   commercialPermissions: user?.commercialPermissions,
   allStudiosBlocked,
   adminCounts,
+  venuePlan:
+   planFeatures?.audience === 'VENUE'
+   || planFeatures?.audience === 'CATALOG'
+   || (planQuota ? (planQuota.limits.maxRooms ?? 0) > 0 : workspace.showRooms),
  });
  const showRealisations = navSections.some((section) =>
   section.items.some((item) => item.href === '/dashboard/publications'),

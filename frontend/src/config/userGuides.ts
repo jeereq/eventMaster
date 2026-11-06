@@ -2,6 +2,7 @@ export type UserGuideId =
   | 'super_admin'
   | 'commercial_platform'
   | 'owner'
+  | 'vendor'
   | 'org_manager'
   | 'org_protocol'
   | 'org_commercial'
@@ -198,6 +199,84 @@ export const USER_GUIDES: UserGuide[] = [
       'Communiquez le code de parrainage aux organisations avant leur inscription.',
       'En cas de rejet d’abonnement, contactez le super admin avec la preuve de paiement corrigée.',
       'Le versement de vos commissions SaaS est hors plateforme (Mobile Money / banque). La preuve est jointe par le Super Admin.',
+    ],
+  },
+  {
+    id: 'vendor',
+    title: 'Guide Salle & Prestataire',
+    badge: 'Salle / Prestataire',
+    summary:
+      'Vous proposez une salle, une prestation (traiteur, DJ, photo, déco…), du matériel ou des boissons. Votre espace sert à être trouvé dans le catalogue, à répondre aux demandes de devis et à suivre vos réservations jusqu’au jour J.',
+    canDo: [
+      'Publier vos fiches au catalogue : salles (Mes salles), prestations, matériel & équipements et boissons (Mes offres)',
+      'Répondre aux demandes de devis : message, montant, refus avec motif',
+      'Accepter une réservation, valider l’acompte reçu puis confirmer pour bloquer la date',
+      'Suivre votre calendrier de disponibilités et vos prochaines dates',
+      'Consulter vos statistiques : demandes, taux de réponse, devis transformés, chiffre et commission',
+      'Publier des réalisations (photos de vos derniers événements)',
+      'Inviter des membres d’équipe (seuls le propriétaire et les managers traitent devis et réservations)',
+    ],
+    cannotDo: [
+      'Encaisser l’acompte sur EventMaster : il se règle directement entre vous et le client',
+      'Marquer vous-même la commission comme payée (EventMaster le fait à réception de votre versement)',
+      'Remettre en ligne une fiche suspendue par EventMaster sans passer par le support',
+      'Changer le type de compte (réservé au Super Admin)',
+    ],
+    navLinks: [
+      { label: 'Tableau de bord', href: '/dashboard' },
+      { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+      { label: 'Réservations & planning', href: '/dashboard/bookings?tab=bookings' },
+      { label: 'Mes salles', href: '/dashboard/rooms' },
+      { label: 'Mes offres', href: '/dashboard/marketplace' },
+      { label: 'Réalisations', href: '/dashboard/publications' },
+      { label: 'Statistiques & revenus', href: '/dashboard/analytics' },
+      { label: 'Abonnement & forfait', href: '/dashboard/billing' },
+      { label: 'Guide', href: '/dashboard/guide' },
+    ],
+    workflows: [
+      {
+        id: 'vendor-publish',
+        title: 'Publier une fiche qui attire',
+        content:
+          '1. Salle : Mes salles → créez la salle (plan 2D/3D facultatif) → ouvrez sa fiche catalogue.\n2. Prestation ou matériel : Mes offres → Nouvelle prestation / Nouveau matériel.\n3. Ajoutez au moins 3 photos, un prix « à partir de », la ville et la commune.\n4. Publiez. L’accueil vous signale une fiche masquée, sans photo ou suspendue.\n5. Traiteur ou salle : onglet Boissons pour tarifer les marques que vous servez.',
+        links: [
+          { label: 'Mes salles', href: '/dashboard/rooms' },
+          { label: 'Mes offres', href: '/dashboard/marketplace' },
+        ],
+      },
+      {
+        id: 'vendor-quote',
+        title: 'Répondre à une demande de devis',
+        content:
+          '1. Demandes de devis : les nouvelles demandes sont en tête.\n2. Ouvrez la demande, lisez date, nombre d’invités et message.\n3. Répondez par la messagerie et indiquez votre montant.\n4. Quand le client est d’accord, transformez le devis en réservation.\n5. Répondre vite compte : votre délai médian apparaît dans Statistiques.',
+        links: [{ label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' }],
+      },
+      {
+        id: 'vendor-booking',
+        title: 'De la réservation à la date bloquée',
+        content:
+          '1. Réservations & planning : acceptez la demande (vous pouvez ajuster le montant).\n2. Le client verse l’acompte directement chez vous, hors EventMaster, puis le déclare.\n3. Vérifiez le versement et cliquez « Acompte reçu ».\n4. Cliquez « Confirmer » : la date est bloquée au calendrier (et rattachée à l’événement du client pour une salle).\n5. Le lendemain de la date, la réservation passe automatiquement en « Terminée ».',
+        links: [{ label: 'Réservations & planning', href: '/dashboard/bookings?tab=bookings' }],
+      },
+      {
+        id: 'vendor-commission',
+        title: 'Commission EventMaster',
+        content:
+          '1. Une commission de {commissionPercent} % s’applique à chaque réservation confirmée.\n2. Le montant à régler (hors commissions déjà payées) s’affiche sur l’accueil, dans Réservations et dans Statistiques.\n3. Versez-la à EventMaster ; elle est ensuite marquée « payée » sur chaque réservation.',
+        links: [{ label: 'Statistiques & revenus', href: '/dashboard/analytics' }],
+      },
+      {
+        id: 'vendor-suspended',
+        title: 'Fiche suspendue par EventMaster',
+        content:
+          '1. Une fiche suspendue n’est plus visible au catalogue.\n2. Le motif s’affiche sur la fiche (Mes offres ou Mes salles).\n3. Corrigez le point signalé, puis contactez le support pour la remettre en ligne.',
+        links: [{ label: 'Contact', href: '/contact' }],
+      },
+    ],
+    tips: [
+      'Gardez votre calendrier à jour : une date bloquée évite les demandes impossibles.',
+      'Les réalisations (photos récentes) rassurent les clients qui hésitent.',
+      'Un agent d’accueil ou un commercial de votre équipe voit devis et réservations, mais seuls le propriétaire et les managers les traitent.',
     ],
   },
   {

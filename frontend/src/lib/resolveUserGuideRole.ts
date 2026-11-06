@@ -17,6 +17,7 @@ const GUIDE_LABELS: Record<UserGuideId, string> = {
   super_admin: 'Super Administrateur',
   commercial_platform: 'Commercial plateforme',
   owner: 'Propriétaire d\'organisation',
+  vendor: 'Salle & Prestataire',
   org_manager: 'Manager organisation',
   org_protocol: 'Protocole organisation',
   org_commercial: 'Commercial organisation',
@@ -36,6 +37,11 @@ export function resolveUserGuideRole({ role, access, accountKind }: ResolveUserG
 
   if (access?.level === 'client' || accountKind === 'CLIENT') {
     return { guideId: 'client', label: GUIDE_LABELS.client };
+  }
+
+  // Compte Salle / Prestataire : guide dédié pour ceux qui traitent devis et réservations.
+  if (accountKind === 'VENDOR' && (access?.isOwner || access?.orgRole === 'MANAGER')) {
+    return { guideId: 'vendor', label: GUIDE_LABELS.vendor };
   }
 
   if (access?.isOwner) {
