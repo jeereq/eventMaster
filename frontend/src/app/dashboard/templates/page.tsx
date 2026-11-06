@@ -56,6 +56,7 @@ import {
  ArrowUp, ArrowDown, Crop, Copy, Upload, Globe, Wand2, Coins,
  Undo2, Redo2, History, Download, SlidersHorizontal, LayoutTemplate,
  Calendar, MapPin, User, Users, MessageSquare, Layers, Move, Crown, ArrowRight, Check, Clock,
+ BookOpen, FolderHeart,
 } from 'lucide-react';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
@@ -249,7 +250,9 @@ export default function TemplatesPage() {
  const router = useRouter();
  /** admin = ouvert depuis la console Super Admin (?tab=templates) ; studio = concepteur organisation */
  type StudioOrigin = 'admin' | 'studio';
- const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
+ type TemplatesListTab = 'mine' | 'library';
+
+const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  const [studioOrigin, setStudioOrigin] = useState<StudioOrigin>('studio');
  const isPlatformTemplateAdmin = Boolean(
   user && (user.role === 'SUPER_ADMIN' || (user.role === 'COMMERCIAL' && user.commercialPermissions?.canManageTemplates))
@@ -282,6 +285,8 @@ export default function TemplatesPage() {
  setGridColumns: setTemplatesColumns,
  } = useViewMode('em-view-templates', 'grid', 3);
  const [catalogPage, setCatalogPage] = useState(1);
+ /** Onglets de la liste : modèles de l’organisation ou bibliothèque EventMaster. */
+ const [listTab, setListTab] = useState<TemplatesListTab>('mine');
  const [ownTemplatesPage, setOwnTemplatesPage] = useState(1);
  const [templatesPageSize, setTemplatesPageSize] = usePageSize('templates', 9);
  const [previewTemplate, setPreviewTemplate] = useState<TemplateItem | null>(null);
@@ -2800,6 +2805,8 @@ const studioModelPhotos = useMemo(
  const listTemplates = isSuperAdmin ? templates : ownTemplates;
  const paginatedCatalog = usePaginateItems(catalogTemplates, catalogPage, templatesPageSize);
  const paginatedOwn = usePaginateItems(listTemplates, ownTemplatesPage, templatesPageSize);
+ const activeListTab: TemplatesListTab =
+ listTab === 'library' && !isSuperAdmin && catalogTemplates.length > 0 ? 'library' : 'mine';
 
  // Helper to get background style
  const getBackgroundStyle = (type: string, color: string, url: string, pattern: string) => {
@@ -6139,7 +6146,59 @@ const studioModelPhotos = useMemo(
  </div>
  )}
 
- <div className="flex justify-end">
+ {(() => {
+ const showLibraryTab = !isSuperAdmin && catalogTemplates.length > 0;
+ const tabs: Array<{ id: TemplatesListTab; label: string; icon: typeof BookOpen; count: number }> = [
+ { id: 'mine', label: isSuperAdmin ? 'Tous les modèles' : 'Mes modèles', icon: FolderHeart, count: listTemplates.length },
+ ...(showLibraryTab
+ ? [{ id: 'library' as const, label: 'Bibliothèque', icon: BookOpen, count: catalogTemplates.length }]
+ : []),
+ ];
+ const onTabKeyDown = (e: React.KeyboardEvent) => {
+ if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+ e.preventDefault();
+ const ids = tabs.map((t) => t.id);
+ const i = Math.max(0, ids.indexOf(activeListTab));
+ const next = ids[(i + (e.key === 'ArrowRight' ? 1 : -1) + ids.length) % ids.length];
+ setListTab(next);
+ window.requestAnimationFrame(() => document.getElementById(`templates-tab-${next}`)?.focus());
+ };
+ return (
+ <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+ <div
+ role="tablist"
+ aria-label="Sections des modèles"
+ onKeyDown={onTabKeyDown}
+ className="flex items-center gap-1 overflow-x-auto no-scrollbar rounded-xl border border-border bg-surface-muted p-1 w-full sm:w-fit"
+ >
+ {tabs.map((item) => {
+ const selected = activeListTab === item.id;
+ return (
+ <button
+ key={item.id}
+ id={`templates-tab-${item.id}`}
+ type="button"
+ role="tab"
+ aria-selected={selected}
+ aria-controls={`templates-panel-${item.id}`}
+ tabIndex={selected ? 0 : -1}
+ onClick={() => setListTab(item.id)}
+ className={cn(
+ 'flex-1 sm:flex-none inline-flex min-h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 sm:px-3.5 py-2 text-sm font-medium transition touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+ selected
+ ? 'bg-surface text-foreground shadow-2xs font-semibold'
+ : 'text-muted hover:bg-surface/70 hover:text-foreground',
+ )}
+ >
+ <item.icon className="w-4 h-4 shrink-0" aria-hidden />
+ <span>{item.label}</span>
+ <span className="ml-0.5 rounded-full bg-primary/10 px-1.5 text-xs font-semibold text-primary tabular-nums">
+ {item.count}
+ </span>
+ </button>
+ );
+ })}
+ </div>
  <ViewModeToggle
  storageKey="em-view-templates"
  value={templatesViewMode}
@@ -6149,15 +6208,19 @@ const studioModelPhotos = useMemo(
  defaultMode="grid"
  />
  </div>
+ );
+ })()}
 
- {!isSuperAdmin && catalogTemplates.length > 0 && (
- <section className="space-y-4">
- <div>
- <h2 className="text-lg font-bold text-foreground dark:text-foreground">Bibliothèque EventMaster</h2>
- <p className="text-sm text-muted dark:text-muted">
- Modèles prêts à l&apos;emploi — dupliquez-en un pour votre organisation ({catalogTemplates.length}).
+ {activeListTab === 'library' && (
+ <section
+ id="templates-panel-library"
+ role="tabpanel"
+ aria-labelledby="templates-tab-library"
+ className="space-y-4"
+ >
+ <p className="text-sm text-muted">
+ Modèles prêts à l&apos;emploi. Dupliquez-en un pour votre organisation.
  </p>
- </div>
  <TemplateCardGrid
  templates={paginatedCatalog}
  isSuperAdmin={false}
@@ -6182,14 +6245,17 @@ const studioModelPhotos = useMemo(
  </section>
  )}
 
- <section className="space-y-4">
+ {activeListTab === 'mine' && (
+ <section
+ id="templates-panel-mine"
+ role="tabpanel"
+ aria-labelledby="templates-tab-mine"
+ className="space-y-4"
+ >
  {!isSuperAdmin && (
- <div>
- <h2 className="text-lg font-bold text-foreground dark:text-foreground">Mes modèles</h2>
- <p className="text-sm text-muted dark:text-muted">
- Modèles appartenant à votre organisation ({ownTemplates.length}).
+ <p className="text-sm text-muted">
+ Modèles appartenant à votre organisation.
  </p>
- </div>
  )}
 
  <TemplateCardGrid
@@ -6260,6 +6326,7 @@ const studioModelPhotos = useMemo(
  itemLabel="modèles"
  />
  </section>
+ )}
  </div>
 
  <InvitationDuplicateModal
