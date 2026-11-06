@@ -30,6 +30,7 @@ import {
 import { notifyAiTokenPayment, notifyTicketPaymentFailed } from '../services/paymentTraceService';
 import { creditPaidAiTokenOrder } from '../services/aiSimulationWalletService';
 import type { AuthenticatedRequest } from '../middleware/auth';
+import { findDepositPaymentForFlexPay, verifyDepositPayment } from '../services/marketplaceDepositService';
 
 function frontendBaseUrl(): string {
   return (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/$/, '');
@@ -243,7 +244,19 @@ export async function flexPayCardCallback(req: Request, res: Response) {
       });
     }
 
-    // 4) Pay Out (versements envoyés avant la route de callback dédiée)
+    // 4) Acompte de réservation marketplace (vérifié auprès de FlexPay dans le service)
+    const deposit = await findDepositPaymentForFlexPay({
+      reference: parsed.reference || null,
+      orderNumber: parsed.orderNumber || null,
+    });
+    if (deposit) {
+      const result = await verifyDepositPayment(deposit.id);
+      const kind = 'marketplace_deposit';
+      if (result.status === 'PENDING') return res.status(202).json({ ok: true, pending: true, kind, paymentId: deposit.id });
+      return res.json({ ok: true, paid: result.status === 'PAID', kind, paymentId: deposit.id });
+    }
+
+    // 5) Pay Out (versements envoyés avant la route de callback dédiée)
     const payout = await processFlexPayPayoutNotification({
       reference: parsed.reference || null,
       orderNumber: parsed.orderNumber || null,
@@ -328,6 +341,21 @@ export async function flexPayCardReturn(req: Request, res: Response) {
 
       return res.redirect(
         `${FRONTEND_URL}/dashboard/billing?flexpay=return&requestId=${encodeURIComponent(requestId)}`,
+      );
+    }
+
+    if (kind === 'marketplace_deposit') {
+      const paymentId = String(req.query.paymentId || '');
+      const payment = paymentId
+        ? await prisma.marketplaceDepositPayment.findUnique({ where: { id: paymentId }, select: { id: true, bookingId: true } })
+        : null;
+      if (!payment) return res.redirect(`${FRONTEND_URL}/dashboard/bookings?tab=bookings`);
+      if (result === 'approve') {
+        await verifyDepositPayment(payment.id).catch((err) => console.warn('[FlexPay] verify deposit on return:', err));
+      }
+      const state = result === 'approve' ? 'return' : 'canceled';
+      return res.redirect(
+        `${FRONTEND_URL}/dashboard/bookings?tab=bookings&bookingId=${encodeURIComponent(payment.bookingId)}&deposit=${state}&paymentId=${encodeURIComponent(payment.id)}`,
       );
     }
 

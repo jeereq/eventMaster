@@ -612,6 +612,10 @@ export interface MarketplaceBookingItem {
   commissionSettledAt?: string | null;
   /** Avis laissé par le client après la date (réservation terminée). */
   review?: import('./marketplaceReviews').BookingReviewSnippet | null;
+  /** Le prestataire accepte le paiement de l'acompte en ligne. */
+  onlineDepositAvailable?: boolean;
+  /** Dernier paiement en ligne de l'acompte. */
+  depositPayment?: MarketplaceDepositPayment | null;
   status: MarketplaceBookingStatus;
   depositMarkedAt: string | null;
   declineReason?: string | null;
@@ -629,6 +633,19 @@ export function bookingPipelineIndex(item: MarketplaceBookingItem): number {
   if (item.status === 'CONFIRMED' || item.status === 'COMPLETED') return 3;
   if (item.status === 'ACCEPTED') return item.depositMarkedAt ? 2 : 1;
   return 0;
+}
+
+export interface MarketplaceDepositPayment {
+  id: string;
+  status: 'PENDING' | 'PAID' | 'FAILED';
+  paymentMethod: 'mobile' | 'card';
+  amountFc: number;
+  commissionFc: number;
+  payoutAmountFc: number;
+  paidAt: string | null;
+  payoutStatus: 'NONE' | 'PENDING' | 'SUCCESS' | 'FAILED';
+  payoutAt: string | null;
+  createdAt: string;
 }
 
 export function bookingNextStep(
@@ -652,6 +669,11 @@ export function bookingNextStep(
     return isVendor
       ? { title: 'À traiter', detail: 'Vérifiez le montant, puis acceptez ou refusez avec motif.' }
       : { title: 'En attente', detail: 'Le professionnel n’a pas encore répondu.' };
+  }
+  if (item.status === 'ACCEPTED' && !item.depositMarkedAt && item.onlineDepositAvailable) {
+    return isVendor
+      ? { title: 'Acompte attendu', detail: `Le client peut payer les ${depositPct} % en ligne, ou vous les verser directement.` }
+      : { title: 'Acompte à payer', detail: `Payez ${depositPct} % en ligne (Mobile Money ou carte) pour bloquer la date.` };
   }
   if (item.status === 'ACCEPTED' && !item.depositMarkedAt) {
     return isVendor

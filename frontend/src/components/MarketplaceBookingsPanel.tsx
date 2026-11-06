@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import {
   Alert,
@@ -53,6 +54,9 @@ import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { useAuth } from '@/context/AuthContext';
 import { ReviewStars, ReviewStarsInput } from '@/components/marketplace/ReviewStars';
 import { commissionPercent, depositPercent } from '@/lib/platformRates';
+import OnlineDepositSettings from '@/components/marketplace/OnlineDepositSettings';
+import { segmentedItem, SEGMENTED_TRACK } from '@/components/ui/segmented';
+import type { MarketplaceDepositPayment } from '@/lib/marketplace';
 
 const KIND_OPTIONS = [
   { id: 'all', label: 'Tous' },
@@ -285,6 +289,93 @@ export default function MarketplaceBookingsPanel({
   const [depositNote, setDepositNote] = useState('');
   const [depositSubmitting, setDepositSubmitting] = useState(false);
 
+  // Paiement de l'acompte en ligne (si le prestataire l'a activé)
+  const searchParams = useSearchParams();
+  const [payModal, setPayModal] = useState<MarketplaceBookingItem | null>(null);
+  const [payMethod, setPayMethod] = useState<'mobile' | 'card'>('mobile');
+  const [payPhone, setPayPhone] = useState('');
+  const [paySubmitting, setPaySubmitting] = useState(false);
+  const [payError, setPayError] = useState('');
+  // Retour de la page de paiement par carte : on reprend le suivi du paiement.
+  const [payWatch, setPayWatch] = useState<{ bookingId: string; paymentId: string } | null>(() => {
+    const paymentId = searchParams.get('paymentId');
+    const bookingId = searchParams.get('bookingId');
+    return searchParams.get('deposit') === 'return' && paymentId && bookingId ? { bookingId, paymentId } : null;
+  });
+  const [payNotice, setPayNotice] = useState<{ tone: 'info' | 'success' | 'error'; text: string } | null>(() => {
+    const state = searchParams.get('deposit');
+    if (state === 'return') return { tone: 'info', text: 'Paiement en cours de vérification…' };
+    if (state === 'canceled') return { tone: 'info', text: 'Paiement de l’acompte interrompu. Vous pouvez réessayer.' };
+    return null;
+  });
+  const onChangedRef = useRef(onChanged);
+  useEffect(() => {
+    onChangedRef.current = onChanged;
+  });
+
+  // Suivi du paiement : la validation Mobile Money peut prendre une minute.
+  useEffect(() => {
+    if (!payWatch) return;
+    let stopped = false;
+    let attempts = 0;
+    const tick = async () => {
+      if (stopped) return;
+      attempts += 1;
+      try {
+        const data = await api.get(`/marketplace/bookings/${payWatch.bookingId}/deposit-payment/${payWatch.paymentId}`);
+        const payment = data.payment as MarketplaceDepositPayment | null;
+        if (payment?.status === 'PAID') {
+          setPayNotice({ tone: 'success', text: 'Acompte payé. Le prestataire va confirmer la réservation.' });
+          setPayWatch(null);
+          await onChangedRef.current();
+          return;
+        }
+        if (payment?.status === 'FAILED') {
+          setPayNotice({ tone: 'error', text: 'Le paiement a échoué ou a été refusé. Vous pouvez réessayer.' });
+          setPayWatch(null);
+          await onChangedRef.current();
+          return;
+        }
+      } catch {
+        /* nouvel essai au prochain passage */
+      }
+      if (attempts >= 40) {
+        setPayNotice({ tone: 'info', text: 'Paiement toujours en attente. Il sera pris en compte dès que l’opérateur le confirme.' });
+        setPayWatch(null);
+        return;
+      }
+      window.setTimeout(tick, 4000);
+    };
+    const first = window.setTimeout(tick, 3000);
+    return () => {
+      stopped = true;
+      window.clearTimeout(first);
+    };
+  }, [payWatch]);
+
+  const submitPayment = async () => {
+    if (!payModal) return;
+    setPaySubmitting(true);
+    setPayError('');
+    try {
+      const data = await api.post(`/marketplace/bookings/${payModal.id}/deposit-payment`, {
+        paymentMethod: payMethod,
+        phone: payMethod === 'mobile' ? payPhone : undefined,
+      });
+      if (data.paymentMethod === 'card' && data.redirectUrl) {
+        window.location.href = data.redirectUrl;
+        return;
+      }
+      setPayModal(null);
+      setPayNotice({ tone: 'info', text: data.message || 'Validez le paiement sur votre téléphone.' });
+      setPayWatch({ bookingId: payModal.id, paymentId: data.paymentId });
+    } catch (err: unknown) {
+      setPayError(err instanceof Error ? err.message : 'Impossible de lancer le paiement.');
+    } finally {
+      setPaySubmitting(false);
+    }
+  };
+
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePageSize('marketplace-desk-bookings', 9);
   const { mode, setViewMode, columns, setGridColumns, gridClassName } = useViewMode(
@@ -415,14 +506,18 @@ export default function MarketplaceBookingsPanel({
           <div>
             <p className="text-xs font-semibold text-foreground">Commission marketplace à régler</p>
             <p className="text-[11px] text-muted mt-0.5">
-              {commissionPct} % des réservations confirmées, hors commissions déjà payées · acompte {depositPct} % hors plateforme
+              {commissionPct} % des réservations confirmées, hors commissions déjà payées ou retenues sur un acompte en ligne
             </p>
           </div>
           <p className="text-lg font-semibold tabular-nums">{formatFc(commissionDueFc)}</p>
         </div>
       )}
+      {!organizerView && canHandleAsVendor ? (
+        <OnlineDepositSettings depositPct={depositPct} commissionPct={commissionPct} onSaved={onChanged} />
+      ) : null}
 
       {error && <Alert variant="error">{error}</Alert>}
+      {payNotice ? <Alert variant={payNotice.tone}>{payNotice.text}</Alert> : null}
 
       <div className="lg:grid lg:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] lg:gap-5 lg:items-start">
       <aside className="lg:sticky lg:top-4 space-y-3 mb-4 lg:mb-0">
@@ -699,6 +794,21 @@ export default function MarketplaceBookingsPanel({
                   Accepter
                 </Button>
               ) : null;
+              const paidOnline = item.depositPayment?.status === 'PAID';
+              const payOnlineButton = !isVendor && item.onlineDepositAvailable && item.status === 'ACCEPTED' && !item.depositMarkedAt && !paidOnline ? (
+                <Button
+                  size="sm"
+                  loading={Boolean(payWatch && payWatch.bookingId === item.id)}
+                  onClick={() => {
+                    setPayModal(item);
+                    setPayMethod('mobile');
+                    setPayError('');
+                  }}
+                  leftIcon={<CreditCard className="w-3.5 h-3.5" />}
+                >
+                  Payer l’acompte
+                </Button>
+              ) : null;
               const depositButton = canAct && item.status === 'ACCEPTED' && !item.depositMarkedAt ? (
                 <Button
                   size="sm"
@@ -710,7 +820,7 @@ export default function MarketplaceBookingsPanel({
                   }}
                   leftIcon={<Coins className="w-3.5 h-3.5" />}
                 >
-                  {isVendor ? 'Acompte reçu' : 'J’ai versé'}
+                  {isVendor ? 'Acompte reçu' : payOnlineButton ? 'Déjà versé' : 'J’ai versé'}
                 </Button>
               ) : null;
               const confirmButton = canAct && isVendor && item.status === 'ACCEPTED' && item.depositMarkedAt ? (
@@ -732,7 +842,12 @@ export default function MarketplaceBookingsPanel({
                   valueMeta={`Acompte ${formatFc(item.depositFc)}`}
                   highlight={Boolean(highlightBookingId && item.id === highlightBookingId)}
                   layout={mode}
-                  primaryActions={acceptButton || depositButton || confirmButton || (
+                  primaryActions={payOnlineButton ? (
+                    <>
+                      {payOnlineButton}
+                      {depositButton ? React.cloneElement(depositButton, { variant: 'secondary' }) : null}
+                    </>
+                  ) : acceptButton || depositButton || confirmButton || (
                     !isVendor && item.status === 'COMPLETED' && !item.review ? (
                       <Button
                         size="sm"
@@ -827,6 +942,24 @@ export default function MarketplaceBookingsPanel({
                       value={amountDraft}
                       onChange={(e) => setAcceptAmount((prev) => ({ ...prev, [item.id]: e.target.value }))}
                     />
+                  ) : null}
+                  {paidOnline && item.depositPayment ? (
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-1 text-xs">
+                      <p className="font-semibold text-foreground inline-flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" aria-hidden />
+                        Acompte payé en ligne · {formatFc(item.depositPayment.amountFc)}
+                      </p>
+                      {isVendor ? (
+                        <p className="text-muted">
+                          Commission retenue {formatFc(item.depositPayment.commissionFc)} · reversé {formatFc(item.depositPayment.payoutAmountFc)}{' '}
+                          {item.depositPayment.payoutStatus === 'SUCCESS'
+                            ? 'sur votre Mobile Money'
+                            : item.depositPayment.payoutStatus === 'FAILED'
+                              ? '· reversement à relancer par EventMaster'
+                              : '· reversement en cours'}
+                        </p>
+                      ) : null}
+                    </div>
                   ) : null}
                   {item.review ? (
                     <div className="rounded-xl border border-border bg-background/60 p-3 space-y-1.5">
@@ -1072,6 +1205,68 @@ export default function MarketplaceBookingsPanel({
       </Modal>
 
       {/* MODALE DÉCLARATION / VALIDATION D'ACOMPTE */}
+      <Modal
+        open={Boolean(payModal)}
+        onClose={() => {
+          if (!paySubmitting) setPayModal(null);
+        }}
+        title="Payer l’acompte en ligne"
+        description={payModal ? `Acompte de ${formatFc(payModal.depositFc)} pour « ${payModal.title} » auprès de ${payModal.vendorName}.` : undefined}
+        size="md"
+        footer={(
+          <div className="flex items-center justify-end gap-2 w-full">
+            <Button variant="ghost" disabled={paySubmitting} onClick={() => setPayModal(null)}>
+              Annuler
+            </Button>
+            <Button loading={paySubmitting} disabled={payMethod === 'mobile' && !payPhone.trim()} onClick={submitPayment}>
+              {payModal ? `Payer ${formatFc(payModal.depositFc)}` : 'Payer'}
+            </Button>
+          </div>
+        )}
+      >
+        {payModal ? (
+          <div className="space-y-4 py-2">
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3.5 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-muted">Montant total :</span>
+                <span className="font-semibold text-foreground">{formatFc(payModal.amountFc)}</span>
+              </div>
+              <div className="flex items-center justify-between pt-1 border-t border-primary/15">
+                <span className="font-semibold text-foreground">Acompte à payer maintenant :</span>
+                <span className="text-sm font-bold text-primary">{formatFc(payModal.depositFc)}</span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-muted">
+                <span>Reste à régler avec le prestataire :</span>
+                <span className="font-medium text-foreground">{formatFc(payModal.amountFc - payModal.depositFc)}</span>
+              </div>
+            </div>
+            <div className={cn('inline-flex', SEGMENTED_TRACK)} role="radiogroup" aria-label="Moyen de paiement">
+              <button type="button" role="radio" aria-checked={payMethod === 'mobile'} className={segmentedItem(payMethod === 'mobile', 'px-3 py-1.5 text-xs')} onClick={() => setPayMethod('mobile')}>
+                Mobile Money
+              </button>
+              <button type="button" role="radio" aria-checked={payMethod === 'card'} className={segmentedItem(payMethod === 'card', 'px-3 py-1.5 text-xs')} onClick={() => setPayMethod('card')}>
+                Carte bancaire
+              </button>
+            </div>
+            {payMethod === 'mobile' ? (
+              <Input
+                label="Numéro M-Pesa, Orange Money ou Airtel Money"
+                placeholder="Ex : 0812345678"
+                inputMode="tel"
+                value={payPhone}
+                onChange={(e) => setPayPhone(e.target.value)}
+              />
+            ) : (
+              <p className="text-[11px] text-muted">Vous serez redirigé vers la page de paiement sécurisée (Visa, Mastercard).</p>
+            )}
+            <p className="text-[11px] text-muted leading-relaxed">
+              Le paiement passe par EventMaster, qui le reverse au prestataire. Vous pouvez aussi le payer directement et cliquer sur « Déjà versé ».
+            </p>
+            {payError ? <Alert variant="error">{payError}</Alert> : null}
+          </div>
+        ) : null}
+      </Modal>
+
       <Modal
         open={Boolean(depositModal)}
         onClose={() => {

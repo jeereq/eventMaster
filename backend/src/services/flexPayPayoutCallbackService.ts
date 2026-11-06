@@ -1,6 +1,7 @@
 import { prisma } from '../db';
 import { verifyCommercialFlexPayPayout } from './commercialFlexPayPayoutService';
 import { findEventPayoutTransfer, verifyEventFlexPayPayout } from './eventFlexPayPayoutService';
+import { findDepositPayoutForFlexPay, verifyDepositPayout } from './marketplaceDepositService';
 
 /**
  * Notification Payout FlexPay (callback). Son contenu sert uniquement à retrouver notre
@@ -30,6 +31,12 @@ export async function processFlexPayPayoutNotification(opts: {
     const result = await verifyCommercialFlexPayPayout(commercialTransfer.id);
     const status = 'status' in result ? result.status : 'PENDING';
     return { kind: 'payout' as const, transferId: commercialTransfer.id, status };
+  }
+
+  const depositPayout = await findDepositPayoutForFlexPay(opts);
+  if (depositPayout) {
+    const result = await verifyDepositPayout(depositPayout.id);
+    return { kind: 'marketplace_deposit_payout' as const, transferId: depositPayout.id, status: result.status };
   }
 
   return null;

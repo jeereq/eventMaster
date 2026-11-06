@@ -54,11 +54,17 @@ enum PlanType {
   ENTERPRISE_1
   ENTERPRISE_2
   ENTERPRISE_3
-  /** Gestionnaire de salles (catalogue lieux). */
+  /**
+   * Gestionnaire de salles (catalogue lieux).
+   */
   VENUE
-  /** Prestataire de services (catalogue prestations). */
+  /**
+   * Prestataire de services (catalogue prestations).
+   */
   SERVICE
-  /** Salles + prestations (compte BOTH). */
+  /**
+   * Salles + prestations (compte BOTH).
+   */
   CATALOG
 }
 
@@ -69,7 +75,9 @@ enum TenantAccountKind {
   CLIENT
 }
 
-/** Période de base (mois ou trimestre) vs annuel 365 j. */
+/**
+ * Période de base (mois ou trimestre) vs annuel 365 j.
+ */
 enum TenantBillingCycle {
   PERIOD
   ANNUAL
@@ -132,192 +140,244 @@ enum ServiceCategory {
 }
 
 model Tenant {
-  id            String     @id @default(uuid())
-  name          String
-  plan          PlanType   @default(FREE)
-  /** Forfait visé à l’inscription ; le plan actif reste FREE tant que l’abonnement n’est pas payé. */
-  pendingPlan   PlanType?
-  stripeCustId  String?
-  licenseActive Boolean    @default(true)
-  licenseExpiresAt DateTime?
-  licenseExpiryWarningFor DateTime?
-  licenseKey    String?
-  referredByCommercialId String?
-  referredByCommercial   User? @relation("CommercialReferral", fields: [referredByCommercialId], references: [id], onDelete: SetNull)
-  referredByOrgUserId    String?
-  referredByOrgUser      User? @relation("OrgCommercialReferral", fields: [referredByOrgUserId], references: [id], onDelete: SetNull)
-  /** Taux 1er paiement des commerciaux org (0.30 = 30 %). */
-  defaultOrgCommercialCommissionRate Float @default(0.30)
-  /** Taux des paiements suivants (0.20 = 20 %). */
-  defaultOrgCommercialRenewalCommissionRate Float @default(0.20)
-  /** Couleurs de marque org : { primary, accent, sidebar? } */
-  branding      Json?
-  /** Paramètres de notification billetterie & dons (propriétaire) : { ticketsEnabled, donationsEnabled, recipientMode, customUserIds, includeEventStaff } */
-  notificationSettings Json?
-  /** ORGANIZER = SaaS événement (défaut). VENDOR = offre salles/prestas. BOTH = les deux. CLIENT = réserve sans SaaS. */
-  accountKind   TenantAccountKind @default(ORGANIZER)
-  /** Cycle facturé : période de base ou annuel (reprise au renouvellement auto). */
-  billingCycle  TenantBillingCycle @default(PERIOD)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id                                        String             @id @default(uuid())
+  name                                      String
+  plan                                      PlanType           @default(FREE)
+  /**
+   * Forfait visé à l’inscription ; le plan actif reste FREE tant que l’abonnement n’est pas payé.
+   */
+  pendingPlan                               PlanType?
+  stripeCustId                              String?
+  licenseActive                             Boolean            @default(true)
+  licenseExpiresAt                          DateTime?
+  licenseExpiryWarningFor                   DateTime?
+  licenseKey                                String?
+  referredByCommercialId                    String?
+  referredByCommercial                      User?              @relation("CommercialReferral", fields: [referredByCommercialId], references: [id], onDelete: SetNull)
+  referredByOrgUserId                       String?
+  referredByOrgUser                         User?              @relation("OrgCommercialReferral", fields: [referredByOrgUserId], references: [id], onDelete: SetNull)
+  /**
+   * Taux 1er paiement des commerciaux org (0.30 = 30 %).
+   */
+  defaultOrgCommercialCommissionRate        Float              @default(0.30)
+  /**
+   * Taux des paiements suivants (0.20 = 20 %).
+   */
+  defaultOrgCommercialRenewalCommissionRate Float              @default(0.20)
+  /**
+   * Couleurs de marque org : { primary, accent, sidebar? }
+   */
+  branding                                  Json?
+  /**
+   * Paramètres de notification billetterie & dons (propriétaire) : { ticketsEnabled, donationsEnabled, recipientMode, customUserIds, includeEventStaff }
+   */
+  notificationSettings                      Json?
+  /**
+   * ORGANIZER = SaaS événement (défaut). VENDOR = offre salles/prestas. BOTH = les deux. CLIENT = réserve sans SaaS.
+   */
+  accountKind                               TenantAccountKind  @default(ORGANIZER)
+  /**
+   * Cycle facturé : période de base ou annuel (reprise au renouvellement auto).
+   */
+  billingCycle                              TenantBillingCycle @default(PERIOD)
+  createdAt                                 DateTime           @default(now())
+  updatedAt                                 DateTime           @updatedAt
 
-  users         User[]
-  events        Event[]
-  templates     Template[]
-  subscriptionRequests SubscriptionRequest[]
-  rooms         OrganizationRoom[]
-  commercialCommissions CommercialCommission[]
-  platformInvoices      PlatformInvoice[]
-  vendorProfile VendorProfile?
-  venueListings VenueListing[]
-  serviceOfferings ServiceOffering[]
-  marketplaceInquiries MarketplaceInquiry[] @relation("InquiryFromTenant")
-  vendorBookings MarketplaceBooking[] @relation("BookingVendor")
-  organizerBookings MarketplaceBooking[] @relation("BookingOrganizer")
-  receivedReviews MarketplaceReview[] @relation("ReviewVendor")
-  orgRoomAmbiences OrgRoomAmbience[]
-  marketplacePosts MarketplacePost[]
-  beveragePrices VendorBeveragePrice[]
-  
-  managerId     String?
-  manager       User?      @relation("TenantManager", fields: [managerId], references: [id])
+  users                    User[]
+  events                   Event[]
+  templates                Template[]
+  subscriptionRequests     SubscriptionRequest[]
+  rooms                    OrganizationRoom[]
+  commercialCommissions    CommercialCommission[]
+  platformInvoices         PlatformInvoice[]
+  vendorProfile            VendorProfile?
+  venueListings            VenueListing[]
+  serviceOfferings         ServiceOffering[]
+  marketplaceInquiries     MarketplaceInquiry[]        @relation("InquiryFromTenant")
+  vendorBookings           MarketplaceBooking[]        @relation("BookingVendor")
+  organizerBookings        MarketplaceBooking[]        @relation("BookingOrganizer")
+  receivedReviews          MarketplaceReview[]         @relation("ReviewVendor")
+  /**
+   * Le prestataire propose le paiement de l'acompte en ligne (FlexPay). Désactivé : acompte hors plateforme.
+   */
+  marketplaceOnlineDeposit Boolean                     @default(false)
+  /**
+   * Numéro Mobile Money (243…) sur lequel EventMaster reverse les acomptes payés en ligne.
+   */
+  marketplacePayoutPhone   String?
+  marketplacePayoutHolder  String?
+  depositPayments          MarketplaceDepositPayment[]
+  orgRoomAmbiences         OrgRoomAmbience[]
+  marketplacePosts         MarketplacePost[]
+  beveragePrices           VendorBeveragePrice[]
+
+  managerId String?
+  manager   User?   @relation("TenantManager", fields: [managerId], references: [id])
 }
 
 model User {
-  id            String     @id @default(uuid())
-  email         String     @unique
-  passwordHash  String
-  name          String?
-  avatarUrl     String?
-  phone         String?
-  /** Indicatif pays dédié, ex. +243 — saisi séparément du numéro national */
-  phoneCountryCode String?
-  role          Role       @default(USER)
-  orgRole       OrgRole?
-  tenantId      String?
-  tenant        Tenant?    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  isEmailVerified Boolean  @default(false)
-  verificationToken String?
-  otpHash           String?
-  otpExpiresAt      DateTime?
+  id                 String    @id @default(uuid())
+  email              String    @unique
+  passwordHash       String
+  name               String?
+  avatarUrl          String?
+  phone              String?
+  /**
+   * Indicatif pays dédié, ex. +243 — saisi séparément du numéro national
+   */
+  phoneCountryCode   String?
+  role               Role      @default(USER)
+  orgRole            OrgRole?
+  tenantId           String?
+  tenant             Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  isEmailVerified    Boolean   @default(false)
+  verificationToken  String?
+  otpHash            String?
+  otpExpiresAt       DateTime?
   /// Échecs de saisie du code OTP en cours ; le code est invalidé au-delà du plafond.
-  otpAttempts       Int       @default(0)
+  otpAttempts        Int       @default(0)
   /// Incrémenté pour révoquer toutes les sessions (reset, changement de mot de passe ou de rôle).
-  tokenVersion      Int       @default(0)
-  verificationMethod String?  // EMAIL | WHATSAPP
-  termsAcceptedAt   DateTime?
-  privacyAcceptedAt DateTime?
-  termsVersion      String?
-  privacyVersion    String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  tokenVersion       Int       @default(0)
+  verificationMethod String? // EMAIL | WHATSAPP
+  termsAcceptedAt    DateTime?
+  privacyAcceptedAt  DateTime?
+  termsVersion       String?
+  privacyVersion     String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
-  referralCode   String?    @unique
-  /** Taux au premier paiement (0.30 = 30 % par défaut). */
-  commissionRate Float?
-  /** Taux des paiements suivants (0.20 = 20 % par défaut). */
-  renewalCommissionRate Float?
-  managedTenants Tenant[]  @relation("TenantManager")
-  referredTenants Tenant[] @relation("CommercialReferral")
-  orgCommercialReferrals Tenant[] @relation("OrgCommercialReferral")
-  comments       EventComment[]
-  marketplaceComments MarketplaceComment[]
-  legalAcceptances LegalAcceptance[]
-  eventStaff     EventStaff[]
-  roomStaff      RoomStaff[]
-  assignedEventTasks EventTask[] @relation("EventTaskAssignee")
-  createdEventTasks  EventTask[] @relation("EventTaskCreator")
-  guestCheckIns  Guest[]   @relation("GuestCheckIns")
-  guestSeatVerifications Guest[] @relation("GuestSeatVerifications")
-  protocolNotes  GuestProtocolNote[]
-  commercialCommissions CommercialCommission[]
-  commercialPayoutTransfers CommercialPayoutTransfer[]
-  platformNotifications PlatformNotification[]
-  notificationPreferences NotificationPreference[]
-  pushDeviceTokens      PushDeviceToken[]
-  listingFavorites      ListingFavorite[]
-  marketplaceReviews    MarketplaceReview[]
+  referralCode                String?                      @unique
+  /**
+   * Taux au premier paiement (0.30 = 30 % par défaut).
+   */
+  commissionRate              Float?
+  /**
+   * Taux des paiements suivants (0.20 = 20 % par défaut).
+   */
+  renewalCommissionRate       Float?
+  managedTenants              Tenant[]                     @relation("TenantManager")
+  referredTenants             Tenant[]                     @relation("CommercialReferral")
+  orgCommercialReferrals      Tenant[]                     @relation("OrgCommercialReferral")
+  comments                    EventComment[]
+  marketplaceComments         MarketplaceComment[]
+  legalAcceptances            LegalAcceptance[]
+  eventStaff                  EventStaff[]
+  roomStaff                   RoomStaff[]
+  assignedEventTasks          EventTask[]                  @relation("EventTaskAssignee")
+  createdEventTasks           EventTask[]                  @relation("EventTaskCreator")
+  guestCheckIns               Guest[]                      @relation("GuestCheckIns")
+  guestSeatVerifications      Guest[]                      @relation("GuestSeatVerifications")
+  protocolNotes               GuestProtocolNote[]
+  commercialCommissions       CommercialCommission[]
+  commercialPayoutTransfers   CommercialPayoutTransfer[]
+  platformNotifications       PlatformNotification[]
+  notificationPreferences     NotificationPreference[]
+  pushDeviceTokens            PushDeviceToken[]
+  listingFavorites            ListingFavorite[]
+  marketplaceReviews          MarketplaceReview[]
   invitationTemplateFavorites InvitationTemplateFavorite[]
-  savedEventPacks       SavedEventPack[]
-  savedEventBriefs      SavedEventBrief[]
-  savedRoomAmbiences    SavedRoomAmbience[]
-  savedRoomElements     SavedRoomElement[]
-  orgRoomAmbiences      OrgRoomAmbience[]
-  ticketOrders          TicketOrder[]
-  aiTokenOrders         AiTokenOrder[]
-  aiSimulationRuns      AiSimulationRun[]
-  aiSimulationWallets   AiSimulationWallet[]
-  aiTemplateComposeRuns AiTemplateComposeRun[]
-  aiRoomPlanComposeRuns AiRoomPlanComposeRun[]
-  aiTokenLedgers        AiTokenLedger[]
-  studioJobs            StudioJob[]
+  savedEventPacks             SavedEventPack[]
+  savedEventBriefs            SavedEventBrief[]
+  savedRoomAmbiences          SavedRoomAmbience[]
+  savedRoomElements           SavedRoomElement[]
+  orgRoomAmbiences            OrgRoomAmbience[]
+  ticketOrders                TicketOrder[]
+  aiTokenOrders               AiTokenOrder[]
+  aiSimulationRuns            AiSimulationRun[]
+  aiSimulationWallets         AiSimulationWallet[]
+  aiTemplateComposeRuns       AiTemplateComposeRun[]
+  aiRoomPlanComposeRuns       AiRoomPlanComposeRun[]
+  aiTokenLedgers              AiTokenLedger[]
+  studioJobs                  StudioJob[]
 }
 
 model Event {
-  id                String       @id @default(uuid())
-  tenantId          String
-  tenant            Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  roomId            String?
-  room              OrganizationRoom? @relation(fields: [roomId], references: [id], onDelete: SetNull)
-  title             String
-  description       String?
-  date              DateTime
-  /** Fin optionnelle (gestionnaire). */
-  endsAt            DateTime?
-  location          String
-  city              String?
-  commune           String?
-  neighborhood      String?
-  /** WEDDING, BIRTHDAY, BAPTISM, CORPORATE, CONFERENCE, GALA, OTHER */
-  eventKind         String?
-  /** Nom du client / dossier (gestionnaire). */
-  clientName        String?
-  estimatedGuests   Int?
-  dayOfContactName  String?
-  dayOfContactPhone String?
-  reminderFrequency String?      @default("NONE") // NONE, DAILY, EVERY_3_DAYS, EVERY_5_DAYS, WEEKLY
-  latitude          Float?
-  longitude         Float?
-  tablePlan         Json?        // Added for visual table planning
-  guestGuidelines   Json?        // Dress code & practical recommendations for guests
-  /** Champs de réponse à l’invitation de l’événement (types + valeurs prédéfinies ou perso). */
-  rsvpForm          Json?
-  /** Préparation optionnelle : salle marketplace + prestataires (non bloquant). */
-  eventPrep         Json?
-  /** false = liste d’invités uniquement. true = fiche publique + inscription / billets. */
-  isPublic          Boolean      @default(false)
-  slug              String?      @unique
-  publishedAt       DateTime?
-  isBlockedByAdmin  Boolean      @default(false)
-  adminBlockReason  String?
-  ticketingEnabled  Boolean      @default(false)
-  ticketPriceFc     Int          @default(0)
-  /** global = prix unique ; by_zone = tarifs dans tablePlan.pricingZones */
-  ticketPricingMode String       @default("global")
-  ticketsTotal      Int?
-  ticketsSold       Int          @default(0)
-  /** Plafond de billets payés par e-mail (null = pas de limite par personne). */
+  id                   String            @id @default(uuid())
+  tenantId             String
+  tenant               Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  roomId               String?
+  room                 OrganizationRoom? @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  title                String
+  description          String?
+  date                 DateTime
+  /**
+   * Fin optionnelle (gestionnaire).
+   */
+  endsAt               DateTime?
+  location             String
+  city                 String?
+  commune              String?
+  neighborhood         String?
+  /**
+   * WEDDING, BIRTHDAY, BAPTISM, CORPORATE, CONFERENCE, GALA, OTHER
+   */
+  eventKind            String?
+  /**
+   * Nom du client / dossier (gestionnaire).
+   */
+  clientName           String?
+  estimatedGuests      Int?
+  dayOfContactName     String?
+  dayOfContactPhone    String?
+  reminderFrequency    String?           @default("NONE") // NONE, DAILY, EVERY_3_DAYS, EVERY_5_DAYS, WEEKLY
+  latitude             Float?
+  longitude            Float?
+  tablePlan            Json? // Added for visual table planning
+  guestGuidelines      Json? // Dress code & practical recommendations for guests
+  /**
+   * Champs de réponse à l’invitation de l’événement (types + valeurs prédéfinies ou perso).
+   */
+  rsvpForm             Json?
+  /**
+   * Préparation optionnelle : salle marketplace + prestataires (non bloquant).
+   */
+  eventPrep            Json?
+  /**
+   * false = liste d’invités uniquement. true = fiche publique + inscription / billets.
+   */
+  isPublic             Boolean           @default(false)
+  slug                 String?           @unique
+  publishedAt          DateTime?
+  isBlockedByAdmin     Boolean           @default(false)
+  adminBlockReason     String?
+  ticketingEnabled     Boolean           @default(false)
+  ticketPriceFc        Int               @default(0)
+  /**
+   * global = prix unique ; by_zone = tarifs dans tablePlan.pricingZones
+   */
+  ticketPricingMode    String            @default("global")
+  ticketsTotal         Int?
+  ticketsSold          Int               @default(0)
+  /**
+   * Plafond de billets payés par e-mail (null = pas de limite par personne).
+   */
   ticketsPerBuyerLimit Int?
-  /** Achat billet pour une place précise (plan de table requis). */
-  seatSelectionEnabled Boolean   @default(false)
-  /** Programme structuré (créneaux + ambiance lumière). */
-  eventProgram      Json?
-  themeId           String?
-  /** Galerie publique (URLs Cloudinary), comme une fiche salle. */
-  photos            Json?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  /**
+   * Achat billet pour une place précise (plan de table requis).
+   */
+  seatSelectionEnabled Boolean           @default(false)
+  /**
+   * Programme structuré (créneaux + ambiance lumière).
+   */
+  eventProgram         Json?
+  themeId              String?
+  /**
+   * Galerie publique (URLs Cloudinary), comme une fiche salle.
+   */
+  photos               Json?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
 
-  guests      Guest[]
-  invitations Invitation[]
-  shares      GuestShare[]
-  posts       EventPost[]
-  staff       EventStaff[]
-  tasks       EventTask[]
+  guests               Guest[]
+  invitations          Invitation[]
+  shares               GuestShare[]
+  posts                EventPost[]
+  staff                EventStaff[]
+  tasks                EventTask[]
   marketplaceInquiries MarketplaceInquiry[]
-  marketplaceBookings MarketplaceBooking[]
-  ticketOrders TicketOrder[]
-  seatHolds    SeatHold[]
+  marketplaceBookings  MarketplaceBooking[]
+  ticketOrders         TicketOrder[]
+  seatHolds            SeatHold[]
 
   @@index([isPublic, date])
   @@index([city])
@@ -326,36 +386,38 @@ model Event {
 }
 
 model Guest {
-  id          String       @id @default(uuid())
-  eventId     String
-  event       Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  firstName   String
-  lastName    String
-  email       String
-  phone       String?
-  /** Indicatif pays dédié, ex. +243 */
-  phoneCountryCode String?
-  category    String?
-  rsvp        String       @default("PENDING") // PENDING, ACCEPTED, DECLINED
-  preferences Json?
-  checkedInAt DateTime?
-  checkedInByUserId String?
-  checkedInBy User?        @relation("GuestCheckIns", fields: [checkedInByUserId], references: [id], onDelete: SetNull)
-  seatVerified Boolean     @default(false)
-  seatVerifiedAt DateTime?
-  seatVerifiedByUserId String?
-  seatVerifiedBy User?     @relation("GuestSeatVerifications", fields: [seatVerifiedByUserId], references: [id], onDelete: SetNull)
-  seatingInvitationPdfUrl       String?
-  seatingInvitationPdfPublicId  String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id                           String    @id @default(uuid())
+  eventId                      String
+  event                        Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  firstName                    String
+  lastName                     String
+  email                        String
+  phone                        String?
+  /**
+   * Indicatif pays dédié, ex. +243
+   */
+  phoneCountryCode             String?
+  category                     String?
+  rsvp                         String    @default("PENDING") // PENDING, ACCEPTED, DECLINED
+  preferences                  Json?
+  checkedInAt                  DateTime?
+  checkedInByUserId            String?
+  checkedInBy                  User?     @relation("GuestCheckIns", fields: [checkedInByUserId], references: [id], onDelete: SetNull)
+  seatVerified                 Boolean   @default(false)
+  seatVerifiedAt               DateTime?
+  seatVerifiedByUserId         String?
+  seatVerifiedBy               User?     @relation("GuestSeatVerifications", fields: [seatVerifiedByUserId], references: [id], onDelete: SetNull)
+  seatingInvitationPdfUrl      String?
+  seatingInvitationPdfPublicId String?
+  createdAt                    DateTime  @default(now())
+  updatedAt                    DateTime  @updatedAt
 
-  shares      GuestShare[]
-  comments    EventComment[]
+  shares           GuestShare[]
+  comments         EventComment[]
   legalAcceptances LegalAcceptance[]
-  protocolNotes GuestProtocolNote[]
-  ticketOrderId String?
-  ticketOrder   TicketOrder? @relation(fields: [ticketOrderId], references: [id], onDelete: SetNull)
+  protocolNotes    GuestProtocolNote[]
+  ticketOrderId    String?
+  ticketOrder      TicketOrder?        @relation(fields: [ticketOrderId], references: [id], onDelete: SetNull)
 
   @@unique([eventId, email])
   @@index([phone])
@@ -363,42 +425,58 @@ model Guest {
 }
 
 model TicketOrder {
-  id                      String    @id @default(uuid())
-  eventId                 String
-  event                   Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  buyerName               String
-  buyerEmail              String
-  buyerPhone              String?
-  quantity                Int       @default(1)
-  amountFc                Int
-  /** Prix unitaire facturé (audit si tarifs par zone). */
-  unitPriceFc             Int?
-  pricingZoneId           String?
-  status                  String    @default("PENDING") // PENDING, PAID, CANCELLED
-  /** stripe | flexpay_card */
-  paymentProvider         String?
-  stripeCheckoutSessionId String?   @unique
-  stripePaymentIntentId   String?
-  /** orderNumber renvoyé par FlexPay Card. */
-  flexPayOrderNumber      String?   @unique
-  /** Référence marchand envoyée à FlexPay (= souvent id commande). */
-  flexPayReference        String?
-  /** Canal FlexPay (mpesa, orange, airtel, afrimoney, mastercard…). */
-  flexPayChannel          String?
-  /** Montant total payé par le client (incl. frais opérateur). */
-  flexPayAmountCustomer   Float?
-  /** Référence transaction chez l’opérateur (provider_reference). */
+  id                       String     @id @default(uuid())
+  eventId                  String
+  event                    Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  buyerName                String
+  buyerEmail               String
+  buyerPhone               String?
+  quantity                 Int        @default(1)
+  amountFc                 Int
+  /**
+   * Prix unitaire facturé (audit si tarifs par zone).
+   */
+  unitPriceFc              Int?
+  pricingZoneId            String?
+  status                   String     @default("PENDING") // PENDING, PAID, CANCELLED
+  /**
+   * stripe | flexpay_card
+   */
+  paymentProvider          String?
+  stripeCheckoutSessionId  String?    @unique
+  stripePaymentIntentId    String?
+  /**
+   * orderNumber renvoyé par FlexPay Card.
+   */
+  flexPayOrderNumber       String?    @unique
+  /**
+   * Référence marchand envoyée à FlexPay (= souvent id commande).
+   */
+  flexPayReference         String?
+  /**
+   * Canal FlexPay (mpesa, orange, airtel, afrimoney, mastercard…).
+   */
+  flexPayChannel           String?
+  /**
+   * Montant total payé par le client (incl. frais opérateur).
+   */
+  flexPayAmountCustomer    Float?
+  /**
+   * Référence transaction chez l’opérateur (provider_reference).
+   */
   flexPayProviderReference String?
-  paidAt                  DateTime?
-  userId                  String?
-  user                    User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  /** Place(s) choisie(s) (si seatSelectionEnabled). */
-  tableId                 String?
-  seatIndex               Int?
-  selectedSeats           Json?
-  createdAt               DateTime  @default(now())
-  guests                  Guest[]
-  seatHolds               SeatHold[]
+  paidAt                   DateTime?
+  userId                   String?
+  user                     User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /**
+   * Place(s) choisie(s) (si seatSelectionEnabled).
+   */
+  tableId                  String?
+  seatIndex                Int?
+  selectedSeats            Json?
+  createdAt                DateTime   @default(now())
+  guests                   Guest[]
+  seatHolds                SeatHold[]
 
   @@index([eventId, status])
   @@index([buyerEmail])
@@ -407,18 +485,20 @@ model TicketOrder {
   @@index([flexPayReference])
 }
 
-/** Réservation temporaire d’un siège pendant le checkout. */
+/**
+ * Réservation temporaire d’un siège pendant le checkout.
+ */
 model SeatHold {
-  id         String      @id @default(uuid())
+  id         String       @id @default(uuid())
   eventId    String
-  event      Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  event      Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
   tableId    String
   seatIndex  Int
   buyerEmail String
   expiresAt  DateTime
   orderId    String?
   order      TicketOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  createdAt  DateTime    @default(now())
+  createdAt  DateTime     @default(now())
 
   @@unique([eventId, tableId, seatIndex])
   @@index([orderId])
@@ -439,43 +519,51 @@ model GuestProtocolNote {
 }
 
 model CommercialCommission {
-  id               String   @id @default(uuid())
-  commercialId     String
-  commercial       User     @relation(fields: [commercialId], references: [id], onDelete: Cascade)
-  tenantId         String
-  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  plan             PlanType
-  invoiceAmount    Float
-  commissionRate   Float    @default(0.30)
-  commissionAmount Float
-  billingPeriod    String
-  source           String
+  id                String           @id @default(uuid())
+  commercialId      String
+  commercial        User             @relation(fields: [commercialId], references: [id], onDelete: Cascade)
+  tenantId          String
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan              PlanType
+  invoiceAmount     Float
+  commissionRate    Float            @default(0.30)
+  commissionAmount  Float
+  billingPeriod     String
+  source            String
   platformInvoiceId String?
   platformInvoice   PlatformInvoice? @relation(fields: [platformInvoiceId], references: [id], onDelete: SetNull)
-  paidAt           DateTime?
-  paidByUserId     String?
-  payoutProofUrl   String?
-  payoutNote       String?
-  createdAt        DateTime @default(now())
+  paidAt            DateTime?
+  paidByUserId      String?
+  payoutProofUrl    String?
+  payoutNote        String?
+  createdAt         DateTime         @default(now())
 
   @@unique([commercialId, tenantId, billingPeriod])
   @@index([commercialId])
   @@index([platformInvoiceId])
 }
 
-/** Session de versement FlexPay (Pay Out) pour un dossier commercial × période. */
+/**
+ * Session de versement FlexPay (Pay Out) pour un dossier commercial × période.
+ */
 model CommercialPayoutTransfer {
   id                       String   @id @default(uuid())
-  /** platform | org */
+  /**
+   * platform | org
+   */
   kind                     String
   commercialId             String
   commercial               User     @relation(fields: [commercialId], references: [id], onDelete: Cascade)
-  /** Rempli pour les versements org (tenant payeur). */
+  /**
+   * Rempli pour les versements org (tenant payeur).
+   */
   tenantId                 String?
   billingPeriod            String
   amountFc                 Int
   phone                    String
-  /** PENDING | SUCCESS | FAILED */
+  /**
+   * PENDING | SUCCESS | FAILED
+   */
   status                   String   @default("PENDING")
   flexPayOrderNumber       String?  @unique
   flexPayReference         String   @unique
@@ -500,12 +588,16 @@ model EventPayoutTransfer {
   eventTitle               String
   amountFc                 Int
   phone                    String
-  /** PENDING | SUCCESS | FAILED */
+  /**
+   * PENDING | SUCCESS | FAILED
+   */
   status                   String    @default("PENDING")
   flexPayReference         String    @unique
   flexPayOrderNumber       String?   @unique
   flexPayProviderReference String?
-  /** Dernier message FlexPay (refus, erreur réseau…). */
+  /**
+   * Dernier message FlexPay (refus, erreur réseau…).
+   */
   lastMessage              String?
   initiatedByUserId        String
   settledAt                DateTime?
@@ -530,25 +622,25 @@ enum InvoiceStatus {
 }
 
 model PlatformInvoice {
-  id                    String        @id @default(uuid())
-  invoiceNumber         String        @unique
+  id                    String                 @id @default(uuid())
+  invoiceNumber         String                 @unique
   tenantId              String
-  tenant                Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant                Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   plan                  PlanType
   amount                Float
-  currency              String        @default("FC")
+  currency              String                 @default("FC")
   type                  InvoiceType
-  status                InvoiceStatus @default(SENT)
+  status                InvoiceStatus          @default(SENT)
   durationDays          Int?
   periodStart           DateTime?
   periodEnd             DateTime?
   billingPeriod         String
-  subscriptionRequestId String?       @unique
-  subscriptionRequest   SubscriptionRequest? @relation(fields: [subscriptionRequestId], references: [id], onDelete: SetNull)
+  subscriptionRequestId String?                @unique
+  subscriptionRequest   SubscriptionRequest?   @relation(fields: [subscriptionRequestId], references: [id], onDelete: SetNull)
   recipientEmails       Json
   details               Json?
   sentAt                DateTime?
-  createdAt             DateTime      @default(now())
+  createdAt             DateTime               @default(now())
   commercialCommissions CommercialCommission[]
 
   @@index([tenantId])
@@ -558,32 +650,34 @@ model PlatformInvoice {
 }
 
 model Template {
-  id            String       @id @default(uuid())
+  id            String   @id @default(uuid())
   tenantId      String?
-  tenant        Tenant?      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant        Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name          String
   content       Json
-  showOnLanding Boolean      @default(false)
-  /** Jetons IA consommés quand ce modèle est utilisé comme base de composition. */
-  aiTokenCost   Int          @default(2)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  showOnLanding Boolean  @default(false)
+  /**
+   * Jetons IA consommés quand ce modèle est utilisé comme base de composition.
+   */
+  aiTokenCost   Int      @default(2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   invitations Invitation[]
 }
 
 model Invitation {
-  id          String       @id @default(uuid())
-  eventId     String
-  event       Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  templateId  String?
-  template    Template?    @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  subject     String
-  body        String
+  id           String    @id @default(uuid())
+  eventId      String
+  event        Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  templateId   String?
+  template     Template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  subject      String
+  body         String
   whatsappBody String?
-  channel     String       // EMAIL, WHATSAPP, EMAIL_AND_WHATSAPP
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  channel      String // EMAIL, WHATSAPP, EMAIL_AND_WHATSAPP
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@index([eventId, createdAt])
 }
@@ -595,24 +689,26 @@ model GuestShare {
   guestId   String
   guest     Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
   message   String?
-  photo     String?  // Base64 string (legacy)
-  photos    Json?    // Array of Base64 strings for multiple photos
+  photo     String? // Base64 string (legacy)
+  photos    Json? // Array of Base64 strings for multiple photos
   createdAt DateTime @default(now())
 }
 
 model EventPost {
-  id        String         @id @default(uuid())
-  eventId   String
-  event     Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  content   String?
-  mediaUrl  String?        // Base64 string (legacy)
-  mediaUrls Json?          // Array of objects { url: string, type: 'IMAGE' | 'VIDEO' }
-  mediaType String?        // IMAGE, VIDEO, TEXT (legacy)
-  likes     Json?          // Array of guest/user IDs who liked the post
-  /** Visible sur la fiche publique /evenements/[slug] si l’événement est public. */
-  publishedOnListing Boolean @default(false)
-  createdAt DateTime       @default(now())
-  comments  EventComment[]
+  id                 String         @id @default(uuid())
+  eventId            String
+  event              Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  content            String?
+  mediaUrl           String? // Base64 string (legacy)
+  mediaUrls          Json? // Array of objects { url: string, type: 'IMAGE' | 'VIDEO' }
+  mediaType          String? // IMAGE, VIDEO, TEXT (legacy)
+  likes              Json? // Array of guest/user IDs who liked the post
+  /**
+   * Visible sur la fiche publique /evenements/[slug] si l’événement est public.
+   */
+  publishedOnListing Boolean        @default(false)
+  createdAt          DateTime       @default(now())
+  comments           EventComment[]
 
   @@index([eventId, createdAt])
 }
@@ -638,38 +734,48 @@ enum SubscriptionRequestStatus {
 }
 
 model SubscriptionRequest {
-  id                     String                    @id @default(uuid())
-  tenantId               String
-  tenant                 Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  requestedPlan          PlanType
-  durationDays           Int                       @default(30)
-  proofOfPayment         String?
-  status                 SubscriptionRequestStatus @default(PENDING)
-  /** standard = paiement / demande classique · discount = demande de rabais */
-  requestKind            String                    @default("standard")
-  discountRequestNote    String?
+  id                       String                    @id @default(uuid())
+  tenantId                 String
+  tenant                   Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requestedPlan            PlanType
+  durationDays             Int                       @default(30)
+  proofOfPayment           String?
+  status                   SubscriptionRequestStatus @default(PENDING)
+  /**
+   * standard = paiement / demande classique · discount = demande de rabais
+   */
+  requestKind              String                    @default("standard")
+  discountRequestNote      String?
   requestedDiscountPercent Float?
-  requestedAmount        Float?
-  quoteExpiresAt         DateTime?
-  quoteReviewedAt        DateTime?
-  quoteReviewedById      String?
-  specialDiscountPercent Float?
-  baseAmount             Float?
-  approvedAmount         Float?
-  /** manual | flexpay_card | flexpay_mobile */
-  paymentProvider        String?
-  flexPayOrderNumber     String?                   @unique
-  flexPayReference       String?
-  /** Canal FlexPay (mpesa, orange, airtel, afrimoney, mastercard…). */
-  flexPayChannel         String?
-  /** Montant total payé par le client (incl. frais opérateur). */
-  flexPayAmountCustomer  Float?
-  /** Référence transaction chez l’opérateur (provider_reference). */
+  requestedAmount          Float?
+  quoteExpiresAt           DateTime?
+  quoteReviewedAt          DateTime?
+  quoteReviewedById        String?
+  specialDiscountPercent   Float?
+  baseAmount               Float?
+  approvedAmount           Float?
+  /**
+   * manual | flexpay_card | flexpay_mobile
+   */
+  paymentProvider          String?
+  flexPayOrderNumber       String?                   @unique
+  flexPayReference         String?
+  /**
+   * Canal FlexPay (mpesa, orange, airtel, afrimoney, mastercard…).
+   */
+  flexPayChannel           String?
+  /**
+   * Montant total payé par le client (incl. frais opérateur).
+   */
+  flexPayAmountCustomer    Float?
+  /**
+   * Référence transaction chez l’opérateur (provider_reference).
+   */
   flexPayProviderReference String?
-  paidAt                 DateTime?
-  platformInvoice        PlatformInvoice?
-  createdAt              DateTime                  @default(now())
-  updatedAt              DateTime                  @updatedAt
+  paidAt                   DateTime?
+  platformInvoice          PlatformInvoice?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
 
   @@index([flexPayReference])
 }
@@ -688,19 +794,19 @@ model GuestMessageTemplate {
 }
 
 model LegalAcceptance {
-  id               String   @id @default(uuid())
-  subjectType      String   // USER | GUEST
-  userId           String?
-  user             User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  guestId          String?
-  guest            Guest?   @relation(fields: [guestId], references: [id], onDelete: Cascade)
-  normalizedEmail  String?
-  normalizedPhone  String?
-  documentType     String   // TERMS | PRIVACY
-  documentVersion  String
-  ipAddress        String?
-  userAgent        String?
-  acceptedAt       DateTime @default(now())
+  id              String   @id @default(uuid())
+  subjectType     String // USER | GUEST
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestId         String?
+  guest           Guest?   @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  normalizedEmail String?
+  normalizedPhone String?
+  documentType    String // TERMS | PRIVACY
+  documentVersion String
+  ipAddress       String?
+  userAgent       String?
+  acceptedAt      DateTime @default(now())
 
   @@index([normalizedEmail])
   @@index([normalizedPhone])
@@ -710,75 +816,75 @@ model LegalAcceptance {
 }
 
 model OrganizationRoom {
-  id               String   @id @default(uuid())
-  tenantId         String
-  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name             String
-  description      String?
-  capacity         Int?
-  floor            String?
-  location         String?
-  roomType         RoomType @default(SIMPLE)
-  layoutBlueprint  Json?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id              String   @id @default(uuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  capacity        Int?
+  floor           String?
+  location        String?
+  roomType        RoomType @default(SIMPLE)
+  layoutBlueprint Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
-  events      Event[]
-  staff       RoomStaff[]
+  events       Event[]
+  staff        RoomStaff[]
   venueListing VenueListing?
 
   @@index([tenantId])
 }
 
 model VendorProfile {
-  id          String   @id @default(uuid())
-  tenantId    String   @unique
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  slug        String   @unique
-  displayName String
-  city        String?
-  bio         String?
-  isBlockedByAdmin Boolean @default(false)
+  id               String   @id @default(uuid())
+  tenantId         String   @unique
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  slug             String   @unique
+  displayName      String
+  city             String?
+  bio              String?
+  isBlockedByAdmin Boolean  @default(false)
   adminBlockReason String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  offerings ServiceOffering[]
+  offerings     ServiceOffering[]
   activityPosts MarketplacePost[]
 }
 
 model VenueListing {
-  id           String         @id @default(uuid())
-  tenantId     String
-  tenant       Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  roomId       String         @unique
-  room         OrganizationRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  slug         String         @unique
-  isPublic     Boolean        @default(false)
-  headline     String?
-  city         String?
-  commune      String?
-  neighborhood String?
-  address      String?
-  latitude     Float?
-  longitude    Float?
-  priceFromFc  Int?
-  priceUnit    VenuePriceUnit @default(EVENT)
-  quotaMin     Int?
-  quotaMax     Int?
-  photos       Json?
-  details      Json?
-  blockedDates Json?
-  isBlockedByAdmin Boolean @default(false)
+  id               String           @id @default(uuid())
+  tenantId         String
+  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  roomId           String           @unique
+  room             OrganizationRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  slug             String           @unique
+  isPublic         Boolean          @default(false)
+  headline         String?
+  city             String?
+  commune          String?
+  neighborhood     String?
+  address          String?
+  latitude         Float?
+  longitude        Float?
+  priceFromFc      Int?
+  priceUnit        VenuePriceUnit   @default(EVENT)
+  quotaMin         Int?
+  quotaMax         Int?
+  photos           Json?
+  details          Json?
+  blockedDates     Json?
+  isBlockedByAdmin Boolean          @default(false)
   adminBlockReason String?
-  publishedAt  DateTime?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  publishedAt      DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
-  inquiries MarketplaceInquiry[]
-  bookings  MarketplaceBooking[]
-  reviews   MarketplaceReview[]
-  viewDays  ListingViewDay[]
+  inquiries     MarketplaceInquiry[]
+  bookings      MarketplaceBooking[]
+  reviews       MarketplaceReview[]
+  viewDays      ListingViewDay[]
   activityPosts MarketplacePost[]
 
   @@index([isPublic, city])
@@ -786,24 +892,30 @@ model VenueListing {
   @@index([tenantId])
 }
 
-/** Fil d’activité marketplace : salle, prestation/offre, ou profil vendeur. */
+/**
+ * Fil d’activité marketplace : salle, prestation/offre, ou profil vendeur.
+ */
 model MarketplacePost {
-  id                String   @id @default(uuid())
+  id                String           @id @default(uuid())
   tenantId          String
-  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   venueListingId    String?
-  venueListing      VenueListing? @relation(fields: [venueListingId], references: [id], onDelete: Cascade)
+  venueListing      VenueListing?    @relation(fields: [venueListingId], references: [id], onDelete: Cascade)
   vendorProfileId   String?
-  vendorProfile     VendorProfile? @relation(fields: [vendorProfileId], references: [id], onDelete: Cascade)
+  vendorProfile     VendorProfile?   @relation(fields: [vendorProfileId], references: [id], onDelete: Cascade)
   serviceOfferingId String?
   serviceOffering   ServiceOffering? @relation(fields: [serviceOfferingId], references: [id], onDelete: Cascade)
   content           String?
-  /** [{ url: string, type: 'IMAGE' | 'VIDEO' }] */
+  /**
+   * [{ url: string, type: 'IMAGE' | 'VIDEO' }]
+   */
   mediaUrls         Json?
-  /** Array of user_${id} who liked the post */
+  /**
+   * Array of user_${id} who liked the post
+   */
   likes             Json?
-  isPublished       Boolean  @default(true)
-  createdAt         DateTime @default(now())
+  isPublished       Boolean          @default(true)
+  createdAt         DateTime         @default(now())
 
   comments MarketplaceComment[]
 
@@ -814,49 +926,49 @@ model MarketplacePost {
 }
 
 model MarketplaceComment {
-  id         String         @id @default(uuid())
+  id         String          @id @default(uuid())
   postId     String
   post       MarketplacePost @relation(fields: [postId], references: [id], onDelete: Cascade)
   userId     String
-  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   authorName String
   content    String
-  createdAt  DateTime       @default(now())
+  createdAt  DateTime        @default(now())
 
   @@index([postId, createdAt])
   @@index([userId])
 }
 
 model MarketplaceInquiry {
-  id          String                    @id @default(uuid())
-  listingId   String?
-  listing     VenueListing?             @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  offeringId  String?
-  offering    ServiceOffering?          @relation(fields: [offeringId], references: [id], onDelete: Cascade)
-  eventId     String?
-  event       Event?                    @relation(fields: [eventId], references: [id], onDelete: SetNull)
-  fromName    String
-  fromEmail   String
-  fromPhone   String?
-  eventDate   DateTime?
-  guestCount  Int?
-  message     String
+  id                 String                           @id @default(uuid())
+  listingId          String?
+  listing            VenueListing?                    @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  offeringId         String?
+  offering           ServiceOffering?                 @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  eventId            String?
+  event              Event?                           @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  fromName           String
+  fromEmail          String
+  fromPhone          String?
+  eventDate          DateTime?
+  guestCount         Int?
+  message            String
   destinationCommune String?
-  status      MarketplaceInquiryStatus  @default(NEW)
-  quotedAmountFc Int?
-  responseNotes String?
-  declineReason String?
-  respondedAt   DateTime?
-  closedAt      DateTime?
-  closedByRole  String?
-  fromTenantId String?
-  fromTenant   Tenant?                  @relation("InquiryFromTenant", fields: [fromTenantId], references: [id], onDelete: SetNull)
-  beveragePriceId String?
-  beveragePrice   VendorBeveragePrice? @relation(fields: [beveragePriceId], references: [id], onDelete: SetNull)
-  beveragePackCount Int?
-  createdAt   DateTime                  @default(now())
-  messages    MarketplaceInquiryMessage[]
-  beverageLines MarketplaceInquiryBeverageLine[]
+  status             MarketplaceInquiryStatus         @default(NEW)
+  quotedAmountFc     Int?
+  responseNotes      String?
+  declineReason      String?
+  respondedAt        DateTime?
+  closedAt           DateTime?
+  closedByRole       String?
+  fromTenantId       String?
+  fromTenant         Tenant?                          @relation("InquiryFromTenant", fields: [fromTenantId], references: [id], onDelete: SetNull)
+  beveragePriceId    String?
+  beveragePrice      VendorBeveragePrice?             @relation(fields: [beveragePriceId], references: [id], onDelete: SetNull)
+  beveragePackCount  Int?
+  createdAt          DateTime                         @default(now())
+  messages           MarketplaceInquiryMessage[]
+  beverageLines      MarketplaceInquiryBeverageLine[]
 
   @@index([listingId, createdAt])
   @@index([offeringId, createdAt])
@@ -877,40 +989,41 @@ model MarketplaceInquiryMessage {
 }
 
 model MarketplaceBooking {
-  id                 String                    @id @default(uuid())
-  listingId          String?
-  listing            VenueListing?             @relation(fields: [listingId], references: [id], onDelete: Cascade)
-  offeringId         String?
-  offering           ServiceOffering?          @relation(fields: [offeringId], references: [id], onDelete: Cascade)
-  inquiryId          String?                   @unique
-  vendorTenantId     String
-  vendorTenant       Tenant                    @relation("BookingVendor", fields: [vendorTenantId], references: [id], onDelete: Cascade)
-  organizerTenantId  String?
-  organizerTenant    Tenant?                   @relation("BookingOrganizer", fields: [organizerTenantId], references: [id], onDelete: SetNull)
-  organizerUserId    String?
-  eventId            String?
-  event              Event?                    @relation(fields: [eventId], references: [id], onDelete: SetNull)
-  eventDate          DateTime
-  eventEndDate       DateTime?
-  guestCount         Int?
-  amountFc           Int
-  depositFc          Int
-  commissionRate     Float                     @default(0.08)
-  commissionFc       Int
+  id                  String                           @id @default(uuid())
+  listingId           String?
+  listing             VenueListing?                    @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  offeringId          String?
+  offering            ServiceOffering?                 @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  inquiryId           String?                          @unique
+  vendorTenantId      String
+  vendorTenant        Tenant                           @relation("BookingVendor", fields: [vendorTenantId], references: [id], onDelete: Cascade)
+  organizerTenantId   String?
+  organizerTenant     Tenant?                          @relation("BookingOrganizer", fields: [organizerTenantId], references: [id], onDelete: SetNull)
+  organizerUserId     String?
+  eventId             String?
+  event               Event?                           @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  eventDate           DateTime
+  eventEndDate        DateTime?
+  guestCount          Int?
+  amountFc            Int
+  depositFc           Int
+  commissionRate      Float                            @default(0.08)
+  commissionFc        Int
   commissionSettledAt DateTime?
   commissionSettledBy String?
-  status             MarketplaceBookingStatus  @default(REQUESTED)
-  depositMarkedAt    DateTime?
-  notes              String?
-  declineReason      String?
-  declinedAt         DateTime?
-  beveragePriceId    String?
-  beveragePrice      VendorBeveragePrice?      @relation(fields: [beveragePriceId], references: [id], onDelete: SetNull)
-  beveragePackCount  Int?
-  createdAt          DateTime                  @default(now())
-  updatedAt          DateTime                  @updatedAt
-  review             MarketplaceReview?
-  beverageLines      MarketplaceBookingBeverageLine[]
+  status              MarketplaceBookingStatus         @default(REQUESTED)
+  depositMarkedAt     DateTime?
+  notes               String?
+  declineReason       String?
+  declinedAt          DateTime?
+  beveragePriceId     String?
+  beveragePrice       VendorBeveragePrice?             @relation(fields: [beveragePriceId], references: [id], onDelete: SetNull)
+  beveragePackCount   Int?
+  createdAt           DateTime                         @default(now())
+  updatedAt           DateTime                         @updatedAt
+  review              MarketplaceReview?
+  depositPayments     MarketplaceDepositPayment[]
+  beverageLines       MarketplaceBookingBeverageLine[]
 
   @@index([vendorTenantId, status])
   @@index([organizerTenantId, status])
@@ -919,46 +1032,48 @@ model MarketplaceBooking {
 }
 
 model ServiceOffering {
-  id                String           @id @default(uuid())
-  tenantId          String
-  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  vendorProfileId   String
-  vendorProfile     VendorProfile    @relation(fields: [vendorProfileId], references: [id], onDelete: Cascade)
-  slug              String           @unique
-  category          ServiceCategory
-  title             String
-  description       String?
-  city              String?
-  commune           String?
-  neighborhood      String?
-  coverageRadiusKm  Int?
-  travels           Boolean          @default(true)
-  /** pickup | included | extra_fee. Le prix inclus est déjà dans le tarif. */
-  deliveryMode      String?
-  deliveryPriceFc   Int?
-  latitude          Float?
-  longitude         Float?
-  priceFromFc       Int?
-  priceUnit         VenuePriceUnit   @default(EVENT)
-  promoPriceFc      Int?
-  promoLabel        String?
-  promoEndsAt       DateTime?
-  quotaMin          Int?
-  quotaMax          Int?
-  photos            Json?
-  details           Json?
-  blockedDates      Json?
-  isPublic          Boolean          @default(false)
-  isBlockedByAdmin  Boolean          @default(false)
-  adminBlockReason  String?
-  publishedAt       DateTime?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  id               String          @id @default(uuid())
+  tenantId         String
+  tenant           Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vendorProfileId  String
+  vendorProfile    VendorProfile   @relation(fields: [vendorProfileId], references: [id], onDelete: Cascade)
+  slug             String          @unique
+  category         ServiceCategory
+  title            String
+  description      String?
+  city             String?
+  commune          String?
+  neighborhood     String?
+  coverageRadiusKm Int?
+  travels          Boolean         @default(true)
+  /**
+   * pickup | included | extra_fee. Le prix inclus est déjà dans le tarif.
+   */
+  deliveryMode     String?
+  deliveryPriceFc  Int?
+  latitude         Float?
+  longitude        Float?
+  priceFromFc      Int?
+  priceUnit        VenuePriceUnit  @default(EVENT)
+  promoPriceFc     Int?
+  promoLabel       String?
+  promoEndsAt      DateTime?
+  quotaMin         Int?
+  quotaMax         Int?
+  photos           Json?
+  details          Json?
+  blockedDates     Json?
+  isPublic         Boolean         @default(false)
+  isBlockedByAdmin Boolean         @default(false)
+  adminBlockReason String?
+  publishedAt      DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
-  inquiries MarketplaceInquiry[]
-  bookings  MarketplaceBooking[]
-  reviews   MarketplaceReview[]
-  viewDays  ListingViewDay[]
+  inquiries     MarketplaceInquiry[]
+  bookings      MarketplaceBooking[]
+  reviews       MarketplaceReview[]
+  viewDays      ListingViewDay[]
   activityPosts MarketplacePost[]
 
   @@index([isPublic, category])
@@ -969,7 +1084,9 @@ model ListingFavorite {
   id        String   @id @default(uuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  /** venue | service */
+  /**
+   * venue | service
+   */
   kind      String
   slug      String
   createdAt DateTime @default(now())
@@ -978,7 +1095,9 @@ model ListingFavorite {
   @@index([userId])
 }
 
-/** Favoris modèles d’invitation : compte connecté (userId) ou appareil anonyme (deviceId). */
+/**
+ * Favoris modèles d’invitation : compte connecté (userId) ou appareil anonyme (deviceId).
+ */
 model InvitationTemplateFavorite {
   id         String   @id @default(uuid())
   templateId String
@@ -993,23 +1112,25 @@ model InvitationTemplateFavorite {
 }
 
 model SavedEventPack {
-  id         String   @id @default(uuid())
+  id         String    @id @default(uuid())
   userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   name       String
   eventType  String
   budgetFc   Int
   city       String?
   guestCount Int?
   eventDate  DateTime?
-  /** search | custom */
-  source     String   @default("search")
+  /**
+   * search | custom
+   */
+  source     String    @default("search")
   styleLabel String?
   totalFc    Int
-  leftoverFc Int      @default(0)
+  leftoverFc Int       @default(0)
   items      Json
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@index([userId])
 }
@@ -1113,26 +1234,26 @@ enum EventTaskKind {
 }
 
 model EventTask {
-  id           String          @id @default(uuid())
-  eventId      String
-  event        Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  title        String
-  notes        String?
-  status       EventTaskStatus @default(OPEN)
-  kind         EventTaskKind   @default(GENERAL)
-  priority     Int             @default(1)
-  dueAt        DateTime?
-  assigneeId   String?
-  assignee     User?           @relation("EventTaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  createdById  String
-  createdBy    User            @relation("EventTaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  blockedById  String?
-  blockedBy    EventTask?      @relation("EventTaskBlockedBy", fields: [blockedById], references: [id], onDelete: SetNull)
-  blocking     EventTask[]     @relation("EventTaskBlockedBy")
-  sourceKey    String?
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
-  completedAt  DateTime?
+  id            String          @id @default(uuid())
+  eventId       String
+  event         Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  title         String
+  notes         String?
+  status        EventTaskStatus @default(OPEN)
+  kind          EventTaskKind   @default(GENERAL)
+  priority      Int             @default(1)
+  dueAt         DateTime?
+  assigneeId    String?
+  assignee      User?           @relation("EventTaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdById   String
+  createdBy     User            @relation("EventTaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  blockedById   String?
+  blockedBy     EventTask?      @relation("EventTaskBlockedBy", fields: [blockedById], references: [id], onDelete: SetNull)
+  blocking      EventTask[]     @relation("EventTaskBlockedBy")
+  sourceKey     String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  completedAt   DateTime?
   dueRemindedAt DateTime?
 
   @@unique([eventId, sourceKey])
@@ -1142,22 +1263,24 @@ model EventTask {
 }
 
 model PlatformNotification {
-  id        String    @id @default(uuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String
-  title     String
-  message   String
-  readAt    DateTime?
-  metadata  Json?
-  createdAt DateTime  @default(now())
+  id         String                 @id @default(uuid())
+  userId     String
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       String
+  title      String
+  message    String
+  readAt     DateTime?
+  metadata   Json?
+  createdAt  DateTime               @default(now())
   deliveries NotificationDelivery[]
 
   @@index([userId, readAt])
   @@index([userId, createdAt])
 }
 
-/** Préférences d’alerte par famille (billing, commissions, catalog, account). In-app toujours actif. */
+/**
+ * Préférences d’alerte par famille (billing, commissions, catalog, account). In-app toujours actif.
+ */
 model NotificationPreference {
   id        String   @id @default(uuid())
   userId    String
@@ -1174,14 +1297,14 @@ model NotificationPreference {
 }
 
 model NotificationDelivery {
-  id             String   @id @default(uuid())
+  id             String               @id @default(uuid())
   notificationId String
   notification   PlatformNotification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
   channel        String
   status         String
   providerId     String?
   error          String?
-  createdAt      DateTime @default(now())
+  createdAt      DateTime             @default(now())
 
   @@index([notificationId])
   @@index([channel, createdAt])
@@ -1199,7 +1322,9 @@ model PushDeviceToken {
   @@index([userId])
 }
 
-/** Journal des actions Super Admin / Commercial plateforme (pas de FK : conserve les traces après suppression). */
+/**
+ * Journal des actions Super Admin / Commercial plateforme (pas de FK : conserve les traces après suppression).
+ */
 model AdminAuditLog {
   id         String   @id @default(uuid())
   actorId    String
@@ -1220,7 +1345,9 @@ model AdminAuditLog {
   @@index([action])
 }
 
-/** Catalogue des forfaits / abonnements (source de vérité pour quotas, prix, features). */
+/**
+ * Catalogue des forfaits / abonnements (source de vérité pour quotas, prix, features).
+ */
 model SubscriptionPlan {
   id                  PlanType @id
   name                String
@@ -1247,7 +1374,9 @@ model SubscriptionPlan {
   roomEditorLevel     String   @default("basic")
   commercialNetwork   Boolean  @default(false)
   supportLevel        String   @default("community")
-  /** B2B | B2C | VENUE | SERVICE | CATALOG */
+  /**
+   * B2B | B2C | VENUE | SERVICE | CATALOG
+   */
   audience            String   @default("B2B")
   sortOrder           Int      @default(0)
   isActive            Boolean  @default(true)
@@ -1255,7 +1384,9 @@ model SubscriptionPlan {
   updatedAt           DateTime @updatedAt
 }
 
-/** Journal idempotent des paiements réussis (notifs + audit). */
+/**
+ * Journal idempotent des paiements réussis (notifs + audit).
+ */
 model PaymentTrace {
   id          String   @id @default(uuid())
   kind        String
@@ -1274,24 +1405,30 @@ model PaymentTrace {
   @@index([payerUserId])
 }
 
-/** Solde de simulations IA par appareil (essais gratuits + jetons payés). */
+/**
+ * Solde de simulations IA par appareil (essais gratuits + jetons payés).
+ */
 model AiSimulationWallet {
-  id                String   @id @default(uuid())
-  deviceId          String   @unique
-  userId            String?
-  user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  freeTrialsUsed    Int      @default(0)
-  bonusTokens       Int      @default(0)
-  /** Jetons offerts par un Super Admin (sans paiement). */
-  grantedTokens     Int      @default(0)
-  creditedOrderIds  Json     @default("[]")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id               String   @id @default(uuid())
+  deviceId         String   @unique
+  userId           String?
+  user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  freeTrialsUsed   Int      @default(0)
+  bonusTokens      Int      @default(0)
+  /**
+   * Jetons offerts par un Super Admin (sans paiement).
+   */
+  grantedTokens    Int      @default(0)
+  creditedOrderIds Json     @default("[]")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@index([userId])
 }
 
-/** Historique des simulations IA (landing + dashboard), rattaché au compte et/ou à l’appareil. */
+/**
+ * Historique des simulations IA (landing + dashboard), rattaché au compte et/ou à l’appareil.
+ */
 model AiSimulationRun {
   id          String   @id @default(uuid())
   userId      String?
@@ -1312,7 +1449,9 @@ model AiSimulationRun {
   @@index([deviceId, createdAt])
 }
 
-/** Tâches studio (invitation / plan de salle) persistées au-delà d’un redémarrage. */
+/**
+ * Tâches studio (invitation / plan de salle) persistées au-delà d’un redémarrage.
+ */
 model StudioJob {
   id        String   @id @default(uuid())
   kind      String
@@ -1332,25 +1471,29 @@ model StudioJob {
   @@index([status, updatedAt])
 }
 
-/** Historique des générations de modèles d’invitation IA (studio + /modeles). */
+/**
+ * Historique des générations de modèles d’invitation IA (studio + /modeles).
+ */
 model AiTemplateComposeRun {
-  id               String   @id @default(uuid())
-  userId           String?
-  user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  deviceId         String?
-  source           String
-  prompt           String?
-  referenceUrls    Json     @default("[]")
-  previewImageUrl  String?
-  content          Json
-  stage            Json?
-  createdAt        DateTime @default(now())
+  id              String   @id @default(uuid())
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  deviceId        String?
+  source          String
+  prompt          String?
+  referenceUrls   Json     @default("[]")
+  previewImageUrl String?
+  content         Json
+  stage           Json?
+  createdAt       DateTime @default(now())
 
   @@index([userId, createdAt])
   @@index([deviceId, createdAt])
 }
 
-/** Historique des générations de plans de salle IA (studio + /plans-3d). */
+/**
+ * Historique des générations de plans de salle IA (studio + /plans-3d).
+ */
 model AiRoomPlanComposeRun {
   id        String   @id @default(uuid())
   userId    String?
@@ -1369,24 +1512,32 @@ model AiRoomPlanComposeRun {
   @@index([deviceId, createdAt])
 }
 
-/** Journal des mouvements de jetons IA (conso + recharge). */
+/**
+ * Journal des mouvements de jetons IA (conso + recharge).
+ */
 model AiTokenLedger {
-  id               String   @id @default(uuid())
-  userId           String?
-  user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  deviceId         String?
-  /** budget_simulation | invitation_compose | recharge */
-  action           String
-  /** landing | dashboard | studio | flexpay */
-  source           String   @default("unknown")
-  tokensDelta      Int
-  tokensFromFree     Int      @default(0)
-  tokensFromBonus    Int      @default(0)
-  tokensFromGranted  Int      @default(0)
-  /** free | bonus | mixed | paid | granted | comp */
-  pool               String
-  relatedId        String?
-  createdAt        DateTime @default(now())
+  id                String   @id @default(uuid())
+  userId            String?
+  user              User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  deviceId          String?
+  /**
+   * budget_simulation | invitation_compose | recharge
+   */
+  action            String
+  /**
+   * landing | dashboard | studio | flexpay
+   */
+  source            String   @default("unknown")
+  tokensDelta       Int
+  tokensFromFree    Int      @default(0)
+  tokensFromBonus   Int      @default(0)
+  tokensFromGranted Int      @default(0)
+  /**
+   * free | bonus | mixed | paid | granted | comp
+   */
+  pool              String
+  relatedId         String?
+  createdAt         DateTime @default(now())
 
   @@unique([action, relatedId])
   @@index([createdAt])
@@ -1404,7 +1555,7 @@ model AiTokenOrder {
   amountFc                 Float     @default(2000)
   currency                 String    @default("CDF")
   status                   String    @default("PENDING") // PENDING | PAID | FAILED | CANCELLED
-  paymentMethod            String    // mobile | card
+  paymentMethod            String // mobile | card
   phone                    String?
   operator                 String?
   flexPayOrderNumber       String?   @unique
@@ -1428,7 +1579,9 @@ enum BeverageKind {
   CHAMPAGNE
 }
 
-/** Conditionnement vendu par le prestataire. */
+/**
+ * Conditionnement vendu par le prestataire.
+ */
 enum BeverageSaleUnit {
   BOTTLE
   CRATE
@@ -1436,7 +1589,9 @@ enum BeverageSaleUnit {
   OTHER
 }
 
-/** Marques de bières, boissons, vins et champagnes proposées sur la plateforme. */
+/**
+ * Marques de bières, boissons, vins et champagnes proposées sur la plateforme.
+ */
 model BeverageBrand {
   id          String       @id @default(uuid())
   name        String
@@ -1456,28 +1611,34 @@ model BeverageBrand {
   @@index([kind, isActive])
 }
 
-/** Tarif d’un prestataire pour une marque du catalogue. */
+/**
+ * Tarif d’un prestataire pour une marque du catalogue.
+ */
 model VendorBeveragePrice {
-  id          String        @id @default(uuid())
-  tenantId    String
-  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  brandId     String
-  brand       BeverageBrand @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  priceFc     Int
+  id           String                           @id @default(uuid())
+  tenantId     String
+  tenant       Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  brandId      String
+  brand        BeverageBrand                    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  priceFc      Int
   promoPriceFc Int?
-  promoLabel  String?
+  promoLabel   String?
   promoEndsAt  DateTime?
-  unitKind    BeverageSaleUnit @default(BOTTLE)
-  /** Nombre d’unités dans le conditionnement (1 bouteille, 12 pour un casier, 6 pour un pack…). */
-  quantity    Int              @default(1)
-  /** Libellé affiché. Imposé pour bouteille, casier et pack ; libre pour « autre ». */
-  unitLabel   String           @default("bouteille")
-  isAvailable Boolean          @default(true)
-  notes       String?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  inquiries   MarketplaceInquiry[]
-  bookings    MarketplaceBooking[]
+  unitKind     BeverageSaleUnit                 @default(BOTTLE)
+  /**
+   * Nombre d’unités dans le conditionnement (1 bouteille, 12 pour un casier, 6 pour un pack…).
+   */
+  quantity     Int                              @default(1)
+  /**
+   * Libellé affiché. Imposé pour bouteille, casier et pack ; libre pour « autre ».
+   */
+  unitLabel    String                           @default("bouteille")
+  isAvailable  Boolean                          @default(true)
+  notes        String?
+  createdAt    DateTime                         @default(now())
+  updatedAt    DateTime                         @updatedAt
+  inquiries    MarketplaceInquiry[]
+  bookings     MarketplaceBooking[]
   inquiryLines MarketplaceInquiryBeverageLine[]
   bookingLines MarketplaceBookingBeverageLine[]
 
@@ -1486,7 +1647,9 @@ model VendorBeveragePrice {
   @@index([tenantId, isAvailable])
 }
 
-/** Ligne d’un devis boissons : plusieurs marques et quantités pour un même prestataire. */
+/**
+ * Ligne d’un devis boissons : plusieurs marques et quantités pour un même prestataire.
+ */
 model MarketplaceInquiryBeverageLine {
   id              String               @id @default(uuid())
   inquiryId       String
@@ -1502,7 +1665,9 @@ model MarketplaceInquiryBeverageLine {
   @@index([beveragePriceId])
 }
 
-/** Ligne d’une réservation boissons, copiée depuis le devis accepté. */
+/**
+ * Ligne d’une réservation boissons, copiée depuis le devis accepté.
+ */
 model MarketplaceBookingBeverageLine {
   id              String               @id @default(uuid())
   bookingId       String
@@ -1518,7 +1683,9 @@ model MarketplaceBookingBeverageLine {
   @@index([beveragePriceId])
 }
 
-/** Réglages Super Admin (FlexPay, marque, e-mails, commissions…) — persistés hors FS éphémère. */
+/**
+ * Réglages Super Admin (FlexPay, marque, e-mails, commissions…) — persistés hors FS éphémère.
+ */
 model PlatformConfig {
   id        String   @id @default("default")
   payload   Json
@@ -1526,37 +1693,44 @@ model PlatformConfig {
   updatedAt DateTime @updatedAt
 }
 
-
-/** Avis laissé par le client après une réservation terminée (un par réservation). */
+/**
+ * Avis laissé par le client après une réservation terminée (un par réservation).
+ */
 model MarketplaceReview {
-  id              String           @id @default(uuid())
-  bookingId       String           @unique
+  id              String             @id @default(uuid())
+  bookingId       String             @unique
   booking         MarketplaceBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   vendorTenantId  String
-  vendorTenant    Tenant           @relation("ReviewVendor", fields: [vendorTenantId], references: [id], onDelete: Cascade)
+  vendorTenant    Tenant             @relation("ReviewVendor", fields: [vendorTenantId], references: [id], onDelete: Cascade)
   listingId       String?
-  listing         VenueListing?    @relation(fields: [listingId], references: [id], onDelete: SetNull)
+  listing         VenueListing?      @relation(fields: [listingId], references: [id], onDelete: SetNull)
   offeringId      String?
-  offering        ServiceOffering? @relation(fields: [offeringId], references: [id], onDelete: SetNull)
+  offering        ServiceOffering?   @relation(fields: [offeringId], references: [id], onDelete: SetNull)
   authorUserId    String?
-  authorUser      User?            @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
-  /** Nom affiché (prénom + initiale, ou nom de l'organisation). */
+  authorUser      User?              @relation(fields: [authorUserId], references: [id], onDelete: SetNull)
+  /**
+   * Nom affiché (prénom + initiale, ou nom de l'organisation).
+   */
   authorName      String
   rating          Int
   comment         String?
   vendorReply     String?
   vendorRepliedAt DateTime?
-  /** Masqué par la modération EventMaster. */
-  isHidden        Boolean          @default(false)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  /**
+   * Masqué par la modération EventMaster.
+   */
+  isHidden        Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 
   @@index([vendorTenantId, createdAt])
   @@index([listingId, createdAt])
   @@index([offeringId, createdAt])
 }
 
-/** Vues des fiches publiques, agrégées par jour (une vue par visiteur et par session). */
+/**
+ * Vues des fiches publiques, agrégées par jour (une vue par visiteur et par session).
+ */
 model ListingViewDay {
   id         String           @id @default(uuid())
   tenantId   String
@@ -1570,4 +1744,49 @@ model ListingViewDay {
   @@unique([listingId, day])
   @@unique([offeringId, day])
   @@index([tenantId, day])
+}
+
+/**
+ * Acompte d'une réservation marketplace payé en ligne (FlexPay). EventMaster encaisse,
+ * retient la commission, puis reverse le reste au Mobile Money du prestataire.
+ */
+model MarketplaceDepositPayment {
+  id                       String             @id @default(uuid())
+  bookingId                String
+  booking                  MarketplaceBooking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  vendorTenantId           String
+  vendorTenant             Tenant             @relation(fields: [vendorTenantId], references: [id], onDelete: Cascade)
+  payerUserId              String?
+  amountFc                 Int
+  /**
+   * Commission retenue sur l'acompte.
+   */
+  commissionFc             Int                @default(0)
+  /**
+   * Montant reversé au prestataire (acompte - commission).
+   */
+  payoutAmountFc           Int                @default(0)
+  currency                 String             @default("CDF")
+  status                   String             @default("PENDING") // PENDING | PAID | FAILED
+  paymentMethod            String // mobile | card
+  phone                    String?
+  flexPayOrderNumber       String?            @unique
+  flexPayReference         String?            @unique
+  flexPayChannel           String?
+  flexPayAmountCustomer    Float?
+  flexPayProviderReference String?
+  paidAt                   DateTime?
+  payoutStatus             String             @default("NONE") // NONE | PENDING | SUCCESS | FAILED
+  payoutPhone              String?
+  payoutReference          String?            @unique
+  payoutOrderNumber        String?            @unique
+  payoutProviderReference  String?
+  payoutMessage            String?
+  payoutAt                 DateTime?
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+
+  @@index([bookingId, createdAt])
+  @@index([vendorTenantId, status])
+  @@index([status, payoutStatus])
 }
