@@ -34,7 +34,7 @@ export default function PublicCtaBand({
 }) {
   const messaging = useMessagingChannels();
   return (
-    <section className="em-landing-defer relative overflow-hidden bg-[#064e3b] text-white py-14 sm:py-24">
+    <section className="em-landing-defer relative overflow-hidden bg-[#1f4a33] text-white py-14 sm:py-24">
       <div
         aria-hidden
         className="pointer-events-none absolute -left-24 -bottom-40 w-[26rem] h-[26rem] rounded-full border-[64px] border-brand-accent opacity-15"
@@ -45,11 +45,11 @@ export default function PublicCtaBand({
               <h2 className="em-landing-heading text-3xl sm:text-5xl text-white">
                 {messaging.adapt(title)}
               </h2>
-              <p className="text-base sm:text-lg text-[#d1fae5] leading-relaxed">
+              <p className="text-base sm:text-lg text-[#d7f6e9] leading-relaxed">
                 {messaging.adapt(description)}
               </p>
               {highlights?.length ? (
-                <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 pt-1 text-sm text-[#d1fae5] font-medium">
+                <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 pt-1 text-sm text-[#d7f6e9] font-medium">
                   {highlights.map((item) => {
                     const Icon = item.icon;
                     return (
@@ -63,7 +63,7 @@ export default function PublicCtaBand({
               ) : null}
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto [&>*]:justify-center [&_.bg-primary-solid]:bg-white [&_.bg-primary-solid]:text-[#064e3b] [&_.bg-primary-solid:hover]:bg-[#ecfdf5]">
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto [&>*]:justify-center [&_.bg-primary-solid]:bg-white [&_.bg-primary-solid]:text-[#1f4a33] [&_.bg-primary-solid:hover]:bg-[#effbf6]">
               {actions || (
                 <>
                   {primaryHref && primaryLabel ? (
@@ -82,7 +82,7 @@ export default function PublicCtaBand({
                       href={secondaryHref}
                       size="lg"
                       variant="secondary"
-                      className="w-full sm:w-auto justify-center bg-transparent text-white hover:bg-white/10 border-[#6ee7b7] font-semibold"
+                      className="w-full sm:w-auto justify-center bg-transparent text-white hover:bg-white/10 border-[#6ee6b6] font-semibold"
                     >
                       {secondaryLabel}
                     </Button>

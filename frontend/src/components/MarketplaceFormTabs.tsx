@@ -89,7 +89,7 @@ export default function MarketplaceFormTabs({
                 className={cn(
                   'px-1.5 py-0.5 rounded-full text-xs font-semibold tabular-nums',
                   selected
-                    ? 'bg-[#e3f3ec] text-[#065f46] dark:bg-primary/15 dark:text-primary'
+                    ? 'bg-[#e3f3ec] text-[#275a3d] dark:bg-primary/15 dark:text-primary'
                     : 'bg-surface text-muted',
                 )}
               >

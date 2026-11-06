@@ -59,7 +59,7 @@ export function PublicPageHero({
 }) {
   const deep = tone === 'deep';
   return (
-    <section className={cn('relative', deep ? 'bg-[#064e3b] text-white overflow-hidden' : 'em-landing-hero')}>
+    <section className={cn('relative', deep ? 'bg-[#1f4a33] text-white overflow-hidden' : 'em-landing-hero')}>
       {deep ? (
         <span
           aria-hidden
@@ -83,7 +83,7 @@ export function PublicPageHero({
             {title}
           </h1>
           {description ? (
-            <p className={cn('text-sm md:text-base leading-relaxed max-w-2xl', deep ? 'text-[#d1fae5]' : 'text-muted')}>
+            <p className={cn('text-sm md:text-base leading-relaxed max-w-2xl', deep ? 'text-[#d7f6e9]' : 'text-muted')}>
               {description}
             </p>
           ) : null}

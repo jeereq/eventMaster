@@ -110,8 +110,8 @@ function cssVar(name: string, fallback: string) {
 function markerColor(kind?: MarketplaceMapKind) {
   if (kind === 'service') return cssVar('--festive-accent', '#b45309');
   if (kind === 'rental') return '#0e7490';
-  if (kind === 'event') return '#059669';
-  return cssVar('--primary', '#059669');
+  if (kind === 'event') return '#2c8f62';
+  return cssVar('--primary', '#2c8f62');
 }
 
 function markerKindClass(kind?: MarketplaceMapKind) {
@@ -619,10 +619,10 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
               L.circle([searchCenter.lat, searchCenter.lng], {
                 pane: 'coverage',
                 radius: radiusKm * 1000,
-                color: cssVar('--primary', '#059669'),
+                color: cssVar('--primary', '#2c8f62'),
                 weight: 2,
                 dashArray: '6 5',
-                fillColor: cssVar('--primary', '#059669'),
+                fillColor: cssVar('--primary', '#2c8f62'),
                 fillOpacity: 0.08,
                 interactive: false
               }),
@@ -839,7 +839,7 @@ const MarketplaceLocationsMap = React.forwardRef<MarketplaceMapHandle, {
       if (gen !== navGenRef.current) return;
       if (routeLineRef.current) map.removeLayer(routeLineRef.current);
       if (originMarkerRef.current) map.removeLayer(originMarkerRef.current);
-      const color = cssVar('--primary', '#059669');
+      const color = cssVar('--primary', '#2c8f62');
       originMarkerRef.current = L.circleMarker([origin.lat, origin.lng], {
         radius: 6,
         color,

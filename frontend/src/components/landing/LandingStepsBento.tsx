@@ -45,7 +45,7 @@ export default function LandingStepsBento({ stepsAction }: { stepsAction?: React
                 key={s.n}
                 className="relative flex sm:flex-col items-start gap-4 sm:gap-0 rounded-[var(--radius-card)] border border-border bg-surface p-5 sm:p-6"
               >
-                <span className="font-display flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#d1fae5] text-lg font-bold text-primary">
+                <span className="font-display flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#d7f6e9] text-lg font-bold text-primary">
                   {s.n}
                 </span>
                 <div className="min-w-0">
@@ -74,7 +74,7 @@ export default function LandingStepsBento({ stepsAction }: { stepsAction?: React
           <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:grid-rows-2">
             <Link
               href="/plans-3d"
-              className="group relative col-span-2 overflow-hidden rounded-[1.75rem] bg-[#064e3b] p-6 sm:p-7 text-white lg:row-span-2 min-h-[16rem] sm:min-h-[20rem] flex flex-col justify-end focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              className="group relative col-span-2 overflow-hidden rounded-[1.75rem] bg-[#1f4a33] p-6 sm:p-7 text-white lg:row-span-2 min-h-[16rem] sm:min-h-[20rem] flex flex-col justify-end focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <Image
                 src="/images/landing/salle-3d-mariage.webp"
@@ -85,12 +85,12 @@ export default function LandingStepsBento({ stepsAction }: { stepsAction?: React
               />
               <span
                 aria-hidden
-                className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#022c22] via-[#022c22]/70 to-[#022c22]/0"
+                className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#10291c] via-[#10291c]/70 to-[#10291c]/0"
               />
-              <Box className="relative h-8 w-8 text-[#6ee7b7]" aria-hidden />
+              <Box className="relative h-8 w-8 text-[#6ee6b6]" aria-hidden />
               <h3 className="font-display relative mt-4 text-2xl sm:text-3xl font-bold">Votre salle en 3D</h3>
-              <p className="relative mt-2 max-w-sm text-[#d1fae5]">Placez tables, scène et allée avant le jour J, puis faites visiter la salle à vos proches.</p>
-              <span className="relative mt-5 inline-flex items-center gap-2 font-semibold text-[#6ee7b7] group-hover:gap-3 transition-all">
+              <p className="relative mt-2 max-w-sm text-[#d7f6e9]">Placez tables, scène et allée avant le jour J, puis faites visiter la salle à vos proches.</p>
+              <span className="relative mt-5 inline-flex items-center gap-2 font-semibold text-[#6ee6b6] group-hover:gap-3 transition-all">
                 Essayer le plan 3D <ArrowRight className="h-4 w-4" aria-hidden />
               </span>
             </Link>
@@ -110,7 +110,7 @@ export default function LandingStepsBento({ stepsAction }: { stepsAction?: React
               </Link>
             ))}
           </div>
-          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-card)] bg-[#ecfdf5] px-5 py-4 text-[15px] text-[#064e3b]">
+          <div className="mt-4 flex items-center gap-3 rounded-[var(--radius-card)] bg-[#effbf6] px-5 py-4 text-[15px] text-[#1f4a33]">
             <Globe className="h-5 w-5 shrink-0" aria-hidden />
             <span>
               <strong>Zéro installation.</strong> Tout se passe dans le navigateur, sur téléphone comme sur ordinateur.

@@ -2,12 +2,12 @@
 name: EventMaster
 description: Atelier de célébration — invitations, salles 3D et protocole, en CDF.
 colors:
-  primary: "#059669"
-  primary-hover: "#047857"
-  primary-solid: "#047857"
-  primary-solid-hover: "#065f46"
+  primary: "#31714c"
+  primary-hover: "#275a3d"
+  primary-solid: "#31714c"
+  primary-solid-hover: "#275a3d"
   primary-foreground: "#ffffff"
-  brand-accent: "#10b981"
+  brand-accent: "#6ee6b6"
   festive-accent: "#d97706"
   festive-on-stage: "#fbbf24"
   background: "#f6f7f8"
@@ -109,7 +109,7 @@ components:
     padding: "2px 8px"
     typography: "{typography.label}"
   chip-primary:
-    backgroundColor: "color-mix(in srgb, #059669 10%, transparent)"
+    backgroundColor: "color-mix(in srgb, #31714c 10%, transparent)"
     textColor: "{colors.primary}"
     rounded: "{rounded.full}"
     padding: "2px 8px"
@@ -155,8 +155,10 @@ La fête est visible sans basculer dans le SaaS gris stérile. Anti-références
 Palette émeraude d’action + ambre de fête + neutres papier, avec une scène ardoise pour les moments inversés.
 
 ### Primary
-- **Émeraude de banquet**: action, liens, focus, boutons pleins (`primary-solid` pour les fonds AA). Le hover assombrit ; le dark mode éclaircit `--primary` mais garde `--primary-solid` pour le texte blanc.
-- **Émeraude vive** (`brand-accent`): halo, pastille, dégradé de preuve — pas le fond d’un bouton de texte blanc.
+Les deux verts viennent du logo : **vert forêt `#31714c`** et **vert menthe `#6ee6b6`**. L’échelle Tailwind `emerald-*` est redéfinie sur cette gamme dans `globals.css` (300 = menthe, 700 = forêt), donc `emerald-*` = vert de marque.
+
+- **Vert forêt du logo** (`#31714c`) : action, liens, focus, boutons pleins en clair (`primary` et `primary-solid`, blanc dessus 5.8:1). Le hover assombrit (`#275a3d`).
+- **Vert menthe du logo** (`#6ee6b6`, `brand-accent`) : halo, pastille, accents sur fond sombre. En dark mode, `--primary` passe à la menthe (10.5:1 sur la surface) ; les fonds pleins restent en vert forêt (`--primary-solid`) pour le texte blanc. Jamais de texte blanc sur la menthe.
 
 ### Secondary
 - **Ambre Kinshasa**: humeur Celebrate, prestataires, confetti discret, chips de fête. Sur scène, l’ambre passe en **or de rampe** (`festive-on-stage`).

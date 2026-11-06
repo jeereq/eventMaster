@@ -336,12 +336,12 @@ export function GuestEventHero({
           {badge}
         </div>
         <div className="space-y-1">
-          {greeting ? <p className="text-sm text-[#a7f3d0]">{greeting}</p> : null}
+          {greeting ? <p className="text-sm text-[#b0eed5]">{greeting}</p> : null}
           <h2 className="font-display text-[1.625rem] sm:text-[1.75rem] font-semibold leading-[1.15] text-white break-words">
             {title}
           </h2>
         </div>
-        <div className="flex flex-col gap-2 text-sm text-[#d1fae5]">
+        <div className="flex flex-col gap-2 text-sm text-[#d7f6e9]">
           <span className="inline-flex items-start gap-2">
             <Calendar className="w-[18px] h-[18px] shrink-0 mt-px" aria-hidden />
             <span>{guestLongDate(date)}</span>

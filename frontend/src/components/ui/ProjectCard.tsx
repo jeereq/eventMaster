@@ -6,10 +6,10 @@ import { cn } from '@/lib/cn';
 
 /** Palette de fonds média (sans photo) — verts profonds et tons chauds du nouveau design. */
 const ACCENT_STRIPES = [
-  '#064e3b',
-  '#047857',
+  '#1f4a33',
+  '#31714c',
   '#0f766e',
-  '#065f46',
+  '#275a3d',
   '#166534',
   '#115e59',
   '#b45309',

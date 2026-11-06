@@ -23,16 +23,16 @@ export type TenantBranding = {
   authTo?: string;
 };
 
-/** Palette par défaut — vert émeraude EventMaster. */
+/** Palette par défaut — les deux verts du logo EventMaster (forêt #31714c + menthe #6ee6b6). */
 export const DEFAULT_BRAND_PALETTE = {
-  primary: '#059669',
-  primaryHover: '#047857',
-  accent: '#10b981',
+  primary: '#31714c',
+  primaryHover: '#275a3d',
+  accent: '#6ee6b6',
   /** Panneau marketing auth (clair → sombre) */
-  authFrom: '#064e3b',
-  authVia: '#022c22',
+  authFrom: '#1f4a33',
+  authVia: '#10291c',
   authTo: '#0f172a',
-  authGlow: '5, 150, 105', // RGB du primary pour blur/glow
+  authGlow: '49, 113, 76', // RGB du primary pour blur/glow
 };
 
 export type BrandPalette = {
@@ -194,11 +194,25 @@ export function syncFaviconFromComputedStyles() {
   syncBrandFavicon(primary, accent);
 }
 
+/** Anciennes couleurs par défaut (émeraude Tailwind) et couleurs du logo : pas une marque personnalisée. */
+const BUILT_IN_BRAND_HEX = new Set(['#059669', '#10b981', '#047857', '#31714c', '#6ee6b6']);
+
+function isBuiltInBrandHex(hex?: string): boolean {
+  return !hex || BUILT_IN_BRAND_HEX.has(hex.trim().toLowerCase());
+}
+
 export function applyBrandToDocument(branding?: TenantBranding | null) {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
   const defaults = resolveDefaultBrandPalette();
-  const hasCustom = Boolean(branding?.primary || branding?.accent);
+  /*
+   * Une marque égale à la palette du logo (ou à l'ancien émeraude par défaut) ne pose pas de
+   * --primary inline : les tokens de globals.css gardent ainsi leurs variantes clair / sombre
+   * (vert forêt en clair, menthe en sombre) et leurs contrastes AA.
+   */
+  const hasCustom =
+    Boolean(branding?.primary || branding?.accent) &&
+    !(isBuiltInBrandHex(branding?.primary) && isBuiltInBrandHex(branding?.accent));
 
   if (hasCustom) {
     const primary = branding?.primary || branding?.accent || defaults.primary;
@@ -206,7 +220,9 @@ export function applyBrandToDocument(branding?: TenantBranding | null) {
     root.style.setProperty('--primary', primary);
     root.style.setProperty('--primary-hover', adjustHex(primary, -12));
     root.style.setProperty('--brand-accent', accent);
+    root.dataset.brand = 'custom';
   } else {
+    delete root.dataset.brand;
     root.style.removeProperty('--primary');
     root.style.removeProperty('--primary-hover');
     root.style.removeProperty('--brand-accent');

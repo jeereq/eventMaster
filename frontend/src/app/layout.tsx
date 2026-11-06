@@ -52,8 +52,8 @@ const geistMono = localFont({
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#059669' },
-    { media: '(prefers-color-scheme: dark)', color: '#10b981' },
+    { media: '(prefers-color-scheme: light)', color: '#31714c' },
+    { media: '(prefers-color-scheme: dark)', color: '#6ee6b6' },
   ],
   width: 'device-width',
   initialScale: 1,
@@ -105,16 +105,16 @@ export default function RootLayout({
         <style
           dangerouslySetInnerHTML={{
             __html: `
-#em-native-splash{position:fixed;inset:0;z-index:2147483000;display:none;flex-direction:column;align-items:center;justify-content:center;padding:max(2rem,env(safe-area-inset-top)) 1.5rem max(1.5rem,env(safe-area-inset-bottom));background:#f6f7f8;background-image:radial-gradient(120% 80% at 50% 18%,rgba(5,150,105,.22),transparent 58%);color:#1e1f21;font-family:system-ui,-apple-system,sans-serif;transition:opacity .28s ease}
+#em-native-splash{position:fixed;inset:0;z-index:2147483000;display:none;flex-direction:column;align-items:center;justify-content:center;padding:max(2rem,env(safe-area-inset-top)) 1.5rem max(1.5rem,env(safe-area-inset-bottom));background:#f6f7f8;background-image:radial-gradient(120% 80% at 50% 18%,rgba(44,143,98,.22),transparent 58%);color:#1e1f21;font-family:system-ui,-apple-system,sans-serif;transition:opacity .28s ease}
 #em-native-splash.is-on{display:flex!important}
 #em-native-splash.is-leaving{opacity:0;pointer-events:none}
 #em-native-splash .em-ns-mark{width:4rem;height:4rem;display:block}
 #em-native-splash .em-ns-mark img{width:100%;height:100%;display:block}
 #em-native-splash .em-ns-title{margin:.9rem 0 0;font-size:1.25rem;font-weight:650;letter-spacing:-.02em;text-align:center}
-#em-native-splash .em-ns-spin{margin-top:1rem;width:1.75rem;height:1.75rem;border-radius:999px;border:2px solid rgba(5,150,105,.28);border-top-color:#059669;animation:em-ns-spin .7s linear infinite}
+#em-native-splash .em-ns-spin{margin-top:1rem;width:1.75rem;height:1.75rem;border-radius:999px;border:2px solid rgba(44,143,98,.28);border-top-color:#31714c;animation:em-ns-spin .7s linear infinite}
 #em-native-splash .em-ns-skip{margin-top:.85rem;min-height:2.75rem;padding:0 1rem;border:0;background:transparent;color:#6d6e6f;font-size:.875rem;font-weight:500;cursor:pointer}
 @keyframes em-ns-spin{to{transform:rotate(360deg)}}
-@media (prefers-reduced-motion:reduce){#em-native-splash .em-ns-spin{animation:none;border-top-color:rgba(5,150,105,.28)}#em-native-splash{transition:none}}
+@media (prefers-reduced-motion:reduce){#em-native-splash .em-ns-spin{animation:none;border-top-color:rgba(44,143,98,.28)}#em-native-splash{transition:none}}
 html.em-splash-boot,html.em-splash-boot body{background:#f6f7f8!important;overflow:hidden}
 @media (min-width: 768px){#em-native-splash{display:none!important}html.em-splash-boot,html.em-splash-boot body{overflow:auto!important;background:inherit!important}}
 `.replace(/\n/g, ''),

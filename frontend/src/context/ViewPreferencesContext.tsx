@@ -21,10 +21,10 @@ export interface AccentPreset {
 export const ACCENT_PRESETS: AccentPreset[] = [
   {
     id: 'emerald',
-    label: 'Émeraude',
-    primary: '#059669',
-    accent: '#10b981',
-    swatches: ['#059669', '#10b981', '#34d399', '#6ee7b7'],
+    label: 'Vert EventMaster',
+    primary: '#31714c',
+    accent: '#6ee6b6',
+    swatches: ['#31714c', '#6ee6b6', '#2c8f62', '#b0eed5'],
   },
   {
     id: 'indigo',
@@ -45,14 +45,14 @@ export const ACCENT_PRESETS: AccentPreset[] = [
     label: 'Ambre',
     primary: '#d97706',
     accent: '#fbbf24',
-    swatches: ['#d97706', '#059669', '#10b981', '#ef4444'],
+    swatches: ['#d97706', '#31714c', '#6ee6b6', '#ef4444'],
   },
   {
     id: 'rose',
     label: 'Rose',
     primary: '#e11d48',
     accent: '#fb7185',
-    swatches: ['#e11d48', '#059669', '#14b8a6', '#f59e0b'],
+    swatches: ['#e11d48', '#31714c', '#14b8a6', '#f59e0b'],
   },
   {
     id: 'violet',

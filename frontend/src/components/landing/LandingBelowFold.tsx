@@ -102,7 +102,7 @@ export default function LandingBelowFold() {
                 href="/marketplace"
                 size="lg"
                 variant="secondary"
-                className="bg-transparent text-white border-[#6ee7b7] hover:bg-white/10 text-sm font-semibold"
+                className="bg-transparent text-white border-[#6ee6b6] hover:bg-white/10 text-sm font-semibold"
                 aria-label="Explorer le marketplace"
               >
                 <span className="sm:hidden">Marketplace</span>

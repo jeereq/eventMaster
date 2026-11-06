@@ -2235,17 +2235,17 @@ function TableMesh({
                 {/* 1. Halo au sol émeraude vif */}
                 <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
                   <ringGeometry args={[0.2, 0.44, 36]} />
-                  <meshBasicMaterial color="#10b981" transparent opacity={0.92} depthWrite={false} />
+                  <meshBasicMaterial color="#34ad7a" transparent opacity={0.92} depthWrite={false} />
                 </mesh>
                 <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.025, 0]}>
                   <circleGeometry args={[0.22, 24]} />
-                  <meshBasicMaterial color="#059669" transparent opacity={0.45} depthWrite={false} />
+                  <meshBasicMaterial color="#2c8f62" transparent opacity={0.45} depthWrite={false} />
                 </mesh>
 
                 {/* 2. Faisceau lumineux vertical doux */}
                 <mesh position={[0, 0.45, 0]}>
                   <cylinderGeometry args={[0.18, 0.3, 0.9, 24, 1, true]} />
-                  <meshBasicMaterial color="#34d399" transparent opacity={0.22} side={THREE.DoubleSide} depthWrite={false} />
+                  <meshBasicMaterial color="#4cce98" transparent opacity={0.22} side={THREE.DoubleSide} depthWrite={false} />
                 </mesh>
 
                 {/* 3. Badge flottant 3D avec flèche pointant sur l'assise */}
@@ -2711,7 +2711,7 @@ function FixtureMesh({
         : kind === 'partition' || kind === 'decal'
           ? '#c4a4a4'
           : kind === 'entrance'
-            ? '#059669'
+            ? '#2c8f62'
             : kind === 'aisle'
               ? '#e7e5e4'
               : kind === 'corridor'
@@ -2951,7 +2951,7 @@ function FixtureMesh({
         <group>
           <mesh position={[0, 0.03, 0]} receiveShadow castShadow>
             <boxGeometry args={[w, 0.06, d]} />
-            <meshStandardMaterial color={selected ? '#c7d2fe' : '#059669'} roughness={0.75} />
+            <meshStandardMaterial color={selected ? '#c7d2fe' : '#2c8f62'} roughness={0.75} />
           </mesh>
           {([-1, 1] as const).map((side) => (
             <mesh key={side} position={[side * w * 0.4, 0.55, 0]} castShadow>
@@ -3107,7 +3107,7 @@ function SightlinesOverlay({
           return distSq < 0.64;
         });
 
-        const color = isObstructed ? '#ef4444' : '#10b981';
+        const color = isObstructed ? '#ef4444' : '#34ad7a';
 
         return (
           <group key={`sightline-${item.id}`}>
@@ -3158,7 +3158,7 @@ function CirculationClearanceOverlay({
         if (item.kind !== 'table') return null;
         const [wx, wz] = pctToWorld(item.x, item.y, widthM, heightM);
         const conflict = conflictIds.get(item.id);
-        const color = conflict === 'error' ? '#ef4444' : conflict === 'warning' ? '#f59e0b' : '#10b981';
+        const color = conflict === 'error' ? '#ef4444' : conflict === 'warning' ? '#f59e0b' : '#34ad7a';
         const ringRadius = 1.35;
 
         return (

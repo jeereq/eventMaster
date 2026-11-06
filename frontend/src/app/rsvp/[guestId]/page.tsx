@@ -603,7 +603,7 @@ export default function RsvpPage() {
       <div className="min-h-screen em-guest-page flex flex-col items-center p-4 pt-20" role="status" aria-busy="true">
         <span className="sr-only">Chargement de votre invitation…</span>
         <div className="w-full max-w-xl space-y-4">
-          <div className="rounded-3xl bg-[#064e3b] p-5 space-y-4">
+          <div className="rounded-3xl bg-[#1f4a33] p-5 space-y-4">
             <Skeleton className="h-6 w-28 rounded-full !bg-white/15" />
             <Skeleton className="h-8 w-3/4 rounded-lg !bg-white/15" />
             <Skeleton className="h-4 w-2/3 rounded-full !bg-white/10" />
@@ -1661,7 +1661,7 @@ export default function RsvpPage() {
               setSelectedQrGuestId(guest.id);
               setShowFullScreenQr(true);
             }}
-            className="fixed z-30 right-[max(1rem,env(safe-area-inset-right))] bottom-[calc(5.25rem+env(safe-area-inset-bottom))] inline-flex items-center gap-2 h-12 pl-3.5 pr-4 rounded-full bg-primary-solid text-primary-foreground text-sm font-semibold shadow-[0_10px_24px_-6px_rgba(4,120,87,0.55)] hover:bg-primary-solid-hover active:scale-95 transition animate-fade-in touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="fixed z-30 right-[max(1rem,env(safe-area-inset-right))] bottom-[calc(5.25rem+env(safe-area-inset-bottom))] inline-flex items-center gap-2 h-12 pl-3.5 pr-4 rounded-full bg-primary-solid text-primary-foreground text-sm font-semibold shadow-[0_10px_24px_-6px_rgba(49,113,76,0.55)] hover:bg-primary-solid-hover active:scale-95 transition animate-fade-in touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             aria-label="Ouvrir mon pass QR"
           >
             <QrCode className="w-5 h-5" aria-hidden />
