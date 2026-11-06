@@ -1,3 +1,4 @@
+import { buildBrandLogoSvg } from '@/lib/brandLogo';
 /**
  * Palette de marque EventMaster — configurable.
  *
@@ -140,11 +141,9 @@ function setAuthPanelVars(
   root.style.setProperty('--auth-glow', hexToRgbChannels(primary));
 }
 
-/** SVG favicon (étoile) colorée selon la palette active. */
-export function buildBrandFaviconSvg(primary: string, accent: string): string {
-  const from = primary || DEFAULT_BRAND_PALETTE.primary;
-  const to = accent || DEFAULT_BRAND_PALETTE.accent;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${from}"/><stop offset="100%" stop-color="${to}"/></linearGradient><linearGradient id="star" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#fbbf24"/><stop offset="100%" stop-color="#f59e0b"/></linearGradient></defs><rect width="512" height="512" rx="128" fill="url(#bg)"/><g transform="translate(128,128) scale(0.5)"><path d="M256 0 C256 150 362 256 512 256 C362 256 256 362 256 512 C256 362 150 256 0 256 C150 256 256 150 256 0 Z" fill="url(#star)"/><path d="M384 128 C384 180 437 224 512 224 C437 224 384 268 384 320 C384 268 331 224 256 224 C331 224 384 180 384 128 Z" fill="#ffffff" opacity="0.8"/></g></svg>`;
+/** SVG favicon : logo EventMaster sur tuile noire (identique quel que soit le thème). */
+export function buildBrandFaviconSvg(): string {
+  return buildBrandLogoSvg({ tile: true });
 }
 
 function upsertLinkIcon(rel: string, href: string, type = 'image/svg+xml') {
@@ -168,8 +167,8 @@ export function syncBrandFavicon(primary: string, accent?: string) {
   if (typeof document === 'undefined') return;
   const defaults = resolveDefaultBrandPalette();
   const from = primary || defaults.primary;
-  const to = accent || from || defaults.accent;
-  const href = `data:image/svg+xml,${encodeURIComponent(buildBrandFaviconSvg(from, to))}`;
+  void accent;
+  const href = `data:image/svg+xml,${encodeURIComponent(buildBrandFaviconSvg())}`;
 
   upsertLinkIcon('icon', href);
   upsertLinkIcon('apple-touch-icon', href);

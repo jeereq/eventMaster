@@ -108,7 +108,7 @@ export default function RootLayout({
 #em-native-splash{position:fixed;inset:0;z-index:2147483000;display:none;flex-direction:column;align-items:center;justify-content:center;padding:max(2rem,env(safe-area-inset-top)) 1.5rem max(1.5rem,env(safe-area-inset-bottom));background:#f6f7f8;background-image:radial-gradient(120% 80% at 50% 18%,rgba(5,150,105,.22),transparent 58%);color:#1e1f21;font-family:system-ui,-apple-system,sans-serif;transition:opacity .28s ease}
 #em-native-splash.is-on{display:flex!important}
 #em-native-splash.is-leaving{opacity:0;pointer-events:none}
-#em-native-splash .em-ns-mark{width:4rem;height:4rem;border-radius:1.25rem;overflow:hidden;background:#fff;box-shadow:0 10px 28px rgba(0,0,0,.12)}
+#em-native-splash .em-ns-mark{width:4rem;height:4rem;display:block}
 #em-native-splash .em-ns-mark img{width:100%;height:100%;display:block}
 #em-native-splash .em-ns-title{margin:.9rem 0 0;font-size:1.25rem;font-weight:650;letter-spacing:-.02em;text-align:center}
 #em-native-splash .em-ns-spin{margin-top:1rem;width:1.75rem;height:1.75rem;border-radius:999px;border:2px solid rgba(5,150,105,.28);border-top-color:#059669;animation:em-ns-spin .7s linear infinite}
@@ -125,7 +125,7 @@ html.em-splash-boot,html.em-splash-boot body{background:#f6f7f8!important;overfl
         <div id="em-native-splash" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-label="EventMaster">
           <span className="em-ns-mark">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icon.svg" alt="" width={64} height={64} />
+            <img src="/brand/logo.svg" alt="" width={64} height={64} />
           </span>
           <p className="em-ns-title">EventMaster</p>
           <span className="em-ns-spin" aria-hidden="true" />

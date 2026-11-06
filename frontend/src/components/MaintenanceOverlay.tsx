@@ -7,7 +7,7 @@ import { Construction, Mail, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { Button } from '@/components/ui';
-import { BrandStarIcon } from '@/components/SiteBrandMark';
+import { BrandLogoIcon } from '@/components/SiteBrandMark';
 
 const AUTH_ESCAPE_PATHS = ['/login', '/ask-reset-password', '/reset-password'];
 
@@ -81,9 +81,7 @@ export default function MaintenanceOverlay() {
 
       <div className="relative z-10 w-full max-w-lg text-center space-y-6 animate-fade-in">
         <div className="inline-flex items-center gap-2.5 mx-auto">
-          <div className="bg-gradient-to-br from-primary to-emerald-600 p-2 rounded-[var(--radius-button)] text-white shadow-lg w-9 h-9 flex items-center justify-center">
-            <BrandStarIcon className="w-5 h-5" />
-          </div>
+          <BrandLogoIcon className="w-9 h-9" />
           <span className="font-semibold text-xl text-white tracking-tight">{site.platformName}</span>
         </div>
 

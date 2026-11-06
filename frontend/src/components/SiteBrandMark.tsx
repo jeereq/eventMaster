@@ -3,26 +3,26 @@
 import Link from 'next/link';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { cn } from '@/lib/cn';
+import {
+  BRAND_LOGO_DARK,
+  BRAND_LOGO_MINT,
+  BRAND_LOGO_PATH_PETALS,
+  BRAND_LOGO_PATH_STAR,
+  BRAND_LOGO_VIEWBOX,
+} from '@/lib/brandLogo';
 
-/** Double étoile emblème d'EventMaster (étoile or cérémoniale + reflet blanc). */
-export function BrandStarIcon({ className }: { className?: string }) {
+/** Logo EventMaster (pétales verts + étoile menthe), version détourée. */
+export function BrandLogoIcon({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 512 512"
+      viewBox={BRAND_LOGO_VIEWBOX}
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       aria-hidden="true"
     >
-      <path
-        d="M256 0 C256 150 362 256 512 256 C362 256 256 362 256 512 C256 362 150 256 0 256 C150 256 256 150 256 0 Z"
-        fill="#fbbf24"
-      />
-      <path
-        d="M384 128 C384 180 437 224 512 224 C437 224 384 268 384 320 C384 268 331 224 256 224 C331 224 384 180 384 128 Z"
-        fill="#ffffff"
-        opacity="0.9"
-      />
+      <path d={BRAND_LOGO_PATH_PETALS} fill={BRAND_LOGO_DARK} />
+      <path d={BRAND_LOGO_PATH_STAR} fill={BRAND_LOGO_MINT} />
     </svg>
   );
 }
@@ -52,20 +52,20 @@ export default function SiteBrandMark({
     <>
       <span
         className={cn(
-          'font-display font-bold shrink-0 flex items-center justify-center leading-none',
-          tone === 'onDark'
-            ? 'bg-brand-accent text-[#022c22]'
-            : 'bg-primary-solid text-primary-foreground',
+          'shrink-0 flex items-center justify-center',
+          // Sur fond sombre/coloré, les pétales vert foncé se fondent : on pose le logo sur sa tuile noire.
+          tone === 'onDark' && 'bg-black',
+          tone === 'onDark' && (size === 'lg' ? 'rounded-xl' : size === 'sm' ? 'rounded-md' : 'rounded-[10px]'),
           size === 'lg'
-            ? 'w-11 h-11 rounded-xl text-xl'
+            ? 'w-11 h-11'
             : size === 'sm'
-              ? 'w-6 h-6 rounded-md text-xs'
-              : 'w-8 h-8 sm:w-[34px] sm:h-[34px] rounded-[10px] text-base',
+              ? 'w-6 h-6'
+              : 'w-8 h-8 sm:w-[34px] sm:h-[34px]',
           interactive && 'group-hover:scale-105 transition-transform',
         )}
         aria-hidden
       >
-        {label.trim().charAt(0).toUpperCase() || 'E'}
+        <BrandLogoIcon className={tone === 'onDark' ? 'w-[74%] h-[74%]' : 'w-full h-full'} />
       </span>
       {showLabel ? (
         <span className="min-w-0">
