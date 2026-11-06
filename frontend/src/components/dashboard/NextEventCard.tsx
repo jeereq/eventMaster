@@ -62,23 +62,23 @@ export default function NextEventCard({
   return (
     <Link
       href={href ?? `/dashboard/events/${event.id}`}
-      className="group relative block overflow-hidden rounded-3xl bg-[#064e3b] p-5 sm:p-6 text-white transition hover:bg-[#065f46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      className="group relative block overflow-hidden rounded-3xl bg-[#1f4a33] p-5 sm:p-6 text-white transition hover:bg-[#275a3d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <span
         aria-hidden
-        className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full border-[28px] border-[#10b981] opacity-25"
+        className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full border-[28px] border-[#34ad7a] opacity-25"
       />
       <div className="relative flex flex-col gap-4">
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-[#10b981] px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.06em] text-[#022c22]">
+          <span className="rounded-full bg-[#34ad7a] px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.06em] text-[#10291c]">
             {countdownLabel(date)}
           </span>
-          <span className="text-xs text-[#a7f3d0]">Prochain événement</span>
+          <span className="text-xs text-[#b0eed5]">Prochain événement</span>
         </div>
         <h2 className="font-display text-2xl sm:text-[1.75rem] font-semibold leading-tight text-white">
           {event.title}
         </h2>
-        <div className="flex flex-col gap-2 text-sm text-[#d1fae5] sm:flex-row sm:flex-wrap sm:gap-x-6">
+        <div className="flex flex-col gap-2 text-sm text-[#d7f6e9] sm:flex-row sm:flex-wrap sm:gap-x-6">
           <span className="inline-flex items-center gap-2">
             <Calendar className="h-[18px] w-[18px] shrink-0" aria-hidden />
             <span className="first-letter:uppercase">
@@ -93,7 +93,7 @@ export default function NextEventCard({
             </span>
           ) : null}
         </div>
-        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#6ee7b7]">
+        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#6ee6b6]">
           Ouvrir l’événement
           <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" aria-hidden />
         </span>

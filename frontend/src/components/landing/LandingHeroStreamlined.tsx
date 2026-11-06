@@ -95,7 +95,7 @@ function HeroWhatsAppMock() {
   const bubble = 'shadow-[0_1px_0.5px_rgba(11,20,26,0.13)]';
   return (
     <div aria-hidden className="relative flex justify-center select-none py-2 lg:pl-16">
-      <span className="absolute left-1/2 top-1/2 w-[420px] h-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.28)_0,rgba(16,185,129,0.12)_45%,transparent_70%)]" />
+      <span className="absolute left-1/2 top-1/2 w-[420px] h-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.28)_0,rgba(52,173,122,0.12)_45%,transparent_70%)]" />
 
       <div className="relative w-[284px] h-[560px] rounded-[46px] bg-[#0d1512] p-2 shadow-[inset_0_0_0_1.5px_#2b3a35,0_40px_80px_rgba(2,30,22,0.55)]">
         <div className="em-light-island relative h-full rounded-[38px] overflow-hidden bg-[#efeae2] text-[#111b21] flex flex-col text-[12px] leading-[1.35]">
@@ -163,7 +163,7 @@ function HeroWhatsAppMock() {
                 <QrCode className="w-7 h-7 text-[#111b21]" strokeWidth={1.6} />
               </span>
               <span className="flex-1 min-w-0 flex flex-col">
-                <b className="text-[#047857]">Votre badge QR est prêt</b>
+                <b className="text-[#31714c]">Votre badge QR est prêt</b>
                 <span className="text-[#54656f]">Table 3 · 2 places</span>
                 <span className="self-end text-[10px] text-[#667781]">18:42</span>
               </span>
@@ -182,8 +182,8 @@ function HeroWhatsAppMock() {
       <div className="em-light-island absolute left-0 bottom-12 hidden lg:flex w-[214px] bg-[#ffffff] text-[#1e1f21] rounded-[18px] p-4 flex-col gap-2.5 shadow-[0_24px_48px_rgba(2,30,22,0.45)]">
         <div className="flex justify-between items-baseline">
           <span className="text-xs font-semibold text-[#5d5f62]">Réponses</span>
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#047857]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#047857]" />
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#31714c]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#31714c]" />
             En direct
           </span>
         </div>
@@ -191,7 +191,7 @@ function HeroWhatsAppMock() {
           86 <span className="text-[15px] font-medium text-[#5d5f62]">confirmés sur 120</span>
         </span>
         <span className="h-2 rounded-full bg-[#ededee] overflow-hidden">
-          <span className="block w-[72%] h-full rounded-full bg-[#047857]" />
+          <span className="block w-[72%] h-full rounded-full bg-[#31714c]" />
         </span>
         <span className="text-[13px] text-[#5d5f62]">12 en attente · relance en un clic</span>
       </div>
@@ -226,7 +226,7 @@ function HeroBriefForm() {
       className="em-light-island max-w-[680px] bg-[#ffffff] text-[#1e1f21] rounded-[18px] p-1.5 flex flex-wrap gap-1 shadow-[0_20px_40px_rgba(2,30,22,0.35)]"
     >
       <div className={cn(field, 'sm:border-r sm:border-[#eeeff0]')}>
-        <PartyPopper className="w-5 h-5 shrink-0 text-[#047857]" aria-hidden />
+        <PartyPopper className="w-5 h-5 shrink-0 text-[#31714c]" aria-hidden />
         <span className="flex flex-col min-w-0 flex-1">
           <label htmlFor="hero-type" className="text-xs font-semibold text-[#5d5f62]">Je prépare</label>
           <select id="hero-type" value={eventType} onChange={(e) => setEventType(e.target.value as ListingEventTypeId)} className={control}>
@@ -237,7 +237,7 @@ function HeroBriefForm() {
         </span>
       </div>
       <div className={cn(field, 'basis-[110px] sm:border-r sm:border-[#eeeff0]')}>
-        <Users className="w-5 h-5 shrink-0 text-[#047857]" aria-hidden />
+        <Users className="w-5 h-5 shrink-0 text-[#31714c]" aria-hidden />
         <span className="flex flex-col min-w-0 flex-1">
           <label htmlFor="hero-guests" className="text-xs font-semibold text-[#5d5f62]">Invités</label>
           <input
@@ -253,7 +253,7 @@ function HeroBriefForm() {
         </span>
       </div>
       <div className={cn(field, 'basis-[160px]')}>
-        <CalendarDays className="w-5 h-5 shrink-0 text-[#047857]" aria-hidden />
+        <CalendarDays className="w-5 h-5 shrink-0 text-[#31714c]" aria-hidden />
         <span className="flex flex-col min-w-0 flex-1">
           <label htmlFor="hero-date" className="text-xs font-semibold text-[#5d5f62]">Date</label>
           <input id="hero-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} className={control} />
@@ -261,7 +261,7 @@ function HeroBriefForm() {
       </div>
       <button
         type="submit"
-        className="flex-1 basis-[200px] whitespace-nowrap min-h-14 px-5 rounded-[13px] bg-[#fbbf24] text-[#171614] text-base font-semibold inline-flex items-center justify-center gap-2 hover:bg-[#f59e0b] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#047857] focus-visible:ring-offset-2"
+        className="flex-1 basis-[200px] whitespace-nowrap min-h-14 px-5 rounded-[13px] bg-[#fbbf24] text-[#171614] text-base font-semibold inline-flex items-center justify-center gap-2 hover:bg-[#f59e0b] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#31714c] focus-visible:ring-offset-2"
       >
         Estimer mon budget
         <ArrowRight className="w-[18px] h-[18px]" aria-hidden />
@@ -280,7 +280,7 @@ export default function LandingHeroStreamlined() {
 
   return (
     <>
-      <section className="relative isolate overflow-hidden bg-[#064e3b] text-[#ffffff]">
+      <section className="relative isolate overflow-hidden bg-[#1f4a33] text-[#ffffff]">
         {/* Photo d’ambiance (réception sous guirlandes) teintée aux couleurs de la charte verte. */}
         <Image
           src="/images/landing/hero-reception-soiree.webp"
@@ -294,7 +294,7 @@ export default function LandingHeroStreamlined() {
         <span aria-hidden className="absolute inset-0 -z-10 bg-[#0b6b50]/45 mix-blend-color" />
         <span
           aria-hidden
-          className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(6,78,59,0.55)_0%,rgba(6,78,59,0.78)_38%,rgba(6,78,59,0.7)_70%,rgba(4,47,36,0.92)_100%)] lg:bg-[linear-gradient(90deg,rgba(4,47,36,0.95)_0%,rgba(6,78,59,0.85)_38%,rgba(6,78,59,0.35)_68%,rgba(6,78,59,0.15)_100%)]"
+          className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(31,74,51,0.55)_0%,rgba(31,74,51,0.78)_38%,rgba(31,74,51,0.7)_70%,rgba(4,47,36,0.92)_100%)] lg:bg-[linear-gradient(90deg,rgba(4,47,36,0.95)_0%,rgba(31,74,51,0.85)_38%,rgba(31,74,51,0.35)_68%,rgba(31,74,51,0.15)_100%)]"
         />
         <span
           aria-hidden
@@ -303,7 +303,7 @@ export default function LandingHeroStreamlined() {
         <div className="page-container grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] gap-10 lg:gap-12 items-center pt-10 pb-12 sm:pt-16 sm:pb-16 lg:py-16">
           <div className="flex flex-col gap-5 sm:gap-6 min-w-0">
             {citySentence ? (
-              <span className="self-start inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0b5e48] text-[#d1fae5] text-xs sm:text-sm font-semibold">
+              <span className="self-start inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0b5e48] text-[#d7f6e9] text-xs sm:text-sm font-semibold">
                 <span className="w-2 h-2 rounded-full bg-[#fbbf24]" />
                 Disponible à {citySentence}
               </span>
@@ -311,7 +311,7 @@ export default function LandingHeroStreamlined() {
             <h1 className="em-landing-heading text-[2.5rem] min-[400px]:text-[2.75rem] sm:text-[3.4rem] xl:text-[3.6rem] leading-[1.05] text-balance max-w-[620px]">
               Votre fête, de l’invitation jusqu’à l’entrée.
             </h1>
-            <p className="text-base sm:text-lg leading-relaxed text-[#d1fae5] max-w-[520px]">
+            <p className="text-base sm:text-lg leading-relaxed text-[#d7f6e9] max-w-[520px]">
               {messaging.adapt('Salle, budget, invitations WhatsApp et contrôle des entrées, au même endroit. Payé par Mobile Money.')}
             </p>
 
@@ -335,7 +335,7 @@ export default function LandingHeroStreamlined() {
                 </Link>
               ) : null}
               {['Sans carte bancaire', 'Aucune appli à installer'].map((item) => (
-                <span key={item} className="inline-flex items-center gap-1.5 text-sm text-[#a7f3d0]">
+                <span key={item} className="inline-flex items-center gap-1.5 text-sm text-[#b0eed5]">
                   <Check className="w-4 h-4 text-[#fbbf24] shrink-0" strokeWidth={2.6} />
                   {item}
                 </span>
@@ -397,7 +397,7 @@ export default function LandingHeroStreamlined() {
                     href={target.href}
                     className="group h-full overflow-hidden rounded-3xl bg-surface text-foreground border border-border flex sm:flex-col transition duration-200 hover:-translate-y-[3px] hover:border-primary/30 hover:shadow-[0_14px_32px_rgba(15,31,26,0.12)] motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                   >
-                    <span className="relative w-28 min-[420px]:w-32 sm:w-full shrink-0 sm:aspect-[4/3] overflow-hidden bg-[#064e3b]">
+                    <span className="relative w-28 min-[420px]:w-32 sm:w-full shrink-0 sm:aspect-[4/3] overflow-hidden bg-[#1f4a33]">
                       <Image
                         src={card.image}
                         alt={card.alt}
@@ -410,8 +410,8 @@ export default function LandingHeroStreamlined() {
                         aria-hidden
                         className="hidden sm:block absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/45 to-transparent"
                       />
-                      <span className="hidden sm:inline-flex absolute left-4 bottom-4 items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full bg-white/95 text-[#065f46] text-xs font-bold tracking-[0.04em] uppercase">
-                        <span className="w-6 h-6 rounded-full bg-[#ecfdf5] flex items-center justify-center">
+                      <span className="hidden sm:inline-flex absolute left-4 bottom-4 items-center gap-2 pl-1.5 pr-3 py-1.5 rounded-full bg-white/95 text-[#275a3d] text-xs font-bold tracking-[0.04em] uppercase">
+                        <span className="w-6 h-6 rounded-full bg-[#effbf6] flex items-center justify-center">
                           <Icon className="w-3.5 h-3.5" aria-hidden />
                         </span>
                         {card.eyebrow}

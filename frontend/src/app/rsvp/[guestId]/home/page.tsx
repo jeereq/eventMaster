@@ -132,7 +132,7 @@ export default function GuestHomePage() {
         <span className="sr-only">Chargement de vos invitations…</span>
         <div className="w-full max-w-xl space-y-5">
           <Skeleton className="h-8 w-48 rounded-lg" />
-          <div className="rounded-3xl bg-[#064e3b] p-5 space-y-4">
+          <div className="rounded-3xl bg-[#1f4a33] p-5 space-y-4">
             <Skeleton className="h-6 w-28 rounded-full !bg-white/15" />
             <Skeleton className="h-8 w-3/4 rounded-lg !bg-white/15" />
             <Skeleton className="h-4 w-2/3 rounded-full !bg-white/10" />
@@ -225,13 +225,13 @@ export default function GuestHomePage() {
                 <span className="em-guest-chip em-guest-chip--glass">Décliné</span>
               ) : null
             }
-            className="transition group-hover:bg-[#065f46]"
+            className="transition group-hover:bg-[#275a3d]"
           >
             <span
               className={cn(
                 'inline-flex items-center justify-center gap-2 self-start min-h-11 px-5 rounded-full text-sm font-semibold transition',
                 featured.rsvp === 'PENDING'
-                  ? 'bg-white text-[#064e3b] group-hover:bg-[#ecfdf5]'
+                  ? 'bg-white text-[#1f4a33] group-hover:bg-[#effbf6]'
                   : 'bg-white/14 text-white group-hover:bg-white/20',
               )}
             >

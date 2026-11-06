@@ -480,7 +480,7 @@ export default function LandingRoomPlanAiStudio({
                             'min-h-11 px-4 rounded-xl border-[1.5px] text-sm font-medium transition touch-manipulation',
                             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
                             selected
-                              ? 'border-primary-solid bg-[#e3f3ec] text-[#065f46] dark:bg-primary/15 dark:text-primary'
+                              ? 'border-primary-solid bg-[#e3f3ec] text-[#275a3d] dark:bg-primary/15 dark:text-primary'
                               : 'border-border bg-surface text-foreground hover:border-primary/50',
                           )}
                         >

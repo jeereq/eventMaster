@@ -26,7 +26,7 @@ export function folderTab(selected: boolean, className?: string) {
   return cn(
     'inline-flex items-center justify-center gap-2 min-h-12 rounded-t-xl font-semibold text-sm sm:text-[15px] transition-colors touch-manipulation',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#fbbf24]',
-    selected ? 'bg-background text-foreground' : 'text-[#d1fae5] hover:bg-white/10 hover:text-white',
+    selected ? 'bg-background text-foreground' : 'text-[#d7f6e9] hover:bg-white/10 hover:text-white',
     className,
   );
 }

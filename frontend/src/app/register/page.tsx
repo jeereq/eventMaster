@@ -581,7 +581,7 @@ function RegisterPageContent() {
               <div className="flex items-center gap-3 pb-1">
                 <span
                   aria-hidden
-                  className="w-10 h-10 shrink-0 rounded-[10px] bg-[#e3f3ec] text-[#065f46] dark:bg-primary/15 dark:text-primary inline-flex items-center justify-center"
+                  className="w-10 h-10 shrink-0 rounded-[10px] bg-[#e3f3ec] text-[#275a3d] dark:bg-primary/15 dark:text-primary inline-flex items-center justify-center"
                 >
                   {accountKind === 'CLIENT' ? (
                     <Compass className="w-5 h-5" />

@@ -51,7 +51,7 @@ export function AuthSplitLayout({
     <div className="min-h-screen flex bg-background text-foreground">
       <CelebrateMood />
       {/* Panneau marketing — couleurs via --auth-* / --primary */}
-      <div className="hidden lg:flex lg:w-[46%] xl:w-1/2 bg-[#064e3b] text-white p-10 xl:p-14 flex-col justify-between relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-[46%] xl:w-1/2 bg-[#1f4a33] text-white p-10 xl:p-14 flex-col justify-between relative overflow-hidden">
         {/* Photo de fête en fond, très atténuée : le panneau reste lisible mais plus chaleureux. */}
         <Image
           src="/images/landing/card-son-ambiance.jpg"
@@ -60,14 +60,14 @@ export function AuthSplitLayout({
           sizes="50vw"
           className="object-cover opacity-[0.16] mix-blend-luminosity pointer-events-none"
         />
-        <span aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#064e3b]/40 via-[#064e3b]/70 to-[#064e3b]" />
+        <span aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#1f4a33]/40 via-[#1f4a33]/70 to-[#1f4a33]" />
         <span
           aria-hidden
-          className="pointer-events-none absolute -right-24 -top-24 h-[22rem] w-[22rem] rounded-[5rem] border-[3.5rem] border-[#065f46]/80"
+          className="pointer-events-none absolute -right-24 -top-24 h-[22rem] w-[22rem] rounded-[5rem] border-[3.5rem] border-[#275a3d]/80"
         />
         <span
           aria-hidden
-          className="pointer-events-none absolute -left-20 -bottom-28 h-72 w-72 rounded-full border-[3rem] border-[#065f46]/70"
+          className="pointer-events-none absolute -left-20 -bottom-28 h-72 w-72 rounded-full border-[3rem] border-[#275a3d]/70"
         />
 
         <SiteBrandMark href="/" tone="onDark" className="relative z-10" />
@@ -75,7 +75,7 @@ export function AuthSplitLayout({
         <div className="space-y-8 my-auto relative z-10 max-w-md">
           <div className="space-y-3">
             <h1 className="text-4xl xl:text-5xl font-display font-bold leading-[1.05]">{messaging.adapt(title)}</h1>
-            <p className="text-[#d1fae5] text-base leading-relaxed">{messaging.adapt(description)}</p>
+            <p className="text-[#d7f6e9] text-base leading-relaxed">{messaging.adapt(description)}</p>
           </div>
 
           {features.length > 0 && (
@@ -90,17 +90,17 @@ export function AuthSplitLayout({
                     style={{ animationDelay: `${index * 70}ms` }}
                   >
                     {featureStyle === 'list' ? (
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-button)] bg-white/10 text-[#6ee7b7]">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-button)] bg-white/10 text-[#6ee6b6]">
                         <Icon className="w-4 h-4" />
                       </span>
                     ) : (
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-button)] bg-[#10b981] text-[#022c22] text-sm font-bold tabular-nums font-display">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-button)] bg-[#34ad7a] text-[#10291c] text-sm font-bold tabular-nums font-display">
                         {step}
                       </span>
                     )}
                     <div className="min-w-0">
                       <h3 className="font-semibold text-sm text-white">{messaging.adapt(feat.title)}</h3>
-                      <p className="text-sm text-[#a7f3d0] leading-relaxed mt-0.5">{messaging.adapt(feat.desc)}</p>
+                      <p className="text-sm text-[#b0eed5] leading-relaxed mt-0.5">{messaging.adapt(feat.desc)}</p>
                     </div>
                   </li>
                 );
@@ -109,7 +109,7 @@ export function AuthSplitLayout({
           )}
         </div>
 
-        <div className="text-xs text-[#a7f3d0] relative z-10 flex justify-between items-center gap-3">
+        <div className="text-xs text-[#b0eed5] relative z-10 flex justify-between items-center gap-3">
           <span>© {new Date().getFullYear()} {site.platformName}</span>
           <Link
             href="/contact"

@@ -16,8 +16,8 @@ export const contentType = 'image/png';
 
 export default async function OpenGraphImage() {
   const site = await fetchPublicSiteSnapshot();
-  const primary = site.brandPrimary || '#059669';
-  const accent = site.brandAccent || '#10b981';
+  const primary = site.brandPrimary || '#31714c';
+  const accent = site.brandAccent || '#6ee6b6';
 
   return new ImageResponse(
     (
@@ -29,7 +29,7 @@ export default async function OpenGraphImage() {
           flexDirection: 'column',
           justifyContent: 'space-between',
           padding: 72,
-          background: `linear-gradient(135deg, ${primary} 0%, ${accent} 58%, #022c22 100%)`,
+          background: `linear-gradient(135deg, ${primary} 0%, ${accent} 58%, #10291c 100%)`,
           color: '#ffffff',
         }}
       >

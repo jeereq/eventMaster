@@ -59,11 +59,11 @@ export default function EventTicketCard({
       onClick={() => rememberCurrentCatalogueList()}
       className={cn(
         'group flex flex-col rounded-2xl border border-border bg-surface overflow-hidden text-foreground transition',
-        'hover:border-primary/40 hover:shadow-[0_12px_28px_-18px_rgba(2,44,34,0.45)]',
+        'hover:border-primary/40 hover:shadow-[0_12px_28px_-18px_rgba(16,41,28,0.45)]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background',
       )}
     >
-      <div className="relative aspect-[16/10] bg-[#064e3b] text-white p-3 sm:p-3.5 flex flex-col justify-between">
+      <div className="relative aspect-[16/10] bg-[#1f4a33] text-white p-3 sm:p-3.5 flex flex-col justify-between">
         {item.coverUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- Cloudinary/Unsplash srcset, comme les autres cartes du catalogue
           <img

@@ -12,14 +12,17 @@ export type ResolvedBranding = {
   sidebar?: string;
 };
 
-/** Palette par défaut — même émeraude que le frontend (`--primary` / `--brand-accent`). */
+/** Palette par défaut — les deux verts du logo, comme le frontend (`--primary` / `--brand-accent`). */
 export const DEFAULT_TENANT_BRANDING: ResolvedBranding = {
-  primary: '#059669',
-  accent: '#10b981',
+  primary: '#31714c',
+  accent: '#6ee6b6',
 };
 
-/** Ancien indigo livré comme « défaut » : traité comme absence de marque perso. */
-const LEGACY_DEFAULT_HEX = new Set(['#4f46e5', '#6366f1', '#4338ca']);
+/**
+ * Anciens « défauts » livrés (indigo, puis émeraude Tailwind) : traités comme absence de marque
+ * perso, pour que les comptes et réglages enregistrés avec eux passent aux couleurs du logo.
+ */
+const LEGACY_DEFAULT_HEX = new Set(['#4f46e5', '#6366f1', '#4338ca', '#059669', '#10b981', '#047857']);
 
 export function normalizeBrandHex(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;

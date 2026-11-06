@@ -72,7 +72,7 @@ const CHIP =
 
 function chipTone(active: boolean) {
   return active
-    ? 'border-primary-solid bg-[#e3f3ec] text-[#065f46] dark:bg-primary/15 dark:text-primary'
+    ? 'border-primary-solid bg-[#e3f3ec] text-[#275a3d] dark:bg-primary/15 dark:text-primary'
     : 'border-border bg-surface text-foreground hover:border-primary/50';
 }
 
@@ -1668,7 +1668,7 @@ export default function EventPrepAiSimulator({
                   <span className="flex items-center justify-between gap-2">
                     <span className="font-display text-lg font-semibold text-foreground">{pack.label}</span>
                     {recommended ? (
-                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#e3f3ec] text-[#065f46] dark:bg-primary/15 dark:text-primary">
+                      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#e3f3ec] text-[#275a3d] dark:bg-primary/15 dark:text-primary">
                         Conseillée
                       </span>
                     ) : null}

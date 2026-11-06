@@ -2,8 +2,8 @@ import { buildMessagingChannels } from '@/lib/messagingChannels';
 
 const DEFAULT_NAME = 'EventMaster';
 const DEFAULT_TAGLINE = 'Préparez votre événement en un clic.';
-const DEFAULT_PRIMARY = '#059669';
-const DEFAULT_ACCENT = '#10b981';
+const DEFAULT_PRIMARY = '#31714c';
+const DEFAULT_ACCENT = '#6ee6b6';
 const DEFAULT_DESCRIPTION =
   'Invitez par WhatsApp, SMS ou e-mail, placez, accueillez. Trouvez une salle ou un prestataire. Confirmations de présence, plan de table et scan QR dans le navigateur.';
 

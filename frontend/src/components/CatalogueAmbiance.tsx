@@ -663,7 +663,7 @@ export function CatalogueDoor({
             <group position={[0, frameH / 2 + 0.16, 0.05]}>
               <mesh castShadow>
                 <boxGeometry args={[0.38, 0.15, 0.06]} />
-                <meshStandardMaterial color="#059669" emissive="#10b981" emissiveIntensity={0.85} roughness={0.2} />
+                <meshStandardMaterial color="#2c8f62" emissive="#34ad7a" emissiveIntensity={0.85} roughness={0.2} />
               </mesh>
             </group>
             {/* Panneau porte battante */}

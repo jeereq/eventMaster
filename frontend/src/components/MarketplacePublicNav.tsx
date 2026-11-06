@@ -59,7 +59,7 @@ export default function MarketplacePublicNav({
               aria-current={selected ? 'page' : undefined}
               className={folderTab(selected, 'shrink-0 whitespace-nowrap px-3.5 sm:px-4 lg:px-5')}
             >
-              <Icon aria-hidden className={cn('hidden sm:block w-4 h-4', selected ? 'text-primary-solid' : 'text-[#a7f3d0]')} />
+              <Icon aria-hidden className={cn('hidden sm:block w-4 h-4', selected ? 'text-primary-solid' : 'text-[#b0eed5]')} />
               <span className="xl:hidden">{item.short}</span>
               <span className="hidden xl:inline">{item.label}</span>
             </Link>

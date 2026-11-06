@@ -538,7 +538,7 @@ export default function GuestRoomPlanCanvas({
                         tableVisual.className
                       } ${
                         isGuest
-                          ? 'ring-4 ring-primary ring-offset-2 ring-offset-background border-primary shadow-[0_0_24px_rgba(5,150,105,0.45)] scale-105'
+                          ? 'ring-4 ring-primary ring-offset-2 ring-offset-background border-primary shadow-[0_0_24px_rgba(44,143,98,0.45)] scale-105'
                           : isSelected
                             ? 'ring-2 ring-primary ring-offset-2 ring-offset-background border-primary'
                             : 'border-border hover:border-primary'

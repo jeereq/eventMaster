@@ -3,7 +3,11 @@
 /* Les variantes dark: ne s'appliquent pas dans un `.em-light-island` (aperçu / document volontairement clair). */
 @custom-variant dark (&:where(.dark, .dark *):not(:where(.em-light-island, .em-light-island *)));
 
-/* ─── Asana-inspired tokens: warm neutrals, flat elevation, soft radius ─── */
+/* ─── Asana-inspired tokens: warm neutrals, flat elevation, soft radius ───
+   Verts de marque = les deux verts du logo :
+     • vert forêt  #31714c (texte / boutons en clair — blanc dessus 5.8:1, sur fond 5.4:1)
+     • vert menthe #6ee6b6 (texte / accents en sombre — 10.5:1 sur --surface sombre)
+   L'échelle `emerald-*` de Tailwind est redéfinie plus bas sur ces deux teintes. */
 :root {
   --background: #f4f7f5;
   --foreground: #0f1f1a;
@@ -11,13 +15,13 @@
   --surface-muted: #edf2ef;
   --border: #dfe7e3;
   --border-subtle: #edf2ef;
-  --primary: #047857;
-  --primary-hover: #065f46;
+  --primary: #31714c;
+  --primary-hover: #275a3d;
   /** Fond de bouton / pastille : blanc AA (≥ 4.5:1). Ne pas réutiliser --primary (trop clair en dark). */
-  --primary-solid: #047857;
-  --primary-solid-hover: #065f46;
+  --primary-solid: #31714c;
+  --primary-solid-hover: #275a3d;
   --primary-foreground: #ffffff;
-  --brand-accent: #10b981;
+  --brand-accent: #34ad7a;
   --muted: #3d4f48;
   --sidebar: #edf2ef;
   --card-hover: #f8faf9;
@@ -34,10 +38,10 @@
   /* Barre Devis / Réserver des fiches (pt-3 + 44px + pb-3) */
   --em-listing-dock: 4.5rem;
   /* Panneau auth — surchargés par brandTheme / env */
-  --auth-from: #064e3b;
-  --auth-via: #022c22;
+  --auth-from: #1f4a33;
+  --auth-via: #10291c;
   --auth-to: #0f172a;
-  --auth-glow: 5, 150, 105;
+  --auth-glow: 49, 113, 76;
   /* Celebrate (landing / Répondez s’il vous plaît / auth) — touche Kinshasa + confetti minimal */
   --festive-accent: #d97706;
   --festive-accent-soft: color-mix(in srgb, #d97706 14%, transparent);
@@ -72,7 +76,7 @@ html[data-mood="celebrate"].dark,
   --sidebar: #0f1513;
   --card-hover: #1f2925;
   --surface-warm: #131a17;
-  --brand-accent: #6ee7b7;
+  --brand-accent: #6ee6b6;
   --festive-accent: #fbbf24;
   --festive-on-stage: #fcd34d;
   --stage: #0c110f;
@@ -80,7 +84,7 @@ html[data-mood="celebrate"].dark,
 }
 
 /* Sombre « forêt » : anthracite teinté vert, aligné sur le design public émeraude.
-   Contrastes (WCAG AA) : foreground 14:1, muted 7:1, primary 6.3:1 sur --surface. */
+   Contrastes (WCAG AA) : foreground 14:1, muted 7:1, primary (menthe du logo) 10.5:1 sur --surface. */
 .dark {
   color-scheme: dark;
   --background: #131a17;
@@ -89,12 +93,12 @@ html[data-mood="celebrate"].dark,
   --surface-muted: #212c28;
   --border: #2c3833;
   --border-subtle: #36433d;
-  --primary: #10b981;
-  --primary-hover: #34d399;
-  --primary-solid: #047857;
-  --primary-solid-hover: #065f46;
+  --primary: #6ee6b6;
+  --primary-hover: #b0eed5;
+  --primary-solid: #31714c;
+  --primary-solid-hover: #275a3d;
   --primary-foreground: #ffffff;
-  --brand-accent: #6ee7b7;
+  --brand-accent: #6ee6b6;
   --muted: #9fb0a8;
   --sidebar: #0f1513;
   --card-hover: #1f2925;
@@ -105,6 +109,32 @@ html[data-mood="celebrate"].dark,
   --festive-on-stage: #fcd34d;
   --stage: #0c110f;
   --stage-elevated: #151d1a;
+}
+
+/* Échelle émeraude Tailwind remplacée par la gamme du logo (300 = menthe, 700 = forêt) :
+   toutes les classes `emerald-*` des pages suivent ainsi la marque. */
+@theme {
+  --color-emerald-50: #effbf6;
+  --color-emerald-100: #d7f6e9;
+  --color-emerald-200: #b0eed5;
+  --color-emerald-300: #6ee6b6;
+  --color-emerald-400: #4cce98;
+  --color-emerald-500: #34ad7a;
+  --color-emerald-600: #2c8f62;
+  --color-emerald-700: #31714c;
+  --color-emerald-800: #275a3d;
+  --color-emerald-900: #1f4a33;
+  --color-emerald-950: #10291c;
+}
+
+/* Sombre : --primary devient la menthe du logo (texte lisible), donc trop claire pour un
+   fond de bouton à texte blanc. Les fonds pleins `bg-primary` reprennent le vert forêt
+   (--primary-solid, blanc 5.8:1). Une marque tenant personnalisée (data-brand="custom") garde sa couleur. */
+html.dark:not([data-brand="custom"]) :is(.bg-primary, .hover\:bg-primary:hover):not(.em-light-island, .em-light-island *) {
+  background-color: var(--primary-solid);
+}
+html.dark:not([data-brand="custom"]) .hover\:bg-primary-hover:hover:not(.em-light-island, .em-light-island *) {
+  background-color: var(--primary-solid-hover);
 }
 
 @theme inline {
@@ -119,7 +149,7 @@ html[data-mood="celebrate"].dark,
   --color-primary-solid: var(--primary-solid);
   --color-primary-solid-hover: var(--primary-solid-hover);
   --color-primary-foreground: var(--primary-foreground);
-  --color-brand-accent: var(--brand-accent, #10b981);
+  --color-brand-accent: var(--brand-accent, #34ad7a);
   --color-muted: var(--muted);
   --color-sidebar: var(--sidebar);
   --color-card-hover: var(--card-hover);
@@ -395,10 +425,10 @@ h1, h2, h3, h4 {
 
 @keyframes em-holo-glow {
   0%, 100% {
-    filter: drop-shadow(0 0 12px rgba(16, 185, 129, 0.35)) drop-shadow(0 0 24px rgba(16, 185, 129, 0.15));
+    filter: drop-shadow(0 0 12px rgba(52, 173, 122, 0.35)) drop-shadow(0 0 24px rgba(52, 173, 122, 0.15));
   }
   50% {
-    filter: drop-shadow(0 0 20px rgba(16, 185, 129, 0.65)) drop-shadow(0 0 36px rgba(16, 185, 129, 0.25));
+    filter: drop-shadow(0 0 20px rgba(52, 173, 122, 0.65)) drop-shadow(0 0 36px rgba(52, 173, 122, 0.25));
   }
 }
 
@@ -1165,7 +1195,7 @@ body[data-em-sheet-open] .em-ai-fab {
   overflow: hidden;
   padding: 1.35rem 1.35rem 1.5rem;
   color: #fff;
-  background: #064e3b;
+  background: #1f4a33;
 }
 
 .em-guest-hero__banner::after {
@@ -1176,7 +1206,7 @@ body[data-em-sheet-open] .em-ai-fab {
   width: 10rem;
   height: 10rem;
   border-radius: 999px;
-  border: 28px solid #10b981;
+  border: 28px solid #34ad7a;
   opacity: 0.25;
   pointer-events: none;
 }
@@ -1193,8 +1223,8 @@ body[data-em-sheet-open] .em-ai-fab {
 }
 
 .em-guest-chip--count {
-  background: #10b981;
-  color: #022c22;
+  background: #34ad7a;
+  color: #10291c;
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -1328,9 +1358,9 @@ body[data-em-sheet-open] .em-ai-fab {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #059669;
+  background: #2c8f62;
   border: 2px solid #fff;
-  box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.22);
+  box-shadow: 0 0 0 4px rgba(44, 143, 98, 0.22);
   animation: em-guide-user-pulse 1.8s ease-out infinite;
 }
 
@@ -1468,10 +1498,10 @@ body[data-em-sheet-open] .em-ai-fab {
   animation-delay: calc(var(--pin-delay, 0ms) + 520ms);
 }
 
-.em-map-marker-venue .em-map-marker-pulse { background: var(--primary, #059669); }
+.em-map-marker-venue .em-map-marker-pulse { background: var(--primary, #2c8f62); }
 .em-map-marker-service .em-map-marker-pulse { background: var(--festive-accent, #b45309); }
 .em-map-marker-rental .em-map-marker-pulse { background: #0e7490; }
-.em-map-marker-event .em-map-marker-pulse { background: #059669; }
+.em-map-marker-event .em-map-marker-pulse { background: #2c8f62; }
 
 .em-map-marker-card {
   display: flex;
@@ -1510,7 +1540,7 @@ body[data-em-sheet-open] .em-ai-fab {
 
 .em-map-marker-card.is-venue .em-map-marker-card-face,
 .em-map-marker-venue .em-map-marker-card-face {
-  background: var(--primary, #059669);
+  background: var(--primary, #2c8f62);
 }
 .em-map-marker-card.is-service .em-map-marker-card-face,
 .em-map-marker-service .em-map-marker-card-face {
@@ -1522,7 +1552,7 @@ body[data-em-sheet-open] .em-ai-fab {
 }
 .em-map-marker-card.is-event .em-map-marker-card-face,
 .em-map-marker-event .em-map-marker-card-face {
-  background: #059669;
+  background: #2c8f62;
 }
 
 .em-map-marker-card-photo,
@@ -1575,13 +1605,13 @@ body[data-em-sheet-open] .em-ai-fab {
 }
 
 .em-map-marker-card.is-venue .em-map-marker-card-arrow,
-.em-map-marker-venue .em-map-marker-card-arrow { color: var(--primary, #059669); }
+.em-map-marker-venue .em-map-marker-card-arrow { color: var(--primary, #2c8f62); }
 .em-map-marker-card.is-service .em-map-marker-card-arrow,
 .em-map-marker-service .em-map-marker-card-arrow { color: var(--festive-accent, #b45309); }
 .em-map-marker-card.is-rental .em-map-marker-card-arrow,
 .em-map-marker-rental .em-map-marker-card-arrow { color: #0e7490; }
 .em-map-marker-card.is-event .em-map-marker-card-arrow,
-.em-map-marker-event .em-map-marker-card-arrow { color: #059669; }
+.em-map-marker-event .em-map-marker-card-arrow { color: #2c8f62; }
 
 .em-map-marker-arrow {
   display: block;
@@ -1819,7 +1849,7 @@ body[data-em-sheet-open] .em-ai-fab {
 }
 
 .em-map-legend-venue {
-  background: var(--primary, #059669);
+  background: var(--primary, #2c8f62);
   border-radius: 3px;
 }
 
@@ -1837,7 +1867,7 @@ body[data-em-sheet-open] .em-ai-fab {
 }
 
 .em-map-legend-event {
-  background: #059669;
+  background: #2c8f62;
   border-radius: 3px;
 }
 
@@ -2306,7 +2336,7 @@ body[data-em-sheet-open] .em-ai-fab {
   width: 0.85rem;
   height: 0.75rem;
   border-radius: 0.2rem;
-  background: linear-gradient(180deg, #34d399, #047857);
+  background: linear-gradient(180deg, #4cce98, #31714c);
 }
 
 .em-chair-top--crossback {
@@ -2401,8 +2431,8 @@ body[data-em-sheet-open] .em-ai-fab {
 
 .em-floor-seat--filled {
   background:
-    radial-gradient(ellipse at 40% 30%, #6ee7b7, color-mix(in srgb, var(--primary) 80%, #047857));
-  border-color: color-mix(in srgb, var(--primary) 55%, #064e3b);
+    radial-gradient(ellipse at 40% 30%, #6ee6b6, color-mix(in srgb, var(--primary) 80%, #31714c));
+  border-color: color-mix(in srgb, var(--primary) 55%, #1f4a33);
   color: #fff;
   box-shadow:
     0 2px 4px rgba(0, 0, 0, 0.28),
@@ -2475,8 +2505,8 @@ body[data-em-sheet-open] .em-ai-fab {
   --surface-muted: #edf2ef;
   --border: #dfe7e3;
   --border-subtle: #edf2ef;
-  --primary: #047857;
-  --primary-hover: #065f46;
+  --primary: #31714c;
+  --primary-hover: #275a3d;
   --muted: #3d4f48;
   --card-hover: #f8faf9;
   --danger: #be123c;
@@ -2576,22 +2606,22 @@ body[data-em-sheet-open] .em-ai-fab {
 /* Pastilles / bandeaux d'état clairs (bg-*-50, text-*-700…) sans variante dark: —
    tons translucides lisibles sur fond sombre. Ignorés dès que l'élément porte une classe dark: du même type. */
 .dark :is(.bg-emerald-50, .bg-emerald-50\/50, .bg-emerald-50\/80, .bg-emerald-50\/90, .bg-emerald-50\/95, .bg-emerald-100, .bg-emerald-100\/50, .bg-emerald-100\/80, .bg-emerald-100\/90, .bg-emerald-100\/95):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
-  background-color: rgb(16 185 129 / 0.12);
+  background-color: rgb(52 173 122 / 0.12);
 }
 .dark :is(.text-emerald-600, .text-emerald-700, .text-emerald-800, .text-emerald-900, .text-emerald-950):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
-  color: #6ee7b7;
+  color: #6ee6b6;
 }
 .dark :is(.border-emerald-100, .border-emerald-100\/60, .border-emerald-100\/80, .border-emerald-200, .border-emerald-200\/60, .border-emerald-200\/80, .border-emerald-300, .border-emerald-300\/60, .border-emerald-300\/80):not(.em-light-island, .em-light-island *):not([class*='dark:border-']) {
-  border-color: rgb(16 185 129 / 0.3);
+  border-color: rgb(52 173 122 / 0.3);
 }
 .dark :is(.bg-green-50, .bg-green-50\/50, .bg-green-50\/80, .bg-green-50\/90, .bg-green-50\/95, .bg-green-100, .bg-green-100\/50, .bg-green-100\/80, .bg-green-100\/90, .bg-green-100\/95):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
-  background-color: rgb(16 185 129 / 0.12);
+  background-color: rgb(52 173 122 / 0.12);
 }
 .dark :is(.text-green-600, .text-green-700, .text-green-800, .text-green-900, .text-green-950):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
-  color: #6ee7b7;
+  color: #6ee6b6;
 }
 .dark :is(.border-green-100, .border-green-100\/60, .border-green-100\/80, .border-green-200, .border-green-200\/60, .border-green-200\/80, .border-green-300, .border-green-300\/60, .border-green-300\/80):not(.em-light-island, .em-light-island *):not([class*='dark:border-']) {
-  border-color: rgb(16 185 129 / 0.3);
+  border-color: rgb(52 173 122 / 0.3);
 }
 .dark :is(.bg-teal-50, .bg-teal-50\/50, .bg-teal-50\/80, .bg-teal-50\/90, .bg-teal-50\/95, .bg-teal-100, .bg-teal-100\/50, .bg-teal-100\/80, .bg-teal-100\/90, .bg-teal-100\/95):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
   background-color: rgb(20 184 166 / 0.12);
@@ -2710,11 +2740,11 @@ body[data-em-sheet-open] .em-ai-fab {
 .dark :is(.border-purple-100, .border-purple-100\/60, .border-purple-100\/80, .border-purple-200, .border-purple-200\/60, .border-purple-200\/80, .border-purple-300, .border-purple-300\/60, .border-purple-300\/80):not(.em-light-island, .em-light-island *):not([class*='dark:border-']) {
   border-color: rgb(168 85 247 / 0.3);
 }
-.dark :is(.bg-\[\#ecfdf5\], .bg-\[\#d1fae5\]):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
-  background-color: rgb(16 185 129 / 0.12);
+.dark :is(.bg-\[\#effbf6\], .bg-\[\#d7f6e9\]):not(.em-light-island, .em-light-island *):not([class*='dark:bg-']) {
+  background-color: rgb(52 173 122 / 0.12);
 }
-.dark :is(.text-\[\#064e3b\], .text-\[\#065f46\]):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
-  color: #6ee7b7;
+.dark :is(.text-\[\#1f4a33\], .text-\[\#275a3d\]):not(.em-light-island, .em-light-island *):not([class*='dark:text-']) {
+  color: #6ee6b6;
 }
 
 /* Ombres discrètes (Asana = flat + hairline) */

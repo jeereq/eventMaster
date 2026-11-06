@@ -834,7 +834,7 @@ const ADMIN_TEMPLATES_HREF = '/dashboard?tab=templates';
  type === 'curve' ? 'Ligne courbe décorative' :
  type === 'triangle' ? 'Triangle décoratif' : 
  type === 'divider' ? '' : 'Confirmer ma présence',
- color: type === 'button' ? (importedPalette?.accent || '#059669') : 
+ color: type === 'button' ? (importedPalette?.accent || '#31714c') : 
  type === 'curve' || type === 'triangle' || type === 'divider' ? (importedPalette?.accent || '#c5a059') : (importedPalette?.primary || '#1e293b'),
  fontSize: type === 'text' ? '16px' : 
  type === 'curve' ? '3px' : '15px',
@@ -5294,7 +5294,7 @@ const studioModelPhotos = useMemo(
  <div className="flex gap-2">
  <input
  type="color"
- value={elColor.startsWith('#') ? elColor : '#059669'}
+ value={elColor.startsWith('#') ? elColor : '#31714c'}
  onChange={(e) => handlePropertyChange('color', e.target.value)}
  className="w-8 h-8 rounded-lg border border-border cursor-pointer overflow-hidden p-0"
  />

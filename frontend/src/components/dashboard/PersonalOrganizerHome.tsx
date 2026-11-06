@@ -646,16 +646,16 @@ function EmptyHero({ canCreate }: { canCreate: boolean }) {
     { icon: Heart, title: 'Accueillez le jour J', hint: 'Scan du QR à l’entrée' },
   ];
   return (
-    <section className="relative overflow-hidden rounded-3xl bg-[#064e3b] p-6 text-white sm:p-8">
+    <section className="relative overflow-hidden rounded-3xl bg-[#1f4a33] p-6 text-white sm:p-8">
       <span
         aria-hidden
-        className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full border-[32px] border-[#10b981] opacity-25"
+        className="pointer-events-none absolute -right-12 -top-12 h-48 w-48 rounded-full border-[32px] border-[#34ad7a] opacity-25"
       />
       <div className="relative max-w-2xl">
         <h2 className="font-display text-2xl font-semibold leading-tight sm:text-3xl">
           Votre première fête commence ici
         </h2>
-        <p className="mt-2 text-sm text-[#a7f3d0]">De quel événement s’agit-il ?</p>
+        <p className="mt-2 text-sm text-[#b0eed5]">De quel événement s’agit-il ?</p>
         <div className="mt-4 flex flex-wrap gap-2">
           {OCCASIONS.map((o) => (
             <Link
@@ -669,7 +669,7 @@ function EmptyHero({ canCreate }: { canCreate: boolean }) {
         </div>
         <Link
           href={canCreate ? '/dashboard/events?create=1' : '/dashboard/billing'}
-          className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#10b981] px-5 text-sm font-semibold text-[#022c22] transition hover:bg-[#34d399]"
+          className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#34ad7a] px-5 text-sm font-semibold text-[#10291c] transition hover:bg-[#4cce98]"
         >
           <PlusCircle className="h-4 w-4" />
           {canCreate ? 'Créer ma fête' : 'Choisir un forfait'}
@@ -680,7 +680,7 @@ function EmptyHero({ canCreate }: { canCreate: boolean }) {
           const Icon = s.icon;
           return (
             <li key={s.title} className="rounded-2xl bg-white/5 p-3 ring-1 ring-white/10">
-              <span className="flex items-center gap-2 text-xs font-semibold text-[#a7f3d0]">
+              <span className="flex items-center gap-2 text-xs font-semibold text-[#b0eed5]">
                 <Icon className="h-4 w-4" aria-hidden />
                 Étape {i + 1}
               </span>

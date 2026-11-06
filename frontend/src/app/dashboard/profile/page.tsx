@@ -35,8 +35,8 @@ function ProfilePageContent() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [brandPrimary, setBrandPrimary] = useState('#059669');
-  const [brandAccent, setBrandAccent] = useState('#10b981');
+  const [brandPrimary, setBrandPrimary] = useState('#31714c');
+  const [brandAccent, setBrandAccent] = useState('#6ee6b6');
   const [brandSaving, setBrandSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -69,8 +69,8 @@ function ProfilePageContent() {
     if (tenant) {
       setTenantName(tenant.name || '');
       setAccountKind(tenant.accountKind || 'ORGANIZER');
-      setBrandPrimary(tenant.branding?.primary || '#059669');
-      setBrandAccent(tenant.branding?.accent || '#10b981');
+      setBrandPrimary(tenant.branding?.primary || '#31714c');
+      setBrandAccent(tenant.branding?.accent || '#6ee6b6');
     }
   }, [user, tenant]);
 
@@ -97,8 +97,8 @@ function ProfilePageContent() {
     setError('');
     try {
       await updateBranding({ reset: true });
-      setBrandPrimary('#059669');
-      setBrandAccent('#10b981');
+      setBrandPrimary('#31714c');
+      setBrandAccent('#6ee6b6');
       setSuccess('Couleurs EventMaster restaurées.');
     } catch (err: any) {
       setError(err.message || 'Réinitialisation impossible.');

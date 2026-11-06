@@ -1377,7 +1377,7 @@ export default function GuestPendingInvitationView({
         <button
           type="button"
           onClick={scrollToAnswer}
-          className="fixed z-30 left-1/2 -translate-x-1/2 bottom-[max(1rem,env(safe-area-inset-bottom))] inline-flex items-center gap-2 h-12 px-5 rounded-full bg-primary-solid text-primary-foreground text-sm font-semibold shadow-[0_10px_24px_-6px_rgba(4,120,87,0.55)] hover:bg-primary-solid-hover active:scale-95 transition animate-fade-in touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="fixed z-30 left-1/2 -translate-x-1/2 bottom-[max(1rem,env(safe-area-inset-bottom))] inline-flex items-center gap-2 h-12 px-5 rounded-full bg-primary-solid text-primary-foreground text-sm font-semibold shadow-[0_10px_24px_-6px_rgba(49,113,76,0.55)] hover:bg-primary-solid-hover active:scale-95 transition animate-fade-in touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           <ArrowDown className="w-4 h-4" aria-hidden />
           Répondre à l&apos;invitation

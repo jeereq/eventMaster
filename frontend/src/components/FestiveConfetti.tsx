@@ -7,7 +7,7 @@ const COLORS = [
   'var(--primary)',
   'var(--brand-accent)',
   '#f59e0b',
-  '#10b981',
+  '#34ad7a',
   '#f43f5e',
 ];
 

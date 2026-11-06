@@ -46,7 +46,7 @@ const QUICK_CHIP_CLASS =
 
 function quickChipTone(active: boolean) {
   return active
-    ? 'border-primary-solid bg-[#e3f3ec] text-[#065f46] dark:bg-primary/15 dark:text-primary'
+    ? 'border-primary-solid bg-[#e3f3ec] text-[#275a3d] dark:bg-primary/15 dark:text-primary'
     : 'border-border bg-surface text-foreground hover:border-primary/40';
 }
 
@@ -185,7 +185,7 @@ function MarketplaceEventsPageInner() {
       heroDescription="Concerts, conférences et galas. Payez en Mobile Money et présentez votre pass QR à l’entrée."
       heroAside={(
         <span className="inline-flex items-center gap-2 rounded-full bg-[#0b5e48] px-3.5 py-2 text-sm text-white">
-          <CreditCard className="w-4 h-4 text-[#6ee7b7]" aria-hidden />
+          <CreditCard className="w-4 h-4 text-[#6ee6b6]" aria-hidden />
           M-Pesa, Orange, Airtel, carte
         </span>
       )}

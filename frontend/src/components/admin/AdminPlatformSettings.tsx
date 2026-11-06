@@ -272,7 +272,7 @@ export default function AdminPlatformSettings({
                   value={value.brandPrimary || ''}
                   onChange={(e) => patch({ brandPrimary: e.target.value })}
                   className={cn(fieldClass, 'font-mono')}
-                  placeholder="#059669"
+                  placeholder="#31714c"
                 />
               </div>
               <div className="space-y-1.5">
@@ -282,7 +282,7 @@ export default function AdminPlatformSettings({
                   value={value.brandAccent || ''}
                   onChange={(e) => patch({ brandAccent: e.target.value })}
                   className={cn(fieldClass, 'font-mono')}
-                  placeholder="#10b981"
+                  placeholder="#6ee6b6"
                 />
               </div>
             </div>

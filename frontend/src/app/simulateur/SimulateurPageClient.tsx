@@ -420,14 +420,14 @@ export default function SimulateurPageClient() {
   return (
     <PublicPageShell faqHref="/faq" mobileFooterPad>
       {/* ─── EN-TÊTE DES STUDIOS : titre du studio ouvert, solde, onglets en languettes ─── */}
-      <section className="bg-[#064e3b] text-white">
+      <section className="bg-[#1f4a33] text-white">
         <div className="page-container pt-4 md:pt-8">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="min-w-0 space-y-1">
               <h1 className="font-display text-2xl md:text-[2.125rem] font-semibold leading-tight tracking-[-0.02em]">
                 {STUDIO_HEADINGS[activeStudio].title}
               </h1>
-              <p className="text-sm md:text-[15px] text-[#d1fae5]"><ChannelText text={STUDIO_HEADINGS[activeStudio].text} /></p>
+              <p className="text-sm md:text-[15px] text-[#d7f6e9]"><ChannelText text={STUDIO_HEADINGS[activeStudio].text} /></p>
             </div>
 
             {!allowance.unlimited ? (
@@ -437,7 +437,7 @@ export default function SimulateurPageClient() {
                 onClick={() => setPurchaseModalOpen(true)}
                 className={cn(
                   'shrink-0 inline-flex items-center gap-2.5 min-h-11 pl-3.5 pr-1.5 py-1.5 rounded-full bg-[#0b5e48] text-sm text-white tabular-nums transition touch-manipulation',
-                  'hover:bg-[#0f6b52] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fbbf24] focus-visible:ring-offset-2 focus-visible:ring-offset-[#064e3b]',
+                  'hover:bg-[#0f6b52] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fbbf24] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1f4a33]',
                   tokensLow && 'ring-1 ring-[#fbbf24]/70',
                 )}
                 aria-label={`${allowance.totalRemaining} jeton${allowance.totalRemaining > 1 ? 's' : ''} IA restant${allowance.totalRemaining > 1 ? 's' : ''}. Recharger`}
@@ -473,7 +473,7 @@ export default function SimulateurPageClient() {
                   className={cn(
                     'flex-1 sm:flex-none inline-flex items-center justify-center gap-2.5 min-h-12 px-2 sm:px-5 rounded-t-xl font-semibold text-sm sm:text-[15px] transition-colors cursor-pointer touch-manipulation',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#fbbf24]',
-                    selected ? 'bg-background text-foreground' : 'text-[#d1fae5] hover:bg-white/10 hover:text-white',
+                    selected ? 'bg-background text-foreground' : 'text-[#d7f6e9] hover:bg-white/10 hover:text-white',
                   )}
                 >
                   {studio.title}
@@ -482,7 +482,7 @@ export default function SimulateurPageClient() {
                       'hidden sm:inline text-xs font-medium tabular-nums',
                       blocked
                         ? (selected ? 'text-amber-700 dark:text-amber-300' : 'text-[#fcd34d]')
-                        : (selected ? 'text-primary-solid' : 'text-[#a7f3d0]'),
+                        : (selected ? 'text-primary-solid' : 'text-[#b0eed5]'),
                     )}
                   >
                     {blocked ? 'Bientôt' : studio.cost}
@@ -637,7 +637,7 @@ function ComingSoonPanel({
 }) {
   return (
     <div className="rounded-[1.25rem] border border-border bg-surface p-6 sm:p-10 text-center space-y-4">
-      <span className="w-12 h-12 rounded-2xl bg-[#d1fae5] text-primary-solid dark:bg-primary/15 inline-flex items-center justify-center">
+      <span className="w-12 h-12 rounded-2xl bg-[#d7f6e9] text-primary-solid dark:bg-primary/15 inline-flex items-center justify-center">
         <Clock className="w-6 h-6" aria-hidden />
       </span>
       <div className="space-y-1.5 max-w-md mx-auto">
