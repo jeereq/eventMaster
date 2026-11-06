@@ -6,7 +6,6 @@ import Image from 'next/image';
 import { useTheme } from '@/context/ThemeContext';
 import { PartyPopper, Sun, Moon, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import PublicAccentPicker from '@/components/PublicAccentPicker';
 import PWAInstallCta from '@/components/PWAInstallCta';
 import SiteBrandMark from '@/components/SiteBrandMark';
 import CelebrateMood from '@/components/CelebrateMood';
@@ -137,9 +136,6 @@ export function AuthSplitLayout({
               <PWAInstallCta variant="inline" />
             </div>
             <SiteBrandMark href="/" size="sm" className="lg:hidden" />
-            <div className="hidden sm:flex items-center">
-              <PublicAccentPicker />
-            </div>
             <button
               type="button"
               onClick={toggleTheme}

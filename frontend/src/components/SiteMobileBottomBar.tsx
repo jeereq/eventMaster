@@ -30,7 +30,6 @@ import { motionSafeScrollBehavior } from '@/lib/prefersReducedMotion';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import PublicAccentPicker from '@/components/PublicAccentPicker';
 import usePwaInstall from '@/hooks/usePwaInstall';
 import { Button } from '@/components/ui';
 import { scrollAppToTop, tapHaptic, useMobileRouteFade } from '@/lib/mobileNative';
@@ -517,11 +516,6 @@ export default function SiteMobileBottomBar({
                     </>
                   )}
                 </button>
-
-                <div className="flex items-center justify-between px-3 min-h-11 rounded-2xl bg-surface-muted/40 dark:bg-surface-muted/20 border border-border/60 dark:border-border-subtle/30">
-                  <span className="text-xs font-medium text-muted">Couleur</span>
-                  <PublicAccentPicker />
-                </div>
               </div>
 
               {showInstall ? (
