@@ -1,11 +1,15 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import { usePlatformSite } from '@/context/PlatformSiteContext';
+import SubscriptionFlexPayModal, { type FlexPayMethod } from '@/components/SubscriptionFlexPayModal';
 import {
   ShieldAlert, Send, Clock, CheckCircle2, XCircle,
   Loader2, CreditCard, Check, LogOut, RefreshCw,
+  Smartphone, ShieldCheck, ChevronDown, Zap,
 } from 'lucide-react';
 import {
   LANDING_PLANS,
@@ -19,16 +23,85 @@ import {
 import { cn } from '@/lib/cn';
 import { guestsBadgeFromDb, highlightsFromDb, planDisplayName } from '@/lib/planCatalogDb';
 
+type FlexPayCheckoutState = {
+  planId?: PlanId | null;
+  planName: string;
+  priceLabel: string;
+  retryRequestId?: string | null;
+  startPending?: boolean;
+  initialMethod: FlexPayMethod;
+};
+
+type SubscriptionRequestRow = {
+  id: string;
+  requestedPlan: PlanId;
+  status: string;
+  requestKind?: string | null;
+  paymentProvider?: string | null;
+  approvedAmount?: number | null;
+  proofOfPayment?: string | null;
+  createdAt: string;
+};
+
+/** Retour du formulaire carte FlexPay : l’API redirige vers /dashboard/billing, qui affiche cet écran tant que la licence est inactive. */
+function readFlexPayReturn(params: URLSearchParams | null): {
+  error: string;
+  checkout: FlexPayCheckoutState | null;
+} {
+  const flexpay = params?.get('flexpay');
+  const requestId = params?.get('requestId');
+  if (flexpay === 'canceled') {
+    return { error: 'Paiement annulé. Vous pouvez réessayer quand vous voulez.', checkout: null };
+  }
+  if (flexpay === 'error') {
+    return { error: 'Retour de paiement invalide. Contactez le support si le montant a été débité.', checkout: null };
+  }
+  if (requestId && (flexpay === 'return' || flexpay === 'pending')) {
+    return {
+      error: '',
+      checkout: {
+        planName: 'Abonnement',
+        priceLabel: '',
+        retryRequestId: requestId,
+        startPending: true,
+        initialMethod: 'card',
+      },
+    };
+  }
+  return { error: '', checkout: null };
+}
+
+function isFlexPayRequest(req: SubscriptionRequestRow) {
+  return req?.paymentProvider === 'flexpay_card' || req?.paymentProvider === 'flexpay_mobile';
+}
+
+function formatFc(amount: number) {
+  return `${new Intl.NumberFormat('fr-FR').format(amount)} FC`;
+}
+
 export default function PWARestrictedScreen() {
   const { tenant, logout, refreshProfile } = useAuth();
+  const { site } = usePlatformSite();
+  const searchParams = useSearchParams();
+  const [saasPaymentMode, setSaasPaymentMode] = useState<'manual' | 'flexpay'>(
+    site.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual',
+  );
+  const [onlinePaymentsEnabled, setOnlinePaymentsEnabled] = useState<boolean>(
+    site.onlinePaymentsEnabled !== false,
+  );
+  const [flexPayReturn] = useState(() =>
+    readFlexPayReturn(searchParams ? new URLSearchParams(searchParams.toString()) : null),
+  );
+  const [flexPayCheckout, setFlexPayCheckout] = useState<FlexPayCheckoutState | null>(flexPayReturn.checkout);
+  const [manualOpen, setManualOpen] = useState(false);
   const [requestedPlan, setRequestedPlan] = useState<PlanId>('STANDARD');
   const [proofOfPayment, setProofOfPayment] = useState('');
-  const [requests, setRequests] = useState<any[]>([]);
+  const [requests, setRequests] = useState<SubscriptionRequestRow[]>([]);
   const [dynamicPlans, setDynamicPlans] = useState<Record<string, any> | null>(null);
   const [loadingRequests, setLoadingRequests] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(flexPayReturn.error);
   const [success, setSuccess] = useState('');
 
   const loadMyRequests = async () => {
@@ -39,7 +112,15 @@ export default function PWARestrictedScreen() {
         api.get('/subscriptions/plans').catch(() => null),
       ]);
       setRequests(requestsData);
-      if (plansData) setDynamicPlans(plansData);
+      if (plansData) {
+        setDynamicPlans(plansData);
+        if (plansData.saasPaymentMode === 'flexpay' || plansData.saasPaymentMode === 'manual') {
+          setSaasPaymentMode(plansData.saasPaymentMode);
+        }
+        if (typeof plansData.onlinePaymentsEnabled === 'boolean') {
+          setOnlinePaymentsEnabled(plansData.onlinePaymentsEnabled);
+        }
+      }
     } catch {
       /* ignore */
     } finally {
@@ -50,6 +131,8 @@ export default function PWARestrictedScreen() {
   useEffect(() => {
     loadMyRequests();
   }, []);
+
+  const onlinePaymentAvailable = saasPaymentMode === 'flexpay' && onlinePaymentsEnabled;
 
   const allowedPlanIds = useMemo(
     () =>
@@ -136,7 +219,54 @@ export default function PWARestrictedScreen() {
     }
   };
 
-  const hasPendingRequest = requests.some((r) => r.status === 'PENDING');
+  // Seules les demandes manuelles en attente bloquent une nouvelle demande manuelle :
+  // un paiement en ligne non finalisé ne doit pas empêcher le repli.
+  const hasPendingRequest = requests.some(
+    (r) => r.status === 'PENDING' && !isFlexPayRequest(r) && r.requestKind !== 'discount',
+  );
+
+  const planLabel = (planId: string) =>
+    planDisplayName(
+      planId,
+      dynamicPlans?.[planId],
+      LANDING_PLANS.find((p) => p.id === planId)?.ms365Name,
+    );
+
+  const openCheckout = (initialMethod: FlexPayMethod) => {
+    if (!selectedPlan || selectedPlan.price === '—') return;
+    setError('');
+    setSuccess('');
+    setFlexPayCheckout({
+      planId: selectedPlan.id,
+      planName: selectedPlan.name,
+      priceLabel: selectedPlan.price,
+      initialMethod,
+    });
+  };
+
+  const canRetryRequest = (req: SubscriptionRequestRow) =>
+    req.status === 'QUOTED' ||
+    (onlinePaymentAvailable && isFlexPayRequest(req) && (req.status === 'PENDING' || req.status === 'REJECTED'));
+
+  const openRetry = (req: SubscriptionRequestRow) => {
+    setError('');
+    setSuccess('');
+    setFlexPayCheckout({
+      planId: req.requestedPlan,
+      planName: planLabel(req.requestedPlan),
+      priceLabel: req.approvedAmount ? formatFc(req.approvedAmount) : '',
+      retryRequestId: req.id,
+      startPending: false,
+      initialMethod: req.paymentProvider === 'flexpay_mobile' ? 'mobile' : 'card',
+    });
+  };
+
+  const handlePaid = async () => {
+    setSuccess('Paiement confirmé. Votre licence est activée.');
+    await loadMyRequests();
+    // Rafraîchit le tenant : la licence active débloque automatiquement le tableau de bord.
+    await refreshProfile();
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col justify-between font-sans antialiased relative overflow-hidden">
@@ -186,7 +316,9 @@ export default function PWARestrictedScreen() {
             </h1>
             <p className="text-sm text-muted leading-relaxed">
               Les forfaits payants adaptés à votre type de compte sont proposés ci-dessous. Les tarifs sont exclusivement en {CURRENCY_NAME} ({'FC'}).
-              Choisissez l&apos;offre adaptée, puis soumettez votre demande d&apos;activation.
+              {onlinePaymentAvailable
+                ? <>Choisissez l&apos;offre adaptée, puis payez-la directement en ligne (Mobile Money ou carte) : votre licence est activée dès la confirmation du paiement.</>
+                : <>Choisissez l&apos;offre adaptée, puis soumettez votre demande d&apos;activation.</>}
             </p>
           </div>
 
@@ -246,7 +378,7 @@ export default function PWARestrictedScreen() {
           <div className="bg-surface/60 border border-border rounded-3xl p-6 shadow-xl">
             <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-primary" />
-              Demande d&apos;activation
+              {onlinePaymentAvailable ? 'Activer mon abonnement' : 'Demande d’activation'}
             </h3>
 
             {error && (
@@ -263,16 +395,65 @@ export default function PWARestrictedScreen() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="p-3 bg-surface-muted/60 border border-border rounded-xl space-y-1">
-                <span className="text-[10px] text-muted font-bold uppercase tracking-wider block">Forfait sélectionné</span>
-                <span className="text-sm font-extrabold text-primary">
-                  {selectedPlan
-                    ? `${selectedPlan.name} — ${selectedPlan.price} ${planPricePeriodSuffix(selectedPlan.id)}`
-                    : '—'}
-                </span>
-              </div>
+            <div className="p-3 bg-surface-muted/60 border border-border rounded-xl space-y-1 mb-4">
+              <span className="text-[10px] text-muted font-bold uppercase tracking-wider block">Forfait sélectionné</span>
+              <span className="text-sm font-extrabold text-primary">
+                {selectedPlan
+                  ? `${selectedPlan.name} — ${selectedPlan.price} ${planPricePeriodSuffix(selectedPlan.id)}`
+                  : '—'}
+              </span>
+            </div>
 
+            {onlinePaymentAvailable && (
+              <div className="space-y-3 mb-5">
+                <div className="flex items-center gap-2 text-[10px] font-bold text-muted uppercase tracking-wider">
+                  <Zap className="w-3.5 h-3.5 text-primary" />
+                  Payer maintenant · activation immédiate
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openCheckout('mobile')}
+                    disabled={!selectedPlan || selectedPlan.price === '—'}
+                    className="min-h-11 py-3 px-3 bg-primary-solid hover:bg-primary-solid-hover disabled:bg-surface-muted disabled:text-muted disabled:cursor-not-allowed text-primary-foreground font-bold rounded-xl text-xs transition shadow-lg shadow-primary/10 flex items-center justify-center gap-2 cursor-pointer touch-manipulation"
+                  >
+                    <Smartphone className="w-4 h-4" />
+                    Mobile Money
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openCheckout('card')}
+                    disabled={!selectedPlan || selectedPlan.price === '—'}
+                    className="min-h-11 py-3 px-3 bg-primary-solid hover:bg-primary-solid-hover disabled:bg-surface-muted disabled:text-muted disabled:cursor-not-allowed text-primary-foreground font-bold rounded-xl text-xs transition shadow-lg shadow-primary/10 flex items-center justify-center gap-2 cursor-pointer touch-manipulation"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    Carte bancaire
+                  </button>
+                </div>
+                <p className="flex items-start gap-1.5 text-[10px] text-muted leading-relaxed">
+                  <ShieldCheck className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-px" />
+                  <span>
+                    Paiement sécurisé FlexPay : Orange Money, M-Pesa, Airtel Money, Visa / Mastercard.
+                    Votre licence est activée automatiquement dès la confirmation.
+                  </span>
+                </p>
+              </div>
+            )}
+
+            {onlinePaymentAvailable && (
+              <button
+                type="button"
+                onClick={() => setManualOpen((v) => !v)}
+                aria-expanded={manualOpen}
+                className="w-full flex items-center justify-between gap-2 pt-4 border-t border-border text-xs font-semibold text-muted hover:text-foreground transition cursor-pointer"
+              >
+                <span>Déjà payé par virement ou autre moyen ? Demande manuelle</span>
+                <ChevronDown className={cn('w-4 h-4 transition-transform', manualOpen && 'rotate-180')} />
+              </button>
+            )}
+
+            {(!onlinePaymentAvailable || manualOpen) && (
+            <form onSubmit={handleSubmit} className={cn('space-y-4', onlinePaymentAvailable && 'pt-4')}>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-muted uppercase tracking-wider">
                   Référence de paiement / Message
@@ -290,7 +471,12 @@ export default function PWARestrictedScreen() {
               <button
                 type="submit"
                 disabled={submitting || hasPendingRequest}
-                className="w-full py-3 bg-primary-solid hover:bg-primary-solid-hover disabled:bg-surface-muted disabled:text-muted disabled:cursor-not-allowed text-primary-foreground font-bold rounded-xl text-xs transition shadow-lg shadow-primary/10 flex items-center justify-center gap-2 cursor-pointer"
+                className={cn(
+                  'w-full py-3 disabled:bg-surface-muted disabled:text-muted disabled:cursor-not-allowed font-bold rounded-xl text-xs transition flex items-center justify-center gap-2 cursor-pointer',
+                  onlinePaymentAvailable
+                    ? 'bg-surface-muted hover:bg-surface-muted/70 text-foreground border border-border'
+                    : 'bg-primary-solid hover:bg-primary-solid-hover text-primary-foreground shadow-lg shadow-primary/10',
+                )}
               >
                 {submitting ? (
                   <>
@@ -310,6 +496,7 @@ export default function PWARestrictedScreen() {
                 )}
               </button>
             </form>
+            )}
           </div>
 
           <div className="bg-surface/40 border border-border rounded-3xl p-6">
@@ -330,25 +517,44 @@ export default function PWARestrictedScreen() {
                   <div key={req.id} className="bg-surface-muted/60 border border-border rounded-xl p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-foreground">
-                        {planDisplayName(
-                          req.requestedPlan,
-                          dynamicPlans?.[req.requestedPlan],
-                          LANDING_PLANS.find((p) => p.id === req.requestedPlan)?.ms365Name,
-                        )}
+                        {planLabel(req.requestedPlan)}
                       </span>
                       <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider ${
                         req.status === 'APPROVED' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' :
                         req.status === 'REJECTED' ? 'bg-rose-500/10 border border-rose-500/20 text-rose-400' :
                         'bg-amber-500/10 border border-amber-500/20 text-amber-400'
                       }`}>
-                        {req.status === 'APPROVED' ? 'Approuvée' :
-                         req.status === 'REJECTED' ? 'Rejetée' : 'En attente'}
+                        {req.status === 'APPROVED' ? (isFlexPayRequest(req) ? 'Payée' : 'Approuvée') :
+                         req.status === 'REJECTED' ? (isFlexPayRequest(req) ? 'Échouée' : 'Rejetée') :
+                         req.status === 'QUOTED' ? 'À payer' :
+                         isFlexPayRequest(req) ? 'Paiement en cours' : 'En attente'}
                       </span>
                     </div>
+                    {(isFlexPayRequest(req) || req.approvedAmount) && (
+                      <p className="text-[10px] text-muted">
+                        {isFlexPayRequest(req)
+                          ? `Paiement en ligne · ${req.paymentProvider === 'flexpay_mobile' ? 'Mobile Money' : 'Carte'}`
+                          : 'Demande manuelle'}
+                        {req.approvedAmount ? ` · ${formatFc(req.approvedAmount)}` : ''}
+                      </p>
+                    )}
                     {req.proofOfPayment && (
                       <p className="text-[10px] text-muted italic truncate" title={req.proofOfPayment}>
                         &quot;{req.proofOfPayment}&quot;
                       </p>
+                    )}
+                    {canRetryRequest(req) && (
+                      <button
+                        type="button"
+                        onClick={() => openRetry(req)}
+                        className="w-full py-1.5 rounded-lg bg-primary/10 border border-primary/25 text-primary text-[10px] font-bold hover:bg-primary/15 transition cursor-pointer"
+                      >
+                        {req.status === 'QUOTED'
+                          ? 'Payer le tarif négocié'
+                          : req.status === 'PENDING'
+                            ? 'Vérifier / reprendre le paiement'
+                            : 'Relancer le paiement'}
+                      </button>
                     )}
                     <div className="text-[9px] text-muted">
                       Soumise le {new Date(req.createdAt).toLocaleDateString('fr-FR', {
@@ -362,6 +568,20 @@ export default function PWARestrictedScreen() {
           </div>
         </div>
       </main>
+
+      {flexPayCheckout && (onlinePaymentAvailable || Boolean(flexPayCheckout.retryRequestId)) ? (
+        <SubscriptionFlexPayModal
+          open
+          onClose={() => setFlexPayCheckout(null)}
+          planId={flexPayCheckout.planId}
+          planName={flexPayCheckout.planName}
+          priceLabel={flexPayCheckout.priceLabel}
+          retryRequestId={flexPayCheckout.retryRequestId}
+          startPending={flexPayCheckout.startPending}
+          initialMethod={flexPayCheckout.initialMethod}
+          onPaid={handlePaid}
+        />
+      ) : null}
 
       <footer className="bg-background border-t border-border py-6 text-center text-[10px] text-muted">
         <p>© {new Date().getFullYear()} EventMaster SaaS. Isolation stricte garantie. Tous droits réservés.</p>
