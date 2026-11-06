@@ -9,6 +9,7 @@ import { Alert, Button, Input } from '@/components/ui';
 import { formatFc } from '@/config/landingPricing';
 import { Ticket, Plus, Minus, X, Check, Users, Loader2, Heart } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 import ClientAuthChoice from '@/components/ClientAuthChoice';
 import { eventPublicHref } from '@/lib/safeAppPath';
 import type { PublicEventCard } from '@/lib/marketplace';
@@ -551,7 +552,7 @@ export default function EventTicketCheckoutForm({
         <div
           role="tablist"
           aria-label="Mode de contribution"
-          className="grid grid-cols-2 p-1 bg-surface-muted rounded-xl border border-border gap-1"
+          className={cn('grid grid-cols-2', SEGMENTED_TRACK)}
         >
           <button
             type="button"
@@ -560,12 +561,7 @@ export default function EventTicketCheckoutForm({
             aria-selected={checkoutTab === 'ticket'}
             aria-controls="checkout-panel-ticket"
             onClick={() => setCheckoutTab('ticket')}
-            className={cn(
-              'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
-              checkoutTab === 'ticket'
-                ? 'bg-surface text-foreground shadow-2xs border border-border'
-                : 'text-muted hover:text-foreground',
-            )}
+            className={segmentedItem(checkoutTab === 'ticket', 'px-2 text-xs sm:text-sm flex items-center justify-center gap-1.5')}
           >
             <Ticket className="w-3.5 h-3.5 text-primary" />
             <span>Billets & Accès</span>
@@ -577,11 +573,9 @@ export default function EventTicketCheckoutForm({
             aria-selected={checkoutTab === 'donation'}
             aria-controls="checkout-panel-donation"
             onClick={() => setCheckoutTab('donation')}
-            className={cn(
-              'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
-              checkoutTab === 'donation'
-                ? 'bg-surface text-rose-700 dark:text-rose-400 shadow-2xs border border-border'
-                : 'text-muted hover:text-foreground',
+            className={segmentedItem(
+              checkoutTab === 'donation',
+              cn('px-2 text-xs sm:text-sm flex items-center justify-center gap-1.5', checkoutTab === 'donation' && 'text-rose-700 dark:text-rose-400'),
             )}
           >
             <Heart className="w-3.5 h-3.5 fill-rose-500/20 text-rose-500" />

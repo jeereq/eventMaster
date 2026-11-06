@@ -183,7 +183,6 @@ function MarketplaceEventsPageInner() {
       activeNav="events"
       heroTitle="Sortir près de chez vous"
       heroDescription="Concerts, conférences et galas. Payez en Mobile Money et présentez votre pass QR à l’entrée."
-      heroTone="deep"
       heroAside={(
         <span className="inline-flex items-center gap-2 rounded-full bg-[#0b5e48] px-3.5 py-2 text-sm text-white">
           <CreditCard className="w-4 h-4 text-[#6ee7b7]" aria-hidden />

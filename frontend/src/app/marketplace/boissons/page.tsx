@@ -186,10 +186,10 @@ function MarketplaceDrinksPageInner() {
       <PublicPageHero
         compact
         title="Boissons"
+        tone="deep"
         description="Bières, vins, champagnes. Le prix le plus bas d’un prestataire."
-      >
-        <MarketplacePublicNav active="drinks" />
-      </PublicPageHero>
+        tabs={<MarketplacePublicNav variant="tabs" active="drinks" />}
+      />
 
       <div className="page-container py-3 md:py-10 flex-1 space-y-3 md:space-y-6">
         <div className="sticky top-[var(--em-site-header)] z-20 -mx-1 px-1 py-0 md:py-1 bg-background/90 backdrop-blur-md">

@@ -44,6 +44,7 @@ export function PublicPageHero({
   compact = false,
   tone = 'default',
   aside,
+  tabs,
 }: {
   title: string;
   description?: string;
@@ -53,6 +54,8 @@ export function PublicPageHero({
   tone?: 'default' | 'deep';
   /** Contenu court à droite du titre (badge, moyens de paiement…). */
   aside?: React.ReactNode;
+  /** Languettes posées tout en bas du bandeau (comme le simulateur) : l’onglet actif se soude au contenu. */
+  tabs?: React.ReactNode;
 }) {
   const deep = tone === 'deep';
   return (
@@ -65,7 +68,9 @@ export function PublicPageHero({
       ) : null}
       <div className={cn(
         'page-container relative z-10',
-        compact ? 'pt-6 pb-4 md:py-8 lg:py-10' : 'pt-7 pb-5 md:py-12 lg:py-14',
+        tabs
+          ? (compact ? 'pt-5 md:pt-8 lg:pt-10' : 'pt-7 md:pt-12 lg:pt-14')
+          : (compact ? 'pt-6 pb-4 md:py-8 lg:py-10' : 'pt-7 pb-5 md:py-12 lg:py-14'),
       )}>
         <div className={cn(aside ? 'flex flex-col md:flex-row md:items-end md:justify-between gap-3 md:gap-6' : undefined)}>
         <div className="max-w-3xl space-y-1.5 md:space-y-3.5">
@@ -87,6 +92,7 @@ export function PublicPageHero({
         {aside ? <div className="shrink-0">{aside}</div> : null}
         </div>
         {aside && children ? <div className="mt-3 md:mt-5">{children}</div> : null}
+        {tabs ? <div className="mt-4 md:mt-6">{tabs}</div> : null}
       </div>
     </section>
   );
