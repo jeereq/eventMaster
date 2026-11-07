@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Input, Badge, Button } from '@/components/ui';
+import EmbedCodeCard from '@/components/room/EmbedCodeCard';
 import CityLocationFields from '@/components/CityLocationFields';
 import LocationPickerMap from '@/components/LocationPickerMap';
 import MarketplaceMediaField from '@/components/MarketplaceMediaField';
@@ -334,6 +335,10 @@ export default function RoomPublicPublicationForm({
           </div>
         </div>
       </div>
+
+      {effectiveSlug && draft.isPublic && !compact ? (
+        <EmbedCodeCard slug={effectiveSlug} title={displayName || 'Visite 3D de la salle'} />
+      ) : null}
 
       {/* Navigation Sub-Tabs with ARIA tablist & keyboard controls */}
       <div
