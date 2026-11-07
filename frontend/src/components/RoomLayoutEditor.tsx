@@ -183,7 +183,7 @@ import {
   publishBlueprintAmbienceToOrg,
   publishOrgAmbience,
 } from '@/lib/roomAmbienceOrg';
-import { roomEditorCapabilities, snapLayoutPct, smartSnapLayoutPct } from '@/lib/roomEditorAccess';
+import { parseRoomEditorLevel, roomEditorCapabilities, snapLayoutPct, smartSnapLayoutPct } from '@/lib/roomEditorAccess';
 import {
   downloadDataUrl,
   exportPixelRatio,
@@ -227,6 +227,8 @@ import {
 import { readImageFile } from '@/lib/imageCropUtils';
 import { uploadImageFile, uploadVideoFile } from '@/lib/cloudinaryUpload';
 import { RoomEnvironmentPanel } from '@/components/room/RoomEnvironmentPanel';
+import { EditorGate as Gate, EditorGateProvider, EditorUpsellDialog, LockedSectionCard, type LockedUpsell } from '@/components/room/EditorLocks';
+import { describeEditorUpsell } from '@/lib/roomEditorUpsell';
 import {
   CUSTOM_ELEMENT_MODES,
   CUSTOM_ELEMENT_MODE_META,
@@ -802,6 +804,16 @@ interface RoomLayoutEditorProps {
 
 type CropTarget = { kind: 'fixture'; id: string } | null;
 
+const TABLE_SHAPE_OPTIONS: ReadonlyArray<readonly [TableShape, string]> = [
+  ['round', 'Ronde'],
+  ['rectangular', 'Rectangulaire'],
+  ['square', 'Carrée'],
+  ['oval', 'Ovale'],
+  ['cocktail', 'Cocktail (basse)'],
+  ['highTop', 'Mange-debout'],
+  ['arc', 'Courbe (arc)'],
+];
+
 export default function RoomLayoutEditor({
   blueprint: rawBlueprint,
   onChange,
@@ -823,6 +835,14 @@ export default function RoomLayoutEditor({
   const blueprint = ensureBlueprintDefaults(rawBlueprint);
   const caps = roomEditorCapabilities(editorLevel, allowThemesFixtures);
   const canOpenStudio = caps.canPlanFromPhoto && !readOnly && !isRoomBlocked;
+  const [upsell, setUpsell] = useState<LockedUpsell | null>(null);
+  const parsedEditorLevel = parseRoomEditorLevel(editorLevel);
+  /** Les formes hors forfait restent listées, grisées, avec le forfait qui les débloque. */
+  const tableShapeOptionLabel = (shape: TableShape, label: string): string => {
+    if (caps.tableShapes.includes(shape)) return label;
+    const plan = describeEditorUpsell(label, { shape }, parsedEditorLevel).planLabel;
+    return `${label} — ${plan ?? 'non inclus'}`;
+  };
   const [selection, setSelection] = useState<LayoutSelectionItem[]>([]);
   const [mobilePane, setMobilePane] = useState<'plan' | 'tools' | 'edit'>('plan');
   const [isExpanded, setIsExpanded] = useState(false);
@@ -2765,8 +2785,7 @@ export default function RoomLayoutEditor({
 
           <div className="h-5 w-px bg-border my-auto mx-0.5" />
 
-          {caps.canDuplicate && (
-            <button
+          <Gate allowed={caps.canDuplicate} need={{ feature: 'canDuplicate' }}><button
               type="button"
               onClick={duplicateSelection}
               className="min-h-11 min-w-11 rounded-full hover:bg-surface-muted text-foreground flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -2774,8 +2793,7 @@ export default function RoomLayoutEditor({
               aria-label="Dupliquer la sélection"
             >
               <Copy className="w-4 h-4" />
-            </button>
-          )}
+            </button></Gate>
 
           {/* Menu Rotation & Orientation Rapide */}
           <div className="relative">
@@ -2918,8 +2936,7 @@ export default function RoomLayoutEditor({
             )}
           </div>
 
-          {selection.length >= 2 && caps.canAlign && (
-            <div className="relative">
+          {selection.length >= 2 && (caps.canAlign ? (<div className="relative">
               <button
                 type="button"
                 onClick={() => {
@@ -2993,8 +3010,17 @@ export default function RoomLayoutEditor({
                   </div>
                 </div>
               )}
-            </div>
-          )}
+            </div>) : (
+            <Gate allowed={false} need={{ feature: 'canAlign' }}>
+              <button
+                type="button"
+                aria-label="Aligner les éléments sélectionnés"
+                className="min-h-11 min-w-11 rounded-full text-foreground flex items-center justify-center"
+              >
+                <AlignCenter className="w-4 h-4" />
+              </button>
+            </Gate>
+          ))}
 
           {/* Quick Color Picker */}
           <div className="relative">
@@ -3251,11 +3277,9 @@ export default function RoomLayoutEditor({
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {caps.canDuplicate ? (
-                <button type="button" onClick={duplicateSelection} className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}>
+              <Gate allowed={caps.canDuplicate} need={{ feature: 'canDuplicate' }}><button type="button" onClick={duplicateSelection} className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}>
                   <Copy className="w-3.5 h-3.5" aria-hidden /> Dupliquer
-                </button>
-              ) : null}
+                </button></Gate>
               <button type="button" onClick={rotateSelection} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
                 <RotateCw className="w-3.5 h-3.5" aria-hidden /> Tourner 90°
               </button>
@@ -3279,8 +3303,7 @@ export default function RoomLayoutEditor({
                   </button>
                 </div>
 
-                {caps.canAlign ? (
-                  <>
+                {caps.canAlign ? (<>
                     <div className="grid grid-cols-4 gap-1.5">
                       {([
                         ['left', AlignLeft],
@@ -3350,8 +3373,13 @@ export default function RoomLayoutEditor({
                     >
                       <MoveHorizontal className="w-3.5 h-3.5" aria-hidden /> Optimiser les espacements
                     </button>
-                  </>
-                ) : null}
+                  </>) : (
+                  <Gate allowed={false} need={{ feature: 'canAlign' }}>
+                    <button type="button" className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+                      Aligner & répartir
+                    </button>
+                  </Gate>
+                )}
               </div>
             </details>
 
@@ -3543,8 +3571,7 @@ export default function RoomLayoutEditor({
               </button>
             ) : null}
             <div className="grid grid-cols-3 gap-2">
-              {caps.canPlanFromPhoto && !isRoomBlocked ? (
-                <button
+              {!isRoomBlocked ? <Gate allowed={caps.canPlanFromPhoto} need={{ feature: 'canPlanFromPhoto' }}><button
                   type="button"
                   aria-pressed={planPath === 'photo'}
                   disabled={aiPlanReading}
@@ -3557,10 +3584,8 @@ export default function RoomLayoutEditor({
                 >
                   <ImagePlus className="w-4 h-4 text-primary-solid" aria-hidden />
                   <span className="text-xs font-semibold text-foreground leading-tight">Depuis une photo</span>
-                </button>
-              ) : null}
-              {caps.canTemplates ? (
-                <button
+                </button></Gate> : null}
+              <Gate allowed={caps.canTemplates} need={{ feature: 'canTemplates' }}><button
                   type="button"
                   onClick={() => {
                     setTemplatesOpen(true);
@@ -3571,8 +3596,7 @@ export default function RoomLayoutEditor({
                 >
                   <LayoutTemplate className="w-4 h-4 text-primary-solid" aria-hidden />
                   <span className="text-xs font-semibold text-foreground leading-tight">Un modèle</span>
-                </button>
-              ) : null}
+                </button></Gate>
               <button
                 type="button"
                 aria-pressed={planPath === 'manual' && toolbarGroup === 'furniture'}
@@ -3680,12 +3704,11 @@ export default function RoomLayoutEditor({
             ) : null}
           </section>
           {!caps.canThemes ? (
-            <Alert variant="warning" title={`Forfait ${caps.label}`}>
-              <p>{caps.description}</p>
-              <Button href="/dashboard/billing" variant="ghost" size="sm" className="mt-2 -ml-3">
-                Voir les forfaits
-              </Button>
-            </Alert>
+            <LockedSectionCard
+              title="Thèmes, murs & sols"
+              planLabel={describeEditorUpsell('Thèmes', { feature: 'canThemes' }, parsedEditorLevel).planLabel}
+              description={`Ambiances complètes, matières des murs et du sol, éclairage. Votre forfait actuel (${caps.label}) : ${caps.description}`}
+            />
           ) : (
             <div className="border border-border rounded-[var(--radius-card)] bg-surface overflow-hidden shadow-sm">
               <button
@@ -3749,14 +3772,12 @@ export default function RoomLayoutEditor({
                     </div>
                   ))}
                 </div>
-                {caps.canCustomTheme ? (
-                  <CustomRoomThemePanel
+                <Gate allowed={caps.canCustomTheme} need={{ feature: 'canCustomTheme' }}><CustomRoomThemePanel
                     blueprint={blueprint}
                     onChange={(next) => updateBlueprint(next)}
                     onApplyTheme={(id) => applyTheme(id as RoomThemeId)}
                     activeThemeId={blueprint.metadata.roomThemeId}
-                  />
-                ) : null}
+                  /></Gate>
                   </div>
                   <div className="space-y-3 pt-4 border-t border-border/50">
                     <p className="text-sm font-semibold text-foreground flex items-center gap-1">
@@ -4419,8 +4440,7 @@ export default function RoomLayoutEditor({
                     </div>
                   </details>
                 </div>
-                {caps.canCustomImages ? (
-                  <div className="space-y-3">
+                <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}><div className="space-y-3">
                     <label className="block text-xs space-y-1">
                       <span className="font-semibold text-muted flex items-center gap-1">
                         <ImagePlus className="w-3.5 h-3.5" /> Repère photo (sol)
@@ -4476,8 +4496,7 @@ export default function RoomLayoutEditor({
                         </button>
                       </div>
                     )}
-                  </div>
-                ) : null}
+                  </div></Gate>
                   </div>
                 </div>
               )}
@@ -4603,8 +4622,7 @@ export default function RoomLayoutEditor({
                   </p>
                 </div>
 
-                {caps.fixtureKinds.includes('stairs') ? (
-                  <div className="space-y-2">
+                <Gate allowed={caps.fixtureKinds.includes('stairs')} need={{ fixture: 'stairs' }}><div className="space-y-2">
                     <p className={EDITOR_HEADING}>Escalier vers…</p>
                     {resolveStories(blueprint).length < 2 ? (
                       <p className={EDITOR_HINT}>Ajoutez un 2ᵉ étage (ou un modèle Duplex) pour créer un escalier.</p>
@@ -4626,11 +4644,9 @@ export default function RoomLayoutEditor({
                       </div>
                     )}
                     <StairsUserGuide compact defaultOpen={false} />
-                  </div>
-                ) : null}
+                  </div></Gate>
 
-                {caps.fixtureKinds.includes('balcony') ? (
-                  <div className="space-y-2">
+                <Gate allowed={caps.fixtureKinds.includes('balcony')} need={{ fixture: 'balcony' }}><div className="space-y-2">
                     <p className={EDITOR_HEADING}>Balcons</p>
                     <div className="grid grid-cols-2 gap-1.5">
                       {(Object.keys(balconySideLabels) as BalconySide[]).map((side) => (
@@ -4652,8 +4668,7 @@ export default function RoomLayoutEditor({
                       Ajouter les 4 façades
                     </button>
                     <p className={EDITOR_HINT}>Les balcons se placent sur l’étage actif. Déplacez-les ensuite sur le plan.</p>
-                  </div>
-                ) : null}
+                  </div></Gate>
 
                 <div className="space-y-2">
                   <p className={EDITOR_HEADING}>Vue</p>
@@ -4753,8 +4768,7 @@ export default function RoomLayoutEditor({
                         </label>
                       ) : null}
                     </div>
-                    {caps.fixtureKinds.includes('corridor') ? (
-                      <div className="space-y-2">
+                    <Gate allowed={caps.fixtureKinds.includes('corridor')} need={{ fixture: 'corridor' }}><div className="space-y-2">
                         <p className={EDITOR_HEADING}>Couloir</p>
                         <button
                           type="button"
@@ -4776,8 +4790,7 @@ export default function RoomLayoutEditor({
                         >
                           Percer les portes (couloirs → murs)
                         </button>
-                      </div>
-                    ) : null}
+                      </div></Gate>
                   </div>
                 </details>
               </div>
@@ -4982,8 +4995,7 @@ export default function RoomLayoutEditor({
             </div>
           </div>
           
-          {caps.canChangeOutline ? (
-            <div className="space-y-3 pt-4 border-t border-border/50">
+          <Gate allowed={caps.canChangeOutline} need={{ feature: 'canChangeOutline' }}><div className="space-y-3 pt-4 border-t border-border/50">
               <p className="text-sm font-semibold text-foreground flex items-center gap-1"><Shapes className="w-3.5 h-3.5" /> Forme de la salle</p>
               <p className="text-sm text-muted leading-relaxed">
                 Met à jour le sol découpé et les murs 3D (L, U, hexagone, cercle…). Annulable avec Ctrl+Z.
@@ -5013,8 +5025,7 @@ export default function RoomLayoutEditor({
                   </button>
                 ))}
               </div>
-            </div>
-          ) : null}
+            </div></Gate>
               </div>
             )}
           </div>
@@ -6345,13 +6356,11 @@ export default function RoomLayoutEditor({
                   aria-label="Forme de la table"
                   className={EDITOR_FIELD}
                 >
-                  {caps.tableShapes.includes('round') ? <option value="round">Ronde</option> : null}
-                  {caps.tableShapes.includes('rectangular') ? <option value="rectangular">Rectangulaire</option> : null}
-                  {caps.tableShapes.includes('square') ? <option value="square">Carrée</option> : null}
-                  {caps.tableShapes.includes('oval') ? <option value="oval">Ovale</option> : null}
-                  {caps.tableShapes.includes('cocktail') ? <option value="cocktail">Cocktail (basse)</option> : null}
-                  {caps.tableShapes.includes('highTop') ? <option value="highTop">Mange-debout</option> : null}
-                  {caps.tableShapes.includes('arc') ? <option value="arc">Courbe (arc)</option> : null}
+                  {TABLE_SHAPE_OPTIONS.map(([shape, label]) => (
+                    <option key={shape} value={shape} disabled={!caps.tableShapes.includes(shape)}>
+                      {tableShapeOptionLabel(shape, label)}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="text-xs space-y-1">
@@ -6826,37 +6835,31 @@ export default function RoomLayoutEditor({
                 />
               </div>
             </div>
-            {caps.canCustomImages ? renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl) : null}
-            {caps.canCustomImages ? renderTableImageUpload(selectedFurniture.id, selectedFurniture.tableImageUrl) : null}
-            {caps.canRotate ? (
-              <ElementRotationControls
+            <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}>{renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl)}</Gate>
+            <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}>{renderTableImageUpload(selectedFurniture.id, selectedFurniture.tableImageUrl)}</Gate>
+            <Gate allowed={caps.canRotate} need={{ feature: 'canRotate' }}><ElementRotationControls
                 rotation={selectedFurniture.rotation ?? 0}
                 onChange={(rot, msg) => updateFurniture(selectedFurniture.id, { rotation: rot }, msg || 'Rotation de table')}
                 onDelta={(delta, msg) => updateFurniture(selectedFurniture.id, { rotation: ((selectedFurniture.rotation ?? 0) + delta + 360) % 360 }, msg)}
                 onSmartOrient={(target, msg) => updateBlueprint(orientSelectionTowards(blueprint, [{ kind: 'table', id: selectedFurniture.id }], target), { message: msg, kind: 'edit' })}
                 title="Rotation & Orientation de la table"
-              />
-            ) : null}
+              /></Gate>
             <div className="flex gap-2">
-              {caps.canLock ? (
-                <button
+              <Gate allowed={caps.canLock} need={{ feature: 'canLock' }}><button
                   type="button"
                   onClick={() => updateFurniture(selectedFurniture.id, { locked: !selectedFurniture.locked }, selectedFurniture.locked ? 'Table déverrouillée' : 'Table verrouillée')}
                   className={cn(EDITOR_PANEL_BTN, 'flex-1 border-border')}
                 >
                   {selectedFurniture.locked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
                   {selectedFurniture.locked ? 'Déverrouiller' : 'Verrouiller'}
-                </button>
-              ) : null}
-              {caps.canDuplicate ? (
-                <button
+                </button></Gate>
+              <Gate allowed={caps.canDuplicate} need={{ feature: 'canDuplicate' }}><button
                   type="button"
                   onClick={duplicateSelectedTable}
                   className={cn(EDITOR_PANEL_BTN, 'flex-1 border-primary/30 bg-primary/10 text-primary')}
                 >
                   <Copy className="w-3 h-3" /> Dupliquer
-                </button>
-              ) : null}
+                </button></Gate>
             </div>
             {selectedFurniture.attachedChairs !== false ? (
               <div className="space-y-1.5">
@@ -7191,9 +7194,8 @@ export default function RoomLayoutEditor({
                 />
               </div>
             </div>
-            {caps.canCustomImages ? renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl) : null}
-            {caps.canRotate ? (
-              <div className="pt-2">
+            <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}>{renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl)}</Gate>
+            <Gate allowed={caps.canRotate} need={{ feature: 'canRotate' }}><div className="pt-2">
                 <ElementRotationControls
                   rotation={selectedFurniture.rotation ?? 0}
                   onChange={(rot, msg) => updateFurniture(selectedFurniture.id, { rotation: rot }, msg || 'Orientation rangée')}
@@ -7201,8 +7203,7 @@ export default function RoomLayoutEditor({
                   onSmartOrient={(target, msg) => updateBlueprint(orientSelectionTowards(blueprint, [{ kind: 'row', id: selectedFurniture.id }], target), { message: msg, kind: 'edit' })}
                   title="Orientation de la rangée"
                 />
-              </div>
-            ) : null}
+              </div></Gate>
             <div className="grid grid-cols-2 gap-1.5 pt-1">
               <button
                 type="button"
@@ -7407,17 +7408,15 @@ export default function RoomLayoutEditor({
                 />
               </div>
             </div>
-            {caps.canRotate ? (
-              <ElementRotationControls
+            <Gate allowed={caps.canRotate} need={{ feature: 'canRotate' }}><ElementRotationControls
                 rotation={selectedFurniture.rotation ?? 0}
                 onChange={(rot, msg) => updateFurniture(selectedFurniture.id, { rotation: rot }, msg || 'Orientation chaise')}
                 onDelta={(delta, msg) => updateFurniture(selectedFurniture.id, { rotation: ((selectedFurniture.rotation ?? 0) + delta + 360) % 360 }, msg)}
                 onSmartOrient={(target, msg) => updateBlueprint(orientSelectionTowards(blueprint, [{ kind: 'chair', id: selectedFurniture.id }], target), { message: msg, kind: 'edit' })}
                 isChair={true}
                 title="Orientation de la chaise"
-              />
-            ) : null}
-            {caps.canCustomImages ? renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl) : null}
+              /></Gate>
+            <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}>{renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl)}</Gate>
             <div className="pt-1">
               <button
                 type="button"
@@ -7528,8 +7527,10 @@ export default function RoomLayoutEditor({
             onChange={(e) => setTplParams((p) => ({ ...p, tableShape: e.target.value as TableShape }))}
             className={EDITOR_FIELD}
           >
-            {(Object.keys(tableShapeLabels) as TableShape[]).filter((shape) => caps.tableShapes.includes(shape)).map((shape) => (
-              <option key={shape} value={shape}>{tableShapeLabels[shape]}</option>
+            {(Object.keys(tableShapeLabels) as TableShape[]).map((shape) => (
+              <option key={shape} value={shape} disabled={!caps.tableShapes.includes(shape)}>
+                {tableShapeOptionLabel(shape, tableShapeLabels[shape])}
+              </option>
             ))}
           </select>
         </label>
@@ -7696,18 +7697,15 @@ export default function RoomLayoutEditor({
       <button type="button" onClick={addTable} className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}>
         <Plus className="w-3.5 h-3.5" aria-hidden /> Table
       </button>
-      {caps.tableShapes.includes('arc') ? (
-        <button
+      <Gate allowed={caps.tableShapes.includes('arc')} need={{ shape: 'arc' }}><button
           type="button"
           onClick={addArcRing}
           className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
           title="Six tables en arc autour d’un centre"
         >
           Anneau d’arcs
-        </button>
-      ) : null}
-      {caps.canAddRows ? (
-        <>
+        </button></Gate>
+      <Gate allowed={caps.canAddRows} need={{ feature: 'canAddRows' }}><>
           <button type="button" onClick={addRow} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
             <Plus className="w-3.5 h-3.5" aria-hidden /> Rangée
           </button>
@@ -7727,8 +7725,7 @@ export default function RoomLayoutEditor({
           >
             Groupes chaises
           </button>
-        </>
-      ) : null}
+        </></Gate>
       <button type="button" onClick={addFreeChair} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Fauteuil</button>
       <button
         type="button"
@@ -7763,36 +7760,30 @@ export default function RoomLayoutEditor({
         >
           <Sparkles className="w-3.5 h-3.5" aria-hidden /> Resto & Shop…
         </button>
-        {caps.fixtureKinds.includes('orderCounter') ? (
-          <button
+        <Gate allowed={caps.fixtureKinds.includes('orderCounter')} need={{ fixture: 'orderCounter' }}><button
             type="button"
             onClick={() => addFixture('orderCounter')}
             className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
             title="Comptoir de commande avec terminal POS"
           >
             Caisse POS
-          </button>
-        ) : null}
-        {caps.fixtureKinds.includes('pickupCounter') ? (
-          <button
+          </button></Gate>
+        <Gate allowed={caps.fixtureKinds.includes('pickupCounter')} need={{ fixture: 'pickupCounter' }}><button
             type="button"
             onClick={() => addFixture('pickupCounter')}
             className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
             title="Comptoir de retrait des commandes"
           >
             Retrait
-          </button>
-        ) : null}
-        {caps.fixtureKinds.includes('pizzaOven') ? (
-          <button
+          </button></Gate>
+        <Gate allowed={caps.fixtureKinds.includes('pizzaOven')} need={{ fixture: 'pizzaOven' }}><button
             type="button"
             onClick={() => addFixture('pizzaOven')}
             className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
             title="Four à pizza au feu de bois circulaire"
           >
             Four pizza
-          </button>
-        ) : null}
+          </button></Gate>
         <button
           type="button"
           onClick={addBoothAssembly}
@@ -7809,16 +7800,14 @@ export default function RoomLayoutEditor({
         >
           Table Parasol
         </button>
-        {caps.fixtureKinds.includes('loungeSofa') ? (
-          <button
+        <Gate allowed={caps.fixtureKinds.includes('loungeSofa')} need={{ fixture: 'loungeSofa' }}><button
             type="button"
             onClick={() => addFixture('loungeSofa')}
             className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
             title="Canapé lounge confortable"
           >
             Canapé Lounge
-          </button>
-        ) : null}
+          </button></Gate>
       </EditorToolGroup>
 
       <EditorToolGroup
@@ -7827,14 +7816,12 @@ export default function RoomLayoutEditor({
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
       >
-      {caps.canZones ? (
-        <>
+      <Gate allowed={caps.canZones} need={{ feature: 'canZones' }}><>
           <button type="button" onClick={() => addZone('Piste de danse', { zoneKind: 'dance', material: 'vinyl' })} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Piste</button>
           <button type="button" onClick={() => addZone('Espace VIP', { zoneKind: 'vip', material: 'marble' })} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>VIP</button>
           <button type="button" onClick={() => addZone('Zone buffet', { zoneKind: 'buffet', material: 'wood' })} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Zone buffet</button>
           <button type="button" onClick={addCarpet} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Moquette</button>
-        </>
-      ) : null}
+        </></Gate>
       </EditorToolGroup>
 
       <EditorToolGroup
@@ -7843,8 +7830,7 @@ export default function RoomLayoutEditor({
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
       >
-      {caps.canCustomImages ? (
-        <label className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'cursor-pointer')}>
+      <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}><label className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'cursor-pointer')}>
           <ImagePlus className="w-3.5 h-3.5" aria-hidden />
           Repère photo (sol)
           <input
@@ -7858,10 +7844,8 @@ export default function RoomLayoutEditor({
               e.target.value = '';
             }}
           />
-        </label>
-      ) : null}
-      {caps.canPlanFromPhoto ? (
-        <button
+        </label></Gate>
+      <Gate allowed={caps.canPlanFromPhoto} need={{ feature: 'canPlanFromPhoto' }}><button
           type="button"
           disabled={readOnly || aiPlanReading}
           aria-busy={aiPlanReading || undefined}
@@ -7877,55 +7861,42 @@ export default function RoomLayoutEditor({
         >
           <Sparkles className="w-3.5 h-3.5" aria-hidden />
           {aiPlanReading ? 'Lecture IA…' : 'Lire avec l’IA'}
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('door') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('door')} need={{ fixture: 'door' }}><button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'doors' ? null : 'doors')}
           className={cn(EDITOR_TOOL, quickCreate === 'doors' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
           title="Ajouter une porte ouvrante ou grand portail"
         >
           <DoorOpen className="w-3.5 h-3.5" aria-hidden /> Portes…
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('stairs') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('stairs')} need={{ fixture: 'stairs' }}><button
           type="button"
           onClick={openStairsQuickCreate}
           className={cn(EDITOR_TOOL, quickCreate === 'stairs' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
           title="Escalier vers un autre étage"
         >
           <StepForward className="w-3.5 h-3.5" aria-hidden /> Escalier vers…
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('balcony') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('balcony')} need={{ fixture: 'balcony' }}><button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'balconies' ? null : 'balconies')}
           className={cn(EDITOR_TOOL, quickCreate === 'balconies' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
         >
           Balcons…
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('column') ? (
-        <button type="button" onClick={() => addFixture('column')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('column')} need={{ fixture: 'column' }}><button type="button" onClick={() => addFixture('column')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
           <Columns3 className="w-3.5 h-3.5" aria-hidden /> Colonne
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('corridor') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('corridor')} need={{ fixture: 'corridor' }}><button
           type="button"
           onClick={addCorridor}
           className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
           title="Couloir structurant (circulation entre pièces)"
         >
           Couloir
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('perimeter') ? (
-        <button type="button" onClick={() => addFixture('perimeter')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Périmètre</button>
-      ) : null}
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('perimeter')} need={{ fixture: 'perimeter' }}><button type="button" onClick={() => addFixture('perimeter')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Périmètre</button></Gate>
       </EditorToolGroup>
 
       <EditorToolGroup
@@ -7934,11 +7905,8 @@ export default function RoomLayoutEditor({
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
       >
-      {caps.fixtureKinds.includes('stage') ? (
-        <button type="button" onClick={() => addFixture('stage')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Scène</button>
-      ) : null}
-      {caps.fixtureKinds.includes('podium') ? (
-        <button
+      <Gate allowed={caps.fixtureKinds.includes('stage')} need={{ fixture: 'stage' }}><button type="button" onClick={() => addFixture('stage')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Scène</button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('podium')} need={{ fixture: 'podium' }}><button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'podiums' ? null : 'podiums')}
           className={cn(EDITOR_TOOL, quickCreate === 'podiums' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
@@ -7947,10 +7915,8 @@ export default function RoomLayoutEditor({
           aria-controls={QUICK_PANEL.podiums.id}
         >
           Podiums…
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('instrument') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('instrument')} need={{ fixture: 'instrument' }}><button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'instruments' ? null : 'instruments')}
           className={cn(EDITOR_TOOL, quickCreate === 'instruments' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
@@ -7959,10 +7925,8 @@ export default function RoomLayoutEditor({
           aria-controls={QUICK_PANEL.instruments.id}
         >
           <Music2 className="w-3.5 h-3.5" aria-hidden /> Instruments…
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('bar') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('bar')} need={{ fixture: 'bar' }}><button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'bars' ? null : 'bars')}
           className={cn(EDITOR_TOOL, quickCreate === 'bars' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
@@ -7971,10 +7935,8 @@ export default function RoomLayoutEditor({
           aria-controls={QUICK_PANEL.bars.id}
         >
           <Wine className="w-3.5 h-3.5" aria-hidden /> Bars…
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('chandelier') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('chandelier')} need={{ fixture: 'chandelier' }}><button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'chandeliers' ? null : 'chandeliers')}
           className={cn(EDITOR_TOOL, quickCreate === 'chandeliers' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
@@ -7983,10 +7945,8 @@ export default function RoomLayoutEditor({
           aria-controls={QUICK_PANEL.chandeliers.id}
         >
           <Sparkles className="w-3.5 h-3.5" aria-hidden /> Lustres…
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('aisle') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('aisle')} need={{ fixture: 'aisle' }}><button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'aisles' ? null : 'aisles')}
           className={cn(EDITOR_TOOL, quickCreate === 'aisles' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
@@ -7995,68 +7955,50 @@ export default function RoomLayoutEditor({
           aria-controls={QUICK_PANEL.aisles.id}
         >
           <Sparkles className="w-3.5 h-3.5" aria-hidden /> Allées VIP…
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('buffet') ? (
-        <button type="button" onClick={() => addFixture('buffet')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Buffet + couverts</button>
-      ) : null}
-      {caps.fixtureKinds.includes('flower') ? (
-        <button type="button" onClick={() => addFixture('flower')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('buffet')} need={{ fixture: 'buffet' }}><button type="button" onClick={() => addFixture('buffet')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Buffet + couverts</button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('flower')} need={{ fixture: 'flower' }}><button type="button" onClick={() => addFixture('flower')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
           <Flower2 className="w-3.5 h-3.5" aria-hidden /> Fleurs
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('arch') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('arch')} need={{ fixture: 'arch' }}><button
           type="button"
           onClick={() => addFixture('arch')}
           className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
           title="Arche florale (cérémonie, fond de salle)"
         >
           <Flower2 className="w-3.5 h-3.5" aria-hidden /> Arche
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('partition') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('partition')} need={{ fixture: 'partition' }}><button
           type="button"
           onClick={() => addFixture('partition')}
           className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
           title="Cloison basse courbe végétalisée"
         >
           Cloison
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('pedestal') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('pedestal')} need={{ fixture: 'pedestal' }}><button
           type="button"
           onClick={() => addFixture('pedestal')}
           className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
           title="Colonne carrée + bouquet (cérémonie)"
         >
           Piédestal
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('decal') ? (
-        <button
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('decal')} need={{ fixture: 'decal' }}><button
           type="button"
           onClick={() => addFixture('decal')}
           className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
           title="Motif au sol : roses ou papillons"
         >
           Motif sol
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('stringLight') ? (
-        <button type="button" onClick={() => addFixture('stringLight')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Guirlandes Edison sur poteaux">
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('stringLight')} need={{ fixture: 'stringLight' }}><button type="button" onClick={() => addFixture('stringLight')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Guirlandes Edison sur poteaux">
           Guirlandes
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('djBooth') ? (
-        <button type="button" onClick={() => addFixture('djBooth')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('djBooth')} need={{ fixture: 'djBooth' }}><button type="button" onClick={() => addFixture('djBooth')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
           Régie DJ
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('screen') ? (
-        <>
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('screen')} need={{ fixture: 'screen' }}><>
           <button type="button" onClick={() => addScreenFixture('stageLedWall')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
             Mur LED
           </button>
@@ -8072,8 +8014,7 @@ export default function RoomLayoutEditor({
           <button type="button" onClick={() => addScreenFixture('desktopPc')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Ordinateur fixe tout-en-un">
             PC Fixe
           </button>
-        </>
-      ) : null}
+        </></Gate>
       </EditorToolGroup>
 
       <EditorToolGroup
@@ -8083,8 +8024,7 @@ export default function RoomLayoutEditor({
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
       >
-      {caps.canFixtures ? (
-        <label className="flex items-center gap-1.5 text-xs font-bold text-foreground" title="Terrain et décor autour du plan en 3D">
+      <Gate allowed={caps.canFixtures} need={{ feature: 'canFixtures' }}><label className="flex items-center gap-1.5 text-xs font-bold text-foreground" title="Terrain et décor autour du plan en 3D">
           <span className="shrink-0">Abords</span>
           <select
             value={outdoorSurroundings}
@@ -8096,10 +8036,8 @@ export default function RoomLayoutEditor({
               <option key={id} value={id}>{id === 'none' ? 'Aucun (salle seule)' : OUTDOOR_SURROUNDINGS_META[id].label}</option>
             ))}
           </select>
-        </label>
-      ) : null}
-      {caps.canFixtures ? (
-        <button
+        </label></Gate>
+      <Gate allowed={caps.canFixtures} need={{ feature: 'canFixtures' }}><button
           type="button"
           onClick={() => setQuickCreate(quickCreate === 'environment' ? null : 'environment')}
           className={cn(EDITOR_TOOL, quickCreate === 'environment' ? EDITOR_TOOL_ON : EDITOR_TOOL_PRIMARY)}
@@ -8107,8 +8045,7 @@ export default function RoomLayoutEditor({
           title="Terrain, végétation, soleil, ciel et brouillard"
         >
           <SlidersHorizontal className="w-3.5 h-3.5" aria-hidden /> Environnement sur mesure
-        </button>
-      ) : null}
+        </button></Gate>
       {caps.fixtureKinds.includes('landscape')
         ? (['vegetation', 'water', 'ambiance'] as LandscapeGroup[]).map((group) => (
           <React.Fragment key={group}>
@@ -8127,21 +8064,15 @@ export default function RoomLayoutEditor({
           </React.Fragment>
         ))
         : null}
-      {caps.fixtureKinds.includes('fountain') ? (
-        <button type="button" onClick={() => addFixture('fountain')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+      <Gate allowed={caps.fixtureKinds.includes('fountain')} need={{ fixture: 'fountain' }}><button type="button" onClick={() => addFixture('fountain')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
           Fontaine
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('gazebo') ? (
-        <button type="button" onClick={() => addFixture('gazebo')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('gazebo')} need={{ fixture: 'gazebo' }}><button type="button" onClick={() => addFixture('gazebo')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
           Gloriette
-        </button>
-      ) : null}
-      {caps.fixtureKinds.includes('parasol') ? (
-        <button type="button" onClick={() => addFixture('parasol')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
+        </button></Gate>
+      <Gate allowed={caps.fixtureKinds.includes('parasol')} need={{ fixture: 'parasol' }}><button type="button" onClick={() => addFixture('parasol')} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>
           Parasol
-        </button>
-      ) : null}
+        </button></Gate>
       </EditorToolGroup>
       {canCustomElements ? (
         <EditorToolGroup
@@ -8304,15 +8235,18 @@ export default function RoomLayoutEditor({
           className="bg-transparent text-xs font-bold text-foreground outline-none"
           title="Qualité de rendu"
         >
-          {(Object.keys(renderQualityLabels) as RenderQuality[])
-            .filter((q) => q !== 'showcase' || caps.canShowcaseRender)
-            .map((q) => (
-            <option key={q} value={q}>{renderQualityLabels[q]}</option>
-          ))}
+          {(Object.keys(renderQualityLabels) as RenderQuality[]).map((q) => {
+            const locked = q === 'showcase' && !caps.canShowcaseRender;
+            const plan = locked ? describeEditorUpsell(renderQualityLabels[q], { feature: 'canShowcaseRender' }, parsedEditorLevel).planLabel : null;
+            return (
+              <option key={q} value={q} disabled={locked}>
+                {locked ? `${renderQualityLabels[q]} — ${plan ?? 'non inclus'}` : renderQualityLabels[q]}
+              </option>
+            );
+          })}
         </select>
       </label>
-      {caps.canShowcaseRender ? (
-      <button
+      <Gate allowed={caps.canShowcaseRender} need={{ feature: 'canShowcaseRender' }}><button
         type="button"
         onClick={() => {
           const next = !blueprint.metadata.presentationMode;
@@ -8338,8 +8272,7 @@ export default function RoomLayoutEditor({
       >
         <Presentation className="w-3.5 h-3.5" aria-hidden />
         {blueprint.metadata.presentationMode ? 'Présentation ON' : 'Présentation'}
-      </button>
-      ) : null}
+      </button></Gate>
       <button
         type="button"
         onClick={exportShowcasePng}
@@ -9888,10 +9821,11 @@ export default function RoomLayoutEditor({
       : 'sticky bottom-0 z-20 -mx-1';
 
   return (
-    <>
+    <EditorGateProvider level={parsedEditorLevel} readOnly={readOnly} onUpsell={setUpsell}>
       {aiPlanFileInput}
       {ambiencePreviewModal}
       {elementCreatorModal}
+      <EditorUpsellDialog upsell={upsell} onClose={() => setUpsell(null)} />
       <ImageCropModal
         open={Boolean(cropTarget)}
         onClose={() => setCropTarget(null)}
@@ -9983,6 +9917,6 @@ export default function RoomLayoutEditor({
           ]}
         />
       </div>
-    </>
+    </EditorGateProvider>
   );
 }
