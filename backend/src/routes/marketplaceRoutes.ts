@@ -23,6 +23,8 @@ import {
   updateDepositSettings,
   payBookingDeposit,
   getBookingDepositPayment,
+  payCommission,
+  getCommissionPayment,
 } from '../controllers/marketplaceDepositController';
 import {
   listFavorites,
@@ -88,6 +90,8 @@ router.get('/deposit-settings', getDepositSettings);
 router.put('/deposit-settings', updateDepositSettings);
 router.post('/bookings/:id/deposit-payment', payBookingDeposit);
 router.get('/bookings/:id/deposit-payment/:paymentId', getBookingDepositPayment);
+router.post('/commission-payment', payCommission);
+router.get('/commission-payment/:paymentId', getCommissionPayment);
 router.get('/reviews/received', listReceivedReviews);
 router.post('/reviews/:id/reply', replyToReview);
 router.post('/bookings', createBooking);

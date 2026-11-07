@@ -39,7 +39,7 @@ export const ONLINE_DEPOSIT_ACTOR_ID = 'system:online-deposit';
 const FRONTEND_URL = () => (process.env.FRONTEND_URL || 'http://localhost:3000').trim().replace(/\/$/, '');
 
 /** Paiement simulé, uniquement hors production et sur demande explicite (tests locaux). */
-function isDepositMockEnabled(): boolean {
+export function isDepositMockEnabled(): boolean {
   return process.env.NODE_ENV !== 'production' && process.env.MARKETPLACE_DEPOSIT_MOCK === '1';
 }
 

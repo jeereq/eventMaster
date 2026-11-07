@@ -181,6 +181,7 @@ model Tenant {
   marketplacePayoutPhone   String?
   marketplacePayoutHolder  String?
   depositPayments          MarketplaceDepositPayment[]
+  commissionPayments       MarketplaceCommissionPayment[]
   orgRoomAmbiences OrgRoomAmbience[]
   marketplacePosts MarketplacePost[]
   beveragePrices VendorBeveragePrice[]
@@ -1618,4 +1619,29 @@ model MarketplaceDepositPayment {
   @@index([bookingId, createdAt])
   @@index([vendorTenantId, status])
   @@index([status, payoutStatus])
+}
+
+/** Règlement en ligne (FlexPay) de la commission marketplace due par un prestataire. */
+model MarketplaceCommissionPayment {
+  id                       String    @id @default(uuid())
+  vendorTenantId           String
+  vendorTenant             Tenant    @relation(fields: [vendorTenantId], references: [id], onDelete: Cascade)
+  payerUserId              String?
+  amountFc                 Int
+  /** Réservations couvertes par ce règlement (ids). */
+  bookingIds               Json
+  status                   String    @default("PENDING") // PENDING | PAID | FAILED
+  paymentMethod            String    // mobile | card
+  phone                    String?
+  flexPayOrderNumber       String?   @unique
+  flexPayReference         String?   @unique
+  flexPayChannel           String?
+  flexPayAmountCustomer    Float?
+  flexPayProviderReference String?
+  paidAt                   DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  @@index([vendorTenantId, status])
+  @@index([status, createdAt])
 }
