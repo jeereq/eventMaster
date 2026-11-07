@@ -47,6 +47,35 @@ const RoomWebGLViewer = dynamic(() => import('@/components/RoomWebGLViewer'), {
   ),
 });
 
+const WALKTHROUGH_START_LABEL = 'Approche de l’entrée';
+
+function WalkthroughButton({
+  active,
+  label,
+  onToggle,
+}: {
+  active: boolean;
+  label: string;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={active}
+      className={cn(
+        'inline-flex items-center justify-center gap-1 min-h-11 min-w-11 px-2.5 rounded-full text-xs font-semibold transition touch-manipulation',
+        'border border-background/20 bg-foreground/80 text-background backdrop-blur-md',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
+        active && 'bg-background text-foreground border-background',
+      )}
+    >
+      <DoorOpen className="w-3.5 h-3.5" aria-hidden />
+      <span>{active ? (label || 'Visite…') : 'Faire le tour'}</span>
+    </button>
+  );
+}
+
 export type RoomPreviewQuality = 'thumb' | 'standard' | 'showcase';
 
 interface RoomLayoutPreviewProps {
@@ -60,6 +89,11 @@ interface RoomLayoutPreviewProps {
   force2d?: boolean;
   /** Remplace metadata.lightingPreset (ex. créneau programme événement). */
   lightingPreset?: LightingPreset;
+  /**
+   * Remplit le conteneur parent (hauteur 100 %) au lieu d'imposer un ratio : pour les scènes plein cadre
+   * qui gèrent leur propre plein écran. Affiche le bouton « Faire le tour » directement sur la scène.
+   */
+  fill?: boolean;
   /** Bouton plein écran (mobile et desktop). */
   allowMobileExpand?: boolean;
   allowExpand?: boolean;
@@ -567,6 +601,7 @@ export default function RoomLayoutPreview({
   showMeta,
   force2d = false,
   lightingPreset: lightingPresetOverride,
+  fill = false,
   allowMobileExpand,
   allowExpand,
   expandWhen3d = false,
@@ -597,6 +632,19 @@ export default function RoomLayoutPreview({
   const [walkthroughLabel, setWalkthroughLabel] = useState('');
   const previousForce2dRef = React.useRef(force2d);
 
+  const stopWalkthrough = () => {
+    setWalkthroughActive(false);
+    setWalkthroughLabel('');
+  };
+  const toggleWalkthrough = () => {
+    if (walkthroughActive) {
+      stopWalkthrough();
+      return;
+    }
+    setWalkthroughActive(true);
+    setWalkthroughLabel(WALKTHROUGH_START_LABEL);
+  };
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -611,12 +659,13 @@ export default function RoomLayoutPreview({
   }, [expandWhen3d, force2d, setExpanded]);
 
   const canvasClass = useMemo(() => {
+    if (fill) return 'h-full min-h-0';
     if (quality === 'thumb') return 'aspect-[4/3] h-full min-h-0';
     if (quality === 'showcase') {
       return 'aspect-[16/10] min-h-[280px] max-h-[min(70dvh,560px)] sm:min-h-[360px] sm:max-h-none';
     }
     return 'aspect-[4/3] min-h-[240px] sm:min-h-[280px]';
-  }, [quality]);
+  }, [fill, quality]);
 
   if (!blueprint) {
     return (
@@ -658,7 +707,7 @@ export default function RoomLayoutPreview({
     : perspectiveBlueprint;
 
   return (
-    <div className={cn('space-y-2', className)}>
+    <div className={cn('space-y-2', fill && 'h-full space-y-0', className)}>
       {showHeader && (
         <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between text-xs font-bold uppercase tracking-wider text-muted">
           <span className="truncate">{roomTypeLabels[blueprint.roomType]} · {theme.name}</span>
@@ -691,6 +740,9 @@ export default function RoomLayoutPreview({
                 selectedSeats={selectedSeats}
                 blockedSeats={blockedSeats}
                 onSelectSeat={onSelectSeat}
+                walkthroughActive={fill && walkthroughActive}
+                onWalkthroughProgress={setWalkthroughLabel}
+                onWalkthroughComplete={stopWalkthrough}
               />
             </Room3DErrorBoundary>
           ) : (
@@ -716,10 +768,15 @@ export default function RoomLayoutPreview({
             variant="overlay"
             className="absolute bottom-2 left-2 z-20 max-w-[calc(100%-5.5rem)]"
           />
+          {fill && useWebGL ? (
+            <div className="absolute bottom-2 right-2 z-20">
+              <WalkthroughButton active={walkthroughActive} label={walkthroughLabel} onToggle={toggleWalkthrough} />
+            </div>
+          ) : null}
         </div>
       )}
 
-      {quality === 'showcase' && useWebGL ? (
+      {quality === 'showcase' && useWebGL && !fill ? (
         <p className="text-xs text-muted leading-relaxed">
           <span className="hidden sm:inline">
             Visualisation <span className="font-semibold text-foreground">vitrine 3D</span> : textures, lumière et architecture.
@@ -756,28 +813,7 @@ export default function RoomLayoutPreview({
                 />
               ) : null}
               {useWebGL ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (walkthroughActive) {
-                      setWalkthroughActive(false);
-                      setWalkthroughLabel('');
-                      return;
-                    }
-                    setWalkthroughActive(true);
-                    setWalkthroughLabel('Approche de l’entrée');
-                  }}
-                  aria-pressed={walkthroughActive}
-                  className={cn(
-                    'inline-flex items-center justify-center gap-1 min-h-11 min-w-11 px-2.5 rounded-full text-xs font-semibold transition touch-manipulation',
-                    'border border-background/20 bg-foreground/80 text-background backdrop-blur-md',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
-                    walkthroughActive && 'bg-background text-foreground border-background',
-                  )}
-                >
-                  <DoorOpen className="w-3.5 h-3.5" aria-hidden />
-                  <span>{walkthroughActive ? (walkthroughLabel || 'Visite…') : 'Faire le tour'}</span>
-                </button>
+                <WalkthroughButton active={walkthroughActive} label={walkthroughLabel} onToggle={toggleWalkthrough} />
               ) : null}
               <PlanSceneControls
                 showWalls={showWalls}
@@ -814,10 +850,7 @@ export default function RoomLayoutPreview({
                   onSelectSeat={onSelectSeat}
                   walkthroughActive={walkthroughActive}
                   onWalkthroughProgress={setWalkthroughLabel}
-                  onWalkthroughComplete={() => {
-                    setWalkthroughActive(false);
-                    setWalkthroughLabel('');
-                  }}
+                  onWalkthroughComplete={stopWalkthrough}
                   className="rounded-none"
                 />
               </Room3DErrorBoundary>

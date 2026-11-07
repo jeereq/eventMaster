@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
-import dynamic from 'next/dynamic';
 import { api } from '@/lib/api';
 import PublicPageShell from '@/components/PublicPageShell';
 import MarketplaceInquiryForm from '@/components/MarketplaceInquiryForm';
@@ -21,16 +20,15 @@ import {
   venueToCatalogueItem,
   type PublicVenue,
 } from '@/lib/marketplace';
-import { roomTypeLabels, type RoomLayoutBlueprint, type RoomType } from '@/lib/roomLayoutUtils';
+import { roomTypeLabels, type RoomType } from '@/lib/roomLayoutUtils';
 import type { MarketplaceFormTab } from '@/components/MarketplaceFormTabs';
 import { Building2 } from 'lucide-react';
 import MarketplaceActivityFeed from '@/components/marketplace/MarketplaceActivityFeed';
 import ListingReviews from '@/components/marketplace/ListingReviews';
 import { trackListingView } from '@/lib/marketplaceReviews';
-
-const RoomLayoutPreview = dynamic(() => import('@/components/RoomLayoutPreview'), {
-  loading: () => <div className="h-48 rounded-[var(--radius-card)] bg-surface-muted" aria-hidden />,
-});
+import { goToListingInquire } from '@/lib/listingInquire';
+import { listingPublicUrl } from '@/lib/share';
+import VenueImmersiveViewer from '@/components/venue/VenueImmersiveViewer';
 
 export default function MarketplaceVenueDetailPage() {
   const params = useParams();
@@ -96,6 +94,13 @@ export default function MarketplaceVenueDetailPage() {
         subtitle={venue?.orgName || ''}
         shareKind="venue"
         shareSlug={venue?.slug}
+        heroSlot={venue?.layoutPreview ? (
+          <VenueImmersiveViewer
+            venue={venue}
+            shareUrl={listingPublicUrl('venue', venue.slug)}
+            onContact={goToListingInquire}
+          />
+        ) : undefined}
         photos={venue?.photos || []}
         photoIndex={photoIndex}
         onPhotoIndex={setPhotoIndex}
@@ -121,15 +126,6 @@ export default function MarketplaceVenueDetailPage() {
             />
             <ListingPublicDetails details={venue.details} kind="venue" />
             <ListingReviews kind="venue" slug={venue.slug} vendorSlug={venue.orgSlug} vendorName={venue.orgName} />
-            {venue.layoutPreview ? (
-              <div>
-                <h2 className="text-sm font-semibold mb-2">Plan de la salle</h2>
-                <RoomLayoutPreview
-                  blueprint={venue.layoutPreview as RoomLayoutBlueprint}
-                  quality="showcase"
-                />
-              </div>
-            ) : null}
           </div>
         ) : null}
         availability={venue ? (

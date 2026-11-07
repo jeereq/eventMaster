@@ -4,6 +4,7 @@ import { findRdcCommune, isAllowedRdcCity, neighborhoodsFor, pointInRdcCity } fr
 import { eventPublicHref } from '@/lib/safeAppPath';
 import { priceFromFcForEvent } from '@/lib/ticketPricing';
 import type { PricingZone, TicketPricingMode } from '@/lib/ticketPricing';
+import type { VenueLayoutSummary } from '@/lib/venueLayouts';
 
 export type VenuePriceUnit = 'EVENT' | 'DAY' | 'HOUR' | 'MINUTE' | 'PERSON' | 'QUOTA';
 export type TenantAccountKind = 'ORGANIZER' | 'VENDOR' | 'BOTH' | 'CLIENT';
@@ -73,6 +74,8 @@ export interface PublicVenue {
   orgSlug?: string | null;
   orgCity: string | null;
   layoutPreview?: unknown | null;
+  /** Dispositions publiques : la principale d'abord (fiche détail uniquement). */
+  layouts?: VenueLayoutSummary[];
   blockedDates?: string[];
   bookedDates?: string[];
   unavailableDates?: string[];
