@@ -224,7 +224,7 @@ export const USER_GUIDES: UserGuide[] = [
     ],
     navLinks: [
       { label: 'Tableau de bord', href: '/dashboard' },
-      { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+      { label: 'Demandes de devis', href: '/dashboard/quotes' },
       { label: 'Réservations & planning', href: '/dashboard/bookings?tab=bookings' },
       { label: 'Mes salles', href: '/dashboard/rooms' },
       { label: 'Mes offres', href: '/dashboard/marketplace' },
@@ -248,7 +248,7 @@ export const USER_GUIDES: UserGuide[] = [
         title: 'Répondre à une demande de devis',
         content:
           '1. Demandes de devis : les nouvelles demandes sont en tête.\n2. Ouvrez la demande, lisez date, nombre d’invités et message.\n3. Répondez par la messagerie et indiquez votre montant.\n4. Quand le client est d’accord, transformez le devis en réservation.\n5. Répondez vite : les clients comparent souvent plusieurs prestataires.',
-        links: [{ label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' }],
+        links: [{ label: 'Demandes de devis', href: '/dashboard/quotes' }],
       },
       {
         id: 'vendor-booking',
@@ -311,7 +311,7 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Factures', href: '/dashboard/invoices' },
       { label: 'Salles', href: '/dashboard/rooms' },
       { label: 'Explorer', href: '/dashboard/catalogue' },
-      { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+      { label: 'Demandes de devis', href: '/dashboard/quotes' },
       { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
       { label: 'Mes offres', href: '/dashboard/marketplace' },
       { label: 'Équipe', href: '/dashboard/team' },
@@ -355,7 +355,7 @@ export const USER_GUIDES: UserGuide[] = [
           '1. Menu Explorer : même expérience que le client (filtres, carte, favoris, packs budget).\n2. Depuis une fiche, envoyez un devis ou une demande de date (lié à un événement si besoin).\n3. Menu Demandes de devis : réponses et conversion.\n4. Menu Réservations : acceptation, acompte hors plateforme, confirmation de date.',
         links: [
           { label: 'Explorer', href: '/dashboard/catalogue' },
-          { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+          { label: 'Demandes de devis', href: '/dashboard/quotes' },
           { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
         ],
       },
@@ -467,7 +467,7 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Explorer', href: '/dashboard/catalogue' },
       { label: 'Simulateur IA', href: '/dashboard/catalogue?tab=plan&planView=ai' },
       { label: 'Réalisations', href: '/dashboard/publications' },
-      { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+      { label: 'Demandes de devis', href: '/dashboard/quotes' },
       { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
       { label: 'Mes offres', href: '/dashboard/marketplace' },
       { label: 'Équipe', href: '/dashboard/team' },
@@ -527,7 +527,7 @@ export const USER_GUIDES: UserGuide[] = [
           '1. Explorer : cherchez salles et prestataires.\n2. Envoyez un devis depuis une fiche.\n3. Demandes de devis → suivi.\n4. Réservations → acompte hors plateforme → confirmation.',
         links: [
           { label: 'Explorer', href: '/dashboard/catalogue' },
-          { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+          { label: 'Demandes de devis', href: '/dashboard/quotes' },
           { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
         ],
       },
@@ -601,7 +601,7 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Tâches', href: '/dashboard/protocol?view=tasks' },
       { label: 'Réalisations', href: '/dashboard/publications' },
       { label: 'Explorer', href: '/dashboard/catalogue' },
-      { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+      { label: 'Demandes de devis', href: '/dashboard/quotes' },
       { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
       { label: 'Statistiques', href: '/dashboard/analytics' },
       { label: 'Guide', href: '/dashboard/guide' },
@@ -650,7 +650,7 @@ export const USER_GUIDES: UserGuide[] = [
           '1. Explorer : fiches salles / prestas liées à l’événement.\n2. Demandes de devis : statut des demandes.\n3. Réservations : dates bloquées / acomptes (info pour l’accueil).',
         links: [
           { label: 'Explorer', href: '/dashboard/catalogue' },
-          { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+          { label: 'Demandes de devis', href: '/dashboard/quotes' },
           { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
         ],
       },
@@ -772,7 +772,7 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Marketplace', href: '/dashboard/catalogue' },
       { label: 'Événements', href: '/dashboard/catalogue?kind=event' },
       { label: 'Mes billets', href: '/dashboard/tickets' },
-      { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+      { label: 'Demandes de devis', href: '/dashboard/quotes' },
       { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
       { label: 'Facturation', href: '/dashboard/billing?tab=plans' },
       { label: 'Guide utilisateur', href: '/dashboard/guide' },
@@ -785,7 +785,7 @@ export const USER_GUIDES: UserGuide[] = [
         content:
           '1. Demandes de devis et Réservations sont deux entrées séparées (plus un seul « Devis & réservations »).\n2. Marketplace = Explorer / Favoris / Préparer / Packs.\n3. Événements = événements publics uniquement.',
         links: [
-          { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+          { label: 'Demandes de devis', href: '/dashboard/quotes' },
           { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
         ],
       },
@@ -827,7 +827,7 @@ export const USER_GUIDES: UserGuide[] = [
           '1. Ouvrez une fiche (Marketplace, Favoris, Événements ou pack).\n2. Envoyez un devis ou une demande de date.\n3. Suivez dans Demandes de devis.\n4. Après acceptation, versez l’acompte ({depositPercent} %) hors EventMaster.\n5. Suivez dans Réservations.',
         links: [
           { label: 'Marketplace', href: '/dashboard/catalogue' },
-          { label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' },
+          { label: 'Demandes de devis', href: '/dashboard/quotes' },
           { label: 'Réservations', href: '/dashboard/bookings?tab=bookings' },
         ],
       },

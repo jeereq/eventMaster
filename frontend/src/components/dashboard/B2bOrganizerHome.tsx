@@ -245,7 +245,7 @@ export default function B2bOrganizerHome({
       detail: asVendor
         ? 'Des clients attendent votre chiffrage.'
         : 'Demandes envoyées aux prestataires, sans réponse finale.',
-      href: asVendor ? '/dashboard/bookings?tab=quotes&role=vendor' : '/dashboard/bookings?tab=quotes',
+      href: asVendor ? '/dashboard/quotes?role=vendor' : '/dashboard/quotes',
       count: pendingQuotesCount,
       icon: Inbox,
       urgent: false,
@@ -301,7 +301,7 @@ export default function B2bOrganizerHome({
       links: [
         { label: 'Explorer', href: '/dashboard/catalogue', icon: Store },
         { label: 'Simulateur', href: '/dashboard/catalogue?tab=plan&planView=ai', icon: Sparkles },
-        { label: 'Devis', href: '/dashboard/bookings?tab=quotes', icon: Inbox },
+        { label: 'Devis', href: '/dashboard/quotes', icon: Inbox },
         { label: 'Réservations', href: '/dashboard/bookings?tab=bookings', icon: CalendarCheck },
       ],
     },

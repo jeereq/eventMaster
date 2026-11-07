@@ -23,11 +23,25 @@ import {
 } from '../utils/publicVenue';
 import {
   collectUnavailableDates,
+  effectiveBlockedDates,
   haversineKm,
   isRangeAvailable,
   parseBlockedDates,
+  rowUnavailableDates,
   toDateKey,
 } from '../utils/marketplaceDates';
+
+const VENDOR_UNAVAILABLE_ERROR = 'Le professionnel n’est pas disponible à cette date. Choisissez un autre jour.';
+
+/** Vrai si la date demandée tombe sur un jour bloqué (fiche ou prestataire). */
+function isInquiryDateBlocked(
+  row: { blockedDates?: unknown; tenant?: { marketplaceUnavailableDates?: unknown } | null },
+  date: Date | null,
+): boolean {
+  if (!date || Number.isNaN(date.getTime())) return false;
+  const key = toDateKey(date);
+  return Boolean(key && effectiveBlockedDates(row).includes(key));
+}
 import { parseListingDetails } from '../utils/listingDetails';
 import { fetchActivityPreview } from './marketplaceFeedController';
 import { Prisma, RoomType, ServiceCategory, MarketplaceBookingStatus, VenuePriceUnit } from '@prisma/client';
@@ -236,6 +250,7 @@ function toPublicVenue(listing: {
   tenant: {
     name: string;
     branding: unknown;
+    marketplaceUnavailableDates?: unknown;
     vendorProfile: { displayName: string; city: string | null; slug?: string | null } | null;
   };
   bookings?: Array<{ eventDate: Date; eventEndDate?: Date | null }>;
@@ -269,9 +284,9 @@ function toPublicVenue(listing: {
     orgSlug: listing.tenant.vendorProfile?.slug || null,
     orgCity: listing.tenant.vendorProfile?.city || listing.city,
     layoutPreview: sanitizeLayoutBlueprint(listing.room.layoutBlueprint),
-    blockedDates: parseBlockedDates(listing.blockedDates),
+    blockedDates: effectiveBlockedDates(listing),
     bookedDates: collectUnavailableDates([], listing.bookings),
-    unavailableDates: collectUnavailableDates(listing.blockedDates, listing.bookings),
+    unavailableDates: rowUnavailableDates(listing),
     details: extra,
   };
 }
@@ -340,14 +355,17 @@ function readAvailabilityRange(req: Request): { from: string; to: string } | nul
   return start <= end ? { from: start, to: end } : { from: end, to: start };
 }
 
-function filterByAvailability<T extends { blockedDates?: unknown; bookings?: Array<{ eventDate: Date; eventEndDate?: Date | null }> }>(
+function filterByAvailability<T extends {
+  blockedDates?: unknown;
+  tenant?: { marketplaceUnavailableDates?: unknown } | null;
+  bookings?: Array<{ eventDate: Date; eventEndDate?: Date | null }>;
+}>(
   rows: T[],
   range: { from: string; to: string } | null,
 ): T[] {
   if (!range) return rows;
   return rows.filter((row) => {
-    const unavailable = collectUnavailableDates(row.blockedDates, row.bookings);
-    return isRangeAvailable(unavailable, range.from, range.to);
+    return isRangeAvailable(rowUnavailableDates(row), range.from, range.to);
   });
 }
 
@@ -418,6 +436,7 @@ const listingInclude = {
     select: {
       name: true,
       branding: true,
+      marketplaceUnavailableDates: true,
       vendorProfile: { select: { displayName: true, city: true, slug: true } },
     },
   },
@@ -600,7 +619,7 @@ export async function createVenueInquiry(req: AuthenticatedRequest, res: Respons
       where: { slug, isPublic: true },
       include: {
         room: { select: { name: true } },
-        tenant: { select: { id: true, name: true, managerId: true } },
+        tenant: { select: { id: true, name: true, managerId: true, marketplaceUnavailableDates: true } },
       },
     });
     if (!listing) {
@@ -609,6 +628,9 @@ export async function createVenueInquiry(req: AuthenticatedRequest, res: Respons
 
     const identity = inquiryIdentity(account, { name, phone });
     const parsedDate = eventDate ? new Date(eventDate) : null;
+    if (isInquiryDateBlocked(listing, parsedDate)) {
+      return res.status(409).json({ error: VENDOR_UNAVAILABLE_ERROR });
+    }
     const parsedGuests = Number.parseInt(String(guestCount || ''), 10);
     const linkedEventId = await resolveLinkedEventId(req, eventId);
 
@@ -848,7 +870,7 @@ function toPublicService(offering: {
   blockedDates?: unknown;
   publishedAt: Date | null;
   vendorProfile: { displayName: string; city: string | null; slug: string };
-  tenant: { name: string };
+  tenant: { name: string; marketplaceUnavailableDates?: unknown };
   bookings?: Array<{ eventDate: Date; eventEndDate?: Date | null }>;
 }) {
   const photos = parsePhotoUrls(offering.photos);
@@ -889,9 +911,9 @@ function toPublicService(offering: {
     publishedAt: offering.publishedAt,
     orgName: offering.vendorProfile.displayName || offering.tenant.name,
     orgSlug: offering.vendorProfile.slug,
-    blockedDates: parseBlockedDates(offering.blockedDates),
+    blockedDates: effectiveBlockedDates(offering),
     bookedDates: collectUnavailableDates([], offering.bookings),
-    unavailableDates: collectUnavailableDates(offering.blockedDates, offering.bookings),
+    unavailableDates: rowUnavailableDates(offering),
     details: {
       ...extra,
       deliveryMode: deliveryMode || '',
@@ -902,7 +924,7 @@ function toPublicService(offering: {
 
 const offeringInclude = {
   vendorProfile: { select: { displayName: true, city: true, slug: true, isBlockedByAdmin: true } },
-  tenant: { select: { name: true } },
+  tenant: { select: { name: true, marketplaceUnavailableDates: true } },
   bookings: {
     where: { status: { in: HOLD_BOOKING_STATUSES } },
     select: { eventDate: true, eventEndDate: true },
@@ -1169,9 +1191,12 @@ export async function createServiceInquiry(req: AuthenticatedRequest, res: Respo
 
     const offering = await prisma.serviceOffering.findFirst({
       where: { slug, isPublic: true },
-      include: { tenant: { select: { id: true, name: true, managerId: true } } },
+      include: { tenant: { select: { id: true, name: true, managerId: true, marketplaceUnavailableDates: true } } },
     });
     if (!offering) return res.status(404).json({ error: 'Prestation introuvable ou non publiée.' });
+    if (isInquiryDateBlocked(offering, eventDate ? new Date(eventDate) : null)) {
+      return res.status(409).json({ error: VENDOR_UNAVAILABLE_ERROR });
+    }
 
     const destinationCommune = normalizeAllowedCommune('Kinshasa', rawDestinationCommune);
     if (rawDestinationCommune && destinationCommune == null) {
@@ -1263,7 +1288,7 @@ export async function createBeverageInquiry(req: AuthenticatedRequest, res: Resp
       where: { id, isAvailable: true, brand: { isActive: true } },
       include: {
         brand: { select: { name: true } },
-        tenant: { select: { id: true, name: true } },
+        tenant: { select: { id: true, name: true, marketplaceUnavailableDates: true } },
       },
     });
     if (!offer) return res.status(404).json({ error: 'Cette proposition n’est plus disponible.' });
@@ -1272,6 +1297,9 @@ export async function createBeverageInquiry(req: AuthenticatedRequest, res: Resp
     }
     const identity = inquiryIdentity(account, req.body || {});
     const parsedDate = req.body?.eventDate ? new Date(String(req.body.eventDate)) : null;
+    if (isInquiryDateBlocked({ tenant: offer.tenant }, parsedDate)) {
+      return res.status(409).json({ error: VENDOR_UNAVAILABLE_ERROR });
+    }
     const note = req.body?.message ? String(req.body.message).trim().slice(0, 2000) : '';
     const message = [`${packs} × ${offer.unitLabel} de ${offer.brand.name}.`, note].filter(Boolean).join(' ');
     const inquiry = await prisma.marketplaceInquiry.create({
@@ -1326,6 +1354,15 @@ export async function createVendorBeverageInquiry(req: AuthenticatedRequest, res
     const identity = inquiryIdentity(account, req.body || {});
     const parsedDate = req.body?.eventDate ? new Date(String(req.body.eventDate)) : null;
     const eventDate = parsedDate && !Number.isNaN(parsedDate.getTime()) ? parsedDate : null;
+    if (eventDate) {
+      const vendorTenant = await prisma.tenant.findUnique({
+        where: { id: resolved.profile.tenantId },
+        select: { marketplaceUnavailableDates: true },
+      });
+      if (isInquiryDateBlocked({ tenant: vendorTenant }, eventDate)) {
+        return res.status(409).json({ error: VENDOR_UNAVAILABLE_ERROR });
+      }
+    }
     const note = req.body?.message ? String(req.body.message).trim().slice(0, 2000) : '';
     const dateLabel = eventDate ? eventDate.toISOString().slice(0, 10) : null;
     const message = beverageOrderMessage(resolved.lines, note, dateLabel);

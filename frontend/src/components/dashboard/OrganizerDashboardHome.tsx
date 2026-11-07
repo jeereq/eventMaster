@@ -2775,7 +2775,7 @@ export default function OrganizerDashboardHome({
 
                     <div className="flex flex-wrap gap-1.5 pt-1">
                       <Link
-                        href="/dashboard/bookings?tab=quotes"
+                        href="/dashboard/quotes"
                         className="text-xs font-medium px-2.5 py-1 rounded-lg bg-surface-muted hover:bg-primary/10 hover:text-primary transition text-muted min-h-[30px] inline-flex items-center"
                       >
                         Devis en cours
@@ -2995,7 +2995,7 @@ export default function OrganizerDashboardHome({
               )}
 
               <Link
-                href="/dashboard/bookings?tab=quotes"
+                href="/dashboard/quotes"
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-primary-solid text-primary-foreground hover:bg-primary-solid-hover transition shadow-2xs"
               >
                 <span>Plein écran</span>

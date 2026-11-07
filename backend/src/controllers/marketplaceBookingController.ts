@@ -23,6 +23,7 @@ import {
 } from '../services/beverageOrderService';
 import {
   eachDateKey,
+  effectiveBlockedDates,
   isRangeAvailable,
   mergeBlockedDates,
   parseBlockedDates,
@@ -51,14 +52,25 @@ const bookingInclude = {
 };
 
 async function collectVendorBlockedDates(tenantId: string): Promise<string[]> {
-  const [listings, offerings] = await Promise.all([
+  const [listings, offerings, vendorDays] = await Promise.all([
     prisma.venueListing.findMany({ where: { tenantId }, select: { blockedDates: true } }),
     prisma.serviceOffering.findMany({ where: { tenantId }, select: { blockedDates: true } }),
+    vendorUnavailableDates(tenantId),
   ]);
   return parseBlockedDates([
     ...listings.flatMap((row) => parseBlockedDates(row.blockedDates)),
     ...offerings.flatMap((row) => parseBlockedDates(row.blockedDates)),
+    ...vendorDays,
   ]);
+}
+
+/** Jours d’indisponibilité déclarés par le prestataire (toutes ses fiches). */
+async function vendorUnavailableDates(tenantId: string): Promise<string[]> {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { marketplaceUnavailableDates: true },
+  });
+  return parseBlockedDates(tenant?.marketplaceUnavailableDates);
 }
 
 function serializeBooking(row: {
@@ -277,13 +289,13 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
     const listing = listingSlug
       ? await prisma.venueListing.findFirst({
           where: { slug: String(listingSlug), isPublic: true },
-          include: { room: { select: { name: true, location: true } }, tenant: { select: { id: true, name: true, managerId: true } } },
+          include: { room: { select: { name: true, location: true } }, tenant: { select: { id: true, name: true, managerId: true, marketplaceUnavailableDates: true } } },
         })
       : null;
     const offering = offeringSlug
       ? await prisma.serviceOffering.findFirst({
           where: { slug: String(offeringSlug), isPublic: true },
-          include: { tenant: { select: { id: true, name: true, managerId: true } } },
+          include: { tenant: { select: { id: true, name: true, managerId: true, marketplaceUnavailableDates: true } } },
         })
       : null;
 
@@ -308,7 +320,7 @@ export async function createBooking(req: AuthenticatedRequest, res: Response) {
       return res.status(400).json({ error: 'Cette offre n’a pas de tarif. Envoyez d’abord un devis.' });
     }
 
-    const blocked = parseBlockedDates(listing?.blockedDates ?? offering?.blockedDates);
+    const blocked = effectiveBlockedDates((listing ?? offering)!);
     const taken = await isRangeTaken({
       listingId: listing?.id,
       offeringId: offering?.id,
@@ -822,12 +834,14 @@ export async function acceptInquiryQuote(req: AuthenticatedRequest, res: Respons
 
     const dateKey = toDateKey(inquiry.eventDate);
     const blocked = parseBlockedDates(inquiry.listing?.blockedDates ?? inquiry.offering?.blockedDates);
+    const vendorDays = await vendorUnavailableDates(vendorTenantId);
     if (
-      !drinkOrder && (
+      (dateKey && vendorDays.includes(dateKey))
+      || (!drinkOrder && (
         !dateKey
         || !isRangeAvailable(blocked, dateKey, dateKey)
         || await isRangeTaken({ listingId: inquiry.listingId, offeringId: inquiry.offeringId, from: dateKey, to: dateKey })
-      )
+      ))
     ) {
       return res.status(409).json({ error: 'Cette date n’est plus disponible. Écrivez au professionnel pour en convenir une autre.' });
     }
@@ -927,6 +941,11 @@ export async function convertInquiryToBooking(req: AuthenticatedRequest, res: Re
 
     const drinkOrder = Boolean(inquiry.beveragePriceId) && !inquiry.listingId && !inquiry.offeringId;
     const dateKey = toDateKey(inquiry.eventDate);
+    if (dateKey && (await vendorUnavailableDates(tenantId)).includes(dateKey)) {
+      return res.status(409).json({
+        error: 'Vous avez marqué ce jour comme indisponible. Retirez-le de vos indisponibilités pour réserver.',
+      });
+    }
     const blocked = parseBlockedDates(inquiry.listing?.blockedDates ?? inquiry.offering?.blockedDates);
     if (
       !drinkOrder && (

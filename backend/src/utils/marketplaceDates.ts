@@ -75,3 +75,26 @@ export function haversineKm(lat1: number, lon1: number, lat2: number, lon2: numb
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
   return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(a)));
 }
+
+/** Jours bloqués d’une fiche + jours d’indisponibilité du prestataire (toutes fiches). */
+export function effectiveBlockedDates(row: {
+  blockedDates?: unknown;
+  tenant?: { marketplaceUnavailableDates?: unknown } | null;
+}): string[] {
+  return mergeBlockedDates(row.blockedDates, parseBlockedDates(row.tenant?.marketplaceUnavailableDates));
+}
+
+/** Jours où la fiche ne peut pas être réservée : blocages fiche + prestataire + réservations. */
+export function rowUnavailableDates(row: {
+  blockedDates?: unknown;
+  tenant?: { marketplaceUnavailableDates?: unknown } | null;
+  bookings?: BookingDateSpan[];
+}): string[] {
+  return collectUnavailableDates(effectiveBlockedDates(row), row.bookings);
+}
+
+/** Au plus deux ans de jours d’indisponibilité, à partir d’hier. */
+export function sanitizeVendorUnavailableDates(input: unknown, today = new Date()): string[] {
+  const floor = new Date(today.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  return parseBlockedDates(input).filter((key) => key >= floor).slice(0, 730);
+}
