@@ -541,9 +541,6 @@ function buildDashboardNav(opts: {
 			]),
 			navSection('Activité', activityItems),
 			navSection('Ma vitrine', showcaseItems),
-			navSection('Suivi', [
-				{ name: 'Statistiques & revenus', href: '/dashboard/analytics', tourId: 'nav-analytics-org', icon: BarChart3 },
-			]),
 			navSection('Mes événements', eventItems),
 			navSection('Réseau', networkItems),
 			navSection('Organisation', [
@@ -998,6 +995,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   ) {
    router.replace(fallback);
   }
+  if (!workspace.showAnalytics && pathname.startsWith('/dashboard/analytics')) {
+   router.replace('/dashboard');
+  }
   if (!workspace.showRooms && pathname.startsWith('/dashboard/rooms')) {
    router.replace(fallback);
   }
@@ -1014,6 +1014,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   workspace.showEvents,
   workspace.showRooms,
   workspace.showMarketplace,
+  workspace.showAnalytics,
   pathname,
   router,
  ]);

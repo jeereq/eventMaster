@@ -62,7 +62,7 @@ export async function getTenantPlanSnapshot(tenantId: string): Promise<TenantPla
 
   if (!tenant) return null;
 
-  const features = getPlanLimitsForTenant(tenant.plan, tenant.accountKind);
+  const features = getPlanLimitsForTenant(tenant.plan, tenant.accountKind, tenant.pendingPlan);
 
   const [guestUsage, orgManagers] = await Promise.all([
     countTenantGuestsForQuota(tenantId),
