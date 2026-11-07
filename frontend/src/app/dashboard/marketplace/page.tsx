@@ -508,7 +508,7 @@ export default function MarketplaceDeskPage() {
         ))}
         <span aria-hidden className="mx-1 w-px shrink-0 self-stretch bg-border" />
         <Link
-          href="/dashboard/bookings?tab=quotes"
+          href="/dashboard/quotes"
           className="inline-flex items-center gap-1.5 shrink-0 min-h-11 px-3 py-2 rounded-full text-xs font-semibold border border-border text-muted hover:text-foreground whitespace-nowrap touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         >
           <Inbox className="w-3.5 h-3.5" aria-hidden />

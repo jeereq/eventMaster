@@ -14,6 +14,7 @@ export function isClientReturnPath(path: string | null | undefined): boolean {
     || path.startsWith('/dashboard/catalogue')
     || path.startsWith('/dashboard/tickets')
     || path.startsWith('/dashboard/bookings')
+    || path.startsWith('/dashboard/quotes')
   );
 }
 

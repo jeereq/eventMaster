@@ -2,7 +2,7 @@ import { MarketplaceBookingStatus, ServiceCategory, VenuePriceUnit } from '@pris
 import { prisma } from '../db';
 import { parseListingDetails } from '../utils/listingDetails';
 import { coverFromMedia, isServiceRentalCategory, parsePhotoUrls, priceUnitLabel, serviceCategoryLabel } from '../utils/publicVenue';
-import { collectUnavailableDates, haversineKm, isRangeAvailable, toDateKey } from '../utils/marketplaceDates';
+import { haversineKm, rowUnavailableDates, isRangeAvailable, toDateKey } from '../utils/marketplaceDates';
 import { allowedCityPrismaFilter, normalizeAllowedCity, normalizeAllowedCommune } from '../utils/rdcCities';
 import { EVENT_PLAN_TYPES, type EventPlanType } from './eventPlanBrief';
 import { beverageBudgetAmount, parseBudgetSimulationScope, parseWantedBrandIds, parseWantedDrinkLines, parseWantedSaleUnits, rentalBudgetAmount, type BeverageFocusBrand, type BeverageOrderLine, type BudgetSimulationScope, type BudgetStyle, type WantedSaleUnit } from './eventBudgetCost';
@@ -270,7 +270,7 @@ async function loadCatalog(opts: {
       where: { isPublic: true, ...cityFilter, ...communeFilter },
       include: {
         room: { select: { name: true, capacity: true, description: true } },
-        tenant: { select: { name: true, vendorProfile: { select: { displayName: true } } } },
+        tenant: { select: { name: true, marketplaceUnavailableDates: true, vendorProfile: { select: { displayName: true } } } },
         bookings: {
           where: { status: { in: HOLD_BOOKING_STATUSES } },
           select: { eventDate: true, eventEndDate: true },
@@ -283,7 +283,7 @@ async function loadCatalog(opts: {
       where: { isPublic: true, ...cityFilter, ...communeFilter },
       include: {
         vendorProfile: { select: { displayName: true } },
-        tenant: { select: { name: true } },
+        tenant: { select: { name: true, marketplaceUnavailableDates: true } },
         bookings: {
           where: { status: { in: HOLD_BOOKING_STATUSES } },
           select: { eventDate: true, eventEndDate: true },
@@ -294,12 +294,12 @@ async function loadCatalog(opts: {
     }),
   ]);
 
-  const available = <T extends { blockedDates?: unknown; bookings?: Array<{ eventDate: Date; eventEndDate?: Date | null }> }>(
+  const available = <T extends { blockedDates?: unknown; tenant?: { marketplaceUnavailableDates?: unknown } | null; bookings?: Array<{ eventDate: Date; eventEndDate?: Date | null }> }>(
     rows: T[],
   ) => {
     if (!opts.dateKey) return rows;
     return rows.filter((row) => {
-      const unavailable = collectUnavailableDates(row.blockedDates, row.bookings);
+      const unavailable = rowUnavailableDates(row);
       return isRangeAvailable(unavailable, opts.dateKey, opts.dateKey);
     });
   };

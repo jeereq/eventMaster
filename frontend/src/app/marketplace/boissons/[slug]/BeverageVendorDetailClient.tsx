@@ -181,7 +181,7 @@ function VendorDrinksPage() {
 
   const followHref = sent?.kind === 'book'
     ? `/dashboard/bookings?tab=bookings${sent.id ? `&bookingId=${sent.id}` : ''}`
-    : `/dashboard/bookings?tab=quotes${sent?.id ? `&inquiryId=${sent.id}` : ''}`;
+    : `/dashboard/quotes${sent?.id ? `&inquiryId=${sent.id}` : ''}`;
 
   return (
     <PublicPageShell faqHref="/faq">

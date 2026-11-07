@@ -139,7 +139,7 @@ export default function ProtocolDashboardHome() {
           <p className="text-sm font-semibold mt-1">Photos et actualités</p>
         </Link>
         <Link
-          href="/dashboard/bookings?tab=quotes"
+          href="/dashboard/quotes"
           className="rounded-2xl border border-border/80 bg-surface/80 hover:bg-surface px-3.5 py-3.5 hover:border-primary/50 hover:shadow-xs transition min-h-[5.5rem]"
         >
           <p className="text-xs font-semibold text-muted inline-flex items-center gap-1.5">

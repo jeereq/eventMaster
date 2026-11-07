@@ -180,6 +180,8 @@ model Tenant {
   /** Numéro Mobile Money (243…) sur lequel EventMaster reverse les acomptes payés en ligne. */
   marketplacePayoutPhone   String?
   marketplacePayoutHolder  String?
+  /** Jours où le prestataire n'est pas disponible (YYYY-MM-DD) : bloquent devis et réservations sur toutes ses fiches. */
+  marketplaceUnavailableDates Json?
   depositPayments          MarketplaceDepositPayment[]
   commissionPayments       MarketplaceCommissionPayment[]
   orgRoomAmbiences OrgRoomAmbience[]

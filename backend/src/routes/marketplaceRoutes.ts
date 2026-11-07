@@ -57,6 +57,7 @@ import {
   createLinkedFeedPost,
   listMyFeedPosts,
 } from '../controllers/marketplaceFeedController';
+import { getVendorUnavailableDates, updateVendorUnavailableDates } from '../controllers/marketplaceAvailabilityController';
 import { getVendorStats } from '../controllers/marketplaceVendorStatsController';
 import { createBookingReview, listReceivedReviews, replyToReview } from '../controllers/marketplaceReviewController';
 import {
@@ -88,6 +89,8 @@ router.get('/vendor-stats', getVendorStats);
 router.post('/bookings/:id/review', createBookingReview);
 router.get('/deposit-settings', getDepositSettings);
 router.put('/deposit-settings', updateDepositSettings);
+router.get('/unavailable-dates', getVendorUnavailableDates);
+router.put('/unavailable-dates', updateVendorUnavailableDates);
 router.post('/bookings/:id/deposit-payment', payBookingDeposit);
 router.get('/bookings/:id/deposit-payment/:paymentId', getBookingDepositPayment);
 router.post('/commission-payment', payCommission);

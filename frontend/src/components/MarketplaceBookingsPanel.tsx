@@ -55,6 +55,7 @@ import { useAuth } from '@/context/AuthContext';
 import { ReviewStars, ReviewStarsInput } from '@/components/marketplace/ReviewStars';
 import { commissionPercent, depositPercent } from '@/lib/platformRates';
 import OnlineDepositSettings from '@/components/marketplace/OnlineDepositSettings';
+import VendorUnavailabilitySettings from '@/components/marketplace/VendorUnavailabilitySettings';
 import CommissionPayButton from '@/components/marketplace/CommissionPayButton';
 import { segmentedItem, SEGMENTED_TRACK } from '@/components/ui/segmented';
 import type { MarketplaceDepositPayment } from '@/lib/marketplace';
@@ -523,6 +524,9 @@ export default function MarketplaceBookingsPanel({
       )}
       {!organizerView && canHandleAsVendor ? (
         <OnlineDepositSettings depositPct={depositPct} commissionPct={commissionPct} onSaved={onChanged} />
+      ) : null}
+      {!organizerView ? (
+        <VendorUnavailabilitySettings bookedDates={[...confirmedDates, ...pendingDates]} onSaved={onChanged} />
       ) : null}
 
       {error && <Alert variant="error">{error}</Alert>}

@@ -225,7 +225,7 @@ export default function PersonalOrganizerHome({ events }: { events: PersonalOrga
     {
       label: 'Devis & réservations',
       hint: 'Suivre vos demandes',
-      href: '/dashboard/bookings?tab=quotes',
+      href: '/dashboard/quotes',
       icon: CalendarCheck,
     },
   ].filter(Boolean) as { label: string; hint: string; href: string; icon: React.ComponentType<{ className?: string }> }[];

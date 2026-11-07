@@ -89,9 +89,9 @@ interface ShowcaseRow {
 }
 
 const LEGACY_TAB_ROUTES: Record<string, (venue: boolean) => string> = {
-  quotes: () => '/dashboard/bookings?tab=quotes',
-  devis: () => '/dashboard/bookings?tab=quotes',
-  inquiries: () => '/dashboard/bookings?tab=quotes',
+  quotes: () => '/dashboard/quotes',
+  devis: () => '/dashboard/quotes',
+  inquiries: () => '/dashboard/quotes',
   reservations: () => '/dashboard/bookings?tab=bookings',
   bookings: () => '/dashboard/bookings?tab=bookings',
   spaces: (venue) => (venue ? '/dashboard/rooms' : '/dashboard/marketplace'),
@@ -405,7 +405,7 @@ export default function VendorDashboardHome() {
       label: 'Devis à répondre',
       value: String(quotesToAnswer.length),
       hint: newQuotesCount > 0 ? `${newQuotesCount} nouveau${newQuotesCount > 1 ? 'x' : ''}` : 'Rien en attente',
-      href: '/dashboard/bookings?tab=quotes',
+      href: '/dashboard/quotes',
       icon: Inbox,
       urgent: quotesToAnswer.length > 0,
     },
@@ -501,7 +501,7 @@ export default function VendorDashboardHome() {
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
           <Link
-            href="/dashboard/bookings?tab=quotes"
+            href="/dashboard/quotes"
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 text-sm font-semibold text-foreground hover:border-primary/40 transition"
           >
             <Inbox className="w-4 h-4 text-primary" />
@@ -621,7 +621,7 @@ export default function VendorDashboardHome() {
         <SectionCard
           title="Demandes de devis à traiter"
           icon={Inbox}
-          action={<SeeAllLink href="/dashboard/bookings?tab=quotes" />}
+          action={<SeeAllLink href="/dashboard/quotes" />}
         >
           {!loading && quotesToAnswer.length === 0 ? (
             <EmptyRow
@@ -634,7 +634,7 @@ export default function VendorDashboardHome() {
               {(loading ? [] : quotesToAnswer.slice(0, 5)).map((q) => (
                 <li key={q.id}>
                   <Link
-                    href={`/dashboard/bookings?tab=quotes&inquiryId=${q.id}`}
+                    href={`/dashboard/quotes?inquiryId=${q.id}`}
                     className="flex items-center gap-3 px-4 py-3 hover:bg-surface-muted/60 transition sm:px-5"
                   >
                     <span
