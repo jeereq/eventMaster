@@ -81,7 +81,7 @@ export default function OnlineDepositSettings({
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3 border border-border rounded-[var(--radius-card)] bg-surface px-4 py-3">
+      <div className="h-full flex flex-wrap items-center justify-between gap-3 border border-border rounded-[var(--radius-card)] bg-surface px-4 py-3">
         <div className="min-w-0">
           <p className="text-xs font-semibold text-foreground inline-flex items-center gap-1.5">
             <Smartphone className="w-3.5 h-3.5 text-primary" aria-hidden />
