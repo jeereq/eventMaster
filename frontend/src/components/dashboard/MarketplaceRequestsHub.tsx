@@ -35,6 +35,7 @@ import type { SavedEventPack } from '@/lib/eventPlan';
 import { eventTypeLabel } from '@/lib/listingDetails';
 import { canPublishVenueCatalog, canSellOnMarketplace } from '@/lib/planAccess';
 import { cn } from '@/lib/cn';
+import { SEGMENTED_TRACK, segmentedItem } from '@/components/ui/segmented';
 
 type HubTab = 'quotes' | 'bookings' | 'packs' | 'favorites';
 export type MarketplaceHubSection = 'quotes' | 'bookings';
@@ -231,6 +232,7 @@ export default function MarketplaceRequestsHub({ section }: { section: Marketpla
 
   const showEventFilter = (tab === 'quotes' || tab === 'bookings') && eventOptions.length > 0;
   const showSubTabs = section === 'bookings' && role === 'organizer' && !isProtocol;
+  const crossHref = `${SECTION_PATH[section === 'quotes' ? 'bookings' : 'quotes']}${role === 'vendor' ? '?role=vendor' : ''}`;
 
   const pageTitle =
     role === 'vendor'
@@ -250,16 +252,16 @@ export default function MarketplaceRequestsHub({ section }: { section: Marketpla
   const pageDescription =
     role === 'vendor'
       ? tab === 'bookings'
-        ? 'Dates demandées pour vos fiches.'
-        : 'Demandes reçues.'
+        ? 'Acceptez les demandes, suivez les acomptes et gérez vos disponibilités.'
+        : 'Répondez aux clients, chiffrez vos devis et transformez-les en réservations.'
       : isProtocol
         ? tab === 'bookings'
           ? 'Dates des événements accompagnés.'
           : 'Devis du protocole.'
         : tab === 'bookings'
-          ? 'Dates et acomptes.'
+          ? 'Vos dates réservées et les acomptes à verser.'
           : tab === 'quotes'
-            ? 'Demandes et devis.'
+            ? 'Vos demandes de devis et les réponses des professionnels.'
             : tab === 'packs'
               ? 'Sélections enregistrées.'
               : tab === 'favorites'
@@ -283,65 +285,64 @@ export default function MarketplaceRequestsHub({ section }: { section: Marketpla
           />
         }
         action={
-          !isProtocol ? (
+          isProtocol ? null : role === 'vendor' ? (
+            <Link href={crossHref} className="inline-flex">
+              <Button
+                size="sm"
+                variant="secondary"
+                leftIcon={section === 'quotes' ? <CalendarCheck className="w-4 h-4" /> : <Inbox className="w-4 h-4" />}
+              >
+                {section === 'quotes' ? 'Voir les réservations' : 'Voir les devis'}
+              </Button>
+            </Link>
+          ) : (
             <Link href="/dashboard/catalogue" className="inline-flex">
               <Button size="sm" leftIcon={<Store className="w-4 h-4" />}>
                 Explorer
               </Button>
             </Link>
-          ) : null
+          )
         }
       />
 
-      {/* SÉLECTEUR DE PERSPECTIVE VENDEUR / ORGANISATEUR */}
+      {/* SÉLECTEUR DE PERSPECTIVE : ce que l’on reçoit (pro) / ce que l’on a envoyé (organisateur) */}
       {canActAsVendor && (
-        <div className="flex flex-wrap items-center justify-between gap-3 p-1.5 rounded-2xl border border-border bg-surface-muted/60">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setPerspectiveRole('vendor')}
-              className={cn(
-                'inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition',
-                role === 'vendor'
-                  ? 'bg-surface text-foreground shadow-xs border border-border font-bold'
-                  : 'text-muted hover:text-foreground hover:bg-surface/50',
-              )}
-            >
-              <Store className="w-4 h-4 text-primary" />
-              <span>Demandes reçues (Professionnel / Salle)</span>
-              {role === 'vendor' && pendingQuotes > 0 ? (
-                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-600 text-white shadow-2xs">
-                  {pendingQuotes}
-                </span>
-              ) : null}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPerspectiveRole('organizer')}
-              className={cn(
-                'inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition',
-                role === 'organizer'
-                  ? 'bg-surface text-foreground shadow-xs border border-border font-bold'
-                  : 'text-muted hover:text-foreground hover:bg-surface/50',
-              )}
-            >
-              <Building2 className="w-4 h-4 text-muted-foreground" />
-              <span>Mes demandes (Organisateur)</span>
-            </button>
-          </div>
-
-          <div className="text-[11px] text-muted px-2">
-            {role === 'vendor' ? (
-              <span>Vue dédiée aux prestataires et gestionnaires de salles</span>
-            ) : (
-              <span>Vue dédiée aux réservations que vous avez initiées</span>
-            )}
-          </div>
+        <div
+          role="radiogroup"
+          aria-label={section === 'quotes' ? 'Devis reçus ou envoyés' : 'Réservations reçues ou envoyées'}
+          className={cn('flex w-full sm:inline-flex sm:w-auto', SEGMENTED_TRACK)}
+        >
+          <button
+            type="button"
+            role="radio"
+            aria-checked={role === 'vendor'}
+            onClick={() => setPerspectiveRole('vendor')}
+            className={segmentedItem(role === 'vendor', 'flex-1 sm:flex-none inline-flex items-center justify-center gap-2 text-xs sm:text-sm')}
+          >
+            <Store className="w-4 h-4 shrink-0" aria-hidden />
+            {section === 'quotes' ? 'Reçus' : 'Reçues'}
+            {role === 'vendor' && section === 'quotes' && pendingQuotes > 0 ? (
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-600 text-white">
+                {pendingQuotes}
+              </span>
+            ) : null}
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={role === 'organizer'}
+            onClick={() => setPerspectiveRole('organizer')}
+            className={segmentedItem(role === 'organizer', 'flex-1 sm:flex-none inline-flex items-center justify-center gap-2 text-xs sm:text-sm')}
+          >
+            <Building2 className="w-4 h-4 shrink-0" aria-hidden />
+            {section === 'quotes' ? 'Mes demandes' : 'Mes réservations'}
+          </button>
         </div>
       )}
 
       {error && <Alert variant="error">{error}</Alert>}
 
+      {showSubTabs || showEventFilter ? (
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {showSubTabs ? (
         <div
@@ -385,14 +386,7 @@ export default function MarketplaceRequestsHub({ section }: { section: Marketpla
             </button>
           ))}
         </div>
-        ) : (
-          <p className="text-xs text-muted inline-flex items-center gap-1.5">
-            {section === 'quotes' ? <Inbox className="w-4 h-4" /> : <CalendarCheck className="w-4 h-4" />}
-            {section === 'quotes'
-              ? (pendingQuotes > 0 ? `${pendingQuotes} devis en attente de réponse` : `${visibleInquiries.length} devis`)
-              : (openBookings > 0 ? `${openBookings} réservation${openBookings > 1 ? 's' : ''} ouverte${openBookings > 1 ? 's' : ''}` : `${visibleBookings.length} réservation${visibleBookings.length > 1 ? 's' : ''}`)}
-          </p>
-        )}
+        ) : <span className="hidden sm:block" />}
 
         {showEventFilter ? (
           <div className="sm:w-64 shrink-0">
@@ -410,6 +404,7 @@ export default function MarketplaceRequestsHub({ section }: { section: Marketpla
           </div>
         ) : null}
       </div>
+      ) : null}
 
       {loading ? (
         <div className="flex items-center justify-center py-16 text-muted">

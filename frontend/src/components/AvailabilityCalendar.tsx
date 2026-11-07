@@ -171,9 +171,9 @@ export default function AvailabilityCalendar({
         className,
       )}
     >
-      <div className="flex items-center justify-between gap-2">
-        <h2 className={cn('font-semibold capitalize', compact ? 'text-xs' : 'text-sm')}>{title}</h2>
-        <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className={cn('font-semibold capitalize min-w-0', compact ? 'text-xs' : 'text-sm')}>{title}</h2>
+        <div className="flex items-center gap-1 ml-auto">
           <button
             type="button"
             className="min-h-11 px-2.5 rounded-[var(--radius-button)] border border-border text-xs font-semibold text-muted hover:text-foreground"
@@ -193,7 +193,7 @@ export default function AvailabilityCalendar({
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-xs font-semibold min-w-[7rem] sm:min-w-[8rem] text-center capitalize">{monthLabel}</span>
+          <span className={cn('text-xs font-semibold text-center capitalize', compact ? 'min-w-[6.5rem]' : 'min-w-[7rem] sm:min-w-[8rem]')}>{monthLabel}</span>
           <button
             type="button"
             className="min-h-11 min-w-11 p-2 inline-flex items-center justify-center rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground"

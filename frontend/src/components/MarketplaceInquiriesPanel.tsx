@@ -34,6 +34,7 @@ import {
   type MarketplaceInquiryThreadMessage,
 } from '@/lib/marketplace';
 import { eventDashboardHref } from '@/lib/eventRoutes';
+import { formatDayDistance, formatEventDay, formatReceivedAt } from '@/lib/relativeDate';
 import { formatFc } from '@/config/landingPricing';
 import { cn } from '@/lib/cn';
 import { DealDeclineBlock, DealQuoteBlock, MarketplaceDealCard, type MarketplaceDealFact } from '@/components/MarketplaceDealCard';
@@ -778,7 +779,12 @@ export default function MarketplaceInquiriesPanel({
               if (item.eventDate) {
                 facts.push({
                   label: 'Date',
-                  value: new Date(item.eventDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }),
+                  value: (
+                    <>
+                      {formatEventDay(item.eventDate)}
+                      <span className="block text-[11px] font-normal text-muted">{formatDayDistance(item.eventDate)}</span>
+                    </>
+                  ),
                 });
               }
               if (item.guestCount) facts.push({ label: 'Invités', value: String(item.guestCount) });
@@ -848,7 +854,9 @@ export default function MarketplaceInquiriesPanel({
                       ? [kindLabel(item.kind), counterpart].filter(Boolean).join(' · ')
                       : [kindLabel(item.kind), listingShortTitle(item.title, item.vendorName)].filter(Boolean).join(' · ')
                   }
-                  timestamp={new Date(item.createdAt).toLocaleString('fr-FR')}
+                  timestamp={organizerView
+                    ? `Envoyé ${formatReceivedAt(item.createdAt).replace(/^Reçu /, '')}`
+                    : formatReceivedAt(item.createdAt)}
                   icon={kindIcon(item.kind)}
                   status={<StatusPill tone={inquiryStatusTone(item)}>{inquiryStatusLabel(item, organizerView)}</StatusPill>}
                   facts={facts}
@@ -943,7 +951,7 @@ export default function MarketplaceInquiriesPanel({
                   {item.message ? (
                     <p className="text-sm text-muted line-clamp-3 whitespace-pre-line">{item.message}</p>
                   ) : null}
-                  {item.lastMessage ? (
+                  {item.lastMessage && item.lastMessage.body.trim() !== (item.message || '').trim() ? (
                     <p className="text-[11px] text-muted line-clamp-2">
                       Dernier message ({item.lastMessage.authorRole === 'CLIENT' ? 'client' : 'pro'}) : {item.lastMessage.body}
                     </p>
