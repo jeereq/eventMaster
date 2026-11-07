@@ -26,6 +26,15 @@ import {
   createSavedElement,
   deleteSavedElement,
 } from '../controllers/roomElementController';
+import {
+  listRoomLayouts,
+  getRoomLayout,
+  createRoomLayout,
+  updateRoomLayout,
+  deleteRoomLayout,
+  duplicateRoomLayout,
+  reorderRoomLayouts,
+} from '../controllers/venueLayoutController';
 import { upsertRoomListing } from '../controllers/marketplaceController';
 
 const router = Router();
@@ -54,5 +63,12 @@ router.delete('/:roomId', deleteRoom);
 router.post('/:roomId/staff', assignRoomStaff);
 router.delete('/:roomId/staff/:userId', removeRoomStaff);
 router.put('/:roomId/listing', upsertRoomListing);
+router.get('/:roomId/layouts', listRoomLayouts);
+router.put('/:roomId/layouts/order', reorderRoomLayouts);
+router.post('/:roomId/layouts', createRoomLayout);
+router.get('/:roomId/layouts/:layoutId', getRoomLayout);
+router.patch('/:roomId/layouts/:layoutId', updateRoomLayout);
+router.delete('/:roomId/layouts/:layoutId', deleteRoomLayout);
+router.post('/:roomId/layouts/:layoutId/duplicate', duplicateRoomLayout);
 
 export default router;

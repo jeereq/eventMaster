@@ -56,6 +56,7 @@ import { rentalDeliverySurcharge } from '../services/eventBudgetCost';
 import { PlanFeatureError, assertServiceQuota, assertVenueCatalogPublish } from '../services/planFeaturesService';
 import { listTenantOperatorIds, notifyTenantOperators, notifyUsers } from '../services/platformNotificationService';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
+import { listPublicLayouts } from '../services/venueLayoutService';
 import {
   allowedCityPrismaFilter,
   normalizeAllowedCity,
@@ -539,7 +540,7 @@ function canViewUnpublishedListing(req: Request, tenantId: string): boolean {
 }
 
 /** SuperAdmin (et org propriétaire) : voir fiches non publiques ou bloquées pour modération. */
-function canViewRestrictedListing(req: Request, tenantId: string): boolean {
+export function canViewRestrictedListing(req: Request, tenantId: string): boolean {
   return canViewUnpublishedListing(req, tenantId);
 }
 
@@ -591,6 +592,7 @@ export async function getPublicVenue(req: Request, res: Response) {
       ...toPublicVenue(listing),
       isPublic: listing.isPublic,
       isBlockedByAdmin: listing.isBlockedByAdmin,
+      layouts: await listPublicLayouts(listing.roomId, listing.room.layoutBlueprint),
       relatedVenues: relatedVenues.map(toPublicVenue),
       relatedServices: relatedOfferings.map(toPublicService),
       activityPreview: await fetchActivityPreview({ venueListingId: listing.id }),
