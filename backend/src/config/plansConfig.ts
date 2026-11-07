@@ -488,6 +488,7 @@ export function applyAccountKindToPlan(
   plan: PlanDefinition,
   kind?: string | null,
   planKey?: string,
+  pendingPlan?: string | null,
 ): PlanDefinition {
   if (kind === 'CLIENT') {
     return {
@@ -503,23 +504,32 @@ export function applyAccountKindToPlan(
   }
   if (kind === 'VENDOR') {
     const isFree = planKey ? normalizePlanKey(planKey) === 'FREE' : false;
+    // Un prestataire inscrit sur la voie « prestations » (forfait visé SERVICE) ne gère pas
+    // de salle, même pendant l'essai : seule la voie « salle » garde la salle d'essai.
+    const serviceTrial = isFree && Boolean(pendingPlan) && normalizePlanKey(String(pendingPlan)) === 'SERVICE';
     return {
       ...plan,
       maxEvents: 0,
       maxGuests: 0,
       maxTemplates: 0,
       customRsvpFields: false,
-      ...(isFree
-        ? { description: 'Essai catalogue : 1 salle et 1 prestation, sans organisation d’événements.' }
-        : {}),
+      ...(serviceTrial
+        ? { maxRooms: 0, description: 'Essai prestataire : 1 prestation, sans salle ni organisation d’événements.' }
+        : isFree
+          ? { description: 'Essai catalogue : 1 salle et 1 prestation, sans organisation d’événements.' }
+          : {}),
     };
   }
   return plan;
 }
 
-export function getPlanLimitsForTenant(planKey: string, accountKind?: string | null): PlanDefinition {
+export function getPlanLimitsForTenant(
+  planKey: string,
+  accountKind?: string | null,
+  pendingPlan?: string | null,
+): PlanDefinition {
   const normalized = normalizePlanKey(planKey);
-  return applyAccountKindToPlan(getPlanLimits(normalized), accountKind, normalized);
+  return applyAccountKindToPlan(getPlanLimits(normalized), accountKind, normalized, pendingPlan);
 }
 
 export function mergePlansForSave(

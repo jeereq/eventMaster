@@ -229,7 +229,6 @@ export const USER_GUIDES: UserGuide[] = [
       { label: 'Mes salles', href: '/dashboard/rooms' },
       { label: 'Mes offres', href: '/dashboard/marketplace' },
       { label: 'Réalisations', href: '/dashboard/publications' },
-      { label: 'Statistiques & revenus', href: '/dashboard/analytics' },
       { label: 'Abonnement & forfait', href: '/dashboard/billing' },
       { label: 'Guide', href: '/dashboard/guide' },
     ],
@@ -248,7 +247,7 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'vendor-quote',
         title: 'Répondre à une demande de devis',
         content:
-          '1. Demandes de devis : les nouvelles demandes sont en tête.\n2. Ouvrez la demande, lisez date, nombre d’invités et message.\n3. Répondez par la messagerie et indiquez votre montant.\n4. Quand le client est d’accord, transformez le devis en réservation.\n5. Répondre vite compte : votre délai médian apparaît dans Statistiques.',
+          '1. Demandes de devis : les nouvelles demandes sont en tête.\n2. Ouvrez la demande, lisez date, nombre d’invités et message.\n3. Répondez par la messagerie et indiquez votre montant.\n4. Quand le client est d’accord, transformez le devis en réservation.\n5. Répondez vite : les clients comparent souvent plusieurs prestataires.',
         links: [{ label: 'Demandes de devis', href: '/dashboard/bookings?tab=quotes' }],
       },
       {
@@ -262,8 +261,8 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'vendor-commission',
         title: 'Commission EventMaster',
         content:
-          '1. Une commission de {commissionPercent} % s’applique à chaque réservation confirmée.\n2. Le montant à régler (hors commissions déjà payées) s’affiche sur l’accueil, dans Réservations et dans Statistiques.\n3. Versez-la à EventMaster ; elle est ensuite marquée « payée » sur chaque réservation.',
-        links: [{ label: 'Statistiques & revenus', href: '/dashboard/analytics' }],
+          '1. Une commission de {commissionPercent} % s’applique à chaque réservation confirmée.\n2. Le montant à régler (hors commissions déjà payées) s’affiche sur l’accueil et dans Réservations.\n3. Versez-la à EventMaster ; elle est ensuite marquée « payée » sur chaque réservation.',
+        links: [{ label: 'Réservations & planning', href: '/dashboard/bookings?tab=bookings' }],
       },
       {
         id: 'vendor-suspended',

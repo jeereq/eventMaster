@@ -212,9 +212,8 @@ export function buildFirstLoginTour(
       push('nav-dashboard', home);
       push('nav-quotes');
       push('nav-reservations');
-      if (!workspace || workspace.showRooms) push('nav-rooms');
+      if (workspace?.showRooms) push('nav-rooms');
       if (access?.canManageRooms) push('nav-marketplace');
-      push('nav-analytics-org');
       steps.push(
         firstLoginFinish(home, 'Ensuite : complétez une fiche avec des photos et un prix pour recevoir vos premiers devis.'),
       );
