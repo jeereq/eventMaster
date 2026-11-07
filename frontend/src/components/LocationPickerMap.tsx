@@ -314,7 +314,7 @@ export default function LocationPickerMap({
       <p className={cn('text-[11px] flex items-start gap-1.5', required && !hasPoint ? 'text-rose-600' : 'text-muted')}>
         <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" />
         {!cityMeta
-          ? `Choisissez ${cityList} dans Détails pour cadrer la carte.`
+          ? `Choisissez d’abord la ville (${cityList}) pour cadrer la carte.`
           : hasPoint
             ? `${hint || 'Position choisie'} · ${lat.toFixed(5)}, ${lng.toFixed(5)}`
             : required

@@ -19,10 +19,10 @@ export async function uploadVideoFile(file: File): Promise<UploadedImage> {
   return api.post('/uploads/video', formData);
 }
 
-export async function uploadMarketplaceMedia(file: File): Promise<UploadedImage> {
+export async function uploadMarketplaceMedia(file: File, signal?: AbortSignal): Promise<UploadedImage> {
   const formData = new FormData();
   formData.append('file', file);
-  return api.post('/uploads/media', formData);
+  return api.post('/uploads/media', formData, signal ? { signal } : undefined);
 }
 
 export async function uploadDataUrlImage(dataUrl: string): Promise<UploadedImage> {
