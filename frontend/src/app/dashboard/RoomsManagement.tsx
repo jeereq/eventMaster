@@ -65,6 +65,7 @@ import {
 import { prependLayoutAction, sanitizeLayoutActions } from '@/lib/layoutActionLog';
 import PlanCreationPath from '@/components/PlanCreationPath';
 import RoomLayoutsPanel from '@/components/room/RoomLayoutsPanel';
+import { LockedSectionCard } from '@/components/room/EditorLocks';
 import RoomPublicPublicationForm, { type RoomPublicationDraft } from '@/components/room/RoomPublicPublicationForm';
 import { calculateBlueprintCapacity } from '@/lib/roomLayoutUtils';
 import { roomEditorCapabilities } from '@/lib/roomEditorAccess';
@@ -1683,6 +1684,22 @@ export default function RoomsManagement() {
                 </li>
               );
             })}
+            {!canCatalogPublish ? (
+              <li className="flex items-center gap-1 sm:gap-2 min-w-0 flex-none">
+                <div className="h-px w-3 sm:w-6 bg-border" aria-hidden />
+                <Link
+                  href="/dashboard/billing"
+                  aria-disabled="true"
+                  title="Publication sur le catalogue — non incluse dans votre forfait. Voir les forfaits"
+                  className="inline-flex items-center gap-2 min-h-11 px-2.5 sm:px-3 rounded-[var(--radius-button)] text-sm font-medium text-muted opacity-60 hover:opacity-100 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                >
+                  <span className="w-6 h-6 rounded-full flex items-center justify-center border border-border bg-surface" aria-hidden>
+                    <Lock className="w-3 h-3" />
+                  </span>
+                  <span>Publication</span>
+                </Link>
+              </li>
+            ) : null}
           </ol>
         </nav>
 
@@ -2908,7 +2925,7 @@ export default function RoomsManagement() {
               onKeyDown={(e) => {
                 if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
                 e.preventDefault();
-                const tabs = canCatalogPublish ? ['identite', 'elements', 'layouts', 'publication'] as const : ['identite', 'elements'] as const;
+                const tabs = ['identite', 'elements', 'layouts', 'publication'] as const;
                 const i = tabs.indexOf(editPane as any);
                 const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
                 setEditPane(next);
@@ -2921,26 +2938,34 @@ export default function RoomsManagement() {
               {([
                 { id: 'identite' as const, label: 'Identité' },
                 { id: 'elements' as const, label: 'Plan & Mobilier' },
-                ...(canCatalogPublish
-                  ? [
-                      { id: 'layouts' as const, label: 'Dispositions' },
-                      {
-                        id: 'publication' as const,
-                        label: (
-                          <span className="inline-flex items-center gap-1.5">
-                            <span>Publication</span>
-                            <span
-                              className={cn(
-                                'w-2 h-2 rounded-full',
-                                editListingDraft.isPublic ? 'bg-emerald-500' : 'bg-muted/50',
-                              )}
-                              aria-hidden
-                            />
-                          </span>
-                        ),
-                      },
-                    ]
-                  : []),
+                {
+                  id: 'layouts' as const,
+                  label: canCatalogPublish ? 'Dispositions' : (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span>Dispositions</span>
+                      <Lock className="w-3 h-3" aria-hidden />
+                    </span>
+                  ),
+                },
+                {
+                  id: 'publication' as const,
+                  label: (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span>Publication</span>
+                      {canCatalogPublish ? (
+                        <span
+                          className={cn(
+                            'w-2 h-2 rounded-full',
+                            editListingDraft.isPublic ? 'bg-emerald-500' : 'bg-muted/50',
+                          )}
+                          aria-hidden
+                        />
+                      ) : (
+                        <Lock className="w-3 h-3" aria-hidden />
+                      )}
+                    </span>
+                  ),
+                },
               ]).map((tab) => {
                 const selected = editPane === tab.id;
                 return (
@@ -3105,7 +3130,7 @@ export default function RoomsManagement() {
             />
             ) : null}
             </div>
-            {canCatalogPublish && editingRoom && editBlueprint && (
+            {editingRoom && editBlueprint && (
               <div
                 role="tabpanel"
                 id="edit-panel-layouts"
@@ -3113,7 +3138,12 @@ export default function RoomsManagement() {
                 hidden={editPane !== 'layouts'}
                 className="pt-1"
               >
-                {editPane === 'layouts' ? (
+                {!canCatalogPublish ? (
+                  <LockedSectionCard
+                    title="Dispositions de la salle"
+                    description="Enregistrez plusieurs agencements (conférence, banquet, cocktail…) et laissez vos visiteurs les parcourir en 3D sur la fiche publique. Cette fonction est liée à la publication sur le catalogue, non incluse dans votre forfait actuel."
+                  />
+                ) : editPane === 'layouts' ? (
                   <RoomLayoutsPanel
                     roomId={editingRoom.id}
                     currentBlueprint={editBlueprint}
@@ -3127,22 +3157,27 @@ export default function RoomsManagement() {
                 ) : null}
               </div>
             )}
-            {canCatalogPublish && (
-              <div
+            <div
                 role="tabpanel"
                 id="edit-panel-publication"
                 aria-labelledby="edit-tab-publication"
                 hidden={editPane !== 'publication'}
                 className="space-y-4 pt-1"
               >
-                <RoomPublicPublicationForm
-                  draft={editListingDraft}
-                  onChange={setEditListingDraft}
-                  calculatedCapacity={editBlueprint ? calculateBlueprintCapacity(editBlueprint) : undefined}
-                  publicSlug={editingRoom?.venueListing?.isPublic ? editingRoom.venueListing.slug : undefined}
-                />
+                {canCatalogPublish ? (
+                  <RoomPublicPublicationForm
+                    draft={editListingDraft}
+                    onChange={setEditListingDraft}
+                    calculatedCapacity={editBlueprint ? calculateBlueprintCapacity(editBlueprint) : undefined}
+                    publicSlug={editingRoom?.venueListing?.isPublic ? editingRoom.venueListing.slug : undefined}
+                  />
+                ) : (
+                  <LockedSectionCard
+                    title="Publication sur le catalogue"
+                    description="Rendez votre salle visible des organisateurs : fiche publique, visite 3D, demandes de devis et réservations. Cette fonction n’est pas incluse dans votre forfait actuel."
+                  />
+                )}
               </div>
-            )}
           </div>
         )}
       </Modal>
