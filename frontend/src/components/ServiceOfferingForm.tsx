@@ -3,20 +3,19 @@
 import React, { useId, useMemo, useState } from 'react';
 import {
   AlertCircle,
-  CalendarDays,
+  ArrowLeft,
+  ArrowRight,
   Camera,
   CheckCircle2,
+  ChevronDown,
   Info,
   MapPin,
-  ShieldCheck,
-  Tag,
 } from 'lucide-react';
 import { Alert, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
   PRICE_UNIT_OPTIONS,
   SERVICE_CATEGORY_LABELS,
-  SERVICE_CATEGORY_META,
   SERVICE_RENTAL_CATEGORIES,
   SERVICE_TRADE_CATEGORIES,
   defaultUnitForServiceCategory,
@@ -83,29 +82,29 @@ export type OfferingPublishGap = {
 export function getOfferingPublishGaps(draft: ServiceOfferingDraft): OfferingPublishGap[] {
   const gaps: OfferingPublishGap[] = [];
   if (!draft.title.trim()) {
-    gaps.push({ tab: 'details', message: 'Donnez un titre visible aux clients.', fieldId: OFFERING_TITLE_FIELD_ID });
+    gaps.push({ tab: 'details', message: 'Ajoutez un titre.', fieldId: OFFERING_TITLE_FIELD_ID });
   }
   const missing = missingPublishLocation(draft);
   if (missing === 'city') {
-    gaps.push({ tab: 'map', message: 'Choisissez une ville active.', fieldId: OFFERING_CITY_SECTION_ID });
+    gaps.push({ tab: 'map', message: 'Choisissez la ville.', fieldId: OFFERING_CITY_SECTION_ID });
   } else if (missing === 'commune') {
     gaps.push({ tab: 'map', message: 'Choisissez la commune.', fieldId: OFFERING_CITY_SECTION_ID });
   } else if (missing === 'neighborhood') {
     gaps.push({ tab: 'map', message: 'Choisissez le quartier.', fieldId: OFFERING_CITY_SECTION_ID });
   } else if (missing === 'map') {
-    gaps.push({ tab: 'map', message: 'Placez le point GPS sur la carte.' });
+    gaps.push({ tab: 'map', message: 'Placez le point sur la carte.' });
   }
   if (isServiceRentalCategory(draft.category) && draft.travels) {
     if (draft.deliveryMode !== 'included' && draft.deliveryMode !== 'extra_fee') {
       gaps.push({
         tab: 'map',
-        message: 'Précisez si le prix de la livraison est inclus dans le tarif ou facturé en plus.',
+        message: 'Livraison : incluse ou en supplément ?',
         fieldId: OFFERING_DELIVERY_FIELD_ID,
       });
     } else if (!(Number(draft.deliveryPriceFc) > 0)) {
       gaps.push({
         tab: 'map',
-        message: 'Indiquez le prix de la livraison en FC.',
+        message: 'Indiquez le prix de la livraison.',
         fieldId: OFFERING_DELIVERY_FIELD_ID,
       });
     }
@@ -114,8 +113,8 @@ export function getOfferingPublishGaps(draft: ServiceOfferingDraft): OfferingPub
     gaps.push({
       tab: 'map',
       message: isServiceRentalCategory(draft.category)
-        ? 'Indiquez le rayon de livraison ou de dépôt.'
-        : 'Indiquez le rayon d’intervention si vous vous déplacez.',
+        ? 'Indiquez jusqu’où vous livrez (km).'
+        : 'Indiquez jusqu’où vous vous déplacez (km).',
       fieldId: OFFERING_RADIUS_FIELD_ID,
     });
   }
@@ -132,7 +131,7 @@ export function offeringDeliveryMessage(
   if (!isServiceRentalCategory(draft.category) || !draft.travels) return '';
   const modeChosen = draft.deliveryMode === 'included' || draft.deliveryMode === 'extra_fee';
   if (!modeChosen) return '';
-  if (!(Number(draft.deliveryPriceFc) > 0)) return 'Indiquez le prix de la livraison en francs.';
+  if (!(Number(draft.deliveryPriceFc) > 0)) return 'Indiquez le prix de la livraison.';
   return '';
 }
 
@@ -141,10 +140,10 @@ export function offeringPromoMessage(draft: Pick<ServiceOfferingDraft, 'priceFro
   const price = Number(draft.priceFromFc);
   const promo = Number(draft.promoPriceFc);
   if (!draft.priceFromFc.trim() || !Number.isFinite(price) || price <= 0) {
-    return 'Indiquez le tarif normal avant la promotion.';
+    return 'Indiquez d’abord le prix normal.';
   }
-  if (!Number.isFinite(promo) || promo < 0) return 'Le prix promotionnel doit être un montant en FC.';
-  if (promo >= price) return 'Le prix promotionnel doit rester inférieur au tarif normal.';
+  if (!Number.isFinite(promo) || promo < 0) return 'Montant invalide.';
+  if (promo >= price) return 'Le prix promo doit être plus bas que le prix normal.';
   return '';
 }
 
@@ -172,6 +171,36 @@ function FormSection({
       </div>
       {children}
     </section>
+  );
+}
+
+/** Bloc facultatif replié par défaut : garde le formulaire court. */
+function OptionalSection({
+  title,
+  summary,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  summary?: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <details
+      open={defaultOpen || undefined}
+      className="group rounded-[var(--radius-card)] border border-border bg-surface"
+    >
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-foreground">{title}</span>
+          {summary ? <span className="block text-xs text-muted truncate">{summary}</span> : null}
+        </span>
+        <span className="text-[11px] font-medium text-muted">Facultatif</span>
+        <ChevronDown className="w-4 h-4 text-muted transition-transform group-open:rotate-180" aria-hidden />
+      </summary>
+      <div className="space-y-3 border-t border-border px-3 pb-3 pt-3">{children}</div>
+    </details>
   );
 }
 
@@ -216,12 +245,15 @@ export default function ServiceOfferingForm({
   tab,
   onTabChange,
   error,
+  onUploadingChange,
 }: {
   draft: ServiceOfferingDraft;
   onChange: React.Dispatch<React.SetStateAction<ServiceOfferingDraft>>;
   tab: MarketplaceFormTab;
   onTabChange: (tab: MarketplaceFormTab) => void;
   error?: string;
+  /** Vrai tant que des photos sont en cours d’envoi. */
+  onUploadingChange?: (uploading: boolean) => void;
 }) {
   const [communePriceQuery, setCommunePriceQuery] = useState('');
   const descriptionId = useId();
@@ -267,89 +299,67 @@ export default function ServiceOfferingForm({
   const tabIndex = EDITOR_TABS.indexOf(tab);
   const nextTab = tabIndex >= 0 && tabIndex < EDITOR_TABS.length - 1 ? EDITOR_TABS[tabIndex + 1] : null;
   const prevTab = tabIndex > 0 ? EDITOR_TABS[tabIndex - 1] : null;
+  const tabLabels: Record<'details' | 'map' | 'medias', string> = {
+    details: 'Offre',
+    map: 'Lieu',
+    medias: 'Photos',
+  };
+  const unitLabel = PRICE_UNIT_OPTIONS.find((opt) => opt.id === draft.priceUnit)?.label || draft.priceUnit;
+  const hasPromo = Boolean(draft.promoPriceFc.trim() || draft.promoLabel.trim() || draft.promoEndsAt);
+  const hasQuota = Boolean(draft.quotaMin.trim() || draft.quotaMax.trim());
+  const hasContact = Boolean(draft.details.contactPhone?.trim() || draft.details.contactWhatsapp?.trim());
+  const pillClass = (active: boolean) => cn(
+    'min-h-11 px-3.5 py-2 rounded-full text-sm font-semibold border transition',
+    active
+      ? 'bg-primary-solid text-primary-foreground border-primary-solid'
+      : 'bg-surface text-muted border-border hover:text-foreground hover:border-primary/30',
+  );
+
+  const checklist = [
+    { id: 'title', label: 'Titre', valid: hasTitle, required: true, tab: 'details' as const, fieldId: OFFERING_TITLE_FIELD_ID },
+    { id: 'place', label: 'Ville et quartier', valid: hasPlace, required: true, tab: 'map' as const, fieldId: OFFERING_CITY_SECTION_ID },
+    { id: 'gps', label: 'Point sur la carte', valid: hasGps, required: true, tab: 'map' as const },
+    { id: 'photos', label: 'Photos (conseillé)', valid: hasPhotos, required: false, tab: 'medias' as const },
+  ];
 
   return (
     <div className="space-y-4">
       {error ? <Alert variant="error">{error}</Alert> : null}
 
-      <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3 sm:p-4 space-y-3">
+      <div className="rounded-[var(--radius-card)] border border-border bg-surface p-3 space-y-2.5">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-foreground inline-flex items-center gap-1.5">
-            <ShieldCheck className="w-4 h-4 text-primary" aria-hidden />
-            Pour publier ({completedRequiredCount}/{requiredCount})
+          <p className="text-sm font-semibold text-foreground">
+            {ready ? 'Prêt à publier' : 'Avant de publier'}
           </p>
-          <p className={cn('text-xs font-semibold', ready ? 'text-primary' : 'text-festive-accent')}>
-            {ready ? 'Fiche prête' : `${gaps.length} élément${gaps.length > 1 ? 's' : ''} à compléter`}
+          <p className={cn('text-xs font-semibold tabular-nums', ready ? 'text-primary' : 'text-muted')}>
+            {completedRequiredCount}/{requiredCount} obligatoires
           </p>
         </div>
-        <div className="h-1.5 rounded-full bg-surface-muted overflow-hidden" aria-hidden>
-          <div
-            className="h-full rounded-full bg-primary-solid transition-[width] duration-200"
-            style={{ width: `${Math.round((completedRequiredCount / requiredCount) * 100)}%` }}
-          />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {[
-            {
-              id: 'title',
-              label: 'Titre',
-              valid: hasTitle,
-              required: true,
-              tab: 'details' as const,
-              fieldId: OFFERING_TITLE_FIELD_ID,
-              detail: draft.title.trim() || 'Ex. Traiteur mariage 200 couverts',
-            },
-            {
-              id: 'place',
-              label: 'Ville & quartier',
-              valid: hasPlace,
-              required: true,
-              tab: 'map' as const,
-              fieldId: OFFERING_CITY_SECTION_ID,
-              detail: hasPlace ? `${draft.city} · ${draft.commune}` : 'Ville, commune et quartier',
-            },
-            {
-              id: 'gps',
-              label: 'Point GPS',
-              valid: hasGps,
-              required: true,
-              tab: 'map' as const,
-              detail: hasGps ? 'Repère placé' : 'Cliquez la carte pour pointer',
-            },
-            {
-              id: 'photos',
-              label: rental ? 'Photos du matériel' : 'Photos de prestation',
-              valid: hasPhotos,
-              required: false,
-              tab: 'medias' as const,
-              detail: hasPhotos ? `${draft.photos.length} média${draft.photos.length > 1 ? 's' : ''}` : 'Fortement conseillé',
-            },
-          ].map((item) => (
+        <div className="flex flex-wrap gap-1.5">
+          {checklist.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => goTo(item.tab, item.fieldId)}
               className={cn(
-                'min-h-11 text-left px-2.5 py-2 rounded-[var(--radius-button)] border text-xs transition flex items-start gap-2',
+                'min-h-9 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40',
                 item.valid
                   ? 'border-primary/25 bg-primary/5 text-foreground'
                   : item.required
-                    ? 'border-festive-accent/35 bg-festive-accent/8 text-foreground'
-                    : 'border-border bg-surface text-muted',
+                    ? 'border-festive-accent/40 bg-festive-accent/8 text-foreground hover:border-festive-accent'
+                    : 'border-border bg-surface text-muted hover:text-foreground',
               )}
             >
               {item.valid ? (
-                <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" aria-hidden />
+                <CheckCircle2 className="w-3.5 h-3.5 text-primary" aria-hidden />
               ) : item.required ? (
-                <AlertCircle className="w-3.5 h-3.5 text-festive-accent shrink-0 mt-0.5" aria-hidden />
+                <AlertCircle className="w-3.5 h-3.5 text-festive-accent" aria-hidden />
               ) : (
-                <Info className="w-3.5 h-3.5 text-muted shrink-0 mt-0.5" aria-hidden />
+                <Info className="w-3.5 h-3.5" aria-hidden />
               )}
-              <span className="min-w-0">
-                <span className="font-semibold block">{item.label}</span>
-                <span className="text-muted line-clamp-1">{item.detail}</span>
-              </span>
+              {item.label}
+              {item.id === 'photos' && hasPhotos ? ` · ${draft.photos.length}` : ''}
             </button>
           ))}
         </div>
@@ -361,42 +371,32 @@ export default function ServiceOfferingForm({
         include={EDITOR_TABS}
         labelledPanels
         labels={{
-          details: 'Offre',
-          map: 'Zone',
-          medias: 'Photos',
+          details: `1. ${tabLabels.details}`,
+          map: `2. ${tabLabels.map}`,
+          medias: `3. ${tabLabels.medias}`,
         }}
         badges={{
-          details: hasTitle ? undefined : 1,
-          map: hasGps ? undefined : 1,
           medias: draft.photos.length || undefined,
         }}
       />
 
       {tab === 'details' ? (
         <div id={listingTabPanelId('details')} role="tabpanel" aria-labelledby="listing-tab-details" className="space-y-6">
-          <FormSection
-            title="Identité"
-            hint={rental
-              ? 'Nommez l’équipement comme le client le chercherait : type, marque, usage.'
-              : 'Un titre clair attire les bons devis. La catégorie oriente les filtres du catalogue.'}
-          >
+          <FormSection title={rental ? 'Votre matériel' : 'Votre prestation'}>
             <Input
               id={OFFERING_TITLE_FIELD_ID}
               label="Titre"
               required
               value={draft.title}
               onChange={(e) => onChange((current) => ({ ...current, title: e.target.value }))}
-              placeholder={rental ? 'Ex. Sono 12 enceintes + table de mixage' : 'Ex. Traiteur mariage 150–300 convives'}
+              placeholder={rental ? 'Ex. Sono 12 enceintes + table de mixage' : 'Ex. Traiteur mariage, 150 à 300 invités'}
+              hint="Écrivez ce que le client chercherait."
             />
             <div className="space-y-1.5">
               <p className="text-xs font-semibold text-muted">Catégorie</p>
               <CategoryPills category={draft.category} rental={rental} onChange={setCategory} />
-              <p className="text-xs text-muted">
-                {SERVICE_CATEGORY_META[draft.category].hint}
-                {rental ? ' Précisez parc, tailles et caution dans la fiche.' : ''}
-              </p>
               {!categoryOptions.includes(draft.category) ? (
-                <p className="text-xs text-danger">Cette catégorie n’appartient pas à cet onglet. Choisissez-en une ci-dessus.</p>
+                <p className="text-xs text-danger">Choisissez une catégorie dans la liste.</p>
               ) : null}
             </div>
             <label className="block space-y-1.5" htmlFor={descriptionId}>
@@ -408,32 +408,33 @@ export default function ServiceOfferingForm({
                 onChange={(e) => onChange((current) => ({ ...current, description: e.target.value }))}
                 className={FIELD_CONTROL_CLASS}
                 placeholder={draft.category === 'RENTAL_CHAIRS'
-                  ? 'Modèles (Chiavari, Napoléon, plastique, pliante), coloris, housses, livraison et caution…'
+                  ? 'Modèles, couleurs, housses, livraison, caution…'
                   : rental
-                  ? 'Parc, modèles, conditions de caution, livraison, ce qui est inclus…'
-                  : 'Style, équipe, déroulement type, ce qui est inclus dans le tarif de départ…'}
+                  ? 'Ce que vous louez, modèles, caution, livraison…'
+                  : 'Ce que vous proposez, ce qui est inclus, votre équipe…'}
               />
             </label>
           </FormSection>
 
           <FormSection
-            title="Tarif"
+            title="Prix"
             hint={hasPrice
-              ? `À partir de ${priceNum.toLocaleString('fr-FR')} FC · ${PRICE_UNIT_OPTIONS.find((opt) => opt.id === draft.priceUnit)?.label || draft.priceUnit}`
-              : 'Sans tarif, la fiche reste sur devis. Un prix de départ accélère les réservations.'}
+              ? `Affiché : à partir de ${priceNum.toLocaleString('fr-FR')} FC, ${unitLabel.toLowerCase()}.`
+              : 'Sans prix, les clients vous demandent un devis.'}
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 id={OFFERING_PRICE_FIELD_ID}
-                label="Tarif de départ (FC)"
+                label="Prix de départ (FC)"
                 type="number"
+                inputMode="numeric"
                 min={0}
                 value={draft.priceFromFc}
                 onChange={(e) => onChange((current) => ({ ...current, priceFromFc: e.target.value }))}
-                hint="Laissez vide pour « sur devis »."
+                placeholder="Sur devis"
               />
               <label className="block space-y-1.5" htmlFor={unitId}>
-                <span className="text-xs font-semibold text-muted">Unité</span>
+                <span className="text-xs font-semibold text-muted">Par</span>
                 <select
                   id={unitId}
                   value={draft.priceUnit}
@@ -447,84 +448,107 @@ export default function ServiceOfferingForm({
                     );
                   })}
                 </select>
-                <p className="text-xs text-muted">
-                  {PRICE_UNIT_OPTIONS.find((opt) => opt.id === draft.priceUnit)?.hint || 'Unité affichée aux clients.'}
-                </p>
               </label>
-              <Input
-                id={OFFERING_PROMO_FIELD_ID}
-                label="Prix promotionnel (FC)"
-                type="number"
-                min={0}
-                value={draft.promoPriceFc}
-                onChange={(e) => onChange((current) => ({ ...current, promoPriceFc: e.target.value }))}
-                hint="Laissez vide s’il n’y a pas de promotion. Doit rester inférieur au tarif."
-                error={offeringPromoMessage(draft)}
-              />
-              <Input
-                label="Libellé de la promotion"
-                value={draft.promoLabel}
-                onChange={(e) => onChange((current) => ({ ...current, promoLabel: e.target.value }))}
-                placeholder="Offre saison, -10 %, semaine du mariage…"
-              />
-              <Input
-                label="Fin de promotion"
-                type="date"
-                value={draft.promoEndsAt}
-                onChange={(e) => onChange((current) => ({ ...current, promoEndsAt: e.target.value }))}
-                hint="Optionnel. Après cette date, le tarif normal reprend."
-              />
-              <Input
-                label={rental ? 'Quantité min. (parc)' : 'Quota min. invités'}
-                type="number"
-                min={0}
-                value={draft.quotaMin}
-                onChange={(e) => onChange((current) => ({ ...current, quotaMin: e.target.value }))}
-                hint={rental ? 'Plus petite commande acceptée.' : 'Minimum de convives pour ce tarif.'}
-              />
-              <Input
-                label={rental ? 'Quantité max. (parc)' : 'Quota max. invités'}
-                type="number"
-                min={0}
-                value={draft.quotaMax}
-                onChange={(e) => onChange((current) => ({ ...current, quotaMax: e.target.value }))}
-                hint={rental ? 'Stock ou capacité maximale.' : 'Au-delà, le client doit demander un devis.'}
-              />
             </div>
           </FormSection>
 
-          <FormSection
-            title={rental ? 'Fiche matériel' : 'Fiche prestation'}
-            hint="Ces infos apparaissent sur la vitrine. Remplissez surtout le contact et ce qui est inclus."
-          >
-            <ListingDetailsFields
-              kind="service"
-              hideDescription
-              category={draft.category}
-              value={draft.details}
-              onChange={(details) => onChange((current) => ({ ...current, details }))}
-            />
-          </FormSection>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Pour aller plus loin</p>
 
-          <FormSection
-            title="Indisponibilités"
-            hint="Bloquez les jours déjà pris hors EventMaster. Les réservations confirmées restent en rouge."
-          >
-            <BlockedDatesField
-              value={draft.blockedDates}
-              bookedDates={draft.bookedDates}
-              onChange={(blockedDates) => onChange((current) => ({ ...current, blockedDates }))}
-            />
-          </FormSection>
+            <OptionalSection
+              title="Promotion"
+              summary={draft.promoPriceFc.trim()
+                ? `${Number(draft.promoPriceFc).toLocaleString('fr-FR')} FC${draft.promoLabel.trim() ? ` · ${draft.promoLabel.trim()}` : ''}`
+                : 'Un prix réduit pour une durée limitée.'}
+              defaultOpen={hasPromo || Boolean(offeringPromoMessage(draft))}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input
+                  id={OFFERING_PROMO_FIELD_ID}
+                  label="Prix promo (FC)"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={draft.promoPriceFc}
+                  onChange={(e) => onChange((current) => ({ ...current, promoPriceFc: e.target.value }))}
+                  error={offeringPromoMessage(draft)}
+                />
+                <Input
+                  label="Fin de la promo"
+                  type="date"
+                  value={draft.promoEndsAt}
+                  onChange={(e) => onChange((current) => ({ ...current, promoEndsAt: e.target.value }))}
+                />
+                <div className="sm:col-span-2">
+                  <Input
+                    label="Nom de la promo"
+                    value={draft.promoLabel}
+                    onChange={(e) => onChange((current) => ({ ...current, promoLabel: e.target.value }))}
+                    placeholder="Ex. Offre mariage -10 %"
+                  />
+                </div>
+              </div>
+            </OptionalSection>
+
+            <OptionalSection
+              title={rental ? 'Quantités' : 'Nombre d’invités'}
+              summary={hasQuota
+                ? `${draft.quotaMin || '…'} à ${draft.quotaMax || '…'}`
+                : rental ? 'Commande minimum et stock disponible.' : 'Minimum et maximum pour ce prix.'}
+              defaultOpen={hasQuota}
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <Input
+                  label="Minimum"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={draft.quotaMin}
+                  onChange={(e) => onChange((current) => ({ ...current, quotaMin: e.target.value }))}
+                />
+                <Input
+                  label="Maximum"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={draft.quotaMax}
+                  onChange={(e) => onChange((current) => ({ ...current, quotaMax: e.target.value }))}
+                />
+              </div>
+            </OptionalSection>
+
+            <OptionalSection
+              title="Contact et infos pratiques"
+              summary={hasContact ? 'Contact renseigné.' : 'Téléphone, WhatsApp, ce qui est inclus…'}
+            >
+              <ListingDetailsFields
+                kind="service"
+                hideDescription
+                category={draft.category}
+                value={draft.details}
+                onChange={(details) => onChange((current) => ({ ...current, details }))}
+              />
+            </OptionalSection>
+
+            <OptionalSection
+              title="Jours indisponibles"
+              summary={draft.blockedDates.length
+                ? `${draft.blockedDates.length} jour${draft.blockedDates.length > 1 ? 's' : ''} bloqué${draft.blockedDates.length > 1 ? 's' : ''}.`
+                : 'Bloquez les jours déjà pris ailleurs.'}
+            >
+              <BlockedDatesField
+                value={draft.blockedDates}
+                bookedDates={draft.bookedDates}
+                onChange={(blockedDates) => onChange((current) => ({ ...current, blockedDates }))}
+              />
+            </OptionalSection>
+          </div>
         </div>
       ) : null}
 
       {tab === 'map' ? (
         <div id={listingTabPanelId('map')} role="tabpanel" aria-labelledby="listing-tab-map" className="space-y-6">
-          <FormSection
-            title="Adresse de référence"
-            hint="Ville, commune et quartier sont obligatoires pour apparaître dans le catalogue."
-          >
+          <FormSection title="Où êtes-vous ?" hint="Obligatoire pour apparaître dans les recherches.">
             <div id={OFFERING_CITY_SECTION_ID} tabIndex={-1}>
               <CityLocationFields
                 city={draft.city}
@@ -537,16 +561,22 @@ export default function ServiceOfferingForm({
             </div>
           </FormSection>
 
-          <FormSection
-            title={rental ? 'Livraison ou retrait' : 'Zone d’intervention'}
-            hint={rental
-              ? 'Indiquez si le client vient chercher le matériel, ou si vous livrez.'
-              : 'Les clients filtrent les pros qui se déplacent dans leur commune.'}
-          >
-            <div className="flex flex-wrap gap-1.5" role="group" aria-label={rental ? 'Livraison' : 'Intervention'}>
+          <FormSection title="Point sur la carte" hint="Touchez la carte à votre adresse.">
+            <LocationPickerMap
+              latitude={draft.latitude}
+              longitude={draft.longitude}
+              city={draft.city}
+              commune={draft.commune}
+              required
+              onChange={({ latitude, longitude }) => onChange((current) => ({ ...current, latitude, longitude }))}
+            />
+          </FormSection>
+
+          <FormSection title={rental ? 'Livraison' : 'Déplacement'}>
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label={rental ? 'Livraison' : 'Déplacement'}>
               {[
-                { id: false, label: rental ? 'Retrait sur place' : 'Sur place uniquement' },
-                { id: true, label: rental ? 'Je livre / je dépose' : 'Je me déplace' },
+                { id: false, label: rental ? 'Le client vient chercher' : 'Chez moi uniquement' },
+                { id: true, label: rental ? 'Je livre' : 'Je me déplace' },
               ].map((opt) => (
                 <button
                   key={String(opt.id)}
@@ -559,12 +589,7 @@ export default function ServiceOfferingForm({
                     deliveryMode: opt.id ? current.deliveryMode : '',
                     deliveryPriceFc: opt.id ? current.deliveryPriceFc : '',
                   }))}
-                  className={cn(
-                    'min-h-[44px] px-3 py-2 rounded-full text-sm font-semibold border transition',
-                    draft.travels === opt.id
-                      ? 'bg-primary-solid text-primary-foreground border-primary-solid'
-                      : 'bg-surface text-muted border-border hover:text-foreground',
-                  )}
+                  className={pillClass(draft.travels === opt.id)}
                 >
                   {opt.label}
                 </button>
@@ -574,8 +599,9 @@ export default function ServiceOfferingForm({
               <>
                 <Input
                   id={OFFERING_RADIUS_FIELD_ID}
-                  label={rental ? 'Rayon de livraison (km)' : 'Rayon d’intervention (km)'}
+                  label={rental ? 'Je livre jusqu’à (km)' : 'Je me déplace jusqu’à (km)'}
                   type="number"
+                  inputMode="numeric"
                   min={1}
                   required
                   value={draft.coverageRadiusKm}
@@ -583,97 +609,97 @@ export default function ServiceOfferingForm({
                 />
                 {rental ? (
                   <>
-                    <div className="flex flex-wrap gap-1.5" role="group" aria-label="Prix de la livraison">
-                      {([
-                        { id: 'included' as const, label: 'Prix inclus dans le tarif' },
-                        { id: 'extra_fee' as const, label: 'Prix en supplément' },
-                      ]).map((opt) => (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          aria-pressed={draft.deliveryMode === opt.id}
-                          onClick={() => onChange((current) => ({
-                            ...current,
-                            deliveryMode: current.deliveryMode === opt.id ? '' : opt.id,
-                          }))}
-                          className={cn(
-                            'min-h-[44px] px-3 py-2 rounded-full text-sm font-semibold border transition',
-                            draft.deliveryMode === opt.id
-                              ? 'bg-primary-solid text-primary-foreground border-primary-solid'
-                              : 'bg-surface text-muted border-border hover:text-foreground',
-                          )}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-semibold text-muted">Prix de la livraison</p>
+                      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Prix de la livraison">
+                        {([
+                          { id: 'included' as const, label: 'Inclus dans le prix' },
+                          { id: 'extra_fee' as const, label: 'En supplément' },
+                        ]).map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            aria-pressed={draft.deliveryMode === opt.id}
+                            onClick={() => onChange((current) => ({
+                              ...current,
+                              deliveryMode: current.deliveryMode === opt.id ? '' : opt.id,
+                            }))}
+                            className={pillClass(draft.deliveryMode === opt.id)}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                     {draft.deliveryMode === 'included' || draft.deliveryMode === 'extra_fee' ? (
                       <>
                         <Input
                           id={OFFERING_DELIVERY_FIELD_ID}
-                          label={draft.deliveryMode === 'extra_fee' ? 'Supplément par défaut (FC)' : 'Prix de la livraison, déjà compris dans le tarif (FC)'}
+                          label={draft.deliveryMode === 'extra_fee' ? 'Supplément livraison (FC)' : 'Valeur de la livraison incluse (FC)'}
                           type="number"
+                          inputMode="numeric"
                           min={1}
                           value={draft.deliveryPriceFc}
                           onChange={(e) => onChange((current) => ({ ...current, deliveryPriceFc: e.target.value }))}
                           error={offeringDeliveryMessage(draft)}
                           hint={draft.deliveryMode === 'extra_fee'
-                            ? 'Utilisé quand la commune n’a pas de prix propre. Ajouté une seule fois, en plus du tarif de location.'
-                            : 'Le client le voit sur la fiche. Il n’est pas ajouté une seconde fois à la réservation.'}
+                            ? 'Ajouté une fois au prix de location.'
+                            : 'Affiché au client, jamais ajouté au total.'}
                         />
                         {draft.deliveryMode === 'extra_fee' && (!draft.city || draft.city.toLowerCase() === 'kinshasa') ? (
-                          <fieldset className="space-y-2">
-                            <legend className="text-sm font-medium text-foreground">Prix selon la commune de Kinshasa</legend>
-                            <p className="text-sm text-muted leading-relaxed">
-                              {pricedDeliveryCount === 0
-                                ? 'Indicatif. Sans prix propre, le supplément par défaut s’applique.'
-                                : `${pricedDeliveryCount} commune${pricedDeliveryCount > 1 ? 's' : ''} avec un prix. Le devis peut le changer.`}
-                            </p>
+                          <OptionalSection
+                            title="Prix par commune de Kinshasa"
+                            summary={pricedDeliveryCount === 0
+                              ? 'Sinon, le supplément ci-dessus s’applique.'
+                              : `${pricedDeliveryCount} commune${pricedDeliveryCount > 1 ? 's' : ''} avec un prix.`}
+                            defaultOpen={pricedDeliveryCount > 0}
+                          >
                             <label className="block space-y-1.5">
-                              <span className="text-sm font-medium text-foreground">Chercher une commune</span>
+                              <span className="text-xs font-semibold text-muted">Chercher une commune</span>
                               <input
                                 type="search"
                                 value={communePriceQuery}
                                 onChange={(event) => setCommunePriceQuery(event.target.value)}
                                 placeholder="Gombe, Lemba…"
-                                className="min-h-[44px] w-full rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 text-base text-foreground placeholder:text-muted focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 sm:text-sm"
+                                className={FIELD_CONTROL_CLASS}
                               />
                             </label>
                             {visibleDeliveryCommunes.length === 0 ? (
                               <p className="text-sm text-muted" role="status">Aucune commune pour « {communePriceQuery.trim()} ».</p>
                             ) : (
-                            <div className="max-h-80 space-y-2 overflow-y-auto overscroll-y-contain pr-1">
-                              {visibleDeliveryCommunes.map((commune) => (
-                                <label key={commune.name} className="grid grid-cols-[minmax(0,1fr)_8.5rem] items-center gap-2">
-                                  <span className="text-sm text-foreground">{commune.name}</span>
-                                  <input
-                                    type="number"
-                                    min={1}
-                                    inputMode="numeric"
-                                    aria-label={`Livraison vers ${commune.name}, en FC`}
-                                    value={draft.details.deliveryByCommune?.[commune.name] || ''}
-                                    onChange={(e) => onChange((current) => ({
-                                      ...current,
-                                      details: {
-                                        ...current.details,
-                                        deliveryByCommune: {
-                                          ...(current.details.deliveryByCommune || {}),
-                                          [commune.name]: e.target.value,
+                              <div className="max-h-80 space-y-2 overflow-y-auto overscroll-y-contain pr-1">
+                                {visibleDeliveryCommunes.map((commune) => (
+                                  <label key={commune.name} className="grid grid-cols-[minmax(0,1fr)_8.5rem] items-center gap-2">
+                                    <span className="text-sm text-foreground">{commune.name}</span>
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      inputMode="numeric"
+                                      aria-label={`Livraison vers ${commune.name}, en FC`}
+                                      placeholder="FC"
+                                      value={draft.details.deliveryByCommune?.[commune.name] || ''}
+                                      onChange={(e) => onChange((current) => ({
+                                        ...current,
+                                        details: {
+                                          ...current.details,
+                                          deliveryByCommune: {
+                                            ...(current.details.deliveryByCommune || {}),
+                                            [commune.name]: e.target.value,
+                                          },
                                         },
-                                      },
-                                    }))}
-                                    className="min-h-[44px] w-full rounded-[var(--radius-button)] border border-border bg-surface-muted px-3 text-base text-foreground tabular-nums focus:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/25 sm:text-sm"
-                                  />
-                                </label>
-                              ))}
-                            </div>
+                                      }))}
+                                      className={cn(FIELD_CONTROL_CLASS, 'tabular-nums')}
+                                    />
+                                  </label>
+                                ))}
+                              </div>
                             )}
-                          </fieldset>
+                          </OptionalSection>
                         ) : null}
                       </>
                     ) : (
-                      <p id={OFFERING_DELIVERY_FIELD_ID} className="text-sm text-muted">
-                        Choisissez d’abord si ce prix est inclus dans le tarif ou ajouté en supplément.
+                      <p id={OFFERING_DELIVERY_FIELD_ID} tabIndex={-1} className="text-sm text-muted">
+                        Choisissez une option ci-dessus.
                       </p>
                     )}
                   </>
@@ -682,74 +708,56 @@ export default function ServiceOfferingForm({
             ) : (
               <p className="text-sm text-muted">
                 {rental
-                  ? 'Les clients viennent retirer le matériel à l’adresse pointée sur la carte.'
-                  : 'Les clients viennent à votre adresse. Aucun rayon n’est affiché.'}
+                  ? 'Le client récupère le matériel à votre adresse.'
+                  : 'Le client vient à votre adresse.'}
               </p>
             )}
           </FormSection>
-
-          <FormSection
-            title="Pointage GPS"
-            hint="Un clic sur la carte suffit. Sans point GPS, la fiche reste en brouillon."
-          >
-            <LocationPickerMap
-              latitude={draft.latitude}
-              longitude={draft.longitude}
-              city={draft.city}
-              commune={draft.commune}
-              required
-              onChange={({ latitude, longitude }) => onChange((current) => ({ ...current, latitude, longitude }))}
-            />
-          </FormSection>
         </div>
       ) : null}
 
-      {tab === 'medias' ? (
-        <div id={listingTabPanelId('medias')} role="tabpanel" aria-labelledby="listing-tab-medias" className="space-y-3">
-          <FormSection
-            title={rental ? 'Photos et vidéos du matériel' : 'Photos et vidéos de réalisation'}
-            hint="La première image devient la couverture du catalogue. Ajoutez au moins une photo nette."
-          >
-            <MarketplaceMediaField
-              urls={draft.photos}
-              onChange={(photos) => onChange((current) => ({ ...current, photos }))}
-            />
-          </FormSection>
-        </div>
-      ) : null}
+      {/* Toujours monté : les envois de photos continuent même si l’on change d’onglet. */}
+      <div
+        id={listingTabPanelId('medias')}
+        role="tabpanel"
+        aria-labelledby="listing-tab-medias"
+        hidden={tab !== 'medias'}
+        className="space-y-3"
+      >
+        <FormSection
+          title={rental ? 'Photos du matériel' : 'Photos de vos réalisations'}
+          hint="Les offres avec photos reçoivent beaucoup plus de demandes."
+        >
+          <MarketplaceMediaField
+            urls={draft.photos}
+            onChange={(photos) => onChange((current) => ({ ...current, photos }))}
+            onUploadingChange={onUploadingChange}
+          />
+        </FormSection>
+      </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-        <div className="flex items-center gap-1.5 text-xs text-muted">
-          {tab === 'details' ? <Tag className="w-3.5 h-3.5" aria-hidden /> : null}
-          {tab === 'map' ? <MapPin className="w-3.5 h-3.5" aria-hidden /> : null}
-          {tab === 'medias' ? <Camera className="w-3.5 h-3.5" aria-hidden /> : null}
-          {tab === 'details' ? 'Étape 1 sur 3 · Offre' : null}
-          {tab === 'map' ? 'Étape 2 sur 3 · Zone' : null}
-          {tab === 'medias' ? 'Étape 3 sur 3 · Photos' : null}
-        </div>
-        <div className="flex gap-2">
-          {prevTab ? (
-            <Button type="button" variant="ghost" size="sm" onClick={() => onTabChange(prevTab)}>
-              Retour
-            </Button>
-          ) : null}
-          {nextTab ? (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => onTabChange(nextTab)}
-              leftIcon={nextTab === 'map' ? <MapPin className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
-            >
-              {nextTab === 'map' ? 'Continuer vers la zone' : 'Continuer vers les photos'}
-            </Button>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-              <CalendarDays className="w-3.5 h-3.5" aria-hidden />
-              Enregistrez en brouillon ou publiez ci-dessous.
-            </span>
-          )}
-        </div>
+      <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
+        {prevTab ? (
+          <Button type="button" variant="ghost" size="sm" onClick={() => onTabChange(prevTab)} leftIcon={<ArrowLeft className="w-4 h-4" />}>
+            {tabLabels[prevTab as keyof typeof tabLabels]}
+          </Button>
+        ) : (
+          <span className="text-xs text-muted">Étape {tabIndex + 1} sur {EDITOR_TABS.length}</span>
+        )}
+        {nextTab ? (
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={() => onTabChange(nextTab)}
+            rightIcon={<ArrowRight className="w-4 h-4" />}
+            leftIcon={nextTab === 'map' ? <MapPin className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
+          >
+            Suivant : {tabLabels[nextTab as keyof typeof tabLabels]}
+          </Button>
+        ) : (
+          <span className="text-xs text-muted text-right">Dernière étape. Publiez ci-dessous.</span>
+        )}
       </div>
     </div>
   );
