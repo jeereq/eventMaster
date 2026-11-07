@@ -735,7 +735,28 @@ model OrganizationRoom {
   events      Event[]
   staff       RoomStaff[]
   venueListing VenueListing?
+  layouts      VenueLayout[]
 
+  @@index([tenantId])
+}
+
+/// Disposition nommée d'une salle (Mariage, Conférence…), en plus du plan principal `layoutBlueprint`.
+model VenueLayout {
+  id           String           @id @default(uuid())
+  roomId       String
+  room         OrganizationRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  tenantId     String
+  name         String
+  sortOrder    Int              @default(0)
+  blueprint    Json
+  capacityMax  Int?
+  areaM2       Float?
+  thumbnailUrl String?
+  isPublic     Boolean          @default(true)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([roomId, sortOrder])
   @@index([tenantId])
 }
 

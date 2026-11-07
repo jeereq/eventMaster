@@ -64,6 +64,7 @@ import {
 } from '@/lib/roomLayoutDraft';
 import { prependLayoutAction, sanitizeLayoutActions } from '@/lib/layoutActionLog';
 import PlanCreationPath from '@/components/PlanCreationPath';
+import RoomLayoutsPanel from '@/components/room/RoomLayoutsPanel';
 import RoomPublicPublicationForm, { type RoomPublicationDraft } from '@/components/room/RoomPublicPublicationForm';
 import { calculateBlueprintCapacity } from '@/lib/roomLayoutUtils';
 import { roomEditorCapabilities } from '@/lib/roomEditorAccess';
@@ -416,7 +417,7 @@ export default function RoomsManagement() {
   const [viewingRoom, setViewingRoom] = useState<RoomItem | null>(null);
   const [editBlueprint, setEditBlueprint] = useState<RoomLayoutBlueprint | null>(null);
   const [editMeta, setEditMeta] = useState({ name: '', floor: '', location: '', description: '', hasPmrAccess: false });
-  const [editPane, setEditPane] = useState<'identite' | 'elements' | 'publication'>('identite');
+  const [editPane, setEditPane] = useState<'identite' | 'elements' | 'layouts' | 'publication'>('identite');
   const [editElementsReady, setEditElementsReady] = useState(false);
   const [savingLayout, setSavingLayout] = useState(false);
   const [wizardDraftSavedAt, setWizardDraftSavedAt] = useState<string | null>(null);
@@ -2860,7 +2861,7 @@ export default function RoomsManagement() {
         onClose={closeEditLayout}
         title={editingRoom ? `Salle — ${editingRoom.name}` : 'Plan'}
         description="Identité d’abord, plan 2D, puis publication sur le catalogue public."
-        size={editPane === 'elements' ? 'full' : editPane === 'publication' ? 'xl' : 'lg'}
+        size={editPane === 'elements' ? 'full' : editPane === 'publication' || editPane === 'layouts' ? 'xl' : 'lg'}
         className={
           editPane === 'elements'
             ? 'h-[100dvh] max-h-[100dvh] sm:h-auto sm:max-h-[96vh] rounded-none sm:rounded-2xl'
@@ -2907,7 +2908,7 @@ export default function RoomsManagement() {
               onKeyDown={(e) => {
                 if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
                 e.preventDefault();
-                const tabs = canCatalogPublish ? ['identite', 'elements', 'publication'] as const : ['identite', 'elements'] as const;
+                const tabs = canCatalogPublish ? ['identite', 'elements', 'layouts', 'publication'] as const : ['identite', 'elements'] as const;
                 const i = tabs.indexOf(editPane as any);
                 const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
                 setEditPane(next);
@@ -2922,6 +2923,7 @@ export default function RoomsManagement() {
                 { id: 'elements' as const, label: 'Plan & Mobilier' },
                 ...(canCatalogPublish
                   ? [
+                      { id: 'layouts' as const, label: 'Dispositions' },
                       {
                         id: 'publication' as const,
                         label: (
@@ -3103,6 +3105,28 @@ export default function RoomsManagement() {
             />
             ) : null}
             </div>
+            {canCatalogPublish && editingRoom && editBlueprint && (
+              <div
+                role="tabpanel"
+                id="edit-panel-layouts"
+                aria-labelledby="edit-tab-layouts"
+                hidden={editPane !== 'layouts'}
+                className="pt-1"
+              >
+                {editPane === 'layouts' ? (
+                  <RoomLayoutsPanel
+                    roomId={editingRoom.id}
+                    currentBlueprint={editBlueprint}
+                    onLoadBlueprint={(blueprint) => {
+                      markEditDirty();
+                      setEditBlueprint(blueprint);
+                      setEditElementsReady(true);
+                      setEditPane('elements');
+                    }}
+                  />
+                ) : null}
+              </div>
+            )}
             {canCatalogPublish && (
               <div
                 role="tabpanel"

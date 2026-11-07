@@ -5,6 +5,8 @@
  * (prix, devis, réservation), dont le simulateur lui-même.
  */
 const HIDDEN_PREFIXES = [
+  // Visionneuse intégrée dans le site d'un propriétaire : aucun bouton flottant par-dessus.
+  '/embed/',
   '/rsvp/',
   '/invite/',
   '/print',

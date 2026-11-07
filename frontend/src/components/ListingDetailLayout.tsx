@@ -106,6 +106,7 @@ export default function ListingDetailLayout({
   preview,
   embedded,
   heroAction,
+  heroSlot,
   inquireLabel = 'Devis',
   bookLabel = 'Réserver',
   hideBooking = false,
@@ -160,6 +161,8 @@ export default function ListingDetailLayout({
   /** Dans le dashboard : pas de second `main.page-container`. */
   embedded?: boolean;
   heroAction?: React.ReactNode;
+  /** Remplace le bandeau photo (ex. visionneuse 3D) ; le titre reste affiché au-dessus. */
+  heroSlot?: React.ReactNode;
   inquireLabel?: string;
   bookLabel?: string;
   hideBooking?: boolean;
@@ -584,74 +587,93 @@ export default function ListingDetailLayout({
         </div>
       ) : (
         <>
-          <div className="flex flex-col gap-2 mb-8 lg:mb-10">
-            <div className="relative em-listing-hero rounded-[var(--radius-card)] overflow-hidden bg-stage shadow-[var(--shadow-soft)]">
-              {heroSrc ? (
-                isVideoUrl(heroSrc) ? (
-                  <video
-                    src={heroSrc}
-                    poster={sizedMediaUrl(heroSrc, 1280)}
-                    className="w-full h-full object-cover"
-                    muted
-                    playsInline
-                    controls
-                    preload="metadata"
-                  />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={sizedMediaUrl(heroSrc, 1280)}
-                    srcSet={listingSrcSet(heroSrc, [640, 960, 1280, 1920])}
-                    sizes="(min-width: 1280px) 1440px, 100vw"
-                    alt={title || "Visuel principal de l'établissement"}
-                    fetchPriority="high"
-                    loading="eager"
-                    decoding="async"
-                    className="w-full h-full object-cover"
-                  />
-                )
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted bg-surface-muted">
-                  {fallbackIcon}
-                </div>
-              )}
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-stage via-stage/70 to-transparent" />
-              {heroAction || title ? (
-                <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
-                  {heroAction}
-                  {title ? (
-                    <ShareButton
-                      title={listingShareTitle(shareKind, title)}
-                      text={subtitle ? `${chip ? `${chip} · ` : ''}${subtitle}` : chip}
-                      url={shareHref}
-                      variant="icon"
-                    />
-                  ) : null}
-                </div>
-              ) : null}
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 px-4 pb-5 pt-16 sm:px-7 sm:pb-8 sm:pt-24 text-stage-foreground [text-shadow:0_1px_2px_rgba(0,0,0,0.85)]">
+          {heroSlot ? (
+            <div className="flex flex-col gap-4 mb-8 lg:mb-10">
+              <div>
                 {eyebrow ? (
-                  <p className="mb-1.5 sm:mb-2 text-sm sm:text-base font-semibold text-[#fcd34d] first-letter:uppercase">{eyebrow}</p>
+                  <p className="mb-1.5 text-sm font-semibold text-primary first-letter:uppercase">{eyebrow}</p>
                 ) : null}
-                <h1 className="font-display text-2xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.1] break-words line-clamp-3">
+                <h1 className="font-display text-2xl sm:text-4xl font-semibold tracking-tight leading-[1.1] break-words">
                   {title}
                 </h1>
                 {(chip || subtitle) ? (
-                  <p className="mt-2 text-sm sm:text-base text-stage-foreground/90 line-clamp-2">
+                  <p className="mt-2 text-sm sm:text-base text-muted">
                     {[chip, subtitle].filter(Boolean).join(' · ')}
                   </p>
                 ) : null}
               </div>
+              {heroSlot}
             </div>
-            {photos.length > 1 ? (
-              <ListingPhotoThumbs
-                photos={photos}
-                photoIndex={photoIndex}
-                onPhotoIndex={onPhotoIndex}
-                listingTitle={title}
-              />
-            ) : null}
-          </div>
+          ) : (
+            <div className="flex flex-col gap-2 mb-8 lg:mb-10">
+              <div className="relative em-listing-hero rounded-[var(--radius-card)] overflow-hidden bg-stage shadow-[var(--shadow-soft)]">
+                {heroSrc ? (
+                  isVideoUrl(heroSrc) ? (
+                    <video
+                      src={heroSrc}
+                      poster={sizedMediaUrl(heroSrc, 1280)}
+                      className="w-full h-full object-cover"
+                      muted
+                      playsInline
+                      controls
+                      preload="metadata"
+                    />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={sizedMediaUrl(heroSrc, 1280)}
+                      srcSet={listingSrcSet(heroSrc, [640, 960, 1280, 1920])}
+                      sizes="(min-width: 1280px) 1440px, 100vw"
+                      alt={title || "Visuel principal de l'établissement"}
+                      fetchPriority="high"
+                      loading="eager"
+                      decoding="async"
+                      className="w-full h-full object-cover"
+                    />
+                  )
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted bg-surface-muted">
+                    {fallbackIcon}
+                  </div>
+                )}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-stage via-stage/70 to-transparent" />
+                {heroAction || title ? (
+                  <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
+                    {heroAction}
+                    {title ? (
+                      <ShareButton
+                        title={listingShareTitle(shareKind, title)}
+                        text={subtitle ? `${chip ? `${chip} · ` : ''}${subtitle}` : chip}
+                        url={shareHref}
+                        variant="icon"
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 px-4 pb-5 pt-16 sm:px-7 sm:pb-8 sm:pt-24 text-stage-foreground [text-shadow:0_1px_2px_rgba(0,0,0,0.85)]">
+                  {eyebrow ? (
+                    <p className="mb-1.5 sm:mb-2 text-sm sm:text-base font-semibold text-[#fcd34d] first-letter:uppercase">{eyebrow}</p>
+                  ) : null}
+                  <h1 className="font-display text-2xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-[1.1] break-words line-clamp-3">
+                    {title}
+                  </h1>
+                  {(chip || subtitle) ? (
+                    <p className="mt-2 text-sm sm:text-base text-stage-foreground/90 line-clamp-2">
+                      {[chip, subtitle].filter(Boolean).join(' · ')}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+              {photos.length > 1 ? (
+                <ListingPhotoThumbs
+                  photos={photos}
+                  photoIndex={photoIndex}
+                  onPhotoIndex={onPhotoIndex}
+                  listingTitle={title}
+                />
+              ) : null}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-5 lg:gap-12">
             <div className="flex min-w-0 flex-col gap-4 lg:col-span-3">
