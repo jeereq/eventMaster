@@ -2695,6 +2695,7 @@ export default function RoomLayoutEditor({
         ref={webglRef}
         blueprint={blueprint}
         selected={selection}
+        introFlyIn
         onSelect={handleCanvasSelect}
         onMoveItem={handleWebGLMove}
         onMoveEnd={handleWebGLMoveEnd}

@@ -3,7 +3,28 @@
 import React, { Suspense, useMemo, useRef, useCallback, useEffect, useState, forwardRef, useImperativeHandle, memo } from 'react';
 import { Canvas, ThreeEvent, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Html, ContactShadows, Environment, Sky, Stars } from '@react-three/drei';
-import { Compass, Sparkles, Crown, DoorOpen, RotateCcw } from 'lucide-react';
+import {
+  Compass,
+  Sparkles,
+  Crown,
+  DoorOpen,
+  RotateCcw,
+  Box,
+  LayoutList,
+  X,
+  ArrowLeft,
+  Mic2,
+  Martini,
+  Disc3,
+  UtensilsCrossed,
+  Music,
+  Star,
+  Users,
+  Armchair,
+  Flower2,
+  Square,
+  ChevronRight,
+} from 'lucide-react';
 import * as THREE from 'three';
 import { SurfaceMat } from '@/components/room/SurfaceMaterial';
 import {
@@ -96,6 +117,15 @@ import { ConcertInstrumentMesh, EventBarMesh } from '@/components/CataloguePodiu
 import { clampRowSeatCount } from '@/lib/roomAmphitheaterGeom';
 import { detectLayoutClearanceConflicts } from '@/lib/roomLayoutClearance';
 import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
+import {
+  DOLLHOUSE_WALL_CUT_M,
+  dollhouseOverviewPose,
+  findRoomSpace,
+  listRoomSpaces,
+  roomSpaceCameraPose,
+  type RoomSpace,
+  type RoomSpaceIcon,
+} from '@/lib/roomSpaces';
 import RoomShowcasePostProcessing from '@/components/RoomShowcasePostProcessing';
 import { LocalRoomEnvironment } from '@/components/room/LocalRoomEnvironment';
 import { LandscapeMesh, OutdoorSurroundingsScene, seedFromId } from '@/components/room/OutdoorLandscapeMeshes';
@@ -176,7 +206,24 @@ interface RoomWebGLViewerProps {
   blockedSeats?: Array<{ tableId: string; seatIndex: number }>;
   /** Coupe la boucle de rendu (onglet Identité, panneau masqué). */
   paused?: boolean;
+  /** Arrivée cinématique de la caméra au premier affichage (désactivée pour les captures). */
+  introFlyIn?: boolean;
 }
+
+const SPACE_ICONS: Record<RoomSpaceIcon, React.ComponentType<{ className?: string }>> = {
+  stage: Mic2,
+  bar: Martini,
+  dj: Disc3,
+  buffet: UtensilsCrossed,
+  dance: Music,
+  vip: Star,
+  honor: Crown,
+  tables: Users,
+  rows: Armchair,
+  entrance: DoorOpen,
+  ceremony: Flower2,
+  zone: Square,
+};
 
 function pctToWorld(xPct: number, yPct: number, widthM: number, heightM: number): [number, number] {
   const x = ((xPct / 100) - 0.5) * widthM;
@@ -1248,6 +1295,8 @@ function wallBricksAroundOpenings(
   length: number,
   wallH: number,
   openings: RoomWallOpening[],
+  /** Vue maquette : les ouvertures qui dépassent la coupe restent ouvertes jusqu’en haut. */
+  openTop = false,
 ): { x0: number; x1: number; y0: number; y1: number }[] {
   type Hole = { left: number; right: number; bottom: number; top: number };
   const holes: Hole[] = openings.map((op) => {
@@ -1255,11 +1304,12 @@ function wallBricksAroundOpenings(
     const h = Math.min(op.heightM, Math.max(0.3, wallH - sill - 0.05));
     const w = Math.min(op.widthM, length * 0.85);
     const cx = (op.t - 0.5) * length;
+    const reachesCut = openTop && sill + op.heightM >= wallH - 0.12;
     return {
       left: Math.max(-length / 2, cx - w / 2),
       right: Math.min(length / 2, cx + w / 2),
       bottom: Math.max(0, sill),
-      top: Math.min(wallH, sill + h),
+      top: reachesCut ? wallH : Math.min(wallH, sill + h),
     };
   });
 
@@ -1662,6 +1712,7 @@ function WallMesh({
   onSelect,
   paintColor,
   fabric = false,
+  cutawayM,
 }: {
   wall: RoomWallSegment;
   widthM: number;
@@ -1671,6 +1722,8 @@ function WallMesh({
   paintColor?: string;
   /** Tente : paroi en toile PVC au lieu d’une maçonnerie. */
   fabric?: boolean;
+  /** Vue maquette : mur coupé à cette hauteur (m), tranche claire visible. */
+  cutawayM?: number;
 }) {
   const [sx, sz] = pctToWorld(wall.start.x, wall.start.y, widthM, heightM);
   const [ex, ez] = pctToWorld(wall.end.x, wall.end.y, widthM, heightM);
@@ -1680,9 +1733,16 @@ function WallMesh({
   const angle = Math.atan2(dz, dx);
   const midX = (sx + ex) / 2;
   const midZ = (sz + ez) / 2;
-  const wallH = wall.heightM;
+  const cutaway = typeof cutawayM === 'number' && cutawayM > 0 && cutawayM < wall.heightM;
+  const wallH = cutaway ? (cutawayM as number) : wall.heightM;
   const thick = wall.thicknessM;
-  const openings = wall.openings ?? [];
+  const rawOpenings = wall.openings;
+  const openings = useMemo(() => {
+    const list = rawOpenings ?? [];
+    if (!cutaway) return list;
+    // Fenêtres hautes au-dessus de la coupe : on ne garde que celles qui commencent sous la tranche.
+    return list.filter((op) => (op.sillM ?? (op.kind === 'door' ? 0 : 0.9)) < wallH - 0.25);
+  }, [rawOpenings, cutaway, wallH]);
 
   const mat = useMemo(
     () => wallTextureForSurface(wall.texture, length, wallH, wall.color ?? paintColor),
@@ -1690,8 +1750,8 @@ function WallMesh({
   );
 
   const bricks = useMemo(
-    () => wallBricksAroundOpenings(length, wallH, openings),
-    [length, wallH, openings],
+    () => wallBricksAroundOpenings(length, wallH, openings, cutaway),
+    [length, wallH, openings, cutaway],
   );
 
   if (length < 0.05) return null;
@@ -1767,12 +1827,30 @@ function WallMesh({
         <boxGeometry args={[length * 0.995, 0.12, 0.04]} />
         <meshStandardMaterial color="#3f3f46" roughness={0.7} metalness={0.05} />
       </mesh>
-      {/* Corniche haute */}
-      <mesh position={[0, wallH / 2 - 0.04, thick * 0.45]} castShadow>
-        <boxGeometry args={[length * 0.995, 0.06, 0.05]} />
-        <meshStandardMaterial color="#e7e5e4" roughness={0.85} metalness={0.02} />
-      </mesh>
-      {openings.map((op) => (
+      {cutaway ? (
+        /* Tranche de coupe : bande claire sur le dessus du mur, comme une maquette d’architecte. */
+        bricks
+          .filter((brick) => brick.y1 >= wallH - 0.001)
+          .map((brick, idx) => (
+            <mesh key={`cut-${idx}`} position={[(brick.x0 + brick.x1) / 2, wallH / 2 + 0.006, 0]}>
+              <boxGeometry args={[brick.x1 - brick.x0, 0.012, thick + 0.004]} />
+              <meshStandardMaterial
+                color={selected ? '#c7d2fe' : '#f5f1ea'}
+                roughness={0.95}
+                metalness={0}
+                emissive="#f5f1ea"
+                emissiveIntensity={0.18}
+              />
+            </mesh>
+          ))
+      ) : (
+        /* Corniche haute */
+        <mesh position={[0, wallH / 2 - 0.04, thick * 0.45]} castShadow>
+          <boxGeometry args={[length * 0.995, 0.06, 0.05]} />
+          <meshStandardMaterial color="#e7e5e4" roughness={0.85} metalness={0.02} />
+        </mesh>
+      )}
+      {openings.filter((op) => !cutaway || op.kind !== 'door').map((op) => (
         <OpeningMesh
           key={op.id}
           opening={op}
@@ -3208,6 +3286,123 @@ class Room3DSubErrorBoundary extends React.Component<
   }
 }
 
+/**
+ * Surlignage d’un espace (survol / focus du panneau « Espaces ») : contour
+ * lumineux au sol qui pulse doucement + étiquette flottante, comme le survol
+ * d’un étage dans une visite immobilière 3D.
+ */
+function SpaceHighlight({ space, reduceMotion }: { space: RoomSpace; reduceMotion: boolean }) {
+  const matRef = useRef<THREE.MeshBasicMaterial | null>(null);
+  const fillRef = useRef<THREE.MeshBasicMaterial | null>(null);
+  useFrame(({ clock }) => {
+    const pulse = reduceMotion ? 0.75 : 0.55 + 0.4 * (0.5 + 0.5 * Math.sin(clock.elapsedTime * 3.2));
+    if (matRef.current) matRef.current.opacity = pulse;
+    if (fillRef.current) fillRef.current.opacity = pulse * 0.22;
+  });
+  const pad = 0.35;
+  const w = Math.max(0.8, space.size.w + pad);
+  const d = Math.max(0.8, space.size.d + pad);
+  const border = 0.09;
+  const rot = (-space.rotationDeg * Math.PI) / 180;
+  const y = 0.05;
+  const edges: Array<{ pos: [number, number, number]; size: [number, number] }> = [
+    { pos: [0, y, -d / 2], size: [w + border, border] },
+    { pos: [0, y, d / 2], size: [w + border, border] },
+    { pos: [-w / 2, y, 0], size: [border, d] },
+    { pos: [w / 2, y, 0], size: [border, d] },
+  ];
+  return (
+    <group position={[space.center.x, 0, space.center.z]} rotation={[0, rot, 0]}>
+      <mesh position={[0, y - 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]} renderOrder={2}>
+        <planeGeometry args={[w, d]} />
+        <meshBasicMaterial ref={fillRef} color="#fbbf24" transparent opacity={0.15} depthWrite={false} toneMapped={false} />
+      </mesh>
+      {edges.map((edge, idx) => (
+        <mesh key={idx} position={edge.pos} rotation={[-Math.PI / 2, 0, 0]} renderOrder={3}>
+          <planeGeometry args={edge.size} />
+          <meshBasicMaterial
+            ref={idx === 0 ? matRef : undefined}
+            color="#fcd34d"
+            transparent
+            opacity={0.85}
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </mesh>
+      ))}
+      <Html position={[0, Math.max(1.6, space.focusHeightM + 1.1), 0]} center zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
+        <div className="whitespace-nowrap rounded-lg border border-amber-300/60 bg-stone-950/85 px-2.5 py-1.5 text-left shadow-lg backdrop-blur-sm">
+          <div className="text-[13px] font-semibold leading-tight text-amber-100">{space.title}</div>
+          <div className="text-[11px] leading-tight text-stone-300">{space.details}</div>
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+/**
+ * Entrée cinématique : la caméra part de loin, en hauteur et de biais, puis
+ * glisse vers le cadrage de la salle (≈ 2,4 s), comme l’arrivée sur une
+ * maquette. Annulée dès que l’utilisateur touche la vue.
+ */
+function IntroFlyIn({
+  from,
+  to,
+  orbitControlsRef,
+  onDone,
+}: {
+  from: THREE.Vector3;
+  to: THREE.Vector3;
+  orbitControlsRef?: React.Ref<unknown>;
+  onDone: () => void;
+}) {
+  const { camera, gl } = useThree();
+  const startRef = useRef<number | null>(null);
+  const doneRef = useRef(false);
+  const duration = 2.4;
+  useEffect(() => {
+    const stop = () => {
+      if (doneRef.current) return;
+      doneRef.current = true;
+      onDone();
+    };
+    const dom = gl.domElement;
+    dom.addEventListener('pointerdown', stop);
+    dom.addEventListener('wheel', stop, { passive: true });
+    return () => {
+      dom.removeEventListener('pointerdown', stop);
+      dom.removeEventListener('wheel', stop);
+    };
+  }, [gl, onDone]);
+  useFrame(({ clock }) => {
+    if (doneRef.current) return;
+    if (startRef.current === null) startRef.current = clock.elapsedTime;
+    const t = Math.min(1, (clock.elapsedTime - startRef.current) / duration);
+    const e = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    // Arc : on interpole en coordonnées sphériques autour de la cible pour tourner autour de la salle.
+    const ctrl = (orbitControlsRef as { current?: { target?: THREE.Vector3; update?: () => void } } | undefined)?.current;
+    const target = ctrl?.target ?? new THREE.Vector3();
+    const a = new THREE.Spherical().setFromVector3(from.clone().sub(target));
+    const b = new THREE.Spherical().setFromVector3(to.clone().sub(target));
+    let dTheta = b.theta - a.theta;
+    if (dTheta > Math.PI) dTheta -= Math.PI * 2;
+    if (dTheta < -Math.PI) dTheta += Math.PI * 2;
+    const sph = new THREE.Spherical(
+      a.radius + (b.radius - a.radius) * e,
+      a.phi + (b.phi - a.phi) * e,
+      a.theta + dTheta * e,
+    );
+    camera.position.copy(target.clone().add(new THREE.Vector3().setFromSpherical(sph)));
+    camera.lookAt(target);
+    ctrl?.update?.();
+    if (t >= 1) {
+      doneRef.current = true;
+      onDone();
+    }
+  });
+  return null;
+}
+
 function SceneContent({
   blueprint: rawBlueprint,
   selected = [],
@@ -3230,7 +3425,10 @@ function SceneContent({
   blockedSeats = [],
   cameraTargetPose,
   onCameraTargetArrived,
-}: Omit<RoomWebGLViewerProps, 'className' | 'previewMode' | 'renderQuality' | 'lightingPreset' | 'presentationMode'> & {
+  dollhouse = false,
+  highlightSpace = null,
+  introFlyIn = false,
+}: Omit<RoomWebGLViewerProps, 'className' | 'previewMode' | 'renderQuality' | 'lightingPreset' | 'presentationMode' | 'introFlyIn'> & {
   qualitySettings: ReturnType<typeof resolveRenderQuality>;
   lighting: ReturnType<typeof resolveLightingPreset>;
   captureApiRef?: React.MutableRefObject<RoomWebGLCaptureApi | null>;
@@ -3240,8 +3438,17 @@ function SceneContent({
   reduceMotion?: boolean;
   cameraTargetPose?: TargetCameraPose | null;
   onCameraTargetArrived?: () => void;
+  /** Vue maquette : murs coupés, toit et suspensions masqués. */
+  dollhouse?: boolean;
+  /** Espace surligné (survol ou focus du panneau « Espaces »). */
+  highlightSpace?: RoomSpace | null;
+  /** Arrivée cinématique de la caméra au premier affichage. */
+  introFlyIn?: boolean;
 }) {
   const blueprint = useMemo(() => ensureBlueprintDefaults(rawBlueprint), [rawBlueprint]);
+  const [introPath, setIntroPath] = useState<{ from: THREE.Vector3; to: THREE.Vector3 } | null>(null);
+  const introPlayedRef = useRef(false);
+  const endIntro = useCallback(() => setIntroPath(null), []);
   const widthM = Number.isFinite(blueprint.canvas?.widthM) && (blueprint.canvas?.widthM ?? 0) > 0 ? blueprint.canvas.widthM : 20;
   const heightM = Number.isFinite(blueprint.canvas?.heightM) && (blueprint.canvas?.heightM ?? 0) > 0 ? blueprint.canvas.heightM : 16;
   const depthAmount = resolveDepthAmount(blueprint.metadata ?? {});
@@ -3325,7 +3532,19 @@ function SceneContent({
       controls.update?.();
       controls.saveState?.();
     }
-  }, [camera, depthAmount, widthM, heightM, qualitySettings.fov, walkthroughActive, stackView, focusY, topStoryElev, wallHeightM, viewportAspect, orbitControlsRef]);
+    if (introFlyIn && !reduceMotion && !introPlayedRef.current) {
+      introPlayedRef.current = true;
+      const to = camera.position.clone();
+      const offset = to.clone().sub(new THREE.Vector3(0, focusY, 0));
+      // Départ : plus loin, plus haut, décalé de 70° autour de la salle.
+      const start = offset.clone().multiplyScalar(1.9).applyAxisAngle(new THREE.Vector3(0, 1, 0), -1.22);
+      start.y = Math.max(start.y, offset.length() * 1.25);
+      const from = start.add(new THREE.Vector3(0, focusY, 0));
+      camera.position.copy(from);
+      camera.lookAt(0, focusY, 0);
+      setIntroPath({ from, to });
+    }
+  }, [camera, depthAmount, widthM, heightM, qualitySettings.fov, walkthroughActive, stackView, focusY, topStoryElev, wallHeightM, viewportAspect, orbitControlsRef, introFlyIn, reduceMotion]);
 
   const [dragSession, setDragSession] = React.useState<DragSession | null>(null);
 
@@ -3535,7 +3754,7 @@ function SceneContent({
         );
       })()}
 
-      {isBlueprintRoofVisible(blueprint.metadata) && (
+      {!dollhouse && isBlueprintRoofVisible(blueprint.metadata) && (
         <RoofMesh
           widthM={widthM}
           heightM={heightM}
@@ -3555,9 +3774,9 @@ function SceneContent({
           heightM={heightM}
           wallHeightM={wallHeightM}
           flags={{
-            chandeliers: blueprint.metadata.showChandeliers === true,
+            chandeliers: !dollhouse && blueprint.metadata.showChandeliers === true,
             uplights: isBlueprintWallsVisible(blueprint.metadata) && blueprint.metadata.showUplights === true,
-            curtains: isBlueprintWallsVisible(blueprint.metadata) && blueprint.metadata.showCurtains === true,
+            curtains: !dollhouse && isBlueprintWallsVisible(blueprint.metadata) && blueprint.metadata.showCurtains === true,
             plants: blueprint.metadata.showDecorPlants === true,
           }}
           curtainColor={blueprint.metadata.curtainColor}
@@ -3585,6 +3804,7 @@ function SceneContent({
             heightM={heightM}
             paintColor={blueprint.metadata.wallPaintColor}
             fabric={isTentVenue(blueprint)}
+            cutawayM={dollhouse ? DOLLHOUSE_WALL_CUT_M : undefined}
             selected={selected.some((s) => s.kind === 'wall' && s.id === wall.id)}
             onSelect={(e) => onSelect({ kind: 'wall', id: wall.id }, { additive: Boolean(e?.shiftKey || e?.metaKey || e?.ctrlKey) })}
           />
@@ -3592,7 +3812,11 @@ function SceneContent({
       ))
         : null}
 
-      {blueprint.fixtures.filter((f) => isStoryVisible(blueprint, f.storyId)).map((f) => {
+      {blueprint.fixtures
+        .filter((f) => isStoryVisible(blueprint, f.storyId))
+        // Vue maquette : les suspensions flotteraient au-dessus des murs coupés.
+        .filter((f) => !dollhouse || (f.kind !== 'chandelier' && f.kind !== 'stringLight'))
+        .map((f) => {
         /** Surfaces plates : ne capturent pas les clics en mode caméra bloquée. */
         const isSurfaceFixture = f.kind === 'carpet' || f.kind === 'aisle' || f.kind === 'corridor' || f.kind === 'perimeter' || f.kind === 'decal';
         const fixturePickable = isSurfaceFixture
@@ -3931,6 +4155,15 @@ function SceneContent({
         }}
       />
 
+      {highlightSpace ? <SpaceHighlight space={highlightSpace} reduceMotion={reduceMotion} /> : null}
+      {introPath ? (
+        <IntroFlyIn
+          from={introPath.from}
+          to={introPath.to}
+          orbitControlsRef={orbitControlsRef}
+          onDone={endIntro}
+        />
+      ) : null}
       <CinematicCameraController
         targetPose={cameraTargetPose ?? null}
         onArrival={onCameraTargetArrived}
@@ -3980,6 +4213,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   onWalkthroughComplete,
   paused = false,
   blockedSeats = [],
+  introFlyIn = false,
 }, ref) {
   const blueprint = useMemo(() => ensureBlueprintDefaults(rawBlueprint), [rawBlueprint]);
   const [tourCaption, setTourCaption] = useState('entrée par la porte');
@@ -4022,12 +4256,47 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   const [inView, setInView] = useState(true);
   const [cameraTargetPose, setCameraTargetPose] = useState<TargetCameraPose | null>(null);
   const [activePreset, setActivePreset] = useState<CameraPresetKey | null>(null);
+  const [dollhouse, setDollhouse] = useState(false);
+  const [spacesOpen, setSpacesOpen] = useState(false);
+  const [focusedSpaceId, setFocusedSpaceId] = useState<string | null>(null);
+  const [hoveredSpaceId, setHoveredSpaceId] = useState<string | null>(null);
+  const spaces = useMemo(() => listRoomSpaces(blueprint), [blueprint]);
+  const focusedSpace = spaces.find((sp) => sp.id === focusedSpaceId) ?? null;
+  const highlightSpace = spaces.find((sp) => sp.id === hoveredSpaceId) ?? focusedSpace;
   const reduceMotion = usePrefersReducedMotion();
   const sceneLabel = useMemo(() => describeRoomScene(blueprint), [blueprint]);
   const freezeFrames = paused || !inView;
 
+  const viewAspect = useCallback(() => {
+    const node = viewerRootRef.current;
+    return node && node.clientHeight > 0 ? node.clientWidth / node.clientHeight : 1.6;
+  }, []);
+
+  const flyToSpace = useCallback((space: RoomSpace) => {
+    const widthM = Number.isFinite(blueprint.canvas?.widthM) && (blueprint.canvas?.widthM ?? 0) > 0 ? blueprint.canvas.widthM : 20;
+    const heightM = Number.isFinite(blueprint.canvas?.heightM) && (blueprint.canvas?.heightM ?? 0) > 0 ? blueprint.canvas.heightM : 16;
+    const stage = findRoomSpace(spaces, ['stage', 'dj']);
+    const pose = roomSpaceCameraPose(
+      space,
+      { widthM, depthM: heightM, fovDeg: qualitySettings.fov, aspect: viewAspect() },
+      stage && stage.id !== space.id ? stage.center : undefined,
+    );
+    setCameraTargetPose({ pos: new THREE.Vector3(...pose.pos), target: new THREE.Vector3(...pose.target) });
+  }, [blueprint.canvas, qualitySettings.fov, viewAspect, spaces]);
+
   const handleSelectPreset = useCallback((key: CameraPresetKey) => {
     setActivePreset(key);
+    setFocusedSpaceId(null);
+    // Scène / Table VIP : on vise l’élément réel du plan quand il existe.
+    const realSpace = key === 'stage'
+      ? findRoomSpace(spaces, ['stage', 'dj'])
+      : key === 'vip'
+        ? findRoomSpace(spaces, ['honor', 'vip'])
+        : undefined;
+    if (realSpace) {
+      flyToSpace(realSpace);
+      return;
+    }
     const widthM = Number.isFinite(blueprint.canvas?.widthM) && (blueprint.canvas?.widthM ?? 0) > 0 ? blueprint.canvas.widthM : 20;
     const heightM = Number.isFinite(blueprint.canvas?.heightM) && (blueprint.canvas?.heightM ?? 0) > 0 ? blueprint.canvas.heightM : 16;
     let pos: [number, number, number];
@@ -4054,10 +4323,47 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       pos: new THREE.Vector3(...pos),
       target: new THREE.Vector3(...target),
     });
-  }, [blueprint.canvas?.widthM, blueprint.canvas?.heightM]);
+  }, [blueprint.canvas?.widthM, blueprint.canvas?.heightM, spaces, flyToSpace]);
+
+  const dollhouseOverview = useCallback(() => {
+    const widthM = Number.isFinite(blueprint.canvas?.widthM) && (blueprint.canvas?.widthM ?? 0) > 0 ? blueprint.canvas.widthM : 20;
+    const heightM = Number.isFinite(blueprint.canvas?.heightM) && (blueprint.canvas?.heightM ?? 0) > 0 ? blueprint.canvas.heightM : 16;
+    const pose = dollhouseOverviewPose({ widthM, depthM: heightM, fovDeg: qualitySettings.fov, aspect: viewAspect() });
+    setCameraTargetPose({ pos: new THREE.Vector3(...pose.pos), target: new THREE.Vector3(...pose.target) });
+  }, [blueprint.canvas, qualitySettings.fov, viewAspect]);
+
+  const toggleDollhouse = useCallback(() => {
+    const next = !dollhouse;
+    setDollhouse(next);
+    setActivePreset(null);
+    // On passe en plongée 3/4 pour « lire » la maquette ; en sortant, on garde l’angle courant.
+    if (next && !focusedSpaceId) dollhouseOverview();
+  }, [dollhouse, focusedSpaceId, dollhouseOverview]);
+
+  const focusSpace = useCallback((space: RoomSpace) => {
+    setActivePreset(null);
+    setFocusedSpaceId(space.id);
+    setHoveredSpaceId(null);
+    flyToSpace(space);
+  }, [flyToSpace]);
+
+  const backToOverview = useCallback(() => {
+    setFocusedSpaceId(null);
+    setActivePreset(null);
+    if (dollhouse) {
+      dollhouseOverview();
+      return;
+    }
+    try {
+      (orbitControlsRef.current as { reset?: () => void } | null)?.reset?.();
+    } catch {
+      /* ignore */
+    }
+  }, [dollhouse, dollhouseOverview]);
 
   const handleResetCamera = useCallback(() => {
     setActivePreset(null);
+    setFocusedSpaceId(null);
     setCameraTargetPose(null);
     try {
       (orbitControlsRef.current as any)?.reset?.();
@@ -4228,8 +4534,138 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
+          <span aria-hidden className="mx-0.5 h-5 w-px shrink-0 bg-border" />
+          <button
+            type="button"
+            onClick={toggleDollhouse}
+            aria-pressed={dollhouse}
+            title="Vue maquette : murs coupés à mi-hauteur pour voir tout l’aménagement"
+            className={cn(
+              'inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-semibold transition-all shrink-0 min-h-11',
+              dollhouse
+                ? 'bg-primary-solid text-primary-foreground shadow-xs'
+                : 'text-foreground/80 hover:text-foreground hover:bg-surface-muted',
+            )}
+          >
+            <Box className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Maquette</span>
+          </button>
+          {spaces.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setSpacesOpen((open) => !open)}
+              aria-pressed={spacesOpen}
+              aria-expanded={spacesOpen}
+              title="Explorer les espaces de la salle"
+              className={cn(
+                'inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-semibold transition-all shrink-0 min-h-11',
+                spacesOpen
+                  ? 'bg-primary-solid text-primary-foreground shadow-xs'
+                  : 'text-foreground/80 hover:text-foreground hover:bg-surface-muted',
+              )}
+            >
+              <LayoutList className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Espaces</span>
+              <span className={cn(
+                'rounded-full px-1.5 text-[10px] font-bold leading-4',
+                spacesOpen ? 'bg-primary-foreground/20' : 'bg-surface-muted text-muted',
+              )}>
+                {spaces.length}
+              </span>
+            </button>
+          ) : null}
         </div>
       )}
+
+      {/* Panneau « Espaces » : liste, survol = surlignage 3D, clic = la caméra s’envole vers l’espace. */}
+      {spacesOpen && !walkthroughActive && !wallEditMode && spaces.length > 0 ? (
+        <div
+          className="absolute right-2.5 top-16 bottom-12 z-10 flex w-[min(18rem,calc(100%-1.25rem))] flex-col overflow-hidden rounded-2xl border border-border/70 bg-background/90 shadow-lg backdrop-blur-md dark:bg-surface-elevated/90 pointer-events-auto"
+          role="region"
+          aria-label="Espaces de la salle"
+        >
+          <div className="flex items-center justify-between gap-2 border-b border-border/70 px-3.5 py-2.5">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">Explorer la salle</p>
+              <p className="truncate text-sm font-semibold text-foreground">
+                {focusedSpace ? focusedSpace.title : `${spaces.length} espace${spaces.length > 1 ? 's' : ''}`}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setSpacesOpen(false);
+                setHoveredSpaceId(null);
+              }}
+              aria-label="Fermer le panneau des espaces"
+              className="inline-flex min-h-9 min-w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          <ul className="min-h-0 flex-1 overflow-y-auto p-1.5">
+            {spaces.map((space) => {
+              const Icon = SPACE_ICONS[space.icon];
+              const active = space.id === focusedSpaceId;
+              return (
+                <li key={space.id}>
+                  <button
+                    type="button"
+                    onClick={() => focusSpace(space)}
+                    onPointerEnter={() => setHoveredSpaceId(space.id)}
+                    onPointerLeave={() => setHoveredSpaceId((cur) => (cur === space.id ? null : cur))}
+                    onFocus={() => setHoveredSpaceId(space.id)}
+                    onBlur={() => setHoveredSpaceId((cur) => (cur === space.id ? null : cur))}
+                    aria-current={active ? 'true' : undefined}
+                    className={cn(
+                      'group flex w-full min-h-11 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors',
+                      active ? 'bg-primary-solid/10 ring-1 ring-primary-solid/40' : 'hover:bg-surface-muted',
+                    )}
+                  >
+                    <span className={cn(
+                      'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg',
+                      active ? 'bg-primary-solid text-primary-foreground' : 'bg-surface-muted text-foreground/80',
+                    )}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-foreground">{space.title}</span>
+                      <span className="block truncate text-xs text-muted">{space.details}</span>
+                    </span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted transition-transform group-hover:translate-x-0.5" />
+                  </button>
+                  {/* Fiche de l’espace sous l’élément actif : les éléments au-dessus ne bougent pas. */}
+                  {active ? (
+                    <div className="flex flex-wrap gap-1.5 px-2.5 pb-2.5 pt-1.5">
+                      <button
+                        type="button"
+                        onClick={backToOverview}
+                        className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border bg-background px-3 text-xs font-semibold text-foreground transition-colors hover:bg-surface-muted"
+                      >
+                        <ArrowLeft className="h-3.5 w-3.5" />
+                        Vue d&apos;ensemble
+                      </button>
+                      {!readOnly && !previewMode && space.selection ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const sel = space.selection;
+                            if (sel) onSelect({ kind: sel.kind, id: sel.id });
+                          }}
+                          className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-primary-solid px-3 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
+                        >
+                          Modifier
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
 
       <Canvas
         shadows
@@ -4287,6 +4723,9 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             blockedSeats={blockedSeats}
             cameraTargetPose={cameraTargetPose}
             onCameraTargetArrived={() => setCameraTargetPose(null)}
+            dollhouse={dollhouse}
+            highlightSpace={walkthroughActive ? null : highlightSpace}
+            introFlyIn={introFlyIn && !walkthroughActive && !presentationMode}
           />
         </Suspense>
       </Canvas>
