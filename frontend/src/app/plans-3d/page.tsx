@@ -73,6 +73,7 @@ const SHOWCASE_TEMPLATES = [
   { id: 'vineyard-long-table', category: 'outdoor', label: 'Dîner dans les vignes' },
   { id: 'forest-ceremony', category: 'outdoor', label: 'Cérémonie en clairière' },
   { id: 'courtyard-gala', category: 'outdoor', label: 'Gala en cour pavée' },
+  { id: 'appartement-temoin-maquette', category: 'residence', label: 'Appartement témoin en maquette' },
 ];
 
 const INITIAL_SHOWCASE_PLANS: ShowcasePlanData[] = SHOWCASE_TEMPLATES.map((item, idx) => {
@@ -97,6 +98,7 @@ const CATEGORIES = [
   { id: 'pro', label: 'Entreprise' },
   { id: 'cocktail', label: 'Cocktails' },
   { id: 'outdoor', label: 'Plein air' },
+  { id: 'residence', label: 'Résidences' },
 ];
 
 function resolvePlanBlueprint(

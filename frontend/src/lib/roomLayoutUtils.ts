@@ -1,4 +1,5 @@
 import { LANDSCAPE_STYLE_META, landscapeFootprintPct, type LandscapeStyle } from '@/lib/roomOutdoorUtils';
+import { HOME_FURNITURE_META } from '@/lib/roomHomeFurniture';
 import { concentricRowCurvePercent, rowSeatCode, seatsGrownForTier } from '@/lib/roomAmphitheaterGeom';
 import { getTableSeatPlacement3D, tablePlateSizeMeters, type TableSeatingSide } from '@/lib/tablePlanUtils';
 export type { TableSeatingSide } from '@/lib/tablePlanUtils';
@@ -184,6 +185,7 @@ export type RoomFixtureKind =
   | 'car'
   | 'parasol'
   | 'landscape'
+  | 'homeFurniture'
   | 'customElement';
 export type FloorDecalKind = 'rose' | 'butterfly' | 'custom' | 'path';
 export type PedestalStyle = 'squareWhite' | 'columnGold';
@@ -501,6 +503,8 @@ export interface RoomLayoutBlueprint {
     barStyle?: BarStyle;
     /** Aménagement extérieur (arbre, haie, piscine, brasero…). */
     landscapeStyle?: import('@/lib/roomOutdoorUtils').LandscapeStyle;
+    /** Mobilier résidentiel (lit, dressing, mur TV, îlot, baignoire…). */
+    homeStyle?: import('@/lib/roomHomeFurniture').HomeFurnitureStyle;
     /** Piscine : forme du bassin (rectangulaire, haricot, ovale, en L…). */
     poolShape?: import('@/lib/roomOutdoorUtils').PoolShape;
     /** Élément créé à partir d’une image ou d’une vidéo (découpe 3D, panneau, bloc, écran…). */
@@ -757,6 +761,8 @@ export interface RoomLayoutBlueprint {
     environment?: import('@/lib/roomOutdoorUtils').EnvironmentSettings;
     /** Mode présentation (orbit auto, labels masqués). */
     presentationMode?: boolean;
+    /** Ouvrir la 3D en vue maquette (murs coupés à mi-hauteur). */
+    dollhouseView?: boolean;
     /** Modèle de structure multi-étages appliqué. */
     buildingPresetId?: import('@/lib/roomBuildingUtils').BuildingStoryPresetId;
     /** Étages du bâtiment (RDC, 1er…). */
@@ -1307,6 +1313,7 @@ export const FIXTURE_REAL_SIZE_M: Partial<Record<RoomFixtureKind, { w: number; d
   loungeSofa: { w: 2.6, d: 0.95 },
   car: { w: 1.9, d: 4.6 },
   parasol: { w: 2.8, d: 2.8 },
+  homeFurniture: { w: HOME_FURNITURE_META.bed.widthM, d: HOME_FURNITURE_META.bed.depthM },
 };
 
 /** Convertit une empreinte en mètres en % du plan (bornée pour rester sélectionnable). */
@@ -1383,6 +1390,7 @@ export function createBlueprintFixture(
     car: { x: 45, y: 75, w: 14, h: 24, label: 'Emplacement véhicule' },
     parasol: { x: 50, y: 50, w: 12, h: 12, label: 'Parasol terrasse' },
     landscape: { x: 44, y: 44, w: 12, h: 12, label: LANDSCAPE_STYLE_META.oak.label },
+    homeFurniture: { x: 42, y: 40, w: 10, h: 14, label: HOME_FURNITURE_META.bed.label },
   };
   const base = defaults[kind] ?? { x: 40, y: 40, w: 20, h: 10, label: kind };
   const real = canvas ? realFixtureFootprintPct(kind, canvas) : null;
@@ -1432,6 +1440,7 @@ export function createBlueprintFixture(
       kind === 'car' ? '#0f766e' :
       kind === 'parasol' ? '#f59e0b' :
       kind === 'landscape' ? LANDSCAPE_STYLE_META.oak.color :
+      kind === 'homeFurniture' ? HOME_FURNITURE_META.bed.color :
       undefined,
     flowerType: kind === 'arch' || kind === 'pedestal' ? 'rose' as FlowerType : kind === 'flower' ? 'boquet' as FlowerType : undefined,
     flowerColor: kind === 'arch' || kind === 'pedestal' ? '#f4e8e4' : kind === 'flower' ? '#e11d48' : undefined,
@@ -1476,8 +1485,10 @@ export function createBlueprintFixture(
       kind === 'car' ? 1.5 :
       kind === 'parasol' ? 2.6 :
       kind === 'landscape' ? LANDSCAPE_STYLE_META.oak.heightM :
+      kind === 'homeFurniture' ? HOME_FURNITURE_META.bed.heightM :
       undefined,
     landscapeStyle: kind === 'landscape' ? 'oak' : undefined,
+    homeStyle: kind === 'homeFurniture' ? 'bed' : undefined,
     steps: kind === 'podium' ? 2 : kind === 'stairs' ? 6 : undefined,
     hasCouverts: kind === 'buffet' ? true : undefined,
     buffetStyle: kind === 'buffet' ? 'straight' : undefined,
@@ -3204,6 +3215,174 @@ const TEMPLATE_DRESSINGS: Record<string, (bp: RoomLayoutBlueprint) => TemplateDr
 function dressTemplate(templateId: string, blueprint: RoomLayoutBlueprint): RoomLayoutBlueprint {
   const dressing = TEMPLATE_DRESSINGS[templateId];
   return dressing ? dressBlueprint(blueprint, dressing(blueprint)) : blueprint;
+}
+
+/**
+ * Appartement témoin (≈ 18 × 8 m utiles) dans l’esprit d’une visite immobilière
+ * en maquette : façade nord entièrement vitrée, cloisons intérieures, bois clair.
+ * De gauche à droite : chambre + dressing, salle de bain, séjour, salle à manger,
+ * cuisine ouverte. S’ouvre en vue maquette.
+ */
+function buildShowFlatTemplate(): RoomLayoutBlueprint {
+  const canvas = { widthM: 20, heightM: 9 };
+  const pctX = (m: number) => (m / canvas.widthM) * 100;
+  const pctY = (m: number) => (m / canvas.heightM) * 100;
+  const WALL = '#f6f2ea';
+  const OAK = '#d8b98c';
+
+  const home = (
+    style: import('@/lib/roomHomeFurniture').HomeFurnitureStyle,
+    cx: number,
+    cy: number,
+    rotation = 0,
+    label?: string,
+  ): BlueprintFixture => {
+    const meta = HOME_FURNITURE_META[style];
+    const w = pctX(meta.widthM);
+    const h = pctY(meta.depthM);
+    return {
+      ...createBlueprintFixture('homeFurniture'),
+      id: makeLayoutId('home'),
+      x: cx - w / 2,
+      y: cy - h / 2,
+      w,
+      h,
+      rotation,
+      label: label ?? meta.label,
+      color: meta.color,
+      heightM: meta.heightM,
+      homeStyle: style,
+    };
+  };
+
+  const glass = (t: number, widthM = 2.3) => createWallOpening('window', {
+    t,
+    widthM,
+    heightM: 2.45,
+    sillM: 0.12,
+    style: 'rectangular',
+    frameColor: '#e7e0d3',
+  });
+  const innerDoor = (t: number) => createWallOpening('door', {
+    t,
+    style: 'sliding',
+    widthM: 0.9,
+    material: 'oak',
+    color: OAK,
+    frameColor: '#c9a273',
+    hasMat: false,
+  });
+  const wall = (
+    start: { x: number; y: number },
+    end: { x: number; y: number },
+    openings: RoomWallOpening[] = [],
+    thicknessM = 0.2,
+  ) => createWallSegment({ start, end, heightM: 2.8, thicknessM, texture: 'plaster', color: WALL, openings });
+
+  const walls: RoomWallSegment[] = [
+    // façade vitrée (haut du plan)
+    wall({ x: 5, y: 5 }, { x: 95, y: 5 }, [0.08, 0.22, 0.36, 0.5, 0.64, 0.78, 0.92].map((t) => glass(t))),
+    wall({ x: 95, y: 5 }, { x: 95, y: 95 }, [glass(0.3, 1.8)]),
+    // façade palier : porte d’entrée côté cuisine
+    wall({ x: 95, y: 95 }, { x: 5, y: 95 }, [createWallOpening('door', { t: 0.3, style: 'panel', material: 'oak', color: OAK, frameColor: '#c9a273', hasMat: true, matColor: '#a98b63' })]),
+    wall({ x: 5, y: 95 }, { x: 5, y: 5 }, [glass(0.75, 1.6)]),
+    // cloisons intérieures
+    wall({ x: 28, y: 5 }, { x: 28, y: 95 }, [innerDoor(0.48), innerDoor(0.86)], 0.12), // chambre | séjour & sdb
+    wall({ x: 5, y: 64 }, { x: 22, y: 64 }, [], 0.12), // chambre | dressing (passage ouvert côté cloison)
+    wall({ x: 28, y: 64 }, { x: 46, y: 64 }, [innerDoor(0.75)], 0.12), // séjour | salle de bain
+    wall({ x: 46, y: 64 }, { x: 46, y: 95 }, [], 0.12),
+  ];
+
+  const room = (label: string, x0: number, y0: number, x1: number, y1: number, material: ZoneMaterial, color: string) => ({
+    ...createBlueprintZone(label, 1, { zoneKind: 'custom', material, color }),
+    x: x0,
+    y: y0,
+    w: x1 - x0,
+    h: y1 - y0,
+  });
+
+  const furniture: RoomLayoutBlueprint['furniture'] = [
+    room('Chambre parentale', 5, 5, 28, 64, 'parquet', '#e2c9a2'),
+    room('Dressing', 5, 64, 28, 95, 'parquet', '#e2c9a2'),
+    room('Salle de bain', 28, 64, 46, 95, 'marble', '#efe9df'),
+    room('Séjour', 28, 5, 58, 64, 'parquet', '#e2c9a2'),
+    room('Cuisine ouverte', 58, 5, 95, 95, 'parquet', '#e2c9a2'),
+    {
+      ...createBlueprintTable(1, { shape: 'rectangular', capacity: 6, chairType: 'CROSSBACK' }),
+      name: 'Table à manger',
+      x: 64,
+      y: 40,
+      tableSurface: 'wood',
+      tableColor: OAK,
+      hasCenterpiece: true,
+      centerpieceStyle: 'greeneryRunner',
+    },
+  ];
+
+  const bedCx = 5 + 0.5 + pctX(HOME_FURNITURE_META.bed.depthM) / 2;
+  const fixtures: BlueprintFixture[] = [
+    // chambre : lit tête contre le mur ouest, chevets, bureau face à la baie
+    home('bed', bedCx, 32, 90),
+    home('nightstand', 5 + 0.6 + pctX(0.21), 32 - pctY(1.25), 90),
+    home('nightstand', 5 + 0.6 + pctX(0.21), 32 + pctY(1.25), 90),
+    home('armchair', 22, 16, 225),
+    home('desk', 20, 10, 180),
+    // dressing ouvert le long de la cloison et du mur ouest
+    home('wardrobe', 28 - 0.6 - pctX(0.31), 79, 270, 'Dressing'),
+    home('wardrobe', 5 + 0.6 + pctX(0.31), 79, 90, 'Dressing'),
+    // salle de bain
+    home('bathtub', 34, 95 - 0.8 - pctY(0.4), 0),
+    home('vanity', 46 - 0.5 - pctX(0.25), 76, 270),
+    // séjour : mur TV contre la salle de bain, canapé face à l’écran
+    home('rug', 43, 38, 0),
+    home('tvUnit', 43, 64 - 0.6 - pctY(0.22), 180),
+    {
+      ...createBlueprintFixture('loungeSofa'),
+      id: makeLayoutId('loungeSofa'),
+      x: 43 - pctX(2.6) / 2,
+      y: 22 - pctY(0.95) / 2,
+      w: pctX(2.6),
+      h: pctY(0.95),
+      label: 'Canapé',
+      color: '#e8dcc6',
+    },
+    home('coffeeTable', 43, 38, 0),
+    home('armchair', 34, 40, 90),
+    home('armchair', 52, 40, 270),
+    // cuisine ouverte : linéaire contre le mur est, îlot avec tabourets
+    home('kitchenRun', 95 - 0.6 - pctX(0.33), 52, 270),
+    home('kitchenIsland', 80, 50, 270),
+    {
+      ...createBlueprintFixture('flower'),
+      id: makeLayoutId('flower'),
+      x: 55,
+      y: 10,
+      w: pctX(0.7),
+      h: pctY(0.7),
+      label: 'Olivier en pot',
+      flowerType: 'boquet',
+      flowerColor: '#7d8c62',
+    },
+  ];
+
+  return refreshBlueprintMetadata({
+    version: 1,
+    roomType: 'CUSTOM',
+    templateId: 'appartement-temoin-maquette',
+    canvas,
+    roomOutline: defaultRoomOutline('rectangle'),
+    walls,
+    furniture,
+    fixtures,
+    metadata: {
+      totalSeats: 0,
+      floorType: 'boisBlond',
+      wallPaintColor: WALL,
+      lightingPreset: 'day',
+      showRoof: false,
+      dollhouseView: true,
+    },
+  });
 }
 
 export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
@@ -5516,6 +5695,14 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     },
   },
   {
+    id: 'appartement-temoin-maquette',
+    name: 'Appartement témoin — Maquette bois & baies vitrées',
+    description: 'Appartement de standing vu en maquette : chambre avec dressing, séjour mur TV, salle à manger, cuisine ouverte avec îlot, salle de bain, grande façade vitrée et bois clair',
+    roomType: 'CUSTOM',
+    outlineShape: 'rectangle',
+    build: () => buildShowFlatTemplate(),
+  },
+  {
     id: 'loft-organique-residentiel',
     name: 'Loft Contemporain — Courbes Organiques & Patio',
     description: 'Design architectural organique inspiré des appartements modernes : grand canapé courbe, table à manger ronde 8 places, porche voiture et patio',
@@ -7390,6 +7577,8 @@ export function getFixtureClass(kind: string): string {
       return 'bg-yellow-50 border-yellow-400 text-yellow-900';
     case 'landscape':
       return 'bg-transparent border-transparent';
+    case 'homeFurniture':
+      return 'bg-amber-50 border-amber-300 text-amber-900';
     case 'perimeter':
       return 'bg-sky-50 border-sky-300 border-dashed text-sky-600';
     default:

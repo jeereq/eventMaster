@@ -1321,7 +1321,9 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
     }
 
     // 11. Dégagement strict et anti-incorporation des cloisons / murs intérieurs et périphériques
+    // (les zones sont des revêtements de sol : une pièce, un tapis, un parquet bordent les murs sans les « traverser »).
     for (const item of mutableItems) {
+      if (item.kind === 'zone') continue;
       for (const wall of wallSegments) {
         if (!sameStory(item.storyId, wall.storyId)) continue;
 
@@ -1375,6 +1377,7 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
 
     // 12. Circulation périphérique le long des murs extérieurs
     for (const item of mutableItems) {
+      if (item.kind === 'zone') continue;
       const minX = clearances.wallMargin + item.halfWM;
       const maxX = widthM - clearances.wallMargin - item.halfWM;
       const minY = clearances.wallMargin + item.halfHM;

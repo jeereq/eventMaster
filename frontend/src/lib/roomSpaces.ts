@@ -144,7 +144,7 @@ export function listRoomSpaces(blueprint: RoomLayoutBlueprint, maxSpaces = 14): 
     });
   }
 
-  const guestTables: Array<{ x: number; z: number; w: number; d: number; seats: number }> = [];
+  const guestTables: Array<{ id: string; name: string; x: number; z: number; w: number; d: number; seats: number }> = [];
   const rows: Array<{ x: number; z: number; seats: number }> = [];
 
   for (const item of blueprint.furniture ?? []) {
@@ -185,14 +185,29 @@ export function listRoomSpaces(blueprint: RoomLayoutBlueprint, maxSpaces = 14): 
           seats,
         });
       } else {
-        guestTables.push({ ...c, ...foot, seats });
+        guestTables.push({ id: item.id, name: item.name ?? '', ...c, ...foot, seats });
       }
     } else if (item.kind === 'row') {
       rows.push({ ...pctCenterToWorld(finite(item.x, 50), finite(item.y, 50), widthM, depthM), seats: Math.max(0, Math.round(finite(item.seatCount, 0))) });
     }
   }
 
-  if (guestTables.length > 0) {
+  if (guestTables.length === 1) {
+    // Une seule table (salle à manger d’un appartement, table de réunion…) : on la nomme.
+    const t = guestTables[0];
+    spaces.push({
+      id: t.id,
+      icon: 'tables',
+      title: cleanLabel(t.name, 'Table'),
+      details: plural(t.seats, 'place', 'places'),
+      center: { x: t.x, z: t.z },
+      size: { w: t.w, d: t.d },
+      rotationDeg: 0,
+      focusHeightM: 0.75,
+      selection: { kind: 'table', id: t.id },
+      seats: t.seats,
+    });
+  } else if (guestTables.length > 1) {
     const minX = Math.min(...guestTables.map((t) => t.x - t.w / 2));
     const maxX = Math.max(...guestTables.map((t) => t.x + t.w / 2));
     const minZ = Math.min(...guestTables.map((t) => t.z - t.d / 2));

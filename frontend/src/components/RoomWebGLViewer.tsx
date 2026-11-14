@@ -24,6 +24,10 @@ import {
   Flower2,
   Square,
   ChevronRight,
+  Clapperboard,
+  Play,
+  Square as StopIcon,
+  Video,
 } from 'lucide-react';
 import * as THREE from 'three';
 import { SurfaceMat } from '@/components/room/SurfaceMaterial';
@@ -134,6 +138,8 @@ import { DomeRoof, RoofLantern, StyledRoof, TentSidewall } from '@/components/ro
 import { offsetRing, roofFootprint } from '@/lib/roomRoofGeometry';
 import type { CustomElementDefinition } from '@/lib/roomCustomElements';
 import { VenueEquipmentMesh, isVenueEquipmentKind, venueEquipmentHeight } from '@/components/room/VenueEquipmentMeshes';
+import { HomeFurnitureMesh } from '@/components/room/HomeFurnitureMeshes';
+import { HOME_FURNITURE_META, type HomeFurnitureStyle } from '@/lib/roomHomeFurniture';
 import { resolveEnvironmentSettings, resolveOutdoorSurroundings, type LandscapeStyle } from '@/lib/roomOutdoorUtils';
 import {
   applyEnvironmentLighting,
@@ -2649,6 +2655,7 @@ function FixtureMesh({
   instrumentStyle,
   barStyle,
   landscapeStyle,
+  homeStyle,
   poolShape,
   customElement,
   flowerType,
@@ -2711,6 +2718,7 @@ function FixtureMesh({
   instrumentStyle?: InstrumentStyle;
   barStyle?: BarStyle;
   landscapeStyle?: LandscapeStyle;
+  homeStyle?: HomeFurnitureStyle;
   poolShape?: import('@/lib/roomOutdoorUtils').PoolShape;
   customElement?: CustomElementDefinition;
   flowerType?: string;
@@ -2756,6 +2764,7 @@ function FixtureMesh({
     kind === 'carpet' ? 0.06 :
     kind === 'buffet' ? 0.9 :
     isVenueEquipmentKind(kind) ? venueEquipmentHeight(kind) :
+    kind === 'homeFurniture' ? HOME_FURNITURE_META[homeStyle ?? 'bed']?.heightM ?? 1 :
     0.35;
   const stairSteps = Math.max(3, Math.min(24, steps ?? (kind === 'stairs' ? 6 : 1)));
 
@@ -2868,6 +2877,8 @@ function FixtureMesh({
           poolShape={poolShape}
           selected={selected}
         />
+      ) : kind === 'homeFurniture' ? (
+        <HomeFurnitureMesh style={homeStyle ?? 'bed'} w={w} d={d} color={color} selected={selected} />
       ) : isVenueEquipmentKind(kind) ? (
         <VenueEquipmentMesh kind={kind} w={w} d={d} color={color} selected={selected} />
       ) : kind === 'instrument' ? (
@@ -3075,10 +3086,13 @@ function CinematicCameraController({
   targetPose,
   onArrival,
   orbitControlsRef,
+  speed = 5.2,
 }: {
   targetPose: TargetCameraPose | null;
   onArrival?: () => void;
   orbitControlsRef?: React.Ref<unknown>;
+  /** Vitesse d’approche (plus bas = glissé plus lent, façon travelling de film). */
+  speed?: number;
 }) {
   const { camera } = useThree();
   const animatingRef = useRef(false);
@@ -3092,7 +3106,7 @@ function CinematicCameraController({
   useFrame((_, delta) => {
     if (!animatingRef.current || !targetPose) return;
     const ctrl = (orbitControlsRef as { current?: any } | undefined)?.current;
-    const t = Math.min(1, 1 - Math.exp(-delta * 5.2));
+    const t = Math.min(1, 1 - Math.exp(-delta * speed));
     camera.position.lerp(targetPose.pos, t);
     if (ctrl?.target) {
       ctrl.target.lerp(targetPose.target, t);
@@ -3428,6 +3442,8 @@ function SceneContent({
   dollhouse = false,
   highlightSpace = null,
   introFlyIn = false,
+  filmActive = false,
+  frameTrackRef,
 }: Omit<RoomWebGLViewerProps, 'className' | 'previewMode' | 'renderQuality' | 'lightingPreset' | 'presentationMode' | 'introFlyIn'> & {
   qualitySettings: ReturnType<typeof resolveRenderQuality>;
   lighting: ReturnType<typeof resolveLightingPreset>;
@@ -3444,11 +3460,19 @@ function SceneContent({
   highlightSpace?: RoomSpace | null;
   /** Arrivée cinématique de la caméra au premier affichage. */
   introFlyIn?: boolean;
+  /** Film de la salle en cours : travellings plus lents, pas de rotation auto. */
+  filmActive?: boolean;
+  /** Piste vidéo de l’enregistrement : une image est poussée après chaque rendu. */
+  frameTrackRef?: React.MutableRefObject<CanvasCaptureMediaStreamTrack | null>;
 }) {
   const blueprint = useMemo(() => ensureBlueprintDefaults(rawBlueprint), [rawBlueprint]);
   const [introPath, setIntroPath] = useState<{ from: THREE.Vector3; to: THREE.Vector3 } | null>(null);
   const introPlayedRef = useRef(false);
   const endIntro = useCallback(() => setIntroPath(null), []);
+  useFrame(() => {
+    frameTrackRef?.current?.requestFrame?.();
+  });
+  const dollhouseFraming = blueprint.metadata?.dollhouseView === true;
   const widthM = Number.isFinite(blueprint.canvas?.widthM) && (blueprint.canvas?.widthM ?? 0) > 0 ? blueprint.canvas.widthM : 20;
   const heightM = Number.isFinite(blueprint.canvas?.heightM) && (blueprint.canvas?.heightM ?? 0) > 0 ? blueprint.canvas.heightM : 16;
   const depthAmount = resolveDepthAmount(blueprint.metadata ?? {});
@@ -3520,6 +3544,11 @@ function SceneContent({
       Math.max(elev, stackView ? focusY + 4 : 4),
       back,
     );
+    // Plan prévu pour la vue maquette (appartement témoin…) : cadrage 3/4 plongeant.
+    if (dollhouseFraming && !stackView && !isTopDown) {
+      const pose = dollhouseOverviewPose({ widthM, depthM: heightM, fovDeg: fov, aspect: viewportAspect });
+      camera.position.set(...pose.pos);
+    }
     camera.lookAt(0, focusY, 0);
     if ('fov' in camera) {
       (camera as THREE.PerspectiveCamera).fov = fov;
@@ -3544,7 +3573,7 @@ function SceneContent({
       camera.lookAt(0, focusY, 0);
       setIntroPath({ from, to });
     }
-  }, [camera, depthAmount, widthM, heightM, qualitySettings.fov, walkthroughActive, stackView, focusY, topStoryElev, wallHeightM, viewportAspect, orbitControlsRef, introFlyIn, reduceMotion]);
+  }, [camera, depthAmount, widthM, heightM, qualitySettings.fov, walkthroughActive, stackView, focusY, topStoryElev, wallHeightM, viewportAspect, orbitControlsRef, introFlyIn, reduceMotion, dollhouseFraming]);
 
   const [dragSession, setDragSession] = React.useState<DragSession | null>(null);
 
@@ -3881,6 +3910,7 @@ function SceneContent({
             instrumentStyle={f.instrumentStyle}
             barStyle={f.barStyle}
             landscapeStyle={f.landscapeStyle}
+            homeStyle={f.homeStyle}
             poolShape={f.poolShape}
             customElement={f.customElement}
             flowerType={f.flowerType}
@@ -4168,6 +4198,7 @@ function SceneContent({
         targetPose={cameraTargetPose ?? null}
         onArrival={onCameraTargetArrived}
         orbitControlsRef={orbitControlsRef}
+        speed={filmActive ? 1.7 : 5.2}
       />
 
       <OrbitControls
@@ -4177,7 +4208,7 @@ function SceneContent({
         enablePan={!wallEditMode && !lockOrbit && !dragSession && !presentationMode && !walkthroughActive}
         enableRotate={(!wallEditMode && !lockOrbit && !dragSession && !walkthroughActive) || (presentationMode && !walkthroughActive)}
         enableZoom={!walkthroughActive}
-        autoRotate={presentationMode && !walkthroughActive && !reduceMotion}
+        autoRotate={presentationMode && !walkthroughActive && !reduceMotion && !filmActive}
         autoRotateSpeed={0.55}
         maxPolarAngle={Math.PI / 2.05}
         minDistance={3}
@@ -4256,7 +4287,13 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   const [inView, setInView] = useState(true);
   const [cameraTargetPose, setCameraTargetPose] = useState<TargetCameraPose | null>(null);
   const [activePreset, setActivePreset] = useState<CameraPresetKey | null>(null);
-  const [dollhouse, setDollhouse] = useState(false);
+  const [dollhouse, setDollhouse] = useState(blueprint.metadata.dollhouseView === true);
+  const [dollhouseFromMeta, setDollhouseFromMeta] = useState(blueprint.metadata.dollhouseView === true);
+  if ((blueprint.metadata.dollhouseView === true) !== dollhouseFromMeta) {
+    // Changement de modèle : on suit sa préférence de vue (maquette ou non).
+    setDollhouseFromMeta(blueprint.metadata.dollhouseView === true);
+    setDollhouse(blueprint.metadata.dollhouseView === true);
+  }
   const [spacesOpen, setSpacesOpen] = useState(false);
   const [focusedSpaceId, setFocusedSpaceId] = useState<string | null>(null);
   const [hoveredSpaceId, setHoveredSpaceId] = useState<string | null>(null);
@@ -4366,6 +4403,115 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
     }
   }, [dollhouse, dollhouseOverview]);
 
+  // ───────────── Film de la salle : visite automatique d’espace en espace ─────────────
+  const [filmMenuOpen, setFilmMenuOpen] = useState(false);
+  const [film, setFilm] = useState<null | { step: number; total: number; caption: string; recording: boolean }>(null);
+  const filmTimersRef = useRef<number[]>([]);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const frameTrackRef = useRef<CanvasCaptureMediaStreamTrack | null>(null);
+  const recordChunksRef = useRef<Blob[]>([]);
+  const dollhouseBeforeFilmRef = useRef(false);
+
+  const clearFilmTimers = useCallback(() => {
+    filmTimersRef.current.forEach((id) => window.clearTimeout(id));
+    filmTimersRef.current = [];
+  }, []);
+
+  const finishRecording = useCallback(() => {
+    frameTrackRef.current = null;
+    const rec = recorderRef.current;
+    if (rec && rec.state !== 'inactive') rec.stop();
+    recorderRef.current = null;
+  }, []);
+
+  const stopFilm = useCallback(() => {
+    clearFilmTimers();
+    finishRecording();
+    setFilm(null);
+    setFocusedSpaceId(null);
+    setCameraTargetPose(null);
+    setDollhouse(dollhouseBeforeFilmRef.current);
+  }, [clearFilmTimers, finishRecording]);
+
+  useEffect(() => () => {
+    clearFilmTimers();
+    const rec = recorderRef.current;
+    if (rec && rec.state !== 'inactive') rec.stop();
+  }, [clearFilmTimers]);
+
+  const startFilm = useCallback((record: boolean) => {
+    setFilmMenuOpen(false);
+    clearFilmTimers();
+    setActivePreset(null);
+    setSpacesOpen(false);
+    setHoveredSpaceId(null);
+    dollhouseBeforeFilmRef.current = dollhouse;
+    setDollhouse(true);
+
+    if (record) {
+      const canvas = viewerRootRef.current?.querySelector('canvas') as HTMLCanvasElement | null;
+      const RecorderCtor = typeof window !== 'undefined' ? window.MediaRecorder : undefined;
+      if (canvas && RecorderCtor && typeof canvas.captureStream === 'function') {
+        const mime = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4']
+          .find((type) => RecorderCtor.isTypeSupported?.(type)) ?? '';
+        try {
+          // Capture image par image (requestFrame après chaque rendu) : fiable même quand le GPU est lent.
+          const stream = canvas.captureStream(0);
+          frameTrackRef.current = (stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack | undefined) ?? null;
+          const rec = new RecorderCtor(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8_000_000 } : undefined);
+          recordChunksRef.current = [];
+          rec.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) recordChunksRef.current.push(e.data);
+          };
+          rec.onstop = () => {
+            const type = rec.mimeType || mime || 'video/webm';
+            const blob = new Blob(recordChunksRef.current, { type });
+            recordChunksRef.current = [];
+            if (blob.size === 0) return;
+            const ext = type.includes('mp4') ? 'mp4' : 'webm';
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `visite-salle-${new Date().toISOString().slice(0, 10)}.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
+          };
+          rec.start(250);
+          recorderRef.current = rec;
+        } catch {
+          recorderRef.current = null;
+        }
+      }
+    }
+
+    // Plan de tournage : vue d’ensemble → chaque espace → vue d’ensemble.
+    const shots: Array<{ caption: string; space: RoomSpace | null; holdMs: number }> = [
+      { caption: 'Vue d’ensemble', space: null, holdMs: 3200 },
+      ...spaces.slice(0, 8).map((space) => ({ caption: space.title, space, holdMs: 3800 })),
+      { caption: 'Vue d’ensemble', space: null, holdMs: 3000 },
+    ];
+    const recording = recorderRef.current !== null;
+    let at = 0;
+    shots.forEach((shot, index) => {
+      const id = window.setTimeout(() => {
+        setFilm({ step: index + 1, total: shots.length, caption: shot.caption, recording });
+        if (shot.space) {
+          setFocusedSpaceId(shot.space.id);
+          flyToSpace(shot.space);
+        } else {
+          setFocusedSpaceId(null);
+          dollhouseOverview();
+        }
+      }, at);
+      filmTimersRef.current.push(id);
+      at += shot.holdMs;
+    });
+    filmTimersRef.current.push(window.setTimeout(() => stopFilm(), at));
+    setFilm({ step: 0, total: shots.length, caption: 'Préparation…', recording });
+  }, [clearFilmTimers, dollhouse, spaces, flyToSpace, dollhouseOverview, stopFilm]);
+
   const handleResetCamera = useCallback(() => {
     setActivePreset(null);
     setFocusedSpaceId(null);
@@ -4457,6 +4603,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
         className,
       )}
       onPointerDown={() => {
+        if (film) return;
         if (cameraTargetPose) {
           setCameraTargetPose(null);
           setActivePreset(null);
@@ -4579,8 +4726,79 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
               </span>
             </button>
           ) : null}
+          <button
+            type="button"
+            onClick={() => (film ? stopFilm() : setFilmMenuOpen((open) => !open))}
+            aria-pressed={film !== null}
+            aria-expanded={filmMenuOpen}
+            title="Film de la salle : visite automatique, à regarder ou à enregistrer en vidéo"
+            className={cn(
+              'inline-flex items-center gap-1.5 px-2.5 py-2 rounded-full text-xs font-semibold transition-all shrink-0 min-h-11',
+              film || filmMenuOpen
+                ? 'bg-primary-solid text-primary-foreground shadow-xs'
+                : 'text-foreground/80 hover:text-foreground hover:bg-surface-muted',
+            )}
+          >
+            <Clapperboard className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Film</span>
+          </button>
         </div>
       )}
+
+      {filmMenuOpen && !film && !walkthroughActive && !wallEditMode ? (
+        <div
+          className="absolute left-2.5 top-16 z-20 w-[min(17rem,calc(100%-1.25rem))] rounded-2xl border border-border/70 bg-background/95 p-2 shadow-lg backdrop-blur-md dark:bg-surface-elevated/95 pointer-events-auto"
+          role="menu"
+          aria-label="Film de la salle"
+        >
+          <p className="px-2 pb-1.5 pt-1 text-xs text-muted">
+            La caméra fait le tour de la salle en maquette, d’espace en espace{spaces.length > 0 ? ` (${Math.min(8, spaces.length)} espaces)` : ''}.
+          </p>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => startFilm(false)}
+            className="flex w-full min-h-11 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm font-semibold text-foreground hover:bg-surface-muted"
+          >
+            <Play className="h-4 w-4" /> Lire le film
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => startFilm(true)}
+            className="flex w-full min-h-11 items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm font-semibold text-foreground hover:bg-surface-muted"
+          >
+            <Video className="h-4 w-4" />
+            <span>
+              Enregistrer en vidéo
+              <span className="block text-xs font-normal text-muted">Téléchargée à la fin du film</span>
+            </span>
+          </button>
+        </div>
+      ) : null}
+
+      {film ? (
+        <div className="absolute inset-x-2.5 bottom-12 z-20 flex justify-center pointer-events-none">
+          <div className="pointer-events-auto flex max-w-full items-center gap-3 rounded-full border border-white/15 bg-stone-950/85 py-1.5 pl-4 pr-1.5 text-white shadow-lg backdrop-blur-md">
+            {film.recording ? (
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-red-300">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" aria-hidden /> Rec
+              </span>
+            ) : (
+              <Clapperboard className="h-4 w-4 text-amber-200" aria-hidden />
+            )}
+            <span className="min-w-0 truncate text-sm font-semibold" aria-live="polite">{film.caption}</span>
+            <span className="text-xs tabular-nums text-stone-300">{Math.max(1, film.step)}/{film.total}</span>
+            <button
+              type="button"
+              onClick={stopFilm}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-white/10 px-3 text-xs font-semibold hover:bg-white/20"
+            >
+              <StopIcon className="h-3 w-3" /> {film.recording ? 'Arrêter et télécharger' : 'Arrêter'}
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Panneau « Espaces » : liste, survol = surlignage 3D, clic = la caméra s’envole vers l’espace. */}
       {spacesOpen && !walkthroughActive && !wallEditMode && spaces.length > 0 ? (
@@ -4731,6 +4949,8 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             dollhouse={dollhouse}
             highlightSpace={walkthroughActive ? null : highlightSpace}
             introFlyIn={introFlyIn && !walkthroughActive && !presentationMode}
+            filmActive={film !== null}
+            frameTrackRef={frameTrackRef}
           />
         </Suspense>
       </Canvas>

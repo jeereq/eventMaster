@@ -24,6 +24,14 @@ import {
   type LandscapeStyle,
   type OutdoorSurroundings,
 } from '@/lib/roomOutdoorUtils';
+import {
+  HOME_FURNITURE_GROUP_LABELS,
+  HOME_FURNITURE_META,
+  HOME_FURNITURE_ORDER,
+  homeFurnitureFootprintPct,
+  type HomeFurnitureGroup,
+  type HomeFurnitureStyle,
+} from '@/lib/roomHomeFurniture';
 import { useAuth } from '@/context/AuthContext';
 import LayoutActionPanel from '@/components/LayoutActionPanel';
 import ImageCropModal from '@/components/ImageCropModal';
@@ -356,7 +364,7 @@ function DiscloseChevron({ open }: { open: boolean }) {
   );
 }
 
-type EditorToolGroupId = 'display' | 'view' | 'light' | 'furniture' | 'zones' | 'building' | 'scene' | 'hospitality' | 'outdoor' | 'custom';
+type EditorToolGroupId = 'display' | 'view' | 'light' | 'furniture' | 'zones' | 'building' | 'scene' | 'hospitality' | 'home' | 'outdoor' | 'custom';
 
 function ToolbarCluster({
   label,
@@ -1764,6 +1772,31 @@ export default function RoomLayoutEditor({
       color: meta.color,
       heightM: meta.heightM,
       landscapeStyle: style,
+      storyId: resolveActiveStoryId(blueprint),
+    });
+    updateBlueprint(
+      { ...blueprint, fixtures: [...blueprint.fixtures, fixture] },
+      { message: `${meta.label} ajouté`, kind: 'add' },
+    );
+    setSelection([{ kind: 'fixture', id: fixture.id }]);
+  };
+
+  const addHomeFurniture = (style: HomeFurnitureStyle) => {
+    if (!caps.canFixtures || !caps.fixtureKinds.includes('homeFurniture')) {
+      log('Le mobilier résidentiel n’est pas inclus dans votre forfait', 'info');
+      return;
+    }
+    const meta = HOME_FURNITURE_META[style];
+    const size = homeFurnitureFootprintPct(style, blueprint.canvas?.widthM ?? 20, blueprint.canvas?.heightM ?? 16);
+    const fixture = placeFixtureWithClearance(blueprint, {
+      ...createBlueprintFixture('homeFurniture'),
+      ...size,
+      x: 50 - size.w / 2,
+      y: 50 - size.h / 2,
+      label: meta.label,
+      color: meta.color,
+      heightM: meta.heightM,
+      homeStyle: style,
       storyId: resolveActiveStoryId(blueprint),
     });
     updateBlueprint(
@@ -5060,6 +5093,7 @@ export default function RoomLayoutEditor({
       const isInstrument = selectedFixture.kind === 'instrument';
       const isBar = selectedFixture.kind === 'bar';
       const isLandscape = selectedFixture.kind === 'landscape';
+      const isHomeFurniture = selectedFixture.kind === 'homeFurniture';
       const isStage = selectedFixture.kind === 'stage' || isPodium;
       const isFlower = selectedFixture.kind === 'flower';
       const isArch = selectedFixture.kind === 'arch';
@@ -5855,6 +5889,37 @@ export default function RoomLayoutEditor({
                 </div>
               );
             })() : null}
+
+            {isHomeFurniture && (() => {
+              const style = (selectedFixture.homeStyle ?? 'bed') as HomeFurnitureStyle;
+              const meta = HOME_FURNITURE_META[style];
+              return (
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Meuble</span>
+                  <select
+                    value={style}
+                    onChange={(e) => {
+                      const next = e.target.value as HomeFurnitureStyle;
+                      const nextMeta = HOME_FURNITURE_META[next];
+                      const size = homeFurnitureFootprintPct(next, blueprint.canvas?.widthM ?? 20, blueprint.canvas?.heightM ?? 16);
+                      updateFixture(selectedFixture.id, {
+                        homeStyle: next,
+                        ...size,
+                        heightM: nextMeta.heightM,
+                        color: nextMeta.color,
+                        label: nextOwnedLabel(selectedFixture.label, meta.label, nextMeta.label),
+                      }, nextMeta.label);
+                    }}
+                    className={EDITOR_FIELD}
+                  >
+                    {HOME_FURNITURE_ORDER.map((id) => (
+                      <option key={id} value={id}>{HOME_FURNITURE_GROUP_LABELS[HOME_FURNITURE_META[id].group]} · {HOME_FURNITURE_META[id].label}</option>
+                    ))}
+                  </select>
+                  <span className="text-xs text-muted">{meta.hint}</span>
+                </label>
+              );
+            })()}
 
             {isLandscape && (() => {
               const style = (selectedFixture.landscapeStyle ?? 'oak') as LandscapeStyle;
@@ -7810,6 +7875,32 @@ export default function RoomLayoutEditor({
             Canapé Lounge
           </button></Gate>
       </EditorToolGroup>
+
+      {caps.fixtureKinds.includes('homeFurniture') ? (
+        <EditorToolGroup
+          id="home"
+          label="Maison"
+          openId={toolbarGroup}
+          onToggle={toggleToolbarGroup}
+        >
+          {(['bedroom', 'living', 'kitchen', 'bathroom'] as HomeFurnitureGroup[]).map((group) => (
+            <React.Fragment key={group}>
+              <span className="basis-full text-[11px] font-semibold uppercase tracking-wide text-muted pt-1">{HOME_FURNITURE_GROUP_LABELS[group]}</span>
+              {HOME_FURNITURE_ORDER.filter((style) => HOME_FURNITURE_META[style].group === group).map((style) => (
+                <button
+                  key={style}
+                  type="button"
+                  onClick={() => addHomeFurniture(style)}
+                  className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}
+                  title={HOME_FURNITURE_META[style].hint}
+                >
+                  {HOME_FURNITURE_META[style].label}
+                </button>
+              ))}
+            </React.Fragment>
+          ))}
+        </EditorToolGroup>
+      ) : null}
 
       <EditorToolGroup
         id="zones"
