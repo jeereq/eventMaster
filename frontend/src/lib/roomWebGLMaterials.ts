@@ -4,6 +4,9 @@ import * as THREE from 'three';
 import type { ChairType, ChairStyle, SeatMaterial, TableShape, TableSurfaceStyle, WallTextureStyle, ZoneMaterial, OpeningMaterial } from '@/lib/roomLayoutUtils';
 import { SEAT_MATERIAL_COLORS, WALL_TEXTURE_COLORS } from '@/lib/roomLayoutUtils';
 import { getFloorAsset, FLOOR_TEXTURE_REPEAT_M } from '@/lib/roomFloorUtils';
+import { PROCEDURAL_FLOOR_DRAW } from '@/lib/roomFloorProcedural';
+import { TABLE_DEFAULT_TEXTURE, TABLE_SURFACE_TEXTURES, resolveTableSurface } from '@/lib/roomTableSurface';
+import { ZONE_DECK_TEXTURES, ZONE_MATERIAL_COLORS } from '@/lib/roomZoneSurface';
 import type { FloorType } from '@/lib/roomThemeUtils';
 import { getDetailSet, withRepeat, type DetailKind } from '@/lib/roomSurfaceFinish';
 
@@ -119,22 +122,7 @@ export function resolveFloorMap(
 
   if (type === 'miroirNoir') {
     const tileM = FLOOR_TEXTURE_REPEAT_M.miroirNoir;
-    const { map: mTex, bumpMap: mBump, normalMap: mNormal } = makeCanvasTexture('floor:miroir-noir-v1', (ctx, size) => {
-      ctx.fillStyle = '#08080a';
-      ctx.fillRect(0, 0, size, size);
-      // Joints fins biseautés de dalles miroir
-      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(1, 1, size - 2, size - 2);
-      ctx.strokeStyle = 'rgba(255,255,255,0.02)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(size * 0.08, size * 0.08, size * 0.84, size * 0.84);
-      const g = ctx.createRadialGradient(size * 0.5, size * 0.5, size * 0.1, size * 0.5, size * 0.5, size * 0.7);
-      g.addColorStop(0, 'rgba(28,28,38,0.4)');
-      g.addColorStop(1, 'rgba(4,4,6,0.9)');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, size, size);
-    }, 512, true, true, 2.2);
+    const { map: mTex, bumpMap: mBump, normalMap: mNormal } = makeCanvasTexture('floor:miroir-noir-v1', PROCEDURAL_FLOOR_DRAW.miroirNoir, 512, true, true, 2.2);
     mTex.repeat.set(widthM / tileM, heightM / tileM);
     if (mBump) mBump.repeat.set(widthM / tileM, heightM / tileM);
     if (mNormal) mNormal.repeat.set(widthM / tileM, heightM / tileM);
@@ -155,43 +143,7 @@ export function resolveFloorMap(
 
   if (type === 'dancefloorLed') {
     const tileM = FLOOR_TEXTURE_REPEAT_M.dancefloorLed;
-    const { map: ledTex, bumpMap: ledBump, normalMap: ledNormal } = makeCanvasTexture('floor:dancefloor-led-v1', (ctx, size) => {
-      ctx.fillStyle = '#07090e';
-      ctx.fillRect(0, 0, size, size);
-      const cols = 4;
-      const step = size / cols;
-      ctx.strokeStyle = 'rgba(212,175,55,0.4)';
-      ctx.lineWidth = 3;
-      for (let i = 0; i <= cols; i++) {
-        ctx.beginPath();
-        ctx.moveTo(i * step, 0); ctx.lineTo(i * step, size); ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(0, i * step); ctx.lineTo(size, i * step); ctx.stroke();
-      }
-      for (let c = 0; c < cols; c++) {
-        for (let r = 0; r < cols; r++) {
-          const cx = c * step;
-          const cy = r * step;
-          ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(cx + 4, cy + 4, step - 8, step - 8);
-          for (let dx = 0.22; dx < 0.9; dx += 0.28) {
-            for (let dy = 0.22; dy < 0.9; dy += 0.28) {
-              const lx = cx + dx * step;
-              const ly = cy + dy * step;
-              const rad = ctx.createRadialGradient(lx, ly, 0.5, lx, ly, 6);
-              rad.addColorStop(0, '#ffffff');
-              rad.addColorStop(0.35, 'rgba(240,230,200,0.85)');
-              rad.addColorStop(1, 'rgba(250,204,21,0)');
-              ctx.fillStyle = rad;
-              ctx.beginPath();
-              ctx.arc(lx, ly, 6, 0, Math.PI * 2);
-              ctx.fill();
-            }
-          }
-        }
-      }
-    }, 512, true, true, 2.5);
+    const { map: ledTex, bumpMap: ledBump, normalMap: ledNormal } = makeCanvasTexture('floor:dancefloor-led-v1', PROCEDURAL_FLOOR_DRAW.dancefloorLed, 512, true, true, 2.5);
     ledTex.repeat.set(widthM / tileM, heightM / tileM);
     if (ledBump) ledBump.repeat.set(widthM / tileM, heightM / tileM);
     if (ledNormal) ledNormal.repeat.set(widthM / tileM, heightM / tileM);
@@ -212,63 +164,7 @@ export function resolveFloorMap(
 
   if (type === 'parquetVersailles') {
     const tileM = FLOOR_TEXTURE_REPEAT_M.parquetVersailles;
-    const { map: versTex, bumpMap: versBump, normalMap: versNormal } = makeCanvasTexture('floor:parquet-versailles-v2', (ctx, size) => {
-      // Panneau Versailles : cadre périphérique + treillis diagonal entrelacé, lames veinées.
-      const rand = seededRandom(29);
-      const grainFill = (angle: number) => {
-        ctx.save();
-        ctx.translate(size / 2, size / 2);
-        ctx.rotate(angle);
-        for (let i = -size; i < size; i += 3) {
-          const t = rand();
-          ctx.fillStyle = `rgba(${t > 0.5 ? '255,236,200' : '70,40,15'},${0.05 + rand() * 0.08})`;
-          ctx.fillRect(-size, i, size * 2, 1 + rand() * 2);
-        }
-        ctx.restore();
-      };
-      ctx.fillStyle = '#b07d45';
-      ctx.fillRect(0, 0, size, size);
-      grainFill(Math.PI / 4);
-      const b = size * 0.09;
-      const band = size * 0.07;
-      // Treillis : deux diagonales de lames.
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(b, b, size - 2 * b, size - 2 * b);
-      ctx.clip();
-      for (const dir of [1, -1]) {
-        ctx.save();
-        ctx.translate(size / 2, size / 2);
-        ctx.rotate((dir * Math.PI) / 4);
-        ctx.fillStyle = dir > 0 ? 'rgba(150,100,50,0.55)' : 'rgba(120,78,36,0.5)';
-        for (const off of [-size * 0.35, 0, size * 0.35]) {
-          ctx.fillRect(-size, off - band / 2, size * 2, band);
-          ctx.strokeStyle = 'rgba(60,35,15,0.55)';
-          ctx.lineWidth = 1.5;
-          ctx.strokeRect(-size, off - band / 2, size * 2, band);
-        }
-        ctx.restore();
-      }
-      ctx.restore();
-      // Cadre : quatre lames de bordure, joints d'onglet.
-      ctx.fillStyle = 'rgba(135,90,45,0.6)';
-      ctx.fillRect(0, 0, size, b);
-      ctx.fillRect(0, size - b, size, b);
-      ctx.fillStyle = 'rgba(120,80,38,0.6)';
-      ctx.fillRect(0, b, b, size - 2 * b);
-      ctx.fillRect(size - b, b, b, size - 2 * b);
-      ctx.strokeStyle = 'rgba(55,32,12,0.6)';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(b, b, size - 2 * b, size - 2 * b);
-      ctx.strokeRect(0.75, 0.75, size - 1.5, size - 1.5);
-      ctx.beginPath();
-      ctx.moveTo(0, 0); ctx.lineTo(b, b);
-      ctx.moveTo(size, 0); ctx.lineTo(size - b, b);
-      ctx.moveTo(0, size); ctx.lineTo(b, size - b);
-      ctx.moveTo(size, size); ctx.lineTo(size - b, size - b);
-      ctx.stroke();
-      noise(ctx, size, 0.05);
-    }, 512, true, true, 2.2);
+    const { map: versTex, bumpMap: versBump, normalMap: versNormal } = makeCanvasTexture('floor:parquet-versailles-v2', PROCEDURAL_FLOOR_DRAW.parquetVersailles, 512, true, true, 2.2);
     versTex.repeat.set(widthM / tileM, heightM / tileM);
     if (versBump) versBump.repeat.set(widthM / tileM, heightM / tileM);
     if (versNormal) versNormal.repeat.set(widthM / tileM, heightM / tileM);
@@ -1137,8 +1033,7 @@ export function getDoorMaterialProps(
   };
 }
 
-export const TABLE_DEFAULT_TEXTURE = '/floors/gen/table-wood.jpg';
-export const TABLE_LINEN_TEXTURE = '/floors/gen/table-linen.jpg';
+export { TABLE_DEFAULT_TEXTURE, TABLE_LINEN_TEXTURE } from '@/lib/roomTableSurface';
 
 export function resolveTableMaterial(
   shape: TableShape,
@@ -1174,11 +1069,7 @@ export function resolveTableMaterial(
     };
   }
 
-  const resolvedSurface = surface ?? (
-    shape === 'round' || shape === 'oval' || shape === 'cocktail' || shape === 'highTop'
-      ? 'linen'
-      : 'wood'
-  );
+  const resolvedSurface = resolveTableSurface(shape, surface);
 
   if (resolvedSurface === 'glass') {
     return {
@@ -1206,15 +1097,7 @@ export function resolveTableMaterial(
     };
   }
 
-  const textureBySurface: Record<Exclude<TableSurfaceStyle, 'glass' | 'whiteLacquer'>, string> = {
-    wood: TABLE_DEFAULT_TEXTURE,
-    linen: TABLE_LINEN_TEXTURE,
-    walnut: '/floors/gen/table-walnut.jpg',
-    marble: '/floors/gen/marble-calacatta.jpg',
-    darkWood: '/floors/gen/table-darkwood.jpg',
-  };
-
-  const url = textureBySurface[resolvedSurface as keyof typeof textureBySurface] ?? TABLE_DEFAULT_TEXTURE;
+  const url = TABLE_SURFACE_TEXTURES[resolvedSurface as keyof typeof TABLE_SURFACE_TEXTURES] ?? TABLE_DEFAULT_TEXTURE;
   // Les textures portent déjà la teinte du matériau : blanc = couleur de la texture telle quelle.
   const defaultColors: Record<TableSurfaceStyle, string> = {
     wood: '#ffffff',
@@ -1250,234 +1133,10 @@ export function resolveTableMaterial(
   };
 }
 
-export type ChairVisual = {
-  seatColor: string;
-  frameColor: string;
-  backHeight: number;
-  seatSize: [number, number, number];
-  hasArms: boolean;
-  cushion: boolean;
-  scale: number;
-};
+// Palette des chaises : module pur partagé avec le plan 2D.
+export { CHAIR_VISUALS, resolveChairVisual, type ChairVisual } from '@/lib/roomChairVisual';
 
-export const CHAIR_VISUALS: Record<ChairType, ChairVisual> = {
-  BANQUET: {
-    seatColor: '#faf7f2',
-    frameColor: '#c9a227',
-    backHeight: 0.55,
-    seatSize: [0.38, 0.06, 0.38],
-    hasArms: false,
-    cushion: true,
-    scale: 1,
-  },
-  FOLDING: {
-    seatColor: '#64748b',
-    frameColor: '#94a3b8',
-    backHeight: 0.42,
-    seatSize: [0.36, 0.04, 0.34],
-    hasArms: false,
-    cushion: false,
-    scale: 0.95,
-  },
-  THEATER: {
-    seatColor: '#7f1d1d',
-    frameColor: '#292524',
-    backHeight: 0.62,
-    seatSize: [0.42, 0.08, 0.4],
-    hasArms: true,
-    cushion: true,
-    scale: 1.05,
-  },
-  STOOL: {
-    seatColor: '#44403c',
-    frameColor: '#292524',
-    backHeight: 0,
-    seatSize: [0.32, 0.05, 0.32],
-    hasArms: false,
-    cushion: false,
-    scale: 0.9,
-  },
-  ARMCHAIR: {
-    seatColor: '#1e293b',
-    frameColor: '#0f172a',
-    backHeight: 0.7,
-    seatSize: [0.52, 0.12, 0.5],
-    hasArms: true,
-    cushion: true,
-    scale: 1.15,
-  },
-  WHEELCHAIR: {
-    seatColor: '#334155',
-    frameColor: '#64748b',
-    backHeight: 0.5,
-    seatSize: [0.45, 0.08, 0.48],
-    hasArms: true,
-    cushion: true,
-    scale: 1.1,
-  },
-  CROSSBACK: {
-    seatColor: '#f5f0e8',
-    frameColor: '#92400e',
-    backHeight: 0.58,
-    seatSize: [0.4, 0.05, 0.38],
-    hasArms: false,
-    cushion: true,
-    scale: 1,
-  },
-  GHOST: {
-    seatColor: '#e2e8f0',
-    frameColor: '#cbd5e1',
-    backHeight: 0.52,
-    seatSize: [0.42, 0.06, 0.4],
-    hasArms: false,
-    cushion: false,
-    scale: 1,
-  },
-  MESH: {
-    seatColor: '#334155',
-    frameColor: '#1e293b',
-    backHeight: 0.48,
-    seatSize: [0.44, 0.06, 0.42],
-    hasArms: true,
-    cushion: false,
-    scale: 1,
-  },
-  BARSTOOL: {
-    seatColor: '#44403c',
-    frameColor: '#292524',
-    backHeight: 0.35,
-    seatSize: [0.34, 0.05, 0.34],
-    hasArms: false,
-    cushion: true,
-    scale: 1.05,
-  },
-  POUF: {
-    seatColor: '#7c2d12',
-    frameColor: '#57534e',
-    backHeight: 0,
-    seatSize: [0.42, 0.22, 0.42],
-    hasArms: false,
-    cushion: true,
-    scale: 0.95,
-  },
-};
-
-const CHAIR_STYLE_TWEAKS: Record<ChairStyle, Partial<ChairVisual>> = {
-  classic: { backHeight: 0.65, hasArms: true, scale: 1.1 },
-  lounge: { backHeight: 0.55, seatSize: [0.58, 0.14, 0.56], scale: 1.25, cushion: true },
-  club: { backHeight: 0.72, seatSize: [0.5, 0.13, 0.52], scale: 1.2, hasArms: true },
-  bergere: { backHeight: 0.78, seatSize: [0.54, 0.12, 0.5], scale: 1.18, hasArms: true },
-  modern: { backHeight: 0.48, seatSize: [0.48, 0.08, 0.48], scale: 1.05, hasArms: false },
-  chiavari: { backHeight: 0.58, seatSize: [0.36, 0.05, 0.36], scale: 0.95, hasArms: false, cushion: false },
-  napoleon: { backHeight: 0.62, seatSize: [0.42, 0.06, 0.4], scale: 1.02, hasArms: false, cushion: true },
-  crossback: { backHeight: 0.58, seatSize: [0.4, 0.05, 0.38], scale: 1, hasArms: false, cushion: true },
-  tolix: { backHeight: 0.42, seatSize: [0.38, 0.04, 0.36], scale: 0.98, hasArms: false, cushion: false },
-  ghost: { backHeight: 0.5, seatSize: [0.42, 0.06, 0.4], scale: 1, hasArms: false, cushion: false },
-  panton: { backHeight: 0.55, seatSize: [0.46, 0.08, 0.44], scale: 1.05, hasArms: false, cushion: false },
-  louis: { backHeight: 0.7, seatSize: [0.42, 0.07, 0.4], scale: 1.05, hasArms: false, cushion: true },
-  ovalBack: { backHeight: 0.68, seatSize: [0.44, 0.08, 0.42], scale: 1.08, hasArms: false, cushion: true },
-  wishbone: { backHeight: 0.62, seatSize: [0.4, 0.04, 0.38], scale: 1, hasArms: false, cushion: false },
-  tiffany: { backHeight: 0.6, seatSize: [0.38, 0.05, 0.36], scale: 0.98, hasArms: false, cushion: true },
-  phoenix: { backHeight: 0.72, seatSize: [0.44, 0.07, 0.42], scale: 1.08, hasArms: false, cushion: true },
-};
-
-export function resolveChairVisual(
-  chairType: ChairType,
-  style?: ChairStyle,
-  material?: SeatMaterial,
-): ChairVisual {
-  const base = { ...CHAIR_VISUALS[chairType] };
-  if (chairType === 'ARMCHAIR' || style || chairType === 'CROSSBACK' || chairType === 'GHOST' || chairType === 'BARSTOOL') {
-    const tweak = CHAIR_STYLE_TWEAKS[style ?? 'classic'];
-    Object.assign(base, tweak);
-  }
-  if (material) {
-    const colors = SEAT_MATERIAL_COLORS[material];
-    base.seatColor = colors.seat;
-    base.frameColor = colors.frame;
-    if (material === 'leather' || material === 'velvet' || material === 'boucle' || material === 'suede') base.cushion = true;
-    if (material === 'wood' || material === 'plastic' || material === 'mesh') base.cushion = false;
-  }
-  if (chairType === 'GHOST') {
-    base.seatColor = '#e2e8f0';
-    base.frameColor = '#cbd5e1';
-    base.cushion = false;
-  }
-  if (chairType === 'POUF') {
-    base.backHeight = 0;
-    base.cushion = true;
-  }
-  if (style === 'chiavari' && (!material || material === 'linen' || material === 'fabric')) {
-    base.frameColor = '#c9a227';
-    base.seatColor = '#faf7f2';
-    base.cushion = true;
-  }
-  if (style === 'tiffany' && !material) {
-    base.frameColor = '#d4af37';
-    base.seatColor = '#faf7f2';
-    base.cushion = true;
-  }
-  if (style === 'phoenix' && !material) {
-    base.frameColor = '#c9a227';
-    base.seatColor = '#4c1d95';
-    base.cushion = true;
-  }
-  if (style === 'wishbone' && !material) {
-    base.frameColor = '#92400e';
-    base.seatColor = '#e7e5e4';
-    base.cushion = false;
-  }
-  if (style === 'ovalBack' && (!material || material === 'velvet' || material === 'linen' || material === 'fabric')) {
-    base.seatColor = '#c4a4a4';
-    base.frameColor = '#d6c4b0';
-    base.cushion = true;
-  }
-  if (style === 'louis' && !material) {
-    base.seatColor = '#f8fafc';
-    base.frameColor = '#f5f5f4';
-    base.cushion = true;
-  }
-  if (chairType === 'FOLDING' && (material === 'plastic' || material === 'linen')) {
-    base.frameColor = '#f8fafc';
-    base.seatColor = '#f4f4f5';
-    base.cushion = false;
-  }
-  if (chairType === 'FOLDING' && material === 'wood') {
-    base.frameColor = '#1c1917';
-    base.seatColor = '#f5f0e8';
-    base.cushion = true;
-  }
-  if (style === 'napoleon' && (material === 'linen' || material === 'plastic' || !material)) {
-    base.frameColor = '#f8fafc';
-    base.seatColor = '#f4f4f5';
-    base.cushion = true;
-  }
-  if (style === 'lounge' && (material === 'suede' || material === 'velvet')) {
-    base.seatColor = '#ea580c';
-    base.frameColor = '#171717';
-    base.cushion = true;
-  }
-  if (chairType === 'THEATER' && (material === 'velvet' || material === 'fabric')) {
-    base.seatColor = '#1e3a5f';
-    base.frameColor = '#292524';
-    base.cushion = true;
-  }
-  return base;
-}
-
-export const ZONE_MATERIAL_COLORS: Record<ZoneMaterial, string> = {
-  wood: '#8b6914',
-  carpet: '#1e3a5f',
-  vinyl: '#e7e5e4',
-  led: '#fbbf24',
-  marble: '#e7e5e4',
-  concrete: '#9ca3af',
-  parquet: '#c4a06a',
-  epoxy: '#cbd5e1',
-  grass: '#4d7c3f',
-  gravel: '#78716c',
-  brick: '#b45309',
-};
+export { ZONE_MATERIAL_COLORS } from '@/lib/roomZoneSurface';
 
 export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
   map: THREE.Texture | null;
@@ -1642,17 +1301,20 @@ export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
 }
 
 /** Textures de plateau (scène, podium, estrade) et taille d’un motif en mètres réels. */
-const DECK_SURFACES: Partial<Record<ZoneMaterial, { url: string; tileM: number; roughness: number; metalness: number }>> = {
-  wood: { url: '/floors/gen/deck-ipe.jpg', tileM: 1.8, roughness: 0.5, metalness: 0.02 },
-  parquet: { url: '/floors/gen/oak-planks.jpg', tileM: 1.8, roughness: 0.45, metalness: 0.02 },
-  marble: { url: '/floors/gen/marble-veined.jpg', tileM: 1.4, roughness: 0.2, metalness: 0.05 },
-  concrete: { url: '/floors/gen/concrete-polished.jpg', tileM: 2.4, roughness: 0.7, metalness: 0.02 },
-  epoxy: { url: '/floors/gen/epoxy-grey.jpg', tileM: 2.4, roughness: 0.2, metalness: 0.1 },
-  grass: { url: '/floors/gen/turf-synthetic.jpg', tileM: 1.5, roughness: 0.95, metalness: 0 },
-  gravel: { url: '/floors/gen/gravel-light.jpg', tileM: 1.2, roughness: 0.92, metalness: 0 },
-  brick: { url: '/floors/gen/brick-pavers.jpg', tileM: 1.4, roughness: 0.8, metalness: 0 },
-  carpet: { url: '/floors/gen/carpet-navy.jpg', tileM: 1.2, roughness: 0.95, metalness: 0 },
+const DECK_FINISH: Partial<Record<ZoneMaterial, { roughness: number; metalness: number }>> = {
+  wood: { roughness: 0.5, metalness: 0.02 },
+  parquet: { roughness: 0.45, metalness: 0.02 },
+  marble: { roughness: 0.2, metalness: 0.05 },
+  concrete: { roughness: 0.7, metalness: 0.02 },
+  epoxy: { roughness: 0.2, metalness: 0.1 },
+  grass: { roughness: 0.95, metalness: 0 },
+  gravel: { roughness: 0.92, metalness: 0 },
+  brick: { roughness: 0.8, metalness: 0 },
+  carpet: { roughness: 0.95, metalness: 0 },
 };
+const DECK_SURFACES: Partial<Record<ZoneMaterial, { url: string; tileM: number; roughness: number; metalness: number }>> = Object.fromEntries(
+  Object.entries(ZONE_DECK_TEXTURES).map(([mat, tex]) => [mat, { ...tex!, ...DECK_FINISH[mat as ZoneMaterial]! }]),
+);
 
 /** Matériaux « textiles / bois » : les flancs d’une estrade sont une jupe de scène, pas la même matière. */
 export function deckUsesSkirt(material: ZoneMaterial | undefined): boolean {
