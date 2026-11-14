@@ -167,6 +167,7 @@ function WebGLPreviewCanvas({
       blueprint={webglBlueprint}
       selected={selected}
       blockedSeats={blockedSeats}
+      introFlyIn
       onSelect={(sel) => {
         const pick = resolveTicketSeatPick(sel);
         if (!pick) {
