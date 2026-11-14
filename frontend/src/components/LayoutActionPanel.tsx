@@ -154,7 +154,7 @@ export default function LayoutActionPanel({ actions, className = '' }: LayoutAct
                     <p className="text-foreground font-medium leading-snug">{a.message}</p>
                     {ctx?.seatsDelta !== undefined && ctx.seatsDelta !== 0 && (
                       <span
-                        className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full border ${
+                        className={`text-xs font-bold px-1.5 py-0.2 rounded-full border ${
                           ctx.seatsDelta > 0
                             ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
                             : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-400'
@@ -164,7 +164,7 @@ export default function LayoutActionPanel({ actions, className = '' }: LayoutAct
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 mt-1 text-[11px] text-muted flex-wrap">
+                  <div className="flex items-center gap-2 mt-1 text-xs text-muted flex-wrap">
                     <span>
                       {new Date(a.at).toLocaleTimeString('fr-FR', {
                         hour: '2-digit',
@@ -173,12 +173,12 @@ export default function LayoutActionPanel({ actions, className = '' }: LayoutAct
                       })}
                     </span>
                     {ctx?.storyLabel && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 font-semibold text-[10px]">
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 font-semibold text-xs">
                         <Building2 className="w-2.5 h-2.5" /> {ctx.storyLabel}
                       </span>
                     )}
                     {ctx?.source && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-muted border border-border text-foreground font-semibold text-[10px]">
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-muted border border-border text-foreground font-semibold text-xs">
                         {sourceIcons[ctx.source] || null}
                         {LAYOUT_ACTION_SOURCE_LABELS[ctx.source] || ctx.source}
                       </span>

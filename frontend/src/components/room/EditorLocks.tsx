@@ -182,7 +182,7 @@ export function LockedSectionCard({
         <Lock className="h-3.5 w-3.5 text-muted" aria-hidden />
         {title}
         {planLabel ? (
-          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">{planLabel}</span>
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">{planLabel}</span>
         ) : null}
       </p>
       <p className="text-xs leading-relaxed text-muted">{description}</p>

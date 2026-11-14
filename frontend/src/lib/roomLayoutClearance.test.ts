@@ -593,3 +593,41 @@ describe('règles architecturales des portes et murs', () => {
     assert.ok(CLEARANCE_PRESETS.pmr.tableToTable! > CLEARANCE_PRESETS.standard.tableToTable!);
   });
 });
+
+describe('rangées et murs', () => {
+  const room = (furniture: unknown[]) => ({
+    canvas: { widthM: 18, heightM: 12 },
+    roomOutline: { x: 5, y: 5, w: 90, h: 90, shape: 'rectangle' },
+    furniture,
+    fixtures: [],
+  });
+
+  it('une longue rangée parallèle au mur, à 1,6 m de lui, n’est pas « encastrée »', () => {
+    const report = detectLayoutClearanceConflicts(room([
+      { id: 'r1', kind: 'row', label: 'Rangée 1', seatCount: 12, x: 50, y: 18.5 },
+    ]) as never);
+    assert.equal(report.conflicts.filter((c) => c.type === 'wall_penetration').length, 0);
+  });
+
+  it('une rangée qui touche vraiment le mur reste signalée', () => {
+    const report = detectLayoutClearanceConflicts(room([
+      { id: 'r1', kind: 'row', label: 'Rangée 1', seatCount: 4, x: 94, y: 50 },
+    ]) as never);
+    assert.ok(report.conflicts.some((c) => c.type === 'wall_penetration' && c.severity === 'error'));
+  });
+
+  it('une banquette poussée contre le mur par sa table est ramenée dans la salle', () => {
+    const out = enforceRealLayoutClearances({
+      canvas: { widthM: 20, heightM: 24 },
+      roomOutline: { x: 5, y: 5, w: 90, h: 90, shape: 'rectangle' },
+      furniture: [
+        { id: 'b', kind: 'row', label: 'Banquette', seatCount: 4, x: 88, y: 32 },
+        { id: 't', kind: 'table', name: 'Table', shape: 'square', capacity: 4, x: 82, y: 32 },
+      ],
+      fixtures: [],
+    } as never);
+    const banquette = out.furniture.find((f: { id: string }) => f.id === 'b');
+    // Mur à x = 19 m (95 %) : la banquette (2 m de long) doit finir avant.
+    assert.ok((banquette.x / 100) * 20 + 1 < 19, `x = ${banquette.x}`);
+  });
+});
