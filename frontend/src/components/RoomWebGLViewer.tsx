@@ -4960,7 +4960,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
             Visite guidée · {tourCaption || 'entrée par la porte'}
           </div>
         </div>
-      ) : presentationMode ? (
+      ) : film ? null : presentationMode ? (
         <div className="pointer-events-none absolute bottom-2 left-2">
           <div className="rounded-md bg-foreground/85 px-2 py-1 text-xs font-bold text-background">
             Présentation · la salle tourne toute seule
