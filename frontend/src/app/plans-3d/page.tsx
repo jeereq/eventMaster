@@ -91,6 +91,23 @@ const INITIAL_SHOWCASE_PLANS: ShowcasePlanData[] = SHOWCASE_TEMPLATES.map((item,
   };
 });
 
+/**
+ * Modèles intégrés publiés après coup : une vitrine déjà personnalisée côté
+ * serveur ne les contient pas encore. On les ajoute en fin de liste, sauf si
+ * un administrateur les a retirés (`dismissedIds`).
+ */
+const SHOWCASE_PLANS_ADDED_LATER = ['appartement-temoin-maquette'];
+
+function withLaterBuiltinPlans(plans: ShowcasePlanData[], dismissedIds: unknown): ShowcasePlanData[] {
+  const dismissed = new Set(Array.isArray(dismissedIds) ? dismissedIds.map(String) : []);
+  const present = new Set(plans.map((p) => p.id));
+  let order = plans.reduce((max, p) => Math.max(max, Number(p.order) || 0), 0);
+  const extra = INITIAL_SHOWCASE_PLANS
+    .filter((p) => p.id !== undefined && SHOWCASE_PLANS_ADDED_LATER.includes(p.id) && !present.has(p.id) && !dismissed.has(p.id))
+    .map((p) => ({ ...p, order: (order += 1) }));
+  return extra.length > 0 ? [...plans, ...extra] : plans;
+}
+
 const CATEGORIES = [
   { id: 'all', label: 'Tous' },
   { id: 'wedding', label: 'Mariages' },
@@ -186,7 +203,7 @@ export default function Plans3DPage() {
       .get('/public/showcase-plans')
       .then((data: any) => {
         if (isMounted && data?.plans && Array.isArray(data.plans) && data.plans.length > 0) {
-          setShowcasePlans(data.plans);
+          setShowcasePlans(withLaterBuiltinPlans(data.plans, data.dismissedIds));
         }
       })
       .catch((err) => {
