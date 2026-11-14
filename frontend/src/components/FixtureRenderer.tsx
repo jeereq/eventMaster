@@ -17,6 +17,7 @@ import {
 import { ZONE_MATERIAL_COLORS } from '@/lib/roomWebGLMaterials';
 import { LANDSCAPE_STYLE_META, poolOutlineSvgPath, type LandscapeStyle, type PoolShape } from '@/lib/roomOutdoorUtils';
 import { getCroppedBackgroundStyle } from '@/lib/imageCropUtils';
+import { HOME_FURNITURE_META, type HomeFurnitureStyle } from '@/lib/roomHomeFurniture';
 import FlowerRenderer from '@/components/FlowerRenderer';
 import { Sparkles, DoorOpen, ShieldAlert } from 'lucide-react';
 
@@ -1102,6 +1103,22 @@ export default function FixtureRenderer({
     );
   }
 
+  if (fixture.kind === 'homeFurniture') {
+    const style: HomeFurnitureStyle = fixture.homeStyle ?? 'bed';
+    return (
+      <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
+        <div className={`relative w-full h-full overflow-hidden border border-amber-700/50 shadow-sm ${style === 'coffeeTable' ? 'rounded-full' : style === 'bathtub' || style === 'armchair' ? 'rounded-xl' : 'rounded-sm'}`} style={{ background: HOME_FURNITURE_META[style].color }}>
+          <HomeFurniturePlanGlyph style={style} />
+          {showLabel && style !== 'rug' ? (
+            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 z-10 text-[7px] font-black uppercase text-amber-950 bg-white/85 px-1 rounded shadow-xs whitespace-nowrap">
+              {fixture.label || HOME_FURNITURE_META[style].label}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
   if (fixture.kind === 'landscape') {
     const style: LandscapeStyle = fixture.landscapeStyle ?? 'oak';
     return (
@@ -1247,4 +1264,47 @@ export default function FixtureRenderer({
       )}
     </div>
   );
+}
+
+/** Pictogramme vu de dessus pour le mobilier résidentiel (plan 2D). */
+function HomeFurniturePlanGlyph({ style }: { style: HomeFurnitureStyle }) {
+  if (style === 'bed') {
+    return (
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+        <rect x="4" y="2" width="92" height="10" fill="#e8dcc6" />
+        <rect x="8" y="14" width="84" height="84" rx="4" fill="#f3eee4" />
+        <rect x="14" y="17" width="32" height="14" rx="4" fill="#fbf8f2" stroke="#d6cbb6" />
+        <rect x="54" y="17" width="32" height="14" rx="4" fill="#fbf8f2" stroke="#d6cbb6" />
+        <rect x="8" y="50" width="84" height="48" rx="3" fill="#d9c7a7" />
+      </svg>
+    );
+  }
+  if (style === 'wardrobe' || style === 'kitchenRun' || style === 'tvUnit') {
+    return (
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <line key={i} x1={(i + 1) * (100 / 7)} y1="0" x2={(i + 1) * (100 / 7)} y2="100" stroke="#8a6a45" strokeWidth="1.2" />
+        ))}
+      </svg>
+    );
+  }
+  if (style === 'kitchenIsland') {
+    return (
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+        <rect x="3" y="3" width="94" height="70" fill="#ece7dd" />
+        <rect x="14" y="18" width="24" height="30" rx="3" fill="#9ca3af" />
+      </svg>
+    );
+  }
+  if (style === 'bathtub') {
+    return (
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+        <rect x="10" y="14" width="80" height="72" rx="30" fill="#cfe3ea" />
+      </svg>
+    );
+  }
+  if (style === 'coffeeTable') {
+    return <span className="absolute inset-[22%] rounded-full bg-[#b98d5c]/40" />;
+  }
+  return null;
 }

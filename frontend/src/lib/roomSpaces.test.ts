@@ -61,6 +61,16 @@ describe('listRoomSpaces', () => {
     assert.deepEqual(spaces.map((s) => s.title), ['Bar 1', 'Bar 2']);
   });
 
+  it('une table unique est nommée et sélectionnable', () => {
+    const spaces = listRoomSpaces(blueprint({
+      furniture: [
+        { id: 'd', kind: 'table', name: 'Table à manger', shape: 'rectangular', capacity: 6, chairType: 'chiavari', x: 60, y: 40 },
+      ],
+    } as Partial<RoomLayoutBlueprint>));
+    assert.equal(spaces[0].title, 'Table à manger');
+    assert.deepEqual(spaces[0].selection, { kind: 'table', id: 'd' });
+  });
+
   it('retourne une liste vide pour une salle vide', () => {
     assert.deepEqual(listRoomSpaces(blueprint({})), []);
   });
