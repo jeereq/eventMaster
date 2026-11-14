@@ -7079,6 +7079,8 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
           locked: item.locked ?? false,
           hiddenSeatIndices: item.hiddenSeatIndices,
           pmrSeatIndices: item.pmrSeatIndices,
+          ...(item.seatingSide === 'oneSide' ? { seatingSide: 'oneSide' as const } : {}),
+          ...(item.rotation ? { rotation: item.rotation } : {}),
         };
       }
 
@@ -7096,6 +7098,7 @@ export function blueprintToTablePlan(blueprint: RoomLayoutBlueprint | null | und
         seats,
         locked: true,
         pmrSeatIndices: item.pmrSeatIndices,
+        ...(item.rotation ? { rotation: item.rotation } : {}),
         rowMeta: {
           tier: item.tier,
           curve: item.curve ?? 0,

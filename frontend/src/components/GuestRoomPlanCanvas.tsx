@@ -10,7 +10,7 @@ import {
   furnitureDepthStyle,
 } from '@/lib/roomFloorUtils';
 import FloorDepthFrame from '@/components/FloorDepthFrame';
-import { getTableVisualStyle, getTableShapeLabel, getSeatCoordinates } from '@/lib/tablePlanUtils';
+import { getTableVisualStyle, getTableShapeLabel, getSeatCoordinates, planRotationScreenDeg, rotateSeatCoordinates } from '@/lib/tablePlanUtils';
 import {
   computeFitZoom,
   getGuestTableMarkerSize,
@@ -548,17 +548,25 @@ export default function GuestRoomPlanCanvas({
                         height: markerSize,
                         ...tableVisual.style,
                         backgroundColor: tableVisual.style?.backgroundColor ?? tableVisual.style?.backgroundImage ? undefined : color,
+                        // Même sens de rotation que la vue 3D.
+                        rotate: planRotationScreenDeg(table.rotation) ? `${planRotationScreenDeg(table.rotation)}deg` : undefined,
                       }}
                       aria-label={`Table ${table.name}${isGuest ? ' (Votre table)' : ''}`}
                     >
-                      <span className="text-[9px] font-black text-foreground leading-none px-0.5 text-center line-clamp-2">
+                      <span
+                        className="text-[9px] font-black text-foreground leading-none px-0.5 text-center line-clamp-2"
+                        style={planRotationScreenDeg(table.rotation) ? { rotate: `${-planRotationScreenDeg(table.rotation)}deg` } : undefined}
+                      >
                         {table.name.replace(/^Table\s*/i, 'T')}
                       </span>
                     </button>
 
                     {/* Sièges / Chaises disposés autour de la table */}
                     {table.capacity > 0 && Array.from({ length: Math.min(table.capacity, 16) }).map((_, seatIdx) => {
-                      const coords = getSeatCoordinates(table.shape, table.capacity, seatIdx, seatRadius, table.seatingSide);
+                      const coords = rotateSeatCoordinates(
+                        getSeatCoordinates(table.shape, table.capacity, seatIdx, seatRadius, table.seatingSide),
+                        table.rotation,
+                      );
                       const isMySeat = isGuest && typeof mySeatIdx === 'number' && seatIdx === mySeatIdx;
 
                       if (isMySeat) {

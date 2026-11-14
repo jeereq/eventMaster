@@ -32,6 +32,8 @@ export type PlanTable = {
   hiddenSeatIndices?: number[];
   pmrSeatIndices?: number[];
   seatingSide?: 'around' | 'oneSide';
+  /** Rotation de la table / rangée en degrés (convention de la vue 3D). */
+  rotation?: number;
 };
 
 export type SeatInventoryItem = {
@@ -51,6 +53,7 @@ export type SeatInventoryItem = {
   isPmr?: boolean;
   seatCode?: string;
   seatingSide?: 'around' | 'oneSide';
+  rotation?: number;
 };
 
 export function planTables(tablePlan: unknown): PlanTable[] {
@@ -124,6 +127,7 @@ export function buildSeatInventoryItems(
         isPmr: isPmrSeat(table, i),
         seatCode: table.rowMeta?.seatCodes?.[i],
         ...(table.seatingSide === 'oneSide' ? { seatingSide: 'oneSide' as const } : {}),
+        ...(Number.isFinite(table.rotation) && table.rotation ? { rotation: Number(table.rotation) } : {}),
       });
     }
   }

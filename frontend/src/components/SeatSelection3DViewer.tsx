@@ -39,6 +39,7 @@ export type SeatSelection3DRow = {
   chairMeta?: SeatChairMeta | null;
   isPmr?: boolean;
   seatCode?: string | null;
+  rotation?: number | null;
 };
 
 export type SeatSelection3DMeta = {
@@ -149,6 +150,7 @@ export default function SeatSelection3DViewer({
       pricingZoneName: string | null;
       rowMeta?: SeatRowMeta | null;
       chairMeta?: SeatChairMeta | null;
+      rotation?: number | null;
     }>();
 
     for (const s of seats) {
@@ -169,6 +171,7 @@ export default function SeatSelection3DViewer({
           pricingZoneName: s.pricingZoneName,
           rowMeta: s.rowMeta ?? null,
           chairMeta: s.chairMeta ?? null,
+          rotation: s.rotation ?? null,
         });
       }
     }
@@ -207,6 +210,7 @@ export default function SeatSelection3DViewer({
         tableColor: zoneColor,
         rowMeta: t.rowMeta ?? undefined,
         chairMeta: t.chairMeta ?? undefined,
+        rotation: t.rotation ?? undefined,
       };
     });
   }, [tablesList, zoneColorById]);

@@ -8,7 +8,7 @@ import { PlanSceneControls, PlanZoomControls, usePlanFullscreen } from '@/compon
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import { resolveFloorStyle } from '@/lib/roomFloorUtils';
 import type { FloorType } from '@/lib/roomThemeUtils';
-import { getSeatCoordinates, getTableVisualStyle, type TableSeatingSide, type TableShape } from '@/lib/tablePlanUtils';
+import { getSeatCoordinates, getTableVisualStyle, planRotationScreenDeg, type TableSeatingSide, type TableShape } from '@/lib/tablePlanUtils';
 import { getRowSeatCoordinates2D } from '@/lib/roomAmphitheaterGeom';
 import {
   checkoutPlanShape,
@@ -40,6 +40,8 @@ export type SeatSelectionSeat = {
   isPmr?: boolean;
   seatCode?: string | null;
   seatingSide?: TableSeatingSide | null;
+  /** Rotation de la table / rangée (degrés, convention de la vue 3D). */
+  rotation?: number | null;
 };
 
 type PlanFixture = {
@@ -96,6 +98,7 @@ type PlanTable = {
   rowMeta?: SeatRowMeta | null;
   chairMeta?: SeatChairMeta | null;
   seatingSide?: TableSeatingSide | null;
+  rotation?: number | null;
 };
 
 export default function SeatSelectionPlanCanvas({
@@ -163,6 +166,7 @@ export default function SeatSelectionPlanCanvas({
           rowMeta: s.rowMeta ?? null,
           chairMeta: s.chairMeta ?? null,
           seatingSide: s.seatingSide ?? null,
+          rotation: s.rotation ?? null,
         });
       }
     }
@@ -322,6 +326,9 @@ export default function SeatSelectionPlanCanvas({
             const isChair = isStandaloneChairPlan(table.chairMeta);
             const visual = getTableVisualStyle(table.shape, Boolean(tableHasSelection || isFocused), undefined);
             const availableSeatsCount = table.seats.filter((s) => s.available).length;
+            // Même sens de rotation que la vue 3D ; une chaise seule s’oriente via son dossier.
+            const screenRot = isChair ? 0 : planRotationScreenDeg(table.rotation);
+            const upright = screenRot ? { transform: `rotate(${-screenRot}deg)` } : undefined;
 
             return (
               <div
@@ -351,10 +358,13 @@ export default function SeatSelectionPlanCanvas({
                     tableHasSelection && 'ring-2 ring-primary ring-offset-2 ring-offset-background',
                     isFocused && !tableHasSelection && 'ring-2 ring-amber-500 ring-offset-1 ring-offset-background',
                   )}
-                  style={isRow || isChair ? undefined : visual.style}
+                  style={{
+                    ...(isRow || isChair ? {} : visual.style),
+                    ...(screenRot ? { transform: `rotate(${screenRot}deg)` } : {}),
+                  }}
                   title={`${table.name} (${availableSeatsCount}/${table.capacity} places libres)`}
                 >
-                  <div className={cn('px-1 relative z-10 pointer-events-none', isChair && 'hidden sm:block')}>
+                  <div className={cn('px-1 relative z-10 pointer-events-none', isChair && 'hidden sm:block')} style={upright}>
                     <div className="truncate max-w-[5.5rem] sm:max-w-[72px] font-semibold text-[11px] sm:text-[10px]">{table.name}</div>
                     {table.seats[0]?.pricingZoneName && (
                       <div
@@ -372,7 +382,7 @@ export default function SeatSelectionPlanCanvas({
 
                   {table.seats.map((seat) => {
                     const coords = isChair
-                      ? { x: 0, y: 0, rotationDeg: table.chairMeta?.rotation ?? 0 }
+                      ? { x: 0, y: 0, rotationDeg: planRotationScreenDeg(table.chairMeta?.rotation) }
                       : isTheaterRowPlan(table.shape, table.rowMeta)
                         ? getRowSeatCoordinates2D(table.capacity, seat.seatIndex, table.rowMeta)
                         : getSeatCoordinates(table.shape, table.capacity, seat.seatIndex, undefined, table.seatingSide);
@@ -425,7 +435,7 @@ export default function SeatSelectionPlanCanvas({
                             opacity: seat.available ? 0.85 : 0.35,
                           }}
                         />
-                        <span className="relative z-10">{isChair && seat.isPmr ? 'PMR' : seat.seatIndex + 1}</span>
+                        <span className="relative z-10 inline-block" style={upright}>{isChair && seat.isPmr ? 'PMR' : seat.seatIndex + 1}</span>
                         {badge != null && (
                           <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-emerald-500 text-white text-[7px] font-black flex items-center justify-center border border-white z-20">
                             {badge}

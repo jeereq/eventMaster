@@ -423,6 +423,7 @@ export async function getGuestRsvpDetails(req: Request, res: Response) {
           tableColor: table.tableColor,
           tableImageUrl: table.tableImageUrl,
           seatingSide: table.seatingSide,
+          rotation: typeof table.rotation === 'number' ? table.rotation : undefined,
         }));
 
         if (Array.isArray(plan.fixtures)) {

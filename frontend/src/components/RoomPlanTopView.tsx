@@ -17,6 +17,7 @@ import { getRoomTheme } from '@/lib/roomThemeUtils';
 import { resolveFloorTopViewStyle } from '@/lib/roomFloorUtils';
 import { isProceduralFloor, proceduralFloorDataUrl } from '@/lib/roomFloorProcedural';
 import { resolveChairVisual } from '@/lib/roomChairVisual';
+import { planRotationScreenDeg } from '@/lib/tablePlanUtils';
 import { TABLE_DEFAULT_TEXTURE, TABLE_SURFACE_TEXTURES, resolveTableSurface } from '@/lib/roomTableSurface';
 import { zoneTopViewStyle } from '@/lib/roomZoneSurface';
 import {
@@ -227,8 +228,7 @@ export default function RoomPlanTopView({ blueprint, showLabels = true, classNam
                 height: `${item.h}%`,
                 ...zoneTopViewStyle(item, (item.w / 100) * W, (item.h / 100) * H),
                 boxShadow: 'inset 0 0 0 1px rgba(15,23,42,0.18)',
-                // Même sens de rotation que la 3D (rotation Y Three.js = sens anti-horaire vu du dessus).
-                transform: item.rotation ? `rotate(${-item.rotation}deg)` : undefined,
+                transform: item.rotation ? `rotate(${planRotationScreenDeg(item.rotation)}deg)` : undefined,
               }}
             />
           ) : null,
@@ -249,7 +249,7 @@ export default function RoomPlanTopView({ blueprint, showLabels = true, classNam
           {fixtures.map((f) => (
             <FixtureRenderer
               key={f.id}
-              fixture={f.rotation ? { ...f, rotation: -f.rotation } : f}
+              fixture={f}
               showLabel={showLabels}
               deckStyle={f.kind === 'stage' || f.kind === 'podium' ? {
                 ...zoneTopViewStyle({ material: f.material ?? 'wood' }, (f.w / 100) * W, (f.h / 100) * H),
