@@ -5,8 +5,9 @@ import {
   savePlatformSettingsDurable,
   canManageShowcasePlans,
   type ShowcaseRoomPlanItem,
-  DEFAULT_SHOWCASE_ROOM_PLANS,
+  resolveShowcaseRoomPlans,
 } from '../services/platformSettingsService';
+import { SHOWCASE_PLANS_ADDED_LATER } from '../services/showcasePlanMerge';
 
 function getUserDisplayName(user?: { id?: string; role?: string }): string {
   if (!user) return 'Super Admin';
@@ -26,10 +27,7 @@ export async function getPublicShowcasePlans(req: Request, res: Response) {
     const canManage = canManageShowcasePlans(user);
 
     const settings = loadPlatformSettings();
-    const allPlans: ShowcaseRoomPlanItem[] =
-      Array.isArray(settings.showcaseRoomPlans) && settings.showcaseRoomPlans.length > 0
-        ? settings.showcaseRoomPlans
-        : DEFAULT_SHOWCASE_ROOM_PLANS;
+    const allPlans: ShowcaseRoomPlanItem[] = resolveShowcaseRoomPlans(settings);
 
     const sorted = [...allPlans].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
@@ -37,6 +35,7 @@ export async function getPublicShowcasePlans(req: Request, res: Response) {
       return res.json({
         plans: sorted,
         canManage: true,
+        dismissedIds: settings.showcaseRoomPlansDismissed ?? [],
       });
     }
 
@@ -44,6 +43,7 @@ export async function getPublicShowcasePlans(req: Request, res: Response) {
     return res.json({
       plans: publicOnly,
       canManage: false,
+      dismissedIds: settings.showcaseRoomPlansDismissed ?? [],
     });
   } catch (error: any) {
     console.error('[ShowcasePlan] Erreur récupération plans publics:', error);
@@ -62,10 +62,7 @@ export async function getAdminShowcasePlans(req: AuthenticatedRequest, res: Resp
     }
 
     const settings = loadPlatformSettings();
-    const allPlans: ShowcaseRoomPlanItem[] =
-      Array.isArray(settings.showcaseRoomPlans) && settings.showcaseRoomPlans.length > 0
-        ? settings.showcaseRoomPlans
-        : DEFAULT_SHOWCASE_ROOM_PLANS;
+    const allPlans: ShowcaseRoomPlanItem[] = resolveShowcaseRoomPlans(settings);
 
     const sorted = [...allPlans].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
@@ -106,10 +103,7 @@ export async function createShowcasePlan(req: AuthenticatedRequest, res: Respons
     }
 
     const settings = loadPlatformSettings();
-    const currentPlans: ShowcaseRoomPlanItem[] =
-      Array.isArray(settings.showcaseRoomPlans) && settings.showcaseRoomPlans.length > 0
-        ? [...settings.showcaseRoomPlans]
-        : [...DEFAULT_SHOWCASE_ROOM_PLANS];
+    const currentPlans: ShowcaseRoomPlanItem[] = resolveShowcaseRoomPlans(settings);
 
     const newId = `showcase-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     const nextOrder = Number.isFinite(Number(order)) ? Number(order) : currentPlans.length + 1;
@@ -161,10 +155,7 @@ export async function updateShowcasePlan(req: AuthenticatedRequest, res: Respons
     }
 
     const settings = loadPlatformSettings();
-    const currentPlans: ShowcaseRoomPlanItem[] =
-      Array.isArray(settings.showcaseRoomPlans) && settings.showcaseRoomPlans.length > 0
-        ? [...settings.showcaseRoomPlans]
-        : [...DEFAULT_SHOWCASE_ROOM_PLANS];
+    const currentPlans: ShowcaseRoomPlanItem[] = resolveShowcaseRoomPlans(settings);
 
     const index = currentPlans.findIndex((p) => p.id === id);
     if (index === -1) {
@@ -229,17 +220,20 @@ export async function deleteShowcasePlan(req: AuthenticatedRequest, res: Respons
     }
 
     const settings = loadPlatformSettings();
-    const currentPlans: ShowcaseRoomPlanItem[] =
-      Array.isArray(settings.showcaseRoomPlans) && settings.showcaseRoomPlans.length > 0
-        ? [...settings.showcaseRoomPlans]
-        : [...DEFAULT_SHOWCASE_ROOM_PLANS];
+    const currentPlans: ShowcaseRoomPlanItem[] = resolveShowcaseRoomPlans(settings);
 
     const filtered = currentPlans.filter((p) => p.id !== id);
     if (filtered.length === currentPlans.length) {
       return res.status(404).json({ error: 'Modèle de salle introuvable.' });
     }
 
-    await savePlatformSettingsDurable({ showcaseRoomPlans: filtered });
+    // Un plan intégré retiré ne doit pas être réajouté automatiquement.
+    const planId = String(id);
+    const dismissed = SHOWCASE_PLANS_ADDED_LATER.includes(planId)
+      ? [...new Set([...(settings.showcaseRoomPlansDismissed ?? []), planId])]
+      : settings.showcaseRoomPlansDismissed ?? [];
+
+    await savePlatformSettingsDurable({ showcaseRoomPlans: filtered, showcaseRoomPlansDismissed: dismissed });
 
     return res.json({
       success: true,
@@ -267,10 +261,7 @@ export async function updateShowcasePlansSelection(req: AuthenticatedRequest, re
     }
 
     const settings = loadPlatformSettings();
-    const currentPlans: ShowcaseRoomPlanItem[] =
-      Array.isArray(settings.showcaseRoomPlans) && settings.showcaseRoomPlans.length > 0
-        ? [...settings.showcaseRoomPlans]
-        : [...DEFAULT_SHOWCASE_ROOM_PLANS];
+    const currentPlans: ShowcaseRoomPlanItem[] = resolveShowcaseRoomPlans(settings);
 
     const updatesMap = new Map<string, { isPublished?: boolean; order?: number }>();
     for (const item of items) {

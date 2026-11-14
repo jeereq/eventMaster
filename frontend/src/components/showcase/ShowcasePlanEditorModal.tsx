@@ -58,6 +58,7 @@ const CATEGORY_OPTIONS = [
   { id: 'pro', label: 'Conférences & Entreprise' },
   { id: 'cocktail', label: 'Cocktails & Debout' },
   { id: 'outdoor', label: 'Plein air & Jardins' },
+  { id: 'residence', label: 'Résidences & Appartements' },
   { id: 'other', label: 'Autre agencement' },
 ];
 

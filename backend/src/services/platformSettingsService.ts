@@ -1,3 +1,4 @@
+import { mergeLaterBuiltinShowcasePlans, sanitizeShowcaseDismissedIds } from './showcasePlanMerge';
 import fs from 'fs';
 import path from 'path';
 import { Prisma } from '@prisma/client';
@@ -303,7 +304,35 @@ export const DEFAULT_SHOWCASE_ROOM_PLANS: ShowcaseRoomPlanItem[] = [
     isPublished: true,
     order: 15,
   },
+  {
+    id: 'appartement-temoin-maquette',
+    name: 'Appartement témoin',
+    label: 'Appartement témoin en maquette',
+    category: 'residence',
+    description: 'Maquette bois avec baies vitrées : chambre, dressing, salle de bain, séjour et cuisine ouverte',
+    outlineShape: 'rectangle',
+    presetId: 'appartement-temoin-maquette',
+    isPublished: true,
+    order: 16,
+  },
 ];
+
+/**
+ * Plans vitrine effectifs : la liste enregistrée (ou les plans par défaut),
+ * complétée des plans intégrés ajoutés depuis, sauf ceux retirés par un admin.
+ */
+export function resolveShowcaseRoomPlans(
+  settings: Pick<PlatformSettings, 'showcaseRoomPlans'> & { showcaseRoomPlansDismissed?: unknown },
+): ShowcaseRoomPlanItem[] {
+  const stored = Array.isArray(settings.showcaseRoomPlans) && settings.showcaseRoomPlans.length > 0
+    ? settings.showcaseRoomPlans
+    : DEFAULT_SHOWCASE_ROOM_PLANS;
+  return mergeLaterBuiltinShowcasePlans(
+    stored,
+    DEFAULT_SHOWCASE_ROOM_PLANS,
+    sanitizeShowcaseDismissedIds(settings.showcaseRoomPlansDismissed),
+  );
+}
 
 export function sanitizeShowcaseRoomPlans(raw: unknown): ShowcaseRoomPlanItem[] {
   if (!Array.isArray(raw) || raw.length === 0) {
@@ -475,6 +504,8 @@ export interface PlatformSettings {
   donationsAccess: DonationsAccess;
   /** Plans de salle 2D / 3D affichés en vitrine publique sur /plans-3d. */
   showcaseRoomPlans: ShowcaseRoomPlanItem[];
+  /** Plans vitrine intégrés retirés par un administrateur (à ne pas réajouter). */
+  showcaseRoomPlansDismissed: string[];
 }
 
 /** Champs exposés publiquement (sans secrets). */
@@ -591,6 +622,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
   subscriptionDiscountAccess: DEFAULT_SUBSCRIPTION_DISCOUNT_ACCESS,
   donationsAccess: DEFAULT_DONATIONS_ACCESS,
   showcaseRoomPlans: DEFAULT_SHOWCASE_ROOM_PLANS,
+  showcaseRoomPlansDismissed: [],
 };
 
 export const PLATFORM_CITY_CATALOG = [
@@ -904,6 +936,7 @@ function buildNextSettings(
   next.subscriptionDiscountAccess = sanitizeSubscriptionDiscountAccess(next.subscriptionDiscountAccess);
   next.donationsAccess = sanitizeDonationsAccess(next.donationsAccess);
   next.showcaseRoomPlans = sanitizeShowcaseRoomPlans(next.showcaseRoomPlans);
+  next.showcaseRoomPlansDismissed = sanitizeShowcaseDismissedIds(next.showcaseRoomPlansDismissed);
   next.ticketPaymentProvider = 'flexpay_card';
   next.saasPaymentMode = next.saasPaymentMode === 'flexpay' ? 'flexpay' : 'manual';
   next.onlinePaymentsEnabled = next.onlinePaymentsEnabled !== false;
