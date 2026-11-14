@@ -3330,7 +3330,7 @@ function SpaceHighlight({ space, reduceMotion }: { space: RoomSpace; reduceMotio
           />
         </mesh>
       ))}
-      <Html position={[0, Math.max(1.6, space.focusHeightM + 1.1), 0]} center zIndexRange={[20, 0]} style={{ pointerEvents: 'none' }}>
+      <Html position={[0, Math.max(1.6, space.focusHeightM + 1.1), 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
         <div className="whitespace-nowrap rounded-lg border border-amber-300/60 bg-stone-950/85 px-2.5 py-1.5 text-left shadow-lg backdrop-blur-sm">
           <div className="text-[13px] font-semibold leading-tight text-amber-100">{space.title}</div>
           <div className="text-[11px] leading-tight text-stone-300">{space.details}</div>
@@ -4281,6 +4281,11 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       { widthM, depthM: heightM, fovDeg: qualitySettings.fov, aspect: viewAspect() },
       stage && stage.id !== space.id ? stage.center : undefined,
     );
+    // Mobile : le panneau est une feuille en bas ; on vise plus bas pour remonter l’espace dans le cadre.
+    const node = viewerRootRef.current;
+    if (node && node.clientWidth < 640) {
+      pose.target[1] -= (pose.pos[1] - pose.target[1]) * 0.45;
+    }
     setCameraTargetPose({ pos: new THREE.Vector3(...pose.pos), target: new THREE.Vector3(...pose.target) });
   }, [blueprint.canvas, qualitySettings.fov, viewAspect, spaces]);
 
@@ -4580,7 +4585,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       {/* Panneau « Espaces » : liste, survol = surlignage 3D, clic = la caméra s’envole vers l’espace. */}
       {spacesOpen && !walkthroughActive && !wallEditMode && spaces.length > 0 ? (
         <div
-          className="absolute right-2.5 top-16 bottom-12 z-10 flex w-[min(18rem,calc(100%-1.25rem))] flex-col overflow-hidden rounded-2xl border border-border/70 bg-background/90 shadow-lg backdrop-blur-md dark:bg-surface-elevated/90 pointer-events-auto"
+          className="absolute inset-x-2.5 bottom-12 z-10 flex max-h-[46%] flex-col sm:inset-x-auto sm:right-2.5 sm:top-16 sm:max-h-none sm:w-72 overflow-hidden rounded-2xl border border-border/70 bg-background/90 shadow-lg backdrop-blur-md dark:bg-surface-elevated/90 pointer-events-auto"
           role="region"
           aria-label="Espaces de la salle"
         >
