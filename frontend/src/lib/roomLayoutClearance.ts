@@ -609,8 +609,6 @@ export function detectLayoutClearanceConflicts(
       const sz1 = estimateTableSizeMeters(t1.shape, t1.capacity, t1.rotation, t1);
       const sz2 = estimateTableSizeMeters(t2.shape, t2.capacity, t2.rotation, t2);
 
-      const dxM = Math.abs(pctToM_X(t2.x) - pctToM_X(t1.x));
-      const dyM = Math.abs(pctToM_Y(t2.y) - pctToM_Y(t1.y));
       const dist = Math.hypot(pctToM_X(t2.x) - pctToM_X(t1.x), pctToM_Y(t2.y) - pctToM_Y(t1.y));
       const targetCenter = sz1.radiusM + sz2.radiusM + clearances.tableToTable;
 
@@ -1365,7 +1363,7 @@ export function enforceRealLayoutClearances<T extends MinimalBlueprint>(
         if (!sameStory(fx.storyId, wall.storyId) || wall.id.startsWith('boundary_wall_')) continue;
         const fxCx = fx.xM + fx.wM / 2;
         const fxCy = fx.yM + fx.hM / 2;
-        let { distM, nx, ny } = distancePointToSegmentM(fxCx, fxCy, wall.x1M, wall.y1M, wall.x2M, wall.y2M);
+        const { distM, nx, ny } = distancePointToSegmentM(fxCx, fxCy, wall.x1M, wall.y1M, wall.x2M, wall.y2M);
         const minReq = Math.min(fx.wM, fx.hM) / 2 + wall.thicknessM / 2;
         if (distM < minReq) {
           const pushM = minReq - distM;

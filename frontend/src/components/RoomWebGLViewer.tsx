@@ -66,7 +66,6 @@ import {
   getWallTexture,
   getDoorMaterialProps,
   wallTextureForSurface,
-  getStairWoodMap,
   resolveChairMap,
   resolveFloorMap,
   resolveTableMaterial,
@@ -1053,6 +1052,30 @@ function MezzanineStairVoidRail({
 }
 
 /** Dalles d’étages empilés avec trémies d'escalier et garde-corps de mezzanine. */
+/** Rectangle centré (plan XZ, z inversé) percé des trémies d’escalier. */
+function rectShapeWithHoles(
+  halfW: number,
+  halfH: number,
+  holes: Array<{ minX: number; maxX: number; minZ: number; maxZ: number }>,
+) {
+  const shape = new THREE.Shape();
+  shape.moveTo(-halfW, halfH);
+  shape.lineTo(halfW, halfH);
+  shape.lineTo(halfW, -halfH);
+  shape.lineTo(-halfW, -halfH);
+  shape.closePath();
+  for (const h of holes) {
+    const p = new THREE.Path();
+    p.moveTo(h.minX, -h.minZ);
+    p.lineTo(h.maxX, -h.minZ);
+    p.lineTo(h.maxX, -h.maxZ);
+    p.lineTo(h.minX, -h.maxZ);
+    p.closePath();
+    shape.holes.push(p);
+  }
+  return shape;
+}
+
 function StoryStackDecks({
   widthM,
   heightM,
@@ -1114,6 +1137,34 @@ function StoryStackDecks({
     return holes;
   }, [blueprint.fixtures, widthM, heightM, stories]);
 
+  // Dalles percées d’une trémie : calculées pour tous les étages d’un coup
+  // (jamais de hook dans la boucle, sinon ajouter un étage fait planter React).
+  const holeGeometries = useMemo(() => {
+    const out: Record<string, { slab: THREE.ExtrudeGeometry; surf: THREE.ShapeGeometry }> = {};
+    stories.forEach((story, index) => {
+      const holes = index > 0 ? stairHolesByStory[story.id] || [] : [];
+      if (holes.length === 0) return;
+      const slab = new THREE.ExtrudeGeometry(
+        rectShapeWithHoles((widthM * 1.02) / 2, (heightM * 1.02) / 2, holes),
+        { depth: slabH, bevelEnabled: false },
+      );
+      slab.rotateX(-Math.PI / 2);
+      const surf = new THREE.ShapeGeometry(
+        rectShapeWithHoles((widthM * 0.985) / 2, (heightM * 0.985) / 2, holes),
+      );
+      surf.rotateX(-Math.PI / 2);
+      out[story.id] = { slab, surf };
+    });
+    return out;
+  }, [stories, stairHolesByStory, widthM, heightM]);
+
+  useEffect(() => () => {
+    for (const g of Object.values(holeGeometries)) {
+      g.slab.dispose();
+      g.surf.dispose();
+    }
+  }, [holeGeometries]);
+
   return (
     <group>
       {stories.map((story, index) => {
@@ -1122,64 +1173,9 @@ function StoryStackDecks({
         const next = stories[index + 1];
         const storyClear = next ? Math.max(2.4, next.elevationM - elev - slabH) : wallHeightM;
         const storyHoles = index > 0 ? stairHolesByStory[story.id] || [] : [];
-        const hasHoles = storyHoles.length > 0;
 
-        // Géométrie de dalle avec trémie
-        const slabGeo = useMemo(() => {
-          if (!hasHoles) return null;
-          const shape = new THREE.Shape();
-          const halfW = (widthM * 1.02) / 2;
-          const halfH = (heightM * 1.02) / 2;
-          shape.moveTo(-halfW, halfH);
-          shape.lineTo(halfW, halfH);
-          shape.lineTo(halfW, -halfH);
-          shape.lineTo(-halfW, -halfH);
-          shape.closePath();
-
-          for (const h of storyHoles) {
-            const p = new THREE.Path();
-            p.moveTo(h.minX, -h.minZ);
-            p.lineTo(h.maxX, -h.minZ);
-            p.lineTo(h.maxX, -h.maxZ);
-            p.lineTo(h.minX, -h.maxZ);
-            p.closePath();
-            shape.holes.push(p);
-          }
-
-          const geo = new THREE.ExtrudeGeometry(shape, {
-            depth: slabH,
-            bevelEnabled: false,
-          });
-          geo.rotateX(-Math.PI / 2);
-          return geo;
-        }, [hasHoles, storyHoles, widthM, heightM, slabH]);
-
-        // Géométrie de surface supérieure avec trémie
-        const surfGeo = useMemo(() => {
-          if (!hasHoles) return null;
-          const shape = new THREE.Shape();
-          const sHalfW = (widthM * 0.985) / 2;
-          const sHalfH = (heightM * 0.985) / 2;
-          shape.moveTo(-sHalfW, sHalfH);
-          shape.lineTo(sHalfW, sHalfH);
-          shape.lineTo(sHalfW, -sHalfH);
-          shape.lineTo(-sHalfW, -sHalfH);
-          shape.closePath();
-
-          for (const h of storyHoles) {
-            const p = new THREE.Path();
-            p.moveTo(h.minX, -h.minZ);
-            p.lineTo(h.maxX, -h.minZ);
-            p.lineTo(h.maxX, -h.maxZ);
-            p.lineTo(h.minX, -h.maxZ);
-            p.closePath();
-            shape.holes.push(p);
-          }
-
-          const geo = new THREE.ShapeGeometry(shape);
-          geo.rotateX(-Math.PI / 2);
-          return geo;
-        }, [hasHoles, storyHoles, widthM, heightM]);
+        const slabGeo = holeGeometries[story.id]?.slab ?? null;
+        const surfGeo = holeGeometries[story.id]?.surf ?? null;
 
         return (
           <group key={`stack-${story.id}`} position={[0, elev, 0]}>

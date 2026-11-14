@@ -4393,7 +4393,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Comptoir bar avec tabourets, banquettes murales, tables carrées 4 places, tables 2 places et zone cuisine',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       for (let i = 0; i < 4; i++) {
         furniture.push({
@@ -4494,7 +4494,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Comptoir commande & retrait, grandes tables d’hôtes rectangulaires, banquettes et station condiments',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       furniture.push({
         ...createBlueprintTable(1, { shape: 'rectangular', capacity: 10, chairType: 'BANQUET' }),
@@ -4593,7 +4593,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Comptoir barista avec tabourets, salon lounge avec canapé et tables bistrot',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       furniture.push({
         ...createBlueprintRow(1, { seatCount: 4, chairType: 'ARMCHAIR', x: 74, y: 32, label: 'Canapé Lounge' }),
@@ -4689,7 +4689,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Salle intérieure avec bar et baie vitrée donnant sur terrasse extérieure avec tables parasols',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       for (let i = 0; i < 4; i++) {
         furniture.push({
@@ -4771,7 +4771,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Postes de coiffage circulaires avec fauteuils, espace bacs de lavage, accueil caisse et salon d’attente',
     roomType: 'CUSTOM',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       for (let c = 0; c < 2; c++) {
         for (let r = 0; r < 4; r++) {
@@ -4855,7 +4855,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Parcours client fluide inspiré des fast-casuals : comptoir commande POS, retrait, grandes tables d’hôtes, banquettes, station condiments et cuisine inox',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       for (let i = 0; i < 2; i++) {
         furniture.push({
@@ -4983,7 +4983,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Aménagement authentique avec four à pizza en pierre 6\', comptoir ondulé avec tabourets, banquettes cabines et tables de salle',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       // Cabines / Booths le long du mur gauche (numérotées 1 à 8)
       for (let i = 0; i < 6; i++) {
@@ -5112,7 +5112,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Architecture modulaire conteneur maritime : guichet commande, tabourets hauts, escalier d’accès et terrasse rooftop panoramique',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       // Tabourets rez-de-chaussée devant le comptoir container
       for (let s = 0; s < 6; s++) {
@@ -5216,7 +5216,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Grand bar central rond à 360°, pods banquettes courbes semi-circulaires, salons VIP lounge et ambiance feutrée',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       // 12 Tabourets concentriques autour du grand bar circulaire
       for (let i = 0; i < 12; i++) {
@@ -5324,7 +5324,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Disposition professionnelle complète : 16 postes coiffeuses avec miroirs, 5 bacs de lavage, tables de préparation, cabines de soins et accueil',
     roomType: 'CUSTOM',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       // 6 Postes centraux double face
       for (let r = 0; r < 3; r++) {
@@ -5452,7 +5452,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Ambiance chaleureuse avec grande terrasse extérieure abritée sous pergola acier, guirlandes Edison, bar traversant et tables parasols',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       // 6 Tables sous la pergola avec chaises bistrot
       for (let r = 0; r < 2; r++) {
@@ -5585,7 +5585,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Café moderne raffiné avec grand comptoir espresso, vitrines pâtisseries, coin canapé lounge cosy et verrière avec tables de terrasse',
     roomType: 'BANQUET',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       // Tabourets de comptoir
       for (let s = 0; s < 4; s++) {
@@ -5708,7 +5708,7 @@ export const ROOM_LAYOUT_TEMPLATES: RoomLayoutTemplate[] = [
     description: 'Design architectural organique inspiré des appartements modernes : grand canapé courbe, table à manger ronde 8 places, porche voiture et patio',
     roomType: 'CUSTOM',
     outlineShape: 'rectangle',
-    build: (p) => {
+    build: () => {
       const furniture: RoomLayoutBlueprint['furniture'] = [];
       // Grande table à manger ronde 8 places
       furniture.push({

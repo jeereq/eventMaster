@@ -78,9 +78,7 @@ import {
   arrangeDensityLabels,
   chairTypeLabels,
   chairStyleLabels,
-  seatMaterialLabels,
   zoneKindLabels,
-  zoneMaterialLabels,
   doorStyleLabels,
   doorStyleHints,
   aisleStyleLabels,
@@ -111,7 +109,6 @@ import {
   flowerTypeLabels,
   getRoomOutlineClipPath,
   refreshBlueprintMetadata,
-  resolveTableColor,
   roomOutlineLabels,
   roomTypeLabels,
   sanitizeBlueprintLayout,
@@ -212,15 +209,12 @@ import {
   groupLayoutSelection,
   moveLayoutSelectionByDelta,
   rotateLayoutSelection,
-  selectionKey,
   toggleSelectionItem,
   ungroupLayoutSelection,
   selectAllItems,
   selectItemsByKind,
   invertSelection,
-  selectItemsInRect,
   orientSelectionTowards,
-  calculateAngleToPoint,
   type SmartOrientationTarget,
   type AlignMode,
   type LayoutSelectionItem,
@@ -264,7 +258,6 @@ import {
 } from '@/lib/roomThemeUtils';
 import {
   FLOOR_CATEGORIES,
-  FLOOR_TYPE_PICKER_ORDER,
   floorsForCategory,
   floorTypeLabels,
   resolveDepthAmount,
@@ -315,6 +308,7 @@ import {
   type FoundationKind,
 } from '@/lib/roomBuildingUtils';
 import { cn } from '@/lib/cn';
+import { TEMPLATE_CATEGORIES, templateMatchesCategory, type TemplateCategory } from '@/lib/roomTemplateCategories';
 import { supportsOneSideSeating, tablePlateSizeMeters } from '@/lib/tablePlanUtils';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
 import { Alert, Button, Input, Modal } from '@/components/ui';
@@ -462,16 +456,6 @@ function EditorToolGroup({
 }
 
 type SelectableKind = 'table' | 'row' | 'zone' | 'fixture' | 'wall' | 'chair';
-
-type TemplateCategory = 'all' | 'banquet' | 'restaurant' | 'conference' | 'empty';
-
-const TEMPLATE_CATEGORIES: { id: TemplateCategory; label: string }[] = [
-  { id: 'all', label: 'Tous' },
-  { id: 'banquet', label: 'Banquets & Fêtes' },
-  { id: 'restaurant', label: 'Restaurants & Cafés' },
-  { id: 'conference', label: 'Conférences' },
-  { id: 'empty', label: 'Salles & Formes' },
-];
 
 function getDirectionLabel(deg: number): string {
   const norm = ((Math.round(deg) % 360) + 360) % 360;
@@ -894,12 +878,12 @@ export default function RoomLayoutEditor({
   const [amphiTiers, setAmphiTiers] = useState(4);
   const [amphiSeatsPerRow, setAmphiSeatsPerRow] = useState(12);
   const [amphiChairType, setAmphiChairType] = useState<ChairType>('THEATER');
-  const [amphiChairStyle, setAmphiChairStyle] = useState<ChairStyle>('napoleon');
-  const [amphiSeatMaterial, setAmphiSeatMaterial] = useState<SeatMaterial>('velvet');
+  const [amphiChairStyle] = useState<ChairStyle>('napoleon');
+  const [amphiSeatMaterial] = useState<SeatMaterial>('velvet');
   const [amphiAisleSplit, setAmphiAisleSplit] = useState(true);
-  const [quickChandelierStyle, setQuickChandelierStyle] = useState<ChandelierFixtureStyle>('crystalCascade');
-  const [quickDoorStyle, setQuickDoorStyle] = useState<DoorStyle>('frenchDoor');
-  const [quickAisleStyle, setQuickAisleStyle] = useState<AisleStyle>('royalRed');
+  const [quickChandelierStyle] = useState<ChandelierFixtureStyle>('crystalCascade');
+  const [quickDoorStyle] = useState<DoorStyle>('frenchDoor');
+  const [quickAisleStyle] = useState<AisleStyle>('royalRed');
   const [elementsFilter, setElementsFilter] = useState<'all' | LayoutSelectionItem['kind']>('all');
   const [elementsQuery, setElementsQuery] = useState('');
   // Replié par défaut : le panneau s’ouvre sur « Créer le plan » et les réglages.
@@ -941,62 +925,10 @@ export default function RoomLayoutEditor({
     return list;
   }, [floorCategory, floorSearch]);
 
-  const filteredTemplates = useMemo(() => {
-    if (templateCategory === 'all') return ROOM_LAYOUT_TEMPLATES;
-    return ROOM_LAYOUT_TEMPLATES.filter((tpl) => {
-      const id = tpl.id.toLowerCase();
-      if (templateCategory === 'restaurant') {
-        return (
-          id.includes('restaurant') ||
-          id.includes('cafe') ||
-          id.includes('bistrot') ||
-          id.includes('salon') ||
-          id.includes('cocktail') ||
-          id.includes('communal') ||
-          id.includes('fast-casual') ||
-          id.includes('pizzeria') ||
-          id.includes('container') ||
-          id.includes('lounge') ||
-          id.includes('patio') ||
-          id.includes('coffee') ||
-          id.includes('loft')
-        );
-      }
-      if (templateCategory === 'conference') {
-        return (
-          id.includes('conference') ||
-          id.includes('amphi') ||
-          id.includes('board') ||
-          id.includes('class') ||
-          id.includes('theater') ||
-          id.includes('chair')
-        );
-      }
-      if (templateCategory === 'empty') {
-        return id.includes('empty') || id.includes('tent');
-      }
-      return (
-        !id.includes('restaurant') &&
-        !id.includes('cafe') &&
-        !id.includes('bistrot') &&
-        !id.includes('salon') &&
-        !id.includes('fast-casual') &&
-        !id.includes('pizzeria') &&
-        !id.includes('container') &&
-        !id.includes('lounge') &&
-        !id.includes('patio') &&
-        !id.includes('coffee') &&
-        !id.includes('loft') &&
-        !id.includes('conference') &&
-        !id.includes('amphi') &&
-        !id.includes('board') &&
-        !id.includes('class') &&
-        !id.includes('theater') &&
-        !id.includes('empty') &&
-        !id.includes('tent')
-      );
-    });
-  }, [templateCategory]);
+  const filteredTemplates = useMemo(
+    () => ROOM_LAYOUT_TEMPLATES.filter((tpl) => templateMatchesCategory(tpl.id, templateCategory)),
+    [templateCategory],
+  );
 
   const [tplParams, setTplParams] = useState<LayoutParams>({
     tableCount: 8,
@@ -1075,7 +1007,7 @@ export default function RoomLayoutEditor({
     skipHistoryRef.current = false;
   }, [emitBlueprint, withLoggedAction]);
 
-  const updateBlueprint = (
+  const updateBlueprint = useCallback((
     next: RoomLayoutBlueprint,
     action?: { message: string; kind?: LayoutActionEntry['kind']; context?: RoomActionContext },
   ) => {
@@ -1083,7 +1015,17 @@ export default function RoomLayoutEditor({
       pushHistory(latestBlueprintRef.current);
     }
     emitBlueprint(withLoggedAction(next, action));
-  };
+  }, [pushHistory, emitBlueprint, withLoggedAction]);
+
+  /** Passe du plan 2D (0) à la perspective 3D (100). Lit toujours le plan à jour. */
+  const setDepthAmount = useCallback((amount: number) => {
+    const current = latestBlueprintRef.current;
+    const next = Math.max(0, Math.min(100, Math.round(amount)));
+    updateBlueprint({
+      ...current,
+      metadata: { ...current.metadata, depthAmount: next, depthView: next > 0 },
+    }, { message: next <= 0 ? 'Vue du dessus' : `Perspective 3D : ${next}%`, kind: 'settings' });
+  }, [updateBlueprint]);
 
   const undo = useCallback(() => {
     const prev = pastRef.current.pop();
@@ -1170,7 +1112,7 @@ export default function RoomLayoutEditor({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [readOnly, undo, redo, optimizeClearances]);
+  }, [readOnly, undo, redo, optimizeClearances, log, setDepthAmount]);
 
   useEffect(() => {
     if (!aiPlanSuccess) return;
@@ -1216,14 +1158,14 @@ export default function RoomLayoutEditor({
       message: alignModeLabels[mode],
       kind: 'edit',
     });
-  }, [blueprint, readOnly, selection]);
+  }, [blueprint, readOnly, selection, updateBlueprint]);
 
   const groupSelection = useCallback(() => {
     if (selection.length < 2 || readOnly) return;
     const next = groupLayoutSelection(blueprint, selection);
     updateBlueprint(next, { message: `Groupe créé (${selection.length} éléments)`, kind: 'edit' });
     setSelection(expandSelectionWithGroups(next, selection));
-  }, [blueprint, readOnly, selection]);
+  }, [blueprint, readOnly, selection, updateBlueprint]);
 
   const ungroupSelection = useCallback(() => {
     if (selection.length === 0 || readOnly) return;
@@ -1231,7 +1173,7 @@ export default function RoomLayoutEditor({
       message: 'Groupe dissous',
       kind: 'edit',
     });
-  }, [blueprint, readOnly, selection]);
+  }, [blueprint, readOnly, selection, updateBlueprint]);
 
   const duplicateSelection = useCallback(() => {
     if (readOnly || selection.length === 0) return;
@@ -1260,7 +1202,7 @@ export default function RoomLayoutEditor({
       kind: 'add',
     });
     setSelection(result.selection);
-  }, [blueprint, caps.canDuplicate, caps.label, caps.maxRows, caps.maxTables, log, readOnly, selection]);
+  }, [blueprint, caps.canDuplicate, caps.label, caps.maxRows, caps.maxTables, log, readOnly, selection, updateBlueprint]);
 
   const rotateSelection = useCallback(() => {
     if (readOnly || selection.length === 0) return;
@@ -1268,7 +1210,7 @@ export default function RoomLayoutEditor({
       message: 'Sélection tournée de 90°',
       kind: 'edit',
     });
-  }, [blueprint, readOnly, selection]);
+  }, [blueprint, readOnly, selection, updateBlueprint]);
 
   const flipSelection = useCallback((axis: 'horizontal' | 'vertical') => {
     if (readOnly || selection.length === 0) return;
@@ -1276,7 +1218,7 @@ export default function RoomLayoutEditor({
       message: axis === 'horizontal' ? 'Sélection miroir horizontal' : 'Sélection miroir vertical',
       kind: 'edit',
     });
-  }, [blueprint, readOnly, selection]);
+  }, [blueprint, readOnly, selection, updateBlueprint]);
 
   const handleWebGLMove = useCallback((kind: SelectableKind, id: string, xPct: number, yPct: number) => {
     if (readOnly) return;
@@ -1350,7 +1292,7 @@ export default function RoomLayoutEditor({
     dragHistPushedRef.current = false;
   }, [emitBlueprint, log, withLoggedAction]);
 
-  const deleteSelected = () => {
+  const deleteSelected = useCallback(() => {
     if (selection.length === 0 || readOnly) return;
     const wallIds = new Set(selection.filter((s) => s.kind === 'wall').map((s) => s.id));
     const fixtureIds = new Set(selection.filter((s) => s.kind === 'fixture').map((s) => s.id));
@@ -1367,7 +1309,7 @@ export default function RoomLayoutEditor({
       kind: 'delete',
     });
     setSelection([]);
-  };
+  }, [blueprint, readOnly, selection, updateBlueprint]);
 
   useEffect(() => {
     if (readOnly) return;
@@ -1483,7 +1425,6 @@ export default function RoomLayoutEditor({
   };
 
   const duplicateSelectedTable = duplicateSelection;
-  const duplicateSelectedFixture = duplicateSelection;
   const duplicateSelectedChair = duplicateSelection;
 
   const addRow = () => {
@@ -2359,14 +2300,6 @@ export default function RoomLayoutEditor({
       message: `Tables agencées — ${tableArrangeLabels[preset]} (${arrangeDensityLabels[arrangeDensity]})`,
       kind: 'edit',
     });
-  };
-
-  const setDepthAmount = (amount: number) => {
-    const next = Math.max(0, Math.min(100, Math.round(amount)));
-    updateBlueprint({
-      ...blueprint,
-      metadata: { ...blueprint.metadata, depthAmount: next, depthView: next > 0 },
-    }, { message: next <= 0 ? 'Vue du dessus' : `Perspective 3D : ${next}%`, kind: 'settings' });
   };
 
   const outline = blueprint.roomOutline!;
@@ -9465,8 +9398,22 @@ export default function RoomLayoutEditor({
             <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold font-mono text-xs text-foreground">Flèches (↑ ↓ ← →)</kbd>
           </div>
           <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
-            <span className="text-muted font-medium">Pivoter l'élément</span>
-            <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold font-mono text-xs text-foreground">R</kbd>
+            <span className="text-muted font-medium">Pivoter de 90° / −90°</span>
+            <div className="flex gap-1 font-mono text-xs">
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">R</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Maj+R</kbd>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Ajouter à la sélection</span>
+            <div className="flex gap-1 font-mono text-xs">
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Maj+clic</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Ctrl+clic</kbd>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Tout désélectionner</span>
+            <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold font-mono text-xs text-foreground">Échap</kbd>
           </div>
           <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
             <span className="text-muted font-medium">Optimiser les espacements</span>

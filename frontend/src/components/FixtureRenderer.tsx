@@ -19,7 +19,7 @@ import { LANDSCAPE_STYLE_META, poolOutlineSvgPath, type LandscapeStyle, type Poo
 import { getCroppedBackgroundStyle } from '@/lib/imageCropUtils';
 import { HOME_FURNITURE_META, type HomeFurnitureStyle } from '@/lib/roomHomeFurniture';
 import FlowerRenderer from '@/components/FlowerRenderer';
-import { Sparkles, DoorOpen, ShieldAlert } from 'lucide-react';
+import { Sparkles, ShieldAlert } from 'lucide-react';
 
 type Fixture = RoomLayoutBlueprint['fixtures'][number];
 
