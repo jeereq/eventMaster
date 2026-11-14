@@ -14,6 +14,7 @@ import { cn } from '@/lib/cn';
 import {
  getOccupiedSeatCount,
  getSeatCoordinates,
+ planRotationScreenDeg,
  getTableShapeLabel,
  getTableVisualStyle,
   normalizeTableSeats,
@@ -330,7 +331,8 @@ export default function TablePlanner({
       if (e.key === 'r' || e.key === 'R') {
         if (caps.canRotate) {
           e.preventDefault();
-          handleRotateTable(activeTableId, e.shiftKey ? -15 : 15);
+          // R tourne dans le sens horaire à l’écran (rotation négative en convention 3D).
+          handleRotateTable(activeTableId, e.shiftKey ? 15 : -15);
           return;
         }
       }
@@ -1472,7 +1474,7 @@ export default function TablePlanner({
  style={{
  left: `${table.x}%`,
  top: `${table.y}%`,
- transform: `translate(-50%, -50%) rotate(${table.rotation || 0}deg)`,
+ transform: `translate(-50%, -50%) rotate(${planRotationScreenDeg(table.rotation)}deg)`,
                       touchAction: 'none',
  }}
  className={cn(
@@ -1587,7 +1589,7 @@ export default function TablePlanner({
  type="button"
  onClick={(e) => {
  e.stopPropagation();
- handleRotateTable(table.id, 15);
+ handleRotateTable(table.id, -15);
  }}
                               className="relative p-1.5 min-h-[30px] min-w-[30px] flex items-center justify-center bg-surface hover:bg-surface-muted border border-border text-muted hover:text-primary rounded-full shadow-xs transition"
                               title="Pivoter de 15° (Touche R)"

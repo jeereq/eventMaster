@@ -15,6 +15,7 @@ import {
   podiumStyleLabels,
 } from '@/lib/roomLayoutUtils';
 import { ZONE_MATERIAL_COLORS } from '@/lib/roomZoneSurface';
+import { planRotationScreenDeg } from '@/lib/tablePlanUtils';
 import { LANDSCAPE_STYLE_META, poolOutlineSvgPath, type LandscapeStyle, type PoolShape } from '@/lib/roomOutdoorUtils';
 import { getCroppedBackgroundStyle } from '@/lib/imageCropUtils';
 import { HOME_FURNITURE_META, type HomeFurnitureStyle } from '@/lib/roomHomeFurniture';
@@ -277,14 +278,14 @@ export default function FixtureRenderer({
     ? {
         width: '100%',
         height: '100%',
-        transform: fixture.rotation ? `rotate(${fixture.rotation}deg)` : undefined,
+        transform: fixture.rotation ? `rotate(${planRotationScreenDeg(fixture.rotation)}deg)` : undefined,
       }
     : {
         left: `${fixture.x}%`,
         top: `${fixture.y}%`,
         width: `${fixture.w}%`,
         height: `${fixture.h}%`,
-        transform: fixture.rotation ? `rotate(${fixture.rotation}deg)` : undefined,
+        transform: fixture.rotation ? `rotate(${planRotationScreenDeg(fixture.rotation)}deg)` : undefined,
       };
 
   // ─────────────────────────────────────────────────────────────

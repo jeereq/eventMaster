@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { getSeatCoordinates, getTableSeatPlacement3D, tablePlateSizeMeters } from './tablePlanUtils.ts';
+import { getSeatCoordinates, getTableSeatPlacement3D, planRotationScreenDeg, rotateSeatCoordinates, tablePlateSizeMeters } from './tablePlanUtils.ts';
 import { rowArcZ, computeRowSeatPose, concentricRowCurvePercent } from './roomAmphitheaterGeom.ts';
 
 describe('tablePlanUtils - orientation des chaises (2D et 3D)', () => {
@@ -111,5 +111,36 @@ describe('tablePlanUtils - chaises d’un seul côté et taille selon capacité'
 
   it('garde les dimensions personnalisées prioritaires', () => {
     assert.deepEqual(tablePlateSizeMeters('rectangular', 20, { customWidthM: 3, customDepthM: 1 }), [3, 1]);
+  });
+});
+
+describe('tablePlanUtils - rotation des tables (2D comme en 3D)', () => {
+  const angle = (x: number, y: number) => (Math.atan2(y, x) * 180) / Math.PI;
+  const norm = (d: number) => ((d % 360) + 360) % 360;
+
+  it('tourne les sièges 2D dans le même sens que la vue 3D vue du dessus', () => {
+    const size = tablePlateSizeMeters('rectangular', 6);
+    for (const rot of [30, 90, 145, -60]) {
+      for (let i = 0; i < 6; i += 1) {
+        const flat2d = getSeatCoordinates('rectangular', 6, i);
+        const turned2d = rotateSeatCoordinates(flat2d, rot);
+        const seat3d = getTableSeatPlacement3D('rectangular', 6, i, size);
+        const r = (rot * Math.PI) / 180;
+        // Rotation Three.js autour de Y, puis lecture du dessus (x à droite, z vers le bas).
+        const x3 = seat3d.x * Math.cos(r) + seat3d.z * Math.sin(r);
+        const z3 = -seat3d.x * Math.sin(r) + seat3d.z * Math.cos(r);
+        const turn2d = norm(angle(turned2d.x, turned2d.y) - angle(flat2d.x, flat2d.y));
+        const turn3d = norm(angle(x3, z3) - angle(seat3d.x, seat3d.z));
+        assert.ok(Math.abs(turn2d - turn3d) < 1e-6, `rot ${rot}, siège ${i}: ${turn2d} ≠ ${turn3d}`);
+        assert.ok(Math.abs(norm(turned2d.rotationDeg - (flat2d.rotationDeg ?? 0)) - norm(-rot)) < 1e-6);
+      }
+    }
+  });
+
+  it('laisse un siège inchangé sans rotation', () => {
+    const seat = getSeatCoordinates('round', 8, 3);
+    assert.equal(rotateSeatCoordinates(seat, 0), seat);
+    assert.equal(planRotationScreenDeg(undefined), 0);
+    assert.equal(planRotationScreenDeg(45), -45);
   });
 });

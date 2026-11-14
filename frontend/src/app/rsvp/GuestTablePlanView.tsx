@@ -79,6 +79,8 @@ export interface GuestTablePlanOverviewItem {
   tableColor?: string;
   tableImageUrl?: string;
   seatingSide?: TableSeatingSide;
+  /** Rotation de la table (degrés, convention de la vue 3D). */
+  rotation?: number;
 }
 
 export interface GuestPlanFixture {
@@ -241,6 +243,7 @@ export default function GuestTablePlanView({
           chairType: table.chairType,
           tableColor: table.tableColor,
           pricingZoneId: table.pricingZoneId,
+          rotation: table.rotation,
         })),
         roomLayoutPreview,
       );

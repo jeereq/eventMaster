@@ -198,4 +198,19 @@ describe('sélection de places — types d’emplacements', () => {
     assert.equal(resolveSeatPrice(event, table.id, 0).priceFc, 15_000);
     assert.equal(resolveSeatPrice(event, table.id, 99).pricingZoneId, null);
   });
+  it('conserve la rotation des tables et rangées jusqu’au plan de sièges', () => {
+    const blueprint = generateRoomBlueprint('AMPHITHEATER', { tierCount: 1, rowsPerTier: 1, seatsPerRow: 6 });
+    blueprint.furniture = blueprint.furniture.map((item) =>
+      item.kind === 'row' ? { ...item, rotation: 30, aisleWidthPct: 12 } : item,
+    );
+    const plan = blueprintToTablePlan(blueprint);
+    const row = planTables(plan)[0] as PlanTable & { rowMeta?: { aisleWidthPct?: number } };
+    assert.equal(row.rotation, 30);
+    assert.equal(row.rowMeta?.aisleWidthPct, 12);
+    const inventory = buildSeatInventoryItems({ ticketPricingMode: 'global', ticketPriceFc: 0 }, [row]);
+    assert.ok(inventory.length > 0);
+    assert.ok(inventory.every((seat) => seat.rotation === 30));
+    const flat = buildSeatInventoryItems({ ticketPricingMode: 'global', ticketPriceFc: 0 }, [{ ...row, rotation: 0 }]);
+    assert.ok(flat.every((seat) => seat.rotation === undefined));
+  });
 });
