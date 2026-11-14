@@ -6,31 +6,17 @@ import { createPortal } from 'react-dom';
 import { DoorOpen } from 'lucide-react';
 import {
   RoomLayoutBlueprint,
-  getRoomOutlineClipPath,
-  resolveTableColor,
-  resolveZonePreviewBackground,
   roomTypeLabels,
   ensureBlueprintDefaults,
-  resolveBlueprintWalls,
   isBlueprintWallsVisible,
   applyPlanSceneVisibility
 } from '@/lib/roomLayoutUtils';
 import { PlanSceneControls, usePlanFullscreen } from '@/components/PlanViewChrome';
 import PlanViewModeToggle from '@/components/PlanViewModeToggle';
-import { getSeatCoordinates, getTableVisualStyle } from '@/lib/tablePlanUtils';
 import { mapTicketSelectionsToWebGL, resolveTicketSeatPick } from '@/lib/seatSelectionLayout';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
-import {
-  GUEST_PLAN_DEFAULT_DEPTH,
-  depthScaleForY,
-  furnitureDepthStyle,
-  resolveDepthAmount,
-  resolveFloorStyle,
-} from '@/lib/roomFloorUtils';
-import FloorDepthFrame from '@/components/FloorDepthFrame';
-import ChairRenderer from '@/components/ChairRenderer';
-import FixtureRenderer from '@/components/FixtureRenderer';
-import Room2DPlanWalls from '@/components/Room2DPlanWalls';
+import { GUEST_PLAN_DEFAULT_DEPTH, resolveDepthAmount } from '@/lib/roomFloorUtils';
+import RoomPlanTopView from '@/components/RoomPlanTopView';
 import Room2DScaleCompass from '@/components/Room2DScaleCompass';
 import Room3DErrorBoundary from '@/components/Room3DErrorBoundary';
 import { cn } from '@/lib/cn';
@@ -193,7 +179,7 @@ function WebGLPreviewCanvas({
   );
 }
 
-/** Miniatures / listes : rendu 2D léger, teintes alignées sur le style WebGL. */
+/** Miniatures / listes : plan 2D à l’échelle, mêmes tables, chaises et sol que la 3D. */
 function ThumbPreview({
   blueprint,
   className,
@@ -201,18 +187,6 @@ function ThumbPreview({
   blueprint: RoomLayoutBlueprint;
   className?: string;
 }) {
-  const outline = blueprint.roomOutline;
-  const clipPath = outline ? getRoomOutlineClipPath(outline.shape) : undefined;
-  const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
-  const floorType = blueprint.metadata.floorType ?? theme.defaultFloorType;
-  const floorStyle = {
-    ...resolveFloorStyle(floorType, blueprint.metadata.floorImageUrl, theme.accentColor),
-    ...(blueprint.metadata.floorColor
-      ? { backgroundColor: blueprint.metadata.floorColor }
-      : {}),
-  };
-  const walls = resolveBlueprintWalls(blueprint);
-
   return (
     <div
       className={cn(
@@ -222,155 +196,8 @@ function ThumbPreview({
       role="img"
       aria-label="Aperçu 2D du plan de salle"
     >
-      <div className="absolute inset-0 opacity-95" style={floorStyle} />
-      {outline && (
-        <div
-          className="absolute pointer-events-none z-[1] overflow-hidden"
-          style={{
-            left: `${outline.x}%`,
-            top: `${outline.y}%`,
-            width: `${outline.w}%`,
-            height: `${outline.h}%`,
-            border: `2px solid ${outline.stroke ?? theme.roomOutline.stroke}`,
-            borderRadius: outline.shape === 'circle' ? '50%' : '4px',
-            clipPath,
-            boxShadow: theme.roomOutline.innerGlow,
-            background: outline.fill ?? 'rgba(248,250,252,0.12)',
-          }}
-        />
-      )}
-      {walls.length > 0 && isBlueprintWallsVisible(blueprint.metadata) && (
-        <Room2DPlanWalls
-          walls={walls}
-          canvasWidthM={blueprint.canvas.widthM}
-          canvasHeightM={blueprint.canvas.heightM}
-          activeStoryId={blueprint.metadata.activeStoryId}
-          showDoorSwings={true}
-        />
-      )}
-      {blueprint.fixtures.map((f) => (
-        <div
-          key={f.id}
-          className="absolute z-[2] pointer-events-none opacity-90"
-          style={{
-            left: `${f.x}%`,
-            top: `${f.y}%`,
-            width: `${f.w}%`,
-            height: `${f.h}%`,
-          }}
-        >
-          <FixtureRenderer fixture={f} showLabel={false} fill />
-        </div>
-      ))}
-      {blueprint.furniture.map((item) => {
-        if (item.kind === 'zone') {
-          return (
-            <div
-              key={item.id}
-              className="absolute z-[2] rounded-sm border border-white/20"
-              style={{
-                left: `${item.x}%`,
-                top: `${item.y}%`,
-                width: `${item.w}%`,
-                height: `${item.h}%`,
-                background: resolveZonePreviewBackground(item, item.color ?? 'rgba(99,102,241,0.35)'),
-                transform: item.rotation ? `rotate(${item.rotation}deg)` : undefined,
-              }}
-            />
-          );
-        }
-        if (item.kind === 'table') {
-          const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
-          const { className: tableClass, style: tableStyle } = getTableVisualStyle(
-            item.shape,
-            false,
-            tableColor,
-            item.tableImageUrl,
-            item.tableSurface ?? blueprint.metadata.defaultTableSurface,
-            {
-              customWidthM: item.customWidthM,
-              customDepthM: item.customDepthM,
-              customRadiusM: item.customRadiusM,
-              cornerRadiusM: item.cornerRadiusM,
-            },
-          );
-          return (
-            <div
-              key={item.id}
-              className="absolute z-[3] flex items-center justify-center relative"
-              style={{
-                left: `${item.x}%`,
-                top: `${item.y}%`,
-                transform: `translate(-50%, -50%) scale(0.38)${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
-              }}
-            >
-              <div className={`${tableClass} origin-center relative shadow-sm`} style={tableStyle}>
-                {item.hasCenterpiece && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 absolute inset-1/2 -translate-x-1/2 -translate-y-1/2" />
-                )}
-                {item.hasParasol && (
-                  <span className="absolute -inset-2 rounded-full border border-amber-500/70 bg-amber-300/30 pointer-events-none flex items-center justify-center">
-                    <span className="w-1 h-1 rounded-full bg-amber-600" />
-                  </span>
-                )}
-              </div>
-              {item.attachedChairs !== false && item.shape !== 'cocktail' && item.shape !== 'highTop'
-                ? Array.from({ length: Math.min(item.capacity, 24) }).map((_, seatIndex) => {
-                    if (item.hiddenSeatIndices?.includes(seatIndex)) return null;
-                    const coords = getSeatCoordinates(item.shape, item.capacity, seatIndex, 36, item.seatingSide);
-                    return (
-                      <span
-                        key={seatIndex}
-                        className="absolute pointer-events-none"
-                        style={{
-                          left: `calc(50% + ${coords.x}px)`,
-                          top: `calc(50% + ${coords.y}px)`,
-                          transform: `translate(-50%, -50%) rotate(${coords.rotationDeg ?? 0}deg)`,
-                        }}
-                      >
-                        <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size="xs" />
-                      </span>
-                    );
-                  })
-                : null}
-            </div>
-          );
-        }
-        if (item.kind === 'chair') {
-          return (
-            <div
-              key={item.id}
-              className="absolute z-[3]"
-              style={{
-                left: `${item.x}%`,
-                top: `${item.y}%`,
-                transform: `translate(-50%, -50%) scale(0.55) rotate(${item.rotation ?? 0}deg)`,
-              }}
-            >
-              <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size="xs" />
-            </div>
-          );
-        }
-        if (item.kind === 'row') {
-          return (
-            <div
-              key={item.id}
-              className="absolute z-[3] flex gap-0.5"
-              style={{
-                left: `${item.x}%`,
-                top: `${item.y}%`,
-                transform: `translate(-50%, -50%) scale(0.45) rotate(${(item.rotation ?? 0) + 180}deg)`,
-              }}
-            >
-              {Array.from({ length: Math.min(item.seatCount, 10) }).map((_, i) => (
-                <ChairRenderer key={i} chairType={item.chairType} imageUrl={item.chairImageUrl} size="xs" />
-              ))}
-            </div>
-          );
-        }
-        return null;
-      })}
-      <div className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[8px] font-bold text-white/90 backdrop-blur-xs flex items-center gap-1 shadow-2xs">
+      <RoomPlanTopView blueprint={blueprint} showLabels={false} />
+      <div className="absolute bottom-1 left-1 z-10 rounded bg-black/60 px-1.5 py-0.5 text-[8px] font-bold text-white/90 backdrop-blur-xs flex items-center gap-1 shadow-2xs">
         <span>{blueprint.metadata.totalSeats} pl.</span>
         <span>·</span>
         <span>{blueprint.canvas.widthM}×{blueprint.canvas.heightM}m</span>
@@ -379,7 +206,7 @@ function ThumbPreview({
   );
 }
 
-/** Aperçu 2D vu du dessus (sans tilt 2,5D). */
+/** Plan 2D vu du dessus, à l’échelle réelle et aux couleurs de la vue 3D. */
 function FlatShowcasePreview({
   blueprint,
   className,
@@ -387,209 +214,17 @@ function FlatShowcasePreview({
   blueprint: RoomLayoutBlueprint;
   className?: string;
 }) {
-  const outline = blueprint.roomOutline;
-  const clipPath = outline ? getRoomOutlineClipPath(outline.shape) : undefined;
-  const theme = getRoomTheme(blueprint.metadata.roomThemeId, blueprint);
-  const floorType = blueprint.metadata.floorType ?? theme.defaultFloorType;
-  const floorStyle = resolveFloorStyle(floorType, blueprint.metadata.floorImageUrl, theme.accentColor);
-  const amount = 0;
-  const walls = resolveBlueprintWalls(blueprint);
-
   return (
     <div
       role="img"
       aria-label={`Plan 2D ${roomTypeLabels[blueprint.roomType]}, ${blueprint.canvas.widthM} × ${blueprint.canvas.heightM} mètres${blueprint.metadata.totalSeats ? `, ${blueprint.metadata.totalSeats} places` : ''}`}
       className={cn('relative aspect-[16/10] min-h-[260px] sm:min-h-[340px] rounded-2xl border border-border overflow-hidden bg-stage', className)}
     >
-      <FloorDepthFrame
-        amount={amount}
-        floorStyle={{
-          ...floorStyle,
-          ...(blueprint.metadata.floorColor ? { backgroundColor: blueprint.metadata.floorColor } : {}),
-        }}
-        maxTilt={0}
-        className="w-full h-full"
-      >
-        {outline && (
-          <div
-            className="absolute pointer-events-none z-0 overflow-hidden"
-            style={{
-              left: `${outline.x}%`,
-              top: `${outline.y}%`,
-              width: `${outline.w}%`,
-              height: `${outline.h}%`,
-              border: `2px solid ${outline.stroke ?? theme.roomOutline.stroke}`,
-              borderRadius: outline.shape === 'circle' ? '50%' : '4px',
-              clipPath,
-              boxShadow: theme.roomOutline.innerGlow,
-            }}
-          />
-        )}
-        {walls.length > 0 && isBlueprintWallsVisible(blueprint.metadata) && (
-          <Room2DPlanWalls
-            walls={walls}
-            canvasWidthM={blueprint.canvas.widthM}
-            canvasHeightM={blueprint.canvas.heightM}
-            activeStoryId={blueprint.metadata.activeStoryId}
-            showDoorSwings={true}
-          />
-        )}
-        {blueprint.fixtures.map((f) => (
-          <div
-            key={f.id}
-            className="absolute z-[1]"
-            style={{ left: `${f.x}%`, top: `${f.y}%`, width: `${f.w}%`, height: `${f.h}%`, ...furnitureDepthStyle(f.y, amount) }}
-          >
-            <FixtureRenderer fixture={f} />
-          </div>
-        ))}
-        {blueprint.furniture.map((item) => {
-          if (item.kind === 'zone') {
-            return (
-              <div
-                key={item.id}
-                className="absolute z-[1] rounded border border-white/30"
-                style={{
-                  left: `${item.x}%`,
-                  top: `${item.y}%`,
-                  width: `${item.w}%`,
-                  height: `${item.h}%`,
-                  background: resolveZonePreviewBackground(item, item.color ?? 'rgba(49,46,129,0.45)'),
-                  transform: item.rotation ? `rotate(${item.rotation}deg)` : undefined,
-                  ...furnitureDepthStyle(item.y + item.h / 2, amount),
-                }}
-              />
-            );
-          }
-          if (item.kind === 'row') {
-            const count = Math.min(item.seatCount, 48);
-            const curveVal = Math.abs(item.curve ?? 0) > 1.5 ? (item.curve ?? 0) / 100 : (item.curve ?? 0);
-            const half = (count - 1) / 2;
-            const hasAisle = !!item.aisleSplit;
-            const midIdx = Math.floor(count / 2);
-
-            return (
-              <div
-                key={item.id}
-                className="absolute z-[2] flex items-center justify-center pointer-events-none"
-                style={{
-                  left: `${item.x}%`,
-                  top: `${item.y}%`,
-                  transform: `translate(-50%, -50%) scale(${0.7 * depthScaleForY(item.y, amount)}) rotate(${item.rotation ?? 0}deg)`,
-                  ...furnitureDepthStyle(item.y, amount),
-                }}
-              >
-                {Array.from({ length: count }).map((_, i) => {
-                  const offset = half > 0 ? (i - half) / half : 0;
-                  const arcY = -Math.abs(curveVal) * (offset * offset) * 28;
-                  const chairRot = 180 - curveVal * offset * 36;
-
-                  return (
-                    <div
-                      key={i}
-                      style={{
-                        transform: `translateY(${arcY}px) rotate(${chairRot}deg)`,
-                        marginRight: hasAisle && i === midIdx - 1 ? '14px' : '2px',
-                      }}
-                    >
-                      <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size="sm" />
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          }
-          if (item.kind === 'chair') {
-            return (
-              <div
-                key={item.id}
-                className="absolute z-[2]"
-                style={{
-                  left: `${item.x}%`,
-                  top: `${item.y}%`,
-                  transform: `translate(-50%, -50%) scale(${0.75 * depthScaleForY(item.y, amount)}) rotate(${item.rotation ?? 0}deg)`,
-                  ...furnitureDepthStyle(item.y, amount),
-                }}
-              >
-                <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size="sm" />
-              </div>
-            );
-          }
-          if (item.kind !== 'table') return null;
-          const tableColor = resolveTableColor(item.tableColor, blueprint.metadata.defaultTableColor);
-          const { className: tableClass, style: tableStyle } = getTableVisualStyle(
-            item.shape,
-            false,
-            tableColor,
-            item.tableImageUrl,
-            item.tableSurface ?? blueprint.metadata.defaultTableSurface,
-            {
-              customWidthM: item.customWidthM,
-              customDepthM: item.customDepthM,
-              customRadiusM: item.customRadiusM,
-              cornerRadiusM: item.cornerRadiusM,
-            },
-          );
-          const depthScale = depthScaleForY(item.y, amount);
-          return (
-            <div
-              key={item.id}
-              className="absolute z-[2] flex flex-col items-center"
-              style={{
-                left: `${item.x}%`,
-                top: `${item.y}%`,
-                transform: `translate(-50%, -50%) scale(${0.85 * depthScale})${item.rotation ? ` rotate(${item.rotation}deg)` : ''}`,
-                ...furnitureDepthStyle(item.y, amount),
-              }}
-            >
-              <div className="relative flex items-center justify-center">
-                <div className={`${tableClass} origin-center flex items-center justify-center relative shadow-sm`} style={tableStyle}>
-                  <span className="text-[8px] font-bold px-1 truncate max-w-[72px] drop-shadow-xs">{item.name}</span>
-                  {item.hasCenterpiece && (
-                    <span
-                      className="absolute w-2.5 h-2.5 rounded-full bg-amber-400 border border-amber-600 shadow-2xs flex items-center justify-center pointer-events-none"
-                      title="Centre de table"
-                    >
-                      <span className="w-1 h-1 rounded-full bg-white" />
-                    </span>
-                  )}
-                  {item.hasParasol && (
-                    <span
-                      className="absolute -inset-3.5 rounded-full border-2 border-dashed border-amber-500/80 bg-amber-200/25 pointer-events-none flex items-center justify-center shadow-xs"
-                      title="Table avec parasol d'ombrage"
-                    >
-                      <span className="w-2 h-2 rounded-full bg-amber-600" />
-                    </span>
-                  )}
-                </div>
-                {item.attachedChairs !== false && item.shape !== 'cocktail' && item.shape !== 'highTop'
-                  ? Array.from({ length: Math.min(item.capacity, 24) }).map((_, seatIndex) => {
-                      if (item.hiddenSeatIndices?.includes(seatIndex)) return null;
-                      const coords = getSeatCoordinates(item.shape, item.capacity, seatIndex, 44, item.seatingSide);
-                      return (
-                        <span
-                          key={seatIndex}
-                          className="absolute"
-                          style={{
-                            left: `calc(50% + ${coords.x}px)`,
-                            top: `calc(50% + ${coords.y}px)`,
-                            transform: `translate(-50%, -50%) rotate(${coords.rotationDeg ?? 0}deg)`,
-                          }}
-                        >
-                          <ChairRenderer chairType={item.chairType} imageUrl={item.chairImageUrl} size="xs" />
-                        </span>
-                      );
-                    })
-                  : null}
-              </div>
-            </div>
-          );
-        })}
-      </FloorDepthFrame>
+      <RoomPlanTopView blueprint={blueprint} />
       <Room2DScaleCompass
         widthM={blueprint.canvas.widthM}
         heightM={blueprint.canvas.heightM}
-        showGrid={true}
+        showGrid={false}
       />
     </div>
   );

@@ -14,7 +14,7 @@ import {
   instrumentStyleLabels,
   podiumStyleLabels,
 } from '@/lib/roomLayoutUtils';
-import { ZONE_MATERIAL_COLORS } from '@/lib/roomWebGLMaterials';
+import { ZONE_MATERIAL_COLORS } from '@/lib/roomZoneSurface';
 import { LANDSCAPE_STYLE_META, poolOutlineSvgPath, type LandscapeStyle, type PoolShape } from '@/lib/roomOutdoorUtils';
 import { getCroppedBackgroundStyle } from '@/lib/imageCropUtils';
 import { HOME_FURNITURE_META, type HomeFurnitureStyle } from '@/lib/roomHomeFurniture';
@@ -236,6 +236,8 @@ interface FixtureRendererProps {
   showLabel?: boolean;
   /** Si true, remplit le conteneur parent (pas de position absolue) */
   fill?: boolean;
+  /** Plateau de scène (texture à l’échelle de la 3D) pour le plan vu du dessus. */
+  deckStyle?: React.CSSProperties;
 }
 
 export default function FixtureRenderer({
@@ -243,6 +245,7 @@ export default function FixtureRenderer({
   className = '',
   showLabel = true,
   fill = false,
+  deckStyle,
 }: FixtureRendererProps) {
   const isColumn = fixture.kind === 'pillar' || fixture.kind === 'column';
   const isStage = fixture.kind === 'stage' || fixture.kind === 'podium';
@@ -331,7 +334,7 @@ export default function FixtureRenderer({
   if (isStringLight) {
     return (
       <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
-        <div className="w-full h-full border border-dashed border-amber-400/70 rounded-[var(--radius-button)] bg-amber-50/40" />
+        <div className="w-full h-full border border-dashed border-amber-400/70 rounded-[var(--radius-button)] bg-amber-100/10" />
         {showLabel && fixture.label ? (
           <span className="absolute -bottom-4 text-[8px] font-bold text-muted whitespace-nowrap bg-surface/80 px-1 rounded shadow-xs">
             {fixture.label}
@@ -1169,6 +1172,7 @@ export default function FixtureRenderer({
           style={{
             backgroundColor: podiumTint,
             ...imageStyle,
+            ...(!hasImage && deckStyle ? deckStyle : {}),
           }}
         >
           {style === 'runway' ? <span className="absolute inset-y-1 left-0.5 w-0.5 bg-pink-400" /> : null}
@@ -1253,6 +1257,7 @@ export default function FixtureRenderer({
         ...positionStyle,
         backgroundColor: materialTint ?? (!hasImage && isColumn && fixture.color ? fixture.color : undefined),
         ...imageStyle,
+        ...(isStage && !hasImage && deckStyle ? deckStyle : {}),
       }}
     >
       {hasImage && <div className="absolute inset-0 bg-black/10" />}
