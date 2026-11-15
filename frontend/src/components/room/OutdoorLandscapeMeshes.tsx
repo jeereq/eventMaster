@@ -13,7 +13,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { RoundedBox } from '@react-three/drei';
-import { loadTiledTexture, normalMapUrlFor } from '@/lib/roomWebGLMaterials';
+import { generatedDetailMaps, loadTiledTexture, roughnessWithMap } from '@/lib/roomWebGLMaterials';
 import {
   LANDSCAPE_STYLE_META,
   OUTDOOR_SURROUNDINGS_META,
@@ -45,17 +45,18 @@ function texturedMat(
   if (cached) return cached as THREE.MeshStandardMaterial;
   const { normalScale = 1, ...rest } = opts;
   const map = loadTiledTexture(url, rx, ry);
-  // Pas de carte de normales pour une image importée (seules les textures générées en ont une).
-  const normalUrl = normalMapUrlFor(url);
-  const normalMap = normalUrl ? loadTiledTexture(normalUrl, rx, ry, true) : null;
+  // Normales et rugosité : seules les textures générées en ont (pas une image importée).
+  const { normalMap, roughnessMap } = generatedDetailMaps(url, rx, ry);
   const mat = new THREE.MeshStandardMaterial({
     map,
     normalMap,
+    roughnessMap,
     normalScale: new THREE.Vector2(normalScale, normalScale),
     roughness: 0.85,
     metalness: 0,
     ...rest,
   });
+  mat.roughness = roughnessWithMap(mat.roughness, roughnessMap);
   matCache.set(cacheKey, mat);
   return mat;
 }

@@ -66,6 +66,35 @@ export function normalMapUrlFor(url: string): string | null {
   return url.replace(/\.jpg$/, '-normal.jpg');
 }
 
+/**
+ * Rugosité moyenne des cartes `x-rough.jpg` (scripts/textures/generate_roughness.py) :
+ * three multiplie la rugosité du matériau par la carte, on la divise donc par cette
+ * moyenne pour garder la brillance d’ensemble de chaque matière.
+ */
+export const GENERATED_ROUGHNESS_MEAN = 0.8;
+const NO_ROUGHNESS_MAP = new Set(['/floors/gen/water.jpg']);
+
+/** Carte de rugosité générée à côté des textures procédurales (`x.jpg` → `x-rough.jpg`). */
+export function roughnessMapUrlFor(url: string): string | null {
+  if (!normalMapUrlFor(url) || NO_ROUGHNESS_MAP.has(url)) return null;
+  return url.replace(/\.jpg$/, '-rough.jpg');
+}
+
+/** Rugosité à donner au matériau quand une carte de rugosité générée l’accompagne. */
+export function roughnessWithMap(roughness: number, roughnessMap: THREE.Texture | null | undefined): number {
+  return roughnessMap ? Math.min(1, roughness / GENERATED_ROUGHNESS_MEAN) : roughness;
+}
+
+/** Cartes de normales et de rugosité d’une texture générée, à la même répétition que sa couleur. */
+export function generatedDetailMaps(url: string, repeatX: number, repeatY: number): { normalMap: THREE.Texture | null; roughnessMap: THREE.Texture | null } {
+  const normalUrl = normalMapUrlFor(url);
+  const roughUrl = roughnessMapUrlFor(url);
+  return {
+    normalMap: normalUrl ? loadTiledTexture(normalUrl, repeatX, repeatY, true) : null,
+    roughnessMap: roughUrl ? loadTiledTexture(roughUrl, repeatX, repeatY, true) : null,
+  };
+}
+
 /** Image de plan : un seul panneau, sans répétition (évite le mosaïque). */
 export function loadCoverTexture(url: string): THREE.Texture {
   const key = `cover:${url}`;
@@ -289,8 +318,7 @@ export function resolveFloorMap(
     envMapIntensity = 0.55;
   }
 
-  const normalUrl = normalMapUrlFor(asset.url);
-  const normalMap = normalUrl ? loadTiledTexture(normalUrl, widthM / tileM, heightM / tileM, true) : null;
+  const { normalMap, roughnessMap } = generatedDetailMaps(asset.url, widthM / tileM, heightM / tileM);
 
   const tint = floorColor && floorColor !== '#ffffff' ? floorColor : asset.fallback;
   const isWood =
@@ -301,7 +329,7 @@ export function resolveFloorMap(
   return {
     map,
     color: floorColor ? tint : '#ffffff',
-    roughness,
+    roughness: roughnessWithMap(roughness, roughnessMap),
     metalness,
     clearcoat,
     envMapIntensity,
@@ -311,6 +339,7 @@ export function resolveFloorMap(
     bumpScale: isWood ? 0.016 : clearcoat > 0.4 ? 0.008 : 0.01,
     normalMap,
     normalScale: normalMap ? (clearcoat > 0.4 ? 0.35 : isWood ? 0.8 : 0.9) : undefined,
+    roughnessMap,
   };
 }
 
@@ -560,15 +589,17 @@ function photoWallMaterial(
   normalScale = 0.6,
 ): WallSurfaceMaterial {
   const map = loadTiledTexture(url, repeatX, repeatY);
-  const normalUrl = normalMapUrlFor(url);
-  const normalMap = normalUrl ? loadTiledTexture(normalUrl, repeatX, repeatY, true) : undefined;
+  const detail = generatedDetailMaps(url, repeatX, repeatY);
+  const normalMap = detail.normalMap ?? undefined;
+  const roughnessMap = detail.roughnessMap ?? undefined;
   return {
     map,
     bumpMap: normalMap ? undefined : bumpFromAlbedo(map),
     normalMap,
     normalScale,
+    roughnessMap,
     color,
-    roughness,
+    roughness: roughnessWithMap(roughness, roughnessMap),
     metalness,
     bumpScale: normalMap ? 0 : bumpScale,
   };
@@ -626,6 +657,7 @@ export type WallSurfaceMaterial = {
   bumpMap?: THREE.Texture;
   normalMap?: THREE.Texture;
   normalScale?: number;
+  roughnessMap?: THREE.Texture;
   color: string;
   roughness: number;
   metalness: number;
@@ -988,7 +1020,13 @@ export function wallTextureForSurface(
     bumpMap = bumpFromAlbedo(map);
     bumpMap.repeat.set(repeatX, repeatY);
   }
-  return { ...base, map, normalMap, bumpMap, bumpScale: bumpMap ? base.bumpScale || 0.006 : 0 };
+  let roughnessMap: THREE.Texture | undefined;
+  if (base.roughnessMap) {
+    roughnessMap = base.roughnessMap.clone();
+    roughnessMap.wrapS = roughnessMap.wrapT = THREE.RepeatWrapping;
+    roughnessMap.repeat.set(repeatX, repeatY);
+  }
+  return { ...base, map, normalMap, bumpMap, roughnessMap, bumpScale: bumpMap ? base.bumpScale || 0.006 : 0 };
 }
 
 /** Texture et PBR pour battants de porte selon le matériau. */
@@ -1150,8 +1188,10 @@ export function resolveTableMaterial(
   // Nappe : trame fine (plus de répétitions) ; bois / marbre : une planche par plateau environ.
   const repeat = isLinen ? 4 : isMarble ? 1 : 1.2;
   const map = loadTiledTexture(url, repeat, repeat);
-  const normalUrl = normalMapUrlFor(url);
-  const normalMap = normalUrl ? loadTiledTexture(normalUrl, repeat, repeat, true) : undefined;
+  const detail = generatedDetailMaps(url, repeat, repeat);
+  const normalMap = detail.normalMap ?? undefined;
+  const roughnessMap = detail.roughnessMap ?? undefined;
+  const baseRoughness = isMarble ? 0.12 : isLinen ? 0.92 : resolvedSurface === 'walnut' || resolvedSurface === 'darkWood' ? 0.42 : 0.48;
 
   return {
     map,
@@ -1161,8 +1201,9 @@ export function resolveTableMaterial(
     normalScale: isLinen ? 0.6 : isMarble ? 0.25 : 0.5,
     color: color && color !== '#ffffff' ? color : defaultColors[resolvedSurface],
     isCloth: isLinen,
+    roughnessMap,
     // Bois vernis satiné, marbre poli, nappe mate : matériaux diélectriques (métal = 0).
-    roughness: isMarble ? 0.12 : isLinen ? 0.92 : resolvedSurface === 'walnut' || resolvedSurface === 'darkWood' ? 0.42 : 0.48,
+    roughness: roughnessWithMap(baseRoughness, roughnessMap),
     metalness: 0,
     clearcoat: isMarble ? 0.8 : isLinen ? 0 : 0.35,
     clearcoatRoughness: isMarble ? 0.06 : 0.22,
@@ -1365,6 +1406,7 @@ export function deckUsesSkirt(material: ZoneMaterial | undefined): boolean {
 export function resolveDeckSurface(material: ZoneMaterial | undefined, wM: number, dM: number): {
   map: THREE.Texture | null;
   normalMap: THREE.Texture | null;
+  roughnessMap?: THREE.Texture | null;
   color: string;
   roughness: number;
   metalness: number;
@@ -1381,12 +1423,13 @@ export function resolveDeckSurface(material: ZoneMaterial | undefined, wM: numbe
   const q = (v: number) => Math.max(0.25, Math.round((v / spec.tileM) * 4) / 4);
   const rx = q(Math.max(0.1, wM));
   const ry = q(Math.max(0.1, dM));
-  const normalUrl = normalMapUrlFor(spec.url);
+  const { normalMap, roughnessMap } = generatedDetailMaps(spec.url, rx, ry);
   return {
     map: loadTiledTexture(spec.url, rx, ry),
-    normalMap: normalUrl ? loadTiledTexture(normalUrl, rx, ry, true) : null,
+    normalMap,
+    roughnessMap,
     color: '#ffffff',
-    roughness: spec.roughness,
+    roughness: roughnessWithMap(spec.roughness, roughnessMap),
     metalness: spec.metalness,
   };
 }

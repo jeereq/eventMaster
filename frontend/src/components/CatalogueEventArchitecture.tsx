@@ -352,6 +352,7 @@ function DeckMaterials({
             color={selected ? '#c7d2fe' : m.color}
             map={m.map ?? undefined}
             normalMap={m.normalMap ?? undefined}
+            roughnessMap={m.roughnessMap ?? undefined}
             roughness={m.roughness}
             metalness={m.metalness}
             emissive={m.emissive}
@@ -382,6 +383,7 @@ function DeckTopMaterial({
       color={selected ? '#c7d2fe' : top.color}
       map={top.map ?? undefined}
       normalMap={top.normalMap ?? undefined}
+      roughnessMap={top.roughnessMap ?? undefined}
       roughness={top.roughness}
       metalness={top.metalness}
     />
@@ -738,6 +740,7 @@ export function EventZoneSurface({
           }
           map={mat.map ?? undefined}
           normalMap={mat.normalMap ?? undefined}
+          roughnessMap={'roughnessMap' in mat ? (mat.roughnessMap ?? undefined) : undefined}
           roughness={mat.roughness}
           metalness={mat.metalness}
           emissive={mat.emissive ?? '#000000'}

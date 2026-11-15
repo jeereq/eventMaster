@@ -1852,6 +1852,7 @@ function WallMesh({
               bumpScale={mat.bumpScale}
               normalMap={mat.normalMap}
               normalScale={mat.normalMap ? new THREE.Vector2(mat.normalScale ?? 0.6, mat.normalScale ?? 0.6) : undefined}
+              roughnessMap={mat.roughnessMap}
               roughness={mat.roughness}
               metalness={mat.metalness}
               emissive={selected ? '#312e81' : '#000000'}
