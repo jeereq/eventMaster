@@ -16,7 +16,8 @@ export type LandscapeStyle =
   | 'firePit'
   | 'torch'
   | 'fence'
-  | 'boulder';
+  | 'boulder'
+  | 'garden';
 
 export type LandscapeGroup = 'vegetation' | 'water' | 'ambiance';
 
@@ -45,6 +46,7 @@ export const LANDSCAPE_STYLE_META: Record<LandscapeStyle, LandscapeMeta> = {
   firePit: { label: 'Brasero', hint: 'Foyer en acier avec flammes et lueur chaude.', group: 'ambiance', widthM: 1.2, depthM: 1.2, heightM: 0.5, color: '#3b3b3b' },
   torch: { label: 'Torche de jardin', hint: 'Torche tiki en bambou, flamme vive.', group: 'ambiance', widthM: 0.4, depthM: 0.4, heightM: 1.7, color: '#a47a45' },
   fence: { label: 'Clôture bois', hint: 'Barrière à lattes pour fermer un enclos ou un parking.', group: 'ambiance', widthM: 6, depthM: 0.2, heightM: 1.1, color: '#b08a5a' },
+  garden: { label: 'Espace vert', hint: 'Pelouse réglable : type de gazon, bordure, fleurs, arbustes, arbres et chemin.', group: 'vegetation', widthM: 8, depthM: 5, heightM: 0.05, color: '#5b8a3a' },
   boulder: { label: 'Rochers', hint: 'Groupe de rochers pour un décor minéral.', group: 'ambiance', widthM: 2, depthM: 1.6, heightM: 0.9, color: '#8a857c' },
 };
 
@@ -55,7 +57,7 @@ export const LANDSCAPE_GROUP_LABELS: Record<LandscapeGroup, string> = {
 };
 
 export const LANDSCAPE_STYLE_ORDER: LandscapeStyle[] = [
-  'oak', 'palm', 'olive', 'cypress', 'hedge', 'shrub', 'planter',
+  'garden', 'oak', 'palm', 'olive', 'cypress', 'hedge', 'shrub', 'planter',
   'pool', 'pond',
   'firePit', 'torch', 'fence', 'boulder',
 ];

@@ -257,6 +257,7 @@ const WALL_TEXTURES = new Set<WallTextureStyle>([
 const CHAIR_STYLES = new Set<ChairStyle>([
   'classic', 'chiavari', 'napoleon', 'ghost', 'lounge', 'crossback', 'louis', 'ovalBack',
   'wishbone', 'tiffany', 'phoenix', 'panton', 'tolix', 'club', 'bergere', 'modern',
+  'windsor', 'bistro', 'scandi',
 ]);
 const SEAT_MATERIALS = new Set<SeatMaterial>([
   'velvet', 'wood', 'fabric', 'leather', 'plastic', 'linen',

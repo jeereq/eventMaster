@@ -21,6 +21,27 @@ export type ChairType =
   | 'BARSTOOL'
   | 'POUF';
 export type TableShape = 'round' | 'rectangular' | 'square' | 'oval' | 'cocktail' | 'highTop' | 'arc';
+/** Piètement de table (banquet, rectangulaire, ovale). */
+export type TableBaseStyle = 'pedestal' | 'fourLegs' | 'trestle' | 'hairpin' | 'cross';
+export const tableBaseLabels: Record<TableBaseStyle, string> = {
+  pedestal: 'Pied central',
+  fourLegs: '4 pieds bois',
+  trestle: 'Tréteaux',
+  hairpin: 'Pieds épingle (métal)',
+  cross: 'Croisillon',
+};
+/** Teinte par défaut de chaque piètement. */
+export const tableBaseDefaultColor: Record<TableBaseStyle, string> = {
+  pedestal: '#6b7280',
+  fourLegs: '#7a5536',
+  trestle: '#9a7552',
+  hairpin: '#1f1f1f',
+  cross: '#b08d57',
+};
+/** Les formes qui acceptent un piètement au choix. */
+export function tableAcceptsBase(shape: TableShape): boolean {
+  return shape === 'round' || shape === 'rectangular' || shape === 'square' || shape === 'oval';
+}
 /** Finition du plateau de table (3D). */
 export type TableSurfaceStyle = 'wood' | 'linen' | 'walnut' | 'marble' | 'darkWood' | 'whiteLacquer' | 'glass';
 /** Style de fauteuil / chaise (surtout fauteuils). */
@@ -40,7 +61,10 @@ export type ChairStyle =
   | 'ovalBack'
   | 'wishbone'
   | 'tiffany'
-  | 'phoenix';
+  | 'phoenix'
+  | 'windsor'
+  | 'bistro'
+  | 'scandi';
 /** Matériau d’assise. */
 export type SeatMaterial =
   | 'velvet'
@@ -249,7 +273,9 @@ export type DoorStyle =
   | 'frenchDoor'
   | 'barnDoor'
   | 'grandPortal'
-  | 'velvetCurtain';
+  | 'velvetCurtain'
+  | 'atelier'
+  | 'cassette';
 
 export const doorStyleLabels: Record<DoorStyle, string> = {
   single: 'Simple battante',
@@ -265,6 +291,8 @@ export const doorStyleLabels: Record<DoorStyle, string> = {
   pivot: 'Pivotante XXL',
   folding: 'Baie accordéon',
   fireExit: 'Issue de secours (sécurisée)',
+  atelier: 'Verrière d’atelier (acier)',
+  cassette: 'Porte à cassettes moulurées',
 };
 
 export const doorStyleHints: Record<DoorStyle, string> = {
@@ -281,6 +309,8 @@ export const doorStyleHints: Record<DoorStyle, string> = {
   pivot: 'Design minimaliste de prestige',
   folding: 'Ouverture panoramique',
   fireExit: 'Signalétique réglementaire rétroéclairée',
+  atelier: 'Profils acier noir et petits carreaux vitrés, esprit loft',
+  cassette: 'Six panneaux moulurés laqués, esprit haussmannien',
 };
 
 /** Styles d’allées centrales et tapis d’honneur (inspiré Pinterest & Galas). */
@@ -406,6 +436,8 @@ export interface RoomWallOpening {
   /** Paillasson devant la porte. */
   hasMat?: boolean;
   matColor?: string;
+  /** Porte : finition des poignées et paumelles. */
+  hardwareFinish?: import('@/lib/roomHomeFurniture').HomeMetalFinish;
   /** Rideaux (fenêtres). */
   hasCurtains?: boolean;
   curtainColor?: string;
@@ -499,12 +531,18 @@ export interface RoomLayoutBlueprint {
     podiumStyle?: PodiumStyle;
     /** Instrument de concert (piano, batterie, micro…). */
     instrumentStyle?: InstrumentStyle;
+    /** Instrument : teinte du corps (laque, fûts, bois, cuivre). */
+    instrumentFinish?: string;
     /** Type de bar (cocktail, vin, champagne…). */
     barStyle?: BarStyle;
     /** Aménagement extérieur (arbre, haie, piscine, brasero…). */
     landscapeStyle?: import('@/lib/roomOutdoorUtils').LandscapeStyle;
     /** Mobilier résidentiel (lit, dressing, mur TV, îlot, baignoire…). */
     homeStyle?: import('@/lib/roomHomeFurniture').HomeFurnitureStyle;
+    /** Espace vert (`landscapeStyle: 'garden'`) : gazon, bordure, fleurs, arbustes, arbres, chemin. */
+    garden?: Partial<import('@/lib/roomGardenLayout').GardenOptions>;
+    /** Salle de bain : finition de la robinetterie (chrome, laiton, noir). */
+    homeMetalFinish?: import('@/lib/roomHomeFurniture').HomeMetalFinish;
     /** Piscine : forme du bassin (rectangulaire, haricot, ovale, en L…). */
     poolShape?: import('@/lib/roomOutdoorUtils').PoolShape;
     /** Élément créé à partir d’une image ou d’une vidéo (découpe 3D, panneau, bloc, écran…). */
@@ -533,6 +571,8 @@ export interface RoomLayoutBlueprint {
     /** Essence / finition du vantail (portes fixture). */
     openingMaterial?: OpeningMaterial;
     frameColor?: string;
+    /** Porte : finition des poignées et paumelles. */
+    hardwareFinish?: import('@/lib/roomHomeFurniture').HomeMetalFinish;
     couvertStyle?: 'classic' | 'gold' | 'festive';
     /** Style d’allée centrale / tapis d’honneur (Pinterest). */
     aisleStyle?: AisleStyle;
@@ -542,6 +582,27 @@ export interface RoomLayoutBlueprint {
     hasSideLanterns?: boolean;
     /** Pétales de roses éparpillés sur l’allée. */
     hasPetals?: boolean;
+    /** Allée : couleur du tapis choisie (sinon celle du thème). */
+    aisleColor?: string;
+    /** Allée : couleur de la ganse (sinon dorée). */
+    aisleBorderColor?: string;
+    /** Allée : couleur des pétales. */
+    petalColor?: string;
+    /** Allée : quantité de pétales (0–1). */
+    petalDensity?: number;
+    /** Allée : écart entre deux lanternes (m). */
+    lanternSpacingM?: number;
+    /** Allée ou couloir : taille du motif de la photo importée (m). */
+    surfaceImageTileM?: number;
+    /** Couloir : murs latéraux (oui par défaut). */
+    corridorWalls?: boolean;
+    corridorWallHeightM?: number;
+    corridorWallColor?: string;
+    /** Couloir : plinthes au pied des murs (oui par défaut). */
+    corridorPlinths?: boolean;
+    /** Couloir : appliques murales. */
+    corridorSconces?: boolean;
+    corridorSconceSpacingM?: number;
     /** Motif de décalcomanie au sol (roses, papillons, image). */
     decalKind?: FloorDecalKind;
     /** Piédestal floral : colonne blanche ou or. */
@@ -608,6 +669,10 @@ export interface RoomLayoutBlueprint {
         customRadiusM?: number;
         /** Rayon d'arrondi des angles (coins) en mètres pour tables rectangulaires / carrées. */
         cornerRadiusM?: number;
+        /** Piètement : pied central, 4 pieds, tréteaux, épingles, croisillon (sinon celui de la forme). */
+        tableBase?: TableBaseStyle;
+        /** Teinte du piètement. */
+        tableBaseColor?: string;
         x: number;
         y: number;
         locked?: boolean;
@@ -709,6 +774,8 @@ export interface RoomLayoutBlueprint {
      * - tile = texture répétée
      */
     floorImageFit?: 'cover' | 'tile';
+    /** Image de sol en mosaïque : taille réelle d’une répétition (m, défaut 3,5). */
+    floorImageTileM?: number;
     /** Teinte / couleur dominante du sol (architecture). */
     floorColor?: string;
     /** Afficher le toit / plafond en 3D. */
@@ -1938,6 +2005,9 @@ export const chairStyleLabels: Record<ChairStyle, string> = {
   wishbone: 'Wishbone (Y)',
   tiffany: 'Tiffany or',
   phoenix: 'Phoenix prestige',
+  windsor: 'Windsor (barreaux)',
+  bistro: 'Bistrot cannée',
+  scandi: 'Coque scandinave',
 };
 
 export const seatMaterialLabels: Record<SeatMaterial, string> = {
@@ -6020,6 +6090,7 @@ function mergeTemplateStyle(
       floorType: previous.metadata.floorType,
       floorImageUrl: previous.metadata.floorImageUrl,
       floorImageFit: previous.metadata.floorImageFit,
+      floorImageTileM: previous.metadata.floorImageTileM,
       depthView: previous.metadata.depthView,
       depthAmount: previous.metadata.depthAmount,
       defaultTableColor: previous.metadata.defaultTableColor,
@@ -6137,6 +6208,8 @@ export function applyTableStyleToAll(
       customDepthM: fields.includes('dimensions') ? source.customDepthM : item.customDepthM,
       customRadiusM: fields.includes('dimensions') ? source.customRadiusM : item.customRadiusM,
       cornerRadiusM: fields.includes('dimensions') ? source.cornerRadiusM : item.cornerRadiusM,
+      tableBase: fields.includes('tableColor') ? source.tableBase : item.tableBase,
+      tableBaseColor: fields.includes('tableColor') ? source.tableBaseColor : item.tableBaseColor,
       hasPmrAccess: fields.includes('pmr') ? source.hasPmrAccess : item.hasPmrAccess,
       pmrSeatIndices: fields.includes('pmr') ? (source.pmrSeatIndices ? [...source.pmrSeatIndices] : undefined) : item.pmrSeatIndices,
     };
@@ -6188,6 +6261,7 @@ export function applyFixtureStyleToSameKind(
         frameColor: source.frameColor,
         hasMat: source.hasMat,
         matColor: source.matColor,
+        hardwareFinish: source.hardwareFinish,
       };
     }
     if (family === 'aisle') {
@@ -6199,6 +6273,14 @@ export function applyFixtureStyleToSameKind(
         hasGoldBorder: source.hasGoldBorder,
         hasSideLanterns: source.hasSideLanterns,
         hasPetals: source.hasPetals,
+        aisleColor: source.aisleColor,
+        aisleBorderColor: source.aisleBorderColor,
+        petalColor: source.petalColor,
+        petalDensity: source.petalDensity,
+        lanternSpacingM: source.lanternSpacingM,
+        imageUrl: source.imageUrl,
+        imageCrop: source.imageCrop,
+        surfaceImageTileM: source.surfaceImageTileM,
       };
     }
     if (family === 'chandelier') {
@@ -6234,6 +6316,7 @@ export function applyFixtureStyleToSameKind(
       return {
         ...item,
         instrumentStyle: source.instrumentStyle,
+        instrumentFinish: source.instrumentFinish,
         color: source.color,
       };
     }
