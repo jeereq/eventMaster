@@ -8,7 +8,7 @@
 
 import { useMemo } from 'react';
 import type { ZoneMaterial } from '@/lib/roomLayoutUtils';
-import { resolveImportedSurface, resolveZoneMaterialMap } from '@/lib/roomWebGLMaterials';
+import { resolveDeckSurface, resolveImportedSurface, resolveZoneMaterialMap } from '@/lib/roomWebGLMaterials';
 import { tileRepeat } from '@/lib/roomImportedTextureMath';
 import { LEGACY_CORRIDOR_GREY, evenlySpacedOffsets } from '@/lib/roomAisleLayout';
 import { SurfaceMat } from '@/components/room/SurfaceMaterial';
@@ -53,11 +53,17 @@ export function CorridorMesh({
   const turn = w > d ? Math.PI / 2 : 0;
   const wallH = Math.max(0.6, Math.min(6, wallHeightM));
 
-  const zone = resolveZoneMaterialMap(material ?? 'wood');
+  const mat = material ?? 'wood';
+  const zone = resolveZoneMaterialMap(mat);
+  // Matières « réelles » (bois, marbre, béton…) : texture générée à l’échelle réelle, avec
+  // relief et rugosité ; moquette, vinyle et LED gardent leur rendu procédural teinté.
+  const metric = mat !== 'carpet' && mat !== 'vinyl' && mat !== 'led';
+  const deck = useMemo(() => (metric ? resolveDeckSurface(mat, across, along) : null), [metric, mat, across, along]);
   // Motif à l’échelle (≈ 2 m par répétition) au lieu d’être étiré sur toute la longueur.
   const q = (v: number) => Math.max(0.25, Math.round(v * 4) / 4);
   const floorMap = withRepeat(zone.map, q(tileRepeat(across, 2)), q(tileRepeat(along, 2)));
-  const floorColor = selected ? SEL : color && color.toLowerCase() !== LEGACY_CORRIDOR_GREY ? color : zone.color;
+  const customColor = color && color.toLowerCase() !== LEGACY_CORRIDOR_GREY ? color : undefined;
+  const floorColor = selected ? SEL : customColor ?? (deck ? '#ffffff' : zone.color);
   const imported = useMemo(() => {
     if (!imageUrl) return null;
     const tile = imageTileM && imageTileM > 0 ? imageTileM : 1.2;
@@ -81,6 +87,17 @@ export function CorridorMesh({
             normalScale={0.8}
             roughness={0.8}
             metalness={0}
+          />
+        ) : deck?.map ? (
+          <SurfaceMat
+            color={floorColor}
+            finish="plain"
+            map={deck.map}
+            normalMap={deck.normalMap ?? undefined}
+            roughnessMap={deck.roughnessMap ?? undefined}
+            normalScale={0.8}
+            roughness={deck.roughness}
+            metalness={deck.metalness}
           />
         ) : (
           <SurfaceMat
