@@ -9,7 +9,7 @@
  * Z perpendiculaire au vantail (épaisseur `t`).
  */
 
-import { SurfaceMat } from '@/components/room/SurfaceMaterial';
+import { SurfaceMat, type SurfaceFinish } from '@/components/room/SurfaceMaterial';
 import { MetalMat } from '@/components/room/BathroomMeshes';
 import type { HomeMetalFinish } from '@/lib/roomHomeFurniture';
 
@@ -122,7 +122,7 @@ export function AtelierGlazing({ w, h, t, cols = 3, rows = 4, frameColor = '#1f1
  * Panneaux à cassettes sur les deux faces : chaque cassette = panneau en creux
  * entouré d’une moulure saillante, comme une porte d’appartement haussmannien.
  */
-export function CassettePanels({ w, h, t, color, cols = 2, rows = 3 }: { w: number; h: number; t: number; color: string; cols?: number; rows?: number }) {
+export function CassettePanels({ w, h, t, color, cols = 2, rows = 3, finish = 'lacquer' }: { w: number; h: number; t: number; color: string; cols?: number; rows?: number; finish?: SurfaceFinish }) {
   const margin = 0.09;
   const gap = 0.07;
   // Cassettes du haut plus hautes que celle du bas (proportions classiques).
@@ -147,19 +147,19 @@ export function CassettePanels({ w, h, t, color, cols = 2, rows = 3 }: { w: numb
             {/* Panneau en léger retrait */}
             <mesh position={[0, 0, -face * 0.004]}>
               <boxGeometry args={[cellW - 0.03, cell.ch - 0.03, 0.006]} />
-              <SurfaceMat color={color} finish="lacquer" roughness={0.42} />
+              <SurfaceMat color={color} finish={finish} roughness={0.42} />
             </mesh>
             {/* Moulure : quatre baguettes en relief */}
             {[-1, 1].map((s) => (
               <mesh key={`mv${s}`} position={[s * (cellW / 2 - 0.008), 0, face * 0.006]} castShadow>
                 <boxGeometry args={[0.016, cell.ch, 0.012]} />
-                <SurfaceMat color={color} finish="lacquer" roughness={0.35} />
+                <SurfaceMat color={color} finish={finish} roughness={0.35} />
               </mesh>
             ))}
             {[-1, 1].map((s) => (
               <mesh key={`mh${s}`} position={[0, s * (cell.ch / 2 - 0.008), face * 0.006]} castShadow>
                 <boxGeometry args={[cellW, 0.016, 0.012]} />
-                <SurfaceMat color={color} finish="lacquer" roughness={0.35} />
+                <SurfaceMat color={color} finish={finish} roughness={0.35} />
               </mesh>
             ))}
           </group>
