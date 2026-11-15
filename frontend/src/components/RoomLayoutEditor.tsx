@@ -599,7 +599,7 @@ function ElementRotationControls({
             {/* Pivot central */}
             <circle cx="36" cy="36" r="3" className="fill-foreground" />
           </svg>
-          <span className="text-[10px] text-muted text-center mt-0.5">Glisser ou cliquer</span>
+          <span className="text-xs text-muted text-center mt-0.5">Glisser ou cliquer</span>
         </div>
 
         {/* 4 Directions cardinales instantanées */}
@@ -625,7 +625,7 @@ function ElementRotationControls({
                 title={`${label} (${deg}°) - ${hint}`}
               >
                 <span className="text-xs font-semibold leading-tight">{label}</span>
-                <span className="text-[10px] text-muted truncate leading-tight">{hint}</span>
+                <span className="text-xs text-muted truncate leading-tight">{hint}</span>
               </button>
             );
           })}
@@ -671,7 +671,7 @@ function ElementRotationControls({
       {/* Orientations intelligentes contextuelles */}
       {onSmartOrient && (
         <div className="pt-1.5 border-t border-border/70 space-y-1">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted block">
+          <span className="text-xs font-bold uppercase tracking-wider text-muted block">
             Orientation intelligente
           </span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
@@ -684,7 +684,7 @@ function ElementRotationControls({
               <Presentation className="w-4 h-4 text-primary shrink-0" />
               <div className="truncate">
                 <span className="block font-semibold">Face à la scène</span>
-                <span className="block text-[10px] text-muted">Oriente vers l'estrade</span>
+                <span className="block text-xs text-muted">Oriente vers l'estrade</span>
               </div>
             </button>
             <button
@@ -696,7 +696,7 @@ function ElementRotationControls({
               <Crosshair className="w-4 h-4 text-primary shrink-0" />
               <div className="truncate">
                 <span className="block font-semibold">Face au centre</span>
-                <span className="block text-[10px] text-muted">Milieu de la pièce</span>
+                <span className="block text-xs text-muted">Milieu de la pièce</span>
               </div>
             </button>
             {isChair && (
@@ -709,7 +709,7 @@ function ElementRotationControls({
                 <Circle className="w-4 h-4 text-emerald-500 shrink-0" />
                 <div className="truncate">
                   <span className="block font-semibold">Face à la table la plus proche</span>
-                  <span className="block text-[10px] text-muted">Tourne le siège vers le convive / table</span>
+                  <span className="block text-xs text-muted">Tourne le siège vers le convive / table</span>
                 </div>
               </button>
             )}
@@ -723,7 +723,7 @@ function ElementRotationControls({
                 <BrickWall className="w-4 h-4 text-amber-500 shrink-0" />
                 <div className="truncate">
                   <span className="block font-semibold">Face à la salle</span>
-                  <span className="block text-[10px] text-muted">Projette vers les spectateurs</span>
+                  <span className="block text-xs text-muted">Projette vers les spectateurs</span>
                 </div>
               </button>
             )}
@@ -2788,7 +2788,7 @@ export default function RoomLayoutEditor({
                   <span className="text-xs font-bold uppercase tracking-wider text-muted">
                     Rotation & Angle
                   </span>
-                  <span className="text-[10px] text-muted">Raccourci : R</span>
+                  <span className="text-xs text-muted">Raccourci : R</span>
                 </div>
 
                 <div className="grid grid-cols-4 gap-1">
@@ -2864,7 +2864,7 @@ export default function RoomLayoutEditor({
                     <Presentation className="w-4 h-4 text-primary shrink-0" />
                     <div>
                       <span className="block font-semibold">Face à la scène</span>
-                      <span className="block text-[10px] text-muted font-normal">Oriente vers l'estrade / podium</span>
+                      <span className="block text-xs text-muted font-normal">Oriente vers l'estrade / podium</span>
                     </div>
                   </button>
                   <button
@@ -2881,7 +2881,7 @@ export default function RoomLayoutEditor({
                     <Crosshair className="w-4 h-4 text-primary shrink-0" />
                     <div>
                       <span className="block font-semibold">Face au centre</span>
-                      <span className="block text-[10px] text-muted font-normal">Milieu de la pièce</span>
+                      <span className="block text-xs text-muted font-normal">Milieu de la pièce</span>
                     </div>
                   </button>
                   <button
@@ -5402,7 +5402,7 @@ export default function RoomLayoutEditor({
                 <div className="rounded-[var(--radius-button)] border border-border bg-surface-muted/40 px-3 py-2.5 space-y-3">
                   <div>
                     <p className={EDITOR_HEADING}>Définition de l’escalier</p>
-                    <p className="text-[11px] font-semibold text-foreground mt-1">{formatStairSummary(def)}</p>
+                    <p className="text-xs font-semibold text-foreground mt-1">{formatStairSummary(def)}</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 text-xs">
@@ -7818,7 +7818,7 @@ export default function RoomLayoutEditor({
         >
           {(['bedroom', 'living', 'kitchen', 'bathroom'] as HomeFurnitureGroup[]).map((group) => (
             <React.Fragment key={group}>
-              <span className="basis-full text-[11px] font-semibold uppercase tracking-wide text-muted pt-1">{HOME_FURNITURE_GROUP_LABELS[group]}</span>
+              <span className="basis-full text-xs font-semibold uppercase tracking-wide text-muted pt-1">{HOME_FURNITURE_GROUP_LABELS[group]}</span>
               {HOME_FURNITURE_ORDER.filter((style) => HOME_FURNITURE_META[style].group === group).map((style) => (
                 <button
                   key={style}
@@ -8074,7 +8074,7 @@ export default function RoomLayoutEditor({
       {caps.fixtureKinds.includes('landscape')
         ? (['vegetation', 'water', 'ambiance'] as LandscapeGroup[]).map((group) => (
           <React.Fragment key={group}>
-            <span className="basis-full text-[11px] font-semibold uppercase tracking-wide text-muted pt-1">{LANDSCAPE_GROUP_LABELS[group]}</span>
+            <span className="basis-full text-xs font-semibold uppercase tracking-wide text-muted pt-1">{LANDSCAPE_GROUP_LABELS[group]}</span>
             {LANDSCAPE_STYLE_ORDER.filter((style) => LANDSCAPE_STYLE_META[style].group === group).map((style) => (
               <button
                 key={style}
@@ -8463,7 +8463,7 @@ export default function RoomLayoutEditor({
                 <span>Allée centrale de passage</span>
               </label>
 
-              <span className="text-[11px] text-muted">
+              <span className="text-xs text-muted">
                 Capacité totale estimée : <strong className="text-foreground">{estimateAmphitheaterSeats(amphiStyle, amphiTiers, amphiSeatsPerRow)} places</strong>
               </span>
             </div>
@@ -9031,7 +9031,7 @@ export default function RoomLayoutEditor({
       )}
       {quickCreate === 'stairs' && (
         <>
-          <p className="text-[11px] text-muted self-center">
+          <p className="text-xs text-muted self-center">
             Depuis <span className="font-semibold text-foreground">{resolveStories(blueprint).find((s) => s.id === resolveActiveStoryId(blueprint))?.label ?? 'RDC'}</span>, créer un escalier vers :
           </p>
           {resolveStories(blueprint)
@@ -9064,7 +9064,7 @@ export default function RoomLayoutEditor({
       )}
       {quickCreate === 'balconies' && (
         <>
-          <p className="text-[11px] text-muted self-center">Balcon sur l’étage actif :</p>
+          <p className="text-xs text-muted self-center">Balcon sur l’étage actif :</p>
           {(Object.keys(balconySideLabels) as BalconySide[]).map((side) => (
             <button
               key={side}
@@ -9556,14 +9556,14 @@ export default function RoomLayoutEditor({
           <div className="p-3 rounded-xl bg-surface-muted border border-border">
             <span className="text-xs text-muted block">Capacité assise</span>
             <span className="text-xl font-bold text-foreground">{inventoryReport.totalCapacity} pers.</span>
-            <span className="text-[10px] text-muted block mt-0.5">
+            <span className="text-xs text-muted block mt-0.5">
               {inventoryReport.tableSeats} tables · {inventoryReport.rowSeats} rangées
             </span>
           </div>
           <div className="p-3 rounded-xl bg-surface-muted border border-border">
             <span className="text-xs text-muted block">Surface totale</span>
             <span className="text-xl font-bold text-foreground">{inventoryReport.totalAreaM2} m²</span>
-            <span className="text-[10px] text-muted block mt-0.5">
+            <span className="text-xs text-muted block mt-0.5">
               {blueprint.canvas?.widthM ?? 20}m × {blueprint.canvas?.heightM ?? 16}m
             </span>
           </div>
@@ -9572,12 +9572,12 @@ export default function RoomLayoutEditor({
             <span className="text-xl font-bold text-foreground">
               {inventoryReport.ratioM2PerSeat > 0 ? `${inventoryReport.ratioM2PerSeat} m²` : '—'}
             </span>
-            <span className="text-[10px] text-muted block mt-0.5">par personne assise</span>
+            <span className="text-xs text-muted block mt-0.5">par personne assise</span>
           </div>
           <div className="p-3 rounded-xl bg-surface-muted border border-border">
             <span className="text-xs text-muted block">Total références</span>
             <span className="text-xl font-bold text-foreground">{inventoryReport.items.length}</span>
-            <span className="text-[10px] text-muted block mt-0.5">équipements distincts</span>
+            <span className="text-xs text-muted block mt-0.5">équipements distincts</span>
           </div>
         </div>
 
@@ -9587,7 +9587,7 @@ export default function RoomLayoutEditor({
             <div key={category} className="space-y-1.5">
               <h4 className="text-xs font-bold uppercase tracking-wider text-muted flex items-center justify-between">
                 <span>{category}</span>
-                <span className="text-[11px] font-semibold text-foreground bg-surface-muted px-2 py-0.5 rounded-full border border-border">
+                <span className="text-xs font-semibold text-foreground bg-surface-muted px-2 py-0.5 rounded-full border border-border">
                   {catItems.reduce((sum, item) => sum + item.count, 0)} unité(s)
                 </span>
               </h4>
@@ -9596,8 +9596,8 @@ export default function RoomLayoutEditor({
                   <div key={item.id} className="p-2.5 flex items-center justify-between gap-3 text-xs hover:bg-surface-muted/40 transition-colors">
                     <div className="min-w-0">
                       <p className="font-semibold text-foreground truncate">{item.name}</p>
-                      {item.specs ? <p className="text-muted text-[11px] truncate">{item.specs}</p> : null}
-                      {item.notes ? <p className="text-primary text-[11px] font-medium">{item.notes}</p> : null}
+                      {item.specs ? <p className="text-muted text-xs truncate">{item.specs}</p> : null}
+                      {item.notes ? <p className="text-primary text-xs font-medium">{item.notes}</p> : null}
                     </div>
                     <div className="shrink-0 text-right">
                       <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-bold text-xs">
@@ -9893,7 +9893,7 @@ export default function RoomLayoutEditor({
               </div>
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 uppercase tracking-wide flex items-center gap-1">
+                  <span className="px-2 py-0.5 rounded-full text-xs font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 uppercase tracking-wide flex items-center gap-1">
                     <Sparkles className="w-3 h-3" /> Succès Studio 2D / 3D
                   </span>
                   <span className="font-bold text-foreground">Plan généré par l’IA</span>

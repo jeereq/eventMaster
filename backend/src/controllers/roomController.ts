@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { AuthenticatedRequest } from '../middleware/auth';
 import { prisma } from '../db';
-import { MarketplaceBookingStatus } from '@prisma/client';
+import { MarketplaceBookingStatus, Prisma } from '@prisma/client';
 import { resolveOrgAccess, canManageRoom, canAccessRoom, protocolCreativeDeniedMessage } from '../services/permissionsService';
 import {
   assertRoomQuota,
@@ -46,6 +46,7 @@ import {
   failStudioJob,
 } from '../services/studioJobService';
 import { notifyUsers } from '../services/platformNotificationService';
+import { parseExpectedUpdatedAt, validateRoomBlueprint } from '../services/roomBlueprintValidation.ts';
 import { PLATFORM_NOTIFICATION_TYPE } from '../config/platformNotificationTypes';
 
 async function persistRoomPlanCompose(opts: {
@@ -67,6 +68,9 @@ async function persistRoomPlanCompose(opts: {
     return null;
   }
 }
+
+const ROOM_CONFLICT_MESSAGE =
+  'Ce plan a été modifié ailleurs (autre onglet ou autre personne). Rechargez-le ou gardez votre version.';
 
 const HOLD_BOOKING_STATUSES: MarketplaceBookingStatus[] = ['REQUESTED', 'ACCEPTED', 'CONFIRMED'];
 
@@ -153,6 +157,11 @@ export async function createRoom(req: AuthenticatedRequest, res: Response) {
 
     const resolvedType = (roomType || 'SIMPLE') as RoomType;
 
+    const blueprintCheck = validateRoomBlueprint(layoutBlueprint);
+    if (!blueprintCheck.ok) {
+      return res.status(blueprintCheck.status).json({ error: blueprintCheck.error, detail: blueprintCheck.detail });
+    }
+
     try {
       const plan = await assertRoomTypeForPlan(tenantId, resolvedType);
       await assertRoomQuota(tenantId);
@@ -224,6 +233,21 @@ export async function updateRoom(req: AuthenticatedRequest, res: Response) {
 
     const { name, description, capacity, floor, location, roomType, layoutParams, layoutBlueprint } = req.body;
 
+    const expectedUpdatedAt = parseExpectedUpdatedAt(req.body?.expectedUpdatedAt);
+    if (expectedUpdatedAt === null) {
+      return res.status(400).json({ error: 'Date de version du plan illisible.' });
+    }
+    if (expectedUpdatedAt && existing.updatedAt.getTime() !== expectedUpdatedAt.getTime()) {
+      return res.status(409).json({ error: ROOM_CONFLICT_MESSAGE, code: 'ROOM_CONFLICT', room: existing });
+    }
+
+    if (layoutBlueprint !== undefined) {
+      const blueprintCheck = validateRoomBlueprint(layoutBlueprint);
+      if (!blueprintCheck.ok) {
+        return res.status(blueprintCheck.status).json({ error: blueprintCheck.error, detail: blueprintCheck.detail });
+      }
+    }
+
     const nextType = roomType !== undefined ? (roomType as RoomType) : (existing.roomType as RoomType);
 
     try {
@@ -272,18 +296,31 @@ export async function updateRoom(req: AuthenticatedRequest, res: Response) {
             : null
           : existing.capacity;
 
-    const room = await prisma.organizationRoom.update({
-      where: { id: roomId },
-      data: {
-        name: name !== undefined ? name : existing.name,
-        description: description !== undefined ? description : existing.description,
-        capacity: computedCapacity,
-        floor: floor !== undefined ? floor : existing.floor,
-        location: location !== undefined ? location : existing.location,
-        roomType: nextType,
-        layoutBlueprint: nextBlueprint === null ? undefined : nextBlueprint,
-      },
-    });
+    const data = {
+      name: name !== undefined ? name : existing.name,
+      description: description !== undefined ? description : existing.description,
+      capacity: computedCapacity,
+      floor: floor !== undefined ? floor : existing.floor,
+      location: location !== undefined ? location : existing.location,
+      roomType: nextType,
+      layoutBlueprint: nextBlueprint === null ? undefined : (nextBlueprint as Prisma.InputJsonValue),
+    };
+
+    if (expectedUpdatedAt) {
+      // Écriture conditionnelle : si une autre sauvegarde est passée entre la
+      // lecture et l'écriture, aucune ligne n'est modifiée et on répond 409.
+      const written = await prisma.organizationRoom.updateMany({
+        where: { id: roomId, tenantId, updatedAt: existing.updatedAt },
+        data,
+      });
+      const fresh = await prisma.organizationRoom.findFirst({ where: { id: roomId, tenantId } });
+      if (written.count === 0) {
+        return res.status(409).json({ error: ROOM_CONFLICT_MESSAGE, code: 'ROOM_CONFLICT', room: fresh });
+      }
+      return res.json(fresh);
+    }
+
+    const room = await prisma.organizationRoom.update({ where: { id: roomId }, data });
 
     return res.json(room);
   } catch (error) {

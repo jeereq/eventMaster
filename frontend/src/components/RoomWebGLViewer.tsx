@@ -3343,7 +3343,7 @@ function SpaceHighlight({ space, reduceMotion }: { space: RoomSpace; reduceMotio
       <Html position={[0, Math.max(1.6, space.focusHeightM + 1.1), 0]} center zIndexRange={[5, 0]} style={{ pointerEvents: 'none' }}>
         <div className="whitespace-nowrap rounded-lg border border-amber-300/60 bg-stone-950/85 px-2.5 py-1.5 text-left shadow-lg backdrop-blur-sm">
           <div className="text-[13px] font-semibold leading-tight text-amber-100">{space.title}</div>
-          <div className="text-[11px] leading-tight text-stone-300">{space.details}</div>
+          <div className="text-xs leading-tight text-stone-300">{space.details}</div>
         </div>
       </Html>
     </group>
@@ -4715,7 +4715,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
               <LayoutList className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Espaces</span>
               <span className={cn(
-                'rounded-full px-1.5 text-[10px] font-bold leading-4',
+                'rounded-full px-1.5 text-xs font-bold leading-4',
                 spacesOpen ? 'bg-primary-foreground/20' : 'bg-surface-muted text-muted',
               )}>
                 {spaces.length}
@@ -4777,7 +4777,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
         <div className="absolute inset-x-2.5 bottom-12 z-20 flex justify-center pointer-events-none">
           <div className="pointer-events-auto flex max-w-full items-center gap-3 rounded-full border border-white/15 bg-stone-950/85 py-1.5 pl-4 pr-1.5 text-white shadow-lg backdrop-blur-md">
             {film.recording ? (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-red-300">
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-red-300">
                 <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" aria-hidden /> Rec
               </span>
             ) : (
@@ -4805,7 +4805,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
         >
           <div className="flex items-center justify-between gap-2 border-b border-border/70 px-3.5 py-2.5">
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">Explorer la salle</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted">Explorer la salle</p>
               <p className="truncate text-sm font-semibold text-foreground">
                 {focusedSpace ? focusedSpace.title : `${spaces.length} espace${spaces.length > 1 ? 's' : ''}`}
               </p>

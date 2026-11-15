@@ -1,11 +1,11 @@
-import { LANDSCAPE_STYLE_META, landscapeFootprintPct, type LandscapeStyle } from '@/lib/roomOutdoorUtils';
-import { HOME_FURNITURE_META } from '@/lib/roomHomeFurniture';
-import { concentricRowCurvePercent, rowSeatCode, seatsGrownForTier } from '@/lib/roomAmphitheaterGeom';
-import { getTableSeatPlacement3D, tablePlateSizeMeters, type TableSeatingSide } from '@/lib/tablePlanUtils';
+import { LANDSCAPE_STYLE_META, landscapeFootprintPct, type LandscapeStyle } from './roomOutdoorUtils.ts';
+import { HOME_FURNITURE_META } from './roomHomeFurniture.ts';
+import { concentricRowCurvePercent, rowSeatCode, seatsGrownForTier } from './roomAmphitheaterGeom.ts';
+import { getTableSeatPlacement3D, tablePlateSizeMeters, type TableSeatingSide } from './tablePlanUtils.ts';
 export type { TableSeatingSide } from '@/lib/tablePlanUtils';
-import { enforceRealLayoutClearances } from './roomLayoutClearance';
+import { enforceRealLayoutClearances } from './roomLayoutClearance.ts';
 
-export { estimateAmphitheaterSeats, rowCurveFactor, rowCurvePercent, rowSeatCode } from '@/lib/roomAmphitheaterGeom';
+export { estimateAmphitheaterSeats, rowCurveFactor, rowCurvePercent, rowSeatCode } from './roomAmphitheaterGeom.ts';
 
 export type RoomType = 'SIMPLE' | 'BANQUET' | 'CONFERENCE' | 'AMPHITHEATER' | 'TENT' | 'CUSTOM';
 export type ChairType =
