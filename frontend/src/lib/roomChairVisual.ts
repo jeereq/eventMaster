@@ -136,6 +136,9 @@ const CHAIR_STYLE_TWEAKS: Record<ChairStyle, Partial<ChairVisual>> = {
   wishbone: { backHeight: 0.62, seatSize: [0.4, 0.04, 0.38], scale: 1, hasArms: false, cushion: false },
   tiffany: { backHeight: 0.6, seatSize: [0.38, 0.05, 0.36], scale: 0.98, hasArms: false, cushion: true },
   phoenix: { backHeight: 0.72, seatSize: [0.44, 0.07, 0.42], scale: 1.08, hasArms: false, cushion: true },
+  windsor: { backHeight: 0.6, seatSize: [0.44, 0.045, 0.42], scale: 1.02, hasArms: false, cushion: false },
+  bistro: { backHeight: 0.5, seatSize: [0.4, 0.035, 0.38], scale: 0.98, hasArms: false, cushion: false },
+  scandi: { backHeight: 0.42, seatSize: [0.46, 0.05, 0.44], scale: 1, hasArms: false, cushion: false },
 };
 
 export function resolveChairVisual(
@@ -178,6 +181,21 @@ export function resolveChairVisual(
     base.frameColor = '#c9a227';
     base.seatColor = '#4c1d95';
     base.cushion = true;
+  }
+  if (style === 'windsor' && !material) {
+    base.frameColor = '#8a5a34';
+    base.seatColor = '#8a5a34';
+    base.cushion = false;
+  }
+  if (style === 'bistro' && !material) {
+    base.frameColor = '#3b2416';
+    base.seatColor = '#d9c08f';
+    base.cushion = false;
+  }
+  if (style === 'scandi' && !material) {
+    base.frameColor = '#c9a273';
+    base.seatColor = '#e7e2d8';
+    base.cushion = false;
   }
   if (style === 'wishbone' && !material) {
     base.frameColor = '#92400e';

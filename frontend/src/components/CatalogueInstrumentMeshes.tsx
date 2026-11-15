@@ -128,7 +128,7 @@ function grandPianoOutline(scale = 1): THREE.Shape {
   return shape;
 }
 
-function GrandPiano({ accent }: { accent?: string }) {
+function GrandPiano({ accent, keysTint }: { accent?: string; keysTint?: string }) {
   const black = accent ?? '#0b0b0c';
   const caseGeo = useDisposable(() => {
     const g = new THREE.ExtrudeGeometry(grandPianoOutline(), { depth: 0.3, bevelEnabled: true, bevelSize: 0.012, bevelThickness: 0.012, bevelSegments: 2, curveSegments: 24 });
@@ -207,7 +207,7 @@ function GrandPiano({ accent }: { accent?: string }) {
         <boxGeometry args={[1.28, 0.07, 0.04]} />
         <Mat color={black} finish="lacquer" roughness={0.12} />
       </mesh>
-      <PianoKeyboard y={0.715} z={0.66} accent={accent} />
+      <PianoKeyboard y={0.715} z={0.66} accent={keysTint} />
       {/* Pieds galbés et roulettes laiton */}
       {([[-0.64, 0.46], [0.64, 0.46], [-0.3, -0.85]] as const).map(([x, z]) => (
         <group key={`${x}${z}`} position={[x, 0, z]}>
@@ -243,7 +243,7 @@ function GrandPiano({ accent }: { accent?: string }) {
   );
 }
 
-function UprightPiano({ accent }: { accent?: string }) {
+function UprightPiano({ accent, keysTint }: { accent?: string; keysTint?: string }) {
   const black = accent ?? '#0b0b0c';
   return (
     <group position={[0, 0, -0.2]}>
@@ -276,7 +276,7 @@ function UprightPiano({ accent }: { accent?: string }) {
           <Mat color={black} finish="lacquer" roughness={0.12} />
         </mesh>
       ))}
-      <PianoKeyboard y={0.705} z={0.24} accent={accent} />
+      <PianoKeyboard y={0.705} z={0.24} accent={keysTint} />
       {/* Consoles et pédales */}
       {([-1, 1] as const).map((side) => (
         <mesh key={side} position={[side * 0.64, 0.32, 0.24]} castShadow>
@@ -295,7 +295,7 @@ function UprightPiano({ accent }: { accent?: string }) {
   );
 }
 
-function StageKeyboard({ accent }: { accent?: string }) {
+function StageKeyboard({ accent, keysTint }: { accent?: string; keysTint?: string }) {
   const chrome = '#a1a1aa';
   return (
     <group>
@@ -333,7 +333,7 @@ function StageKeyboard({ accent }: { accent?: string }) {
         <boxGeometry args={[0.16, 0.004, 0.06]} />
         <meshStandardMaterial color="#38bdf8" emissive="#0ea5e9" emissiveIntensity={0.5} />
       </mesh>
-      <PianoKeyboard width={1.22} y={0.898} z={0.07} accent={accent} />
+      <PianoKeyboard width={1.22} y={0.898} z={0.07} accent={keysTint} />
     </group>
   );
 }
@@ -842,8 +842,8 @@ function PaSpeaker({ accent }: { accent?: string }) {
   );
 }
 
-function Saxophone() {
-  const brass = '#c9a227';
+function Saxophone({ accent }: { accent?: string }) {
+  const brass = accent ?? '#c9a227';
   const bodyCurve = useMemo(
     () => new THREE.CatmullRomCurve3([
       new THREE.Vector3(-0.02, 0.92, 0.02),
@@ -907,25 +907,29 @@ function InstrumentStand({ height = 0.42, chrome = '#d4d4d8' }: { height?: numbe
 function InstrumentGlyph({
   style,
   selected = false,
+  finish,
 }: {
   style: InstrumentStyle;
   selected?: boolean;
+  /** Teinte choisie pour le corps (laque, bois, fût, cuivre). */
+  finish?: string;
 }) {
-  const accent = selected ? '#c7d2fe' : undefined;
+  const sel = selected ? '#c7d2fe' : undefined;
+  const accent = sel ?? finish;
   const wood = accent ?? '#5c4030';
   const chrome = '#d4d4d8';
-  const brass = '#c9a227';
+  const brass = accent ?? '#c9a227';
 
-  if (style === 'piano') return <GrandPiano accent={accent} />;
-  if (style === 'upright') return <UprightPiano accent={accent} />;
-  if (style === 'keyboard') return <StageKeyboard accent={accent} />;
+  if (style === 'piano') return <GrandPiano accent={accent} keysTint={sel} />;
+  if (style === 'upright') return <UprightPiano accent={accent} keysTint={sel} />;
+  if (style === 'keyboard') return <StageKeyboard accent={accent} keysTint={sel} />;
   if (style === 'drums') return <DrumKit accent={accent} />;
   if (style === 'guitar' || style === 'bass' || style === 'violin' || style === 'cello' || style === 'doubleBass') {
     return <StringFamily style={style} accent={accent} />;
   }
   if (style === 'harp') return <ConcertHarp accent={accent} />;
   if (style === 'micStand') return <MicrophoneStand />;
-  if (style === 'sax') return <Saxophone />;
+  if (style === 'sax') return <Saxophone accent={accent} />;
   if (style === 'speaker') return <PaSpeaker accent={accent} />;
 
   if (style === 'trumpet') {
@@ -961,7 +965,7 @@ function InstrumentGlyph({
           <group key={x} position={[x, 0, 0]}>
             <mesh position={[0, i === 0 ? 0.38 : 0.32, 0]} castShadow>
               <cylinderGeometry args={[i === 0 ? 0.16 : 0.14, 0.13, i === 0 ? 0.72 : 0.6, 16]} />
-              <Mat color="#9a4a24" finish="wood" roughness={0.38} clearcoat={0.7} repeat={[1, 3]} vertical />
+              <Mat color={accent ?? '#9a4a24'} finish="wood" roughness={0.38} clearcoat={0.7} repeat={[1, 3]} vertical />
             </mesh>
             <mesh position={[0, i === 0 ? 0.75 : 0.63, 0]}>
               <cylinderGeometry args={[i === 0 ? 0.155 : 0.135, i === 0 ? 0.155 : 0.135, 0.02, 16]} />
@@ -993,7 +997,7 @@ function InstrumentGlyph({
       <group>
         <mesh position={[0, 0.72, 0]} rotation={[-0.28, 0, 0]} castShadow receiveShadow>
           <boxGeometry args={[1.02, 0.08, 0.52]} />
-          <Mat color="#171717" roughness={0.4} metalness={0.2} />
+          <Mat color={accent ?? '#171717'} roughness={0.4} metalness={0.2} />
         </mesh>
         {Array.from({ length: MIXER_FADERS }).map((_, i) => {
           const x = ((i + 0.5) / MIXER_FADERS - 0.5) * 0.88;
@@ -1029,7 +1033,7 @@ function InstrumentGlyph({
       <group>
         <mesh position={[0, 0.34, 0]} castShadow receiveShadow>
           <boxGeometry args={[0.56, 0.64, 0.32]} />
-          <Mat color="#292524" finish="leather" roughness={0.7} repeat={2} />
+          <Mat color={accent ?? '#292524'} finish="leather" roughness={0.7} repeat={2} />
         </mesh>
         {([-0.24, 0.24] as const).flatMap((x) =>
           ([-0.28, 0.28] as const).map((y) => (
@@ -1067,11 +1071,13 @@ function InstrumentGlyph({
 export function ConcertInstrumentMesh({
   style,
   selected = false,
+  finish,
   w = 1.2,
   d = 0.7,
 }: {
   style: InstrumentStyle;
   selected?: boolean;
+  finish?: string;
   w?: number;
   d?: number;
 }) {
@@ -1081,7 +1087,7 @@ export function ConcertInstrumentMesh({
   const scale = Math.min(1.25, Math.max(0.75, fit));
   return (
     <group scale={[scale, scale, scale]}>
-      <InstrumentGlyph style={style} selected={selected} />
+      <InstrumentGlyph style={style} selected={selected} finish={finish} />
     </group>
   );
 }

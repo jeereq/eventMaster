@@ -6,7 +6,7 @@
  * du lustre (y = 0), le lustre descend vers les y négatifs. Dimensions réelles en mètres.
  */
 
-import React, { useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { SurfaceMat } from '@/components/room/SurfaceMaterial';
 import type { ChandelierFixtureStyle } from '@/lib/roomLayoutUtils';
@@ -51,24 +51,36 @@ function beadChain(a: THREE.Vector3, b: THREE.Vector3, n: number, sag: number): 
   return out;
 }
 
+/**
+ * Cristal taillé (même recette que la finition « crystal » de SurfaceMat) :
+ * diélectrique à IOR élevé (cristal au plomb ≈ 2), reflets d’environnement
+ * forts et légère irisation pour les feux colorés des pampilles. Pas de
+ * « transmission » : aucune passe de rendu en plus, fluide sur mobile.
+ */
 function useCrystalMaterial(tint = '#f8fbff', glow = '#fff1c9', glowIntensity = 0.18) {
-  return useMemo(
+  const mat = useMemo(
     () =>
       new THREE.MeshPhysicalMaterial({
         color: tint,
         roughness: 0.02,
-        metalness: 0.15,
+        metalness: 0,
+        ior: 2,
+        specularIntensity: 1,
         clearcoat: 1,
         clearcoatRoughness: 0.02,
-        envMapIntensity: 2.6,
+        iridescence: 0.35,
+        iridescenceIOR: 1.6,
+        envMapIntensity: 2.8,
         emissive: glow,
         emissiveIntensity: glowIntensity,
         transparent: true,
-        opacity: 0.88,
+        opacity: 0.82,
         flatShading: true,
       }),
     [tint, glow, glowIntensity],
   );
+  useEffect(() => () => mat.dispose(), [mat]);
+  return mat;
 }
 
 function useFlameMaterial(color: string, intensity = 2.4) {

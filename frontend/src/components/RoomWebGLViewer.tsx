@@ -133,11 +133,14 @@ import RoomShowcasePostProcessing from '@/components/RoomShowcasePostProcessing'
 import { LocalRoomEnvironment } from '@/components/room/LocalRoomEnvironment';
 import { LandscapeMesh, OutdoorSurroundingsScene, seedFromId } from '@/components/room/OutdoorLandscapeMeshes';
 import { CorridorMesh } from '@/components/room/CorridorMesh';
+import { AtelierGlazing, CassettePanels, DoorHandles, Hinges, handleY } from '@/components/room/DoorHardware';
+import { MetalMat } from '@/components/room/BathroomMeshes';
 
 type SurfaceDecor = Pick<
   RoomLayoutBlueprint['fixtures'][number],
   | 'aisleColor' | 'aisleBorderColor' | 'petalColor' | 'petalDensity' | 'lanternSpacingM' | 'surfaceImageTileM'
   | 'corridorWalls' | 'corridorWallHeightM' | 'corridorWallColor' | 'corridorPlinths' | 'corridorSconces' | 'corridorSconceSpacingM'
+  | 'hardwareFinish'
 >;
 import { CustomElementMesh } from '@/components/room/CustomElementMesh';
 import { DomeRoof, RoofLantern, StyledRoof, TentSidewall } from '@/components/room/RoofMeshes';
@@ -1389,6 +1392,7 @@ function OpeningMesh({
   );
   const woodMap = doorMat.map ?? null;
 
+  const hardware: HomeMetalFinish = opening.hardwareFinish ?? 'brass';
   const glassProps = {
     color: leafColor,
     transparent: true,
@@ -1444,7 +1448,7 @@ function OpeningMesh({
         ([-0.2, 0.2] as const).map((ty) => (
           <mesh key={`${tx}-${ty}`} position={[leafW * tx, leafHeight * ty, z]}>
             <boxGeometry args={[leafW * 0.28, leafHeight * 0.28, 0.015]} />
-            <meshStandardMaterial {...glassProps} />
+            <SurfaceMat color={leafColor} finish="glass" opacity={0.3} />
           </mesh>
         )),
       )}
@@ -1510,16 +1514,14 @@ function OpeningMesh({
               {style === 'double' && material === 'glass' && (
                 <mesh position={[0, 0.08, 0.035]}>
                   <boxGeometry args={[w * 0.32, leafH * 0.55, 0.02]} />
-                  <meshStandardMaterial {...glassProps} />
+                  <SurfaceMat color={leafColor} finish="glass" opacity={0.3} />
                 </mesh>
               )}
               {(style === 'double') && (material === 'wood' || material === 'oak' || material === 'walnut') && (
                 renderDoorPanels(w * 0.46, leafH, 0.035)
               )}
-              <mesh position={[side * -w * 0.15, 0, 0.045]}>
-                <sphereGeometry args={[0.035, 10, 10]} />
-                <meshStandardMaterial color="#c9a227" metalness={0.9} roughness={0.15} />
-              </mesh>
+              <DoorHandles x={-side * (w * 0.23 - 0.07)} y={handleY(leafH)} t={0.055} toward={side as 1 | -1} finish={hardware} />
+              <Hinges x={side * (w * 0.23 - 0.01)} leafH={leafH * 0.98} t={0.055} finish={hardware} />
             </group>
           ))}
         </>
@@ -1579,7 +1581,27 @@ function OpeningMesh({
         </group>
       )}
 
-      {isDoor && style !== 'double' && style !== 'frenchDoor' && style !== 'sliding' && style !== 'folding' && style !== 'fireExit' && (
+      {isDoor && style === 'atelier' && (
+        <group position={[0, -h / 2 + leafH / 2, leafZ]}>
+          <AtelierGlazing w={w * 0.96} h={leafH * 0.98} t={0.045} cols={3} rows={5} frameColor={opening.color ?? '#1f1f1f'} />
+          <DoorHandles x={w * 0.4} y={handleY(leafH)} t={0.045} toward={-1} finish={opening.hardwareFinish ?? 'black'} />
+          <Hinges x={-(w * 0.48 - 0.02)} leafH={leafH * 0.98} t={0.045} finish={opening.hardwareFinish ?? 'black'} />
+        </group>
+      )}
+
+      {isDoor && style === 'cassette' && (
+        <group position={[0, -h / 2 + leafH / 2, leafZ]}>
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[w * 0.96, leafH * 0.98, 0.05]} />
+            <SurfaceMat color={opening.color ?? '#f4f1ea'} finish="lacquer" roughness={0.38} />
+          </mesh>
+          <CassettePanels w={w * 0.96} h={leafH * 0.98} t={0.05} color={opening.color ?? '#f4f1ea'} />
+          <DoorHandles x={w * 0.38} y={handleY(leafH)} t={0.066} toward={-1} finish={hardware} />
+          <Hinges x={-(w * 0.48 - 0.01)} leafH={leafH * 0.98} t={0.05} finish={hardware} />
+        </group>
+      )}
+
+      {isDoor && style !== 'double' && style !== 'frenchDoor' && style !== 'sliding' && style !== 'folding' && style !== 'fireExit' && style !== 'atelier' && style !== 'cassette' && (
         <group position={[0, -h / 2 + leafH / 2, leafZ]} rotation={style === 'pivot' ? [0, 0.35, 0] : [0, 0, 0]}>
           <mesh castShadow>
             <boxGeometry args={[w * 0.92, leafH * 0.98, 0.055]} />
@@ -1589,22 +1611,30 @@ function OpeningMesh({
             <>
               <mesh position={[0, leafH * 0.15, 0.035]}>
                 <boxGeometry args={[w * 0.7, leafH * 0.4, 0.02]} />
-                <meshStandardMaterial {...glassProps} />
+                <SurfaceMat color={leafColor} finish="glass" opacity={0.3} />
               </mesh>
               <mesh position={[0, -leafH * 0.22, 0.035]}>
                 <boxGeometry args={[w * 0.7, leafH * 0.28, 0.02]} />
-                <meshStandardMaterial {...glassProps} />
+                <SurfaceMat color={leafColor} finish="glass" opacity={0.3} />
               </mesh>
             </>
           )}
           {(style === 'panel' || material === 'wood' || material === 'oak' || material === 'walnut') && style !== 'glass' && material !== 'glass' && (
             renderDoorPanels(w * 0.92, leafH, 0.035)
           )}
-          {style !== 'pivot' && (
-            <mesh position={[w * 0.32, 0, 0.045]}>
-              <sphereGeometry args={[0.04, 10, 10]} />
-              <meshStandardMaterial color="#c9a227" metalness={0.9} roughness={0.15} />
-            </mesh>
+          {style !== 'pivot' ? (
+            <>
+              <DoorHandles x={w * 0.36} y={handleY(leafH)} t={0.055} toward={-1} finish={hardware} />
+              <Hinges x={-(w * 0.46 - 0.01)} leafH={leafH * 0.98} t={0.055} finish={hardware} />
+            </>
+          ) : (
+            // Pivot : longue poignée bâton des deux côtés.
+            [1, -1].map((face) => (
+              <mesh key={face} position={[w * 0.36, 0, face * 0.06]} castShadow>
+                <cylinderGeometry args={[0.014, 0.014, Math.min(1.2, leafH * 0.55), 12]} />
+                <MetalMat finish={hardware} />
+              </mesh>
+            ))
           )}
         </group>
       )}
@@ -2126,6 +2156,8 @@ function TableMesh({
   customDepthM,
   customRadiusM,
   cornerRadiusM,
+  tableBase,
+  tableBaseColor,
   seatingSide,
   onSelect,
   onDragStart,
@@ -2162,6 +2194,8 @@ function TableMesh({
   customDepthM?: number;
   customRadiusM?: number;
   cornerRadiusM?: number;
+  tableBase?: import('@/lib/roomLayoutUtils').TableBaseStyle;
+  tableBaseColor?: string;
   seatingSide?: import('@/lib/tablePlanUtils').TableSeatingSide;
   onSelect: (mods?: { shiftKey?: boolean; metaKey?: boolean; ctrlKey?: boolean; seatIndex?: number }) => void;
   onDragStart?: (e: ThreeEvent<PointerEvent>) => void;
@@ -2224,6 +2258,8 @@ function TableMesh({
           mat={mat}
           selected={tableHalo}
           cornerRadiusM={cornerRadiusM}
+          base={tableBase}
+          baseColor={tableBaseColor}
         />
       </group>
       {(hasCouverts || dressAllTables || (selected && showcaseTableware && shape !== 'cocktail' && shape !== 'highTop' && capacity <= 10)) &&
@@ -2660,6 +2696,7 @@ function FixtureMesh({
   stageRoof,
   podiumStyle,
   instrumentStyle,
+  instrumentFinish,
   barStyle,
   landscapeStyle,
   homeStyle,
@@ -2727,6 +2764,7 @@ function FixtureMesh({
   stageRoof?: 'none' | 'gabled';
   podiumStyle?: PodiumStyle;
   instrumentStyle?: InstrumentStyle;
+  instrumentFinish?: string;
   barStyle?: BarStyle;
   landscapeStyle?: LandscapeStyle;
   homeStyle?: HomeFurnitureStyle;
@@ -2896,7 +2934,7 @@ function FixtureMesh({
       ) : isVenueEquipmentKind(kind) ? (
         <VenueEquipmentMesh kind={kind} w={w} d={d} color={color} selected={selected} />
       ) : kind === 'instrument' ? (
-        <ConcertInstrumentMesh style={instrumentStyle ?? 'piano'} w={w} d={d} selected={selected} />
+        <ConcertInstrumentMesh style={instrumentStyle ?? 'piano'} w={w} d={d} selected={selected} finish={instrumentFinish} />
       ) : kind === 'bar' ? (
         <EventBarMesh
           w={w}
@@ -3005,6 +3043,7 @@ function FixtureMesh({
           color={color}
           openingMaterial={openingMaterial}
           frameColor={frameColor}
+          hardwareFinish={surfaceDecor?.hardwareFinish}
           selected={selected}
         />
       ) : kind === 'chandelier' ? (
@@ -3927,6 +3966,7 @@ function SceneContent({
             stageRoof={f.stageRoof}
             podiumStyle={f.podiumStyle}
             instrumentStyle={f.instrumentStyle}
+            instrumentFinish={f.instrumentFinish}
             barStyle={f.barStyle}
             landscapeStyle={f.landscapeStyle}
             homeStyle={f.homeStyle}
@@ -4160,6 +4200,8 @@ function SceneContent({
             customDepthM={item.customDepthM}
             customRadiusM={item.customRadiusM}
             cornerRadiusM={item.cornerRadiusM}
+            tableBase={item.tableBase}
+            tableBaseColor={item.tableBaseColor}
             seatingSide={item.seatingSide}
             onSelect={(e) =>
               onSelect(

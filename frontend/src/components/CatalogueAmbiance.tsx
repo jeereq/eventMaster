@@ -12,6 +12,8 @@ import { getDoorMaterialProps, resolveImportedSurface } from '@/lib/roomWebGLMat
 import { tileRepeat } from '@/lib/roomImportedTextureMath';
 import { aislePetals, evenlySpacedOffsets, shadeHex, type AislePetal } from '@/lib/roomAisleLayout';
 import { SurfaceMat } from '@/components/room/SurfaceMaterial';
+import { AtelierGlazing, CassettePanels, DoorHandles, Hinges, handleY } from '@/components/room/DoorHardware';
+import type { HomeMetalFinish } from '@/lib/roomHomeFurniture';
 import { CandelabraChandelier, ChandelierModel, CrystalChandelier, chandelierLightY } from '@/components/room/ChandelierMeshes';
 
 function ChandelierClassic({ pointLights }: { pointLights: boolean }) {
@@ -417,11 +419,13 @@ export function CatalogueDoor({
   color,
   openingMaterial,
   frameColor,
+  hardwareFinish,
   selected = false,
 }: {
   w: number;
   d: number;
   height?: number;
+  hardwareFinish?: HomeMetalFinish;
   style?: DoorStyle;
   doorSwing?: 'left' | 'right' | 'double' | 'sliding' | 'arch';
   hasMat?: boolean;
@@ -439,6 +443,7 @@ export function CatalogueDoor({
   const jambColor = frameColor ?? leafColor;
   const frameThickness = 0.08;
   const doorThick = 0.045;
+  const hardware: HomeMetalFinish = hardwareFinish ?? 'chrome';
   const frameW = Math.max(0.9, w);
   const frameH = Math.max(2.1, height);
 
@@ -838,7 +843,7 @@ export function CatalogueDoor({
               {/* Bande vitrée dépolie */}
               <mesh position={[0, 0.1, doorThick / 2 + 0.002]}>
                 <boxGeometry args={[frameW * 0.16, frameH * 0.7, 0.004]} />
-                <meshStandardMaterial color="#f1f5f9" roughness={0.2} transparent opacity={0.7} />
+                <SurfaceMat color="#eef2f5" finish="glass" roughness={0.35} opacity={0.55} />
               </mesh>
               <mesh position={[-frameW * 0.3, -0.05, doorThick / 2 + 0.01]}>
                 <boxGeometry args={[0.03, 0.4, 0.02]} />
@@ -878,6 +883,38 @@ export function CatalogueDoor({
           </group>
         )}
 
+        {/* 13. VERRIÈRE D’ATELIER : vantail en profils acier et petits carreaux */}
+        {style === 'atelier' && (() => {
+          const leafW = frameW - frameThickness * 1.2;
+          const leafH = frameH - frameThickness * 1.2;
+          const steel = selected ? '#c7d2fe' : (color ?? '#1f1f1f');
+          return (
+            <group>
+              <AtelierGlazing w={leafW} h={leafH} t={0.04} cols={3} rows={5} frameColor={steel} />
+              <DoorHandles x={leafW * 0.42} y={handleY(frameH)} t={0.04} toward={-1} finish={hardwareFinish ?? 'black'} />
+              <Hinges x={-(leafW / 2 - 0.02)} leafH={leafH} t={0.04} finish={hardwareFinish ?? 'black'} />
+            </group>
+          );
+        })()}
+
+        {/* 14. PORTE À CASSETTES MOULURÉES (deux faces) */}
+        {style === 'cassette' && (() => {
+          const leafW = frameW - frameThickness * 1.2;
+          const leafH = frameH - frameThickness * 1.2;
+          const lacquer = selected ? '#c7d2fe' : (color ?? '#f4f1ea');
+          return (
+            <group>
+              <mesh castShadow receiveShadow>
+                <boxGeometry args={[leafW, leafH, doorThick]} />
+                <SurfaceMat color={lacquer} finish="lacquer" roughness={0.38} />
+              </mesh>
+              <CassettePanels w={leafW} h={leafH} t={doorThick} color={lacquer} cols={2} rows={3} />
+              <DoorHandles x={leafW * 0.4} y={handleY(frameH)} t={doorThick + 0.016} toward={-1} finish={hardwareFinish ?? 'brass'} />
+              <Hinges x={-(leafW / 2 - 0.01)} leafH={leafH} t={doorThick} finish={hardwareFinish ?? 'brass'} />
+            </group>
+          );
+        })()}
+
         {/* 10. PORTE SIMPLE / MOULURÉE PAR DÉFAUT */}
         {style !== 'grandPortal' &&
           style !== 'frenchDoor' &&
@@ -889,7 +926,9 @@ export function CatalogueDoor({
           style !== 'double' &&
           style !== 'arch' &&
           style !== 'sliding' &&
-          style !== 'folding' && (
+          style !== 'folding' &&
+          style !== 'atelier' &&
+          style !== 'cassette' && (
             <group position={[0, 0, 0]}>
               {/* Vantail principal */}
               <mesh castShadow receiveShadow>
@@ -905,23 +944,9 @@ export function CatalogueDoor({
                 <boxGeometry args={[(frameW - frameThickness * 2) * 0.8, frameH * 0.38, 0.008]} />
                 <meshStandardMaterial color={color ?? '#f8fafc'} roughness={0.45} />
               </mesh>
-              {/* Ensemble poignée béquille en L sur rosace circulaire */}
-              <group position={[frameW * 0.34, -0.06, doorThick / 2 + 0.015]}>
-                <mesh rotation={[Math.PI / 2, 0, 0]} castShadow>
-                  <cylinderGeometry args={[0.026, 0.026, 0.008, 16]} />
-                  <SurfaceMat color="#94a3b8" metalness={0.85} roughness={0.2} />
-                </mesh>
-                {/* Béquille en L */}
-                <mesh position={[-0.05, 0, 0.02]} castShadow>
-                  <boxGeometry args={[0.11, 0.018, 0.016]} />
-                  <SurfaceMat color="#cbd5e1" metalness={0.9} roughness={0.15} />
-                </mesh>
-                {/* Trou de serrure sous la rosace */}
-                <mesh position={[0, -0.06, 0]} rotation={[Math.PI / 2, 0, 0]}>
-                  <cylinderGeometry args={[0.016, 0.016, 0.006, 12]} />
-                  <SurfaceMat color="#64748b" metalness={0.8} roughness={0.3} />
-                </mesh>
-              </group>
+              {/* Béquilles des deux côtés et paumelles côté gonds */}
+              <DoorHandles x={frameW * 0.36} y={handleY(frameH)} t={doorThick} toward={-1} finish={hardware} />
+              <Hinges x={-(frameW / 2 - frameThickness * 0.6 - 0.01)} leafH={frameH - frameThickness * 1.2} t={doorThick} finish={hardware} />
             </group>
           )}
       </group>

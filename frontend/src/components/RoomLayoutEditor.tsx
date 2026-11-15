@@ -86,6 +86,9 @@ import {
   aisleStyleLabels,
   aisleStyleHints,
   zoneMaterialLabels,
+  tableBaseLabels,
+  tableBaseDefaultColor,
+  tableAcceptsBase,
   chandelierFixtureStyleLabels,
   chandelierFixtureStyleHints,
   amphitheaterStyleLabels,
@@ -153,6 +156,7 @@ import {
   type TableSurfaceStyle,
   type ZoneKind,
   type ZoneMaterial,
+  type TableBaseStyle,
   type AmbienceApplyScope,
   type DoorStyle,
   type AisleStyle,
@@ -233,6 +237,7 @@ import { readImageFile } from '@/lib/imageCropUtils';
 import { uploadImageFile, uploadVideoFile } from '@/lib/cloudinaryUpload';
 import { RoomEnvironmentPanel } from '@/components/room/RoomEnvironmentPanel';
 import { LEGACY_CORRIDOR_GREY } from '@/lib/roomAisleLayout';
+import { instrumentFinishPresets } from '@/lib/roomInstrumentFinish';
 import {
   GARDEN_BORDER_LABELS,
   GARDEN_FLOWER_PALETTES,
@@ -5292,6 +5297,19 @@ export default function RoomLayoutEditor({
                     />
                   </label>
                 </div>
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-foreground">Poignées et paumelles</span>
+                  <select
+                    value={selectedFixture.hardwareFinish ?? ''}
+                    onChange={(e) => updateFixture(selectedFixture.id, { hardwareFinish: (e.target.value || undefined) as HomeMetalFinish | undefined }, 'Finition des poignées')}
+                    className={EDITOR_FIELD}
+                  >
+                    <option value="">Selon le modèle</option>
+                    {(Object.keys(HOME_METAL_FINISH_LABELS) as HomeMetalFinish[]).map((id) => (
+                      <option key={id} value={id}>{HOME_METAL_FINISH_LABELS[id]}</option>
+                    ))}
+                  </select>
+                </label>
 
                 <div className="grid grid-cols-2 gap-2">
                   <label className="block space-y-1.5">
@@ -5926,6 +5944,44 @@ export default function RoomLayoutEditor({
                 </span>
               </label>
             )}
+            {isInstrument && (() => {
+              const presets = instrumentFinishPresets((selectedFixture.instrumentStyle ?? 'piano') as InstrumentStyle);
+              if (presets.length === 0) return null;
+              const current = selectedFixture.instrumentFinish;
+              return (
+                <div className="space-y-1.5">
+                  <span className="block text-xs font-semibold text-muted">Finition</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => updateFixture(selectedFixture.id, { instrumentFinish: undefined }, 'Finition d’origine')}
+                      aria-pressed={!current}
+                      className={cn(EDITOR_CHIP, !current && 'border-primary bg-primary/10 text-primary')}
+                    >
+                      D’origine
+                    </button>
+                    {presets.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => updateFixture(selectedFixture.id, { instrumentFinish: p.color }, `Finition : ${p.label}`)}
+                        aria-pressed={current === p.color}
+                        className={cn(EDITOR_CHIP, 'gap-1.5', current === p.color && 'border-primary bg-primary/10 text-primary')}
+                      >
+                        <span className="size-3.5 rounded-full border border-border" style={{ background: p.color }} />
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                  <DecorColorField
+                    label="Autre teinte"
+                    value={current && !presets.some((p) => p.color === current) ? current : undefined}
+                    fallback={current ?? presets[0].color}
+                    onChange={(next) => updateFixture(selectedFixture.id, { instrumentFinish: next })}
+                  />
+                </div>
+              );
+            })()}
 
             {isBar && (
               <label className="block text-xs space-y-1">
@@ -7045,6 +7101,35 @@ export default function RoomLayoutEditor({
                 onChange={(tableSurface) => updateFurniture(selectedFurniture.id, { tableSurface }, 'Finition de table')}
               />
             </div>
+            {tableAcceptsBase(selectedFurniture.shape) ? (
+              <div className="space-y-1.5">
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Piètement</span>
+                  <select
+                    value={selectedFurniture.tableBase ?? ''}
+                    onChange={(e) => updateFurniture(
+                      selectedFurniture.id,
+                      { tableBase: e.target.value ? (e.target.value as TableBaseStyle) : undefined },
+                      e.target.value ? `Piètement : ${tableBaseLabels[e.target.value as TableBaseStyle]}` : 'Piètement d’origine',
+                    )}
+                    className={EDITOR_FIELD}
+                  >
+                    <option value="">D’origine ({selectedFurniture.shape === 'round' || selectedFurniture.shape === 'oval' ? 'pied central' : '4 pieds métal'})</option>
+                    {(Object.keys(tableBaseLabels) as TableBaseStyle[]).map((id) => (
+                      <option key={id} value={id}>{tableBaseLabels[id]}</option>
+                    ))}
+                  </select>
+                </label>
+                {selectedFurniture.tableBase ? (
+                  <DecorColorField
+                    label="Teinte du piètement"
+                    value={selectedFurniture.tableBaseColor}
+                    fallback={tableBaseDefaultColor[selectedFurniture.tableBase]}
+                    onChange={(next) => updateFurniture(selectedFurniture.id, { tableBaseColor: next })}
+                  />
+                ) : null}
+              </div>
+            ) : null}
             <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
               <input
                 type="checkbox"

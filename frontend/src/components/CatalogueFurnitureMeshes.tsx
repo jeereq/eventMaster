@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import * as THREE from 'three';
-import type { ChairType, ChairStyle, SeatMaterial, TableShape } from '@/lib/roomLayoutUtils';
+import type { ChairType, ChairStyle, SeatMaterial, TableBaseStyle, TableShape } from '@/lib/roomLayoutUtils';
 import {
   resolveChairMap,
   resolveImportedSurface,
@@ -11,6 +11,7 @@ import {
   resolveTableMaterial,
 } from '@/lib/roomWebGLMaterials';
 import { CatalogueArcTable } from '@/components/roomCelebrationMeshes';
+import { TableBase } from '@/components/room/TableBaseMeshes';
 import { SurfaceMat, type SurfaceFinish } from '@/components/room/SurfaceMaterial';
 import { withRepeat } from '@/lib/roomSurfaceFinish';
 
@@ -420,6 +421,152 @@ function CatalogueChairMesh({
         <mesh position={[0, seatH + backH * 0.55, -sd * 0.4]} rotation={[0.15, 0, -0.55]} castShadow>
           <boxGeometry args={[0.025, backH * 0.85, 0.025]} />
           <Mat finish={frameFinish} color={visual.frameColor} roughness={0.48} />
+        </mesh>
+      </group>
+    );
+  }
+
+  const seatOnlyChair = chairType !== 'BARSTOOL' && chairType !== 'POUF';
+
+  if (seatOnlyChair && style === 'windsor') {
+    // Windsor : assise en bois massif creusée, pieds tournés évasés, entretoise en H,
+    // dossier arceau à barreaux.
+    const legH = seatH - 0.02;
+    const splay = 0.1;
+    const spindles = 7;
+    const bowR = sw * 0.42;
+    return (
+      <group position={position} rotation={[0, rotationY, 0]}>
+        {([-1, 1] as const).flatMap((sx) =>
+          ([-1, 1] as const).map((sz) => (
+            <mesh key={`${sx}${sz}`} position={[sx * sw * 0.33, legH / 2, sz * sd * 0.3]} rotation={[sz * splay, 0, -sx * splay]} castShadow>
+              <cylinderGeometry args={[0.016, 0.022, legH * 1.02, 10]} />
+              <Mat finish="wood" color={visual.frameColor} roughness={0.5} metalness={0} />
+            </mesh>
+          )),
+        )}
+        {([-1, 1] as const).map((sx) => (
+          <mesh key={`s${sx}`} position={[sx * sw * 0.36, legH * 0.38, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+            <cylinderGeometry args={[0.011, 0.011, sd * 0.72, 8]} />
+            <Mat finish="wood" color={visual.frameColor} roughness={0.5} metalness={0} />
+          </mesh>
+        ))}
+        <mesh position={[0, legH * 0.38, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+          <cylinderGeometry args={[0.011, 0.011, sw * 0.72, 8]} />
+          <Mat finish="wood" color={visual.frameColor} roughness={0.5} metalness={0} />
+        </mesh>
+        {/* Assise selle : galette épaisse légèrement bombée devant */}
+        <mesh position={[0, seatH, 0]} scale={[sw / 2, 1, sd / 2]} castShadow receiveShadow>
+          <cylinderGeometry args={[1, 0.96, 0.045, 32]} />
+          <Mat finish="wood" color={seatTint} map={imported?.map ?? null} roughness={0.42} metalness={0} clearcoat={0.25} />
+        </mesh>
+        {/* Arceau + barreaux */}
+        <mesh position={[0, seatH + backH * 0.42, -sd * 0.36]} rotation={[0.12, 0, 0]} castShadow>
+          <torusGeometry args={[bowR, 0.014, 8, 28, Math.PI]} />
+          <Mat finish="wood" color={visual.frameColor} roughness={0.45} metalness={0} />
+        </mesh>
+        {Array.from({ length: spindles }, (_, i) => {
+          const t = (i + 1) / (spindles + 1);
+          const a = Math.PI * t;
+          const x = Math.cos(a) * bowR;
+          const top = Math.sin(a) * bowR + backH * 0.42;
+          return (
+            <mesh key={i} position={[x, seatH + top / 2, -sd * 0.36 + top * 0.06]} rotation={[0.12, 0, 0]} castShadow>
+              <cylinderGeometry args={[0.007, 0.009, top, 6]} />
+              <Mat finish="wood" color={visual.frameColor} roughness={0.45} metalness={0} />
+            </mesh>
+          );
+        })}
+        {([-1, 1] as const).map((sx) => (
+          <mesh key={`p${sx}`} position={[sx * bowR, seatH + backH * 0.21, -sd * 0.37]} rotation={[0.12, 0, 0]} castShadow>
+            <cylinderGeometry args={[0.013, 0.015, backH * 0.42, 8]} />
+            <Mat finish="wood" color={visual.frameColor} roughness={0.45} metalness={0} />
+          </mesh>
+        ))}
+      </group>
+    );
+  }
+
+  if (seatOnlyChair && style === 'bistro') {
+    // Bistrot en bois courbé : assise ronde cannée, cercle d’entretoise, dossier en boucle.
+    const r = Math.min(sw, sd) * 0.5;
+    const legH = seatH;
+    return (
+      <group position={position} rotation={[0, rotationY, 0]}>
+        {[45, 135, 225, 315].map((deg) => {
+          const a = (deg * Math.PI) / 180;
+          return (
+            <mesh key={deg} position={[Math.cos(a) * r * 0.78, legH / 2, Math.sin(a) * r * 0.78]} rotation={[Math.sin(a) * 0.08, 0, -Math.cos(a) * 0.08]} castShadow>
+              <cylinderGeometry args={[0.012, 0.016, legH, 10]} />
+              <Mat finish="wood" color={visual.frameColor} roughness={0.38} metalness={0} clearcoat={0.4} />
+            </mesh>
+          );
+        })}
+        <mesh position={[0, legH * 0.35, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <torusGeometry args={[r * 0.82, 0.009, 8, 32]} />
+          <Mat finish="wood" color={visual.frameColor} roughness={0.38} metalness={0} clearcoat={0.4} />
+        </mesh>
+        {/* Cerclage d’assise et cannage */}
+        <mesh position={[0, seatH, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <torusGeometry args={[r, 0.018, 10, 40]} />
+          <Mat finish="wood" color={visual.frameColor} roughness={0.38} metalness={0} clearcoat={0.4} />
+        </mesh>
+        <mesh position={[0, seatH, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+          <circleGeometry args={[r * 0.98, 40]} />
+          <Mat finish={imported ? 'plain' : 'rattan'} color={imported ? '#ffffff' : seatTint} map={imported?.map ?? null} roughness={0.7} metalness={0} side={THREE.DoubleSide} />
+        </mesh>
+        {/* Dossier : deux montants prolongés en une boucle de bois courbé, traverse basse */}
+        {([-1, 1] as const).map((sx) => (
+          <mesh key={sx} position={[sx * r * 0.62, seatH + backH * 0.34, -r * 0.84]} rotation={[0.1, 0, 0]} castShadow>
+            <cylinderGeometry args={[0.012, 0.014, backH * 0.7, 8]} />
+            <Mat finish="wood" color={visual.frameColor} roughness={0.38} metalness={0} clearcoat={0.4} />
+          </mesh>
+        ))}
+        <mesh position={[0, seatH + backH * 0.68, -r * 0.88]} rotation={[0.1, 0, 0]} scale={[1, 0.7, 1]} castShadow>
+          <torusGeometry args={[r * 0.62, 0.013, 8, 32, Math.PI]} />
+          <Mat finish="wood" color={visual.frameColor} roughness={0.38} metalness={0} clearcoat={0.4} />
+        </mesh>
+        <mesh position={[0, seatH + backH * 0.42, -r * 0.865]} rotation={[0.1, 0, Math.PI / 2]} castShadow>
+          <cylinderGeometry args={[0.01, 0.01, r * 1.24, 8]} />
+          <Mat finish="wood" color={visual.frameColor} roughness={0.38} metalness={0} clearcoat={0.4} />
+        </mesh>
+      </group>
+    );
+  }
+
+  if (seatOnlyChair && style === 'scandi') {
+    // Coque moulée d’un seul tenant (assise + dossier enveloppant), pieds bois et croisillon acier.
+    const shellR = sw * 0.52;
+    const legH = seatH - 0.04;
+    return (
+      <group position={position} rotation={[0, rotationY, 0]}>
+        {([-1, 1] as const).flatMap((sx) =>
+          ([-1, 1] as const).map((sz) => (
+            <mesh key={`${sx}${sz}`} position={[sx * sw * 0.3, legH / 2, sz * sd * 0.28]} rotation={[sz * 0.14, 0, -sx * 0.14]} castShadow>
+              <cylinderGeometry args={[0.012, 0.017, legH * 1.03, 10]} />
+              <Mat finish="wood" color={visual.frameColor} roughness={0.5} metalness={0} />
+            </mesh>
+          )),
+        )}
+        {([-1, 1] as const).map((d1) => (
+          <mesh key={`x${d1}`} position={[0, legH * 0.55, 0]} rotation={[0, d1 * Math.atan2(sd, sw), Math.PI / 2]} castShadow>
+            <cylinderGeometry args={[0.004, 0.004, Math.hypot(sw, sd) * 0.62, 6]} />
+            <Mat color="#d4d4d8" metalness={0.85} roughness={0.25} />
+          </mesh>
+        ))}
+        <mesh position={[0, legH + 0.012, 0]} castShadow>
+          <boxGeometry args={[sw * 0.5, 0.012, sd * 0.45]} />
+          <Mat color="#18181b" metalness={0.4} roughness={0.5} />
+        </mesh>
+        {/* Assise de la coque : légèrement creusée */}
+        <mesh position={[0, seatH, 0.01]} scale={[sw / 2, 1, sd / 2]} castShadow receiveShadow>
+          <cylinderGeometry args={[1, 0.94, 0.03, 36]} />
+          <Mat finish={imported ? 'plain' : 'plastic'} color={imported ? '#ffffff' : seatTint} map={imported?.map ?? null} roughness={0.38} metalness={0} />
+        </mesh>
+        {/* Dossier enveloppant : portion de cylindre ouverte, incliné */}
+        <mesh position={[0, seatH + backH * 0.5, -sd * 0.08]} rotation={[-0.14, 0, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[shellR, shellR * 0.86, backH, 36, 1, true, Math.PI * 0.62, Math.PI * 0.76]} />
+          <Mat finish={imported ? 'plain' : 'plastic'} color={imported ? '#ffffff' : seatTint} map={imported?.map ?? null} roughness={0.38} metalness={0} side={THREE.DoubleSide} />
         </mesh>
       </group>
     );
@@ -841,6 +988,8 @@ export function CatalogueTableStructure({
   mat,
   selected,
   cornerRadiusM,
+  base,
+  baseColor,
 }: {
   shape: TableShape;
   size: [number, number];
@@ -848,6 +997,9 @@ export function CatalogueTableStructure({
   mat: TableMat;
   selected: boolean;
   cornerRadiusM?: number;
+  /** Piètement choisi (sinon celui d’origine de la forme). */
+  base?: TableBaseStyle;
+  baseColor?: string;
 }) {
   const topColor = mat.color;
   const topMat = {
@@ -868,6 +1020,26 @@ export function CatalogueTableStructure({
   };
   const isRound = shape === 'round' || shape === 'oval' || shape === 'cocktail' || shape === 'highTop';
   const segments = shape === 'oval' ? 40 : 48;
+  // Hook avant tout retour anticipé : changer la forme d’une table ne doit pas changer l’ordre des hooks.
+  const roundedTopGeom = useMemo(() => {
+    if (!cornerRadiusM || cornerRadiusM <= 0.01 || isRound || shape === 'arc') return null;
+    const w = size[0];
+    const d = size[1];
+    const maxR = Math.min(w / 2 - 0.02, d / 2 - 0.02);
+    const r = Math.min(cornerRadiusM, maxR);
+    if (r <= 0.01) return null;
+    const s = createRoundedRectShape(w, d, r);
+    const geom = new THREE.ExtrudeGeometry(s, {
+      depth: 0.055,
+      bevelEnabled: true,
+      bevelSegments: 2,
+      steps: 1,
+      bevelSize: 0.005,
+      bevelThickness: 0.005,
+    });
+    geom.rotateX(-Math.PI / 2);
+    return geom;
+  }, [cornerRadiusM, isRound, shape, size]);
 
   if (shape === 'arc') {
     return (
@@ -901,7 +1073,7 @@ export function CatalogueTableStructure({
           <Mat color="#57534e" metalness={0.5} roughness={0.4} />
         </mesh>
         {/* Bord chrome */}
-        <mesh position={[0, topY + 0.01, 0]}>
+        <mesh position={[0, topY + 0.01, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <torusGeometry args={[size[0] / 2 - 0.01, 0.012, 8, 32]} />
           <Mat color="#e2e8f0" metalness={0.85} roughness={0.15} />
         </mesh>
@@ -920,7 +1092,7 @@ export function CatalogueTableStructure({
           <cylinderGeometry args={[0.045, 0.07, topY - 0.1, 16]} />
           <Mat color="#71717a" metalness={0.7} roughness={0.25} />
         </mesh>
-        <mesh position={[0, topY * 0.35, 0]} castShadow>
+        <mesh position={[0, topY * 0.35, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
           <torusGeometry args={[0.09, 0.015, 10, 20]} />
           <Mat color="#a1a1aa" metalness={0.8} roughness={0.2} />
         </mesh>
@@ -963,14 +1135,20 @@ export function CatalogueTableStructure({
             />
           </mesh>
         ) : null}
-        <mesh position={[0, topY / 2, 0]} castShadow>
-          <cylinderGeometry args={[0.06, 0.1, topY - 0.08, 14]} />
-          <Mat color="#6b7280" metalness={0.6} roughness={0.3} />
-        </mesh>
-        <mesh position={[0, 0.035, 0]} castShadow>
-          <cylinderGeometry args={[0.34, 0.38, 0.06, 28]} />
-          <Mat color="#44403c" metalness={0.35} roughness={0.45} />
-        </mesh>
+        {base ? (
+          <TableBase base={base} w={size[0]} d={size[1]} topY={topY - 0.05} round color={baseColor} />
+        ) : (
+          <>
+            <mesh position={[0, topY / 2, 0]} castShadow>
+              <cylinderGeometry args={[0.06, 0.1, topY - 0.08, 14]} />
+              <Mat color="#6b7280" metalness={0.6} roughness={0.3} />
+            </mesh>
+            <mesh position={[0, 0.035, 0]} castShadow>
+              <cylinderGeometry args={[0.34, 0.38, 0.06, 28]} />
+              <Mat color="#44403c" metalness={0.35} roughness={0.45} />
+            </mesh>
+          </>
+        )}
       </group>
     );
   }
@@ -1003,22 +1181,28 @@ export function CatalogueTableStructure({
             />
           </mesh>
         ) : null}
-        <mesh position={[0, topY + 0.008, 0]}>
+        <mesh position={[0, topY + 0.008, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <torusGeometry args={[size[0] / 2 - 0.01, 0.01, 8, 36]} />
           <Mat color="#d6c4b0" metalness={0.25} roughness={0.4} />
         </mesh>
-        <mesh position={[0, topY / 2, 0]} castShadow>
-          <cylinderGeometry args={[0.055, 0.09, topY - 0.08, 16]} />
-          <Mat color="#6b7280" metalness={0.65} roughness={0.28} />
-        </mesh>
-        <mesh position={[0, topY * 0.55, 0]} castShadow>
-          <torusGeometry args={[0.1, 0.018, 10, 24]} />
-          <Mat color="#9ca3af" metalness={0.8} roughness={0.2} />
-        </mesh>
-        <mesh position={[0, 0.035, 0]} castShadow>
-          <cylinderGeometry args={[0.32, 0.38, 0.07, 28]} />
-          <Mat color="#3f3f46" metalness={0.4} roughness={0.45} />
-        </mesh>
+        {base ? (
+          <TableBase base={base} w={size[0]} d={size[0]} topY={topY - 0.05} round color={baseColor} />
+        ) : (
+          <>
+            <mesh position={[0, topY / 2, 0]} castShadow>
+              <cylinderGeometry args={[0.055, 0.09, topY - 0.08, 16]} />
+              <Mat color="#6b7280" metalness={0.65} roughness={0.28} />
+            </mesh>
+            <mesh position={[0, topY * 0.55, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+              <torusGeometry args={[0.1, 0.018, 10, 24]} />
+              <Mat color="#9ca3af" metalness={0.8} roughness={0.2} />
+            </mesh>
+            <mesh position={[0, 0.035, 0]} castShadow>
+              <cylinderGeometry args={[0.32, 0.38, 0.07, 28]} />
+              <Mat color="#3f3f46" metalness={0.4} roughness={0.45} />
+            </mesh>
+          </>
+        )}
       </group>
     );
   }
@@ -1041,25 +1225,7 @@ function createRoundedRectShape(w: number, d: number, r: number): THREE.Shape {
 
   // rectangular / square
   const legInset = shape === 'square' ? 0.36 : 0.4;
-  const roundedTopGeom = useMemo(() => {
-    if (!cornerRadiusM || cornerRadiusM <= 0.01 || isRound) return null;
-    const w = size[0];
-    const d = size[1];
-    const maxR = Math.min(w / 2 - 0.02, d / 2 - 0.02);
-    const r = Math.min(cornerRadiusM, maxR);
-    if (r <= 0.01) return null;
-    const s = createRoundedRectShape(w, d, r);
-    const geom = new THREE.ExtrudeGeometry(s, {
-      depth: 0.055,
-      bevelEnabled: true,
-      bevelSegments: 2,
-      steps: 1,
-      bevelSize: 0.005,
-      bevelThickness: 0.005,
-    });
-    geom.rotateX(-Math.PI / 2);
-    return geom;
-  }, [cornerRadiusM, isRound, size]);
+  const withApron = !base || base === 'fourLegs' || base === 'pedestal';
 
   return (
     <group>
@@ -1073,10 +1239,13 @@ function createRoundedRectShape(w: number, d: number, r: number): THREE.Shape {
           <Mat color={topColor} {...topMat} />
         </mesh>
       )}
-      <mesh position={[0, topY - 0.08, 0]} castShadow>
-        <boxGeometry args={[size[0] * 0.96, 0.1, size[1] * 0.96]} />
-        <Mat color="#4a3728" finish="wood" roughness={0.5} />
-      </mesh>
+      {/* Ceinture sous plateau : absente des piètements légers (tréteaux, épingles, croisillon). */}
+      {withApron ? (
+        <mesh position={[0, topY - 0.08, 0]} castShadow>
+          <boxGeometry args={[size[0] * 0.96, 0.1, size[1] * 0.96]} />
+          <Mat color="#4a3728" finish="wood" roughness={0.5} />
+        </mesh>
+      ) : null}
       {mat.isCloth ? (
         <mesh position={[0, topY - 0.16, 0]} castShadow receiveShadow>
           <boxGeometry args={[size[0] * 1.01, 0.3, size[1] * 1.01]} />
@@ -1091,28 +1260,34 @@ function createRoundedRectShape(w: number, d: number, r: number): THREE.Shape {
           />
         </mesh>
       ) : null}
-      {/* Traverses */}
-      <mesh position={[0, topY * 0.35, 0]} castShadow>
-        <boxGeometry args={[size[0] * 0.72, 0.04, 0.04]} />
-        <Mat color="#57534e" metalness={0.3} roughness={0.5} />
-      </mesh>
-      <mesh position={[0, topY * 0.35, 0]} castShadow>
-        <boxGeometry args={[0.04, 0.04, size[1] * 0.72]} />
-        <Mat color="#57534e" metalness={0.3} roughness={0.5} />
-      </mesh>
-      {([-1, 1] as const).flatMap((sx) =>
-        ([-1, 1] as const).map((sz) => (
-          <group key={`${sx}-${sz}`} position={[sx * size[0] * legInset, 0, sz * size[1] * legInset]}>
-            <mesh position={[0, topY / 2, 0]} castShadow>
-              <boxGeometry args={[0.055, topY - 0.05, 0.055]} />
-              <Mat color="#57534e" metalness={0.4} roughness={0.4} />
-            </mesh>
-            <mesh position={[0, 0.03, 0]} castShadow>
-              <boxGeometry args={[0.09, 0.05, 0.09]} />
-              <Mat color="#44403c" metalness={0.3} roughness={0.5} />
-            </mesh>
-          </group>
-        )),
+      {base ? (
+        <TableBase base={base} w={size[0]} d={size[1]} topY={withApron ? topY - 0.13 : topY - 0.03} round={false} color={baseColor} />
+      ) : (
+        <>
+          {/* Traverses */}
+          <mesh position={[0, topY * 0.35, 0]} castShadow>
+            <boxGeometry args={[size[0] * 0.72, 0.04, 0.04]} />
+            <Mat color="#57534e" metalness={0.3} roughness={0.5} />
+          </mesh>
+          <mesh position={[0, topY * 0.35, 0]} castShadow>
+            <boxGeometry args={[0.04, 0.04, size[1] * 0.72]} />
+            <Mat color="#57534e" metalness={0.3} roughness={0.5} />
+          </mesh>
+          {([-1, 1] as const).flatMap((sx) =>
+            ([-1, 1] as const).map((sz) => (
+              <group key={`${sx}-${sz}`} position={[sx * size[0] * legInset, 0, sz * size[1] * legInset]}>
+                <mesh position={[0, topY / 2, 0]} castShadow>
+                  <boxGeometry args={[0.055, topY - 0.05, 0.055]} />
+                  <Mat color="#57534e" metalness={0.4} roughness={0.4} />
+                </mesh>
+                <mesh position={[0, 0.03, 0]} castShadow>
+                  <boxGeometry args={[0.09, 0.05, 0.09]} />
+                  <Mat color="#44403c" metalness={0.3} roughness={0.5} />
+                </mesh>
+              </group>
+            )),
+          )}
+        </>
       )}
     </group>
   );
