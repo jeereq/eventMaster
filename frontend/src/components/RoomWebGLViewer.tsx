@@ -2,7 +2,7 @@
 
 import React, { Suspense, useMemo, useRef, useCallback, useEffect, useState, forwardRef, useImperativeHandle, memo } from 'react';
 import { Canvas, ThreeEvent, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, Html, ContactShadows, Environment, Sky, Stars } from '@react-three/drei';
+import { OrbitControls, Html, ContactShadows, Environment, MeshReflectorMaterial, Sky, Stars } from '@react-three/drei';
 import {
   Compass,
   Sparkles,
@@ -135,6 +135,8 @@ import { LandscapeMesh, OutdoorSurroundingsScene, seedFromId } from '@/component
 import { CorridorMesh } from '@/components/room/CorridorMesh';
 import { AtelierGlazing, CassettePanels, DoorHandles, Hinges, handleY } from '@/components/room/DoorHardware';
 import { MetalMat } from '@/components/room/BathroomMeshes';
+import { Architrave, Cornice, Plinth, ARCHITRAVE_W, TRIM_DEFAULT_COLOR } from '@/components/room/WallTrimMeshes';
+import { WindowUnit } from '@/components/room/WindowMeshes';
 
 type SurfaceDecor = Pick<
   RoomLayoutBlueprint['fixtures'][number],
@@ -593,7 +595,10 @@ function FloorPlane({
   outline,
   onPointerMissed,
   stairHoles = [],
+  reflections = false,
 }: {
+  /** Mode vitrine : vrais reflets de la salle sur les sols brillants (marbre, résine, béton ciré…). */
+  reflections?: boolean;
   widthM: number;
   heightM: number;
   floorType?: import('@/lib/roomThemeUtils').FloorType;
@@ -655,14 +660,17 @@ function FloorPlane({
       uv.setXY(i, uv.getX(i) / widthM + 0.5, uv.getY(i) / heightM + 0.5);
     }
     uv.needsUpdate = true;
-    geo.rotateX(-Math.PI / 2);
+    // Pas de rotation « cuite » : le maillage est tourné, pour que le miroir du sol trouve sa normale.
     return geo;
   }, [outline, widthM, heightM, stairHoles]);
+
+  // Sols brillants seulement : un parquet mat ne reflète pas la salle.
+  const glossy = !mat.isPlan && (mat.roughness < 0.35 || mat.clearcoat >= 0.4);
 
   return (
     <mesh
       geometry={shapeGeo ?? undefined}
-      rotation={shapeGeo ? [0, 0, 0] : [-Math.PI / 2, 0, 0]}
+      rotation={[-Math.PI / 2, 0, 0]}
       position={[0, -0.002, 0]}
       receiveShadow
       onClick={(e) => {
@@ -671,6 +679,30 @@ function FloorPlane({
       }}
     >
       {!shapeGeo && <planeGeometry args={[widthM, heightM]} />}
+      {reflections && glossy ? (
+        <MeshReflectorMaterial
+          resolution={1024}
+          blur={[250, 80]}
+          mixBlur={0.6}
+          mixStrength={mat.roughness < 0.15 ? 3 : 1.5}
+          mixContrast={1}
+          mirror={0}
+          depthScale={0.8}
+          minDepthThreshold={0.35}
+          maxDepthThreshold={1.3}
+          color={mat.color}
+          map={mat.map ?? undefined}
+          normalMap={mat.normalMap ?? undefined}
+          normalScale={mat.normalScale ? new THREE.Vector2(mat.normalScale, mat.normalScale) : undefined}
+          roughnessMap={mat.roughnessMap ?? undefined}
+          roughness={mat.roughness}
+          metalness={mat.metalness}
+          envMapIntensity={mat.envMapIntensity}
+          polygonOffset
+          polygonOffsetFactor={1}
+          polygonOffsetUnits={1}
+        />
+      ) : (
       <meshPhysicalMaterial
         color={mat.color}
         map={mat.map ?? undefined}
@@ -688,6 +720,7 @@ function FloorPlane({
         polygonOffsetFactor={1}
         polygonOffsetUnits={1}
       />
+      )}
     </mesh>
   );
 }
@@ -1367,11 +1400,14 @@ function OpeningMesh({
   wallLengthM,
   wallHeightM,
   wallThicknessM,
+  inSide = 1,
 }: {
   opening: RoomWallOpening;
   wallLengthM: number;
   wallHeightM: number;
   wallThicknessM: number;
+  /** Face du mur côté pièce (+1 / −1, repère local du mur). */
+  inSide?: 1 | -1;
 }) {
   const localX = (opening.t - 0.5) * wallLengthM;
   const sill = opening.sillM ?? (opening.kind === 'door' ? 0 : 0.9);
@@ -1383,23 +1419,15 @@ function OpeningMesh({
   const leafColor = opening.color ?? (isDoor ? '#6b4423' : '#93c5fd');
   const frameColor = opening.frameColor ?? (isDoor ? '#3f2a1a' : '#f1f5f9');
   const thick = wallThicknessM;
-  /** Face extérieure du mur (hors volume) pour que style / couleur soient visibles. */
-  const faceZ = thick / 2 + 0.04;
+  /** Vantail posé dans l’ébrasement, juste en retrait du nu du mur, entre l’huisserie et les chambranles. */
+  const faceZ = thick / 2 - 0.04;
   const frameT = 0.055;
   const doorMat = useMemo(
     () => getDoorMaterialProps(material, leafColor),
     [material, leafColor],
   );
-  const woodMap = doorMat.map ?? null;
 
   const hardware: HomeMetalFinish = opening.hardwareFinish ?? 'brass';
-  const glassProps = {
-    color: leafColor,
-    transparent: true,
-    opacity: 0.42,
-    roughness: 0.06,
-    metalness: 0.35,
-  } as const;
 
   const leafMatProps = (() => {
     if (material === 'glass' || style === 'glass') {
@@ -1429,18 +1457,35 @@ function OpeningMesh({
   const leafZ = faceZ + 0.01;
   const panelColor = material === 'wood' || material === 'oak' || material === 'walnut' ? leafColor : '#3f2a1a';
 
-  const renderDoorPanels = (leafW: number, leafHeight: number, z: number) => (
-    <>
-      <mesh position={[0, leafHeight * 0.22, z]}>
-        <boxGeometry args={[leafW * 0.78, leafHeight * 0.28, 0.02]} />
-        <meshStandardMaterial color={panelColor} map={woodMap ?? undefined} roughness={0.6} />
-      </mesh>
-      <mesh position={[0, -leafHeight * 0.22, z]}>
-        <boxGeometry args={[leafW * 0.78, leafHeight * 0.28, 0.02]} />
-        <meshStandardMaterial color={panelColor} map={woodMap ?? undefined} roughness={0.6} />
-      </mesh>
-    </>
+  // Deux panneaux moulurés sur chaque face (avant : deux plaques plates sur une seule face).
+  const renderDoorPanels = (leafW: number, leafHeight: number) => (
+    <CassettePanels w={leafW} h={leafHeight * 0.98} t={0.055} color={panelColor} cols={1} rows={2} finish="wood" />
   );
+  /** Vantail vitré : cadre (montants et traverses) et grande glace, au lieu d’une boîte translucide. */
+  const glassLeafFrame = opening.frameColor ?? '#2f2f2f';
+  const renderGlassLeaf = (leafW: number, leafHeight: number) => {
+    const bar = 0.07;
+    return (
+      <>
+        {([-1, 1] as const).map((s) => (
+          <mesh key={`gv${s}`} position={[s * (leafW / 2 - bar / 2), 0, 0]} castShadow>
+            <boxGeometry args={[bar, leafHeight, 0.05]} />
+            <SurfaceMat color={glassLeafFrame} finish="metal" roughness={0.4} metalness={0.6} />
+          </mesh>
+        ))}
+        {([-1, 1] as const).map((s) => (
+          <mesh key={`gh${s}`} position={[0, s * (leafHeight / 2 - (s < 0 ? bar * 0.9 : bar / 2)), 0]} castShadow>
+            <boxGeometry args={[leafW - 2 * bar, s < 0 ? bar * 1.8 : bar, 0.05]} />
+            <SurfaceMat color={glassLeafFrame} finish="metal" roughness={0.4} metalness={0.6} />
+          </mesh>
+        ))}
+        <mesh>
+          <boxGeometry args={[leafW - 2 * bar + 0.01, leafHeight - 2.7 * bar + 0.01, 0.01]} />
+          <SurfaceMat color={leafColor === '#6b4423' ? '#e3eef0' : leafColor} finish="glass" opacity={0.12} envMapIntensity={1.1} />
+        </mesh>
+      </>
+    );
+  };
 
   const renderFrenchPanes = (leafW: number, leafHeight: number, z: number) => (
     <>
@@ -1464,31 +1509,50 @@ function OpeningMesh({
 
   return (
     <group position={[localX, localY, 0]}>
-      {/* Dormant en 4 pièces — ne rebouche pas le trou découpé dans le mur */}
-      <mesh position={[-(w / 2 + frameT / 2), 0, 0]} castShadow>
-        <boxGeometry args={[frameT, h + frameT * 2, jambDepth]} />
-        <meshStandardMaterial {...frameMat} />
-      </mesh>
-      <mesh position={[w / 2 + frameT / 2, 0, 0]} castShadow>
-        <boxGeometry args={[frameT, h + frameT * 2, jambDepth]} />
-        <meshStandardMaterial {...frameMat} />
-      </mesh>
-      <mesh position={[0, h / 2 + frameT / 2, 0]} castShadow>
-        <boxGeometry args={[w, frameT, jambDepth]} />
-        <meshStandardMaterial {...frameMat} />
-      </mesh>
-      <mesh position={[0, -(h / 2 + frameT / 2), 0]} castShadow>
-        <boxGeometry args={[w, frameT, jambDepth]} />
-        <meshStandardMaterial {...frameMat} />
-      </mesh>
+      {isDoor ? (
+        <>
+          {/* Huisserie : habillage de l’ébrasement (deux montants et une traverse) */}
+          {([-1, 1] as const).map((s) => (
+            <mesh key={`lining${s}`} position={[s * (w / 2 - frameT / 4), 0, 0]} castShadow receiveShadow>
+              <boxGeometry args={[frameT / 2, h, jambDepth - 0.05]} />
+              <meshStandardMaterial {...frameMat} />
+            </mesh>
+          ))}
+          <mesh position={[0, h / 2 - frameT / 4, 0]} castShadow receiveShadow>
+            <boxGeometry args={[w, frameT / 2, jambDepth - 0.05]} />
+            <meshStandardMaterial {...frameMat} />
+          </mesh>
+          {/* Chambranles moulurés sur les deux faces */}
+          {([-1, 1] as const).map((s) => (
+            <Architrave key={`arch${s}`} w={w} h={h} z={s * (thick / 2)} side={s} color={opening.frameColor ?? TRIM_DEFAULT_COLOR} />
+          ))}
+          {/* Seuil */}
+          <mesh position={[0, -h / 2 + 0.006, 0]} receiveShadow>
+            <boxGeometry args={[w, 0.012, thick + 0.02]} />
+            <SurfaceMat color="#8a8178" finish="stone" roughness={0.5} />
+          </mesh>
+        </>
+      ) : (
+        <>
+          <Architrave w={w} h={h} z={inSide * (thick / 2)} side={inSide} color={TRIM_DEFAULT_COLOR} />
+          <WindowUnit
+            w={w}
+            h={h}
+            wallThickness={thick}
+            inSide={inSide}
+            style={style === 'french' || style === 'arched' || style === 'bay' ? style : 'rectangular'}
+            frameColor={frameColor}
+            glassTint={opening.color && opening.color.toLowerCase() !== '#93c5fd' ? opening.color : '#e3eef0'}
+            hardware={opening.hardwareFinish ?? 'chrome'}
+            sillToFloor={sill}
+            headroom={wallHeightM - sill - h}
+            curtains={opening.hasCurtains}
+            curtainColor={opening.curtainColor}
+          />
+        </>
+      )}
 
-      {/* Seuil / allège */}
-      <mesh position={[0, -h / 2 + 0.03, faceZ * 0.35]} receiveShadow>
-        <boxGeometry args={[w + 0.08, 0.06, thick * 0.85]} />
-        <meshStandardMaterial color={isDoor ? '#57534e' : frameColor} roughness={0.55} metalness={0.2} />
-      </mesh>
-
-      {arch && (
+      {arch && isDoor && (
         <mesh position={[0, -h / 2 + leafH + archR * 0.35, leafZ]} rotation={[Math.PI / 2, 0, 0]} castShadow>
           <cylinderGeometry args={[archR, archR, 0.08, 20, 1, false, 0, Math.PI]} />
           <meshStandardMaterial
@@ -1506,19 +1570,17 @@ function OpeningMesh({
         <>
           {([-1, 1] as const).map((side) => (
             <group key={side} position={[side * (w * 0.25 + 0.01), -h / 2 + leafH / 2, leafZ]}>
-              <mesh castShadow>
-                <boxGeometry args={[w * 0.46, leafH * 0.98, 0.055]} />
-                <meshStandardMaterial {...leafMatProps} />
-              </mesh>
-              {style === 'frenchDoor' && renderFrenchPanes(w * 0.46, leafH, 0.035)}
-              {style === 'double' && material === 'glass' && (
-                <mesh position={[0, 0.08, 0.035]}>
-                  <boxGeometry args={[w * 0.32, leafH * 0.55, 0.02]} />
-                  <SurfaceMat color={leafColor} finish="glass" opacity={0.3} />
+              {style === 'double' && material === 'glass' ? (
+                renderGlassLeaf(w * 0.46, leafH * 0.98)
+              ) : (
+                <mesh castShadow>
+                  <boxGeometry args={[w * 0.46, leafH * 0.98, 0.055]} />
+                  <meshStandardMaterial {...leafMatProps} />
                 </mesh>
               )}
+              {style === 'frenchDoor' && renderFrenchPanes(w * 0.46, leafH, 0.035)}
               {(style === 'double') && (material === 'wood' || material === 'oak' || material === 'walnut') && (
-                renderDoorPanels(w * 0.46, leafH, 0.035)
+                renderDoorPanels(w * 0.46, leafH)
               )}
               <DoorHandles x={-side * (w * 0.23 - 0.07)} y={handleY(leafH)} t={0.055} toward={side as 1 | -1} finish={hardware} />
               <Hinges x={side * (w * 0.23 - 0.01)} leafH={leafH * 0.98} t={0.055} finish={hardware} />
@@ -1603,24 +1665,16 @@ function OpeningMesh({
 
       {isDoor && style !== 'double' && style !== 'frenchDoor' && style !== 'sliding' && style !== 'folding' && style !== 'fireExit' && style !== 'atelier' && style !== 'cassette' && (
         <group position={[0, -h / 2 + leafH / 2, leafZ]} rotation={style === 'pivot' ? [0, 0.35, 0] : [0, 0, 0]}>
-          <mesh castShadow>
-            <boxGeometry args={[w * 0.92, leafH * 0.98, 0.055]} />
-            <meshStandardMaterial {...leafMatProps} />
-          </mesh>
-          {(material === 'glass' || style === 'glass') && (
-            <>
-              <mesh position={[0, leafH * 0.15, 0.035]}>
-                <boxGeometry args={[w * 0.7, leafH * 0.4, 0.02]} />
-                <SurfaceMat color={leafColor} finish="glass" opacity={0.3} />
-              </mesh>
-              <mesh position={[0, -leafH * 0.22, 0.035]}>
-                <boxGeometry args={[w * 0.7, leafH * 0.28, 0.02]} />
-                <SurfaceMat color={leafColor} finish="glass" opacity={0.3} />
-              </mesh>
-            </>
+          {material === 'glass' || style === 'glass' ? (
+            renderGlassLeaf(w * 0.92, leafH * 0.98)
+          ) : (
+            <mesh castShadow>
+              <boxGeometry args={[w * 0.92, leafH * 0.98, 0.055]} />
+              <meshStandardMaterial {...leafMatProps} />
+            </mesh>
           )}
           {(style === 'panel' || material === 'wood' || material === 'oak' || material === 'walnut') && style !== 'glass' && material !== 'glass' && (
-            renderDoorPanels(w * 0.92, leafH, 0.035)
+            renderDoorPanels(w * 0.92, leafH)
           )}
           {style !== 'pivot' ? (
             <>
@@ -1650,98 +1704,6 @@ function OpeningMesh({
         </mesh>
       )}
 
-      {!isDoor && (
-        <group position={[0, 0, style === 'bay' ? faceZ + 0.12 : leafZ]}>
-          {style === 'bay' && (
-            <mesh position={[0, 0, 0.08]} castShadow>
-              <boxGeometry args={[w * 1.05, h * 1.05, 0.22]} />
-              <meshStandardMaterial color={frameColor} roughness={0.65} />
-            </mesh>
-          )}
-          <mesh castShadow>
-            <boxGeometry args={[w * 0.88, (arch ? leafH : h) * 0.88, 0.035]} />
-            <meshPhysicalMaterial
-              color={leafColor}
-              transparent
-              opacity={0.38}
-              roughness={0.04}
-              metalness={0.12}
-              transmission={0.72}
-            />
-          </mesh>
-          {opening.hasCurtains && (
-            <>
-              {([-1, 1] as const).map((side) => (
-                <mesh
-                  key={side}
-                  position={[side * w * 0.28, 0, leafZ + 0.05]}
-                  castShadow
-                >
-                  <boxGeometry args={[w * 0.34, (arch ? leafH : h) * 0.92, 0.03]} />
-                  <meshStandardMaterial
-                    color={opening.curtainColor ?? '#7f1d1d'}
-                    roughness={0.88}
-                  />
-                </mesh>
-              ))}
-            </>
-          )}
-          {arch && (
-            <mesh position={[0, -h / 2 + leafH + archR * 0.3, 0.02]} rotation={[Math.PI / 2, 0, 0]}>
-              <cylinderGeometry args={[archR * 0.92, archR * 0.92, 0.04, 18, 1, false, 0, Math.PI]} />
-              <meshStandardMaterial {...glassProps} />
-            </mesh>
-          )}
-          {(style === 'rectangular' || style === 'french' || style === 'arched') && (
-            <>
-              <mesh position={[0, 0, 0.025]}>
-                <boxGeometry args={[0.035, (arch ? leafH : h) * 0.82, 0.025]} />
-                <meshStandardMaterial color={frameColor} />
-              </mesh>
-              <mesh position={[0, arch ? -h * 0.08 : 0, 0.025]}>
-                <boxGeometry args={[w * 0.82, 0.035, 0.025]} />
-                <meshStandardMaterial color={frameColor} />
-              </mesh>
-              {style === 'french' && (
-                <>
-                  <mesh position={[-w * 0.22, 0, 0.025]}>
-                    <boxGeometry args={[0.028, h * 0.82, 0.025]} />
-                    <meshStandardMaterial color={frameColor} />
-                  </mesh>
-                  <mesh position={[w * 0.22, 0, 0.025]}>
-                    <boxGeometry args={[0.028, h * 0.82, 0.025]} />
-                    <meshStandardMaterial color={frameColor} />
-                  </mesh>
-                  <mesh position={[0, h * 0.2, 0.025]}>
-                    <boxGeometry args={[w * 0.82, 0.028, 0.025]} />
-                    <meshStandardMaterial color={frameColor} />
-                  </mesh>
-                  <mesh position={[0, -h * 0.2, 0.025]}>
-                    <boxGeometry args={[w * 0.82, 0.028, 0.025]} />
-                    <meshStandardMaterial color={frameColor} />
-                  </mesh>
-                </>
-              )}
-            </>
-          )}
-          {style === 'bay' && (
-            <>
-              <mesh position={[-w * 0.3, 0, 0.03]}>
-                <boxGeometry args={[0.035, h * 0.85, 0.025]} />
-                <meshStandardMaterial color={frameColor} />
-              </mesh>
-              <mesh position={[w * 0.3, 0, 0.03]}>
-                <boxGeometry args={[0.035, h * 0.85, 0.025]} />
-                <meshStandardMaterial color={frameColor} />
-              </mesh>
-            </>
-          )}
-          <mesh position={[0, -h / 2 - 0.02, 0.06]} receiveShadow>
-            <boxGeometry args={[w + 0.12, 0.05, 0.16]} />
-            <meshStandardMaterial color={frameColor} roughness={0.5} />
-          </mesh>
-        </group>
-      )}
     </group>
   );
 }
@@ -1795,6 +1757,33 @@ function WallMesh({
     () => wallBricksAroundOpenings(length, wallH, openings, cutaway),
     [length, wallH, openings, cutaway],
   );
+
+  /**
+   * Face côté pièce : la normale locale +Z du mur pointe vers (−sin a, cos a) ; on garde
+   * celle qui regarde le centre de la salle (plinthes, corniche, rideaux, crémones).
+   */
+  const inSide: 1 | -1 = Math.sin(angle) * midX - Math.cos(angle) * midZ >= 0 ? 1 : -1;
+  /** Plinthe interrompue aux portes (chambranles compris). */
+  const plinthRuns = useMemo(() => {
+    const cuts = openings
+      .filter((op) => op.kind === 'door' || (op.sillM ?? 0.9) < 0.12)
+      .map((op) => {
+        const w = Math.min(op.widthM, length * 0.85);
+        const cx = (op.t - 0.5) * length;
+        return [cx - w / 2 - ARCHITRAVE_W, cx + w / 2 + ARCHITRAVE_W] as const;
+      })
+      .sort((a, b) => a[0] - b[0]);
+    const runs: Array<[number, number]> = [];
+    let x = -length / 2;
+    for (const [a, b] of cuts) {
+      if (a > x) runs.push([x, Math.min(a, length / 2)]);
+      x = Math.max(x, b);
+    }
+    if (x < length / 2) runs.push([x, length / 2]);
+    return runs.filter(([a, b]) => b - a > 0.03);
+  }, [openings, length]);
+  /** Corniche seulement si aucune ouverture ne monte jusqu’au plafond. */
+  const corniceFree = !openings.some((op) => (op.sillM ?? (op.kind === 'door' ? 0 : 0.9)) + op.heightM > wallH - 0.12);
 
   if (length < 0.05) return null;
 
@@ -1865,11 +1854,10 @@ function WallMesh({
           </mesh>
         );
       })}
-      {/* Plinthe */}
-      <mesh position={[0, -wallH / 2 + 0.06, thick * 0.55]} castShadow receiveShadow>
-        <boxGeometry args={[length * 0.995, 0.12, 0.04]} />
-        <meshStandardMaterial color="#3f3f46" roughness={0.7} metalness={0.05} />
-      </mesh>
+      {/* Plinthes moulurées côté pièce, coupées aux portes */}
+      {plinthRuns.map(([a, b]) => (
+        <Plinth key={`plinth-${a.toFixed(3)}`} x0={a} x1={b} y={-wallH / 2} z={inSide * (thick / 2)} side={inSide} />
+      ))}
       {cutaway ? (
         /* Tranche de coupe : bande claire sur le dessus du mur, comme une maquette d’architecte. */
         bricks
@@ -1887,11 +1875,8 @@ function WallMesh({
             </mesh>
           ))
       ) : (
-        /* Corniche haute */
-        <mesh position={[0, wallH / 2 - 0.04, thick * 0.45]} castShadow>
-          <boxGeometry args={[length * 0.995, 0.06, 0.05]} />
-          <meshStandardMaterial color="#e7e5e4" roughness={0.85} metalness={0.02} />
-        </mesh>
+        /* Corniche à gorge sous le plafond */
+        corniceFree ? <Cornice length={length * 0.998} y={wallH / 2} z={inSide * (thick / 2)} side={inSide} /> : null
       )}
       {openings.filter((op) => !cutaway || op.kind !== 'door').map((op) => (
         <OpeningMesh
@@ -1900,6 +1885,7 @@ function WallMesh({
           wallLengthM={length}
           wallHeightM={wallH}
           wallThicknessM={thick}
+          inSide={inSide}
         />
       ))}
     </group>
@@ -3795,6 +3781,7 @@ function SceneContent({
           outline={blueprint.roomOutline}
           onPointerMissed={() => onSelect(null)}
           stairHoles={activeStoryStairHoles}
+          reflections={qualitySettings.quality === 'showcase' && !reduceMotion}
         />
       )}
 
