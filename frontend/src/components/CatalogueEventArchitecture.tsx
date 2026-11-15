@@ -707,7 +707,7 @@ export function EventZoneSurface({
   // multipliée qui salit le rendu ; moquette / vinyle / LED gardent leur rendu procédural teinté.
   const metric = material !== undefined && material !== 'carpet' && material !== 'vinyl' && material !== 'led';
   const mat = useMemo(
-    () => (metric ? resolveDeckSurface(material, w, h) : { ...resolveZoneMaterialMap(material), normalMap: null }),
+    () => (metric ? resolveDeckSurface(material, w, h) : { normalMap: null, ...resolveZoneMaterialMap(material) }),
     [metric, material, w, h],
   );
   const isDance = material === 'vinyl' || material === 'led' || zoneKind === 'dance';
