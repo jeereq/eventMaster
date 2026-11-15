@@ -1,13 +1,16 @@
 'use client';
 
-import { Bloom, EffectComposer, Vignette } from '@react-three/postprocessing';
+import { Bloom, EffectComposer, N8AO, SMAA, Vignette } from '@react-three/postprocessing';
 import type { ScenicLightSettings } from '@/lib/roomRenderQuality';
 
 type RoomShowcasePostProcessingProps = {
   lighting: ScenicLightSettings;
 };
 
-/** Bloom + vignette légers, calibrés selon l’ambiance (showcase uniquement). */
+/**
+ * Rendu vitrine (showcase uniquement) : occlusion ambiante, bloom et vignette légers
+ * calibrés selon l’ambiance, puis anti-crénelage (le composeur coupe le MSAA).
+ */
 export default function RoomShowcasePostProcessing({ lighting }: RoomShowcasePostProcessingProps) {
   const bloomIntensity =
     lighting.preset === 'night' ? 0.9
@@ -27,8 +30,13 @@ export default function RoomShowcasePostProcessing({ lighting }: RoomShowcasePos
       : lighting.preset === 'dusk' ? 0.6
         : 0.45;
 
+  // Occlusion ambiante : assombrit les coins, le dessous des tables et le pied des
+  // chaises, là où la lumière indirecte n’arrive pas. Rayon en mètres (échelle d’une salle).
+  const aoIntensity = lighting.preset === 'night' ? 3 : lighting.preset === 'day' ? 4 : 3.5;
+
   return (
     <EffectComposer multisampling={0}>
+      <N8AO aoRadius={0.5} distanceFalloff={1} intensity={aoIntensity} quality="medium" halfRes depthAwareUpsampling />
       <Bloom
         intensity={bloomIntensity}
         luminanceThreshold={bloomThreshold}
@@ -36,6 +44,7 @@ export default function RoomShowcasePostProcessing({ lighting }: RoomShowcasePos
         mipmapBlur
       />
       <Vignette eskil={false} offset={0.32} darkness={vignetteDarkness} />
+      <SMAA />
     </EffectComposer>
   );
 }
