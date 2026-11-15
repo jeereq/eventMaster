@@ -350,6 +350,7 @@ export function resolveFloorTopViewStyle({
   floorType,
   floorImageUrl,
   floorImageFit,
+  floorImageTileM,
   floorColor,
   widthM,
   heightM,
@@ -358,6 +359,8 @@ export function resolveFloorTopViewStyle({
   floorType: FloorType | undefined;
   floorImageUrl?: string;
   floorImageFit?: 'cover' | 'tile';
+  /** Sol importé en mosaïque : taille d’une répétition (m), comme en 3D. */
+  floorImageTileM?: number;
   floorColor?: string;
   widthM: number;
   heightM: number;
@@ -382,7 +385,7 @@ export function resolveFloorTopViewStyle({
     return withTint({
       backgroundColor: '#8b6840',
       backgroundImage: `url(${floorImageUrl})`,
-      backgroundSize: tiled ? tilePct(3.5) : '100% 100%',
+      backgroundSize: tiled ? tilePct(floorImageTileM && floorImageTileM > 0 ? floorImageTileM : 3.5) : '100% 100%',
       backgroundRepeat: tiled ? 'repeat' : 'no-repeat',
       backgroundPosition: '0 0',
     });

@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import type { ChairType, ChairStyle, SeatMaterial, TableShape } from '@/lib/roomLayoutUtils';
 import {
   resolveChairMap,
+  resolveImportedSurface,
   resolveChairVisual,
   resolveSeatFabricMap,
   resolveTableMaterial,
@@ -24,6 +25,7 @@ type MatProps = {
   bumpScale?: number;
   normalMap?: THREE.Texture | null;
   normalScale?: number;
+  roughnessMap?: THREE.Texture | null;
   clearcoat?: number;
   clearcoatRoughness?: number;
   transmission?: number;
@@ -65,6 +67,7 @@ function Mat({
   bumpScale,
   normalMap,
   normalScale,
+  roughnessMap,
   clearcoat,
   clearcoatRoughness,
   transmission,
@@ -90,6 +93,7 @@ function Mat({
       map={map}
       normalMap={normalMap}
       normalScale={normalScale}
+      roughnessMap={roughnessMap}
       bumpMap={bumpMap}
       bumpScale={bumpScale}
       roughness={gold && roughness > 0.28 ? 0.2 : roughness}
@@ -212,9 +216,10 @@ function CatalogueChairMesh({
     () => resolveSeatFabricMap(seatMaterial, visual.seatColor),
     [seatMaterial, visual.seatColor],
   );
-  const map = useMemo(() => resolveChairMap(imageUrl) ?? fabric.map, [imageUrl, fabric.map]);
-  // Relief tissu / cuir seulement sur la texture maison (pas sur une photo importée).
-  const seatNormal = imageUrl ? null : fabric.normalMap;
+  const imported = useMemo(() => resolveImportedSurface(imageUrl, 1, 1), [imageUrl]);
+  const map = imported?.map ?? resolveChairMap(imageUrl) ?? fabric.map;
+  // Photo importée : relief tiré de l’image elle-même (grain du tissu, capitons).
+  const seatNormal = imported ? imported.normalMap : imageUrl ? null : fabric.normalMap;
   const frameFinish: SurfaceFinish = isWoodTone(visual.frameColor) ? 'wood' : 'auto';
   const seatH = 0.42 * visual.scale;
   const [sw0, sh0, sd0] = visual.seatSize;
@@ -855,6 +860,7 @@ export function CatalogueTableStructure({
     bumpScale: mat.bumpScale,
     normalMap: mat.normalMap,
     normalScale: mat.normalScale,
+    roughnessMap: mat.roughnessMap,
     clearcoat: mat.clearcoat,
     clearcoatRoughness: mat.clearcoatRoughness,
     transmission: mat.transmission,

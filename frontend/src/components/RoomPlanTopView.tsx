@@ -142,6 +142,7 @@ export default function RoomPlanTopView({ blueprint, showLabels = true, classNam
     floorType,
     floorImageUrl: meta.floorImageUrl,
     floorImageFit: meta.floorImageFit,
+    floorImageTileM: meta.floorImageTileM,
     floorColor: meta.floorColor,
     widthM: W,
     heightM: H,

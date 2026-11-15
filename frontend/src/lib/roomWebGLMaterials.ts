@@ -9,6 +9,8 @@ import { TABLE_DEFAULT_TEXTURE, TABLE_SURFACE_TEXTURES, resolveTableSurface } fr
 import { ZONE_DECK_TEXTURES, ZONE_MATERIAL_COLORS } from '@/lib/roomZoneSurface';
 import type { FloorType } from '@/lib/roomThemeUtils';
 import { getDetailSet, withRepeat, type DetailKind } from '@/lib/roomSurfaceFinish';
+import { loadImportedTexture, type ImportedTextureSet } from '@/lib/roomImportedTexture';
+import { tileRepeat } from '@/lib/roomImportedTextureMath';
 
 const textureCache = new Map<string, THREE.Texture>();
 const canvasCache = new Map<string, THREE.CanvasTexture>();
@@ -88,6 +90,8 @@ export function resolveFloorMap(
   heightM: number,
   floorColor?: string,
   floorImageFit?: 'cover' | 'tile',
+  /** Sol importé en mosaïque : taille réelle d’une répétition de l’image (m). */
+  floorImageTileM?: number,
 ): {
   map: THREE.Texture | null;
   color: string;
@@ -100,22 +104,43 @@ export function resolveFloorMap(
   bumpScale: number;
   normalMap?: THREE.Texture | null;
   normalScale?: number;
+  roughnessMap?: THREE.Texture | null;
 } {
   if (floorImageUrl) {
     const isPlan = floorImageFit !== 'tile';
-    const map = isPlan
-      ? loadCoverTexture(floorImageUrl)
-      : loadTiledTexture(floorImageUrl, widthM / 3.5, heightM / 3.5);
+    const color = floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff';
+    if (isPlan) {
+      return {
+        map: loadCoverTexture(floorImageUrl),
+        color,
+        roughness: 0.82,
+        metalness: 0.04,
+        clearcoat: 0,
+        envMapIntensity: 0.25,
+        isPlan,
+        bumpMap: null,
+        bumpScale: 0,
+      };
+    }
+    // Matière importée : relief et rugosité tirés de la photo, motif à l’échelle choisie.
+    const tileM = floorImageTileM && floorImageTileM > 0 ? floorImageTileM : DEFAULT_IMPORTED_FLOOR_TILE_M;
+    const set = loadImportedTexture(floorImageUrl, {
+      repeatX: tileRepeat(widthM, tileM),
+      repeatY: tileRepeat(heightM, tileM),
+    });
     return {
-      map,
-      color: floorColor && floorColor !== '#ffffff' ? floorColor : '#ffffff',
-      roughness: isPlan ? 0.82 : 0.7,
-      metalness: 0.04,
+      map: set?.map ?? loadTiledTexture(floorImageUrl, widthM / tileM, heightM / tileM),
+      color,
+      roughness: 0.78,
+      metalness: 0.02,
       clearcoat: 0,
-      envMapIntensity: isPlan ? 0.25 : 0.45,
+      envMapIntensity: 0.5,
       isPlan,
-      bumpMap: isPlan ? null : bumpFromAlbedo(map),
-      bumpScale: isPlan ? 0 : 0.01,
+      bumpMap: null,
+      bumpScale: 0,
+      normalMap: set?.normalMap ?? null,
+      normalScale: 0.9,
+      roughnessMap: set?.roughnessMap ?? null,
     };
   }
   const type = floorType && floorType !== 'custom' ? floorType : 'parquet';
@@ -1040,6 +1065,8 @@ export function resolveTableMaterial(
   color?: string,
   imageUrl?: string,
   surface?: TableSurfaceStyle,
+  /** Plateau [largeur, profondeur] en mètres : une image importée garde son échelle réelle. */
+  sizeM?: [number, number],
 ): {
   map: THREE.Texture | null;
   color: string;
@@ -1051,6 +1078,7 @@ export function resolveTableMaterial(
   bumpScale?: number;
   normalMap?: THREE.Texture;
   normalScale?: number;
+  roughnessMap?: THREE.Texture;
   clearcoat?: number;
   clearcoatRoughness?: number;
   transmission?: number;
@@ -1059,12 +1087,20 @@ export function resolveTableMaterial(
   isCloth?: boolean;
 } {
   if (imageUrl) {
+    const [w, d] = sizeM ?? [1.2, 1.2];
+    const set = loadImportedTexture(imageUrl, {
+      repeatX: tileRepeat(w, IMPORTED_TABLE_TILE_M),
+      repeatY: tileRepeat(d, IMPORTED_TABLE_TILE_M),
+    });
     return {
-      map: loadTiledTexture(imageUrl, 1.2, 1.2),
+      map: set?.map ?? loadTiledTexture(imageUrl, 1.2, 1.2),
       color: '#ffffff',
       roughness: 0.55,
-      metalness: 0.08,
-      clearcoat: 0.15,
+      metalness: 0.04,
+      normalMap: set?.normalMap,
+      normalScale: 0.7,
+      roughnessMap: set?.roughnessMap,
+      clearcoat: 0.2,
       clearcoatRoughness: 0.25,
     };
   }
@@ -1357,5 +1393,19 @@ export function resolveDeckSurface(material: ZoneMaterial | undefined, wM: numbe
 
 export function resolveChairMap(imageUrl?: string): THREE.Texture | null {
   if (!imageUrl) return null;
-  return loadTiledTexture(imageUrl, 1, 1);
+  return resolveImportedSurface(imageUrl, 1, 1)?.map ?? loadTiledTexture(imageUrl, 1, 1);
+}
+
+/** Sol importé : taille par défaut d’une répétition de l’image (m). */
+export const DEFAULT_IMPORTED_FLOOR_TILE_M = 3.5;
+/** Plateau importé : une répétition de l’image couvre 90 cm. */
+const IMPORTED_TABLE_TILE_M = 0.9;
+
+/**
+ * Matière importée (couleur + relief + rugosité) répétée `repeatX` × `repeatY` :
+ * assise de chaise, tapis d’allée, sol de couloir…
+ */
+export function resolveImportedSurface(imageUrl: string | undefined, repeatX = 1, repeatY = 1): ImportedTextureSet | null {
+  if (!imageUrl) return null;
+  return loadImportedTexture(imageUrl, { repeatX, repeatY });
 }

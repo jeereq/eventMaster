@@ -26,6 +26,8 @@ import {
 } from '@/lib/roomOutdoorUtils';
 import {
   HOME_FURNITURE_GROUP_LABELS,
+  HOME_METAL_FINISH_LABELS,
+  type HomeMetalFinish,
   HOME_FURNITURE_META,
   HOME_FURNITURE_ORDER,
   homeFurnitureFootprintPct,
@@ -83,6 +85,7 @@ import {
   doorStyleHints,
   aisleStyleLabels,
   aisleStyleHints,
+  zoneMaterialLabels,
   chandelierFixtureStyleLabels,
   chandelierFixtureStyleHints,
   amphitheaterStyleLabels,
@@ -229,6 +232,18 @@ import {
 import { readImageFile } from '@/lib/imageCropUtils';
 import { uploadImageFile, uploadVideoFile } from '@/lib/cloudinaryUpload';
 import { RoomEnvironmentPanel } from '@/components/room/RoomEnvironmentPanel';
+import { LEGACY_CORRIDOR_GREY } from '@/lib/roomAisleLayout';
+import {
+  GARDEN_BORDER_LABELS,
+  GARDEN_FLOWER_PALETTES,
+  GARDEN_LAWN_LABELS,
+  GARDEN_PATH_LABELS,
+  resolveGardenOptions,
+  type GardenBorder,
+  type GardenLawn,
+  type GardenOptions,
+  type GardenPath,
+} from '@/lib/roomGardenLayout';
 import { EditorGate as Gate, EditorGateProvider, EditorUpsellDialog, LockedSectionCard, type LockedUpsell } from '@/components/room/EditorLocks';
 import { describeEditorUpsell } from '@/lib/roomEditorUpsell';
 import {
@@ -320,6 +335,34 @@ const EDITOR_CHIP =
 const EDITOR_PANEL_BTN =
   'inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-[var(--radius-button)] border text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-40 disabled:cursor-not-allowed';
 const EDITOR_HEADING = 'text-sm font-semibold text-foreground flex items-center gap-1';
+const EDITOR_SWATCH = 'min-h-11 min-w-11 shrink-0 rounded-[var(--radius-button)] border border-border cursor-pointer';
+
+/** Ligne « libellé + nuancier + réinitialiser » pour une couleur facultative. */
+function DecorColorField({ label, value, fallback, onChange }: { label: string; value?: string; fallback: string; onChange: (next: string | undefined) => void }) {
+  return (
+    <div className="flex items-center gap-2">
+      <input type="color" value={value ?? fallback} onChange={(e) => onChange(e.target.value)} aria-label={label} title={label} className={EDITOR_SWATCH} />
+      <span className="flex-1 text-sm text-foreground">{label}</span>
+      {value ? (
+        <button type="button" onClick={() => onChange(undefined)} className="min-h-11 px-2 text-xs font-semibold text-muted hover:text-foreground">
+          Par défaut
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+/** Curseur avec valeur affichée (mètres, pourcentage…). */
+function DecorRangeField({ label, value, min, max, step, format, onChange }: { label: string; value: number; min: number; max: number; step: number; format: (v: number) => string; onChange: (v: number) => void }) {
+  return (
+    <label className="block space-y-1">
+      <span className="text-xs font-semibold text-foreground">{label} : {format(value)}</span>
+      <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))} className="w-full accent-primary" aria-label={label} />
+    </label>
+  );
+}
+
+const fmtM = (v: number) => `${v.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} m`;
 const EDITOR_HINT = 'text-sm text-muted leading-snug';
 const EDITOR_CARD_ACTION =
   'inline-flex items-center justify-center min-h-11 min-w-11 rounded-[var(--radius-button)] border border-border bg-surface text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
@@ -4463,6 +4506,29 @@ export default function RoomLayoutEditor({
                         </button>
                       </div>
                     )}
+                    {blueprint.metadata.floorImageUrl && blueprint.metadata.floorImageFit !== 'cover' && (
+                      <label className="block space-y-1.5">
+                        <span className="text-xs font-semibold text-foreground">
+                          Taille du motif : {(blueprint.metadata.floorImageTileM ?? 3.5).toLocaleString('fr-FR', { maximumFractionDigits: 1 })} m
+                        </span>
+                        <input
+                          type="range"
+                          min={0.3}
+                          max={8}
+                          step={0.1}
+                          value={blueprint.metadata.floorImageTileM ?? 3.5}
+                          onChange={(e) => updateBlueprint({
+                            ...blueprint,
+                            metadata: { ...blueprint.metadata, floorImageTileM: parseFloat(e.target.value) },
+                          })}
+                          className="w-full accent-primary"
+                          aria-label="Taille réelle d’une répétition de l’image de sol"
+                        />
+                        <span className={EDITOR_HINT}>
+                          Largeur réelle couverte par l’image : 0,6 m pour un carreau de 60 cm, 2 à 3 m pour un parquet.
+                        </span>
+                      </label>
+                    )}
                   </div></Gate>
                   </div>
                 </div>
@@ -5053,7 +5119,8 @@ export default function RoomLayoutEditor({
       const isDoor = selectedFixture.kind === 'door' || selectedFixture.kind === 'entrance';
       const isAisle = selectedFixture.kind === 'aisle' || selectedFixture.kind === 'carpet';
       const isChandelier = selectedFixture.kind === 'chandelier';
-      const canHaveImage = isColumn || isStage || isFlower || isBuffet || isStairs || isAisle || isDecal;
+      const isCorridor = selectedFixture.kind === 'corridor';
+      const canHaveImage = isColumn || isStage || isFlower || isBuffet || isStairs || isAisle || isDecal || isCorridor;
 
       return (
         <div className="space-y-3">
@@ -5311,7 +5378,7 @@ export default function RoomLayoutEditor({
                   <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={selectedFixture.hasSideLanterns !== false}
+                      checked={selectedFixture.hasSideLanterns === true}
                       onChange={(e) => updateFixture(selectedFixture.id, { hasSideLanterns: e.target.checked }, 'Lanternes latérales')}
                       className="rounded border-border size-4"
                     />
@@ -5320,13 +5387,168 @@ export default function RoomLayoutEditor({
                   <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={selectedFixture.hasPetals !== false}
+                      checked={selectedFixture.hasPetals === true}
                       onChange={(e) => updateFixture(selectedFixture.id, { hasPetals: e.target.checked }, 'Pétales de fleurs')}
                       className="rounded border-border size-4"
                     />
                     <span>Pétales de roses parsemés</span>
                   </label>
                 </div>
+
+                {selectedFixture.kind === 'aisle' && (
+                  <div className="space-y-2 p-2 rounded bg-surface border border-border">
+                    <p className="text-xs font-semibold text-muted">Personnaliser</p>
+                    <DecorColorField
+                      label="Couleur du tapis"
+                      value={selectedFixture.aisleColor}
+                      fallback="#881337"
+                      onChange={(next) => updateFixture(selectedFixture.id, { aisleColor: next })}
+                    />
+                    {selectedFixture.hasGoldBorder !== false && (
+                      <DecorColorField
+                        label="Couleur de la ganse"
+                        value={selectedFixture.aisleBorderColor}
+                        fallback="#d4af37"
+                        onChange={(next) => updateFixture(selectedFixture.id, { aisleBorderColor: next })}
+                      />
+                    )}
+                    {selectedFixture.hasPetals === true && (
+                      <>
+                        <DecorColorField
+                          label="Couleur des pétales"
+                          value={selectedFixture.petalColor}
+                          fallback="#f43f5e"
+                          onChange={(next) => updateFixture(selectedFixture.id, { petalColor: next })}
+                        />
+                        <DecorRangeField
+                          label="Quantité de pétales"
+                          value={selectedFixture.petalDensity ?? 0.35}
+                          min={0.05}
+                          max={1}
+                          step={0.05}
+                          format={(v) => `${Math.round(v * 100)} %`}
+                          onChange={(v) => updateFixture(selectedFixture.id, { petalDensity: v })}
+                        />
+                      </>
+                    )}
+                    {selectedFixture.hasSideLanterns === true && (
+                      <DecorRangeField
+                        label="Écart entre lanternes"
+                        value={selectedFixture.lanternSpacingM ?? 2}
+                        min={0.8}
+                        max={4}
+                        step={0.1}
+                        format={fmtM}
+                        onChange={(v) => updateFixture(selectedFixture.id, { lanternSpacingM: v })}
+                      />
+                    )}
+                    {selectedFixture.imageUrl && (
+                      <DecorRangeField
+                        label="Taille du motif importé"
+                        value={selectedFixture.surfaceImageTileM ?? 1.2}
+                        min={0.3}
+                        max={6}
+                        step={0.1}
+                        format={fmtM}
+                        onChange={(v) => updateFixture(selectedFixture.id, { surfaceImageTileM: v })}
+                      />
+                    )}
+                    <p className={EDITOR_HINT}>Une photo de tapis ou de tissu se pose sur l’allée avec « Image personnalisée » plus bas.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ───────── COULOIR ───────── */}
+            {isCorridor && (
+              <div className="space-y-2 pt-2 border-t border-border">
+                <p className={EDITOR_HEADING}>Couloir</p>
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-semibold text-foreground">Sol</span>
+                  <select
+                    value={selectedFixture.material ?? 'wood'}
+                    onChange={(e) => updateFixture(selectedFixture.id, { material: e.target.value as ZoneMaterial }, 'Sol du couloir')}
+                    className={EDITOR_FIELD}
+                  >
+                    {(Object.keys(zoneMaterialLabels) as ZoneMaterial[]).map((m) => (
+                      <option key={m} value={m}>{zoneMaterialLabels[m]}</option>
+                    ))}
+                  </select>
+                </label>
+                <DecorColorField
+                  label="Teinte du sol"
+                  value={selectedFixture.color && selectedFixture.color.toLowerCase() !== LEGACY_CORRIDOR_GREY ? selectedFixture.color : undefined}
+                  fallback="#c9a273"
+                  onChange={(next) => updateFixture(selectedFixture.id, { color: next ?? LEGACY_CORRIDOR_GREY })}
+                />
+                <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedFixture.corridorWalls !== false}
+                    onChange={(e) => updateFixture(selectedFixture.id, { corridorWalls: e.target.checked }, e.target.checked ? 'Murs du couloir' : 'Couloir sans murs')}
+                    className="rounded border-border size-4"
+                  />
+                  <span>Murs de chaque côté</span>
+                </label>
+                {selectedFixture.corridorWalls !== false && (
+                  <>
+                    <DecorRangeField
+                      label="Hauteur des murs"
+                      value={selectedFixture.corridorWallHeightM ?? 2.2}
+                      min={0.8}
+                      max={4}
+                      step={0.1}
+                      format={fmtM}
+                      onChange={(v) => updateFixture(selectedFixture.id, { corridorWallHeightM: v })}
+                    />
+                    <DecorColorField
+                      label="Couleur des murs"
+                      value={selectedFixture.corridorWallColor}
+                      fallback="#ece8e1"
+                      onChange={(next) => updateFixture(selectedFixture.id, { corridorWallColor: next })}
+                    />
+                    <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedFixture.corridorSconces === true}
+                        onChange={(e) => updateFixture(selectedFixture.id, { corridorSconces: e.target.checked }, 'Appliques murales')}
+                        className="rounded border-border size-4"
+                      />
+                      <span>Appliques murales</span>
+                    </label>
+                    {selectedFixture.corridorSconces === true && (
+                      <DecorRangeField
+                        label="Écart entre appliques"
+                        value={selectedFixture.corridorSconceSpacingM ?? 3}
+                        min={1}
+                        max={8}
+                        step={0.5}
+                        format={fmtM}
+                        onChange={(v) => updateFixture(selectedFixture.id, { corridorSconceSpacingM: v })}
+                      />
+                    )}
+                  </>
+                )}
+                <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedFixture.corridorPlinths !== false}
+                    onChange={(e) => updateFixture(selectedFixture.id, { corridorPlinths: e.target.checked }, 'Plinthes')}
+                    className="rounded border-border size-4"
+                  />
+                  <span>{selectedFixture.corridorWalls !== false ? 'Plinthes' : 'Bordures au sol'}</span>
+                </label>
+                {selectedFixture.imageUrl && (
+                  <DecorRangeField
+                    label="Taille du motif importé"
+                    value={selectedFixture.surfaceImageTileM ?? 1.2}
+                    min={0.3}
+                    max={6}
+                    step={0.1}
+                    format={fmtM}
+                    onChange={(v) => updateFixture(selectedFixture.id, { surfaceImageTileM: v })}
+                  />
+                )}
               </div>
             )}
 
@@ -5827,6 +6049,7 @@ export default function RoomLayoutEditor({
               const style = (selectedFixture.homeStyle ?? 'bed') as HomeFurnitureStyle;
               const meta = HOME_FURNITURE_META[style];
               return (
+                <>
                 <label className="block text-xs space-y-1">
                   <span className="font-semibold text-muted">Meuble</span>
                   <select
@@ -5851,6 +6074,21 @@ export default function RoomLayoutEditor({
                   </select>
                   <span className="text-xs text-muted">{meta.hint}</span>
                 </label>
+                {meta.group === 'bathroom' ? (
+                  <label className="block text-xs space-y-1">
+                    <span className="font-semibold text-muted">Robinetterie et métaux</span>
+                      <select
+                        value={selectedFixture.homeMetalFinish ?? 'chrome'}
+                        onChange={(e) => updateFixture(selectedFixture.id, { homeMetalFinish: e.target.value as HomeMetalFinish }, 'Finition')}
+                        className={EDITOR_FIELD}
+                      >
+                        {(Object.keys(HOME_METAL_FINISH_LABELS) as HomeMetalFinish[]).map((id) => (
+                          <option key={id} value={id}>{HOME_METAL_FINISH_LABELS[id]}</option>
+                        ))}
+                      </select>
+                  </label>
+                ) : null}
+                </>
               );
             })()}
 
@@ -5900,7 +6138,74 @@ export default function RoomLayoutEditor({
                       </select>
                     </label>
                   ) : null}
-                  {style !== 'pool' && style !== 'pond' && style !== 'firePit' ? (
+                  {style === 'garden' ? (() => {
+                    const g = resolveGardenOptions(selectedFixture.garden);
+                    const setGarden = (patch: Partial<GardenOptions>, message?: string) =>
+                      updateFixture(selectedFixture.id, { garden: { ...g, ...patch } }, message);
+                    const paletteId = Object.entries(GARDEN_FLOWER_PALETTES).find(([, pal]) => pal.colors.join() === g.flowerColors.join())?.[0] ?? 'custom';
+                    return (
+                      <div className="space-y-2 p-2 rounded bg-surface border border-border">
+                        <label className="block text-xs space-y-1">
+                          <span className="font-semibold text-muted">Gazon</span>
+                          <select value={g.lawn} onChange={(e) => setGarden({ lawn: e.target.value as GardenLawn }, 'Type de gazon')} className={EDITOR_FIELD}>
+                            {(Object.keys(GARDEN_LAWN_LABELS) as GardenLawn[]).map((id) => <option key={id} value={id}>{GARDEN_LAWN_LABELS[id]}</option>)}
+                          </select>
+                        </label>
+                        <label className="block text-xs space-y-1">
+                          <span className="font-semibold text-muted">Bordure</span>
+                          <select value={g.border} onChange={(e) => setGarden({ border: e.target.value as GardenBorder }, 'Bordure du jardin')} className={EDITOR_FIELD}>
+                            {(Object.keys(GARDEN_BORDER_LABELS) as GardenBorder[]).map((id) => <option key={id} value={id}>{GARDEN_BORDER_LABELS[id]}</option>)}
+                          </select>
+                        </label>
+                        <label className="block text-xs space-y-1">
+                          <span className="font-semibold text-muted">Chemin</span>
+                          <select value={g.path} onChange={(e) => setGarden({ path: e.target.value as GardenPath }, 'Chemin du jardin')} className={EDITOR_FIELD}>
+                            {(Object.keys(GARDEN_PATH_LABELS) as GardenPath[]).map((id) => <option key={id} value={id}>{GARDEN_PATH_LABELS[id]}</option>)}
+                          </select>
+                        </label>
+                        <DecorRangeField
+                          label="Fleurs"
+                          value={g.flowerDensity}
+                          min={0}
+                          max={1}
+                          step={0.05}
+                          format={(v) => (v === 0 ? 'aucune' : `${Math.round(v * 100)} %`)}
+                          onChange={(v) => setGarden({ flowerDensity: v })}
+                        />
+                        {(g.flowerDensity > 0 || g.border === 'flowers') && (
+                          <label className="block text-xs space-y-1">
+                            <span className="font-semibold text-muted">Couleurs des fleurs</span>
+                            <select
+                              value={paletteId}
+                              onChange={(e) => {
+                                const pal = GARDEN_FLOWER_PALETTES[e.target.value];
+                                if (pal) setGarden({ flowerColors: pal.colors }, `Fleurs : ${pal.label}`);
+                              }}
+                              className={EDITOR_FIELD}
+                            >
+                              {Object.entries(GARDEN_FLOWER_PALETTES).map(([id, pal]) => <option key={id} value={id}>{pal.label}</option>)}
+                              {paletteId === 'custom' ? <option value="custom">Couleur choisie</option> : null}
+                            </select>
+                            <span className="flex items-center gap-2 pt-1">
+                              <input
+                                type="color"
+                                value={g.flowerColors[0]}
+                                onChange={(e) => setGarden({ flowerColors: [e.target.value] })}
+                                aria-label="Une seule couleur de fleurs"
+                                title="Une seule couleur de fleurs"
+                                className={EDITOR_SWATCH}
+                              />
+                              <span className="text-sm text-foreground">Ou une seule couleur</span>
+                            </span>
+                          </label>
+                        )}
+                        <DecorRangeField label="Arbustes" value={g.shrubs} min={0} max={16} step={1} format={(v) => String(v)} onChange={(v) => setGarden({ shrubs: v })} />
+                        <DecorRangeField label="Arbres" value={g.trees} min={0} max={6} step={1} format={(v) => String(v)} onChange={(v) => setGarden({ trees: v })} />
+                        <p className={EDITOR_HINT}>Les plantes évitent le chemin et restent au même endroit à chaque ouverture.</p>
+                      </div>
+                    );
+                  })() : null}
+                  {style !== 'pool' && style !== 'pond' && style !== 'firePit' && style !== 'garden' ? (
                     <label className="block text-xs space-y-1">
                       <span className="font-semibold text-muted">Hauteur (m)</span>
                       <input

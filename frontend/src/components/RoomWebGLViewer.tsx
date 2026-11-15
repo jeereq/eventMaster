@@ -132,13 +132,20 @@ import {
 import RoomShowcasePostProcessing from '@/components/RoomShowcasePostProcessing';
 import { LocalRoomEnvironment } from '@/components/room/LocalRoomEnvironment';
 import { LandscapeMesh, OutdoorSurroundingsScene, seedFromId } from '@/components/room/OutdoorLandscapeMeshes';
+import { CorridorMesh } from '@/components/room/CorridorMesh';
+
+type SurfaceDecor = Pick<
+  RoomLayoutBlueprint['fixtures'][number],
+  | 'aisleColor' | 'aisleBorderColor' | 'petalColor' | 'petalDensity' | 'lanternSpacingM' | 'surfaceImageTileM'
+  | 'corridorWalls' | 'corridorWallHeightM' | 'corridorWallColor' | 'corridorPlinths' | 'corridorSconces' | 'corridorSconceSpacingM'
+>;
 import { CustomElementMesh } from '@/components/room/CustomElementMesh';
 import { DomeRoof, RoofLantern, StyledRoof, TentSidewall } from '@/components/room/RoofMeshes';
 import { offsetRing, roofFootprint } from '@/lib/roomRoofGeometry';
 import type { CustomElementDefinition } from '@/lib/roomCustomElements';
 import { VenueEquipmentMesh, isVenueEquipmentKind, venueEquipmentHeight } from '@/components/room/VenueEquipmentMeshes';
 import { HomeFurnitureMesh } from '@/components/room/HomeFurnitureMeshes';
-import { HOME_FURNITURE_META, type HomeFurnitureStyle } from '@/lib/roomHomeFurniture';
+import { HOME_FURNITURE_META, type HomeFurnitureStyle, type HomeMetalFinish } from '@/lib/roomHomeFurniture';
 import { resolveEnvironmentSettings, resolveOutdoorSurroundings, type LandscapeStyle } from '@/lib/roomOutdoorUtils';
 import {
   applyEnvironmentLighting,
@@ -578,6 +585,7 @@ function FloorPlane({
   floorType,
   floorImageUrl,
   floorImageFit,
+  floorImageTileM,
   floorColor,
   outline,
   onPointerMissed,
@@ -588,14 +596,15 @@ function FloorPlane({
   floorType?: import('@/lib/roomThemeUtils').FloorType;
   floorImageUrl?: string;
   floorImageFit?: 'cover' | 'tile';
+  floorImageTileM?: number;
   floorColor?: string;
   outline?: RoomLayoutBlueprint['roomOutline'];
   onPointerMissed?: () => void;
   stairHoles?: Array<{ minX: number; maxX: number; minZ: number; maxZ: number }>;
 }) {
   const mat = useMemo(
-    () => resolveFloorMap(floorType, floorImageUrl, widthM, heightM, floorColor, floorImageFit),
-    [floorType, floorImageUrl, floorImageFit, floorColor, widthM, heightM],
+    () => resolveFloorMap(floorType, floorImageUrl, widthM, heightM, floorColor, floorImageFit, floorImageTileM),
+    [floorType, floorImageUrl, floorImageFit, floorColor, widthM, heightM, floorImageTileM],
   );
 
   const shapeGeo = useMemo(() => {
@@ -666,6 +675,7 @@ function FloorPlane({
         bumpScale={mat.bumpScale || 0}
         normalMap={mat.normalMap ?? undefined}
         normalScale={mat.normalScale ? new THREE.Vector2(mat.normalScale, mat.normalScale) : undefined}
+        roughnessMap={mat.roughnessMap ?? undefined}
         roughness={mat.roughness}
         metalness={mat.metalness}
         clearcoat={mat.clearcoat}
@@ -2161,12 +2171,12 @@ function TableMesh({
 }) {
   const [wx, wz] = pctToWorld(xPct, yPct, widthM, heightM);
   const { gl } = useThree();
-  const mat = useMemo(
-    () => resolveTableMaterial(shape, color, tableImageUrl, tableSurface),
-    [shape, color, tableImageUrl, tableSurface],
-  );
-
   const size = tablePlateSizeMeters(shape, capacity, { customWidthM, customDepthM, customRadiusM }, seatingSide);
+  const [plateW, plateD] = size;
+  const mat = useMemo(
+    () => resolveTableMaterial(shape, color, tableImageUrl, tableSurface, [plateW, plateD]),
+    [shape, color, tableImageUrl, tableSurface, plateW, plateD],
+  );
   const topY = shape === 'highTop' ? 1.05 : shape === 'cocktail' ? 0.55 : 0.72;
   const isRound = shape === 'round' || shape === 'oval' || shape === 'cocktail' || shape === 'highTop';
   const seatPicked = selectedSeatIndices.length > 0;
@@ -2638,6 +2648,7 @@ function FixtureMesh({
   hasGoldBorder,
   hasSideLanterns,
   hasPetals,
+  surfaceDecor,
   chandelierStyle,
   ceilingM = 3,
   lightWarmth,
@@ -2652,6 +2663,8 @@ function FixtureMesh({
   barStyle,
   landscapeStyle,
   homeStyle,
+  homeMetalFinish,
+  garden,
   poolShape,
   customElement,
   flowerType,
@@ -2700,6 +2713,8 @@ function FixtureMesh({
   hasGoldBorder?: boolean;
   hasSideLanterns?: boolean;
   hasPetals?: boolean;
+  /** Réglages fins d’allée et de couloir (couleurs, pétales, lanternes, murs…). */
+  surfaceDecor?: SurfaceDecor;
   chandelierStyle?: ChandelierFixtureStyle;
   /** Hauteur sous plafond (lustres suspendus). */
   ceilingM?: number;
@@ -2715,6 +2730,8 @@ function FixtureMesh({
   barStyle?: BarStyle;
   landscapeStyle?: LandscapeStyle;
   homeStyle?: HomeFurnitureStyle;
+  homeMetalFinish?: HomeMetalFinish;
+  garden?: RoomLayoutBlueprint['fixtures'][number]['garden'];
   poolShape?: import('@/lib/roomOutdoorUtils').PoolShape;
   customElement?: CustomElementDefinition;
   flowerType?: string;
@@ -2871,10 +2888,11 @@ function FixtureMesh({
           heightM={podiumHeightM}
           seed={seedFromId(fixtureId ?? label ?? 'landscape')}
           poolShape={poolShape}
+          garden={garden}
           selected={selected}
         />
       ) : kind === 'homeFurniture' ? (
-        <HomeFurnitureMesh style={homeStyle ?? 'bed'} w={w} d={d} color={color} selected={selected} />
+        <HomeFurnitureMesh style={homeStyle ?? 'bed'} w={w} d={d} color={color} selected={selected} metalFinish={homeMetalFinish} />
       ) : isVenueEquipmentKind(kind) ? (
         <VenueEquipmentMesh kind={kind} w={w} d={d} color={color} selected={selected} />
       ) : kind === 'instrument' ? (
@@ -3003,35 +3021,37 @@ function FixtureMesh({
           w={w}
           d={d}
           style={aisleStyle ?? 'royalRed'}
-          hasGoldBorder={hasGoldBorder ?? true}
-          hasSideLanterns={hasSideLanterns ?? false}
-          hasPetals={hasPetals ?? false}
+          hasGoldBorder={hasGoldBorder !== false}
+          hasSideLanterns={hasSideLanterns === true}
+          hasPetals={hasPetals === true}
+          color={surfaceDecor?.aisleColor}
+          borderColor={surfaceDecor?.aisleBorderColor}
+          petalColor={surfaceDecor?.petalColor}
+          petalDensity={surfaceDecor?.petalDensity}
+          lanternSpacingM={surfaceDecor?.lanternSpacingM}
+          imageUrl={imageUrl}
+          imageTileM={surfaceDecor?.surfaceImageTileM}
+          seed={seedFromId(fixtureId ?? label ?? 'aisle')}
           selected={selected}
         />
       ) : kind === 'perimeter' ? (
         <PerimeterBarrierMesh w={w} d={d} color={color} selected={selected} />
       ) : kind === 'corridor' ? (
-        <group>
-          <mesh position={[0, 0.02, 0]} receiveShadow>
-            <boxGeometry args={[w, 0.04, d]} />
-            <meshStandardMaterial
-              color={selected ? '#c7d2fe' : '#d6d3d1'}
-              roughness={0.85}
-            />
-          </mesh>
-          <mesh position={[0, 0.045, 0]} receiveShadow>
-            <boxGeometry args={[w * 0.72, 0.015, d * 0.98]} />
-            <meshStandardMaterial color="#fafaf9" roughness={0.7} />
-          </mesh>
-          <mesh position={[-w * 0.48, 1.1, 0]} castShadow>
-            <boxGeometry args={[0.08, 2.2, d * 0.98]} />
-            <meshStandardMaterial color="#a8a29e" roughness={0.9} />
-          </mesh>
-          <mesh position={[w * 0.48, 1.1, 0]} castShadow>
-            <boxGeometry args={[0.08, 2.2, d * 0.98]} />
-            <meshStandardMaterial color="#a8a29e" roughness={0.9} />
-          </mesh>
-        </group>
+        <CorridorMesh
+          w={w}
+          d={d}
+          material={material}
+          color={color}
+          imageUrl={imageUrl}
+          imageTileM={surfaceDecor?.surfaceImageTileM}
+          walls={surfaceDecor?.corridorWalls !== false}
+          wallHeightM={surfaceDecor?.corridorWallHeightM}
+          wallColor={surfaceDecor?.corridorWallColor}
+          plinths={surfaceDecor?.corridorPlinths !== false}
+          sconces={surfaceDecor?.corridorSconces === true}
+          sconceSpacingM={surfaceDecor?.corridorSconceSpacingM}
+          selected={selected}
+        />
       ) : kind === 'entrance' ? (
         <group>
           <mesh position={[0, 0.03, 0]} receiveShadow castShadow>
@@ -3730,6 +3750,7 @@ function SceneContent({
           floorType={floorType}
           floorImageUrl={blueprint.metadata.floorImageUrl}
           floorImageFit={blueprint.metadata.floorImageFit}
+          floorImageTileM={blueprint.metadata.floorImageTileM}
           floorColor={blueprint.metadata.floorColor}
           outline={blueprint.roomOutline}
           onPointerMissed={() => onSelect(null)}
@@ -3756,6 +3777,7 @@ function SceneContent({
             floorType={floorType}
             floorImageUrl={blueprint.metadata.floorImageUrl}
             floorImageFit={blueprint.metadata.floorImageFit}
+            floorImageTileM={blueprint.metadata.floorImageTileM}
             floorColor={blueprint.metadata.floorColor}
             outline={blueprint.roomOutline}
             onPointerMissed={() => onSelect(null)}
@@ -3893,6 +3915,7 @@ function SceneContent({
             hasGoldBorder={f.hasGoldBorder}
             hasSideLanterns={f.hasSideLanterns}
             hasPetals={f.hasPetals}
+            surfaceDecor={f}
             chandelierStyle={f.chandelierStyle}
             ceilingM={wallHeightM}
             lightWarmth={f.lightWarmth}
@@ -3907,6 +3930,8 @@ function SceneContent({
             barStyle={f.barStyle}
             landscapeStyle={f.landscapeStyle}
             homeStyle={f.homeStyle}
+            homeMetalFinish={f.homeMetalFinish}
+            garden={f.garden}
             poolShape={f.poolShape}
             customElement={f.customElement}
             flowerType={f.flowerType}

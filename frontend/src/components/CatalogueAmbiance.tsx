@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import {
   resolveChandelierCount,
@@ -8,7 +8,9 @@ import {
   type ChandelierType,
 } from '@/lib/roomCeilingUtils';
 import type { DoorStyle, AisleStyle, ChandelierFixtureStyle, OpeningMaterial } from '@/lib/roomLayoutUtils';
-import { getDoorMaterialProps } from '@/lib/roomWebGLMaterials';
+import { getDoorMaterialProps, resolveImportedSurface } from '@/lib/roomWebGLMaterials';
+import { tileRepeat } from '@/lib/roomImportedTextureMath';
+import { aislePetals, evenlySpacedOffsets, shadeHex, type AislePetal } from '@/lib/roomAisleLayout';
 import { SurfaceMat } from '@/components/room/SurfaceMaterial';
 import { CandelabraChandelier, ChandelierModel, CrystalChandelier, chandelierLightY } from '@/components/room/ChandelierMeshes';
 
@@ -974,6 +976,51 @@ export function CatalogueChandelierFixture({
 }
 
 /** ───────── ALLÉE VIP & TAPIS DE CÉRÉMONIE 3D (PINTEREST) ───────── */
+/** Pétales en goutte légèrement bombés, dessinés en une seule fois (instances). */
+function AislePetalsInstanced({ petals, color }: { petals: AislePetal[]; color: string }) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  const geo = useMemo(() => {
+    const shape = new THREE.Shape();
+    shape.moveTo(0, -1);
+    shape.bezierCurveTo(0.9, -0.6, 0.8, 0.7, 0, 1);
+    shape.bezierCurveTo(-0.8, 0.7, -0.9, -0.6, 0, -1);
+    const g = new THREE.ShapeGeometry(shape, 6);
+    const pos = g.attributes.position;
+    for (let i = 0; i < pos.count; i += 1) {
+      const x = pos.getX(i);
+      const y = pos.getY(i);
+      pos.setZ(i, 0.18 * (1 - (x * x + y * y) * 0.6));
+    }
+    g.computeVertexNormals();
+    return g;
+  }, []);
+  useEffect(() => () => geo.dispose(), [geo]);
+  useLayoutEffect(() => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const e = new THREE.Euler();
+    const c = new THREE.Color();
+    petals.forEach((p, i) => {
+      e.set(-Math.PI / 2, 0, p.rot);
+      q.setFromEuler(e);
+      m.compose(new THREE.Vector3(p.x, 0.029 + (i % 3) * 0.0006, p.z), q, new THREE.Vector3(p.size * 0.8, p.size, p.size));
+      mesh.setMatrixAt(i, m);
+      mesh.setColorAt(i, c.set(shadeHex(color, (p.tone - 0.5) * 0.45)));
+    });
+    mesh.count = petals.length;
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    mesh.computeBoundingSphere();
+  }, [petals, color]);
+  return (
+    <instancedMesh key={petals.length} ref={ref} args={[geo, undefined, Math.max(1, petals.length)]} receiveShadow>
+      <meshStandardMaterial roughness={0.55} side={THREE.DoubleSide} />
+    </instancedMesh>
+  );
+}
+
 export function CatalogueAisle({
   w,
   d,
@@ -981,6 +1028,14 @@ export function CatalogueAisle({
   hasGoldBorder = true,
   hasSideLanterns = false,
   hasPetals = false,
+  color,
+  borderColor,
+  petalColor,
+  petalDensity,
+  lanternSpacingM,
+  imageUrl,
+  imageTileM,
+  seed = 1,
   selected = false,
 }: {
   w: number;
@@ -989,6 +1044,18 @@ export function CatalogueAisle({
   hasGoldBorder?: boolean;
   hasSideLanterns?: boolean;
   hasPetals?: boolean;
+  /** Couleur du tapis choisie (remplace la teinte du thème). */
+  color?: string;
+  borderColor?: string;
+  petalColor?: string;
+  /** 0–1 : quantité de pétales. */
+  petalDensity?: number;
+  /** Écart entre deux lanternes (m). */
+  lanternSpacingM?: number;
+  /** Photo importée posée sur le tapis (motif répété). */
+  imageUrl?: string;
+  imageTileM?: number;
+  seed?: number;
   selected?: boolean;
 }) {
   const isRed = style === 'royalRed';
@@ -1002,49 +1069,94 @@ export function CatalogueAisle({
   const isMarble = style === 'marbleInlay';
   const isFairy = style === 'fairyLight';
   const isSilk = style === 'silkIvory';
-  const aisleColor = selected
-    ? '#c7d2fe'
-    : isRed
-      ? '#881337'
-      : isMirror
-        ? '#ffffff'
-        : isBotanical || isSilk
-          ? '#fef3c7'
-          : isWood
-            ? '#78350f'
-            : isDamask || isSequin
-              ? '#d97706'
-              : isLed || isFairy
-                ? '#0f172a'
-                : isBlack
-                  ? '#18181b'
-                  : isMarble
-                    ? '#f5f5f4'
-                    : '#881337';
+  const themeColor = isRed
+    ? '#881337'
+    : isMirror
+      ? '#ffffff'
+      : isBotanical || isSilk
+        ? '#fef3c7'
+        : isWood
+          ? '#78350f'
+          : isDamask || isSequin
+            ? '#d97706'
+            : isLed || isFairy
+              ? '#0f172a'
+              : isBlack
+                ? '#18181b'
+                : isMarble
+                  ? '#f5f5f4'
+                  : '#881337';
+  const aisleColor = selected ? '#c7d2fe' : color ?? themeColor;
+  const trimColor = borderColor ?? '#d4af37';
+  const roseColor = petalColor ?? '#f43f5e';
+
+  // Velours, soie, tissage : la trame se voit à hauteur d’invité.
+  const runnerFinish = isMirror || isLed || isFairy
+    ? 'plain'
+    : isBlack || isRed
+      ? 'velvet'
+      : isSilk
+        ? 'linen'
+        : isWood
+          ? 'wood'
+          : isMarble
+            ? 'stone'
+            : 'fabric';
+  const runnerRoughness = isMirror || isSilk ? 0.12 : isLed ? 0.2 : isWood || isMarble ? 0.55 : isSequin ? 0.22 : 0.94;
+  const runnerMetalness = isMirror ? 0.75 : isDamask || isSequin ? 0.45 : isMarble ? 0.05 : 0;
+
+  const imported = useMemo(() => {
+    if (!imageUrl) return null;
+    const tile = imageTileM && imageTileM > 0 ? imageTileM : Math.max(0.6, w);
+    return resolveImportedSurface(imageUrl, tileRepeat(w, tile), tileRepeat(d, tile));
+  }, [imageUrl, imageTileM, w, d]);
+
+  const petals = useMemo(
+    () => (hasPetals || isBotanical ? aislePetals(w, d, petalDensity ?? 0.35, seed) : []),
+    [hasPetals, isBotanical, w, d, petalDensity, seed],
+  );
+  const lanternZ = useMemo(
+    () => (hasSideLanterns ? evenlySpacedOffsets(d, lanternSpacingM ?? 2) : []),
+    [hasSideLanterns, d, lanternSpacingM],
+  );
 
   return (
     <group>
       {/* Tapis principal au sol */}
       <mesh position={[0, 0.015, 0]} receiveShadow>
         <boxGeometry args={[w, 0.025, d]} />
-        <meshStandardMaterial
-          color={aisleColor}
-          roughness={isMirror || isSilk ? 0.08 : isLed ? 0.2 : isWood || isMarble ? 0.55 : isSequin ? 0.18 : 0.94}
-          metalness={isMirror ? 0.75 : isDamask || isSequin ? 0.45 : isMarble ? 0.22 : 0.04}
-        />
+        {imported ? (
+          <SurfaceMat
+            color={selected ? '#c7d2fe' : '#ffffff'}
+            finish="plain"
+            map={imported.map}
+            normalMap={imported.normalMap}
+            roughnessMap={imported.roughnessMap}
+            normalScale={0.8}
+            roughness={0.9}
+            metalness={0}
+          />
+        ) : (
+          <SurfaceMat
+            color={aisleColor}
+            finish={runnerFinish}
+            repeat={[Math.max(1, w * 2.5), Math.max(1, d * 2.5)]}
+            vertical={isWood}
+            roughness={runnerRoughness}
+            metalness={runnerMetalness}
+          />
+        )}
       </mesh>
 
       {/* Bordures or / ganse de prestige */}
       {(hasGoldBorder || isRed || isDamask) && (
         <>
-          <mesh position={[-w / 2 + 0.025, 0.028, 0]} receiveShadow castShadow>
-            <boxGeometry args={[0.04, 0.01, d]} />
-            <SurfaceMat color="#fbbf24" metalness={0.8} roughness={0.25} />
-          </mesh>
-          <mesh position={[w / 2 - 0.025, 0.028, 0]} receiveShadow castShadow>
-            <boxGeometry args={[0.04, 0.01, d]} />
-            <SurfaceMat color="#fbbf24" metalness={0.8} roughness={0.25} />
-          </mesh>
+          {[-1, 1].map((side) => (
+            <mesh key={side} position={[side * (w / 2 - 0.025), 0.03, 0]} receiveShadow castShadow>
+              <boxGeometry args={[0.04, 0.012, d]} />
+              <SurfaceMat color={trimColor} finish={borderColor ? 'fabric' : 'brass'} metalness={borderColor ? 0 : 0.8} roughness={borderColor ? 0.8 : 0.28} repeat={[1, Math.max(1, d * 4)]} />
+            </mesh>
+          ))}
         </>
       )}
 
@@ -1062,19 +1174,41 @@ export function CatalogueAisle({
         </>
       )}
 
-      {/* Lanternes posées le long de l'allée */}
-      {hasSideLanterns && (
+      {/* Lanternes posées le long de l'allée : cage dorée, verre, bougie allumée */}
+      {lanternZ.length > 0 && (
         <group>
           {[-1, 1].map((side) =>
-            [0.2, 0.5, 0.8].map((t, idx) => (
-              <group key={`${side}-${idx}`} position={[side * (w / 2 + 0.12), 0.12, (t - 0.5) * d]}>
-                <mesh castShadow>
-                  <boxGeometry args={[0.12, 0.22, 0.12]} />
-                  <SurfaceMat color="#d4af37" metalness={0.8} roughness={0.25} />
+            lanternZ.map((z, idx) => (
+              <group key={`${side}-${idx}`} position={[side * (w / 2 + 0.14), 0, z]}>
+                <mesh position={[0, 0.01, 0]} castShadow receiveShadow>
+                  <boxGeometry args={[0.15, 0.02, 0.15]} />
+                  <SurfaceMat color="#b08d57" finish="brass" metalness={0.85} roughness={0.32} />
                 </mesh>
-                <mesh position={[0, 0, 0]}>
-                  <boxGeometry args={[0.09, 0.18, 0.09]} />
-                  <meshStandardMaterial color="#fef3c7" emissive="#fbbf24" emissiveIntensity={0.8} />
+                {[[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([sx, sz]) => (
+                  <mesh key={`${sx}${sz}`} position={[sx * 0.065, 0.13, sz * 0.065]} castShadow>
+                    <boxGeometry args={[0.012, 0.22, 0.012]} />
+                    <SurfaceMat color="#b08d57" finish="brass" metalness={0.85} roughness={0.32} />
+                  </mesh>
+                ))}
+                <mesh position={[0, 0.245, 0]} castShadow>
+                  <coneGeometry args={[0.1, 0.06, 4, 1]} />
+                  <SurfaceMat color="#b08d57" finish="brass" metalness={0.85} roughness={0.32} />
+                </mesh>
+                <mesh position={[0, 0.29, 0]}>
+                  <torusGeometry args={[0.022, 0.005, 6, 16]} />
+                  <SurfaceMat color="#b08d57" finish="brass" metalness={0.85} roughness={0.32} />
+                </mesh>
+                <mesh position={[0, 0.13, 0]}>
+                  <boxGeometry args={[0.12, 0.2, 0.12]} />
+                  <SurfaceMat color="#ffffff" finish="glass" roughness={0.05} transparent opacity={0.18} depthWrite={false} />
+                </mesh>
+                <mesh position={[0, 0.06, 0]}>
+                  <cylinderGeometry args={[0.025, 0.025, 0.08, 14]} />
+                  <meshStandardMaterial color="#fdf6e3" roughness={0.6} />
+                </mesh>
+                <mesh position={[0, 0.115, 0]}>
+                  <sphereGeometry args={[0.012, 10, 8]} />
+                  <meshStandardMaterial color="#fde68a" emissive="#f59e0b" emissiveIntensity={2.4} toneMapped={false} />
                 </mesh>
               </group>
             )),
@@ -1082,21 +1216,8 @@ export function CatalogueAisle({
         </group>
       )}
 
-      {/* Pétales de roses parsemés */}
-      {(hasPetals || isBotanical) && (
-        <group>
-          {Array.from({ length: 16 }).map((_, idx) => {
-            const px = ((idx % 4) / 3 - 0.5) * w * 0.75;
-            const pz = ((Math.floor(idx / 4)) / 3 - 0.5) * d * 0.85;
-            return (
-              <mesh key={idx} position={[px, 0.03, pz]} rotation={[-Math.PI / 2, 0, idx * 0.7]}>
-                <circleGeometry args={[0.035, 6]} />
-                <meshStandardMaterial color={idx % 2 === 0 ? '#fb7185' : '#f43f5e'} roughness={0.6} />
-              </mesh>
-            );
-          })}
-        </group>
-      )}
+      {/* Pétales semés : position, taille et nuance stables pour chaque allée */}
+      {petals.length > 0 && <AislePetalsInstanced petals={petals} color={roseColor} />}
 
       {isWood &&
         Array.from({ length: Math.max(6, Math.round(d / 0.35)) }).map((_, i) => {

@@ -13,12 +13,30 @@ export type HomeFurnitureStyle =
   | 'kitchenIsland'
   | 'kitchenRun'
   | 'bathtub'
+  | 'bathtubBuiltIn'
+  | 'clawfootTub'
   | 'vanity'
+  | 'toilet'
+  | 'shower'
+  | 'towelRail'
   | 'armchair'
   | 'coffeeTable'
   | 'nightstand'
   | 'desk'
   | 'rug';
+
+/** Finition de la robinetterie et des métaux de salle de bain. */
+export type HomeMetalFinish = 'chrome' | 'brass' | 'black';
+
+export const HOME_METAL_FINISH_LABELS: Record<HomeMetalFinish, string> = {
+  chrome: 'Chrome poli',
+  brass: 'Laiton brossé',
+  black: 'Noir mat',
+};
+
+export function isHomeMetalFinish(value: unknown): value is HomeMetalFinish {
+  return value === 'chrome' || value === 'brass' || value === 'black';
+}
 
 export type HomeFurnitureGroup = 'bedroom' | 'living' | 'kitchen' | 'bathroom';
 
@@ -44,15 +62,20 @@ export const HOME_FURNITURE_META: Record<HomeFurnitureStyle, HomeFurnitureMeta> 
   rug: { label: 'Tapis', hint: 'Grand tapis tissé sous le salon.', group: 'living', widthM: 2.8, depthM: 2, heightM: 0.02, color: '#e9e0cf' },
   kitchenIsland: { label: 'Îlot de cuisine', hint: 'Îlot plan de travail pierre avec tabourets.', group: 'kitchen', widthM: 2.4, depthM: 1, heightM: 0.92, color: '#d8b98c' },
   kitchenRun: { label: 'Cuisine linéaire', hint: 'Meubles bas et hauts, évier, plaque et four.', group: 'kitchen', widthM: 3.6, depthM: 0.65, heightM: 2.2, color: '#d8b98c' },
-  bathtub: { label: 'Baignoire', hint: 'Baignoire îlot ovale.', group: 'bathroom', widthM: 1.7, depthM: 0.8, heightM: 0.6, color: '#f4f1ea' },
-  vanity: { label: 'Meuble vasque', hint: 'Plan vasque bois et miroir.', group: 'bathroom', widthM: 1.2, depthM: 0.5, heightM: 1.8, color: '#c9a273' },
+  bathtub: { label: 'Baignoire îlot', hint: 'Baignoire ovale creuse posée au sol, avec mitigeur sur pied.', group: 'bathroom', widthM: 1.7, depthM: 0.8, heightM: 0.6, color: '#f4f1ea' },
+  bathtubBuiltIn: { label: 'Baignoire encastrée', hint: 'Cuve ovale creuse dans un coffrage avec tablier.', group: 'bathroom', widthM: 1.7, depthM: 0.75, heightM: 0.56, color: '#f4f1ea' },
+  clawfootTub: { label: 'Baignoire sur pieds', hint: 'Baignoire rétro laquée sur pieds griffes, robinet col de cygne.', group: 'bathroom', widthM: 1.65, depthM: 0.75, heightM: 0.75, color: '#1f3a4d' },
+  vanity: { label: 'Meuble vasque', hint: 'Plan bois, vasque à poser creuse et miroir.', group: 'bathroom', widthM: 1.2, depthM: 0.5, heightM: 1.8, color: '#c9a273' },
+  toilet: { label: 'WC', hint: 'WC au sol avec réservoir et abattant.', group: 'bathroom', widthM: 0.38, depthM: 0.65, heightM: 0.8, color: '#f8f6f1' },
+  shower: { label: 'Douche à l’italienne', hint: 'Receveur extra-plat, paroi vitrée, pomme de pluie et mitigeur.', group: 'bathroom', widthM: 1.2, depthM: 0.9, heightM: 2.1, color: '#d9d4cb' },
+  towelRail: { label: 'Sèche-serviettes', hint: 'Échelle murale avec serviette pliée.', group: 'bathroom', widthM: 0.5, depthM: 0.15, heightM: 1.35, color: '#e8dcc6' },
 };
 
 export const HOME_FURNITURE_ORDER: HomeFurnitureStyle[] = [
   'bed', 'nightstand', 'wardrobe', 'desk',
   'tvUnit', 'armchair', 'coffeeTable', 'rug',
   'kitchenIsland', 'kitchenRun',
-  'bathtub', 'vanity',
+  'bathtub', 'bathtubBuiltIn', 'clawfootTub', 'vanity', 'toilet', 'shower', 'towelRail',
 ];
 
 export const HOME_FURNITURE_GROUP_LABELS: Record<HomeFurnitureGroup, string> = {

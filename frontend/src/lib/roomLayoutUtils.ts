@@ -505,6 +505,10 @@ export interface RoomLayoutBlueprint {
     landscapeStyle?: import('@/lib/roomOutdoorUtils').LandscapeStyle;
     /** Mobilier résidentiel (lit, dressing, mur TV, îlot, baignoire…). */
     homeStyle?: import('@/lib/roomHomeFurniture').HomeFurnitureStyle;
+    /** Espace vert (`landscapeStyle: 'garden'`) : gazon, bordure, fleurs, arbustes, arbres, chemin. */
+    garden?: Partial<import('@/lib/roomGardenLayout').GardenOptions>;
+    /** Salle de bain : finition de la robinetterie (chrome, laiton, noir). */
+    homeMetalFinish?: import('@/lib/roomHomeFurniture').HomeMetalFinish;
     /** Piscine : forme du bassin (rectangulaire, haricot, ovale, en L…). */
     poolShape?: import('@/lib/roomOutdoorUtils').PoolShape;
     /** Élément créé à partir d’une image ou d’une vidéo (découpe 3D, panneau, bloc, écran…). */
@@ -542,6 +546,27 @@ export interface RoomLayoutBlueprint {
     hasSideLanterns?: boolean;
     /** Pétales de roses éparpillés sur l’allée. */
     hasPetals?: boolean;
+    /** Allée : couleur du tapis choisie (sinon celle du thème). */
+    aisleColor?: string;
+    /** Allée : couleur de la ganse (sinon dorée). */
+    aisleBorderColor?: string;
+    /** Allée : couleur des pétales. */
+    petalColor?: string;
+    /** Allée : quantité de pétales (0–1). */
+    petalDensity?: number;
+    /** Allée : écart entre deux lanternes (m). */
+    lanternSpacingM?: number;
+    /** Allée ou couloir : taille du motif de la photo importée (m). */
+    surfaceImageTileM?: number;
+    /** Couloir : murs latéraux (oui par défaut). */
+    corridorWalls?: boolean;
+    corridorWallHeightM?: number;
+    corridorWallColor?: string;
+    /** Couloir : plinthes au pied des murs (oui par défaut). */
+    corridorPlinths?: boolean;
+    /** Couloir : appliques murales. */
+    corridorSconces?: boolean;
+    corridorSconceSpacingM?: number;
     /** Motif de décalcomanie au sol (roses, papillons, image). */
     decalKind?: FloorDecalKind;
     /** Piédestal floral : colonne blanche ou or. */
@@ -709,6 +734,8 @@ export interface RoomLayoutBlueprint {
      * - tile = texture répétée
      */
     floorImageFit?: 'cover' | 'tile';
+    /** Image de sol en mosaïque : taille réelle d’une répétition (m, défaut 3,5). */
+    floorImageTileM?: number;
     /** Teinte / couleur dominante du sol (architecture). */
     floorColor?: string;
     /** Afficher le toit / plafond en 3D. */
@@ -6020,6 +6047,7 @@ function mergeTemplateStyle(
       floorType: previous.metadata.floorType,
       floorImageUrl: previous.metadata.floorImageUrl,
       floorImageFit: previous.metadata.floorImageFit,
+      floorImageTileM: previous.metadata.floorImageTileM,
       depthView: previous.metadata.depthView,
       depthAmount: previous.metadata.depthAmount,
       defaultTableColor: previous.metadata.defaultTableColor,
@@ -6199,6 +6227,14 @@ export function applyFixtureStyleToSameKind(
         hasGoldBorder: source.hasGoldBorder,
         hasSideLanterns: source.hasSideLanterns,
         hasPetals: source.hasPetals,
+        aisleColor: source.aisleColor,
+        aisleBorderColor: source.aisleBorderColor,
+        petalColor: source.petalColor,
+        petalDensity: source.petalDensity,
+        lanternSpacingM: source.lanternSpacingM,
+        imageUrl: source.imageUrl,
+        imageCrop: source.imageCrop,
+        surfaceImageTileM: source.surfaceImageTileM,
       };
     }
     if (family === 'chandelier') {

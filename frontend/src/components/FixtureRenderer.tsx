@@ -17,6 +17,7 @@ import {
 import { ZONE_MATERIAL_COLORS } from '@/lib/roomZoneSurface';
 import { planRotationScreenDeg } from '@/lib/tablePlanUtils';
 import { LANDSCAPE_STYLE_META, poolOutlineSvgPath, type LandscapeStyle, type PoolShape } from '@/lib/roomOutdoorUtils';
+import { resolveGardenOptions, type GardenOptions } from '@/lib/roomGardenLayout';
 import { getCroppedBackgroundStyle } from '@/lib/imageCropUtils';
 import { HOME_FURNITURE_META, type HomeFurnitureStyle } from '@/lib/roomHomeFurniture';
 import FlowerRenderer from '@/components/FlowerRenderer';
@@ -25,6 +26,25 @@ import { Sparkles, ShieldAlert } from 'lucide-react';
 type Fixture = RoomLayoutBlueprint['fixtures'][number];
 
 /** Vue de dessus des aménagements extérieurs (arbres, eau, feu…). */
+function GardenPlanGlyph({ garden }: { garden?: Partial<GardenOptions> }) {
+  const g = resolveGardenOptions(garden);
+  const lawn = g.lawn === 'dry' ? '#b9b071' : g.lawn === 'meadow' ? '#7aa04a' : g.lawn === 'synthetic' ? '#3f9a3a' : '#5f9a3c';
+  const border = g.border === 'hedge' ? '#2f5a26' : g.border === 'stone' ? '#d6d0c4' : g.border === 'wood' ? '#a47a45' : g.border === 'flowers' ? '#8a6a4f' : null;
+  return (
+    <div className="w-full h-full rounded-sm overflow-hidden relative" style={{ background: lawn, boxShadow: border ? `inset 0 0 0 4px ${border}` : undefined }}>
+      {g.border === 'flowers' ? <div className="absolute inset-[2px] rounded-sm" style={{ border: `2px dotted ${g.flowerColors[0]}` }} /> : null}
+      {g.path !== 'none' ? (
+        <div className="absolute left-[6%] right-[6%] top-1/2 -translate-y-1/2 h-[16%] flex items-center justify-around" style={{ background: g.path === 'gravel' ? '#e7e2d6' : 'transparent' }}>
+          {g.path === 'stones' ? Array.from({ length: 6 }, (_, i) => <span key={i} className="block h-full aspect-square rounded-full bg-[#d6d0c4] border border-black/10" />) : null}
+        </div>
+      ) : null}
+      {g.flowerDensity > 0 ? (
+        <div className="absolute inset-0 opacity-90" style={{ backgroundImage: g.flowerColors.slice(0, 3).map((c, i) => `radial-gradient(circle at ${20 + i * 27}% ${25 + (i % 2) * 45}%, ${c} 0 3px, transparent 4px)`).join(', '), backgroundSize: '22px 22px' }} />
+      ) : null}
+    </div>
+  );
+}
+
 function LandscapePlanGlyph({ style, poolShape = 'rectangle' }: { style: LandscapeStyle; poolShape?: PoolShape }) {
   switch (style) {
     case 'oak':
@@ -636,8 +656,9 @@ export default function FixtureRenderer({
   if (isAisle || isCarpet) {
     const aisleStyle: AisleStyle = fixture.aisleStyle ?? (isAisle ? 'royalRed' : 'damaskGold');
     const hasGoldBorder = fixture.hasGoldBorder !== false;
-    const hasLanterns = fixture.hasSideLanterns !== false;
-    const hasPetals = fixture.hasPetals !== false;
+    // Comme la vue 3D : lanternes et pétales seulement s’ils sont cochés.
+    const hasLanterns = fixture.hasSideLanterns === true;
+    const hasPetals = fixture.hasPetals === true;
 
     return (
       <div
@@ -694,11 +715,16 @@ export default function FixtureRenderer({
             <div className="absolute inset-0 bg-gradient-to-b from-amber-50 via-stone-100 to-amber-50 border border-stone-200 shadow-inner" />
           )}
 
+          {/* Couleur choisie : remplace la teinte du thème, garde son relief */}
+          {isAisle && fixture.aisleColor && (
+            <div className="absolute inset-0 shadow-inner" style={{ background: `linear-gradient(to right, rgba(0,0,0,0.25), transparent 30%, transparent 70%, rgba(0,0,0,0.25)), ${fixture.aisleColor}` }} />
+          )}
+
           {/* Bordure Dorée / Liseré Prestige */}
           {hasGoldBorder && (
             <>
-              <div className="absolute inset-y-0 left-0.5 w-[2px] bg-gradient-to-b from-amber-400 via-amber-200 to-amber-400 opacity-90" />
-              <div className="absolute inset-y-0 right-0.5 w-[2px] bg-gradient-to-b from-amber-400 via-amber-200 to-amber-400 opacity-90" />
+              <div className="absolute inset-y-0 left-0.5 w-[2px] bg-gradient-to-b from-amber-400 via-amber-200 to-amber-400 opacity-90" style={fixture.aisleBorderColor ? { background: fixture.aisleBorderColor } : undefined} />
+              <div className="absolute inset-y-0 right-0.5 w-[2px] bg-gradient-to-b from-amber-400 via-amber-200 to-amber-400 opacity-90" style={fixture.aisleBorderColor ? { background: fixture.aisleBorderColor } : undefined} />
             </>
           )}
 
@@ -1111,7 +1137,7 @@ export default function FixtureRenderer({
     const style: HomeFurnitureStyle = fixture.homeStyle ?? 'bed';
     return (
       <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
-        <div className={`relative w-full h-full overflow-hidden border border-amber-700/50 shadow-sm ${style === 'coffeeTable' ? 'rounded-full' : style === 'bathtub' || style === 'armchair' ? 'rounded-xl' : 'rounded-sm'}`} style={{ background: HOME_FURNITURE_META[style].color }}>
+        <div className={`relative w-full h-full overflow-hidden border border-amber-700/50 shadow-sm ${style === 'coffeeTable' ? 'rounded-full' : style === 'bathtub' || style === 'clawfootTub' || style === 'armchair' ? 'rounded-xl' : 'rounded-sm'}`} style={{ background: HOME_FURNITURE_META[style].color }}>
           <HomeFurniturePlanGlyph style={style} />
           {showLabel && style !== 'rug' ? (
             <span className="absolute bottom-0 left-1/2 -translate-x-1/2 z-10 text-[7px] font-black uppercase text-amber-950 bg-white/85 px-1 rounded shadow-xs whitespace-nowrap">
@@ -1128,7 +1154,7 @@ export default function FixtureRenderer({
     return (
       <div className={`${fill ? 'relative' : 'absolute'} select-none ${className}`} style={positionStyle}>
         <div className="relative w-full h-full flex items-center justify-center">
-          <LandscapePlanGlyph style={style} poolShape={fixture.poolShape} />
+          {style === 'garden' ? <GardenPlanGlyph garden={fixture.garden} /> : <LandscapePlanGlyph style={style} poolShape={fixture.poolShape} />}
           {showLabel && style !== 'fence' && style !== 'hedge' ? (
             <span className="absolute bottom-0 translate-y-1/2 z-10 text-[7px] font-black uppercase text-emerald-950 bg-white/85 px-1 rounded shadow-xs whitespace-nowrap">
               {fixture.label || LANDSCAPE_STYLE_META[style].label}
@@ -1302,10 +1328,54 @@ function HomeFurniturePlanGlyph({ style }: { style: HomeFurnitureStyle }) {
       </svg>
     );
   }
-  if (style === 'bathtub') {
+  if (style === 'bathtub' || style === 'clawfootTub') {
     return (
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
-        <rect x="10" y="14" width="80" height="72" rx="30" fill="#cfe3ea" />
+        <rect x="6" y="8" width="88" height="84" rx="40" fill="#f8f6f1" />
+        <rect x="14" y="18" width="72" height="64" rx="30" fill="#cfe3ea" />
+      </svg>
+    );
+  }
+  if (style === 'bathtubBuiltIn') {
+    return (
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+        <rect x="2" y="2" width="96" height="96" fill="#f4f1ea" stroke="#d6d3d1" />
+        <rect x="14" y="16" width="72" height="68" rx="30" fill="#cfe3ea" />
+      </svg>
+    );
+  }
+  if (style === 'vanity') {
+    return (
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+        <rect x="0" y="0" width="100" height="100" fill="#ece7dd" />
+        <ellipse cx="50" cy="55" rx="18" ry="30" fill="#fbfaf7" stroke="#d6d3d1" strokeWidth="2" />
+        <circle cx="50" cy="55" r="3" fill="#9ca3af" />
+      </svg>
+    );
+  }
+  if (style === 'toilet') {
+    return (
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+        <rect x="8" y="2" width="84" height="26" rx="4" fill="#f8f6f1" stroke="#d6d3d1" strokeWidth="2" />
+        <ellipse cx="50" cy="62" rx="38" ry="34" fill="#f8f6f1" stroke="#d6d3d1" strokeWidth="2" />
+        <ellipse cx="50" cy="64" rx="24" ry="22" fill="#cfe3ea" />
+      </svg>
+    );
+  }
+  if (style === 'shower') {
+    return (
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+        <rect x="0" y="0" width="100" height="100" fill="#d9d4cb" />
+        <rect x="10" y="84" width="80" height="4" fill="#9ca3af" />
+        <line x1="60" y1="0" x2="60" y2="100" stroke="#93c5fd" strokeWidth="3" />
+        <circle cx="30" cy="22" r="10" fill="none" stroke="#9ca3af" strokeWidth="2" />
+      </svg>
+    );
+  }
+  if (style === 'towelRail') {
+    return (
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
+        {[16, 36, 56, 76].map((x) => <line key={x} x1="0" y1="50" x2="100" y2="50" stroke="#9ca3af" strokeWidth="6" transform={`translate(0 ${x - 50})`} />)}
       </svg>
     );
   }

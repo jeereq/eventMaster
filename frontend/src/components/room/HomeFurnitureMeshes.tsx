@@ -9,9 +9,19 @@
 
 import { RoundedBox } from '@react-three/drei';
 import { SurfaceMat } from '@/components/room/SurfaceMaterial';
-import type { HomeFurnitureStyle } from '@/lib/roomHomeFurniture';
+import type { HomeFurnitureStyle, HomeMetalFinish } from '@/lib/roomHomeFurniture';
+import {
+  BuiltInBathtub,
+  ClawfootBathtub,
+  IslandBathtub,
+  MetalMat,
+  Toilet,
+  TowelRail,
+  VesselSink,
+  WalkInShower,
+} from '@/components/room/BathroomMeshes';
 
-type Props = { w: number; d: number; color?: string; selected?: boolean };
+type Props = { w: number; d: number; color?: string; selected?: boolean; metalFinish?: HomeMetalFinish };
 
 const SEL = '#c7d2fe';
 const OAK = '#d8b98c';
@@ -400,49 +410,55 @@ function KitchenRun({ w, d, color, selected }: Props) {
   );
 }
 
-function Bathtub({ w, d, selected }: Props) {
-  const h = 0.56;
-  return (
-    <group>
-      <RoundedBox args={[w, h, d]} radius={Math.min(0.3, d * 0.45)} smoothness={6} position={[0, h / 2, 0]} castShadow receiveShadow>
-        <SurfaceMat color={tint('#f8f6f1', selected)} finish="ceramic" roughness={0.18} />
-      </RoundedBox>
-      <mesh position={[0, h + 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[w - 0.2, d - 0.16]} />
-        <meshStandardMaterial color="#cfe3ea" roughness={0.05} metalness={0.1} transparent opacity={0.9} />
-      </mesh>
-      <mesh position={[w / 2 - 0.15, h + 0.25, -d / 2 + 0.05]}>
-        <cylinderGeometry args={[0.015, 0.015, 0.5, 8]} />
-        <SurfaceMat color="#d6d3d1" finish="chrome" />
-      </mesh>
-    </group>
-  );
-}
-
-function Vanity({ w, d, color, selected }: Props) {
+function Vanity({ w, d, color, selected, metalFinish }: Props) {
   const h = 0.85;
+  const bowl = Math.min(0.21, w * 0.2, d * 0.42);
+  const finish = metalFinish ?? 'chrome';
   return (
     <group>
       <RoundedBox args={[w, 0.4, d]} radius={0.02} smoothness={2} position={[0, h - 0.2, 0]} castShadow receiveShadow>
         <Wood color={color ?? OAK} selected={selected} />
       </RoundedBox>
-      <mesh position={[0, h + 0.015, 0]} castShadow>
+      {/* poignées de tiroir */}
+      {[-w / 4, w / 4].map((x) => (
+        <mesh key={x} position={[x, h - 0.14, d / 2 + 0.008]}>
+          <boxGeometry args={[Math.min(0.22, w * 0.15), 0.012, 0.012]} />
+          <MetalMat finish={finish} />
+        </mesh>
+      ))}
+      <mesh position={[0, h + 0.015, 0]} castShadow receiveShadow>
         <boxGeometry args={[w, 0.03, d]} />
         <SurfaceMat color={STONE} finish="stone" roughness={0.3} />
       </mesh>
-      <mesh position={[0, h + 0.08, 0.02]} castShadow>
-        <cylinderGeometry args={[0.2, 0.17, 0.12, 28]} />
-        <SurfaceMat color="#fbfaf7" finish="ceramic" roughness={0.12} />
-      </mesh>
-      <mesh position={[0, h + 0.2, -d / 2 + 0.06]}>
-        <cylinderGeometry args={[0.012, 0.012, 0.28, 8]} />
-        <SurfaceMat color="#d6d3d1" finish="chrome" />
-      </mesh>
-      {/* miroir rond */}
-      <mesh position={[0, h + 0.62, -d / 2 + 0.02]}>
-        <cylinderGeometry args={[Math.min(0.38, w * 0.3), Math.min(0.38, w * 0.3), 0.02, 40]} />
-        <meshStandardMaterial color="#dbe4e8" roughness={0.04} metalness={0.9} />
-      </mesh>
+      <group position={[0, h + 0.03, 0.02]}>
+        <VesselSink radius={bowl} finish={finish} />
+      </group>
+      {/* mitigeur haut, bec au-dessus de la vasque */}
+      <group position={[0, h + 0.03, -d / 2 + 0.07]}>
+        <mesh position={[0, 0.15, 0]}>
+          <cylinderGeometry args={[0.016, 0.02, 0.3, 14]} />
+          <MetalMat finish={finish} />
+        </mesh>
+        <mesh position={[0, 0.29, 0.06]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.012, 0.012, 0.13, 10]} />
+          <MetalMat finish={finish} />
+        </mesh>
+        <mesh position={[0, 0.24, -0.03]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.008, 0.008, 0.07, 8]} />
+          <MetalMat finish={finish} />
+        </mesh>
+      </group>
+      {/* miroir rond cerclé */}
+      <group position={[0, h + 0.62, -d / 2 + 0.02]}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[Math.min(0.38, w * 0.3), Math.min(0.38, w * 0.3), 0.012, 48]} />
+          <meshStandardMaterial color="#dbe4e8" roughness={0.03} metalness={0.95} />
+        </mesh>
+        <mesh>
+          <torusGeometry args={[Math.min(0.38, w * 0.3), 0.012, 10, 64]} />
+          <MetalMat finish={finish} />
+        </mesh>
+      </group>
     </group>
   );
 }
@@ -459,8 +475,13 @@ export function HomeFurnitureMesh({ style, ...props }: Props & { style: HomeFurn
     case 'rug': return <Rug {...props} />;
     case 'kitchenIsland': return <KitchenIsland {...props} />;
     case 'kitchenRun': return <KitchenRun {...props} />;
-    case 'bathtub': return <Bathtub {...props} />;
+    case 'bathtub': return <IslandBathtub {...props} />;
+    case 'bathtubBuiltIn': return <BuiltInBathtub {...props} />;
+    case 'clawfootTub': return <ClawfootBathtub {...props} />;
     case 'vanity': return <Vanity {...props} />;
+    case 'toilet': return <Toilet {...props} />;
+    case 'shower': return <WalkInShower {...props} />;
+    case 'towelRail': return <TowelRail {...props} />;
     default: return null;
   }
 }
