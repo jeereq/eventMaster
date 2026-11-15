@@ -19,6 +19,7 @@ const PAGE_SECTIONS = [
   { id: 'profils', label: 'Pour qui ?' },
   { id: 'etapes', label: 'Comment ça marche' },
   { id: 'outils', label: 'Les outils' },
+  { id: 'editeur-salles', label: 'Éditeur de salles 3D' },
   { id: 'catalogue', label: 'Salles & prestataires' },
   { id: 'simulateur-ia', label: 'Simulateur IA' },
   { id: 'tarifs', label: 'Tarifs' },

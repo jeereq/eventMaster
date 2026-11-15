@@ -8,6 +8,7 @@ import LandingTrustPricingBand from '@/components/landing/LandingTrustPricingBan
 import PublicCtaBand from '@/components/PublicCtaBand';
 import SiteFooter from '@/components/SiteFooter';
 import LandingStepsBento from '@/components/landing/LandingStepsBento';
+import LandingRoomEditorSection from '@/components/landing/LandingRoomEditorSection';
 import LandingDashboardQuickAccess from '@/components/landing/LandingDashboardQuickAccess';
 import LandingLazyMount, { LandingSectionFallback } from '@/components/landing/LandingLazyMount';
 import { Button } from '@/components/ui';
@@ -63,6 +64,7 @@ export default function LandingBelowFold() {
           ) : null
         }
       />
+      <LandingRoomEditorSection />
       <LandingLazyMount label="Chargement de la vitrine…" eagerHash="catalogue">
         <LandingVitrineSection />
       </LandingLazyMount>

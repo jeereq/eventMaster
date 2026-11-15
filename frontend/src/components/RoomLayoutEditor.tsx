@@ -4,7 +4,7 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic';
 import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import {
-  Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees,
+  GraduationCap, Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees,
 } from 'lucide-react';
 import {
   LANDSCAPE_GROUP_LABELS,
@@ -171,6 +171,9 @@ import {
   isTentVenue,
 } from '@/lib/roomLayoutUtils';
 import QuickAddPalette, { type QuickAddAction } from '@/components/room/QuickAddPalette';
+import EditorTour from '@/components/room/EditorTour';
+import { START_EDITOR_TOUR_EVENT } from '@/components/room/RoomEditorPlanCard';
+import { buildEditorTour, editorTourSummary, EDITOR_TOUR_SEEN_KEY, type EditorTourAction } from '@/lib/roomEditorTour';
 import { BAR_BACK_LABELS, BAR_FRONT_LABELS, BAR_METAL_LABELS, BAR_STOOL_LABELS, BAR_STYLE_DESIGN, BAR_TOP_LABELS } from '@/lib/roomBarDesign';
 import {
   copyAmbienceShareLink,
@@ -486,6 +489,7 @@ function EditorToolGroup({
         )}
         aria-expanded={open}
         aria-controls={panelId}
+        data-tour={`tool-${id}`}
         onClick={() => onToggle(id)}
       >
         {icon}
@@ -859,6 +863,37 @@ const TABLE_SHAPE_OPTIONS: ReadonlyArray<readonly [TableShape, string]> = [
   ['arc', 'Courbe (arc)'],
 ];
 
+/** `?guide=1` dans l’adresse ouvre directement la visite guidée (liens « Découvrir l’éditeur »). */
+function readGuideParam(): boolean {
+  if (typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('guide') === '1';
+}
+
+/** Retire `?guide=1` une fois la visite fermée, pour qu’elle ne reparte pas à chaque salle ouverte. */
+function clearGuideParam() {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has('guide')) return;
+  url.searchParams.delete('guide');
+  window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
+}
+
+function tourAlreadySeen(): boolean {
+  try {
+    return window.localStorage.getItem(EDITOR_TOUR_SEEN_KEY) === '1';
+  } catch {
+    return true;
+  }
+}
+
+function markTourSeen() {
+  try {
+    window.localStorage.setItem(EDITOR_TOUR_SEEN_KEY, '1');
+  } catch {
+    /* navigation privée : le guide sera simplement reproposé */
+  }
+}
+
 export default function RoomLayoutEditor({
   blueprint: rawBlueprint,
   onChange,
@@ -964,6 +999,24 @@ export default function RoomLayoutEditor({
   const buildQuickAddRef = useRef<() => QuickAddAction[]>(() => []);
   const openQuickAdd = useCallback(() => setQuickAddActions(buildQuickAddRef.current()), []);
   const clipboardRef = useRef<LayoutClipboard | null>(null);
+  /** Guide interactif : ouvert, ou proposé d’office à la première visite. */
+  const [tourOpen, setTourOpen] = useState(() => !readOnly && readGuideParam());
+  const [tourOffer, setTourOffer] = useState(() => !readOnly && !readGuideParam() && !tourAlreadySeen());
+  const startTour = useCallback(() => {
+    markTourSeen();
+    setTourOffer(false);
+    setTourOpen(true);
+  }, []);
+  useEffect(() => {
+    if (readOnly) return;
+    // `preventDefault` signale au bandeau de la page Salles que l’éditeur a pris la main.
+    const onStart = (event: Event) => {
+      event.preventDefault();
+      startTour();
+    };
+    window.addEventListener(START_EDITOR_TOUR_EVENT, onStart);
+    return () => window.removeEventListener(START_EDITOR_TOUR_EVENT, onStart);
+  }, [readOnly, startTour]);
   const [clearanceModalOpen, setClearanceModalOpen] = useState(false);
   const [clearancePreset, setClearancePreset] = useState<ClearancePreset>('standard');
   const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
@@ -2757,7 +2810,7 @@ export default function RoomLayoutEditor({
   };
 
   const renderCanvas = (className: string) => (
-    <div className={cn('relative w-full h-full min-h-0', className)}>
+    <div className={cn('relative w-full h-full min-h-0', className)} data-tour="canvas">
       <RoomWebGLViewer
         ref={webglRef}
         blueprint={blueprint}
@@ -2793,6 +2846,7 @@ export default function RoomLayoutEditor({
           className="hidden lg:flex absolute top-2.5 right-2.5 z-20 items-center gap-1 p-1 rounded-full bg-background/90 backdrop-blur-md border border-border/70 shadow-sm"
           role="toolbar"
           aria-label="Vue du plan"
+          data-tour="view-toggle"
         >
           <div role="group" aria-label="Mode d’affichage" className="flex items-center gap-0.5 p-0.5 rounded-full bg-surface-muted">
             {([
@@ -8122,6 +8176,7 @@ export default function RoomLayoutEditor({
       <button
         type="button"
         onClick={() => setClearanceModalOpen(true)}
+        data-tour="verify"
         title="Gérer et optimiser les espacements réels (Ctrl+Alt+O)"
         className={cn(
           EDITOR_TOOL,
@@ -8143,6 +8198,7 @@ export default function RoomLayoutEditor({
         onClick={() => setShortcutsModalOpen(true)}
         title="Consulter les raccourcis clavier"
         aria-label="Raccourcis clavier"
+        data-tour="shortcuts"
         className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'px-0 min-w-11')}
       >
         <Keyboard className="w-4 h-4" aria-hidden />
@@ -8172,6 +8228,15 @@ export default function RoomLayoutEditor({
       )}
     </>
   ) : null;
+
+  const runTourAction = (kind: EditorTourAction) => {
+    if (kind === 'openQuickAdd') openQuickAdd();
+    else if (kind === 'addTable') addTable();
+    else if (kind === 'toggle3d') setDepthAmount(depthAmount > 0 ? 0 : 60);
+    else if (kind === 'openTemplates') setTemplatesOpen(true);
+    else if (kind === 'openShortcuts') setShortcutsModalOpen(true);
+    else if (kind === 'openStudio') setStudioOpen(true);
+  };
 
   /** Tout ce que la barre « Ajouter » sait poser, pour la palette de recherche (Ctrl+K). */
   const buildQuickAddActions = (): QuickAddAction[] => {
@@ -8257,6 +8322,9 @@ export default function RoomLayoutEditor({
       <ToolbarCluster label="Ajouter">
       <button type="button" onClick={openQuickAdd} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'lg:hidden')} title="Rechercher un élément à ajouter">
         <Search className="w-3.5 h-3.5" aria-hidden /> Rechercher
+      </button>
+      <button type="button" onClick={startTour} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'lg:hidden')} title="Visite guidée de l’éditeur">
+        <GraduationCap className="w-3.5 h-3.5" aria-hidden /> Guide
       </button>
       <EditorToolGroup
         id="furniture"
@@ -9775,10 +9843,19 @@ export default function RoomLayoutEditor({
           <div className="hidden lg:flex items-center gap-1.5">
             <button
               type="button"
+              onClick={startTour}
+              className={cn(EDITOR_TOOL, tourOpen ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
+              title="Visite guidée de l’éditeur, adaptée à votre forfait"
+            >
+              <GraduationCap className="w-3.5 h-3.5" aria-hidden /> Guide
+            </button>
+            <button
+              type="button"
               onClick={openQuickAdd}
               className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'gap-2')}
               title="Rechercher un élément à ajouter (Ctrl+K ou /)"
               aria-keyshortcuts="Control+K /"
+              data-tour="quick-add"
             >
               <Search className="w-3.5 h-3.5" aria-hidden />
               Ajouter…
@@ -9790,6 +9867,7 @@ export default function RoomLayoutEditor({
                 onClick={() => setTemplatesOpen((v) => !v)}
                 aria-expanded={templatesOpen}
                 aria-controls="editor-templates"
+                data-tour="templates"
                 className={cn(EDITOR_TOOL, templatesOpen ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
                 title="Partir d’un modèle de salle (banquet, conférence, cocktail…)"
               >
@@ -9830,6 +9908,7 @@ export default function RoomLayoutEditor({
             type="button"
             disabled={aiPlanReading}
             onClick={() => setStudioOpen(true)}
+            data-tour="studio-ai"
             className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY, 'px-3.5')}
             title="Décrire la salle ou importer une photo : l’IA compose le plan"
           >
@@ -9953,6 +10032,46 @@ export default function RoomLayoutEditor({
     <>
     {!readOnly ? (
       <QuickAddPalette open={quickAddActions !== null} onClose={() => setQuickAddActions(null)} actions={quickAddActions ?? []} />
+    ) : null}
+    {!readOnly ? (
+      <EditorTour
+        open={tourOpen}
+        steps={tourOpen ? buildEditorTour(caps) : []}
+        summary={editorTourSummary(caps)}
+        upgradeHref={user ? '/dashboard/billing' : '/tarifs'}
+        onClose={() => {
+          markTourSeen();
+          setTourOpen(false);
+          clearGuideParam();
+        }}
+        onAction={runTourAction}
+      />
+    ) : null}
+    {!readOnly && tourOffer && !tourOpen ? (
+      <div
+        role="status"
+        className="fixed bottom-4 left-4 z-[11900] w-[min(20rem,calc(100vw-2rem))] rounded-[var(--radius-card)] border border-border bg-surface p-3.5 shadow-xl animate-in fade-in slide-in-from-bottom-2"
+      >
+        <p className="flex items-center gap-1.5 text-sm font-bold text-foreground">
+          <GraduationCap className="h-4 w-4 text-primary" aria-hidden /> Première fois dans l’éditeur ?
+        </p>
+        <p className="mt-1 text-xs text-muted">Une visite de 2 minutes, adaptée à votre forfait {caps.label}.</p>
+        <div className="mt-2.5 flex gap-2">
+          <button type="button" onClick={startTour} className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}>
+            Faire la visite
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              markTourSeen();
+              setTourOffer(false);
+            }}
+            className={cn(EDITOR_TOOL, EDITOR_TOOL_MUTED)}
+          >
+            Plus tard
+          </button>
+        </div>
+      </div>
     ) : null}
     <Modal
       open={shortcutsModalOpen}
