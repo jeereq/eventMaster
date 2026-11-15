@@ -104,6 +104,9 @@ export function CorridorMesh({
             color={floorColor}
             finish="plain"
             map={floorMap}
+            normalMap={zone.normalMap ? withRepeat(zone.normalMap, q(tileRepeat(across, 2)), q(tileRepeat(along, 2))) : undefined}
+            roughnessMap={zone.roughnessMap ? withRepeat(zone.roughnessMap, q(tileRepeat(across, 2)), q(tileRepeat(along, 2))) : undefined}
+            normalScale={0.8}
             roughness={zone.roughness}
             metalness={zone.metalness}
             emissive={zone.emissive}

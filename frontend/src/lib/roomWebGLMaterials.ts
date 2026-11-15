@@ -650,6 +650,10 @@ const GENERATED_WALLS: Partial<Record<WallTextureStyle, { url: string; roughness
   plaster: { url: '/floors/gen/wall-plaster.jpg', roughness: 0.9, normalScale: 0.45, tinted: true },
   limewash: { url: '/floors/gen/wall-limewash.jpg', roughness: 0.92, normalScale: 0.4, tinted: true },
   metroTile: { url: '/floors/gen/wall-metro.jpg', roughness: 0.18, normalScale: 0.8 },
+  wallpaper: { url: '/floors/gen/wall-wallpaper.jpg', roughness: 0.78, normalScale: 0.6, tinted: true },
+  tadelakt: { url: '/floors/gen/wall-tadelakt.jpg', roughness: 0.3, normalScale: 0.35, tinted: true, metalness: 0.04 },
+  fluted: { url: '/floors/gen/wall-fluted.jpg', roughness: 0.55, normalScale: 1.2, tinted: true },
+  metalCorrugated: { url: '/floors/gen/wall-corrugated.jpg', roughness: 0.4, normalScale: 1.4, metalness: 0.75 },
 };
 
 export type WallSurfaceMaterial = {
@@ -1012,7 +1016,7 @@ export function wallTextureForSurface(
     normalMap = base.normalMap.clone();
     normalMap.wrapS = normalMap.wrapT = THREE.RepeatWrapping;
     // Micro-relief d'enduit : grain plus fin que la teinte (≈ 60 cm).
-    const smooth = !base.bumpMap && style === 'tadelakt';
+    const smooth = !base.bumpMap && style === 'tadelakt' && !GENERATED_WALLS[style];
     normalMap.repeat.set(smooth ? widthM / 0.6 : repeatX, smooth ? heightM / 0.6 : repeatY);
   }
   let bumpMap: THREE.Texture | undefined;
@@ -1224,26 +1228,21 @@ export function resolveZoneMaterialMap(material: ZoneMaterial | undefined): {
   emissiveIntensity?: number;
   /** Épaisseur visuelle de la surface (m). */
   thicknessM?: number;
+  normalMap?: THREE.Texture | null;
+  roughnessMap?: THREE.Texture | null;
 } {
   const mat = material ?? 'wood';
   const color = ZONE_MATERIAL_COLORS[mat];
   if (mat === 'carpet') {
-    const { map: pile } = makeCanvasTexture('zone:carpet-pile', (ctx, size) => {
-      ctx.fillStyle = '#1a2744';
-      ctx.fillRect(0, 0, size, size);
-      for (let i = 0; i < 4000; i += 1) {
-        const x = Math.random() * size;
-        const y = Math.random() * size;
-        ctx.fillStyle = Math.random() > 0.5 ? '#2a3f66' : '#152038';
-        ctx.fillRect(x, y, 1.2, 2.4);
-      }
-      noise(ctx, size, 0.12);
-    }, 512);
-    pile.repeat.set(4, 4);
+    // Moquette velours claire, teintée par la couleur choisie : fibres et traces de brossage en relief.
+    const url = '/floors/gen/carpet-neutral.jpg';
+    const { normalMap, roughnessMap } = generatedDetailMaps(url, 4, 4);
     return {
-      map: pile,
+      map: loadTiledTexture(url, 4, 4),
+      normalMap,
+      roughnessMap,
       color,
-      roughness: 0.98,
+      roughness: roughnessWithMap(0.98, roughnessMap),
       metalness: 0,
       thicknessM: 0.045,
     };
