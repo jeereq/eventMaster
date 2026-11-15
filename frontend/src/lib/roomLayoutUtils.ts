@@ -535,6 +535,12 @@ export interface RoomLayoutBlueprint {
     instrumentFinish?: string;
     /** Type de bar (cocktail, vin, champagne…). */
     barStyle?: BarStyle;
+    /** Bar : habillage choisi (sinon celui du type de bar, voir roomBarDesign). */
+    barFront?: import('@/lib/roomBarDesign').BarFront;
+    barTop?: import('@/lib/roomBarDesign').BarTop;
+    barBack?: import('@/lib/roomBarDesign').BarBack;
+    barStool?: import('@/lib/roomBarDesign').BarStool;
+    barMetal?: import('@/lib/roomBarDesign').BarMetal;
     /** Aménagement extérieur (arbre, haie, piscine, brasero…). */
     landscapeStyle?: import('@/lib/roomOutdoorUtils').LandscapeStyle;
     /** Mobilier résidentiel (lit, dressing, mur TV, îlot, baignoire…). */
@@ -6324,6 +6330,11 @@ export function applyFixtureStyleToSameKind(
       return {
         ...item,
         barStyle: source.barStyle,
+        barFront: source.barFront,
+        barTop: source.barTop,
+        barBack: source.barBack,
+        barStool: source.barStool,
+        barMetal: source.barMetal,
         color: source.color,
         material: source.material,
       };
@@ -7445,17 +7456,17 @@ export const barStyleHints: Record<BarStyle, string> = {
 
 export const barStylePresets: Record<BarStyle, { w: number; h: number; label: string; color: string }> = {
   cocktail: { w: 28, h: 10, label: 'Bar cocktail', color: '#4a3728' },
-  wine: { w: 26, h: 10, label: 'Bar à vins', color: '#3f2a22' },
-  champagne: { w: 24, h: 10, label: 'Bar champagne', color: '#5c4a32' },
+  wine: { w: 26, h: 10, label: 'Bar à vins', color: '#8a5a34' },
+  champagne: { w: 24, h: 10, label: 'Bar champagne', color: '#ece3d0' },
   beer: { w: 26, h: 10, label: 'Bar bières', color: '#5b4030' },
-  coffee: { w: 22, h: 9, label: 'Coffee bar', color: '#2c2118' },
-  whiskey: { w: 24, h: 10, label: 'Bar whisky', color: '#3b2416' },
+  coffee: { w: 22, h: 9, label: 'Coffee bar', color: '#2f5d4e' },
+  whiskey: { w: 24, h: 10, label: 'Bar whisky', color: '#5a2418' },
   island: { w: 18, h: 16, label: 'Îlot bar', color: '#3d2b1f' },
   lShaped: { w: 32, h: 16, label: 'Bar en L', color: '#4a3728' },
-  juice: { w: 22, h: 9, label: 'Bar à jus', color: '#3f4a28' },
-  mocktail: { w: 24, h: 10, label: 'Bar mocktails', color: '#3a3048' },
-  tapas: { w: 26, h: 10, label: 'Bar tapas', color: '#4a3020' },
-  tea: { w: 22, h: 9, label: 'Salon de thé', color: '#4a4034' },
+  juice: { w: 22, h: 9, label: 'Bar à jus', color: '#f4ede4' },
+  mocktail: { w: 24, h: 10, label: 'Bar mocktails', color: '#f6a5c9' },
+  tapas: { w: 26, h: 10, label: 'Bar tapas', color: '#f3dccb' },
+  tea: { w: 22, h: 9, label: 'Salon de thé', color: '#8b6a47' },
 };
 
 /** Tailles réelles (m) des podiums : largeur × profondeur. */

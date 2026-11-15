@@ -170,6 +170,8 @@ import {
   openingMaterialLabels,
   isTentVenue,
 } from '@/lib/roomLayoutUtils';
+import QuickAddPalette, { type QuickAddAction } from '@/components/room/QuickAddPalette';
+import { BAR_BACK_LABELS, BAR_FRONT_LABELS, BAR_METAL_LABELS, BAR_STOOL_LABELS, BAR_STYLE_DESIGN, BAR_TOP_LABELS } from '@/lib/roomBarDesign';
 import {
   copyAmbienceShareLink,
   decodeAmbienceShareToken,
@@ -209,8 +211,11 @@ import {
 import {
   alignLayoutSelection,
   alignModeLabels,
+  copyLayoutSelection,
   duplicateLayoutSelection,
   expandSelectionWithGroups,
+  pasteLayoutClipboard,
+  type LayoutClipboard,
   flipLayoutSelection,
   getSelectionBounds,
   groupLayoutSelection,
@@ -954,6 +959,11 @@ export default function RoomLayoutEditor({
   const [customTplName, setCustomTplName] = useState('');
   const [templateCategory, setTemplateCategory] = useState<TemplateCategory>('all');
   const [shortcutsModalOpen, setShortcutsModalOpen] = useState(false);
+  /** Palette Ctrl+K : liste figée à l’ouverture (la palette est modale, le plan ne bouge pas entre-temps). */
+  const [quickAddActions, setQuickAddActions] = useState<QuickAddAction[] | null>(null);
+  const buildQuickAddRef = useRef<() => QuickAddAction[]>(() => []);
+  const openQuickAdd = useCallback(() => setQuickAddActions(buildQuickAddRef.current()), []);
+  const clipboardRef = useRef<LayoutClipboard | null>(null);
   const [clearanceModalOpen, setClearanceModalOpen] = useState(false);
   const [clearancePreset, setClearancePreset] = useState<ClearancePreset>('standard');
   const [inventoryModalOpen, setInventoryModalOpen] = useState(false);
@@ -1371,6 +1381,48 @@ export default function RoomLayoutEditor({
         setSelection([]);
         return;
       }
+      // Palette d’ajout et aide : Ctrl+K ou « / », « ? ».
+      if ((mod && key === 'k') || (!mod && !e.altKey && e.key === '/')) {
+        e.preventDefault();
+        openQuickAdd();
+        return;
+      }
+      if (!mod && e.key === '?') {
+        e.preventDefault();
+        setShortcutsModalOpen(true);
+        return;
+      }
+      if (mod && (key === 'c' || key === 'x') && selection.length > 0 && !window.getSelection()?.toString()) {
+        const clip = copyLayoutSelection(blueprint, selection);
+        if (!clip) return;
+        e.preventDefault();
+        clipboardRef.current = clip;
+        const n = clip.furniture.length + clip.fixtures.length;
+        if (key === 'x') {
+          deleteSelected();
+          log(n > 1 ? `${n} éléments coupés` : 'Élément coupé', 'info');
+        } else {
+          log(n > 1 ? `${n} éléments copiés (Ctrl+V pour coller)` : 'Élément copié (Ctrl+V pour coller)', 'info');
+        }
+        return;
+      }
+      if (mod && key === 'v' && clipboardRef.current) {
+        e.preventDefault();
+        if (!caps.canDuplicate) {
+          log('La duplication n’est pas incluse dans votre forfait', 'info');
+          return;
+        }
+        const result = pasteLayoutClipboard(blueprint, clipboardRef.current, resolveActiveStoryId(blueprint));
+        if (result.selection.length === 0) return;
+        updateBlueprint(result.blueprint, {
+          message: result.selection.length > 1 ? `${result.selection.length} éléments collés` : 'Élément collé',
+          kind: 'add',
+        });
+        setSelection(result.selection);
+        // Coller encore décale de nouveau, comme une duplication en chaîne.
+        clipboardRef.current = copyLayoutSelection(result.blueprint, result.selection) ?? clipboardRef.current;
+        return;
+      }
       if ((e.key === 'Delete' || e.key === 'Backspace') && selection.length > 0) {
         e.preventDefault();
         deleteSelected();
@@ -1390,7 +1442,8 @@ export default function RoomLayoutEditor({
       }
       if (selection.length > 0 && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
         e.preventDefault();
-        const step = e.shiftKey ? 2.5 : 1;
+        // Maj = grand pas, Alt = calage fin.
+        const step = e.shiftKey ? 2.5 : e.altKey ? 0.25 : 1;
         const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
         const dy = e.key === 'ArrowUp' ? -step : e.key === 'ArrowDown' ? step : 0;
         updateBlueprint(moveLayoutSelectionByDelta(blueprint, expandSelectionWithGroups(blueprint, selection), dx, dy), {
@@ -1424,7 +1477,7 @@ export default function RoomLayoutEditor({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [readOnly, selection, blueprint, groupSelection, ungroupSelection, duplicateSelection, updateBlueprint, rotateSelection, deleteSelected]);
+  }, [readOnly, selection, blueprint, groupSelection, ungroupSelection, duplicateSelection, updateBlueprint, rotateSelection, deleteSelected, log, caps.canDuplicate, openQuickAdd]);
 
   const addTable = () => {
     const tableCount = blueprint.furniture.filter((f) => f.kind === 'table').length;
@@ -2715,6 +2768,7 @@ export default function RoomLayoutEditor({
         onMoveEnd={handleWebGLMoveEnd}
         readOnly={readOnly}
         wallEditMode={wallEditMode}
+        reserveTopRight={!readOnly && !walkthroughActive}
         lockOrbit={lockOrbit}
         renderQuality={renderQuality}
         lightingPreset={lightingPreset}
@@ -6012,6 +6066,51 @@ export default function RoomLayoutEditor({
                 <span className="text-xs text-muted">{barStyleHints[(selectedFixture.barStyle ?? 'cocktail') as BarStyle]}</span>
               </label>
             )}
+            {isBar && (() => {
+              const style = (selectedFixture.barStyle ?? 'cocktail') as BarStyle;
+              const auto = BAR_STYLE_DESIGN[style];
+              const parts = [
+                { key: 'barFront', label: 'Façade', labels: BAR_FRONT_LABELS as Record<string, string>, value: selectedFixture.barFront, fallback: auto.front },
+                { key: 'barTop', label: 'Plateau', labels: BAR_TOP_LABELS as Record<string, string>, value: selectedFixture.barTop, fallback: auto.top },
+                ...(style === 'island' ? [] : [{ key: 'barBack', label: 'Arrière-bar', labels: BAR_BACK_LABELS as Record<string, string>, value: selectedFixture.barBack, fallback: auto.back }]),
+                { key: 'barStool', label: 'Tabourets', labels: BAR_STOOL_LABELS as Record<string, string>, value: selectedFixture.barStool, fallback: auto.stool },
+                { key: 'barMetal', label: 'Métal', labels: BAR_METAL_LABELS as Record<string, string>, value: selectedFixture.barMetal, fallback: auto.metal },
+              ] as const;
+              const customised = parts.some((part) => part.value);
+              return (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className={EDITOR_HEADING}>Habillage du bar</p>
+                    {customised ? (
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-primary hover:underline min-h-11 px-1"
+                        onClick={() => updateFixture(selectedFixture.id, { barFront: undefined, barTop: undefined, barBack: undefined, barStool: undefined, barMetal: undefined }, 'Habillage du bar par défaut')}
+                      >
+                        Par défaut
+                      </button>
+                    ) : null}
+                  </div>
+                  <div className="grid grid-cols-1 gap-2">
+                    {parts.map((part) => (
+                      <label key={part.key} className="block text-xs space-y-1">
+                        <span className="font-semibold text-muted">{part.label}</span>
+                        <select
+                          value={part.value ?? ''}
+                          onChange={(e) => updateFixture(selectedFixture.id, { [part.key]: e.target.value || undefined }, `${part.label} du bar`)}
+                          className={EDITOR_FIELD}
+                        >
+                          <option value="">Auto · {part.labels[part.fallback]}</option>
+                          {Object.entries(part.labels).map(([id, label]) => (
+                            <option key={id} value={id}>{label}</option>
+                          ))}
+                        </select>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {selectedFixture.kind === 'customElement' && selectedFixture.customElement ? (() => {
               const def = selectedFixture.customElement;
@@ -8074,9 +8173,91 @@ export default function RoomLayoutEditor({
     </>
   ) : null;
 
+  /** Tout ce que la barre « Ajouter » sait poser, pour la palette de recherche (Ctrl+K). */
+  const buildQuickAddActions = (): QuickAddAction[] => {
+    const out: QuickAddAction[] = [];
+    const can = (kind: string) => caps.canFixtures && caps.fixtureKinds.includes(kind as (typeof caps.fixtureKinds)[number]);
+    const push = (id: string, label: string, group: string, run: () => void, keywords?: string) => out.push({ id, label, group, run, keywords });
+    push('table', 'Table', 'Mobilier', addTable, 'ronde banquet invités');
+    push('free-chair', 'Fauteuil', 'Mobilier', addFreeChair, 'chaise siège');
+    if (caps.tableShapes.includes('arc')) push('arc-ring', 'Anneau d’arcs', 'Mobilier', addArcRing, 'tables arc');
+    if (caps.canAddRows) {
+      push('row', 'Rangée de chaises', 'Mobilier', addRow, 'conférence théâtre');
+      push('amphitheater', 'Amphithéâtre…', 'Mobilier', () => setQuickCreate('amphitheater'), 'gradins');
+      push('chair-groups', 'Groupes de chaises…', 'Mobilier', () => setQuickCreate('chairs'), 'rangées');
+    }
+    if (caps.canZones) {
+      push('zone-dance', 'Piste de danse', 'Zones', () => addZone('Piste de danse', { zoneKind: 'dance', material: 'vinyl' }), 'dancefloor');
+      push('zone-vip', 'Espace VIP', 'Zones', () => addZone('Espace VIP', { zoneKind: 'vip', material: 'marble' }));
+      push('zone-buffet', 'Zone buffet', 'Zones', () => addZone('Zone buffet', { zoneKind: 'buffet', material: 'wood' }));
+      push('carpet', 'Moquette', 'Zones', addCarpet, 'tapis sol');
+    }
+    if (can('bar')) {
+      (Object.keys(barStyleLabels) as BarStyle[]).forEach((style) => push(`bar-${style}`, barStyleLabels[style], 'Bars', () => addBarFixture(style), `bar comptoir ${barStyleHints[style]}`));
+    }
+    if (can('podium')) {
+      (Object.keys(podiumStyleLabels) as PodiumStyle[]).forEach((style) => push(`podium-${style}`, podiumStyleLabels[style], 'Podiums', () => addPodiumFixture(style), 'podium estrade'));
+    }
+    if (can('instrument')) {
+      (Object.keys(instrumentStyleLabels) as InstrumentStyle[]).forEach((style) => push(`instrument-${style}`, instrumentStyleLabels[style], 'Instruments', () => addInstrumentFixture(style), 'musique concert'));
+    }
+    if (can('chandelier')) {
+      (Object.keys(chandelierFixtureStyleLabels) as ChandelierFixtureStyle[]).forEach((style) => push(`chandelier-${style}`, chandelierFixtureStyleLabels[style], 'Lustres', () => addChandelierFixture(style), 'lustre suspension lumière'));
+    }
+    if (can('door')) {
+      (Object.keys(doorStyleLabels) as DoorStyle[]).forEach((style) => push(`door-${style}`, doorStyleLabels[style], 'Portes', () => addDoorFixture(style), 'porte entrée'));
+    }
+    if (can('aisle')) {
+      (Object.keys(aisleStyleLabels) as AisleStyle[]).forEach((style) => push(`aisle-${style}`, aisleStyleLabels[style], 'Allées', () => addAisleCustomStyle(style), 'allée tapis cérémonie'));
+    }
+    if (can('screen')) {
+      (Object.keys(screenKindLabels) as ScreenKind[]).forEach((kind) => push(`screen-${kind}`, screenKindLabels[kind], 'Écrans', () => addScreenFixture(kind), 'écran vidéo'));
+    }
+    if (can('homeFurniture')) {
+      HOME_FURNITURE_ORDER.forEach((style) => push(`home-${style}`, HOME_FURNITURE_META[style].label, HOME_FURNITURE_GROUP_LABELS[HOME_FURNITURE_META[style].group], () => addHomeFurniture(style), `maison ${HOME_FURNITURE_META[style].hint}`));
+    }
+    if (can('landscape')) {
+      LANDSCAPE_STYLE_ORDER.forEach((style) => push(`landscape-${style}`, LANDSCAPE_STYLE_META[style].label, 'Extérieur', () => addLandscapeFixture(style), `jardin ${LANDSCAPE_STYLE_META[style].hint}`));
+    }
+    const simple: Array<[string, string, string, string?]> = [
+      ['stage', 'Scène', 'Décor', 'estrade spectacle'],
+      ['djBooth', 'Cabine DJ', 'Décor', 'musique platines'],
+      ['buffet', 'Buffet + couverts', 'Décor', 'repas traiteur'],
+      ['arch', 'Arche', 'Décor', 'cérémonie mariage fleurs'],
+      ['flower', 'Fleurs', 'Décor', 'bouquet composition'],
+      ['pedestal', 'Colonne fleurie', 'Décor', 'piédestal'],
+      ['stringLight', 'Guirlande lumineuse', 'Décor', 'guinguette'],
+      ['partition', 'Cloison', 'Décor', 'paravent séparation'],
+      ['decal', 'Sticker de sol', 'Décor', 'logo monogramme'],
+      ['fountain', 'Fontaine', 'Extérieur', 'eau'],
+      ['gazebo', 'Tonnelle', 'Extérieur', 'pergola'],
+      ['parasol', 'Parasol', 'Extérieur', 'ombre'],
+      ['column', 'Colonne', 'Bâtiment', 'pilier poteau'],
+      ['perimeter', 'Périmètre', 'Bâtiment', 'contour limite'],
+      ['orderCounter', 'Caisse POS', 'Resto & Shop', 'comptoir commande'],
+      ['pickupCounter', 'Comptoir de retrait', 'Resto & Shop', 'commande'],
+      ['pizzaOven', 'Four à pizza', 'Resto & Shop', 'cuisine'],
+      ['loungeSofa', 'Canapé lounge', 'Resto & Shop', 'sofa salon'],
+    ];
+    simple.forEach(([kind, label, group, keywords]) => {
+      if (can(kind)) push(`fixture-${kind}`, label, group, () => addFixture(kind as RoomLayoutBlueprint['fixtures'][number]['kind']), keywords);
+    });
+    if (can('corridor')) push('corridor', 'Couloir', 'Bâtiment', addCorridor, 'circulation passage');
+    push('booth', 'Cabine Booth', 'Resto & Shop', addBoothAssembly, 'banquette restaurant');
+    push('parasol-table', 'Table parasol', 'Resto & Shop', addParasolTable, 'terrasse');
+    return out;
+  };
+
+  useEffect(() => {
+    buildQuickAddRef.current = buildQuickAddActions;
+  });
+
   const toolbar = !readOnly && (
     <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-4 lg:gap-y-2" role="toolbar" aria-label="Outils du plan">
       <ToolbarCluster label="Ajouter">
+      <button type="button" onClick={openQuickAdd} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'lg:hidden')} title="Rechercher un élément à ajouter">
+        <Search className="w-3.5 h-3.5" aria-hidden /> Rechercher
+      </button>
       <EditorToolGroup
         id="furniture"
         label="Mobilier"
@@ -9492,8 +9673,16 @@ export default function RoomLayoutEditor({
 
   const stories = resolveStories(blueprint);
   const activeStory = stories.find((s) => s.id === resolveActiveStoryId(blueprint));
+  // Un seul étage : sur grand écran, la barre d’étages laisse sa place au plan (bouton « + Étage » dans l’en-tête).
+  const compactStories = stories.length < 2 && !blueprint.metadata.stackView;
+  const addStoryFromHeader = () => {
+    const next = addStory(blueprint);
+    updateBlueprint(setStackView(next, false), { message: 'Nouvel étage ajouté', kind: 'add' });
+    setSelection([]);
+    setAccordion('batiment');
+  };
   const storyBar = (
-    <div className="flex flex-wrap items-center gap-2 px-2.5 py-2 rounded-[var(--radius-card)] border border-border bg-surface-muted/50">
+    <div className={cn('flex flex-wrap items-center gap-2 px-2.5 py-2 rounded-[var(--radius-card)] border border-border bg-surface-muted/50', compactStories && 'lg:hidden')}>
       <span className="text-xs font-bold uppercase tracking-wide text-muted shrink-0">Étage</span>
       <div className="flex flex-wrap gap-1">
         {stories.map((story) => (
@@ -9584,6 +9773,34 @@ export default function RoomLayoutEditor({
       <div className="flex items-center gap-1.5 shrink-0">
         {!readOnly ? (
           <div className="hidden lg:flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={openQuickAdd}
+              className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'gap-2')}
+              title="Rechercher un élément à ajouter (Ctrl+K ou /)"
+              aria-keyshortcuts="Control+K /"
+            >
+              <Search className="w-3.5 h-3.5" aria-hidden />
+              Ajouter…
+              <kbd className="px-1.5 py-0.5 rounded border border-border bg-surface-muted font-mono text-[11px] leading-none text-muted">Ctrl K</kbd>
+            </button>
+            {caps.canTemplates ? (
+              <button
+                type="button"
+                onClick={() => setTemplatesOpen((v) => !v)}
+                aria-expanded={templatesOpen}
+                aria-controls="editor-templates"
+                className={cn(EDITOR_TOOL, templatesOpen ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
+                title="Partir d’un modèle de salle (banquet, conférence, cocktail…)"
+              >
+                <LayoutTemplate className="w-3.5 h-3.5" aria-hidden /> Modèles
+              </button>
+            ) : null}
+            {compactStories ? (
+              <button type="button" onClick={addStoryFromHeader} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Ajouter un étage au bâtiment">
+                <Plus className="w-3.5 h-3.5" aria-hidden /> Étage
+              </button>
+            ) : null}
             {verifyTools}
             <span className="h-6 w-px bg-border mx-0.5" aria-hidden />
             <button
@@ -9734,6 +9951,9 @@ export default function RoomLayoutEditor({
 
   const ambiencePreviewModal = (
     <>
+    {!readOnly ? (
+      <QuickAddPalette open={quickAddActions !== null} onClose={() => setQuickAddActions(null)} actions={quickAddActions ?? []} />
+    ) : null}
     <Modal
       open={shortcutsModalOpen}
       onClose={() => setShortcutsModalOpen(false)}
@@ -9785,7 +10005,28 @@ export default function RoomLayoutEditor({
           </div>
           <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
             <span className="text-muted font-medium">Déplacement précis</span>
-            <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold font-mono text-xs text-foreground">Flèches (↑ ↓ ← →)</kbd>
+            <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold font-mono text-xs text-foreground">Flèches · Maj ×2,5 · Alt fin</kbd>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Rechercher et ajouter un élément</span>
+            <div className="flex gap-1 font-mono text-xs">
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Ctrl+K</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">/</kbd>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Copier / Couper / Coller</span>
+            <div className="flex gap-1 font-mono text-xs">
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Ctrl+C</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Ctrl+X</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">Ctrl+V</kbd>
+            </div>
+          </div>
+          <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
+            <span className="text-muted font-medium">Afficher cette aide</span>
+            <div className="flex gap-1 font-mono text-xs">
+              <kbd className="px-1.5 py-0.5 rounded bg-surface border border-border shadow-2xs font-bold text-foreground">?</kbd>
+            </div>
           </div>
           <div className="flex items-center justify-between p-2.5 rounded-xl border border-border bg-surface-muted/30">
             <span className="text-muted font-medium">Pivoter de 90° / −90°</span>
@@ -10199,7 +10440,7 @@ export default function RoomLayoutEditor({
             <div className="p-2.5 sm:p-4 space-y-2 sm:space-y-3 border-b border-border-subtle shrink-0">
               {header}
               <div className="hidden lg:block space-y-2">
-                {templateBar}
+                {templatesOpen ? templateBar : null}
                 {toolbar}
                 {quickCreatePanel}
               </div>
@@ -10267,7 +10508,7 @@ export default function RoomLayoutEditor({
         <div className="sticky top-0 z-20 -mx-1 px-1 pb-2 space-y-2 bg-background/95 backdrop-blur-md md:static md:bg-transparent md:backdrop-blur-none md:mx-0 md:px-0 md:pb-0">
           {header}
           <div className="hidden lg:block space-y-2">
-            {templateBar}
+            {templatesOpen ? templateBar : null}
             {toolbar}
           </div>
         </div>

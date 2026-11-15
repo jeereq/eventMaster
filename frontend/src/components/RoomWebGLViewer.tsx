@@ -117,6 +117,7 @@ import {
   arcTablePoint,
 } from '@/components/roomCelebrationMeshes';
 import { ConcertInstrumentMesh, EventBarMesh } from '@/components/CataloguePodiumBarMeshes';
+import type { BarBack, BarFront, BarMetal, BarStool, BarTop } from '@/lib/roomBarDesign';
 import { clampRowSeatCount } from '@/lib/roomAmphitheaterGeom';
 import { detectLayoutClearanceConflicts } from '@/lib/roomLayoutClearance';
 import RoomWalkthroughCamera from '@/components/RoomWalkthroughCamera';
@@ -205,6 +206,8 @@ interface RoomWebGLViewerProps {
   readOnly?: boolean;
   className?: string;
   wallEditMode?: boolean;
+  /** L’hôte pose ses propres boutons en haut à droite (éditeur) : la barre caméra leur laisse la place. */
+  reserveTopRight?: boolean;
   /** Bloque orbit / pan pour déplacer le mobilier sans changer la perspective. */
   lockOrbit?: boolean;
   /** Mode aperçu (marketplace / fiches) : pas de hints d’édition, orbit libre. */
@@ -2685,6 +2688,11 @@ function FixtureMesh({
   instrumentStyle,
   instrumentFinish,
   barStyle,
+  barFront,
+  barTop,
+  barBack,
+  barStool,
+  barMetal,
   landscapeStyle,
   homeStyle,
   homeMetalFinish,
@@ -2753,6 +2761,11 @@ function FixtureMesh({
   instrumentStyle?: InstrumentStyle;
   instrumentFinish?: string;
   barStyle?: BarStyle;
+  barFront?: BarFront;
+  barTop?: BarTop;
+  barBack?: BarBack;
+  barStool?: BarStool;
+  barMetal?: BarMetal;
   landscapeStyle?: LandscapeStyle;
   homeStyle?: HomeFurnitureStyle;
   homeMetalFinish?: HomeMetalFinish;
@@ -2928,6 +2941,7 @@ function FixtureMesh({
           d={d}
           height={height}
           style={barStyle ?? 'cocktail'}
+          design={{ barFront, barTop, barBack, barStool, barMetal }}
           color={color ?? baseColor}
           selected={selected}
         />
@@ -3956,6 +3970,11 @@ function SceneContent({
             instrumentStyle={f.instrumentStyle}
             instrumentFinish={f.instrumentFinish}
             barStyle={f.barStyle}
+            barFront={f.barFront}
+            barTop={f.barTop}
+            barBack={f.barBack}
+            barStool={f.barStool}
+            barMetal={f.barMetal}
             landscapeStyle={f.landscapeStyle}
             homeStyle={f.homeStyle}
             homeMetalFinish={f.homeMetalFinish}
@@ -4285,6 +4304,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   readOnly = false,
   className,
   wallEditMode = false,
+  reserveTopRight = false,
   lockOrbit = false,
   previewMode = false,
   renderQuality: renderQualityProp,
@@ -4651,6 +4671,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       }}
       className={cn(
         'relative w-full overflow-hidden rounded-[var(--radius-card)] border border-border bg-foreground touch-none overscroll-none',
+        reserveTopRight && '@container',
         className,
       )}
       onPointerDown={() => {
@@ -4664,7 +4685,11 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       {/* Préréglages de caméra cinématiques */}
       {!walkthroughActive && !wallEditMode && (
         <div
-          className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1 p-1 rounded-full bg-background/85 dark:bg-surface-elevated/85 backdrop-blur-md border border-border/70 shadow-sm max-w-[calc(100%-4.5rem)] overflow-x-auto no-scrollbar pointer-events-auto"
+          className={cn(
+            'absolute top-2.5 left-2.5 z-10 flex items-center gap-1 p-1 rounded-full bg-background/85 dark:bg-surface-elevated/85 backdrop-blur-md border border-border/70 shadow-sm max-w-[calc(100%-4.5rem)] overflow-x-auto no-scrollbar pointer-events-auto',
+            // Assez large : une seule ligne à côté des boutons de l’éditeur ; sinon, juste en dessous.
+            reserveTopRight && 'lg:@max-[62rem]:top-[3.6rem] @min-[62rem]:max-w-[calc(100%-18.5rem)]',
+          )}
           role="toolbar"
           aria-label="Angles de caméra 3D"
         >
