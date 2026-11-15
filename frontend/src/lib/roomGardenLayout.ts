@@ -11,7 +11,7 @@
 
 import { seededRandom } from './roomOutdoorUtils.ts';
 
-export type GardenLawn = 'english' | 'meadow' | 'dry' | 'synthetic';
+export type GardenLawn = 'english' | 'striped' | 'meadow' | 'dry' | 'synthetic';
 export type GardenBorder = 'none' | 'hedge' | 'stone' | 'wood' | 'flowers';
 export type GardenPath = 'none' | 'stones' | 'gravel';
 
@@ -29,6 +29,7 @@ export interface GardenOptions {
 
 export const GARDEN_LAWN_LABELS: Record<GardenLawn, string> = {
   english: 'Gazon anglais tondu',
+  striped: 'Gazon rayé (tonte en bandes)',
   meadow: 'Prairie haute',
   dry: 'Pelouse sèche d’été',
   synthetic: 'Gazon synthétique',
@@ -70,6 +71,7 @@ export const DEFAULT_GARDEN: GardenOptions = {
 /** Teinte et texture du gazon par type (textures générées de public/floors/gen). */
 export const GARDEN_LAWN_SURFACE: Record<GardenLawn, { url: string; tint: string; tuftColor: string; tuftHeight: number; tuftsPerM2: number }> = {
   english: { url: '/floors/gen/grass-fine.jpg', tint: '#ffffff', tuftColor: '#4f7d33', tuftHeight: 0.05, tuftsPerM2: 6 },
+  striped: { url: '/floors/gen/grass-striped.jpg', tint: '#ffffff', tuftColor: '#4a7a30', tuftHeight: 0.04, tuftsPerM2: 4 },
   meadow: { url: '/floors/gen/meadow.jpg', tint: '#ffffff', tuftColor: '#6a8f3a', tuftHeight: 0.28, tuftsPerM2: 14 },
   dry: { url: '/floors/gen/grass-lawn.jpg', tint: '#d9c98f', tuftColor: '#a59a5a', tuftHeight: 0.12, tuftsPerM2: 8 },
   synthetic: { url: '/floors/gen/turf-synthetic.jpg', tint: '#ffffff', tuftColor: '#3f8a35', tuftHeight: 0, tuftsPerM2: 0 },
