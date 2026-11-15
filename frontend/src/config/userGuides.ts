@@ -404,8 +404,9 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'room-editor-plans',
         title: 'Éditeur de salles selon le forfait',
         content:
-          'Niveau d’éditeur (Facturation) :\n1. Essentiel — tables simples.\n2. Business — rangées, entrées, allées, couloirs.\n3. Premium — thèmes, scène, buffet, zones, escaliers, balcons.\n4. Complet — + périmètre, tapis, thèmes / images perso.\n5. Duplex / Empiler : structure ; escalier / balcon = Premium+.\n6. FAQ publique : question dédiée à l’éditeur.',
+          'Niveau d’éditeur (Facturation) :\n1. Essentiel — tables simples.\n2. Business — rangées, entrées, allées, couloirs.\n3. Premium — thèmes, scène, buffet, zones, escaliers, balcons.\n4. Complet — + périmètre, tapis, thèmes / images perso.\n5. Duplex / Empiler : structure ; escalier / balcon = Premium+.\n6. Bouton « Guide » de l’éditeur : visite pas à pas adaptée à votre forfait (les fonctions non incluses y sont signalées avec le forfait qui les débloque).\n7. FAQ publique : question dédiée à l’éditeur.',
         links: [
+          { label: 'Visite guidée de l’éditeur', href: '/dashboard/rooms?guide=1' },
           { label: 'Facturation', href: '/dashboard/billing' },
           { label: 'Salles', href: '/dashboard/rooms' },
           { label: 'FAQ', href: '/faq' },
@@ -507,8 +508,9 @@ export const USER_GUIDES: UserGuide[] = [
         id: 'room-editor-plans',
         title: 'Éditeur de salles selon le forfait',
         content:
-          '1. Essentiel — tables.\n2. Business — allées / entrées.\n3. Premium — thèmes, escaliers, balcons.\n4. Complet — + perso.\n5. Le propriétaire monte de niveau dans Facturation.',
+          '1. Essentiel — tables.\n2. Business — allées / entrées.\n3. Premium — thèmes, escaliers, balcons.\n4. Complet — + perso.\n5. Le propriétaire monte de niveau dans Facturation.\n6. Bouton « Guide » dans l’éditeur : visite adaptée à votre forfait.',
         links: [
+          { label: 'Visite guidée de l’éditeur', href: '/dashboard/rooms?guide=1' },
           { label: 'Salles', href: '/dashboard/rooms' },
           { label: 'FAQ', href: '/faq' },
         ],
