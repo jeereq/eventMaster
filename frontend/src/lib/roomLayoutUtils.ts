@@ -150,7 +150,10 @@ export type RoofStyle =
   | 'pergola'
   | 'mansard'
   | 'skylight'
-  | 'fabricStretch';
+  | 'fabricStretch'
+  | 'clearTent'
+  | 'barrel'
+  | 'sawtooth';
 
 export type ScreenKind = 'stageLedWall' | 'wallTv' | 'tableMonitor' | 'laptop' | 'desktopPc';
 export type ScreenRatio = '16:9' | '21:9' | '9:16' | '32:9';
@@ -216,6 +219,13 @@ export type FloorDecalKind = 'rose' | 'butterfly' | 'custom' | 'path';
 export type PedestalStyle = 'squareWhite' | 'columnGold';
 export type CenterpieceStyle = 'floral' | 'greeneryRunner' | 'candleCluster';
 export type StageRoofStyle = 'none' | 'gabled';
+export type StageRig = 'none' | 'truss' | 'concert' | 'wedding';
+export const stageRigLabels: Record<StageRig, string> = {
+  none: 'Aucun',
+  truss: 'Portique truss + lumières',
+  concert: 'Concert (truss, sono, écran LED)',
+  wedding: 'Mariage (drapé et rideau lumineux)',
+};
 
 export type RoomOutlineShape =
   | 'rectangle'
@@ -625,6 +635,10 @@ export interface RoomLayoutBlueprint {
     pedestalStyle?: PedestalStyle;
     /** Toit de scène (amphithéâtre jardin). */
     stageRoof?: StageRoofStyle;
+    /** Habillage de scène : portique truss lumière, concert, mariage. */
+    stageRig?: StageRig;
+    /** Escalier d’accès en façade (oui par défaut dès 30 cm de haut). */
+    stageStairs?: boolean;
     /** Style de lustre / suspension au plafond. */
     chandelierStyle?: ChandelierFixtureStyle;
     /** Rayon de diffusion de la lumière (en % ou mètres). */
@@ -766,6 +780,14 @@ export interface RoomLayoutBlueprint {
         zoneKind?: ZoneKind;
         material?: ZoneMaterial;
         color?: string;
+        /** Piste de danse : rendu (classique, dalles LED, ciel étoilé, laqué). */
+        danceStyle?: import('./roomDanceFloor.ts').DanceFloorStyle;
+        /** Motif des dalles LED animées. */
+        danceLedPattern?: import('./roomDanceFloor.ts').DanceLedPattern;
+        /** Initiales au centre de la piste (mariage). */
+        danceMonogram?: string;
+        /** Boule à facettes suspendue au-dessus de la piste. */
+        danceMirrorBall?: boolean;
         x: number;
         y: number;
         w: number;
@@ -949,7 +971,7 @@ export function refreshBlueprintMetadata(blueprint: RoomLayoutBlueprint): RoomLa
 export function isTentVenue(blueprint: Pick<RoomLayoutBlueprint, 'roomType' | 'metadata'>): boolean {
   if (blueprint.roomType === 'TENT') return true;
   const roof = blueprint.metadata?.roofStyle;
-  return blueprint.metadata?.tentVenue === true && (roof === 'tentSwag' || roof === 'pagoda');
+  return blueprint.metadata?.tentVenue === true && (roof === 'tentSwag' || roof === 'pagoda' || roof === 'clearTent');
 }
 
 export function createBlueprintTable(
@@ -7564,6 +7586,9 @@ export const roofStyleLabels: Record<RoofStyle, string> = {
   mansard: 'Combles mansardés (Pans coupés)',
   skylight: 'Puits de lumière contemporain',
   fabricStretch: 'Velum tendu architectural',
+  clearTent: 'Tente cristal transparente',
+  barrel: 'Voûte en berceau (Hangar)',
+  sawtooth: 'Sheds industriels (Dents de scie)',
 };
 
 export const centerpieceStyleLabels: Record<CenterpieceStyle, string> = {
