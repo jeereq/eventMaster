@@ -4,6 +4,7 @@ import React, { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { loadTiledTexture } from '@/lib/roomWebGLMaterials';
+import { bulbColor, bulbsAlongSpan, stringLightPlan, type StringLightLayout, type StringLightMount, type StringLightStyle } from '@/lib/roomStringLights';
 
 const GOLD = '#c9a227';
 const CREAM = '#f5f0e8';
@@ -480,76 +481,143 @@ export function CandleClusterMesh({ selected = false }: { selected?: boolean }) 
   );
 }
 
-/** Guirlandes Edison tendues entre poteaux. */
+/** Pièces identiques (ampoules, douilles) en un seul appel, couleur par instance. */
+function InstancedPoints({ points, colors, geometry, material }: { points: Array<[number, number, number]>; colors?: string[]; geometry: THREE.BufferGeometry; material: THREE.Material }) {
+  const ref = useRef<THREE.InstancedMesh>(null);
+  React.useLayoutEffect(() => {
+    const mesh = ref.current;
+    if (!mesh) return;
+    const m = new THREE.Matrix4();
+    const c = new THREE.Color();
+    points.forEach((p, i) => {
+      m.makeTranslation(p[0], p[1], p[2]);
+      mesh.setMatrixAt(i, m);
+      if (colors) mesh.setColorAt(i, c.set(colors[i] ?? '#ffffff'));
+    });
+    mesh.count = points.length;
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    mesh.computeBoundingSphere();
+  }, [points, colors]);
+  if (!points.length) return null;
+  return <instancedMesh key={points.length} ref={ref} args={[geometry, material, points.length]} />;
+}
+
+/** Guirlandes lumineuses : câble en chaînette, douilles et ampoules du style choisi, sur poteaux ou au plafond. */
 export function EdisonStringLightMesh({
   w,
   d,
   heightM = 3.4,
   selected = false,
+  style = 'edison',
+  layout = 'canopy',
+  mount = 'poles',
+  ceilingM,
 }: {
   w: number;
   d: number;
   heightM?: number;
   selected?: boolean;
+  style?: StringLightStyle;
+  layout?: StringLightLayout;
+  mount?: StringLightMount;
+  /** Hauteur sous plafond (accroche plafond). */
+  ceilingM?: number;
 }) {
-  const poles: Array<[number, number]> = [
-    [-w * 0.42, -d * 0.42],
-    [w * 0.42, -d * 0.42],
-    [-w * 0.42, d * 0.42],
-    [w * 0.42, d * 0.42],
-  ];
-  const spans: Array<[[number, number], [number, number]]> = [
-    [poles[0], poles[1]],
-    [poles[0], poles[2]],
-    [poles[1], poles[3]],
-    [poles[2], poles[3]],
-    [poles[0], poles[3]],
-    [poles[1], poles[2]],
-  ];
-  const h = Math.max(2.4, heightM);
+  const onCeiling = mount === 'ceiling';
+  const h = onCeiling ? Math.max(2.3, (ceilingM ?? 3.2) - 0.25) : Math.max(2.4, heightM);
+  const mastExtra = onCeiling ? 0 : 0.7;
+  const plan = useMemo(() => stringLightPlan(layout, w, d), [layout, w, d]);
+
+  const { wires, bulbs, colors } = useMemo(() => {
+    const wireGeos: THREE.TubeGeometry[] = [];
+    const pts: Array<[number, number, number]> = [];
+    const cols: string[] = [];
+    plan.spans.forEach((span) => {
+      const along = bulbsAlongSpan(span, h, mastExtra, style);
+      if (!along.length) return;
+      const ya = h + (span.fromMast ? mastExtra : 0);
+      const curve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(span.a[0], ya, span.a[1]),
+        ...along.map((p) => new THREE.Vector3(p[0], p[1], p[2])),
+        new THREE.Vector3(span.b[0], h, span.b[1]),
+      ]);
+      wireGeos.push(new THREE.TubeGeometry(curve, Math.max(8, along.length * 2), style === 'fairy' ? 0.002 : 0.0045, 4, false));
+      along.forEach((p) => {
+        // Ampoule pendue sous le câble.
+        const drop = style === 'lanterns' ? 0.16 : style === 'fairy' ? 0 : 0.07;
+        pts.push([p[0], p[1] - drop, p[2]]);
+        cols.push(bulbColor(style, pts.length - 1));
+      });
+    });
+    return { wires: wireGeos, bulbs: pts, colors: cols };
+  }, [plan, h, mastExtra, style]);
+  React.useEffect(() => () => wires.forEach((g) => g.dispose()), [wires]);
+
+  const bulbGeo = useMemo(() => {
+    if (style === 'fairy') return new THREE.SphereGeometry(0.012, 6, 4);
+    if (style === 'lanterns') {
+      const g = new THREE.SphereGeometry(0.13, 16, 10);
+      g.scale(1, 0.82, 1);
+      return g;
+    }
+    if (style === 'globe') return new THREE.SphereGeometry(0.06, 14, 10);
+    const g = new THREE.SphereGeometry(0.034, 12, 10);
+    g.scale(1, 1.35, 1);
+    return g;
+  }, [style]);
+  const socketGeo = useMemo(() => new THREE.CylinderGeometry(0.014, 0.016, 0.05, 8), []);
+  React.useEffect(() => () => { bulbGeo.dispose(); socketGeo.dispose(); }, [bulbGeo, socketGeo]);
+  const bulbMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#ffffff', toneMapped: false, transparent: style === 'lanterns', opacity: style === 'lanterns' ? 0.93 : 1 }), [style]);
+  const socketMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#1c1917', metalness: 0.4, roughness: 0.5 }), []);
+  const wireMat = useMemo(() => new THREE.MeshStandardMaterial({ color: style === 'fairy' ? '#a8a29e' : '#1c1917', roughness: 0.6 }), [style]);
+  React.useEffect(() => () => { bulbMat.dispose(); socketMat.dispose(); wireMat.dispose(); }, [bulbMat, socketMat, wireMat]);
+  const sockets = useMemo(
+    () => (style === 'fairy' ? [] : bulbs.map((p) => [p[0], p[1] + (style === 'lanterns' ? 0.12 : 0.055), p[2]] as [number, number, number])),
+    [bulbs, style],
+  );
+  const glow = style === 'guinguette' ? '#ffe2a8' : style === 'fairy' ? '#fff2c4' : '#ffcf87';
+  const poleColor = selected ? '#c7d2fe' : '#44403c';
+  const anchors = onCeiling ? [...plan.poles, ...(plan.mast ? [plan.mast] : [])] : [];
+
   return (
     <group>
-      {poles.map(([x, z], i) => (
-        <group key={`p-${i}`} position={[x, 0, z]}>
-          <mesh position={[0, 0.08, 0]} receiveShadow>
-            <boxGeometry args={[0.28, 0.16, 0.28]} />
-            <meshStandardMaterial color="#a8a29e" roughness={0.85} />
-          </mesh>
-          <mesh position={[0, h * 0.5, 0]} castShadow>
-            <cylinderGeometry args={[0.035, 0.04, h, 8]} />
-            <meshStandardMaterial color={selected ? '#c7d2fe' : '#44403c'} metalness={0.45} roughness={0.4} />
-          </mesh>
-        </group>
+      {!onCeiling
+        ? plan.poles.map(([x, z], i) => (
+            <group key={`p-${i}`} position={[x, 0, z]}>
+              <mesh position={[0, 0.08, 0]} receiveShadow>
+                <boxGeometry args={[0.28, 0.16, 0.28]} />
+                <meshStandardMaterial color="#a8a29e" roughness={0.85} />
+              </mesh>
+              <mesh position={[0, h * 0.5, 0]} castShadow>
+                <cylinderGeometry args={[0.035, 0.04, h, 8]} />
+                <meshStandardMaterial color={poleColor} metalness={0.45} roughness={0.4} />
+              </mesh>
+            </group>
+          ))
+        : null}
+      {!onCeiling && plan.mast ? (
+        <mesh position={[plan.mast[0], (h + mastExtra) / 2, plan.mast[1]]} castShadow>
+          <cylinderGeometry args={[0.05, 0.06, h + mastExtra, 10]} />
+          <meshStandardMaterial color={poleColor} metalness={0.45} roughness={0.4} />
+        </mesh>
+      ) : null}
+      {anchors.map(([x, z], i) => (
+        // Crochets au plafond.
+        <mesh key={`a-${i}`} position={[x, h + 0.12, z]}>
+          <cylinderGeometry args={[0.003, 0.003, 0.24, 4]} />
+          <meshStandardMaterial color="#3f3f46" />
+        </mesh>
       ))}
-      {spans.map(([a, b], si) => {
-        const bulbs = 7;
-        return (
-          <group key={`s-${si}`}>
-            {Array.from({ length: bulbs }).map((_, i) => {
-              const t = (i + 0.5) / bulbs;
-              const sag = Math.sin(t * Math.PI) * 0.45;
-              return (
-                <mesh
-                  key={i}
-                  position={[
-                    a[0] + (b[0] - a[0]) * t,
-                    h - 0.12 - sag,
-                    a[1] + (b[1] - a[1]) * t,
-                  ]}
-                >
-                  <sphereGeometry args={[0.035, 8, 8]} />
-                  <meshStandardMaterial
-                    color="#fde68a"
-                    emissive="#fbbf24"
-                    emissiveIntensity={selected ? 1.8 : 1.15}
-                  />
-                </mesh>
-              );
-            })}
-          </group>
-        );
-      })}
-      <pointLight position={[0, h * 0.7, 0]} intensity={0.55} color="#fde68a" distance={Math.max(w, d) * 1.4} />
+      {wires.map((g, i) => (
+        <mesh key={`w-${i}`} geometry={g} material={wireMat} />
+      ))}
+      <InstancedPoints points={sockets} geometry={socketGeo} material={socketMat} />
+      <InstancedPoints points={bulbs} colors={colors} geometry={bulbGeo} material={bulbMat} />
+      <pointLight position={[0, h * 0.85, 0]} intensity={selected ? 0.9 : 0.65} color={glow} distance={Math.max(w, d) * 1.4} decay={2} />
+      {Math.max(w, d) > 9 ? (
+        <pointLight position={[w * 0.25, h * 0.85, d * 0.25]} intensity={0.4} color={glow} distance={Math.max(w, d)} decay={2} />
+      ) : null}
     </group>
   );
 }

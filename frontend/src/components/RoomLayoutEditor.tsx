@@ -169,9 +169,14 @@ import {
   type OpeningMaterial,
   openingMaterialLabels,
   isTentVenue,
+  wallLengthMeters,
+  type RoomWallSegment,
 } from '@/lib/roomLayoutUtils';
 import QuickAddPalette, { type QuickAddAction } from '@/components/room/QuickAddPalette';
 import EditorTour from '@/components/room/EditorTour';
+import WallArtPanel from '@/components/room/WallArtPanel';
+import LedShowControls from '@/components/room/LedShowControls';
+import { STRING_LIGHT_LAYOUT_LABELS, STRING_LIGHT_MOUNT_LABELS, STRING_LIGHT_STYLE_LABELS } from '@/lib/roomStringLights';
 import { START_EDITOR_TOUR_EVENT } from '@/components/room/RoomEditorPlanCard';
 import { buildEditorTour, editorTourSummary, EDITOR_TOUR_SEEN_KEY, type EditorTourAction } from '@/lib/roomEditorTour';
 import { BAR_BACK_LABELS, BAR_FRONT_LABELS, BAR_METAL_LABELS, BAR_STOOL_LABELS, BAR_STYLE_DESIGN, BAR_TOP_LABELS } from '@/lib/roomBarDesign';
@@ -377,6 +382,18 @@ function DecorRangeField({ label, value, min, max, step, format, onChange }: { l
 
 const fmtM = (v: number) => `${v.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} m`;
 const EDITOR_HINT = 'text-sm text-muted leading-snug';
+/** Teintes de toiture courantes (tuile, ardoise, zinc, toile, bois, cuivre…). */
+const ROOF_COLOR_PRESETS = [
+  { color: '#d6d3d1', label: 'Pierre claire' },
+  { color: '#ffffff', label: 'Blanc / toile' },
+  { color: '#f2e8d5', label: 'Toile ivoire' },
+  { color: '#c2643d', label: 'Tuile terre cuite' },
+  { color: '#64748b', label: 'Ardoise' },
+  { color: '#9ca3af', label: 'Zinc' },
+  { color: '#8b5a2b', label: 'Bois' },
+  { color: '#5f8f7a', label: 'Cuivre vert-de-gris' },
+  { color: '#1f2937', label: 'Anthracite' },
+] as const;
 const EDITOR_CARD_ACTION =
   'inline-flex items-center justify-center min-h-11 min-w-11 rounded-[var(--radius-button)] border border-border bg-surface text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
 const EDITOR_FILE =
@@ -3240,6 +3257,23 @@ export default function RoomLayoutEditor({
     setSelection(id ? [{ kind: 'wall', id }] : []);
   }, []);
 
+  /** Décor mural : sélectionne le plus long mur de l’étage affiché pour ouvrir son panneau « Images et graffitis ». */
+  const selectWallForArt = () => {
+    const activeStory = resolveActiveStoryId(blueprint);
+    const candidates = (blueprint.walls ?? []).filter((w) => !w.storyId || w.storyId === activeStory);
+    const longest = candidates.reduce<RoomWallSegment | null>(
+      (best, w) => (!best || wallLengthMeters(w, blueprint.canvas) > wallLengthMeters(best, blueprint.canvas) ? w : best),
+      null,
+    );
+    if (!longest) {
+      log('Ajoutez d’abord des murs à la salle', 'info');
+      return;
+    }
+    selectWall(longest.id);
+    setMobilePane('edit');
+    log('Mur sélectionné : ajoutez une image ou un graffiti dans le panneau', 'info');
+  };
+
   const renderChairImageUpload = (id: string, currentUrl?: string) => (
     <label className="block space-y-1.5">
       <span className="text-sm font-semibold text-foreground flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Image de chaise (optionnel)</span>
@@ -4403,23 +4437,57 @@ export default function RoomLayoutEditor({
                   </label>
                   {roofVisible && (
                     <div className="grid grid-cols-2 gap-3 pl-1">
-                      <label className="block space-y-1.5 col-span-2">
+                      <div className="col-span-2 space-y-1.5">
                         <span className="text-xs font-semibold text-foreground">Style de toit</span>
-                        <select
-                          value={blueprint.metadata.roofStyle ?? 'flat'}
-                          onChange={(e) => updateBlueprint({
-                            ...blueprint,
-                            metadata: { ...blueprint.metadata, roofStyle: e.target.value as RoofStyle },
-                          }, { message: `Toit : ${roofStyleLabels[e.target.value as RoofStyle]}`, kind: 'settings' })}
-                          className={EDITOR_FIELD}
-                        >
-                          {(Object.keys(roofStyleLabels) as RoofStyle[]).map((style) => (
-                            <option key={style} value={style}>{roofStyleLabels[style]}</option>
-                          ))}
-                        </select>
-                      </label>
+                        <div className="grid grid-cols-2 gap-1.5" role="group" aria-label="Style de toit">
+                          {(Object.keys(roofStyleLabels) as RoofStyle[]).map((style) => {
+                            const active = (blueprint.metadata.roofStyle ?? 'flat') === style;
+                            return (
+                              <button
+                                key={style}
+                                type="button"
+                                aria-pressed={active}
+                                onClick={() => updateBlueprint({
+                                  ...blueprint,
+                                  metadata: { ...blueprint.metadata, roofStyle: style },
+                                }, { message: `Toit : ${roofStyleLabels[style]}`, kind: 'settings' })}
+                                className={cn(
+                                  'min-h-11 rounded-[var(--radius-button)] border px-2 py-1.5 text-left text-xs font-semibold leading-snug transition-colors',
+                                  active ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface text-foreground hover:border-primary/40',
+                                )}
+                              >
+                                {roofStyleLabels[style]}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="col-span-2 space-y-1.5">
+                        <span className="text-xs font-semibold text-foreground">Matière et teinte</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {ROOF_COLOR_PRESETS.map((p) => {
+                            const active = (blueprint.metadata.roofColor ?? '#d6d3d1').toLowerCase() === p.color;
+                            return (
+                              <button
+                                key={p.color}
+                                type="button"
+                                title={p.label}
+                                aria-label={p.label}
+                                aria-pressed={active}
+                                onClick={() => updateBlueprint({
+                                  ...blueprint,
+                                  metadata: { ...blueprint.metadata, roofColor: p.color },
+                                }, { message: `Toit : ${p.label}`, kind: 'settings' })}
+                                className={cn('inline-flex h-11 w-11 items-center justify-center rounded-full border-2', active ? 'border-primary' : 'border-transparent')}
+                              >
+                                <span className="h-7 w-7 rounded-full border border-black/10" style={{ background: p.color }} />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                       <label className="block space-y-1.5">
-                        <span className="text-xs font-semibold text-foreground">Couleur plafond</span>
+                        <span className="text-xs font-semibold text-foreground">Autre teinte</span>
                         <input
                           type="color"
                           value={blueprint.metadata.roofColor ?? '#d6d3d1'}
@@ -4528,6 +4596,11 @@ export default function RoomLayoutEditor({
                       <p className={EDITOR_HINT}>Activez pour choisir le style (classique, cristal, moderne…).</p>
                     )}
                   </div>
+
+                  <LedShowControls
+                    value={blueprint.metadata.ledShow}
+                    onChange={(next, message) => updateBlueprint({ ...blueprint, metadata: { ...blueprint.metadata, ledShow: next } }, { message, kind: 'settings' })}
+                  />
 
                   <details className="group rounded-[var(--radius-button)] border border-border bg-surface-muted/30 px-2.5 py-2">
                     <summary className="text-sm font-semibold text-foreground cursor-pointer select-none min-h-11 flex items-center justify-between gap-2 list-none [&::-webkit-details-marker]:hidden">
@@ -5201,6 +5274,17 @@ export default function RoomLayoutEditor({
               onSelectWall={selectWall}
               onChange={(next, action) => updateBlueprint(next, action)}
             />
+            {!readOnly ? (
+              <WallArtPanel
+                blueprint={blueprint}
+                wallId={selected.id}
+                onChange={(next, action) => updateBlueprint(next, action)}
+                uploadImage={uploadElementImage}
+                canUploadImages={caps.canCustomImages}
+                imagesPlanLabel={describeEditorUpsell('Images sur les murs', { feature: 'canCustomImages' }, parsedEditorLevel).planLabel}
+                onLockedImages={() => setUpsell({ ...describeEditorUpsell('Images sur les murs', { feature: 'canCustomImages' }, parsedEditorLevel), label: 'Images sur les murs' })}
+              />
+            ) : null}
           </div>
           <LayoutActionPanel actions={actionLog} />
         </div>
@@ -5306,6 +5390,32 @@ export default function RoomLayoutEditor({
             ) : isInstrument ? (
               <p className="text-xs text-muted">Glissez-le sur un podium ou une scène pour le surélever.</p>
             ) : null}
+
+            {/* ───────── GUIRLANDES ───────── */}
+            {selectedFixture.kind === 'stringLight' && (
+              <div className="space-y-2 pt-2 border-t border-border">
+                <p className={EDITOR_HEADING}>Guirlande lumineuse</p>
+                {([
+                  ['stringLightStyle', 'Ampoules', STRING_LIGHT_STYLE_LABELS, 'edison'],
+                  ['stringLightLayout', 'Tracé', STRING_LIGHT_LAYOUT_LABELS, 'canopy'],
+                  ['stringLightMount', 'Accroche', STRING_LIGHT_MOUNT_LABELS, 'poles'],
+                ] as const).map(([key, label, labels, fallback]) => (
+                  <label key={key} className="block text-xs space-y-1">
+                    <span className="font-semibold text-muted">{label}</span>
+                    <select
+                      className={EDITOR_FIELD}
+                      value={(selectedFixture[key] as string | undefined) ?? fallback}
+                      onChange={(e) => updateFixture(selectedFixture.id, { [key]: e.target.value } as Partial<typeof selectedFixture>)}
+                    >
+                      {Object.entries(labels).map(([v, l]) => (
+                        <option key={v} value={v}>{l}</option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+                <p className={EDITOR_HINT}>« Accrochées au plafond » supprime les poteaux : idéal en intérieur.</p>
+              </div>
+            )}
 
             {/* ───────── PORTES & ENTRÉES D’ACCUEIL ───────── */}
             {isDoor && (
@@ -8253,6 +8363,7 @@ export default function RoomLayoutEditor({
     const push = (id: string, label: string, group: string, run: () => void, keywords?: string) => out.push({ id, label, group, run, keywords });
     push('table', 'Table', 'Mobilier', addTable, 'ronde banquet invités');
     push('free-chair', 'Fauteuil', 'Mobilier', addFreeChair, 'chaise siège');
+    push('wall-art', 'Image ou graffiti sur un mur', 'Murs', selectWallForArt, 'photo affiche logo tableau tag graffiti mural décor');
     if (caps.tableShapes.includes('arc')) push('arc-ring', 'Anneau d’arcs', 'Mobilier', addArcRing, 'tables arc');
     if (caps.canAddRows) {
       push('row', 'Rangée de chaises', 'Mobilier', addRow, 'conférence théâtre');
