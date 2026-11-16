@@ -982,7 +982,8 @@ export default function MarketplaceActivityFeed({
 
   return (
     <div className={cn('space-y-6', className)}>
-      {!user ? (
+      {/* Inviter à se connecter seulement quand il y a des réalisations à aimer ou commenter. */}
+      {!user && posts.length > 0 ? (
         <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl border border-primary/20 bg-primary/5 text-xs text-foreground">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary shrink-0" />
@@ -1032,7 +1033,7 @@ export default function MarketplaceActivityFeed({
           ))}
         </div>
       ) : posts.length === 0 ? (
-        <div className="text-center py-14 px-4 space-y-2 rounded-xl sm:rounded-2xl border border-dashed border-border bg-surface/30">
+        <div className="text-center py-10 px-4 space-y-2 rounded-2xl border border-dashed border-border bg-surface/30">
           <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto">
             {isVenue ? <Building2 className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
           </div>
