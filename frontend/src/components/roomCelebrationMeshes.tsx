@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { loadTiledTexture } from '@/lib/roomWebGLMaterials';
+import { withRepeat } from '@/lib/roomSurfaceFinish';
 import { bulbColor, bulbsAlongSpan, stringLightPlan, type StringLightLayout, type StringLightMount, type StringLightStyle } from '@/lib/roomStringLights';
 
 const GOLD = '#c9a227';
@@ -236,42 +237,161 @@ export function arcTableRadius(size: [number, number]): number {
   return Math.max(1.4, size[0] / 2);
 }
 
-/** Plateau en C pour tables de gala organique. */
+/** Jupe de nappe courbe (secteur de cylindre ouvert) avec plis verticaux qui s’évasent vers le sol. */
+function arcSkirtGeometry(radius: number, height: number, flare: number, foldDepth: number): THREE.BufferGeometry {
+  const radial = Math.max(48, Math.round((ARC_SWEEP * radius) / 0.05));
+  const geom = new THREE.CylinderGeometry(radius, radius, height, radial, 4, true, ARC_START, ARC_SWEEP);
+  const pos = geom.attributes.position as THREE.BufferAttribute;
+  const foldsPerM = 1 / 0.24;
+  for (let i = 0; i < pos.count; i += 1) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    const theta = Math.atan2(x, z);
+    // 0 sous le plateau, 1 au ras du sol : les plis naissent sous le bord et se creusent en tombant.
+    const f = THREE.MathUtils.clamp(0.5 - y / height, 0, 1);
+    const fold = Math.sin(theta * radius * foldsPerM * Math.PI * 2) * foldDepth * Math.pow(f, 1.4);
+    const r = radius + flare * f * f + fold;
+    pos.setXYZ(i, Math.sin(theta) * r, y, Math.cos(theta) * r);
+  }
+  geom.computeVertexNormals();
+  return geom;
+}
+
+/** Plateau en C pour tables de gala organique : plateau continu, nappe tombante plissée. */
 export function CatalogueArcTable({
   size,
   topY,
   color,
   selected,
+  cloth = true,
+  map,
+  normalMap,
 }: {
   size: [number, number];
   topY: number;
   color: string;
   selected: boolean;
+  /** Nappe jusqu’au sol (lin) ; sinon plateau nu sur ceinture et pieds. */
+  cloth?: boolean;
+  map?: THREE.Texture | null;
+  normalMap?: THREE.Texture | null;
 }) {
   const radius = arcTableRadius(size);
   const thick = Math.min(0.72, Math.max(0.48, size[1] * 0.38));
-  const segs = 12;
+  const half = thick / 2;
   const topColor = selected ? '#c7d2fe' : color;
+  const topGeom = useMemo(() => {
+    const overhang = cloth ? 0.03 : 0.01;
+    const ro = radius + half + overhang;
+    const ri = radius - half - overhang;
+    const steps = 64;
+    const shape = new THREE.Shape();
+    for (let i = 0; i <= steps; i += 1) {
+      const a = ARC_START + (i / steps) * ARC_SWEEP;
+      if (i === 0) shape.moveTo(Math.sin(a) * ro, Math.cos(a) * ro);
+      else shape.lineTo(Math.sin(a) * ro, Math.cos(a) * ro);
+    }
+    for (let i = steps; i >= 0; i -= 1) {
+      const a = ARC_START + (i / steps) * ARC_SWEEP;
+      shape.lineTo(Math.sin(a) * ri, Math.cos(a) * ri);
+    }
+    const g = new THREE.ExtrudeGeometry(shape, {
+      depth: 0.045,
+      curveSegments: 1,
+      bevelEnabled: true,
+      bevelThickness: 0.008,
+      bevelSize: 0.008,
+      bevelSegments: 2,
+    });
+    // Forme dans le plan XY : on la couche (Y du profil → Z monde), l’épaisseur part vers le bas.
+    g.rotateX(Math.PI / 2);
+    return g;
+  }, [radius, half, cloth]);
+  const skirtH = topY - 0.015;
+  const outerSkirt = useMemo(
+    () => (cloth ? arcSkirtGeometry(radius + half + 0.035, skirtH, 0.035, 0.014) : null),
+    [cloth, radius, half, skirtH],
+  );
+  const innerSkirt = useMemo(
+    () => (cloth ? arcSkirtGeometry(radius - half - 0.035, skirtH, -0.03, 0.012) : null),
+    [cloth, radius, half, skirtH],
+  );
+  useEffect(() => () => {
+    topGeom.dispose();
+    outerSkirt?.dispose();
+    innerSkirt?.dispose();
+  }, [topGeom, outerSkirt, innerSkirt]);
+  const skirtLen = ARC_SWEEP * radius;
+  const skirtMap = useMemo(() => withRepeat(map ?? null, Math.max(1, Math.round(skirtLen * 4)), 1.2), [map, skirtLen]);
+  const skirtNormal = useMemo(() => withRepeat(normalMap ?? null, Math.max(1, Math.round(skirtLen * 4)), 1.2), [normalMap, skirtLen]);
+  const endRadius = radius;
+  const endW = thick + 0.07;
   return (
     <group>
-      {Array.from({ length: segs }).map((_, i) => {
-        const t0 = ARC_START + (i / segs) * ARC_SWEEP;
-        const t1 = ARC_START + ((i + 1) / segs) * ARC_SWEEP;
-        const mid = (t0 + t1) / 2;
-        const len = Math.abs(t1 - t0) * radius;
-        return (
-          <group key={i} position={[Math.sin(mid) * radius, topY, Math.cos(mid) * radius]} rotation={[0, mid, 0]}>
-            <mesh castShadow receiveShadow>
-              <boxGeometry args={[len * 1.08, 0.06, thick]} />
-              <meshStandardMaterial color={topColor} roughness={0.55} />
+      <mesh geometry={topGeom} position={[0, topY + 0.03, 0]} castShadow receiveShadow>
+        {cloth ? (
+          <meshPhysicalMaterial
+            color={topColor}
+            map={map ?? null}
+            normalMap={normalMap ?? null}
+            normalScale={new THREE.Vector2(0.5, 0.5)}
+            roughness={0.86}
+            sheen={0.55}
+            sheenRoughness={0.6}
+            sheenColor="#ffffff"
+          />
+        ) : (
+          <meshStandardMaterial color={topColor} map={map ?? null} roughness={0.5} />
+        )}
+      </mesh>
+      {cloth && outerSkirt && innerSkirt ? (
+        <>
+          {[outerSkirt, innerSkirt].map((g, i) => (
+            <mesh key={i} geometry={g} position={[0, 0.015 + skirtH / 2, 0]} castShadow receiveShadow>
+              <meshPhysicalMaterial
+                color={topColor}
+                map={skirtMap}
+                normalMap={skirtNormal}
+                normalScale={new THREE.Vector2(0.45, 0.45)}
+                roughness={0.9}
+                sheen={0.5}
+                sheenRoughness={0.65}
+                sheenColor="#ffffff"
+                side={THREE.DoubleSide}
+              />
             </mesh>
-            <mesh position={[0, -0.14, 0]} castShadow>
-              <boxGeometry args={[len * 1.04, 0.22, thick * 0.96]} />
-              <meshStandardMaterial color={CREAM} roughness={0.9} transparent opacity={0.45} />
+          ))}
+          {/* Retombées droites aux deux extrémités de l’arc. */}
+          {[ARC_START, ARC_START + ARC_SWEEP].map((a, i) => (
+            <mesh
+              key={`end-${i}`}
+              position={[Math.sin(a) * endRadius, 0.015 + skirtH / 2, Math.cos(a) * endRadius]}
+              rotation={[0, a - Math.PI / 2, 0]}
+              castShadow
+              receiveShadow
+            >
+              <planeGeometry args={[endW, skirtH]} />
+              <meshPhysicalMaterial color={topColor} roughness={0.9} sheen={0.5} sheenColor="#ffffff" side={THREE.DoubleSide} />
             </mesh>
-          </group>
-        );
-      })}
+          ))}
+        </>
+      ) : (
+        <>
+          {[0.08, 0.36, 0.64, 0.92].flatMap((t) =>
+            [-1, 1].map((side) => {
+              const a = ARC_START + t * ARC_SWEEP;
+              const r = radius + side * (half - 0.06);
+              return (
+                <mesh key={`leg-${t}-${side}`} position={[Math.sin(a) * r, topY / 2, Math.cos(a) * r]} castShadow>
+                  <cylinderGeometry args={[0.022, 0.018, topY - 0.02, 10]} />
+                  <meshStandardMaterial color="#3f3a36" metalness={0.6} roughness={0.35} />
+                </mesh>
+              );
+            }),
+          )}
+        </>
+      )}
     </group>
   );
 }

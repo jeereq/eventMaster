@@ -204,7 +204,7 @@ def wood_planks(name: str, palette: list[tuple[float, str]], seed: int, plank_w:
 
 # ───────────────────────── herringbone ─────────────────────────
 
-def herringbone(name: str, colors: list[str], seed: int, w: int = 64, ratio: int = 4, grain_strength: float = 0.2):
+def herringbone(name: str, colors: list[str], seed: int, w: int = 64, ratio: int = 4, grain_strength: float = 0.2, rings: float = 7, joint_dark: float = 0.45, tone_jitter: tuple[float, float] = (0.92, 1.06), figure: float = 0.0):
     size = SIZE
     L = w * ratio
     # Réseau : H_k en (k*w, k*w), V_k en (L + k*w, w - L + k*w) ; translation t2 trouvée par recherche.
@@ -212,6 +212,9 @@ def herringbone(name: str, colors: list[str], seed: int, w: int = 64, ratio: int
         cnt = np.zeros((size, size), dtype=np.int16)
         idm = -np.ones((size, size), dtype=np.int32)
         orient = np.zeros((size, size), dtype=np.int8)
+        # Coordonnées locales de chaque lame : u le long du fil, v en travers (pixels).
+        lu = np.zeros((size, size))
+        lv = np.zeros((size, size))
         pid = 0
         rng_i = range(-size // w - 4, size // w + 4)
         for a in rng_i:
@@ -226,15 +229,22 @@ def herringbone(name: str, colors: list[str], seed: int, w: int = 64, ratio: int
                     cnt[np.ix_(ys, xs)] += 1
                     idm[np.ix_(ys, xs)] = pid
                     orient[np.ix_(ys, xs)] = kind
+                    if kind == 0:
+                        lu[np.ix_(ys, xs)] = np.arange(pw)[None, :]
+                        lv[np.ix_(ys, xs)] = np.arange(ph)[:, None]
+                    else:
+                        lu[np.ix_(ys, xs)] = np.arange(ph)[:, None]
+                        lv[np.ix_(ys, xs)] = np.arange(pw)[None, :]
                     pid += 1
-        return cnt, idm, orient, pid
+        return cnt, idm, orient, pid, lu, lv
 
     t2 = (L + w, w - L)
-    cnt, idm, orient, count = cover(t2)
+    cnt, idm, orient, count, lu, lv = cover(t2)
     # Les motifs se recouvrent via le modulo : on garde la dernière pose (partition exacte vérifiée ci-dessous).
     rng = np.random.default_rng(seed)
-    gh = grain_field(size, seed + 3, 7, 'x')
-    gv = grain_field(size, seed + 4, 7, 'y')
+    gh = grain_field(size, seed + 3, rings, 'x')
+    gv = grain_field(size, seed + 4, rings, 'y')
+    warp_n = spectral_noise(size, seed + 5, beta=3.0)
     t = np.zeros((size, size))
     col = np.zeros((size, size, 3))
     palette = [rgb(c) for c in colors]
@@ -244,7 +254,20 @@ def herringbone(name: str, colors: list[str], seed: int, w: int = 64, ratio: int
         g = gh if orient[m][0] == 0 else gv
         dy, dx = rng.integers(0, size, 2)
         t[m] = np.roll(np.roll(g, dy, axis=0), dx, axis=1)[m]
-        c = palette[int(rng.integers(0, len(palette)))] * rng.uniform(0.92, 1.06)
+        if figure > 0:
+            # Dosse : cernes en ogives (« cathédrale ») centrées au hasard sur la lame,
+            # au lieu de fibres droites qui donnaient un aspect de métal brossé.
+            u = lu[m] / L
+            v = lv[m] / w
+            u0 = rng.uniform(0.25, 0.75)
+            curv = rng.uniform(0.6, 1.4)
+            k = rng.uniform(1.1, 1.9)
+            wob = (warp_n[m] - 0.5) * 0.35
+            phase = k * (v - rng.uniform(-0.5, 0.5) + curv * (u - u0) ** 2) + wob
+            # Bois final : liserés fins et plus sombres sur un bois de printemps clair.
+            late = np.power(0.5 + 0.5 * np.cos(2 * np.pi * phase), 6)
+            t[m] = np.clip(t[m] - figure * late + figure * 0.25, 0, 1)
+        c = palette[int(rng.integers(0, len(palette)))] * rng.uniform(*tone_jitter)
         col[m] = c
     # Joints : frontière entre identifiants différents.
     edge = np.zeros((size, size))
@@ -254,7 +277,7 @@ def herringbone(name: str, colors: list[str], seed: int, w: int = 64, ratio: int
     edge = np.maximum(edge, np.roll(edge, 1, axis=1) * 0.6)
     albedo = col * (1 - grain_strength + grain_strength * 2 * t)[..., None]
     albedo *= (0.95 + 0.1 * spectral_noise(size, seed + 8, beta=1.2))[..., None]
-    albedo *= (1 - 0.45 * edge)[..., None]
+    albedo *= (1 - joint_dark * edge)[..., None]
     height = 0.8 + 0.12 * t - 0.6 * edge
     return albedo, height
 
@@ -476,11 +499,12 @@ def main():
     a, h = epoxy_mint_gold(); save('epoxy-mint-gold', a, h, 1.5)
     a, h = flagstone(); save('flagstone', a, h, 8)
     a, h = travertine(); save('travertine', a, h, 5)
-    a, h = herringbone('herringbone-grey', ['#8b8d8f', '#6e7073', '#a6a7a6', '#5c5e61', '#c1c0bc'], 111); save('herringbone-grey', a, h, 6)
-    a, h = herringbone('parquet-oak-herringbone', ['#b98a55', '#a87a47', '#c49762', '#9c6f3f', '#b3854f'], 161); save('parquet-oak-herringbone', a, h, 6)
+    # Chêne gris cérusé : teintes resserrées et veinage marqué (l’ancienne palette, trop contrastée, lisait comme du métal brossé).
+    a, h = herringbone('herringbone-grey', ['#968f88', '#88827b', '#a29c94', '#8f8982', '#aba49c'], 111, grain_strength=0.3, joint_dark=0.32, tone_jitter=(0.95, 1.04), figure=0.3); save('herringbone-grey', a, h, 6)
+    a, h = herringbone('parquet-oak-herringbone', ['#b98a55', '#a87a47', '#c49762', '#9c6f3f', '#b3854f'], 161, figure=0.25); save('parquet-oak-herringbone', a, h, 6)
     a, h = wood_planks('oak-planks', [(0, '#9b6d3e'), (0.4, '#b58450'), (0.75, '#c89a64'), (1, '#d6ad78')], 171, plank_w=128, rings=9, tone_var=0.1)
     save('oak-planks', a, h, 6)
-    a, h = herringbone('herringbone-greige', ['#c3b8a6', '#b3a794', '#cfc5b4', '#a99d8a'], 121); save('herringbone-greige', a, h, 6)
+    a, h = herringbone('herringbone-greige', ['#c3b8a6', '#b3a794', '#cfc5b4', '#a99d8a'], 121, figure=0.25); save('herringbone-greige', a, h, 6)
     a, h = wood_planks('wood-blonde', [(0, '#b89a72'), (0.4, '#cdb38e'), (0.75, '#dcc6a4'), (1, '#e8d8bb')], 131, plank_w=128, rings=8, tone_var=0.08)
     save('wood-blonde', a, h, 6)
     a, h = wood_planks('wood-charcoal', [(0, '#2e2c2a'), (0.45, '#434039'), (0.8, '#58544c'), (1, '#6a655b')], 141, plank_w=102, rings=10, tone_var=0.14)
