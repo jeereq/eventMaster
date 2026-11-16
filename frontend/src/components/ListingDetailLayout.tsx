@@ -327,16 +327,25 @@ export default function ListingDetailLayout({
     </>
   ) : null;
 
+  const discountPct = showCompare && compareAtFc ? Math.round((1 - priceFromFc! / compareAtFc) * 100) : 0;
   const priceBlock = (
-    <div className="space-y-1">
-      <p className="text-2xl font-semibold text-foreground tracking-tight tabular-nums">{priceLabel}</p>
+    <div className="space-y-1.5">
+      <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+        <span className="text-3xl font-semibold text-foreground tracking-tight tabular-nums">{priceLabel}</span>
+        {priceUnitLabel && priceFromFc != null ? (
+          <span className="text-sm text-muted">{priceUnitLabel}</span>
+        ) : null}
+      </p>
       {showCompare ? (
-        <p className="text-sm text-muted">
-          <span className="line-through tabular-nums">{formatFc(compareAtFc!)}</span>
-          {priceNote ? <span> · {priceNote}</span> : null}
+        <p className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-muted line-through tabular-nums">{formatFc(compareAtFc!)}</span>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-festive-accent/12 text-festive-accent border border-festive-accent/25">
+            {priceNote || 'Promotion'}
+            {discountPct > 0 ? <span className="tabular-nums">−{discountPct} %</span> : null}
+          </span>
         </p>
       ) : null}
-      {priceUnitLabel ? <p className="text-xs text-muted">{priceUnitLabel}</p> : null}
+      {priceUnitLabel && priceFromFc == null ? <p className="text-xs text-muted">{priceUnitLabel}</p> : null}
       {quotaLabel ? <p className="text-xs text-muted">{quotaLabel}</p> : null}
     </div>
   );
@@ -709,42 +718,42 @@ export default function ListingDetailLayout({
                 embedded ? 'scroll-mt-[9.5rem] md:scroll-mt-24' : 'scroll-mt-24',
               )}
             >
-              <div className="hidden lg:block">
-                {priceBlock}
-              </div>
-
-              {relationStatus ? (
-                <div className="hidden lg:block">{relationStatus}</div>
-              ) : null}
-
-              {showCommerce || availability || preview ? (
-                <div className="flex flex-col gap-3">
-              {availability ? (
-                <div
-                  id="listing-availability"
-                  className={embedded ? 'scroll-mt-[9.5rem] md:scroll-mt-24' : 'scroll-mt-24'}
-                >
-                  {availability}
+              <div className="overflow-hidden rounded-[var(--radius-card)] border border-border bg-surface shadow-[var(--shadow-soft)]">
+                <div className="p-4 sm:p-5 space-y-1.5">
+                  <p className={cn('text-xs font-semibold uppercase tracking-wider text-primary lg:hidden', !(showCommerce || availability) && 'hidden')}>
+                    {listingKind === 'event' ? 'Billetterie & Inscription' : 'Demande & Réservation'}
+                  </p>
+                  {priceBlock}
+                  {relationStatus ? (
+                    <div className="hidden lg:block pt-2 empty:hidden">{relationStatus}</div>
+                  ) : null}
                 </div>
-              ) : null}
 
-              {/* Sur mobile, afficher le bloc prix et le titre pour une identification immédiate de la billetterie / réservation */}
-              <div className="lg:hidden pt-4 border-t border-border space-y-1">
-                <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-                  {listingKind === 'event' ? 'Billetterie & Inscription' : 'Demande & Réservation'}
-                </p>
-                {priceBlock}
+                {availability ? (
+                  <div
+                    id="listing-availability"
+                    className={cn(
+                      'border-t border-border px-4 py-4 sm:px-5',
+                      '[&>div]:border-0 [&>div]:rounded-none [&>div]:bg-transparent [&>div]:p-0',
+                      embedded ? 'scroll-mt-[9.5rem] md:scroll-mt-24' : 'scroll-mt-24',
+                    )}
+                  >
+                    {availability}
+                  </div>
+                ) : null}
+
+                {showCommerce || preview ? (
+                  <div className="border-t border-border bg-surface-muted/30 p-4 sm:p-5 flex flex-col gap-3">
+                    {showCommerce ? (
+                      commercePanel
+                    ) : (
+                      <p className="text-xs text-muted leading-relaxed">
+                        Aperçu interne — les demandes de devis et réservations restent sur la fiche publique.
+                      </p>
+                    )}
+                  </div>
+                ) : null}
               </div>
-
-              {showCommerce ? (
-                commercePanel
-              ) : preview ? (
-                <p className="text-xs text-muted leading-relaxed">
-                  Aperçu interne — les demandes de devis et réservations restent sur la fiche publique.
-                </p>
-              ) : null}
-                </div>
-              ) : null}
             </aside>
           </div>
         </>
