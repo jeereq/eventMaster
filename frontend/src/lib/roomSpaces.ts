@@ -70,6 +70,7 @@ const ZONE_SPACES: Record<string, { icon: RoomSpaceIcon; title: string }> = {
   vip: { icon: 'vip', title: 'Espace VIP' },
   buffet: { icon: 'buffet', title: 'Buffet' },
   custom: { icon: 'zone', title: 'Zone' },
+  plot: { icon: 'zone', title: 'Emplacement' },
 };
 
 /** Ordre d’affichage : ce que l’on veut voir en premier dans une salle. */
@@ -154,7 +155,7 @@ export function listRoomSpaces(blueprint: RoomLayoutBlueprint, maxSpaces = 14): 
       const w = (finite(item.w, 0) / 100) * widthM;
       const d = (finite(item.h, 0) / 100) * depthM;
       if (w <= 0.05 || d <= 0.05) continue;
-      const useLabel = item.zoneKind === 'custom' || !item.zoneKind;
+      const useLabel = item.zoneKind === 'custom' || item.zoneKind === 'plot' || !item.zoneKind;
       spaces.push({
         id: item.id,
         icon: meta.icon,

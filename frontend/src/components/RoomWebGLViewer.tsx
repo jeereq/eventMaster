@@ -138,6 +138,7 @@ import {
 } from '@/lib/roomSpaces';
 import RoomShowcasePostProcessing from '@/components/RoomShowcasePostProcessing';
 import { LocalRoomEnvironment } from '@/components/room/LocalRoomEnvironment';
+import { PlotMarking } from '@/components/room/PlotMarkingMeshes';
 import { LandscapeMesh, OutdoorSurroundingsScene, seedFromId } from '@/components/room/OutdoorLandscapeMeshes';
 import { CorridorMesh } from '@/components/room/CorridorMesh';
 import { AtelierGlazing, CassettePanels, DoorHandles, Hinges, handleY } from '@/components/room/DoorHardware';
@@ -2408,7 +2409,9 @@ function ZoneMesh({
   hideLabels = false,
   dance,
   ceilingM = 3,
+  plotBorder,
 }: {
+  plotBorder?: import('@/lib/roomLayoutUtils').PlotBorderStyle;
   xPct: number;
   yPct: number;
   wPct: number;
@@ -2436,7 +2439,8 @@ function ZoneMesh({
   const mat = useMemo(() => resolveZoneMaterialMap(material), [material]);
   const { gl } = useThree();
   const rot = ((rotation ?? 0) * Math.PI) / 180;
-  const thickness = mat.thicknessM ?? 0.03;
+  const isPlot = zoneKind === 'plot';
+  const thickness = isPlot ? 0 : (mat.thicknessM ?? 0.03);
 
   return (
     <group
@@ -2455,16 +2459,20 @@ function ZoneMesh({
         gl.domElement.style.cursor = 'grabbing';
       }}
     >
-      <EventZoneSurface
-        w={w}
-        h={h}
-        thickness={thickness}
-        material={material}
-        zoneKind={zoneKind}
-        color={color}
-        selected={selected}
-        pickable={pickable}
-      />
+      {isPlot ? (
+        <PlotMarking w={w} h={h} label={label} border={plotBorder} color={color} selected={selected} pickable={pickable} />
+      ) : (
+        <EventZoneSurface
+          w={w}
+          h={h}
+          thickness={thickness}
+          material={material}
+          zoneKind={zoneKind}
+          color={color}
+          selected={selected}
+          pickable={pickable}
+        />
+      )}
       {dance && (dance.danceStyle && dance.danceStyle !== 'classic' || dance.danceMonogram || dance.danceMirrorBall) ? (
         <DanceFloorDressing
           w={w}
@@ -2479,13 +2487,13 @@ function ZoneMesh({
         />
       ) : null}
       {/* Repère d’orientation : utile en édition, masqué en aperçu et en visite. */}
-      {!hideLabels && (
+      {!hideLabels && !isPlot && (
         <mesh position={[0, thickness + 0.04, -h * 0.35]} rotation={[-Math.PI / 2, 0, Math.PI]}>
           <coneGeometry args={[Math.min(w, h) * 0.06, Math.min(w, h) * 0.14, 3]} />
           <meshStandardMaterial color="#fef3c7" emissive="#f59e0b" emissiveIntensity={0.45} />
         </mesh>
       )}
-      {!hideLabels && (
+      {!hideLabels && !isPlot && (
         <Html zIndexRange={[20, 0]} center distanceFactor={12} style={{ pointerEvents: 'none' }} position={[0, thickness + 0.22, 0]}>
           <span className="text-xs font-bold text-background bg-foreground/85 px-1.5 py-0.5 rounded shadow-sm">{label}</span>
         </Html>
@@ -4127,6 +4135,7 @@ function SceneContent({
               pickable={surfacePickable || selected.some((s) => s.kind === 'zone' && s.id === item.id)}
               hideLabels={hideLabels}
               dance={item.zoneKind === 'dance' ? item : undefined}
+              plotBorder={item.plotBorder}
               ceilingM={wallHeightM}
             />
             </group>

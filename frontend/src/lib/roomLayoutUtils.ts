@@ -248,7 +248,17 @@ export type ColumnShape = 'round' | 'square' | 'fluted';
 export type FlowerType = 'rose' | 'tulipe' | 'orchidee' | 'tournesol' | 'lavande' | 'boquet' | 'personnalise';
 
 /** Type de zone au sol (piste, VIP, moquette…). */
-export type ZoneKind = 'dance' | 'vip' | 'buffet' | 'carpet' | 'custom';
+export type ZoneKind = 'dance' | 'vip' | 'buffet' | 'carpet' | 'custom' | 'plot';
+/**
+ * Emplacement (zoneKind « plot ») : surface délimitée sans murs ni revêtement posé,
+ * pour découper un espace ouvert (stands, lots, coins). Seule la bordure change.
+ */
+export type PlotBorderStyle = 'paint' | 'rope' | 'none';
+export const plotBorderLabels: Record<PlotBorderStyle, string> = {
+  paint: 'Marquage au sol',
+  rope: 'Piquets et cordon',
+  none: 'Teinte seule',
+};
 /** Matériau de surface pour zones / moquettes. */
 export type ZoneMaterial = 'wood' | 'carpet' | 'vinyl' | 'led' | 'marble' | 'concrete' | 'parquet' | 'epoxy' | 'grass' | 'gravel' | 'brick';
 
@@ -788,6 +798,8 @@ export interface RoomLayoutBlueprint {
         danceMonogram?: string;
         /** Boule à facettes suspendue au-dessus de la piste. */
         danceMirrorBall?: boolean;
+        /** Emplacement : façon de délimiter la surface (marquage, cordon, teinte). */
+        plotBorder?: PlotBorderStyle;
         x: number;
         y: number;
         w: number;
@@ -1093,10 +1105,13 @@ export function createBlueprintZone(
           ? 'buffet'
           : label.toLowerCase().includes('moquette') || label.toLowerCase().includes('tapis')
             ? 'carpet'
-            : 'custom');
+            : label.toLowerCase().includes('emplacement')
+              ? 'plot'
+              : 'custom');
+  // Emplacement : pas de revêtement, le sol de la salle (ou le terrain) reste visible.
   const material =
     opts.material ??
-    (zoneKind === 'dance' ? 'vinyl' : zoneKind === 'carpet' ? 'carpet' : zoneKind === 'vip' ? 'marble' : 'wood');
+    (zoneKind === 'plot' ? undefined : zoneKind === 'dance' ? 'vinyl' : zoneKind === 'carpet' ? 'carpet' : zoneKind === 'vip' ? 'marble' : 'wood');
   return {
     id: makeLayoutId('zone'),
     kind: 'zone',
@@ -1104,6 +1119,7 @@ export function createBlueprintZone(
     zoneKind,
     material,
     color: opts.color,
+    ...(zoneKind === 'plot' ? { plotBorder: 'paint' as const } : {}),
     x: 18 + (index % 3) * 10,
     y: 28 + (index % 2) * 8,
     w: opts.w ?? (zoneKind === 'dance' ? 32 : zoneKind === 'carpet' ? 28 : 26),
@@ -1236,6 +1252,8 @@ export function resolveFurnitureSurfaceAt(
 
   for (const item of blueprint.furniture) {
     if (item.kind !== 'zone' || item.id === ignoreId) continue;
+    // Emplacement : simple marquage, le mobilier reste posé sur le sol.
+    if (item.zoneKind === 'plot') continue;
     if (!pointInLayoutRect(xPct, yPct, { x: item.x, y: item.y, w: item.w, h: item.h })) continue;
     const kind =
       item.zoneKind === 'dance' ? 'dance' :
@@ -1696,7 +1714,8 @@ export function estimateTableFootprint(
 
 function furnitureLayoutBox(item: RoomLayoutBlueprint['furniture'][number]): LayoutBox | null {
   if (item.kind === 'zone') {
-    if (item.zoneKind === 'dance' || item.zoneKind === 'carpet') return null;
+    // Piste, tapis et emplacements se meublent : ils ne gênent pas la pose.
+    if (item.zoneKind === 'dance' || item.zoneKind === 'carpet' || item.zoneKind === 'plot') return null;
     return { x: item.x, y: item.y, w: item.w, h: item.h };
   }
   if (item.kind === 'table') {
@@ -2082,6 +2101,7 @@ export const zoneKindLabels: Record<ZoneKind, string> = {
   buffet: 'Buffet',
   carpet: 'Moquette / tapis',
   custom: 'Zone libre',
+  plot: 'Emplacement (sans murs)',
 };
 
 export const zoneMaterialLabels: Record<ZoneMaterial, string> = {
