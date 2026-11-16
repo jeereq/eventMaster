@@ -1017,7 +1017,7 @@ function assignImportedTiers(
 
 /** Toitures que le rendu 3D sait construire (tout style reconnu par l’IA est conservé). */
 const IMPORTED_ROOF_STYLES = new Set<RoofStyle>([
-  'tentSwag', 'pagoda', 'gabled', 'coffered', 'glassCanopy', 'dome', 'pergola', 'mansard', 'skylight', 'fabricStretch',
+  'tentSwag', 'pagoda', 'gabled', 'coffered', 'glassCanopy', 'dome', 'pergola', 'mansard', 'skylight', 'fabricStretch', 'clearTent', 'barrel', 'sawtooth',
 ]);
 
 const IMPORTED_CHANDELIER_STYLES = new Set<ChandelierFixtureStyle>([

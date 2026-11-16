@@ -134,6 +134,8 @@ import {
   barStylePresets,
   nextOwnedLabel,
   roofStyleLabels,
+  stageRigLabels,
+  type StageRig,
   screenKindLabels,
   screenRatioLabels,
   centerpieceStyleLabels,
@@ -341,6 +343,7 @@ import {
   type FoundationKind,
 } from '@/lib/roomBuildingUtils';
 import { cn } from '@/lib/cn';
+import { DANCE_FLOOR_STYLE_LABELS, DANCE_LED_PATTERN_LABELS, type DanceFloorStyle, type DanceLedPattern } from '@/lib/roomDanceFloor';
 import { TEMPLATE_CATEGORIES, templateMatchesCategory, type TemplateCategory } from '@/lib/roomTemplateCategories';
 import { supportsOneSideSeating, tablePlateSizeMeters } from '@/lib/tablePlanUtils';
 import { StudioMobileDock } from '@/components/StudioMobileDock';
@@ -6086,6 +6089,39 @@ export default function RoomLayoutEditor({
                 </select>
               </label>
             ) : null}
+            {selectedFixture.kind === 'stage' ? (
+              <div className="space-y-1.5">
+                <span className="text-xs font-semibold text-muted">Habillage de scène</span>
+                <div className="grid grid-cols-2 gap-1.5" role="group" aria-label="Habillage de scène">
+                  {(Object.keys(stageRigLabels) as StageRig[]).map((rig) => {
+                    const active = (selectedFixture.stageRig ?? 'none') === rig;
+                    return (
+                      <button
+                        key={rig}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => updateFixture(selectedFixture.id, { stageRig: rig }, `Scène : ${stageRigLabels[rig]}`)}
+                        className={cn(
+                          'min-h-11 rounded-[var(--radius-button)] border px-2 py-1.5 text-left text-xs font-semibold leading-snug transition-colors',
+                          active ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface text-foreground hover:border-primary/40',
+                        )}
+                      >
+                        {stageRigLabels[rig]}
+                      </button>
+                    );
+                  })}
+                </div>
+                <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedFixture.stageStairs !== false}
+                    onChange={(e) => updateFixture(selectedFixture.id, { stageStairs: e.target.checked }, e.target.checked ? 'Escalier de scène ajouté' : 'Escalier de scène retiré')}
+                    className="rounded border-border size-4"
+                  />
+                  <span>Escalier d’accès (dès 30 cm de haut)</span>
+                </label>
+              </div>
+            ) : null}
 
             {isPodium && (
               <>
@@ -7926,6 +7962,64 @@ export default function RoomLayoutEditor({
                 className="w-full min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer"
               />
             </label>
+            {selectedFurniture.zoneKind === 'dance' ? (
+              <div className="space-y-2 rounded-[var(--radius-button)] border border-border bg-surface p-2.5">
+                <p className="text-sm font-semibold text-foreground">Habillage de la piste</p>
+                <div className="grid grid-cols-2 gap-1.5" role="group" aria-label="Style de piste">
+                  {(Object.keys(DANCE_FLOOR_STYLE_LABELS) as DanceFloorStyle[]).map((style) => {
+                    const active = (selectedFurniture.danceStyle ?? 'classic') === style;
+                    return (
+                      <button
+                        key={style}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => updateFurniture(selectedFurniture.id, { danceStyle: style }, `Piste : ${DANCE_FLOOR_STYLE_LABELS[style]}`)}
+                        className={cn(
+                          'min-h-11 rounded-[var(--radius-button)] border px-2 py-1.5 text-left text-xs font-semibold leading-snug transition-colors',
+                          active ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface text-foreground hover:border-primary/40',
+                        )}
+                      >
+                        {DANCE_FLOOR_STYLE_LABELS[style]}
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedFurniture.danceStyle === 'ledTiles' ? (
+                  <label className="block text-xs space-y-1">
+                    <span className="font-semibold text-muted">Animation des dalles</span>
+                    <select
+                      value={selectedFurniture.danceLedPattern ?? 'rainbow'}
+                      onChange={(e) => updateFurniture(selectedFurniture.id, { danceLedPattern: e.target.value as DanceLedPattern }, 'Animation de la piste LED')}
+                      className={EDITOR_FIELD}
+                    >
+                      {(Object.keys(DANCE_LED_PATTERN_LABELS) as DanceLedPattern[]).map((p) => (
+                        <option key={p} value={p}>{DANCE_LED_PATTERN_LABELS[p]}</option>
+                      ))}
+                    </select>
+                    <span className="block text-muted">La teinte ci-dessus colore la vague, le damier et l’onde.</span>
+                  </label>
+                ) : null}
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Monogramme au centre</span>
+                  <input
+                    value={selectedFurniture.danceMonogram ?? ''}
+                    maxLength={12}
+                    placeholder="Ex. A & J"
+                    onChange={(e) => updateFurniture(selectedFurniture.id, { danceMonogram: e.target.value || undefined }, 'Monogramme de la piste')}
+                    className={EDITOR_FIELD}
+                  />
+                </label>
+                <label className="flex items-center gap-2 min-h-11 text-sm font-medium text-foreground cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedFurniture.danceMirrorBall === true}
+                    onChange={(e) => updateFurniture(selectedFurniture.id, { danceMirrorBall: e.target.checked }, e.target.checked ? 'Boule à facettes ajoutée' : 'Boule à facettes retirée')}
+                    className="rounded border-border size-4"
+                  />
+                  <span>Boule à facettes au-dessus</span>
+                </label>
+              </div>
+            ) : null}
             <div className="grid grid-cols-2 gap-2">
               <label className="text-xs space-y-1">
                 <span className="font-semibold text-muted">Largeur %</span>

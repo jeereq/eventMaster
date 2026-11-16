@@ -92,6 +92,7 @@ import {
   AmphitheaterRiser,
   RISER_FRONT_OVERHANG_M,
   EventStage,
+  StageFlowerCluster,
   EventZoneSurface,
 } from '@/components/CatalogueEventArchitecture';
 import {
@@ -148,11 +149,13 @@ type SurfaceDecor = Pick<
   RoomLayoutBlueprint['fixtures'][number],
   | 'aisleColor' | 'aisleBorderColor' | 'petalColor' | 'petalDensity' | 'lanternSpacingM' | 'surfaceImageTileM'
   | 'corridorWalls' | 'corridorWallHeightM' | 'corridorWallColor' | 'corridorPlinths' | 'corridorSconces' | 'corridorSconceSpacingM'
-  | 'hardwareFinish' | 'stringLightStyle' | 'stringLightLayout' | 'stringLightMount'
+  | 'hardwareFinish' | 'stringLightStyle' | 'stringLightLayout' | 'stringLightMount' | 'stageRig' | 'stageStairs'
 >;
 import { CustomElementMesh } from '@/components/room/CustomElementMesh';
 import { DomeRoof, RoofLantern, StyledRoof, TentSidewall } from '@/components/room/RoofMeshes';
 import { CofferedCeiling, RooftopEquipment } from '@/components/room/RoofDetails';
+import { DanceFloorDressing } from '@/components/room/DanceFloorMeshes';
+import { StageRigDressing } from '@/components/room/StageDressing';
 import { offsetRing, roofFootprint } from '@/lib/roomRoofGeometry';
 import type { CustomElementDefinition } from '@/lib/roomCustomElements';
 import { VenueEquipmentMesh, isVenueEquipmentKind, venueEquipmentHeight } from '@/components/room/VenueEquipmentMeshes';
@@ -823,7 +826,10 @@ function RoofMesh({
     roofStyle === 'glassCanopy' ||
     roofStyle === 'mansard' ||
     roofStyle === 'pergola' ||
-    roofStyle === 'fabricStretch'
+    roofStyle === 'fabricStretch' ||
+    roofStyle === 'clearTent' ||
+    roofStyle === 'barrel' ||
+    roofStyle === 'sawtooth'
   ) {
     return <StyledRoof style={roofStyle} props={styledProps} />;
   }
@@ -2400,6 +2406,8 @@ function ZoneMesh({
   readOnly,
   pickable = true,
   hideLabels = false,
+  dance,
+  ceilingM = 3,
 }: {
   xPct: number;
   yPct: number;
@@ -2408,6 +2416,9 @@ function ZoneMesh({
   label: string;
   material?: ZoneMaterial;
   zoneKind?: ZoneKind;
+  /** Habillage de piste de danse (style, motif LED, monogramme, boule à facettes). */
+  dance?: Pick<Extract<RoomLayoutBlueprint['furniture'][number], { kind: 'zone' }>, 'danceStyle' | 'danceLedPattern' | 'danceMonogram' | 'danceMirrorBall'>;
+  ceilingM?: number;
   color?: string;
   rotation?: number;
   widthM: number;
@@ -2454,6 +2465,19 @@ function ZoneMesh({
         selected={selected}
         pickable={pickable}
       />
+      {dance && (dance.danceStyle && dance.danceStyle !== 'classic' || dance.danceMonogram || dance.danceMirrorBall) ? (
+        <DanceFloorDressing
+          w={w}
+          h={h}
+          top={thickness / 2}
+          style={dance.danceStyle ?? 'classic'}
+          pattern={dance.danceLedPattern}
+          color={color}
+          monogram={dance.danceMonogram}
+          mirrorBall={dance.danceMirrorBall}
+          ceilingY={ceilingM - thickness / 2}
+        />
+      ) : null}
       <mesh position={[0, thickness + 0.04, -h * 0.35]} rotation={[-Math.PI / 2, 0, Math.PI]}>
         <coneGeometry args={[Math.min(w, h) * 0.06, Math.min(w, h) * 0.14, 3]} />
         <meshStandardMaterial color="#fef3c7" emissive="#f59e0b" emissiveIntensity={0.45} />
@@ -2991,7 +3015,20 @@ function FixtureMesh({
             podiumStyle={podiumStyle}
             material={material ?? 'wood'}
             skirtColor={color && color !== '#b45309' ? color : undefined}
+            stairs={surfaceDecor?.stageStairs !== false}
+            dressed={kind === 'stage' && (surfaceDecor?.stageRig ?? 'none') !== 'none'}
           />
+          {kind === 'stage' && surfaceDecor?.stageRig && surfaceDecor.stageRig !== 'none' ? (
+            <StageRigDressing
+              rig={surfaceDecor.stageRig}
+              w={w}
+              d={d}
+              height={height}
+              ceilingY={ceilingM - surfaceElevationM}
+              flower={(pos, sc) => <StageFlowerCluster position={pos} scale={sc} />}
+              shape={stageShape ?? 'rect'}
+            />
+          ) : null}
           {stageRoof === 'gabled' ? (
             <GabledStageRoof w={w} d={d} heightM={height + 4.2} selected={selected} />
           ) : null}
@@ -4054,6 +4091,8 @@ function SceneContent({
               readOnly={readOnly || wallEditMode}
               pickable={surfacePickable || selected.some((s) => s.kind === 'zone' && s.id === item.id)}
               hideLabels={hideLabels}
+              dance={item.zoneKind === 'dance' ? item : undefined}
+              ceilingM={wallHeightM}
             />
             </group>
           );
