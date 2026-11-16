@@ -102,6 +102,11 @@ export default function AvailabilityCalendar({
     year: 'numeric',
   });
 
+  const isCurrentMonth = cursor.year === now.getFullYear() && cursor.month === now.getMonth();
+  const goToday = () => setCursor(parseKey(todayKey()));
+  const goPrev = () => setCursor((c) => (c.month === 0 ? { year: c.year - 1, month: 11 } : { year: c.year, month: c.month - 1 }));
+  const goNext = () => setCursor((c) => (c.month === 11 ? { year: c.year + 1, month: 0 } : { year: c.year, month: c.month + 1 }));
+
   const rangeBusy = (from: string, to: string) => {
     return eachDateKey(from, to).some((key) => booked.has(key) || blocked.has(key) || pending.has(key) || key < floor);
   };
@@ -171,45 +176,79 @@ export default function AvailabilityCalendar({
         className,
       )}
     >
+      {compact ? (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold first-letter:uppercase min-w-0">{title}</h2>
+            {!isCurrentMonth ? (
+              <button
+                type="button"
+                className="min-h-9 px-2 -mr-2 rounded-[var(--radius-button)] text-xs font-semibold text-primary hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                onClick={goToday}
+              >
+                Aujourd’hui
+              </button>
+            ) : null}
+          </div>
+          <div className="flex items-center justify-between gap-2 rounded-[var(--radius-button)] bg-surface-muted/70 p-1">
+            <button
+              type="button"
+              className="min-h-9 min-w-9 inline-flex items-center justify-center rounded-[var(--radius-button)] text-muted hover:text-foreground hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              onClick={goPrev}
+              aria-label="Mois précédent"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-sm font-semibold capitalize tabular-nums" aria-live="polite">{monthLabel}</span>
+            <button
+              type="button"
+              className="min-h-9 min-w-9 inline-flex items-center justify-center rounded-[var(--radius-button)] text-muted hover:text-foreground hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              onClick={goNext}
+              aria-label="Mois suivant"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      ) : (
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className={cn('font-semibold capitalize min-w-0', compact ? 'text-xs' : 'text-sm')}>{title}</h2>
+        <h2 className="font-semibold first-letter:uppercase min-w-0 text-sm">{title}</h2>
         <div className="flex items-center gap-1 ml-auto">
           <button
             type="button"
             className="min-h-11 px-2.5 rounded-[var(--radius-button)] border border-border text-xs font-semibold text-muted hover:text-foreground"
-            onClick={() => {
-              const t = todayKey();
-              const p = parseKey(t);
-              setCursor(p);
-            }}
+            onClick={goToday}
           >
             Aujourd’hui
           </button>
           <button
             type="button"
             className="min-h-11 min-w-11 p-2 inline-flex items-center justify-center rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground"
-            onClick={() => setCursor((c) => (c.month === 0 ? { year: c.year - 1, month: 11 } : { year: c.year, month: c.month - 1 }))}
+            onClick={goPrev}
             aria-label="Mois précédent"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className={cn('text-xs font-semibold text-center capitalize', compact ? 'min-w-[6.5rem]' : 'min-w-[7rem] sm:min-w-[8rem]')}>{monthLabel}</span>
+          <span className="text-xs font-semibold text-center capitalize min-w-[7rem] sm:min-w-[8rem]">{monthLabel}</span>
           <button
             type="button"
             className="min-h-11 min-w-11 p-2 inline-flex items-center justify-center rounded-[var(--radius-button)] border border-border text-muted hover:text-foreground"
-            onClick={() => setCursor((c) => (c.month === 11 ? { year: c.year + 1, month: 0 } : { year: c.year, month: c.month + 1 }))}
+            onClick={goNext}
             aria-label="Mois suivant"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>
+      )}
 
       {rangeMode ? (
         <p className="text-xs text-muted leading-relaxed">
           {selectingSecond
-            ? 'Sélectionnez la fin de période (ou recliquez le même jour).'
-            : '1er clic = début · 2e clic = fin. Un seul jour suffit aussi.'}
+            ? 'Choisissez le dernier jour, ou recliquez le même jour.'
+            : compact
+              ? 'Un jour, ou deux clics pour une période.'
+              : '1er clic = début · 2e clic = fin. Un seul jour suffit aussi.'}
         </p>
       ) : null}
 
@@ -238,9 +277,9 @@ export default function AvailabilityCalendar({
         </p>
       ) : null}
 
-      <div className="grid grid-cols-7 gap-1 text-center">
+      <div className={cn('grid grid-cols-7 text-center', compact ? 'gap-x-1 gap-y-0.5' : 'gap-1')}>
         {WEEKDAYS.map((label) => (
-          <div key={label} className="text-xs font-semibold text-muted py-1">
+          <div key={label} className={cn('text-xs font-semibold text-muted', compact ? 'pb-1.5' : 'py-1')}>
             {label}
           </div>
         ))}
@@ -269,7 +308,8 @@ export default function AvailabilityCalendar({
               onClick={() => handleDay(cell.key)}
               aria-current={isToday ? 'date' : undefined}
               className={cn(
-                'aspect-square min-h-9 sm:min-h-0 rounded-lg text-sm sm:text-xs font-medium border relative',
+                'rounded-lg font-medium border relative tabular-nums',
+                compact ? 'h-10 sm:h-9 text-sm' : 'aspect-square min-h-9 sm:min-h-0 text-sm sm:text-xs',
                 isBooked && !isEdge && !isSelected && !inRange && (
                   bookedTone === 'emerald'
                     ? 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/35'
@@ -283,8 +323,8 @@ export default function AvailabilityCalendar({
                 inRange && !isEdge && !occupied && 'bg-primary/15 text-foreground border-primary/25',
                 isSelected && !occupied && 'bg-primary-solid text-primary-foreground border-primary-solid shadow-[var(--shadow-soft)]',
                 !occupied && !inRange && !isSelected && !isPast && 'border-transparent hover:border-border hover:bg-surface-muted',
-                isPast && 'text-muted/45 border-transparent',
-                isToday && !isEdge && !isSelected && 'ring-1 ring-primary/50',
+                isPast && (compact ? 'text-muted/35 border-transparent font-normal' : 'text-muted/45 border-transparent'),
+                isToday && !isEdge && !isSelected && (compact ? 'ring-1 ring-primary/60 text-primary font-semibold' : 'ring-1 ring-primary/50'),
               )}
             >
               {cell.day}
@@ -293,7 +333,8 @@ export default function AvailabilityCalendar({
         })}
       </div>
 
-      <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted">
+      <div className={cn('flex flex-wrap gap-x-3 gap-y-1.5 text-xs text-muted', compact && 'pt-2.5 border-t border-border/70')}>
+        {!compact || booked.size > 0 ? (
         <span className="inline-flex items-center gap-1.5">
           <span className={cn(
             'w-2.5 h-2.5 rounded-sm border',
@@ -301,16 +342,19 @@ export default function AvailabilityCalendar({
           )} />
           {bookedLabel}
         </span>
+        ) : null}
         {pending.size > 0 ? (
           <span className="inline-flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-sm bg-amber-500/40 border border-amber-500/40" />
             {pendingLabel}
           </span>
         ) : null}
-        <span className="inline-flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-sm bg-festive-accent/40 border border-festive-accent/40" />
-          {blockedLabel}
-        </span>
+        {!compact || editable || blocked.size > 0 ? (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-festive-accent/40 border border-festive-accent/40" />
+            {blockedLabel}
+          </span>
+        ) : null}
         <span className="inline-flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-sm ring-1 ring-primary/50 bg-surface" />
           Aujourd’hui

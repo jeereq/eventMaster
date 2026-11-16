@@ -422,6 +422,8 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
   onSubmitComment,
   onShare,
   onOpenLightbox,
+  dense = false,
+  wide = false,
 }: {
   post: MarketplaceFeedPost;
   authorLabel: string;
@@ -436,6 +438,10 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
   onSubmitComment: (postId: string, text: string) => Promise<boolean>;
   onShare: (postId: string) => void;
   onOpenLightbox: (urls: string[], index: number) => void;
+  /** Grille de réalisations (fiche offre) : carte plus compacte. */
+  dense?: boolean;
+  /** En grille : carte sur toute la largeur (format paysage). */
+  wide?: boolean;
 }) {
   const [commentsExpanded, setCommentsExpanded] = useState(false);
   const [activeSnapIndex, setActiveSnapIndex] = useState(0);
@@ -492,12 +498,19 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
   return (
     <article
       id={`post-${post.id}`}
-      className="group/card w-full rounded-xl sm:rounded-2xl border border-border/80 bg-surface shadow-xs hover:shadow-md transition-all duration-300 p-2 sm:p-2.5 space-y-2.5 [content-visibility:auto] [contain-intrinsic-size:0_480px]"
+      className={cn(
+        'group/card w-full rounded-xl sm:rounded-2xl border border-border/80 bg-surface shadow-xs hover:shadow-md transition-all duration-300 space-y-2.5 [content-visibility:auto] [contain-intrinsic-size:0_480px]',
+        dense ? 'p-1.5 self-start' : 'p-2 sm:p-2.5',
+        dense && wide && 'sm:col-span-2',
+      )}
     >
       {/* ─── CAS 1 : Publication avec Médias (Format Snap Spotlight) ─── */}
       {hasMedia ? (
         <div
-          className="relative w-full aspect-[4/5] sm:aspect-[4/5] md:aspect-[3/4] max-h-[620px] rounded-lg sm:rounded-xl overflow-hidden bg-slate-950 select-none shadow-inner touch-pan-y"
+          className={cn(
+            'relative w-full rounded-lg sm:rounded-xl overflow-hidden bg-slate-950 select-none shadow-inner touch-pan-y',
+            dense ? (wide ? 'aspect-[4/5] sm:aspect-[16/10]' : 'aspect-[4/5]') : 'aspect-[4/5] sm:aspect-[4/5] md:aspect-[3/4] max-h-[620px]',
+          )}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
@@ -684,7 +697,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
           </div>
 
           {/* Dégradé immersif bas + Légende / Contenu */}
-          <div className="absolute inset-x-0 bottom-0 pt-16 pb-3 px-4 sm:px-5 bg-gradient-to-t from-black/95 via-black/55 to-transparent z-10 text-white rounded-b-[24px] sm:rounded-b-[28px] pointer-events-none flex flex-col gap-1.5">
+          <div className="absolute inset-x-0 bottom-0 pt-16 pb-3 pl-4 pr-16 sm:pl-5 bg-gradient-to-t from-black/95 via-black/55 to-transparent z-10 text-white rounded-b-[24px] sm:rounded-b-[28px] pointer-events-none flex flex-col gap-1.5">
             {/* Badge indicateur de snap si multi-snaps */}
             {media.length > 1 && (
               <div className="flex items-center gap-2 pointer-events-auto">
@@ -722,7 +735,8 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
       ) : (
         /* ─── CAS 2 : Publication texte sans média (Story Texte Snapchat) ─── */
         <div className={cn(
-          'relative w-full rounded-lg sm:rounded-xl p-5 sm:p-7 flex flex-col justify-between min-h-[280px] sm:min-h-[320px] overflow-hidden shadow-inner text-white select-none',
+          'relative w-full rounded-lg sm:rounded-xl flex flex-col justify-between overflow-hidden shadow-inner text-white select-none',
+          dense ? (wide ? 'p-5 aspect-[4/5] sm:aspect-[16/10] sm:p-7' : 'p-5 aspect-[4/5]') : 'p-5 sm:p-7 min-h-[280px] sm:min-h-[320px]',
           isVenue
             ? 'bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900'
             : 'bg-gradient-to-br from-amber-600 via-rose-600 to-purple-800',
@@ -857,11 +871,14 @@ export default function MarketplaceActivityFeed({
   authorLabel,
   className,
   initialPosts,
+  layout = 'stack',
 }: {
   scope: PublicScope;
   authorLabel: string;
   className?: string;
   initialPosts?: MarketplaceFeedPost[];
+  /** `grid` : deux colonnes de cartes compactes (onglet Réalisations d’une fiche). */
+  layout?: 'stack' | 'grid';
 }) {
   const { user } = useAuth();
   const router = useRouter();
@@ -979,19 +996,21 @@ export default function MarketplaceActivityFeed({
 
   const myLike = likeKey(user?.id);
   const isVenue = scope.kind === 'venue';
+  const isGrid = layout === 'grid';
+  const listClass = isGrid ? 'grid grid-cols-1 sm:grid-cols-2 gap-4 items-start' : 'space-y-6';
 
   return (
-    <div className={cn('space-y-6', className)}>
+    <div className={cn(isGrid ? 'space-y-4' : 'space-y-6', className)}>
       {/* Inviter à se connecter seulement quand il y a des réalisations à aimer ou commenter. */}
       {!user && posts.length > 0 ? (
-        <div className="flex items-center justify-between gap-3 p-3.5 rounded-2xl border border-primary/20 bg-primary/5 text-xs text-foreground">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-3 py-2.5 pl-3.5 pr-2.5 rounded-[var(--radius-card)] border border-primary/20 bg-primary/5 text-xs text-foreground">
+          <div className="flex items-center gap-2 min-w-0">
             <Sparkles className="w-4 h-4 text-primary shrink-0" />
-            <span>Connectez-vous pour aimer et commenter les réalisations de {authorLabel}.</span>
+            <span className="leading-snug">Connectez-vous pour aimer et commenter les réalisations de {authorLabel}.</span>
           </div>
           <Link
             href={loginHref}
-            className="shrink-0 px-3 py-1 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-95 transition"
+            className="shrink-0 inline-flex items-center min-h-9 px-3.5 rounded-[var(--radius-button)] bg-primary-solid text-primary-foreground text-xs font-semibold hover:bg-primary-solid-hover transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
           >
             Connexion
           </Link>
@@ -1005,13 +1024,13 @@ export default function MarketplaceActivityFeed({
       ) : null}
 
       {loading ? (
-        <div className="space-y-6" role="status" aria-label="Chargement des réalisations">
+        <div className={listClass} role="status" aria-label="Chargement des réalisations">
           {[...Array(2)].map((_, i) => (
             <article
               key={i}
               className="w-full rounded-xl sm:rounded-2xl border border-border/80 bg-surface shadow-xs p-2 sm:p-2.5 space-y-2.5 animate-pulse"
             >
-              <div className="relative w-full aspect-[4/5] sm:aspect-[4/5] md:aspect-[3/4] max-h-[620px] rounded-lg sm:rounded-xl overflow-hidden bg-slate-900/90 dark:bg-slate-950 flex flex-col justify-between p-3.5 sm:p-4">
+              <div className={cn('relative w-full rounded-lg sm:rounded-xl overflow-hidden bg-slate-900/90 dark:bg-slate-950 flex flex-col justify-between p-3.5 sm:p-4', isGrid ? 'aspect-[4/5]' : 'aspect-[4/5] sm:aspect-[4/5] md:aspect-[3/4] max-h-[620px]')}>
                 <div className="flex items-center gap-2 p-1 pr-3 rounded-full bg-white/10 w-fit">
                   <div className="w-8 h-8 rounded-full bg-white/20" />
                   <div className="space-y-1">
@@ -1043,8 +1062,8 @@ export default function MarketplaceActivityFeed({
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {posts.map((post) => (
+        <div className={listClass}>
+          {posts.map((post, index) => (
             <VenueActivityPostCard
               key={post.id}
               post={post}
@@ -1060,6 +1079,8 @@ export default function MarketplaceActivityFeed({
               onSubmitComment={submitComment}
               onShare={handleShare}
               onOpenLightbox={openLightbox}
+              dense={isGrid}
+              wide={isGrid && posts.length % 2 === 1 && index === posts.length - 1}
             />
           ))}
         </div>
