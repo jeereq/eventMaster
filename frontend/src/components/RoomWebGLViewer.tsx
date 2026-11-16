@@ -2478,10 +2478,13 @@ function ZoneMesh({
           ceilingY={ceilingM - thickness / 2}
         />
       ) : null}
-      <mesh position={[0, thickness + 0.04, -h * 0.35]} rotation={[-Math.PI / 2, 0, Math.PI]}>
-        <coneGeometry args={[Math.min(w, h) * 0.06, Math.min(w, h) * 0.14, 3]} />
-        <meshStandardMaterial color="#fef3c7" emissive="#f59e0b" emissiveIntensity={0.45} />
-      </mesh>
+      {/* Repère d’orientation : utile en édition, masqué en aperçu et en visite. */}
+      {!hideLabels && (
+        <mesh position={[0, thickness + 0.04, -h * 0.35]} rotation={[-Math.PI / 2, 0, Math.PI]}>
+          <coneGeometry args={[Math.min(w, h) * 0.06, Math.min(w, h) * 0.14, 3]} />
+          <meshStandardMaterial color="#fef3c7" emissive="#f59e0b" emissiveIntensity={0.45} />
+        </mesh>
+      )}
       {!hideLabels && (
         <Html zIndexRange={[20, 0]} center distanceFactor={12} style={{ pointerEvents: 'none' }} position={[0, thickness + 0.22, 0]}>
           <span className="text-xs font-bold text-background bg-foreground/85 px-1.5 py-0.5 rounded shadow-sm">{label}</span>
@@ -3593,6 +3596,30 @@ function SceneContent({
       })
       .filter((f) => Math.hypot(f.bx - f.ax, f.bz - f.az) > 0.3);
   }, [ledOn, walls, blueprint, widthM, heightM]);
+  /** Intérieur délimité par les murs extérieurs : les uplights et rideaux automatiques s’y posent, jamais dehors. */
+  const ambianceInterior = useMemo(() => {
+    const shown = walls.filter((w) => isStoryVisible(blueprint, w.storyId));
+    if (!shown.length) return undefined;
+    let x0 = Infinity;
+    let x1 = -Infinity;
+    let z0 = Infinity;
+    let z1 = -Infinity;
+    let t = 0;
+    for (const w of shown) {
+      for (const p of [w.start, w.end]) {
+        const [x, z] = pctToWorld(p.x, p.y, widthM, heightM);
+        x0 = Math.min(x0, x);
+        x1 = Math.max(x1, x);
+        z0 = Math.min(z0, z);
+        z1 = Math.max(z1, z);
+      }
+      t = Math.max(t, w.thicknessM);
+    }
+    const w = x1 - x0 - t;
+    const d = z1 - z0 - t;
+    if (w < 2 || d < 2) return undefined;
+    return { cx: (x0 + x1) / 2, cz: (z0 + z1) / 2, w, d };
+  }, [walls, blueprint, widthM, heightM]);
   /** Lustres automatiques : aucun dès qu’un lustre est posé sur un étage affiché. */
   const ambientChandeliers = ceilingChandelierCount(
     blueprint.metadata,
@@ -3928,6 +3955,7 @@ function SceneContent({
             plants: blueprint.metadata.showDecorPlants === true,
           }}
           curtainColor={blueprint.metadata.curtainColor}
+          interior={ambianceInterior}
           maxChandeliers={qualitySettings.maxChandeliers}
           maxUplights={qualitySettings.maxUplights}
           chandelierPointLights={qualitySettings.chandelierPointLights}

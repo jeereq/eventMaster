@@ -303,10 +303,11 @@ function CoffeeTable({ w, d, color, selected }: Props) {
 function Rug({ w, d, color, selected }: Props) {
   return (
     <group>
-      <RoundedBox args={[w, 0.015, d]} radius={0.006} smoothness={2} position={[0, 0.0075, 0]} receiveShadow>
+      {/* 3 cm d’épaisseur : le tapis reste visible quand il est posé sur une zone (parquet, marbre…). */}
+      <RoundedBox args={[w, 0.03, d]} radius={0.01} smoothness={2} position={[0, 0.015, 0]} receiveShadow>
         <SurfaceMat color={tint(color ?? '#e9e0cf', selected)} finish="linen" />
       </RoundedBox>
-      <mesh position={[0, 0.016, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, 0.031, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[Math.min(w, d) * 0.32, Math.min(w, d) * 0.34, 48]} />
         <meshStandardMaterial color="#cdbb9a" roughness={1} />
       </mesh>

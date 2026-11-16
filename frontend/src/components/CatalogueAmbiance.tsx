@@ -143,16 +143,17 @@ export function RoomUplights({
               roughness={0.2}
             />
           </mesh>
-          <mesh position={[0, 0.12, 0]}>
-            <coneGeometry args={[0.2, 0.55, 16]} />
-            <meshStandardMaterial
-              color="#fef9c3"
+          {/* Halo discret sur le mur plutôt qu’un cône opaque, qui se voyait comme un objet posé. */}
+          <mesh position={[0, 0.5, 0]} rotation={[Math.PI, 0, 0]}>
+            <coneGeometry args={[0.22, 0.8, 16, 1, true]} />
+            <meshBasicMaterial
+              color="#fbbf24"
               transparent
-              opacity={0.15}
-              emissive="#fbbf24"
-              emissiveIntensity={0.45}
+              opacity={0.06}
+              blending={THREE.AdditiveBlending}
               depthWrite={false}
               side={THREE.DoubleSide}
+              toneMapped={false}
             />
           </mesh>
         </group>
@@ -255,11 +256,15 @@ export type RoomAmbianceFlags = {
   plants?: boolean;
 };
 
+/** Intérieur délimité par les murs (repère monde) : centre et dimensions en mètres. */
+export type RoomInteriorBox = { cx: number; cz: number; w: number; d: number };
+
 export function RoomAmbiance({
   widthM,
   heightM,
   wallHeightM,
   flags,
+  interior,
   maxChandeliers = 3,
   maxUplights = 12,
   chandelierPointLights = true,
@@ -277,7 +282,10 @@ export function RoomAmbiance({
   chandelierType?: ChandelierType | string;
   chandelierCount?: number;
   curtainColor?: string;
+  /** Murs en retrait du plan : uplights, rideaux et plantes se posent contre leurs faces intérieures. */
+  interior?: RoomInteriorBox;
 }) {
+  const box = interior ?? { cx: 0, cz: 0, w: widthM, d: heightM };
   // Le nombre choisi est toujours respecté ; la qualité de rendu ne limite que les lampes réelles.
   const count = resolveChandelierCount(chandelierCount, 5);
   return (
@@ -293,13 +301,15 @@ export function RoomAmbiance({
           chandelierType={chandelierType}
         />
       ) : null}
-      {flags.uplights ? (
-        <RoomUplights widthM={widthM} heightM={heightM} maxCount={maxUplights} />
-      ) : null}
-      {flags.curtains ? (
-        <RoomCurtains widthM={widthM} heightM={heightM} wallHeightM={wallHeightM} color={curtainColor} />
-      ) : null}
-      {flags.plants ? <RoomCornerPlants widthM={widthM} heightM={heightM} /> : null}
+      <group position={[box.cx, 0, box.cz]}>
+        {flags.uplights ? (
+          <RoomUplights widthM={box.w} heightM={box.d} maxCount={maxUplights} />
+        ) : null}
+        {flags.curtains ? (
+          <RoomCurtains widthM={box.w} heightM={box.d} wallHeightM={wallHeightM} color={curtainColor} />
+        ) : null}
+        {flags.plants ? <RoomCornerPlants widthM={box.w} heightM={box.d} /> : null}
+      </group>
     </group>
   );
 }
