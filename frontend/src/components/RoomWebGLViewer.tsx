@@ -60,6 +60,10 @@ import {
 import type { StairStyle } from '@/lib/roomStairsUtils';
 import { resolveDepthAmount } from '@/lib/roomFloorUtils';
 import { ceilingChandelierCount } from '@/lib/roomCeilingUtils';
+import { wallArtHeightM } from '@/lib/roomWallArt';
+import { WallArtLayer } from '@/components/room/WallArtMeshes';
+import { LedShowLights, type LedWallFace } from '@/components/room/LedShowMeshes';
+import { isLedShowOn, resolveLedShow } from '@/lib/roomLedShow';
 import { isStoryVisible, resolveActiveStoryId, resolveFoundation, resolveStories, stackViewFocusY, worldElevationForStory } from '@/lib/roomBuildingUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import { getTableSeatPlacement3D, tablePlateSizeMeters } from '@/lib/tablePlanUtils';
@@ -144,10 +148,11 @@ type SurfaceDecor = Pick<
   RoomLayoutBlueprint['fixtures'][number],
   | 'aisleColor' | 'aisleBorderColor' | 'petalColor' | 'petalDensity' | 'lanternSpacingM' | 'surfaceImageTileM'
   | 'corridorWalls' | 'corridorWallHeightM' | 'corridorWallColor' | 'corridorPlinths' | 'corridorSconces' | 'corridorSconceSpacingM'
-  | 'hardwareFinish'
+  | 'hardwareFinish' | 'stringLightStyle' | 'stringLightLayout' | 'stringLightMount'
 >;
 import { CustomElementMesh } from '@/components/room/CustomElementMesh';
 import { DomeRoof, RoofLantern, StyledRoof, TentSidewall } from '@/components/room/RoofMeshes';
+import { CofferedCeiling, RooftopEquipment } from '@/components/room/RoofDetails';
 import { offsetRing, roofFootprint } from '@/lib/roomRoofGeometry';
 import type { CustomElementDefinition } from '@/lib/roomCustomElements';
 import { VenueEquipmentMesh, isVenueEquipmentKind, venueEquipmentHeight } from '@/components/room/VenueEquipmentMeshes';
@@ -800,13 +805,6 @@ function RoofMesh({
     return shape;
   }, [footprint, stairHoles]);
 
-  const shapeGeo = useMemo(() => {
-    if (roofStyle !== 'coffered') return null;
-    const geo = new THREE.ShapeGeometry(roofShape);
-    geo.rotateX(-Math.PI / 2);
-    return geo;
-  }, [roofShape, roofStyle]);
-
   const roofTop = baseElevationM + wallHeightM;
   const styledProps = {
     footprint: footprint.fp,
@@ -830,45 +828,6 @@ function RoofMesh({
     return <StyledRoof style={roofStyle} props={styledProps} />;
   }
 
-  if (roofStyle === 'coffered') {
-    const cells = 6;
-    return (
-      <group position={[0, y, 0]}>
-        <mesh geometry={shapeGeo ?? undefined} receiveShadow>
-          {!shapeGeo && (
-            <mesh rotation={[-Math.PI / 2, 0, 0]}>
-              <planeGeometry args={[widthM, heightM]} />
-            </mesh>
-          )}
-          <meshStandardMaterial color="#1c1917" roughness={0.7} transparent opacity={Math.max(0.7, opacity)} side={THREE.DoubleSide} />
-        </mesh>
-        {Array.from({ length: cells + 1 }).map((_, i) => {
-          const t = (i / cells - 0.5);
-          const bx = t * widthM;
-          const bz = t * heightM;
-          const inStairX = stairHoles.some((h) => bx >= h.minX && bx <= h.maxX);
-          const inStairZ = stairHoles.some((h) => bz >= h.minZ && bz <= h.maxZ);
-          return (
-            <group key={i}>
-              {!inStairX && (
-                <mesh position={[bx, -0.06, 0]}>
-                  <boxGeometry args={[0.08, 0.12, heightM]} />
-                  <meshStandardMaterial color="#292524" roughness={0.45} />
-                </mesh>
-              )}
-              {!inStairZ && (
-                <mesh position={[0, -0.06, bz]}>
-                  <boxGeometry args={[widthM, 0.12, 0.08]} />
-                  <meshStandardMaterial color="#292524" roughness={0.45} />
-                </mesh>
-              )}
-            </group>
-          );
-        })}
-      </group>
-    );
-  }
-
   const bbox = footprint.pts.reduce(
     (b, p) => ({ x0: Math.min(b.x0, p.x), x1: Math.max(b.x1, p.x), z0: Math.min(b.z0, p.z), z1: Math.max(b.z1, p.z) }),
     { x0: Infinity, x1: -Infinity, z0: Infinity, z1: -Infinity },
@@ -884,9 +843,11 @@ function RoofMesh({
         pts={footprint.pts}
         y={y - 0.04}
         color={color}
-        opacity={roofStyle === 'dome' || roofStyle === 'skylight' ? Math.max(0.85, opacity) : opacity}
+        opacity={roofStyle === 'dome' || roofStyle === 'skylight' || roofStyle === 'coffered' ? Math.max(0.85, opacity) : opacity}
         parapetColor={blueprint?.metadata.wallPaintColor ?? '#ece7df'}
       />
+      {roofStyle === 'coffered' ? <CofferedCeiling pts={footprint.pts} holes={stairHoles} y={y - 0.04} color={color} /> : null}
+      {roofStyle === 'flat' && opacity >= 0.7 ? <RooftopEquipment pts={footprint.pts} holes={stairHoles} y={y + 0.21} /> : null}
       {roofStyle === 'dome' ? (
         <DomeRoof center={center} radius={Math.max(1.2, Math.min(bw, bd) * 0.27)} props={{ ...styledProps, y: y + 0.21 }} />
       ) : null}
@@ -955,6 +916,15 @@ function FlatRoofSlab({
     g.rotateX(-Math.PI / 2);
     return g;
   }, [pts]);
+  // Couvertine métallique : déborde de 4 cm de chaque côté de l’acrotère.
+  const coping = useMemo(() => {
+    const outer = new THREE.Shape(offsetRing(pts, -0.04).map((p) => new THREE.Vector2(p.x, -p.z)));
+    outer.holes.push(new THREE.Path(offsetRing(pts, 0.26).map((p) => new THREE.Vector2(p.x, -p.z))));
+    const g = new THREE.ExtrudeGeometry(outer, { depth: 0.05, bevelEnabled: false });
+    g.rotateX(-Math.PI / 2);
+    g.translate(0, 0.5, 0);
+    return g;
+  }, [pts]);
   const transparent = opacity < 0.97;
   return (
     <group position={[0, y, 0]}>
@@ -976,6 +946,9 @@ function FlatRoofSlab({
           opacity={transparent ? Math.min(1, opacity + 0.2) : 1}
           depthWrite={!transparent}
         />
+      </mesh>
+      <mesh geometry={coping} castShadow={!transparent}>
+        <meshStandardMaterial color="#9ca3af" metalness={0.7} roughness={0.35} transparent={transparent} opacity={transparent ? Math.min(1, opacity + 0.25) : 1} depthWrite={!transparent} />
       </mesh>
     </group>
   );
@@ -1892,6 +1865,16 @@ function WallMesh({
           inSide={inSide}
         />
       ))}
+      {/* Images et graffitis ; en vue maquette, seulement ceux qui tiennent sous la coupe. */}
+      {wall.art?.length ? (
+        <WallArtLayer
+          art={cutaway ? wall.art.filter((a) => a.yM + wallArtHeightM(a) / 2 <= wallH) : wall.art}
+          lengthM={length}
+          wallHeightM={wallH}
+          thicknessM={thick}
+          inSide={inSide}
+        />
+      ) : null}
     </group>
   );
 }
@@ -2912,7 +2895,16 @@ function FixtureMesh({
           selected={selected}
         />
       ) : kind === 'stringLight' ? (
-        <EdisonStringLightMesh w={w} d={d} heightM={height} selected={selected} />
+        <EdisonStringLightMesh
+          w={w}
+          d={d}
+          heightM={height}
+          selected={selected}
+          style={surfaceDecor?.stringLightStyle}
+          layout={surfaceDecor?.stringLightLayout}
+          mount={surfaceDecor?.stringLightMount}
+          ceilingM={ceilingM}
+        />
       ) : kind === 'fountain' ? (
         <FountainMesh w={w} d={d} color={color} selected={selected} />
       ) : kind === 'gazebo' ? (
@@ -3541,6 +3533,29 @@ function SceneContent({
   const stories = resolveStories(blueprint);
   const focusY = stackViewFocusY(blueprint, wallHeightM);
   const topStoryElev = stories.reduce((max, s) => Math.max(max, s.elevationM), 0);
+  const ledShow = resolveLedShow(blueprint.metadata.ledShow);
+  const ledOn = isLedShowOn(ledShow) && isBlueprintWallsVisible(blueprint.metadata);
+  /** Faces intérieures des murs affichés, pour poser uplights et bandeau LED. */
+  const ledFaces = useMemo<LedWallFace[]>(() => {
+    if (!ledOn) return [];
+    return walls
+      .filter((w) => isStoryVisible(blueprint, w.storyId))
+      .map((w) => {
+        const [ax, az] = pctToWorld(w.start.x, w.start.y, widthM, heightM);
+        const [bx, bz] = pctToWorld(w.end.x, w.end.y, widthM, heightM);
+        const len = Math.hypot(bx - ax, bz - az) || 1;
+        let nx = -(bz - az) / len;
+        let nz = (bx - ax) / len;
+        // Normale tournée vers le centre de la pièce, puis décalage jusqu’à la face du mur.
+        if (nx * (0 - (ax + bx) / 2) + nz * (0 - (az + bz) / 2) < 0) {
+          nx = -nx;
+          nz = -nz;
+        }
+        const off = w.thicknessM / 2;
+        return { ax: ax + nx * off, az: az + nz * off, bx: bx + nx * off, bz: bz + nz * off, nx, nz, y0: worldElevationForStory(blueprint, w.storyId), heightM: w.heightM };
+      })
+      .filter((f) => Math.hypot(f.bx - f.ax, f.bz - f.az) > 0.3);
+  }, [ledOn, walls, blueprint, widthM, heightM]);
   /** Lustres automatiques : aucun dès qu’un lustre est posé sur un étage affiché. */
   const ambientChandeliers = ceilingChandelierCount(
     blueprint.metadata,
@@ -3870,7 +3885,8 @@ function SceneContent({
           wallHeightM={wallHeightM}
           flags={{
             chandeliers: !dollhouse && ambientChandeliers > 0,
-            uplights: isBlueprintWallsVisible(blueprint.metadata) && blueprint.metadata.showUplights === true,
+            // Les uplights du jeu LED remplacent les uplights classiques (jamais les deux).
+            uplights: isBlueprintWallsVisible(blueprint.metadata) && blueprint.metadata.showUplights === true && !(ledOn && ledShow.uplights),
             curtains: !dollhouse && isBlueprintWallsVisible(blueprint.metadata) && blueprint.metadata.showCurtains === true,
             plants: blueprint.metadata.showDecorPlants === true,
           }}
@@ -3882,6 +3898,10 @@ function SceneContent({
           chandelierCount={ambientChandeliers}
         />
       </group>
+
+      {ledOn && ledFaces.length ? (
+        <LedShowLights show={dollhouse ? { ...ledShow, cove: false } : ledShow} faces={ledFaces} maxPointLights={Math.max(2, qualitySettings.maxChandeliers * 2)} />
+      ) : null}
 
       {!presentationMode && !hideLabels && !stackView ? (
         <gridHelper

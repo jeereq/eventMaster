@@ -27,7 +27,7 @@ function isRectilinear(pts: RoofPoint[]): boolean {
   return true;
 }
 
-function pointInPolygon(x: number, z: number, pts: RoofPoint[]): boolean {
+export function pointInPolygon(x: number, z: number, pts: RoofPoint[]): boolean {
   let inside = false;
   for (let i = 0, j = pts.length - 1; i < pts.length; j = i, i += 1) {
     const a = pts[i];
@@ -168,4 +168,94 @@ export function offsetRing(pts: RoofPoint[], d: number): RoofPoint[] {
     const k = d / Math.max(0.25, cos);
     return { x: p.x + (bx / bl) * k, z: p.z + (bz / bl) * k };
   });
+}
+
+export type RoofHole = { minX: number; maxX: number; minZ: number; maxZ: number };
+
+function inHole(x: number, z: number, holes: RoofHole[]): boolean {
+  return holes.some((h) => x >= h.minX && x <= h.maxX && z >= h.minZ && z <= h.maxZ);
+}
+
+/**
+ * Plafond à caissons : grille régulière (~`cellM` m) limitée aux caissons entièrement dans le contour
+ * et hors trémies. Renvoie les caissons et les poutres (arêtes uniques) qui les bordent.
+ */
+export function cofferedGrid(
+  pts: RoofPoint[],
+  holes: RoofHole[] = [],
+  cellM = 2.4,
+): { cells: RoofRect[]; beams: Array<{ cx: number; cz: number; len: number; alongX: boolean }> } {
+  if (pts.length < 3) return { cells: [], beams: [] };
+  const x0 = Math.min(...pts.map((p) => p.x));
+  const x1 = Math.max(...pts.map((p) => p.x));
+  const z0 = Math.min(...pts.map((p) => p.z));
+  const z1 = Math.max(...pts.map((p) => p.z));
+  const nx = Math.max(2, Math.min(24, Math.round((x1 - x0) / cellM)));
+  const nz = Math.max(2, Math.min(24, Math.round((z1 - z0) / cellM)));
+  const cw = (x1 - x0) / nx;
+  const cd = (z1 - z0) / nz;
+  const cells: RoofRect[] = [];
+  const edges = new Map<string, { cx: number; cz: number; len: number; alongX: boolean }>();
+  const inset = 0.05;
+  for (let i = 0; i < nx; i += 1) {
+    for (let j = 0; j < nz; j += 1) {
+      const ax = x0 + i * cw;
+      const az = z0 + j * cd;
+      const corners: Array<[number, number]> = [
+        [ax + inset, az + inset],
+        [ax + cw - inset, az + inset],
+        [ax + inset, az + cd - inset],
+        [ax + cw - inset, az + cd - inset],
+      ];
+      if (!corners.every(([x, z]) => pointInPolygon(x, z, pts))) continue;
+      if (holes.some((h) => h.minX < ax + cw && h.maxX > ax && h.minZ < az + cd && h.maxZ > az)) continue;
+      cells.push({ cx: ax + cw / 2, cz: az + cd / 2, w: cw, d: cd });
+      edges.set(`h${i},${j}`, { cx: ax + cw / 2, cz: az, len: cw, alongX: true });
+      edges.set(`h${i},${j + 1}`, { cx: ax + cw / 2, cz: az + cd, len: cw, alongX: true });
+      edges.set(`v${i},${j}`, { cx: ax, cz: az + cd / 2, len: cd, alongX: false });
+      edges.set(`v${i + 1},${j}`, { cx: ax + cw, cz: az + cd / 2, len: cd, alongX: false });
+    }
+  }
+  return { cells, beams: Array.from(edges.values()) };
+}
+
+export type RooftopUnit = { kind: 'hvac' | 'vent'; x: number; z: number; w: number; d: number; rotY: number };
+
+/**
+ * Équipements de toiture-terrasse (centrales de traitement d’air, extracteurs) placés au large
+ * de l’acrotère et des trémies, en quantité proportionnelle à la surface.
+ */
+export function rooftopUnits(pts: RoofPoint[], holes: RoofHole[] = []): RooftopUnit[] {
+  if (pts.length < 3) return [];
+  const x0 = Math.min(...pts.map((p) => p.x));
+  const x1 = Math.max(...pts.map((p) => p.x));
+  const z0 = Math.min(...pts.map((p) => p.z));
+  const z1 = Math.max(...pts.map((p) => p.z));
+  const w = x1 - x0;
+  const d = z1 - z0;
+  if (w < 4 || d < 4) return [];
+  const area = Math.abs(polygonArea(pts));
+  const alongX = w >= d;
+  const candidates: Array<[number, number]> = [
+    [0.3, 0.32],
+    [0.7, 0.68],
+    [0.5, 0.3],
+    [0.3, 0.7],
+    [0.72, 0.3],
+  ].map(([u, v]) => (alongX ? [x0 + u * w, z0 + v * d] : [x0 + v * w, z0 + u * d]) as [number, number]);
+  const want = Math.max(1, Math.min(3, Math.round(area / 120)));
+  const out: RooftopUnit[] = [];
+  const clear = (x: number, z: number, r: number) =>
+    [[x - r, z - r], [x + r, z - r], [x - r, z + r], [x + r, z + r]].every(([px, pz]) => pointInPolygon(px, pz, pts) && !inHole(px, pz, holes));
+  for (const [x, z] of candidates) {
+    if (out.filter((u) => u.kind === 'hvac').length >= want) break;
+    if (clear(x, z, 1.4)) out.push({ kind: 'hvac', x, z, w: 1.8, d: 1.1, rotY: alongX ? 0 : Math.PI / 2 });
+  }
+  const vents: Array<[number, number]> = [
+    [0.15, 0.5],
+    [0.85, 0.5],
+    [0.5, 0.82],
+  ].map(([u, v]) => (alongX ? [x0 + u * w, z0 + v * d] : [x0 + v * w, z0 + u * d]) as [number, number]);
+  for (const [x, z] of vents) if (clear(x, z, 0.6)) out.push({ kind: 'vent', x, z, w: 0.35, d: 0.35, rotY: 0 });
+  return out;
 }

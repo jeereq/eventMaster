@@ -611,6 +611,7 @@ function GableRect({ rect, props, glass }: { rect: RoofRect; props: RoofBuildPro
   const trim = usePlainMaterial(glass ? STEEL : '#f5f5f4', glass ? 0.3 : 0.6, glass ? 0.7 : 0);
   const ridgeMat = usePlainMaterial(glass ? STEEL : '#9a4a2c', 0.7, glass ? 0.7 : 0);
   const gutter = usePlainMaterial('#9ca3af', 0.35, 0.8);
+  const louvreMat = usePlainMaterial('#2a2522', 0.85);
 
   const geo = useMemo(() => {
     const thick = glass ? 0.02 : 0.14;
@@ -681,6 +682,33 @@ function GableRect({ rect, props, glass }: { rect: RoofRect; props: RoofBuildPro
           </mesh>
         </group>
       ))}
+      {!glass && rise > 1.1
+        ? ([-1, 1] as const).map((sx) => {
+            // Œil-de-bœuf à persiennes sur chaque pignon.
+            const r = Math.min(0.55, rise * 0.16);
+            return (
+              <group key={`oc${sx}`} position={pos} rotation={[0, rotationY, 0]}>
+                <group position={[sx * (L / 2 + 0.01), rise * 0.42, 0]} rotation={[0, (sx * Math.PI) / 2, 0]}>
+                  <mesh material={louvreMat}>
+                    <circleGeometry args={[r, 28]} />
+                  </mesh>
+                  <mesh position={[0, 0, 0.03]} material={trim} castShadow>
+                    <torusGeometry args={[r, Math.max(0.05, r * 0.14), 8, 32]} />
+                  </mesh>
+                  {[-0.5, -0.17, 0.17, 0.5].map((k) => (
+                    <mesh key={k} position={[0, k * r * 1.2, 0.02]} rotation={[-0.5, 0, 0]} material={trim}>
+                      <boxGeometry args={[2 * r * Math.sqrt(Math.max(0.05, 1 - (k * 1.2) ** 2)) * 0.95, 0.035, 0.06]} />
+                    </mesh>
+                  ))}
+                  {/* Clé de voûte */}
+                  <mesh position={[0, r + 0.06, 0.04]} material={trim}>
+                    <boxGeometry args={[0.14, 0.18, 0.08]} />
+                  </mesh>
+                </group>
+              </group>
+            );
+          })
+        : null}
       <group position={pos} rotation={[0, rotationY, 0]}>
         {/* Faîtière */}
         <mesh position={[0, rise + (glass ? 0.05 : 0.14), 0]} rotation={[Math.PI / 4, 0, 0]} material={ridgeMat} castShadow>

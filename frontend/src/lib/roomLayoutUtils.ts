@@ -1,3 +1,4 @@
+import type { RoomWallArt } from './roomWallArt.ts';
 import { LANDSCAPE_STYLE_META, landscapeFootprintPct, type LandscapeStyle } from './roomOutdoorUtils.ts';
 import { HOME_FURNITURE_META } from './roomHomeFurniture.ts';
 import { concentricRowCurvePercent, rowSeatCode, seatsGrownForTier } from './roomAmphitheaterGeom.ts';
@@ -456,6 +457,8 @@ export interface RoomWallSegment {
   texture: WallTextureStyle;
   color?: string;
   openings?: RoomWallOpening[];
+  /** Images et graffitis posés sur la face intérieure. */
+  art?: RoomWallArt[];
   /** Étage (maison multi-niveaux). */
   storyId?: string;
 }
@@ -522,6 +525,10 @@ export interface RoomLayoutBlueprint {
     color?: string;
     imageUrl?: string;
     imageCrop?: ImageCropRect;
+    /** Guirlande : style d’ampoules, tracé et accroche. */
+    stringLightStyle?: import('./roomStringLights.ts').StringLightStyle;
+    stringLightLayout?: import('./roomStringLights.ts').StringLightLayout;
+    stringLightMount?: import('./roomStringLights.ts').StringLightMount;
     flowerType?: FlowerType;
     flowerColor?: string;
     /** Matériau / texture pour moquette, scène, podium, buffet… */
@@ -825,6 +832,8 @@ export interface RoomLayoutBlueprint {
     showChandeliers?: boolean;
     /** Uplights le long des murs. */
     showUplights?: boolean;
+    /** Jeux de lumière LED (uplights colorés, bandeau en corniche, animations). */
+    ledShow?: Partial<import('./roomLedShow.ts').LedShowSettings>;
     /** Rideaux décoratifs. */
     showCurtains?: boolean;
     /** Teinte des rideaux muraux (ivoire, bordeaux…). */
