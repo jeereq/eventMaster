@@ -331,7 +331,7 @@ export default function RoomLayoutPreview({
         ...perspectiveBlueprint,
         metadata: {
           ...perspectiveBlueprint.metadata,
-          showChandeliers: perspectiveBlueprint.metadata.showChandeliers ?? true,
+          showChandeliers: perspectiveBlueprint.metadata.showChandeliers === true,
           showUplights: perspectiveBlueprint.metadata.showUplights ?? true,
           showCurtains: perspectiveBlueprint.metadata.showCurtains ?? false,
           showDecorPlants: perspectiveBlueprint.metadata.showDecorPlants ?? true,

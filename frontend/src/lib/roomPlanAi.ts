@@ -1021,7 +1021,7 @@ const IMPORTED_ROOF_STYLES = new Set<RoofStyle>([
 ]);
 
 const IMPORTED_CHANDELIER_STYLES = new Set<ChandelierFixtureStyle>([
-  'crystalCascade', 'brassRings', 'bohoPampas', 'botanicalHalo', 'fairyCanopy', 'candleCandelabra', 'modernMinimal', 'lantern',
+  'crystalCascade', 'brassRings', 'bohoPampas', 'botanicalHalo', 'fairyCanopy', 'candleCandelabra', 'modernMinimal', 'lantern', 'industrialDome',
 ]);
 
 /** Forme de piscine : valeur de l’IA, sinon déduite du libellé (« Piscine haricot »…). */

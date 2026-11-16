@@ -914,6 +914,8 @@ export default function RoomLayoutEditor({
   const isRoomBlocked = site?.studioVisibility?.room === false;
   const blueprint = ensureBlueprintDefaults(rawBlueprint);
   const caps = roomEditorCapabilities(editorLevel, allowThemesFixtures);
+  /** Lustres posés à la main : ils remplacent les lustres automatiques du plafond. */
+  const placedChandelierCount = blueprint.fixtures.filter((f) => f.kind === 'chandelier').length;
   const canOpenStudio = caps.canPlanFromPhoto && !readOnly && !isRoomBlocked;
   const [upsell, setUpsell] = useState<LockedUpsell | null>(null);
   const parsedEditorLevel = parseRoomEditorLevel(editorLevel);
@@ -4463,6 +4465,12 @@ export default function RoomLayoutEditor({
                       />
                       Lustres au plafond
                     </label>
+                    {placedChandelierCount > 0 ? (
+                      <p className={EDITOR_HINT} role="note">
+                        {placedChandelierCount === 1 ? 'Un lustre est posé' : `${placedChandelierCount} lustres sont posés`} sur le plan : ce sont eux qui sont affichés.
+                        {blueprint.metadata.showChandeliers === true ? ' Les lustres automatiques ci-dessous ne s’ajoutent pas.' : ''}
+                      </p>
+                    ) : null}
                     {blueprint.metadata.showChandeliers === true ? (
                       <div className="space-y-2">
                         <p className={EDITOR_HEADING}>Type de lustre</p>
@@ -8919,8 +8927,8 @@ export default function RoomLayoutEditor({
             metadata: {
               ...blueprint.metadata,
               presentationMode: next,
+              // Les lustres restent ceux que l’on a choisis : la présentation n’en ajoute pas.
               ...(next ? {
-                showChandeliers: true,
                 showUplights: true,
                 renderQuality: 'showcase' as RenderQuality,
               } : {}),
@@ -9207,6 +9215,9 @@ export default function RoomLayoutEditor({
                 ['botanicalHalo', 'Couronne Florale', 'Roses & feuillages'],
                 ['fairyCanopy', 'Ciel Étoilé', 'Micro-LEDs féériques'],
                 ['candleCandelabra', 'Candélabre Grand Siècle', 'Bougies château'],
+                ['modernMinimal', 'Cylindres Épurés', 'Trio contemporain'],
+                ['lantern', 'Lanterne Fer Forgé', 'Classique intemporel'],
+                ['industrialDome', 'Dômes Industriels', 'Émail & filament'],
               ] as const
             ).map(([style, label, hint]) => (
               <button

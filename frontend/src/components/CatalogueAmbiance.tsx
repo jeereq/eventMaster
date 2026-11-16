@@ -14,113 +14,7 @@ import { aislePetals, evenlySpacedOffsets, shadeHex, type AislePetal } from '@/l
 import { SurfaceMat } from '@/components/room/SurfaceMaterial';
 import { AtelierGlazing, CassettePanels, DoorHandles, Hinges, handleY } from '@/components/room/DoorHardware';
 import type { HomeMetalFinish } from '@/lib/roomHomeFurniture';
-import { CandelabraChandelier, ChandelierModel, CrystalChandelier, chandelierLightY } from '@/components/room/ChandelierMeshes';
-
-function ChandelierClassic({ pointLights }: { pointLights: boolean }) {
-  return (
-    <group>
-      <mesh position={[0, 0.1, 0]}>
-        <cylinderGeometry args={[0.005, 0.005, 0.2, 6]} />
-        <SurfaceMat color="#57534e" metalness={0.7} roughness={0.3} />
-      </mesh>
-      <CandelabraChandelier scale={0.62} />
-      {pointLights ? (
-        <pointLight position={[0, -0.4, 0]} intensity={0.55} color="#fef3c7" distance={10} decay={2} />
-      ) : null}
-    </group>
-  );
-}
-
-function ChandelierCrystal({ pointLights }: { pointLights: boolean }) {
-  return (
-    <group>
-      <mesh position={[0, 0.1, 0]}>
-        <cylinderGeometry args={[0.005, 0.005, 0.2, 6]} />
-        <SurfaceMat color="#a8a29e" metalness={0.85} roughness={0.2} />
-      </mesh>
-      <CrystalChandelier scale={0.72} />
-      {pointLights ? (
-        <pointLight position={[0, -0.45, 0]} intensity={0.78} color="#fef3c7" distance={11} decay={2} />
-      ) : null}
-    </group>
-  );
-}
-
-function ChandelierModern({ pointLights }: { pointLights: boolean }) {
-  return (
-    <group>
-      <mesh position={[0, 0.35, 0]}>
-        <cylinderGeometry args={[0.005, 0.005, 0.55, 6]} />
-        <SurfaceMat color="#57534e" metalness={0.6} roughness={0.35} />
-      </mesh>
-      <mesh position={[0, 0.02, 0]} castShadow>
-        <cylinderGeometry args={[0.09, 0.11, 0.28, 24]} />
-        <SurfaceMat color="#1c1917" metalness={0.55} roughness={0.35} />
-      </mesh>
-      <mesh position={[0, -0.14, 0]}>
-        <cylinderGeometry args={[0.08, 0.08, 0.04, 24]} />
-        <meshStandardMaterial color="#fef3c7" emissive="#fbbf24" emissiveIntensity={0.85} roughness={0.4} />
-      </mesh>
-      {pointLights ? (
-        <pointLight position={[0, -0.25, 0]} intensity={0.65} color="#fff7ed" distance={9} decay={2} />
-      ) : null}
-    </group>
-  );
-}
-
-function ChandelierIndustrial({ pointLights }: { pointLights: boolean }) {
-  return (
-    <group>
-      <mesh position={[0, 0.32, 0]}>
-        <cylinderGeometry args={[0.01, 0.01, 0.5, 6]} />
-        <SurfaceMat color="#292524" metalness={0.7} roughness={0.4} />
-      </mesh>
-      <mesh position={[0, 0.05, 0]} castShadow>
-        <coneGeometry args={[0.18, 0.22, 16, 1, true]} />
-        <meshStandardMaterial color="#44403c" metalness={0.65} roughness={0.4} side={THREE.DoubleSide} />
-      </mesh>
-      <mesh position={[0, -0.02, 0]}>
-        <sphereGeometry args={[0.07, 12, 12]} />
-        <meshStandardMaterial color="#fef9c3" emissive="#fde68a" emissiveIntensity={0.9} roughness={0.3} />
-      </mesh>
-      {pointLights ? (
-        <pointLight position={[0, -0.15, 0]} intensity={0.5} color="#fde68a" distance={8} decay={2} />
-      ) : null}
-    </group>
-  );
-}
-
-function ChandelierLantern({ pointLights }: { pointLights: boolean }) {
-  return (
-    <group>
-      <mesh position={[0, 0.3, 0]}>
-        <cylinderGeometry args={[0.006, 0.006, 0.4, 6]} />
-        <SurfaceMat color="#a8a29e" metalness={0.75} roughness={0.3} />
-      </mesh>
-      <mesh position={[0, 0.08, 0]} castShadow>
-        <boxGeometry args={[0.22, 0.06, 0.22]} />
-        <SurfaceMat color="#d4af37" metalness={0.8} roughness={0.25} />
-      </mesh>
-      <mesh position={[0, -0.08, 0]} castShadow>
-        <boxGeometry args={[0.2, 0.28, 0.2]} />
-        <meshStandardMaterial color="#fef3c7" emissive="#fbbf24" emissiveIntensity={0.45} transparent opacity={0.75} roughness={0.35} />
-      </mesh>
-      {[0, 1, 2, 3].map((i) => (
-        <mesh key={i} position={[0, -0.08, 0]} rotation={[0, (i * Math.PI) / 2, 0]} castShadow>
-          <boxGeometry args={[0.22, 0.28, 0.012]} />
-          <SurfaceMat color="#b45309" metalness={0.55} roughness={0.4} />
-        </mesh>
-      ))}
-      <mesh position={[0, -0.24, 0]} castShadow>
-        <boxGeometry args={[0.22, 0.04, 0.22]} />
-        <SurfaceMat color="#d4af37" metalness={0.8} roughness={0.25} />
-      </mesh>
-      {pointLights ? (
-        <pointLight position={[0, -0.1, 0]} intensity={0.6} color="#fdba74" distance={9} decay={2} />
-      ) : null}
-    </group>
-  );
-}
+import { ChandelierModel, chandelierLightY } from '@/components/room/ChandelierMeshes';
 
 function ChandelierRecessed({ pointLights }: { pointLights: boolean }) {
   return (
@@ -140,37 +34,34 @@ function ChandelierRecessed({ pointLights }: { pointLights: boolean }) {
   );
 }
 
-function ChandelierByType({
-  type,
-  pointLights,
-}: {
-  type: ChandelierType;
-  pointLights: boolean;
-}) {
-  switch (type) {
-    case 'crystal':
-      return <ChandelierCrystal pointLights={pointLights} />;
-    case 'modern':
-      return <ChandelierModern pointLights={pointLights} />;
-    case 'industrial':
-      return <ChandelierIndustrial pointLights={pointLights} />;
-    case 'lantern':
-      return <ChandelierLantern pointLights={pointLights} />;
-    case 'recessed':
-      return <ChandelierRecessed pointLights={pointLights} />;
-    case 'classic':
-    default:
-      return <ChandelierClassic pointLights={pointLights} />;
-  }
+/** Lustres / suspensions au plafond. */
+/** Modèle détaillé utilisé pour chaque type de lustre automatique (mêmes lustres que ceux posés à la main). */
+const AMBIENT_CHANDELIER_MODEL: Record<Exclude<ChandelierType, 'recessed'>, ChandelierFixtureStyle> = {
+  classic: 'candleCandelabra',
+  crystal: 'crystalCascade',
+  modern: 'modernMinimal',
+  industrial: 'industrialDome',
+  lantern: 'lantern',
+};
+
+/** Positions des lustres automatiques : alignés au centre, le long du grand côté de la salle. */
+export function ambientChandelierPositions(count: number, widthM: number, heightM: number): Array<[number, number]> {
+  const n = Math.max(1, Math.min(5, Math.round(count)));
+  const alongX = widthM >= heightM;
+  const span = (alongX ? widthM : heightM) * 0.8;
+  return Array.from({ length: n }, (_, i) => {
+    const t = (i + 0.5) / n - 0.5;
+    return alongX ? [t * span, 0] : [0, t * span];
+  });
 }
 
-/** Lustres / suspensions au plafond. */
 export function RoomChandeliers({
   widthM,
   heightM,
   wallHeightM,
   count = 3,
   pointLights = true,
+  maxPointLights = 5,
   chandelierType = 'classic',
 }: {
   widthM: number;
@@ -178,30 +69,34 @@ export function RoomChandeliers({
   wallHeightM: number;
   count?: number;
   pointLights?: boolean;
+  /** Lampes réelles au-delà desquelles les lustres restent allumés sans éclairer (performances). */
+  maxPointLights?: number;
   chandelierType?: ChandelierType | string;
 }) {
   const type = resolveChandelierType(chandelierType);
-  const positions = useMemo(() => {
-    const n = Math.max(1, Math.min(5, count));
-    const flush = type === 'recessed';
-    return Array.from({ length: n }).map((_, i) => {
-      const t = n === 1 ? 0.5 : i / (n - 1);
-      const y = flush ? wallHeightM - 0.02 : wallHeightM - 0.15;
-      return [
-        (t - 0.5) * widthM * 0.55,
-        y,
-        (i % 2 === 0 ? -0.12 : 0.12) * heightM,
-      ] as [number, number, number];
-    });
-  }, [count, widthM, heightM, wallHeightM, type]);
+  const positions = useMemo(() => ambientChandelierPositions(count, widthM, heightM), [count, widthM, heightM]);
+  const model = type === 'recessed' ? null : AMBIENT_CHANDELIER_MODEL[type];
 
   return (
     <group>
-      {positions.map((pos, i) => (
-        <group key={`${type}-${i}`} position={pos}>
-          <ChandelierByType type={type} pointLights={pointLights} />
-        </group>
-      ))}
+      {positions.map(([x, z], i) => {
+        const lit = pointLights && i < maxPointLights;
+        if (!model) {
+          return (
+            <group key={`${type}-${i}`} position={[x, wallHeightM - 0.02, z]}>
+              <ChandelierRecessed pointLights={lit} />
+            </group>
+          );
+        }
+        return (
+          <group key={`${type}-${i}`} position={[x, 0, z]}>
+            <ChandelierModel style={model} ceilingM={wallHeightM} lightColor="#ffd79a" />
+            {lit ? (
+              <pointLight position={[0, chandelierLightY(model, wallHeightM), 0]} intensity={0.8} color="#fef3c7" distance={10} decay={2} />
+            ) : null}
+          </group>
+        );
+      })}
     </group>
   );
 }
@@ -383,7 +278,8 @@ export function RoomAmbiance({
   chandelierCount?: number;
   curtainColor?: string;
 }) {
-  const count = resolveChandelierCount(chandelierCount, maxChandeliers);
+  // Le nombre choisi est toujours respecté ; la qualité de rendu ne limite que les lampes réelles.
+  const count = resolveChandelierCount(chandelierCount, 5);
   return (
     <group>
       {flags.chandeliers ? (
@@ -393,6 +289,7 @@ export function RoomAmbiance({
           wallHeightM={wallHeightM}
           count={count}
           pointLights={chandelierPointLights}
+          maxPointLights={maxChandeliers}
           chandelierType={chandelierType}
         />
       ) : null}
@@ -991,7 +888,7 @@ export function CatalogueChandelierFixture({
       {/* Source de lumière ponctuelle scénique */}
       <pointLight
         position={[0, chandelierLightY(hangStyle, ceilingM), 0]}
-        intensity={lightIntensity * 0.85}
+        intensity={lightIntensity * 0.6}
         color={lightColor}
         distance={lightRadius}
         decay={2}
