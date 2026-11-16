@@ -538,6 +538,21 @@ body[data-em-sheet-open] .em-ai-fab {
   display: none;
 }
 
+/* Sections de l’accueil qui portent déjà leurs boutons (simulateur, forfaits) : le bouton flottant s’efface. */
+body[data-em-ai-fab-muted] .em-ai-fab {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(0.75rem);
+  pointer-events: none;
+  transition: opacity 150ms ease, transform 150ms ease, visibility 0s linear 150ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-em-ai-fab-muted] .em-ai-fab {
+    transform: none;
+  }
+}
+
 /* Sur mobile, la barre du bas a déjà son bouton « Simulateur » : pas de second bouton flottant par-dessus le contenu. */
 @media (max-width: 767px) {
   body[data-em-site-bottom-bar] .em-ai-fab {
