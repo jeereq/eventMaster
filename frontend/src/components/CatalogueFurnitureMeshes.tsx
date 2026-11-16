@@ -1048,6 +1048,9 @@ export function CatalogueTableStructure({
         topY={topY}
         color={topColor}
         selected={selected}
+        cloth={mat.isCloth !== false}
+        map={mat.map ?? null}
+        normalMap={mat.normalMap ?? null}
       />
     );
   }

@@ -3972,6 +3972,13 @@ function SceneContent({
         <gridHelper
           args={[Math.max(widthM, heightM), 24, '#64748b', '#334155']}
           position={[0, 0.015, 0]}
+          // Repère d’édition discret : il guide la pose sans quadriller le sol comme un carrelage.
+          onUpdate={(grid: THREE.GridHelper) => {
+            const m = grid.material as THREE.LineBasicMaterial;
+            m.transparent = true;
+            m.opacity = 0.22;
+            m.depthWrite = false;
+          }}
         />
       ) : null}
 
