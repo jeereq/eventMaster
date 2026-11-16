@@ -423,6 +423,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
   onShare,
   onOpenLightbox,
   dense = false,
+  wide = false,
 }: {
   post: MarketplaceFeedPost;
   authorLabel: string;
@@ -439,6 +440,8 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
   onOpenLightbox: (urls: string[], index: number) => void;
   /** Grille de réalisations (fiche offre) : carte plus compacte. */
   dense?: boolean;
+  /** En grille : carte sur toute la largeur (format paysage). */
+  wide?: boolean;
 }) {
   const [commentsExpanded, setCommentsExpanded] = useState(false);
   const [activeSnapIndex, setActiveSnapIndex] = useState(0);
@@ -498,6 +501,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
       className={cn(
         'group/card w-full rounded-xl sm:rounded-2xl border border-border/80 bg-surface shadow-xs hover:shadow-md transition-all duration-300 space-y-2.5 [content-visibility:auto] [contain-intrinsic-size:0_480px]',
         dense ? 'p-1.5 self-start' : 'p-2 sm:p-2.5',
+        dense && wide && 'sm:col-span-2',
       )}
     >
       {/* ─── CAS 1 : Publication avec Médias (Format Snap Spotlight) ─── */}
@@ -505,7 +509,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
         <div
           className={cn(
             'relative w-full rounded-lg sm:rounded-xl overflow-hidden bg-slate-950 select-none shadow-inner touch-pan-y',
-            dense ? 'aspect-[4/5]' : 'aspect-[4/5] sm:aspect-[4/5] md:aspect-[3/4] max-h-[620px]',
+            dense ? (wide ? 'aspect-[4/5] sm:aspect-[16/10]' : 'aspect-[4/5]') : 'aspect-[4/5] sm:aspect-[4/5] md:aspect-[3/4] max-h-[620px]',
           )}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
@@ -732,7 +736,7 @@ const VenueActivityPostCard = React.memo(function VenueActivityPostCard({
         /* ─── CAS 2 : Publication texte sans média (Story Texte Snapchat) ─── */
         <div className={cn(
           'relative w-full rounded-lg sm:rounded-xl flex flex-col justify-between overflow-hidden shadow-inner text-white select-none',
-          dense ? 'p-5 aspect-[4/5]' : 'p-5 sm:p-7 min-h-[280px] sm:min-h-[320px]',
+          dense ? (wide ? 'p-5 aspect-[4/5] sm:aspect-[16/10] sm:p-7' : 'p-5 aspect-[4/5]') : 'p-5 sm:p-7 min-h-[280px] sm:min-h-[320px]',
           isVenue
             ? 'bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900'
             : 'bg-gradient-to-br from-amber-600 via-rose-600 to-purple-800',
@@ -1059,7 +1063,7 @@ export default function MarketplaceActivityFeed({
         </div>
       ) : (
         <div className={listClass}>
-          {posts.map((post) => (
+          {posts.map((post, index) => (
             <VenueActivityPostCard
               key={post.id}
               post={post}
@@ -1076,6 +1080,7 @@ export default function MarketplaceActivityFeed({
               onShare={handleShare}
               onOpenLightbox={openLightbox}
               dense={isGrid}
+              wide={isGrid && posts.length % 2 === 1 && index === posts.length - 1}
             />
           ))}
         </div>
