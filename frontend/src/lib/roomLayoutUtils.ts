@@ -3414,7 +3414,8 @@ function buildShowFlatTemplate(): RoomLayoutBlueprint {
   const furniture: RoomLayoutBlueprint['furniture'] = [
     room('Chambre parentale', 5, 5, 28, 64, 'parquet', '#e2c9a2'),
     room('Dressing', 5, 64, 28, 95, 'parquet', '#e2c9a2'),
-    room('Salle de bain', 28, 64, 46, 95, 'marble', '#efe9df'),
+    room('Salle de bain', 28, 64, 46, 95, 'concrete', '#ddd3c4'),
+    room('Entrée', 46, 64, 58, 95, 'parquet', '#e2c9a2'),
     room('Séjour', 28, 5, 58, 64, 'parquet', '#e2c9a2'),
     room('Cuisine ouverte', 58, 5, 95, 95, 'parquet', '#e2c9a2'),
     {
@@ -3432,6 +3433,7 @@ function buildShowFlatTemplate(): RoomLayoutBlueprint {
   const bedCx = 5 + 0.5 + pctX(HOME_FURNITURE_META.bed.depthM) / 2;
   const fixtures: BlueprintFixture[] = [
     // chambre : lit tête contre le mur ouest, chevets, bureau face à la baie
+    { ...home('rug', bedCx + pctX(0.35), 32, 90, 'Tapis de chambre'), color: '#cdb99b' },
     home('bed', bedCx, 32, 90),
     home('nightstand', 5 + 0.6 + pctX(0.21), 32 - pctY(1.25), 90),
     home('nightstand', 5 + 0.6 + pctX(0.21), 32 + pctY(1.25), 90),
@@ -3440,11 +3442,13 @@ function buildShowFlatTemplate(): RoomLayoutBlueprint {
     // dressing ouvert le long de la cloison et du mur ouest
     home('wardrobe', 28 - 0.6 - pctX(0.31), 79, 270, 'Dressing'),
     home('wardrobe', 5 + 0.6 + pctX(0.31), 79, 90, 'Dressing'),
-    // salle de bain
-    home('bathtub', 34, 95 - 0.8 - pctY(0.4), 0),
-    home('vanity', 46 - 0.5 - pctX(0.25), 76, 270),
+    // salle de bain : baignoire encastrée au fond, WC contre la cloison, vasque laiton et sèche-serviettes
+    { ...home('bathtubBuiltIn', 35.5, 95 - 0.8 - pctY(0.375), 0), homeMetalFinish: 'brass' },
+    { ...home('toilet', 28 + 0.4 + pctX(0.33), 72, 90), homeMetalFinish: 'brass' },
+    { ...home('vanity', 46 - 0.5 - pctX(0.25), 76, 270), homeMetalFinish: 'brass' },
+    { ...home('towelRail', 37, 64 + 0.5 + pctY(0.08), 180), homeMetalFinish: 'brass' },
     // séjour : mur TV contre la salle de bain, canapé face à l’écran
-    home('rug', 43, 38, 0),
+    { ...home('rug', 43, 38, 0), color: '#b9a383' },
     home('tvUnit', 43, 64 - 0.6 - pctY(0.22), 180),
     {
       ...createBlueprintFixture('loungeSofa'),
@@ -3473,6 +3477,10 @@ function buildShowFlatTemplate(): RoomLayoutBlueprint {
       flowerType: 'boquet',
       flowerColor: '#7d8c62',
     },
+    // plantes en bac (coordonnées relatives au contour 5–95 %) : chambre, entrée et cuisine
+    landscapeFixture(canvas, { style: 'planter', x: 22, y: 59, w: pctX(0.9), h: pctY(0.4) }),
+    landscapeFixture(canvas, { style: 'planter', x: 52, y: 96, w: pctX(1.2), h: pctY(0.4) }),
+    landscapeFixture(canvas, { style: 'planter', x: 95, y: 3, w: pctX(1.2), h: pctY(0.4) }),
   ];
 
   return refreshBlueprintMetadata({
@@ -3491,6 +3499,9 @@ function buildShowFlatTemplate(): RoomLayoutBlueprint {
       lightingPreset: 'day',
       showRoof: false,
       dollhouseView: true,
+      // Jardin autour de la maquette plutôt qu’un fond uni ; pas d’uplights scéniques dans un logement.
+      outdoorSurroundings: 'garden',
+      showUplights: false,
     },
   });
 }

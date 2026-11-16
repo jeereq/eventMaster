@@ -28,7 +28,7 @@ const VIEWS = [
     id: '3d',
     label: 'Visite 3D',
     src: '/images/landing/editor/editeur-3d.webp',
-    alt: 'Vue 3D d’une salle de réception dressée, sol en marbre et lustres',
+    alt: 'Vue 3D d’une salle de mariage dressée : parquet en chevrons, scène drapée, piste de danse avec monogramme et lustres',
     caption: 'La même salle en 3D : matières, lumière et reflets, directement dans le navigateur.',
   },
   {
