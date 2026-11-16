@@ -20,14 +20,12 @@ import {
   Wallet,
   CalendarCheck,
   Store,
-  Eye,
   ArrowRight,
-  CheckCircle2,
-  Scale,
 } from 'lucide-react';
 import { AuthSplitLayout, MethodToggle } from '@/components/AuthSplitLayout';
 import { Button, Alert, Input, PasswordInput, Card, PhoneInput } from '@/components/ui';
 import { TERMS_VERSION, PRIVACY_VERSION, REFUND_VERSION } from '@/config/legalConfig';
+import LegalConsentChecklist from '@/components/LegalConsentChecklist';
 import { parseReferralFromSearchParams } from '@/lib/referralLink';
 import { usePlatformSite } from '@/context/PlatformSiteContext';
 import {
@@ -381,7 +379,7 @@ function RegisterPageContent() {
     if (!acceptTerms || !acceptPrivacy || !acceptRefund) {
       setLegalModalTab(!acceptTerms ? 'terms' : !acceptPrivacy ? 'privacy' : 'refund');
       setLegalModalOpen(true);
-      setError('Cochez les conditions, la confidentialité et la politique de remboursement après lecture, ou utilisez « Tout lire & approuver ».');
+      setError('Cochez les conditions, la confidentialité et la politique de remboursement après lecture, ou utilisez « Tout lire & accepter ».');
       return;
     }
 
@@ -767,152 +765,22 @@ function RegisterPageContent() {
                 </p>
               )}
 
-              {/* ─── CONDITIONS LÉGALES & PRÉVISUALISATION COMPACTES ─── */}
-              <div className="space-y-1.5 pt-0.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-semibold text-foreground flex items-center gap-1 text-xs">
-                    <Scale className="w-3.5 h-3.5 text-primary" aria-hidden />
-                    Engagements
-                  </span>
-                  {(!acceptTerms || !acceptPrivacy || !acceptRefund) && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setLegalModalTab('summary');
-                        setLegalModalOpen(true);
-                      }}
-                      className="text-xs font-bold text-primary hover:underline inline-flex items-center min-h-11 gap-1 touch-manipulation cursor-pointer rounded-[var(--radius-button)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                    >
-                      <Eye className="w-3 h-3" aria-hidden />
-                      Tout lire & approuver
-                    </button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
-                  {/* 1. Carte Conditions d'utilisation */}
-                  <div
-                    className={cn(
-                      'min-h-11 px-2.5 py-1.5 rounded-[var(--radius-card)] border transition-all flex items-center justify-between gap-2 text-xs',
-                      acceptTerms
-                        ? 'border-primary/30 bg-primary/8'
-                        : 'border-border bg-surface hover:border-primary/40',
-                    )}
-                  >
-                    <label className="flex items-center gap-2 min-w-0 cursor-pointer flex-1 min-h-11">
-                      <input
-                        type="checkbox"
-                        checked={acceptTerms}
-                        onChange={(e) => setAcceptTerms(e.target.checked)}
-                        className="rounded text-primary focus:ring-primary accent-primary shrink-0 h-4 w-4"
-                      />
-                      <span className="font-medium text-foreground truncate text-xs">
-                        Conditions d’utilisation <span className="text-xs text-muted">v{TERMS_VERSION}</span>
- </span>
- </label>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setLegalModalTab('terms');
-                        setLegalModalOpen(true);
-                      }}
-                      aria-label={acceptTerms ? 'Relire les conditions d’utilisation' : 'Lire les conditions d’utilisation'}
-                      className={cn(
-                        'min-h-11 min-w-11 px-2 rounded-[var(--radius-button)] text-xs font-bold shrink-0 transition inline-flex items-center justify-center gap-0.5 touch-manipulation cursor-pointer',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                        acceptTerms
-                          ? 'text-primary bg-primary/12'
-                          : 'text-primary bg-primary/10 hover:bg-primary/20',
-                      )}
-                    >
-                      {acceptTerms ? <CheckCircle2 className="w-4 h-4 text-primary" aria-hidden /> : null}
-                      {acceptTerms ? 'Relire' : 'Lire'}
-                    </button>
-                  </div>
-
-                  {/* 2. Carte Politique de confidentialité */}
-                  <div
-                    className={cn(
-                      'min-h-11 px-2.5 py-1.5 rounded-[var(--radius-card)] border transition-all flex items-center justify-between gap-2 text-xs',
-                      acceptPrivacy
-                        ? 'border-primary/30 bg-primary/8'
-                        : 'border-border bg-surface hover:border-primary/40',
-                    )}
-                  >
-                    <label className="flex items-center gap-2 min-w-0 cursor-pointer flex-1 min-h-11">
-                      <input
-                        type="checkbox"
-                        checked={acceptPrivacy}
-                        onChange={(e) => setAcceptPrivacy(e.target.checked)}
-                        className="rounded text-primary focus:ring-primary accent-primary shrink-0 h-4 w-4"
-                      />
-                      <span className="font-medium text-foreground truncate text-xs">
-                        Confidentialité <span className="text-xs text-muted">v{PRIVACY_VERSION}</span>
- </span>
- </label>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setLegalModalTab('privacy');
-                        setLegalModalOpen(true);
-                      }}
-                      aria-label={acceptPrivacy ? 'Relire la politique de confidentialité' : 'Lire la politique de confidentialité'}
-                      className={cn(
-                        'min-h-11 min-w-11 px-2 rounded-[var(--radius-button)] text-xs font-bold shrink-0 transition inline-flex items-center justify-center gap-0.5 touch-manipulation cursor-pointer',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                        acceptPrivacy
-                          ? 'text-primary bg-primary/12'
-                          : 'text-primary bg-primary/10 hover:bg-primary/20',
-                      )}
-                    >
-                      {acceptPrivacy ? <CheckCircle2 className="w-4 h-4 text-primary" aria-hidden /> : null}
-                      {acceptPrivacy ? 'Relire' : 'Lire'}
-                    </button>
-                  </div>
-
-                  <div
-                    className={cn(
-                      'min-h-11 px-2.5 py-1.5 rounded-[var(--radius-card)] border transition-all flex items-center justify-between gap-2 text-xs',
-                      acceptRefund
-                        ? 'border-primary/30 bg-primary/8'
-                        : 'border-border bg-surface hover:border-primary/40',
-                    )}
-                  >
-                    <label className="flex items-center gap-2 min-w-0 cursor-pointer flex-1 min-h-11">
-                      <input
-                        type="checkbox"
-                        checked={acceptRefund}
-                        onChange={(e) => setAcceptRefund(e.target.checked)}
-                        className="rounded text-primary focus:ring-primary accent-primary shrink-0 h-4 w-4"
-                      />
-                      <span className="font-medium text-foreground truncate text-xs">
-                        Politique de remboursement <span className="text-xs text-muted">v{REFUND_VERSION}</span>
-                      </span>
-                    </label>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setLegalModalTab('refund');
-                        setLegalModalOpen(true);
-                      }}
-                      aria-label={acceptRefund ? 'Relire la politique de remboursement' : 'Lire la politique de remboursement'}
-                      className={cn(
-                        'min-h-11 min-w-11 px-2 rounded-[var(--radius-button)] text-xs font-bold shrink-0 transition inline-flex items-center justify-center gap-0.5 touch-manipulation cursor-pointer',
-                        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-                        acceptRefund
-                          ? 'text-primary bg-primary/12'
-                          : 'text-primary bg-primary/10 hover:bg-primary/20',
-                      )}
-                    >
-                      {acceptRefund ? <CheckCircle2 className="w-4 h-4 text-primary" aria-hidden /> : null}
-                      {acceptRefund ? 'Relire' : 'Lire'}
-                    </button>
-                  </div>
-                </div>
- </div>
+              {/* ─── ENGAGEMENTS : liste groupée, libellés complets, lecture du texte ─── */}
+              <LegalConsentChecklist
+                items={[
+                  { id: 'terms', label: 'les conditions d’utilisation', version: TERMS_VERSION, checked: acceptTerms, onChange: setAcceptTerms },
+                  { id: 'privacy', label: 'la politique de confidentialité', version: PRIVACY_VERSION, checked: acceptPrivacy, onChange: setAcceptPrivacy },
+                  { id: 'refund', label: 'la politique de remboursement', version: REFUND_VERSION, checked: acceptRefund, onChange: setAcceptRefund },
+                ]}
+                onRead={(id) => {
+                  setLegalModalTab(id);
+                  setLegalModalOpen(true);
+                }}
+                onReadAll={() => {
+                  setLegalModalTab('summary');
+                  setLegalModalOpen(true);
+                }}
+              />
 
               {/* ─── BOUTON D'ACTION PRINCIPAL DYNAMIQUE ─── */}
               <div className="pt-1.5 space-y-1.5">
