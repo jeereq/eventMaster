@@ -35,7 +35,7 @@ const OUTLINE_SHAPES = new Set([
   'stadium',
 ]);
 const TABLE_SHAPES = new Set(['round', 'rectangular', 'square', 'oval', 'cocktail', 'highTop', 'arc']);
-const ZONE_KINDS = new Set(['dance', 'vip', 'buffet', 'carpet', 'custom']);
+const ZONE_KINDS = new Set(['dance', 'vip', 'buffet', 'carpet', 'custom', 'plot']);
 const FLOOR_TYPES = new Set([
   'parquet', 'marbre', 'moquette', 'carrelage', 'beton', 'herbe',
   'damier', 'terrazzo', 'sable', 'brique', 'bois', 'pierre', 'epoxy',
@@ -465,6 +465,9 @@ const SHAPE_ALIASES: Record<string, string> = {
 };
 
 const ZONE_KIND_ALIASES: Record<string, string> = {
+  plot: 'plot',
+  emplacement: 'plot',
+  stand: 'plot',
   dance: 'dance',
   dancefloor: 'dance',
   piste: 'dance',
@@ -1208,7 +1211,7 @@ Required JSON fields:
     "shape": "round"|"rectangular"|"square"|"oval"|"cocktail"|"highTop"|"arc",
     "hasCenterpiece": true,
     "stageShape": "rect"|"semiCircle",
-    "label": string, "zoneKind": "dance"|"vip"|"buffet"|"carpet"|"custom",
+    "label": string, "zoneKind": "dance"|"vip"|"buffet"|"carpet"|"custom"|"plot",
     "color": "#rrggbb", "surface": "wood"|"linen"|"walnut"|"marble"|"darkWood"|"whiteLacquer"|"glass",
     "material": "wood"|"carpet"|"vinyl"|"led"|"marble"|"concrete"|"parquet"|"epoxy",
     "chairStyle": "classic"|"chiavari"|"napoleon"|"ghost"|"lounge"|"crossback"|"louis"|"ovalBack",
@@ -1252,7 +1255,7 @@ Item rules (inference allowed):
 - chair = isolated armchair or counter stool only (not chairs around a table). Bar stools along a bar counter = individual "chair" items along the counter edge.
 - Chairs around a table = that table’s seats — never separate chair or row items.
 - corridor = visible hallway / circulation. perimeter = edge band only if visible.
-- zone = dance floor, VIP lounge, outdoor terrace, or distinct functional area. Back-of-house areas (Kitchen / Cuisine / Cocina, Toilets / Restrooms / Aseos, Storage / Almacén, Wash area) should be represented as "zone" items with zoneKind="custom" and explicit label.
+- zone = dance floor, VIP lounge, outdoor terrace, or distinct functional area. Back-of-house areas (Kitchen / Cuisine / Cocina, Toilets / Restrooms / Aseos, Storage / Almacén, Wash area) should be represented as "zone" items with zoneKind="custom" and explicit label. Marked plots without walls in an open space (exhibitor stands, market stalls, numbered lots drawn on the ground) = "zone" items with zoneKind="plot" and their number as label.
 - bar = any service counter, bar counter, barista order counter, pickup counter, or sushi bar (label="Comptoir Bar", "Comptoir Commande", "Sushi Bar").
 - podium = hostess stand, reception desk, cashier/checkout counter, or speaker pulpit (label="Accueil", "Caisse", "Hostess", "Réception").
 - buffet = buffet tables, condiment stations, water stations, pastry showcases, credenzas, or pizza ovens.
@@ -1324,7 +1327,7 @@ JSON schema:
     "shape": "round"|"rectangular"|"square"|"oval"|"cocktail"|"highTop"|"arc",
     "hasCenterpiece": true,
     "stageShape": "rect"|"semiCircle",
-    "label": string, "zoneKind": "dance"|"vip"|"buffet"|"carpet"|"custom",
+    "label": string, "zoneKind": "dance"|"vip"|"buffet"|"carpet"|"custom"|"plot",
     "color": "#rrggbb", "surface": "wood"|"linen"|"walnut"|"marble"|"darkWood"|"whiteLacquer"|"glass",
     "material": "wood"|"carpet"|"vinyl"|"led"|"marble"|"concrete"|"parquet"|"epoxy",
     "chairStyle": "classic"|"chiavari"|"napoleon"|"ghost"|"lounge"|"crossback"|"louis"|"ovalBack",

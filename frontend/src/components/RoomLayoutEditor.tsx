@@ -4,8 +4,9 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import dynamic from 'next/dynamic';
 import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import {
-  GraduationCap, Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees,
+  GraduationCap, Plus, Trash2, RefreshCw, Maximize2, Minimize2, LayoutGrid, LayoutTemplate, Shapes, Columns3, ImagePlus, Flower2, Palette, Sparkles, Layers, Copy, Lock, Unlock, Ruler, Circle, Columns2, BoxSelect, Eye, EyeOff, BookmarkPlus, BrickWall, Undo2, Redo2, Video, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Home, StepForward, AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignEndVertical, AlignCenterVertical, Group, Ungroup, BetweenHorizontalStart, BetweenVerticalStart, Download, Upload, Link2, Cloud, History, Building2, Search, Aperture, Sun, Moon, ListTree, ClipboardList, Presentation, DoorOpen, ChevronDown, RotateCw, RotateCcw, FlipHorizontal2, FlipVertical2, Music2, Wine, Crosshair, Keyboard, MoveHorizontal, ShieldCheck, Box, Check, CheckCircle2, SlidersHorizontal, X, Compass, Pencil, Trees, SquareDashed, Fence,
 } from 'lucide-react';
+import { buildPlotGrid, buildSinglePlot, findFreePlotSpot, isOpenSpace, nextPlotLabel, normalizePlotGrid, plotGridFootprint, PLOT_COLORS, PLOT_GRID_DEFAULTS, type PlotGridOptions } from '@/lib/roomPlots';
 import {
   LANDSCAPE_GROUP_LABELS,
   LANDSCAPE_STYLE_META,
@@ -81,6 +82,8 @@ import {
   chairTypeLabels,
   chairStyleLabels,
   zoneKindLabels,
+  plotBorderLabels,
+  type PlotBorderStyle,
   doorStyleLabels,
   doorStyleHints,
   aisleStyleLabels,
@@ -463,6 +466,7 @@ function EditorToolGroup({
   openId,
   onToggle,
   icon,
+  closeOnPick = false,
   children,
 }: {
   id: EditorToolGroupId;
@@ -470,6 +474,8 @@ function EditorToolGroup({
   openId: EditorToolGroupId | null;
   onToggle: (id: EditorToolGroupId) => void;
   icon?: React.ReactNode;
+  /** Menu d’ajout : se referme après un choix pour laisser voir l’élément posé. */
+  closeOnPick?: boolean;
   children: React.ReactNode;
 }) {
   const items = React.Children.toArray(children).filter(Boolean);
@@ -524,6 +530,10 @@ function EditorToolGroup({
             'lg:absolute lg:left-0 lg:top-full lg:z-40 lg:mt-2 lg:w-max lg:max-w-[min(40rem,calc(100vw-4rem))]',
             'lg:p-2 lg:rounded-[var(--radius-card)] lg:border lg:border-border lg:bg-surface lg:shadow-xl',
           )}
+          onClick={closeOnPick ? (e) => {
+            // Seuls les boutons referment : un champ ou un import de fichier garde le menu ouvert.
+            if (e.target instanceof Element && e.target.closest('button')) onToggle(id);
+          } : undefined}
         >
           {items}
         </div>
@@ -976,12 +986,13 @@ export default function RoomLayoutEditor({
   const [lockOrbit, setLockOrbit] = useState(true);
   const [walkthroughActive, setWalkthroughActive] = useState(false);
   const [walkthroughLabel, setWalkthroughLabel] = useState('');
-  const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs' | 'stairs' | 'balconies' | 'amphitheater' | 'chandeliers' | 'doors' | 'podiums' | 'instruments' | 'bars' | 'hospitality' | 'environment' | 'elements'>(null);
+  const [quickCreate, setQuickCreate] = useState<null | 'aisles' | 'chairs' | 'stairs' | 'balconies' | 'amphitheater' | 'chandeliers' | 'doors' | 'podiums' | 'instruments' | 'bars' | 'hospitality' | 'environment' | 'elements' | 'plots'>(null);
   const [elementCreatorOpen, setElementCreatorOpen] = useState(false);
   const [elementLibrary, setElementLibrary] = useState<CustomElementDefinition[] | null>(null);
   const envCoalesceRef = useRef<{ key: string; at: number } | null>(null);
   const [aisleCount, setAisleCount] = useState(2);
   const [chairGroups, setChairGroups] = useState(2);
+  const [plotGrid, setPlotGrid] = useState<PlotGridOptions>(PLOT_GRID_DEFAULTS);
   const [rowsPerGroup, setRowsPerGroup] = useState(4);
   const [seatsPerRow, setSeatsPerRow] = useState(12);
   const [amphiStyle, setAmphiStyle] = useState<AmphitheaterStyle>('modernFan');
@@ -1689,6 +1700,53 @@ export default function RoomLayoutEditor({
     const zone = { ...draftZone, x: zoneSlot.x, y: zoneSlot.y };
     updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, zone] }, { message: `Zone « ${zone.label} » ajoutée`, kind: 'add' });
     setSelection([{ kind: 'zone', id: zone.id }]);
+  };
+
+  /** Emplacement sans murs : surface délimitée au sol (marquage), à sa taille réelle. */
+  const addPlot = () => {
+    if (!caps.canZones) {
+      log('Les emplacements ne sont pas inclus dans votre forfait', 'info');
+      return;
+    }
+    const storyId = resolveActiveStoryId(blueprint);
+    const plot = { ...buildSinglePlot(blueprint.canvas, nextPlotLabel(blueprint)), storyId };
+    // Les emplacements se meublent librement, mais ne se chevauchent pas entre eux.
+    const spot = findFreePlotSpot(
+      blueprint.furniture.filter(
+        (f): f is Extract<typeof f, { kind: 'zone' }> => f.kind === 'zone' && f.zoneKind === 'plot' && (f.storyId ?? storyId) === storyId,
+      ),
+      plot,
+    );
+    const placed = { ...plot, ...spot };
+    updateBlueprint({ ...blueprint, furniture: [...blueprint.furniture, placed] }, { message: `« ${placed.label} » ajouté (sans murs)`, kind: 'add' });
+    setSelection([{ kind: 'zone', id: placed.id }]);
+  };
+
+  /** Grille d’emplacements numérotés (A1, A2…) avec allées, centrée dans l’espace. */
+  const addPlotGridQuick = () => {
+    if (!caps.canZones) {
+      log('Les emplacements ne sont pas inclus dans votre forfait', 'info');
+      return;
+    }
+    const { plots, fits } = buildPlotGrid(blueprint.canvas, { ...plotGrid, storyId: resolveActiveStoryId(blueprint) });
+    updateBlueprint(
+      { ...blueprint, furniture: [...blueprint.furniture, ...plots] },
+      { message: `${plots.length} emplacement${plots.length > 1 ? 's' : ''} ajouté${plots.length > 1 ? 's' : ''}`, kind: 'add' },
+    );
+    if (!fits) log('La grille dépasse l’espace : agrandissez le plan ou réduisez les emplacements', 'info');
+    setSelection(plots.map((p) => ({ kind: 'zone' as const, id: p.id })));
+    setQuickCreate(null);
+  };
+
+  /** Espace ouvert : murs et toit masqués d’un geste (rien n’est supprimé). */
+  const openSpace = isOpenSpace(blueprint.metadata);
+  const toggleOpenSpace = () => {
+    const next = !openSpace;
+    if (next) setWallEditMode(false);
+    updateBlueprint({
+      ...blueprint,
+      metadata: { ...blueprint.metadata, showWalls: !next, showRoof: !next },
+    }, { message: next ? 'Espace ouvert : murs et toit masqués' : 'Murs et toit réaffichés', kind: 'settings' });
   };
 
   const addFreeChair = () => {
@@ -7927,7 +7985,7 @@ export default function RoomLayoutEditor({
         <div className="space-y-3">
           <div className="p-4 bg-surface-muted rounded-[var(--radius-card)] border space-y-3">
             <p className="text-xs font-bold uppercase text-muted">
-              {selectedFurniture.zoneKind === 'dance' ? 'Piste de danse' : selectedFurniture.zoneKind === 'carpet' ? 'Moquette' : 'Zone'}
+              {selectedFurniture.zoneKind === 'dance' ? 'Piste de danse' : selectedFurniture.zoneKind === 'carpet' ? 'Moquette' : selectedFurniture.zoneKind === 'plot' ? 'Emplacement sans murs' : 'Zone'}
             </p>
             <label className="block text-xs space-y-1">
               <span className="font-semibold text-muted">Libellé</span>
@@ -7945,23 +8003,76 @@ export default function RoomLayoutEditor({
                 ))}
               </select>
             </label>
-            <label className="block text-xs space-y-1">
-              <span className="font-semibold text-muted">Matériau / sol</span>
-              <ZoneMaterialPicker
-                value={selectedFurniture.material ?? 'vinyl'}
-                onChange={(material) => updateFurniture(selectedFurniture.id, { material }, 'Matériau de zone modifié')}
-              />
-            </label>
-            <label className="block text-xs space-y-1">
-              <span className="font-semibold text-muted">Teinte</span>
-              <input
-                type="color"
-                value={selectedFurniture.color ?? '#312e81'}
-                onChange={(e) => updateFurniture(selectedFurniture.id, { color: e.target.value }, 'Couleur de zone')}
-                aria-label="Teinte de la zone"
-                className="w-full min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer"
-              />
-            </label>
+            {selectedFurniture.zoneKind === 'plot' ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-1.5" role="group" aria-label="Bordure de l’emplacement">
+                  {(Object.keys(plotBorderLabels) as PlotBorderStyle[]).map((b) => {
+                    const active = (selectedFurniture.plotBorder ?? 'paint') === b;
+                    return (
+                      <button
+                        key={b}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => updateFurniture(selectedFurniture.id, { plotBorder: b }, `Bordure : ${plotBorderLabels[b]}`)}
+                        className={cn(
+                          'min-h-11 rounded-[var(--radius-button)] border px-2 py-1.5 text-xs font-semibold leading-snug transition-colors',
+                          active ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-surface text-foreground hover:border-primary/40',
+                        )}
+                      >
+                        {plotBorderLabels[b]}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Couleur de l’emplacement">
+                  <button
+                    type="button"
+                    onClick={() => updateFurniture(selectedFurniture.id, { color: undefined }, 'Couleur par défaut')}
+                    aria-pressed={!selectedFurniture.color}
+                    className={cn('size-8 rounded-full border-2 bg-surface text-[10px] font-bold', !selectedFurniture.color ? 'border-primary' : 'border-border')}
+                    title="Blanc (par défaut)"
+                  >
+                    –
+                  </button>
+                  {PLOT_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => updateFurniture(selectedFurniture.id, { color: c }, 'Couleur de l’emplacement')}
+                      aria-pressed={selectedFurniture.color === c}
+                      aria-label={`Couleur ${c}`}
+                      className={cn('size-8 rounded-full border-2', selectedFurniture.color === c ? 'border-foreground' : 'border-transparent')}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+                {!openSpace ? (
+                  <button type="button" onClick={toggleOpenSpace} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'w-full justify-center')}>
+                    <Fence className="w-3.5 h-3.5" aria-hidden /> Passer en espace ouvert (sans murs)
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <>
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Matériau / sol</span>
+                  <ZoneMaterialPicker
+                    value={selectedFurniture.material ?? 'vinyl'}
+                    onChange={(material) => updateFurniture(selectedFurniture.id, { material }, 'Matériau de zone modifié')}
+                  />
+                </label>
+                <label className="block text-xs space-y-1">
+                  <span className="font-semibold text-muted">Teinte</span>
+                  <input
+                    type="color"
+                    value={selectedFurniture.color ?? '#312e81'}
+                    onChange={(e) => updateFurniture(selectedFurniture.id, { color: e.target.value }, 'Couleur de zone')}
+                    aria-label="Teinte de la zone"
+                    className="w-full min-h-11 rounded-[var(--radius-button)] border border-border cursor-pointer"
+                  />
+                </label>
+              </>
+            )}
             {selectedFurniture.zoneKind === 'dance' ? (
               <div className="space-y-2 rounded-[var(--radius-button)] border border-border bg-surface p-2.5">
                 <p className="text-sm font-semibold text-foreground">Habillage de la piste</p>
@@ -8021,13 +8132,38 @@ export default function RoomLayoutEditor({
               </div>
             ) : null}
             <div className="grid grid-cols-2 gap-2">
+              {/* Cotes en mètres réels (stockées en % du plan). */}
               <label className="text-xs space-y-1">
-                <span className="font-semibold text-muted">Largeur %</span>
-                <input type="number" min={8} max={90} value={selectedFurniture.w} onChange={(e) => updateFurniture(selectedFurniture.id, { w: parseInt(e.target.value, 10) || 20 })} className={EDITOR_FIELD} />
+                <span className="font-semibold text-muted">Largeur (m)</span>
+                <input
+                  type="number"
+                  min={0.5}
+                  max={blueprint.canvas.widthM}
+                  step={0.1}
+                  value={Math.round((selectedFurniture.w / 100) * blueprint.canvas.widthM * 10) / 10}
+                  onChange={(e) => {
+                    const m = Number(e.target.value);
+                    if (!Number.isFinite(m) || m <= 0) return;
+                    updateFurniture(selectedFurniture.id, { w: Math.round(Math.min(100, (m / blueprint.canvas.widthM) * 100) * 100) / 100 });
+                  }}
+                  className={EDITOR_FIELD}
+                />
               </label>
               <label className="text-xs space-y-1">
-                <span className="font-semibold text-muted">Profondeur %</span>
-                <input type="number" min={8} max={90} value={selectedFurniture.h} onChange={(e) => updateFurniture(selectedFurniture.id, { h: parseInt(e.target.value, 10) || 16 })} className={EDITOR_FIELD} />
+                <span className="font-semibold text-muted">Profondeur (m)</span>
+                <input
+                  type="number"
+                  min={0.5}
+                  max={blueprint.canvas.heightM}
+                  step={0.1}
+                  value={Math.round((selectedFurniture.h / 100) * blueprint.canvas.heightM * 10) / 10}
+                  onChange={(e) => {
+                    const m = Number(e.target.value);
+                    if (!Number.isFinite(m) || m <= 0) return;
+                    updateFurniture(selectedFurniture.id, { h: Math.round(Math.min(100, (m / blueprint.canvas.heightM) * 100) * 100) / 100 });
+                  }}
+                  className={EDITOR_FIELD}
+                />
               </label>
             </div>
             <div className="space-y-2 pt-1 border-t border-border">
@@ -8098,7 +8234,9 @@ export default function RoomLayoutEditor({
                   </button>
                 ))}
               </div>
-              <p className={EDITOR_HINT}>La flèche jaune dans la vue 3D indique l’orientation de la zone.</p>
+              {selectedFurniture.zoneKind !== 'plot' ? (
+                <p className={EDITOR_HINT}>La flèche jaune dans la vue 3D indique l’orientation de la zone.</p>
+              ) : null}
             </div>
             <p className={EDITOR_HINT}>Glissez aussi la zone dans la vue 3D.</p>
             <div className="grid grid-cols-2 gap-1.5 pt-1">
@@ -8469,6 +8607,8 @@ export default function RoomLayoutEditor({
       push('zone-vip', 'Espace VIP', 'Zones', () => addZone('Espace VIP', { zoneKind: 'vip', material: 'marble' }));
       push('zone-buffet', 'Zone buffet', 'Zones', () => addZone('Zone buffet', { zoneKind: 'buffet', material: 'wood' }));
       push('carpet', 'Moquette', 'Zones', addCarpet, 'tapis sol');
+      push('zone-plot', 'Emplacement sans murs', 'Zones', addPlot, 'stand lot espace ouvert marquage');
+      push('zone-plots', 'Grille d’emplacements numérotés', 'Zones', () => setQuickCreate('plots'), 'stands lots marché exposants');
     }
     if (can('bar')) {
       (Object.keys(barStyleLabels) as BarStyle[]).forEach((style) => push(`bar-${style}`, barStyleLabels[style], 'Bars', () => addBarFixture(style), `bar comptoir ${barStyleHints[style]}`));
@@ -8541,6 +8681,7 @@ export default function RoomLayoutEditor({
       </button>
       <EditorToolGroup
         id="furniture"
+        closeOnPick
         label="Mobilier"
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
@@ -8597,6 +8738,7 @@ export default function RoomLayoutEditor({
 
       <EditorToolGroup
         id="hospitality"
+        closeOnPick
         label="Resto & Shop"
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
@@ -8664,6 +8806,7 @@ export default function RoomLayoutEditor({
       {caps.fixtureKinds.includes('homeFurniture') ? (
         <EditorToolGroup
           id="home"
+          closeOnPick
           label="Maison"
           openId={toolbarGroup}
           onToggle={toggleToolbarGroup}
@@ -8689,6 +8832,7 @@ export default function RoomLayoutEditor({
 
       <EditorToolGroup
         id="zones"
+        closeOnPick
         label="Zones"
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
@@ -8698,11 +8842,33 @@ export default function RoomLayoutEditor({
           <button type="button" onClick={() => addZone('Espace VIP', { zoneKind: 'vip', material: 'marble' })} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>VIP</button>
           <button type="button" onClick={() => addZone('Zone buffet', { zoneKind: 'buffet', material: 'wood' })} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Zone buffet</button>
           <button type="button" onClick={addCarpet} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)}>Moquette</button>
+          <button type="button" onClick={addPlot} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Surface délimitée au sol, sans murs ni revêtement">
+            <SquareDashed className="w-3.5 h-3.5" aria-hidden /> Emplacement
+          </button>
+          <button
+            type="button"
+            onClick={() => setQuickCreate(quickCreate === 'plots' ? null : 'plots')}
+            className={cn(EDITOR_TOOL, quickCreate === 'plots' ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
+            aria-expanded={quickCreate === 'plots'}
+            title="Plusieurs emplacements numérotés, avec allées"
+          >
+            <LayoutGrid className="w-3.5 h-3.5" aria-hidden /> Emplacements…
+          </button>
         </></Gate>
+        <button
+          type="button"
+          onClick={toggleOpenSpace}
+          aria-pressed={openSpace}
+          className={cn(EDITOR_TOOL, openSpace ? EDITOR_TOOL_ON : EDITOR_TOOL_IDLE)}
+          title={openSpace ? 'Réafficher les murs et le toit' : 'Masquer murs et toit : espace ouvert (rien n’est supprimé)'}
+        >
+          <Fence className="w-3.5 h-3.5" aria-hidden /> {openSpace ? 'Espace ouvert ✓' : 'Espace ouvert'}
+        </button>
       </EditorToolGroup>
 
       <EditorToolGroup
         id="building"
+        closeOnPick
         label="Bâtiment"
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
@@ -8778,6 +8944,7 @@ export default function RoomLayoutEditor({
 
       <EditorToolGroup
         id="scene"
+        closeOnPick
         label="Décor"
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
@@ -8896,6 +9063,7 @@ export default function RoomLayoutEditor({
 
       <EditorToolGroup
         id="outdoor"
+        closeOnPick
         label="Extérieur"
         icon={<Trees className="w-3.5 h-3.5" aria-hidden />}
         openId={toolbarGroup}
@@ -8954,6 +9122,7 @@ export default function RoomLayoutEditor({
       {canCustomElements ? (
         <EditorToolGroup
           id="custom"
+          closeOnPick
           label="Importer"
           icon={<ImagePlus className="w-3.5 h-3.5" aria-hidden />}
           openId={toolbarGroup}
@@ -9913,6 +10082,60 @@ export default function RoomLayoutEditor({
               className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}
             >
               + Créer un étage d’abord
+            </button>
+          ) : null}
+        </>
+      )}
+      {quickCreate === 'plots' && (
+        <>
+          {([
+            ['count', 'Nombre', 1, 60, 1],
+            ['columns', 'Par rangée', 1, 12, 1],
+            ['widthM', 'Largeur (m)', 0.5, 50, 0.5],
+            ['depthM', 'Profondeur (m)', 0.5, 50, 0.5],
+            ['aisleM', 'Allée (m)', 0, 20, 0.5],
+          ] as const).map(([key, label, min, max, step]) => (
+            <label key={key} className="text-xs font-semibold text-foreground space-y-1">
+              <span>{label}</span>
+              <input
+                type="number"
+                min={min}
+                max={max}
+                step={step}
+                value={plotGrid[key]}
+                onChange={(e) => setPlotGrid((g) => normalizePlotGrid({ ...g, [key]: e.target.value === '' ? min : Number(e.target.value) }))}
+                className="block w-20 px-2 py-1.5 rounded border border-border text-sm font-bold text-foreground bg-surface"
+              />
+            </label>
+          ))}
+          <label className="text-xs font-semibold text-foreground space-y-1">
+            <span>Bordure</span>
+            <select
+              value={plotGrid.border ?? 'paint'}
+              onChange={(e) => setPlotGrid((g) => ({ ...g, border: e.target.value as PlotBorderStyle }))}
+              className="block px-2 py-1.5 rounded border border-border text-sm font-semibold text-foreground bg-surface"
+            >
+              {(Object.keys(plotBorderLabels) as PlotBorderStyle[]).map((b) => (
+                <option key={b} value={b}>{plotBorderLabels[b]}</option>
+              ))}
+            </select>
+          </label>
+          {(() => {
+            const foot = plotGridFootprint(plotGrid);
+            const fits = foot.widthM <= blueprint.canvas.widthM && foot.depthM <= blueprint.canvas.heightM;
+            return (
+              <p className={cn('text-xs self-center', fits ? 'text-muted' : 'text-danger font-semibold')}>
+                {foot.rows} rangée{foot.rows > 1 ? 's' : ''} · emprise {foot.widthM} × {foot.depthM} m
+                {fits ? '' : ` : dépasse l’espace (${blueprint.canvas.widthM} × ${blueprint.canvas.heightM} m)`}
+              </p>
+            );
+          })()}
+          <button type="button" onClick={addPlotGridQuick} className={cn(EDITOR_TOOL, EDITOR_TOOL_PRIMARY)}>
+            Créer {plotGrid.count} emplacement{plotGrid.count > 1 ? 's' : ''}
+          </button>
+          {!openSpace ? (
+            <button type="button" onClick={toggleOpenSpace} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Masquer murs et toit">
+              <Fence className="w-3.5 h-3.5" aria-hidden /> Sans murs
             </button>
           ) : null}
         </>

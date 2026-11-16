@@ -51,6 +51,15 @@ export function zoneTopViewStyle(
   widthM: number,
   heightM: number,
 ): React.CSSProperties {
+  // Emplacement sans murs : sol de la salle visible, voile coloré et bordure en tirets.
+  if (zone.zoneKind === 'plot') {
+    const c = zone.color ?? '#475569';
+    return {
+      backgroundColor: `color-mix(in srgb, ${c} 14%, transparent)`,
+      outline: `2px dashed ${c}`,
+      outlineOffset: '-2px',
+    };
+  }
   const material = zone.material;
   const w = Math.max(0.1, widthM);
   const h = Math.max(0.1, heightM);

@@ -231,7 +231,13 @@ export default function RoomPlanTopView({ blueprint, showLabels = true, classNam
                 boxShadow: 'inset 0 0 0 1px rgba(15,23,42,0.18)',
                 transform: item.rotation ? `rotate(${planRotationScreenDeg(item.rotation)}deg)` : undefined,
               }}
-            />
+            >
+              {item.zoneKind === 'plot' ? (
+                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-extrabold text-foreground/80 leading-none truncate px-0.5">
+                  {item.label}
+                </span>
+              ) : null}
+            </div>
           ) : null,
         )}
 
