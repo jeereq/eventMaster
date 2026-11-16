@@ -105,7 +105,7 @@ export default function GuestPrintPlanSection({
       ...base,
       metadata: {
         ...base.metadata,
-        showChandeliers: base.metadata.showChandeliers ?? true,
+        showChandeliers: base.metadata.showChandeliers === true,
         showUplights: base.metadata.showUplights ?? true,
         showDecorPlants: base.metadata.showDecorPlants ?? true,
         showRoof: base.metadata.showRoof ?? true,

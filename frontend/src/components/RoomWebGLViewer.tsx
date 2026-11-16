@@ -59,6 +59,7 @@ import {
 } from '@/lib/roomLayoutUtils';
 import type { StairStyle } from '@/lib/roomStairsUtils';
 import { resolveDepthAmount } from '@/lib/roomFloorUtils';
+import { ceilingChandelierCount } from '@/lib/roomCeilingUtils';
 import { isStoryVisible, resolveActiveStoryId, resolveFoundation, resolveStories, stackViewFocusY, worldElevationForStory } from '@/lib/roomBuildingUtils';
 import { getRoomTheme } from '@/lib/roomThemeUtils';
 import { getTableSeatPlacement3D, tablePlateSizeMeters } from '@/lib/tablePlanUtils';
@@ -3540,6 +3541,12 @@ function SceneContent({
   const stories = resolveStories(blueprint);
   const focusY = stackViewFocusY(blueprint, wallHeightM);
   const topStoryElev = stories.reduce((max, s) => Math.max(max, s.elevationM), 0);
+  /** Lustres automatiques : aucun dès qu’un lustre est posé sur un étage affiché. */
+  const ambientChandeliers = ceilingChandelierCount(
+    blueprint.metadata,
+    blueprint.fixtures.filter((f) => isStoryVisible(blueprint, f.storyId)),
+    5,
+  );
 
   const activeStoryStairHoles = useMemo(() => {
     const activeId = resolveActiveStoryId(blueprint);
@@ -3862,7 +3869,7 @@ function SceneContent({
           heightM={heightM}
           wallHeightM={wallHeightM}
           flags={{
-            chandeliers: !dollhouse && blueprint.metadata.showChandeliers === true,
+            chandeliers: !dollhouse && ambientChandeliers > 0,
             uplights: isBlueprintWallsVisible(blueprint.metadata) && blueprint.metadata.showUplights === true,
             curtains: !dollhouse && isBlueprintWallsVisible(blueprint.metadata) && blueprint.metadata.showCurtains === true,
             plants: blueprint.metadata.showDecorPlants === true,
@@ -3872,7 +3879,7 @@ function SceneContent({
           maxUplights={qualitySettings.maxUplights}
           chandelierPointLights={qualitySettings.chandelierPointLights}
           chandelierType={blueprint.metadata.chandelierType}
-          chandelierCount={blueprint.metadata.chandelierCount}
+          chandelierCount={ambientChandeliers}
         />
       </group>
 

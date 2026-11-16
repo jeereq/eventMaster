@@ -367,7 +367,8 @@ export type ChandelierFixtureStyle =
   | 'fairyCanopy'
   | 'candleCandelabra'
   | 'modernMinimal'
-  | 'lantern';
+  | 'lantern'
+  | 'industrialDome';
 
 export const chandelierFixtureStyleLabels: Record<ChandelierFixtureStyle, string> = {
   crystalCascade: 'Cascade de cristal royal',
@@ -378,6 +379,7 @@ export const chandelierFixtureStyleLabels: Record<ChandelierFixtureStyle, string
   candleCandelabra: 'Candélabre grand siècle (bougies)',
   modernMinimal: 'Cylindre épuré architectural',
   lantern: 'Lanterne suspendue fer forgé',
+  industrialDome: 'Trio de dômes industriels',
 };
 
 export const chandelierFixtureStyleHints: Record<ChandelierFixtureStyle, string> = {
@@ -389,6 +391,7 @@ export const chandelierFixtureStyleHints: Record<ChandelierFixtureStyle, string>
   candleCandelabra: 'Ambiance château et lueurs chaudes',
   modernMinimal: 'Lumière ciblée contemporaine',
   lantern: 'Élégance classique intemporelle',
+  industrialDome: 'Émail noir et ampoules à filament',
 };
 
 /** Styles de disposition pour amphithéâtre / gradins. */

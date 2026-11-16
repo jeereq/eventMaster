@@ -290,7 +290,7 @@ export function buildTablePlanPreviewBlueprint(
       metadata: {
         ...base.metadata,
         ...meta,
-        showChandeliers: base.metadata.showChandeliers ?? true,
+        showChandeliers: base.metadata.showChandeliers === true,
         showUplights: base.metadata.showUplights ?? true,
         showDecorPlants: base.metadata.showDecorPlants ?? true,
         showRoof: base.metadata.showRoof ?? true,

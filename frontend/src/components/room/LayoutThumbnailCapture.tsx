@@ -40,7 +40,7 @@ export default function LayoutThumbnailCapture({ blueprint, onCaptured, onFailed
       ...base,
       metadata: {
         ...base.metadata,
-        showChandeliers: base.metadata.showChandeliers ?? true,
+        showChandeliers: base.metadata.showChandeliers === true,
         showUplights: base.metadata.showUplights ?? true,
         showDecorPlants: base.metadata.showDecorPlants ?? true,
         renderQuality: 'showcase' as const,
