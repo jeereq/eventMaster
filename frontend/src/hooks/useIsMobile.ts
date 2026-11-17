@@ -30,3 +30,15 @@ export function useIsLgUp() {
     () => true,
   );
 }
+
+const COARSE_POINTER_QUERY = '(pointer: coarse)';
+const subscribeCoarse = subscribeQuery(COARSE_POINTER_QUERY);
+
+/** Écran tactile (doigt) : les consignes parlent de toucher, pas de clic ni de flèches du clavier. */
+export function useCoarsePointer() {
+  return useSyncExternalStore(
+    subscribeCoarse,
+    () => window.matchMedia(COARSE_POINTER_QUERY).matches,
+    () => false,
+  );
+}

@@ -1738,6 +1738,13 @@ export default function RoomLayoutEditor({
     setQuickCreate(null);
   };
 
+  const addStoryFromHeader = () => {
+    const next = addStory(blueprint);
+    updateBlueprint(setStackView(next, false), { message: 'Nouvel étage ajouté', kind: 'add' });
+    setSelection([]);
+    setAccordion('batiment');
+  };
+
   /** Espace ouvert : murs et toit masqués d’un geste (rien n’est supprimé). */
   const openSpace = isOpenSpace(blueprint.metadata);
   const toggleOpenSpace = () => {
@@ -8873,6 +8880,11 @@ export default function RoomLayoutEditor({
         openId={toolbarGroup}
         onToggle={toggleToolbarGroup}
       >
+      {!readOnly ? (
+        <button type="button" onClick={() => addStoryFromHeader()} className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE)} title="Ajouter un étage au bâtiment">
+          <Plus className="w-3.5 h-3.5" aria-hidden /> Étage
+        </button>
+      ) : null}
       <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}><label className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'cursor-pointer')}>
           <ImagePlus className="w-3.5 h-3.5" aria-hidden />
           Repère photo (sol)
@@ -10182,14 +10194,10 @@ export default function RoomLayoutEditor({
   const activeStory = stories.find((s) => s.id === resolveActiveStoryId(blueprint));
   // Un seul étage : sur grand écran, la barre d’étages laisse sa place au plan (bouton « + Étage » dans l’en-tête).
   const compactStories = stories.length < 2 && !blueprint.metadata.stackView;
-  const addStoryFromHeader = () => {
-    const next = addStory(blueprint);
-    updateBlueprint(setStackView(next, false), { message: 'Nouvel étage ajouté', kind: 'add' });
-    setSelection([]);
-    setAccordion('batiment');
-  };
   const storyBar = (
-    <div className={cn('flex flex-wrap items-center gap-2 px-2.5 py-2 rounded-[var(--radius-card)] border border-border bg-surface-muted/50', compactStories && 'lg:hidden')}>
+    // Un seul étage : la barre ne sert à rien et mange la hauteur du plan (surtout sur mobile).
+    // « + Étage » reste dans l’en-tête (grand écran) et dans Ajouter › Bâtiment (partout).
+    <div className={cn('flex flex-wrap items-center gap-2 px-2.5 py-2 rounded-[var(--radius-card)] border border-border bg-surface-muted/50', compactStories && 'hidden')}>
       <span className="text-xs font-bold uppercase tracking-wide text-muted shrink-0">Étage</span>
       <div className="flex flex-wrap gap-1">
         {stories.map((story) => (
@@ -10396,9 +10404,11 @@ export default function RoomLayoutEditor({
           }}
           className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'shrink-0')}
           title="Recentrer la caméra"
+          aria-label="Recentrer la caméra"
         >
           <Crosshair className="w-3.5 h-3.5" aria-hidden />
-          Recentrer
+          {/* Petit écran : icône seule, pour que Annuler / Rétablir restent visibles sans défiler. */}
+          <span className="max-sm:hidden">Recentrer</span>
         </button>
         <div role="group" aria-label="Mode d’affichage" className="flex items-center gap-0.5 p-0.5 rounded-[var(--radius-button)] border border-border bg-surface-muted shrink-0">
           {([

@@ -139,6 +139,7 @@ import {
 import RoomShowcasePostProcessing from '@/components/RoomShowcasePostProcessing';
 import { LocalRoomEnvironment } from '@/components/room/LocalRoomEnvironment';
 import { PlotMarking } from '@/components/room/PlotMarkingMeshes';
+import { useCoarsePointer } from '@/hooks/useIsMobile';
 import { LandscapeMesh, OutdoorSurroundingsScene, seedFromId } from '@/components/room/OutdoorLandscapeMeshes';
 import { CorridorMesh } from '@/components/room/CorridorMesh';
 import { AtelierGlazing, CassettePanels, DoorHandles, Hinges, handleY } from '@/components/room/DoorHardware';
@@ -2495,7 +2496,7 @@ function ZoneMesh({
       )}
       {!hideLabels && !isPlot && (
         <Html zIndexRange={[20, 0]} center distanceFactor={12} style={{ pointerEvents: 'none' }} position={[0, thickness + 0.22, 0]}>
-          <span className="text-xs font-bold text-background bg-foreground/85 px-1.5 py-0.5 rounded shadow-sm">{label}</span>
+          <span className="block whitespace-nowrap text-xs font-bold text-background bg-foreground/85 px-1.5 py-0.5 rounded shadow-sm">{label}</span>
         </Html>
       )}
     </group>
@@ -2572,7 +2573,7 @@ function FreeChairMesh({
       />
       {selected && !hideLabels && (
         <Html zIndexRange={[20, 0]} center distanceFactor={9} style={{ pointerEvents: 'none' }} position={[0, 1.05, 0]}>
-          <span className="text-xs font-bold bg-primary-solid text-primary-foreground px-1.5 py-0.5 rounded">{label || 'Chaise'}</span>
+          <span className="block whitespace-nowrap text-xs font-bold bg-primary-solid text-primary-foreground px-1.5 py-0.5 rounded">{label || 'Chaise'}</span>
         </Html>
       )}
     </group>
@@ -3162,7 +3163,7 @@ function FixtureMesh({
       )}
       {(selected || label) && !hideLabels && (
         <Html zIndexRange={[20, 0]} center distanceFactor={10} style={{ pointerEvents: 'none' }} position={[0, height + 0.35, 0]}>
-          <span className="text-xs font-bold bg-foreground/85 text-background px-1.5 py-0.5 rounded">
+          <span className="block whitespace-nowrap text-xs font-bold bg-foreground/85 text-background px-1.5 py-0.5 rounded">
             {label || kind}
           </span>
         </Html>
@@ -4269,7 +4270,7 @@ function SceneContent({
               })()}
               {!hideLabels && (
                 <Html zIndexRange={[20, 0]} center distanceFactor={10} style={{ pointerEvents: 'none' }} position={[0, elevation + 1.1, 0]}>
-                  <span className="text-xs font-bold bg-foreground/85 text-background px-1.5 py-0.5 rounded shadow-sm">{item.label}</span>
+                  <span className="block whitespace-nowrap text-xs font-bold bg-foreground/85 text-background px-1.5 py-0.5 rounded shadow-sm">{item.label}</span>
                 </Html>
               )}
             </group>
@@ -4428,6 +4429,7 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
   introFlyIn = false,
 }, ref) {
   const blueprint = useMemo(() => ensureBlueprintDefaults(rawBlueprint), [rawBlueprint]);
+  const touchScreen = useCoarsePointer();
   const [tourCaption, setTourCaption] = useState('entrée par la porte');
   const presentationMode = presentationModeProp ?? blueprint.metadata.presentationMode === true;
   const orbitLocked = previewMode || presentationMode || walkthroughActive ? false : lockOrbit;
@@ -5155,11 +5157,17 @@ const RoomWebGLViewer = forwardRef<RoomWebGLCaptureApi, RoomWebGLViewerProps>(fu
       ) : qualitySettings.showHints ? (
         <div className="pointer-events-none absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
           <div className="max-w-[min(26rem,55%)] rounded-md bg-foreground/85 px-2 py-1 text-xs font-medium text-background">
-            {previewMode
-              ? 'Glissez pour tourner la vue · molette pour zoomer'
-              : orbitLocked
-                ? 'Glissez un objet pour le poser · flèches pour caler · clic chaise = un siège'
-                : 'Glissez un objet pour le poser · glissez le sol pour tourner la vue'}
+            {touchScreen
+              ? previewMode
+                ? 'Glissez un doigt pour tourner · pincez pour zoomer'
+                : orbitLocked
+                  ? 'Touchez un objet puis faites-le glisser · « Regarder » pour tourner la vue'
+                  : 'Glissez un doigt pour tourner · pincez pour zoomer'
+              : previewMode
+                ? 'Glissez pour tourner la vue · molette pour zoomer'
+                : orbitLocked
+                  ? 'Glissez un objet pour le déplacer · flèches du clavier pour l’ajuster'
+                  : 'Glissez un objet pour le déplacer · glissez le sol pour tourner la vue'}
           </div>
           {previewMode ? (
             <div className="rounded-md bg-foreground/85 px-2 py-1 text-xs font-bold text-background">
