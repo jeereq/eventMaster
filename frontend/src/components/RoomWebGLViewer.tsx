@@ -290,6 +290,34 @@ function ShadowHardness({ hard, softPreferred }: { hard: boolean; softPreferred:
   return null;
 }
 
+/**
+ * Brouillard qui suit le recul de la caméra. Sur un écran étroit (téléphone en portrait),
+ * la caméra doit reculer bien plus loin pour cadrer toute la salle : avec un brouillard fixe,
+ * le plan entier se noyait dans la couleur du fond et paraissait très sombre.
+ * Au-delà du recul de référence (cadrage habituel sur ordinateur), le brouillard recule d'autant.
+ */
+function CameraRelativeFog({
+  color,
+  near,
+  far,
+  referenceDistance,
+}: {
+  color: string;
+  near: number;
+  far: number;
+  referenceDistance: number;
+}) {
+  const fogRef = useRef<THREE.Fog>(null);
+  useFrame(({ camera }) => {
+    const fog = fogRef.current;
+    if (!fog) return;
+    const shift = Math.max(0, camera.position.length() - referenceDistance);
+    fog.near = near + shift;
+    fog.far = far + shift;
+  });
+  return <fog ref={fogRef} attach="fog" args={[color, near, far]} />;
+}
+
 function sunDiscPosition(x: number, y: number, z: number): [number, number, number] {
   const len = Math.hypot(x, y, z) || 1;
   const dist = 95;
@@ -3801,23 +3829,19 @@ function SceneContent({
       {lighting.fogStrength !== undefined ? (
         lighting.fogStrength > 0.01 ? (
           // Brouillard réglé à la main : de très lointain (0) à épais autour de la salle (1).
-          <fog
-            attach="fog"
-            args={[
-              lighting.fogColor,
-              Math.max(widthM, heightM) * (0.4 + (1 - lighting.fogStrength) * 4),
-              Math.max(widthM, heightM) * (1.6 + (1 - lighting.fogStrength) * 12),
-            ]}
+          <CameraRelativeFog
+            color={lighting.fogColor}
+            near={Math.max(widthM, heightM) * (0.4 + (1 - lighting.fogStrength) * 4)}
+            far={Math.max(widthM, heightM) * (1.6 + (1 - lighting.fogStrength) * 12)}
+            referenceDistance={Math.max(widthM, heightM) * 1.2}
           />
         ) : null
       ) : qualitySettings.fog ? (
-        <fog
-          attach="fog"
-          args={[
-            lighting.fogColor,
-            Math.max(10, Math.max(widthM, heightM) * (lighting.preset === 'night' ? 0.7 : 1.0)),
-            Math.max(32, Math.max(widthM, heightM) * (lighting.preset === 'dusk' ? 2.2 : lighting.preset === 'night' ? 2.0 : 3.0)),
-          ]}
+        <CameraRelativeFog
+          color={lighting.fogColor}
+          near={Math.max(10, Math.max(widthM, heightM) * (lighting.preset === 'night' ? 0.7 : 1.0))}
+          far={Math.max(32, Math.max(widthM, heightM) * (lighting.preset === 'dusk' ? 2.2 : lighting.preset === 'night' ? 2.0 : 3.0))}
+          referenceDistance={Math.max(widthM, heightM) * 1.2}
         />
       ) : null}
 

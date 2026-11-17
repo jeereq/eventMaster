@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useHideAiFabWhileVisible } from '@/components/landing/useHideAiFabWhileVisible';
 import dynamic from 'next/dynamic';
 import StudioLoadingPanel from '@/components/StudioLoadingPanel';
 import {
@@ -402,8 +403,6 @@ const ROOF_COLOR_PRESETS = [
 ] as const;
 const EDITOR_CARD_ACTION =
   'inline-flex items-center justify-center min-h-11 min-w-11 rounded-[var(--radius-button)] border border-border bg-surface text-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
-const EDITOR_FILE =
-  'block w-full min-h-11 text-sm text-foreground file:mr-3 file:min-h-11 file:px-3 file:rounded-[var(--radius-button)] file:border-0 file:bg-surface-muted file:text-sm file:font-medium file:text-foreground';
 const EDITOR_REMOVE =
   'inline-flex items-center min-h-11 text-sm font-medium text-rose-700 dark:text-rose-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-[var(--radius-button)]';
 
@@ -412,6 +411,47 @@ const EDITOR_TOOL =
 const EDITOR_TOOL_IDLE = 'bg-surface border-border text-foreground hover:bg-surface-muted';
 const EDITOR_TOOL_MUTED = 'bg-surface border-border text-muted hover:bg-surface-muted hover:text-foreground';
 const EDITOR_TOOL_ON = 'bg-primary/10 border-primary/40 text-primary';
+/**
+ * Sélecteur d'image en français. Le champ natif affichait « Choose File / No file chosen »
+ * (langue du navigateur) au milieu d'un panneau tout en français.
+ */
+function EditorImagePicker({
+  label,
+  onFile,
+  hasImage = false,
+  accept = 'image/*',
+}: {
+  /** Ce que l'image représente, pour les lecteurs d'écran (« Image de chaise »…). */
+  label: string;
+  onFile: (file: File) => void | Promise<void>;
+  hasImage?: boolean;
+  accept?: string;
+}) {
+  const [fileName, setFileName] = useState('');
+  const status = fileName || (hasImage ? 'Image en place' : 'Aucune image choisie');
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <label className={cn(EDITOR_TOOL, EDITOR_TOOL_IDLE, 'shrink-0 cursor-pointer focus-within:ring-2 focus-within:ring-primary/40')}>
+        <ImagePlus className="w-3.5 h-3.5" aria-hidden />
+        {hasImage || fileName ? 'Changer l’image' : 'Choisir une image'}
+        <input
+          type="file"
+          accept={accept}
+          className="sr-only"
+          aria-label={`${label} : choisir un fichier`}
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (!file) return;
+            setFileName(file.name);
+            await onFile(file);
+          }}
+        />
+      </label>
+      <span className="min-w-0 truncate text-xs text-muted" title={fileName || undefined}>{status}</span>
+    </div>
+  );
+}
 
 const launchedPlanPhotoSeeds = new WeakSet<File>();
 const EDITOR_TOOL_PRIMARY = 'bg-primary-solid text-primary-foreground border-transparent hover:bg-primary-solid-hover';
@@ -2885,6 +2925,11 @@ export default function RoomLayoutEditor({
     log('Inventaire exporté en CSV', 'info');
   };
 
+  // L'éditeur a son propre bouton « Studio IA » : le bouton flottant des studios recouvrait
+  // le bas du plan (et le panneau de réglages sur ordinateur). Il s'efface tant que le plan est à l'écran.
+  const [canvasHost, setCanvasHost] = useState<HTMLDivElement | null>(null);
+  useHideAiFabWhileVisible(canvasHost);
+
   const copyInventoryText = async () => {
     try {
       await navigator.clipboard.writeText(inventoryReport.textSummary);
@@ -2897,7 +2942,7 @@ export default function RoomLayoutEditor({
   };
 
   const renderCanvas = (className: string) => (
-    <div className={cn('relative w-full h-full min-h-0', className)} data-tour="canvas">
+    <div ref={setCanvasHost} className={cn('relative w-full h-full min-h-0', className)} data-tour="canvas">
       <RoomWebGLViewer
         ref={webglRef}
         blueprint={blueprint}
@@ -3343,15 +3388,12 @@ export default function RoomLayoutEditor({
   };
 
   const renderChairImageUpload = (id: string, currentUrl?: string) => (
-    <label className="block space-y-1.5">
+    <div className="space-y-1.5">
       <span className="text-sm font-semibold text-foreground flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Image de chaise (optionnel)</span>
-      <input
-        type="file"
-        accept="image/*"
-        className={EDITOR_FILE}
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
+      <EditorImagePicker
+        label="Image de chaise"
+        hasImage={Boolean(currentUrl)}
+        onFile={async (file) => {
           const url = await readImageFile(file);
           updateFurniture(id, { chairImageUrl: url }, 'Image de chaise personnalisée');
         }}
@@ -3361,19 +3403,16 @@ export default function RoomLayoutEditor({
           Retirer l&apos;image
         </button>
       )}
-    </label>
+    </div>
   );
 
   const renderTableImageUpload = (id: string, currentUrl?: string) => (
-    <label className="block space-y-1.5">
+    <div className="space-y-1.5">
       <span className="text-sm font-semibold text-foreground flex items-center gap-1"><ImagePlus className="w-3.5 h-3.5" /> Image de table (nappage, bois…)</span>
-      <input
-        type="file"
-        accept="image/*"
-        className={EDITOR_FILE}
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          if (!file) return;
+      <EditorImagePicker
+        label="Image de table"
+        hasImage={Boolean(currentUrl)}
+        onFile={async (file) => {
           const url = await readImageFile(file);
           updateFurniture(id, { tableImageUrl: url }, 'Image de table importée');
         }}
@@ -3383,7 +3422,7 @@ export default function RoomLayoutEditor({
           Retirer l&apos;image
         </button>
       )}
-    </label>
+    </div>
   );
 
   const renderEditPanel = () => {
@@ -4713,39 +4752,29 @@ export default function RoomLayoutEditor({
                   </details>
                 </div>
                 <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}><div className="space-y-3">
-                    <label className="block text-xs space-y-1">
+                    <div className="text-xs space-y-1">
                       <span className="font-semibold text-muted flex items-center gap-1">
                         <ImagePlus className="w-3.5 h-3.5" /> Repère photo (sol)
                       </span>
                       <p className={EDITOR_HINT}>
                         Affiche le scan sous le mobilier, sans le lire. Pour détecter tables et décor, utilisez « Lire le plan avec l’IA ».
                       </p>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className={EDITOR_FILE}
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (file) await importRoomPlanImage(file);
-                          e.target.value = '';
-                        }}
+                      <EditorImagePicker
+                        label="Repère photo au sol"
+                        hasImage={Boolean(blueprint.metadata.floorImageUrl) && blueprint.metadata.floorImageFit === 'cover'}
+                        onFile={importRoomPlanImage}
                       />
-                    </label>
-                    <label className="block text-xs space-y-1">
+                    </div>
+                    <div className="text-xs space-y-1">
                       <span className="font-semibold text-muted flex items-center gap-1">
                         <ImagePlus className="w-3.5 h-3.5" /> Texture de sol (mosaïque)
                       </span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className={EDITOR_FILE}
-                        onChange={async (e) => {
-                          const file = e.target.files?.[0];
-                          if (file) await setFloorImage(file);
-                          e.target.value = '';
-                        }}
+                      <EditorImagePicker
+                        label="Texture de sol"
+                        hasImage={Boolean(blueprint.metadata.floorImageUrl) && blueprint.metadata.floorImageFit !== 'cover'}
+                        onFile={setFloorImage}
                       />
-                    </label>
+                    </div>
                     {blueprint.metadata.floorImageUrl && (
                       <div className="flex flex-wrap gap-2 items-center">
                         <span className="text-sm font-medium text-primary">
