@@ -26,7 +26,7 @@ import type { SimulatedGuest } from '@/lib/roomGuestSimulation';
  */
 
 type GeoKind =
-  | 'head' | 'hair' | 'beard' | 'nose' | 'ball' | 'hand' | 'shoe' | 'box'
+  | 'head' | 'hair' | 'beard' | 'nose' | 'ball' | 'hand' | 'shoe' | 'box' | 'deltoid'
   | 'torsoM' | 'torsoF' | 'bodice' | 'skirt' | 'robe'
   | 'upperArm' | 'forearm' | 'thigh' | 'calf' | 'tube' | 'bell';
 type MatKind = 'skin' | 'cloth' | 'shiny';
@@ -125,30 +125,72 @@ interface LimbLook {
   lowerColor: string;
 }
 
-/** Membre en deux segments, avec rotules aux articulations. */
-function limb(points: [Vec3, Vec3, Vec3], d0: number, d1: number, look: LimbLook): PartSpec[] {
+/** Membre en deux segments, avec rotules aux articulations (deltoïde galbé à l'épaule). */
+function limb(points: [Vec3, Vec3, Vec3], d0: number, d1: number, look: LimbLook, shoulder = false): PartSpec[] {
   const [a, b, c] = points;
+  let start: PartSpec;
+  if (shoulder) {
+    // Deltoïde : volume allongé dans l'axe du bras, qui se fond dans le haut du buste
+    // au lieu d'une rotule de mannequin.
+    tmpDir.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]).normalize();
+    tmpQuat.setFromUnitVectors(UP, tmpDir);
+    start = {
+      geo: 'deltoid',
+      mat: look.upperMat,
+      pos: [a[0] + tmpDir.x * d0 * 0.3, a[1] + tmpDir.y * d0 * 0.3, a[2] + tmpDir.z * d0 * 0.3],
+      quat: [tmpQuat.x, tmpQuat.y, tmpQuat.z, tmpQuat.w],
+      scale: [d0 * 0.53, d0 * 0.95, d0 * 0.53],
+      color: look.upperColor,
+    };
+  } else {
+    start = ball(a, d0 * 0.44, look.upperColor, look.upperMat);
+  }
   return [
-    ball(a, d0 * 0.44, look.upperColor, look.upperMat),
+    start,
     seg(a, b, d0, look.upperColor, look.upper, look.upperMat),
-    // Rotule un peu plus large que les deux segments : pas de scintillement à la jonction.
-    ball(b, Math.max(d0 * 0.4, Math.min(d0, d1) * 0.42) + 0.002, look.lowerColor, look.lowerMat),
+    // Rotule à peine plus large que les deux segments : pas de scintillement à la jonction.
+    ball(b, Math.max(d0 * 0.38, d1 * 0.44) + 0.0015, look.lowerColor, look.lowerMat),
     seg(b, c, d1, look.lowerColor, look.lower, look.lowerMat),
   ];
 }
 
-/** Main dans le prolongement de l'avant-bras (doigts vers `dir`). */
-function hand(wrist: Vec3, dir: THREE.Vector3, skin: string, female: boolean): PartSpec {
-  tmpQuat.setFromUnitVectors(UP, dir);
-  const len = female ? 0.07 : 0.078;
-  return {
-    geo: 'hand',
-    mat: 'skin',
-    pos: [wrist[0] + dir.x * len * 0.55, wrist[1] + dir.y * len * 0.55, wrist[2] + dir.z * len * 0.55],
-    quat: [tmpQuat.x, tmpQuat.y, tmpQuat.z, tmpQuat.w],
-    scale: [female ? 0.031 : 0.036, len, female ? 0.017 : 0.02],
-    color: skin,
-  };
+const palmN = new THREE.Vector3();
+const palmW = new THREE.Vector3();
+const basis = new THREE.Matrix4();
+
+/** Main dans le prolongement de l'avant-bras (doigts vers `dir`), paume tournée vers le corps, pouce en avant. */
+function hand(wrist: Vec3, dir: THREE.Vector3, skin: string, female: boolean): PartSpec[] {
+  // Paume face à la cuisse : normale = axe X ramené perpendiculaire aux doigts.
+  palmN.set(1, 0, 0).addScaledVector(dir, -dir.x);
+  if (palmN.lengthSq() < 1e-4) palmN.set(0, 0, 1).addScaledVector(dir, -dir.z);
+  palmN.normalize();
+  palmW.crossVectors(dir, palmN);
+  if (palmW.z < 0) {
+    palmW.negate();
+    palmN.negate();
+  }
+  basis.makeBasis(palmW, dir, palmN);
+  tmpQuat.setFromRotationMatrix(basis);
+  const len = female ? 0.074 : 0.084;
+  const width = female ? 0.032 : 0.038;
+  const at = (k: number, w: number): Vec3 => [
+    wrist[0] + dir.x * k + palmW.x * w,
+    wrist[1] + dir.y * k + palmW.y * w,
+    wrist[2] + dir.z * k + palmW.z * w,
+  ];
+  const thumbBase = at(len * 0.22, width * 0.42);
+  const thumbTip = at(len * 0.62, width * 0.62);
+  return [
+    {
+      geo: 'hand',
+      mat: 'skin',
+      pos: at(len * 0.52, 0),
+      quat: [tmpQuat.x, tmpQuat.y, tmpQuat.z, tmpQuat.w],
+      scale: [width, len, female ? 0.017 : 0.021],
+      color: skin,
+    },
+    seg(thumbBase, thumbTip, female ? 0.016 : 0.019, skin, 'tube', 'skin'),
+  ];
 }
 
 /** Chaussure (bout effilé) ; escarpin à talon, pointe posée au sol. */
@@ -224,7 +266,7 @@ function headParts(g: SimulatedGuest, neckBase: Vec3, yaw: number, pitch: number
     const eyeZ = faceZ(eyeX, eyeY);
     const lid = mixColor(g.skin, '#000000', 0.2);
     local.push(
-      { geo: 'nose', mat: 'skin', pos: [0, -0.019, faceZ(0, -0.019) - 0.005], scale: [0.017, 0.026, 0.0155], color: g.skin },
+      { geo: 'nose', mat: 'skin', pos: [0, -0.019, faceZ(0, -0.019) - 0.005], scale: [0.0155, 0.0245, 0.0145], color: g.skin },
       // Ailes du nez.
       ball([-0.0115, -0.035, faceZ(0.0115, -0.035) - 0.001], [0.0085, 0.0065, 0.008], g.skin, 'skin'),
       ball([0.0115, -0.035, faceZ(0.0115, -0.035) - 0.001], [0.0085, 0.0065, 0.008], g.skin, 'skin'),
@@ -239,6 +281,14 @@ function headParts(g: SimulatedGuest, neckBase: Vec3, yaw: number, pitch: number
         ball([side * eyeX, eyeY + 0.0066, eyeZ - 0.0032], [0.0136, 0.0042, 0.0076], lid, 'skin'),
         ball([side * 0.031, 0.036, faceZ(0.031, 0.036) - 0.0015], [0.019, 0.0045, 0.0055], g.hair, 'cloth', quatFromEuler(0, 0, -side * 0.12)),
       );
+    }
+  }
+
+  if (female && trait(g, 12) < 0.75) {
+    // Boucles d'oreilles : perle ou petite goutte dorée sous le lobe.
+    const drop = trait(g, 14) < 0.5;
+    for (const side of [-1, 1]) {
+      local.push(ball([side * 0.083, drop ? -0.04 : -0.031, 0.004], drop ? [0.006, 0.011, 0.006] : 0.0065, trait(g, 13) < 0.7 ? '#d8b25a' : '#efece4', 'shiny'));
     }
   }
 
@@ -360,11 +410,11 @@ function lookOf(g: SimulatedGuest): Look {
 /** Bras complet (épaule → coude → poignet) avec la main et, pour le costume, le poignet de chemise. */
 function arm(g: SimulatedGuest, look: Look, shoulder: Vec3, elbow: Vec3, wrist: Vec3): PartSpec[] {
   const dir = new THREE.Vector3(wrist[0] - elbow[0], wrist[1] - elbow[1], wrist[2] - elbow[2]).normalize();
-  const parts = limb([shoulder, elbow, wrist], look.sleeveD, look.forearmD, look.arm);
+  const parts = limb([shoulder, elbow, wrist], look.sleeveD, look.forearmD, look.arm, true);
   if (g.style === 'suit') {
     parts.push(ball([wrist[0] - dir.x * 0.01, wrist[1] - dir.y * 0.01, wrist[2] - dir.z * 0.01], 0.036, '#f2efe8'));
   }
-  parts.push(hand(wrist, dir, g.skin, look.female));
+  parts.push(...hand(wrist, dir, g.skin, look.female));
   return parts;
 }
 
@@ -374,6 +424,58 @@ function flute(at: Vec3): PartSpec[] {
     seg([at[0], at[1] - 0.02, at[2]], [at[0], at[1] + 0.06, at[2]], 0.008, '#e8e4da', 'tube', 'shiny'),
     seg([at[0], at[1] + 0.06, at[2]], [at[0], at[1] + 0.16, at[2]], 0.04, '#f0dc9a', 'calf', 'shiny'),
   ];
+}
+
+interface TorsoFrame {
+  base: Vec3;
+  height: number;
+  w: number;
+  d: number;
+}
+
+/**
+ * Finitions qui font « vrai » : collier et bretelles sur les robes, col de chemise sous la veste,
+ * trapèzes qui relient le cou aux épaules.
+ */
+function outfitDetails(g: SimulatedGuest, look: Look, torso: TorsoFrame, neck: Vec3): PartSpec[] {
+  const parts: PartSpec[] = [];
+  const { female } = look;
+  const [nx, ny, nz] = neck;
+  const top = torso.base[1] + torso.height;
+  const gold = trait(g, 13) < 0.7 ? '#d8b25a' : '#e6e3dc';
+  const neckD = female ? 0.075 : 0.088;
+  if (g.style === 'suit') {
+    const shirt = lightness(g.outfit) > 0.72 ? '#1b1b1f' : '#f2efe8';
+    parts.push(seg([nx, ny - 0.03, nz], [nx, ny + 0.022, nz + 0.004], neckD + 0.016, shirt));
+  }
+  if (g.style === 'dress') {
+    const bodiceTop = torso.base[1] + torso.height * 0.8;
+    if (trait(g, 11) < 0.5) {
+      // Fines bretelles : du haut du bustier, par-dessus l'épaule.
+      for (const side of [-1, 1]) {
+        const fx = side * torso.w * 0.45;
+        const front: Vec3 = [fx, bodiceTop - 0.006, torsoSurfaceZ(female, torso, fx, bodiceTop) + 0.003];
+        const midY = torso.base[1] + torso.height * 0.9;
+        const mx = side * torso.w * 0.5;
+        const mid: Vec3 = [mx, midY, torsoSurfaceZ(female, torso, mx, midY) + 0.004];
+        const over: Vec3 = [side * torso.w * 0.52, top - torso.height * 0.02, torso.base[2] - 0.01];
+        parts.push(seg(front, mid, 0.011, g.outfit, 'tube', 'shiny'), seg(mid, over, 0.011, g.outfit, 'tube', 'shiny'));
+      }
+    }
+    if (trait(g, 10) < 0.65) {
+      // Collier de perles qui épouse le haut de la poitrine, pendentif au centre.
+      const beads = 11;
+      for (let i = 0; i < beads; i += 1) {
+        const a = ((i / (beads - 1)) * 2 - 1) * 1.15;
+        const x = Math.sin(a) * neckD * 0.95;
+        const y = ny - 0.045 + (1 - Math.cos(a)) * 0.04;
+        parts.push(ball([x, y, torsoSurfaceZ(female, torso, x, y) + 0.004], 0.0068, gold, 'shiny'));
+      }
+      const py = ny - 0.06;
+      parts.push(ball([0, py, torsoSurfaceZ(female, torso, 0, py) + 0.006], [0.011, 0.014, 0.007], gold, 'shiny'));
+    }
+  }
+  return parts;
 }
 
 /** Pièces d'un invité, dans son repère (sol à y = 0, regard vers +Z). */
@@ -418,11 +520,12 @@ function guestParts(g: SimulatedGuest, t: number): PartSpec[] {
       parts.push(...boubouFront(0.93, 0.05, g.outfit));
     }
     for (const side of [-1, 1]) {
-      const shoulder: Vec3 = [side * torsoW * 0.94, 1.04, -0.075];
+      const shoulder: Vec3 = [side * torsoW * 0.86, 1.04, -0.075];
       const elbow: Vec3 = [side * (torsoW + 0.03), 0.82, 0.02];
       const wrist: Vec3 = [side * 0.15, 0.79, 0.26];
       parts.push(...arm(g, look, shoulder, elbow, wrist));
     }
+    parts.push(...outfitDetails(g, look, { base: [0, 0.6, -0.08], height: 0.56, w: torsoW, d: torsoD }, [0, 1.12, -0.06]));
     parts.push(...headParts(g, [0, 1.12, -0.06], yaw, -0.08, female));
     return parts;
   }
@@ -484,7 +587,7 @@ function guestParts(g: SimulatedGuest, t: number): PartSpec[] {
   // Bras : le long du corps, levés et balancés pour les danseurs ; certains tiennent un verre.
   const holdsGlass = !dancing && trait(g, 9) < 0.35;
   for (const side of [-1, 1]) {
-    const shoulder: Vec3 = [side * torsoW * 0.94, hipY + 0.465, -0.012];
+    const shoulder: Vec3 = [side * torsoW * 0.86, hipY + 0.465, -0.012];
     let elbow: Vec3;
     let wrist: Vec3;
     if (dancing) {
@@ -502,6 +605,7 @@ function guestParts(g: SimulatedGuest, t: number): PartSpec[] {
     parts.push(...arm(g, look, shoulder, elbow, wrist));
     if (holdsGlass && side === 1) parts.push(...flute([wrist[0] - 0.005, wrist[1] + 0.02, wrist[2] + 0.06]));
   }
+  parts.push(...outfitDetails(g, look, { base: [0, hipY - 0.05, 0], height: 0.6, w: torsoW, d: torsoD }, [0, hipY + 0.55, -0.005]));
   parts.push(...headParts(g, [0, hipY + 0.55, -0.005], dancing ? 0 : yaw, dancing ? 0.1 * beat2 : 0, female));
   return parts;
 }
@@ -546,6 +650,35 @@ function sculpted(geo: THREE.BufferGeometry, fn: (v: THREE.Vector3) => void): TH
     pos.setXYZ(i, v.x, v.y, v.z);
   }
   geo.computeVertexNormals();
+  return geo;
+}
+
+/**
+ * Normales lissées, y compris sur la couture des profils de révolution
+ * (sommets dédoublés au même endroit) : plus de ligne d'ombre au milieu des bras et des jambes.
+ */
+function smoothNormals(geo: THREE.BufferGeometry): THREE.BufferGeometry {
+  geo.computeVertexNormals();
+  const pos = geo.getAttribute('position') as THREE.BufferAttribute;
+  const nrm = geo.getAttribute('normal') as THREE.BufferAttribute;
+  const sums = new Map<string, [number, number, number]>();
+  // Arrondi entier : « -0 » et « 0 » (sin 2π) tombent sur la même clé.
+  const keyOf = (i: number) => `${Math.round(pos.getX(i) * 1e4)}|${Math.round(pos.getY(i) * 1e4)}|${Math.round(pos.getZ(i) * 1e4)}`;
+  for (let i = 0; i < pos.count; i += 1) {
+    const k = keyOf(i);
+    const acc = sums.get(k);
+    if (acc) {
+      acc[0] += nrm.getX(i);
+      acc[1] += nrm.getY(i);
+      acc[2] += nrm.getZ(i);
+    } else sums.set(k, [nrm.getX(i), nrm.getY(i), nrm.getZ(i)]);
+  }
+  for (let i = 0; i < pos.count; i += 1) {
+    const [x, y, z] = sums.get(keyOf(i))!;
+    const len = Math.hypot(x, y, z) || 1;
+    nrm.setXYZ(i, x / len, y / len, z / len);
+  }
+  nrm.needsUpdate = true;
   return geo;
 }
 
@@ -600,9 +733,15 @@ function noseGeometry(): THREE.BufferGeometry {
 }
 
 function handGeometry(): THREE.BufferGeometry {
-  return sculpted(new THREE.SphereGeometry(1, 14, 12), (v) => {
-    if (v.y > 0) v.x *= 1 - 0.28 * v.y;
-    if (v.y < -0.5) v.x *= 0.85;
+  return sculpted(new THREE.SphereGeometry(1, 16, 14), (v) => {
+    // Paume plate et large aux jointures, doigts effilés et légèrement repliés vers la paume.
+    v.z *= 0.8;
+    if (v.y < -0.4) v.x *= 0.78 + 0.22 * (1 + v.y) / 0.6;
+    if (v.y > 0.1) {
+      const f = v.y - 0.1;
+      v.x *= 1 - 0.32 * f;
+      v.z += 0.38 * f * f;
+    }
   });
 }
 
@@ -615,17 +754,29 @@ function shoeGeometry(): THREE.BufferGeometry {
 }
 
 /** Buste paramétrique (section arrondie) : hanches, taille, poitrine, épaules, dos. */
-function torsoGeometry(female: boolean, topT = 1): THREE.BufferGeometry {
-  // [hauteur, demi-largeur, avant, arrière]
-  const male: Array<[number, number, number, number]> = [
+// [hauteur, demi-largeur, avant, arrière]
+const TORSO_M: Array<[number, number, number, number]> = [
     [0, 0.8, 0.82, 0.95], [0.12, 0.84, 0.86, 0.98], [0.35, 0.78, 0.86, 0.84], [0.6, 0.9, 1.05, 0.95],
     [0.78, 0.98, 1.0, 0.95], [0.86, 1.0, 0.85, 0.88], [0.92, 0.9, 0.62, 0.72], [0.97, 0.55, 0.45, 0.55], [1, 0.34, 0.4, 0.42],
-  ];
-  const fem: Array<[number, number, number, number]> = [
+];
+const TORSO_F: Array<[number, number, number, number]> = [
     [0, 0.88, 0.8, 1.02], [0.1, 0.92, 0.84, 1.08], [0.38, 0.68, 0.74, 0.8], [0.55, 0.8, 0.98, 0.86],
     [0.64, 0.84, 1.22, 0.88], [0.76, 0.88, 0.98, 0.9], [0.86, 0.92, 0.8, 0.84], [0.92, 0.84, 0.6, 0.7], [0.97, 0.52, 0.44, 0.52], [1, 0.32, 0.38, 0.42],
-  ];
-  const table = female ? fem : male;
+];
+
+/** Point de la face avant (side = 1) ou arrière (-1) du buste, à la hauteur `y` et au décalage latéral `x`. */
+function torsoSurfaceZ(female: boolean, torso: TorsoFrame, x: number, y: number, side: 1 | -1 = 1): number {
+  const table = female ? TORSO_F : TORSO_M;
+  const t = Math.min(1, Math.max(0, (y - torso.base[1]) / torso.height));
+  const w = interp(table.map((r) => [r[0], r[1]] as [number, number]), t) * torso.w;
+  const d = interp(table.map((r) => [r[0], side === 1 ? r[2] : r[3]] as [number, number]), t) * torso.d;
+  const sRaw = Math.min(1, (Math.abs(x) / Math.max(1e-3, w)) ** 1.25);
+  const c = Math.sqrt(Math.max(0, 1 - sRaw * sRaw));
+  return torso.base[2] + side * d * c ** 0.85;
+}
+
+function torsoGeometry(female: boolean, topT = 1): THREE.BufferGeometry {
+  const table = female ? TORSO_F : TORSO_M;
   const col = (c: 1 | 2 | 3) => table.map((r) => [r[0], r[c]] as [number, number]);
   const width = col(1);
   const fore = col(2);
@@ -672,9 +823,7 @@ function torsoGeometry(female: boolean, topT = 1): THREE.BufferGeometry {
 
 /** Profil de révolution (rayon, hauteur). */
 function lathe(profile: Array<[number, number]>, segments: number): THREE.BufferGeometry {
-  const geo = new THREE.LatheGeometry(profile.map(([r, y]) => new THREE.Vector2(r, y)), segments);
-  geo.computeVertexNormals();
-  return geo;
+  return smoothNormals(new THREE.LatheGeometry(profile.map(([r, y]) => new THREE.Vector2(r, y)), segments));
 }
 
 let sharedGeometries: Record<GeoKind, THREE.BufferGeometry> | null = null;
@@ -687,6 +836,11 @@ function geometries(): Record<GeoKind, THREE.BufferGeometry> {
       nose: noseGeometry(),
       ball: new THREE.SphereGeometry(1, 14, 10),
       hand: handGeometry(),
+      // Épaule : ovoïde plus plein vers le haut (côté buste), qui s'affine vers le bras.
+      deltoid: sculpted(new THREE.SphereGeometry(1, 16, 12), (v) => {
+        if (v.y < 0) v.x *= 1 + 0.1 * v.y;
+        v.z *= 1 - 0.12 * Math.max(0, -v.y);
+      }),
       shoe: shoeGeometry(),
       box: new RoundedBoxGeometry(1, 1, 1, 2, 0.3),
       torsoM: torsoGeometry(false),
@@ -702,7 +856,7 @@ function geometries(): Record<GeoKind, THREE.BufferGeometry> {
       forearm: lathe([[0, -0.5], [0.24, -0.49], [0.38, -0.46], [0.47, -0.4], [0.5, -0.3], [0.46, -0.05], [0.36, 0.3], [0.31, 0.47], [0, 0.5]], 12),
       thigh: lathe([[0, -0.5], [0.26, -0.49], [0.42, -0.46], [0.5, -0.36], [0.5, -0.3], [0.46, 0], [0.4, 0.3], [0.36, 0.46], [0, 0.5]], 12),
       calf: lathe([[0, -0.5], [0.4, -0.47], [0.49, -0.25], [0.45, -0.05], [0.32, 0.3], [0.27, 0.46], [0, 0.5]], 12),
-      tube: lathe([[0, -0.5], [0.26, -0.49], [0.42, -0.46], [0.49, -0.4], [0.5, -0.3], [0.47, 0.3], [0.44, 0.49], [0, 0.5]], 12),
+      tube: lathe([[0, -0.5], [0.26, -0.49], [0.42, -0.46], [0.49, -0.4], [0.5, -0.3], [0.47, 0.3], [0.44, 0.49], [0, 0.5]], 16),
       bell: lathe([[0, -0.5], [0.34, -0.49], [0.38, -0.2], [0.48, 0.35], [0.5, 0.49], [0, 0.5]], 14),
     };
   }
@@ -773,7 +927,16 @@ function writeCrowd(guests: SimulatedGuest[], meshes: Map<string, THREE.Instance
 /** Peau satinée, tissu au reflet doux, finitions brillantes (cuir, satin, or). */
 function makeMaterials(): Record<MatKind, THREE.Material> {
   return {
-    skin: new THREE.MeshStandardMaterial({ roughness: 0.52, metalness: 0 }),
+    // Peau : reflet velouté chaud sur les bords (évoque la diffusion sous la peau) et léger vernis.
+    skin: new THREE.MeshPhysicalMaterial({
+      roughness: 0.5,
+      metalness: 0,
+      sheen: 0.45,
+      sheenRoughness: 0.5,
+      sheenColor: new THREE.Color('#ffb08a'),
+      clearcoat: 0.08,
+      clearcoatRoughness: 0.6,
+    }),
     cloth: new THREE.MeshPhysicalMaterial({
       roughness: 0.82,
       metalness: 0,

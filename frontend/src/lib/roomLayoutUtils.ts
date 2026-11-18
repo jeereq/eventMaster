@@ -2982,10 +2982,10 @@ export function wallLengthPct(wall: RoomWallSegment): number {
 }
 
 export function wallLengthMeters(wall: RoomWallSegment, canvas: { widthM: number; heightM: number }): number {
-  const pct = wallLengthPct(wall);
-  // Approximation : moyenne des axes canvas
-  const avgM = (canvas.widthM + canvas.heightM) / 2;
-  return (pct / 100) * avgM;
+  // Longueur réelle, identique à celle du mur dessiné en 3D (chaque axe à sa propre échelle).
+  const dx = ((wall.end.x - wall.start.x) / 100) * canvas.widthM;
+  const dy = ((wall.end.y - wall.start.y) / 100) * canvas.heightM;
+  return Math.hypot(dx, dy);
 }
 
 export function ensureBlueprintDefaults(blueprint: RoomLayoutBlueprint): RoomLayoutBlueprint {

@@ -196,6 +196,8 @@ import {
 import QuickAddPalette, { type QuickAddAction } from '@/components/room/QuickAddPalette';
 import EditorTour from '@/components/room/EditorTour';
 import WallArtPanel from '@/components/room/WallArtPanel';
+import WallElevationEditor from '@/components/room/WallElevationEditor';
+import { ItemPlacementFields } from '@/components/room/ItemPlacementFields';
 import LedShowControls from '@/components/room/LedShowControls';
 import { STRING_LIGHT_LAYOUT_LABELS, STRING_LIGHT_MOUNT_LABELS, STRING_LIGHT_STYLE_LABELS } from '@/lib/roomStringLights';
 import { START_EDITOR_TOUR_EVENT } from '@/components/room/RoomEditorPlanCard';
@@ -1521,6 +1523,36 @@ export default function RoomLayoutEditor({
     }
     dragHistPushedRef.current = false;
   }, [emitBlueprint, log, withLoggedAction]);
+
+  const handleWebGLResize = useCallback((kind: 'fixture' | 'zone', id: string, rect: { x: number; y: number; w: number; h: number }) => {
+    if (readOnly) return;
+    // Plan le plus récent : plusieurs mouvements arrivent entre deux rendus pendant le glisser.
+    const blueprint = latestBlueprintRef.current;
+    if (!dragHistPushedRef.current) {
+      pushHistory(blueprint);
+      dragHistPushedRef.current = true;
+    }
+    const r = (v: number) => Math.round(v * 100) / 100;
+    const next = { x: r(rect.x), y: r(rect.y), w: r(rect.w), h: r(rect.h) };
+    skipHistoryRef.current = true;
+    if (kind === 'fixture') {
+      emitBlueprint({
+        ...blueprint,
+        fixtures: blueprint.fixtures.map((f) => (f.id === id ? { ...f, ...next } : f)),
+      });
+    } else {
+      emitBlueprint({
+        ...blueprint,
+        furniture: blueprint.furniture.map((f) => (f.kind === 'zone' && f.id === id ? { ...f, ...next } : f)),
+      });
+    }
+    skipHistoryRef.current = false;
+  }, [emitBlueprint, pushHistory, readOnly]);
+
+  const handleWebGLResizeEnd = useCallback(() => {
+    if (dragHistPushedRef.current) log('Élément redimensionné', 'edit');
+    dragHistPushedRef.current = false;
+  }, [log]);
 
   const deleteSelected = useCallback(() => {
     if (selection.length === 0 || readOnly) return;
@@ -3134,6 +3166,8 @@ export default function RoomLayoutEditor({
         onSelect={handleCanvasSelect}
         onMoveItem={handleWebGLMove}
         onMoveEnd={handleWebGLMoveEnd}
+        onResizeItem={handleWebGLResize}
+        onResizeEnd={handleWebGLResizeEnd}
         readOnly={readOnly}
         wallEditMode={wallEditMode}
         reserveTopRight={!readOnly && !walkthroughActive}
@@ -5570,6 +5604,12 @@ export default function RoomLayoutEditor({
               onSelectWall={selectWall}
               onChange={(next, action) => updateBlueprint(next, action)}
             />
+            <WallElevationEditor
+              blueprint={blueprint}
+              wallId={selected.id}
+              onChange={(next, action) => updateBlueprint(next, action)}
+              readOnly={readOnly}
+            />
             {!readOnly ? (
               <WallArtPanel
                 blueprint={blueprint}
@@ -5669,16 +5709,17 @@ export default function RoomLayoutEditor({
               <span className="font-semibold text-muted">Libellé</span>
               <input value={selectedFixture.label ?? ''} onChange={(e) => updateFixture(selectedFixture.id, { label: e.target.value })} className="w-full px-3 py-2 rounded-[var(--radius-button)] border text-sm" />
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              <label className="text-xs space-y-1">
-                <span className="font-semibold text-muted">Largeur %</span>
-                <input type="number" min={1} max={100} value={Math.round(selectedFixture.w)} onChange={(e) => updateFixture(selectedFixture.id, { w: parseFloat(e.target.value) })} className={EDITOR_FIELD} />
-              </label>
-              <label className="text-xs space-y-1">
-                <span className="font-semibold text-muted">Profondeur %</span>
-                <input type="number" min={1} max={100} value={Math.round(selectedFixture.h)} onChange={(e) => updateFixture(selectedFixture.id, { h: parseFloat(e.target.value) })} className={EDITOR_FIELD} />
-              </label>
-            </div>
+            <ItemPlacementFields
+              canvas={blueprint.canvas}
+              x={selectedFixture.x}
+              y={selectedFixture.y}
+              w={selectedFixture.w}
+              h={selectedFixture.h}
+              anchor="topLeft"
+              minSizeM={0.1}
+              disabled={readOnly}
+              onChange={(patch, msg) => updateFixture(selectedFixture.id, patch, msg)}
+            />
             {raisedSurface && (raisedSurface.kind === 'podium' || raisedSurface.kind === 'stage') ? (
               <p className="text-xs text-muted">
                 Posé sur « {raisedSurface.label} » ({raisedSurface.elevationM.toFixed(2)} m)
@@ -7826,6 +7867,15 @@ export default function RoomLayoutEditor({
             </div>
             <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}>{renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl)}</Gate>
             <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}>{renderTableImageUpload(selectedFurniture.id, selectedFurniture.tableImageUrl)}</Gate>
+            <ItemPlacementFields
+              canvas={blueprint.canvas}
+              x={selectedFurniture.x}
+              y={selectedFurniture.y}
+              anchor="center"
+              showSize={false}
+              disabled={readOnly}
+              onChange={(patch, msg) => updateFurniture(selectedFurniture.id, patch, msg)}
+            />
             <Gate allowed={caps.canRotate} need={{ feature: 'canRotate' }}><ElementRotationControls
                 rotation={selectedFurniture.rotation ?? 0}
                 onChange={(rot, msg) => updateFurniture(selectedFurniture.id, { rotation: rot }, msg || 'Rotation de table')}
@@ -8184,6 +8234,15 @@ export default function RoomLayoutEditor({
               </div>
             </div>
             <Gate allowed={caps.canCustomImages} need={{ feature: 'canCustomImages' }}>{renderChairImageUpload(selectedFurniture.id, selectedFurniture.chairImageUrl)}</Gate>
+            <ItemPlacementFields
+              canvas={blueprint.canvas}
+              x={selectedFurniture.x}
+              y={selectedFurniture.y}
+              anchor="center"
+              showSize={false}
+              disabled={readOnly}
+              onChange={(patch, msg) => updateFurniture(selectedFurniture.id, patch, msg)}
+            />
             <Gate allowed={caps.canRotate} need={{ feature: 'canRotate' }}><div className="pt-2">
                 <ElementRotationControls
                   rotation={selectedFurniture.rotation ?? 0}
@@ -8366,41 +8425,17 @@ export default function RoomLayoutEditor({
                 </label>
               </div>
             ) : null}
-            <div className="grid grid-cols-2 gap-2">
-              {/* Cotes en mètres réels (stockées en % du plan). */}
-              <label className="text-xs space-y-1">
-                <span className="font-semibold text-muted">Largeur (m)</span>
-                <input
-                  type="number"
-                  min={0.5}
-                  max={blueprint.canvas.widthM}
-                  step={0.1}
-                  value={Math.round((selectedFurniture.w / 100) * blueprint.canvas.widthM * 10) / 10}
-                  onChange={(e) => {
-                    const m = Number(e.target.value);
-                    if (!Number.isFinite(m) || m <= 0) return;
-                    updateFurniture(selectedFurniture.id, { w: Math.round(Math.min(100, (m / blueprint.canvas.widthM) * 100) * 100) / 100 });
-                  }}
-                  className={EDITOR_FIELD}
-                />
-              </label>
-              <label className="text-xs space-y-1">
-                <span className="font-semibold text-muted">Profondeur (m)</span>
-                <input
-                  type="number"
-                  min={0.5}
-                  max={blueprint.canvas.heightM}
-                  step={0.1}
-                  value={Math.round((selectedFurniture.h / 100) * blueprint.canvas.heightM * 10) / 10}
-                  onChange={(e) => {
-                    const m = Number(e.target.value);
-                    if (!Number.isFinite(m) || m <= 0) return;
-                    updateFurniture(selectedFurniture.id, { h: Math.round(Math.min(100, (m / blueprint.canvas.heightM) * 100) * 100) / 100 });
-                  }}
-                  className={EDITOR_FIELD}
-                />
-              </label>
-            </div>
+            <ItemPlacementFields
+              canvas={blueprint.canvas}
+              x={selectedFurniture.x}
+              y={selectedFurniture.y}
+              w={selectedFurniture.w}
+              h={selectedFurniture.h}
+              anchor="topLeft"
+              minSizeM={0.5}
+              disabled={readOnly}
+              onChange={(patch, msg) => updateFurniture(selectedFurniture.id, patch, msg)}
+            />
             <div className="space-y-2 pt-1 border-t border-border">
               <p className={EDITOR_HEADING}>Direction / placement</p>
               <div className="flex flex-col items-center gap-1.5">
@@ -8535,6 +8570,15 @@ export default function RoomLayoutEditor({
                 />
               </div>
             </div>
+            <ItemPlacementFields
+              canvas={blueprint.canvas}
+              x={selectedFurniture.x}
+              y={selectedFurniture.y}
+              anchor="center"
+              showSize={false}
+              disabled={readOnly}
+              onChange={(patch, msg) => updateFurniture(selectedFurniture.id, patch, msg)}
+            />
             <Gate allowed={caps.canRotate} need={{ feature: 'canRotate' }}><ElementRotationControls
                 rotation={selectedFurniture.rotation ?? 0}
                 onChange={(rot, msg) => updateFurniture(selectedFurniture.id, { rotation: rot }, msg || 'Orientation chaise')}
